@@ -1,0 +1,17 @@
+[package]
+name = "kwavers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ndarray = { version = "0.16.1", features = ["matrixmultiply-threading", "rayon"] }
+rustfft = "6.2"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+log = "0.4"
+env_logger = "0.11"
+rayon = "1.10"
+rand = { version = "0.9.0", features = ["serde"] }
+plotly = { version = "0.12.0", features = ["kaleido"] }
+num-complex = "0.4.6"
+
