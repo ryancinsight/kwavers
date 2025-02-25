@@ -2,35 +2,37 @@
 use kwavers::{
     generate_summary, init_logging, plot_simulation_outputs, save_light_data, save_pressure_data,
     Config, HanningApodization, HomogeneousMedium, MatrixArray, PMLBoundary, Recorder, Sensor,
-    Solver,
+    Solver, SineWave,
 };
 use log::info;
 use std::fs::File;
 use std::io::{Write};
+use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging()?;
 
-    // Write config file
+    // Write config file with reduced parameters for troubleshooting
     let config_content = r#"
-        domain_size_x = 0.1
-        domain_size_yz = 0.05
-        points_per_wavelength = 10
+        domain_size_x = 0.05
+        domain_size_yz = 0.03
+        points_per_wavelength = 6
         frequency = 180000.0
-        amplitude = 1.0
-        num_cycles = 5.0
-        pml_thickness = 10
+        amplitude = 1.0e5
+        num_cycles = 2.0
+        pml_thickness = 5
+        pml_sigma_acoustic = 100.0
+        pml_sigma_light = 10.0
+        pml_polynomial_order = 2
+        pml_reflection = 0.000001
 
-        num_elements = 0
-        signal_type = "chirp"
-        start_freq = 160000.0
-        end_freq = 200000.0
-        signal_duration = 0.0000555555
-        focus_x = 0.05
+        num_elements = 4
+        signal_type = "sine"
+        focus_x = 0.025
         focus_y = 0.0
-        focus_z = 0.025
+        focus_z = 0.015
 
-        snapshot_interval = 5
+        snapshot_interval = 10
         light_file = "sdt_light_output.csv"
     "#;
     let mut file = File::create("sdt_config.toml")?;
@@ -40,41 +42,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_file("sdt_config.toml")?;
     let grid = config.grid().clone();
     let time = config.time().clone();
-    let medium = Box::new(HomogeneousMedium::water(&grid));
+    
+    // Create medium with Arc
+    let medium = Arc::new(HomogeneousMedium::water(&grid));
+    
+    // Simple sine wave signal for troubleshooting
+    let signal = Box::new(SineWave::new(config.simulation.frequency, config.simulation.amplitude, 0.0));
+    
+    // Simpler transducer configuration
     let source = Box::new(MatrixArray::with_focus(
-        0.1,
-        0.05, // Width, Height
-        16,
-        8,   // num_x, num_y
+        0.05,
+        0.02, // Width, Height (smaller)
+        4,
+        2,   // num_x, num_y (fewer elements)
         0.0, // z_pos
-        config.source().signal().clone_box(),
+        signal,
         medium.as_ref(),
         &grid,
         config.simulation.frequency,
-        config.source.focus_x.unwrap(),
-        config.source.focus_y.unwrap(),
-        config.source.focus_z.unwrap(),
-        HanningApodization, // Default apodization
+        config.source.focus_x.unwrap_or(0.025),
+        config.source.focus_y.unwrap_or(0.0),
+        config.source.focus_z.unwrap_or(0.015),
+        HanningApodization,
     )) as Box<dyn kwavers::Source>;
 
-    let boundary = Box::new(PMLBoundary::new(
-        config.simulation.pml_thickness,
-        100.0, // alpha_max
-        10.0,  // sigma_max
-        medium.as_ref(),
-        &grid,
-        config.simulation.frequency,
-    ));
+    // Use the PML from the config
+    let boundary = Box::new(config.pml().clone());
 
-    // Define sensor positions (grid along focal plane)
-    let mut sensor_positions = Vec::new();
-    for i in 0..5 {
-        for j in 0..5 {
-            sensor_positions.push((0.05, i as f64 * 0.01 - 0.02, j as f64 * 0.01 - 0.02));
-        }
-    }
+    // Reduced sensor positions (just 4 instead of 25)
+    let sensor_positions = vec![
+        (0.025, 0.0, 0.0),
+        (0.025, 0.01, 0.0),
+        (0.025, 0.0, 0.01),
+        (0.025, 0.01, 0.01),
+    ];
+    
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
-    let mut recorder = Recorder::new(sensor, &time, "sdt_sensor_data", true, true, 5);
+    let mut recorder = Recorder::new(sensor, &time, "sdt_sensor_data", true, true, 10);
 
     // Run simulation
     let mut solver = Solver::new(grid.clone(), time.clone(), medium, source, boundary);

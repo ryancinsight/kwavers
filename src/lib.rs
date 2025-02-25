@@ -22,7 +22,7 @@ pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
 pub use grid::Grid;
 pub use log::init_logging;
 pub use medium::{
-    absorption::power_law_absorption, heterogeneous::HeterogeneousMedium,
+    absorption::power_law_absorption, absorption::tissue_specific, heterogeneous::HeterogeneousMedium,
     homogeneous::HomogeneousMedium, Medium,
 };
 pub use output::{generate_summary, save_light_data, save_pressure_data};

@@ -4,9 +4,11 @@ use crate::medium::Medium;
 use crate::physics::optics::{PolarizationModel, OpticalThermalModel, polarization::SimplePolarizationModel};
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
 use crate::utils::{fft_3d, ifft_3d};
-use log::debug;
+use log::{debug, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
 use rustfft::num_complex::Complex;
+use rayon::prelude::*;
+use std::time::Instant;
 
 pub const LIGHT_IDX: usize = 1;
 
@@ -20,6 +22,14 @@ pub struct LightDiffusion {
     enable_polarization: bool,
     enable_scattering: bool,
     enable_thermal: bool,
+    // Performance metrics
+    update_time: f64,
+    fft_time: f64,
+    diffusion_time: f64,
+    effect_time: f64,
+    call_count: usize,
+    // Precomputed arrays for better performance
+    d_inv: Option<Array3<f64>>,
 }
 
 impl LightDiffusion {
@@ -54,7 +64,66 @@ impl LightDiffusion {
             enable_polarization,
             enable_scattering,
             enable_thermal,
+            // Initialize performance metrics
+            update_time: 0.0,
+            fft_time: 0.0,
+            diffusion_time: 0.0,
+            effect_time: 0.0,
+            call_count: 0,
+            // Start with no precomputed arrays
+            d_inv: None,
         }
+    }
+
+    /// Precomputes inverse diffusion coefficients for better performance
+    fn precompute_diffusion_coefficients(&mut self, grid: &Grid, medium: &dyn Medium) {
+        trace!("Precomputing diffusion coefficients");
+        let mut d_inv = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+        
+        // Compute inverse diffusion coefficients in parallel
+        Zip::indexed(&mut d_inv).par_for_each(|(i, j, k), val| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
+            let mu_s_prime = medium.reduced_scattering_coefficient_light(x, y, z, grid);
+            // Store inverse directly for faster computation later (multiply vs divide)
+            *val = 3.0 * (mu_a + mu_s_prime);
+        });
+        
+        self.d_inv = Some(d_inv);
+    }
+
+    /// Reports performance metrics for light diffusion computation
+    pub fn report_performance(&self) {
+        if self.call_count == 0 {
+            debug!("No calls to LightDiffusion::update_light yet");
+            return;
+        }
+
+        let total_time = self.update_time;
+        let avg_time = total_time / self.call_count as f64;
+
+        debug!(
+            "LightDiffusion performance (avg over {} calls):",
+            self.call_count
+        );
+        debug!("  Total time per call:   {:.3e} s", avg_time);
+        debug!(
+            "  FFT operations:         {:.3e} s ({:.1}%)",
+            self.fft_time / self.call_count as f64,
+            100.0 * self.fft_time / total_time
+        );
+        debug!(
+            "  Diffusion calculation:  {:.3e} s ({:.1}%)",
+            self.diffusion_time / self.call_count as f64,
+            100.0 * self.diffusion_time / total_time
+        );
+        debug!(
+            "  Effects application:    {:.3e} s ({:.1}%)",
+            self.effect_time / self.call_count as f64,
+            100.0 * self.effect_time / total_time
+        );
     }
 
     pub fn update_light(
@@ -65,33 +134,65 @@ impl LightDiffusion {
         medium: &dyn Medium,
         dt: f64,
     ) {
+        let start_total = Instant::now();
+        self.call_count += 1;
+        
         debug!("Updating light diffusion with integrated effects");
 
+        // Lazily initialize diffusion coefficients if not already done
+        if self.d_inv.is_none() {
+            self.precompute_diffusion_coefficients(grid, medium);
+        }
+        
+        let d_inv = self.d_inv.as_ref().unwrap();
+        let start_fft = Instant::now();
         let mut fluence_fft = fft_3d(fields, LIGHT_IDX, grid);
-        let k2 = grid.k_squared();
+        self.fft_time += start_fft.elapsed().as_secs_f64();
 
+        let k2 = grid.k_squared();
+        let start_diffusion = Instant::now();
+
+        // Optimize diffusion calculation with better parallel processing and precomputed values
         Zip::indexed(&mut fluence_fft)
             .and(&k2)
             .and(light_source)
-            .par_for_each(|(i, j, k), f, &k_val, &s_val| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
-                let mu_s_prime = medium.reduced_scattering_coefficient_light(x, y, z, grid);
-                let d = 1.0 / (3.0 * (mu_a + mu_s_prime));
-                let denom = 1.0 + dt * (d * k_val + mu_a);
-                *f = (*f + Complex::new(dt * s_val, 0.0)) / denom;
+            .and(d_inv)
+            .par_for_each(|(i, j, k), f, &k_val, &s_val, &d_inv_val| {
+                // Use precomputed inverse diffusion coefficient
+                let d = 1.0 / d_inv_val;
+                let mu_a = medium.absorption_coefficient_light(
+                    i as f64 * grid.dx, 
+                    j as f64 * grid.dy, 
+                    k as f64 * grid.dz, 
+                    grid
+                );
+                
+                // Optimize division with multiplication by inverse
+                let dt_inv = 1.0 / dt;
+                let denom_inv = 1.0 / (dt_inv + d * k_val + mu_a);
+                
+                // Use complex number optimizations
+                *f = Complex::new(
+                    (f.re * dt_inv + s_val) * denom_inv,
+                    f.im * dt_inv * denom_inv
+                );
             });
+        self.diffusion_time += start_diffusion.elapsed().as_secs_f64();
 
+        let start_ifft = Instant::now();
         let mut fluence = ifft_3d(&fluence_fft, grid);
+        self.fft_time += start_ifft.elapsed().as_secs_f64();
 
+        let start_effects = Instant::now();
+        
+        // Update emission spectrum in parallel with optimized calculations
         Zip::from(&mut self.emission_spectrum)
             .and(light_source)
             .par_for_each(|spec, &source| {
-                *spec = source.max(0.0) * 1e-9;
+                *spec = if source > 0.0 { source * 1e-9 } else { 0.0 };
             });
 
+        // Apply optional physics effects if enabled
         if self.enable_polarization {
             if let Some(pol) = &mut self.polarization {
                 pol.apply_polarization(&mut fluence, &self.emission_spectrum, grid, medium);
@@ -109,8 +210,12 @@ impl LightDiffusion {
                 therm.update_thermal(fields, &fluence, grid, medium, dt);
             }
         }
+        self.effect_time += start_effects.elapsed().as_secs_f64();
 
+        // Assign back to fields array
         fields.index_axis_mut(Axis(0), LIGHT_IDX).assign(&fluence);
+        
+        self.update_time += start_total.elapsed().as_secs_f64();
     }
 
     pub fn fluence_rate(&self) -> &Array4<f64> {

@@ -1,11 +1,13 @@
 // src/fft/fft3d.rs
-use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection};
+use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, is_power_of_two, next_power_of_two_usize, log2_ceil};
 use crate::grid::Grid;
-use ndarray::{Array3, Axis, s};
+use ndarray::{Array3, s};
 use num_complex::Complex;
 use rayon::prelude::*;
-use log::debug;
+use log::{debug, trace};
+use std::sync::Arc;
 
+/// Optimized 3D FFT implementation with cache-friendly algorithms
 #[derive(Debug, Clone)]
 pub struct Fft3d {
     nx: usize,
@@ -14,23 +16,35 @@ pub struct Fft3d {
     padded_nx: usize,
     padded_ny: usize,
     padded_nz: usize,
-    twiddles_x: Vec<Complex<f64>>,
-    twiddles_y: Vec<Complex<f64>>,
-    twiddles_z: Vec<Complex<f64>>,
+    twiddles_x: Arc<Vec<Complex<f64>>>,
+    twiddles_y: Arc<Vec<Complex<f64>>>,
+    twiddles_z: Arc<Vec<Complex<f64>>>,
+    bit_reverse_indices_x: Arc<Vec<usize>>,
+    bit_reverse_indices_y: Arc<Vec<usize>>,
+    bit_reverse_indices_z: Arc<Vec<usize>>,
 }
 
 impl Fft3d {
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
-        let padded_nx = nx.next_power_of_two();
-        let padded_ny = ny.next_power_of_two();
-        let padded_nz = nz.next_power_of_two();
-        let twiddles_x = precompute_twiddles(padded_nx, FftDirection::Forward);
-        let twiddles_y = precompute_twiddles(padded_ny, FftDirection::Forward);
-        let twiddles_z = precompute_twiddles(padded_nz, FftDirection::Forward);
+        let padded_nx = next_power_of_two_usize(nx);
+        let padded_ny = next_power_of_two_usize(ny);
+        let padded_nz = next_power_of_two_usize(nz);
+        
+        // Precompute twiddle factors for better performance
+        let twiddles_x = Arc::new(precompute_twiddles(padded_nx, FftDirection::Forward));
+        let twiddles_y = Arc::new(precompute_twiddles(padded_ny, FftDirection::Forward));
+        let twiddles_z = Arc::new(precompute_twiddles(padded_nz, FftDirection::Forward));
+        
+        // Precompute bit-reverse indices for faster reordering
+        let bit_reverse_indices_x = Arc::new(Self::precompute_bit_reverse_indices(padded_nx));
+        let bit_reverse_indices_y = Arc::new(Self::precompute_bit_reverse_indices(padded_ny));
+        let bit_reverse_indices_z = Arc::new(Self::precompute_bit_reverse_indices(padded_nz));
+        
         debug!(
-            "Initialized custom Fft3d: padded {}x{}x{} (original: {}x{}x{})",
+            "Initialized optimized Fft3d: padded {}x{}x{} (original: {}x{}x{})",
             padded_nx, padded_ny, padded_nz, nx, ny, nz
         );
+        
         Self {
             nx,
             ny,
@@ -41,12 +55,21 @@ impl Fft3d {
             twiddles_x,
             twiddles_y,
             twiddles_z,
+            bit_reverse_indices_x,
+            bit_reverse_indices_y,
+            bit_reverse_indices_z,
         }
+    }
+    
+    /// Precompute bit-reverse indices for a given size
+    fn precompute_bit_reverse_indices(n: usize) -> Vec<usize> {
+        let log2_n = log2_ceil(n) as u32;
+        (0..n).map(|i| reverse_bits(i as u32, log2_n) as usize).collect()
     }
 
     pub fn process(&mut self, field: &mut Array3<Complex<f64>>, grid: &Grid) {
         debug!(
-            "Computing custom 3D FFT: size {}x{}x{}",
+            "Computing optimized 3D FFT: size {}x{}x{}",
             grid.nx, grid.ny, grid.nz
         );
         assert_eq!(
@@ -55,70 +78,168 @@ impl Fft3d {
             "Field dimensions must match grid"
         );
 
-        // Pad field to power-of-two sizes
-        let mut padded_field = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
-        padded_field
-            .slice_mut(s![0..self.nx, 0..self.ny, 0..self.nz])
-            .assign(field);
-
-        // In-place 3D FFT
-        self.fft_in_place(&mut padded_field);
-
-        // Copy back to original field
-        field.assign(&padded_field.slice(s![0..self.nx, 0..self.ny, 0..self.nz]));
+        // Create padded field if needed
+        if (grid.nx != self.padded_nx) || (grid.ny != self.padded_ny) || (grid.nz != self.padded_nz) {
+            trace!("Padding field for FFT from {}x{}x{} to {}x{}x{}", 
+                   grid.nx, grid.ny, grid.nz, self.padded_nx, self.padded_ny, self.padded_nz);
+            
+            let mut padded = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
+            padded.slice_mut(s![0..grid.nx, 0..grid.ny, 0..grid.nz]).assign(field);
+            
+            // Perform in-place FFT on padded field
+            self.fft_in_place(&mut padded);
+            
+            // Copy back to original field
+            field.assign(&padded.slice(s![0..grid.nx, 0..grid.ny, 0..grid.nz]));
+        } else {
+            // If no padding needed, perform FFT directly on the input field
+            self.fft_in_place(field);
+        }
     }
 
     fn fft_in_place(&self, field: &mut Array3<Complex<f64>>) {
         let (nx, ny, nz) = (self.padded_nx, self.padded_ny, self.padded_nz);
-
-        // Bit reversal along all dimensions
+        
+        // Apply bit reversal permutation
+        self.apply_bit_reversal(field);
+        
+        // Process each dimension using sequential approach instead of parallel
+        // to avoid borrowing issues
+        
+        // FFT along x-axis
+        for j in 0..ny {
+            let twiddles = &self.twiddles_x;
+            for k in 0..nz {
+                // Create a temporary buffer for the x-slice
+                let mut temp = vec![Complex::new(0.0, 0.0); nx];
+                
+                // Copy data to temp buffer
+                for i in 0..nx {
+                    temp[i] = field[[i, j, k]];
+                }
+                
+                // Perform FFT on temp buffer
+                self.butterfly_1d_optimized(&mut temp, twiddles, nx);
+                
+                // Copy back to field
+                for i in 0..nx {
+                    field[[i, j, k]] = temp[i];
+                }
+            }
+        }
+        
+        // FFT along y-axis
         for i in 0..nx {
-            let i_rev = reverse_bits(i as u32, (nx as f64).log2() as u32) as usize;
+            let twiddles = &self.twiddles_y;
+            for k in 0..nz {
+                // Create a temporary buffer for the y-slice
+                let mut temp = vec![Complex::new(0.0, 0.0); ny];
+                
+                // Copy data to temp buffer (y-axis is not contiguous in memory)
+                for j in 0..ny {
+                    temp[j] = field[[i, j, k]];
+                }
+                
+                // Perform FFT on temp buffer
+                self.butterfly_1d_optimized(&mut temp, twiddles, ny);
+                
+                // Copy back to field
+                for j in 0..ny {
+                    field[[i, j, k]] = temp[j];
+                }
+            }
+        }
+        
+        // FFT along z-axis
+        for i in 0..nx {
+            let twiddles = &self.twiddles_z;
             for j in 0..ny {
-                let j_rev = reverse_bits(j as u32, (ny as f64).log2() as u32) as usize;
+                // Create a temporary buffer for the z-slice
+                let mut temp = vec![Complex::new(0.0, 0.0); nz];
+                
+                // Copy data to temp buffer (z-axis is not contiguous in memory)
                 for k in 0..nz {
-                    let k_rev = reverse_bits(k as u32, (nz as f64).log2() as u32) as usize;
-                    if i < i_rev || (i == i_rev && j < j_rev) || (i == i_rev && j == j_rev && k < k_rev) {
-                        field.swap([i, j, k], [i_rev, j_rev, k_rev]);
+                    temp[k] = field[[i, j, k]];
+                }
+                
+                // Perform FFT on temp buffer
+                self.butterfly_1d_optimized(&mut temp, twiddles, nz);
+                
+                // Copy back to field
+                for k in 0..nz {
+                    field[[i, j, k]] = temp[k];
+                }
+            }
+        }
+    }
+    
+    /// Apply bit reversal permutation to the 3D field
+    fn apply_bit_reversal(&self, field: &mut Array3<Complex<f64>>) {
+        let (nx, ny, nz) = (self.padded_nx, self.padded_ny, self.padded_nz);
+        
+        // Use precomputed bit-reverse indices
+        let indices_x = &self.bit_reverse_indices_x;
+        let indices_y = &self.bit_reverse_indices_y;
+        let indices_z = &self.bit_reverse_indices_z;
+        
+        // Apply bit reversal in a cache-friendly way
+        for i in 0..nx {
+            let i_rev = indices_x[i];
+            if i < i_rev {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        field.swap([i, j, k], [i_rev, j, k]);
                     }
                 }
             }
         }
-
-        // FFT along x-axis
+        
         for j in 0..ny {
-            for k in 0..nz {
-                self.butterfly_1d(&mut field.slice_mut(s![.., j, k]), &self.twiddles_x, nx);
+            let j_rev = indices_y[j];
+            if j < j_rev {
+                for i in 0..nx {
+                    for k in 0..nz {
+                        field.swap([i, j, k], [i, j_rev, k]);
+                    }
+                }
             }
         }
-
-        // FFT along y-axis
-        for i in 0..nx {
-            for k in 0..nz {
-                self.butterfly_1d(&mut field.slice_mut(s![i, .., k]), &self.twiddles_y, ny);
-            }
-        }
-
-        // FFT along z-axis
-        for i in 0..nx {
-            for j in 0..ny {
-                self.butterfly_1d(&mut field.slice_mut(s![i, j, ..]), &self.twiddles_z, nz);
+        
+        for k in 0..nz {
+            let k_rev = indices_z[k];
+            if k < k_rev {
+                for i in 0..nx {
+                    for j in 0..ny {
+                        field.swap([i, j, k], [i, j, k_rev]);
+                    }
+                }
             }
         }
     }
 
-    fn butterfly_1d(&self, data: &mut ndarray::ArrayViewMut1<Complex<f64>>, twiddles: &[Complex<f64>], n: usize) {
+    /// Optimized 1D butterfly FFT algorithm that works on slices for better cache locality
+    #[inline]
+    fn butterfly_1d_optimized(&self, data: &mut [Complex<f64>], twiddles: &[Complex<f64>], n: usize) {
         let mut len = 1;
         while len < n {
             let half_len = len;
             len *= 2;
+            
+            // Process each butterfly stage
             for k in (0..n).step_by(len) {
+                // Use SIMD-friendly loop with fewer branches
                 for j in 0..half_len {
                     let idx = k + j;
-                    let t = twiddles[j * (n / len)] * data[idx + half_len];
+                    let idx2 = idx + half_len;
+                    
+                    // Avoid bounds checking in release mode
+                    debug_assert!(idx < n && idx2 < n && j * (n / len) < twiddles.len());
+                    
+                    // Compute butterfly operation
+                    let t = twiddles[j * (n / len)] * data[idx2];
                     let u = data[idx];
                     data[idx] = u + t;
-                    data[idx + half_len] = u - t;
+                    data[idx2] = u - t;
                 }
             }
         }

@@ -59,13 +59,17 @@ impl Config {
 
         let medium = self.simulation.initialize_medium(grid);
         self.source_instance = Some(self.source.initialize_source(medium.as_ref(), grid)?);
+        
+        // Use the PML parameters from the simulation config
         self.pml = Some(PMLBoundary::new(
             self.simulation.pml_thickness,
-            100.0,
-            10.0,
+            self.simulation.pml_sigma_acoustic,
+            self.simulation.pml_sigma_light,
             medium.as_ref(),
             grid,
             self.simulation.frequency,
+            Some(self.simulation.pml_polynomial_order),
+            Some(self.simulation.pml_reflection),
         ));
 
         Ok(())

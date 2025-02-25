@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+</head>
+
+<body>
+    <div>
+        <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script>
+        
+
+        <div id="plotly-html-element" class="plotly-graph-div" style="height:100%; width:100%;"></div>
+
+        <script type="module">
+            const graph_div = document.getElementById("plotly-html-element");
+            await Plotly.newPlot(graph_div, {"data":[{"type":"scatter","name":"Sensor 1","mode":"lines","x":[0.0,5.078544034538374e-7,1.0157088069076748e-6,1.5235632103615122e-6,2.0314176138153497e-6,2.539272017269187e-6,3.0471264207230245e-6,3.554980824176862e-6,4.062835227630699e-6,4.570689631084537e-6,5.078544034538374e-6,5.586398437992212e-6,6.094252841446049e-6,6.602107244899886e-6,7.109961648353724e-6,7.617816051807561e-6,8.125670455261399e-6,8.633524858715236e-6,9.141379262169073e-6,9.649233665622911e-6,0.000010157088069076748,0.000010664942472530586],"y":[-3.849474443350243,-5.160509940909496,-14.478484470335141,-37.92545991049041,-62.6910638510334,-65.6534866763613,-33.815539470803586,29.83911661753651,-495.78095249263004,-542.0908490690392,171.6169072584003,-106.26972141687159,241.68667506348996,4477.280759990613,-295.20050864547244,-347.17300092096696,153.42558101607418,2017.4499232972696,-5518.140558302016,41674.3971294979,64523.27364438239,96772.19519080775]}],"layout":{"title":{"text":"Pressure Time Series (Sensor 0)"},"width":800,"height":600},"config":{}});
+        </script>
+    </div>
+</body>
+
+</html>

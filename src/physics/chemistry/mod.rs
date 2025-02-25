@@ -49,7 +49,7 @@ impl ChemicalModel {
         temperature: &Array3<f64>,
         grid: &Grid,
         dt: f64,
-        medium: &mut dyn Medium,
+        medium: &dyn Medium,
         frequency: f64,
     ) {
         debug!("Updating chemical effects");

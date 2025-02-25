@@ -4,6 +4,8 @@ use crate::medium::{absorption, power_law_absorption, Medium};
 use log::debug;
 use ndarray::{Array3, Zip};
 
+pub mod tissue;
+
 #[derive(Debug, Clone)]
 pub struct HeterogeneousMedium {
     pub density: Array3<f64>,

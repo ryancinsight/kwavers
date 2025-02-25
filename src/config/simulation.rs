@@ -16,6 +16,15 @@ pub struct SimulationConfig {
     pub num_cycles: f64,
     #[serde(default)]
     pub pml_thickness: usize,
+    // PML specific parameters
+    #[serde(default = "default_pml_sigma_acoustic")]
+    pub pml_sigma_acoustic: f64,
+    #[serde(default = "default_pml_sigma_light")]
+    pub pml_sigma_light: f64,
+    #[serde(default = "default_pml_polynomial_order")]
+    pub pml_polynomial_order: usize,
+    #[serde(default = "default_pml_reflection")]
+    pub pml_reflection: f64,
     #[serde(default = "default_light_wavelength")]
     pub light_wavelength: f64,
     // k-space specific parameters
@@ -23,6 +32,22 @@ pub struct SimulationConfig {
     pub kspace_padding: usize, // Padding for FFT to avoid aliasing
     #[serde(default = "default_kspace_alpha")]
     pub kspace_alpha: f64, // k-space correction coefficient
+}
+
+fn default_pml_sigma_acoustic() -> f64 {
+    100.0
+}
+
+fn default_pml_sigma_light() -> f64 {
+    10.0
+}
+
+fn default_pml_polynomial_order() -> usize {
+    3
+}
+
+fn default_pml_reflection() -> f64 {
+    1e-6
 }
 
 fn default_light_wavelength() -> f64 {

@@ -3,6 +3,7 @@
 use log::{debug, trace};
 
 pub mod power_law_absorption;
+pub mod tissue_specific;
 
 pub fn absorption_coefficient(frequency: f64, temperature: f64, bubble_radius: Option<f64>) -> f64 {
     debug!(
