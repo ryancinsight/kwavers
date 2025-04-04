@@ -5,11 +5,13 @@ use num_complex::Complex;
 use std::fmt::Debug;
 
 pub mod absorption;
+pub mod dispersion;
 pub mod heterogeneous;
 pub mod homogeneous;
 
 pub use absorption::power_law_absorption;
 pub use absorption::tissue_specific;
+pub use dispersion::DispersiveMedium;
 
 use std::any::Any;
 
@@ -28,7 +30,7 @@ pub trait Medium: Debug + Sync + Send + Any {
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     
     // Elastic properties
-    fn shear_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn shear_modulus(&self, x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         3.0e3  // Default: 3 kPa (typical soft tissue)
     }
     
@@ -58,11 +60,11 @@ pub trait Medium: Debug + Sync + Send + Any {
     }
     
     // Dispersion-related methods with default implementations
-    fn phase_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+    fn phase_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, _frequency: f64) -> f64 {
         self.sound_speed(x, y, z, grid)  // Default: frequency-independent speed
     }
     
-    fn group_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+    fn group_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, _frequency: f64) -> f64 {
         self.sound_speed(x, y, z, grid)  // Default: same as phase velocity
     }
     
@@ -88,4 +90,18 @@ pub trait Medium: Debug + Sync + Send + Any {
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>);
     fn density_array(&self) -> Array3<f64>;
     fn sound_speed_array(&self) -> Array3<f64>;
+    
+    /// Optional method to compute shear modulus array for the entire grid
+    fn compute_shear_modulus_array(&self, grid: &Grid) -> Array3<f64> {
+        let mut shear_modulus = Array3::zeros((grid.nx(), grid.ny(), grid.nz()));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let (x, y, z) = grid.idx_to_pos(i, j, k);
+                    shear_modulus[[i, j, k]] = self.shear_modulus(x, y, z, grid);
+                }
+            }
+        }
+        shear_modulus
+    }
 }
