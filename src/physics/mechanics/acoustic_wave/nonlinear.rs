@@ -1,6 +1,6 @@
 // physics/mechanics/acoustic_wave/nonlinear.rs
 use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::medium::{Medium, dispersion::DispersiveMedium};
 use crate::source::Source;
 use crate::solver::PRESSURE_IDX;
 use log::{debug, trace, warn};
@@ -33,6 +33,11 @@ pub struct NonlinearWave {
 }
 
 impl NonlinearWave {
+    /// Check if a medium implements dispersive propagation
+    fn is_dispersive(&self, medium: &dyn Medium) -> bool {
+        medium.as_any().downcast_ref::<dyn DispersiveMedium>().is_some()
+    }
+
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing NonlinearWave solver");
         
@@ -385,25 +390,24 @@ impl NonlinearWave {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
                 
-                // Get medium properties (could be expensive, but needed for heterogeneous media)
-                let c = medium.sound_speed(x, y, z, grid);
-                let mu = medium.viscosity(x, y, z, grid);
-                let rho = medium.density(x, y, z, grid);
-                
-                // Compute wave propagation in k-space
+                // Get wave properties
                 let k_val = k2[[i, j, k]].sqrt();
+                let k_complex = medium.complex_wave_number(x, y, z, grid, freq);
+                let c = medium.phase_velocity(x, y, z, grid, freq);
                 
-                // Calculate phase factor using optimized method
-                let phase = self.calculate_phase_factor(k_val, c, dt);
+                // Apply k-space correction with complex wave number
+                let mut propagator = Complex::new(0.0, -dt * c * k_val);
+                if k_val > 0.0 {
+                    propagator = propagator * (k_complex / k_val);
+                }
                 
-                // Calculate damping factors
+                // Include viscosity effects
+                let rho = medium.density(x, y, z, grid);
+                let mu = medium.viscosity(x, y, z, grid);
                 let viscous_damping = (-mu * k_val * k_val * dt / rho).exp();
-                let absorption_damping = (-medium.absorption_coefficient(x, y, z, grid, freq) * dt).exp();
                 
-                // Apply phase shift, k-space correction, and damping
-                let phase_factor = Complex::new(phase.cos(), phase.sin());
-                let decay = absorption_damping * viscous_damping;
-                *p_new = p_val * phase_factor * kspace_corr[[i, j, k]] * decay;
+                // Apply propagation and damping
+                *p_new = p_val * propagator.exp() * kspace_corr[[i, j, k]] * viscous_damping;
             });
 
         // Convert back to spatial domain
@@ -453,4 +457,4 @@ impl NonlinearWave {
             }
         }
     }
-}
+

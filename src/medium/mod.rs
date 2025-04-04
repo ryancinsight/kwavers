@@ -1,6 +1,7 @@
 // src/medium/mod.rs
 use crate::grid::Grid;
 use ndarray::Array3;
+use num_complex::Complex;
 use std::fmt::Debug;
 
 pub mod absorption;
@@ -10,7 +11,9 @@ pub mod homogeneous;
 pub use absorption::power_law_absorption;
 pub use absorption::tissue_specific;
 
-pub trait Medium: Debug + Sync + Send {
+use std::any::Any;
+
+pub trait Medium: Debug + Sync + Send + Any {
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn is_homogeneous(&self) -> bool { false }
@@ -23,6 +26,52 @@ pub trait Medium: Debug + Sync + Send {
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    
+    // Elastic properties
+    fn shear_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        3.0e3  // Default: 3 kPa (typical soft tissue)
+    }
+    
+    fn youngs_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let mu = self.shear_modulus(x, y, z, grid);
+        let lambda = self.lame_first_parameter(x, y, z, grid);
+        mu * (3.0 * lambda + 2.0 * mu) / (lambda + mu)
+    }
+    
+    fn lame_first_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let c = self.sound_speed(x, y, z, grid);
+        let rho = self.density(x, y, z, grid);
+        let mu = self.shear_modulus(x, y, z, grid);
+        rho * c * c - 2.0 * mu  // λ = ρc² - 2μ
+    }
+    
+    fn poissons_ratio(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let mu = self.shear_modulus(x, y, z, grid);
+        let lambda = self.lame_first_parameter(x, y, z, grid);
+        lambda / (2.0 * (lambda + mu))
+    }
+    
+    fn bulk_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let lambda = self.lame_first_parameter(x, y, z, grid);
+        let mu = self.shear_modulus(x, y, z, grid);
+        lambda + 2.0 * mu / 3.0
+    }
+    
+    // Dispersion-related methods with default implementations
+    fn phase_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+        self.sound_speed(x, y, z, grid)  // Default: frequency-independent speed
+    }
+    
+    fn group_velocity(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+        self.sound_speed(x, y, z, grid)  // Default: same as phase velocity
+    }
+    
+    fn complex_wave_number(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> Complex<f64> {
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+        let c = self.phase_velocity(x, y, z, grid, frequency);
+        let alpha = self.absorption_coefficient(x, y, z, grid, frequency);
+        Complex::new(omega / c, alpha)
+    }
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;

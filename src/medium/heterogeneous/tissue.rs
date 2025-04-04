@@ -24,6 +24,8 @@ pub struct HeterogeneousTissueMedium {
     density_array: OnceLock<Array3<f64>>,
     /// Cached sound speed array for performance
     sound_speed_array: OnceLock<Array3<f64>>,
+    /// Cached shear modulus array for performance
+    shear_modulus_array: OnceLock<Array3<f64>>,
     /// Optional cached pressure amplitude for nonlinear absorption effects
     pub pressure_amplitude: Option<Array3<f64>>,
 }
@@ -47,6 +49,8 @@ impl HeterogeneousTissueMedium {
             reference_frequency,
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
+            shear_modulus_array: OnceLock::new(),
+            shear_modulus_array: OnceLock::new(),
             pressure_amplitude: None,
         }
     }
@@ -224,6 +228,34 @@ impl HeterogeneousTissueMedium {
 }
 
 impl Medium for HeterogeneousTissueMedium {
+    fn shear_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Get tissue type and return its shear modulus
+        if let Some(tissue_type) = self.tissue_type(x, y, z, grid) {
+            tissue_type.get_shear_modulus()
+        } else {
+            // Use cached array if available, otherwise return default soft tissue value
+            if let Some(indices) = grid.to_grid_indices(x, y, z) {
+                self.shear_modulus_array
+                    .get_or_init(|| self.compute_shear_modulus_array(grid))
+                    [indices]
+            } else {
+                TissueType::SoftTissue.get_shear_modulus()
+            }
+        }
+    }
+
+    /// Compute shear modulus array for the entire grid
+    fn compute_shear_modulus_array(&self, grid: &Grid) -> Array3<f64> {
+        let mut shear_modulus = Array3::zeros((grid.nx(), grid.ny(), grid.nz()));
+        
+        Zip::indexed(&mut shear_modulus)
+            .par_for_each(|(i, j, k), mu| {
+                let tissue = self.tissue_map[[i, j, k]];
+                *mu = tissue.get_shear_modulus();
+            });
+            
+        shear_modulus
+    }
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.to_grid_indices(x, y, z) {
             let tissue = self.tissue_map[indices];

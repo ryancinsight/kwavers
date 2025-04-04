@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+approx = "0.5"
+num-complex = "0.4"
 ndarray = { version = "0.16.1", features = ["matrixmultiply-threading", "rayon"] }
 rustfft = "6.2"
 serde = { version = "1.0", features = ["derive"] }

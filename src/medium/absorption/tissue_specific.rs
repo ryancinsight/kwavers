@@ -22,6 +22,27 @@ pub enum TissueType {
     // Add more tissue types as needed
 }
 
+impl TissueType {
+    /// Get the shear modulus (Pa) for this tissue type
+    pub fn get_shear_modulus(&self) -> f64 {
+        match self {
+            TissueType::BloodVessel => 0.0,      // Fluid-like
+            TissueType::Bone => 5.0e6,           // 5 MPa
+            TissueType::BoneCortical => 6.0e6,   // 6 MPa
+            TissueType::BoneMarrow => 0.5e3,     // 0.5 kPa
+            TissueType::Brain => 2.5e3,          // 2.5 kPa
+            TissueType::Fat => 2.0e3,            // 2 kPa
+            TissueType::Kidney => 2.5e3,         // 2.5 kPa
+            TissueType::Liver => 2.0e3,          // 2 kPa
+            TissueType::Lung => 1.0e3,           // 1 kPa
+            TissueType::Muscle => 12.0e3,        // 12 kPa
+            TissueType::Skin => 15.0e3,          // 15 kPa
+            TissueType::SoftTissue => 3.0e3,     // 3 kPa
+            TissueType::Tumor => 20.0e3,         // 20 kPa
+        }
+    }
+}
+
 /// Tissue properties for acoustic simulations
 #[derive(Debug, Clone, Copy)]
 pub struct TissueProperties {
@@ -43,6 +64,8 @@ pub struct TissueProperties {
     pub thermal_conductivity: f64,
     /// Acoustic impedance (kg/m²/s)
     pub impedance: f64,
+    /// Shear modulus (Pa)
+    pub shear_modulus: f64,
 }
 
 /// Get tissue database singleton
@@ -67,7 +90,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             b_a: 6.1,
             specific_heat: 3770.0,
             thermal_conductivity: 0.51,
-            impedance: 1.68e6,
+            impedance: 1.70e6,
+            shear_modulus: 0.0,  // Fluid-like
         });
         
         db.insert(TissueType::Bone, TissueProperties {
@@ -80,6 +104,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 1313.0,
             thermal_conductivity: 0.32,
             impedance: 6.63e6,
+            shear_modulus: 5.0e6,  // 5 MPa
         });
         
         db.insert(TissueType::BoneCortical, TissueProperties {
@@ -92,6 +117,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 1300.0,
             thermal_conductivity: 0.38,
             impedance: 8.06e6,
+            shear_modulus: 6.0e6,  // 6 MPa
         });
         
         db.insert(TissueType::BoneMarrow, TissueProperties {
@@ -104,6 +130,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 2700.0,
             thermal_conductivity: 0.22,
             impedance: 1.65e6,
+            shear_modulus: 0.5e3,  // 0.5 kPa (soft marrow)
         });
         
         db.insert(TissueType::Brain, TissueProperties {
@@ -116,6 +143,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 3630.0,
             thermal_conductivity: 0.51,
             impedance: 1.61e6,
+            shear_modulus: 2.5e3,  // 2.5 kPa
         });
         
         db.insert(TissueType::Fat, TissueProperties {
@@ -128,6 +156,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 2348.0,
             thermal_conductivity: 0.21,
             impedance: 1.38e6,
+            shear_modulus: 2.0e3,  // 2 kPa
         });
         
         db.insert(TissueType::Kidney, TissueProperties {
@@ -140,6 +169,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 3763.0,
             thermal_conductivity: 0.53,
             impedance: 1.64e6,
+            shear_modulus: 2.0e3,  // 2 kPa
+            shear_modulus: 2.5e3,  // 2.5 kPa
         });
         
         db.insert(TissueType::Liver, TissueProperties {
@@ -163,7 +194,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             b_a: 9.0,
             specific_heat: 3886.0,
             thermal_conductivity: 0.39,
-            impedance: 0.26e6,
+            impedance: 0.52e6,
         });
         
         db.insert(TissueType::Muscle, TissueProperties {
@@ -200,6 +231,7 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 3600.0,
             thermal_conductivity: 0.5,
             impedance: 1.63e6,
+            shear_modulus: 3.0e3,  // 3 kPa
         });
         
         db.insert(TissueType::Tumor, TissueProperties {
