@@ -1,10 +1,9 @@
 use crate::grid::Grid;
 use crate::medium::{Medium, tissue_specific};
-use ndarray::{Array3, ArrayBase, Axis, Dimension, OwnedRepr, Zip};
-use log::{debug, info, trace};
+use ndarray::{Array3, Axis, Dimension, Zip};
+use log::{debug, info};
 use std::sync::OnceLock;
-use std::sync::Arc;
-use tissue_specific::{TissueType, TissueProperties};
+use tissue_specific::TissueType;
 
 /// A heterogeneous medium composed of multiple tissue types
 /// This allows for complex tissue structures with different acoustic properties
@@ -49,7 +48,6 @@ impl HeterogeneousTissueMedium {
             reference_frequency,
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
-            shear_modulus_array: OnceLock::new(),
             shear_modulus_array: OnceLock::new(),
             pressure_amplitude: None,
         }

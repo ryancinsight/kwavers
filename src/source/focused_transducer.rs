@@ -45,7 +45,7 @@ impl FocusedTransducer {
     }
     
     // Calculate geometric focus delay for a given point
-    fn calculate_delay(&self, x: f64, y: f64, z: f64) -> f64 {
+    fn calculate_delay(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let dx = x - self.x0;
         let dy = y - self.y0;
         let dz = z - self.z0;
@@ -106,18 +106,14 @@ impl Source for FocusedTransducer {
         // Get local sound speed for delay calculation
         let local_speed = self.medium.sound_speed(x, y, z, grid);
         
-        // Calculate delay based on path length and local sound speed
-        let delay = self.calculate_delay(x, y, z);
+        // Calculate delay and apply focusing
+        let delay = self.calculate_delay(x, y, z, grid);
         let delayed_t = t - delay;
         
         // Apply apodization
         let apodization = self.apodization.get_apodization(r / self.radius);
         
-        // Apply focusing delay
-        let delay = self.calculate_delay(x, y, z);
-        let delayed_t = t - delay;
-        
-        // Get signal value with delay
+        // Get signal value with delay and apodization
         self.signal.value(delayed_t) * apodization
     }
     
