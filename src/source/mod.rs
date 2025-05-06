@@ -5,6 +5,7 @@ use crate::signal::Signal;
 use std::fmt::Debug;
 
 pub mod apodization;
+pub mod focused_transducer;
 pub mod linear_array;
 pub mod matrix_array;
 
@@ -18,5 +19,6 @@ pub use apodization::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization,
 };
+pub use focused_transducer::FocusedTransducer;
 pub use linear_array::LinearArray;
 pub use matrix_array::MatrixArray;
