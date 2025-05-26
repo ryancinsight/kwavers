@@ -1,10 +1,10 @@
 use crate::grid::Grid;
 use crate::medium::{Medium, tissue_specific};
-use ndarray::{Array3, ArrayBase, Axis, Dimension, OwnedRepr, Zip};
-use log::{debug, info, trace};
+use ndarray::{Array3, Axis, Zip}; // Removed ArrayBase, Dimension, OwnedRepr
+use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
-use std::sync::Arc;
-use tissue_specific::{TissueType, TissueProperties};
+// Removed std::sync::Arc
+use tissue_specific::TissueType; // Removed TissueProperties
 
 /// A heterogeneous medium composed of multiple tissue types
 /// This allows for complex tissue structures with different acoustic properties
@@ -158,12 +158,12 @@ impl HeterogeneousTissueMedium {
         grid: &Grid,
     ) {
         let dir_idx = direction.0;
-        let dir_step = match dir_idx {
-            0 => grid.dx,
-            1 => grid.dy,
-            2 => grid.dz,
-            _ => panic!("Invalid axis index: {}", dir_idx),
-        };
+        // let dir_step = match dir_idx { // Removed unused variable dir_step
+        //     0 => grid.dx,
+        //     1 => grid.dy,
+        //     2 => grid.dz,
+        //     _ => panic!("Invalid axis index: {}", dir_idx),
+        // };
 
         debug!(
             "Creating layered tissue model along axis {}, starting at {:.3}m",
@@ -252,7 +252,7 @@ impl Medium for HeterogeneousTissueMedium {
         }
     }
 
-    fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // For simplicity, we use a constant viscosity value for all tissues
         // A more detailed model could interpolate between tissue types
         1.0e-3 // Water-like viscosity as a reasonable approximation

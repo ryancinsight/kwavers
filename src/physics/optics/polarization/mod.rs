@@ -10,8 +10,8 @@ pub trait PolarizationModel: Debug + Send + Sync {
         &mut self,
         fluence: &mut Array3<f64>,
         emission_spectrum: &Array3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
+        _grid: &Grid,
+        _medium: &dyn Medium,
     );
 }
 
@@ -34,8 +34,8 @@ impl PolarizationModel for SimplePolarizationModel {
         &mut self,
         fluence: &mut Array3<f64>,
         emission_spectrum: &Array3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
+        _grid: &Grid,
+        _medium: &dyn Medium,
     ) {
         debug!("Applying polarization effects to light fluence");
         Zip::from(fluence)

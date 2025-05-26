@@ -1,5 +1,5 @@
 // src/fft/ifft3d.rs
-use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, is_power_of_two, next_power_of_two_usize, log2_ceil};
+use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil}; // Removed is_power_of_two
 use crate::grid::Grid;
 use ndarray::{Array3, s};
 use num_complex::Complex;
@@ -10,9 +10,9 @@ use std::sync::Arc;
 /// Optimized 3D inverse FFT implementation with cache-friendly algorithms
 #[derive(Debug, Clone)]
 pub struct Ifft3d {
-    nx: usize,
-    ny: usize,
-    nz: usize,
+    // nx: usize, // Removed
+    // ny: usize, // Removed
+    // nz: usize, // Removed
     padded_nx: usize,
     padded_ny: usize,
     padded_nz: usize,
@@ -46,9 +46,9 @@ impl Ifft3d {
         );
         
         Self {
-            nx,
-            ny,
-            nz,
+            // nx, // Removed
+            // ny, // Removed
+            // nz, // Removed
             padded_nx,
             padded_ny,
             padded_nz,

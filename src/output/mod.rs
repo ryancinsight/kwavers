@@ -8,7 +8,7 @@ use std::io::{self, Write};
 
 const PRESSURE_IDX: usize = 0;
 const LIGHT_IDX: usize = 1;
-const TEMPERATURE_IDX: usize = 2;
+// const TEMPERATURE_IDX: usize = 2; // Removed unused constant
 
 pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving pressure data to {}", filename);
