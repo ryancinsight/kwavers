@@ -12,9 +12,9 @@ use rustfft::num_complex::Complex;
 /// with optional backing by a theoretical model for automatic parameter selection.
 #[derive(Debug, Clone)]
 pub struct PMLBoundary {
-    thickness: usize,
-    sigma_max_acoustic: f64,
-    sigma_max_light: f64,
+    // thickness: usize, // Removed
+    // sigma_max_acoustic: f64, // Removed
+    // sigma_max_light: f64, // Removed
     /// Pre-computed damping profiles for each dimension
     acoustic_damping_x: Vec<f64>,
     acoustic_damping_y: Vec<f64>,
@@ -22,10 +22,8 @@ pub struct PMLBoundary {
     light_damping_x: Vec<f64>,
     light_damping_y: Vec<f64>,
     light_damping_z: Vec<f64>,
-    /// Polynomial order for damping profile (typically 2-4)
-    polynomial_order: usize,
-    /// Theoretical reflection coefficient (used for auto parameter selection)
-    target_reflection: f64,
+    // polynomial_order: usize, // Removed
+    // target_reflection: f64, // Removed
     /// Pre-computed combined damping factors for optimization
     acoustic_damping_3d: Option<Array3<f64>>,
     light_damping_3d: Option<Array3<f64>>,
@@ -119,17 +117,17 @@ impl PMLBoundary {
         let light_damping_z = Self::damping_profile(final_thickness, grid.nz, grid.dz, sigma_light, poly_order);
 
         Self {
-            thickness: final_thickness,
-            sigma_max_acoustic: sigma_acoustic,
-            sigma_max_light: sigma_light,
+            // thickness: final_thickness, // Removed
+            // sigma_max_acoustic: sigma_acoustic, // Removed
+            // sigma_max_light: sigma_light, // Removed
             acoustic_damping_x,
             acoustic_damping_y,
             acoustic_damping_z,
             light_damping_x,
             light_damping_y,
             light_damping_z,
-            polynomial_order: poly_order,
-            target_reflection: reflection,
+            // polynomial_order: poly_order, // Removed
+            // target_reflection: reflection, // Removed
             acoustic_damping_3d: None,
             light_damping_3d: None,
         }
@@ -144,7 +142,7 @@ impl PMLBoundary {
     /// * `dx` - Grid spacing
     /// * `sigma_max` - Maximum absorption coefficient
     /// * `order` - Polynomial order for profile grading
-    fn damping_profile(thickness: usize, length: usize, dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
+    fn damping_profile(thickness: usize, length: usize, _dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
         let mut profile = vec![0.0; length];
         
         // Apply PML at both domain boundaries (left/right or top/bottom)

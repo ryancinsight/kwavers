@@ -15,14 +15,14 @@ use crate::physics::{
 use crate::recorder::Recorder;
 use crate::source::Source;
 use crate::time::Time;
-use crate::utils::{fft_3d, ifft_3d, warm_fft_cache, report_fft_statistics};
-use log::{debug, info, trace, warn};
+use crate::utils::{fft_3d, ifft_3d}; // Removed warm_fft_cache, report_fft_statistics
+use log::{info, trace}; // Removed debug, warn (used as log::debug, log::warn)
 use ndarray::{Array3, Array4, Axis};
-use num_complex::Complex;
+// Removed num_complex::Complex
 use std::time::{Duration, Instant};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use rayon::prelude::*;
+// Removed std::sync::atomic::{AtomicBool, Ordering}
+// Removed rayon::prelude::*;
 
 pub const PRESSURE_IDX: usize = 0;
 pub const LIGHT_IDX: usize = 1;
@@ -372,7 +372,7 @@ impl Solver {
         let step_start = Instant::now();
         let mut preprocessing_time = 0.0;
         let mut wave_time = 0.0;
-        let mut boundary_time = 0.0;
+        // let mut boundary_time = 0.0; // Removed unused variable
         let mut cavitation_time = 0.0;
         let mut light_time = 0.0;
         let mut thermal_time = 0.0;

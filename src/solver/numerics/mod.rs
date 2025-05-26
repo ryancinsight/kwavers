@@ -2,7 +2,7 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::{mechanics::cavitation::CavitationModel, chemistry::ChemicalModel, optics::diffusion::LightDiffusion, thermodynamics::heat_transfer::ThermalModel};
-use crate::utils::{fft_3d, ifft_3d};
+// Removed crate::utils::{fft_3d, ifft_3d};
 use log::{debug, warn};
 use ndarray::{Array3, Array4, Axis, Zip};
 

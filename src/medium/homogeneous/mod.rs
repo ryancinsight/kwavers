@@ -40,11 +40,10 @@ struct FloatKey(f64);
 
 impl PartialEq for FloatKey {
     fn eq(&self, other: &Self) -> bool {
-        // Epsilon comparison for floating point equality.
-        // This epsilon should be consistent with the quantization in Hash.
-        // If Hash quantizes to 1e-6, then values differing by less than that
-        // should be considered equal.
-        (self.0 - other.0).abs() < 1e-6 // Changed from 1e-10
+        // Equality is defined by whether the f64 values, when quantized
+        // by multiplying by 1e6 and rounding, result in the same i64 value.
+        // This ensures consistency with the Hash implementation.
+        (self.0 * 1e6).round() == (other.0 * 1e6).round()
     }
 }
 
@@ -459,48 +458,104 @@ mod tests {
     // --- FloatKey Tests ---
     #[test]
     fn test_float_key_equality() {
-        let epsilon_val: f64 = 1e-6; // The epsilon used in PartialEq
+        // Helper to see the quantized value
+        let _quantize = |f: f64| (f * 1e6).round() as i64; // Prefixed with _
 
-        assert_eq!(FloatKey(1.0), FloatKey(1.0)); // Should be equal to itself
-        assert_eq!(FloatKey(1.0), FloatKey(1.0 + 1e-7)); // Difference 1e-7 (< epsilon_val), so should be equal
-        assert_eq!(FloatKey(1.0), FloatKey(1.0 - 1e-7)); // Difference 1e-7 (< epsilon_val), so should be equal
-        assert_eq!(FloatKey(1.0), FloatKey(1.0 + 1e-9)); // Difference 1e-9 (< epsilon_val), so should be equal
+        // Test case 1: Identical values
+        assert_eq!(FloatKey(1.0), FloatKey(1.0));
+        assert_eq!(FloatKey(0.0), FloatKey(0.0));
+        assert_eq!(FloatKey(-1.0), FloatKey(-1.0));
 
-        // Test values that should NOT be equal (difference >= epsilon_val)
-        assert_ne!(FloatKey(1.0), FloatKey(1.0 + 1e-5)); // Diff 1e-5 (>= epsilon_val)
-        assert_ne!(FloatKey(1.0), FloatKey(2.0));       // Large difference
+        // Test case 2: Different values that should be EQUAL
+        // (quantized values are the same)
+        // 0.0 vs 0.4e-6: quantize(0.0) = 0, quantize(0.4e-6) = round(0.4) = 0
+        assert_eq!(FloatKey(0.0), FloatKey(0.4e-6));
+        // 0.0 vs -0.4e-6: quantize(-0.4e-6) = round(-0.4) = 0
+        assert_eq!(FloatKey(0.0), FloatKey(-0.4e-6));
+        // 1.0 vs 1.0 + 0.3e-6: quantize(1.0) = 1000000, quantize(1.0000003) = round(1000000.3) = 1000000
+        assert_eq!(FloatKey(1.0), FloatKey(1.0 + 0.3e-6));
+        // A value that rounds down vs one that rounds up to the same integer
+        // 0.9999996 (rounds to 1.0 when scaled) vs 1.0000004 (rounds to 1.0 when scaled)
+        // quantize(0.9999996) = round(999999.6) = 1000000
+        // quantize(1.0000004) = round(1000000.4) = 1000000
+        assert_eq!(FloatKey(0.9999996), FloatKey(1.0000004));
 
-        // Test the boundary case for a difference mathematically equal to epsilon_val.
-        // (1.0 - (1.0 + 1e-6)).abs() should be 1e-6.
-        // The PartialEq is (diff.abs() < 1e-6).
-        // So, if diff is exactly 1e-6, then 1e-6 < 1e-6 is false, meaning they are UNEQUAL.
-        // However, if floating point representation causes (1.0 - (1.0 + 1e-6)).abs() to be slightly *less*
-        // than 1e-6 (e.g., 1e-6 - tiny_error), then they would be considered EQUAL.
-        // The previous test run indicated they were considered EQUAL.
-        // So, we assert that they are EQUAL here to reflect this observed behavior due to f64 precision.
-        let val1 = 1.0_f64;
-        let val2_plus_epsilon = 1.0_f64 + epsilon_val;
-        assert_eq!(
-            FloatKey(val1), 
-            FloatKey(val2_plus_epsilon),
-            "Testing if diff of {} is considered equal due to f64 precision effects on the comparison `abs(diff) < {}`. Computed diff: {:.20e}",
-            epsilon_val,
-            epsilon_val,
-            (val1 - val2_plus_epsilon).abs()
-        );
+
+        // Test case 3: Values that should be DIFFERENT
+        // (quantized values are different)
+        // 0.0 vs 0.7e-6: quantize(0.0) = 0, quantize(0.7e-6) = round(0.7) = 1
+        assert_ne!(FloatKey(0.0), FloatKey(0.7e-6));
+        // 0.0 vs -0.7e-6: quantize(-0.7e-6) = round(-0.7) = -1
+        assert_ne!(FloatKey(0.0), FloatKey(-0.7e-6));
+        // 1.0 vs 1.0 + 0.8e-6: quantize(1.0) = 1000000, quantize(1.0000008) = round(1000000.8) = 1000001
+        assert_ne!(FloatKey(1.0), FloatKey(1.0 + 0.8e-6));
+
+        // Test case 4: Boundary conditions around 0.5 rounding
+        // (0.5e-6 * 1e6).round() = (0.5).round() = 1 (in Rust, .5 rounds away from 0)
+        // (0.49e-6 * 1e6).round() = (0.49).round() = 0
+        assert_ne!(FloatKey(0.5e-6), FloatKey(0.49e-6)); // quantize(0.5e-6)=1, quantize(0.49e-6)=0
+        assert_eq!(FloatKey(0.5e-6), FloatKey(0.5000000000000001e-6)); // Both round to 1
+        
+        // (-0.5e-6 * 1e6).round() = (-0.5).round() = -1
+        // (-0.49e-6 * 1e6).round() = (-0.49).round() = 0
+        assert_ne!(FloatKey(-0.5e-6), FloatKey(-0.49e-6)); // quantize(-0.5e-6)=-1, quantize(-0.49e-6)=0
+
+        // Test with a larger number
+        // quantize(123.4567891) = round(123456789.1) = 123456789
+        // quantize(123.4567894) = round(123456789.4) = 123456789
+        assert_eq!(FloatKey(123.4567891), FloatKey(123.4567894));
+        // quantize(123.4567896) = round(123456789.6) = 123456790
+        assert_ne!(FloatKey(123.4567891), FloatKey(123.4567896));
     }
 
     #[test]
     fn test_float_key_hashing() {
         let mut set = HashSet::new();
-        set.insert(FloatKey(1.0));
-        set.insert(FloatKey(1.0 + 1e-7)); // Should hash to the same due to quantization (1e6 multiplier)
-        set.insert(FloatKey(1.0000001));  // Should hash to the same
 
-        assert_eq!(set.len(), 1, "Keys with very close f64 values (diff < 1e-6) should produce the same hash");
+        // Case 1: Values that are equal by new definition (quantize to same i64)
+        // FloatKey(0.0) vs FloatKey(0.4e-6)
+        // (0.0 * 1e6).round() = 0
+        // (0.4e-6 * 1e6).round() = (0.4).round() = 0
+        // These are equal and should hash to the same bucket and be one entry.
+        set.insert(FloatKey(0.0));
+        set.insert(FloatKey(0.4e-6)); // Should not add a new element
+        set.insert(FloatKey(-0.3e-6)); // (-0.3).round() = 0. Should not add a new element
+        assert_eq!(set.len(), 1, "Keys that quantize to the same i64 should result in one HashSet entry.");
 
-        set.insert(FloatKey(1.00001)); // Should be a different hash (diff > 1e-6)
-        assert_eq!(set.len(), 2, "Keys with sufficiently different f64 values should produce different hashes");
+        // Case 2: Add a value that is different (quantizes to a different i64)
+        // FloatKey(0.7e-6)
+        // (0.7e-6 * 1e6).round() = (0.7).round() = 1
+        // This is different from FloatKey(0.0) and should be a new entry.
+        set.insert(FloatKey(0.7e-6));
+        assert_eq!(set.len(), 2, "Keys that quantize to different i64s should result in distinct HashSet entries.");
+
+        // Case 3: Add another value equal to the first ones
+        set.insert(FloatKey(0.1e-6)); // (0.1).round() = 0. Should not add a new element.
+        assert_eq!(set.len(), 2, "Inserting a key equal to an existing one should not change set size.");
+
+        // Case 4: Add another different value
+        // FloatKey(-0.8e-6)
+        // (-0.8e-6 * 1e6).round() = (-0.8).round() = -1
+        set.insert(FloatKey(-0.8e-6));
+        assert_eq!(set.len(), 3, "Adding another distinct key should increase set size.");
+
+        // Case 5: Test with values from the original test that are still relevant
+        // FloatKey(1.0)
+        // (1.0 * 1e6).round() = 1000000
+        set.insert(FloatKey(1.0)); // This is a new key, distinct from 0, 1, -1 (quantized)
+        assert_eq!(set.len(), 4);
+
+        // FloatKey(1.0 + 1e-7) = FloatKey(1.0000001)
+        // (1.0000001 * 1e6).round() = (1000000.1).round() = 1000000
+        // This is equal to FloatKey(1.0)
+        set.insert(FloatKey(1.0 + 1e-7));
+        assert_eq!(set.len(), 4, "Key equal to FloatKey(1.0) should not increase set size.");
+
+        // FloatKey(1.00001)
+        // (1.00001 * 1e6).round() = (1000010.0).round() = 1000010
+        // This is different from 1000000.
+        set.insert(FloatKey(1.00001));
+        assert_eq!(set.len(), 5, "Key different from FloatKey(1.0) should increase set size.");
     }
 
     // --- AbsorptionCache Tests ---
