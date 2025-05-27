@@ -86,11 +86,7 @@ impl AcousticScatteringModel {
         &mut self,
         incident_field: &Array3<f64>,
         bubble_radius: &Array3<f64>, // Used as radius1 for interactions
-        // bubble_velocity is needed for compute_bubble_interactions, assuming it's part of bubble_radius for now
-        // or it should be passed as a separate parameter if it's distinct from radius.
-        // The original call used bubble_radius for both radius and velocity parameters to compute_bubble_interactions.
-        // This seems like an error in the original call signature or logic if velocity is needed.
-        // For now, replicating the existing call structure.
+        bubble_velocity: &Array3<f64>, // New parameter
         grid: &Grid,
         medium: &dyn Medium,
         frequency: f64,
@@ -102,10 +98,8 @@ impl AcousticScatteringModel {
 
         compute_rayleigh_scattering(&mut rayleigh_scatter, bubble_radius, incident_field, grid, medium, frequency);
         compute_mie_scattering(&mut mie_scatter, bubble_radius, incident_field, grid, medium, frequency);
-        // Assuming bubble_radius is passed for the 'velocity' parameter as per the original call.
-        // This is likely a placeholder or simplification in the original code.
-        // True bubble interactions might depend on actual bubble wall velocities.
-        compute_bubble_interactions(&mut interaction_scatter, bubble_radius, bubble_radius, incident_field, grid, medium, frequency);
+        // bubble_velocity is passed to compute_bubble_interactions for inter-bubble forces.
+        compute_bubble_interactions(&mut interaction_scatter, bubble_radius, bubble_velocity, incident_field, grid, medium, frequency);
 
         Zip::from(&mut self.scattered_field)
             .and(&rayleigh_scatter)
@@ -211,7 +205,14 @@ mod tests {
         let mock_medium = MockMedium::default();
         let frequency = 1e6; // 1 MHz
 
-        model.compute_scattering(&incident_field, &bubble_radius, &test_grid, &mock_medium, frequency);
+        model.compute_scattering(
+            &incident_field,
+            &bubble_radius,
+            mock_medium.bubble_velocity(), // This is &Array3<f64> via the trait method
+            &test_grid,
+            &mock_medium,
+            frequency
+        );
 
         // Basic assertion: field should be modified and finite.
         // If all scattering components are zero (e.g., due to kr conditions),

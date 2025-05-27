@@ -143,9 +143,8 @@ impl CavitationModel {
             let new_vel = self.velocity[[i, j, k]] + d2r * actual_dt;
             new_velocity[[i, j, k]] = new_vel.clamp(-MAX_VELOCITY_MODEL_DEFAULT, MAX_VELOCITY_MODEL_DEFAULT);
             
-            // Velocity used here should be the new_velocity for a more accurate integration step (e.g. semi-implicit Euler)
-            // Original code uses self.velocity which is old velocity. Let's stick to original for now.
-            let new_rad = self.radius[[i, j, k]] + self.velocity[[i, j, k]] * actual_dt; 
+            // Update radius using the NEW velocity for Semi-Implicit Euler integration: r_new = r_old + v_new * dt
+            let new_rad = self.radius[[i, j, k]] + new_velocity[[i, j, k]] * actual_dt; 
             new_radius[[i, j, k]] = new_rad.clamp(MIN_RADIUS_MODEL_DEFAULT, MAX_RADIUS_MODEL_DEFAULT);
         }
         
@@ -323,10 +322,8 @@ mod tests {
         let expected_new_velocity_no_clamp = initial_velocity + test_acceleration * dt;
         let expected_new_velocity = expected_new_velocity_no_clamp.clamp(-MAX_VELOCITY_MODEL_DEFAULT, MAX_VELOCITY_MODEL_DEFAULT);
         
-        // Original code uses old velocity for radius update: R_new = R_old + V_old * dt
-        // Corrected semi-implicit Euler would be: R_new = R_old + V_new * dt
-        // Sticking to original for now:
-        let expected_new_radius_no_clamp = initial_radius + initial_velocity * dt; 
+        // Expected radius update using Semi-Implicit Euler: R_new = R_old + V_new * dt
+        let expected_new_radius_no_clamp = initial_radius + expected_new_velocity * dt; 
         let expected_new_radius = expected_new_radius_no_clamp.clamp(MIN_RADIUS_MODEL_DEFAULT, MAX_RADIUS_MODEL_DEFAULT);
 
 

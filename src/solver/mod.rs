@@ -497,8 +497,9 @@ impl Solver {
         // 5. Scattering effects
         let scattering_start = Instant::now();
         self.scattering.compute_scattering(
-            &pressure,
-            self.medium.bubble_radius(),
+            &pressure,                       // incident_field
+            self.medium.bubble_radius(),    // bubble_radius
+            self.medium.bubble_velocity(),  // bubble_velocity (new argument)
             &self.grid,
             self.medium.as_ref(),
             frequency,
