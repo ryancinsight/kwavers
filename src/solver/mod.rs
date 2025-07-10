@@ -3,6 +3,7 @@ use crate::boundary::Boundary;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::{
+    traits::{AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, StreamingModelTrait, AcousticScatteringModelTrait, HeterogeneityModelTrait}, // Added trait imports
     mechanics::cavitation::CavitationModel,
     mechanics::streaming::StreamingModel,
     mechanics::acoustic_wave::NonlinearWave,
@@ -10,7 +11,7 @@ use crate::physics::{
     optics::diffusion::LightDiffusion as LightDiffusionModel, 
     scattering::acoustic::AcousticScatteringModel,
     thermodynamics::heat_transfer::ThermalModel,
-    heterogeneity::HeterogeneityModel,
+    heterogeneity::HeterogeneityModel, // Keep for Solver::new
 };
 use crate::recorder::Recorder;
 use crate::source::Source;
@@ -51,14 +52,14 @@ pub struct Solver {
     pub boundary: Box<dyn Boundary>,
     pub source: Box<dyn Source>,
     pub prev_pressure: Array3<f64>,
-    pub wave: NonlinearWave,
-    pub cavitation: CavitationModel,
-    pub light: LightDiffusionModel,
-    pub thermal: ThermalModel,
-    pub chemical: ChemicalModel,
-    pub streaming: StreamingModel,
-    pub scattering: AcousticScatteringModel,
-    pub heterogeneity: HeterogeneityModel,
+    pub wave: Box<dyn AcousticWaveModel>,
+    pub cavitation: Box<dyn CavitationModelBehavior>,
+    pub light: Box<dyn LightDiffusionModelTrait>,
+    pub thermal: Box<dyn ThermalModelTrait>,
+    pub chemical: Box<dyn ChemicalModelTrait>,
+    pub streaming: Box<dyn StreamingModelTrait>,
+    pub scattering: Box<dyn AcousticScatteringModelTrait>,
+    pub heterogeneity: Box<dyn HeterogeneityModelTrait>, // Refactored
     pub step_times: Vec<f64>,
     pub physics_times: [Vec<f64>; 8], // Timing for different physics components
     // Track pending medium updates
@@ -109,14 +110,14 @@ impl Solver {
             boundary,
             source,
             prev_pressure,
-            wave: NonlinearWave::new(&grid_clone),
-            cavitation: CavitationModel::new(&grid_clone, 10e-6),
-            light: LightDiffusionModel::new(&grid_clone, true, true, true),
-            thermal: ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6),
-            chemical: ChemicalModel::new(&grid_clone, true, true),
-            streaming: StreamingModel::new(&grid_clone),
-            scattering: AcousticScatteringModel::new(&grid_clone),
-            heterogeneity: HeterogeneityModel::new(&grid_clone, 1500.0, 0.05),
+            wave: Box::new(NonlinearWave::new(&grid_clone)),
+            cavitation: Box::new(CavitationModel::new(&grid_clone, 10e-6)),
+            light: Box::new(LightDiffusionModel::new(&grid_clone, true, true, true)),
+            thermal: Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6)),
+            chemical: Box::new(ChemicalModel::new(&grid_clone, true, true)),
+            streaming: Box::new(StreamingModel::new(&grid_clone)),
+            scattering: Box::new(AcousticScatteringModel::new(&grid_clone)),
+            heterogeneity: Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05)), // Refactored
             step_times: Vec::with_capacity(time_clone.n_steps),
             physics_times,
             // Initialize pending updates

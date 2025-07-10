@@ -15,3 +15,5 @@ pub use thermodynamics::heat_transfer::ThermalModel;
 pub use chemistry::ChemicalModel;
 pub use scattering::acoustic::AcousticScatteringModel;
 pub use heterogeneity::HeterogeneityModel;
+
+pub mod traits; // Added to expose the new traits module
