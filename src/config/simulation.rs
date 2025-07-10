@@ -15,7 +15,7 @@ pub struct SimulationConfig {
     pub domain_size_yz: f64,
     pub points_per_wavelength: usize,
     pub frequency: f64,
-    pub amplitude: f64,
+    // pub amplitude: f64, // Amplitude is now part of SourceConfig
     pub num_cycles: f64,
     #[serde(default)]
     pub pml_thickness: usize,
@@ -55,10 +55,10 @@ fn default_pml_reflection() -> f64 {
     1e-6
 }
 
-fn default_light_wavelength() -> f64 {
+pub fn default_light_wavelength() -> f64 { // Made public
     500.0
 }
-fn default_kspace_padding() -> usize {
+pub fn default_kspace_padding() -> usize { // Made public
     0
 } // No padding by default
 fn default_kspace_alpha() -> f64 {

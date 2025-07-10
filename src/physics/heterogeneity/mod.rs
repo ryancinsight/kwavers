@@ -10,9 +10,9 @@ pub struct HeterogeneityModel {
 
 impl HeterogeneityModel {
     pub fn new(grid: &Grid, base_speed: f64, variance: f64) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::ThreadRng::default(); // Correct way to get a ThreadRng
         let sound_speed_var = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |_| {
-            base_speed * (1.0 + rng.gen_range(-variance..=variance))
+            base_speed * (1.0 + rng.gen_range(-variance..=variance)) // Inclusive upper bound
         });
         Self { sound_speed_var }
     }

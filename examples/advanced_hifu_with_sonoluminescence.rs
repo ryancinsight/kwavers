@@ -1,6 +1,7 @@
 // examples/advanced_hifu_with_sonoluminescence.rs
 use kwavers::{
-    init_logging, plot_simulation_outputs, Config, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave, // NonlinearWave for concrete type
+    init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave, // NonlinearWave for concrete type
+    // Config removed as it's manually constructed now
     physics::{ // Import physics models and traits
         mechanics::cavitation::CavitationModel,
         mechanics::streaming::StreamingModel,
@@ -13,52 +14,66 @@ use kwavers::{
     },
 };
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
+// use std::fs::File; // Removed
+// use std::io::Write; // Removed
 use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn Error>> {
     init_logging()?;
 
-    // Create a scientifically optimized config file for HIFU simulations
-    // Parameters are based on typical ultrasound physics for HIFU applications
-    let config_content = r#"
-        [simulation]
-        domain_size_x = 0.06
-        domain_size_yz = 0.04
-        points_per_wavelength = 6
-        frequency = 1000000.0  # 1 MHz - typical HIFU frequency
-        # amplitude is now part of [source]
-        num_cycles = 5.0
-        pml_thickness = 10
-        pml_sigma_acoustic = 100.0
-        pml_sigma_light = 10.0
-        pml_polynomial_order = 2
-        pml_reflection = 0.000001
-        kspace_alpha = 0.5     # k-space correction coefficient
-        
-        [source]
-        # HIFU transducer parameters
-        num_elements = 32
-        signal_type = "sine"
-        frequency = 1000000.0  # Source signal frequency
-        amplitude = 1.0e6      # Source signal amplitude
-        focus_x = 0.03
-        focus_y = 0.0
-        focus_z = 0.0
-        # phase is optional
+    // Hardcode configuration values to bypass TOML parsing issues
+    let simulation_config = kwavers::SimulationConfig {
+        domain_size_x: 0.06,
+        domain_size_yz: 0.04,
+        points_per_wavelength: 6,
+        frequency: 1000000.0,
+        // amplitude: 1.0e6, // This was moved to SourceConfig, ensure SimulationConfig doesn't have it
+        num_cycles: 5.0,
+        pml_thickness: 10,
+        pml_sigma_acoustic: 100.0,
+        pml_sigma_light: 10.0,
+        pml_polynomial_order: 2, // TOML had 2, SimulationConfig default is 3. Let's use 2.
+        pml_reflection: 0.000001,
+        light_wavelength: kwavers::config::simulation::default_light_wavelength(), // Use default
+        kspace_padding: kwavers::config::simulation::default_kspace_padding(), // Use default
+        kspace_alpha: 0.5,
+        medium_type: None, // Default to homogeneous_water in initialize_medium
+    };
 
-        [output]
-        pressure_file = "hifu_pressure.csv"
-        light_file = "hifu_light.csv"
-        summary_file = "hifu_summary.csv"
-        snapshot_interval = 10
-        enable_visualization = true
-    "#;
-    let mut file = File::create("hifu_config.toml")?;
-    file.write_all(config_content.as_bytes())?;
+    let source_config = kwavers::SourceConfig {
+        num_elements: 32,
+        signal_type: "sine".to_string(),
+        frequency: Some(1000000.0),
+        amplitude: Some(1.0e6),
+        phase: None, // This is Option<f64> in struct, None is fine
+        focus_x: Some(0.03),
+        focus_y: Some(0.0),
+        focus_z: Some(0.0),
+        // Non-existent fields removed:
+        // element_width: None,
+        // element_height: None,
+        // element_spacing: None,
+        // array_type: None,
+        // apodization: None,
+        // start_freq, end_freq, signal_duration are Option<f64> and can be None if not used by "sine" type
+        start_freq: None,
+        end_freq: None,
+        signal_duration: None,
+    };
 
-    let config = Config::from_file("hifu_config.toml")?;
+    let output_config = kwavers::OutputConfig {
+        pressure_file: "hifu_pressure.csv".to_string(),
+        light_file: "hifu_light.csv".to_string(),
+        summary_file: "hifu_summary.csv".to_string(),
+        snapshot_interval: 10,
+        enable_visualization: true,
+    };
+
+    let config = kwavers::Config {
+        simulation: simulation_config,
+        source: source_config,
+        output: output_config,
+    };
     
     // Initialize grid and time from simulation config
     let grid = config.simulation.initialize_grid()?;

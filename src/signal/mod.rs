@@ -9,9 +9,10 @@ pub mod phase;
 pub mod sine_wave;
 pub mod sweep;
 
-use amplitude::Amplitude;
-use frequency::Frequency;
-use phase::Phase;
+// Unused imports removed:
+// use amplitude::Amplitude;
+// use frequency::Frequency;
+// use phase::Phase;
 
 pub trait Signal: Debug + Send + Sync {
     fn amplitude(&self, t: f64) -> f64;

@@ -7,7 +7,6 @@ use crate::utils::{fft_3d, ifft_3d};
 use log::{debug, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
 use rustfft::num_complex::Complex;
-use rayon::prelude::*;
 use std::time::Instant;
 
 pub const LIGHT_IDX: usize = 1;
