@@ -21,3 +21,14 @@ impl HeterogeneityModel {
         self.sound_speed_var.clone()
     }
 }
+
+// ADDED:
+use crate::physics::traits::HeterogeneityModelTrait;
+
+impl HeterogeneityModelTrait for HeterogeneityModel {
+    fn adjust_sound_speed(&self, grid: &Grid) -> Array3<f64> {
+        // Call the inherent method, which has the same name and signature
+        // (though the inherent method currently ignores the grid argument)
+        self.adjust_sound_speed(grid)
+    }
+}

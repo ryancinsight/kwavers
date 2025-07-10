@@ -5,18 +5,26 @@
 
 use kwavers::{
     boundary::PMLBoundary,
-    config::Config,
     grid::Grid,
     init_logging,
     medium::heterogeneous::tissue::HeterogeneousTissueMedium,
-    physics::mechanics::acoustic_wave::NonlinearWave,
+    physics::{
+        mechanics::acoustic_wave::NonlinearWave, // Keep for concrete type
+        mechanics::cavitation::CavitationModel,
+        mechanics::streaming::StreamingModel,
+        chemistry::ChemicalModel,
+        optics::diffusion::LightDiffusion as LightDiffusionModel,
+        scattering::acoustic::AcousticScatteringModel,
+        thermodynamics::heat_transfer::ThermalModel,
+        heterogeneity::HeterogeneityModel,
+        traits::*, // Import all traits
+    },
     save_pressure_data, save_light_data, generate_summary,
-    source::{LinearArray, Source, HanningApodization},
+    source::{LinearArray, HanningApodization},
     solver::Solver,
     time::Time,
 };
-use ndarray::{Array3, Array4, Axis};
-use log::{info, debug};
+use log::info;
 use std::sync::Arc;
 use std::time::Instant;
 use std::fs::create_dir_all;
@@ -53,12 +61,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Created grid with dimensions: {}x{}x{}", nx, ny, nz);
     
     // Create heterogeneous tissue medium with predefined layers
-    let mut medium = HeterogeneousTissueMedium::new_layered(&grid);
+    let medium = HeterogeneousTissueMedium::new_layered(&grid);
     info!("Created layered tissue medium model");
     
     // Create a linear array transducer instead of FocusedTransducer
     let amplitude = 1.0e5f64; // 0.1 MPa amplitude
-    let mut signal = kwavers::SineWave::new(frequency, amplitude, 0.0);
+    let signal = kwavers::SineWave::new(frequency, amplitude, 0.0);
     
     let num_elements = 16;
     let source = LinearArray::with_focus(
@@ -127,13 +135,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         20 // snapshot interval
     );
     
+    // Instantiate other physics models with defaults
+    let wave_model: Box<dyn AcousticWaveModel> = Box::new(nonlinear_wave); // Use the configured one
+    let cavitation_model: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid, 10e-6));
+    let light_model: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid, true, true, true));
+    let thermal_model: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid, 293.15, 1e-6, 1e-6));
+    let chemical_model: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid, true, true));
+    let streaming_model: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid));
+    let scattering_model: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid));
+    let heterogeneity_model: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid, 1500.0, 0.05));
+
     // Create solver
     let mut solver = Solver::new(
-        grid.clone(),
+        grid.clone(), // grid is effectively cloned via models
         time,
         medium_arc.clone(),
         Box::new(source),
-        Box::new(boundary)
+        Box::new(boundary),
+        wave_model,
+        cavitation_model,
+        light_model,
+        thermal_model,
+        chemical_model,
+        streaming_model,
+        scattering_model,
+        heterogeneity_model,
     );
     
     // Run simulation

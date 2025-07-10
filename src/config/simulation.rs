@@ -1,10 +1,13 @@
 // config/simulation.rs
 
 use crate::grid::Grid;
+use crate::medium::Medium; // Added
 use crate::medium::homogeneous::HomogeneousMedium;
+use crate::medium::heterogeneous::tissue::HeterogeneousTissueMedium; // Added
 use crate::time::Time;
-use log::{debug, info};
+use log::{debug, info, warn}; // Added warn
 use serde::Deserialize;
+use std::sync::Arc; // Added
 
 #[derive(Debug, Deserialize)]
 pub struct SimulationConfig {
@@ -32,6 +35,8 @@ pub struct SimulationConfig {
     pub kspace_padding: usize, // Padding for FFT to avoid aliasing
     #[serde(default = "default_kspace_alpha")]
     pub kspace_alpha: f64, // k-space correction coefficient
+    #[serde(default)]
+    pub medium_type: Option<String>, // Added for medium selection
 }
 
 fn default_pml_sigma_acoustic() -> f64 {
@@ -95,7 +100,22 @@ impl SimulationConfig {
         Ok(time)
     }
 
-    pub fn initialize_medium(&self, grid: &Grid) -> Box<HomogeneousMedium> {
-        Box::new(HomogeneousMedium::water(grid))
+    pub fn initialize_medium(&self, grid: &Grid) -> Result<Arc<dyn Medium>, String> {
+        match self.medium_type.as_deref() {
+            Some("layered_tissue") => {
+                info!("Initializing layered tissue medium.");
+                Ok(Arc::new(HeterogeneousTissueMedium::new_layered(grid)))
+            }
+            Some("homogeneous_water") | None => {
+                if self.medium_type.is_none() {
+                    warn!("medium_type not specified in config, defaulting to homogeneous_water.");
+                }
+                info!("Initializing homogeneous water medium.");
+                Ok(Arc::new(HomogeneousMedium::water(grid)))
+            }
+            Some(unknown_type) => {
+                Err(format!("Unknown medium_type in config: {}", unknown_type))
+            }
+        }
     }
 }

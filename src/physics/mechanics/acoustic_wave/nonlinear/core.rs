@@ -84,8 +84,8 @@ mod tests {
     use crate::signal::Signal;
 
     const TEST_N_FIELDS: usize = 4; 
-    use ndarray::{Array3, Array4, ShapeBuilder, Ix3, Ix4, Array};
-    use num_complex::Complex;
+    use ndarray::{Array3, Array4, ShapeBuilder};
+
 
 
     fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
@@ -152,8 +152,8 @@ mod tests {
         fn bubble_radius(&self) -> &Array3<f64> { &self.dummy_bubble_radius }
         fn bubble_velocity(&self) -> &Array3<f64> { &self.dummy_bubble_velocity }
         fn update_bubble_state(&mut self, _radius: &Array3<f64>, _velocity: &Array3<f64>) { /* dummy */ }
-        fn density_array(&self) -> Array3<f64> { Array3::from_elem((self.dummy_temperature.dim()), self.density_val) }
-        fn sound_speed_array(&self) -> Array3<f64> { Array3::from_elem((self.dummy_temperature.dim()), self.sound_speed_val) }
+        fn density_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.density_val) }
+        fn sound_speed_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.sound_speed_val) }
     }
 
 

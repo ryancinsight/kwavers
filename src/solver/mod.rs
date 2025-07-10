@@ -3,15 +3,7 @@ use crate::boundary::Boundary;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::{
-    traits::{AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, StreamingModelTrait, AcousticScatteringModelTrait, HeterogeneityModelTrait}, // Added trait imports
-    mechanics::cavitation::CavitationModel,
-    mechanics::streaming::StreamingModel,
-    mechanics::acoustic_wave::NonlinearWave,
-    chemistry::ChemicalModel,
-    optics::diffusion::LightDiffusion as LightDiffusionModel, 
-    scattering::acoustic::AcousticScatteringModel,
-    thermodynamics::heat_transfer::ThermalModel,
-    heterogeneity::HeterogeneityModel, // Keep for Solver::new
+    traits::{AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, StreamingModelTrait, AcousticScatteringModelTrait, HeterogeneityModelTrait},
 };
 use crate::recorder::Recorder;
 use crate::source::Source;
@@ -76,6 +68,14 @@ impl Solver {
         medium: Arc<dyn Medium>,
         source: Box<dyn Source>,
         boundary: Box<dyn Boundary>,
+        wave: Box<dyn AcousticWaveModel>,
+        cavitation: Box<dyn CavitationModelBehavior>,
+        light: Box<dyn LightDiffusionModelTrait>,
+        thermal: Box<dyn ThermalModelTrait>,
+        chemical: Box<dyn ChemicalModelTrait>,
+        streaming: Box<dyn StreamingModelTrait>,
+        scattering: Box<dyn AcousticScatteringModelTrait>,
+        heterogeneity: Box<dyn HeterogeneityModelTrait>,
     ) -> Self {
         let nx = grid.nx;
         let ny = grid.ny;
@@ -99,9 +99,6 @@ impl Solver {
             Vec::with_capacity(capacity), // Scattering
         ];
         
-        // Clone the grid to avoid the "borrow of moved value" error
-        let grid_clone = grid.clone();
-        
         Self {
             grid,
             time,
@@ -110,23 +107,24 @@ impl Solver {
             boundary,
             source,
             prev_pressure,
-            wave: Box::new(NonlinearWave::new(&grid_clone)),
-            cavitation: Box::new(CavitationModel::new(&grid_clone, 10e-6)),
-            light: Box::new(LightDiffusionModel::new(&grid_clone, true, true, true)),
-            thermal: Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6)),
-            chemical: Box::new(ChemicalModel::new(&grid_clone, true, true)),
-            streaming: Box::new(StreamingModel::new(&grid_clone)),
-            scattering: Box::new(AcousticScatteringModel::new(&grid_clone)),
-            heterogeneity: Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05)), // Refactored
+            wave,
+            cavitation,
+            light,
+            thermal,
+            chemical,
+            streaming,
+            scattering,
+            heterogeneity,
             step_times: Vec::with_capacity(time_clone.n_steps),
             physics_times,
-            // Initialize pending updates
             pending_temperature_update: None,
             pending_bubble_update: None,
             medium_update_attempts: 0,
             medium_update_successes: 0,
         }
     }
+
+    // Removed duplicated pub fn run and part of new() method body
 
     pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) {
         let dt = self.time.dt;

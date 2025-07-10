@@ -54,3 +54,26 @@ impl StreamingModel {
         &self.velocity
     }
 }
+
+// ADDED:
+use crate::physics::traits::StreamingModelTrait;
+// Note: The inherent update_velocity uses Zip...par_for_each, so rayon::prelude might be needed here
+// if it's not already in scope. However, the trait implementation just calls the inherent method,
+// so the inherent method's own imports should cover it. Let's not add `use rayon::prelude::*;` here
+// unless the compiler complains about it specifically for the trait impl.
+
+impl StreamingModelTrait for StreamingModel {
+    fn update_velocity(
+        &mut self,
+        pressure: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) {
+        self.update_velocity(pressure, grid, medium, dt);
+    }
+
+    fn velocity(&self) -> &Array3<f64> {
+        self.velocity()
+    }
+}

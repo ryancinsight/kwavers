@@ -1,7 +1,16 @@
 // examples/advanced_hifu_with_sonoluminescence.rs
 use kwavers::{
-    init_logging, plot_simulation_outputs, Config, HanningApodization, HomogeneousMedium,
-    LinearArray, PMLBoundary, Recorder, Sensor, SineWave, Solver, NonlinearWave,
+    init_logging, plot_simulation_outputs, Config, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave, // NonlinearWave for concrete type
+    physics::{ // Import physics models and traits
+        mechanics::cavitation::CavitationModel,
+        mechanics::streaming::StreamingModel,
+        chemistry::ChemicalModel,
+        optics::diffusion::LightDiffusion as LightDiffusionModel,
+        scattering::acoustic::AcousticScatteringModel,
+        thermodynamics::heat_transfer::ThermalModel,
+        heterogeneity::HeterogeneityModel,
+        traits::*, // Import all traits
+    },
 };
 use std::error::Error;
 use std::fs::File;
@@ -14,11 +23,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a scientifically optimized config file for HIFU simulations
     // Parameters are based on typical ultrasound physics for HIFU applications
     let config_content = r#"
+        [simulation]
         domain_size_x = 0.06
         domain_size_yz = 0.04
         points_per_wavelength = 6
         frequency = 1000000.0  # 1 MHz - typical HIFU frequency
-        amplitude = 1.0e6      # Higher amplitude for nonlinear effects
+        # amplitude is now part of [source]
         num_cycles = 5.0
         pml_thickness = 10
         pml_sigma_acoustic = 100.0
@@ -27,13 +37,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         pml_reflection = 0.000001
         kspace_alpha = 0.5     # k-space correction coefficient
         
+        [source]
         # HIFU transducer parameters
         num_elements = 32
         signal_type = "sine"
+        frequency = 1000000.0  # Source signal frequency
+        amplitude = 1.0e6      # Source signal amplitude
         focus_x = 0.03
         focus_y = 0.0
         focus_z = 0.0
+        # phase is optional
 
+        [output]
         pressure_file = "hifu_pressure.csv"
         light_file = "hifu_light.csv"
         summary_file = "hifu_summary.csv"
@@ -44,11 +59,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     file.write_all(config_content.as_bytes())?;
 
     let config = Config::from_file("hifu_config.toml")?;
-    let grid = config.grid().clone();
-    let time = config.time().clone();
     
-    // Create a more physically accurate water medium for HIFU
-    // Configure medium properties before wrapping in Arc
+    // Initialize grid and time from simulation config
+    let grid = config.simulation.initialize_grid()?;
+    let time = config.simulation.initialize_time(&grid)?;
+
+    // Create a custom, more physically accurate water medium for HIFU
+    // This medium will be used to initialize the source and boundary
     let mut medium_obj = HomogeneousMedium::new(
         998.0,   // Density (kg/m³) for water
         1482.0,  // Sound speed (m/s) for water at body temperature
@@ -63,32 +80,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     medium_obj.b_a = 5.2;        // Nonlinearity parameter (B/A) for water
     
     // Wrap in Arc after configuration
-    let medium = Arc::new(medium_obj);
+    let custom_medium = Arc::new(medium_obj); // Renamed to avoid conflict if config.medium() was used
     
-    let signal = Box::new(SineWave::new(
-        config.simulation.frequency,
-        config.simulation.amplitude,
-        0.0,
-    ));
+    // Initialize source using the custom medium and source config
+    let source = config.source.initialize_source(custom_medium.as_ref(), &grid)?;
     
-    // Create a focused transducer for HIFU
-    let source = Box::new(LinearArray::with_focus(
-        0.04, // Length (smaller)
-        config.source.num_elements,
-        0.0,
-        0.0, // y0, z0
-        signal,
-        medium.as_ref(),
+    // Initialize PML boundary using the custom medium and simulation config for PML params
+    let boundary = Box::new(PMLBoundary::new(
+        config.simulation.pml_thickness,
+        config.simulation.pml_sigma_acoustic,
+        config.simulation.pml_sigma_light,
+        custom_medium.as_ref(), // Use the custom medium
         &grid,
-        config.simulation.frequency,
-        config.source.focus_x.unwrap_or(0.03),
-        config.source.focus_y.unwrap_or(0.0),
-        config.source.focus_z.unwrap_or(0.0),
-        HanningApodization,
-    )) as Box<dyn kwavers::Source>;
-    
-    // Use the PML from the config with proper thickness for HIFU
-    let boundary = Box::new(config.pml().clone());
+        config.simulation.frequency, // Simulation frequency for PML
+        Some(config.simulation.pml_polynomial_order),
+        Some(config.simulation.pml_reflection),
+    ));
     
     // Place sensors strategically at focus and surrounding areas
     let sensor_positions: Vec<(f64, f64, f64)> = vec![
@@ -108,17 +115,39 @@ fn main() -> Result<(), Box<dyn Error>> {
         config.output.snapshot_interval,
     );
 
-    // Create the solver with our optimized medium
-    let mut solver = Solver::new(grid.clone(), time.clone(), medium, source, boundary);
-    
-    // Access and configure the nonlinear wave solver for better HIFU physics
-    {
-        let wave = &mut solver.wave;
-        // Set stronger nonlinearity scaling for HIFU (high pressure nonlinear effects)
-        wave.set_nonlinearity_scaling(2.0);
-        // Use 3rd order k-space correction for better dispersion handling
-        wave.set_k_space_correction_order(3);
-    }
+    // Instantiate physics models
+    let grid_clone = grid.clone(); // Clone grid for model instantiation
+
+    let mut acoustic_wave_model = NonlinearWave::new(&grid_clone);
+    // Configure the nonlinear wave solver for better HIFU physics
+    acoustic_wave_model.set_nonlinearity_scaling(2.0);
+    acoustic_wave_model.set_k_space_correction_order(3);
+
+    let wave: Box<dyn AcousticWaveModel> = Box::new(acoustic_wave_model);
+    let cavitation: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid_clone, 10e-6));
+    let light: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
+    let thermal: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
+    let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true));
+    let streaming: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid_clone));
+    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid_clone));
+    let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
+
+    // Create the solver with our optimized medium and injected physics models
+    let mut solver = Solver::new(
+        grid.clone(), // or just grid
+        time.clone(),
+        custom_medium, // Use the custom_medium initialized above
+        source,
+        boundary,
+        wave,
+        cavitation,
+        light,
+        thermal,
+        chemical,
+        streaming,
+        scattering,
+        heterogeneity,
+    );
     
     // Run the simulation
     solver.run(&mut recorder, config.simulation.frequency);
