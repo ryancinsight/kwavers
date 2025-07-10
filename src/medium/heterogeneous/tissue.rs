@@ -26,6 +26,12 @@ pub struct HeterogeneousTissueMedium {
     sound_speed_array: OnceLock<Array3<f64>>,
     /// Optional cached pressure amplitude for nonlinear absorption effects
     pub pressure_amplitude: Option<Array3<f64>>,
+    /// Cached shear sound speed array
+    shear_sound_speed_array: OnceLock<Array3<f64>>,
+    /// Cached shear viscosity coefficient array
+    shear_viscosity_coeff_array: OnceLock<Array3<f64>>,
+    /// Cached bulk viscosity coefficient array
+    bulk_viscosity_coeff_array: OnceLock<Array3<f64>>,
 }
 
 impl HeterogeneousTissueMedium {
@@ -48,6 +54,9 @@ impl HeterogeneousTissueMedium {
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
             pressure_amplitude: None,
+            shear_sound_speed_array: OnceLock::new(),
+            shear_viscosity_coeff_array: OnceLock::new(),
+            bulk_viscosity_coeff_array: OnceLock::new(),
         }
     }
 
@@ -220,6 +229,9 @@ impl HeterogeneousTissueMedium {
         debug!("Clearing tissue medium property caches");
         self.density_array = OnceLock::new();
         self.sound_speed_array = OnceLock::new();
+        self.shear_sound_speed_array = OnceLock::new();
+        self.shear_viscosity_coeff_array = OnceLock::new();
+        self.bulk_viscosity_coeff_array = OnceLock::new();
     }
 }
 
@@ -426,6 +438,48 @@ impl Medium for HeterogeneousTissueMedium {
             });
             
             speed
+        }).clone()
+    }
+
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        self.shear_sound_speed_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.shear_sound_speed;
+            });
+            arr
+        }).clone()
+    }
+
+    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.shear_viscosity_coeff_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.shear_viscosity_coeff;
+            });
+            arr
+        }).clone()
+    }
+
+    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.bulk_viscosity_coeff_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.bulk_viscosity_coeff;
+            });
+            arr
         }).clone()
     }
 } 

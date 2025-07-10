@@ -39,4 +39,24 @@ pub trait Medium: Debug + Sync + Send {
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>);
     fn density_array(&self) -> Array3<f64>;
     fn sound_speed_array(&self) -> Array3<f64>;
+
+    // New methods for viscoelastic properties
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        // Default implementation for media not supporting shear (e.g., ideal fluids)
+        // Assumes temperature() or density_array() is available to get dimensions
+        let shape = self.density_array().dim();
+        Array3::zeros(shape)
+    }
+
+    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+        // Default implementation
+        let shape = self.density_array().dim();
+        Array3::zeros(shape)
+    }
+
+    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+        // Default implementation
+        let shape = self.density_array().dim();
+        Array3::zeros(shape)
+    }
 }

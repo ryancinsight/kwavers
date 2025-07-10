@@ -198,6 +198,18 @@ pub struct HomogeneousMedium {
     /// Lazily initialized 3D array for sound speed, filled with `self.sound_speed`.
     /// Used by `Medium::sound_speed_array()`.
     sound_speed_array: OnceLock<Array3<f64>>,
+    /// Uniform shear sound speed value (m/s).
+    pub shear_sound_speed_val: f64,
+    /// Uniform shear viscosity coefficient value (Pa·s).
+    pub shear_viscosity_coeff_val: f64,
+    /// Uniform bulk viscosity coefficient value (Pa·s).
+    pub bulk_viscosity_coeff_val: f64,
+    /// Lazily initialized 3D array for shear sound speed.
+    shear_sound_speed_array: OnceLock<Array3<f64>>,
+    /// Lazily initialized 3D array for shear viscosity coefficient.
+    shear_viscosity_coeff_array: OnceLock<Array3<f64>>,
+    /// Lazily initialized 3D array for bulk viscosity coefficient.
+    bulk_viscosity_coeff_array: OnceLock<Array3<f64>>,
 }
 
 impl HomogeneousMedium {
@@ -283,6 +295,12 @@ impl HomogeneousMedium {
             absorption_cache: AbsorptionCache::new(),
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
+            shear_sound_speed_val: 0.0, // Default to no shear for typical fluids
+            shear_viscosity_coeff_val: 0.0,
+            bulk_viscosity_coeff_val: 0.0,
+            shear_sound_speed_array: OnceLock::new(),
+            shear_viscosity_coeff_array: OnceLock::new(),
+            bulk_viscosity_coeff_array: OnceLock::new(),
         }
     }
 
@@ -306,10 +324,13 @@ impl HomogeneousMedium {
     /// (like temperature or bubble state) are updated, ensuring that subsequent
     /// requests for these values will trigger fresh calculations or re-initializations.
     fn clear_caches(&mut self) {
-        debug!("Clearing medium property caches (absorption, density array, sound speed array)");
+        debug!("Clearing medium property caches (absorption, density, sound_speed, shear_sound_speed, shear_viscosity, bulk_viscosity arrays)");
         self.absorption_cache.clear();
         self.density_array = OnceLock::new(); 
         self.sound_speed_array = OnceLock::new();
+        self.shear_sound_speed_array = OnceLock::new();
+        self.shear_viscosity_coeff_array = OnceLock::new();
+        self.bulk_viscosity_coeff_array = OnceLock::new();
     }
 }
 
@@ -441,6 +462,30 @@ impl Medium for HomogeneousMedium {
     
     /// Returns `true` indicating that this medium's base properties are defined as homogeneous.
     fn is_homogeneous(&self) -> bool { true }
+
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        self.shear_sound_speed_array.get_or_init(|| {
+            debug!("Initializing shear_sound_speed_array cache for HomogeneousMedium.");
+            let shape = self.temperature.dim();
+            Array3::from_elem(shape, self.shear_sound_speed_val)
+        }).clone()
+    }
+
+    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.shear_viscosity_coeff_array.get_or_init(|| {
+            debug!("Initializing shear_viscosity_coeff_array cache for HomogeneousMedium.");
+            let shape = self.temperature.dim();
+            Array3::from_elem(shape, self.shear_viscosity_coeff_val)
+        }).clone()
+    }
+
+    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.bulk_viscosity_coeff_array.get_or_init(|| {
+            debug!("Initializing bulk_viscosity_coeff_array cache for HomogeneousMedium.");
+            let shape = self.temperature.dim();
+            Array3::from_elem(shape, self.bulk_viscosity_coeff_val)
+        }).clone()
+    }
 }
 
 
@@ -826,5 +871,77 @@ mod tests {
         let grid = create_test_grid(1,1,1);
         let medium = HomogeneousMedium::water(&grid);
         assert!(medium.is_homogeneous());
+    }
+
+    #[test]
+    fn test_new_shear_fields_initialization() {
+        let grid = create_test_grid(2, 2, 2);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+        assert_eq!(medium.shear_sound_speed_val, 0.0);
+        assert_eq!(medium.shear_viscosity_coeff_val, 0.0);
+        assert_eq!(medium.bulk_viscosity_coeff_val, 0.0);
+        assert!(medium.shear_sound_speed_array.get().is_none());
+        assert!(medium.shear_viscosity_coeff_array.get().is_none());
+        assert!(medium.bulk_viscosity_coeff_array.get().is_none());
+
+        let water_medium = HomogeneousMedium::water(&grid);
+        assert_eq!(water_medium.shear_sound_speed_val, 0.0);
+        assert_eq!(water_medium.shear_viscosity_coeff_val, 0.0);
+        assert_eq!(water_medium.bulk_viscosity_coeff_val, 0.0);
+    }
+
+    #[test]
+    fn test_shear_property_array_methods() {
+        let grid_dims = (2, 3, 4);
+        let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
+        let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+
+        medium.shear_sound_speed_val = 10.0;
+        medium.shear_viscosity_coeff_val = 0.1;
+        medium.bulk_viscosity_coeff_val = 0.2;
+
+        let sss_arr = medium.shear_sound_speed_array();
+        assert_eq!(sss_arr.dim(), grid_dims);
+        assert!(sss_arr.iter().all(|&x| (x - 10.0).abs() < 1e-9));
+        assert!(medium.shear_sound_speed_array.get().is_some()); // Check cached
+
+        let svc_arr = medium.shear_viscosity_coeff_array();
+        assert_eq!(svc_arr.dim(), grid_dims);
+        assert!(svc_arr.iter().all(|&x| (x - 0.1).abs() < 1e-9));
+        assert!(medium.shear_viscosity_coeff_array.get().is_some());
+
+        let bvc_arr = medium.bulk_viscosity_coeff_array();
+        assert_eq!(bvc_arr.dim(), grid_dims);
+        assert!(bvc_arr.iter().all(|&x| (x - 0.2).abs() < 1e-9));
+        assert!(medium.bulk_viscosity_coeff_array.get().is_some());
+    }
+
+    #[test]
+    fn test_clear_caches_includes_shear_properties() {
+        let grid = create_test_grid(2, 2, 2);
+        let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+
+        // Populate caches
+        let _ = medium.density_array();
+        let _ = medium.shear_sound_speed_array();
+        let _ = medium.shear_viscosity_coeff_array();
+        let _ = medium.bulk_viscosity_coeff_array();
+        medium.absorption_coefficient(0.0,0.0,0.0, &grid, 1e6);
+
+
+        assert!(medium.density_array.get().is_some());
+        assert!(medium.shear_sound_speed_array.get().is_some());
+        assert!(medium.shear_viscosity_coeff_array.get().is_some());
+        assert!(medium.bulk_viscosity_coeff_array.get().is_some());
+        assert!(medium.absorption_cache.get(&FloatKey(1e6)).is_some());
+
+        medium.clear_caches();
+
+        assert!(medium.density_array.get().is_none());
+        assert!(medium.sound_speed_array.get().is_none()); // Also check this standard one
+        assert!(medium.shear_sound_speed_array.get().is_none());
+        assert!(medium.shear_viscosity_coeff_array.get().is_none());
+        assert!(medium.bulk_viscosity_coeff_array.get().is_none());
+        assert!(medium.absorption_cache.get(&FloatKey(1e6)).is_none());
     }
 }
