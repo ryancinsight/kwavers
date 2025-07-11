@@ -127,6 +127,11 @@ mod tests {
         fn update_bubble_state(&mut self, _radius: &Array3<f64>, _velocity: &Array3<f64>) {}
         fn density_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.density_val) }
         fn sound_speed_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.sound_speed_val) }
+        // Default implementations for new elastic methods
+        fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
+        fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
+        fn lame_lambda_array(&self) -> Array3<f64> { Array3::zeros(self.dummy_temperature.dim()) }
+        fn lame_mu_array(&self) -> Array3<f64> { Array3::zeros(self.dummy_temperature.dim()) }
     }
 
     #[test]

@@ -14,13 +14,32 @@ use ndarray::{Array3, Array4, Axis};
 // Removed num_complex::Complex
 use std::time::{Duration, Instant};
 use std::sync::Arc;
+use log::warn; // Added warn import
 // Removed std::sync::atomic::{AtomicBool, Ordering}
 // Removed rayon::prelude::*;
 
-pub const PRESSURE_IDX: usize = 0;
-pub const LIGHT_IDX: usize = 1;
-pub const TEMPERATURE_IDX: usize = 2;
-pub const BUBBLE_RADIUS_IDX: usize = 3;
+// Field indices for Array4 in SimulationFields
+// Acoustic + Optical + Thermal fields
+pub const PRESSURE_IDX: usize = 0;      // Acoustic pressure
+pub const LIGHT_IDX: usize = 1;         // Light intensity (e.g., for sonoluminescence)
+pub const TEMPERATURE_IDX: usize = 2;   // Temperature
+pub const BUBBLE_RADIUS_IDX: usize = 3; // Bubble radius (for cavitation)
+// Elastic wave fields (particle velocities)
+pub const VX_IDX: usize = 4;            // Particle velocity in x
+pub const VY_IDX: usize = 5;            // Particle velocity in y
+pub const VZ_IDX: usize = 6;            // Particle velocity in z
+// Elastic wave fields (stress components)
+pub const SXX_IDX: usize = 7;           // Normal stress in x
+pub const SYY_IDX: usize = 8;           // Normal stress in y
+pub const SZZ_IDX: usize = 9;           // Normal stress in z
+pub const SXY_IDX: usize = 10;          // Shear stress in xy plane
+pub const SXZ_IDX: usize = 11;          // Shear stress in xz plane
+pub const SYZ_IDX: usize = 12;          // Shear stress in yz plane
+
+// Total number of fields by default (acoustic + optical + thermal + elastic)
+// This might need to be dynamic if not all models are active.
+pub const TOTAL_FIELDS: usize = 13;
+
 
 #[derive(Debug)]
 pub struct SimulationFields {
@@ -28,7 +47,20 @@ pub struct SimulationFields {
 }
 
 impl SimulationFields {
+    /// Creates new simulation fields.
+    /// The `num_fields` argument is now used to determine the first dimension of the array.
+    /// For a simulation including elastic waves, this should be at least `TOTAL_FIELDS`.
     pub fn new(num_fields: usize, nx: usize, ny: usize, nz: usize) -> Self {
+        info!("Initializing SimulationFields with {} fields, dimensions: ({}, {}, {})", num_fields, nx, ny, nz);
+        if num_fields == 0 && (nx > 0 || ny > 0 || nz > 0) {
+            warn!("SimulationFields created with num_fields = 0 but spatial dimensions > 0. This might lead to errors if fields are accessed.");
+        }
+         if num_fields < TOTAL_FIELDS && num_fields > BUBBLE_RADIUS_IDX + 1 { // Check if it's trying to be elastic but too small
+            warn!(
+                "SimulationFields initialized with {} fields, which is less than the {} required for full elastic + acoustic/thermal simulation. Ensure this is intended.",
+                num_fields, TOTAL_FIELDS
+            );
+        }
         Self {
             fields: Array4::zeros((num_fields, nx, ny, nz)),
         }
@@ -76,11 +108,13 @@ impl Solver {
         streaming: Box<dyn StreamingModelTrait>,
         scattering: Box<dyn AcousticScatteringModelTrait>,
         heterogeneity: Box<dyn HeterogeneityModelTrait>,
+        num_simulation_fields: usize, // Added to allow dynamic field allocation
     ) -> Self {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
-        let fields = SimulationFields::new(4, nx, ny, nz);
+        // Use the provided num_simulation_fields for field initialization
+        let fields = SimulationFields::new(num_simulation_fields, nx, ny, nz);
         let prev_pressure = Array3::zeros((nx, ny, nz));
         
         // Create a clone of time for use in capacity calculation
@@ -406,6 +440,21 @@ impl Solver {
         // Update original pressure with boundary-applied version
         pressure.assign(&pressure_owned);
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&pressure);
+
+        // TODO: Placeholder PML application for elastic waves.
+        // This naively applies the acoustic PML to each velocity component.
+        // A proper elastic PML (e.g., CPML) is required for accurate absorption
+        // of both P-waves and S-waves without reflections. This is a major future task.
+        let elastic_velocity_indices = [VX_IDX, VY_IDX, VZ_IDX];
+        for &field_idx in elastic_velocity_indices.iter() {
+            if field_idx < self.fields.fields.shape()[0] { // Check if the field exists
+                let mut component = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
+                // Apply acoustic boundary conditions (as a placeholder)
+                self.boundary.apply_acoustic(&mut component, &self.grid, step);
+                self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&component);
+                trace!("Applied placeholder acoustic PML to field index {}", field_idx);
+            }
+        }
         
         preprocessing_time += preprocess_start.elapsed().as_secs_f64();
 

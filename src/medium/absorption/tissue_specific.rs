@@ -49,6 +49,10 @@ pub struct TissueProperties {
     pub shear_viscosity_coeff: f64,
     /// Bulk viscosity coefficient (Pa·s) - related to compressional wave damping not covered by other mechanisms
     pub bulk_viscosity_coeff: f64,
+    /// Lamé's first parameter (Pa)
+    pub lame_lambda: f64,
+    /// Lamé's second parameter (shear modulus, mu) (Pa)
+    pub lame_mu: f64,
 }
 
 /// Get tissue database singleton
@@ -77,6 +81,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 10.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 800e3, // Keep lambda as originally estimated for now
+            lame_mu: 1060.0 * 10.0_f64.powi(2), // rho * cs^2 = 1060 * 100 = 1.06e5
         });
         
         db.insert(TissueType::Bone, TissueProperties {
@@ -92,6 +98,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 1000.0,
             shear_viscosity_coeff: 1.0,
             bulk_viscosity_coeff: 1.0,
+            lame_lambda: 9e9,
+            lame_mu: 1908.0 * 1000.0_f64.powi(2), // 1908 * 1e6 = 1.908e9
         });
         
         db.insert(TissueType::BoneCortical, TissueProperties {
@@ -107,6 +115,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 1500.0,
             shear_viscosity_coeff: 1.5,
             bulk_viscosity_coeff: 1.5,
+            lame_lambda: 10.38e9,
+            lame_mu: 1975.0 * 1500.0_f64.powi(2), // 1975 * 2.25e6 = 4.44375e9
         });
         
         db.insert(TissueType::BoneMarrow, TissueProperties {
@@ -119,9 +129,11 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 2700.0,
             thermal_conductivity: 0.22,
             impedance: 1.65e6,
-            shear_sound_speed: 5.0, // Lower than typical fat, more fluid-like
+            shear_sound_speed: 5.0,
             shear_viscosity_coeff: 0.05,
             bulk_viscosity_coeff: 0.05,
+            lame_lambda: 2.0e9,
+            lame_mu: 970.0 * 5.0_f64.powi(2), // 970 * 25 = 24250.0
         });
         
         db.insert(TissueType::Brain, TissueProperties {
@@ -137,6 +149,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 8.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 2.3e9,
+            lame_mu: 1040.0 * 8.0_f64.powi(2), // 1040 * 64 = 66560.0
         });
         
         db.insert(TissueType::Fat, TissueProperties {
@@ -152,6 +166,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 7.0,
             shear_viscosity_coeff: 0.08,
             bulk_viscosity_coeff: 0.08,
+            lame_lambda: 2.0e9,
+            lame_mu: 950.0 * 7.0_f64.powi(2), // 950 * 49 = 46550.0
         });
         
         db.insert(TissueType::Kidney, TissueProperties {
@@ -167,6 +183,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 10.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 2.4e9,
+            lame_mu: 1050.0 * 10.0_f64.powi(2), // 1050 * 100 = 1.05e5
         });
         
         db.insert(TissueType::Liver, TissueProperties {
@@ -182,6 +200,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 9.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 2.5e9,
+            lame_mu: 1060.0 * 9.0_f64.powi(2), // 1060 * 81 = 85860.0
         });
         
         db.insert(TissueType::Lung, TissueProperties {
@@ -194,9 +214,11 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             specific_heat: 3886.0,
             thermal_conductivity: 0.39,
             impedance: 0.26e6,
-            shear_sound_speed: 0.0, // Effectively no shear wave propagation in air
-            shear_viscosity_coeff: 1.81e-5, // Air viscosity (approx)
-            bulk_viscosity_coeff: 0.0, // Negligible for air in this context
+            shear_sound_speed: 0.0,
+            shear_viscosity_coeff: 1.81e-5,
+            bulk_viscosity_coeff: 0.0,
+            lame_lambda: 394.0 * 650.0_f64.powi(2), // K = rho * c_p^2 for fluid-like
+            lame_mu: 0.0,
         });
         
         db.insert(TissueType::Muscle, TissueProperties {
@@ -212,6 +234,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 12.0,
             shear_viscosity_coeff: 0.12,
             bulk_viscosity_coeff: 0.12,
+            lame_lambda: 2.6e9,
+            lame_mu: 1050.0 * 12.0_f64.powi(2), // 1050 * 144 = 151200.0
         });
         
         db.insert(TissueType::Skin, TissueProperties {
@@ -227,6 +251,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 10.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 2.2e9,
+            lame_mu: 1109.0 * 10.0_f64.powi(2), // 1109 * 100 = 1.109e5
         });
         
         db.insert(TissueType::SoftTissue, TissueProperties {
@@ -242,6 +268,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 10.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.1,
+            lame_lambda: 2.25e9,
+            lame_mu: 1040.0 * 10.0_f64.powi(2), // 1040 * 100 = 1.04e5
         });
         
         db.insert(TissueType::Tumor, TissueProperties {
@@ -257,6 +285,8 @@ pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
             shear_sound_speed: 11.0,
             shear_viscosity_coeff: 0.11,
             bulk_viscosity_coeff: 0.11,
+            lame_lambda: 2.8e9,
+            lame_mu: 1070.0 * 11.0_f64.powi(2), // 1070 * 121 = 129470.0
         });
         
         info!("Initialized tissue property database with {} tissues", db.len());
@@ -368,34 +398,43 @@ mod tests {
             shear_sound_speed: 10.0,
             shear_viscosity_coeff: 0.1,
             bulk_viscosity_coeff: 0.2,
+            lame_lambda: 1e9, // Example value
+            lame_mu: 0.5e9,   // Example value
         };
         assert_eq!(props.shear_sound_speed, 10.0);
         assert_eq!(props.shear_viscosity_coeff, 0.1);
         assert_eq!(props.bulk_viscosity_coeff, 0.2);
+        assert_eq!(props.lame_lambda, 1e9);
+        assert_eq!(props.lame_mu, 0.5e9);
     }
 
     #[test]
-    fn test_tissue_database_entries_contain_shear_properties() {
+    fn test_tissue_database_entries_contain_elastic_properties() {
         let db = tissue_database();
         assert!(!db.is_empty(), "Tissue database should not be empty");
 
         for (tissue_type, props) in db.iter() {
-            // Check that the new fields are present and have some value.
-            // We don't assert specific values here as they are placeholders,
-            // but we check they are not uninitialized or default zero for all,
-            // unless that's the intended placeholder (like for Lung shear speed).
+            // Check that elastic fields are present and have some value.
             assert!(props.shear_sound_speed >= 0.0, "Shear sound speed should be non-negative for {:?}", tissue_type);
             assert!(props.shear_viscosity_coeff >= 0.0, "Shear viscosity coeff should be non-negative for {:?}", tissue_type);
             assert!(props.bulk_viscosity_coeff >= 0.0, "Bulk viscosity coeff should be non-negative for {:?}", tissue_type);
+            assert!(props.lame_lambda >= 0.0, "Lame lambda should be non-negative for {:?}", tissue_type);
+            assert!(props.lame_mu >= 0.0, "Lame mu should be non-negative for {:?}", tissue_type);
 
             // Example check for a specific tissue type if needed for more detailed validation
             if *tissue_type == TissueType::BoneCortical {
                 assert_eq!(props.shear_sound_speed, 1500.0, "Cortical bone shear speed mismatch");
                 assert_eq!(props.shear_viscosity_coeff, 1.5, "Cortical bone shear viscosity mismatch");
                 assert_eq!(props.bulk_viscosity_coeff, 1.5, "Cortical bone bulk viscosity mismatch");
+                assert!((props.lame_lambda - 10.38e9).abs() < 1e5, "Cortical bone lambda mismatch"); // Using approximate check
+                // Updated expected lame_mu to be consistent with density and shear_sound_speed
+                let expected_lame_mu_cortical = props.density * props.shear_sound_speed.powi(2);
+                assert!((props.lame_mu - expected_lame_mu_cortical).abs() < 1e5,
+                    "Cortical bone mu mismatch. Expected based on cs: {}, got: {}", expected_lame_mu_cortical, props.lame_mu);
             }
             if *tissue_type == TissueType::Lung {
                  assert_eq!(props.shear_sound_speed, 0.0, "Lung shear speed should be ~0");
+                 assert_eq!(props.lame_mu, 0.0, "Lung mu should be 0");
             }
         }
     }

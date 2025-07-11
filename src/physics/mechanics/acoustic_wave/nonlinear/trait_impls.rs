@@ -7,7 +7,7 @@ use crate::source::Source;
 use crate::solver::PRESSURE_IDX;
 use crate::utils::{fft_3d, ifft_3d};
 use log::{debug, trace};
-use ndarray::{Array3, Array4, Axis, parallel::prelude::*, Zip, ShapeBuilder};
+use ndarray::{Array3, Array4, Axis, Zip, ShapeBuilder}; // Removed parallel prelude
 use num_complex::Complex;
 use std::time::Instant;
 

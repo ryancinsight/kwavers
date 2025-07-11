@@ -33,6 +33,9 @@ pub struct HeterogeneousMedium {
     pub shear_sound_speed: Array3<f64>,
     pub shear_viscosity_coeff: Array3<f64>,
     pub bulk_viscosity_coeff: Array3<f64>,
+    // New fields for elastic properties
+    pub lame_lambda: Array3<f64>,
+    pub lame_mu: Array3<f64>,
 }
 
 impl HeterogeneousMedium {
@@ -66,6 +69,14 @@ impl HeterogeneousMedium {
         let shear_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
         let bulk_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
 
+        // Initialize new elastic fields (default to fluid-like: mu=0, lambda=K)
+        // K = rho * c^2. Using default density and sound_speed from above.
+        let default_density: f64 = 1050.0;
+        let default_sound_speed: f64 = 1540.0;
+        let default_bulk_modulus = default_density * default_sound_speed.powi(2); // lambda for a fluid
+        let lame_lambda = Array3::from_elem((grid.nx, grid.ny, grid.nz), default_bulk_modulus);
+        let lame_mu = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.0); // mu is 0 for ideal fluid
+
         debug!(
             "Initialized HeterogeneousMedium: grid {}x{}x{}, freq = {:.2e}",
             grid.nx, grid.ny, grid.nz, reference_frequency
@@ -95,11 +106,38 @@ impl HeterogeneousMedium {
             shear_sound_speed,
             shear_viscosity_coeff,
             bulk_viscosity_coeff,
+            lame_lambda,
+            lame_mu,
         }
     }
 }
 
 impl Medium for HeterogeneousMedium {
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let ix = grid.x_idx(x); // These are used for bounds checking implicitly by indexing
+        let iy = grid.y_idx(y);
+        let iz = grid.z_idx(z);
+        // The direct indexing self.lame_lambda[[ix, iy, iz]] handles bounds with ndarray's default panic.
+        // A more robust way would be to use .get() or ensure indices are always valid.
+        // For now, assume valid indices after grid.x_idx or rely on ndarray's panic for out-of-bounds.
+        self.lame_lambda[[ix, iy, iz]]
+    }
+
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let ix = grid.x_idx(x);
+        let iy = grid.y_idx(y);
+        let iz = grid.z_idx(z);
+        self.lame_mu[[ix, iy, iz]]
+    }
+
+    fn lame_lambda_array(&self) -> Array3<f64> {
+        self.lame_lambda.clone()
+    }
+
+    fn lame_mu_array(&self) -> Array3<f64> {
+        self.lame_mu.clone()
+    }
+
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let ix = grid.x_idx(x);
         let iy = grid.y_idx(y);

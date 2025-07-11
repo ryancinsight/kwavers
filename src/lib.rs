@@ -29,7 +29,8 @@ pub use output::{generate_summary, save_light_data, save_pressure_data};
 pub use physics::{
     mechanics::cavitation::CavitationModel,
     mechanics::streaming::StreamingModel,
-    mechanics::acoustic_wave::NonlinearWave,
+    mechanics::acoustic_wave::NonlinearWave, // Existing acoustic wave model
+    mechanics::elastic_wave::ElasticWave,   // New elastic wave model
     mechanics::viscosity::ViscosityModel,
     chemistry::ChemicalModel,
     optics::diffusion::LightDiffusion,

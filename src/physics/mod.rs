@@ -7,6 +7,7 @@ pub mod scattering; // Consolidated scattering
 pub mod heterogeneity;
 
 pub use mechanics::acoustic_wave::NonlinearWave;
+pub use mechanics::elastic_wave::ElasticWave; // Added for convenience
 pub use mechanics::cavitation::CavitationModel;
 pub use mechanics::streaming::StreamingModel;
 pub use mechanics::viscosity::ViscosityModel;

@@ -162,6 +162,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         streaming,
         scattering,
         heterogeneity,
+        4, // num_simulation_fields for acoustic + light + temp + bubble_radius
     );
     
     // Run the simulation

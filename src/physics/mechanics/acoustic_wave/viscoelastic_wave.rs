@@ -5,12 +5,11 @@ use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
 use crate::solver::PRESSURE_IDX; // Assuming pressure is still the primary field
-use crate::utils::{fft_3d, ifft_3d, laplacian}; // laplacian might not be needed if using k-space differentiation
+use crate::utils::{fft_3d, ifft_3d};
 use log::{debug, trace, warn};
-use ndarray::{Array3, Array4, Axis, Zip, parallel::prelude::*};
+use ndarray::{Array3, Array4, Axis, Zip}; // Removed parallel prelude
 use num_complex::Complex;
-use std::f64::consts::PI;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 // Helper struct for performance tracking, similar to NonlinearWave
@@ -31,15 +30,15 @@ pub struct ViscoelasticWave {
     // For simplicity, let's assume they are passed or computed if needed.
     // NonlinearWave uses self.k_squared: Option<Array3<f64>>
     k_squared: Option<Array3<f64>>,
-    kx: Option<Array3<f64>>, // For gradient calculation if needed
-    ky: Option<Array3<f64>>,
-    kz: Option<Array3<f64>>,
+    // kx: Option<Array3<f64>>, // For gradient calculation if needed - Unused
+    // ky: Option<Array3<f64>>, - Unused
+    // kz: Option<Array3<f64>>, - Unused
 
     // Configuration parameters
     nonlinearity_scaling: f64,
     k_space_correction_order: usize, // May not be used if we follow NonlinearWave's sinc correction
     max_pressure: f64,             // For clamping
-    clamp_gradients: bool,
+    // clamp_gradients: bool, - Unused
 
     // Performance tracking
     metrics: Arc<Mutex<PerformanceMetrics>>,
@@ -75,13 +74,13 @@ impl ViscoelasticWave {
 
         Self {
             k_squared: Some(k_squared_arr),
-            kx: Some(kx_arr_nd),
-            ky: Some(ky_arr_nd),
-            kz: Some(kz_arr_nd),
+            // kx: Some(kx_arr_nd), // Field commented out
+            // ky: Some(ky_arr_nd), // Field commented out
+            // kz: Some(kz_arr_nd), // Field commented out
             nonlinearity_scaling: 1.0, // Default, can be adjusted
             k_space_correction_order: 1, // Default
             max_pressure: 1e9,         // Default max pressure for clamping
-            clamp_gradients: false,     // Default
+            // clamp_gradients: false,     // Field commented out
             metrics: Arc::new(Mutex::new(PerformanceMetrics::default())),
         }
     }
@@ -121,11 +120,11 @@ impl ViscoelasticWave {
     }
 
     // Placeholder for phase factor calculation from NonlinearWave
-     fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
-        // This is a simplified phase factor; k-Wave uses a k-space correction (sinc term)
-        // which is often applied differently. For a simple linear acoustic solver:
-        -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
-    }
+    //  fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
+    //     // This is a simplified phase factor; k-Wave uses a k-space correction (sinc term)
+    //     // which is often applied differently. For a simple linear acoustic solver:
+    //     -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
+    // }
 
 }
 
@@ -194,33 +193,13 @@ impl AcousticWaveModel for ViscoelasticWave {
                     // Or (B/A / (2 * rho_0 * c_0^4)) * d/dt (p^2)
                     // For now, let's use a simplified form as in NonlinearWave, which needs gradients.
                     // This requires kx, ky, kz or finite differences.
-                    // For simplicity, let's use the d/dt(p^2) form.
-                    // dp_dt can be approximated as (p_current - p_previous) / dt
-                    let p_prev = prev_pressure[[i,j,k]];
-                    let dp_dt_approx = (p_curr - p_prev) / dt.max(1e-9);
-                    let beta_val = b_a_arr / (rho * c * c); // B/A is often given directly
+                    // For simplicity, let's use the d/dt(p^2) form if nonlinearity were active.
+                    // let p_prev = prev_pressure[[i,j,k]];
+                    // let dp_dt_approx = (p_curr - p_prev) / dt.max(1e-9);
+                    // let beta_val = b_a_arr / (rho * c * c);
 
-                    // Nonlinear term: (beta / (2 * rho * c^3)) * d(p^2)/dt OR (B/A / (2*rho*c^4)) * d(p^2)/dt
-                    // k-Wave uses: (1 / (rho * c^2)) * (B/A / 2) * d(p^2)/dt
-                    // d(p^2)/dt = 2 * p * dp/dt
-                    let nl_calc = (self.nonlinearity_scaling * beta_val / (2.0 * rho * c.powi(3))) * 2.0 * p_curr * dp_dt_approx;
-                    // This is one form; NonlinearWave uses gradient based form. Let's stick to that structure.
-                    // The gradient calculation from NonlinearWave:
-                    let dx_inv = 1.0 / (2.0 * grid.dx);
-                    let dy_inv = 1.0 / (2.0 * grid.dy);
-                    let dz_inv = 1.0 / (2.0 * grid.dz);
-
-                    let grad_x = (pressure_at_start[[i + 1, j, k]] - pressure_at_start[[i - 1, j, k]]) * dx_inv;
-                    let grad_y = (pressure_at_start[[i, j + 1, k]] - pressure_at_start[[i, j - 1, k]]) * dy_inv;
-                    let grad_z = (pressure_at_start[[i, j, k + 1]] - pressure_at_start[[i, j, k - 1]]) * dz_inv;
-
-                    let grad_p_sq = grad_x.powi(2) + grad_y.powi(2) + grad_z.powi(2);
-                     // Term from Westervelt equation: (beta / (rho * c^2)) * p * laplacian(p) - (beta / (2 * rho * c^4)) * d(p^2)/dt
-                     // Simplified form often used in k-space: (beta / (2 * rho_0 * c_0^3)) * d/dt (p^2)
-                     // Another form: (B/A / (rho_0 * c_0^2)) * nabla(p^2/2)
-                     // The NonlinearWave implementation uses: -beta * scaling * (dt / (2*rho*c*c)) * p * |grad p| (this seems unusual)
-                     // Let's use d/dt ( (beta / (2 c^3 rho)) p^2 ) which is (beta / (rho c^3)) p dp/dt
-                    *nl_val = self.nonlinearity_scaling * (beta_val / (rho * c.powi(3))) * p_curr * dp_dt_approx;
+                    // For Viscoelastic, we are currently assuming a linear model in this part of the code.
+                    *nl_val = 0.0;
 
                 } else {
                     *nl_val = 0.0;
@@ -268,8 +247,8 @@ impl AcousticWaveModel for ViscoelasticWave {
                 // This is what NonlinearWave's `calculate_phase_factor` seems to be building towards with `exp(phase_complex * decay)`
                 // Let's follow NonlinearWave's structure for the linear propagator part.
 
-                let phase_angle = -c * k_val * dt; // Argument for exp(-i*omega*t) where omega = c*k
-                let phase_complex = Complex::new(phase_angle.cos(), phase_angle.sin());
+                // let phase_angle = -c * k_val * dt; // Original phase angle calculation
+                // let phase_complex = Complex::new(phase_angle.cos(), phase_angle.sin()); // This was unused
 
                 // Damping term
                 // alpha_p = (effective_viscosity * k_sq) / (2.0 * rho)
@@ -292,7 +271,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                 // This means it uses a single c for the whole grid for this correction.
                 let c_for_sinc = medium.sound_speed(0.0,0.0,0.0,grid); // Homogeneous c for sinc
                 let sinc_arg = c_for_sinc * k_val * dt / 2.0;
-                let sinc_corr = if sinc_arg.abs() > 1e-6 { (sinc_arg.sin() / sinc_arg) } else { 1.0 };
+                let sinc_corr = if sinc_arg.abs() > 1e-6 { sinc_arg.sin() / sinc_arg } else { 1.0 };
                 // This correction is typically applied to k, so k_eff = k * sinc_corr or phase_angle uses k_eff.
                 // Or it modifies the dt in cos(c*k*dt_eff).
                 // NonlinearWave applies it as a multiplier: p_old_fft_val * phase_complex * kspace_corr_factor[[i,j,k]] * decay

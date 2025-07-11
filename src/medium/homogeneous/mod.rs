@@ -198,21 +198,56 @@ pub struct HomogeneousMedium {
     /// Lazily initialized 3D array for sound speed, filled with `self.sound_speed`.
     /// Used by `Medium::sound_speed_array()`.
     sound_speed_array: OnceLock<Array3<f64>>,
-    /// Uniform shear sound speed value (m/s).
-    pub shear_sound_speed_val: f64,
+    // Removed shear_sound_speed_val, HomogeneousMedium will use trait default derived from Lame params
     /// Uniform shear viscosity coefficient value (Pa·s).
     pub shear_viscosity_coeff_val: f64,
     /// Uniform bulk viscosity coefficient value (Pa·s).
     pub bulk_viscosity_coeff_val: f64,
-    /// Lazily initialized 3D array for shear sound speed.
-    shear_sound_speed_array: OnceLock<Array3<f64>>,
+    // Removed shear_sound_speed_array cache, will use trait default
     /// Lazily initialized 3D array for shear viscosity coefficient.
     shear_viscosity_coeff_array: OnceLock<Array3<f64>>,
     /// Lazily initialized 3D array for bulk viscosity coefficient.
     bulk_viscosity_coeff_array: OnceLock<Array3<f64>>,
+    /// Uniform Lamé's first parameter (lambda).
+    pub lame_lambda_val: f64,
+    /// Uniform Lamé's second parameter (mu, shear modulus).
+    pub lame_mu_val: f64,
+    /// Lazily initialized 3D array for Lamé's first parameter (lambda).
+    lame_lambda_array: OnceLock<Array3<f64>>,
+    /// Lazily initialized 3D array for Lamé's second parameter (mu).
+    lame_mu_array: OnceLock<Array3<f64>>,
 }
 
 impl HomogeneousMedium {
+    /// Creates a new `HomogeneousMedium` with specified primary properties and defaults for others.
+    ///
+    /// Initializes a medium with uniform `density` (kg/m³), `sound_speed` (m/s),
+    /// optical `mu_a` (absorption coefficient, 1/m), and `mu_s_prime` (reduced optical scattering coefficient, 1/m).
+    /// Other physical properties (viscosity, surface tension, etc.) are set to default values,
+    /// often representative of water at approximately 20°C.
+    /// Elastic properties (`lame_lambda_val`, `lame_mu_val`) are defaulted to 0.0 Pa, representing an ideal fluid
+    /// from an elastic perspective unless explicitly set using builder methods like `with_lame_lambda` and `with_lame_mu`.
+    ///
+    /// The `temperature`, `bubble_radius`, and `bubble_velocity` fields are initialized as 3D arrays
+    /// matching the `grid` dimensions, with default values:
+    /// - Temperature: 293.15 K (20°C).
+    /// - Bubble Radius: 10 µm.
+    /// - Bubble Velocity: 0 m/s.
+    ///
+    /// Default acoustic absorption parameters (`alpha0`, `delta`, `reference_frequency`) are also set,
+    /// typically corresponding to water.
+    ///
+    /// # Arguments
+    ///
+    /// * `density` - Density of the medium in kg/m³. Must be positive.
+    /// * `sound_speed` - Speed of sound in the medium in m/s. Must be positive.
+    /// * `grid` - A reference to the `Grid` defining the spatial dimensions for array fields.
+    /// * `mu_a` - Optical absorption coefficient in 1/m. Must be non-negative.
+    /// * `mu_s_prime` - Reduced optical scattering coefficient in 1/m. Must be non-negative.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `density` or `sound_speed` are not positive, or if `mu_a` or `mu_s_prime` are negative.
     /// Creates a new `HomogeneousMedium` with specified primary properties and defaults for others.
     ///
     /// Initializes a medium with uniform `density` (kg/m³), `sound_speed` (m/s),
@@ -295,13 +330,44 @@ impl HomogeneousMedium {
             absorption_cache: AbsorptionCache::new(),
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
-            shear_sound_speed_val: 0.0, // Default to no shear for typical fluids
+            // shear_sound_speed_val: 0.0, // Removed
             shear_viscosity_coeff_val: 0.0,
             bulk_viscosity_coeff_val: 0.0,
-            shear_sound_speed_array: OnceLock::new(),
+            // shear_sound_speed_array: OnceLock::new(), // Removed
             shear_viscosity_coeff_array: OnceLock::new(),
             bulk_viscosity_coeff_array: OnceLock::new(),
+            lame_lambda_val: 0.0, // Default for fluid
+            lame_mu_val: 0.0,     // Default for fluid
+            lame_lambda_array: OnceLock::new(),
+            lame_mu_array: OnceLock::new(),
         }
+    }
+
+    /// Sets Lamé's first parameter (lambda) for the medium (Pa).
+    ///
+    /// This allows for configuring one of the fundamental elastic moduli.
+    /// Setting this will invalidate the cached `lame_lambda_array`.
+    ///
+    /// # Arguments
+    /// * `lambda` - The value for Lamé's first parameter (Pa).
+    pub fn with_lame_lambda(mut self, lambda: f64) -> Self {
+        self.lame_lambda_val = lambda;
+        self.lame_lambda_array = OnceLock::new(); // Invalidate cache
+        self
+    }
+
+    /// Sets Lamé's second parameter (mu, shear modulus) for the medium (Pa).
+    ///
+    /// This allows for configuring the shear modulus, crucial for shear wave propagation.
+    /// Setting this will invalidate cached `lame_mu_array` and `shear_sound_speed_array`.
+    ///
+    /// # Arguments
+    /// * `mu` - The value for Lamé's second parameter (shear modulus, Pa).
+    pub fn with_lame_mu(mut self, mu: f64) -> Self {
+        self.lame_mu_val = mu;
+        self.lame_mu_array = OnceLock::new(); // Invalidate cache
+        // self.shear_sound_speed_array = OnceLock::new(); // Removed, trait default will pick up change in lame_mu_array
+        self
     }
 
     /// Creates a `HomogeneousMedium` instance with properties representative of water.
@@ -328,13 +394,40 @@ impl HomogeneousMedium {
         self.absorption_cache.clear();
         self.density_array = OnceLock::new(); 
         self.sound_speed_array = OnceLock::new();
-        self.shear_sound_speed_array = OnceLock::new();
+        // self.shear_sound_speed_array = OnceLock::new(); // Removed
         self.shear_viscosity_coeff_array = OnceLock::new();
         self.bulk_viscosity_coeff_array = OnceLock::new();
+        self.lame_lambda_array = OnceLock::new();
+        self.lame_mu_array = OnceLock::new();
     }
 }
 
 impl Medium for HomogeneousMedium {
+    // Existing property getters...
+    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.lame_lambda_val
+    }
+
+    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.lame_mu_val
+    }
+
+    fn lame_lambda_array(&self) -> Array3<f64> {
+        self.lame_lambda_array.get_or_init(|| {
+            debug!("Initializing lame_lambda_array cache for HomogeneousMedium.");
+            let shape = self.temperature.dim();
+            Array3::from_elem(shape, self.lame_lambda_val)
+        }).clone()
+    }
+
+    fn lame_mu_array(&self) -> Array3<f64> {
+        self.lame_mu_array.get_or_init(|| {
+            debug!("Initializing lame_mu_array cache for HomogeneousMedium.");
+            let shape = self.temperature.dim();
+            Array3::from_elem(shape, self.lame_mu_val)
+        }).clone()
+    }
+
     /// Returns the uniform density (kg/m³) of the medium.
     /// The spatial coordinates `_x`, `_y`, `_z` and `_grid` are ignored as the property is homogeneous.
     fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.density }
@@ -463,13 +556,8 @@ impl Medium for HomogeneousMedium {
     /// Returns `true` indicating that this medium's base properties are defined as homogeneous.
     fn is_homogeneous(&self) -> bool { true }
 
-    fn shear_sound_speed_array(&self) -> Array3<f64> {
-        self.shear_sound_speed_array.get_or_init(|| {
-            debug!("Initializing shear_sound_speed_array cache for HomogeneousMedium.");
-            let shape = self.temperature.dim();
-            Array3::from_elem(shape, self.shear_sound_speed_val)
-        }).clone()
-    }
+    // Removed override of shear_sound_speed_array to use trait default
+    // fn shear_sound_speed_array(&self) -> Array3<f64> { ... }
 
     fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
         self.shear_viscosity_coeff_array.get_or_init(|| {
@@ -877,15 +965,15 @@ mod tests {
     fn test_new_shear_fields_initialization() {
         let grid = create_test_grid(2, 2, 2);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
-        assert_eq!(medium.shear_sound_speed_val, 0.0);
+        // assert_eq!(medium.shear_sound_speed_val, 0.0); // Field removed
         assert_eq!(medium.shear_viscosity_coeff_val, 0.0);
         assert_eq!(medium.bulk_viscosity_coeff_val, 0.0);
-        assert!(medium.shear_sound_speed_array.get().is_none());
+        // assert!(medium.shear_sound_speed_array.get().is_none()); // Field removed
         assert!(medium.shear_viscosity_coeff_array.get().is_none());
         assert!(medium.bulk_viscosity_coeff_array.get().is_none());
 
         let water_medium = HomogeneousMedium::water(&grid);
-        assert_eq!(water_medium.shear_sound_speed_val, 0.0);
+        // assert_eq!(water_medium.shear_sound_speed_val, 0.0); // Field removed
         assert_eq!(water_medium.shear_viscosity_coeff_val, 0.0);
         assert_eq!(water_medium.bulk_viscosity_coeff_val, 0.0);
     }
@@ -896,14 +984,15 @@ mod tests {
         let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
         let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
 
-        medium.shear_sound_speed_val = 10.0;
+        // medium.shear_sound_speed_val = 10.0; // Field removed, shear speed derived from Lame params
+        medium.lame_mu_val = 10.0 * 10.0 * 1000.0; // cs = 10, rho = 1000 => mu = cs^2 * rho
         medium.shear_viscosity_coeff_val = 0.1;
         medium.bulk_viscosity_coeff_val = 0.2;
 
-        let sss_arr = medium.shear_sound_speed_array();
+        let sss_arr = medium.shear_sound_speed_array(); // Should use trait default
         assert_eq!(sss_arr.dim(), grid_dims);
         assert!(sss_arr.iter().all(|&x| (x - 10.0).abs() < 1e-9));
-        assert!(medium.shear_sound_speed_array.get().is_some()); // Check cached
+        // assert!(medium.shear_sound_speed_array.get().is_some()); // Cache field removed
 
         let svc_arr = medium.shear_viscosity_coeff_array();
         assert_eq!(svc_arr.dim(), grid_dims);
@@ -923,14 +1012,14 @@ mod tests {
 
         // Populate caches
         let _ = medium.density_array();
-        let _ = medium.shear_sound_speed_array();
+        // let _ = medium.shear_sound_speed_array(); // No longer directly cached on struct
         let _ = medium.shear_viscosity_coeff_array();
         let _ = medium.bulk_viscosity_coeff_array();
         medium.absorption_coefficient(0.0,0.0,0.0, &grid, 1e6);
 
 
         assert!(medium.density_array.get().is_some());
-        assert!(medium.shear_sound_speed_array.get().is_some());
+        // assert!(medium.shear_sound_speed_array.get().is_none()); // No longer a field
         assert!(medium.shear_viscosity_coeff_array.get().is_some());
         assert!(medium.bulk_viscosity_coeff_array.get().is_some());
         assert!(medium.absorption_cache.get(&FloatKey(1e6)).is_some());
@@ -939,9 +1028,121 @@ mod tests {
 
         assert!(medium.density_array.get().is_none());
         assert!(medium.sound_speed_array.get().is_none()); // Also check this standard one
-        assert!(medium.shear_sound_speed_array.get().is_none());
+        // assert!(medium.shear_sound_speed_array.get().is_none()); // No longer a field
         assert!(medium.shear_viscosity_coeff_array.get().is_none());
         assert!(medium.bulk_viscosity_coeff_array.get().is_none());
         assert!(medium.absorption_cache.get(&FloatKey(1e6)).is_none());
+        assert!(medium.lame_lambda_array.get().is_none(), "Lame lambda array cache should be cleared");
+        assert!(medium.lame_mu_array.get().is_none(), "Lame mu array cache should be cleared");
+    }
+
+    #[test]
+    fn test_lame_parameter_getters_and_builders() {
+        let grid = create_test_grid(1,1,1);
+        let lambda_val = 2.25e9; // Water bulk modulus
+        let mu_val = 0.0;       // Water shear modulus
+
+        let medium = HomogeneousMedium::water(&grid)
+            .with_lame_lambda(lambda_val)
+            .with_lame_mu(mu_val);
+
+        assert_eq!(medium.lame_lambda(0.0,0.0,0.0, &grid), lambda_val);
+        assert_eq!(medium.lame_mu(0.0,0.0,0.0, &grid), mu_val);
+        assert_eq!(medium.lame_lambda_val, lambda_val);
+        assert_eq!(medium.lame_mu_val, mu_val);
+    }
+
+    #[test]
+    fn test_lame_array_caching_and_values() {
+        let grid_dims = (2,2,2);
+        let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
+        let lambda_val = 2.25e9;
+        let mu_val = 1e6; // Some non-zero mu
+
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0)
+            .with_lame_lambda(lambda_val)
+            .with_lame_mu(mu_val);
+
+        // Test lambda array
+        let lambda_arr1_ptr: *const f64 = medium.lame_lambda_array().as_ptr();
+        let lambda_arr1_clone = medium.lame_lambda_array().clone();
+        let lambda_arr2_ptr: *const f64 = medium.lame_lambda_array().as_ptr();
+        assert_eq!(lambda_arr1_ptr, lambda_arr2_ptr, "Expected lame_lambda_array to return same pointer (cached)");
+        assert_eq!(lambda_arr1_clone, medium.lame_lambda_array(), "Expected lame_lambda_array data to be consistent");
+        assert_eq!(medium.lame_lambda_array().dim(), grid_dims);
+        assert!(medium.lame_lambda_array().iter().all(|&val| (val - lambda_val).abs() < 1e-9 ));
+
+        // Test mu array
+        let mu_arr1_ptr: *const f64 = medium.lame_mu_array().as_ptr();
+        let mu_arr1_clone = medium.lame_mu_array().clone();
+        let mu_arr2_ptr: *const f64 = medium.lame_mu_array().as_ptr();
+        assert_eq!(mu_arr1_ptr, mu_arr2_ptr, "Expected lame_mu_array to return same pointer (cached)");
+        assert_eq!(mu_arr1_clone, medium.lame_mu_array(), "Expected lame_mu_array data to be consistent");
+        assert_eq!(medium.lame_mu_array().dim(), grid_dims);
+        assert!(medium.lame_mu_array().iter().all(|&val| (val - mu_val).abs() < 1e-9 ));
+    }
+
+    #[test]
+    fn test_derived_wave_speeds_elastic() {
+        let grid = create_test_grid(1,1,1);
+        let density = 2000.0;
+        // For steel: E ~ 200 GPa, nu ~ 0.3
+        // mu = E / (2*(1+nu)) = 200e9 / (2 * 1.3) = 200e9 / 2.6 ~ 76.92e9 Pa
+        // lambda = E*nu / ((1+nu)(1-2*nu)) = 200e9 * 0.3 / (1.3 * 0.4) = 60e9 / 0.52 ~ 115.38e9 Pa
+        let mu_val = 76.92e9;
+        let lambda_val = 115.38e9;
+
+        let mut medium = HomogeneousMedium::new(density, 1500.0, &grid, 0.1, 1.0) // sound_speed is for acoustic model
+            .with_lame_lambda(lambda_val)
+            .with_lame_mu(mu_val);
+        medium.density = density; // Ensure density is set
+
+        let expected_cp = ((lambda_val + 2.0 * mu_val) / density).sqrt(); // Compressional wave speed
+        let expected_cs = (mu_val / density).sqrt(); // Shear wave speed
+
+        assert!((medium.compressional_wave_speed(0.0,0.0,0.0, &grid) - expected_cp).abs() < 1.0); // Allow small tolerance
+        assert!((medium.shear_wave_speed(0.0,0.0,0.0, &grid) - expected_cs).abs() < 1.0);
+
+        // Test array versions implicitly via default trait methods if Medium trait test covers them
+        // Or test shear_sound_speed_array directly as it's overridden in Medium trait for Homogeneous
+        let cs_array = medium.shear_sound_speed_array();
+        assert!(cs_array.iter().all(|&cs_val| (cs_val - expected_cs).abs() < 1.0 ));
+
+        // Check default shear_sound_speed_array (which uses lame_mu_array and density_array)
+        let sss_array_from_trait = Medium::shear_sound_speed_array(&medium); // Explicitly call trait method
+        assert!(sss_array_from_trait.iter().all(|&val| (val - expected_cs).abs() < 1.0 ));
+
+    }
+
+    #[test]
+    fn test_water_elastic_properties_default_to_fluid() {
+        let grid = create_test_grid(1,1,1);
+        let medium = HomogeneousMedium::water(&grid); // Should have mu=0, lambda can be K if set
+
+        assert_eq!(medium.lame_mu_val, 0.0, "Water (default) should have mu=0");
+        // lambda for water is its bulk modulus K ~ 2.25 GPa.
+        // The default HomogeneousMedium::new sets lambda to 0. water() constructor calls new().
+        // If we want water to have its K as lambda, we'd need a .with_lame_lambda(K_water)
+        assert_eq!(medium.lame_lambda_val, 0.0, "Default water lambda from new() is 0, not K_water unless explicitly set");
+
+        assert_eq!(medium.shear_wave_speed(0.0,0.0,0.0, &grid), 0.0);
+
+        // Test with explicit setting for water as an elastic fluid
+        let k_water = 2.25e9;
+        let water_elastic_fluid = HomogeneousMedium::water(&grid)
+            .with_lame_lambda(k_water)
+            .with_lame_mu(0.0);
+
+        assert_eq!(water_elastic_fluid.lame_mu(0.0,0.0,0.0, &grid), 0.0);
+        assert_eq!(water_elastic_fluid.lame_lambda(0.0,0.0,0.0, &grid), k_water);
+        assert_eq!(water_elastic_fluid.shear_wave_speed(0.0,0.0,0.0, &grid), 0.0);
+
+        let expected_cp_water = (k_water / water_elastic_fluid.density).sqrt();
+        assert!((water_elastic_fluid.compressional_wave_speed(0.0,0.0,0.0, &grid) - expected_cp_water).abs() < 1.0);
+        // Also check that sound_speed (original field) is different from this calculated one,
+        // as sound_speed is set independently in new().
+        assert!((water_elastic_fluid.sound_speed - expected_cp_water).abs() > 1.0);
+
+
     }
 }

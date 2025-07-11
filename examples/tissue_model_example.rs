@@ -160,6 +160,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         streaming_model,
         scattering_model,
         heterogeneity_model,
+        4, // num_simulation_fields for acoustic + light + temp + bubble_radius
     );
     
     // Run simulation
