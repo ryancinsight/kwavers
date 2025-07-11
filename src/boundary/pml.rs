@@ -2,8 +2,7 @@ use crate::boundary::Boundary;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use log::{debug, trace};
-use ndarray::{Array3, Zip};
-use rayon::prelude::*;
+use ndarray::{Array3, Zip}; // Removed parallel prelude
 use rustfft::num_complex::Complex;
 
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.

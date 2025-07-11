@@ -2,7 +2,7 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 pub mod radical_initiation;
 pub mod photochemistry;
@@ -96,5 +96,31 @@ impl ChemicalModel {
 
     pub fn reactive_oxygen_species(&self) -> Option<&Array3<f64>> {
         self.photochemical.as_ref().map(|p| p.reactive_oxygen_species())
+    }
+}
+
+// ADDED:
+use crate::physics::traits::ChemicalModelTrait;
+
+impl ChemicalModelTrait for ChemicalModel {
+    fn update_chemical(
+        &mut self,
+        p: &Array3<f64>,
+        light: &Array3<f64>,
+        emission_spectrum: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        temperature: &Array3<f64>,
+        grid: &Grid,
+        dt: f64,
+        medium: &dyn Medium,
+        frequency: f64,
+    ) {
+        // Call the inherent method, which has the same name and signature
+        self.update_chemical(p, light, emission_spectrum, bubble_radius, temperature, grid, dt, medium, frequency);
+    }
+
+    fn radical_concentration(&self) -> &Array3<f64> {
+        // Call the inherent method
+        self.radical_concentration()
     }
 }

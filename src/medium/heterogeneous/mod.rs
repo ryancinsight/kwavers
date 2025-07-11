@@ -29,6 +29,13 @@ pub struct HeterogeneousMedium {
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
     pub reference_frequency: f64, // Added
+    // New fields for viscoelastic properties
+    pub shear_sound_speed: Array3<f64>,
+    pub shear_viscosity_coeff: Array3<f64>,
+    pub bulk_viscosity_coeff: Array3<f64>,
+    // New fields for elastic properties
+    pub lame_lambda: Array3<f64>,
+    pub lame_mu: Array3<f64>,
 }
 
 impl HeterogeneousMedium {
@@ -57,6 +64,19 @@ impl HeterogeneousMedium {
         let alpha0 = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5);
         let delta = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.1);
 
+        // Initialize new viscoelastic fields
+        let shear_sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10.0); // Placeholder m/s
+        let shear_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
+        let bulk_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
+
+        // Initialize new elastic fields (default to fluid-like: mu=0, lambda=K)
+        // K = rho * c^2. Using default density and sound_speed from above.
+        let default_density: f64 = 1050.0;
+        let default_sound_speed: f64 = 1540.0;
+        let default_bulk_modulus = default_density * default_sound_speed.powi(2); // lambda for a fluid
+        let lame_lambda = Array3::from_elem((grid.nx, grid.ny, grid.nz), default_bulk_modulus);
+        let lame_mu = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.0); // mu is 0 for ideal fluid
+
         debug!(
             "Initialized HeterogeneousMedium: grid {}x{}x{}, freq = {:.2e}",
             grid.nx, grid.ny, grid.nz, reference_frequency
@@ -83,11 +103,41 @@ impl HeterogeneousMedium {
             delta,
             b_a,
             reference_frequency,
+            shear_sound_speed,
+            shear_viscosity_coeff,
+            bulk_viscosity_coeff,
+            lame_lambda,
+            lame_mu,
         }
     }
 }
 
 impl Medium for HeterogeneousMedium {
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let ix = grid.x_idx(x); // These are used for bounds checking implicitly by indexing
+        let iy = grid.y_idx(y);
+        let iz = grid.z_idx(z);
+        // The direct indexing self.lame_lambda[[ix, iy, iz]] handles bounds with ndarray's default panic.
+        // A more robust way would be to use .get() or ensure indices are always valid.
+        // For now, assume valid indices after grid.x_idx or rely on ndarray's panic for out-of-bounds.
+        self.lame_lambda[[ix, iy, iz]]
+    }
+
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        let ix = grid.x_idx(x);
+        let iy = grid.y_idx(y);
+        let iz = grid.z_idx(z);
+        self.lame_mu[[ix, iy, iz]]
+    }
+
+    fn lame_lambda_array(&self) -> Array3<f64> {
+        self.lame_lambda.clone()
+    }
+
+    fn lame_mu_array(&self) -> Array3<f64> {
+        self.lame_mu.clone()
+    }
+
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let ix = grid.x_idx(x);
         let iy = grid.y_idx(y);
@@ -208,4 +258,75 @@ impl Medium for HeterogeneousMedium {
     }
     fn density_array(&self) -> Array3<f64> { self.density.clone() }
     fn sound_speed_array(&self) -> Array3<f64> { self.sound_speed.clone() }
+
+    // Implement new trait methods
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        self.shear_sound_speed.clone()
+    }
+
+    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.shear_viscosity_coeff.clone()
+    }
+
+    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.bulk_viscosity_coeff.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::Grid;
+    use ndarray::Array3;
+
+    fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
+        Grid::new(nx, ny, nz, 0.01, 0.01, 0.01)
+    }
+
+    #[test]
+    fn test_new_tissue_initialization_includes_shear_props() {
+        let grid_dims = (2, 3, 4);
+        let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
+        let medium = HeterogeneousMedium::new_tissue(&grid);
+
+        // Check dimensions of new fields
+        assert_eq!(medium.shear_sound_speed.dim(), grid_dims);
+        assert_eq!(medium.shear_viscosity_coeff.dim(), grid_dims);
+        assert_eq!(medium.bulk_viscosity_coeff.dim(), grid_dims);
+
+        // Check placeholder values are set (these are set in new_tissue)
+        assert!(medium.shear_sound_speed.iter().all(|&x| (x - 10.0).abs() < 1e-9));
+        assert!(medium.shear_viscosity_coeff.iter().all(|&x| (x - 0.1).abs() < 1e-9));
+        assert!(medium.bulk_viscosity_coeff.iter().all(|&x| (x - 0.1).abs() < 1e-9));
+    }
+
+    #[test]
+    fn test_shear_property_array_methods_heterogeneous() {
+        let grid_dims = (2, 2, 2);
+        let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
+        let mut medium = HeterogeneousMedium::new_tissue(&grid);
+
+        // Modify the arrays directly for testing the getter methods
+        let new_sss = Array3::from_elem(grid_dims, 25.0);
+        let new_svc = Array3::from_elem(grid_dims, 0.25);
+        let new_bvc = Array3::from_elem(grid_dims, 0.35);
+
+        medium.shear_sound_speed = new_sss.clone();
+        medium.shear_viscosity_coeff = new_svc.clone();
+        medium.bulk_viscosity_coeff = new_bvc.clone();
+
+        let sss_arr = medium.shear_sound_speed_array();
+        assert_eq!(sss_arr, new_sss);
+        // Ensure it's a clone, not the same instance
+        assert_ne!(sss_arr.as_ptr(), medium.shear_sound_speed.as_ptr());
+
+
+        let svc_arr = medium.shear_viscosity_coeff_array();
+        assert_eq!(svc_arr, new_svc);
+        assert_ne!(svc_arr.as_ptr(), medium.shear_viscosity_coeff.as_ptr());
+
+        let bvc_arr = medium.bulk_viscosity_coeff_array();
+        assert_eq!(bvc_arr, new_bvc);
+        assert_ne!(bvc_arr.as_ptr(), medium.bulk_viscosity_coeff.as_ptr());
+    }
 }

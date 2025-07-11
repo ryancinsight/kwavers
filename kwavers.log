@@ -308,3 +308,7 @@
 [INFO] src\solver\mod.rs:182 - Step 1/80 (1.2%): Pressure = -1.403e4 Pa, Light = 0.000e0 W/m², Temp = 293.15 K, Time = 38.375s, Avg = 33.100s, ETA: 0h 43m 2s
 [WARN] src\solver\mod.rs:288 - Cannot update medium state (temperature, bubble dynamics) because it is shared
 [INFO] src\solver\mod.rs:182 - Step 2/80 (2.5%): Pressure = -1.232e4 Pa, Light = 0.000e0 W/m², Temp = 293.15 K, Time = 30.754s, Avg = 32.318s, ETA: 0h 41m 28s
+[INFO] src/config/simulation.rs:71 - Calculated acoustic wavelength: 0.0015 m
+[INFO] src/sensor/mod.rs:34 - Sensor initialized with 4 positions for 110 steps
+[INFO] src/recorder/mod.rs:38 - Initialized Recorder: 4 sensors, duration 4.982052e-6 s, pressure: true, light: true
+[INFO] src/solver/mod.rs:132 - Starting simulation: dt = 4.570690e-8, steps = 110

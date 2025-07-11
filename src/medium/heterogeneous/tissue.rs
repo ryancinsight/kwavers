@@ -1,6 +1,6 @@
 use crate::grid::Grid;
 use crate::medium::{Medium, tissue_specific};
-use ndarray::{Array3, Axis, Zip}; // Removed ArrayBase, Dimension, OwnedRepr
+use ndarray::{Array3, Axis, Zip}; // Restored Axis
 use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
 // Removed std::sync::Arc
@@ -26,6 +26,16 @@ pub struct HeterogeneousTissueMedium {
     sound_speed_array: OnceLock<Array3<f64>>,
     /// Optional cached pressure amplitude for nonlinear absorption effects
     pub pressure_amplitude: Option<Array3<f64>>,
+    /// Cached shear sound speed array
+    shear_sound_speed_array: OnceLock<Array3<f64>>,
+    /// Cached shear viscosity coefficient array
+    shear_viscosity_coeff_array: OnceLock<Array3<f64>>,
+    /// Cached bulk viscosity coefficient array
+    bulk_viscosity_coeff_array: OnceLock<Array3<f64>>,
+    /// Cached Lamé's first parameter (lambda) array
+    lame_lambda_array: OnceLock<Array3<f64>>,
+    /// Cached Lamé's second parameter (mu) array
+    lame_mu_array: OnceLock<Array3<f64>>,
 }
 
 impl HeterogeneousTissueMedium {
@@ -48,6 +58,11 @@ impl HeterogeneousTissueMedium {
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
             pressure_amplitude: None,
+            shear_sound_speed_array: OnceLock::new(),
+            shear_viscosity_coeff_array: OnceLock::new(),
+            bulk_viscosity_coeff_array: OnceLock::new(),
+            lame_lambda_array: OnceLock::new(),
+            lame_mu_array: OnceLock::new(),
         }
     }
 
@@ -220,10 +235,69 @@ impl HeterogeneousTissueMedium {
         debug!("Clearing tissue medium property caches");
         self.density_array = OnceLock::new();
         self.sound_speed_array = OnceLock::new();
+        self.shear_sound_speed_array = OnceLock::new();
+        self.shear_viscosity_coeff_array = OnceLock::new();
+        self.bulk_viscosity_coeff_array = OnceLock::new();
+        self.lame_lambda_array = OnceLock::new();
+        self.lame_mu_array = OnceLock::new();
     }
 }
 
 impl Medium for HeterogeneousTissueMedium {
+    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+            let tissue = self.tissue_map[indices];
+            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+            });
+            // Values are now expected to be directly in props from tissue_specific.rs
+            props.lame_lambda
+        } else {
+            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().lame_lambda
+        }
+    }
+
+    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+            let tissue = self.tissue_map[indices];
+            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+            });
+            // Values are now expected to be directly in props from tissue_specific.rs
+             props.lame_mu
+        } else {
+            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().lame_mu
+        }
+    }
+
+    fn lame_lambda_array(&self) -> Array3<f64> {
+        self.lame_lambda_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.lame_lambda; // EXPECTING THIS FIELD
+            });
+            arr
+        }).clone()
+    }
+
+    fn lame_mu_array(&self) -> Array3<f64> {
+        self.lame_mu_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.lame_mu; // EXPECTING THIS FIELD
+            });
+            arr
+        }).clone()
+    }
+
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.to_grid_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
@@ -428,4 +502,140 @@ impl Medium for HeterogeneousTissueMedium {
             speed
         }).clone()
     }
-} 
+
+    fn shear_sound_speed_array(&self) -> Array3<f64> {
+        self.shear_sound_speed_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.shear_sound_speed;
+            });
+            arr
+        }).clone()
+    }
+
+    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.shear_viscosity_coeff_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.shear_viscosity_coeff;
+            });
+            arr
+        }).clone()
+    }
+
+    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+        self.bulk_viscosity_coeff_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                });
+                *val = props.bulk_viscosity_coeff;
+            });
+            arr
+        }).clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::Grid;
+    use crate::medium::tissue_specific::TissueType;
+    // Removed: use ndarray::Axis; // Was unused in this test module
+
+    fn create_test_grid_ht(nx: usize, ny: usize, nz: usize) -> Grid {
+        Grid::new(nx, ny, nz, 0.001, 0.001, 0.001) // Smaller dx for tissue tests
+    }
+
+    #[test]
+    fn test_heterogeneous_new_defaults() {
+        let grid = create_test_grid_ht(10, 10, 10);
+        let medium = HeterogeneousTissueMedium::new(&grid, 1e6);
+
+        assert_eq!(medium.tissue_map.iter().all(|&t| t == TissueType::SoftTissue), true);
+        assert_eq!(medium.temperature.iter().all(|&t| (t - 310.15).abs() < 1e-9), true);
+        assert_eq!(medium.reference_frequency, 1e6);
+        assert!(medium.density_array.get().is_none()); // Check caches are initially empty
+        assert!(medium.sound_speed_array.get().is_none());
+        assert!(medium.lame_lambda_array.get().is_none());
+        assert!(medium.lame_mu_array.get().is_none());
+    }
+
+    #[test]
+    fn test_elastic_properties_retrieval() {
+        let grid = create_test_grid_ht(10, 1, 1);
+        let mut medium = HeterogeneousTissueMedium::new(&grid, 1e6);
+
+        // Set a region to BoneCortical
+        medium.set_tissue_in_region(TissueType::BoneCortical, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001, &grid);
+
+        let bone_props = tissue_specific::tissue_database().get(&TissueType::BoneCortical).unwrap();
+        let soft_tissue_props = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+
+        // Check point in bone region
+        assert_eq!(medium.lame_lambda(0.003, 0.0, 0.0, &grid), bone_props.lame_lambda);
+        assert_eq!(medium.lame_mu(0.003, 0.0, 0.0, &grid), bone_props.lame_mu);
+        let expected_cs_bone = bone_props.shear_sound_speed; // Use direct value from props
+        assert!((medium.shear_wave_speed(0.003, 0.0, 0.0, &grid) - expected_cs_bone).abs() < 1e-6);
+
+        // Check point in soft tissue region
+        assert_eq!(medium.lame_lambda(0.000, 0.0, 0.0, &grid), soft_tissue_props.lame_lambda);
+        assert_eq!(medium.lame_mu(0.000, 0.0, 0.0, &grid), soft_tissue_props.lame_mu);
+
+        // Check array versions
+        let lambda_arr = medium.lame_lambda_array();
+        let mu_arr = medium.lame_mu_array();
+        let cs_arr_trait = medium.shear_sound_speed_array(); // Uses default from trait
+
+        assert_eq!(lambda_arr[[0,0,0]], soft_tissue_props.lame_lambda);
+        assert_eq!(lambda_arr[[3,0,0]], bone_props.lame_lambda);
+        assert_eq!(mu_arr[[0,0,0]], soft_tissue_props.lame_mu);
+        assert_eq!(mu_arr[[3,0,0]], bone_props.lame_mu);
+
+        let expected_cs_soft_tissue_arr = soft_tissue_props.shear_sound_speed; // Use direct value
+        assert!((cs_arr_trait[[0,0,0]] - expected_cs_soft_tissue_arr).abs() < 1e-6);
+        // expected_cs_bone was already changed above to use props.shear_sound_speed
+        assert!((cs_arr_trait[[3,0,0]] - expected_cs_bone).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_clear_caches_heterogeneous() {
+        let grid = create_test_grid_ht(5,5,5);
+        let mut medium = HeterogeneousTissueMedium::new(&grid, 1e6);
+
+        // Populate caches
+        let _ = medium.density_array();
+        let _ = medium.sound_speed_array();
+        let _ = medium.lame_lambda_array();
+        let _ = medium.lame_mu_array();
+        let _ = medium.shear_sound_speed_array(); // This will use the default trait impl which calls above arrays
+
+        assert!(medium.density_array.get().is_some());
+        assert!(medium.lame_lambda_array.get().is_some());
+        assert!(medium.lame_mu_array.get().is_some());
+        // shear_sound_speed_array itself might not be directly cached in HeterogeneousTissueMedium if using default trait
+        // but its dependencies (lame_mu_array, density_array) are.
+
+        medium.clear_caches(); // This is defined in HeterogeneousTissueMedium
+
+        assert!(medium.density_array.get().is_none());
+        assert!(medium.sound_speed_array.get().is_none());
+        assert!(medium.lame_lambda_array.get().is_none());
+        assert!(medium.lame_mu_array.get().is_none());
+        // After clear_caches, the OnceLock for shear_sound_speed_array itself isn't reset here
+        // because it's not a field of HeterogeneousTissueMedium. However, its underlying
+        // dependencies (lame_mu_array and density_array) *are* reset, so subsequent calls
+        // to shear_sound_speed_array() will recompute using fresh underlying arrays if needed.
+        // This is the expected behavior.
+    }
+}

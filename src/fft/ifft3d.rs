@@ -3,7 +3,6 @@ use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next
 use crate::grid::Grid;
 use ndarray::{Array3, s};
 use num_complex::Complex;
-use rayon::prelude::*;
 use log::{debug, trace};
 use std::sync::Arc;
 

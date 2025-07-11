@@ -16,6 +16,8 @@ pub struct SourceConfig {
     pub focus_x: Option<f64>,
     pub focus_y: Option<f64>,
     pub focus_z: Option<f64>,
+    pub frequency: Option<f64>, // Added for signal specific frequency
+    pub amplitude: Option<f64>, // Added for signal specific amplitude
 }
 
 impl SourceConfig {
@@ -23,25 +25,31 @@ impl SourceConfig {
         &self,
         medium: &dyn Medium,
         grid: &Grid,
+        // Parameters below might be needed if SourceConfig doesn't have its own Freq/Amp
+        // default_frequency: f64,
+        // default_amplitude: f64,
     ) -> Result<Box<dyn Source>, String> {
+        let signal_frequency = self.frequency.ok_or_else(|| "frequency is required in SourceConfig for selected signal_type".to_string())?;
+        let signal_amplitude = self.amplitude.ok_or_else(|| "amplitude is required in SourceConfig for selected signal_type".to_string())?;
+
         let signal: Box<dyn Signal> = match self.signal_type.as_str() {
             "sine" => Box::new(SineWave::new(
-                self.frequency(),
-                self.amplitude(),
+                signal_frequency,
+                signal_amplitude,
                 self.phase.unwrap_or(0.0),
             )),
             "sweep" => Box::new(SweepSignal::new(
                 self.start_freq.ok_or("start_freq required")?,
                 self.end_freq.ok_or("end_freq required")?,
                 self.signal_duration.ok_or("signal_duration required")?,
-                self.amplitude(),
+                signal_amplitude, // Use common amplitude
                 self.phase.unwrap_or(0.0),
             )),
             "chirp" => Box::new(ChirpSignal::new(
                 self.start_freq.ok_or("start_freq required")?,
                 self.end_freq.ok_or("end_freq required")?,
                 self.signal_duration.ok_or("signal_duration required")?,
-                self.amplitude(),
+                signal_amplitude, // Use common amplitude
                 self.phase.unwrap_or(0.0),
             )),
             _ => return Err(format!("Unknown signal_type: {}", self.signal_type)),
@@ -56,7 +64,7 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                self.frequency(),
+                signal_frequency, // Use signal's frequency for focusing
                 self.focus_x.unwrap(),
                 self.focus_y.unwrap(),
                 self.focus_z.unwrap(),
@@ -71,18 +79,11 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                self.frequency(),
+                signal_frequency, // Use signal's frequency
                 HanningApodization, // Added default apodization
             )) as Box<dyn Source>
         };
 
         Ok(source)
-    }
-
-    fn frequency(&self) -> f64 {
-        180000.0
-    } // Default for SDT
-    fn amplitude(&self) -> f64 {
-        1.0
     }
 }

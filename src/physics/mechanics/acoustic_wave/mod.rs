@@ -7,3 +7,6 @@ pub mod nonlinear; // This will now refer to the new subdirectory
 // For now, ensure this line correctly points once the new nonlinear/mod.rs is set up.
 // It might be initially commented out if NonlinearWave is not yet defined in the new mod.rs
 pub use nonlinear::NonlinearWave;
+
+pub mod viscoelastic_wave;
+pub use viscoelastic_wave::ViscoelasticWave;

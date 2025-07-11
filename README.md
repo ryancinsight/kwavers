@@ -5,8 +5,9 @@ KWAVERS is a high-performance computational physics framework focused on simulat
 ## Key Features
 
 - Nonlinear acoustic wave propagation using k-space and time-domain methods
+- Linear elastic wave propagation in isotropic media (new!)
 - Focused ultrasound simulation with various transducer geometries
-- Heterogeneous tissue modeling with realistic acoustic properties
+- Heterogeneous tissue modeling with realistic acoustic properties (now including basic elastic properties)
 - Cavitation dynamics and bubble-field interactions
 - Thermal effects including heat diffusion and tissue absorption
 - Light transport for sonoluminescence phenomena

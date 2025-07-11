@@ -1,8 +1,10 @@
 // solver/numerics/mod.rs
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::{mechanics::cavitation::CavitationModel, chemistry::ChemicalModel, optics::diffusion::LightDiffusion, thermodynamics::heat_transfer::ThermalModel};
-// Removed crate::utils::{fft_3d, ifft_3d};
+// Import concrete types only if needed for construction/specific functions not using traits.
+// For now, assuming LightDiffusion is still concrete here.
+use crate::physics::optics::diffusion::LightDiffusion;
+use crate::physics::traits::{CavitationModelBehavior, ThermalModelTrait, ChemicalModelTrait};
 use log::{debug, warn};
 use ndarray::{Array3, Array4, Axis, Zip};
 
@@ -47,10 +49,10 @@ pub fn hybrid_step(
     p_new: &mut Array3<f64>,
     p: &Array3<f64>,
     _p_old: &Array3<f64>,
-    cavitation: &mut CavitationModel,
+    cavitation: &mut dyn CavitationModelBehavior,
     light: &mut LightDiffusion,
-    thermal: &mut ThermalModel,
-    chemical: &mut ChemicalModel,
+    thermal: &mut dyn ThermalModelTrait,
+    chemical: &mut dyn ChemicalModelTrait, // Changed to trait object
     fields: &mut Array4<f64>,
     grid: &Grid,
     dt_wave: f64,
@@ -109,7 +111,7 @@ pub fn hybrid_step(
 
                 medium.update_bubble_state(&radius_temp, &initial_velocity);
                 fields.index_axis_mut(Axis(0), 1).assign(&light_temp);
-                thermal.temperature.assign(&temp_temp);
+                thermal.set_temperature(&temp_temp); // Use trait method
             }
 
             let mut p_temp = p_new.clone();
@@ -122,6 +124,7 @@ pub fn hybrid_step(
                 frequency,
             );
             let mut light_fields = fields.clone();
+            // Assuming light is still concrete here, if it becomes Box<dyn Trait> this call needs to adapt
             light.update_light(
                 &mut light_fields,
                 &k_radius[stage],
@@ -136,9 +139,9 @@ pub fn hybrid_step(
             chemical.update_chemical(
                 &p_temp,
                 &k_light[stage],
-                &Array3::zeros(k_light[stage].dim()), // Placeholder for emission_spectrum
+                &Array3::zeros(k_light[stage].dim()),
                 cavitation.radius(),
-                &thermal.temperature,
+                thermal.temperature(),
                 grid,
                 dt_adaptive,
                 medium,
@@ -218,9 +221,9 @@ pub fn hybrid_step(
                     MAX_ATTEMPTS, t, error
                 );
             }
-            cavitation.radius.assign(&radius_5th);
+            cavitation.set_radius(&radius_5th);
             fields.index_axis_mut(Axis(0), 1).assign(&light_5th);
-            thermal.temperature.assign(&temp_5th);
+            thermal.set_temperature(&temp_5th); // Use trait method
             light_source.assign(&k_radius[0]);
             medium.update_bubble_state(&radius_5th, &initial_velocity);
             medium.update_temperature(&temp_5th);
@@ -228,9 +231,9 @@ pub fn hybrid_step(
         } else {
             debug!("Adaptive step rejected: error = {:.6e}", error);
             dt_adaptive = new_dt.min(dt_wave);
-            cavitation.radius.assign(&initial_radius);
+            cavitation.set_radius(&initial_radius);
             fields.index_axis_mut(Axis(0), 1).assign(&initial_light);
-            thermal.temperature.assign(&initial_temp);
+            thermal.set_temperature(&initial_temp); // Use trait method
             medium.update_bubble_state(&initial_radius, &initial_velocity);
             medium.update_temperature(&initial_temp);
         }

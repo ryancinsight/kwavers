@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
-use rayon::prelude::*;
 
 // Performance tracking for FFT operations
 static FFT_CACHE_HITS: AtomicUsize = AtomicUsize::new(0);

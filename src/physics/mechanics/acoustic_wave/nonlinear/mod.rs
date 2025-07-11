@@ -28,3 +28,5 @@ pub mod stability;
 
 // Re-export NonlinearWave. The struct definition will live in config.rs
 pub use config::NonlinearWave;
+
+pub mod trait_impls; // Added to include the trait implementations

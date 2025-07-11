@@ -30,6 +30,8 @@ pub mod model;
 
 pub use model::CavitationModel;
 
+pub mod trait_impls; // Added to include the trait implementations
+
 // Note: All constants previously at the top level of this file 
 // (STEFAN_BOLTZMANN, MIN_RADIUS, MAX_RADIUS, MAX_VELOCITY, MAX_ACCELERATION)
 // have been moved into the respective submodules where they are used:
