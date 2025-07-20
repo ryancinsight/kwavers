@@ -23,7 +23,7 @@ fn test_elastic_wave_single_step() {
     let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
     let source = MockSource::new();
 
-    let mut fields = Array4::<f64>::zeros((9, 32, 32, 32));
+    let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));
 
     // Simple initial condition: a small velocity impulse in the center
     fields[[VX_IDX, 16, 16, 16]] = 1.0;
