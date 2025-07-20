@@ -71,41 +71,30 @@ impl Ifft3d {
             "Computing optimized 3D IFFT: size {}x{}x{}",
             grid.nx, grid.ny, grid.nz
         );
-        assert_eq!(
-            field.dim(),
-            (grid.nx, grid.ny, grid.nz),
-            "Field dimensions must match grid"
-        );
 
-        // Create padded field if needed
-        let mut padded_field = if (grid.nx != self.padded_nx) || (grid.ny != self.padded_ny) || (grid.nz != self.padded_nz) {
-            trace!("Padding field for IFFT from {}x{}x{} to {}x{}x{}", 
-                   grid.nx, grid.ny, grid.nz, self.padded_nx, self.padded_ny, self.padded_nz);
-            
-            let mut padded = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
-            padded.slice_mut(s![0..grid.nx, 0..grid.ny, 0..grid.nz]).assign(field);
-            padded
-        } else {
-            field.clone()
-        };
+        // Create padded field
+        let mut padded = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    padded[[i, j, k]] = field[[i, j, k]];
+                }
+            }
+        }
 
         // Perform in-place IFFT
-        self.ifft_in_place(&mut padded_field);
+        self.ifft_in_place(&mut padded);
 
-        // Extract real part and copy back to original field
-        if (grid.nx != self.padded_nx) || (grid.ny != self.padded_ny) || (grid.nz != self.padded_nz) {
-            // Copy complex data back to input field
-            field.assign(&padded_field.slice(s![0..grid.nx, 0..grid.ny, 0..grid.nz]));
-            
-            // Return real part
-            padded_field
-                .slice(s![0..grid.nx, 0..grid.ny, 0..grid.nz])
-                .mapv(|c| c.re)
-        } else {
-            // If no padding was needed, just map the field directly
-            field.assign(&padded_field);
-            field.mapv(|c| c.re)
+        // Copy back to original field and return real part
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    field[[i, j, k]] = padded[[i, j, k]];
+                }
+            }
         }
+
+        field.mapv(|c| c.re)
     }
 
     fn ifft_in_place(&self, field: &mut Array3<Complex<f64>>) {
