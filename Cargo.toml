@@ -2,21 +2,98 @@
 name = "kwavers"
 version = "0.1.0"
 edition = "2021"
-
-[features]
-nightly = []
-default = []
+authors = ["Kwavers Team <team@kwavers.org>"]
+description = "Advanced Ultrasound Simulation Toolbox with Cavitation and Light Physics"
+license = "MIT"
+repository = "https://github.com/kwavers/kwavers"
+keywords = ["ultrasound", "simulation", "physics", "cavitation", "sonoluminescence", "medical-imaging"]
+categories = ["science", "simulation", "medical"]
 
 [dependencies]
-ndarray = { version = "0.16.1", features = ["matrixmultiply-threading", "rayon"] }
-rustfft = "6.2"
+# Core numerical computing
+ndarray = "0.15"
+rayon = "1.7"
+rustfft = "6.1"
+num-complex = "0.4"
+
+# Serialization and configuration
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 toml = "0.8"
+
+# Logging and error handling
 log = "0.4"
-env_logger = "0.11"
-rayon = "1.10"
-rand = { version = "0.9.0", features = ["serde"] }
-plotly = { version = "0.12.0" }
-num-complex = "0.4.6"
-lazy_static = "1.4.0"
+env_logger = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Random number generation
+rand = "0.8"
+
+# Visualization (optional)
+plotly = { version = "0.8", optional = true }
+
+# Lazy static initialization
+lazy_static = "1.4"
+
+# Hash computation for checksums
+md5 = "0.7"
+
+# Regular expressions (for pattern validation)
+regex = "1.8"
+
+# System information
+sysinfo = "0.29"
+
+# Async runtime (for future async features)
+tokio = { version = "1.28", features = ["full"], optional = true }
+
+# Memory management
+crossbeam = "0.8"
+
+# Mathematical constants and functions
+libm = "0.2"
+
+[dev-dependencies]
+criterion = "0.4"
+proptest = "1.2"
+mockall = "0.11"
+
+[features]
+default = ["basic-physics"]
+basic-physics = []
+advanced-physics = ["plotly"]
+full-features = ["advanced-physics", "tokio"]
+gpu-acceleration = []  # Future feature
+python-bindings = []   # Future feature
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[[bench]]
+name = "physics_benchmarks"
+harness = false
+
+[[bench]]
+name = "grid_benchmarks"
+harness = false
+
+[[bench]]
+name = "validation_benchmarks"
+harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[package.metadata.release]
+pre-release-commit-message = "chore: prepare for release {{version}}"
+tag-name = "v{{version}}"
+tag-message = "Release {{version}}"
 
