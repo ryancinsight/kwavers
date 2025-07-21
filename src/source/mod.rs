@@ -21,25 +21,21 @@ pub use apodization::{
 pub use linear_array::LinearArray;
 pub use matrix_array::MatrixArray;
 
-#[cfg(test)]
 #[derive(Debug)]
 pub struct MockSource {}
 
-#[cfg(test)]
 impl MockSource {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-#[cfg(test)]
 impl Default for MockSource {
     fn default() -> Self {
         Self::new()
     }
 }
 
-#[cfg(test)]
 impl Source for MockSource {
     fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.0

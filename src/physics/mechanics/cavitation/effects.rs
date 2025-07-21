@@ -215,7 +215,7 @@ impl CavitationModel {
         dt: f64, 
     ) {
         // Initialize enhanced light emission model if not already done
-        if !hasattr!(self, 'enhanced_light_emission') {
+        if self.enhanced_light_emission.is_none() {
             self.enhanced_light_emission = Some(EnhancedLightEmission::new(
                 grid, 
                 SpectralParameters::default()
