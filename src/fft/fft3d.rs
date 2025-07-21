@@ -3,7 +3,6 @@ use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next
 use crate::grid::Grid;
 use ndarray::{Array3, s};
 use num_complex::Complex;
-// Removed rayon::prelude::*;
 use log::{debug, trace};
 use std::sync::Arc;
 
@@ -72,28 +71,27 @@ impl Fft3d {
             "Computing optimized 3D FFT: size {}x{}x{}",
             grid.nx, grid.ny, grid.nz
         );
-        assert_eq!(
-            field.dim(),
-            (grid.nx, grid.ny, grid.nz),
-            "Field dimensions must match grid"
-        );
 
-        // Create padded field if needed
-        if (grid.nx != self.padded_nx) || (grid.ny != self.padded_ny) || (grid.nz != self.padded_nz) {
-            trace!("Padding field for FFT from {}x{}x{} to {}x{}x{}", 
-                   grid.nx, grid.ny, grid.nz, self.padded_nx, self.padded_ny, self.padded_nz);
-            
-            let mut padded = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
-            padded.slice_mut(s![0..grid.nx, 0..grid.ny, 0..grid.nz]).assign(field);
-            
-            // Perform in-place FFT on padded field
-            self.fft_in_place(&mut padded);
-            
-            // Copy back to original field
-            field.assign(&padded.slice(s![0..grid.nx, 0..grid.ny, 0..grid.nz]));
-        } else {
-            // If no padding needed, perform FFT directly on the input field
-            self.fft_in_place(field);
+        // Create padded field
+        let mut padded = Array3::zeros((self.padded_nx, self.padded_ny, self.padded_nz));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    padded[[i, j, k]] = field[[i, j, k]];
+                }
+            }
+        }
+
+        // Perform in-place FFT on padded field
+        self.fft_in_place(&mut padded);
+
+        // Copy back to original field
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    field[[i, j, k]] = padded[[i, j, k]];
+                }
+            }
         }
     }
 

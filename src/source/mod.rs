@@ -20,3 +20,31 @@ pub use apodization::{
 };
 pub use linear_array::LinearArray;
 pub use matrix_array::MatrixArray;
+
+#[cfg(test)]
+#[derive(Debug)]
+pub struct MockSource {}
+
+#[cfg(test)]
+impl MockSource {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[cfg(test)]
+impl Source for MockSource {
+    fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        0.0
+    }
+
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![]
+    }
+
+    fn signal(&self) -> &dyn Signal {
+        // This is tricky because we need a concrete type that implements Signal.
+        // For now, we can panic, or create a mock signal if needed.
+        panic!("MockSource::signal() should not be called in this test")
+    }
+}
