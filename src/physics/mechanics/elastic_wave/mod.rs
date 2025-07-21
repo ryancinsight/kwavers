@@ -179,27 +179,27 @@ impl ElasticWave {
     /// Update stress fields using FFT with parameter struct
     /// Follows SOLID principles by reducing parameter coupling
     fn _update_stress_fft(&self, params: &StressUpdateParams) -> KwaversResult<StressFields> {
-        // Implementation here - simplified for now
-        let shape = params.vx_fft.dim();
+        // Basic implementation that preserves input values for now
+        // TODO: Implement proper elastic wave stress update equations
         Ok(StressFields {
-            txx: Complex3D::zeros(shape),
-            tyy: Complex3D::zeros(shape),
-            tzz: Complex3D::zeros(shape),
-            txy: Complex3D::zeros(shape),
-            txz: Complex3D::zeros(shape),
-            tyz: Complex3D::zeros(shape),
+            txx: params.vx_fft.clone(),
+            tyy: params.vy_fft.clone(),
+            tzz: params.vz_fft.clone(),
+            txy: Complex3D::zeros(params.vx_fft.dim()),
+            txz: Complex3D::zeros(params.vx_fft.dim()),
+            tyz: Complex3D::zeros(params.vx_fft.dim()),
         })
     }
 
     /// Update velocity fields using FFT with parameter struct
     /// Follows SOLID principles by reducing parameter coupling
     fn _update_velocity_fft(&self, params: &VelocityUpdateParams) -> KwaversResult<VelocityFields> {
-        // Implementation here - simplified for now
-        let shape = params.vx_fft.dim();
+        // Basic implementation that preserves input values for now
+        // TODO: Implement proper elastic wave velocity update equations
         Ok(VelocityFields {
-            vx: Complex3D::zeros(shape),
-            vy: Complex3D::zeros(shape),
-            vz: Complex3D::zeros(shape),
+            vx: params.vx_fft.clone(),
+            vy: params.vy_fft.clone(),
+            vz: params.vz_fft.clone(),
         })
     }
 
@@ -273,17 +273,7 @@ impl AcousticWaveModel for ElasticWave {
                       density: &medium.density_array(),
                       dt,
                   }
-              ).unwrap_or_else(|e| {
-                  log::error!("Failed to update stress fields: {:?}", e);
-                  StressFields {
-                      txx: sxx_fft.clone(),
-                      tyy: syy_fft.clone(), 
-                      tzz: szz_fft.clone(),
-                      txy: Array3::zeros(sxx_fft.dim()),
-                      txz: Array3::zeros(sxx_fft.dim()),
-                      tyz: Array3::zeros(sxx_fft.dim()),
-                  }
-              });
+              ).expect("Failed to update stress fields");
           let mut sxx_fft_new = stress_fields.txx;
           let mut syy_fft_new = stress_fields.tyy;
           let mut szz_fft_new = stress_fields.tzz;
@@ -316,14 +306,7 @@ impl AcousticWaveModel for ElasticWave {
                 density: &medium.density_array(),
                 dt,
             }
-                 ).unwrap_or_else(|e| {
-             log::error!("Failed to update velocity fields: {:?}", e);
-             VelocityFields {
-                 vx: vx_fft.clone(),
-                 vy: vy_fft.clone(),
-                 vz: vz_fft.clone(),
-             }
-         });
+                 ).expect("Failed to update velocity fields");
         let mut vx_fft_new = velocity_fields.vx;
         let mut vy_fft_new = velocity_fields.vy;
         let mut vz_fft_new = velocity_fields.vz;

@@ -235,16 +235,6 @@ impl HeterogeneousTissueMedium {
         self.bulk_viscosity_coeff_array = OnceLock::new();
         self.lame_lambda_array = OnceLock::new();
         self.lame_mu_array = OnceLock::new();
-
-                    // Update optical properties
-                    // These are not directly stored in HeterogeneousTissueMedium,
-                    // but the tissue_specific::tissue_database() provides them.
-                    // For now, we'll just update the temperature.
-                }
-            }
-        }
-        
-        Ok(())
     }
     
     /// Legacy method for backward compatibility
@@ -736,18 +726,7 @@ mod tests {
         let mu_arr = medium.lame_mu_array();
         let cs_arr_trait = medium.shear_sound_speed_array(); // Uses default from trait
 
-        // Debug: Print tissue map and lambda values
-        println!("Tissue at [0,0,0]: {:?}", medium.tissue_map[[0,0,0]]);
-        println!("Tissue at [3,0,0]: {:?}", medium.tissue_map[[3,0,0]]);
-        println!("Lambda at [0,0,0]: {}", lambda_arr[[0,0,0]]);
-        println!("Lambda at [3,0,0]: {}", lambda_arr[[3,0,0]]);
-        println!("Expected bone lambda: {}", bone_props.lame_lambda);
-        println!("Expected soft tissue lambda: {}", soft_tissue_props.lame_lambda);
-        
-        // Debug: Check if tissue database lookup works
-        let tissue_at_3 = medium.tissue_map[[3,0,0]];
-        let props_at_3 = tissue_specific::tissue_database().get(&tissue_at_3);
-        println!("Tissue at [3,0,0]: {:?}, Props: {:?}", tissue_at_3, props_at_3.map(|p| p.lame_lambda));
+
 
         assert_eq!(lambda_arr[[0,0,0]], soft_tissue_props.lame_lambda);
         assert_eq!(lambda_arr[[3,0,0]], bone_props.lame_lambda);
