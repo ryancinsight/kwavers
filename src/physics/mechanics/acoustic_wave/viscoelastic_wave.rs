@@ -132,7 +132,7 @@ impl AcousticWaveModel for ViscoelasticWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        prev_pressure: &Array3<f64>,
+        _prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
@@ -180,14 +180,14 @@ impl AcousticWaveModel for ViscoelasticWave {
         // For a purely linear viscoelastic model, this section would be skipped.
         let start_nonlinear = Instant::now();
         let mut nonlinear_term = Array3::<f64>::zeros((nx, ny, nz));
-        let b_a_arr = medium.nonlinearity_coefficient(0.0,0.0,0.0,grid); // Assuming B/A is homogeneous for simplicity here or get array
+        let _b_a_arr = medium.nonlinearity_coefficient(0.0,0.0,0.0,grid); // Assuming B/A is homogeneous for simplicity here or get array
 
         Zip::indexed(&mut nonlinear_term)
             .and(&pressure_at_start)
-            .par_for_each(|(i, j, k), nl_val, &p_curr| {
+            .par_for_each(|(i, j, k), nl_val, &_p_curr| {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
-                    let rho = rho_arr[[i,j,k]].max(1e-9);
-                    let c = c_arr[[i,j,k]].max(1e-9);
+                    let _rho = rho_arr[[i,j,k]].max(1e-9);
+                    let _c = c_arr[[i,j,k]].max(1e-9);
                     // Using a simplified nonlinearity term from k-Wave (beta * d/dt (p^2/2))
                     // Or Westervelt: (beta / (rho * c^4)) * p * d^2p/dt^2 (approx)
                     // Or (B/A / (2 * rho_0 * c_0^4)) * d/dt (p^2)

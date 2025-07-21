@@ -1,20 +1,13 @@
-// physics/mod.rs
+// src/physics/mod.rs
+pub mod chemistry;
+pub mod composable;
+pub mod heterogeneity;
 pub mod mechanics;
 pub mod optics;
+pub mod scattering;
 pub mod thermodynamics;
-pub mod chemistry;
-pub mod scattering; // Consolidated scattering
-pub mod heterogeneity;
+pub mod traits;
 
-pub use mechanics::acoustic_wave::NonlinearWave;
-pub use mechanics::elastic_wave::ElasticWave; // Added for convenience
-pub use mechanics::cavitation::CavitationModel;
-pub use mechanics::streaming::StreamingModel;
-pub use mechanics::viscosity::ViscosityModel;
-pub use optics::diffusion::LightDiffusion;
-pub use thermodynamics::heat_transfer::ThermalModel;
-pub use chemistry::ChemicalModel;
-pub use scattering::acoustic::AcousticScatteringModel;
-pub use heterogeneity::HeterogeneityModel;
-
-pub mod traits; // Added to expose the new traits module
+// Re-export commonly used types
+pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
+pub use traits::*;

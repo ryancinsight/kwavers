@@ -1,6 +1,8 @@
 // src/lib.rs
 pub mod boundary;
 pub mod config;
+pub mod error;
+pub mod factory;
 pub mod grid;
 pub mod log;
 pub mod medium;
@@ -15,6 +17,14 @@ pub mod source;
 pub mod time;
 pub mod utils;
 pub mod fft;
+
+// Re-export error types for convenience
+pub use error::{KwaversError, KwaversResult, GridError, MediumError, PhysicsError, DataError, ConfigError, NumericalError};
+pub use error::{Validate, Resettable, PerformanceMonitor};
+
+// Re-export factory types for easy simulation setup
+pub use factory::{SimulationFactory, SimulationBuilder, SimulationSetup};
+pub use factory::SimulationConfig as FactorySimulationConfig;
 
 pub use fft::{Fft3d, Ifft3d};
 pub use boundary::{pml::PMLBoundary, Boundary};
@@ -38,6 +48,7 @@ pub use physics::{
     scattering::acoustic::AcousticScatteringModel,
     scattering::acoustic::{bubble_interactions, mie, rayleigh},
     heterogeneity::HeterogeneityModel,
+    PhysicsComponent, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent, PhysicsContext,
 };
 pub use plotting::{plot_2d_slice, plot_positions, plot_simulation_outputs, plot_time_series};
 pub use recorder::Recorder;

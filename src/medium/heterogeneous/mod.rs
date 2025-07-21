@@ -212,9 +212,7 @@ impl Medium for HeterogeneousMedium {
         self.gas_diffusion_coeff[[ix, iy, iz]].max(1e-10)
     }
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        // Calculate thermal diffusivity using thermal conductivity, density, and specific heat
         let rho = self.density(x, y, z, grid);
         let cp = self.specific_heat(x, y, z, grid);
         let k = self.thermal_conductivity(x, y, z, grid);

@@ -1,9 +1,9 @@
 // src/fft/ifft3d.rs
-use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil}; // Removed is_power_of_two
+use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil};
 use crate::grid::Grid;
-use ndarray::{Array3, s};
+use ndarray::Array3;
 use num_complex::Complex;
-use log::{debug, trace};
+use log::debug;
 use std::sync::Arc;
 
 /// Optimized 3D inverse FFT implementation with cache-friendly algorithms

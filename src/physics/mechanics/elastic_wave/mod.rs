@@ -5,11 +5,10 @@ use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
 use crate::solver::{VX_IDX, VY_IDX, VZ_IDX, SXX_IDX, SYY_IDX, SZZ_IDX, SXY_IDX, SXZ_IDX, SYZ_IDX};
 use crate::utils::{fft_3d, ifft_3d};
-use ndarray::{Array3, Array4, Axis, s}; // Removed Zip
+use ndarray::{Array3, Array4, Axis, s};
 use num_complex::Complex;
 use log::{debug, trace, warn};
-use rayon::prelude::*;
-use std::time::Instant; // Added for performance timing
+use std::time::Instant;
 // Removed PI, was unused
 
 /// Solver for linear isotropic elastic wave propagation using a k-space pseudospectral method.

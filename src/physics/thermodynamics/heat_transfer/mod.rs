@@ -54,12 +54,12 @@ impl ThermalModel {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
-            let k_thermal = medium.thermal_conductivity(x, y, z, grid);
+            let _k_thermal = medium.thermal_conductivity(x, y, z, grid);
             let rho = medium.density(x, y, z, grid);
             let cp = medium.specific_heat(x, y, z, grid);
-            let d_alpha = medium.thermal_diffusivity(x, y, z, grid);
+            let _d_alpha = medium.thermal_diffusivity(x, y, z, grid);
             
-            // Precompute division factor
+            // Precompute division factor (thermal diffusivity calculation is handled by the medium)
             *val = dt / (rho * cp);
         });
         
