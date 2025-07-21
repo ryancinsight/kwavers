@@ -17,6 +17,7 @@ use kwavers::{
 use log::info;
 use std::fs::File;
 use std::io::{Write};
+use kwavers::boundary::pml::PMLConfig;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging()?;
@@ -64,16 +65,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let source = config.source.initialize_source(medium.as_ref(), &grid)?;
     
-    let boundary = Box::new(PMLBoundary::new(
-        config.simulation.pml_thickness,
-        config.simulation.pml_sigma_acoustic,
-        config.simulation.pml_sigma_light,
-        medium.as_ref(), // Pass the initialized medium
-        &grid,
-        config.simulation.frequency, // Simulation frequency for PML
-        Some(config.simulation.pml_polynomial_order),
-        Some(config.simulation.pml_reflection),
-    ));
+    let pml_config = PMLConfig {
+        thickness: config.simulation.pml_thickness,
+        sigma_max_acoustic: 2.0,
+        sigma_max_light: 1.0,
+        alpha_max_acoustic: 0.0,
+        alpha_max_light: 0.0,
+        kappa_max_acoustic: 1.0,
+        kappa_max_light: 1.0,
+        target_reflection: Some(1e-6),
+    };
+    let boundary = Box::new(PMLBoundary::new(pml_config).expect("Failed to create PML boundary"));
 
     // Reduced sensor positions (just 4 instead of 25)
     let sensor_positions = vec![

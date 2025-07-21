@@ -17,6 +17,7 @@ impl PhotochemicalEffects {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_photochemical(
         &mut self,
         light: &Array3<f64>,

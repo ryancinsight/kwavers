@@ -45,6 +45,7 @@ const B5: [f64; 6] = [
     2.0 / 55.0,
 ];
 
+#[allow(clippy::too_many_arguments)]
 pub fn hybrid_step(
     p_new: &mut Array3<f64>,
     p: &Array3<f64>,

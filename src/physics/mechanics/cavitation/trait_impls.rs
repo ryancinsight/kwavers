@@ -35,7 +35,7 @@ impl CavitationModelBehavior for CavitationModel {
         }
 
         let actual_dt = if has_extreme_pressure {
-            dt * (LOCAL_MAX_PRESSURE / max_p_abs.max(1.0)).min(0.5).max(0.01)
+            dt                 * (LOCAL_MAX_PRESSURE / max_p_abs.max(1.0)).clamp(0.01, 0.5)
         } else {
             dt
         };
@@ -65,9 +65,7 @@ impl CavitationModelBehavior for CavitationModel {
                 }
             });
 
-        let light_emission = self.calculate_acoustic_effects(p_update, p, grid, medium, has_extreme_pressure);
-
-        light_emission
+        self.calculate_acoustic_effects(p_update, p, grid, medium, has_extreme_pressure)
     }
 
     fn radius(&self) -> &Array3<f64> {

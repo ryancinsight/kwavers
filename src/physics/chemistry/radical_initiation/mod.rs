@@ -17,6 +17,7 @@ impl RadicalInitiation {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_radicals(
         &mut self,
         p: &Array3<f64>,

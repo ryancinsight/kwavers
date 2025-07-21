@@ -20,11 +20,17 @@ pub struct SimplePolarizationModel {
     polarization_factor: f64, // Simplified polarization strength (0 to 1)
 }
 
+impl Default for SimplePolarizationModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SimplePolarizationModel {
     pub fn new() -> Self {
         debug!("Initializing SimplePolarizationModel");
         Self {
-            polarization_factor: 0.5, // Default: moderate polarization effect
+            polarization_factor: 0.5, // Default: moderate polarization
         }
     }
 }

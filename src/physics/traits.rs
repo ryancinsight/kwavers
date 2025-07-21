@@ -22,6 +22,7 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     /// * `medium` - A trait object implementing `Medium`, providing material properties.
     /// * `dt` - The time step size for this update.
     /// * `t` - The current simulation time.
+    #[allow(clippy::too_many_arguments)]
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
@@ -190,6 +191,7 @@ pub trait ChemicalModelTrait: Debug + Send + Sync {
     /// * `dt` - Time step.
     /// * `medium` - Medium properties.
     /// * `frequency` - Acoustic frequency.
+    #[allow(clippy::too_many_arguments)]
     fn update_chemical(
         &mut self,
         p: &Array3<f64>,

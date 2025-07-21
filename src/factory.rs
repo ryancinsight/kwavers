@@ -96,7 +96,7 @@ impl SimulationFactory {
         builder = builder.with_grid(grid);
         
         // Create medium (Creator - Factory creates medium with required information)
-        let medium = Self::create_medium(config.medium, &builder.grid.as_ref().unwrap())?;
+        let medium = Self::create_medium(config.medium, builder.grid.as_ref().unwrap())?;
         builder = builder.with_medium(medium);
         
         // Create physics pipeline (Low Coupling - separate creation concerns)

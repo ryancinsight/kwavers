@@ -9,6 +9,12 @@ pub struct RayleighOpticalScatteringModel {
     scattering_coefficient: f64, // Base scattering coefficient (m⁻¹)
 }
 
+impl Default for RayleighOpticalScatteringModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RayleighOpticalScatteringModel {
     pub fn new() -> Self {
         debug!("Initializing RayleighOpticalScatteringModel");
