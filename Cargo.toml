@@ -3,6 +3,10 @@ name = "kwavers"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+nightly = []
+default = []
+
 [dependencies]
 ndarray = { version = "0.16.1", features = ["matrixmultiply-threading", "rayon"] }
 rustfft = "6.2"

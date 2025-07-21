@@ -48,7 +48,7 @@ impl RandomPhase {
 impl Phase for RandomPhase {
     fn phase(&self, _t: f64) -> f64 {
         let mut rng = rand::rngs::ThreadRng::default();
-        rng.gen_range(-self.amplitude..=self.amplitude)
+        rng.random_range(-self.amplitude..=self.amplitude)
     }
     fn clone_box(&self) -> Box<dyn Phase> {
         Box::new(self.clone())
