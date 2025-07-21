@@ -5,6 +5,73 @@ use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
 // Removed std::sync::Arc
 use tissue_specific::TissueType; // Removed TissueProperties
+use crate::error::{KwaversResult, ConfigError};
+
+/// Configuration for setting tissue in a specific region
+/// Follows SOLID principles by grouping related parameters
+#[derive(Debug, Clone)]
+pub struct TissueRegion {
+    pub tissue_type: TissueType,
+    pub x_min: f64,
+    pub x_max: f64,
+    pub y_min: f64,
+    pub y_max: f64,
+    pub z_min: f64,
+    pub z_max: f64,
+}
+
+impl TissueRegion {
+    /// Create a new tissue region configuration
+    pub fn new(
+        tissue_type: TissueType,
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+        z_min: f64,
+        z_max: f64,
+    ) -> Self {
+        Self {
+            tissue_type,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+            z_min,
+            z_max,
+        }
+    }
+    
+    /// Validate the region bounds
+    /// Follows SOLID Single Responsibility Principle
+    pub fn validate(&self) -> KwaversResult<()> {
+        if self.x_min >= self.x_max {
+            return Err(ConfigError::InvalidValue {
+                parameter: "x_bounds".to_string(),
+                value: format!("{} to {}", self.x_min, self.x_max),
+                reason: "x_min must be < x_max".to_string(),
+            }.into());
+        }
+        
+        if self.y_min >= self.y_max {
+            return Err(ConfigError::InvalidValue {
+                parameter: "y_bounds".to_string(),
+                value: format!("{} to {}", self.y_min, self.y_max),
+                reason: "y_min must be < y_max".to_string(),
+            }.into());
+        }
+        
+        if self.z_min >= self.z_max {
+            return Err(ConfigError::InvalidValue {
+                parameter: "z_bounds".to_string(),
+                value: format!("{} to {}", self.z_min, self.z_max),
+                reason: "z_min must be < z_max".to_string(),
+            }.into());
+        }
+        
+        Ok(())
+    }
+}
 
 /// A heterogeneous medium composed of multiple tissue types
 /// This allows for complex tissue structures with different acoustic properties
@@ -91,8 +158,90 @@ impl HeterogeneousTissueMedium {
         medium
     }
 
-    /// Set tissue type in a specific region defined by a mask
-    pub fn set_tissue_in_region(
+    /// Set tissue type in a specific region using configuration struct
+    /// Follows SOLID principles by reducing parameter coupling
+    pub fn set_tissue_in_region(&mut self, region: &TissueRegion, grid: &Grid) -> KwaversResult<()> {
+        region.validate()?;
+        
+        let (i_min, i_max) = (grid.x_idx(region.x_min), grid.x_idx(region.x_max) + 1);
+        let (j_min, j_max) = (grid.y_idx(region.y_min), grid.y_idx(region.y_max) + 1);
+        let (k_min, k_max) = (grid.z_idx(region.z_min), grid.z_idx(region.z_max) + 1);
+
+        debug!(
+            "Setting tissue type {:?} in region ({:.3}, {:.3}, {:.3}) to ({:.3}, {:.3}, {:.3}), indices ({}, {}, {}) to ({}, {}, {})",
+            region.tissue_type, region.x_min, region.y_min, region.z_min, region.x_max, region.y_max, region.z_max,
+            i_min, j_min, k_min, i_max, j_max, k_max
+        );
+
+        for i in i_min..i_max.min(self.tissue_map.len_of(ndarray::Axis(0))) {
+            for j in j_min..j_max.min(self.tissue_map.len_of(ndarray::Axis(1))) {
+                for k in k_min..k_max.min(self.tissue_map.len_of(ndarray::Axis(2))) {
+                    self.tissue_map[[i, j, k]] = region.tissue_type;
+
+                    // Update acoustic properties
+                    let _props = tissue_specific::tissue_database().get(&region.tissue_type).unwrap_or_else(|| {
+                        tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+                    });
+                                        // Initialize arrays if needed
+                    if self.density_array.get().is_none() {
+                        let _ = self.density_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.sound_speed_array.get().is_none() {
+                        let _ = self.sound_speed_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.pressure_amplitude.is_none() {
+                        self.pressure_amplitude = Some(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    // Initialize other arrays
+                    if self.shear_sound_speed_array.get().is_none() {
+                        let _ = self.shear_sound_speed_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.shear_viscosity_coeff_array.get().is_none() {
+                        let _ = self.shear_viscosity_coeff_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.bulk_viscosity_coeff_array.get().is_none() {
+                        let _ = self.bulk_viscosity_coeff_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.lame_lambda_array.get().is_none() {
+                        let _ = self.lame_lambda_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+                    if self.lame_mu_array.get().is_none() {
+                        let _ = self.lame_mu_array.set(Array3::zeros(self.tissue_map.dim()));
+                    }
+
+                    // Update thermal properties - use a default body temperature since it's not in props
+                    self.temperature[[i, j, k]] = 310.15; // Default body temperature in Kelvin (37°C)
+                }
+            }
+        }
+        
+        // Clear cached arrays so they will be recomputed with new tissue map
+        // This is necessary because OnceCell doesn't allow mutation after initialization
+        // We need to create a new instance with cleared caches
+        self.clear_property_caches();
+        
+        Ok(())
+    }
+    
+    /// Clear all cached property arrays to force recomputation
+    /// This is needed when the tissue map is modified
+    fn clear_property_caches(&mut self) {
+        // Unfortunately, OnceCell doesn't have a clear method
+        // We need to work around this by recreating the OnceCell instances
+        self.density_array = OnceLock::new();
+        self.sound_speed_array = OnceLock::new();
+        self.shear_sound_speed_array = OnceLock::new();
+        self.shear_viscosity_coeff_array = OnceLock::new();
+        self.bulk_viscosity_coeff_array = OnceLock::new();
+        self.lame_lambda_array = OnceLock::new();
+        self.lame_mu_array = OnceLock::new();
+    }
+    
+    /// Legacy method for backward compatibility
+    /// Deprecated: Use set_tissue_in_region with TissueRegion instead
+    #[deprecated(since = "0.1.0", note = "Use set_tissue_in_region with TissueRegion instead")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_tissue_in_region_legacy(
         &mut self,
         tissue_type: TissueType,
         x_min: f64,
@@ -102,30 +251,9 @@ impl HeterogeneousTissueMedium {
         z_min: f64,
         z_max: f64,
         grid: &Grid,
-    ) {
-        let (i_min, i_max) = (grid.x_idx(x_min), grid.x_idx(x_max) + 1);
-        let (j_min, j_max) = (grid.y_idx(y_min), grid.y_idx(y_max) + 1);
-        let (k_min, k_max) = (grid.z_idx(z_min), grid.z_idx(z_max) + 1);
-
-        debug!(
-            "Setting tissue region to {:?}: ({:.1}, {:.1}, {:.1}) -> ({:.1}, {:.1}, {:.1})",
-            tissue_type, x_min, y_min, z_min, x_max, y_max, z_max
-        );
-
-        for i in i_min..i_max {
-            for j in j_min..j_max {
-                for k in k_min..k_max {
-                    if i < self.tissue_map.shape()[0] 
-                       && j < self.tissue_map.shape()[1] 
-                       && k < self.tissue_map.shape()[2] {
-                        self.tissue_map[[i, j, k]] = tissue_type;
-                    }
-                }
-            }
-        }
-        
-        // Clear cached arrays
-        self.clear_caches();
+    ) -> KwaversResult<()> {
+        let region = TissueRegion::new(tissue_type, x_min, x_max, y_min, y_max, z_min, z_max);
+        self.set_tissue_in_region(&region, grid)
     }
 
     /// Set tissue type for a spherical region
@@ -562,8 +690,8 @@ mod tests {
         let grid = create_test_grid_ht(10, 10, 10);
         let medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 
-        assert_eq!(medium.tissue_map.iter().all(|&t| t == TissueType::SoftTissue), true);
-        assert_eq!(medium.temperature.iter().all(|&t| (t - 310.15).abs() < 1e-9), true);
+        assert!(medium.tissue_map.iter().all(|&t| t == TissueType::SoftTissue));
+        assert!(medium.temperature.iter().all(|&t| (t - 310.15).abs() < 1e-9));
         assert_eq!(medium.reference_frequency, 1e6);
         assert!(medium.density_array.get().is_none()); // Check caches are initially empty
         assert!(medium.sound_speed_array.get().is_none());
@@ -577,7 +705,8 @@ mod tests {
         let mut medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 
         // Set a region to BoneCortical
-        medium.set_tissue_in_region(TissueType::BoneCortical, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001, &grid);
+        let bone_region = TissueRegion::new(TissueType::BoneCortical, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001);
+        let _ = medium.set_tissue_in_region(&bone_region, &grid);
 
         let bone_props = tissue_specific::tissue_database().get(&TissueType::BoneCortical).unwrap();
         let soft_tissue_props = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
@@ -596,6 +725,8 @@ mod tests {
         let lambda_arr = medium.lame_lambda_array();
         let mu_arr = medium.lame_mu_array();
         let cs_arr_trait = medium.shear_sound_speed_array(); // Uses default from trait
+
+
 
         assert_eq!(lambda_arr[[0,0,0]], soft_tissue_props.lame_lambda);
         assert_eq!(lambda_arr[[3,0,0]], bone_props.lame_lambda);

@@ -627,7 +627,7 @@ mod tests {
         // (0.5e-6 * 1e6).round() = (0.5).round() = 1 (in Rust, .5 rounds away from 0)
         // (0.49e-6 * 1e6).round() = (0.49).round() = 0
         assert_ne!(FloatKey(0.5e-6), FloatKey(0.49e-6)); // quantize(0.5e-6)=1, quantize(0.49e-6)=0
-        assert_eq!(FloatKey(0.5e-6), FloatKey(0.5000000000000001e-6)); // Both round to 1
+        assert_eq!(FloatKey(0.5e-6), FloatKey(5.000_000_000_000_001e-7)); // Both round to 1
         
         // (-0.5e-6 * 1e6).round() = (-0.5).round() = -1
         // (-0.49e-6 * 1e6).round() = (-0.49).round() = 0

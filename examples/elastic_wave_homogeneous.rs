@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::error::Error;
 use std::io::Write; // For manual CSV writing
 use log::info;
+use kwavers::boundary::pml::PMLConfig;
 
 // --- Simple PointSource (if not existing) ---
 #[derive(Debug)]
@@ -101,7 +102,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // --- 5. Define Boundary Conditions ---
     let pml_thickness = 10;
-    let _boundary: Box<dyn Boundary> = Box::new(PMLBoundary::new(pml_thickness, 0.0, 0.0, medium.as_ref(), &grid, source_freq, None, None));
+    let pml_config = PMLConfig {
+        thickness: pml_thickness,
+        sigma_max_acoustic: 2.0,
+        sigma_max_light: 1.0,
+        alpha_max_acoustic: 0.0,
+        alpha_max_light: 0.0,
+        kappa_max_acoustic: 1.0,
+        kappa_max_light: 1.0,
+        target_reflection: Some(1e-6),
+    };
+    let _boundary: Box<dyn Boundary> = Box::new(PMLBoundary::new(pml_config.clone()).expect("Failed to create PML boundary"));
     info!("Boundary: PML, thickness={} points", pml_thickness);
 
     // --- 6. Initialize Recorder (for snapshots primarily) & Manual Data Collection ---
@@ -145,7 +156,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             current_time,
         );
 
-        let mut pml_boundary_mut = PMLBoundary::new(pml_thickness, 0.0, 0.0, medium.as_ref(), &grid, source_freq, None, None);
+        let mut pml_boundary_mut = PMLBoundary::new(pml_config.clone()).expect("Failed to create PML boundary");
         let elastic_velocity_indices = [VX_IDX, VY_IDX, VZ_IDX];
         for &field_idx in elastic_velocity_indices.iter() {
             if field_idx < fields_array.shape()[0] {

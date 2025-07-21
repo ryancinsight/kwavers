@@ -94,6 +94,7 @@ pub struct Solver {
 }
 
 impl Solver {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         grid: Grid,
         time: Time,

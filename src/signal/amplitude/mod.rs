@@ -46,8 +46,7 @@ impl PowerModulation {
         assert!(
             base_amplitude >= 0.0
                 && modulation_freq > 0.0
-                && modulation_depth >= 0.0
-                && modulation_depth <= 1.0
+                && (0.0..=1.0).contains(&modulation_depth)
         );
         Self {
             base_amplitude,

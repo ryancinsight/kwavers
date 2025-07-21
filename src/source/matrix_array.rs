@@ -35,6 +35,7 @@ impl Clone for MatrixArray {
 }
 
 impl MatrixArray {
+    #[allow(clippy::too_many_arguments)]
     pub fn new<A: Apodization>(
         width: f64,
         height: f64,
@@ -91,6 +92,7 @@ impl MatrixArray {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn with_focus<A: Apodization>(
         width: f64,
         height: f64,

@@ -13,6 +13,7 @@ use kwavers::{
         traits::*, // Import all traits
     },
 };
+use kwavers::boundary::pml::PMLConfig;
 use std::error::Error;
 // use std::fs::File; // Removed
 // use std::io::Write; // Removed
@@ -101,16 +102,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let source = config.source.initialize_source(custom_medium.as_ref(), &grid)?;
     
     // Initialize PML boundary using the custom medium and simulation config for PML params
-    let boundary = Box::new(PMLBoundary::new(
-        config.simulation.pml_thickness,
-        config.simulation.pml_sigma_acoustic,
-        config.simulation.pml_sigma_light,
-        custom_medium.as_ref(), // Use the custom medium
-        &grid,
-        config.simulation.frequency, // Simulation frequency for PML
-        Some(config.simulation.pml_polynomial_order),
-        Some(config.simulation.pml_reflection),
-    ));
+    let pml_config = PMLConfig {
+        thickness: config.simulation.pml_thickness,
+        sigma_max_acoustic: 2.0,
+        sigma_max_light: 1.0,
+        alpha_max_acoustic: 0.0,
+        alpha_max_light: 0.0,
+        kappa_max_acoustic: 1.0,
+        kappa_max_light: 1.0,
+        target_reflection: Some(1e-6),
+    };
+    let boundary = Box::new(PMLBoundary::new(pml_config).expect("Failed to create PML boundary"));
     
     // Place sensors strategically at focus and surrounding areas
     let sensor_positions: Vec<(f64, f64, f64)> = vec![

@@ -32,6 +32,7 @@ impl Clone for LinearArray {
 }
 
 impl LinearArray {
+    #[allow(clippy::too_many_arguments)]
     pub fn new<A: Apodization>(
         length: f64,
         num_elements: usize,
@@ -71,6 +72,7 @@ impl LinearArray {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn with_focus<A: Apodization>(
         length: f64,
         num_elements: usize,

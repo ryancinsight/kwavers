@@ -19,9 +19,9 @@ static TOTAL_IFFT_TIME: Mutex<Duration> = Mutex::new(Duration::new(0, 0));
 
 // Thread-local buffer to avoid repeated allocations
 thread_local! {
-    static FFT_BUFFER: std::cell::RefCell<Option<Array3<Complex<f64>>>> = std::cell::RefCell::new(None);
-    static IFFT_BUFFER: std::cell::RefCell<Option<Array3<Complex<f64>>>> = std::cell::RefCell::new(None);
-    static RESULT_BUFFER: std::cell::RefCell<Option<Array3<f64>>> = std::cell::RefCell::new(None);
+    static FFT_BUFFER: std::cell::RefCell<Option<Array3<Complex<f64>>>> = const { std::cell::RefCell::new(None) };
+    static IFFT_BUFFER: std::cell::RefCell<Option<Array3<Complex<f64>>>> = const { std::cell::RefCell::new(None) };
+    static RESULT_BUFFER: std::cell::RefCell<Option<Array3<f64>>> = const { std::cell::RefCell::new(None) };
 }
 
 // Cache for FFT instances to avoid recreating them for the same grid dimensions
@@ -40,19 +40,19 @@ pub fn warm_fft_cache(grid: &Grid) {
     // Warm up FFT cache
     {
         let mut cache = FFT_CACHE.lock().unwrap();
-        if !cache.contains_key(&key) {
+        cache.entry(key).or_insert_with(|| {
             debug!("Pre-creating FFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
-            cache.insert(key, Arc::new(Fft3d::new(grid.nx, grid.ny, grid.nz)));
-        }
+            Arc::new(Fft3d::new(grid.nx, grid.ny, grid.nz))
+        });
     }
     
     // Warm up IFFT cache
     {
         let mut cache = IFFT_CACHE.lock().unwrap();
-        if !cache.contains_key(&key) {
+        cache.entry(key).or_insert_with(|| {
             debug!("Pre-creating IFFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
-            cache.insert(key, Arc::new(Ifft3d::new(grid.nx, grid.ny, grid.nz)));
-        }
+            Arc::new(Ifft3d::new(grid.nx, grid.ny, grid.nz))
+        });
     }
     
     // Initialize thread-local buffers for common grid size
@@ -164,15 +164,15 @@ pub fn fft_3d(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Array3<Com
         let mut cache = FFT_CACHE.lock().unwrap();
         let key = (grid.nx, grid.ny, grid.nz);
         
-        if cache.contains_key(&key) {
-            FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
-            Arc::clone(cache.get(&key).unwrap())
-        } else {
+        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
             debug!("Cache miss: Creating new FFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
             let fft = Arc::new(Fft3d::new(grid.nx, grid.ny, grid.nz));
-            cache.insert(key, Arc::clone(&fft));
+            e.insert(Arc::clone(&fft));
             fft
+        } else {
+            FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
+            Arc::clone(cache.get(&key).unwrap())
         }
     };
     
@@ -238,15 +238,15 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
         let mut cache = IFFT_CACHE.lock().unwrap();
         let key = (grid.nx, grid.ny, grid.nz);
         
-        if cache.contains_key(&key) {
-            IFFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
-            Arc::clone(cache.get(&key).unwrap())
-        } else {
+        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
             IFFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
             debug!("Cache miss: Creating new IFFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
             let ifft = Arc::new(Ifft3d::new(grid.nx, grid.ny, grid.nz));
-            cache.insert(key, Arc::clone(&ifft));
+            e.insert(Arc::clone(&ifft));
             ifft
+        } else {
+            IFFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
+            Arc::clone(cache.get(&key).unwrap())
         }
     };
     

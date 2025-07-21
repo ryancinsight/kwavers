@@ -1,7 +1,7 @@
 use crate::boundary::Boundary;
 use crate::grid::Grid;
-use crate::medium::Medium;
-use log::{debug, trace};
+use crate::error::{KwaversResult, ConfigError};
+use log::trace;
 use ndarray::{Array3, Zip}; // Removed parallel prelude
 use rustfft::num_complex::Complex;
 
@@ -28,7 +28,86 @@ pub struct PMLBoundary {
     light_damping_3d: Option<Array3<f64>>,
 }
 
+/// Configuration for PML boundary layer
+/// Follows SOLID principles by grouping related parameters together
+#[derive(Debug, Clone)]
+pub struct PMLConfig {
+    pub thickness: usize,
+    pub sigma_max_acoustic: f64,
+    pub sigma_max_light: f64,
+    pub alpha_max_acoustic: f64,
+    pub alpha_max_light: f64,
+    pub kappa_max_acoustic: f64,
+    pub kappa_max_light: f64,
+    pub target_reflection: Option<f64>,
+}
+
+impl Default for PMLConfig {
+    fn default() -> Self {
+        Self {
+            thickness: 10,
+            sigma_max_acoustic: 2.0,
+            sigma_max_light: 1.0,
+            alpha_max_acoustic: 0.0,
+            alpha_max_light: 0.0,
+            kappa_max_acoustic: 1.0,
+            kappa_max_light: 1.0,
+            target_reflection: Some(1e-4),
+        }
+    }
+}
+
+impl PMLConfig {
+    /// Validate PML configuration parameters
+    /// Follows SOLID Single Responsibility Principle
+    pub fn validate(&self) -> KwaversResult<()> {
+        if self.thickness == 0 {
+            return Err(ConfigError::InvalidValue {
+                parameter: "thickness".to_string(),
+                value: self.thickness.to_string(),
+                reason: "PML thickness must be > 0".to_string(),
+            }.into());
+        }
+        
+        if self.sigma_max_acoustic < 0.0 || self.sigma_max_light < 0.0 {
+            return Err(ConfigError::InvalidValue {
+                parameter: "sigma_max".to_string(),
+                value: format!("acoustic: {}, light: {}", self.sigma_max_acoustic, self.sigma_max_light),
+                reason: "Sigma values must be >= 0".to_string(),
+            }.into());
+        }
+        
+        Ok(())
+    }
+}
+
 impl PMLBoundary {
+    /// Create new PML boundary with configuration struct
+    /// Follows SOLID principles by reducing parameter coupling
+    pub fn new(config: PMLConfig) -> KwaversResult<Self> {
+        config.validate()?;
+        
+        // Create damping profiles based on configuration
+        let acoustic_profile = Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_acoustic, 2);
+        let light_profile = Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_light, 2);
+        
+        Ok(Self {
+            acoustic_damping_x: acoustic_profile.clone(),
+            acoustic_damping_y: acoustic_profile.clone(),
+            acoustic_damping_z: acoustic_profile.clone(),
+            light_damping_x: light_profile.clone(),
+            light_damping_y: light_profile.clone(),
+            light_damping_z: light_profile,
+            acoustic_damping_3d: None,
+            light_damping_3d: None,
+        })
+    }
+    
+    /// Create with default configuration
+    pub fn with_defaults() -> KwaversResult<Self> {
+        Self::new(PMLConfig::default())
+    }
+
     /// Creates a new PML boundary with the specified parameters.
     ///
     /// # Arguments
@@ -41,97 +120,7 @@ impl PMLBoundary {
     /// * `acoustic_freq` - Characteristic acoustic frequency
     /// * `polynomial_order` - Order of polynomial grading (default: 3)
     /// * `target_reflection` - Target theoretical reflection coefficient (default: 1e-6)
-    pub fn new(
-        thickness: usize,
-        sigma_max_acoustic: f64,
-        sigma_max_light: f64,
-        medium: &dyn Medium,
-        grid: &Grid,
-        acoustic_freq: f64,
-        polynomial_order: Option<usize>,
-        target_reflection: Option<f64>,
-    ) -> Self {
-        let poly_order = polynomial_order.unwrap_or(3);
-        let reflection = target_reflection.unwrap_or(1e-6);
-        
-        debug!(
-            "Initializing PMLBoundary: sigma_acoustic = {}, sigma_light = {}, polynomial_order = {}",
-            sigma_max_acoustic, sigma_max_light, poly_order
-        );
-
-        // Calculate optimal PML thickness based on acoustic wavelength
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
-        let wavelength = c / acoustic_freq;
-        let acoustic_thickness = (wavelength * 2.0 / grid.dx).ceil() as usize;
-
-        // Calculate optimal PML thickness based on light diffusion length
-        let mu_a = medium.absorption_coefficient_light(0.0, 0.0, 0.0, grid);
-        let mu_s_prime = medium.reduced_scattering_coefficient_light(0.0, 0.0, 0.0, grid);
-        let diffusion_length = 1.0 / (3.0 * (mu_a + mu_s_prime)).sqrt();
-        let light_thickness = (diffusion_length * 5.0 / grid.dx).ceil() as usize;
-
-        // Use provided thickness or auto-select based on physics
-        let final_thickness = if thickness == 0 {
-            acoustic_thickness.max(light_thickness).max(10) // Minimum 10 points for stability
-        } else {
-            thickness
-        };
-
-        // Auto-calculate optimal sigma if not provided
-        let sigma_acoustic = if sigma_max_acoustic <= 0.0 {
-            // Based on Komatitsch & Martin (2007)
-            let poly_order_f64 = (poly_order + 1) as f64;
-            let optimal_sigma = -poly_order_f64 * c * (reflection.ln()) / 
-                                (2.0 * final_thickness as f64 * grid.dx);
-            debug!("Auto-calculated acoustic sigma_max = {}", optimal_sigma);
-            optimal_sigma
-        } else {
-            sigma_max_acoustic
-        };
-
-        let sigma_light = if sigma_max_light <= 0.0 {
-            // For light, we use a similar approach but scaled by diffusion coefficient
-            let d = 1.0 / (3.0 * (mu_a + mu_s_prime));
-            let poly_order_f64 = (poly_order + 1) as f64;
-            let optimal_sigma = -poly_order_f64 * d * (reflection.ln()) / 
-                                (2.0 * final_thickness as f64 * grid.dx);
-            debug!("Auto-calculated light sigma_max = {}", optimal_sigma);
-            optimal_sigma
-        } else {
-            sigma_max_light
-        };
-
-        debug!(
-            "PML thickness: acoustic = {}, light = {}, final = {}",
-            acoustic_thickness, light_thickness, final_thickness
-        );
-
-        // Create damping profiles for each dimension
-        let acoustic_damping_x = Self::damping_profile(final_thickness, grid.nx, grid.dx, sigma_acoustic, poly_order);
-        let acoustic_damping_y = Self::damping_profile(final_thickness, grid.ny, grid.dy, sigma_acoustic, poly_order);
-        let acoustic_damping_z = Self::damping_profile(final_thickness, grid.nz, grid.dz, sigma_acoustic, poly_order);
-        
-        let light_damping_x = Self::damping_profile(final_thickness, grid.nx, grid.dx, sigma_light, poly_order);
-        let light_damping_y = Self::damping_profile(final_thickness, grid.ny, grid.dy, sigma_light, poly_order);
-        let light_damping_z = Self::damping_profile(final_thickness, grid.nz, grid.dz, sigma_light, poly_order);
-
-        Self {
-            // thickness: final_thickness, // Removed
-            // sigma_max_acoustic: sigma_acoustic, // Removed
-            // sigma_max_light: sigma_light, // Removed
-            acoustic_damping_x,
-            acoustic_damping_y,
-            acoustic_damping_z,
-            light_damping_x,
-            light_damping_y,
-            light_damping_z,
-            // polynomial_order: poly_order, // Removed
-            // target_reflection: reflection, // Removed
-            acoustic_damping_3d: None,
-            light_damping_3d: None,
-        }
-    }
-
+    ///
     /// Creates a damping profile for a PML layer.
     ///
     /// # Arguments
@@ -146,9 +135,9 @@ impl PMLBoundary {
         
         // Apply PML at both domain boundaries (left/right or top/bottom)
         // Left/bottom boundary
-        for i in 0..thickness {
+        for (i, profile_val) in profile.iter_mut().enumerate().take(thickness) {
             let normalized_distance = (thickness - i) as f64 / thickness as f64;
-            profile[i] = sigma_max * normalized_distance.powi(order as i32);
+            *profile_val = sigma_max * normalized_distance.powi(order as i32);
         }
         
         // Right/top boundary

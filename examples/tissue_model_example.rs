@@ -24,6 +24,7 @@ use kwavers::{
     solver::Solver,
     time::Time,
 };
+use kwavers::boundary::pml::PMLConfig;
 use log::info;
 use std::sync::Arc;
 use std::time::Instant;
@@ -107,16 +108,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Configure PML boundary conditions
     let pml_thickness = 10;
-    let boundary = PMLBoundary::new(
-        pml_thickness, 
-        100.0,             // sigma_max_acoustic
-        10.0,              // sigma_max_light
-        medium_arc.as_ref(),
-        &grid,
-        frequency,
-        Some(2),           // polynomial_order
-        Some(0.000001)     // target_reflection
-    );
+    let pml_config = PMLConfig {
+        thickness: pml_thickness,
+        sigma_max_acoustic: 2.0,
+        sigma_max_light: 1.0,
+        alpha_max_acoustic: 0.0,
+        alpha_max_light: 0.0,
+        kappa_max_acoustic: 1.0,
+        kappa_max_light: 1.0,
+        target_reflection: Some(1e-6),
+    };
+    let boundary = PMLBoundary::new(pml_config).expect("Failed to create PML boundary");
     
     // Create sensor array and recorder
     let sensor_positions = vec![
@@ -151,7 +153,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         time,
         medium_arc.clone(),
         Box::new(source),
-        Box::new(boundary),
+        Box::new(boundary) as Box<dyn kwavers::Boundary>,
         wave_model,
         cavitation_model,
         light_model,

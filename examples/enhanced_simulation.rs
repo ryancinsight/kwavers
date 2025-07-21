@@ -178,6 +178,7 @@ fn demonstrate_builder_pattern() -> KwaversResult<()> {
 
 /// Custom physics component demonstrating extensibility (Open/Closed principle)
 #[derive(Debug)]
+#[allow(dead_code)]
 struct CustomAcousticComponent {
     id: String,
     metrics: HashMap<String, f64>,
@@ -185,6 +186,7 @@ struct CustomAcousticComponent {
 }
 
 impl CustomAcousticComponent {
+    #[allow(dead_code)]
     pub fn new(id: String, custom_parameter: f64) -> Self {
         Self {
             id,

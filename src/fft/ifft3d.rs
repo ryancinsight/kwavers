@@ -62,7 +62,7 @@ impl Ifft3d {
     
     /// Precompute bit-reverse indices for a given size
     fn precompute_bit_reverse_indices(n: usize) -> Vec<usize> {
-        let log2_n = log2_ceil(n) as u32;
+        let log2_n = log2_ceil(n);
         (0..n).map(|i| reverse_bits(i as u32, log2_n) as usize).collect()
     }
 
