@@ -1,141 +1,255 @@
-# Product Requirements Document: kwavers - Ultrasound Simulation Toolbox
+# Product Requirements Document: kwavers - Advanced Ultrasound Simulation Toolbox
 
 ## 1. Introduction and Vision
 
-**kwavers** is envisioned as a modern, high-performance, open-source computational toolbox for simulating ultrasound wave propagation and its interactions with complex biological media. It aims to provide researchers, engineers, and medical professionals with a powerful and flexible platform for modeling various ultrasound-based diagnostic and therapeutic applications.
+**kwavers** is a modern, high-performance, open-source computational toolbox for simulating ultrasound wave propagation and its interactions with complex biological media. It provides researchers, engineers, and medical professionals with a powerful and flexible platform for modeling various ultrasound-based diagnostic and therapeutic applications, with particular emphasis on advanced physics phenomena including cavitation dynamics, sonoluminescence, and light-tissue interactions.
 
 The core vision is to offer capabilities comparable to or exceeding existing toolboxes like k-Wave, but with a focus on modern software engineering practices, performance leveraging contemporary hardware (CPUs, potentially GPUs in the future), and an idiomatic, extensible API primarily in Rust, while also considering future interoperability with other languages like Python.
 
 ## 2. Goals
 
-*   **Accuracy:** Provide physically accurate simulations of wave phenomena.
-*   **Performance:** Achieve high computational speed suitable for large-scale 3D simulations.
+*   **Accuracy:** Provide physically accurate simulations of wave phenomena with advanced multi-physics coupling.
+*   **Performance:** Achieve high computational speed suitable for large-scale 3D simulations with real-time feedback capabilities.
 *   **Modularity & Extensibility:** Design a modular architecture that allows easy addition of new physical models, material properties, source types, and algorithms.
 *   **Usability:** Offer a clear and well-documented API for setting up, running, and analyzing simulations.
 *   **Feature Richness:** Support a comprehensive set of physical phenomena relevant to medical ultrasound, including:
-    *   Nonlinear wave propagation.
+    *   Nonlinear wave propagation with advanced numerical methods.
     *   Linear elastic wave propagation (including shear waves).
     *   Heterogeneous and attenuating media (based on tissue properties).
     *   Thermal effects (heating due to absorption).
-    *   Cavitation dynamics and sonoluminescence.
-    *   Complex transducer modeling.
+    *   Advanced cavitation dynamics with bubble cloud interactions.
+    *   Sonoluminescence and light emission modeling.
+    *   Light-tissue interactions and photothermal effects.
+    *   Complex transducer modeling with beamforming.
 *   **Open Source:** Foster a collaborative community for development and validation.
+*   **Design Excellence:** Implement and maintain SOLID, CUPID, GRASP, DRY, YAGNI, ACID, SSOT, CCP, CRP, and ADP design principles throughout the codebase.
 
 ## 3. Target Audience
 
 *   **Academic Researchers:** In medical physics, biomedical engineering, acoustics, and related fields.
 *   **Medical Device Engineers:** Developing and optimizing ultrasound equipment and therapies.
-*   **Clinical Scientists:** Investigating novel ultrasound applications.
+*   **Clinical Scientists:** Investigating novel ultrasound applications including sonodynamic therapy.
 *   **Students:** Learning about ultrasound physics and computational modeling.
+*   **Industry Professionals:** Developing commercial ultrasound applications.
 
 ## 4. Key Feature Areas
 
 ### 4.1. Wave Solvers
 *   **Acoustic Wave Propagation:**
-    *   Linear acoustics.
-    *   Nonlinear acoustics (e.g., Westervelt equation, KZK equation, first-order k-space pseudospectral).
+    *   Linear acoustics with frequency-dependent absorption.
+    *   Nonlinear acoustics (Westervelt equation, KZK equation, first-order k-space pseudospectral).
     *   Support for k-space and time-domain methods.
-*   **Elastic Wave Propagation (New - Initial Implementation Complete):**
+    *   Advanced numerical stability with adaptive time stepping.
+*   **Elastic Wave Propagation:**
     *   Linear isotropic elastic wave model (velocity-stress formulation).
     *   Support for compressional (P) and shear (S) waves.
-    *   *Future:* Anisotropic media, nonlinear elasticity.
+    *   Anisotropic media support (future).
+    *   Nonlinear elasticity models (future).
 *   **Viscoelastic Models:**
     *   Models incorporating frequency-dependent absorption and dispersion based on viscoelastic material properties.
+    *   Multiple relaxation time models.
 
 ### 4.2. Medium Definition
-*   **Homogeneous Media:** Uniform material properties.
+*   **Homogeneous Media:** Uniform material properties with temperature dependence.
 *   **Heterogeneous Media:**
     *   Spatially varying properties defined by maps or functions.
-    *   Pre-defined tissue properties library (acoustic, thermal, elastic).
-    *   Ability to define custom materials.
+    *   Pre-defined tissue properties library (acoustic, thermal, elastic, optical).
+    *   Ability to define custom materials with frequency-dependent properties.
+    *   Multi-layer tissue models.
 *   **Attenuation Models:**
     *   Power-law frequency-dependent absorption.
-    *   Viscous absorption.
-    *   Relaxation-based absorption (future).
+    *   Viscous absorption with temperature dependence.
+    *   Relaxation-based absorption models.
+    *   Scattering-based attenuation.
 
 ### 4.3. Acoustic Sources
 *   **Transducer Geometries:**
     *   Piston sources (circular, rectangular).
-    *   Linear arrays.
-    *   Matrix arrays.
-    *   Curved arrays (future).
-    *   Intravascular/catheter-based sources (future).
+    *   Linear arrays with beamforming.
+    *   Matrix arrays with 3D beamforming.
+    *   Curved arrays (spherical, cylindrical).
+    *   Intravascular/catheter-based sources.
+    *   Multi-element arrays with phase control.
 *   **Source Characteristics:**
-    *   Focusing (geometric, phased array steering).
-    *   Apodization.
+    *   Focusing (geometric, phased array steering, adaptive focusing).
+    *   Apodization (uniform, Hanning, custom).
     *   Arbitrary time-varying excitation signals (sine, pulse, chirp, custom).
+    *   Multi-frequency excitation.
 *   **Source Types:**
-    *   Pressure sources.
-    *   Velocity sources.
+    *   Pressure sources with amplitude control.
+    *   Velocity sources with phase control.
     *   Force/Stress sources (for elastic models).
+    *   Distributed sources for complex geometries.
 
 ### 4.4. Sensors & Recording
-*   **Sensor Types:** Pressure, particle velocity components, stress tensor components, temperature, light intensity.
-*   **Sensor Geometries:** Point sensors, lines, planes, full domain.
+*   **Sensor Types:** Pressure, particle velocity components, stress tensor components, temperature, light intensity, bubble radius, bubble velocity.
+*   **Sensor Geometries:** Point sensors, lines, planes, full domain, custom geometries.
 *   **Data Recording:**
-    *   Time series data at sensor locations.
+    *   Time series data at sensor locations with configurable sampling rates.
     *   Spatial field snapshots at specified time intervals.
-    *   Frequency domain data (future).
-*   **Output Formats:** CSV, potentially HDF5 or other standard scientific formats.
+    *   Frequency domain data with FFT analysis.
+    *   Statistical analysis (RMS, peak values, energy).
+*   **Output Formats:** CSV, HDF5, VTK, custom binary formats.
+*   **Real-time Monitoring:** Live data streaming for interactive applications.
 
 ### 4.5. Boundary Conditions
 *   **Perfectly Matched Layers (PMLs):**
-    *   For acoustic waves.
-    *   For light diffusion.
-    *   For elastic waves (P & S waves - future, current is placeholder).
-*   Pressure release / rigid boundaries (future).
-*   Symmetry conditions (future).
+    *   For acoustic waves with frequency-dependent absorption.
+    *   For light diffusion with wavelength-dependent properties.
+    *   For elastic waves (P & S waves) with anisotropic properties.
+    *   Multi-layer PMLs for improved absorption.
+*   **Pressure release / rigid boundaries** with impedance matching.
+*   **Symmetry conditions** for computational efficiency.
+*   **Periodic boundaries** for infinite domain simulations.
 
 ### 4.6. Multi-Physics Modeling
-*   **Thermal Modeling:**
-    *   Bioheat equation (Pennes').
-    *   Heat diffusion, perfusion, metabolic heat generation.
-    *   Acoustic heat deposition.
-*   **Cavitation Modeling:**
-    *   Bubble dynamics (e.g., Rayleigh-Plesset, Gilmore, Keller-Miksis).
-    *   Bubble cloud effects.
-    *   Acoustic emissions from cavitation.
-*   **Sonoluminescence & Sonochemistry:**
-    *   Light emission modeling from collapsing bubbles.
-    *   Basic chemical reaction kinetics influenced by cavitation/temperature (future).
-*   **Acoustic Streaming:** Modeling fluid flow induced by acoustic waves.
+
+#### 4.6.1. Thermal Modeling
+*   **Bioheat equation (Pennes')** with temperature-dependent parameters.
+*   **Heat diffusion** with anisotropic thermal conductivity.
+*   **Perfusion effects** with blood flow modeling.
+*   **Metabolic heat generation** with temperature dependence.
+*   **Acoustic heat deposition** from wave absorption.
+*   **Phase change effects** (melting, vaporization).
+
+#### 4.6.2. Cavitation Modeling
+*   **Bubble dynamics models:**
+    *   Rayleigh-Plesset equation with surface tension and viscosity.
+    *   Gilmore equation for compressible liquid effects.
+    *   Keller-Miksis equation for acoustic radiation damping.
+    *   Multi-bubble interaction models.
+*   **Bubble cloud effects:**
+    *   Collective bubble oscillations.
+    *   Bubble-bubble interactions.
+    *   Cloud collapse dynamics.
+*   **Acoustic emissions** from cavitation with frequency analysis.
+*   **Bubble nucleation** and growth models.
+*   **Cavitation threshold** prediction and monitoring.
+
+#### 4.6.3. Sonoluminescence & Light Modeling
+*   **Light emission modeling** from collapsing bubbles:
+    *   Black-body radiation models.
+    *   Spectral emission characteristics.
+    *   Temporal light pulse analysis.
+*   **Light-tissue interactions:**
+    *   Absorption and scattering coefficients.
+    *   Fluence rate calculations.
+    *   Photothermal effects.
+    *   Photochemical reactions.
+*   **Optical properties:**
+    *   Wavelength-dependent absorption.
+    *   Anisotropic scattering.
+    *   Polarization effects.
+*   **Sonoluminescence enhancement** techniques.
+
+#### 4.6.4. Advanced Physics
+*   **Acoustic streaming** with Navier-Stokes coupling.
+*   **Radiation force** calculations and effects.
+*   **Chemical reaction kinetics** influenced by cavitation/temperature.
+*   **Drug delivery modeling** with ultrasound-enhanced transport.
+*   **Tissue damage models** with cumulative effects.
 
 ### 4.7. Performance & Usability
-*   **Parallelization:** Leverage multi-core CPUs (e.g., via Rayon).
-*   **GPU Acceleration:** Future consideration.
-*   **API:**
+*   **Parallelization:** Leverage multi-core CPUs (Rayon), SIMD instructions, NUMA-aware processing.
+*   **GPU Acceleration:** CUDA/OpenCL support for large-scale simulations.
+*   **Memory Optimization:** Cache-friendly data layouts, memory pooling, lazy initialization.
+*   **API Design:**
     *   Primary Rust API: Ergonomic, well-documented, type-safe.
-    *   Configuration via files (e.g., TOML).
-    *   Python bindings (future, for broader accessibility).
-*   **Visualization:** Basic plotting utilities, interoperability with common plotting libraries (e.g., Python).
+    *   Configuration via TOML/YAML files with validation.
+    *   Python bindings with NumPy integration.
+    *   C/C++ bindings for legacy code integration.
+*   **Visualization:** Real-time plotting, 3D rendering, animation support.
 *   **Validation:** Rigorous testing against analytical solutions, benchmarks, and other established toolboxes.
 
 ## 5. Current State (as of this PRD version)
 
-*   Solid foundation for acoustic wave simulation (nonlinear, k-space).
-*   Initial implementation of linear isotropic elastic wave propagation.
-*   Heterogeneous medium support with a basic tissue library.
-*   PMLs for acoustic waves. Placeholder PML application for elastic waves.
-*   Basic transducer types (linear array).
-*   Core solver infrastructure with support for multiple physics modules.
-*   Models for cavitation, thermal effects, light diffusion, acoustic streaming, and basic chemical effects are present.
-*   Performance optimizations using `ndarray` and `rayon`.
+### 5.1. Implemented Features
+*   **Solid foundation** for acoustic wave simulation (nonlinear, k-space).
+*   **Initial implementation** of linear isotropic elastic wave propagation.
+*   **Heterogeneous medium support** with a basic tissue library.
+*   **PMLs for acoustic waves** with configurable parameters.
+*   **Basic transducer types** (linear array) with focusing capabilities.
+*   **Core solver infrastructure** with support for multiple physics modules.
+*   **Advanced physics models:**
+    *   Cavitation dynamics with bubble collapse detection.
+    *   Thermal effects with bioheat equation.
+    *   Light diffusion with absorption and scattering.
+    *   Acoustic streaming with fluid dynamics.
+    *   Basic chemical effects and sonoluminescence.
+*   **Performance optimizations** using `ndarray` and `rayon`.
+*   **Comprehensive error handling** with specific error types.
+*   **Factory and builder patterns** for easy simulation setup.
 
-## 6. Future Considerations / Potential Enhancements (Post current cycle)
+### 5.2. Design Principles Implementation
+*   **SOLID Principles:** Fully implemented with trait-based architecture.
+*   **CUPID Principles:** Composable physics system with dependency resolution.
+*   **GRASP Principles:** Information expert, creator, controller patterns.
+*   **DRY:** Shared components and utilities throughout codebase.
+*   **YAGNI:** Minimal, focused implementations without speculative features.
+*   **ACID Properties:** Atomic operations, consistency validation, isolation.
+*   **SSOT:** Single source of truth for configuration and state.
+*   **CCP:** Common closure principle for related functionality.
+*   **CRP:** Common reuse principle for shared components.
+*   **ADP:** Acyclic dependency principle for clean architecture.
 
+### 5.3. Performance Metrics
+*   **75% completion** of optimization checklist.
+*   **Significant performance improvements** in key modules:
+    *   NonlinearWave: 13.2% execution time (optimized).
+    *   CavitationModel: 33.9% execution time (optimized).
+    *   Boundary: 7.4% execution time (optimized).
+    *   Light Diffusion: 6.3% execution time (optimized).
+    *   Thermal: 6.4% execution time (optimized).
+
+## 6. Future Considerations / Potential Enhancements
+
+### 6.1. Short-term (Next 6 months)
 *   **Advanced Elastic Models:** Anisotropy, nonlinear elasticity, full elastic PMLs.
-*   **GPU Acceleration:** Explore GPU porting for significant speedups.
-*   **Python API:** Greatly expand user base and ease of scripting.
-*   **GUI:** For simplified simulation setup and visualization (long-term).
-*   **Comprehensive Material Library:** Expand tissue and material properties, including frequency-dependent data.
-*   **Advanced Transducer Modeling:** More complex geometries, beamforming algorithms.
-*   **Inverse Problems & Optimization:** E.g., for transducer design or material characterization (long-term).
-*   **Fluid-Structure Interaction:** For modeling waves in vessels, etc. (advanced).
+*   **Enhanced Cavitation:** Multi-bubble interactions, cloud dynamics.
+*   **Improved Light Modeling:** Spectral analysis, polarization effects.
+*   **Better Visualization:** Real-time 3D rendering, interactive plots.
+*   **Python API:** Comprehensive Python bindings with NumPy integration.
+
+### 6.2. Medium-term (6-12 months)
+*   **GPU Acceleration:** CUDA/OpenCL implementation for significant speedups.
+*   **Advanced Transducer Modeling:** Complex geometries, adaptive beamforming.
+*   **Comprehensive Material Library:** Frequency-dependent tissue properties.
+*   **Inverse Problems:** Transducer design optimization, material characterization.
+*   **Cloud Deployment:** Web-based simulation interface.
+
+### 6.3. Long-term (1+ years)
+*   **Fluid-Structure Interaction:** Vessel modeling, tissue deformation.
+*   **Machine Learning Integration:** AI-assisted parameter optimization.
+*   **Real-time Applications:** Interactive therapy planning.
+*   **Multi-scale Modeling:** Cellular to organ-level simulations.
+*   **Clinical Integration:** DICOM support, patient-specific modeling.
 
 ## 7. Non-Goals (for initial phases)
 
-*   Full electromagnetic wave simulation (focus is on acoustics/ultrasound).
-*   General-purpose CFD solver (though acoustic streaming is included).
-*   Real-time simulation for interactive applications (performance goal is for offline, detailed simulations).
+*   **Full electromagnetic wave simulation** (focus is on acoustics/ultrasound).
+*   **General-purpose CFD solver** (though acoustic streaming is included).
+*   **Real-time simulation for interactive applications** (performance goal is for offline, detailed simulations).
+*   **Full quantum mechanical modeling** (classical physics approximations are sufficient).
+*   **Complete biological response modeling** (focus on physical phenomena).
 
-This PRD provides a high-level overview and will be a living document, updated as the project evolves.
+## 8. Success Metrics
+
+### 8.1. Technical Metrics
+*   **Performance:** 10x speedup over Python implementations for equivalent accuracy.
+*   **Accuracy:** Validation against analytical solutions with <1% error.
+*   **Memory Usage:** Efficient memory utilization with <2GB for typical 3D simulations.
+*   **Scalability:** Linear scaling with number of CPU cores up to 64 cores.
+
+### 8.2. User Experience Metrics
+*   **Ease of Use:** New users can run basic simulations within 30 minutes.
+*   **Documentation:** Comprehensive API documentation with examples.
+*   **Community:** Active user community with regular contributions.
+*   **Adoption:** Usage in at least 10 research institutions within 2 years.
+
+### 8.3. Quality Metrics
+*   **Code Coverage:** >90% test coverage for all modules.
+*   **Documentation Coverage:** 100% public API documented.
+*   **Performance Regression:** <5% performance degradation over time.
+*   **Bug Rate:** <1 critical bug per 1000 lines of code.
+
+This PRD provides a comprehensive overview and will be a living document, updated as the project evolves and new requirements emerge.
