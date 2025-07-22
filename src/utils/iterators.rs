@@ -4,9 +4,8 @@
 //! This module provides iterator-based patterns that leverage Rust's zero-cost abstractions
 //! to achieve high performance while maintaining readable and maintainable code.
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::{ArrayView3, ArrayViewMut3};
 use rayon::prelude::*;
-use num_complex::Complex;
 
 /// Iterator for processing 3D grid points with spatial coordinates
 pub struct GridPointIterator<'a, T> {
@@ -25,10 +24,10 @@ where
         Self { array, nx, ny, nz }
     }
     
-    /// Process interior points (excluding boundaries) with iterator pattern
-    pub fn process_interior<F>(mut self, dx: f64, dy: f64, dz: f64, processor: F)
+    /// Process interior points (excluding boundaries) with iterator pattern  
+    pub fn process_interior<F>(self, dx: f64, dy: f64, dz: f64, processor: F)
     where
-        F: Fn(usize, usize, usize, f64, f64, f64, &mut T) + Sync + Send,
+        F: Fn(usize, usize, usize, f64, f64, f64) + Sync + Send,
     {
         (1..self.nx-1)
             .into_par_iter()
@@ -38,11 +37,7 @@ where
                         let x = i as f64 * dx;
                         let y = j as f64 * dy;
                         let z = k as f64 * dz;
-                        // Safe access within bounds - using unsafe for performance
-                        unsafe {
-                            let ptr = self.array.as_mut_ptr().add(i * self.ny * self.nz + j * self.nz + k);
-                            processor(i, j, k, x, y, z, &mut *ptr);
-                        }
+                        processor(i, j, k, x, y, z);
                     }
                 }
             });
@@ -64,9 +59,9 @@ impl<'a> GradientComputer<'a> {
     }
     
     /// Compute gradients at interior points using iterator pattern
-    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, mut processor: F)
+    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, processor: F)
     where
-        F: FnMut(f64, f64, f64, usize, usize, usize) + Sync + Send,
+        F: Fn(f64, f64, f64, usize, usize, usize) + Sync + Send,
     {
         let dx_inv = 1.0 / (2.0 * dx);
         let dy_inv = 1.0 / (2.0 * dy);

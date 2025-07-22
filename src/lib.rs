@@ -33,7 +33,7 @@ pub mod signal;
 pub mod utils;
 pub mod fft;
 pub mod output;
-// pub mod factory;  // Temporarily disabled - needs refactoring
+pub mod factory;
 
 use std::collections::HashMap;
 use ndarray::Array3;
@@ -54,6 +54,7 @@ pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
 pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, ComponentState, FieldType};
+pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SimulationBuilder};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel};
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::ElasticWave;
