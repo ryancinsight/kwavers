@@ -26,7 +26,6 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::{Array3, Array4};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::time::Instant;
 
 /// Field identifiers for different physics quantities

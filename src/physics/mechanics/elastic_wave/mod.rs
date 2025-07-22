@@ -6,9 +6,9 @@ use crate::source::Source;
 use crate::solver::{VX_IDX, VY_IDX, VZ_IDX, SXX_IDX, SYY_IDX, SZZ_IDX, SXY_IDX, SXZ_IDX, SYZ_IDX};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::error::{KwaversResult, PhysicsError, NumericalError};
-use ndarray::{Array3, Array4, Axis, s};
+use ndarray::{Array3, Array4, s};
 use num_complex::Complex;
-use log::{debug, trace, warn};
+use log::{debug, warn};
 use std::time::Instant;
 use std::collections::HashMap;
 
@@ -499,14 +499,14 @@ impl AcousticWaveModel for ElasticWave {
         // Perform FFT
         let fft_start = Instant::now();
         let mut vx_fft = self._perform_fft(&vx, grid);
-        let mut vy_fft = self._perform_fft(&vy, grid);
-        let mut vz_fft = self._perform_fft(&vz, grid);
-        let mut sxx_fft = self._perform_fft(&sxx, grid);
-        let mut syy_fft = self._perform_fft(&syy, grid);
-        let mut szz_fft = self._perform_fft(&szz, grid);
-        let mut sxy_fft = self._perform_fft(&sxy, grid);
-        let mut sxz_fft = self._perform_fft(&sxz, grid);
-        let mut syz_fft = self._perform_fft(&syz, grid);
+        let vy_fft = self._perform_fft(&vy, grid);
+        let vz_fft = self._perform_fft(&vz, grid);
+        let sxx_fft = self._perform_fft(&sxx, grid);
+        let syy_fft = self._perform_fft(&syy, grid);
+        let szz_fft = self._perform_fft(&szz, grid);
+        let sxy_fft = self._perform_fft(&sxy, grid);
+        let sxz_fft = self._perform_fft(&sxz, grid);
+        let syz_fft = self._perform_fft(&syz, grid);
         self.metrics.fft_time += fft_start.elapsed().as_secs_f64();
 
         // Apply source term
