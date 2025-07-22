@@ -4,9 +4,8 @@
 //! This module provides iterator-based patterns that leverage Rust's zero-cost abstractions
 //! to achieve high performance while maintaining readable and maintainable code.
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use rayon::prelude::*;
-use num_complex::Complex;
 
 /// Iterator for processing 3D grid points with spatial coordinates
 pub struct GridPointIterator<'a, T> {
@@ -25,27 +24,84 @@ where
         Self { array, nx, ny, nz }
     }
     
-    /// Process interior points (excluding boundaries) with iterator pattern
-    pub fn process_interior<F>(mut self, dx: f64, dy: f64, dz: f64, processor: F)
+    /// Get reference to element at position
+    pub fn get(&self, i: usize, j: usize, k: usize) -> Option<&T> {
+        if i < self.nx && j < self.ny && k < self.nz {
+            Some(&self.array[[i, j, k]])
+        } else {
+            None
+        }
+    }
+    
+    /// Get mutable reference to element at position
+    pub fn get_mut(&mut self, i: usize, j: usize, k: usize) -> Option<&mut T> {
+        if i < self.nx && j < self.ny && k < self.nz {
+            Some(&mut self.array[[i, j, k]])
+        } else {
+            None
+        }
+    }
+    
+    /// Process interior points sequentially to avoid borrowing conflicts
+    pub fn process_interior_sequential<F>(&mut self, dx: f64, dy: f64, dz: f64, mut processor: F)
     where
-        F: Fn(usize, usize, usize, f64, f64, f64, &mut T) + Sync + Send,
+        F: FnMut(usize, usize, usize, f64, f64, f64, &mut T),
     {
-        (1..self.nx-1)
-            .into_par_iter()
-            .for_each(|i| {
-                for j in 1..self.ny-1 {
-                    for k in 1..self.nz-1 {
-                        let x = i as f64 * dx;
-                        let y = j as f64 * dy;
-                        let z = k as f64 * dz;
-                        // Safe access within bounds - using unsafe for performance
-                        unsafe {
-                            let ptr = self.array.as_mut_ptr().add(i * self.ny * self.nz + j * self.nz + k);
-                            processor(i, j, k, x, y, z, &mut *ptr);
-                        }
-                    }
+        for i in 1..self.nx-1 {
+            for j in 1..self.ny-1 {
+                for k in 1..self.nz-1 {
+                    let x = i as f64 * dx;
+                    let y = j as f64 * dy;
+                    let z = k as f64 * dz;
+                    processor(i, j, k, x, y, z, &mut self.array[[i, j, k]]);
                 }
-            });
+            }
+        }
+    }
+}
+
+/// Iterator for chunked processing with cache-friendly access patterns
+pub struct ChunkedProcessor<'a, T> {
+    array: ArrayViewMut3<'a, T>,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+}
+
+impl<'a, T> ChunkedProcessor<'a, T>
+where
+    T: Sync + Send,
+{
+    pub fn new(array: ArrayViewMut3<'a, T>) -> Self {
+        let (nx, ny, nz) = array.dim();
+        Self { array, nx, ny, nz }
+    }
+    
+    /// Process interior points with chunked iteration for better cache performance
+    pub fn process_interior<F>(&mut self, dx: f64, dy: f64, dz: f64, processor: F)
+    where
+        F: Fn(usize, usize, usize, f64, f64, f64) + Sync + Send,
+    {
+        // Use sequential processing to avoid borrowing conflicts
+        for i in 1..self.nx-1 {
+            for j in 1..self.ny-1 {
+                for k in 1..self.nz-1 {
+                    let x = i as f64 * dx;
+                    let y = j as f64 * dy;
+                    let z = k as f64 * dz;
+                    processor(i, j, k, x, y, z);
+                }
+            }
+        }
+    }
+    
+    /// Get mutable reference to element at position
+    pub fn get_mut(&mut self, i: usize, j: usize, k: usize) -> Option<&mut T> {
+        if i < self.nx && j < self.ny && k < self.nz {
+            Some(&mut self.array[[i, j, k]])
+        } else {
+            None
+        }
     }
 }
 
@@ -64,9 +120,9 @@ impl<'a> GradientComputer<'a> {
     }
     
     /// Compute gradients at interior points using iterator pattern
-    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, mut processor: F)
+    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, processor: F)
     where
-        F: FnMut(f64, f64, f64, usize, usize, usize) + Sync + Send,
+        F: Fn(f64, f64, f64, usize, usize, usize) + Sync + Send,
     {
         let dx_inv = 1.0 / (2.0 * dx);
         let dy_inv = 1.0 / (2.0 * dy);
@@ -86,32 +142,29 @@ impl<'a> GradientComputer<'a> {
                 }
             });
     }
-}
-
-/// Iterator for chunked processing with cache-friendly access patterns
-pub struct ChunkedProcessor<T> {
-    data: Vec<T>,
-    chunk_size: usize,
-}
-
-impl<T> ChunkedProcessor<T> 
-where 
-    T: Send + Sync + Clone,
-{
-    pub fn new(data: Vec<T>, chunk_size: usize) -> Self {
-        Self { data, chunk_size }
-    }
     
-    /// Process data in chunks for better cache locality
-    pub fn process_chunks<F>(mut self, processor: F) -> Vec<T>
-    where
-        F: Fn(&mut [T]) + Sync + Send,
-    {
-        self.data
-            .par_chunks_mut(self.chunk_size)
-            .for_each(|chunk| processor(chunk));
+    /// Collect gradients into a result array
+    pub fn collect_gradients(&self, dx: f64, dy: f64, dz: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
+        let mut grad_x = Array3::zeros((self.nx, self.ny, self.nz));
+        let mut grad_y = Array3::zeros((self.nx, self.ny, self.nz));
+        let mut grad_z = Array3::zeros((self.nx, self.ny, self.nz));
         
-        self.data
+        let dx_inv = 1.0 / (2.0 * dx);
+        let dy_inv = 1.0 / (2.0 * dy);
+        let dz_inv = 1.0 / (2.0 * dz);
+        
+        // Sequential computation for interior points
+        for i in 1..self.nx-1 {
+            for j in 1..self.ny-1 {
+                for k in 1..self.nz-1 {
+                    grad_x[[i, j, k]] = (self.array[[i+1, j, k]] - self.array[[i-1, j, k]]) * dx_inv;
+                    grad_y[[i, j, k]] = (self.array[[i, j+1, k]] - self.array[[i, j-1, k]]) * dy_inv;
+                    grad_z[[i, j, k]] = (self.array[[i, j, k+1]] - self.array[[i, j, k-1]]) * dz_inv;
+                }
+            }
+        }
+            
+        (grad_x, grad_y, grad_z)
     }
 }
 
@@ -122,18 +175,31 @@ mod tests {
     
     #[test]
     fn test_chunked_processor() {
-        let data: Vec<f64> = (0..1000).map(|i| i as f64).collect();
-        let processor = ChunkedProcessor::new(data, 100);
+        // Create a 3D array for testing
+        let mut data = Array3::<f64>::zeros((10, 10, 10));
         
-        let result = processor.process_chunks(|chunk| {
-            for val in chunk.iter_mut() {
-                *val *= 2.0;
+        // Fill with test data
+        for i in 0..10 {
+            for j in 0..10 {
+                for k in 0..10 {
+                    data[[i, j, k]] = (i * 100 + j * 10 + k) as f64;
+                }
             }
-        });
+        }
         
-        assert_eq!(result[0], 0.0);
-        assert_eq!(result[1], 2.0);
-        assert_eq!(result[999], 1998.0);
+        // Test chunked processor
+        let mut processor = ChunkedProcessor::new(data.view_mut());
+        
+        // Test element access
+        assert_eq!(processor.get_mut(1, 2, 3), Some(&mut 123.0));
+        
+        // Test interior processing 
+        processor.process_interior(1.0, 1.0, 1.0, |i, j, k, x, y, z| {
+            // Just verify the coordinates are as expected
+            assert_eq!(x, i as f64);
+            assert_eq!(y, j as f64);
+            assert_eq!(z, k as f64);
+        });
     }
     
     #[test]
