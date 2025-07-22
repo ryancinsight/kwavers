@@ -4,8 +4,6 @@
 
 // Core simulation logic (implementation of the AcousticWaveModel trait)
 pub mod core;
-pub mod optimized;
 
-// Re-export the main structs
+// Re-export the main struct
 pub use core::NonlinearWave;
-pub use optimized::OptimizedNonlinearWave;

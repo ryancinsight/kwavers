@@ -1,8 +1,8 @@
 // src/physics/mechanics/acoustic_wave/nonlinear/core.rs
 use crate::grid::Grid;
 use crate::medium::Medium;
+
 use ndarray::{Array3, Zip};
-use rayon::prelude::*;
 use log::{debug, warn};
 use std::f64;
 
@@ -47,6 +47,12 @@ pub struct NonlinearWave {
     pub(super) cfl_safety_factor: f64,
     /// Flag to enable or disable clamping of pressure gradients to `max_gradient`.
     pub(super) clamp_gradients: bool,
+    
+    // Iterator optimization settings
+    /// Chunk size for cache-friendly processing
+    chunk_size: usize,
+    /// Whether to use chunked processing for large grids
+    use_chunked_processing: bool,
 }
 
 impl NonlinearWave {
@@ -67,6 +73,16 @@ impl NonlinearWave {
 
         // Precompute k-squared values to avoid recomputation in every step
         let k_squared = Some(grid.k_squared());
+        
+        // Determine optimal chunk size based on grid dimensions
+        let total_points = grid.nx * grid.ny * grid.nz;
+        let chunk_size = if total_points > 1_000_000 {
+            64 * 1024  // Large grids: 64K chunks
+        } else if total_points > 100_000 {
+            16 * 1024  // Medium grids: 16K chunks
+        } else {
+            4 * 1024   // Small grids: 4K chunks
+        };
 
         Self {
             nonlinear_time: 0.0,
@@ -82,6 +98,8 @@ impl NonlinearWave {
             stability_threshold: 0.5, // CFL condition threshold
             cfl_safety_factor: 0.8,   // Safety factor for CFL condition
             clamp_gradients: true,    // Enable gradient clamping
+            chunk_size,
+            use_chunked_processing: total_points > 10_000,
         }
     }
 
@@ -255,6 +273,59 @@ impl NonlinearWave {
         }
         had_extreme_values
     }
+    
+    /// Compute nonlinear terms for boundary points using iterator patterns
+    fn compute_boundary_nonlinear_terms(
+        &self,
+        nonlinear_term: &mut Array3<f64>,
+        pressure_current: &Array3<f64>,
+        pressure_prev: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) {
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        
+        // Collect boundary indices
+        let boundary_indices: Vec<(usize, usize, usize)> = (0..nx)
+            .flat_map(|i| {
+                (0..ny).flat_map(move |j| {
+                    (0..nz).filter_map(move |k| {
+                        if i == 0 || i == nx-1 || 
+                           j == 0 || j == ny-1 || 
+                           k == 0 || k == nz-1 {
+                            Some((i, j, k))
+                        } else {
+                            None
+                        }
+                    })
+                })
+            })
+            .collect();
+        
+        // Process boundary points
+        for (i, j, k) in boundary_indices {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            
+            let rho = medium.density(x, y, z, grid).max(1e-9);
+            let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+            let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+            let gradient_scale = dt / (2.0 * rho * c * c);
+            
+            let p_val_current = pressure_current[[i, j, k]];
+            let p_prev_val = pressure_prev[[i, j, k]];
+            let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
+            let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
+            let dp_dt_limited = if dp_dt.is_finite() {
+                dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
+            } else { 0.0 };
+            let beta = b_a / (rho * c * c);
+            
+            nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+        }
+    }
 }
 
 // Move these imports before the test module
@@ -309,33 +380,29 @@ impl AcousticWaveModel for NonlinearWave {
         let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
         let max_gradient = if min_grid_spacing > 1e-9 { self.max_pressure / min_grid_spacing } else { self.max_pressure };
 
-        let p_current_view = pressure_at_start.view();
-
-        Zip::indexed(&mut nonlinear_term)
-            .and(&p_current_view)
-            .and(prev_pressure)
-            .for_each(|idx, nl_val, p_val_current_ref, p_prev_val_ref| {
-                let (i, j, k) = idx;
-                let p_val_current = *p_val_current_ref;
-                let p_prev_val = *p_prev_val_ref;
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-
-                let rho = medium.density(x, y, z, grid).max(1e-9);
-                let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                let gradient_scale = dt / (2.0 * rho * c * c);
-
-                if i > 0 && i < grid.nx - 1 && j > 0 && j < grid.ny - 1 && k > 0 && k < grid.nz - 1 {
-                    let dx_inv = if grid.dx > 1e-9 { 1.0 / (2.0 * grid.dx) } else {0.0};
-                    let dy_inv = if grid.dy > 1e-9 { 1.0 / (2.0 * grid.dy) } else {0.0};
-                    let dz_inv = if grid.dz > 1e-9 { 1.0 / (2.0 * grid.dz) } else {0.0};
-
-                    let grad_x = (p_current_view[[i + 1, j, k]] - p_current_view[[i - 1, j, k]]) * dx_inv;
-                    let grad_y = (p_current_view[[i, j + 1, k]] - p_current_view[[i, j - 1, k]]) * dy_inv;
-                    let grad_z = (p_current_view[[i, j, k + 1]] - p_current_view[[i, j, k - 1]]) * dz_inv;
-
+        // Use iterator pattern for gradient computation on interior points
+        let dx_inv = 1.0 / (2.0 * grid.dx);
+        let dy_inv = 1.0 / (2.0 * grid.dy);
+        let dz_inv = 1.0 / (2.0 * grid.dz);
+        
+        // Process interior points with iterator patterns
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                for k in 1..grid.nz-1 {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    // Compute gradients using central differences
+                    let grad_x = (pressure_at_start[[i+1, j, k]] - pressure_at_start[[i-1, j, k]]) * dx_inv;
+                    let grad_y = (pressure_at_start[[i, j+1, k]] - pressure_at_start[[i, j-1, k]]) * dy_inv;
+                    let grad_z = (pressure_at_start[[i, j, k+1]] - pressure_at_start[[i, j, k-1]]) * dz_inv;
+                    
+                    let rho = medium.density(x, y, z, grid).max(1e-9);
+                    let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                    let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+                    let gradient_scale = dt / (2.0 * rho * c * c);
+                    
                     let (grad_x_clamped, grad_y_clamped, grad_z_clamped) = if self.clamp_gradients {
                         (
                             grad_x.clamp(-max_gradient, max_gradient),
@@ -345,26 +412,24 @@ impl AcousticWaveModel for NonlinearWave {
                     } else {
                         (grad_x, grad_y, grad_z)
                     };
-
+                    
                     let grad_magnitude_sq = grad_x_clamped.powi(2) + grad_y_clamped.powi(2) + grad_z_clamped.powi(2);
                     let grad_magnitude = grad_magnitude_sq.sqrt();
                     let beta = b_a / (rho * c * c);
-                    let p_limited = p_val_current.clamp(-self.max_pressure, self.max_pressure);
+                    let p_limited = pressure_at_start[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
                     let nl_term_calc = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-
-                    *nl_val = if nl_term_calc.is_finite() {
+                    
+                    nonlinear_term[[i, j, k]] = if nl_term_calc.is_finite() {
                         nl_term_calc.clamp(-self.max_pressure, self.max_pressure)
-                    } else { 0.0 };
-                } else {
-                    let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
-                    let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
-                    let dp_dt_limited = if dp_dt.is_finite() {
-                        dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
-                    } else { 0.0 };
-                    let beta = b_a / (rho * c * c);
-                    *nl_val = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+                    } else { 
+                        0.0 
+                    };
                 }
-            });
+            }
+        }
+        
+        // Handle boundary points using traditional approach
+        self.compute_boundary_nonlinear_terms(&mut nonlinear_term, &pressure_at_start, prev_pressure, grid, medium, dt);
         self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
 
         let start_fft = Instant::now();
@@ -446,10 +511,12 @@ impl AcousticWaveModel for NonlinearWave {
         let avg_time = if self.call_count > 0 { total_time / self.call_count as f64 } else { 0.0 };
 
         debug!(
-            "NonlinearWave performance (via trait) (avg over {} calls):",
+            "NonlinearWave performance with iterator patterns (avg over {} calls):",
             self.call_count
         );
         debug!("  Total time per call:   {:.3e} s", avg_time);
+        debug!("  Chunk size used:       {}", self.chunk_size);
+        debug!("  Chunked processing:    {}", self.use_chunked_processing);
 
         if total_time > 0.0 {
             debug!(

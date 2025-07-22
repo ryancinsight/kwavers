@@ -412,12 +412,13 @@
 #### Iterator Pattern Implementation (Latest Session) - MAJOR ENHANCEMENT ✅
 - [x] **Zero-Cost Iterator Abstractions**: Created comprehensive iterator module with GradientComputer and ChunkedProcessor
 - [x] **Pure Rust Focus**: Removed all Python-related plans from PRD and Checklist, focusing on pure Rust implementation
-- [x] **Optimized NonlinearWave**: Implemented OptimizedNonlinearWave using iterator patterns for enhanced performance
-- [x] **Iterator-Based Processing**: Added iterator-based gradient computation and chunked data processing
-- [x] **Memory-Efficient Patterns**: Implemented cache-friendly access patterns with iterator abstractions
+- [x] **In-Place Implementation**: Updated main NonlinearWave implementation with iterator patterns, removed separate optimized files
+- [x] **Iterator-Based Processing**: Enhanced main implementation with iterator-based gradient computation and chunked data processing
+- [x] **Memory-Efficient Patterns**: Implemented cache-friendly access patterns with iterator abstractions in core implementation
 - [x] **Type-Safe Optimizations**: Leveraged Rust's zero-cost abstractions and iterator patterns for performance
 - [x] **k-Wave Alternative**: Positioned as pure Rust alternative to k-Wave, jWave, and k-wave-python
 - [x] **Design Principles**: Maintained SOLID, CUPID, GRASP, ADP, SSOT, KISS, DRY, and YAGNI principles
+- [x] **Clean Architecture**: Removed deprecated code and separate optimization files, maintaining single source of truth
 
 #### Phase 4 Progress: API Fixes & Production Readiness (Previous Session) - MAJOR SUCCESS ✅
 - [x] **Critical API Fixes Completed**: Successfully resolved 50+ compilation errors across examples

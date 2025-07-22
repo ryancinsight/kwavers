@@ -64,9 +64,9 @@ impl<'a> GradientComputer<'a> {
     }
     
     /// Compute gradients at interior points using iterator pattern
-    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, processor: F)
+    pub fn compute_interior_gradients<F>(&self, dx: f64, dy: f64, dz: f64, mut processor: F)
     where
-        F: Fn(f64, f64, f64, usize, usize, usize) + Sync + Send,
+        F: FnMut(f64, f64, f64, usize, usize, usize) + Sync + Send,
     {
         let dx_inv = 1.0 / (2.0 * dx);
         let dy_inv = 1.0 / (2.0 * dy);
