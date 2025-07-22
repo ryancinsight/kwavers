@@ -172,7 +172,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     recorder.save()?;
     
     // Create visualizations
-    plot_simulation_outputs("output", &["simulation_results.txt"])?;
+    plot_simulation_outputs("output", &[&config.output.pressure_file, &config.output.light_file])?;
 
     Ok(())
 }
