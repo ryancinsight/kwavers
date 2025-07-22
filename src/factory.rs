@@ -618,13 +618,13 @@ impl SimulationSetup {
 
         // Validate medium properties match grid
         let (nx, ny, nz) = self.grid.dimensions();
-        let medium_properties = self.medium.get_properties(&self.grid);
+        let medium_density = self.medium.density_array();
         
         // Check that medium properties are consistent with grid
-        if medium_properties.density.shape() != (nx, ny, nz) {
+        if medium_density.shape() != (nx, ny, nz) {
             return Err(ValidationError::FieldValidation {
                 field: "medium properties".to_string(),
-                value: format!("shape {:?}", medium_properties.density.shape()),
+                value: format!("shape {:?}", medium_density.shape()),
                 constraint: format!("must match grid dimensions ({}, {}, {})", nx, ny, nz),
             }.into());
         }
@@ -672,8 +672,9 @@ impl SimulationSetup {
         // Time step recommendations
         let (dx, dy, dz) = self.grid.spacing();
         let min_spacing = dx.min(dy).min(dz);
-        let sound_speed = 1500.0; // Approximate
-        let max_dt = min_spacing / sound_speed * 0.3; // CFL condition
+        
+        // Get the maximum stable time step from the medium for CFL condition
+        let max_dt = self.grid.cfl_timestep_from_medium(&*self.medium);
         
         if self.time.dt > max_dt {
             recommendations.insert(

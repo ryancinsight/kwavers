@@ -67,7 +67,11 @@ fn default_kspace_alpha() -> f64 {
 
 impl SimulationConfig {
     pub fn initialize_grid(&self) -> Result<Grid, String> {
-        let wavelength = 1500.0 / self.frequency;
+        self.initialize_grid_with_sound_speed(1500.0)
+    }
+
+    pub fn initialize_grid_with_sound_speed(&self, sound_speed: f64) -> Result<Grid, String> {
+        let wavelength = sound_speed / self.frequency;
         info!("Calculated acoustic wavelength: {} m", wavelength);
         let dx = wavelength / self.points_per_wavelength as f64;
         let nx = (self.domain_size_x / dx).ceil() as usize + self.kspace_padding;
@@ -83,9 +87,12 @@ impl SimulationConfig {
     }
 
     pub fn initialize_time(&self, grid: &Grid) -> Result<Time, String> {
+        self.initialize_time_with_sound_speed(grid, 1500.0)
+    }
+
+    pub fn initialize_time_with_sound_speed(&self, grid: &Grid, sound_speed: f64) -> Result<Time, String> {
         let duration = self.num_cycles / self.frequency;
-        let c = 1500.0;
-        let max_dt = grid.dx / (3.0f64.sqrt() * c);
+        let max_dt = grid.cfl_timestep_default(sound_speed);
         let dt = max_dt * 0.95 * self.kspace_alpha; // Adjusted for k-space stability
         let n_steps = (duration / dt).ceil() as usize;
 
@@ -94,7 +101,7 @@ impl SimulationConfig {
             "Time initialized: n_steps = {}, dt = {}",
             time.n_steps, time.dt
         );
-        if !time.is_stable(grid.dx, grid.dy, grid.dz, c) {
+        if !time.is_stable(grid.dx, grid.dy, grid.dz, sound_speed) {
             return Err("Unstable time step detected".to_string());
         }
         Ok(time)
@@ -117,5 +124,11 @@ impl SimulationConfig {
                 Err(format!("Unknown medium_type in config: {}", unknown_type))
             }
         }
+    }
+
+    /// Initialize time from a medium, using the medium's maximum sound speed for CFL condition
+    pub fn initialize_time_from_medium(&self, grid: &Grid, medium: &dyn crate::medium::Medium) -> Result<Time, String> {
+        let max_sound_speed = crate::medium::max_sound_speed(medium);
+        self.initialize_time_with_sound_speed(grid, max_sound_speed)
     }
 }

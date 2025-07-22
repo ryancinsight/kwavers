@@ -160,10 +160,9 @@ impl AdvancedSonoluminescenceSimulation {
         )?;
         
         // Create time discretization
-        let time = Time::new(
-            config.time_duration,
-            grid.cfl_timestep(1500.0)?, // Sound speed in water
-        )?;
+        let dt = grid.cfl_timestep_default(1500.0); // Sound speed in water
+        let n_steps = (config.time_duration / dt).ceil() as usize;
+        let time = Time::new(dt, n_steps);
         
         // Create enhanced medium with optical properties
         let medium = Arc::new(HomogeneousMedium::new(

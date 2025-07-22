@@ -10,6 +10,21 @@ pub mod homogeneous;
 pub use absorption::power_law_absorption;
 pub use absorption::tissue_specific;
 
+/// Get the maximum sound speed from a medium for CFL condition calculations.
+/// 
+/// This function is useful for determining the most restrictive CFL condition
+/// when the medium has spatially varying sound speeds.
+/// 
+/// # Arguments
+/// * `medium` - Reference to the medium
+/// 
+/// # Returns
+/// The maximum sound speed in the medium (m/s)
+pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
+    let sound_speed_array = medium.sound_speed_array();
+    sound_speed_array.fold(0.0, |max, &val| max.max(val))
+}
+
 pub trait Medium: Debug + Sync + Send {
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
