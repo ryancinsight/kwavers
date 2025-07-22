@@ -5,7 +5,7 @@ pub mod streaming;
 pub mod viscosity;
 pub mod elastic_wave; // Added new module
 
-pub use acoustic_wave::NonlinearWave;
+pub use acoustic_wave::{NonlinearWave, OptimizedNonlinearWave};
 pub use cavitation::CavitationModel;
 pub use streaming::StreamingModel;
 pub use viscosity::ViscosityModel;

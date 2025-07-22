@@ -63,8 +63,8 @@ default = ["basic-physics"]
 basic-physics = []
 advanced-physics = ["plotly"]
 full-features = ["advanced-physics", "tokio"]
-gpu-acceleration = []  # Future feature
-python-bindings = []   # Future feature
+gpu-acceleration = []  # Future feature using wgpu or cudarc
+iterator-optimizations = []  # Zero-cost iterator patterns
 
 [profile.release]
 opt-level = 3
