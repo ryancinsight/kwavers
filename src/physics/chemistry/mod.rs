@@ -440,17 +440,17 @@ impl ChemicalModel {
 
     /// Get hydroxyl concentration
     pub fn hydroxyl_concentration(&self) -> Option<&Array3<f64>> {
-        self.kinetics.as_ref().and_then(|k| k.hydroxyl_concentration())
+        self.kinetics.as_ref().map(|k| &k.hydroxyl_concentration)
     }
 
     /// Get hydrogen peroxide concentration
     pub fn hydrogen_peroxide(&self) -> Option<&Array3<f64>> {
-        self.kinetics.as_ref().and_then(|k| k.hydrogen_peroxide())
+        self.kinetics.as_ref().map(|k| &k.hydrogen_peroxide)
     }
 
     /// Get reactive oxygen species concentration
     pub fn reactive_oxygen_species(&self) -> Option<&Array3<f64>> {
-        self.photochemical.as_ref().and_then(|p| p.reactive_oxygen_species())
+        self.photochemical.as_ref().map(|p| &p.reactive_oxygen_species)
     }
 
     /// Get performance metrics
@@ -584,13 +584,13 @@ mod tests {
 
     #[test]
     fn test_chemical_update_params_validation() {
-        let grid = Grid::new(10, 10, 10, 1e-4, 1e-4, 1e-4).unwrap();
+        let grid = Grid::new(10, 10, 10, 1e-4, 1e-4, 1e-4);
         let pressure = Array3::zeros((10, 10, 10));
         let light = Array3::zeros((10, 10, 10));
         let emission_spectrum = Array3::zeros((10, 10, 10));
         let bubble_radius = Array3::zeros((10, 10, 10));
         let temperature = Array3::zeros((10, 10, 10));
-        let medium = crate::medium::homogeneous::HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0).unwrap();
+        let medium = crate::medium::homogeneous::HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
 
         // Valid parameters
         let params = ChemicalUpdateParams::new(
@@ -609,7 +609,7 @@ mod tests {
 
     #[test]
     fn test_chemical_model_creation() {
-        let grid = Grid::new(10, 10, 10, 1e-4, 1e-4, 1e-4).unwrap();
+        let grid = Grid::new(10, 10, 10, 1e-4, 1e-4, 1e-4);
         let model = ChemicalModel::new(&grid, true, true).unwrap();
         assert_eq!(*model.state(), ChemicalModelState::Initialized);
     }

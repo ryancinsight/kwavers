@@ -812,7 +812,7 @@ mod tests {
     use crate::grid::Grid;
 
     fn create_test_grid() -> Grid {
-        Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap()
+        Grid::new(10, 10, 10, 0.001, 0.001, 0.001)
     }
 
     #[test]

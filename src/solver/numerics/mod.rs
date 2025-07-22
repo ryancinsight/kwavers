@@ -4,7 +4,7 @@ use crate::medium::Medium;
 // Import concrete types only if needed for construction/specific functions not using traits.
 // For now, assuming LightDiffusion is still concrete here.
 use crate::physics::optics::diffusion::LightDiffusion;
-use crate::physics::traits::{CavitationModelBehavior, ThermalModelTrait, ChemicalModelTrait};
+use crate::physics::traits::{CavitationModelBehavior, ThermalModelTrait, ChemicalModelTrait, LightDiffusionModelTrait};
 use log::{debug, warn};
 use ndarray::{Array3, Array4, Axis, Zip};
 

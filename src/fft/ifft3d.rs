@@ -175,7 +175,7 @@ impl Ifft3d {
 
         // Normalize in parallel
         let scale = 1.0 / total_size as f64;
-        field.par_mapv_inplace(|x| Complex::new(x.re * scale, x.im * scale));
+        field.mapv_inplace(|x| Complex::new(x.re * scale, x.im * scale));
     }
     
     /// Apply bit reversal permutation to the 3D field

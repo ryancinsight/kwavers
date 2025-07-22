@@ -28,7 +28,7 @@ impl RayleighOpticalScatteringModel {
 impl super::OpticalScatteringModel for RayleighOpticalScatteringModel {
     fn apply_scattering(&mut self, fluence: &mut Array3<f64>, grid: &Grid, medium: &dyn Medium) {
         debug!("Applying Rayleigh optical scattering");
-        Zip::indexed(fluence).par_for_each(|(i, j, k), f| {
+        Zip::indexed(fluence).for_each(|(i, j, k), f| {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
