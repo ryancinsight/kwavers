@@ -6,6 +6,47 @@ use ndarray::{Array2, Array4, Axis};
 use std::fs::File;
 use std::io::{self, Write};
 
+/// Configuration for recorder setup
+#[derive(Debug, Clone)]
+pub struct RecorderConfig {
+    pub filename: String,
+    pub record_pressure: bool,
+    pub record_light: bool,
+    pub snapshot_interval: usize,
+}
+
+impl RecorderConfig {
+    pub fn new(filename: &str) -> Self {
+        Self {
+            filename: filename.to_string(),
+            record_pressure: true,
+            record_light: true,
+            snapshot_interval: 1,
+        }
+    }
+    
+    pub fn with_pressure_recording(mut self, record: bool) -> Self {
+        self.record_pressure = record;
+        self
+    }
+    
+    pub fn with_light_recording(mut self, record: bool) -> Self {
+        self.record_light = record;
+        self
+    }
+    
+    pub fn with_snapshot_interval(mut self, interval: usize) -> Self {
+        self.snapshot_interval = interval;
+        self
+    }
+}
+
+impl Default for RecorderConfig {
+    fn default() -> Self {
+        Self::new("simulation_output")
+    }
+}
+
 // Field indices
 const PRESSURE_IDX: usize = 0;
 const LIGHT_IDX: usize = 1;
@@ -59,6 +100,18 @@ impl Recorder {
 
     pub fn default_sdt(sensor: Sensor, time: &Time) -> Self {
         Self::new(sensor, time, "sensor_data", true, true, 10)
+    }
+    
+    /// Creates a recorder from configuration
+    pub fn from_config(sensor: Sensor, time: &Time, config: &RecorderConfig) -> Self {
+        Self::new(
+            sensor,
+            time,
+            &config.filename,
+            config.record_pressure,
+            config.record_light,
+            config.snapshot_interval,
+        )
     }
 
     pub fn record(&mut self, fields: &Array4<f64>, time_step: usize, current_time: f64) {

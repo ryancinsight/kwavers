@@ -4,14 +4,12 @@
 //! showing the different acoustic properties and absorption characteristics of each tissue type.
 
 use kwavers::{
-    boundary::PMLBoundary,
+    boundary::pml::{PMLBoundary, PMLConfig},
     grid::Grid,
     init_logging,
     medium::heterogeneous::tissue::HeterogeneousTissueMedium,
     physics::{
-        mechanics::acoustic_wave::NonlinearWave, // Keep for concrete type
-        mechanics::cavitation::CavitationModel,
-        mechanics::streaming::StreamingModel,
+        mechanics::{NonlinearWave, CavitationModel, StreamingModel},
         chemistry::ChemicalModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
         scattering::acoustic::AcousticScatteringModel,
@@ -23,8 +21,9 @@ use kwavers::{
     source::{LinearArray, HanningApodization},
     solver::Solver,
     time::Time,
+    signal::{SineWave, Signal},
+    CavitationModelBehavior,
 };
-use kwavers::boundary::pml::PMLConfig;
 use log::info;
 use std::sync::Arc;
 use std::time::Instant;
@@ -67,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create a linear array transducer instead of FocusedTransducer
     let amplitude = 1.0e5f64; // 0.1 MPa amplitude
-    let signal = kwavers::SineWave::new(frequency, amplitude, 0.0);
+    let signal = SineWave::new(frequency, amplitude, 0.0);
     
     let num_elements = 16;
     let source = LinearArray::with_focus(
@@ -142,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cavitation_model: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid, 10e-6));
     let light_model: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid, true, true, true));
     let thermal_model: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid, 293.15, 1e-6, 1e-6));
-    let chemical_model: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid, true, true));
+    let chemical_model: Box<dyn kwavers::ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid, true, true)?);
     let streaming_model: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid));
     let scattering_model: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid));
     let heterogeneity_model: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid, 1500.0, 0.05));

@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cavitation: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid_clone, 10e-6));
     let light: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
     let thermal: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
-    let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true));
+    let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true)?);
     let streaming: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid_clone));
     let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid_clone));
     let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     recorder.save()?;
 
     // Generate plots
-    plot_simulation_outputs(&recorder, &grid, &time, solver.source.as_ref());
+    plot_simulation_outputs("output", &["pressure_data.txt", "light_data.txt"])?;
 
     info!("SDT simulation completed. Outputs saved and plotted as HTML files.");
     Ok(())

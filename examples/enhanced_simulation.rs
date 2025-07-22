@@ -47,6 +47,8 @@ fn main() -> KwaversResult<()> {
     }
     
     // Get simulation summary (SSOT principle)
+    let summary = setup.get_simulation_summary();
+    println!("   Simulation summary: {} total points, {} steps",
              summary.get("total_points").map(|s| s.as_str()).unwrap_or("N/A"), 
              summary.get("num_steps").map(|s| s.as_str()).unwrap_or("N/A"));
     

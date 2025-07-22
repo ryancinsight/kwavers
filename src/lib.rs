@@ -32,6 +32,7 @@ pub mod validation;
 pub mod signal;
 pub mod utils;
 pub mod fft;
+pub mod output;
 
 use std::collections::HashMap;
 use ndarray::Array3;
@@ -51,7 +52,21 @@ pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, Val
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
-pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent};
+pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent};
+pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel};
+pub use physics::chemistry::ChemicalModel;
+pub use physics::mechanics::elastic_wave::ElasticWave;
+pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
+
+// Re-export utility functions
+pub use output::{save_pressure_data, save_light_data, generate_summary};
+
+// Re-export signal types
+pub use signal::{SineWave, Signal};
+
+// Re-export configuration types
+pub use sensor::SensorConfig;
+pub use recorder::RecorderConfig;
 
 /// Initialize logging for the kwavers library
 /// 

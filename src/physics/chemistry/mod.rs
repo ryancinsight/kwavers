@@ -696,3 +696,29 @@ mod tests {
         assert!(invalid_config.validate().is_err());
     }
 }
+
+// Implement the physics::traits::ChemicalModelTrait for compatibility with solver
+impl crate::physics::traits::ChemicalModelTrait for ChemicalModel {
+    fn update_chemical(
+        &mut self,
+        p: &Array3<f64>,
+        light: &Array3<f64>,
+        emission_spectrum: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        temperature: &Array3<f64>,
+        grid: &Grid,
+        dt: f64,
+        medium: &dyn Medium,
+        frequency: f64,
+    ) {
+        // Delegate to the local trait implementation
+        <Self as ChemicalModelTrait>::update_chemical(
+            self, p, light, emission_spectrum, bubble_radius, temperature, grid, dt, medium, frequency
+        );
+    }
+
+    fn radical_concentration(&self) -> &Array3<f64> {
+        // Delegate to the local trait implementation
+        <Self as ChemicalModelTrait>::radical_concentration(self)
+    }
+}

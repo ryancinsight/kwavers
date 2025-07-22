@@ -5,6 +5,45 @@ use crate::time::Time;
 use log::{debug, error, info};
 use ndarray::{Array1, Array2, Array3};
 
+/// Configuration for sensor setup
+#[derive(Debug, Clone)]
+pub struct SensorConfig {
+    pub positions: Vec<(f64, f64, f64)>, // Positions in meters
+    pub record_pressure: bool,
+    pub record_light: bool,
+}
+
+impl SensorConfig {
+    pub fn new() -> Self {
+        Self {
+            positions: Vec::new(),
+            record_pressure: true,
+            record_light: true,
+        }
+    }
+    
+    pub fn with_positions(mut self, positions: Vec<(f64, f64, f64)>) -> Self {
+        self.positions = positions;
+        self
+    }
+    
+    pub fn with_pressure_recording(mut self, record: bool) -> Self {
+        self.record_pressure = record;
+        self
+    }
+    
+    pub fn with_light_recording(mut self, record: bool) -> Self {
+        self.record_light = record;
+        self
+    }
+}
+
+impl Default for SensorConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct Sensor {
     positions: Vec<(usize, usize, usize)>, // Grid indices
@@ -48,6 +87,16 @@ impl Sensor {
             light_data,
             grid: grid.clone(),
         }
+    }
+    
+    /// Creates a single point sensor at the specified coordinates
+    pub fn point(x: f64, y: f64, z: f64) -> SensorConfig {
+        SensorConfig::new().with_positions(vec![(x, y, z)])
+    }
+    
+    /// Creates a sensor from configuration
+    pub fn from_config(grid: &Grid, time: &Time, config: &SensorConfig) -> Self {
+        Self::new(grid, time, &config.positions)
     }
 
     /// Records pressure and light data at the current time step from k-space fields.
