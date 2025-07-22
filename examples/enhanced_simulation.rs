@@ -47,11 +47,8 @@ fn main() -> KwaversResult<()> {
     }
     
     // Get simulation summary (SSOT principle)
-    let summary = setup.get_summary();
-    println!("   Simulation summary:");
-    for (key, value) in summary {
-        println!("     - {}: {}", key, value);
-    }
+             summary.get("total_points").map(|s| s.as_str()).unwrap_or("N/A"), 
+             summary.get("num_steps").map(|s| s.as_str()).unwrap_or("N/A"));
     
     // Example 2: Enhanced Composable Physics Pipeline (CUPID Composable principle)
     println!("\n2. Demonstrating enhanced composable physics pipeline...");
