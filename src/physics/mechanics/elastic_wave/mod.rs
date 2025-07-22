@@ -277,6 +277,7 @@ impl ElasticWaveMetrics {
 /// - GRASP: Information expert, creator, controller, low coupling, high cohesion
 /// - SSOT: Single source of truth for performance metrics
 /// - ADP: Acyclic dependency principle
+#[derive(Debug)]
 pub struct ElasticWave {
     kx: Array3<f64>,
     ky: Array3<f64>,
@@ -370,7 +371,10 @@ impl ElasticWave {
 
 impl ElasticWave {
     fn _perform_fft(&self, field: &Array3<f64>, grid: &Grid) -> Array3<Complex<f64>> {
-        fft_3d(field, grid)
+        // Create a 4D array with the field as the first component
+        let mut fields_4d = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
+        fields_4d.index_axis_mut(ndarray::Axis(0), 0).assign(field);
+        fft_3d(&fields_4d, 0, grid)
     }
 
     fn _perform_ifft(&self, field_fft: &mut Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
@@ -389,12 +393,12 @@ impl ElasticWave {
         }
 
         // Stress update in k-space
-        let txx_fft = params.vx_fft * &(&params.kx * params.lame_lambda + 2.0 * &params.kx * params.lame_mu);
-        let tyy_fft = params.vy_fft * &(&params.ky * params.lame_lambda + 2.0 * &params.ky * params.lame_mu);
-        let tzz_fft = params.vz_fft * &(&params.kz * params.lame_lambda + 2.0 * &params.kz * params.lame_mu);
-        let txy_fft = (params.vx_fft * &params.ky + params.vy_fft * &params.kx) * params.lame_mu;
-        let txz_fft = (params.vx_fft * &params.kz + params.vz_fft * &params.kx) * params.lame_mu;
-        let tyz_fft = (params.vy_fft * &params.kz + params.vz_fft * &params.ky) * params.lame_mu;
+        let txx_fft = params.vx_fft * &(params.kx * params.lame_lambda + 2.0 * params.kx * params.lame_mu);
+        let tyy_fft = params.vy_fft * &(params.ky * params.lame_lambda + 2.0 * params.ky * params.lame_mu);
+        let tzz_fft = params.vz_fft * &(params.kz * params.lame_lambda + 2.0 * params.kz * params.lame_mu);
+        let txy_fft = (params.vx_fft * params.ky + params.vy_fft * params.kx) * params.lame_mu;
+        let txz_fft = (params.vx_fft * params.kz + params.vz_fft * params.kx) * params.lame_mu;
+        let tyz_fft = (params.vy_fft * params.kz + params.vz_fft * params.ky) * params.lame_mu;
 
         let stress_update_time = start_time.elapsed().as_secs_f64();
         
@@ -412,9 +416,9 @@ impl ElasticWave {
         let start_time = Instant::now();
         
         // Velocity update in k-space
-        let vx_fft = (params.txx_fft * &params.kx + params.txy_fft * &params.ky + params.txz_fft * &params.kz) / params.density;
-        let vy_fft = (params.txy_fft * &params.kx + params.tyy_fft * &params.ky + params.tyz_fft * &params.kz) / params.density;
-        let vz_fft = (params.txz_fft * &params.kx + params.tyz_fft * &params.ky + params.tzz_fft * &params.kz) / params.density;
+        let vx_fft = (params.txx_fft * params.kx + params.txy_fft * params.ky + params.txz_fft * params.kz) / params.density;
+        let vy_fft = (params.txy_fft * params.kx + params.tyy_fft * params.ky + params.tyz_fft * params.kz) / params.density;
+        let vz_fft = (params.txz_fft * params.kx + params.tyz_fft * params.ky + params.tzz_fft * params.kz) / params.density;
 
         let velocity_update_time = start_time.elapsed().as_secs_f64();
         
@@ -433,7 +437,17 @@ impl ElasticWave {
     ) -> Array3<Complex<f64>> {
         let start_time = Instant::now();
         
-        let source_field = source.get_field(grid, t);
+        // Create a source field array from the source term
+        let (nx, ny, nz) = grid.dimensions();
+        let mut source_field = Array3::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let (x, y, z) = grid.coordinates(i, j, k);
+                    source_field[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
+                }
+            }
+        }
         let source_fft = self._perform_fft(&source_field, grid);
         
         let source_time = start_time.elapsed().as_secs_f64();
@@ -478,7 +492,9 @@ impl AcousticWaveModel for ElasticWave {
         let syz = fields.slice(s![SYZ_IDX, .., .., ..]).to_owned();
 
         // Get medium properties
-        let (density, lambda, mu) = medium.get_elastic_properties(grid);
+        let density = medium.density_array();
+        let lambda = medium.lame_lambda_array();
+        let mu = medium.lame_mu_array();
 
         // Perform FFT
         let fft_start = Instant::now();

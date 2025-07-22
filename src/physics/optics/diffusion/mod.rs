@@ -6,6 +6,7 @@ use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::Raylei
 use crate::utils::{fft_3d, ifft_3d};
 use log::{debug, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 use rustfft::num_complex::Complex;
 use std::time::Instant;
 

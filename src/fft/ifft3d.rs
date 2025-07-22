@@ -2,6 +2,7 @@
 use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil};
 use crate::grid::Grid;
 use ndarray::Array3;
+use rayon::prelude::*;
 use num_complex::Complex;
 use log::debug;
 use std::sync::Arc;

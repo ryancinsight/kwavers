@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 use std::fmt::Debug;
 
 pub trait PolarizationModel: Debug + Send + Sync {

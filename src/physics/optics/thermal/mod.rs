@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 
 pub const TEMPERATURE_IDX: usize = 2;
 

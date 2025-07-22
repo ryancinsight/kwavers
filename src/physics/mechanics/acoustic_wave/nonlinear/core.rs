@@ -1,7 +1,8 @@
 // src/physics/mechanics/acoustic_wave/nonlinear/core.rs
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 use log::{debug, warn};
 use std::f64;
 
@@ -262,7 +263,7 @@ use crate::source::Source;
 use crate::solver::PRESSURE_IDX;
 use crate::utils::{fft_3d, ifft_3d};
 use log::{trace};
-use ndarray::{Array4, Axis, Zip, ShapeBuilder};
+use ndarray::{Array4, Axis, ShapeBuilder};
 use num_complex::Complex;
 use std::time::Instant;
 

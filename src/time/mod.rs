@@ -42,6 +42,10 @@ impl Time {
         self.t_max
     }
 
+    pub fn num_steps(&self) -> usize {
+        self.n_steps
+    }
+
     pub fn time_vector(&self) -> Array1<f64> {
         Array1::linspace(0.0, self.t_max, self.n_steps)
     }

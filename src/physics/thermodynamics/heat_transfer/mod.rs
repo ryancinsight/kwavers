@@ -4,6 +4,7 @@ use crate::medium::Medium;
 use crate::utils::laplacian;
 use log::{debug, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 use std::time::{Instant};
 
 pub const TEMPERATURE_IDX: usize = 2;

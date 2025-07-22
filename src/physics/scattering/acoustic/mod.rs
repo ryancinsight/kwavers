@@ -11,7 +11,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
- // Required for par_for_each
+use rayon::prelude::*; // Required for par_for_each
 
 #[derive(Debug, Clone)]
 pub struct AcousticScatteringModel {

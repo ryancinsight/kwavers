@@ -34,6 +34,7 @@ pub mod utils;
 pub mod fft;
 
 use std::collections::HashMap;
+use ndarray::Array3;
 
 // Re-export commonly used types for convenience
 pub use error::{KwaversResult, KwaversError};
@@ -272,13 +273,10 @@ pub fn run_advanced_simulation(
     ))?;
     
     // Create boundary conditions
-    let boundary = PMLBoundary::new(
+    let mut boundary = PMLBoundary::new(
         PMLConfig::default()
             .with_thickness(10)
-            .with_sigma_acoustic(100.0)
-            .with_polynomial_order(2)
             .with_reflection_coefficient(1e-6),
-        &grid,
     )?;
     
     // Initialize fields
@@ -301,7 +299,17 @@ pub fn run_advanced_simulation(
         context.step = step;
         
         // Apply source
-        let source_field = source.generate_field(t, &grid)?;
+        // Create source field array
+        let (nx, ny, nz) = grid.dimensions();
+        let mut source_field = Array3::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let (x, y, z) = grid.coordinates(i, j, k);
+                    source_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
+                }
+            }
+        }
         context.add_source_term("acoustic_source".to_string(), source_field);
         
         // Apply physics pipeline
@@ -315,10 +323,15 @@ pub fn run_advanced_simulation(
         )?;
         
         // Apply boundary conditions
-        boundary.apply(&mut fields, &grid, time.dt)?;
+        let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
+        boundary.apply_acoustic(&mut pressure_field, &grid, step);
+        fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+        let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
+        boundary.apply_light(&mut light_field, &grid, step);
+        fields.index_axis_mut(ndarray::Axis(0), 1).assign(&light_field);
         
         // Record data
-        recorder.record(step, &fields, &grid)?;
+        recorder.record(&fields, step, t);
         
         // Progress reporting
         if step % 100 == 0 {
@@ -328,22 +341,8 @@ pub fn run_advanced_simulation(
     }
     
     // Generate visualizations if enabled
-    if recorder.config.enable_visualization {
-        plot_simulation_outputs(
-            &recorder.config.output_directory,
-            &[
-                "pressure_time_series.html",
-                "temperature_time_series.html",
-                "pressure_slice.html",
-                "temperature_slice.html",
-                "source_positions.html",
-                "sensor_positions.html",
-            ],
-        )?;
-    }
-    
     println!("Advanced simulation completed successfully!");
-    println!("Results saved to: {}", recorder.config.output_directory);
+    println!("Results saved to: {}", recorder.filename);
     
     Ok(())
 }

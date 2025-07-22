@@ -51,6 +51,24 @@ impl Grid {
         self.nx * self.ny * self.nz
     }
 
+    /// Returns grid dimensions as (nx, ny, nz).
+    pub fn dimensions(&self) -> (usize, usize, usize) {
+        (self.nx, self.ny, self.nz)
+    }
+
+    /// Returns grid spacing as (dx, dy, dz).
+    pub fn spacing(&self) -> (f64, f64, f64) {
+        (self.dx, self.dy, self.dz)
+    }
+
+    /// Returns the physical coordinates at grid indices (i, j, k).
+    pub fn coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
+        let x = i as f64 * self.dx;
+        let y = j as f64 * self.dy;
+        let z = k as f64 * self.dz;
+        (x, y, z)
+    }
+
     /// Calculates the physical domain size in each dimension (meters), excluding padding.
     pub fn domain_size(&self) -> (f64, f64, f64) {
         let lx = self.dx * (self.nx - 1) as f64;

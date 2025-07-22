@@ -58,6 +58,18 @@ impl Default for PMLConfig {
 }
 
 impl PMLConfig {
+    /// Set PML thickness
+    pub fn with_thickness(mut self, thickness: usize) -> Self {
+        self.thickness = thickness;
+        self
+    }
+
+    /// Set reflection coefficient
+    pub fn with_reflection_coefficient(mut self, reflection: f64) -> Self {
+        self.target_reflection = Some(reflection);
+        self
+    }
+
     /// Validate PML configuration parameters
     /// Follows SOLID Single Responsibility Principle
     pub fn validate(&self) -> KwaversResult<()> {
