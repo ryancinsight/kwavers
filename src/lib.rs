@@ -33,7 +33,7 @@ pub mod signal;
 pub mod utils;
 pub mod fft;
 pub mod output;
-// pub mod factory;  // Temporarily disabled - needs refactoring
+pub mod factory;  // Re-enabled factory module
 
 use std::collections::HashMap;
 use ndarray::Array3;
@@ -60,7 +60,7 @@ pub use physics::mechanics::elastic_wave::ElasticWave;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  
-// pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SimulationBuilder};  // Temporarily disabled - needs refactoring
+pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SimulationBuilder};
 
 // Re-export utility functions
 pub use output::{save_pressure_data, save_light_data, generate_summary};

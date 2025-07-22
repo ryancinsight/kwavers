@@ -176,7 +176,37 @@ impl CavitationModel {
                     let d_volume_dt = 4.0 * PI * r.powi(2) * v;
                     
                     // Add multi-bubble interaction effects (placeholder)
-                    let multi_bubble_contribution = 0.0; // TODO: Implement when field is available
+                    let multi_bubble_contribution = if bubble_density.len() > 1 {
+                        // Calculate distance-weighted contribution from nearby bubbles
+                        let max_interaction_distance = 5.0 * bubble_radius;
+                        let mut total_contribution = 0.0;
+                        let mut count = 0;
+                        
+                        for (neighbor_i, neighbor_j, neighbor_k) in [(i+1,j,k), (i-1,j,k), (i,j+1,k), (i,j-1,k), (i,j,k+1), (i,j,k-1)] {
+                            if neighbor_i < grid.nx && neighbor_j < grid.ny && neighbor_k < grid.nz {
+                                let neighbor_density = bubble_density[[neighbor_i, neighbor_j, neighbor_k]];
+                                if neighbor_density > 0.0 {
+                                    let distance = ((neighbor_i as f64 - i as f64) * grid.dx).powi(2) +
+                                                  ((neighbor_j as f64 - j as f64) * grid.dy).powi(2) +
+                                                  ((neighbor_k as f64 - k as f64) * grid.dz).powi(2);
+                                    let distance = distance.sqrt();
+                                    
+                                    if distance < max_interaction_distance && distance > 0.0 {
+                                        total_contribution += neighbor_density / (1.0 + distance);
+                                        count += 1;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if count > 0 {
+                            total_contribution / count as f64 * 0.1 // 10% enhancement factor
+                        } else {
+                            0.0
+                        }
+                    } else {
+                        0.0
+                    };
                     
                     p_update[[i, j, k]] -= d_volume_dt / cell_volume + total_scatter + multi_bubble_contribution;
                     
@@ -214,8 +244,27 @@ impl CavitationModel {
         medium: &dyn Medium,
         dt: f64, 
     ) {
-        // Simplified light emission calculation (placeholder)
-        // TODO: Implement full enhanced light emission when fields are available
+        // Enhanced light emission calculation with bubble dynamics
+        let collapse_threshold = bubble_radius * 0.1; // 10% of initial radius
+        let enhanced_factor = if bubble_radius < collapse_threshold {
+            // During collapse, emit enhanced light based on compression ratio
+            let compression_ratio = collapse_threshold / bubble_radius.max(1e-12);
+            let temperature_factor = (compression_ratio * 1000.0).min(10000.0); // Cap at 10,000K
+            let emission_efficiency = (temperature_factor / 5000.0).min(1.0);
+            
+            // Calculate spectral distribution based on temperature
+            let wavelength_peak = 2.898e-3 / temperature_factor; // Wien's displacement law
+            let spectral_intensity = if wavelength_peak > 400e-9 && wavelength_peak < 700e-9 {
+                1.0 // Visible spectrum
+            } else {
+                0.5 // UV/IR reduced efficiency
+            };
+            
+            emission_efficiency * spectral_intensity * compression_ratio.powi(2)
+        } else {
+            // Normal thermal emission
+            0.01 * (bubble_radius / initial_radius).powi(3)
+        };
         
         for i in 0..grid.nx {
             for j in 0..grid.ny {
