@@ -421,9 +421,7 @@ mod tests {
     #[test]
     fn test_enhanced_simulation_example() {
         // Test that the main function doesn't panic
-        let result = main();
-        assert!(result.is_ok() || result.is_err()); // Either success or controlled error
-    }
+        assert!(result.is_ok());
     
     #[test]
     fn test_enhanced_custom_component() {
