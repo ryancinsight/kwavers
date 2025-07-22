@@ -64,6 +64,10 @@ pub use output::{save_pressure_data, save_light_data, generate_summary};
 // Re-export signal types
 pub use signal::{SineWave, Signal};
 
+// Re-export configuration types
+pub use sensor::SensorConfig;
+pub use recorder::RecorderConfig;
+
 /// Initialize logging for the kwavers library
 /// 
 /// Implements KISS principle with simple, clear initialization

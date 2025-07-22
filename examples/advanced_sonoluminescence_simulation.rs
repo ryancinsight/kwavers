@@ -25,14 +25,14 @@ use kwavers::{
         thermodynamics::heat_transfer::ThermalModel,
         heterogeneity::HeterogeneityModel,
         traits::*,
-        composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline},
+        composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, FieldType},
     },
     boundary::pml::PMLConfig,
     grid::Grid,
     time::Time,
     source::Source,
-    sensor::SensorConfig,
-    recorder::RecorderConfig,
+    SensorConfig,
+    RecorderConfig,
     error::KwaversResult,
 };
 use std::error::Error;
@@ -40,7 +40,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Advanced sonoluminescence simulation configuration
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SonoluminescenceConfig {
     // Acoustic parameters
     frequency: f64,
@@ -157,7 +157,7 @@ impl AdvancedSonoluminescenceSimulation {
             config.domain_size.0 / config.grid_resolution.0 as f64,
             config.domain_size.1 / config.grid_resolution.1 as f64,
             config.domain_size.2 / config.grid_resolution.2 as f64,
-        )?;
+        );
         
         // Create time discretization
         let dt = grid.cfl_timestep_default(1500.0); // Sound speed in water
@@ -208,37 +208,22 @@ impl AdvancedSonoluminescenceSimulation {
         ))?;
         
         // Create recorder with enhanced sensor configuration
-        let sensor_config = SensorConfig {
-            pressure_sensors: vec![
-                Sensor::point(0.03, 0.0, 0.0), // Focus point
-                Sensor::point(0.02, 0.0, 0.0), // Pre-focus
-                Sensor::point(0.04, 0.0, 0.0), // Post-focus
-            ],
-            temperature_sensors: vec![
-                Sensor::point(0.03, 0.0, 0.0),
-                Sensor::point(0.02, 0.0, 0.0),
-                Sensor::point(0.04, 0.0, 0.0),
-            ],
-            light_sensors: vec![
-                Sensor::point(0.03, 0.0, 0.0),
-                Sensor::point(0.02, 0.0, 0.0),
-                Sensor::point(0.04, 0.0, 0.0),
-            ],
-            cavitation_sensors: vec![
-                Sensor::point(0.03, 0.0, 0.0),
-                Sensor::point(0.02, 0.0, 0.0),
-                Sensor::point(0.04, 0.0, 0.0),
-            ],
-        };
+        let sensor_config = SensorConfig::new()
+            .with_positions(vec![
+                (0.03, 0.0, 0.0), // Focus point
+                (0.02, 0.0, 0.0), // Pre-focus
+                (0.04, 0.0, 0.0), // Post-focus
+            ])
+            .with_pressure_recording(true)
+            .with_light_recording(true);
         
-        let recorder_config = RecorderConfig {
-            output_directory: "sonoluminescence_output".to_string(),
-            snapshot_interval: config.output_interval,
-            enable_visualization: true,
-            save_raw_data: true,
-        };
+        let recorder_config = RecorderConfig::new("sonoluminescence_output")
+            .with_snapshot_interval(config.output_interval)
+            .with_pressure_recording(true)
+            .with_light_recording(true);
         
-        let recorder = Recorder::new(sensor_config, recorder_config)?;
+        let sensor = Sensor::from_config(&grid, &time, &sensor_config);
+        let recorder = Recorder::from_config(sensor, &time, &recorder_config);
         
         let total_time = start_time.elapsed().as_secs_f64();
         
@@ -349,22 +334,21 @@ impl AdvancedSonoluminescenceSimulation {
     }
     
     /// Create a focused ultrasound source for cavitation generation
-    fn create_focused_source(&self) -> KwaversResult<Source> {
-        let source_config = kwavers::SourceConfig {
-            num_elements: 64, // More elements for better focusing
-            signal_type: "sine".to_string(),
-            frequency: Some(self.config.frequency),
-            amplitude: Some(self.config.amplitude),
-            phase: None,
-            focus_x: Some(0.03), // Focus at 30 mm
-            focus_y: Some(0.0),
-            focus_z: Some(0.0),
-            start_freq: None,
-            end_freq: None,
-            signal_duration: None,
-        };
+    fn create_focused_source(&self) -> KwaversResult<Box<dyn Source>> {
+        use kwavers::{SineWave, LinearArray, HanningApodization};
         
-        Source::new(source_config, &self.grid)
+        let signal = SineWave::new(self.config.frequency, self.config.amplitude, 0.0);
+        let apodization = HanningApodization::new();
+        
+        let source = LinearArray::new(
+            64, // Number of elements
+            0.001, // Element spacing (1mm)
+            (0.03, 0.0, 0.0), // Focus point
+            Box::new(signal),
+            Box::new(apodization),
+        );
+        
+        Ok(Box::new(source))
     }
     
     /// Report detailed performance metrics
@@ -443,12 +427,12 @@ impl PhysicsComponent for AdvancedCavitationComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<&str> {
-        vec!["pressure"] // Depends on acoustic pressure
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure] // Depends on acoustic pressure
     }
     
-    fn output_fields(&self) -> Vec<&str> {
-        vec!["cavitation", "light_source"] // Produces cavitation and light
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Cavitation, FieldType::Light] // Produces cavitation and light
     }
     
     fn apply(
@@ -527,12 +511,12 @@ impl PhysicsComponent for AdvancedLightComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<&str> {
-        vec!["light_source"] // Depends on light source from cavitation
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Light] // Depends on light source from cavitation
     }
     
-    fn output_fields(&self) -> Vec<&str> {
-        vec!["light", "thermal_source"] // Produces light field and thermal effects
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Light, FieldType::Temperature] // Produces light field and thermal effects
     }
     
     fn apply(
@@ -597,12 +581,12 @@ impl PhysicsComponent for AdvancedChemicalComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<&str> {
-        vec!["temperature", "light"] // Depends on temperature and light
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Temperature, FieldType::Light] // Depends on temperature and light
     }
     
-    fn output_fields(&self) -> Vec<&str> {
-        vec!["chemical_concentration", "reaction_heat"] // Produces chemical effects
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Chemical, FieldType::Temperature] // Produces chemical effects
     }
     
     fn apply(

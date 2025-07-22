@@ -9,7 +9,7 @@ use kwavers::{
     boundary::{Boundary, PMLBoundary},
     recorder::Recorder,
     sensor::Sensor, // Added Sensor
-    log::init_logging,
+    init_logging,
     physics::traits::AcousticWaveModel,
 };
 use ndarray::{Array3, Array4, Axis};
@@ -139,7 +139,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut fields_array = Array4::zeros((TOTAL_FIELDS, nx, ny, nz));
     let prev_pressure_dummy = Array3::zeros((nx, ny, nz));
 
-    let mut wave_solver_mut = ElasticWave::new(&grid);
+    let mut wave_solver_mut = ElasticWave::new(&grid)?;
 
     info!("Starting simulation loop (direct wave model update)...");
     for step in 0..num_steps {
