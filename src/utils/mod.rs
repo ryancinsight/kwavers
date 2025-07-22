@@ -1,4 +1,6 @@
 // src/utils/mod.rs
+pub mod iterators;
+
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
 use log::{debug, trace, info};

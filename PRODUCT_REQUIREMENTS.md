@@ -4,7 +4,7 @@
 
 **kwavers** is a modern, high-performance, open-source computational toolbox for simulating ultrasound wave propagation and its interactions with complex biological media. It provides researchers, engineers, and medical professionals with a powerful and flexible platform for modeling various ultrasound-based diagnostic and therapeutic applications, with particular emphasis on advanced physics phenomena including cavitation dynamics, sonoluminescence, and light-tissue interactions.
 
-The core vision is to offer capabilities comparable to or exceeding existing toolboxes like k-Wave, but with a focus on modern software engineering practices, performance leveraging contemporary hardware (CPUs, potentially GPUs in the future), and an idiomatic, extensible API primarily in Rust, while also considering future interoperability with other languages like Python.
+The core vision is to offer capabilities comparable to or exceeding existing toolboxes like k-Wave, jWave, and k-wave-python, but with a focus on modern software engineering practices, performance leveraging contemporary hardware (CPUs, potentially GPUs in the future), and an idiomatic, extensible API implemented in pure Rust using zero-cost abstractions and iterator-based patterns.
 
 ## 2. Goals
 
@@ -154,10 +154,10 @@ The core vision is to offer capabilities comparable to or exceeding existing too
 *   **GPU Acceleration:** CUDA/OpenCL support for large-scale simulations.
 *   **Memory Optimization:** Cache-friendly data layouts, memory pooling, lazy initialization.
 *   **API Design:**
-    *   Primary Rust API: Ergonomic, well-documented, type-safe.
+    *   Pure Rust API: Ergonomic, well-documented, type-safe, leveraging zero-cost abstractions.
+    *   Iterator-based patterns for memory-efficient processing.
     *   Configuration via TOML/YAML files with validation.
-    *   Python bindings with NumPy integration.
-    *   C/C++ bindings for legacy code integration.
+    *   Future C/C++ bindings for legacy code integration if needed.
 *   **Visualization:** Real-time plotting, 3D rendering, animation support.
 *   **Validation:** Rigorous testing against analytical solutions, benchmarks, and other established toolboxes.
 
@@ -217,10 +217,10 @@ The core vision is to offer capabilities comparable to or exceeding existing too
 *   **Error Handling**: Complete error propagation and recovery mechanisms
 
 #### 6.1.2. Enhanced Usability (Priority 2 - Week 3-6)
-*   **Python Bindings**: Complete PyO3 integration with NumPy compatibility
-*   **Configuration System**: YAML/TOML support with comprehensive validation
-*   **Documentation**: Interactive tutorials and comprehensive API examples
-*   **Visualization**: Real-time 3D plotting and animation capabilities
+*   **Iterator Patterns**: Implement zero-cost iterator abstractions for efficient data processing
+*   **Configuration System**: YAML/TOML support with comprehensive validation using Rust's type system
+*   **Documentation**: Interactive tutorials and comprehensive Rust API examples
+*   **Visualization**: Real-time 3D plotting and animation capabilities using pure Rust libraries
 
 #### 6.1.3. Advanced Physics (Priority 3 - Week 7-10)
 *   **Multi-Bubble Interactions**: Complete bubble cloud dynamics implementation
@@ -236,33 +236,33 @@ The core vision is to offer capabilities comparable to or exceeding existing too
 
 ### 6.2. Success Criteria for Phase 4
 *   **Zero Compilation Errors**: All examples and tests compile successfully
-*   **Python Integration**: Functional Python API with Jupyter notebook examples
-*   **Performance Target**: 10x speedup over equivalent Python implementations
-*   **Documentation**: 100% API coverage with interactive examples
-*   **GPU Acceleration**: 50x speedup on CUDA-enabled hardware for large simulations
+*   **Iterator Integration**: Functional zero-cost iterator patterns throughout the codebase
+*   **Performance Target**: 10x+ speedup over k-Wave, jWave, and k-wave-python implementations
+*   **Documentation**: 100% API coverage with comprehensive Rust examples
+*   **GPU Acceleration**: 50x speedup on CUDA-enabled hardware for large simulations using pure Rust GPU libraries
 
 ## 7. Future Considerations / Long-term Enhancements
 
 ### 7.1. Short-term (Next 6 months)
-*   **Advanced Elastic Models:** Anisotropy, nonlinear elasticity, full elastic PMLs.
-*   **Enhanced Cavitation:** Multi-bubble interactions, cloud dynamics.
-*   **Improved Light Modeling:** Spectral analysis, polarization effects.
-*   **Better Visualization:** Real-time 3D rendering, interactive plots.
-*   **Python API:** Comprehensive Python bindings with NumPy integration.
+*   **Advanced Elastic Models:** Anisotropy, nonlinear elasticity, full elastic PMLs using iterator patterns.
+*   **Enhanced Cavitation:** Multi-bubble interactions, cloud dynamics with zero-cost abstractions.
+*   **Improved Light Modeling:** Spectral analysis, polarization effects leveraging Rust's type system.
+*   **Better Visualization:** Real-time 3D rendering, interactive plots using pure Rust graphics libraries.
+*   **Iterator Optimization:** Comprehensive iterator-based patterns for memory-efficient processing.
 
-### 6.2. Medium-term (6-12 months)
-*   **GPU Acceleration:** CUDA/OpenCL implementation for significant speedups.
-*   **Advanced Transducer Modeling:** Complex geometries, adaptive beamforming.
-*   **Comprehensive Material Library:** Frequency-dependent tissue properties.
-*   **Inverse Problems:** Transducer design optimization, material characterization.
-*   **Cloud Deployment:** Web-based simulation interface.
+### 7.2. Medium-term (6-12 months)
+*   **GPU Acceleration:** Pure Rust CUDA/OpenCL implementation using wgpu or similar for significant speedups.
+*   **Advanced Transducer Modeling:** Complex geometries, adaptive beamforming with iterator-based processing.
+*   **Comprehensive Material Library:** Frequency-dependent tissue properties with type-safe material definitions.
+*   **Inverse Problems:** Transducer design optimization, material characterization using Rust's optimization libraries.
+*   **WASM Deployment:** WebAssembly-based simulation interface for browser deployment.
 
-### 6.3. Long-term (1+ years)
-*   **Fluid-Structure Interaction:** Vessel modeling, tissue deformation.
-*   **Machine Learning Integration:** AI-assisted parameter optimization.
-*   **Real-time Applications:** Interactive therapy planning.
-*   **Multi-scale Modeling:** Cellular to organ-level simulations.
-*   **Clinical Integration:** DICOM support, patient-specific modeling.
+### 7.3. Long-term (1+ years)
+*   **Fluid-Structure Interaction:** Vessel modeling, tissue deformation using Rust's async capabilities.
+*   **Machine Learning Integration:** AI-assisted parameter optimization with pure Rust ML libraries (Candle, Linfa).
+*   **Real-time Applications:** Interactive therapy planning with low-latency Rust implementations.
+*   **Multi-scale Modeling:** Cellular to organ-level simulations leveraging Rust's zero-cost abstractions.
+*   **Clinical Integration:** DICOM support, patient-specific modeling with memory-safe medical data handling.
 
 ## 7. Non-Goals (for initial phases)
 
@@ -275,16 +275,16 @@ The core vision is to offer capabilities comparable to or exceeding existing too
 ## 8. Success Metrics
 
 ### 8.1. Technical Metrics
-*   **Performance:** 10x speedup over Python implementations for equivalent accuracy.
+*   **Performance:** 10x+ speedup over k-Wave, jWave, and k-wave-python implementations for equivalent accuracy.
 *   **Accuracy:** Validation against analytical solutions with <1% error.
-*   **Memory Usage:** Efficient memory utilization with <2GB for typical 3D simulations.
-*   **Scalability:** Linear scaling with number of CPU cores up to 64 cores.
+*   **Memory Usage:** Efficient memory utilization with <2GB for typical 3D simulations using Rust's zero-cost abstractions.
+*   **Scalability:** Linear scaling with number of CPU cores up to 64 cores leveraging Rust's fearless concurrency.
 
 ### 8.2. User Experience Metrics
-*   **Ease of Use:** New users can run basic simulations within 30 minutes.
-*   **Documentation:** Comprehensive API documentation with examples.
-*   **Community:** Active user community with regular contributions.
-*   **Adoption:** Usage in at least 10 research institutions within 2 years.
+*   **Ease of Use:** New Rust developers can run basic simulations within 30 minutes.
+*   **Documentation:** Comprehensive API documentation with Rust examples and benchmarks.
+*   **Community:** Active Rust-focused user community with regular contributions.
+*   **Adoption:** Usage in at least 10 research institutions within 2 years, demonstrating Rust's viability for scientific computing.
 
 ### 8.3. Quality Metrics
 *   **Code Coverage:** >90% test coverage for all modules.
@@ -313,15 +313,15 @@ The core vision is to offer capabilities comparable to or exceeding existing too
 *   **Quality**: High code quality with comprehensive error handling and validation
 
 ### 9.3. Immediate Next Steps (Priority 1)
-1. **Documentation Enhancement**: Complete API documentation and tutorial creation
-2. **Python Bindings**: Implement PyO3 integration for Python interoperability
+1. **Documentation Enhancement**: Complete API documentation and tutorial creation with Rust-focused examples
+2. **Iterator Patterns**: Implement comprehensive zero-cost iterator abstractions throughout the codebase
 3. **Advanced Examples**: Fix remaining advanced examples (enhanced_simulation, advanced_hifu_with_sonoluminescence)
-4. **Factory Module**: Refactor and re-enable the factory pattern implementation
+4. **Factory Module**: Refactor and re-enable the factory pattern implementation using Rust design patterns
 
 ### 9.4. Next Development Cycle (Priority 2)
-1. **Multi-Bubble Interactions**: Enhanced cavitation modeling with bubble cloud dynamics
-2. **Spectral Analysis**: Complete sonoluminescence spectral modeling
-3. **GPU Acceleration**: CUDA/OpenCL implementation for large-scale simulations
-4. **Advanced Visualization**: Real-time 3D rendering capabilities
+1. **Multi-Bubble Interactions**: Enhanced cavitation modeling with bubble cloud dynamics using iterator patterns
+2. **Spectral Analysis**: Complete sonoluminescence spectral modeling with zero-cost abstractions
+3. **GPU Acceleration**: Pure Rust CUDA/OpenCL implementation for large-scale simulations
+4. **Advanced Visualization**: Real-time 3D rendering capabilities using pure Rust graphics libraries
 
 This PRD provides a comprehensive overview and will be a living document, updated as the project evolves and new requirements emerge.
