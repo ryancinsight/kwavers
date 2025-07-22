@@ -20,7 +20,6 @@
 use crate::error::{KwaversResult, ValidationError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt;
 use std::sync::{Arc, RwLock};
 
 /// Validation result with detailed information

@@ -2,7 +2,7 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, PhysicsError, NumericalError};
-use log::{debug, warn, trace};
+use log::{debug, warn};
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;

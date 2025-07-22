@@ -33,6 +33,7 @@ pub mod signal;
 pub mod utils;
 pub mod fft;
 pub mod output;
+// pub mod factory;  // Temporarily disabled - needs refactoring
 
 use std::collections::HashMap;
 use ndarray::Array3;
@@ -52,17 +53,23 @@ pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, Val
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
-pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent};
+pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, ComponentState, FieldType};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel};
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::ElasticWave;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
+
+// Re-export factory components  
+// pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SimulationBuilder};  // Temporarily disabled - needs refactoring
 
 // Re-export utility functions
 pub use output::{save_pressure_data, save_light_data, generate_summary};
 
 // Re-export signal types
 pub use signal::{SineWave, Signal};
+
+// Re-export source types
+pub use source::{LinearArray, HanningApodization};
 
 // Re-export configuration types
 pub use sensor::SensorConfig;
@@ -380,7 +387,7 @@ pub fn get_version_info() -> HashMap<String, String> {
 /// 
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
-    let mut validation_manager = ValidationManager::new();
+    let validation_manager = ValidationManager::new();
     
     // Create system compatibility validation pipeline
     let pipeline = ValidationBuilder::new("system_compatibility_validation".to_string())

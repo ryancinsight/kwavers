@@ -3,11 +3,9 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::optics::{PolarizationModel, OpticalThermalModel, polarization::SimplePolarizationModel};
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
-use crate::utils::{fft_3d, ifft_3d};
-use log::{debug, trace};
+use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
 use rayon::prelude::*;
-use rustfft::num_complex::Complex;
 use std::time::Instant;
 use crate::physics::traits::LightDiffusionModelTrait;
 
