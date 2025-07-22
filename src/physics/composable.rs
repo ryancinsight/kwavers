@@ -433,10 +433,11 @@ impl PhysicsPipeline {
             
             // Execute component with performance tracking
             let start_time = Instant::now();
+            let component_id = component.component_id().to_string();
             let result = component.apply(fields, grid, medium, dt, t, context);
             let duration = start_time.elapsed().as_secs_f64();
             
-            context.performance_tracker.record_execution(component_id, duration);
+            context.performance_tracker.record_execution(&component_id, duration);
             
             if let Err(e) = result {
                 self.state = PipelineState::Error(e.to_string());
@@ -659,7 +660,7 @@ impl PhysicsComponent for AcousticWaveComponent {
     }
     
     fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure]
+        vec![] // Acoustic wave doesn't depend on its own output
     }
     
     fn output_fields(&self) -> Vec<FieldType> {
@@ -683,7 +684,7 @@ impl PhysicsComponent for AcousticWaveComponent {
         let start_time = Instant::now();
         
         // Apply wave equation update
-        let pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
         
         // Simple finite difference update (placeholder)
         for i in 1..grid.nx - 1 {
@@ -745,7 +746,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
     }
     
     fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Temperature]
+        vec![] // Thermal diffusion doesn't depend on its own output
     }
     
     fn output_fields(&self) -> Vec<FieldType> {
@@ -766,7 +767,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         let start_time = Instant::now();
         
         // Simple thermal diffusion (placeholder implementation)
-        let temp_field = fields.index_axis_mut(ndarray::Axis(0), 2);
+        let mut temp_field = fields.index_axis_mut(ndarray::Axis(0), 2);
         
         // Finite difference thermal diffusion
         for i in 1..grid.nx - 1 {
@@ -811,7 +812,7 @@ mod tests {
     use crate::grid::Grid;
 
     fn create_test_grid() -> Grid {
-        Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap()
+        Grid::new(10, 10, 10, 0.001, 0.001, 0.001)
     }
 
     #[test]

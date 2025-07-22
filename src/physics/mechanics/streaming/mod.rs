@@ -28,7 +28,7 @@ impl StreamingModel {
         let mut force = Array3::zeros(pressure.dim());
         Zip::indexed(&mut force)
             .and(pressure)
-            .par_for_each(|(i, j, k), f, &p| {
+            .for_each(|(i, j, k), f, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -38,7 +38,7 @@ impl StreamingModel {
 
         Zip::indexed(&mut self.velocity)
             .and(&force)
-            .par_for_each(|(i, j, k), v, &f| {
+            .for_each(|(i, j, k), v, &f| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

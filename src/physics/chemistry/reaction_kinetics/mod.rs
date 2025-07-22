@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct ReactionKinetics {
@@ -33,7 +34,7 @@ impl ReactionKinetics {
             .and(&mut self.hydrogen_peroxide)
             .and(radical_init)
             .and(temperature)
-            .par_for_each(|(i, j, k), oh, h2o2, &r_init, &t| {
+            .for_each(|(i, j, k), oh, h2o2, &r_init, &t| {
                 let _x = i as f64 * grid.dx;
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;

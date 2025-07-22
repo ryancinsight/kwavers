@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 
 pub const TEMPERATURE_IDX: usize = 2;
 
@@ -32,7 +33,7 @@ impl OpticalThermalModel {
         // Calculate heat source from light absorption
         Zip::indexed(&mut self.temperature_contribution)
             .and(fluence)
-            .par_for_each(|(i, j, k), t_contrib, &f_val| {
+            .for_each(|(i, j, k), t_contrib, &f_val| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -46,7 +47,7 @@ impl OpticalThermalModel {
         let mut temp_field = fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
         Zip::from(&mut temp_field)
             .and(&self.temperature_contribution)
-            .par_for_each(|t, &t_contrib| {
+            .for_each(|t, &t_contrib| {
                 *t += t_contrib;
                 if t.is_nan() || t.is_infinite() {
                     *t = 0.0;

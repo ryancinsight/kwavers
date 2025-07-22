@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 use std::fmt::Debug;
 
 pub trait PolarizationModel: Debug + Send + Sync {
@@ -46,7 +47,7 @@ impl PolarizationModel for SimplePolarizationModel {
         debug!("Applying polarization effects to light fluence");
         Zip::from(fluence)
             .and(emission_spectrum)
-            .par_for_each(|f, &spec| {
+            .for_each(|f, &spec| {
                 let x = (spec / 1e-9).cos(); // Simple polarization modulation based on wavelength
                 *f *= 1.0 + self.polarization_factor * x; // Adjust fluence by polarization
                 *f = f.max(0.0);

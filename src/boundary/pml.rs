@@ -2,7 +2,8 @@ use crate::boundary::Boundary;
 use crate::grid::Grid;
 use crate::error::{KwaversResult, ConfigError};
 use log::trace;
-use ndarray::{Array3, Zip}; // Removed parallel prelude
+use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 use rustfft::num_complex::Complex;
 
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.
@@ -58,6 +59,18 @@ impl Default for PMLConfig {
 }
 
 impl PMLConfig {
+    /// Set PML thickness
+    pub fn with_thickness(mut self, thickness: usize) -> Self {
+        self.thickness = thickness;
+        self
+    }
+
+    /// Set reflection coefficient
+    pub fn with_reflection_coefficient(mut self, reflection: f64) -> Self {
+        self.target_reflection = Some(reflection);
+        self
+    }
+
     /// Validate PML configuration parameters
     /// Follows SOLID Single Responsibility Principle
     pub fn validate(&self) -> KwaversResult<()> {
@@ -65,7 +78,7 @@ impl PMLConfig {
             return Err(ConfigError::InvalidValue {
                 parameter: "thickness".to_string(),
                 value: self.thickness.to_string(),
-                reason: "PML thickness must be > 0".to_string(),
+                constraint: "PML thickness must be > 0".to_string(),
             }.into());
         }
         
@@ -73,7 +86,7 @@ impl PMLConfig {
             return Err(ConfigError::InvalidValue {
                 parameter: "sigma_max".to_string(),
                 value: format!("acoustic: {}, light: {}", self.sigma_max_acoustic, self.sigma_max_light),
-                reason: "Sigma values must be >= 0".to_string(),
+                constraint: "Sigma values must be >= 0".to_string(),
             }.into());
         }
         
@@ -174,7 +187,7 @@ impl PMLBoundary {
             trace!("Precomputing 3D acoustic damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
             
-            Zip::indexed(&mut damping_3d).par_for_each(|(i, j, k), val| {
+            Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
                 *val = self.acoustic_damping_x[i] + self.acoustic_damping_y[j] + self.acoustic_damping_z[k];
             });
             
@@ -188,7 +201,7 @@ impl PMLBoundary {
             trace!("Precomputing 3D light damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
             
-            Zip::indexed(&mut damping_3d).par_for_each(|(i, j, k), val| {
+            Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
                 *val = self.light_damping_x[i] + self.light_damping_y[j] + self.light_damping_z[k];
             });
             
@@ -206,10 +219,10 @@ impl Boundary for PMLBoundary {
         self.precompute_acoustic_damping_3d(grid);
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
         
-        // Apply damping in parallel using precomputed factors
+        // Apply damping using precomputed factors
         Zip::from(field)
             .and(damping_3d)
-            .par_for_each(|val, &damping| {
+            .for_each(|val, &damping| {
                 Self::apply_damping(val, damping, dx);
             });
     }
@@ -222,10 +235,10 @@ impl Boundary for PMLBoundary {
         self.precompute_acoustic_damping_3d(grid);
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
         
-        // Apply damping in parallel using precomputed factors
+        // Apply damping using precomputed factors
         Zip::from(field)
             .and(damping_3d)
-            .par_for_each(|val, &damping| {
+            .for_each(|val, &damping| {
                 Self::apply_complex_damping(val, damping, dx);
             });
     }
@@ -238,10 +251,10 @@ impl Boundary for PMLBoundary {
         self.precompute_light_damping_3d(grid);
         let damping_3d = self.light_damping_3d.as_ref().unwrap();
         
-        // Apply damping in parallel using precomputed factors
+        // Apply damping using precomputed factors
         Zip::from(field)
             .and(damping_3d)
-            .par_for_each(|val, &damping| {
+            .for_each(|val, &damping| {
                 Self::apply_damping(val, damping, dx);
             });
     }

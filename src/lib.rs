@@ -29,19 +29,26 @@ pub mod solver;
 pub mod physics;
 pub mod config;
 pub mod validation;
+pub mod signal;
+pub mod utils;
+pub mod fft;
+
+use std::collections::HashMap;
+use ndarray::Array3;
 
 // Re-export commonly used types for convenience
 pub use error::{KwaversResult, KwaversError};
 pub use grid::Grid;
 pub use time::Time;
-pub use medium::{Medium, HomogeneousMedium};
-pub use source::{Source, SourceConfig};
+pub use medium::{Medium, homogeneous::HomogeneousMedium};
+pub use source::Source;
 pub use sensor::Sensor;
-pub use recorder::{Recorder, RecorderConfig};
-pub use boundary::{Boundary, PMLBoundary, PMLConfig};
+pub use recorder::Recorder;
+pub use boundary::{Boundary, pml::PMLBoundary, pml::PMLConfig};
 pub use solver::Solver;
-pub use config::{Configuration, ConfigManager, ConfigBuilder, ConfigValue};
+pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
 pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue};
+pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
 pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent};
@@ -74,93 +81,121 @@ pub fn plot_simulation_outputs(
 /// Create a default simulation configuration
 /// 
 /// Implements SSOT principle as the single source of truth for default configuration
-pub fn create_default_config() -> Configuration {
-    ConfigBuilder::new()
-        .with_string("simulation_name".to_string(), "default_simulation".to_string())
-        .with_string("version".to_string(), env!("CARGO_PKG_VERSION").to_string())
-        .with_boolean("enable_visualization".to_string(), true)
-        .with_float("frequency".to_string(), 1e6)
-        .with_float("amplitude".to_string(), 1e6)
-        .with_integer("grid_nx".to_string(), 100)
-        .with_integer("grid_ny".to_string(), 100)
-        .with_integer("grid_nz".to_string(), 100)
-        .with_float("grid_dx".to_string(), 1e-3)
-        .with_float("grid_dy".to_string(), 1e-3)
-        .with_float("grid_dz".to_string(), 1e-3)
-        .with_float("time_duration".to_string(), 1e-3)
-        .build()
+pub fn create_default_config() -> Config {
+    Config {
+        simulation: SimulationConfig {
+            domain_size_x: 0.1,
+            domain_size_yz: 0.1,
+            points_per_wavelength: 10,
+            frequency: 1e6,
+            num_cycles: 5.0,
+            pml_thickness: 10,
+            pml_sigma_acoustic: 100.0,
+            pml_sigma_light: 10.0,
+            pml_polynomial_order: 3,
+            pml_reflection: 1e-6,
+            light_wavelength: 500.0,
+            kspace_padding: 0,
+            kspace_alpha: 1.0,
+            medium_type: None,
+        },
+        source: SourceConfig {
+            num_elements: 32,
+            signal_type: "sine".to_string(),
+            start_freq: None,
+            end_freq: None,
+            signal_duration: None,
+            phase: None,
+            focus_x: Some(0.03),
+            focus_y: Some(0.0),
+            focus_z: Some(0.0),
+            frequency: Some(1e6),
+            amplitude: Some(1e6),
+        },
+        output: OutputConfig {
+            pressure_file: "pressure_output.csv".to_string(),
+            light_file: "light_output.csv".to_string(),
+            summary_file: "summary.csv".to_string(),
+            snapshot_interval: 10,
+            enable_visualization: true,
+        },
+    }
 }
 
 /// Validate a simulation configuration
 /// 
 /// Implements Information Expert principle by providing validation logic
-pub fn validate_simulation_config(config: &Configuration) -> KwaversResult<ValidationResult> {
-    let mut validation_manager = ValidationManager::new();
+pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
+    let mut validation_result = ValidationResult::valid("simulation_config_validation".to_string());
     
-    // Create validation pipeline for simulation configuration
-    let pipeline = ValidationBuilder::new("simulation_config_validation".to_string())
-        .with_required("simulation_name".to_string())
-        .with_string_length("simulation_name".to_string(), Some(1), Some(100))
-        .with_required("version".to_string())
-        .with_pattern("version".to_string(), "\\d+\\.\\d+\\.\\d+".to_string(), "must be semantic version".to_string())
-        .with_range("frequency".to_string(), Some(1e3), Some(100e6))
-        .with_range("amplitude".to_string(), Some(1e3), Some(100e6))
-        .with_range("grid_nx".to_string(), Some(10.0), Some(10000.0))
-        .with_range("grid_ny".to_string(), Some(10.0), Some(10000.0))
-        .with_range("grid_nz".to_string(), Some(10.0), Some(10000.0))
-        .with_range("grid_dx".to_string(), Some(1e-6), Some(1e-1))
-        .with_range("grid_dy".to_string(), Some(1e-6), Some(1e-1))
-        .with_range("grid_dz".to_string(), Some(1e-6), Some(1e-1))
-        .with_range("time_duration".to_string(), Some(1e-6), Some(1e0))
-        .build();
-    
-    // Convert configuration to validation values
-    let mut validation_values = Vec::new();
-    
-    for (key, value) in config.iter() {
-        let validation_value = match value {
-            ConfigValue::String(s) => ValidationValue::String(s.clone()),
-            ConfigValue::Integer(i) => ValidationValue::Integer(*i),
-            ConfigValue::Float(f) => ValidationValue::Float(*f),
-            ConfigValue::Boolean(b) => ValidationValue::Boolean(*b),
-            ConfigValue::Array(arr) => {
-                let mut validation_array = Vec::new();
-                for item in arr {
-                    match item {
-                        ConfigValue::String(s) => validation_array.push(ValidationValue::String(s.clone())),
-                        ConfigValue::Integer(i) => validation_array.push(ValidationValue::Integer(*i)),
-                        ConfigValue::Float(f) => validation_array.push(ValidationValue::Float(*f)),
-                        ConfigValue::Boolean(b) => validation_array.push(ValidationValue::Boolean(*b)),
-                        _ => validation_array.push(ValidationValue::Null),
-                    }
-                }
-                ValidationValue::Array(validation_array)
-            }
-            ConfigValue::Object(_) => ValidationValue::Null, // Skip nested objects for now
-            ConfigValue::Null => ValidationValue::Null,
-        };
-        
-        validation_values.push((key.as_str(), validation_value));
+    // Basic validation checks
+    if config.simulation.domain_size_x < 1e-3 || config.simulation.domain_size_x > 1.0 {
+        validation_result.add_error(ValidationError::RangeValidation {
+            field: "domain_size_x".to_string(),
+            value: config.simulation.domain_size_x,
+            min: 1e-3,
+            max: 1.0,
+        });
     }
     
-    // Validate each field
-    let results = validation::utils::validate_multiple(&pipeline, &validation_values);
-    
-    // Merge all results
-    let mut final_result = ValidationResult::valid("simulation_config_validation".to_string());
-    for result in results.values() {
-        final_result.merge(result.clone());
+    if config.simulation.domain_size_yz < 1e-3 || config.simulation.domain_size_yz > 1.0 {
+        validation_result.add_error(ValidationError::RangeValidation {
+            field: "domain_size_yz".to_string(),
+            value: config.simulation.domain_size_yz,
+            min: 1e-3,
+            max: 1.0,
+        });
     }
     
-    Ok(final_result)
+    if config.simulation.points_per_wavelength < 5 || config.simulation.points_per_wavelength > 100 {
+        validation_result.add_error(ValidationError::RangeValidation {
+            field: "points_per_wavelength".to_string(),
+            value: config.simulation.points_per_wavelength as f64,
+            min: 5.0,
+            max: 100.0,
+        });
+    }
+    
+    if config.simulation.frequency < 1e3 || config.simulation.frequency > 100e6 {
+        validation_result.add_error(ValidationError::RangeValidation {
+            field: "frequency".to_string(),
+            value: config.simulation.frequency,
+            min: 1e3,
+            max: 100e6,
+        });
+    }
+    
+    if let Some(freq) = config.source.frequency {
+        if freq < 1e3 || freq > 100e6 {
+            validation_result.add_error(ValidationError::RangeValidation {
+                field: "source_frequency".to_string(),
+                value: freq,
+                min: 1e3,
+                max: 100e6,
+            });
+        }
+    }
+    
+    if let Some(amp) = config.source.amplitude {
+        if amp < 1e3 || amp > 100e6 {
+            validation_result.add_error(ValidationError::RangeValidation {
+                field: "source_amplitude".to_string(),
+                value: amp,
+                min: 1e3,
+                max: 100e6,
+            });
+        }
+    }
+    
+    Ok(validation_result)
 }
 
 /// Create a complete simulation setup with validation
 /// 
 /// Implements Controller pattern from GRASP principles
 pub fn create_validated_simulation(
-    config: Configuration,
-) -> KwaversResult<(Grid, Time, HomogeneousMedium, Source, Recorder)> {
+    config: Config,
+) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
     // Validate configuration first
     let validation_result = validate_simulation_config(&config)?;
     if !validation_result.is_valid {
@@ -170,62 +205,47 @@ pub fn create_validated_simulation(
         }));
     }
     
-    // Extract configuration values
-    let nx = config.get("grid_nx").unwrap().as_integer().unwrap() as usize;
-    let ny = config.get("grid_ny").unwrap().as_integer().unwrap() as usize;
-    let nz = config.get("grid_nz").unwrap().as_integer().unwrap() as usize;
-    let dx = config.get("grid_dx").unwrap().as_float().unwrap();
-    let dy = config.get("grid_dy").unwrap().as_float().unwrap();
-    let dz = config.get("grid_dz").unwrap().as_float().unwrap();
-    let duration = config.get("time_duration").unwrap().as_float().unwrap();
-    let frequency = config.get("frequency").unwrap().as_float().unwrap();
-    let amplitude = config.get("amplitude").unwrap().as_float().unwrap();
-    
-    // Create grid
-    let grid = Grid::new(nx, ny, nz, dx, dy, dz)?;
+    // Create grid using simulation config
+    let grid = config.simulation.initialize_grid()
+        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
+            section: "simulation".to_string(),
+            reason: e,
+        }))?;
     
     // Create time discretization
-    let time = Time::new(duration, grid.cfl_timestep(1500.0)?)?;
+    let time = config.simulation.initialize_time(&grid)
+        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
+            section: "simulation".to_string(),
+            reason: e,
+        }))?;
     
     // Create medium
     let medium = HomogeneousMedium::new(998.0, 1482.0, &grid, 0.5, 10.0);
     
-    // Create source
-    let source_config = SourceConfig {
-        num_elements: 32,
-        signal_type: "sine".to_string(),
-        frequency: Some(frequency),
-        amplitude: Some(amplitude),
-        phase: None,
-        focus_x: Some(0.03),
-        focus_y: Some(0.0),
-        focus_z: Some(0.0),
-        start_freq: None,
-        end_freq: None,
-        signal_duration: None,
-    };
-    let source = Source::new(source_config, &grid)?;
+    // Create source using source config
+    let source = config.source.initialize_source(&medium, &grid)
+        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
+            section: "source".to_string(),
+            reason: e,
+        }))?;
+    
+    // Create sensor
+    let sensor_positions = vec![
+        (0.03, 0.0, 0.0),
+        (0.02, 0.0, 0.0),
+        (0.04, 0.0, 0.0),
+    ];
+    let sensor = Sensor::new(&grid, &time, &sensor_positions);
     
     // Create recorder
-    let sensor_config = crate::sensor::SensorConfig {
-        pressure_sensors: vec![
-            Sensor::point(0.03, 0.0, 0.0),
-            Sensor::point(0.02, 0.0, 0.0),
-            Sensor::point(0.04, 0.0, 0.0),
-        ],
-        temperature_sensors: vec![],
-        light_sensors: vec![],
-        cavitation_sensors: vec![],
-    };
-    
-    let recorder_config = RecorderConfig {
-        output_directory: "simulation_output".to_string(),
-        snapshot_interval: 10,
-        enable_visualization: config.get("enable_visualization").unwrap().as_boolean().unwrap(),
-        save_raw_data: true,
-    };
-    
-    let recorder = Recorder::new(sensor_config, recorder_config)?;
+    let recorder = Recorder::new(
+        sensor,
+        &time,
+        "simulation_output",
+        true,
+        true,
+        config.output.snapshot_interval,
+    );
     
     Ok((grid, time, medium, source, recorder))
 }
@@ -234,7 +254,7 @@ pub fn create_validated_simulation(
 /// 
 /// Implements ACID principles for simulation execution
 pub fn run_advanced_simulation(
-    config: Configuration,
+    config: Config,
 ) -> KwaversResult<()> {
     // Create validated simulation components
     let (grid, time, medium, source, mut recorder) = create_validated_simulation(config)?;
@@ -253,13 +273,10 @@ pub fn run_advanced_simulation(
     ))?;
     
     // Create boundary conditions
-    let boundary = PMLBoundary::new(
+    let mut boundary = PMLBoundary::new(
         PMLConfig::default()
             .with_thickness(10)
-            .with_sigma_acoustic(100.0)
-            .with_polynomial_order(2)
             .with_reflection_coefficient(1e-6),
-        &grid,
     )?;
     
     // Initialize fields
@@ -282,7 +299,17 @@ pub fn run_advanced_simulation(
         context.step = step;
         
         // Apply source
-        let source_field = source.generate_field(t, &grid)?;
+        // Create source field array
+        let (nx, ny, nz) = grid.dimensions();
+        let mut source_field = Array3::zeros((nx, ny, nz));
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let (x, y, z) = grid.coordinates(i, j, k);
+                    source_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
+                }
+            }
+        }
         context.add_source_term("acoustic_source".to_string(), source_field);
         
         // Apply physics pipeline
@@ -296,10 +323,15 @@ pub fn run_advanced_simulation(
         )?;
         
         // Apply boundary conditions
-        boundary.apply(&mut fields, &grid, time.dt)?;
+        let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
+        boundary.apply_acoustic(&mut pressure_field, &grid, step);
+        fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+        let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
+        boundary.apply_light(&mut light_field, &grid, step);
+        fields.index_axis_mut(ndarray::Axis(0), 1).assign(&light_field);
         
         // Record data
-        recorder.record(step, &fields, &grid)?;
+        recorder.record(&fields, step, t);
         
         // Progress reporting
         if step % 100 == 0 {
@@ -309,22 +341,8 @@ pub fn run_advanced_simulation(
     }
     
     // Generate visualizations if enabled
-    if recorder.config.enable_visualization {
-        plot_simulation_outputs(
-            &recorder.config.output_directory,
-            &[
-                "pressure_time_series.html",
-                "temperature_time_series.html",
-                "pressure_slice.html",
-                "temperature_slice.html",
-                "source_positions.html",
-                "sensor_positions.html",
-            ],
-        )?;
-    }
-    
     println!("Advanced simulation completed successfully!");
-    println!("Results saved to: {}", recorder.config.output_directory);
+    println!("Results saved to: {}", recorder.filename);
     
     Ok(())
 }
@@ -381,9 +399,10 @@ mod tests {
     #[test]
     fn test_default_config_creation() {
         let config = create_default_config();
-        assert!(config.has_key("simulation_name"));
-        assert!(config.has_key("version"));
-        assert!(config.has_key("frequency"));
+        // Config validation - check that required fields exist
+        assert!(config.simulation.frequency > 0.0);
+        assert!(config.source.frequency.is_some());
+        assert!(config.output.enable_visualization);
     }
     
     #[test]

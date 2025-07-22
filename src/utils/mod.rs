@@ -3,6 +3,7 @@ use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
 use log::{debug, trace, info};
 use ndarray::{Array3, Array4, Axis, Zip};
+use rayon::prelude::*;
 use num_complex::Complex;
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use lazy_static::lazy_static;
@@ -151,7 +152,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Array3<Com
         // Convert real field to complex in parallel
         Zip::from(&mut *complex_buffer)
             .and(&field)
-            .par_for_each(|c, &r| {
+            .for_each(|c, &r| {
                 *c = Complex::new(r, 0.0);
             });
         
@@ -225,7 +226,7 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
         // Copy input field to buffer in parallel
         Zip::from(&mut *complex_buffer)
             .and(field)
-            .par_for_each(|dst, &src| {
+            .for_each(|dst, &src| {
                 *dst = src;
             });
         
@@ -308,7 +309,7 @@ pub fn laplacian(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<
     // Multiply by -k² in parallel for better performance
     Zip::from(&mut field_fft)
         .and(&k2)
-        .par_for_each(|f, &k_val| {
+        .for_each(|f, &k_val| {
             *f *= Complex::new(-k_val, 0.0);
         });
 

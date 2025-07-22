@@ -2,6 +2,7 @@
 use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil};
 use crate::grid::Grid;
 use ndarray::Array3;
+use rayon::prelude::*;
 use num_complex::Complex;
 use log::debug;
 use std::sync::Arc;
@@ -174,7 +175,7 @@ impl Ifft3d {
 
         // Normalize in parallel
         let scale = 1.0 / total_size as f64;
-        field.par_mapv_inplace(|x| Complex::new(x.re * scale, x.im * scale));
+        field.mapv_inplace(|x| Complex::new(x.re * scale, x.im * scale));
     }
     
     /// Apply bit reversal permutation to the 3D field

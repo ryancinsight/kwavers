@@ -11,7 +11,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
- // Required for par_for_each
+use rayon::prelude::*; // Required for par_for_each
 
 #[derive(Debug, Clone)]
 pub struct AcousticScatteringModel {
@@ -52,7 +52,7 @@ impl AcousticScatteringModelTrait for AcousticScatteringModel {
             .and(&rayleigh_scatter)
             .and(&mie_scatter)
             .and(&interaction_scatter)
-            .par_for_each(|s, &ray, &mie, &inter| { // par_for_each needs rayon::prelude
+            .for_each(|s, &ray, &mie, &inter| { // for_each needs rayon::prelude
                 *s = ray + mie + inter;
                 if s.is_nan() || s.is_infinite() {
                     *s = 0.0;

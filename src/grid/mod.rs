@@ -51,6 +51,24 @@ impl Grid {
         self.nx * self.ny * self.nz
     }
 
+    /// Returns grid dimensions as (nx, ny, nz).
+    pub fn dimensions(&self) -> (usize, usize, usize) {
+        (self.nx, self.ny, self.nz)
+    }
+
+    /// Returns grid spacing as (dx, dy, dz).
+    pub fn spacing(&self) -> (f64, f64, f64) {
+        (self.dx, self.dy, self.dz)
+    }
+
+    /// Returns the physical coordinates at grid indices (i, j, k).
+    pub fn coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
+        let x = i as f64 * self.dx;
+        let y = j as f64 * self.dy;
+        let z = k as f64 * self.dz;
+        (x, y, z)
+    }
+
     /// Calculates the physical domain size in each dimension (meters), excluding padding.
     pub fn domain_size(&self) -> (f64, f64, f64) {
         let lx = self.dx * (self.nx - 1) as f64;
@@ -157,5 +175,93 @@ impl Grid {
             let k = k2_val.sqrt();
             (c * k * dt / 2.0).sin() / (k + 1e-10) // Avoid division by zero
         })
+    }
+
+    /// Calculates the maximum stable time step based on the CFL condition.
+    /// 
+    /// # Arguments
+    /// * `sound_speed` - The maximum sound speed in the medium (m/s)
+    /// * `cfl_factor` - Safety factor for CFL condition (default: 0.3 for k-space methods)
+    /// 
+    /// # Returns
+    /// The maximum stable time step in seconds
+    pub fn cfl_timestep(&self, sound_speed: f64, cfl_factor: f64) -> f64 {
+        assert!(sound_speed > 0.0, "Sound speed must be positive");
+        assert!(cfl_factor > 0.0 && cfl_factor <= 1.0, "CFL factor must be in (0, 1]");
+        
+        let (dx, dy, dz) = self.spacing();
+        let min_spacing = dx.min(dy).min(dz);
+        
+        // For k-space methods, we use a relaxed CFL condition
+        // The factor of 1.414 (sqrt(2)) accounts for the 3D nature of the problem
+        min_spacing / (sound_speed * 1.414) * cfl_factor
+    }
+
+    /// Calculates the maximum stable time step based on the CFL condition with default CFL factor.
+    /// 
+    /// # Arguments
+    /// * `sound_speed` - The maximum sound speed in the medium (m/s)
+    /// 
+    /// # Returns
+    /// The maximum stable time step in seconds (using default CFL factor of 0.3)
+    pub fn cfl_timestep_default(&self, sound_speed: f64) -> f64 {
+        self.cfl_timestep(sound_speed, 0.3)
+    }
+
+    /// Calculates the maximum stable time step based on the CFL condition using a medium.
+    /// 
+    /// This method automatically determines the maximum sound speed from the medium
+    /// and applies the CFL condition with the default safety factor.
+    /// 
+    /// # Arguments
+    /// * `medium` - Reference to the medium
+    /// 
+    /// # Returns
+    /// The maximum stable time step in seconds
+    pub fn cfl_timestep_from_medium(&self, medium: &dyn crate::medium::Medium) -> f64 {
+        let max_sound_speed = crate::medium::max_sound_speed(medium);
+        self.cfl_timestep_default(max_sound_speed)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::medium::homogeneous::HomogeneousMedium;
+
+    #[test]
+    fn test_cfl_timestep_methods() {
+        let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+        
+        // Test with different sound speeds
+        let water_speed = 1500.0;
+        let bone_speed = 3500.0;
+        let air_speed = 343.0;
+        
+        let dt_water = grid.cfl_timestep_default(water_speed);
+        let dt_bone = grid.cfl_timestep_default(bone_speed);
+        let dt_air = grid.cfl_timestep_default(air_speed);
+        
+        // Faster sound speed should give smaller timestep
+        assert!(dt_bone < dt_water);
+        assert!(dt_water < dt_air);
+        
+        // Test with custom CFL factor
+        let dt_custom = grid.cfl_timestep(water_speed, 0.1);
+        assert!(dt_custom < dt_water); // Smaller CFL factor = smaller timestep
+    }
+
+    #[test]
+    fn test_cfl_timestep_from_medium() {
+        let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+        
+        // Create a medium with known sound speed
+        let medium = HomogeneousMedium::new(1000.0, 2000.0, &grid, 0.1, 1.0);
+        
+        let dt_from_medium = grid.cfl_timestep_from_medium(&medium);
+        let dt_direct = grid.cfl_timestep_default(2000.0);
+        
+        // Should be the same
+        assert!((dt_from_medium - dt_direct).abs() < 1e-10);
     }
 }
