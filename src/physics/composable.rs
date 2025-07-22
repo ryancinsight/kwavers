@@ -660,7 +660,7 @@ impl PhysicsComponent for AcousticWaveComponent {
     }
     
     fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure]
+        vec![] // Acoustic wave doesn't depend on its own output
     }
     
     fn output_fields(&self) -> Vec<FieldType> {
@@ -746,7 +746,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
     }
     
     fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Temperature]
+        vec![] // Thermal diffusion doesn't depend on its own output
     }
     
     fn output_fields(&self) -> Vec<FieldType> {
