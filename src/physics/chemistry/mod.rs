@@ -72,6 +72,30 @@ impl<'a> ChemicalUpdateParams<'a> {
             }.into());
         }
 
+        if emission_spectrum.shape() != expected_shape {
+            return Err(PhysicsError::InvalidConfiguration {
+                component: "ChemicalUpdateParams".to_string(),
+                reason: format!("Emission spectrum array shape {:?} doesn't match grid dimensions {:?}", 
+                               emission_spectrum.shape(), expected_shape),
+            }.into());
+        }
+
+        if bubble_radius.shape() != expected_shape {
+            return Err(PhysicsError::InvalidConfiguration {
+                component: "ChemicalUpdateParams".to_string(),
+                reason: format!("Bubble radius array shape {:?} doesn't match grid dimensions {:?}", 
+                               bubble_radius.shape(), expected_shape),
+            }.into());
+        }
+
+        if temperature.shape() != expected_shape {
+            return Err(PhysicsError::InvalidConfiguration {
+                component: "ChemicalUpdateParams".to_string(),
+                reason: format!("Temperature array shape {:?} doesn't match grid dimensions {:?}", 
+                               temperature.shape(), expected_shape),
+            }.into());
+        }
+
         Ok(Self {
             pressure,
             light,
@@ -603,6 +627,53 @@ mod tests {
         let result = ChemicalUpdateParams::new(
             &pressure, &light, &emission_spectrum, &bubble_radius, &temperature,
             &grid, -1e-8, &medium, 1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid frequency
+        let result = ChemicalUpdateParams::new(
+            &pressure, &light, &emission_spectrum, &bubble_radius, &temperature,
+            &grid, 1e-8, &medium, -1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid pressure array shape
+        let wrong_pressure = Array3::zeros((5, 5, 5));
+        let result = ChemicalUpdateParams::new(
+            &wrong_pressure, &light, &emission_spectrum, &bubble_radius, &temperature,
+            &grid, 1e-8, &medium, 1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid light array shape
+        let wrong_light = Array3::zeros((5, 5, 5));
+        let result = ChemicalUpdateParams::new(
+            &pressure, &wrong_light, &emission_spectrum, &bubble_radius, &temperature,
+            &grid, 1e-8, &medium, 1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid emission_spectrum array shape
+        let wrong_emission_spectrum = Array3::zeros((5, 5, 5));
+        let result = ChemicalUpdateParams::new(
+            &pressure, &light, &wrong_emission_spectrum, &bubble_radius, &temperature,
+            &grid, 1e-8, &medium, 1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid bubble_radius array shape
+        let wrong_bubble_radius = Array3::zeros((5, 5, 5));
+        let result = ChemicalUpdateParams::new(
+            &pressure, &light, &emission_spectrum, &wrong_bubble_radius, &temperature,
+            &grid, 1e-8, &medium, 1e6
+        );
+        assert!(result.is_err());
+
+        // Invalid temperature array shape
+        let wrong_temperature = Array3::zeros((5, 5, 5));
+        let result = ChemicalUpdateParams::new(
+            &pressure, &light, &emission_spectrum, &bubble_radius, &wrong_temperature,
+            &grid, 1e-8, &medium, 1e6
         );
         assert!(result.is_err());
     }
