@@ -27,7 +27,6 @@ use std::sync::{Arc, RwLock};
 /// 
 /// Implements SSOT principle as the single source of truth for validation results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Clone)]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<ValidationError>,

@@ -676,6 +676,18 @@ pub enum ErrorSeverity {
     Critical,
 }
 
+impl fmt::Display for ErrorSeverity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ErrorSeverity::Debug => write!(f, "DEBUG"),
+            ErrorSeverity::Info => write!(f, "INFO"),
+            ErrorSeverity::Warning => write!(f, "WARNING"),
+            ErrorSeverity::Error => write!(f, "ERROR"),
+            ErrorSeverity::Critical => write!(f, "CRITICAL"),
+        }
+    }
+}
+
 impl fmt::Display for EnhancedError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[{}] {} at {}: {}", 

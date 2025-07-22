@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct RadicalInitiation {
@@ -34,7 +35,7 @@ impl RadicalInitiation {
             .and(p)
             .and(light)
             .and(bubble_radius)
-            .par_for_each(|(i, j, k), conc, &p_val, &light_val, &r_val| {
+            .for_each(|(i, j, k), conc, &p_val, &light_val, &r_val| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

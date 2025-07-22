@@ -49,7 +49,7 @@ impl TissueRegion {
             return Err(ConfigError::InvalidValue {
                 parameter: "x_bounds".to_string(),
                 value: format!("{} to {}", self.x_min, self.x_max),
-                reason: "x_min must be < x_max".to_string(),
+                constraint: "x_min must be < x_max".to_string(),
             }.into());
         }
         
@@ -57,7 +57,7 @@ impl TissueRegion {
             return Err(ConfigError::InvalidValue {
                 parameter: "y_bounds".to_string(),
                 value: format!("{} to {}", self.y_min, self.y_max),
-                reason: "y_min must be < y_max".to_string(),
+                constraint: "y_min must be < y_max".to_string(),
             }.into());
         }
         
@@ -65,7 +65,7 @@ impl TissueRegion {
             return Err(ConfigError::InvalidValue {
                 parameter: "z_bounds".to_string(),
                 value: format!("{} to {}", self.z_min, self.z_max),
-                reason: "z_min must be < z_max".to_string(),
+                constraint: "z_min must be < z_max".to_string(),
             }.into());
         }
         

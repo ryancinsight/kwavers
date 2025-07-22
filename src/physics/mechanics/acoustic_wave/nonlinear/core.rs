@@ -297,7 +297,7 @@ impl AcousticWaveModel for NonlinearWave {
 
         let start_source = Instant::now();
         Zip::indexed(&mut src_term_array)
-            .par_for_each(|(i, j, k), src_val| {
+            .for_each(|(i, j, k), src_val| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -314,7 +314,7 @@ impl AcousticWaveModel for NonlinearWave {
         Zip::indexed(&mut nonlinear_term)
             .and(&p_current_view)
             .and(prev_pressure)
-            .par_for_each(|idx, nl_val, p_val_current_ref, p_prev_val_ref| {
+            .for_each(|idx, nl_val, p_val_current_ref, p_prev_val_ref| {
                 let (i, j, k) = idx;
                 let p_val_current = *p_val_current_ref;
                 let p_prev_val = *p_prev_val_ref;
@@ -379,7 +379,7 @@ impl AcousticWaveModel for NonlinearWave {
 
         Zip::indexed(&mut p_linear_fft)
             .and(&p_fft)
-            .par_for_each(|idx, p_new_fft_val, p_old_fft_val_ref| {
+            .for_each(|idx, p_new_fft_val, p_old_fft_val_ref| {
                 let (i,j,k) = idx;
                 let p_old_fft_val = *p_old_fft_val_ref;
                 let x = i as f64 * grid.dx;
@@ -414,7 +414,7 @@ impl AcousticWaveModel for NonlinearWave {
             .and(&p_linear)
             .and(&nonlinear_term)
             .and(&src_term_array)
-            .par_for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
+            .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
                 *p_out = p_lin_val + nl_val + src_val;
             });
         self.combination_time += start_combine.elapsed().as_secs_f64();

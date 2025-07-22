@@ -3,6 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct PhotochemicalEffects {
@@ -35,7 +36,7 @@ impl PhotochemicalEffects {
             .and(emission_spectrum)
             .and(bubble_radius)
             .and(temperature)
-            .par_for_each(|(i, j, k), ros, &light_val, &spec_val, &r_val, &t| {
+            .for_each(|(i, j, k), ros, &light_val, &spec_val, &r_val, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;

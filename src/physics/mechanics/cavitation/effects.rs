@@ -404,7 +404,7 @@ mod tests {
         Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)
     }
 
-    #[derive(Default)]
+    #[derive(Debug)]
     struct MockMedium {
         density_val: f64,
         polytropic_index_val: f64,

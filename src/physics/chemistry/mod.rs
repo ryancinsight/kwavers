@@ -54,7 +54,7 @@ impl<'a> ChemicalUpdateParams<'a> {
 
         // Validate array dimensions match grid
         let (nx, ny, nz) = grid.dimensions();
-        let expected_shape = (nx, ny, nz);
+        let expected_shape = [nx, ny, nz];
         
         if pressure.shape() != expected_shape {
             return Err(PhysicsError::InvalidConfiguration {
@@ -306,14 +306,14 @@ impl ChemicalModel {
             }.into());
         }
 
-        let radical_initiation = RadicalInitiation::new(grid)?;
+        let radical_initiation = RadicalInitiation::new(grid);
         let kinetics = if enable_kinetics { 
-            Some(ReactionKinetics::new(grid)?) 
+            Some(ReactionKinetics::new(grid)) 
         } else { 
             None 
         };
         let photochemical = if enable_photochemical {
-            Some(PhotochemicalEffects::new(grid)?)
+            Some(PhotochemicalEffects::new(grid))
         } else {
             None
         };
@@ -368,21 +368,20 @@ impl ChemicalModel {
             params.dt, 
             params.medium, 
             params.frequency
-        )?;
+        );
         self.metrics.radical_initiation_time += radical_start.elapsed().as_secs_f64();
 
         // Update reaction kinetics if enabled
         if self.enable_kinetics {
             if let Some(ref mut kinetics) = self.kinetics {
                 let kinetics_start = Instant::now();
-                kinetics.update_kinetics(
-                    params.pressure,
+                kinetics.update_reactions(
+                    &self.radical_initiation.radical_concentration,
                     params.temperature,
                     params.grid,
                     params.dt,
                     params.medium,
-                    &self.reaction_configs,
-                )?;
+                );
                 self.metrics.kinetics_time += kinetics_start.elapsed().as_secs_f64();
             }
         }
@@ -394,11 +393,12 @@ impl ChemicalModel {
                 photochemical.update_photochemical(
                     params.light,
                     params.emission_spectrum,
+                    params.bubble_radius,
                     params.temperature,
                     params.grid,
                     params.dt,
                     params.medium,
-                )?;
+                );
                 self.metrics.photochemical_time += photochemical_start.elapsed().as_secs_f64();
             }
         }
@@ -435,7 +435,7 @@ impl ChemicalModel {
 
     /// Get radical concentration
     pub fn radical_concentration(&self) -> &Array3<f64> {
-        self.radical_initiation.radical_concentration()
+        &self.radical_initiation.radical_concentration
     }
 
     /// Get hydroxyl concentration
@@ -450,7 +450,7 @@ impl ChemicalModel {
 
     /// Get reactive oxygen species concentration
     pub fn reactive_oxygen_species(&self) -> Option<&Array3<f64>> {
-        self.kinetics.as_ref().and_then(|k| k.reactive_oxygen_species())
+        self.photochemical.as_ref().and_then(|p| p.reactive_oxygen_species())
     }
 
     /// Get performance metrics
@@ -471,12 +471,14 @@ impl ChemicalModel {
 
     /// Reset model to initial state
     pub fn reset(&mut self) -> KwaversResult<()> {
-        self.radical_initiation.reset()?;
+        // Reset arrays to zero
+        self.radical_initiation.radical_concentration.fill(0.0);
         if let Some(ref mut kinetics) = self.kinetics {
-            kinetics.reset()?;
+            kinetics.hydroxyl_concentration.fill(0.0);
+            kinetics.hydrogen_peroxide.fill(0.0);
         }
         if let Some(ref mut photochemical) = self.photochemical {
-            photochemical.reset()?;
+            photochemical.reactive_oxygen_species.fill(0.0);
         }
         self.state = ChemicalModelState::Initialized;
         Ok(())
@@ -485,12 +487,12 @@ impl ChemicalModel {
     /// Validate model configuration
     /// Follows Information Expert principle - knows how to validate itself
     pub fn validate(&self) -> KwaversResult<()> {
-        self.radical_initiation.validate()?;
-        if let Some(ref kinetics) = self.kinetics {
-            kinetics.validate()?;
-        }
-        if let Some(ref photochemical) = self.photochemical {
-            photochemical.validate()?;
+        // Basic validation - check for NaN or infinite values
+        if self.radical_initiation.radical_concentration.iter().any(|&x| x.is_nan() || x.is_infinite()) {
+            return Err(crate::error::NumericalError::NaN {
+                operation: "Chemical model validation".to_string(),
+                inputs: vec![0.0],
+            }.into());
         }
         Ok(())
     }
@@ -498,12 +500,13 @@ impl ChemicalModel {
     /// Calculate memory usage
     fn calculate_memory_usage(&self) -> usize {
         let mut total = 0;
-        total += self.radical_initiation.memory_usage();
+        total += self.radical_initiation.radical_concentration.len() * std::mem::size_of::<f64>();
         if let Some(ref kinetics) = self.kinetics {
-            total += kinetics.memory_usage();
+            total += kinetics.hydroxyl_concentration.len() * std::mem::size_of::<f64>();
+            total += kinetics.hydrogen_peroxide.len() * std::mem::size_of::<f64>();
         }
         if let Some(ref photochemical) = self.photochemical {
-            total += photochemical.memory_usage();
+            total += photochemical.reactive_oxygen_species.len() * std::mem::size_of::<f64>();
         }
         total
     }

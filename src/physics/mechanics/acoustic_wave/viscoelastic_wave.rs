@@ -167,7 +167,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         let start_source = Instant::now();
         let mut src_term_array = Array3::<f64>::zeros((nx, ny, nz));
         Zip::indexed(&mut src_term_array)
-            .par_for_each(|(i, j, k), src_val| {
+            .for_each(|(i, j, k), src_val| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -184,7 +184,7 @@ impl AcousticWaveModel for ViscoelasticWave {
 
         Zip::indexed(&mut nonlinear_term)
             .and(&pressure_at_start)
-            .par_for_each(|(i, j, k), nl_val, &_p_curr| {
+            .for_each(|(i, j, k), nl_val, &_p_curr| {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
                     let _rho = rho_arr[[i,j,k]].max(1e-9);
                     let _c = c_arr[[i,j,k]].max(1e-9);
@@ -225,7 +225,7 @@ impl AcousticWaveModel for ViscoelasticWave {
 
         Zip::indexed(&mut p_linear_fft)
             .and(&p_fft)
-            .par_for_each(|(i, j, k), p_new_k, &p_old_k| {
+            .for_each(|(i, j, k), p_new_k, &p_old_k| {
                 let k_sq = k_squared_vals[[i, j, k]];
                 let k_val = k_sq.sqrt();
 
@@ -302,7 +302,7 @@ impl AcousticWaveModel for ViscoelasticWave {
             .and(&p_linear)
             .and(&nonlinear_term)
             .and(&src_term_array)
-            .par_for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
+            .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
                 *p_out = p_lin_val + nl_val + src_val; // dt scaling might be needed for NL and Src if they are rates
             });
         metrics.combination_time += start_combine.elapsed().as_secs_f64();

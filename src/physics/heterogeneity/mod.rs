@@ -14,7 +14,7 @@ impl HeterogeneityModel {
     pub fn new(grid: &Grid, base_speed: f64, variance: f64) -> Self {
         let mut rng = rand::rngs::ThreadRng::default();
         let sound_speed_var = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |_| {
-            base_speed * (1.0 + rng.random_range(-variance..=variance))
+            base_speed * (1.0 + rng.gen_range(-variance..=variance))
         });
         Self { 
             sound_speed_var,
@@ -38,7 +38,7 @@ impl HeterogeneityModel {
         
         let mut rng = rand::rngs::ThreadRng::default();
         self.sound_speed_var = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |_| {
-            self.base_speed * (1.0 + rng.random_range(-self.variance..=self.variance))
+            self.base_speed * (1.0 + rng.gen_range(-self.variance..=self.variance))
         });
     }
 }
