@@ -211,7 +211,7 @@ impl PMLBoundary {
 }
 
 impl Boundary for PMLBoundary {
-    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) {
+    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
 
@@ -225,9 +225,10 @@ impl Boundary for PMLBoundary {
             .for_each(|val, &damping| {
                 Self::apply_damping(val, damping, dx);
             });
+        Ok(())
     }
 
-    fn apply_acoustic_freq(&mut self, field: &mut Array3<Complex<f64>>, grid: &Grid, time_step: usize) {
+    fn apply_acoustic_freq(&mut self, field: &mut Array3<Complex<f64>>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
         trace!("Applying frequency domain acoustic PML at step {}", time_step);
         let dx = grid.dx;
 
@@ -241,6 +242,7 @@ impl Boundary for PMLBoundary {
             .for_each(|val, &damping| {
                 Self::apply_complex_damping(val, damping, dx);
             });
+        Ok(())
     }
 
     fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) {

@@ -243,6 +243,10 @@ pub enum PhysicsError {
         max_dt: f64,
         reason: String,
     },
+    /// General simulation error
+    SimulationError {
+        message: String,
+    },
 }
 
 impl fmt::Display for PhysicsError {
@@ -269,6 +273,9 @@ impl fmt::Display for PhysicsError {
             }
             PhysicsError::TimeStepTooLarge { dt, max_dt, reason } => {
                 write!(f, "Time step {} too large (max {}): {}", dt, max_dt, reason)
+            }
+            PhysicsError::SimulationError { message } => {
+                write!(f, "Simulation error: {}", message)
             }
         }
     }

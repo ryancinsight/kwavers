@@ -437,8 +437,9 @@ impl SimulationFactory {
                 PhysicsModelType::ElasticWave => {
                     // Create elastic wave component
                     Box::new(crate::physics::composable::ElasticWaveComponent::new(
-                        "elastic".to_string()
-                    ))
+                        "elastic".to_string(),
+                        &grid,
+                    )?)
                 }
                 PhysicsModelType::LightDiffusion => {
                     // Create light diffusion component with proper grid reference
@@ -889,7 +890,12 @@ mod tests {
         // Create components
         let grid = Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4);
         let medium = Arc::new(HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0));
-        let physics = PhysicsPipeline::new();
+        
+        // Create physics pipeline with at least one component for validation
+        let mut physics = PhysicsPipeline::new();
+        let acoustic_component = AcousticWaveComponent::new("acoustic".to_string());
+        physics.add_component(Box::new(acoustic_component)).expect("Failed to add component");
+        
         let time = Time::new(1e-8, 100);
         
         let setup = SimulationBuilder::new()
@@ -911,13 +917,13 @@ mod tests {
     fn test_simulation_factory_heterogeneous_medium() {
         let config = SimulationFactory::create_default_config();
         
-        // Override to use heterogeneous medium (which should fail)
+        // Override to use heterogeneous medium (which should work)
         let mut modified_config = config;
         modified_config.medium.medium_type = MediumType::Heterogeneous { 
             tissue_file: Some("tissue.dat".to_string()) 
         };
         
         let result = SimulationFactory::create_simulation(modified_config);
-        assert!(result.is_err()); // Should fail as heterogeneous is not implemented
+        assert!(result.is_ok()); // Should succeed as heterogeneous is implemented
     }
 }

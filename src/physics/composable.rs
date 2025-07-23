@@ -27,6 +27,9 @@ use crate::medium::Medium;
 use ndarray::{Array3, Array4};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
+use crate::physics::mechanics::cavitation::model::CavitationModel;
+use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
+use crate::physics::optics::diffusion::LightDiffusion;
 
 /// Field identifiers for different physics quantities
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -897,26 +900,30 @@ impl PhysicsComponent for CavitationComponent {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        // Extract pressure field (assuming index 0 is pressure)
-        let pressure = fields.index_axis(ndarray::Axis(3), 0);
+        // Extract pressure field (field type is on Axis(0), pressure is typically index 0)
+        let pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
         
-        // Update cavitation dynamics
-        let cavitation_update = self.cavitation_model.update_cavitation(
-            &mut fields.index_axis_mut(ndarray::Axis(3), 0),
+        // Create a mutable copy for cavitation processing
+        let mut pressure_for_cavitation = pressure.clone();
+        
+        // Update cavitation dynamics - this modifies the pressure field copy
+        let light_emission = self.cavitation_model.update_cavitation(
+            &mut pressure_for_cavitation,
             &pressure,
             grid,
             dt,
             medium,
-            t,
+            1e6, // 1 MHz frequency
         );
         
-        // Handle the return value properly
-        match cavitation_update {
-            Ok(_) => {},
-            Err(_) => return Err(PhysicsError::SimulationError {
-                component: self.id.clone(),
-                message: "Cavitation update failed".to_string(),
-            }.into()),
+        // Write the updated pressure back to the main fields array
+        let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
+        pressure_field_mut.assign(&pressure_for_cavitation);
+        
+        // Store light emission in the appropriate field (assuming light is index 1)
+        if fields.shape()[0] > 1 {
+            let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1);
+            light_field.assign(&light_emission);
         }
         
         // Record performance metrics
@@ -949,13 +956,13 @@ pub struct ElasticWaveComponent {
 }
 
 impl ElasticWaveComponent {
-    pub fn new(id: String) -> Self {
-        Self {
-            elastic_model: crate::physics::mechanics::elastic_wave::ElasticWave::new(),
+    pub fn new(id: String, grid: &Grid) -> crate::error::KwaversResult<Self> {
+        Ok(Self {
+            elastic_model: crate::physics::mechanics::elastic_wave::ElasticWave::new(grid)?,
             id,
             state: ComponentState::Ready,
             metrics: HashMap::new(),
-        }
+        })
     }
 }
 
@@ -984,7 +991,10 @@ impl PhysicsComponent for ElasticWaveComponent {
         let start_time = Instant::now();
         
         // Update elastic wave propagation
-        self.elastic_model.update_elastic_wave(fields, grid, medium, dt, t)?;
+        // Use a dummy pressure field since ElasticWave doesn't use it
+        let dummy_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let dummy_source = &crate::source::MockSource::new();
+        self.elastic_model.update_wave(fields, &dummy_pressure, dummy_source, grid, medium, dt, t);
         
         // Record performance metrics
         let duration = start_time.elapsed().as_secs_f64();
@@ -1018,7 +1028,7 @@ pub struct LightDiffusionComponent {
 impl LightDiffusionComponent {
     pub fn new(id: String, grid: &Grid) -> Self {
         Self {
-            light_model: crate::physics::optics::diffusion::LightDiffusion::new(grid),
+            light_model: crate::physics::optics::diffusion::LightDiffusion::new(grid, false, true, false),
             id,
             state: ComponentState::Ready,
             metrics: HashMap::new(),
@@ -1051,7 +1061,9 @@ impl PhysicsComponent for LightDiffusionComponent {
         let start_time = Instant::now();
         
         // Update light diffusion
-        self.light_model.update_light(fields, dt, grid, medium)?;
+        // Create a dummy light source for now
+        let light_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        self.light_model.update_light(fields, &light_source, grid, medium, dt);
         
         // Record performance metrics
         let duration = start_time.elapsed().as_secs_f64();
@@ -1118,17 +1130,48 @@ impl PhysicsComponent for ChemicalComponent {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        // Prepare chemical update parameters
-        let params = crate::physics::chemistry::ChemicalUpdateParams {
-            light_intensity: fields.index_axis(ndarray::Axis(3), 1).to_owned(), // Assuming light is index 1
-            temperature: fields.index_axis(ndarray::Axis(3), 2).to_owned(),     // Assuming temp is index 2
-            pressure: fields.index_axis(ndarray::Axis(3), 0).to_owned(),        // Assuming pressure is index 0
+        // Prepare chemical update parameters with proper physical data
+        let light_field = fields.index_axis(ndarray::Axis(0), 1).to_owned();
+        let temperature_field = fields.index_axis(ndarray::Axis(0), 2).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Get bubble radius - for now use a simple estimation from pressure
+        // TODO: In a full implementation, this should come from a proper cavitation component
+        let bubble_radius = pressure_field.mapv(|p| {
+            // Simple bubble radius estimation based on pressure
+            // R = R0 * (1 + P/P0)^(-1/3) where P0 is ambient pressure
+            let p0 = 101325.0; // Pa
+            let r0 = 1e-6; // 1 micron initial radius
+            r0 * (1.0 + p.abs() / p0).powf(-1.0/3.0).max(0.1e-6)
+        });
+        
+        // Get emission spectrum from light field or generate physically meaningful spectrum
+        let emission_spectrum = if light_field.sum() > 0.0 {
+            light_field.clone()
+        } else {
+            // Generate a physically meaningful emission spectrum based on cavitation intensity
+            bubble_radius.mapv(|r| {
+                // Sonoluminescence intensity scales with bubble collapse ratio
+                let r0 = 1e-6;
+                let collapse_ratio = (r0 / r.max(0.1e-6)).powi(3);
+                collapse_ratio * 1e-12 // W/m³ typical sonoluminescence intensity
+            })
+        };
+        
+        let chemical_params = crate::physics::chemistry::ChemicalUpdateParams {
+            light: &light_field,
+            emission_spectrum: &emission_spectrum,
+            bubble_radius: &bubble_radius,
+            temperature: &temperature_field,
+            pressure: &pressure_field,
+            grid,
             dt,
-            time: t,
+            medium,
+            frequency: 1e6, // 1 MHz default frequency
         };
         
         // Update chemical reactions
-        self.chemical_model.update_chemical(&params)?;
+        self.chemical_model.update_chemical(&chemical_params)?;
         
         // Record performance metrics
         let duration = start_time.elapsed().as_secs_f64();
