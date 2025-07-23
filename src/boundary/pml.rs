@@ -259,3 +259,24 @@ impl Boundary for PMLBoundary {
             });
     }
 }
+
+impl PMLBoundary {
+    /// Apply acoustic PML with custom damping factor
+    /// Follows Open/Closed Principle: Extends functionality without modifying existing code
+    pub fn apply_acoustic_with_factor(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize, damping_factor: f64) {
+        trace!("Applying acoustic PML with factor {} at step {}", damping_factor, time_step);
+        let dx = grid.dx;
+
+        // Lazily initialize 3D damping factors if not computed yet
+        self.precompute_acoustic_damping_3d(grid);
+        let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
+        
+        // Apply damping using precomputed factors with custom scaling
+        Zip::from(field)
+            .and(damping_3d)
+            .for_each(|val, &damping| {
+                let scaled_damping = damping * damping_factor;
+                Self::apply_damping(val, scaled_damping, dx);
+            });
+    }
+}

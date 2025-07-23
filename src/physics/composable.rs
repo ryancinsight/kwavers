@@ -490,6 +490,54 @@ impl PhysicsPipeline {
             .collect()
     }
     
+    /// Get the number of components in the pipeline
+    /// Follows Information Expert principle - pipeline knows its own component count
+    pub fn component_count(&self) -> usize {
+        self.components.len()
+    }
+    
+    /// Get component by ID
+    /// Follows Information Expert principle - pipeline knows about its components
+    pub fn get_component(&self, id: &str) -> Option<&dyn PhysicsComponent> {
+        self.components.iter()
+            .find(|comp| comp.component_id() == id)
+            .map(|comp| comp.as_ref())
+    }
+    
+    /// Get component IDs
+    /// Follows Information Expert principle - pipeline knows its component structure
+    pub fn component_ids(&self) -> Vec<String> {
+        self.components.iter()
+            .map(|comp| comp.component_id().to_string())
+            .collect()
+    }
+    
+    /// Get pipeline metrics
+    /// Follows Information Expert principle - pipeline aggregates component metrics
+    pub fn get_pipeline_metrics(&self) -> HashMap<String, f64> {
+        let mut metrics = HashMap::new();
+        
+        // Aggregate execution times
+        let mut total_time = 0.0;
+        for component in &self.components {
+            let comp_metrics = component.get_metrics();
+            if let Some(time) = comp_metrics.get("execution_time") {
+                total_time += time;
+            }
+            
+            // Add component-specific metrics
+            let comp_id = component.component_id();
+            for (key, value) in comp_metrics {
+                metrics.insert(format!("{}_{}", comp_id, key), value);
+            }
+        }
+        
+        metrics.insert("total_execution_time".to_string(), total_time);
+        metrics.insert("component_count".to_string(), self.components.len() as f64);
+        
+        metrics
+    }
+    
     /// Get pipeline state
     pub fn state(&self) -> &PipelineState {
         &self.state
@@ -802,6 +850,303 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         self.state = ComponentState::Initialized;
         self.metrics.clear();
         Ok(())
+    }
+}
+
+/// Cavitation Physics Component
+/// Follows Single Responsibility: Handles only cavitation dynamics
+pub struct CavitationComponent {
+    id: String,
+    cavitation_model: crate::physics::mechanics::cavitation::CavitationModel,
+    state: ComponentState,
+    metrics: HashMap<String, f64>,
+}
+
+impl CavitationComponent {
+    pub fn new(id: String, grid: &Grid) -> Self {
+        Self {
+            cavitation_model: crate::physics::mechanics::cavitation::CavitationModel::new(grid, 1e-6),
+            id,
+            state: ComponentState::Ready,
+            metrics: HashMap::new(),
+        }
+    }
+}
+
+impl PhysicsComponent for CavitationComponent {
+    fn component_id(&self) -> &str {
+        &self.id
+    }
+    
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure]
+    }
+    
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Cavitation, FieldType::Light]
+    }
+    
+    fn apply(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        _context: &PhysicsContext,
+    ) -> KwaversResult<()> {
+        let start_time = Instant::now();
+        
+        // Extract pressure field (assuming index 0 is pressure)
+        let pressure = fields.index_axis(ndarray::Axis(3), 0);
+        
+        // Update cavitation dynamics
+        let cavitation_update = self.cavitation_model.update_cavitation(
+            &mut fields.index_axis_mut(ndarray::Axis(3), 0),
+            &pressure,
+            grid,
+            dt,
+            medium,
+            t,
+        );
+        
+        // Handle the return value properly
+        match cavitation_update {
+            Ok(_) => {},
+            Err(_) => return Err(PhysicsError::SimulationError {
+                component: self.id.clone(),
+                message: "Cavitation update failed".to_string(),
+            }.into()),
+        }
+        
+        // Record performance metrics
+        let duration = start_time.elapsed().as_secs_f64();
+        self.metrics.insert("execution_time".to_string(), duration);
+        
+        Ok(())
+    }
+    
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.metrics.clone()
+    }
+    
+    fn state(&self) -> ComponentState {
+        self.state.clone()
+    }
+    
+    fn priority(&self) -> u32 {
+        2 // Execute after acoustic wave
+    }
+}
+
+/// Elastic Wave Physics Component
+/// Follows Single Responsibility: Handles only elastic wave propagation
+pub struct ElasticWaveComponent {
+    id: String,
+    elastic_model: crate::physics::mechanics::elastic_wave::ElasticWave,
+    state: ComponentState,
+    metrics: HashMap<String, f64>,
+}
+
+impl ElasticWaveComponent {
+    pub fn new(id: String) -> Self {
+        Self {
+            elastic_model: crate::physics::mechanics::elastic_wave::ElasticWave::new(),
+            id,
+            state: ComponentState::Ready,
+            metrics: HashMap::new(),
+        }
+    }
+}
+
+impl PhysicsComponent for ElasticWaveComponent {
+    fn component_id(&self) -> &str {
+        &self.id
+    }
+    
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure]
+    }
+    
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Stress, FieldType::Velocity]
+    }
+    
+    fn apply(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        _context: &PhysicsContext,
+    ) -> KwaversResult<()> {
+        let start_time = Instant::now();
+        
+        // Update elastic wave propagation
+        self.elastic_model.update_elastic_wave(fields, grid, medium, dt, t)?;
+        
+        // Record performance metrics
+        let duration = start_time.elapsed().as_secs_f64();
+        self.metrics.insert("execution_time".to_string(), duration);
+        
+        Ok(())
+    }
+    
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.metrics.clone()
+    }
+    
+    fn state(&self) -> ComponentState {
+        self.state.clone()
+    }
+    
+    fn priority(&self) -> u32 {
+        1 // Execute with acoustic wave
+    }
+}
+
+/// Light Diffusion Physics Component
+/// Follows Single Responsibility: Handles only light propagation and diffusion
+pub struct LightDiffusionComponent {
+    id: String,
+    light_model: crate::physics::optics::diffusion::LightDiffusion,
+    state: ComponentState,
+    metrics: HashMap<String, f64>,
+}
+
+impl LightDiffusionComponent {
+    pub fn new(id: String, grid: &Grid) -> Self {
+        Self {
+            light_model: crate::physics::optics::diffusion::LightDiffusion::new(grid),
+            id,
+            state: ComponentState::Ready,
+            metrics: HashMap::new(),
+        }
+    }
+}
+
+impl PhysicsComponent for LightDiffusionComponent {
+    fn component_id(&self) -> &str {
+        &self.id
+    }
+    
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Light, FieldType::Temperature]
+    }
+    
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Light, FieldType::Temperature]
+    }
+    
+    fn apply(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        _t: f64,
+        _context: &PhysicsContext,
+    ) -> KwaversResult<()> {
+        let start_time = Instant::now();
+        
+        // Update light diffusion
+        self.light_model.update_light(fields, dt, grid, medium)?;
+        
+        // Record performance metrics
+        let duration = start_time.elapsed().as_secs_f64();
+        self.metrics.insert("execution_time".to_string(), duration);
+        
+        Ok(())
+    }
+    
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.metrics.clone()
+    }
+    
+    fn state(&self) -> ComponentState {
+        self.state.clone()
+    }
+    
+    fn priority(&self) -> u32 {
+        3 // Execute after cavitation
+    }
+}
+
+/// Chemical Reaction Physics Component
+/// Follows Single Responsibility: Handles only chemical reactions and kinetics
+pub struct ChemicalComponent {
+    id: String,
+    chemical_model: crate::physics::chemistry::ChemicalModel,
+    state: ComponentState,
+    metrics: HashMap<String, f64>,
+}
+
+impl ChemicalComponent {
+    pub fn new(id: String, grid: &Grid) -> KwaversResult<Self> {
+        let chemical_model = crate::physics::chemistry::ChemicalModel::new(grid, true, true)?;
+        Ok(Self {
+            chemical_model,
+            id,
+            state: ComponentState::Ready,
+            metrics: HashMap::new(),
+        })
+    }
+}
+
+impl PhysicsComponent for ChemicalComponent {
+    fn component_id(&self) -> &str {
+        &self.id
+    }
+    
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Light, FieldType::Temperature, FieldType::Pressure]
+    }
+    
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Chemical, FieldType::Temperature]
+    }
+    
+    fn apply(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        _context: &PhysicsContext,
+    ) -> KwaversResult<()> {
+        let start_time = Instant::now();
+        
+        // Prepare chemical update parameters
+        let params = crate::physics::chemistry::ChemicalUpdateParams {
+            light_intensity: fields.index_axis(ndarray::Axis(3), 1).to_owned(), // Assuming light is index 1
+            temperature: fields.index_axis(ndarray::Axis(3), 2).to_owned(),     // Assuming temp is index 2
+            pressure: fields.index_axis(ndarray::Axis(3), 0).to_owned(),        // Assuming pressure is index 0
+            dt,
+            time: t,
+        };
+        
+        // Update chemical reactions
+        self.chemical_model.update_chemical(&params)?;
+        
+        // Record performance metrics
+        let duration = start_time.elapsed().as_secs_f64();
+        self.metrics.insert("execution_time".to_string(), duration);
+        
+        Ok(())
+    }
+    
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.metrics.clone()
+    }
+    
+    fn state(&self) -> ComponentState {
+        self.state.clone()
+    }
+    
+    fn priority(&self) -> u32 {
+        4 // Execute last
     }
 }
 
