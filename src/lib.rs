@@ -60,7 +60,7 @@ pub use physics::mechanics::elastic_wave::ElasticWave;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  
-pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SimulationBuilder, SimulationSetup, SimulationResults};
+pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, SimulationBuilder, SimulationSetup, SimulationResults};
 
 // Re-export utility functions
 pub use output::{save_pressure_data, save_light_data, generate_summary};

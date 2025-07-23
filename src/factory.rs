@@ -37,6 +37,8 @@ pub struct SimulationConfig {
     pub physics: PhysicsConfig,
     /// Time stepping configuration
     pub time: TimeConfig,
+    /// Source configuration
+    pub source: SourceConfig,
     /// Validation settings
     pub validation: ValidationConfig,
 }
@@ -274,6 +276,149 @@ impl Default for ValidationConfig {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SourceConfig {
+    /// Source type (e.g., "gaussian", "focused", "linear_array", "point")
+    pub source_type: String,
+    /// Source position (x, y, z) in meters
+    pub position: (f64, f64, f64),
+    /// Source amplitude in Pa
+    pub amplitude: f64,
+    /// Source frequency in Hz
+    pub frequency: f64,
+    /// Source radius/size in meters (for gaussian/focused sources)
+    pub radius: Option<f64>,
+    /// Focus position (x, y, z) in meters (for focused sources)
+    pub focus: Option<(f64, f64, f64)>,
+    /// Number of elements (for array sources)
+    pub num_elements: Option<usize>,
+    /// Signal type ("sine", "gaussian_pulse", "chirp")
+    pub signal_type: String,
+    /// Signal phase in radians
+    pub phase: f64,
+    /// Signal duration in seconds (for pulses)
+    pub duration: Option<f64>,
+}
+
+impl Default for SourceConfig {
+    fn default() -> Self {
+        Self {
+            source_type: "gaussian".to_string(),
+            position: (0.0, 0.0, 0.0),
+            amplitude: 1e6,
+            frequency: 1e6,
+            radius: Some(2e-3), // 2mm default radius
+            focus: None,
+            num_elements: None,
+            signal_type: "gaussian_pulse".to_string(),
+            phase: 0.0,
+            duration: Some(1e-6), // 1 microsecond pulse
+        }
+    }
+}
+
+impl SourceConfig {
+    /// Apply this source configuration to simulation fields
+    pub fn apply_to_fields(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        match self.source_type.as_str() {
+            "gaussian" => self.apply_gaussian_source(fields, grid),
+            "focused" => self.apply_focused_source(fields, grid),
+            "point" => self.apply_point_source(fields, grid),
+            _ => Err(crate::error::KwaversError::Validation(
+                crate::error::ValidationError::FieldValidation {
+                    field: "source_type".to_string(),
+                    value: self.source_type.clone(),
+                    constraint: "gaussian, focused, or point".to_string(),
+                }
+            ))
+        }
+    }
+
+    fn apply_gaussian_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let radius = self.radius.unwrap_or(2e-3);
+        let (cx_world, cy_world, cz_world) = self.position;
+        
+        // Convert world coordinates to grid indices
+        let cx = ((cx_world / grid.dx) as usize).min(grid.nx - 1);
+        let cy = ((cy_world / grid.dy) as usize).min(grid.ny - 1);
+        let cz = ((cz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        let radius_grid = radius / grid.dx; // Convert to grid units
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = i as f64 - cx as f64;
+                    let dy = j as f64 - cy as f64;
+                    let dz = k as f64 - cz as f64;
+                    let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                    
+                    if r <= radius_grid * 3.0 {
+                        let pressure = self.amplitude * (-0.5 * (r / radius_grid).powi(2)).exp();
+                        fields[[0, i, j, k]] = pressure; // Pressure field at index 0
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn apply_focused_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let focus = self.focus.ok_or_else(|| {
+            crate::error::KwaversError::Validation(
+                crate::error::ValidationError::FieldValidation {
+                    field: "focus".to_string(),
+                    value: "None".to_string(),
+                    constraint: "Required for focused source type".to_string(),
+                }
+            )
+        })?;
+        
+        let radius = self.radius.unwrap_or(5e-3);
+        let (fx_world, fy_world, fz_world) = focus;
+        
+        // Convert focus coordinates to grid indices
+        let fx = ((fx_world / grid.dx) as usize).min(grid.nx - 1);
+        let fy = ((fy_world / grid.dy) as usize).min(grid.ny - 1);
+        let fz = ((fz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        let radius_grid = radius / grid.dx;
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = i as f64 - fx as f64;
+                    let dy = j as f64 - fy as f64;
+                    let dz = k as f64 - fz as f64;
+                    let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                    
+                    if r <= radius_grid * 2.0 {
+                        let pressure = self.amplitude * (-0.5 * (r / radius_grid).powi(2)).exp();
+                        fields[[0, i, j, k]] = pressure;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn apply_point_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let (px_world, py_world, pz_world) = self.position;
+        
+        // Convert world coordinates to grid indices
+        let px = ((px_world / grid.dx) as usize).min(grid.nx - 1);
+        let py = ((py_world / grid.dy) as usize).min(grid.ny - 1);
+        let pz = ((pz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        // Set point source
+        fields[[0, px, py, pz]] = self.amplitude;
+        
+        Ok(())
+    }
+}
+
 /// Factory for creating simulation components following GRASP Creator principle
 pub struct SimulationFactory;
 
@@ -286,7 +431,7 @@ impl SimulationFactory {
             Self::validate_config(&config)?;
         }
 
-        let mut builder = SimulationBuilder::new();
+        let mut builder = SimulationBuilder::new(config.clone());
         
         // Create grid (Information Expert - Grid knows how to validate itself)
         let grid = Self::create_grid(config.grid)?;
@@ -540,6 +685,7 @@ impl SimulationFactory {
                 num_steps: 1000,
                 cfl_factor: 0.3,
             },
+            source: SourceConfig::default(),
             validation: ValidationConfig::default(),
         }
     }
@@ -552,16 +698,18 @@ pub struct SimulationBuilder {
     medium: Option<Arc<dyn Medium>>,
     physics: Option<PhysicsPipeline>,
     time: Option<Time>,
+    config: SimulationConfig,
 }
 
 impl SimulationBuilder {
-    /// Create a new simulation builder
-    pub fn new() -> Self {
+    /// Create a new simulation builder with config
+    pub fn new(config: SimulationConfig) -> Self {
         Self {
             grid: None,
             medium: None,
             physics: None,
             time: None,
+            config,
         }
     }
 
@@ -618,13 +766,14 @@ impl SimulationBuilder {
             medium,
             physics,
             time,
+            config: self.config,
         })
     }
 }
 
 impl Default for SimulationBuilder {
     fn default() -> Self {
-        Self::new()
+        Self::new(SimulationFactory::create_default_config())
     }
 }
 
@@ -635,6 +784,7 @@ pub struct SimulationSetup {
     pub medium: Arc<dyn Medium>,
     pub physics: PhysicsPipeline,
     pub time: Time,
+    pub config: SimulationConfig,
 }
 
 impl SimulationSetup {
@@ -930,6 +1080,15 @@ impl SimulationSetup {
         println!("Simulation completed in {:.2} seconds", total_time);
         
         Ok(results)
+    }
+
+    /// Run simulation with source configuration
+    /// Uses the built-in source configuration to set initial conditions
+    pub fn run_with_source(&mut self) -> KwaversResult<SimulationResults> {
+        let source_config = self.config.source.clone();
+        self.run_with_initial_conditions(move |fields, grid| {
+            source_config.apply_to_fields(fields, grid)
+        })
     }
 }
 

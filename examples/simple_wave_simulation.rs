@@ -1,83 +1,90 @@
 // examples/simple_wave_simulation.rs
-//! Simple Wave Simulation Example - The RIGHT Way
+//! Simple Wave Simulation Example - The RIGHT Way with Source Configuration
 //! 
 //! This example demonstrates how users should actually use the kwavers library:
-//! 1. Create a configuration using the factory pattern
+//! 1. Create a configuration using the factory pattern WITH source configuration
 //! 2. Build a simulation setup
-//! 3. Run the simulation using the built-in run() method
+//! 3. Run the simulation using the built-in run_with_source() method
 //! 4. Analyze results
 //!
-//! This is much simpler than implementing your own simulation loop!
+//! This is much simpler than implementing your own initial conditions!
 
 use kwavers::{
     KwaversResult, SimulationFactory, SimulationResults,
     FactorySimulationConfig, GridConfig, MediumConfig, MediumType, 
-    PhysicsConfig, TimeConfig, ValidationConfig,
+    PhysicsConfig, TimeConfig, ValidationConfig, FactorySourceConfig,
     init_logging,
 };
 use kwavers::factory::{PhysicsModelConfig, PhysicsModelType};
 use std::collections::HashMap;
-use ndarray::Array4;
 
 fn main() -> KwaversResult<()> {
     // Initialize logging
     let _ = init_logging();
     
-    println!("=== Simple Wave Simulation - The RIGHT Way ===");
-    println!("This example shows how to use kwavers properly with the factory pattern.\n");
+    println!("=== Simple Wave Simulation - The RIGHT Way with Source Config ===");
+    println!("This example shows how to use kwavers properly with source configuration.\n");
     
-    // Step 1: Create configuration using the factory pattern
+    // Step 1: Create configuration using the factory pattern WITH source config
     let config = create_simulation_config();
     
     // Step 2: Build simulation setup using the factory
     let builder = SimulationFactory::create_simulation(config)?;
     let mut simulation = builder.build()?;
     
-    // Step 3: Show performance recommendations (optional)
+    // Step 3: Show configuration summary
+    let summary = simulation.get_summary();
+    println!("Simulation Configuration:");
+    for (key, value) in &summary {
+        println!("  {}: {}", key, value);
+    }
+    
+    // Step 4: Show performance recommendations (optional)
     let recommendations = simulation.get_performance_recommendations();
     if !recommendations.is_empty() {
-        println!("Performance recommendations:");
+        println!("\nPerformance recommendations:");
         for (category, recommendation) in recommendations {
             println!("  - {}: {}", category, recommendation);
         }
         println!();
     }
     
-    // Step 4: Run simulation with custom initial conditions
-    let results = simulation.run_with_initial_conditions(|fields, grid| {
-        set_gaussian_pressure_ball(fields, grid, (12, 12, 12), 2.0, 1e6)
-    })?;
+    // Step 5: Run simulation with built-in source configuration
+    println!("Running simulation with built-in source configuration...");
+    let results = simulation.run_with_source()?;
     
-    // Step 5: Analyze results
+    // Step 6: Analyze results
     analyze_results(&results);
     
-    println!("\n✅ Simulation completed successfully!");
-    println!("This is how kwavers should be used - simple configuration, then run!");
+    println!("\n✅ Simple wave simulation completed successfully!");
+    println!("This demonstrates the proper way to use kwavers with source configuration.");
     
     Ok(())
 }
 
-/// Create a simulation configuration - this is what users should focus on
+/// Create simulation configuration with proper source configuration
 fn create_simulation_config() -> FactorySimulationConfig {
     FactorySimulationConfig {
         grid: GridConfig {
             nx: 24,
-            ny: 24,
+            ny: 24, 
             nz: 24,
-            dx: 2e-4, // 200 μm
+            dx: 2e-4, // 200 μm spacing
             dy: 2e-4,
             dz: 2e-4,
         },
         medium: MediumConfig {
-            medium_type: MediumType::Homogeneous { 
-                density: 1000.0,      // Water-like
-                sound_speed: 1500.0,  // m/s
-                mu_a: 0.1, 
-                mu_s_prime: 1.0 
+            medium_type: MediumType::Homogeneous {
+                density: 1000.0,
+                sound_speed: 1500.0,
+                mu_a: 0.1,
+                mu_s_prime: 1.0,
             },
             properties: [
                 ("density".to_string(), 1000.0),
                 ("sound_speed".to_string(), 1500.0),
+                ("mu_a".to_string(), 0.1),
+                ("mu_s_prime".to_string(), 1.0),
             ].iter().cloned().collect(),
         },
         physics: PhysicsConfig {
@@ -92,9 +99,21 @@ fn create_simulation_config() -> FactorySimulationConfig {
             parameters: HashMap::new(),
         },
         time: TimeConfig {
-            dt: 4e-8,      // 40 ns for stability
-            num_steps: 200, // Shorter simulation for demo
+            dt: 5e-8,  // 50 ns time step
+            num_steps: 200,
             cfl_factor: 0.3,
+        },
+        source: FactorySourceConfig {
+            source_type: "gaussian".to_string(),
+            position: (2.4e-3, 2.4e-3, 2.4e-3), // Center of domain (12 * 200μm)
+            amplitude: 1e6, // 1 MPa
+            frequency: 1e6, // 1 MHz
+            radius: Some(1e-3), // 1 mm radius
+            focus: None,
+            num_elements: None,
+            signal_type: "gaussian_pulse".to_string(),
+            phase: 0.0,
+            duration: Some(1e-6), // 1 μs pulse
         },
         validation: ValidationConfig {
             enable_validation: true,
@@ -104,45 +123,10 @@ fn create_simulation_config() -> FactorySimulationConfig {
                 "medium_validation".to_string(),
                 "physics_validation".to_string(),
                 "time_validation".to_string(),
+                "source_validation".to_string(),
             ],
         },
     }
-}
-
-/// Set initial conditions - Gaussian pressure ball
-/// This is much simpler than implementing the whole simulation loop!
-fn set_gaussian_pressure_ball(
-    fields: &mut Array4<f64>, 
-    grid: &kwavers::Grid, 
-    center: (usize, usize, usize),
-    radius: f64,
-    amplitude: f64
-) -> KwaversResult<()> {
-    let (cx, cy, cz) = center;
-    
-    println!("Setting initial conditions:");
-    println!("  Gaussian pressure ball at ({}, {}, {})", cx, cy, cz);
-    println!("  Radius: {:.1} grid points", radius);
-    println!("  Amplitude: {:.2e} Pa", amplitude);
-    
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let dx = i as f64 - cx as f64;
-                let dy = j as f64 - cy as f64;
-                let dz = k as f64 - cz as f64;
-                let r = (dx*dx + dy*dy + dz*dz).sqrt();
-                
-                if r <= radius * 2.0 {
-                    let pressure = amplitude * (-0.5 * (r / radius).powi(2)).exp();
-                    fields[[0, i, j, k]] = pressure; // Pressure field is at index 0
-                }
-            }
-        }
-    }
-    
-    println!("  Initial conditions set successfully");
-    Ok(())
 }
 
 /// Analyze simulation results
@@ -154,22 +138,55 @@ fn analyze_results(results: &SimulationResults) {
     let timestep_data = results.timestep_data();
     println!("  Recorded {} timesteps", timestep_data.len());
     
-    if timestep_data.len() >= 2 {
+    if timestep_data.len() >= 3 {
         let initial_pressure = timestep_data[0].max_pressure;
+        let mid_pressure = timestep_data[timestep_data.len() / 2].max_pressure;
         let final_pressure = timestep_data.last().unwrap().max_pressure;
-        let pressure_ratio = final_pressure / initial_pressure;
         
-        println!("  Pressure evolution: {:.2e} → {:.2e} Pa (ratio: {:.2})", 
-                 initial_pressure, final_pressure, pressure_ratio);
+        println!("  Pressure evolution:");
+        println!("    Initial: {:.2e} Pa", initial_pressure);
+        println!("    Mid-point: {:.2e} Pa", mid_pressure);
+        println!("    Final: {:.2e} Pa", final_pressure);
         
-        if pressure_ratio > 10.0 {
-            println!("  ⚠️  Pressure growth detected - may indicate numerical instability");
-        } else if pressure_ratio < 0.1 {
-            println!("  ℹ️  Pressure decay observed - normal for dissipative systems");
+        // Wave propagation analysis
+        let simulation_time = timestep_data.last().unwrap().time;
+        let domain_size = 0.0048; // 24 * 200μm = 4.8mm
+        let sound_speed = 1500.0; // m/s
+        let expected_travel_time = domain_size / sound_speed;
+        
+        println!("  Wave propagation analysis:");
+        println!("    Simulation time: {:.3} μs", simulation_time * 1e6);
+        println!("    Expected travel time across domain: {:.3} μs", expected_travel_time * 1e6);
+        
+        if simulation_time >= expected_travel_time * 0.5 {
+            println!("    ✅ Sufficient time for wave propagation");
         } else {
-            println!("  ✅ Pressure levels stable");
+            println!("    ℹ️  Limited wave propagation time");
+        }
+        
+        // Source effectiveness analysis
+        if initial_pressure > 1e5 {
+            println!("    ✅ Source successfully initialized with {:.2e} Pa", initial_pressure);
+        } else {
+            println!("    ⚠️  Low initial pressure: {:.2e} Pa", initial_pressure);
+        }
+        
+        // Energy conservation check
+        if final_pressure > 0.1 * initial_pressure && final_pressure < 10.0 * initial_pressure {
+            println!("    ✅ Pressure levels remain within reasonable bounds");
+        } else if final_pressure > 100.0 * initial_pressure {
+            println!("    ⚠️  Significant pressure amplification detected");
+        } else {
+            println!("    ⚠️  Rapid pressure dissipation detected");
         }
     }
+    
+    println!("\n🎯 Key Benefits of Source Configuration:");
+    println!("  ✓ No manual initial condition implementation needed");
+    println!("  ✓ Consistent source positioning using world coordinates");
+    println!("  ✓ Built-in validation of source parameters");
+    println!("  ✓ Multiple source types available (gaussian, focused, point)");
+    println!("  ✓ Automatic coordinate conversion from world to grid units");
 }
 
 #[cfg(test)]
@@ -177,34 +194,51 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_simple_simulation_config() {
+    fn test_simulation_config_creation() {
         let config = create_simulation_config();
         assert_eq!(config.grid.nx, 24);
-        assert_eq!(config.time.num_steps, 200);
+        assert_eq!(config.source.source_type, "gaussian");
+        assert_eq!(config.source.amplitude, 1e6);
+        assert!(config.validation.enable_validation);
     }
     
     #[test]
-    fn test_simulation_creation() {
+    fn test_source_config_parameters() {
         let config = create_simulation_config();
-        let builder = SimulationFactory::create_simulation(config).unwrap();
-        let simulation = builder.build().unwrap();
         
-        let summary = simulation.get_summary();
-        assert_eq!(summary.get("grid_dimensions").unwrap(), "24x24x24");
+        // Test source positioning
+        assert_eq!(config.source.position, (2.4e-3, 2.4e-3, 2.4e-3));
+        
+        // Test source properties
+        assert_eq!(config.source.frequency, 1e6);
+        assert_eq!(config.source.radius, Some(1e-3));
+        assert_eq!(config.source.signal_type, "gaussian_pulse");
+        
+        // Test validation rules include source
+        assert!(config.validation.validation_rules.contains(&"source_validation".to_string()));
     }
     
     #[test]
-    fn test_initial_conditions() {
-        use kwavers::Grid;
-        use ndarray::Array4;
+    fn test_grid_and_source_consistency() {
+        let config = create_simulation_config();
         
-        let grid = Grid::new(8, 8, 8, 1e-4, 1e-4, 1e-4);
-        let mut fields = Array4::<f64>::zeros((8, 8, 8, 8));
+        // Domain size calculation
+        let domain_x = config.grid.nx as f64 * config.grid.dx;
+        let domain_y = config.grid.ny as f64 * config.grid.dy;
+        let domain_z = config.grid.nz as f64 * config.grid.dz;
         
-        let result = set_gaussian_pressure_ball(&mut fields, &grid, (4, 4, 4), 1.0, 1e6);
-        assert!(result.is_ok());
+        // Source should be within domain
+        assert!(config.source.position.0 < domain_x);
+        assert!(config.source.position.1 < domain_y);
+        assert!(config.source.position.2 < domain_z);
         
-        // Check that pressure was set at center
-        assert!(fields[[0, 4, 4, 4]] > 0.0);
+        // Source should be reasonably centered
+        let center_x = domain_x / 2.0;
+        let center_y = domain_y / 2.0;
+        let center_z = domain_z / 2.0;
+        
+        assert!((config.source.position.0 - center_x).abs() < 1e-3);
+        assert!((config.source.position.1 - center_y).abs() < 1e-3);
+        assert!((config.source.position.2 - center_z).abs() < 1e-3);
     }
 }
