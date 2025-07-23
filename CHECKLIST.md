@@ -64,6 +64,11 @@
 - **Placeholders Replaced**: 15+ placeholder values with realistic physics
 - **Simplifications Upgraded**: 4 major physics modules enhanced
 - **Code Robustness**: Enhanced error handling and edge case management
+- **Critical Fix Applied**: Viscoelastic wave second-order derivative implementation corrected ✅
+  - **Issue**: Incorrect approximation d²p/dt² = (dp/dt)/dt was numerically unstable
+  - **Solution**: Proper second-order finite difference: (p(t) - 2*p(t-dt) + p(t-2*dt))/dt²
+  - **Impact**: Significantly improved accuracy and stability of Westervelt equation
+  - **Implementation**: Added pressure history storage for full second-order accuracy
 
 #### **Technical Debt Reduction:**
 - **Dummy Implementations**: Maintained for trait compatibility (design decision)
