@@ -910,6 +910,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         }
         
         self.metrics.insert("execution_time".to_string(), start_time.elapsed().as_secs_f64());
+        self.state = ComponentState::Ready;
         Ok(())
     }
     
