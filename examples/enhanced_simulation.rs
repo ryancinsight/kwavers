@@ -134,6 +134,18 @@ fn create_enhanced_simulation_config() -> FactorySimulationConfig {
             num_steps: 300,  // Longer simulation for multi-physics effects
             cfl_factor: 0.25, // More conservative for stability
         },
+        source: FactorySourceConfig {
+            source_type: "focused_gaussian".to_string(),
+            position: (2.4e-3, 1.2e-3, 2.4e-3), // Offset position for enhanced pattern
+            amplitude: 2e6, // 2 MPa for enhanced simulation
+            frequency: 1.5e6, // 1.5 MHz
+            radius: Some(0.8e-3), // 0.8 mm radius for tighter focus
+            focus: Some((2.4e-3, 2.4e-3, 2.4e-3)), // Focus at center
+            num_elements: None,
+            signal_type: "continuous_wave".to_string(),
+            phase: 0.0,
+            duration: Some(2e-6), // 2 μs duration for multi-physics effects
+        },
         validation: ValidationConfig {
             enable_validation: true,
             strict_mode: true, // Strict validation for enhanced simulation

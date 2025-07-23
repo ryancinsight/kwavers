@@ -1273,7 +1273,10 @@ mod tests {
         
         let time = Time::new(1e-8, 100);
         
-        let setup = SimulationBuilder::new()
+        // Create default config for the builder
+        let config = SimulationFactory::create_default_config();
+        
+        let setup = SimulationBuilder::new(config)
             .with_grid(grid)
             .with_medium(medium)
             .with_physics(physics)
