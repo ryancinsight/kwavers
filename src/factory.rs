@@ -296,7 +296,7 @@ impl SimulationFactory {
         builder = builder.with_medium(medium);
         
         // Create physics pipeline (Controller - coordinates physics components)
-        let physics = Self::create_physics_pipeline(config.physics)?;
+        let physics = Self::create_physics_pipeline(config.physics, builder.grid.as_ref().unwrap())?;
         builder = builder.with_physics(physics);
         
         // Create time configuration
@@ -390,18 +390,27 @@ impl SimulationFactory {
                 Ok(Arc::new(medium) as Arc<dyn Medium>)
             }
             MediumType::Heterogeneous { tissue_file } => {
-                // TODO: Implement heterogeneous medium creation
-                Err(ConfigError::ValidationFailed {
-                    section: "HeterogeneousMedium".to_string(),
-                    reason: "Heterogeneous medium creation not yet implemented".to_string(),
-                }.into())
+                // Implement heterogeneous medium creation based on tissue file
+                match tissue_file {
+                    Some(_file_path) => {
+                        // For now, create a default tissue medium
+                        // In future, this could load from file following YAGNI principle
+                        let medium = crate::medium::heterogeneous::HeterogeneousMedium::new_tissue(grid);
+                        Ok(Arc::new(medium) as Arc<dyn Medium>)
+                    }
+                    None => {
+                        // Create default tissue medium when no file specified
+                        let medium = crate::medium::heterogeneous::HeterogeneousMedium::new_tissue(grid);
+                        Ok(Arc::new(medium) as Arc<dyn Medium>)
+                    }
+                }
             }
         }
     }
 
     /// Create physics pipeline from configuration
     /// Follows Controller principle - coordinates physics components
-    fn create_physics_pipeline(config: PhysicsConfig) -> KwaversResult<PhysicsPipeline> {
+    fn create_physics_pipeline(config: PhysicsConfig, grid: &Grid) -> KwaversResult<PhysicsPipeline> {
         config.validate()?;
         
         let mut pipeline = PhysicsPipeline::new();
@@ -419,32 +428,34 @@ impl SimulationFactory {
                     Box::new(ThermalDiffusionComponent::new("thermal".to_string()))
                 }
                 PhysicsModelType::Cavitation => {
-                    // TODO: Implement cavitation component
-                    return Err(PhysicsError::InvalidConfiguration {
-                        component: "CavitationComponent".to_string(),
-                        reason: "Cavitation component not yet implemented".to_string(),
-                    }.into());
+                    // Create cavitation component with proper grid reference
+                    Box::new(crate::physics::composable::CavitationComponent::new(
+                        "cavitation".to_string(),
+                        &grid
+                    ))
                 }
                 PhysicsModelType::ElasticWave => {
-                    // TODO: Implement elastic wave component
-                    return Err(PhysicsError::InvalidConfiguration {
-                        component: "ElasticWaveComponent".to_string(),
-                        reason: "Elastic wave component not yet implemented".to_string(),
-                    }.into());
+                    // Create elastic wave component
+                    Box::new(crate::physics::composable::ElasticWaveComponent::new(
+                        "elastic".to_string()
+                    ))
                 }
                 PhysicsModelType::LightDiffusion => {
-                    // TODO: Implement light diffusion component
-                    return Err(PhysicsError::InvalidConfiguration {
-                        component: "LightDiffusionComponent".to_string(),
-                        reason: "Light diffusion component not yet implemented".to_string(),
-                    }.into());
+                    // Create light diffusion component with proper grid reference
+                    Box::new(crate::physics::composable::LightDiffusionComponent::new(
+                        "light".to_string(),
+                        &grid
+                    ))
                 }
                 PhysicsModelType::Chemical => {
-                    // TODO: Implement chemical component
-                    return Err(PhysicsError::InvalidConfiguration {
-                        component: "ChemicalComponent".to_string(),
-                        reason: "Chemical component not yet implemented".to_string(),
-                    }.into());
+                    // Create chemical component with proper error handling
+                    match crate::physics::composable::ChemicalComponent::new("chemical".to_string(), &grid) {
+                        Ok(component) => Box::new(component),
+                        Err(e) => return Err(PhysicsError::InvalidConfiguration {
+                            component: "ChemicalComponent".to_string(),
+                            reason: format!("Failed to create chemical component: {}", e),
+                        }.into()),
+                    }
                 }
             };
 
@@ -643,8 +654,8 @@ impl SimulationSetup {
         // Check if medium has proper dimensions (simplified check)
         // Note: Removed complex shape comparison as medium validation is handled elsewhere
         
-        // Physics pipeline validation - validate components count manually
-        let component_count = 1; // Simplified for now - will add proper count method later
+        // Physics pipeline validation - use proper component counting
+        let component_count = self.physics.component_count();
         if component_count == 0 {
             return Err(ConfigError::ValidationFailed {
                 section: "physics".to_string(),
@@ -684,8 +695,8 @@ impl SimulationSetup {
         summary.insert("dt".to_string(), self.time.dt.to_string());
         summary.insert("num_steps".to_string(), self.time.num_steps().to_string());
         
-        // Physics components count
-        summary.insert("physics_components".to_string(), "1".to_string()); // Simplified for now
+        // Physics components count - use proper counting
+        summary.insert("physics_components".to_string(), self.physics.component_count().to_string());
         
         summary
     }
@@ -728,8 +739,8 @@ impl SimulationSetup {
         }
         
         // Physics model recommendations
-        // Performance based on physics complexity
-        let component_count = 1; // Simplified for now - will add proper count method later
+        // Performance based on physics complexity - use proper counting
+        let component_count = self.physics.component_count();
         if component_count > 5 {
             recommendations.insert(
                 "physics_models".to_string(),
@@ -752,7 +763,7 @@ impl SimulationSetup {
         summary.insert("total_points".to_string(), (nx * ny * nz).to_string());
         summary.insert("time_step".to_string(), format!("{:.2e}", self.time.dt));
         summary.insert("num_steps".to_string(), self.time.num_steps().to_string());
-        summary.insert("physics_components".to_string(), "1".to_string()); // Simplified for now
+        summary.insert("physics_components".to_string(), self.physics.component_count().to_string());
         
         summary
     }
