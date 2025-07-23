@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::physics::traits::ThermalModelTrait;
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
-use rayon::prelude::*;
+
 use std::time::Instant;
 
 pub const TEMPERATURE_IDX: usize = 2;

@@ -188,7 +188,7 @@ pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationRe
     }
     
     if let Some(freq) = config.source.frequency {
-        if freq < 1e3 || freq > 100e6 {
+        if !(1e3..=100e6).contains(&freq) {
             validation_result.add_error(ValidationError::RangeValidation {
                 field: "source_frequency".to_string(),
                 value: freq,
@@ -199,7 +199,7 @@ pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationRe
     }
     
     if let Some(amp) = config.source.amplitude {
-        if amp < 1e3 || amp > 100e6 {
+        if !(1e3..=100e6).contains(&amp) {
             validation_result.add_error(ValidationError::RangeValidation {
                 field: "source_amplitude".to_string(),
                 value: amp,
@@ -346,7 +346,7 @@ pub fn run_advanced_simulation(
         
         // Apply boundary conditions
         let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
-        boundary.apply_acoustic(&mut pressure_field, &grid, step);
+        boundary.apply_acoustic(&mut pressure_field, &grid, step)?;
         fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
         let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
         boundary.apply_light(&mut light_field, &grid, step);

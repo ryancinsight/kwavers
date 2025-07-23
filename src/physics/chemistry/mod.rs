@@ -143,6 +143,12 @@ pub struct ChemicalMetrics {
     pub reaction_rates: HashMap<String, f64>,
 }
 
+impl Default for ChemicalMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChemicalMetrics {
     pub fn new() -> Self {
         Self {

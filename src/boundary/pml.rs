@@ -3,7 +3,7 @@ use crate::grid::Grid;
 use crate::error::{KwaversResult, ConfigError};
 use log::trace;
 use ndarray::{Array3, Zip};
-use rayon::prelude::*;
+
 use rustfft::num_complex::Complex;
 
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.

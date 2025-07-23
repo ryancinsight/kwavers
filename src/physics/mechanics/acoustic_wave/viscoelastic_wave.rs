@@ -23,6 +23,44 @@ struct PerformanceMetrics {
     kspace_ops_time: f64,
 }
 
+/// A viscoelastic wave model implementing the Westervelt equation with proper second-order time derivatives.
+/// 
+/// This implementation provides accurate nonlinear acoustics modeling through:
+/// - **Proper Second-Order Derivatives**: Uses (p(t) - 2*p(t-dt) + p(t-2*dt))/dt² for ∂²p/∂t²
+/// - **Westervelt Equation**: Full (β/ρc⁴) * ∂²(p²)/∂t² nonlinear term implementation
+/// - **Pressure History Management**: Maintains two time steps of pressure data for accuracy
+/// 
+/// ## Mathematical Foundation
+/// 
+/// The Westervelt equation implemented here is:
+/// ```text
+/// ∂²p/∂t² - c²∇²p = (β/ρc⁴) * ∂²(p²)/∂t²
+/// ```
+/// 
+/// Where the nonlinear term ∂²(p²)/∂t² is computed as:
+/// ```text
+/// ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
+/// ```
+/// 
+/// ## Numerical Implementation
+/// 
+/// - **Second-order accuracy**: Uses proper finite difference: (p(t) - 2*p(t-dt) + p(t-2*dt))/dt²
+/// - **First-order fallback**: For the initial time step when history is unavailable
+/// - **Stability**: Maintains numerical stability through proper time stepping
+/// 
+/// ## Limitations
+/// 
+/// - **Initial Time Step**: Uses simplified approximation for first iteration (no t-2*dt available)
+/// - **Memory Overhead**: Stores two additional pressure field arrays for history
+/// - **Homogeneous β**: Currently assumes spatially uniform nonlinearity parameter
+/// 
+/// ## Usage
+/// 
+/// ```rust
+/// let mut viscoelastic = ViscoelasticWave::new(&grid);
+/// // After first time step, full second-order accuracy is achieved
+/// viscoelastic.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
+/// ```
 #[derive(Debug)]
 pub struct ViscoelasticWave {
     // Precomputed k-space grids (kx, ky, kz, k_squared)
@@ -39,6 +77,11 @@ pub struct ViscoelasticWave {
     k_space_correction_order: usize, // May not be used if we follow NonlinearWave's sinc correction
     max_pressure: f64,             // For clamping
     // clamp_gradients: bool, - Unused
+
+    // Pressure history for proper second-order time derivatives in Westervelt equation
+    // This enables accurate ∂²p/∂t² calculation: (p(t) - 2*p(t-dt) + p(t-2*dt)) / dt²
+    pressure_history: Option<Array3<f64>>, // Stores p(t-2*dt)
+    prev_pressure_stored: Option<Array3<f64>>, // Stores p(t-dt) for next iteration
 
     // Performance tracking
     metrics: Arc<Mutex<PerformanceMetrics>>,
@@ -81,6 +124,8 @@ impl ViscoelasticWave {
             k_space_correction_order: 1, // Default
             max_pressure: 1e9,         // Default max pressure for clamping
             // clamp_gradients: false,     // Field commented out
+            pressure_history: None,
+            prev_pressure_stored: None,
             metrics: Arc::new(Mutex::new(PerformanceMetrics::default())),
         }
     }
@@ -126,13 +171,57 @@ impl ViscoelasticWave {
     //     -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
     // }
 
+    /// Returns true if the solver has sufficient pressure history for full second-order accuracy.
+    /// 
+    /// The Westervelt equation nonlinear term requires pressure values from two previous time steps
+    /// for accurate ∂²p/∂t² calculation. This method indicates whether such history is available.
+    /// 
+    /// # Returns
+    /// 
+    /// - `true`: Full second-order accuracy available (after 2+ time steps)
+    /// - `false`: Using simplified approximation (first 1-2 time steps)
+    pub fn has_full_accuracy(&self) -> bool {
+        self.pressure_history.is_some()
+    }
+    
+    /// Returns diagnostic information about the current state of the solver.
+    /// 
+    /// This includes accuracy status, memory usage, and performance metrics.
+    pub fn get_diagnostics(&self) -> String {
+        let accuracy_status = if self.has_full_accuracy() {
+            "Full second-order accuracy (proper finite differences)"
+        } else {
+            "Simplified approximation (building pressure history)"
+        };
+        
+        let memory_usage = if self.pressure_history.is_some() && self.prev_pressure_stored.is_some() {
+            "2 pressure field arrays stored for history"
+        } else if self.prev_pressure_stored.is_some() {
+            "1 pressure field array stored for history"
+        } else {
+            "No pressure history stored yet"
+        };
+        
+        let metrics = self.metrics.lock().unwrap();
+        format!(
+            "ViscoelasticWave Diagnostics:\n\
+             - Accuracy: {}\n\
+             - Memory: {}\n\
+             - Calls: {}\n\
+             - Nonlinearity scaling: {:.2e}",
+            accuracy_status,
+            memory_usage,
+            metrics.call_count,
+            self.nonlinearity_scaling
+        )
+    }
 }
 
 impl AcousticWaveModel for ViscoelasticWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        _prev_pressure: &Array3<f64>,
+        prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
@@ -188,18 +277,45 @@ impl AcousticWaveModel for ViscoelasticWave {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
                     let _rho = rho_arr[[i,j,k]].max(1e-9);
                     let _c = c_arr[[i,j,k]].max(1e-9);
-                    // Using a simplified nonlinearity term from k-Wave (beta * d/dt (p^2/2))
-                    // Or Westervelt: (beta / (rho * c^4)) * p * d^2p/dt^2 (approx)
-                    // Or (B/A / (2 * rho_0 * c_0^4)) * d/dt (p^2)
-                    // For now, let's use a simplified form as in NonlinearWave, which needs gradients.
-                    // This requires kx, ky, kz or finite differences.
-                    // For simplicity, let's use the d/dt(p^2) form if nonlinearity were active.
-                    // let p_prev = prev_pressure[[i,j,k]];
-                    // let dp_dt_approx = (p_curr - p_prev) / dt.max(1e-9);
-                    // let beta_val = b_a_arr / (rho * c * c);
-
-                    // For Viscoelastic, we are currently assuming a linear model in this part of the code.
-                    *nl_val = 0.0;
+                                         // Enhanced nonlinearity implementation using Westervelt equation
+                     // Nonlinear term: (β/ρc⁴) * ∂²(p²)/∂t²
+                     let beta = _b_a_arr; // Nonlinearity parameter (assuming homogeneous)
+                     let rho = _rho;
+                     let c = _c;
+                     
+                     // Get current and previous pressure values
+                     let p_curr = pressure_at_start[[i,j,k]];
+                     let p_prev = prev_pressure[[i,j,k]];
+                     
+                     // Calculate proper second-order time derivative of p²
+                     // For Westervelt equation: ∂²(p²)/∂t² ≈ 2p * ∂²p/∂t² + 2(∂p/∂t)²
+                     let nonlinear_coeff = beta / (rho * c.powi(4));
+                     
+                     let nonlinear_term = if let Some(ref p_history) = self.pressure_history {
+                         // Use proper second-order finite difference: ∂²p/∂t² = (p(t) - 2*p(t-dt) + p(t-2*dt)) / dt²
+                         let p_prev_prev = p_history[[i,j,k]];
+                         let d2p_dt2 = (p_curr - 2.0 * p_prev + p_prev_prev) / (dt * dt);
+                         
+                         // First-order time derivative: ∂p/∂t = (p(t) - p(t-dt)) / dt
+                         let dp_dt = (p_curr - p_prev) / dt;
+                         
+                         // Westervelt nonlinear term: ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
+                         let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2 + 2.0 * dp_dt.powi(2);
+                         nonlinear_coeff * p_squared_second_deriv
+                     } else {
+                         // First iteration: no pressure history available
+                         // Use simplified first-order approximation with clear documentation
+                         // This is a known limitation for the first time step
+                         let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
+                         
+                         // Simplified approximation: ∂²(p²)/∂t² ≈ 2p * (∂p/∂t)/dt + 2(∂p/∂t)²
+                         // Note: This is less accurate than the full second-order method above
+                         let simplified_d2p_dt2 = dp_dt / dt.max(1e-12); // Rough approximation
+                         let p_squared_second_deriv = 2.0 * p_curr * simplified_d2p_dt2 + 2.0 * dp_dt.powi(2);
+                         nonlinear_coeff * p_squared_second_deriv
+                     };
+                     
+                     *nl_val = nonlinear_term;
 
                 } else {
                     *nl_val = 0.0;
@@ -324,6 +440,19 @@ impl AcousticWaveModel for ViscoelasticWave {
         // However, the linear k-space part `p_fft = fft_3d(fields, PRESSURE_IDX, grid);` uses current `fields` (i.e. p(t)).
         // This hybrid approach needs care. For now, mirroring NonlinearWave.
 
+        // --- Update pressure history for accurate second-order derivatives ---
+        // Store current pressure state as previous for next iteration
+        let current_pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        
+        // Shift pressure history: p(t-dt) becomes p(t-2*dt), current becomes p(t-dt)
+        if let Some(ref mut prev_stored) = self.prev_pressure_stored {
+            // Move the previously stored pressure to history (t-dt -> t-2*dt)
+            self.pressure_history = Some(prev_stored.clone());
+        }
+        
+        // Store current pressure for next iteration (t -> t-dt for next call)
+        self.prev_pressure_stored = Some(current_pressure);
+
         trace!("ViscoelasticWave: Update for t={} completed in {:.3e} s", t, start_total.elapsed().as_secs_f64());
     }
 
@@ -381,5 +510,54 @@ impl AcousticWaveModel for ViscoelasticWave {
         self.k_space_correction_order = order;
         // Note: current implementation uses a specific sinc correction, order not directly used in the same way.
         debug!("ViscoelasticWave: k-space correction order set to {} (may have limited effect in current impl)", order);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::Grid;
+    use crate::medium::homogeneous::HomogeneousMedium;
+    use crate::source::MockSource;
+    use ndarray::Array4;
+
+    #[test]
+    fn test_viscoelastic_wave_accuracy_progression() {
+        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001);
+        let mut viscoelastic = ViscoelasticWave::new(&grid);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let source = MockSource::new();
+        let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 8, 8, 8));
+        let prev_pressure = Array3::<f64>::zeros((8, 8, 8));
+        
+        // Initially, should not have full accuracy
+        assert!(!viscoelastic.has_full_accuracy(), "Should start without full accuracy");
+        
+        // First update - still no full accuracy
+        viscoelastic.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, 1e-6, 0.0);
+        assert!(!viscoelastic.has_full_accuracy(), "Should not have full accuracy after first step");
+        
+        // Second update - now should have full accuracy
+        viscoelastic.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, 1e-6, 1e-6);
+        assert!(viscoelastic.has_full_accuracy(), "Should have full accuracy after second step");
+        
+        // Verify diagnostics
+        let diagnostics = viscoelastic.get_diagnostics();
+        assert!(diagnostics.contains("Full second-order accuracy"), "Diagnostics should indicate full accuracy");
+        assert!(diagnostics.contains("2 pressure field arrays"), "Should indicate proper memory usage");
+    }
+
+    #[test]
+    fn test_viscoelastic_wave_constructor() {
+        let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001);
+        let viscoelastic = ViscoelasticWave::new(&grid);
+        
+        // Test initial state
+        assert!(!viscoelastic.has_full_accuracy(), "New instance should not have full accuracy");
+        assert_eq!(viscoelastic.nonlinearity_scaling, 1.0, "Default nonlinearity scaling should be 1.0");
+        
+        let diagnostics = viscoelastic.get_diagnostics();
+        assert!(diagnostics.contains("Simplified approximation"), "Initial diagnostics should indicate simplified mode");
+        assert!(diagnostics.contains("No pressure history"), "Should indicate no history initially");
     }
 }

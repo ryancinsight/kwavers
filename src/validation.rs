@@ -619,12 +619,12 @@ impl ValidationManager {
     /// Get a registered rule
     pub fn get_rule(&self, name: &str) -> Option<Box<dyn ValidationRule>> {
         let registry = self.rule_registry.read().unwrap();
-        registry.get(name).map(|rule| {
+        registry.get(name).and_then(|rule| {
             // This is a simplified approach - in a real implementation,
             // you'd need to implement Clone for Box<dyn ValidationRule>
             // For now, we'll return None to avoid the borrowing issue
             None
-        }).flatten()
+        })
     }
     
     /// Create a validation pipeline

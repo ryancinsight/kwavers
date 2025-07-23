@@ -431,26 +431,26 @@ impl SimulationFactory {
                     // Create cavitation component with proper grid reference
                     Box::new(crate::physics::composable::CavitationComponent::new(
                         "cavitation".to_string(),
-                        &grid
+                        grid
                     ))
                 }
                 PhysicsModelType::ElasticWave => {
                     // Create elastic wave component
                     Box::new(crate::physics::composable::ElasticWaveComponent::new(
                         "elastic".to_string(),
-                        &grid,
+                        grid,
                     )?)
                 }
                 PhysicsModelType::LightDiffusion => {
                     // Create light diffusion component with proper grid reference
                     Box::new(crate::physics::composable::LightDiffusionComponent::new(
                         "light".to_string(),
-                        &grid
+                        grid
                     ))
                 }
                 PhysicsModelType::Chemical => {
                     // Create chemical component with proper error handling
-                    match crate::physics::composable::ChemicalComponent::new("chemical".to_string(), &grid) {
+                    match crate::physics::composable::ChemicalComponent::new("chemical".to_string(), grid) {
                         Ok(component) => Box::new(component),
                         Err(e) => return Err(PhysicsError::InvalidConfiguration {
                             component: "ChemicalComponent".to_string(),
