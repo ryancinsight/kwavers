@@ -18,6 +18,7 @@
 use crate::error::{KwaversResult, ConfigError, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
+use ndarray::Array4;
 use crate::physics::{PhysicsComponent, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
 use crate::time::Time;
 use crate::validation::{ValidationResult};
@@ -36,6 +37,8 @@ pub struct SimulationConfig {
     pub physics: PhysicsConfig,
     /// Time stepping configuration
     pub time: TimeConfig,
+    /// Source configuration
+    pub source: SourceConfig,
     /// Validation settings
     pub validation: ValidationConfig,
 }
@@ -273,6 +276,149 @@ impl Default for ValidationConfig {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SourceConfig {
+    /// Source type (e.g., "gaussian", "focused", "linear_array", "point")
+    pub source_type: String,
+    /// Source position (x, y, z) in meters
+    pub position: (f64, f64, f64),
+    /// Source amplitude in Pa
+    pub amplitude: f64,
+    /// Source frequency in Hz
+    pub frequency: f64,
+    /// Source radius/size in meters (for gaussian/focused sources)
+    pub radius: Option<f64>,
+    /// Focus position (x, y, z) in meters (for focused sources)
+    pub focus: Option<(f64, f64, f64)>,
+    /// Number of elements (for array sources)
+    pub num_elements: Option<usize>,
+    /// Signal type ("sine", "gaussian_pulse", "chirp")
+    pub signal_type: String,
+    /// Signal phase in radians
+    pub phase: f64,
+    /// Signal duration in seconds (for pulses)
+    pub duration: Option<f64>,
+}
+
+impl Default for SourceConfig {
+    fn default() -> Self {
+        Self {
+            source_type: "gaussian".to_string(),
+            position: (0.0, 0.0, 0.0),
+            amplitude: 1e6,
+            frequency: 1e6,
+            radius: Some(2e-3), // 2mm default radius
+            focus: None,
+            num_elements: None,
+            signal_type: "gaussian_pulse".to_string(),
+            phase: 0.0,
+            duration: Some(1e-6), // 1 microsecond pulse
+        }
+    }
+}
+
+impl SourceConfig {
+    /// Apply this source configuration to simulation fields
+    pub fn apply_to_fields(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        match self.source_type.as_str() {
+            "gaussian" => self.apply_gaussian_source(fields, grid),
+            "focused" => self.apply_focused_source(fields, grid),
+            "point" => self.apply_point_source(fields, grid),
+            _ => Err(crate::error::KwaversError::Validation(
+                crate::error::ValidationError::FieldValidation {
+                    field: "source_type".to_string(),
+                    value: self.source_type.clone(),
+                    constraint: "gaussian, focused, or point".to_string(),
+                }
+            ))
+        }
+    }
+
+    fn apply_gaussian_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let radius = self.radius.unwrap_or(2e-3);
+        let (cx_world, cy_world, cz_world) = self.position;
+        
+        // Convert world coordinates to grid indices
+        let cx = ((cx_world / grid.dx) as usize).min(grid.nx - 1);
+        let cy = ((cy_world / grid.dy) as usize).min(grid.ny - 1);
+        let cz = ((cz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        let radius_grid = radius / grid.dx; // Convert to grid units
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = i as f64 - cx as f64;
+                    let dy = j as f64 - cy as f64;
+                    let dz = k as f64 - cz as f64;
+                    let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                    
+                    if r <= radius_grid * 3.0 {
+                        let pressure = self.amplitude * (-0.5 * (r / radius_grid).powi(2)).exp();
+                        fields[[0, i, j, k]] = pressure; // Pressure field at index 0
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn apply_focused_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let focus = self.focus.ok_or_else(|| {
+            crate::error::KwaversError::Validation(
+                crate::error::ValidationError::FieldValidation {
+                    field: "focus".to_string(),
+                    value: "None".to_string(),
+                    constraint: "Required for focused source type".to_string(),
+                }
+            )
+        })?;
+        
+        let radius = self.radius.unwrap_or(5e-3);
+        let (fx_world, fy_world, fz_world) = focus;
+        
+        // Convert focus coordinates to grid indices
+        let fx = ((fx_world / grid.dx) as usize).min(grid.nx - 1);
+        let fy = ((fy_world / grid.dy) as usize).min(grid.ny - 1);
+        let fz = ((fz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        let radius_grid = radius / grid.dx;
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = i as f64 - fx as f64;
+                    let dy = j as f64 - fy as f64;
+                    let dz = k as f64 - fz as f64;
+                    let r = (dx*dx + dy*dy + dz*dz).sqrt();
+                    
+                    if r <= radius_grid * 2.0 {
+                        let pressure = self.amplitude * (-0.5 * (r / radius_grid).powi(2)).exp();
+                        fields[[0, i, j, k]] = pressure;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn apply_point_source(&self, fields: &mut ndarray::Array4<f64>, grid: &crate::Grid) -> KwaversResult<()> {
+        let (px_world, py_world, pz_world) = self.position;
+        
+        // Convert world coordinates to grid indices
+        let px = ((px_world / grid.dx) as usize).min(grid.nx - 1);
+        let py = ((py_world / grid.dy) as usize).min(grid.ny - 1);
+        let pz = ((pz_world / grid.dz) as usize).min(grid.nz - 1);
+        
+        // Set point source
+        fields[[0, px, py, pz]] = self.amplitude;
+        
+        Ok(())
+    }
+}
+
 /// Factory for creating simulation components following GRASP Creator principle
 pub struct SimulationFactory;
 
@@ -285,7 +431,7 @@ impl SimulationFactory {
             Self::validate_config(&config)?;
         }
 
-        let mut builder = SimulationBuilder::new();
+        let mut builder = SimulationBuilder::new(config.clone());
         
         // Create grid (Information Expert - Grid knows how to validate itself)
         let grid = Self::create_grid(config.grid)?;
@@ -539,6 +685,7 @@ impl SimulationFactory {
                 num_steps: 1000,
                 cfl_factor: 0.3,
             },
+            source: SourceConfig::default(),
             validation: ValidationConfig::default(),
         }
     }
@@ -551,16 +698,18 @@ pub struct SimulationBuilder {
     medium: Option<Arc<dyn Medium>>,
     physics: Option<PhysicsPipeline>,
     time: Option<Time>,
+    config: SimulationConfig,
 }
 
 impl SimulationBuilder {
-    /// Create a new simulation builder
-    pub fn new() -> Self {
+    /// Create a new simulation builder with config
+    pub fn new(config: SimulationConfig) -> Self {
         Self {
             grid: None,
             medium: None,
             physics: None,
             time: None,
+            config,
         }
     }
 
@@ -617,13 +766,14 @@ impl SimulationBuilder {
             medium,
             physics,
             time,
+            config: self.config,
         })
     }
 }
 
 impl Default for SimulationBuilder {
     fn default() -> Self {
-        Self::new()
+        Self::new(SimulationFactory::create_default_config())
     }
 }
 
@@ -634,6 +784,7 @@ pub struct SimulationSetup {
     pub medium: Arc<dyn Medium>,
     pub physics: PhysicsPipeline,
     pub time: Time,
+    pub config: SimulationConfig,
 }
 
 impl SimulationSetup {
@@ -767,6 +918,230 @@ impl SimulationSetup {
         summary.insert("physics_components".to_string(), self.physics.component_count().to_string());
         
         summary
+    }
+
+    /// Run the simulation - This is the core simulation execution method
+    /// Users should use this instead of implementing their own run loops
+    pub fn run(&mut self) -> KwaversResult<SimulationResults> {
+        use std::time::Instant;
+        use crate::boundary::{Boundary, PMLBoundary};
+        use crate::PMLConfig;
+        use crate::physics::composable::PhysicsContext;
+        use ndarray::Array4;
+
+        let start_time = Instant::now();
+        
+        // Validate simulation setup
+        self.validate()?;
+        
+        println!("Starting Kwavers Simulation");
+        let summary = self.get_summary();
+        println!("Grid: {} points", summary.get("total_points").unwrap_or(&"N/A".to_string()));
+        println!("Time steps: {}, dt: {}", 
+                 summary.get("num_steps").unwrap_or(&"N/A".to_string()),
+                 summary.get("time_step").unwrap_or(&"N/A".to_string()));
+        
+        // Initialize fields - allocate enough for all physics components
+        // Standard layout: [pressure, field1, field2, velocity_x, velocity_y, velocity_z, ...]
+        let mut fields = Array4::<f64>::zeros((8, self.grid.nx, self.grid.ny, self.grid.nz));
+        
+        // Create boundary conditions
+        let pml_config = PMLConfig::default()
+            .with_thickness(8)
+            .with_reflection_coefficient(1e-6);
+        let mut boundary = PMLBoundary::new(pml_config)?;
+        
+        // Initialize physics context
+        let mut context = PhysicsContext::new(1e6); // Default frequency
+        
+        // Initialize results tracking
+        let mut results = SimulationResults::new();
+        
+        println!("Starting time-stepping loop...");
+        
+        // Main simulation loop
+        for step in 0..self.time.num_steps() {
+            let t = step as f64 * self.time.dt;
+            context.step = step;
+            
+            // Apply physics pipeline
+            self.physics.execute(
+                &mut fields,
+                &self.grid,
+                self.medium.as_ref(),
+                self.time.dt,
+                t,
+                &mut context,
+            )?;
+            
+            // Apply boundary conditions
+            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
+            boundary.apply_acoustic(&mut pressure_field, &self.grid, step)?;
+            fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+            
+            // Record results periodically
+            if step % 100 == 0 {
+                let pressure_field = fields.index_axis(ndarray::Axis(0), 0);
+                let max_pressure = pressure_field.fold(0.0f64, |acc, &x| acc.max(x.abs()));
+                
+                results.add_timestep_data(step, t, max_pressure);
+                
+                println!("Step {}/{} ({:.1}%) - t={:.3}μs - Max P: {:.2e} Pa", 
+                         step, self.time.num_steps(), 
+                         step as f64 / self.time.num_steps() as f64 * 100.0,
+                         t * 1e6, max_pressure);
+            }
+        }
+        
+        let total_time = start_time.elapsed().as_secs_f64();
+        results.set_total_time(total_time);
+        
+        println!("Simulation completed in {:.2} seconds", total_time);
+        
+        Ok(results)
+    }
+
+    /// Run simulation with initial conditions
+    /// Allows users to set custom initial pressure distributions
+    pub fn run_with_initial_conditions<F>(&mut self, init_fn: F) -> KwaversResult<SimulationResults>
+    where
+        F: FnOnce(&mut Array4<f64>, &Grid) -> KwaversResult<()>,
+    {
+        use std::time::Instant;
+        use crate::boundary::{Boundary, PMLBoundary};
+        use crate::PMLConfig;
+        use crate::physics::composable::PhysicsContext;
+        use ndarray::Array4;
+
+        let start_time = Instant::now();
+        
+        // Validate simulation setup
+        self.validate()?;
+        
+        println!("Starting Kwavers Simulation with Custom Initial Conditions");
+        
+        // Initialize fields
+        let mut fields = Array4::<f64>::zeros((8, self.grid.nx, self.grid.ny, self.grid.nz));
+        
+        // Apply initial conditions
+        init_fn(&mut fields, &self.grid)?;
+        
+        // Create boundary conditions
+        let pml_config = PMLConfig::default()
+            .with_thickness(8)
+            .with_reflection_coefficient(1e-6);
+        let mut boundary = PMLBoundary::new(pml_config)?;
+        
+        // Initialize physics context
+        let mut context = PhysicsContext::new(1e6);
+        
+        // Initialize results tracking
+        let mut results = SimulationResults::new();
+        
+        println!("Starting time-stepping loop...");
+        
+        // Main simulation loop
+        for step in 0..self.time.num_steps() {
+            let t = step as f64 * self.time.dt;
+            context.step = step;
+            
+            // Apply physics pipeline
+            self.physics.execute(
+                &mut fields,
+                &self.grid,
+                self.medium.as_ref(),
+                self.time.dt,
+                t,
+                &mut context,
+            )?;
+            
+            // Apply boundary conditions
+            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
+            boundary.apply_acoustic(&mut pressure_field, &self.grid, step)?;
+            fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+            
+            // Record results
+            if step % 100 == 0 {
+                let pressure_field = fields.index_axis(ndarray::Axis(0), 0);
+                let max_pressure = pressure_field.fold(0.0f64, |acc, &x| acc.max(x.abs()));
+                
+                results.add_timestep_data(step, t, max_pressure);
+                
+                println!("Step {}/{} ({:.1}%) - t={:.3}μs - Max P: {:.2e} Pa", 
+                         step, self.time.num_steps(), 
+                         step as f64 / self.time.num_steps() as f64 * 100.0,
+                         t * 1e6, max_pressure);
+            }
+        }
+        
+        let total_time = start_time.elapsed().as_secs_f64();
+        results.set_total_time(total_time);
+        
+        println!("Simulation completed in {:.2} seconds", total_time);
+        
+        Ok(results)
+    }
+
+    /// Run simulation with source configuration
+    /// Uses the built-in source configuration to set initial conditions
+    pub fn run_with_source(&mut self) -> KwaversResult<SimulationResults> {
+        let source_config = self.config.source.clone();
+        self.run_with_initial_conditions(move |fields, grid| {
+            source_config.apply_to_fields(fields, grid)
+        })
+    }
+}
+
+/// Results from a completed simulation
+#[derive(Debug, Clone)]
+pub struct SimulationResults {
+    timestep_data: Vec<TimestepData>,
+    total_time: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct TimestepData {
+    pub step: usize,
+    pub time: f64,
+    pub max_pressure: f64,
+}
+
+impl SimulationResults {
+    fn new() -> Self {
+        Self {
+            timestep_data: Vec::new(),
+            total_time: 0.0,
+        }
+    }
+    
+    fn add_timestep_data(&mut self, step: usize, time: f64, max_pressure: f64) {
+        self.timestep_data.push(TimestepData {
+            step,
+            time,
+            max_pressure,
+        });
+    }
+    
+    fn set_total_time(&mut self, total_time: f64) {
+        self.total_time = total_time;
+    }
+    
+    /// Get the total simulation time
+    pub fn total_time(&self) -> f64 {
+        self.total_time
+    }
+    
+    /// Get timestep data for analysis
+    pub fn timestep_data(&self) -> &[TimestepData] {
+        &self.timestep_data
+    }
+    
+    /// Get maximum pressure over all timesteps
+    pub fn max_pressure(&self) -> f64 {
+        self.timestep_data
+            .iter()
+            .map(|data| data.max_pressure)
+            .fold(0.0f64, |acc, x| acc.max(x))
     }
 }
 
