@@ -74,12 +74,12 @@ impl EnhancedLightEmission {
         
         if hc_over_lambda_kt > 700.0 {
             // Use Wien's approximation for high frequencies
-            return 2.0 * PI * PLANCK_CONSTANT * SPEED_OF_LIGHT.powi(2) / 
-                   (wavelength.powi(5) * (hc_over_lambda_kt).exp());
+            2.0 * PI * PLANCK_CONSTANT * SPEED_OF_LIGHT.powi(2) / 
+                   (wavelength.powi(5) * (hc_over_lambda_kt).exp())
         } else {
             // Full Planck's law
-            return 2.0 * PI * PLANCK_CONSTANT * SPEED_OF_LIGHT.powi(2) / 
-                   (wavelength.powi(5) * ((hc_over_lambda_kt).exp() - 1.0));
+            2.0 * PI * PLANCK_CONSTANT * SPEED_OF_LIGHT.powi(2) / 
+                   (wavelength.powi(5) * ((hc_over_lambda_kt).exp() - 1.0))
         }
     }
     
@@ -194,7 +194,7 @@ impl CavitationModel {
                         
                         for (neighbor_i, neighbor_j, neighbor_k) in neighbors {
                             // Skip if coordinates are the same (saturating_sub returned 0 when original was 0)
-                            if (neighbor_i == i && neighbor_j == j && neighbor_k == k) {
+                            if neighbor_i == i && neighbor_j == j && neighbor_k == k {
                                 continue;
                             }
                             
@@ -409,9 +409,9 @@ impl CavitationModel {
         let mut nearby_bubbles = 0;
         let search_radius = 3; // Search in 3x3x3 neighborhood
         
-        for di in -search_radius as i32..=search_radius as i32 {
-            for dj in -search_radius as i32..=search_radius as i32 {
-                for dk in -search_radius as i32..=search_radius as i32 {
+        for di in { -search_radius }..=search_radius {
+            for dj in { -search_radius }..=search_radius {
+                for dk in { -search_radius }..=search_radius {
                     let ni = (i as i32 + di).max(0).min(grid.nx as i32 - 1) as usize;
                     let nj = (j as i32 + dj).max(0).min(grid.ny as i32 - 1) as usize;
                     let nk = (k as i32 + dk).max(0).min(grid.nz as i32 - 1) as usize;

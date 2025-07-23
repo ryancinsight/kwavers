@@ -3,7 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
-use rayon::prelude::*;
+
 
 #[derive(Debug)]
 pub struct RadicalInitiation {

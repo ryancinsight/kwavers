@@ -5,7 +5,7 @@ use crate::physics::optics::{PolarizationModel, OpticalThermalModel, polarizatio
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
-use rayon::prelude::*;
+
 use std::time::Instant;
 use crate::physics::traits::LightDiffusionModelTrait;
 
@@ -94,7 +94,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
             });
         
         // Update fluence_rate to match
-        self.fluence_rate.assign(&fields);
+        self.fluence_rate.assign(fields);
         
         self.update_time = start_time.elapsed().as_secs_f64();
         self.call_count += 1;

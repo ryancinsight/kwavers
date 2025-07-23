@@ -226,6 +226,12 @@ pub struct ElasticWaveMetrics {
     pub memory_usage: usize,
 }
 
+impl Default for ElasticWaveMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ElasticWaveMetrics {
     pub fn new() -> Self {
         Self {

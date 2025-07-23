@@ -5,7 +5,7 @@ use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
 use log::{debug, trace, info};
 use ndarray::{Array3, Array4, Axis, Zip};
-use rayon::prelude::*;
+
 use num_complex::Complex;
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use lazy_static::lazy_static;

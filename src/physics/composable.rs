@@ -27,9 +27,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Array4};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
-use crate::physics::mechanics::cavitation::model::CavitationModel;
 use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
-use crate::physics::optics::diffusion::LightDiffusion;
 
 /// Field identifiers for different physics quantities
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -76,6 +74,12 @@ pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+}
+
+impl Default for ValidationResult {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ValidationResult {
@@ -143,7 +147,7 @@ pub trait PhysicsComponent: Send + Sync {
     }
     
     /// Validate component configuration and state
-    fn validate(&self, context: &PhysicsContext) -> ValidationResult {
+    fn validate(&self, _context: &PhysicsContext) -> ValidationResult {
         ValidationResult::new()
     }
     
@@ -251,6 +255,12 @@ pub struct PerformanceTracker {
     pub call_counts: HashMap<String, usize>,
 }
 
+impl Default for PerformanceTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceTracker {
     pub fn new() -> Self {
         Self {
@@ -263,7 +273,7 @@ impl PerformanceTracker {
     pub fn record_execution(&mut self, component_id: &str, duration: f64) {
         self.execution_times
             .entry(component_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(duration);
         
         *self.call_counts.entry(component_id.to_string()).or_insert(0) += 1;
