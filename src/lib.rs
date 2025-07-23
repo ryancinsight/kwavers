@@ -346,7 +346,7 @@ pub fn run_advanced_simulation(
         
         // Apply boundary conditions
         let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
-        let _ = boundary.apply_acoustic(&mut pressure_field, &grid, step);
+        boundary.apply_acoustic(&mut pressure_field, &grid, step)?;
         fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
         let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
         boundary.apply_light(&mut light_field, &grid, step);
