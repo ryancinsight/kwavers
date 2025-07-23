@@ -900,22 +900,31 @@ impl PhysicsComponent for CavitationComponent {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        // Extract pressure field (assuming index 0 is pressure)
-        let pressure = fields.index_axis(ndarray::Axis(3), 0);
+        // Extract pressure field (field type is on Axis(0), pressure is typically index 0)
+        let pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
         
-        // Update cavitation dynamics
-        let cavitation_update = self.cavitation_model.update_cavitation(
-            &mut fields.index_axis_mut(ndarray::Axis(3), 0).to_owned(),
-            &fields.index_axis(ndarray::Axis(3), 0).to_owned(),
+        // Create a mutable copy for cavitation processing
+        let mut pressure_for_cavitation = pressure.clone();
+        
+        // Update cavitation dynamics - this modifies the pressure field copy
+        let light_emission = self.cavitation_model.update_cavitation(
+            &mut pressure_for_cavitation,
+            &pressure,
             grid,
             dt,
             medium,
             1e6, // 1 MHz frequency
         );
         
-        // The method returns light emission data, not a Result
-        // Store the light emission data if needed
-        let _light_emission = cavitation_update;
+        // Write the updated pressure back to the main fields array
+        let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
+        pressure_field_mut.assign(&pressure_for_cavitation);
+        
+        // Store light emission in the appropriate field (assuming light is index 1)
+        if fields.shape()[0] > 1 {
+            let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1);
+            light_field.assign(&light_emission);
+        }
         
         // Record performance metrics
         let duration = start_time.elapsed().as_secs_f64();
@@ -1121,13 +1130,40 @@ impl PhysicsComponent for ChemicalComponent {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        // Prepare chemical update parameters
+        // Prepare chemical update parameters with proper physical data
+        let light_field = fields.index_axis(ndarray::Axis(0), 1).to_owned();
+        let temperature_field = fields.index_axis(ndarray::Axis(0), 2).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Get bubble radius - for now use a simple estimation from pressure
+        // TODO: In a full implementation, this should come from a proper cavitation component
+        let bubble_radius = pressure_field.mapv(|p| {
+            // Simple bubble radius estimation based on pressure
+            // R = R0 * (1 + P/P0)^(-1/3) where P0 is ambient pressure
+            let p0 = 101325.0; // Pa
+            let r0 = 1e-6; // 1 micron initial radius
+            r0 * (1.0 + p.abs() / p0).powf(-1.0/3.0).max(0.1e-6)
+        });
+        
+        // Get emission spectrum from light field or generate physically meaningful spectrum
+        let emission_spectrum = if light_field.sum() > 0.0 {
+            light_field.clone()
+        } else {
+            // Generate a physically meaningful emission spectrum based on cavitation intensity
+            bubble_radius.mapv(|r| {
+                // Sonoluminescence intensity scales with bubble collapse ratio
+                let r0 = 1e-6;
+                let collapse_ratio = (r0 / r.max(0.1e-6)).powi(3);
+                collapse_ratio * 1e-12 // W/m³ typical sonoluminescence intensity
+            })
+        };
+        
         let chemical_params = crate::physics::chemistry::ChemicalUpdateParams {
-            light: &fields.index_axis(ndarray::Axis(3), 1).to_owned(),
-            emission_spectrum: &fields.index_axis(ndarray::Axis(3), 1).to_owned(), // Using light as spectrum for now
-            bubble_radius: &fields.index_axis(ndarray::Axis(3), 1).to_owned(), // Using light field as placeholder
-            temperature: &fields.index_axis(ndarray::Axis(3), 2).to_owned(),     // Assuming temp is index 2
-            pressure: &fields.index_axis(ndarray::Axis(3), 0).to_owned(),        // Assuming pressure is index 0
+            light: &light_field,
+            emission_spectrum: &emission_spectrum,
+            bubble_radius: &bubble_radius,
+            temperature: &temperature_field,
+            pressure: &pressure_field,
             grid,
             dt,
             medium,

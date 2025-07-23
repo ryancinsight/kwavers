@@ -305,7 +305,7 @@ impl AdvancedSonoluminescenceSimulation {
             self.performance_metrics.physics_time += physics_start.elapsed().as_secs_f64();
             
             // Apply boundary conditions
-            boundary.apply_acoustic(&mut fields.index_axis_mut(ndarray::Axis(3), 0).to_owned(), &self.grid, step)?;
+            boundary.apply_acoustic(&mut fields.index_axis_mut(ndarray::Axis(0), 0).to_owned(), &self.grid, step)?;
             
             // Record data
             let io_start = Instant::now();
@@ -530,7 +530,7 @@ impl PhysicsComponent for AdvancedLightComponent {
         let start_time = std::time::Instant::now();
         
         // Create light source from cavitation field
-        let light_source = fields.index_axis(ndarray::Axis(3), 1).to_owned();
+        let light_source = fields.index_axis(ndarray::Axis(0), 1).to_owned();
         
         // Update light diffusion
         self.light_model.update_light(
@@ -600,9 +600,9 @@ impl PhysicsComponent for AdvancedChemicalComponent {
         let start_time = std::time::Instant::now();
         
         // Create chemical update parameters
-        let light_field = fields.index_axis(ndarray::Axis(3), 1).to_owned();
-        let temperature_field = fields.index_axis(ndarray::Axis(3), 2).to_owned();
-        let pressure_field = fields.index_axis(ndarray::Axis(3), 0).to_owned();
+        let light_field = fields.index_axis(ndarray::Axis(0), 1).to_owned();
+        let temperature_field = fields.index_axis(ndarray::Axis(0), 2).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
         
         let chemical_params = ChemicalUpdateParams {
             light: &light_field,
