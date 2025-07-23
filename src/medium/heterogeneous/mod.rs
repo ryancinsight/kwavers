@@ -64,10 +64,34 @@ impl HeterogeneousMedium {
         let alpha0 = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5);
         let delta = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.1);
 
-        // Initialize new viscoelastic fields
-        let shear_sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10.0); // Placeholder m/s
-        let shear_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
-        let bulk_viscosity_coeff = Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.1); // Placeholder Pa·s
+        // Initialize viscoelastic fields with tissue-appropriate values
+        // Shear wave speed in soft tissue: typically 1-10 m/s
+        let shear_sound_speed = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+            // Vary shear speed based on position to simulate tissue heterogeneity
+            let base_speed = 3.0; // m/s (typical for muscle tissue)
+            let variation = 0.5 * ((i as f64 / grid.nx as f64).sin() + 
+                                  (j as f64 / grid.ny as f64).cos());
+            (base_speed + variation).max(1.0).min(8.0)
+        });
+        
+        // Shear viscosity coefficient for soft tissue: 0.1-10 Pa·s
+        let shear_viscosity_coeff = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+            // Higher viscosity near boundaries, lower in center
+            let center_x = grid.nx as f64 / 2.0;
+            let center_y = grid.ny as f64 / 2.0;
+            let center_z = grid.nz as f64 / 2.0;
+            let dist_from_center = ((i as f64 - center_x).powi(2) + 
+                                   (j as f64 - center_y).powi(2) + 
+                                   (k as f64 - center_z).powi(2)).sqrt();
+            let max_dist = (center_x.powi(2) + center_y.powi(2) + center_z.powi(2)).sqrt();
+            let normalized_dist = (dist_from_center / max_dist).min(1.0);
+            
+            // Base viscosity + position-dependent variation
+            1.0 + 2.0 * normalized_dist // Range: 1.0-3.0 Pa·s
+        });
+        
+        // Bulk viscosity coefficient: typically 2-5x shear viscosity
+        let bulk_viscosity_coeff = shear_viscosity_coeff.mapv(|shear_visc| shear_visc * 3.0);
 
         // Initialize new elastic fields (default to fluid-like: mu=0, lambda=K)
         // K = rho * c^2. Using default density and sound_speed from above.
@@ -292,10 +316,13 @@ mod tests {
         assert_eq!(medium.shear_viscosity_coeff.dim(), grid_dims);
         assert_eq!(medium.bulk_viscosity_coeff.dim(), grid_dims);
 
-        // Check placeholder values are set (these are set in new_tissue)
-        assert!(medium.shear_sound_speed.iter().all(|&x| (x - 10.0).abs() < 1e-9));
-        assert!(medium.shear_viscosity_coeff.iter().all(|&x| (x - 0.1).abs() < 1e-9));
-        assert!(medium.bulk_viscosity_coeff.iter().all(|&x| (x - 0.1).abs() < 1e-9));
+        // Check realistic tissue values are set (these are set in new_tissue)
+        // Shear sound speed should be in range 1-8 m/s (tissue-appropriate values)
+        assert!(medium.shear_sound_speed.iter().all(|&x| x >= 1.0 && x <= 8.0));
+        // Shear viscosity should be in range 1-3 Pa·s
+        assert!(medium.shear_viscosity_coeff.iter().all(|&x| x >= 1.0 && x <= 3.0));
+        // Bulk viscosity should be about 3x shear viscosity
+        assert!(medium.bulk_viscosity_coeff.iter().all(|&x| x >= 3.0 && x <= 9.0));
     }
 
     #[test]

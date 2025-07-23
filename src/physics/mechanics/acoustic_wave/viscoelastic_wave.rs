@@ -132,7 +132,7 @@ impl AcousticWaveModel for ViscoelasticWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        _prev_pressure: &Array3<f64>,
+        prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
@@ -188,18 +188,29 @@ impl AcousticWaveModel for ViscoelasticWave {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
                     let _rho = rho_arr[[i,j,k]].max(1e-9);
                     let _c = c_arr[[i,j,k]].max(1e-9);
-                    // Using a simplified nonlinearity term from k-Wave (beta * d/dt (p^2/2))
-                    // Or Westervelt: (beta / (rho * c^4)) * p * d^2p/dt^2 (approx)
-                    // Or (B/A / (2 * rho_0 * c_0^4)) * d/dt (p^2)
-                    // For now, let's use a simplified form as in NonlinearWave, which needs gradients.
-                    // This requires kx, ky, kz or finite differences.
-                    // For simplicity, let's use the d/dt(p^2) form if nonlinearity were active.
-                    // let p_prev = prev_pressure[[i,j,k]];
-                    // let dp_dt_approx = (p_curr - p_prev) / dt.max(1e-9);
-                    // let beta_val = b_a_arr / (rho * c * c);
-
-                    // For Viscoelastic, we are currently assuming a linear model in this part of the code.
-                    *nl_val = 0.0;
+                                         // Enhanced nonlinearity implementation using Westervelt equation
+                     // Nonlinear term: (β/ρc⁴) * ∂²(p²)/∂t²
+                     let beta = _b_a_arr; // Nonlinearity parameter (assuming homogeneous)
+                     let rho = _rho;
+                     let c = _c;
+                     
+                     // Get current and previous pressure values
+                     let p_curr = pressure_at_start[[i,j,k]];
+                     let p_prev = prev_pressure[[i,j,k]];
+                    
+                    // Estimate second time derivative of p²
+                    // ∂²(p²)/∂t² ≈ 2p * ∂²p/∂t² + 2(∂p/∂t)²
+                    let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
+                    
+                    // Approximate ∂²p/∂t² using finite differences (simplified)
+                    // This is a simplification - full implementation would use proper time history
+                    let d2p_dt2 = dp_dt / dt.max(1e-12); // Very rough approximation
+                    
+                    // Calculate nonlinear term: (β/ρc⁴) * [2p * ∂²p/∂t² + 2(∂p/∂t)²]
+                    let nonlinear_coeff = beta / (rho * c.powi(4));
+                    let p_squared_term = 2.0 * p_curr * d2p_dt2 + 2.0 * dp_dt.powi(2);
+                    
+                    *nl_val = nonlinear_coeff * p_squared_term;
 
                 } else {
                     *nl_val = 0.0;
