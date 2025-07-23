@@ -15,25 +15,18 @@
 //! and potentially triggering chemical reactions.
 
 use kwavers::{
-    init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave,
+    init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, 
+    PMLConfig, KwaversResult, SensorConfig, RecorderConfig,
     physics::{
-        mechanics::cavitation::CavitationModel,
-        mechanics::streaming::StreamingModel,
-        chemistry::ChemicalModel,
+        chemistry::{ChemicalModel, ChemicalUpdateParams},
+        mechanics::cavitation::model::CavitationModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
-        scattering::acoustic::AcousticScatteringModel,
-        thermodynamics::heat_transfer::ThermalModel,
-        heterogeneity::HeterogeneityModel,
-        traits::*,
         composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, FieldType},
+        traits::{CavitationModelBehavior, LightDiffusionModelTrait},
     },
-    boundary::pml::PMLConfig,
-    grid::Grid,
-    time::Time,
+    boundary::Boundary,
     source::Source,
-    SensorConfig,
-    RecorderConfig,
-    error::KwaversResult,
+    Grid, Time, SineWave, LinearArray, HanningApodization
 };
 use std::error::Error;
 use std::sync::Arc;
@@ -174,7 +167,8 @@ impl AdvancedSonoluminescenceSimulation {
         ));
         
         // Configure medium for advanced physics
-        let mut medium_mut = Arc::get_mut(&mut Arc::clone(&medium)).unwrap();
+        let mut medium_clone = Arc::clone(&medium);
+        let medium_mut = Arc::get_mut(&mut medium_clone).unwrap();
         medium_mut.alpha0 = 0.3; // Power law absorption
         medium_mut.delta = 1.1; // Power law exponent
         medium_mut.b_a = 5.2; // Nonlinearity parameter
@@ -194,7 +188,7 @@ impl AdvancedSonoluminescenceSimulation {
         
         // Add custom cavitation component
         physics_pipeline.add_component(Box::new(
-            AdvancedCavitationComponent::new("cavitation".to_string(), config.clone())
+            AdvancedCavitationComponent::new("cavitation".to_string(), config.clone(), &grid)
         ))?;
         
         // Add custom light diffusion component
@@ -204,7 +198,7 @@ impl AdvancedSonoluminescenceSimulation {
         
         // Add custom chemical component
         physics_pipeline.add_component(Box::new(
-            AdvancedChemicalComponent::new("chemical".to_string(), config.clone())
+            AdvancedChemicalComponent::new("chemical".to_string(), config.clone(), &grid)
         ))?;
         
         // Create recorder with enhanced sensor configuration
@@ -263,15 +257,15 @@ impl AdvancedSonoluminescenceSimulation {
         let source = self.create_focused_source()?;
         
         // Create boundary conditions
-        let boundary = PMLBoundary::new(
-            PMLConfig::default()
-                .with_thickness(10)
-                .with_sigma_acoustic(100.0)
-                .with_sigma_light(10.0)
-                .with_polynomial_order(2)
-                .with_reflection_coefficient(1e-6),
-            &self.grid,
-        )?;
+        let mut pml_config = PMLConfig::default()
+            .with_thickness(10)
+            .with_reflection_coefficient(1e-6);
+        
+        // Set additional parameters directly
+        pml_config.sigma_max_acoustic = 100.0;
+        pml_config.sigma_max_light = 10.0;
+        
+        let mut boundary = PMLBoundary::new(pml_config)?;
         
         // Main simulation loop
         let mut context = PhysicsContext::new(self.config.frequency);
@@ -288,8 +282,14 @@ impl AdvancedSonoluminescenceSimulation {
             let t = step as f64 * self.time.dt;
             context.step = step;
             
-            // Apply source
-            let source_field = source.generate_field(t, &self.grid)?;
+            // Generate source term for this time step
+            let mut source_field = ndarray::Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
+            for ((i, j, k), field_val) in source_field.indexed_iter_mut() {
+                let x = self.grid.x_coordinates()[i];
+                let y = self.grid.y_coordinates()[j];
+                let z = self.grid.z_coordinates()[k];
+                *field_val = source.get_source_term(t, x, y, z, &self.grid);
+            }
             context.add_source_term("acoustic_source".to_string(), source_field);
             
             // Apply physics pipeline
@@ -305,11 +305,11 @@ impl AdvancedSonoluminescenceSimulation {
             self.performance_metrics.physics_time += physics_start.elapsed().as_secs_f64();
             
             // Apply boundary conditions
-            boundary.apply(&mut fields, &self.grid, self.time.dt)?;
+            boundary.apply_acoustic(&mut fields.index_axis_mut(ndarray::Axis(3), 0).to_owned(), &self.grid, step)?;
             
             // Record data
             let io_start = Instant::now();
-            self.recorder.record(step, &fields, &self.grid)?;
+            self.recorder.record(&fields, step, t);
             self.performance_metrics.io_time += io_start.elapsed().as_secs_f64();
             
             // Update performance metrics
@@ -338,14 +338,18 @@ impl AdvancedSonoluminescenceSimulation {
         use kwavers::{SineWave, LinearArray, HanningApodization};
         
         let signal = SineWave::new(self.config.frequency, self.config.amplitude, 0.0);
-        let apodization = HanningApodization::new();
+        let apodization = HanningApodization;
         
         let source = LinearArray::new(
+            0.064, // Array length (64mm)
             64, // Number of elements
-            0.001, // Element spacing (1mm)
-            (0.03, 0.0, 0.0), // Focus point
+            0.0, // Y position
+            0.0, // Z position
             Box::new(signal),
-            Box::new(apodization),
+            self.medium.as_ref(),
+            &self.grid,
+            self.config.frequency,
+            apodization,
         );
         
         Ok(Box::new(source))
@@ -412,12 +416,12 @@ struct AdvancedCavitationComponent {
 }
 
 impl AdvancedCavitationComponent {
-    pub fn new(id: String, config: SonoluminescenceConfig) -> Self {
+    pub fn new(id: String, config: SonoluminescenceConfig, grid: &Grid) -> Self {
         Self {
             id,
             config,
             metrics: std::collections::HashMap::new(),
-            cavitation_model: CavitationModel::new(),
+            cavitation_model: CavitationModel::new(grid, 1e-6), // 1 micron initial radius
         }
     }
 }
@@ -450,28 +454,23 @@ impl PhysicsComponent for AdvancedCavitationComponent {
         let pressure = fields.index_axis(ndarray::Axis(0), 0);
         
         // Update cavitation model
-        self.cavitation_model.update_cavitation(
-            fields,
-            pressure,
+        let light_emission = self.cavitation_model.update_cavitation(
+            &mut pressure.to_owned(),
+            &pressure.to_owned(),
             grid,
-            medium,
             dt,
-            t,
-        )?;
-        
-        // Calculate sonoluminescence light emission
-        let light_source = self.cavitation_model.calculate_light_emission(
-            &mut fields.index_axis_mut(ndarray::Axis(0), 1), // Light field
-            grid,
             medium,
-            dt,
+            context.frequency,
         );
+        
+        // Calculate sonoluminescence light emission (already computed in update_cavitation)
+        let light_source = light_emission;
         
         // Update metrics
         let execution_time = start_time.elapsed().as_secs_f64();
         self.metrics.insert("execution_time".to_string(), execution_time);
         self.metrics.insert("bubble_count".to_string(), 
-            self.cavitation_model.radius.len() as f64);
+            self.cavitation_model.radius().len() as f64);
         
         Ok(())
     }
@@ -497,7 +496,7 @@ impl AdvancedLightComponent {
             config,
             metrics: std::collections::HashMap::new(),
             light_model: LightDiffusionModel::new(
-                &Grid::new(1, 1, 1, 1.0, 1.0, 1.0).unwrap(),
+                &Grid::new(1, 1, 1, 1.0, 1.0, 1.0),
                 true, // Enable polarization
                 true, // Enable scattering
                 true, // Enable thermal effects
@@ -531,7 +530,7 @@ impl PhysicsComponent for AdvancedLightComponent {
         let start_time = std::time::Instant::now();
         
         // Create light source from cavitation field
-        let light_source = fields.index_axis(ndarray::Axis(0), 1).clone();
+        let light_source = fields.index_axis(ndarray::Axis(3), 1).to_owned();
         
         // Update light diffusion
         self.light_model.update_light(
@@ -566,12 +565,12 @@ struct AdvancedChemicalComponent {
 }
 
 impl AdvancedChemicalComponent {
-    pub fn new(id: String, config: SonoluminescenceConfig) -> Self {
+    pub fn new(id: String, config: SonoluminescenceConfig, grid: &Grid) -> Self {
         Self {
             id,
             config,
             metrics: std::collections::HashMap::new(),
-            chemical_model: ChemicalModel::new(),
+            chemical_model: ChemicalModel::new(grid, true, true).expect("Failed to create chemical model"),
         }
     }
 }
@@ -600,20 +599,24 @@ impl PhysicsComponent for AdvancedChemicalComponent {
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
-        // Get temperature and light fields
-        let temperature = fields.index_axis(ndarray::Axis(0), 2);
-        let light = fields.index_axis(ndarray::Axis(0), 1);
+        // Create chemical update parameters
+        let light_field = fields.index_axis(ndarray::Axis(3), 1).to_owned();
+        let temperature_field = fields.index_axis(ndarray::Axis(3), 2).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(3), 0).to_owned();
         
-        // Update chemical reactions
-        self.chemical_model.update_chemical_reactions(
-            fields,
-            temperature,
-            light,
+        let chemical_params = ChemicalUpdateParams {
+            light: &light_field,
+            emission_spectrum: &light_field, // Using light as spectrum for now
+            bubble_radius: &light_field, // Using light field as placeholder
+            temperature: &temperature_field,
+            pressure: &pressure_field,
             grid,
-            medium,
             dt,
-            t,
-        )?;
+            medium,
+            frequency: context.frequency,
+        };
+        
+        self.chemical_model.update_chemical(&chemical_params)?;
         
         // Update metrics
         let execution_time = start_time.elapsed().as_secs_f64();

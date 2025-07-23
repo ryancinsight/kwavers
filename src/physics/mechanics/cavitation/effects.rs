@@ -175,24 +175,41 @@ impl CavitationModel {
                     
                     let d_volume_dt = 4.0 * PI * r.powi(2) * v;
                     
-                    // Add multi-bubble interaction effects (placeholder)
-                    let multi_bubble_contribution = if bubble_density.len() > 1 {
+                    // Add multi-bubble interaction effects
+                    let multi_bubble_contribution = if self.radius.len() > 1 {
                         // Calculate distance-weighted contribution from nearby bubbles
-                        let max_interaction_distance = 5.0 * bubble_radius;
+                        let max_interaction_distance = 5.0 * r;
                         let mut total_contribution = 0.0;
                         let mut count = 0;
                         
-                        for (neighbor_i, neighbor_j, neighbor_k) in [(i+1,j,k), (i-1,j,k), (i,j+1,k), (i,j-1,k), (i,j,k+1), (i,j,k-1)] {
+                        // Use safe neighbor coordinates to avoid underflow
+                        let neighbors = [
+                            (i.saturating_add(1), j, k),
+                            (i.saturating_sub(1), j, k),
+                            (i, j.saturating_add(1), k),
+                            (i, j.saturating_sub(1), k),
+                            (i, j, k.saturating_add(1)),
+                            (i, j, k.saturating_sub(1)),
+                        ];
+                        
+                        for (neighbor_i, neighbor_j, neighbor_k) in neighbors {
+                            // Skip if coordinates are the same (saturating_sub returned 0 when original was 0)
+                            if (neighbor_i == i && neighbor_j == j && neighbor_k == k) {
+                                continue;
+                            }
+                            
                             if neighbor_i < grid.nx && neighbor_j < grid.ny && neighbor_k < grid.nz {
-                                let neighbor_density = bubble_density[[neighbor_i, neighbor_j, neighbor_k]];
-                                if neighbor_density > 0.0 {
+                                let neighbor_radius = self.radius[[neighbor_i, neighbor_j, neighbor_k]];
+                                if neighbor_radius > 0.0 {
                                     let distance = ((neighbor_i as f64 - i as f64) * grid.dx).powi(2) +
                                                   ((neighbor_j as f64 - j as f64) * grid.dy).powi(2) +
                                                   ((neighbor_k as f64 - k as f64) * grid.dz).powi(2);
                                     let distance = distance.sqrt();
                                     
                                     if distance < max_interaction_distance && distance > 0.0 {
-                                        total_contribution += neighbor_density / (1.0 + distance);
+                                        // Interaction strength decreases with distance
+                                        let interaction_strength = (max_interaction_distance - distance) / max_interaction_distance;
+                                        total_contribution += neighbor_radius * interaction_strength;
                                         count += 1;
                                     }
                                 }
@@ -245,10 +262,10 @@ impl CavitationModel {
         dt: f64, 
     ) {
         // Enhanced light emission calculation with bubble dynamics
-        let collapse_threshold = bubble_radius * 0.1; // 10% of initial radius
-        let enhanced_factor = if bubble_radius < collapse_threshold {
+        let collapse_threshold = self.radius[[0, 0, 0]] * 0.1; // 10% of initial radius
+        let enhanced_factor = if self.radius[[0, 0, 0]] < collapse_threshold {
             // During collapse, emit enhanced light based on compression ratio
-            let compression_ratio = collapse_threshold / bubble_radius.max(1e-12);
+            let compression_ratio = collapse_threshold / self.radius[[0, 0, 0]].max(1e-12);
             let temperature_factor = (compression_ratio * 1000.0).min(10000.0); // Cap at 10,000K
             let emission_efficiency = (temperature_factor / 5000.0).min(1.0);
             
@@ -263,7 +280,7 @@ impl CavitationModel {
             emission_efficiency * spectral_intensity * compression_ratio.powi(2)
         } else {
             // Normal thermal emission
-            0.01 * (bubble_radius / initial_radius).powi(3)
+            0.01 * (self.radius[[0, 0, 0]] / 1e-6).powi(3) // Using 1 micron as default initial radius
         };
         
         for i in 0..grid.nx {
@@ -335,9 +352,12 @@ impl CavitationModel {
         let r = self.radius[[i, j, k]];
         // Comprehensive thermal conduction model
         // Follows proper heat transfer physics with temperature gradients
-        let thermal_conductivity = medium.thermal_conductivity(i, j, k);
-        let specific_heat = medium.specific_heat(i, j, k);
-        let density = medium.density(i, j, k);
+        let x = grid.x_coordinates()[i];
+        let y = grid.y_coordinates()[j];
+        let z = grid.z_coordinates()[k];
+        let thermal_conductivity = medium.thermal_conductivity(x, y, z, grid);
+        let specific_heat = medium.specific_heat(x, y, z, grid);
+        let density = medium.density(x, y, z, grid);
         let thermal_diffusivity = thermal_conductivity / (density * specific_heat);
         
         // Calculate temperature gradient around the bubble
@@ -356,8 +376,8 @@ impl CavitationModel {
         }
         
         // Nusselt number for heat transfer around a sphere
-        let reynolds_number = 2.0 * r * self.velocity[[i, j, k]].abs() * density / medium.viscosity(i, j, k);
-        let prandtl_number = medium.viscosity(i, j, k) * specific_heat / thermal_conductivity;
+        let reynolds_number = 2.0 * r * self.velocity[[i, j, k]].abs() * density / medium.viscosity(x, y, z, grid);
+        let prandtl_number = medium.viscosity(x, y, z, grid) * specific_heat / thermal_conductivity;
         let nusselt_number = 2.0 + 0.6 * reynolds_number.powf(0.5) * prandtl_number.powf(0.33);
         
         // Heat transfer coefficient
@@ -368,7 +388,7 @@ impl CavitationModel {
         
         // Temperature difference between bubble interior and surrounding medium
         let bubble_temp = self.temperature[[i, j, k]];
-        let ambient_temp = medium.temperature(i, j, k);
+        let ambient_temp = medium.temperature()[[i, j, k]];
         let temp_difference = bubble_temp - ambient_temp;
         
         // Cooling rate based on convective heat transfer
@@ -490,7 +510,10 @@ impl CavitationModel {
                         self.radius[[i, j, k]] = new_radius.max(MIN_RADIUS_MODEL_DEFAULT);
                         
                         // Update bubble velocity based on forces
-                        let acceleration = average_force / (4.0/3.0 * std::f64::consts::PI * current_radius.powi(3) * medium.density(i, j, k));
+                        let x = grid.x_coordinates()[i];
+                        let y = grid.y_coordinates()[j];
+                        let z = grid.z_coordinates()[k];
+                        let acceleration = average_force / (4.0/3.0 * std::f64::consts::PI * current_radius.powi(3) * medium.density(x, y, z, grid));
                         self.velocity[[i, j, k]] += acceleration * 1e-6; // Small time step approximation
                     }
                 }

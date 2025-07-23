@@ -1,6 +1,7 @@
 // src/solver/mod.rs
-use crate::boundary::Boundary;
 use crate::grid::Grid;
+use crate::KwaversResult;
+use crate::boundary::Boundary;
 use crate::medium::Medium;
 use crate::physics::{
     traits::{AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, StreamingModelTrait, AcousticScatteringModelTrait, HeterogeneityModelTrait},
@@ -161,7 +162,7 @@ impl Solver {
 
     // Removed duplicated pub fn run and part of new() method body
 
-    pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) {
+    pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) -> KwaversResult<()> {
         let dt = self.time.dt;
         let n_steps = self.time.n_steps;
         info!(
@@ -182,7 +183,7 @@ impl Solver {
         // Main simulation loop
         for step in 0..n_steps {
             // Use the enhanced step method that includes stability checks
-            self.step(step, dt, frequency);
+            self.step(step, dt, frequency)?;
             
             // Current simulation time
             let t = step as f64 * dt;
@@ -242,6 +243,7 @@ impl Solver {
             self.medium_update_attempts,
             100.0 * self.medium_update_successes as f64 / self.medium_update_attempts.max(1) as f64
         );
+        Ok(())
     }
     
     fn report_performance_statistics(&self, n_steps: usize) {
@@ -401,7 +403,7 @@ impl Solver {
         unstable_found
     }
 
-    fn step(&mut self, step: usize, dt: f64, frequency: f64) {
+    fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
         // Performance tracking
         let step_start = Instant::now();
         let mut preprocessing_time = 0.0;
@@ -436,7 +438,7 @@ impl Solver {
         let mut pressure_owned = pressure.to_owned();
         
         // Apply acoustic boundary conditions
-        self.boundary.apply_acoustic(&mut pressure_owned, &self.grid, step);
+        self.boundary.apply_acoustic(&mut pressure_owned, &self.grid, step)?;
         
         // Update original pressure with boundary-applied version
         pressure.assign(&pressure_owned);
@@ -658,6 +660,7 @@ impl Solver {
                 step, step_time, wave_time, cavitation_time, light_time, thermal_time
             );
         }
+        Ok(())
     }
 
     /// Apply elastic-specific PML boundary conditions for velocity components
@@ -667,7 +670,7 @@ impl Solver {
         let velocity_damping_factor = 0.8; // Reduced damping for velocity components
         
         // Apply modified PML with velocity-specific parameters
-        self.boundary.apply_acoustic_with_factor(field, &self.grid, step, velocity_damping_factor);
+        self.boundary.apply_acoustic_with_factor(field, &self.grid, step, velocity_damping_factor)?;
         
         // Additional velocity-specific boundary treatment
         self.apply_velocity_boundary_conditions(field, field_idx)?;
@@ -682,7 +685,7 @@ impl Solver {
         let stress_damping_factor = 1.2; // Enhanced damping for stress components
         
         // Apply modified PML with stress-specific parameters
-        self.boundary.apply_acoustic_with_factor(field, &self.grid, step, stress_damping_factor);
+        self.boundary.apply_acoustic_with_factor(field, &self.grid, step, stress_damping_factor)?;
         
         // Additional stress-specific boundary treatment
         self.apply_stress_boundary_conditions(field, field_idx)?;
