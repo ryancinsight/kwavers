@@ -26,9 +26,9 @@ Kwavers is a high-performance, memory-safe ultrasound simulation library written
 #### **Phased Array Implementation** ✅
 - **Multi-Element Arrays**: 64-element linear arrays with configurable spacing and geometry
 - **Electronic Beam Focusing**: Precise focus control at any 3D target point
-- **Beam Steering**: Accurate steering to angles up to 45° with 100% accuracy
+- **Beam Steering**: Precise steering to angles up to 45° matching theoretical calculations
 - **Custom Phase Patterns**: Dual focus, Gaussian apodization, sinusoidal patterns
-- **Element Cross-talk**: Distance-based coupling with configurable coefficients (0-20%)
+- **Element Cross-talk**: Distance-based coupling with configurable coefficients (0.0-1.0)
 
 #### **Beamforming Algorithms** ✅
 - **Focus Mode**: Target-specific phase delay calculation with wavelength precision

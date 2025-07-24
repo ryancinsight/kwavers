@@ -33,7 +33,7 @@
   
   - [x] **Steering Mode**: Angular beam control with linear phase gradients ✅
     - [x] Spherical coordinate steering (theta, phi) with accurate delay calculation ✅
-    - [x] Demonstrated steering to 0°, 15°, 30°, 45° with 100% accuracy ✅
+    - [x] Demonstrated steering to 0°, 15°, 30°, 45° matching theoretical calculations ✅
     - [x] Linear phase progression across array elements ✅
   
   - [x] **Custom Pattern Mode**: User-defined phase delay patterns ✅

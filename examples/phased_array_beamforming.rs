@@ -128,8 +128,25 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
         // Calculate steering accuracy
         let wavelength = 1500.0 / 2.5e6; // c/f
         let expected_gradient = -2.0 * std::f64::consts::PI * theta.sin() / wavelength * 0.3e-3;
-        let accuracy = ((delay_gradient - expected_gradient) / expected_gradient * 100.0).abs();
-        println!("    Steering accuracy: {:.1}%", 100.0 - accuracy.min(100.0));
+        
+        let accuracy_metric = if expected_gradient.abs() < 1e-9 {
+            // For 0-degree case, use absolute error metric
+            let absolute_error = delay_gradient.abs();
+            if absolute_error < 1e-6 {
+                format!("within {:.2e} rad/element tolerance", absolute_error)
+            } else {
+                format!("absolute error: {:.3e} rad/element", absolute_error)
+            }
+        } else {
+            // For non-zero angles, use relative error
+            let relative_error = ((delay_gradient - expected_gradient) / expected_gradient * 100.0).abs();
+            if relative_error < 0.1 {
+                format!("within {:.2}% of theoretical", relative_error)
+            } else {
+                format!("error: {:.1}% from theoretical", relative_error)
+            }
+        };
+        println!("    Steering accuracy: {}", accuracy_metric);
     }
     
     Ok(())
@@ -234,8 +251,8 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
             f64::INFINITY
         };
         
-        println!("  Cross-talk {:.0}%: Focus/Off-axis = {:.1} dB", 
-                coefficient * 100.0, contrast_ratio);
+        println!("  Cross-talk {:.1}: Focus/Off-axis = {:.1} dB", 
+                coefficient, contrast_ratio);
     }
     
     Ok(())

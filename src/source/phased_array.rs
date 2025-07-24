@@ -38,7 +38,7 @@ pub struct PhasedArrayConfig {
     pub frequency: f64,
     /// Enable element cross-talk modeling
     pub enable_crosstalk: bool,
-    /// Cross-talk coupling coefficient [0.0-1.0]
+    /// Cross-talk coupling coefficient [0.0-1.0] (0.0 = no coupling, 1.0 = full coupling)
     pub crosstalk_coefficient: f64,
 }
 
