@@ -9,12 +9,18 @@ use kwavers::{
     KwaversResult,
 };
 use ndarray::Array4;
-use std::sync::Arc;
 use std::collections::HashMap;
 
 fn main() -> KwaversResult<()> {
     println!("🌊 Advanced Multi-Frequency Acoustic Wave Simulation");
     println!("========================================================");
+    
+    // Create medium properties HashMap as expected by validation
+    let mut medium_properties = HashMap::new();
+    medium_properties.insert("density".to_string(), 1000.0);
+    medium_properties.insert("sound_speed".to_string(), 1500.0);
+    medium_properties.insert("mu_a".to_string(), 0.1);
+    medium_properties.insert("mu_s_prime".to_string(), 1.0);
     
     // Create simulation configuration
     let config = SimulationConfig {
@@ -29,7 +35,7 @@ fn main() -> KwaversResult<()> {
                 mu_a: 0.1,
                 mu_s_prime: 1.0,
             },
-            properties: std::collections::HashMap::new(),
+            properties: medium_properties,
         },
         physics: PhysicsConfig {
             models: vec![PhysicsModelConfig {
