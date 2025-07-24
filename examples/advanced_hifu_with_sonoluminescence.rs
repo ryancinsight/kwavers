@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
     
     // Run the simulation
-    solver.run(&mut recorder, config.simulation.frequency);
+    let _ = solver.run(&mut recorder, config.simulation.frequency);
     recorder.save()?;
     
     // Create visualizations

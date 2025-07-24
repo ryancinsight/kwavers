@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         heterogeneity,
         4, // num_simulation_fields for acoustic + light + temp + bubble_radius
     );
-    solver.run(&mut recorder, config.simulation.frequency);
+    let _ = solver.run(&mut recorder, config.simulation.frequency);
 
     // Save outputs
     save_pressure_data(&recorder, &time, "sdt_pressure_output.csv")?;

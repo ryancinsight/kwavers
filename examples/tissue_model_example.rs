@@ -21,7 +21,7 @@ use kwavers::{
     source::{LinearArray, HanningApodization},
     solver::Solver,
     time::Time,
-    signal::{SineWave, Signal},
+    signal::SineWave,
     CavitationModelBehavior,
 };
 use log::info;
@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Instant::now();
     info!("Starting simulation with {} time steps", num_steps);
     
-    solver.run(&mut recorder, frequency);
+    let _ = solver.run(&mut recorder, frequency);
     
     let elapsed = start_time.elapsed();
     info!("Simulation completed in {:.2?}", elapsed);

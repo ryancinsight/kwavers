@@ -161,7 +161,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         for &field_idx in elastic_velocity_indices.iter() {
             if field_idx < fields_array.shape()[0] {
                 let mut component = fields_array.index_axis(Axis(0), field_idx).to_owned();
-                pml_boundary_mut.apply_acoustic(&mut component, &grid, step);
+                let _ = pml_boundary_mut.apply_acoustic(&mut component, &grid, step);
                 fields_array.index_axis_mut(Axis(0), field_idx).assign(&component);
             }
         }

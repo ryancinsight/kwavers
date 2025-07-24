@@ -418,7 +418,7 @@ impl Source for PhasedArrayTransducer {
         
         // Calculate contribution from each element
         for element in &self.elements {
-            let distance = Self::distance((x, y, z), element.position);
+            let _distance = Self::distance((x, y, z), element.position);
             
             // Element spatial response (simplified rectangular aperture)
             let spatial_response = self.calculate_element_response(element, x, y, z);
@@ -432,7 +432,7 @@ impl Source for PhasedArrayTransducer {
         }
         
         // Apply cross-talk if enabled
-        if let Some(ref crosstalk_matrix) = self.crosstalk_matrix {
+        if let Some(ref _crosstalk_matrix) = self.crosstalk_matrix {
             // Simplified cross-talk application (full implementation would require convolution)
             total_source *= 1.0 + 0.1 * (t * self.config.frequency).sin(); // Placeholder
         }

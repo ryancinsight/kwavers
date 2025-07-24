@@ -66,7 +66,7 @@ impl HeterogeneousMedium {
 
         // Initialize viscoelastic fields with tissue-appropriate values
         // Shear wave speed in soft tissue: typically 1-10 m/s
-        let shear_sound_speed = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+        let shear_sound_speed = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, _k)| {
             // Vary shear speed based on position to simulate tissue heterogeneity
             let base_speed = 3.0; // m/s (typical for muscle tissue)
             let variation = 0.5 * ((i as f64 / grid.nx as f64).sin() + 
