@@ -103,24 +103,24 @@ impl GpuBenchmarkSuite {
         let mut failed = 0;
 
         for benchmark in &self.benchmarks {
-            println!("Running benchmark: {}", benchmark.name());
+log::info!("Running benchmark: {}", benchmark.name());
             
-            match benchmark.run(context) {
-                Ok(result) => {
-                    if result.passed {
-                        passed += 1;
-                        println!("  ✅ PASSED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
-                    } else {
-                        failed += 1;
-                        println!("  ❌ FAILED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
-                    }
-                    self.results.insert(result.name.clone(), result);
-                }
-                Err(e) => {
-                    failed += 1;
-                    println!("  ❌ ERROR: {}", e);
-                }
-            }
+match benchmark.run(context) {
+    Ok(result) => {
+        if result.passed {
+            passed += 1;
+            log::info!("  ✅ PASSED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
+        } else {
+            failed += 1;
+            log::warn!("  ❌ FAILED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
+        }
+        self.results.insert(result.name.clone(), result);
+    }
+    Err(e) => {
+        failed += 1;
+        log::error!("  ❌ ERROR: {}", e);
+    }
+}
         }
 
         let total_time = start_time.elapsed().as_secs_f64();
