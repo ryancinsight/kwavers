@@ -26,7 +26,7 @@ use kwavers::{
     },
     boundary::Boundary,
     source::Source,
-    Grid, Time, SineWave, LinearArray, HanningApodization
+    Grid, Time
 };
 use std::error::Error;
 use std::sync::Arc;
@@ -237,7 +237,7 @@ impl AdvancedSonoluminescenceSimulation {
     
     /// Run the advanced sonoluminescence simulation
     pub fn run(&mut self) -> KwaversResult<()> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
         
         println!("Starting Advanced Sonoluminescence Simulation");
         println!("Configuration: {:?}", self.config);
@@ -464,7 +464,7 @@ impl PhysicsComponent for AdvancedCavitationComponent {
         );
         
         // Calculate sonoluminescence light emission (already computed in update_cavitation)
-        let light_source = light_emission;
+        let _light_source = light_emission;
         
         // Update metrics
         let execution_time = start_time.elapsed().as_secs_f64();

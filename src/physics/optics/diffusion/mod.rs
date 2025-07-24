@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::physics::optics::{PolarizationModel, OpticalThermalModel, polarization::SimplePolarizationModel};
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
 use log::debug;
-use ndarray::{Array3, Array4, Axis, Zip};
+use ndarray::{Array3, Array4, Axis};
 
 use std::time::Instant;
 use crate::physics::traits::LightDiffusionModelTrait;
@@ -77,7 +77,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
         fields: &mut Array4<f64>,
         light_source: &Array3<f64>,
         grid: &Grid,
-        medium: &dyn Medium,
+        _medium: &dyn Medium,
         dt: f64,
     ) {
         let start_time = Instant::now();

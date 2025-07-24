@@ -17,7 +17,7 @@ use kwavers::{
     init_logging,
 };
 use kwavers::factory::{PhysicsModelConfig, PhysicsModelType};
-use std::collections::HashMap;
+
 use ndarray::Array4;
 
 fn main() -> KwaversResult<()> {
