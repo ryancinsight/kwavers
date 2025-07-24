@@ -367,7 +367,7 @@ extern "C" {
         
         // Simplified occupancy model
         let max_threads_per_sm = 2048; // Typical for modern GPUs
-        let max_shared_mem_per_sm = 48 * 1024; // 48KB typical
+        let max_shared_mem_per_sm = self.get_max_shared_memory_per_sm(); // Dynamically detected or configurable
         
         let blocks_by_threads = max_threads_per_sm / threads_per_block;
         let blocks_by_shared_mem = if shared_mem_per_block > 0 {
