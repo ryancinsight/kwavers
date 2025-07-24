@@ -151,8 +151,8 @@ impl GpuBenchmarkSuite {
 
         report.push_str(&format!("## Summary\n"));
         report.push_str(&format!("- Total benchmarks: {}\n", total));
-        report.push_str(&format!("- Passed: {} ({:.1}%)\n", passed, (passed as f64 / total as f64) * 100.0));
-        report.push_str(&format!("- Failed: {} ({:.1}%)\n\n", failed, (failed as f64 / total as f64) * 100.0));
+report.push_str(&format!("- Passed: {} ({:.1}%)\n", passed, if total > 0 { (passed as f64 / total as f64) * 100.0 } else { 0.0 }));
+report.push_str(&format!("- Failed: {} ({:.1}%)\n\n", failed, if total > 0 { (failed as f64 / total as f64) * 100.0 } else { 0.0 }));
 
         // Detailed results
         report.push_str("## Detailed Results\n\n");
