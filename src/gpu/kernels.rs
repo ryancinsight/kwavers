@@ -250,7 +250,7 @@ extern "C" {
     __global__ void cavitation_update_kernel(
         float* bubble_radius, float* bubble_velocity, const float* pressure,
         unsigned int nx, unsigned int ny, unsigned int nz,
-        float dt, float surface_tension, float viscosity
+        float dt, float surface_tension, float viscosity, float density
     ) {
         unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= nx * ny * nz) return;
@@ -261,7 +261,8 @@ extern "C" {
         float P = pressure[idx];
         
         if (R > 0.0f) {
-            float R_ddot = (P - 2.0f * surface_tension / R) / (R * 1000.0f) - 1.5f * R_dot * R_dot / R;
+            // Fixed: Use density parameter instead of hardcoded 1000.0f
+            float R_ddot = (P - 2.0f * surface_tension / R) / (R * density) - 1.5f * R_dot * R_dot / R;
             
             bubble_velocity[idx] += dt * R_ddot;
             bubble_radius[idx] += dt * bubble_velocity[idx];
