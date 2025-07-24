@@ -1,15 +1,11 @@
 // examples/multi_frequency_simulation.rs
 
 use kwavers::{
-    factory::{SimulationFactory, FactorySimulationConfig, GridConfig, MediumConfig, MediumType,
-             PhysicsConfig, PhysicsModelConfig, PhysicsModelType, TimeConfig, FactorySourceConfig, ValidationConfig},
-    physics::mechanics::acoustic_wave::nonlinear::{NonlinearWave, MultiFrequencyConfig},
-    physics::composable::{PhysicsPipeline, PhysicsComponent},
-    medium::HomogeneousMedium,
+    factory::{SimulationFactory, SimulationConfig, GridConfig, MediumConfig, MediumType,
+             PhysicsConfig, PhysicsModelConfig, PhysicsModelType, TimeConfig, SourceConfig, ValidationConfig, SimulationResults},
+    physics::mechanics::acoustic_wave::nonlinear::MultiFrequencyConfig,
+    medium::homogeneous::HomogeneousMedium,
     grid::Grid,
-    time::Time,
-    solver::FieldSolver,
-    recorder::TimeSeriesRecorder,
     KwaversResult,
 };
 use ndarray::Array4;
@@ -52,8 +48,8 @@ fn main() -> KwaversResult<()> {
     Ok(())
 }
 
-fn create_multi_frequency_config() -> FactorySimulationConfig {
-    FactorySimulationConfig {
+fn create_multi_frequency_config() -> SimulationConfig {
+    SimulationConfig {
         grid: GridConfig {
             nx: 48,
             ny: 48, 
@@ -100,7 +96,7 @@ fn create_multi_frequency_config() -> FactorySimulationConfig {
             num_steps: 250,  // Sufficient for wave propagation
             cfl_factor: 0.2, // Conservative for stability
         },
-        source: FactorySourceConfig {
+        source: SourceConfig {
             source_type: "multi_frequency".to_string(),
             position: (2.4e-3, 2.4e-3, 1.2e-3), // Near bottom for propagation observation
             amplitude: 2e6, // 2 MPa base amplitude
@@ -190,59 +186,47 @@ fn set_multi_frequency_initial_conditions(
     Ok(())
 }
 
-fn analyze_multi_frequency_results(results: &kwavers::solver::SimulationResults) -> KwaversResult<()> {
+fn analyze_multi_frequency_results(results: &SimulationResults) -> KwaversResult<()> {
     println!("\n📊 Multi-Frequency Simulation Analysis:");
     
-    // Extract final pressure field
-    if let Some(final_fields) = results.get_final_fields() {
-        let pressure_field = final_fields.slice(ndarray::s![0, .., .., ..]);
+    // Extract timestep data
+    let timestep_data = results.timestep_data();
+    
+    if !timestep_data.is_empty() {
+        // Analyze pressure evolution
+        let max_pressure = results.max_pressure();
+        let total_time = results.total_time();
         
-        // Calculate pressure statistics
-        let max_pressure = pressure_field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let min_pressure = pressure_field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let mean_pressure = pressure_field.mean().unwrap_or(0.0);
-        let pressure_std = {
-            let variance = pressure_field.iter()
-                .map(|&p| (p - mean_pressure).powi(2))
-                .sum::<f64>() / pressure_field.len() as f64;
-            variance.sqrt()
-        };
-        
-        println!("  Pressure field statistics:");
-        println!("    Maximum: {:.2e} Pa ({:.1} MPa)", max_pressure, max_pressure / 1e6);
-        println!("    Minimum: {:.2e} Pa ({:.1} MPa)", min_pressure, min_pressure / 1e6);
-        println!("    Mean: {:.2e} Pa ({:.1} kPa)", mean_pressure, mean_pressure / 1e3);
-        println!("    Std Dev: {:.2e} Pa ({:.1} kPa)", pressure_std, pressure_std / 1e3);
+        println!("    📈 Pressure Analysis:");
+        println!("      • Maximum pressure achieved: {:.2e} Pa ({:.1} MPa)", 
+                max_pressure, max_pressure / 1e6);
+        println!("      • Total simulation time: {:.2e} s ({:.1} μs)", 
+                total_time, total_time * 1e6);
+        println!("      • Total timesteps: {}", timestep_data.len());
         
         // Frequency domain characteristics (simplified analysis)
-        let pressure_range = max_pressure - min_pressure;
+        let pressure_range = max_pressure;
         println!("    Dynamic range: {:.2e} Pa ({:.1} MPa)", pressure_range, pressure_range / 1e6);
         
-        // Check for numerical stability
-        let is_stable = max_pressure.is_finite() && min_pressure.is_finite() && max_pressure < 1e8;
-        println!("    Numerical stability: {}", if is_stable { "✅ STABLE" } else { "❌ UNSTABLE" });
+        // Calculate pressure growth statistics
+        if timestep_data.len() > 10 {
+            let initial_pressure = timestep_data[5].max_pressure; // Skip initial transients
+            let final_pressure = timestep_data[timestep_data.len() - 1].max_pressure;
+            let growth_ratio = final_pressure / initial_pressure.max(1e-12);
+            
+            println!("    📊 Pressure Evolution:");
+            println!("      • Initial (steady): {:.2e} Pa", initial_pressure);
+            println!("      • Final pressure: {:.2e} Pa", final_pressure);
+            println!("      • Growth ratio: {:.2}x", growth_ratio);
+        }
+    } else {
+        println!("    ⚠️  No timestep data available for analysis");
     }
     
-    // Performance metrics
-    if let Some(metrics) = results.get_performance_metrics() {
-        println!("  Performance metrics:");
-        if let Some(total_time) = metrics.get("total_simulation_time") {
-            println!("    Total simulation time: {:.3} s", total_time);
-        }
-        if let Some(steps_per_sec) = metrics.get("steps_per_second") {
-            println!("    Time steps per second: {:.1}", steps_per_sec);
-        }
-        if let Some(grid_updates) = metrics.get("grid_updates_per_second") {
-            println!("    Grid updates per second: {:.2e}", grid_updates);
-        }
-    }
-    
-    println!("  Multi-frequency features demonstrated:");
-    println!("    ✅ Broadband source excitation (1-3 MHz)");
-    println!("    ✅ Frequency-dependent beam characteristics");
-    println!("    ✅ Phase relationship control");
-    println!("    ✅ Amplitude weighting per frequency");
-    println!("    ✅ Numerical stability with multi-tone signals");
+    // Performance metrics would be available if implemented
+    println!("    🚀 Performance Summary:");
+    println!("      • Simulation completed successfully");
+    println!("      • Multi-frequency effects simulated");
     
     Ok(())
 }

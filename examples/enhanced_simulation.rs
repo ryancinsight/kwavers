@@ -11,8 +11,8 @@
 //! This shows the RIGHT way to use kwavers for complex simulations.
 
 use kwavers::{
-    KwaversResult, SimulationFactory, SimulationResults,
-    FactorySimulationConfig, GridConfig, MediumConfig, MediumType, 
+    KwaversResult, 
+    factory::{SimulationFactory, SimulationResults, SimulationConfig, GridConfig, MediumConfig, MediumType, SourceConfig}, 
     PhysicsConfig, TimeConfig, ValidationConfig,
     init_logging,
 };
@@ -69,8 +69,8 @@ fn main() -> KwaversResult<()> {
 }
 
 /// Create enhanced configuration with multiple physics components
-fn create_enhanced_simulation_config() -> FactorySimulationConfig {
-    FactorySimulationConfig {
+fn create_enhanced_simulation_config() -> SimulationConfig {
+    SimulationConfig {
         grid: GridConfig {
             nx: 32,
             ny: 32,
@@ -134,7 +134,7 @@ fn create_enhanced_simulation_config() -> FactorySimulationConfig {
             num_steps: 300,  // Longer simulation for multi-physics effects
             cfl_factor: 0.25, // More conservative for stability
         },
-        source: FactorySourceConfig {
+        source: SourceConfig {
             source_type: "focused_gaussian".to_string(),
             position: (2.4e-3, 1.2e-3, 2.4e-3), // Offset position for enhanced pattern
             amplitude: 2e6, // 2 MPa for enhanced simulation

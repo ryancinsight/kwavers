@@ -57,7 +57,27 @@ struct PerformanceMetrics {
 /// ## Usage
 /// 
 /// ```rust
+/// use kwavers::{
+///     grid::Grid,
+///     medium::homogeneous::HomogeneousMedium,
+///     physics::mechanics::acoustic_wave::viscoelastic_wave::ViscoelasticWave,
+///     physics::traits::AcousticWaveModel,
+///     source::MockSource,
+/// };
+/// use ndarray::{Array3, Array4};
+/// 
+/// let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4);
+/// let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+/// 
 /// let mut viscoelastic = ViscoelasticWave::new(&grid);
+/// 
+/// // Example arrays for demonstration
+/// let mut fields = Array4::zeros((4, 16, 16, 16));
+/// let prev_pressure = Array3::zeros((16, 16, 16));
+/// let source = MockSource::new();
+/// let dt = 1e-7;
+/// let t = 0.0;
+/// 
 /// // After first time step, full second-order accuracy is achieved
 /// viscoelastic.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
 /// ```
