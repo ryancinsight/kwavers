@@ -432,9 +432,20 @@ impl Source for PhasedArrayTransducer {
         }
         
         // Apply cross-talk if enabled
-        if let Some(ref _crosstalk_matrix) = self.crosstalk_matrix {
-            // Simplified cross-talk application (full implementation would require convolution)
-            total_source *= 1.0 + 0.1 * (t * self.config.frequency).sin(); // Placeholder
+        if let Some(ref crosstalk_matrix) = self.crosstalk_matrix {
+            // Apply cross-talk effects using the crosstalk_matrix
+            for (i, element) in self.elements.iter().enumerate() {
+                for (j, other_element) in self.elements.iter().enumerate() {
+                    if i != j {
+                        let coupling = crosstalk_matrix[[i, j]] * self.config.crosstalk_coefficient;
+                        let spatial_response = self.calculate_element_response(other_element, x, y, z);
+                        let time_delay = other_element.phase_delay / (2.0 * std::f64::consts::PI * self.config.frequency);
+                        let delayed_time = t - time_delay;
+                        let temporal_response = self.signal.amplitude(delayed_time) * other_element.amplitude_weight;
+                        total_source += coupling * spatial_response * temporal_response;
+                    }
+                }
+            }
         }
         
         total_source
