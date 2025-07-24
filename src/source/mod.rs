@@ -7,6 +7,7 @@ use std::fmt::Debug;
 pub mod apodization;
 pub mod linear_array;
 pub mod matrix_array;
+pub mod phased_array;
 
 pub trait Source: Debug + Sync + Send {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
@@ -20,6 +21,10 @@ pub use apodization::{
 };
 pub use linear_array::LinearArray;
 pub use matrix_array::MatrixArray;
+pub use phased_array::{
+    PhasedArrayTransducer, PhasedArrayConfig, TransducerElement, 
+    ElementSensitivity, BeamformingMode
+};
 
 /// Mock signal implementation for testing purposes
 #[derive(Debug, Clone)]
