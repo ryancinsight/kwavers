@@ -140,7 +140,7 @@ fn set_multi_frequency_initial_conditions(
         let phase = multi_freq_config.phases[freq_idx];
         
         // Calculate wavelength for spatial pattern
-        let wavelength = 1500.0 / frequency; // c/f in medium
+        let wavelength = medium.sound_speed(0.0, 0.0, 0.0, grid) / frequency; // c/f in medium
         let spatial_freq = 2.0 * std::f64::consts::PI / wavelength;
         
         println!("  Frequency {}: {:.1} MHz, λ = {:.1} mm, amplitude = {:.1}", 
