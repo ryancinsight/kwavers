@@ -143,8 +143,11 @@ pub fn compute_bubble_interactions(
                             let radiation_force = (4.0 * PI / 3.0) 
                                 * r_clamped.powi(3) * rho * velocity_gradient;
                             
+                            const SECONDARY_BJERKNES_SCALING: f64 = 0.1; // Scaling factor for secondary Bjerknes force
+                            const RADIATION_FORCE_SCALING: f64 = 0.01; // Scaling factor for radiation force
+
                             // Combine forces with appropriate scaling
-                            let total_force = primary_bjerknes + 0.1 * secondary_bjerknes + 0.01 * radiation_force;
+                            let total_force = primary_bjerknes + SECONDARY_BJERKNES_SCALING * secondary_bjerknes + RADIATION_FORCE_SCALING * radiation_force;
                             
                             force_sum += total_force;
                             secondary_bjerknes_sum += secondary_bjerknes;
