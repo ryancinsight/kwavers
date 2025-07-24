@@ -478,7 +478,7 @@ impl PhasedArrayTransducer {
         let sinc_y = self.sinc(ky, element.height);
         
         // Distance-based attenuation
-        let distance_factor = if r > 0.0 { 1.0 / r } else { 1.0 };
+        let distance_factor = 1.0 / (r + 1e-9); // Add a small epsilon to prevent instability
         
         sinc_x * sinc_y * distance_factor
     }
