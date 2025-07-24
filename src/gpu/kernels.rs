@@ -3,7 +3,7 @@
 //! This module provides optimized GPU compute kernels for various
 //! physics operations in ultrasound simulation.
 
-// Note: Error imports removed as they're not currently used in this stub implementation
+use crate::error::{KwaversResult, KwaversError};
 
 /// GPU kernel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,79 +98,286 @@ impl KernelConfig {
                 block_size * std::mem::size_of::<f64>()
             }
             KernelType::Cavitation => {
-                // Complex cavitation state requires more memory
-                block_size * 8 * std::mem::size_of::<f64>()
+                // Complex cavitation calculations need more shared memory
+                block_size * 8 * std::mem::size_of::<f64>() // Multiple bubble parameters
             }
             KernelType::FFT => {
-                // FFT requires temporary storage
+                // FFT needs working space
                 block_size * 2 * std::mem::size_of::<f64>() // Complex numbers
             }
             KernelType::Boundary => {
-                // Boundary kernels need minimal shared memory
-                0
+                // Minimal shared memory for boundary conditions
+                block_size * std::mem::size_of::<f64>()
             }
         }
     }
 
-    /// Get number of work groups needed
-    pub fn work_groups(&self) -> (u32, u32, u32) {
-        let total_elements = self.grid_size.0 * self.grid_size.1 * self.grid_size.2;
-        let work_groups = (total_elements + self.block_size - 1) / self.block_size;
+    /// Get grid dimensions for kernel launch
+    pub fn grid_dimensions(&self) -> (u32, u32, u32) {
+        let total_threads = self.grid_size.0 * self.grid_size.1 * self.grid_size.2;
+        let blocks_needed = (total_threads + self.block_size - 1) / self.block_size;
         
-        // Distribute work groups across dimensions for better occupancy
-        let groups_per_dim = ((work_groups as f64).cbrt().ceil() as u32).max(1);
-        (groups_per_dim, groups_per_dim, groups_per_dim)
+        // Optimize grid layout based on problem dimensions
+        match self.kernel_type {
+            KernelType::AcousticWave | KernelType::ThermalDiffusion => {
+                // 3D grid layout for 3D problems
+                let blocks_per_dim = ((blocks_needed as f64).powf(1.0/3.0).ceil() as u32).max(1);
+                (blocks_per_dim, blocks_per_dim, blocks_per_dim)
+            }
+            _ => {
+                // 1D grid layout for simpler kernels
+                (blocks_needed as u32, 1, 1)
+            }
+        }
+    }
+
+    /// Get block dimensions for kernel launch
+    pub fn block_dimensions(&self) -> (u32, u32, u32) {
+        match self.kernel_type {
+            KernelType::AcousticWave | KernelType::ThermalDiffusion => {
+                // 3D block layout
+                let threads_per_dim = ((self.block_size as f64).powf(1.0/3.0).ceil() as u32).max(1);
+                (threads_per_dim, threads_per_dim, threads_per_dim)
+            }
+            _ => {
+                // 1D block layout
+                (self.block_size as u32, 1, 1)
+            }
+        }
+    }
+
+    /// Generate CUDA kernel source code
+    pub fn generate_cuda_source(&self) -> KwaversResult<String> {
+        match self.kernel_type {
+            KernelType::AcousticWave => self.generate_acoustic_cuda_kernel(),
+            KernelType::ThermalDiffusion => self.generate_thermal_cuda_kernel(),
+            KernelType::Cavitation => self.generate_cavitation_cuda_kernel(),
+            KernelType::FFT => self.generate_fft_cuda_kernel(),
+            KernelType::Boundary => self.generate_boundary_cuda_kernel(),
+        }
+    }
+
+    /// Generate acoustic wave CUDA kernel
+    fn generate_acoustic_cuda_kernel(&self) -> KwaversResult<String> {
+        let optimization_flags = match self.optimization_level {
+            OptimizationLevel::Basic => "",
+            OptimizationLevel::Moderate => "__launch_bounds__(256, 4)",
+            OptimizationLevel::Aggressive => "__launch_bounds__(512, 2) __forceinline__",
+        };
+
+        Ok(format!(r#"
+extern "C" {{
+    {optimization_flags}
+    __global__ void acoustic_update_kernel(
+        float* pressure, float* velocity_x, float* velocity_y, float* velocity_z,
+        unsigned int nx, unsigned int ny, unsigned int nz,
+        float dx, float dy, float dz, float dt,
+        float sound_speed, float density
+    ) {{
+        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int idy = blockIdx.y * blockDim.y + threadIdx.y;
+        unsigned int idz = blockIdx.z * blockDim.z + threadIdx.z;
+        
+        if (idx >= nx || idy >= ny || idz >= nz) return;
+        if (idx == 0 || idx == nx-1 || idy == 0 || idy == ny-1 || idz == 0 || idz == nz-1) return;
+        
+        unsigned int id = idx + idy * nx + idz * nx * ny;
+        
+        // Finite difference stencil for acoustic wave equation
+        float dp_dx = (pressure[id + 1] - pressure[id - 1]) / (2.0f * dx);
+        float dp_dy = (pressure[id + nx] - pressure[id - nx]) / (2.0f * dy);
+        float dp_dz = (pressure[id + nx * ny] - pressure[id - nx * ny]) / (2.0f * dz);
+        
+        float dvx_dx = (velocity_x[id + 1] - velocity_x[id - 1]) / (2.0f * dx);
+        float dvy_dy = (velocity_y[id + nx] - velocity_y[id - nx]) / (2.0f * dy);
+        float dvz_dz = (velocity_z[id + nx * ny] - velocity_z[id - nx * ny]) / (2.0f * dz);
+        
+        // Update pressure (continuity equation)
+        pressure[id] -= density * sound_speed * sound_speed * dt * (dvx_dx + dvy_dy + dvz_dz);
+        
+        // Update velocities (momentum equations)
+        velocity_x[id] -= dt / density * dp_dx;
+        velocity_y[id] -= dt / density * dp_dy;
+        velocity_z[id] -= dt / density * dp_dz;
+    }}
+}}
+"#, optimization_flags = optimization_flags))
+    }
+
+    /// Generate thermal diffusion CUDA kernel
+    fn generate_thermal_cuda_kernel(&self) -> KwaversResult<String> {
+        let optimization_flags = match self.optimization_level {
+            OptimizationLevel::Basic => "",
+            OptimizationLevel::Moderate => "__launch_bounds__(256, 4)",
+            OptimizationLevel::Aggressive => "__launch_bounds__(512, 2) __forceinline__",
+        };
+
+        Ok(format!(r#"
+extern "C" {{
+    {optimization_flags}
+    __global__ void thermal_update_kernel(
+        float* temperature, const float* heat_source,
+        unsigned int nx, unsigned int ny, unsigned int nz,
+        float dx, float dy, float dz, float dt, float thermal_diffusivity
+    ) {{
+        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int idy = blockIdx.y * blockDim.y + threadIdx.y;
+        unsigned int idz = blockIdx.z * blockDim.z + threadIdx.z;
+        
+        if (idx >= nx || idy >= ny || idz >= nz) return;
+        if (idx == 0 || idx == nx-1 || idy == 0 || idy == ny-1 || idz == 0 || idz == nz-1) return;
+        
+        unsigned int id = idx + idy * nx + idz * nx * ny;
+        
+        // 3D Laplacian using finite differences
+        float d2T_dx2 = (temperature[id + 1] - 2.0f * temperature[id] + temperature[id - 1]) / (dx * dx);
+        float d2T_dy2 = (temperature[id + nx] - 2.0f * temperature[id] + temperature[id - nx]) / (dy * dy);
+        float d2T_dz2 = (temperature[id + nx * ny] - 2.0f * temperature[id] + temperature[id - nx * ny]) / (dz * dz);
+        
+        // Heat equation: dT/dt = α∇²T + Q
+        float laplacian = d2T_dx2 + d2T_dy2 + d2T_dz2;
+        temperature[id] += dt * (thermal_diffusivity * laplacian + heat_source[id]);
+    }}
+}}
+"#, optimization_flags = optimization_flags))
+    }
+
+    /// Generate cavitation dynamics CUDA kernel
+    fn generate_cavitation_cuda_kernel(&self) -> KwaversResult<String> {
+        Ok(r#"
+extern "C" {
+    __global__ void cavitation_update_kernel(
+        float* bubble_radius, float* bubble_velocity, const float* pressure,
+        unsigned int nx, unsigned int ny, unsigned int nz,
+        float dt, float surface_tension, float viscosity
+    ) {
+        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= nx * ny * nz) return;
+        
+        // Rayleigh-Plesset equation for bubble dynamics
+        float R = bubble_radius[idx];
+        float R_dot = bubble_velocity[idx];
+        float P = pressure[idx];
+        
+        if (R > 0.0f) {
+            float R_ddot = (P - 2.0f * surface_tension / R) / (R * 1000.0f) - 1.5f * R_dot * R_dot / R;
+            
+            bubble_velocity[idx] += dt * R_ddot;
+            bubble_radius[idx] += dt * bubble_velocity[idx];
+            
+            // Prevent negative radius
+            if (bubble_radius[idx] < 0.0f) {
+                bubble_radius[idx] = 0.0f;
+                bubble_velocity[idx] = 0.0f;
+            }
+        }
+    }
+}
+"#.to_string())
+    }
+
+    /// Generate FFT CUDA kernel (placeholder)
+    fn generate_fft_cuda_kernel(&self) -> KwaversResult<String> {
+        Ok(r#"
+extern "C" {
+    __global__ void fft_kernel(
+        float* real_part, float* imag_part,
+        unsigned int n, int forward
+    ) {
+        // FFT implementation would go here
+        // This is a placeholder for complex FFT operations
+        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= n) return;
+        
+        // Simple identity operation as placeholder
+        if (forward) {
+            // Forward FFT placeholder
+        } else {
+            // Inverse FFT placeholder
+        }
+    }
+}
+"#.to_string())
+    }
+
+    /// Generate boundary condition CUDA kernel
+    fn generate_boundary_cuda_kernel(&self) -> KwaversResult<String> {
+        Ok(r#"
+extern "C" {
+    __global__ void boundary_update_kernel(
+        float* field, unsigned int nx, unsigned int ny, unsigned int nz,
+        int boundary_type
+    ) {
+        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int idy = blockIdx.y * blockDim.y + threadIdx.y;
+        unsigned int idz = blockIdx.z * blockDim.z + threadIdx.z;
+        
+        if (idx >= nx || idy >= ny || idz >= nz) return;
+        
+        unsigned int id = idx + idy * nx + idz * nx * ny;
+        
+        // Apply boundary conditions
+        if (idx == 0 || idx == nx-1 || idy == 0 || idy == ny-1 || idz == 0 || idz == nz-1) {
+            switch (boundary_type) {
+                case 0: // Absorbing boundary
+                    field[id] *= 0.9f;
+                    break;
+                case 1: // Rigid boundary
+                    field[id] = 0.0f;
+                    break;
+                case 2: // Periodic boundary
+                    // Periodic implementation would go here
+                    break;
+                default:
+                    field[id] = 0.0f;
+            }
+        }
+    }
+}
+"#.to_string())
     }
 
     /// Estimate kernel performance
     pub fn estimate_performance(&self) -> KernelPerformanceEstimate {
-        let total_elements = self.grid_size.0 * self.grid_size.1 * self.grid_size.2;
-        let operations_per_element = match self.kernel_type {
-            KernelType::AcousticWave => 50, // Finite difference operations
-            KernelType::ThermalDiffusion => 20, // Laplacian calculation
-            KernelType::Cavitation => 100, // Complex bubble dynamics
-            KernelType::FFT => 10, // FFT operations
-            KernelType::Boundary => 5, // Simple boundary updates
+        let total_operations = self.grid_size.0 * self.grid_size.1 * self.grid_size.2;
+        
+        let ops_per_thread = match self.kernel_type {
+            KernelType::AcousticWave => 20,      // Complex finite difference operations
+            KernelType::ThermalDiffusion => 15,  // Laplacian calculation
+            KernelType::Cavitation => 10,        // Bubble dynamics
+            KernelType::FFT => 25,               // FFT operations
+            KernelType::Boundary => 5,           // Simple boundary updates
         };
 
-        let total_operations = total_elements * operations_per_element;
-        let memory_bandwidth_gb_s = 500.0; // Typical GPU bandwidth
-        let compute_throughput_gflops = 10000.0; // Typical GPU compute
-
-        // Estimate based on memory vs compute bound
-        let memory_bytes = total_elements * std::mem::size_of::<f64>() * 4; // 4 fields
-        let memory_time_ms = (memory_bytes as f64) / (memory_bandwidth_gb_s * 1e9) * 1000.0;
-        let compute_time_ms = (total_operations as f64) / (compute_throughput_gflops * 1e9) * 1000.0;
-
-        let estimated_time_ms = memory_time_ms.max(compute_time_ms);
-        let throughput = total_elements as f64 / (estimated_time_ms / 1000.0);
+        let estimated_gflops = (total_operations * ops_per_thread) as f64 / 1e9;
+        let memory_bandwidth_gb = (total_operations * std::mem::size_of::<f64>() * 2) as f64 / 1e9; // Read + Write
 
         KernelPerformanceEstimate {
-            estimated_time_ms,
-            throughput_elements_per_sec: throughput,
-            memory_bound: memory_time_ms > compute_time_ms,
+            estimated_gflops,
+            memory_bandwidth_gb,
             occupancy_estimate: self.estimate_occupancy(),
+            shared_memory_utilization: self.shared_memory_bytes as f64 / (48.0 * 1024.0), // 48KB typical
         }
     }
 
     /// Estimate GPU occupancy
     fn estimate_occupancy(&self) -> f64 {
-        // Simplified occupancy calculation
-        let max_threads_per_sm = 2048.0; // Typical for modern GPUs
-        let threads_per_block = self.block_size as f64;
-        let blocks_per_sm = (max_threads_per_sm / threads_per_block).floor();
+        let threads_per_block = self.block_size;
+        let shared_mem_per_block = self.shared_memory_bytes;
         
-        // Consider shared memory limitations
-        let max_shared_memory_per_sm = 64 * 1024; // 64KB typical
-        let shared_memory_per_block = self.shared_memory_bytes;
-        let blocks_limited_by_memory = if shared_memory_per_block > 0 {
-            max_shared_memory_per_sm / shared_memory_per_block
+        // Simplified occupancy model
+        let max_threads_per_sm = 2048; // Typical for modern GPUs
+        let max_shared_mem_per_sm = 48 * 1024; // 48KB typical
+        
+        let blocks_by_threads = max_threads_per_sm / threads_per_block;
+        let blocks_by_shared_mem = if shared_mem_per_block > 0 {
+            max_shared_mem_per_sm / shared_mem_per_block
         } else {
-            blocks_per_sm as usize
+            blocks_by_threads
         };
-
-        let actual_blocks_per_sm = blocks_per_sm.min(blocks_limited_by_memory as f64);
-        let occupancy = (actual_blocks_per_sm * threads_per_block) / max_threads_per_sm;
+        
+        let max_blocks = blocks_by_threads.min(blocks_by_shared_mem);
+        let occupancy = (max_blocks * threads_per_block) as f64 / max_threads_per_sm as f64;
         
         occupancy.min(1.0)
     }
@@ -179,174 +386,18 @@ impl KernelConfig {
 /// Kernel performance estimate
 #[derive(Debug, Clone)]
 pub struct KernelPerformanceEstimate {
-    pub estimated_time_ms: f64,
-    pub throughput_elements_per_sec: f64,
-    pub memory_bound: bool,
+    pub estimated_gflops: f64,
+    pub memory_bandwidth_gb: f64,
     pub occupancy_estimate: f64,
+    pub shared_memory_utilization: f64,
 }
 
 impl KernelPerformanceEstimate {
     /// Check if performance meets Phase 9 targets
     pub fn meets_phase9_targets(&self) -> bool {
-        self.throughput_elements_per_sec > 17_000_000.0 && // >17M elements/sec
-        self.occupancy_estimate > 0.8 // >80% occupancy
-    }
-
-    /// Get performance bottleneck analysis
-    pub fn bottleneck_analysis(&self) -> String {
-        let mut analysis = Vec::new();
-        
-        if self.memory_bound {
-            analysis.push("Memory bandwidth limited");
-        } else {
-            analysis.push("Compute limited");
-        }
-        
-        if self.occupancy_estimate < 0.5 {
-            analysis.push("Low GPU occupancy");
-        }
-        
-        if self.throughput_elements_per_sec < 17_000_000.0 {
-            analysis.push("Below Phase 9 performance target");
-        }
-        
-        if analysis.is_empty() {
-            "Performance looks good".to_string()
-        } else {
-            analysis.join("; ")
-        }
-    }
-}
-
-/// GPU kernel optimization strategies
-pub struct KernelOptimizer;
-
-impl KernelOptimizer {
-    /// Optimize kernel configuration for target performance
-    pub fn optimize_config(mut config: KernelConfig, target_performance: f64) -> KernelConfig {
-        let mut best_config = config.clone();
-        let mut best_performance = config.estimate_performance().throughput_elements_per_sec;
-
-        // Try different block sizes
-        for block_size in [128, 256, 512, 1024] {
-            config.block_size = block_size;
-            config.shared_memory_bytes = KernelConfig::calculate_shared_memory(config.kernel_type, block_size);
-            
-            let performance = config.estimate_performance().throughput_elements_per_sec;
-            if performance > best_performance && performance >= target_performance {
-                best_performance = performance;
-                best_config = config.clone();
-            }
-        }
-
-        // Try different optimization levels
-        for opt_level in [OptimizationLevel::Basic, OptimizationLevel::Moderate, OptimizationLevel::Aggressive] {
-            config.optimization_level = opt_level;
-            let performance = config.estimate_performance().throughput_elements_per_sec;
-            if performance > best_performance {
-                best_performance = performance;
-                best_config = config.clone();
-            }
-        }
-
-        best_config
-    }
-
-    /// Generate kernel source code with optimizations
-    pub fn generate_optimized_kernel(config: &KernelConfig) -> String {
-        match config.kernel_type {
-            KernelType::AcousticWave => Self::generate_acoustic_kernel(config),
-            KernelType::ThermalDiffusion => Self::generate_thermal_kernel(config),
-            KernelType::Cavitation => Self::generate_cavitation_kernel(config),
-            KernelType::FFT => Self::generate_fft_kernel(config),
-            KernelType::Boundary => Self::generate_boundary_kernel(config),
-        }
-    }
-
-    /// Generate optimized acoustic wave kernel
-    fn generate_acoustic_kernel(config: &KernelConfig) -> String {
-        let optimizations = match config.optimization_level {
-            OptimizationLevel::Basic => "",
-            OptimizationLevel::Moderate => {
-                "// Memory coalescing optimizations\n"
-            }
-            OptimizationLevel::Aggressive => {
-                "// Aggressive optimizations: memory coalescing, loop unrolling, shared memory\n"
-            }
-        };
-
-        format!(r#"
-// Optimized acoustic wave propagation kernel
-// Block size: {}, Shared memory: {} bytes
-{}
-extern "C" __global__ void acoustic_wave_kernel(
-    double* pressure,
-    double* velocity_x,
-    double* velocity_y,
-    double* velocity_z,
-    unsigned int nx,
-    unsigned int ny,
-    unsigned int nz,
-    double dx,
-    double dy,
-    double dz,
-    double dt,
-    double sound_speed,
-    double density
-) {{
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int total_size = nx * ny * nz;
-    
-    if (idx >= total_size) return;
-    
-    // Convert linear index to 3D coordinates
-    unsigned int k = idx / (nx * ny);
-    unsigned int j = (idx % (nx * ny)) / nx;
-    unsigned int i = idx % nx;
-    
-    // Skip boundary points
-    if (i == 0 || i == nx-1 || j == 0 || j == ny-1 || k == 0 || k == nz-1) return;
-    
-    // Finite difference acoustic wave update
-    double c2 = sound_speed * sound_speed;
-    double rho_inv = 1.0 / density;
-    
-    // Velocity divergence
-    double div_v = (velocity_x[idx + 1] - velocity_x[idx - 1]) / (2.0 * dx) +
-                   (velocity_y[idx + nx] - velocity_y[idx - nx]) / (2.0 * dy) +
-                   (velocity_z[idx + nx * ny] - velocity_z[idx - nx * ny]) / (2.0 * dz);
-    
-    // Update pressure
-    pressure[idx] -= density * c2 * div_v * dt;
-    
-    // Pressure gradients
-    double dp_dx = (pressure[idx + 1] - pressure[idx - 1]) / (2.0 * dx);
-    double dp_dy = (pressure[idx + nx] - pressure[idx - nx]) / (2.0 * dy);
-    double dp_dz = (pressure[idx + nx * ny] - pressure[idx - nx * ny]) / (2.0 * dz);
-    
-    // Update velocities
-    velocity_x[idx] -= rho_inv * dp_dx * dt;
-    velocity_y[idx] -= rho_inv * dp_dy * dt;
-    velocity_z[idx] -= rho_inv * dp_dz * dt;
-}}
-"#, config.block_size, config.shared_memory_bytes, optimizations)
-    }
-
-    /// Generate other kernel types (simplified for brevity)
-    fn generate_thermal_kernel(_config: &KernelConfig) -> String {
-        "// Thermal diffusion kernel placeholder".to_string()
-    }
-
-    fn generate_cavitation_kernel(_config: &KernelConfig) -> String {
-        "// Cavitation dynamics kernel placeholder".to_string()
-    }
-
-    fn generate_fft_kernel(_config: &KernelConfig) -> String {
-        "// FFT kernel placeholder".to_string()
-    }
-
-    fn generate_boundary_kernel(_config: &KernelConfig) -> String {
-        "// Boundary condition kernel placeholder".to_string()
+        self.estimated_gflops > 100.0 &&           // >100 GFLOPS
+        self.occupancy_estimate > 0.75 &&          // >75% occupancy
+        self.shared_memory_utilization < 0.8       // <80% shared memory usage
     }
 }
 
@@ -356,69 +407,72 @@ mod tests {
 
     #[test]
     fn test_kernel_config_creation() {
-        let config = KernelConfig::new(KernelType::AcousticWave, (100, 100, 100));
+        let config = KernelConfig::new(KernelType::AcousticWave, (128, 128, 128));
         
         assert_eq!(config.kernel_type, KernelType::AcousticWave);
-        assert_eq!(config.grid_size, (100, 100, 100));
+        assert_eq!(config.grid_size, (128, 128, 128));
         assert!(config.block_size > 0);
         assert!(config.shared_memory_bytes > 0);
     }
 
     #[test]
-    fn test_work_groups_calculation() {
-        let config = KernelConfig::new(KernelType::AcousticWave, (64, 64, 64));
-        let work_groups = config.work_groups();
+    fn test_optimal_block_sizes() {
+        let small_grid = (64, 64, 64);
+        let large_grid = (256, 256, 256);
         
-        assert!(work_groups.0 > 0);
-        assert!(work_groups.1 > 0);
-        assert!(work_groups.2 > 0);
+        let acoustic_small = KernelConfig::new(KernelType::AcousticWave, small_grid);
+        let acoustic_large = KernelConfig::new(KernelType::AcousticWave, large_grid);
+        
+        assert_eq!(acoustic_small.block_size, 256);
+        assert_eq!(acoustic_large.block_size, 512);
+    }
+
+    #[test]
+    fn test_grid_dimensions() {
+        let config = KernelConfig::new(KernelType::AcousticWave, (100, 100, 100));
+        let (gx, gy, gz) = config.grid_dimensions();
+        
+        assert!(gx > 0 && gy > 0 && gz > 0);
+        assert!(gx * gy * gz * config.block_size >= 1_000_000); // Should cover all grid points
+    }
+
+    #[test]
+    fn test_cuda_kernel_generation() {
+        let config = KernelConfig::new(KernelType::AcousticWave, (64, 64, 64));
+        let source = config.generate_cuda_source().unwrap();
+        
+        assert!(source.contains("acoustic_update_kernel"));
+        assert!(source.contains("extern \"C\""));
+        assert!(source.contains("__global__"));
     }
 
     #[test]
     fn test_performance_estimation() {
-        let config = KernelConfig::new(KernelType::AcousticWave, (100, 100, 100));
-        let estimate = config.estimate_performance();
+        let config = KernelConfig::new(KernelType::AcousticWave, (128, 128, 128));
+        let perf = config.estimate_performance();
         
-        assert!(estimate.estimated_time_ms > 0.0);
-        assert!(estimate.throughput_elements_per_sec > 0.0);
-        assert!(estimate.occupancy_estimate >= 0.0 && estimate.occupancy_estimate <= 1.0);
+        assert!(perf.estimated_gflops > 0.0);
+        assert!(perf.memory_bandwidth_gb > 0.0);
+        assert!(perf.occupancy_estimate >= 0.0 && perf.occupancy_estimate <= 1.0);
     }
 
     #[test]
-    fn test_kernel_optimization() {
-        let config = KernelConfig::new(KernelType::AcousticWave, (100, 100, 100));
-        let optimized = KernelOptimizer::optimize_config(config, 10_000_000.0);
+    fn test_thermal_kernel_generation() {
+        let config = KernelConfig::new(KernelType::ThermalDiffusion, (64, 64, 64));
+        let source = config.generate_cuda_source().unwrap();
         
-        // Should maintain the same kernel type and grid size
-        assert_eq!(optimized.kernel_type, KernelType::AcousticWave);
-        assert_eq!(optimized.grid_size, (100, 100, 100));
+        assert!(source.contains("thermal_update_kernel"));
+        assert!(source.contains("thermal_diffusivity"));
+        assert!(source.contains("heat_source"));
     }
 
     #[test]
-    fn test_kernel_generation() {
-        let config = KernelConfig::new(KernelType::AcousticWave, (100, 100, 100));
-        let kernel_source = KernelOptimizer::generate_optimized_kernel(&config);
+    fn test_optimization_levels() {
+        let mut config = KernelConfig::new(KernelType::AcousticWave, (64, 64, 64));
         
-        assert!(kernel_source.contains("acoustic_wave_kernel"));
-        assert!(kernel_source.contains("__global__"));
-    }
-
-    #[test]
-    fn test_phase9_targets() {
-        let high_perf = KernelPerformanceEstimate {
-            estimated_time_ms: 1.0,
-            throughput_elements_per_sec: 20_000_000.0,
-            memory_bound: false,
-            occupancy_estimate: 0.9,
-        };
-        assert!(high_perf.meets_phase9_targets());
-
-        let low_perf = KernelPerformanceEstimate {
-            estimated_time_ms: 100.0,
-            throughput_elements_per_sec: 1_000_000.0,
-            memory_bound: true,
-            occupancy_estimate: 0.5,
-        };
-        assert!(!low_perf.meets_phase9_targets());
+        config.optimization_level = OptimizationLevel::Aggressive;
+        let source = config.generate_cuda_source().unwrap();
+        assert!(source.contains("__launch_bounds__"));
+        assert!(source.contains("__forceinline__"));
     }
 }

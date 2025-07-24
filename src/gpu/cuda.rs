@@ -119,61 +119,67 @@ impl GpuFieldOps for CudaContext {
             let (nx, ny, nz) = pressure.dim();
             let grid_size = nx * ny * nz;
 
-            // Allocate GPU memory
-            let mut d_pressure = self.device.alloc_zeros::<f64>(grid_size)
+            // Allocate GPU memory (using f32 for GPU operations)
+            let mut d_pressure = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0, // Not easily available from cudarc error
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
-            let mut d_velocity_x = self.device.alloc_zeros::<f64>(grid_size)
+            let mut d_velocity_x = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0,
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
-            let mut d_velocity_y = self.device.alloc_zeros::<f64>(grid_size)
+            let mut d_velocity_y = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0,
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
-            let mut d_velocity_z = self.device.alloc_zeros::<f64>(grid_size)
+            let mut d_velocity_z = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0,
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
 
-            // Safely get array slices
+            // Convert f64 to f32 and copy data to GPU
             let pressure_slice = Self::get_safe_slice(pressure)?;
             let velocity_x_slice = Self::get_safe_slice(velocity_x)?;
             let velocity_y_slice = Self::get_safe_slice(velocity_y)?;
             let velocity_z_slice = Self::get_safe_slice(velocity_z)?;
 
+            // Convert to f32 for GPU operations
+            let pressure_f32: Vec<f32> = pressure_slice.iter().map(|&x| x as f32).collect();
+            let velocity_x_f32: Vec<f32> = velocity_x_slice.iter().map(|&x| x as f32).collect();
+            let velocity_y_f32: Vec<f32> = velocity_y_slice.iter().map(|&x| x as f32).collect();
+            let velocity_z_f32: Vec<f32> = velocity_z_slice.iter().map(|&x| x as f32).collect();
+
             // Copy data to GPU
-            self.device.htod_sync_copy_into(pressure_slice, &mut d_pressure)
+            self.device.htod_sync_copy_into(&pressure_f32, &mut d_pressure)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
-            self.device.htod_sync_copy_into(velocity_x_slice, &mut d_velocity_x)
+            self.device.htod_sync_copy_into(&velocity_x_f32, &mut d_velocity_x)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
-            self.device.htod_sync_copy_into(velocity_y_slice, &mut d_velocity_y)
+            self.device.htod_sync_copy_into(&velocity_y_f32, &mut d_velocity_y)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
-            self.device.htod_sync_copy_into(velocity_z_slice, &mut d_velocity_z)
+            self.device.htod_sync_copy_into(&velocity_z_f32, &mut d_velocity_z)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
 
@@ -210,8 +216,8 @@ impl GpuFieldOps for CudaContext {
                 f.launch(cfg, (
                     &d_pressure, &d_velocity_x, &d_velocity_y, &d_velocity_z,
                     nx as u32, ny as u32, nz as u32,
-                    grid.dx, grid.dy, grid.dz, dt,
-                    1500.0, 1000.0  // Default sound speed and density
+                    grid.dx as f32, grid.dy as f32, grid.dz as f32, dt as f32,
+                    1500.0f32, 1000.0f32  // Default sound speed and density
                 )).map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
                     kernel_name: "acoustic_update_kernel".to_string(),
                     reason: format!("Kernel launch failed: {:?}", e),
@@ -225,37 +231,55 @@ impl GpuFieldOps for CudaContext {
                     reason: format!("Device synchronization failed: {:?}", e),
                 }))?;
 
-            // Safely get mutable slices for results
+            // Copy results back to host and convert f32 to f64
+            let mut pressure_f32_result = vec![0.0f32; grid_size];
+            let mut velocity_x_f32_result = vec![0.0f32; grid_size];
+            let mut velocity_y_f32_result = vec![0.0f32; grid_size];
+            let mut velocity_z_f32_result = vec![0.0f32; grid_size];
+
+            self.device.dtoh_sync_copy_into(&d_pressure, &mut pressure_f32_result)
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                    direction: MemoryTransferDirection::DeviceToHost,
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
+                    reason: format!("Device to host copy failed: {:?}", e),
+                }))?;
+            self.device.dtoh_sync_copy_into(&d_velocity_x, &mut velocity_x_f32_result)
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                    direction: MemoryTransferDirection::DeviceToHost,
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
+                    reason: format!("Device to host copy failed: {:?}", e),
+                }))?;
+            self.device.dtoh_sync_copy_into(&d_velocity_y, &mut velocity_y_f32_result)
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                    direction: MemoryTransferDirection::DeviceToHost,
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
+                    reason: format!("Device to host copy failed: {:?}", e),
+                }))?;
+            self.device.dtoh_sync_copy_into(&d_velocity_z, &mut velocity_z_f32_result)
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                    direction: MemoryTransferDirection::DeviceToHost,
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
+                    reason: format!("Device to host copy failed: {:?}", e),
+                }))?;
+
+            // Convert back to f64 and update arrays
             let pressure_slice_mut = Self::get_safe_slice_mut(pressure)?;
             let velocity_x_slice_mut = Self::get_safe_slice_mut(velocity_x)?;
             let velocity_y_slice_mut = Self::get_safe_slice_mut(velocity_y)?;
             let velocity_z_slice_mut = Self::get_safe_slice_mut(velocity_z)?;
 
-            // Copy results back to host
-            self.device.dtoh_sync_copy_into(&d_pressure, pressure_slice_mut)
-                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                    direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
-                    reason: format!("Device to host copy failed: {:?}", e),
-                }))?;
-            self.device.dtoh_sync_copy_into(&d_velocity_x, velocity_x_slice_mut)
-                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                    direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
-                    reason: format!("Device to host copy failed: {:?}", e),
-                }))?;
-            self.device.dtoh_sync_copy_into(&d_velocity_y, velocity_y_slice_mut)
-                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                    direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
-                    reason: format!("Device to host copy failed: {:?}", e),
-                }))?;
-            self.device.dtoh_sync_copy_into(&d_velocity_z, velocity_z_slice_mut)
-                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                    direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
-                    reason: format!("Device to host copy failed: {:?}", e),
-                }))?;
+            for (i, &val) in pressure_f32_result.iter().enumerate() {
+                pressure_slice_mut[i] = val as f64;
+            }
+            for (i, &val) in velocity_x_f32_result.iter().enumerate() {
+                velocity_x_slice_mut[i] = val as f64;
+            }
+            for (i, &val) in velocity_y_f32_result.iter().enumerate() {
+                velocity_y_slice_mut[i] = val as f64;
+            }
+            for (i, &val) in velocity_z_f32_result.iter().enumerate() {
+                velocity_z_slice_mut[i] = val as f64;
+            }
 
             Ok(())
         }
@@ -281,35 +305,39 @@ impl GpuFieldOps for CudaContext {
             let (nx, ny, nz) = temperature.dim();
             let grid_size = nx * ny * nz;
 
-            // Allocate GPU memory
-            let mut d_temperature = self.device.alloc_zeros::<f64>(grid_size)
+            // Allocate GPU memory (using f32 for GPU operations)
+            let mut d_temperature = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0,
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
-            let mut d_heat_source = self.device.alloc_zeros::<f64>(grid_size)
+            let mut d_heat_source = self.device.alloc_zeros::<f32>(grid_size)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                    requested_bytes: grid_size * std::mem::size_of::<f64>(),
+                    requested_bytes: grid_size * std::mem::size_of::<f32>(),
                     available_bytes: 0,
                     reason: format!("GPU memory allocation failed: {:?}", e),
                 }))?;
 
-            // Safely get array slices
+            // Convert f64 to f32 and copy data to GPU
             let temperature_slice = Self::get_safe_slice(temperature)?;
             let heat_source_slice = Self::get_safe_slice(heat_source)?;
 
+            // Convert to f32 for GPU operations
+            let temperature_f32: Vec<f32> = temperature_slice.iter().map(|&x| x as f32).collect();
+            let heat_source_f32: Vec<f32> = heat_source_slice.iter().map(|&x| x as f32).collect();
+
             // Copy data to GPU
-            self.device.htod_sync_copy_into(temperature_slice, &mut d_temperature)
+            self.device.htod_sync_copy_into(&temperature_f32, &mut d_temperature)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
-            self.device.htod_sync_copy_into(heat_source_slice, &mut d_heat_source)
+            self.device.htod_sync_copy_into(&heat_source_f32, &mut d_heat_source)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::HostToDevice,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Host to device copy failed: {:?}", e),
                 }))?;
 
@@ -345,7 +373,7 @@ impl GpuFieldOps for CudaContext {
                 f.launch(cfg, (
                     &d_temperature, &d_heat_source,
                     nx as u32, ny as u32, nz as u32,
-                    grid.dx, grid.dy, grid.dz, dt, thermal_diffusivity
+                    grid.dx as f32, grid.dy as f32, grid.dz as f32, dt as f32, thermal_diffusivity as f32
                 )).map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
                     kernel_name: "thermal_update_kernel".to_string(),
                     reason: format!("Kernel launch failed: {:?}", e),
@@ -359,14 +387,20 @@ impl GpuFieldOps for CudaContext {
                     reason: format!("Device synchronization failed: {:?}", e),
                 }))?;
 
-            // Copy results back
-            let temperature_slice_mut = Self::get_safe_slice_mut(temperature)?;
-            self.device.dtoh_sync_copy_into(&d_temperature, temperature_slice_mut)
+            // Copy results back and convert f32 to f64
+            let mut temperature_f32_result = vec![0.0f32; grid_size];
+            self.device.dtoh_sync_copy_into(&d_temperature, &mut temperature_f32_result)
                 .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: grid_size * std::mem::size_of::<f64>(),
+                    size_bytes: grid_size * std::mem::size_of::<f32>(),
                     reason: format!("Device to host copy failed: {:?}", e),
                 }))?;
+
+            // Convert back to f64 and update array
+            let temperature_slice_mut = Self::get_safe_slice_mut(temperature)?;
+            for (i, &val) in temperature_f32_result.iter().enumerate() {
+                temperature_slice_mut[i] = val as f64;
+            }
 
             Ok(())
         }
