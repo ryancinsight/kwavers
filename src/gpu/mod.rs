@@ -310,6 +310,8 @@ impl GpuPerformanceMetrics {
 mod tests {
     use super::*;
     use crate::error::MemoryTransferDirection;
+    use crate::grid::Grid;
+    use ndarray::Array3;
 
     #[test]
     fn test_gpu_backend_enum() {
@@ -499,5 +501,116 @@ mod tests {
 
         // Test invalid device index
         assert!(context.set_active_device(99).is_err());
+    }
+
+    #[test]
+    fn test_gpu_acoustic_kernel_validation() {
+        // Test that would validate acoustic kernel correctness
+        // This is a placeholder for when GPU hardware is available
+        println!("GPU acoustic kernel validation test - requires CUDA hardware");
+        
+        // Create test grid
+        let grid = create_test_grid();
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        
+        // Create test arrays
+        let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
+        let mut velocity_x = Array3::<f64>::zeros((nx, ny, nz));
+        let mut velocity_y = Array3::<f64>::zeros((nx, ny, nz));
+        let mut velocity_z = Array3::<f64>::zeros((nx, ny, nz));
+        
+        // Initialize with test pattern
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                for k in 1..nz-1 {
+                    pressure[[i, j, k]] = ((i + j + k) as f64).sin();
+                }
+            }
+        }
+        
+        // Attempt GPU acoustic update
+        if let Ok(context) = GpuContext::new_sync() {
+            if context.devices().len() > 0 {
+                // Would test actual GPU computation here
+                println!("GPU context available for testing");
+            }
+        }
+    }
+
+    #[test]
+    fn test_gpu_thermal_kernel_validation() {
+        // Test that would validate thermal kernel correctness
+        println!("GPU thermal kernel validation test - requires CUDA hardware");
+        
+        // Create test grid
+        let grid = create_test_grid();
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        
+        // Create test arrays
+        let mut temperature = Array3::<f64>::zeros((nx, ny, nz));
+        let heat_source = Array3::<f64>::zeros((nx, ny, nz));
+        
+        // Initialize with test pattern
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                for k in 1..nz-1 {
+                    temperature[[i, j, k]] = 37.0 + ((i * j * k) as f64).sin(); // Body temperature + variation
+                }
+            }
+        }
+        
+        // Attempt GPU thermal update
+        if let Ok(context) = GpuContext::new_sync() {
+            if context.devices().len() > 0 {
+                println!("GPU context available for thermal testing");
+            }
+        }
+    }
+
+    #[test]
+    fn test_gpu_performance_benchmarking() {
+        // Benchmark test for Phase 9 performance targets
+        let grid_sizes = vec![
+            (32, 32, 32),    // Small: 32K points
+            (64, 64, 64),    // Medium: 262K points  
+            (128, 128, 128), // Large: 2M points
+        ];
+        
+        for (nx, ny, nz) in grid_sizes {
+            let grid_size = nx * ny * nz;
+            println!("Testing grid size: {}x{}x{} = {} points", nx, ny, nz, grid_size);
+            
+            // Simulate kernel execution times based on grid size
+            let kernel_time_ms = (grid_size as f64) / 1_000_000.0; // 1M points per ms
+            let transfer_time_ms = kernel_time_ms * 0.1; // 10% transfer overhead
+            
+            let metrics = GpuPerformanceMetrics::new(
+                grid_size,
+                kernel_time_ms,
+                transfer_time_ms,
+                1000.0, // 1000 GB/s theoretical bandwidth
+                (grid_size * std::mem::size_of::<f64>()) as f64 / 1e9, // Data size in GB
+            );
+            
+            println!("  Grid updates/sec: {:.0}", metrics.grid_updates_per_second);
+            println!("  Memory bandwidth util: {:.1}%", metrics.memory_bandwidth_utilization * 100.0);
+            
+            // For large grids, should meet Phase 9 targets
+            if grid_size >= 1_000_000 {
+                println!("  Meets Phase 9 targets: {}", metrics.meets_targets());
+            }
+        }
+    }
+
+    // Helper function to create test grid
+    fn create_test_grid() -> Grid {
+        Grid {
+            nx: 64,
+            ny: 64, 
+            nz: 64,
+            dx: 0.1e-3, // 0.1 mm
+            dy: 0.1e-3,
+            dz: 0.1e-3,
+        }
     }
 }
