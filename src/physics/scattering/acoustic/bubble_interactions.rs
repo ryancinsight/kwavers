@@ -157,6 +157,12 @@ pub fn compute_bubble_interactions(
             }
             let cell_volume = (grid.dx * grid.dy * grid.dz).max(1e-18);
             *s = force_sum / cell_volume; 
+            
+            // Log secondary Bjerknes force sum for debugging
+            if secondary_bjerknes_sum.abs() > 1e-15 {
+                log::trace!("Secondary Bjerknes force sum: {:.2e}", secondary_bjerknes_sum);
+            }
+            
             if s.is_nan() || s.is_infinite() {
                 *s = 0.0;
             }
