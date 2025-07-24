@@ -357,7 +357,7 @@ extern "C" {
             estimated_gflops,
             memory_bandwidth_gb,
             occupancy_estimate: self.estimate_occupancy(),
-            shared_memory_utilization: self.shared_memory_bytes as f64 / (48.0 * 1024.0), // 48KB typical
+            shared_memory_utilization: self.shared_memory_bytes as f64 / DEFAULT_SHARED_MEMORY_BYTES as f64, // 48KB typical
         }
     }
 
