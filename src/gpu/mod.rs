@@ -53,8 +53,8 @@ pub struct GpuContext {
 
 impl GpuContext {
     /// Create new GPU context with automatic device detection
-    pub fn new() -> KwaversResult<Self> {
-        let devices = Self::detect_devices()?;
+    pub async fn new() -> KwaversResult<Self> {
+        let devices = Self::detect_devices().await?;
         
         if devices.is_empty() {
             return Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound));
@@ -75,8 +75,31 @@ impl GpuContext {
         })
     }
 
-    /// Detect available GPU devices
-    fn detect_devices() -> KwaversResult<Vec<GpuDevice>> {
+    /// Create new GPU context synchronously (for compatibility)
+    pub fn new_sync() -> KwaversResult<Self> {
+        let devices = Self::detect_devices_sync()?;
+        
+        if devices.is_empty() {
+            return Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound));
+        }
+
+        // Select best device (highest memory and compute units)
+        let active_device = devices.iter()
+            .enumerate()
+            .max_by_key(|(_, device)| (device.memory_size, device.compute_units))
+            .map(|(idx, _)| idx);
+
+        let backend = devices[active_device.unwrap()].backend;
+
+        Ok(Self {
+            devices,
+            active_device,
+            backend,
+        })
+    }
+
+    /// Detect available GPU devices (async version)
+    async fn detect_devices() -> KwaversResult<Vec<GpuDevice>> {
         let mut devices = Vec::new();
 
         // Try CUDA devices first
@@ -90,7 +113,30 @@ impl GpuContext {
         // Try OpenCL/WebGPU devices
         #[cfg(feature = "wgpu")]
         {
-            if let Ok(wgpu_devices) = opencl::detect_wgpu_devices() {
+            if let Ok(wgpu_devices) = opencl::detect_wgpu_devices().await {
+                devices.extend(wgpu_devices);
+            }
+        }
+
+        Ok(devices)
+    }
+
+    /// Detect available GPU devices (sync version for compatibility)
+    fn detect_devices_sync() -> KwaversResult<Vec<GpuDevice>> {
+        let mut devices = Vec::new();
+
+        // Try CUDA devices first
+        #[cfg(feature = "cudarc")]
+        {
+            if let Ok(cuda_devices) = cuda::detect_cuda_devices() {
+                devices.extend(cuda_devices);
+            }
+        }
+
+        // Try OpenCL/WebGPU devices (using sync wrapper)
+        #[cfg(feature = "wgpu")]
+        {
+            if let Ok(wgpu_devices) = opencl::detect_wgpu_devices_sync() {
                 devices.extend(wgpu_devices);
             }
         }
@@ -183,7 +229,10 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::allocate_wgpu_memory(size),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => Err(KwaversError::GpuError("No GPU backend available".to_string())),
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: "Any".to_string(),
+                reason: "No GPU backend available".to_string(),
+            })),
         }
     }
 
@@ -195,7 +244,10 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_wgpu(host_data, device_buffer),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => Err(KwaversError::GpuError("No GPU backend available".to_string())),
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: "Any".to_string(),
+                reason: "No GPU backend available".to_string(),
+            })),
         }
     }
 
@@ -207,7 +259,10 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_wgpu(device_buffer, host_data),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => Err(KwaversError::GpuError("No GPU backend available".to_string())),
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: "Any".to_string(),
+                reason: "No GPU backend available".to_string(),
+            })),
         }
     }
 }
@@ -254,55 +309,195 @@ impl GpuPerformanceMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::MemoryTransferDirection;
 
     #[test]
-    fn test_gpu_context_creation() {
-        // Test should work even without GPU hardware
-        match GpuContext::new() {
+    fn test_gpu_backend_enum() {
+        assert_eq!(GpuBackend::Cuda, GpuBackend::Cuda);
+        assert_ne!(GpuBackend::Cuda, GpuBackend::OpenCL);
+        assert_ne!(GpuBackend::OpenCL, GpuBackend::WebGPU);
+    }
+
+    #[test]
+    fn test_gpu_device_creation() {
+        let device = GpuDevice {
+            id: 0,
+            name: "Test GPU".to_string(),
+            backend: GpuBackend::Cuda,
+            memory_size: 8 * 1024 * 1024 * 1024, // 8GB
+            compute_units: 32,
+            max_work_group_size: 1024,
+        };
+
+        assert_eq!(device.id, 0);
+        assert_eq!(device.name, "Test GPU");
+        assert_eq!(device.backend, GpuBackend::Cuda);
+        assert_eq!(device.memory_size, 8 * 1024 * 1024 * 1024);
+        assert_eq!(device.compute_units, 32);
+        assert_eq!(device.max_work_group_size, 1024);
+    }
+
+    #[test]
+    fn test_gpu_context_sync_creation() {
+        // Test synchronous GPU context creation
+        let result = GpuContext::new_sync();
+        
+        // Should either succeed with devices or fail with NoDevicesFound
+        match result {
             Ok(context) => {
-                assert!(!context.devices().is_empty());
-                assert!(context.active_device().is_some());
+                assert!(!context.devices.is_empty());
+                assert!(context.active_device.is_some());
             }
-            Err(_) => {
-                // No GPU devices available - this is acceptable in CI/test environments
-                println!("No GPU devices found - skipping GPU tests");
+            Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound)) => {
+                // This is expected when no GPU devices are available
             }
+            Err(e) => panic!("Unexpected error: {:?}", e),
         }
     }
 
     #[test]
-    fn test_performance_metrics() {
+    fn test_gpu_performance_metrics() {
         let metrics = GpuPerformanceMetrics::new(
-            1000_000, // 1M grid points
-            10.0,     // 10ms kernel time
-            5.0,      // 5ms transfer time
-            500.0,    // 500 GB/s memory bandwidth
-            1.0,      // 1 GB data size
+            1_000_000, // 1M grid points
+            10.0,      // 10ms kernel time
+            5.0,       // 5ms transfer time
+            500.0,     // 500 GB/s memory bandwidth
+            0.1,       // 0.1 GB data size
         );
 
-        assert!(metrics.grid_updates_per_second > 0.0);
-        assert!(metrics.memory_bandwidth_utilization > 0.0);
+        assert_eq!(metrics.kernel_execution_time_ms, 10.0);
+        assert_eq!(metrics.memory_transfer_time_ms, 5.0);
         assert_eq!(metrics.total_time_ms, 15.0);
+        
+        // Calculate expected values
+        let expected_updates_per_sec = 1_000_000.0 / (15.0 / 1000.0);
+        let expected_bandwidth_util = (0.1 / (5.0 / 1000.0)) / 500.0;
+        
+        assert!((metrics.grid_updates_per_second - expected_updates_per_sec).abs() < 1.0);
+        assert!((metrics.memory_bandwidth_utilization - expected_bandwidth_util).abs() < 0.01);
     }
 
     #[test]
-    fn test_performance_targets() {
+    fn test_gpu_performance_targets() {
+        // Test metrics that meet Phase 9 targets
         let good_metrics = GpuPerformanceMetrics::new(
             20_000_000, // 20M grid points
             1.0,        // 1ms kernel time
             0.1,        // 0.1ms transfer time
             1000.0,     // 1000 GB/s memory bandwidth
-            1.0,        // 1 GB data size
+            0.8,        // 0.8 GB data size
         );
         assert!(good_metrics.meets_targets());
 
+        // Test metrics that don't meet targets
         let bad_metrics = GpuPerformanceMetrics::new(
             1_000_000,  // 1M grid points (too low)
             100.0,      // 100ms kernel time (too slow)
-            50.0,       // 50ms transfer time (too slow)
+            50.0,       // 50ms transfer time
             100.0,      // 100 GB/s memory bandwidth
-            1.0,        // 1 GB data size
+            0.1,        // 0.1 GB data size
         );
         assert!(!bad_metrics.meets_targets());
+    }
+
+    #[test]
+    fn test_memory_transfer_direction_display() {
+        assert_eq!(format!("{}", MemoryTransferDirection::HostToDevice), "HostToDevice");
+        assert_eq!(format!("{}", MemoryTransferDirection::DeviceToHost), "DeviceToHost");
+        assert_eq!(format!("{}", MemoryTransferDirection::DeviceToDevice), "DeviceToDevice");
+    }
+
+    #[test]
+    fn test_gpu_error_handling() {
+        // Test device initialization error
+        let error = crate::error::GpuError::DeviceInitialization {
+            device_id: 0,
+            reason: "Test error".to_string(),
+        };
+        let display = format!("{}", error);
+        assert!(display.contains("GPU device 0 initialization failed"));
+        assert!(display.contains("Test error"));
+
+        // Test memory allocation error
+        let error = crate::error::GpuError::MemoryAllocation {
+            requested_bytes: 1024,
+            available_bytes: 512,
+            reason: "Insufficient memory".to_string(),
+        };
+        let display = format!("{}", error);
+        assert!(display.contains("requested 1024 bytes"));
+        assert!(display.contains("available 512 bytes"));
+
+        // Test memory transfer error
+        let error = crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::HostToDevice,
+            size_bytes: 2048,
+            reason: "Transfer failed".to_string(),
+        };
+        let display = format!("{}", error);
+        assert!(display.contains("HostToDevice"));
+        assert!(display.contains("2048 bytes"));
+    }
+
+    #[tokio::test]
+    async fn test_gpu_context_async_creation() {
+        // Test asynchronous GPU context creation
+        let result = GpuContext::new().await;
+        
+        // Should either succeed with devices or fail with NoDevicesFound
+        match result {
+            Ok(context) => {
+                assert!(!context.devices.is_empty());
+                assert!(context.active_device.is_some());
+                
+                // Test device access
+                if let Some(device) = context.active_device() {
+                    assert!(!device.name.is_empty());
+                }
+                
+                // Test device list access
+                assert!(!context.devices().is_empty());
+            }
+            Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound)) => {
+                // This is expected when no GPU devices are available
+            }
+            Err(e) => panic!("Unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_gpu_context_device_selection() {
+        // Create a mock context with test devices
+        let devices = vec![
+            GpuDevice {
+                id: 0,
+                name: "Low-end GPU".to_string(),
+                backend: GpuBackend::Cuda,
+                memory_size: 2 * 1024 * 1024 * 1024, // 2GB
+                compute_units: 16,
+                max_work_group_size: 512,
+            },
+            GpuDevice {
+                id: 1,
+                name: "High-end GPU".to_string(),
+                backend: GpuBackend::Cuda,
+                memory_size: 16 * 1024 * 1024 * 1024, // 16GB
+                compute_units: 64,
+                max_work_group_size: 1024,
+            },
+        ];
+
+        let mut context = GpuContext {
+            devices,
+            active_device: Some(0),
+            backend: GpuBackend::Cuda,
+        };
+
+        // Test setting active device
+        assert!(context.set_active_device(1).is_ok());
+        assert_eq!(context.active_device, Some(1));
+
+        // Test invalid device index
+        assert!(context.set_active_device(99).is_err());
     }
 }

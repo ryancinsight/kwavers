@@ -55,10 +55,14 @@ impl GpuMemoryPool {
         let id = self.allocation_count;
         self.allocation_count += 1;
 
+        // Simulate GPU memory allocation with a realistic pointer value
+        // In a real implementation, this would be the actual GPU memory address
+        let device_ptr = self.simulate_gpu_allocation(size)?;
+
         let block = GpuMemoryBlock {
             id,
             size,
-            device_ptr: 0, // Would be actual GPU pointer
+            device_ptr,
             is_free: false,
             allocation_time: std::time::Instant::now(),
         };
@@ -71,6 +75,30 @@ impl GpuMemoryPool {
         }
 
         Ok(id)
+    }
+
+    /// Simulate GPU memory allocation for testing and development
+    /// In a real implementation, this would interface with CUDA/OpenCL APIs
+    fn simulate_gpu_allocation(&self, size: usize) -> KwaversResult<usize> {
+        // Create a realistic-looking GPU memory address
+        // Base address starts at 0x7f000000 (typical GPU memory region)
+        let base_address = 0x7f000000_usize;
+        let offset = self.total_allocated;
+        let aligned_offset = (offset + 255) & !255; // 256-byte alignment
+        
+        let device_ptr = base_address + aligned_offset;
+        
+        // Check for memory overflow (simulate 8GB GPU memory limit)
+        const MAX_GPU_MEMORY: usize = 8 * 1024 * 1024 * 1024; // 8GB
+        if aligned_offset + size > MAX_GPU_MEMORY {
+            return Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                requested_bytes: size,
+                available_bytes: MAX_GPU_MEMORY.saturating_sub(aligned_offset),
+                reason: "Simulated GPU memory exhausted".to_string(),
+            }));
+        }
+        
+        Ok(device_ptr)
     }
 
     /// Free memory block

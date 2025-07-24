@@ -56,9 +56,9 @@ crossbeam = "0.8"
 libm = "0.2"
 
 # GPU acceleration dependencies
-cudarc = { version = "0.11", optional = true }
-wgpu = { version = "0.19", optional = true }
-bytemuck = { version = "1.14", optional = true }
+cudarc = { version = "0.11", features = ["cuda-12050"], optional = true }
+wgpu = { version = "0.19", features = ["wgsl"], optional = true }
+bytemuck = { version = "1.14", features = ["derive"], optional = true }
 
 [dev-dependencies]
 criterion = "0.4"

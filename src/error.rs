@@ -581,6 +581,27 @@ impl fmt::Display for SystemError {
 
 impl StdError for SystemError {}
 
+/// Memory transfer direction for GPU operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MemoryTransferDirection {
+    /// Host to device transfer
+    HostToDevice,
+    /// Device to host transfer
+    DeviceToHost,
+    /// Device to device transfer
+    DeviceToDevice,
+}
+
+impl fmt::Display for MemoryTransferDirection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemoryTransferDirection::HostToDevice => write!(f, "HostToDevice"),
+            MemoryTransferDirection::DeviceToHost => write!(f, "DeviceToHost"),
+            MemoryTransferDirection::DeviceToDevice => write!(f, "DeviceToDevice"),
+        }
+    }
+}
+
 /// GPU acceleration errors
 /// 
 /// Implements SOLID principles with specific error types for GPU operations
@@ -601,7 +622,7 @@ pub enum GpuError {
     },
     /// GPU memory transfer failed
     MemoryTransfer {
-        direction: String,
+        direction: MemoryTransferDirection,
         size_bytes: usize,
         reason: String,
     },
