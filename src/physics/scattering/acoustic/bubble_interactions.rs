@@ -127,8 +127,8 @@ pub fn compute_bubble_interactions(
                             
                             // Secondary Bjerknes force: inter-bubble oscillation coupling
                             // F_secondary = (4π ρ) * (R1*R1_dot * R2*R2_dot) / r * cos(kr)
-                            let pulsation_strength1 = r_clamped * current_velocity;
-                            let pulsation_strength_other = r_other * v_other;
+                            let pulsation_strength1 = r_clamped.powi(2) * current_velocity;
+                            let pulsation_strength_other = r_other.powi(2) * v_other;
                             
                             let phase_diff = wavenumber * dist;
                             let phase_factor = phase_diff.cos();
