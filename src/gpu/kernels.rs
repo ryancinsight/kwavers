@@ -208,8 +208,8 @@ extern "C" {{
     fn generate_thermal_cuda_kernel(&self) -> KwaversResult<String> {
         let optimization_flags = match self.optimization_level {
             OptimizationLevel::Basic => "",
-            OptimizationLevel::Moderate => "__launch_bounds__(256, 4)",
-            OptimizationLevel::Aggressive => "__launch_bounds__(512, 2) __forceinline__",
+            OptimizationLevel::Moderate => MODERATE_LAUNCH_BOUNDS,
+            OptimizationLevel::Aggressive => AGGRESSIVE_LAUNCH_BOUNDS,
         };
 
         Ok(format!(r#"
