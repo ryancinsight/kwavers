@@ -1,42 +1,43 @@
-// src/lib.rs
-//! Kwavers - Advanced Ultrasound Simulation Toolbox
+//! # Kwavers - Advanced Ultrasound Simulation Toolbox
 //!
 //! A modern, high-performance, open-source computational toolbox for simulating
 //! ultrasound wave propagation and its interactions with complex biological media.
 //!
-//! Design Principles Implemented:
-//! - SOLID: Single responsibility, open/closed, Liskov substitution, interface segregation, dependency inversion
-//! - CUPID: Composable, Unix-like, Predictable, Idiomatic, Domain-focused
-//! - GRASP: Information expert, creator, controller, low coupling, high cohesion
-//! - ACID: Atomicity, consistency, isolation, durability
-//! - DRY: Don't repeat yourself
-//! - KISS: Keep it simple, stupid
-//! - YAGNI: You aren't gonna need it
-//! - SSOT: Single source of truth
-//! - CCP: Common closure principle
-//! - CRP: Common reuse principle
-//! - ADP: Acyclic dependency principle
-
-pub mod error;
-pub mod grid;
-pub mod time;
-pub mod medium;
-pub mod source;
-pub mod sensor;
-pub mod recorder;
-pub mod boundary;
-pub mod solver;
-pub mod physics;
-pub mod config;
-pub mod validation;
-pub mod signal;
-pub mod utils;
-pub mod fft;
-pub mod output;
-pub mod factory;  // Re-enabled factory module
+//! ## Features
+//!
+//! - **Advanced Physics**: Nonlinear acoustics, thermal effects, cavitation dynamics
+//! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
+//! - **Memory Safety**: Zero unsafe code with comprehensive error handling
+//! - **Performance**: Optimized algorithms with SIMD and parallel processing
+//! - **Extensibility**: Modular architecture following SOLID principles
 
 use std::collections::HashMap;
 use ndarray::Array3;
+
+// Core modules
+pub mod boundary;
+pub mod config;
+pub mod error;
+pub mod factory;
+pub mod fft;
+pub mod grid;
+pub mod log;
+pub mod medium;
+pub mod output;
+pub mod physics;
+pub mod plotting;
+pub mod recorder;
+pub mod sensor;
+pub mod signal;
+pub mod solver;
+pub mod source;
+pub mod time;
+pub mod utils;
+pub mod validation;
+
+// GPU acceleration module (feature-gated)
+#[cfg(feature = "gpu-acceleration")]
+pub mod gpu;
 
 // Re-export commonly used types for convenience
 pub use error::{KwaversResult, KwaversError};
