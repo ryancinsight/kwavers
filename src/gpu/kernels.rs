@@ -161,7 +161,7 @@ impl KernelConfig {
     fn generate_acoustic_cuda_kernel(&self) -> KwaversResult<String> {
         let optimization_flags = match self.optimization_level {
             OptimizationLevel::Basic => "",
-            OptimizationLevel::Moderate => "__launch_bounds__(256, 4)",
+            OptimizationLevel::Moderate => format!("__launch_bounds__({}, {})", LAUNCH_BOUNDS_THREADS, LAUNCH_BOUNDS_BLOCKS).as_str(),
             OptimizationLevel::Aggressive => "__launch_bounds__(512, 2) __forceinline__",
         };
 
