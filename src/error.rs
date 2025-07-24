@@ -43,6 +43,8 @@ pub enum KwaversError {
     Validation(ValidationError),
     /// System errors (memory, threading, etc.)
     System(SystemError),
+    /// GPU acceleration errors
+    Gpu(GpuError),
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
 }
@@ -58,6 +60,7 @@ impl fmt::Display for KwaversError {
             KwaversError::Numerical(e) => write!(f, "Numerical error: {}", e),
             KwaversError::Validation(e) => write!(f, "Validation error: {}", e),
             KwaversError::System(e) => write!(f, "System error: {}", e),
+            KwaversError::Gpu(e) => write!(f, "GPU error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
         }
     }
@@ -74,6 +77,7 @@ impl StdError for KwaversError {
             KwaversError::Numerical(e) => Some(e),
             KwaversError::Validation(e) => Some(e),
             KwaversError::System(e) => Some(e),
+            KwaversError::Gpu(e) => Some(e),
             KwaversError::Composite(e) => Some(e),
         }
     }
@@ -577,6 +581,110 @@ impl fmt::Display for SystemError {
 
 impl StdError for SystemError {}
 
+/// Memory transfer direction for GPU operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MemoryTransferDirection {
+    /// Host to device transfer
+    HostToDevice,
+    /// Device to host transfer
+    DeviceToHost,
+    /// Device to device transfer
+    DeviceToDevice,
+}
+
+impl fmt::Display for MemoryTransferDirection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MemoryTransferDirection::HostToDevice => write!(f, "HostToDevice"),
+            MemoryTransferDirection::DeviceToHost => write!(f, "DeviceToHost"),
+            MemoryTransferDirection::DeviceToDevice => write!(f, "DeviceToDevice"),
+        }
+    }
+}
+
+/// GPU acceleration errors
+/// 
+/// Implements SOLID principles with specific error types for GPU operations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GpuError {
+    /// No GPU devices found
+    NoDevicesFound,
+    /// GPU device initialization failed
+    DeviceInitialization {
+        device_id: u32,
+        reason: String,
+    },
+    /// GPU memory allocation failed
+    MemoryAllocation {
+        requested_bytes: usize,
+        available_bytes: usize,
+        reason: String,
+    },
+    /// GPU memory transfer failed
+    MemoryTransfer {
+        direction: MemoryTransferDirection,
+        size_bytes: usize,
+        reason: String,
+    },
+    /// GPU kernel compilation failed
+    KernelCompilation {
+        kernel_name: String,
+        reason: String,
+    },
+    /// GPU kernel execution failed
+    KernelExecution {
+        kernel_name: String,
+        reason: String,
+    },
+    /// GPU backend not available
+    BackendNotAvailable {
+        backend: String,
+        reason: String,
+    },
+    /// GPU performance below threshold
+    PerformanceThreshold {
+        actual_performance: f64,
+        required_performance: f64,
+        metric: String,
+    },
+}
+
+impl fmt::Display for GpuError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GpuError::NoDevicesFound => {
+                write!(f, "No GPU devices found")
+            }
+            GpuError::DeviceInitialization { device_id, reason } => {
+                write!(f, "GPU device {} initialization failed: {}", device_id, reason)
+            }
+            GpuError::MemoryAllocation { requested_bytes, available_bytes, reason } => {
+                write!(f, "GPU memory allocation failed: requested {} bytes, available {} bytes: {}", 
+                       requested_bytes, available_bytes, reason)
+            }
+            GpuError::MemoryTransfer { direction, size_bytes, reason } => {
+                write!(f, "GPU memory transfer ({}) failed for {} bytes: {}", 
+                       direction, size_bytes, reason)
+            }
+            GpuError::KernelCompilation { kernel_name, reason } => {
+                write!(f, "GPU kernel '{}' compilation failed: {}", kernel_name, reason)
+            }
+            GpuError::KernelExecution { kernel_name, reason } => {
+                write!(f, "GPU kernel '{}' execution failed: {}", kernel_name, reason)
+            }
+            GpuError::BackendNotAvailable { backend, reason } => {
+                write!(f, "GPU backend '{}' not available: {}", backend, reason)
+            }
+            GpuError::PerformanceThreshold { actual_performance, required_performance, metric } => {
+                write!(f, "GPU performance below threshold: {} = {:.2}, required {:.2}", 
+                       metric, actual_performance, required_performance)
+            }
+        }
+    }
+}
+
+impl StdError for GpuError {}
+
 /// Composite error for multiple underlying errors
 /// 
 /// Implements CCP (Common Closure Principle) by grouping related errors
@@ -870,6 +978,7 @@ pub mod utils {
             KwaversError::Data(_) => ErrorSeverity::Warning,
             KwaversError::Config(_) => ErrorSeverity::Warning,
             KwaversError::Validation(_) => ErrorSeverity::Info,
+            KwaversError::Gpu(_) => ErrorSeverity::Error,
             KwaversError::Composite(_) => ErrorSeverity::Error,
         }
     }
