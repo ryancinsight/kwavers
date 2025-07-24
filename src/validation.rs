@@ -169,17 +169,21 @@ pub trait ValidationRule: Send + Sync {
     /// Get rule description
     fn description(&self) -> &str;
     
+    /// Check if rule is applicable to a value type
+    fn is_applicable(&self, _value: &ValidationValue) -> bool {
+        true // Default: applicable to all values
+    }
+    
     /// Validate a value
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult;
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult;
+    
+    /// Clone the rule into a new boxed instance
+    /// This enables proper cloning of trait objects
+    fn clone_box(&self) -> Box<dyn ValidationRule>;
     
     /// Get rule priority (lower numbers have higher priority)
     fn priority(&self) -> u32 {
         0
-    }
-    
-    /// Check if rule is applicable to the given value
-    fn is_applicable(&self, value: &ValidationValue) -> bool {
-        true
     }
 }
 
@@ -254,7 +258,8 @@ impl ValidationValue {
 
 /// Range validation rule
 /// 
-/// Implements KISS principle with simple range checking
+/// Validates that numeric values fall within specified bounds
+#[derive(Debug, Clone)]
 pub struct RangeValidationRule {
     pub min: Option<f64>,
     pub max: Option<f64>,
@@ -329,9 +334,14 @@ impl ValidationRule for RangeValidationRule {
     fn is_applicable(&self, value: &ValidationValue) -> bool {
         value.as_float().is_some() || value.as_integer().is_some()
     }
+
+    fn clone_box(&self) -> Box<dyn ValidationRule> {
+        Box::new((*self).clone())
+    }
 }
 
 /// String length validation rule
+#[derive(Debug, Clone)]
 pub struct StringLengthValidationRule {
     pub min_length: Option<usize>,
     pub max_length: Option<usize>,
@@ -406,9 +416,14 @@ impl ValidationRule for StringLengthValidationRule {
     fn is_applicable(&self, value: &ValidationValue) -> bool {
         value.as_string().is_some()
     }
+
+    fn clone_box(&self) -> Box<dyn ValidationRule> {
+        Box::new((*self).clone())
+    }
 }
 
 /// Pattern validation rule
+#[derive(Debug, Clone)]
 pub struct PatternValidationRule {
     pub pattern: String,
     pub field_name: String,
@@ -467,9 +482,14 @@ impl ValidationRule for PatternValidationRule {
     fn is_applicable(&self, value: &ValidationValue) -> bool {
         value.as_string().is_some()
     }
+
+    fn clone_box(&self) -> Box<dyn ValidationRule> {
+        Box::new((*self).clone())
+    }
 }
 
 /// Required field validation rule
+#[derive(Debug, Clone)]
 pub struct RequiredFieldValidationRule {
     pub field_name: String,
 }
@@ -509,6 +529,10 @@ impl ValidationRule for RequiredFieldValidationRule {
             result
         }
     }
+
+    fn clone_box(&self) -> Box<dyn ValidationRule> {
+        Box::new((*self).clone())
+    }
 }
 
 /// Validation pipeline for composable validation
@@ -517,6 +541,15 @@ impl ValidationRule for RequiredFieldValidationRule {
 pub struct ValidationPipeline {
     rules: Vec<Box<dyn ValidationRule>>,
     context: ValidationContext,
+}
+
+impl Clone for ValidationPipeline {
+    fn clone(&self) -> Self {
+        Self {
+            rules: self.rules.iter().map(|rule| rule.clone_box()).collect(),
+            context: self.context.clone(),
+        }
+    }
 }
 
 impl ValidationPipeline {
@@ -616,19 +649,15 @@ impl ValidationManager {
         registry.insert(name, rule);
     }
     
-    /// Get a registered rule
+    /// Get a validation rule by name with proper cloning support
     pub fn get_rule(&self, name: &str) -> Option<Box<dyn ValidationRule>> {
         let registry = self.rule_registry.read().unwrap();
-        registry.get(name).and_then(|rule| {
-            // This is a simplified approach - in a real implementation,
-            // you'd need to implement Clone for Box<dyn ValidationRule>
-            // For now, we'll return None to avoid the borrowing issue
-            None
-        })
+        registry.get(name).map(|rule| rule.clone_box())
     }
     
-    /// Create a validation pipeline
+    /// Create a validation pipeline with basic structure
     pub fn create_pipeline(&self, name: String) -> ValidationPipeline {
+        log::debug!("Creating validation pipeline: {}", name);
         ValidationPipeline::new(name)
     }
     
@@ -640,9 +669,8 @@ impl ValidationManager {
     
     /// Get a registered pipeline
     pub fn get_pipeline(&self, name: &str) -> Option<ValidationPipeline> {
-        // For now, return None to avoid the Clone issue
-        // In a real implementation, you'd need to implement Clone properly
-        None
+        let pipelines = self.pipelines.read().unwrap();
+        pipelines.get(name).cloned()
     }
     
     /// Validate using a registered pipeline

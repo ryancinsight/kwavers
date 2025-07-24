@@ -111,19 +111,56 @@ impl<'a> ChemicalUpdateParams<'a> {
 
     /// Validate chemical parameters for numerical stability
     pub fn validate(&self) -> KwaversResult<()> {
-        // Check for NaN or infinite values
-        if self.pressure.iter().any(|&x| x.is_nan() || x.is_infinite()) {
+        // Check for NaN or infinite values in pressure field
+        let invalid_pressure_values: Vec<f64> = self.pressure.iter()
+            .filter(|&&x| x.is_nan() || x.is_infinite())
+            .cloned()
+            .collect();
+            
+        if !invalid_pressure_values.is_empty() {
             return Err(NumericalError::NaN {
                 operation: "Chemical parameter validation".to_string(),
-                inputs: vec![0.0], // Placeholder
+                inputs: invalid_pressure_values,
             }.into());
         }
 
-        if self.temperature.iter().any(|&x| x < 0.0) {
+        // Check for negative temperatures
+        let negative_temperatures: Vec<f64> = self.temperature.iter()
+            .filter(|&&x| x < 0.0)
+            .cloned()
+            .collect();
+            
+        if !negative_temperatures.is_empty() {
             return Err(PhysicsError::InvalidConfiguration {
                 component: "ChemicalUpdateParams".to_string(),
-                reason: "Temperature must be non-negative".to_string(),
+                reason: format!("Temperature must be non-negative. Found {} negative values, first: {:.2e} K", 
+                               negative_temperatures.len(), 
+                               negative_temperatures[0]),
             }.into());
+        }
+
+        // Check for extremely high temperatures (> 1000 K)
+        let high_temperatures: Vec<f64> = self.temperature.iter()
+            .filter(|&&x| x > 1000.0)
+            .cloned()
+            .collect();
+            
+        if !high_temperatures.is_empty() {
+            log::warn!("High temperatures detected in chemical model: {} values > 1000K, max: {:.2e} K", 
+                      high_temperatures.len(), 
+                      high_temperatures.iter().fold(0.0f64, |a, &b| a.max(b)));
+        }
+
+        // Check for extremely high pressures (> 100 MPa)
+        let high_pressures: Vec<f64> = self.pressure.iter()
+            .filter(|&&x| x.abs() > 1e8)
+            .cloned()
+            .collect();
+            
+        if !high_pressures.is_empty() {
+            log::warn!("High pressures detected in chemical model: {} values > 100 MPa, max: {:.2e} Pa", 
+                      high_pressures.len(), 
+                      high_pressures.iter().fold(0.0f64, |a, &b| a.max(b.abs())));
         }
 
         Ok(())

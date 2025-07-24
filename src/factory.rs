@@ -803,10 +803,66 @@ impl SimulationSetup {
         // Check grid spacing consistency
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         
-        // Check if medium has proper dimensions (simplified check)
-        // Note: Removed complex shape comparison as medium validation is handled elsewhere
+        // Comprehensive medium validation with dimensional checks
+        let grid_volume = self.grid.dx * self.grid.dy * self.grid.dz * (nx * ny * nz) as f64;
         
-        // Physics pipeline validation - use proper component counting
+        // Validate medium properties at key points
+        let test_points = vec![
+            (0.0, 0.0, 0.0),  // Origin
+            (self.grid.dx * (nx/2) as f64, self.grid.dy * (ny/2) as f64, self.grid.dz * (nz/2) as f64), // Center
+            (self.grid.dx * (nx-1) as f64, self.grid.dy * (ny-1) as f64, self.grid.dz * (nz-1) as f64), // Far corner
+        ];
+        
+        for (x, y, z) in test_points {
+            // Validate density
+            let density = self.medium.density(x, y, z, &self.grid);
+            if density <= 0.0 || density > 20000.0 { // 0 to 20 g/cm³ (covers all biological tissues and bone)
+                return Err(ConfigError::ValidationFailed {
+                    section: "medium".to_string(),
+                    reason: format!("Invalid density {:.2e} kg/m³ at position ({:.3e}, {:.3e}, {:.3e})", 
+                                   density, x, y, z),
+                }.into());
+            }
+            
+            // Validate sound speed
+            let sound_speed = self.medium.sound_speed(x, y, z, &self.grid);
+            if sound_speed <= 0.0 || sound_speed > 10000.0 { // 0 to 10 km/s (covers all biological materials)
+                return Err(ConfigError::ValidationFailed {
+                    section: "medium".to_string(),
+                    reason: format!("Invalid sound speed {:.2e} m/s at position ({:.3e}, {:.3e}, {:.3e})", 
+                                   sound_speed, x, y, z),
+                }.into());
+            }
+            
+            // Validate thermal properties for thermal simulations
+            let thermal_conductivity = self.medium.thermal_conductivity(x, y, z, &self.grid);
+            if thermal_conductivity < 0.0 || thermal_conductivity > 1000.0 { // 0 to 1000 W/(m·K)
+                return Err(ConfigError::ValidationFailed {
+                    section: "medium".to_string(),
+                    reason: format!("Invalid thermal conductivity {:.2e} W/(m·K) at position ({:.3e}, {:.3e}, {:.3e})", 
+                                   thermal_conductivity, x, y, z),
+                }.into());
+            }
+        }
+        
+        // Check medium homogeneity consistency
+        if self.medium.is_homogeneous() {
+            // For homogeneous media, verify properties are actually uniform
+            let center_density = self.medium.density(
+                self.grid.dx * (nx/2) as f64, 
+                self.grid.dy * (ny/2) as f64, 
+                self.grid.dz * (nz/2) as f64, 
+                &self.grid
+            );
+            let corner_density = self.medium.density(0.0, 0.0, 0.0, &self.grid);
+            
+            let density_variation = (center_density - corner_density).abs() / center_density;
+            if density_variation > 1e-10 { // Very small tolerance for floating point precision
+                log::warn!("Medium claims to be homogeneous but shows density variation: {:.2e}", density_variation);
+            }
+        }
+        
+        // Physics pipeline validation - detailed component analysis
         let component_count = self.physics.component_count();
         if component_count == 0 {
             return Err(ConfigError::ValidationFailed {
@@ -814,8 +870,18 @@ impl SimulationSetup {
                 reason: "At least one physics component must be enabled".to_string(),
             }.into());
         }
+        
+        // Validate physics component compatibility
+        if component_count > 1 {
+            log::info!("Multi-physics simulation detected with {} components", component_count);
+            
+            // Check for potential stability issues with multi-physics
+            if self.time.dt > 1e-7 {
+                log::warn!("Large time step ({:.2e} s) detected for multi-physics simulation. Consider dt < 1e-7 s for stability", self.time.dt);
+            }
+        }
 
-        // Basic time validation - validate parameters directly since Time doesn't have validate method
+        // Enhanced time validation with CFL condition checking
         if self.time.dt <= 0.0 {
             return Err(ConfigError::InvalidValue {
                 parameter: "dt".to_string(),
@@ -1273,7 +1339,10 @@ mod tests {
         
         let time = Time::new(1e-8, 100);
         
-        let setup = SimulationBuilder::new()
+        // Create default config for the builder
+        let config = SimulationFactory::create_default_config();
+        
+        let setup = SimulationBuilder::new(config)
             .with_grid(grid)
             .with_medium(medium)
             .with_physics(physics)

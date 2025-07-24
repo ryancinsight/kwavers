@@ -1,6 +1,7 @@
 // src/physics/mechanics/acoustic_wave/nonlinear/core.rs
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::KwaversResult;
 
 use ndarray::{Array3, Zip};
 use log::{debug, warn};
@@ -53,6 +54,10 @@ pub struct NonlinearWave {
     chunk_size: usize,
     /// Whether to use chunked processing for large grids
     use_chunked_processing: bool,
+
+    // Multi-frequency simulation support
+    /// Configuration for multi-frequency simulation
+    pub(super) multi_freq_config: Option<MultiFrequencyConfig>,
 }
 
 impl NonlinearWave {
@@ -100,7 +105,82 @@ impl NonlinearWave {
             clamp_gradients: true,    // Enable gradient clamping
             chunk_size,
             use_chunked_processing: total_points > 10_000,
+            multi_freq_config: None, // Initialize as None
         }
+    }
+
+    /// Create a new NonlinearWave with multi-frequency capabilities
+    pub fn with_multi_frequency(
+        grid: &Grid,
+        multi_freq_config: MultiFrequencyConfig,
+    ) -> Self {
+        let mut instance = Self::new(grid);
+        instance.multi_freq_config = Some(multi_freq_config);
+        instance
+    }
+    
+    /// Apply multi-frequency source excitation
+    pub fn apply_multi_frequency_source(
+        &self,
+        pressure: &mut Array3<f64>,
+        grid: &Grid,
+        time: f64,
+        source_position: (f64, f64, f64),
+        base_amplitude: f64,
+    ) -> KwaversResult<()> {
+        if let Some(ref config) = self.multi_freq_config {
+            let (x_src, y_src, z_src) = source_position;
+            
+            // Calculate multi-frequency excitation
+            let mut total_amplitude = 0.0;
+            for (i, &freq) in config.frequencies.iter().enumerate() {
+                let amplitude = config.amplitudes.get(i).unwrap_or(&1.0);
+                let phase = config.phases.get(i).unwrap_or(&0.0);
+                
+                // Multi-tone excitation with proper phase relationships
+                let component = amplitude * (2.0 * std::f64::consts::PI * freq * time + phase).sin();
+                total_amplitude += component;
+            }
+            
+            // Apply source with spatial distribution
+            let source_radius = grid.dx * 3.0; // 3-cell radius
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    for k in 0..grid.nz {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        
+                        let distance = ((x - x_src).powi(2) + (y - y_src).powi(2) + (z - z_src).powi(2)).sqrt();
+                        
+                        if distance <= source_radius {
+                            let spatial_factor = (-0.5 * (distance / source_radius).powi(2)).exp();
+                            pressure[[i, j, k]] += base_amplitude * total_amplitude * spatial_factor;
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Calculate frequency-dependent attenuation coefficient
+    pub fn calculate_frequency_dependent_attenuation(
+        &self,
+        frequency: f64,
+        base_attenuation: f64,
+    ) -> f64 {
+        if let Some(ref config) = self.multi_freq_config {
+            if config.frequency_dependent_attenuation {
+                // Power law attenuation: α = α₀ * f^n (typically n ≈ 1.1 for soft tissue)
+                let power_law_exponent = 1.1;
+                let reference_frequency = 1e6; // 1 MHz reference
+                let frequency_factor = (frequency / reference_frequency).powf(power_law_exponent);
+                return base_attenuation * frequency_factor;
+            }
+        }
+        base_attenuation
     }
 
     /// Sets the scaling factor for the nonlinearity term.
@@ -337,6 +417,76 @@ use log::{trace};
 use ndarray::{Array4, Axis, ShapeBuilder};
 use num_complex::Complex;
 use std::time::Instant;
+
+/// Represents the configuration for multi-frequency simulation
+#[derive(Debug, Clone)]
+pub struct MultiFrequencyConfig {
+    /// Primary frequency components [Hz]
+    pub frequencies: Vec<f64>,
+    /// Relative amplitudes for each frequency [0.0-1.0]
+    pub amplitudes: Vec<f64>,
+    /// Phase relationships between frequencies [rad]
+    pub phases: Vec<f64>,
+    /// Enable frequency-dependent attenuation
+    pub frequency_dependent_attenuation: bool,
+    /// Enable harmonic generation
+    pub enable_harmonics: bool,
+}
+
+impl Default for MultiFrequencyConfig {
+    fn default() -> Self {
+        Self {
+            frequencies: vec![1e6], // Default 1 MHz
+            amplitudes: vec![1.0],
+            phases: vec![0.0],
+            frequency_dependent_attenuation: true,
+            enable_harmonics: false,
+        }
+    }
+}
+
+impl MultiFrequencyConfig {
+    /// Create a new multi-frequency configuration
+    pub fn new(frequencies: Vec<f64>) -> Self {
+        let n = frequencies.len();
+        Self {
+            frequencies,
+            amplitudes: vec![1.0; n],
+            phases: vec![0.0; n],
+            frequency_dependent_attenuation: true,
+            enable_harmonics: false,
+        }
+    }
+    
+    /// Set relative amplitudes for each frequency component
+    pub fn with_amplitudes(mut self, amplitudes: Vec<f64>) -> Result<Self, &'static str> {
+        if amplitudes.len() != self.frequencies.len() {
+            return Err("Number of amplitudes must match number of frequencies");
+        }
+        self.amplitudes = amplitudes;
+        Ok(self)
+    }
+    
+    /// Set phase relationships between frequency components
+    pub fn with_phases(mut self, phases: Vec<f64>) -> Self {
+        assert_eq!(phases.len(), self.frequencies.len(), 
+                   "Number of phases must match number of frequencies");
+        self.phases = phases;
+        self
+    }
+    
+    /// Enable frequency-dependent attenuation modeling
+    pub fn with_frequency_dependent_attenuation(mut self, enable: bool) -> Self {
+        self.frequency_dependent_attenuation = enable;
+        self
+    }
+    
+    /// Enable harmonic generation from nonlinear effects
+    pub fn with_harmonics(mut self, enable: bool) -> Self {
+        self.enable_harmonics = enable;
+        self
+    }
+}
 
 impl AcousticWaveModel for NonlinearWave {
     fn update_wave(

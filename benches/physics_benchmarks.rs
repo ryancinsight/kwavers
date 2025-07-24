@@ -1,11 +1,11 @@
 // benches/physics_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::{Grid, HomogeneousMedium};
+use kwavers::{Grid, medium::homogeneous::HomogeneousMedium};
 
 fn grid_creation_benchmark(c: &mut Criterion) {
     c.bench_function("grid_creation", |b| {
         b.iter(|| {
-            let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4).unwrap();
+            let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
             black_box(grid)
         })
     });
@@ -14,7 +14,8 @@ fn grid_creation_benchmark(c: &mut Criterion) {
 fn medium_creation_benchmark(c: &mut Criterion) {
     c.bench_function("medium_creation", |b| {
         b.iter(|| {
-            let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0).unwrap();
+            let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+            let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
             black_box(medium)
         })
     });
