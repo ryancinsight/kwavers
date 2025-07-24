@@ -72,6 +72,7 @@ advanced-physics = ["plotly"]
 full-features = ["advanced-physics", "plotly", "tokio", "iterator-optimizations"]
 iterator-optimizations = []
 gpu-acceleration = ["cudarc", "wgpu", "bytemuck"]  # Enhanced GPU feature
+nightly = [] # Nightly Rust features
 
 [profile.release]
 opt-level = 3

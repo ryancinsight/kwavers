@@ -5,7 +5,7 @@
 
 use crate::error::{KwaversResult, KwaversError};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+// Note: Arc and Mutex imports removed as they're not currently used
 
 /// GPU memory pool for efficient allocation
 pub struct GpuMemoryPool {

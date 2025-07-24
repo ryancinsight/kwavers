@@ -3,9 +3,9 @@
 //! This module provides comprehensive benchmarking capabilities for GPU acceleration,
 //! validating Phase 9 performance targets and identifying optimization opportunities.
 
-use crate::error::{KwaversResult, KwaversError};
-use crate::gpu::{GpuContext, GpuPerformanceMetrics};
-use crate::gpu::kernels::{KernelConfig, KernelType, KernelPerformanceEstimate};
+use crate::error::KwaversResult;
+use crate::gpu::GpuContext;
+// Note: Other imports removed as they're not currently used in this stub implementation
 use std::time::Instant;
 use std::collections::HashMap;
 
@@ -194,7 +194,7 @@ impl BenchmarkSummary {
         self.failed == 0
     }
 
-    /// Get overall performance score (0.0 to 1.0)
+    /// Get overall performance score (1.0 = meets Phase 9 target of 17M elements/sec)
     pub fn performance_score(&self) -> f64 {
         if self.results.is_empty() {
             0.0
@@ -204,7 +204,8 @@ impl BenchmarkSummary {
                 .sum::<f64>() / self.results.len() as f64;
             
             // Score based on Phase 9 target (17M elements/sec)
-            (avg_throughput / 17_000_000.0).min(1.0)
+            // Values > 1.0 indicate exceeding the target
+            avg_throughput / 17_000_000.0
         }
     }
 }
@@ -461,6 +462,6 @@ mod tests {
         };
 
         assert!(summary.all_passed());
-        assert!(summary.performance_score() > 1.0); // Above Phase 9 target
+        assert!(summary.performance_score() > 1.0); // Exceeds Phase 9 target
     }
 }

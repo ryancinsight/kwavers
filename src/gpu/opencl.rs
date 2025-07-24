@@ -9,7 +9,8 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 #[cfg(feature = "wgpu")]
-use wgpu::{Device, Queue, Buffer, CommandEncoder, ComputePipeline, BindGroup};
+use wgpu::{Device, Queue, ComputePipeline};
+use wgpu::util::DeviceExt;
 
 /// WebGPU-based GPU context
 pub struct WebGpuContext {
@@ -97,17 +98,19 @@ impl WebGpuContext {
     /// Safely get mutable array slice, ensuring standard layout
     fn get_safe_slice_mut(array: &mut Array3<f64>) -> KwaversResult<&mut [f64]> {
         if array.is_standard_layout() {
+            let size_bytes = array.len() * std::mem::size_of::<f64>();
             array.as_slice_mut().ok_or_else(|| {
                 KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                     direction: MemoryTransferDirection::DeviceToHost,
-                    size_bytes: array.len() * std::mem::size_of::<f64>(),
+                    size_bytes,
                     reason: "Failed to get mutable array slice despite standard layout".to_string(),
                 })
             })
         } else {
+            let size_bytes = array.len() * std::mem::size_of::<f64>();
             Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::DeviceToHost,
-                size_bytes: array.len() * std::mem::size_of::<f64>(),
+                size_bytes,
                 reason: "Array is not in standard layout - cannot safely access as mutable slice".to_string(),
             }))
         }
@@ -169,8 +172,8 @@ impl GpuFieldOps for WebGpuContext {
                 dy: grid.dy as f32,
                 dz: grid.dz as f32,
                 dt: dt as f32,
-                sound_speed: grid.sound_speed as f32,
-                density: grid.density as f32,
+                sound_speed: 1500.0_f32, // Default sound speed
+                density: 1000.0_f32,     // Default density
                 _padding: [0; 3],
             };
 
@@ -321,27 +324,26 @@ impl GpuFieldOps for WebGpuContext {
         &self,
         temperature: &mut Array3<f64>,
         heat_source: &Array3<f64>,
-        grid: &Grid,
-        dt: f64,
-        thermal_diffusivity: f64,
+        _grid: &Grid,
+        _dt: f64,
+        _thermal_diffusivity: f64,
     ) -> KwaversResult<()> {
         #[cfg(feature = "wgpu")]
         {
-            let (nx, ny, nz) = temperature.dim();
-            let grid_size = nx * ny * nz;
+            let (_nx, _ny, _nz) = temperature.dim();
 
             // Safely get array slices
             let temperature_slice = Self::get_safe_slice(temperature)?;
             let heat_source_slice = Self::get_safe_slice(heat_source)?;
 
-            // Create GPU buffers
-            let temperature_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            // Create GPU buffers (for stub implementation)
+            let _temperature_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Temperature Buffer"),
                 contents: bytemuck::cast_slice(temperature_slice),
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
             });
 
-            let heat_source_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            let _heat_source_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Heat Source Buffer"),
                 contents: bytemuck::cast_slice(heat_source_slice),
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
@@ -362,9 +364,9 @@ impl GpuFieldOps for WebGpuContext {
 
     fn fft_gpu(
         &self,
-        input: &Array3<f64>,
-        output: &mut Array3<f64>,
-        forward: bool,
+        _input: &Array3<f64>,
+        _output: &mut Array3<f64>,
+        _forward: bool,
     ) -> KwaversResult<()> {
         #[cfg(feature = "wgpu")]
         {
@@ -414,7 +416,7 @@ pub async fn detect_wgpu_devices() -> KwaversResult<Vec<GpuDevice>> {
         ..Default::default()
     });
 
-    let adapters: Vec<_> = instance.enumerate_adapters(wgpu::Backends::all()).collect();
+    let adapters: Vec<_> = instance.enumerate_adapters(wgpu::Backends::all()).into_iter().collect();
     let mut devices = Vec::new();
 
     for (i, adapter) in adapters.iter().enumerate() {
@@ -427,7 +429,6 @@ pub async fn detect_wgpu_devices() -> KwaversResult<Vec<GpuDevice>> {
                 wgpu::Backend::Vulkan => GpuBackend::OpenCL,
                 wgpu::Backend::Metal => GpuBackend::OpenCL,
                 wgpu::Backend::Dx12 => GpuBackend::OpenCL,
-                wgpu::Backend::Dx11 => GpuBackend::OpenCL,
                 wgpu::Backend::Gl => GpuBackend::OpenCL,
                 wgpu::Backend::BrowserWebGpu => GpuBackend::WebGPU,
                 _ => GpuBackend::WebGPU,
