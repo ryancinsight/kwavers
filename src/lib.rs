@@ -388,7 +388,7 @@ pub fn get_version_info() -> HashMap<String, String> {
 /// 
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
-    let validation_manager = ValidationManager::new();
+    let _validation_manager = ValidationManager::new();
     
     // Create system compatibility validation pipeline
     let pipeline = ValidationBuilder::new("system_compatibility_validation".to_string())
