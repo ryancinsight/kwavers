@@ -162,7 +162,8 @@ impl KernelConfig {
         let optimization_flags = match self.optimization_level {
             OptimizationLevel::Basic => "",
             OptimizationLevel::Moderate => format!("__launch_bounds__({}, {})", LAUNCH_BOUNDS_THREADS, LAUNCH_BOUNDS_BLOCKS).as_str(),
-            OptimizationLevel::Aggressive => "__launch_bounds__(512, 2) __forceinline__",
+            OptimizationLevel::Aggressive => 
+                &format!("__launch_bounds__({}, {}) __forceinline__", MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MULTIPROCESSOR),
         };
 
         Ok(format!(r#"
