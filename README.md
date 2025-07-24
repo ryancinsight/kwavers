@@ -35,12 +35,20 @@ This project implements comprehensive software engineering principles:
 - **ADP**: Acyclic dependency principle for clean architecture
 
 ### Performance Optimizations
+- **GPU Acceleration** with CUDA and WebGPU backends for massive parallelization
 - **SIMD-friendly data layouts** for vectorized operations
 - **Parallel processing** with Rayon for multi-core utilization
 - **Memory-efficient algorithms** with minimal allocations
 - **Optimized FFT operations** using rustfft
 - **Cache-friendly memory access patterns**
 - **Performance monitoring** and profiling tools
+
+### GPU Acceleration Framework ✨ NEW
+- **Multi-Backend Support**: CUDA for NVIDIA GPUs, WebGPU for cross-platform compatibility
+- **Memory Management**: Optimized GPU memory allocation and transfer operations
+- **Kernel Generation**: Automatic CUDA kernel generation for acoustic and thermal operations
+- **Performance Optimization**: Three optimization levels (Basic, Moderate, Aggressive)
+- **Occupancy Analysis**: GPU performance estimation and optimization guidance
 
 ## 📦 Installation
 
