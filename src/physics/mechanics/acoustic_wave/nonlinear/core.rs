@@ -459,11 +459,13 @@ impl MultiFrequencyConfig {
     }
     
     /// Set relative amplitudes for each frequency component
-    pub fn with_amplitudes(mut self, amplitudes: Vec<f64>) -> Self {
-        assert_eq!(amplitudes.len(), self.frequencies.len(), 
-                   "Number of amplitudes must match number of frequencies");
+    pub fn with_amplitudes(mut self, amplitudes: Vec<f64>) -> Result<Self, &'static str> {
+        if amplitudes.len() != self.frequencies.len() {
+            return Err("Number of amplitudes must match number of frequencies");
+        }
         self.amplitudes = amplitudes;
-        self
+        Ok(self)
+    }
     }
     
     /// Set phase relationships between frequency components
