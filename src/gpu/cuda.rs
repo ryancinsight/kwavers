@@ -268,17 +268,22 @@ impl GpuFieldOps for CudaContext {
             let velocity_y_slice_mut = Self::get_safe_slice_mut(velocity_y)?;
             let velocity_z_slice_mut = Self::get_safe_slice_mut(velocity_z)?;
 
-            for (i, &val) in pressure_f32_result.iter().enumerate() {
-                pressure_slice_mut[i] = val as f64;
-            }
-            for (i, &val) in velocity_x_f32_result.iter().enumerate() {
-                velocity_x_slice_mut[i] = val as f64;
-            }
-            for (i, &val) in velocity_y_f32_result.iter().enumerate() {
-                velocity_y_slice_mut[i] = val as f64;
-            }
-            for (i, &val) in velocity_z_f32_result.iter().enumerate() {
-                velocity_z_slice_mut[i] = val as f64;
+            for ((p_f32, vx_f32, vy_f32, vz_f32), (p_f64, vx_f64, vy_f64, vz_f64)) in 
+                pressure_f32_result.iter()
+                    .zip(velocity_x_f32_result.iter())
+                    .zip(velocity_y_f32_result.iter())
+                    .zip(velocity_z_f32_result.iter())
+                    .map(|(((p, vx), vy), vz)| (p, vx, vy, vz))
+                    .zip(pressure_slice_mut.iter_mut()
+                        .zip(velocity_x_slice_mut.iter_mut())
+                        .zip(velocity_y_slice_mut.iter_mut())
+                        .zip(velocity_z_slice_mut.iter_mut())
+                        .map(|(((p, vx), vy), vz)| (p, vx, vy, vz))) 
+            {
+                *p_f64 = *p_f32 as f64;
+                *vx_f64 = *vx_f32 as f64;
+                *vy_f64 = *vy_f32 as f64;
+                *vz_f64 = *vz_f32 as f64;
             }
 
             Ok(())
