@@ -205,17 +205,25 @@ impl GpuFieldOps for CudaContext {
                 shared_mem_bytes: 0,
             };
 
-            // Launch kernel
-                            unsafe {
-                    f.launch(cfg, (
-                        &d_pressure, &d_velocity_x, &d_velocity_y, &d_velocity_z,
-                        nx as u32, ny as u32, nz as u32,
-                        grid.dx, grid.dy, grid.dz
-                    )).map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
-                        kernel_name: "acoustic_update_kernel".to_string(),
-                        reason: format!("Kernel launch failed: {:?}", e),
-                    }))?;
-                }
+            // Launch kernel with complete parameters
+            unsafe {
+                f.launch(cfg, (
+                    &d_pressure, &d_velocity_x, &d_velocity_y, &d_velocity_z,
+                    nx as u32, ny as u32, nz as u32,
+                    grid.dx, grid.dy, grid.dz, dt,
+                    1500.0, 1000.0  // Default sound speed and density
+                )).map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
+                    kernel_name: "acoustic_update_kernel".to_string(),
+                    reason: format!("Kernel launch failed: {:?}", e),
+                }))?;
+            }
+
+            // Synchronize device
+            self.device.synchronize()
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
+                    kernel_name: "acoustic_update_kernel".to_string(),
+                    reason: format!("Device synchronization failed: {:?}", e),
+                }))?;
 
             // Safely get mutable slices for results
             let pressure_slice_mut = Self::get_safe_slice_mut(pressure)?;
@@ -343,6 +351,13 @@ impl GpuFieldOps for CudaContext {
                     reason: format!("Kernel launch failed: {:?}", e),
                 }))?;
             }
+
+            // Synchronize device
+            self.device.synchronize()
+                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::KernelExecution {
+                    kernel_name: "thermal_update_kernel".to_string(),
+                    reason: format!("Device synchronization failed: {:?}", e),
+                }))?;
 
             // Copy results back
             let temperature_slice_mut = Self::get_safe_slice_mut(temperature)?;
