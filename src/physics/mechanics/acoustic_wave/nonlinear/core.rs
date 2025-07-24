@@ -466,7 +466,6 @@ impl MultiFrequencyConfig {
         self.amplitudes = amplitudes;
         Ok(self)
     }
-    }
     
     /// Set phase relationships between frequency components
     pub fn with_phases(mut self, phases: Vec<f64>) -> Self {

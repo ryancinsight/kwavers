@@ -4,7 +4,7 @@ use kwavers::{
     factory::{SimulationFactory, SimulationConfig, GridConfig, MediumConfig, MediumType,
              PhysicsConfig, PhysicsModelConfig, PhysicsModelType, TimeConfig, SourceConfig, ValidationConfig, SimulationResults},
     physics::mechanics::acoustic_wave::nonlinear::MultiFrequencyConfig,
-    medium::homogeneous::HomogeneousMedium,
+    medium::{homogeneous::HomogeneousMedium, Medium},
     grid::Grid,
     KwaversResult,
 };
@@ -13,18 +13,64 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 fn main() -> KwaversResult<()> {
-    println!("🌊 Kwavers Multi-Frequency Ultrasound Simulation Example");
+    println!("🌊 Advanced Multi-Frequency Acoustic Wave Simulation");
     println!("========================================================");
     
-    // Create enhanced simulation configuration
-    let config = create_multi_frequency_config();
+    // Create simulation configuration
+    let config = SimulationConfig {
+        grid: GridConfig {
+            nx: 64, ny: 64, nz: 64,
+            dx: 1e-4, dy: 1e-4, dz: 1e-4,
+        },
+        medium: MediumConfig {
+            medium_type: MediumType::Homogeneous {
+                density: 1000.0,
+                sound_speed: 1500.0,
+                mu_a: 0.1,
+                mu_s_prime: 1.0,
+            },
+            properties: std::collections::HashMap::new(),
+        },
+        physics: PhysicsConfig {
+            models: vec![PhysicsModelConfig {
+                model_type: PhysicsModelType::AcousticWave,
+                enabled: true,
+                parameters: std::collections::HashMap::new(),
+            }],
+            frequency: 2e6,
+            parameters: std::collections::HashMap::new(),
+        },
+        time: TimeConfig {
+            dt: 1e-8,
+            num_steps: 100,
+            cfl_factor: 0.5,
+        },
+        source: SourceConfig {
+            source_type: "multi_frequency".to_string(),
+            position: (3.2e-3, 3.2e-3, 1.6e-3),
+            amplitude: 1e6,
+            frequency: 2e6,
+            radius: Some(0.5e-3),
+            focus: Some((3.2e-3, 3.2e-3, 4.8e-3)),
+            num_elements: None,
+            signal_type: "multi_tone".to_string(),
+            phase: 0.0,
+            duration: Some(5e-6),
+        },
+        validation: ValidationConfig {
+            enable_validation: true,
+            strict_mode: false,
+            validation_rules: vec!["basic_validation".to_string()],
+        },
+    };
+    
     let builder = SimulationFactory::create_simulation(config)?;
     let mut simulation = builder.build()?;
     
     // Create multi-frequency acoustic wave component
     let multi_freq_config = MultiFrequencyConfig::new(vec![1e6, 2e6, 3e6]) // 1, 2, 3 MHz
-        .with_amplitudes(vec![1.0, 0.5, 0.3]) // Decreasing amplitudes
-        .with_phases(vec![0.0, std::f64::consts::PI/4.0, std::f64::consts::PI/2.0]) // Phase offsets
+        .with_amplitudes(vec![1.0, 0.5, 0.3]).expect("Valid amplitudes") // Decreasing amplitudes
+        .with_phases(vec![0.0, std::f64::consts::PI/4.0, std::f64::consts::PI/2.0]) // Phase progression
         .with_frequency_dependent_attenuation(true)
         .with_harmonics(true);
     
@@ -35,8 +81,10 @@ fn main() -> KwaversResult<()> {
     println!("  Phases: {:?} rad", multi_freq_config.phases);
     
     // Run enhanced simulation with multi-frequency capabilities
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
     let results = simulation.run_with_initial_conditions(|fields, grid| {
-        set_multi_frequency_initial_conditions(fields, grid, &multi_freq_config)
+        set_multi_frequency_initial_conditions(fields, grid, &multi_freq_config, &medium)
     })?;
     
     // Analyze results
@@ -48,84 +96,21 @@ fn main() -> KwaversResult<()> {
     Ok(())
 }
 
-fn create_multi_frequency_config() -> SimulationConfig {
-    SimulationConfig {
-        grid: GridConfig {
-            nx: 48,
-            ny: 48, 
-            nz: 48,
-            dx: 1.0e-4, // 100 μm resolution for multi-frequency
-            dy: 1.0e-4,
-            dz: 1.0e-4,
-        },
-        medium: MediumConfig {
-            medium_type: MediumType::Homogeneous {
-                density: 1000.0,      // Water-like medium
-                sound_speed: 1500.0,  // 1500 m/s
-                mu_a: 0.3,            // Frequency-dependent absorption
-                mu_s_prime: 1.5       // Scattering
-            },
-            properties: [
-                ("density".to_string(), 1000.0),
-                ("sound_speed".to_string(), 1500.0),
-                ("thermal_conductivity".to_string(), 0.6),
-                ("specific_heat".to_string(), 4180.0),
-                ("attenuation_coefficient".to_string(), 0.5), // Base attenuation
-            ].iter().cloned().collect(),
-        },
-        physics: PhysicsConfig {
-            models: vec![
-                PhysicsModelConfig {
-                    model_type: PhysicsModelType::AcousticWave,
-                    enabled: true,
-                    parameters: [
-                        ("nonlinear".to_string(), 1.0),
-                        ("multi_frequency".to_string(), 1.0),
-                        ("harmonics".to_string(), 1.0),
-                    ].iter().cloned().collect(),
-                },
-            ],
-            frequency: 2e6, // Center frequency 2 MHz
-            parameters: [
-                ("coupling_strength".to_string(), 0.9),
-                ("stability_factor".to_string(), 0.8),
-            ].iter().cloned().collect(),
-        },
-        time: TimeConfig {
-            dt: 2e-8,        // 20 ns time step for multi-frequency
-            num_steps: 250,  // Sufficient for wave propagation
-            cfl_factor: 0.2, // Conservative for stability
-        },
-        source: SourceConfig {
-            source_type: "multi_frequency".to_string(),
-            position: (2.4e-3, 2.4e-3, 1.2e-3), // Near bottom for propagation observation
-            amplitude: 2e6, // 2 MPa base amplitude
-            frequency: 2e6, // Center frequency
-            radius: Some(0.6e-3), // 0.6 mm source radius
-            focus: Some((2.4e-3, 2.4e-3, 3.6e-3)), // Focus at 3/4 height
-            num_elements: None,
-            signal_type: "multi_tone".to_string(),
-            phase: 0.0,
-            duration: Some(3e-6), // 3 μs multi-frequency burst
-        },
-        validation: ValidationConfig {
-            enable_validation: true,
-            strict_mode: false, // Allow advanced features
-            validation_rules: vec![
-                "grid_validation".to_string(),
-                "medium_validation".to_string(),
-                "physics_validation".to_string(),
-                "time_validation".to_string(),
-                "multi_frequency_validation".to_string(),
-            ],
-        },
-    }
+fn create_multi_frequency_config() -> MultiFrequencyConfig {
+    let multi_freq_config = MultiFrequencyConfig::new(vec![1e6, 2e6, 3e6]) // 1, 2, 3 MHz
+        .with_amplitudes(vec![1.0, 0.5, 0.3]).expect("Valid amplitudes") // Decreasing amplitudes
+        .with_phases(vec![0.0, std::f64::consts::PI/4.0, std::f64::consts::PI/2.0]) // Phase progression
+        .with_frequency_dependent_attenuation(true)
+        .with_harmonics(true);
+    
+    multi_freq_config
 }
 
 fn set_multi_frequency_initial_conditions(
     fields: &mut Array4<f64>, 
     grid: &Grid,
-    multi_freq_config: &MultiFrequencyConfig
+    multi_freq_config: &MultiFrequencyConfig,
+    medium: &dyn Medium
 ) -> KwaversResult<()> {
     println!("Setting multi-frequency initial conditions:");
     

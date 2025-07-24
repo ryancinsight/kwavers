@@ -482,12 +482,16 @@ fn get_available_memory_gb() -> f64 {
     
     #[cfg(target_os = "macos")]
     {
-        // Use sysctl on macOS
+        // Use sysctl on macOS - NOTE: This returns total physical memory, not available
+        // Getting true available memory on macOS requires parsing vm_stat output
+        // which is complex and beyond the scope of this implementation
         use std::process::Command;
         if let Ok(output) = Command::new("sysctl").args(&["-n", "hw.memsize"]).output() {
             if let Ok(mem_str) = String::from_utf8(output.stdout) {
                 if let Ok(mem_bytes) = mem_str.trim().parse::<f64>() {
-                    return mem_bytes / 1024.0 / 1024.0 / 1024.0; // Convert bytes to GB
+                    let total_gb = mem_bytes / 1024.0 / 1024.0 / 1024.0; // Convert bytes to GB
+                    log::warn!("macOS memory detection: returning total physical memory ({:.1} GB), not available memory. For accurate available memory, vm_stat parsing would be required.", total_gb);
+                    return total_gb;
                 }
             }
         }

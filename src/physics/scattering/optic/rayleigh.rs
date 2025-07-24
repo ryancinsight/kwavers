@@ -102,10 +102,17 @@ impl super::OpticalScatteringModel for RayleighOpticalScatteringModel {
             let z = k as f64 * grid.dz;
             
             // Get tissue optical properties
+            // For Beer-Lambert attenuation, we need the full scattering coefficient μs, not μs'
             let tissue_mu_s_prime = medium.reduced_scattering_coefficient_light(x, y, z, grid);
             
-            // Calculate Rayleigh-specific scattering coefficient
-            let rayleigh_mu_s = self.calculate_rayleigh_coefficient(wavelength, tissue_mu_s_prime);
+            // Convert reduced scattering coefficient back to full scattering coefficient
+            // μs' = μs * (1 - g), so μs = μs' / (1 - g)
+            // For Rayleigh scattering, anisotropy g ≈ 0.1-0.2 in biological tissues
+            let rayleigh_anisotropy = self.rayleigh_anisotropy();
+            let tissue_mu_s = tissue_mu_s_prime / (1.0 - rayleigh_anisotropy);
+            
+            // Calculate Rayleigh-specific scattering coefficient using full μs
+            let rayleigh_mu_s = self.calculate_rayleigh_coefficient(wavelength, tissue_mu_s);
             
             // Apply particle density variations based on tissue type
             let density_factor = self.particle_density_factor;
@@ -114,8 +121,13 @@ impl super::OpticalScatteringModel for RayleighOpticalScatteringModel {
             // Calculate scattering path length (assuming step size is grid spacing)
             let path_length = (grid.dx.powi(2) + grid.dy.powi(2) + grid.dz.powi(2)).sqrt();
             
-            // Apply phase function correction for anisotropic scattering
-            let corrected_fluence = self.apply_phase_function_correction(*f, effective_rayleigh_coefficient * path_length);
+            // Apply Beer-Lambert attenuation: I = I₀ * exp(-μs * L)
+            // This is the correct physics for primary beam attenuation
+            let attenuation_factor = (-effective_rayleigh_coefficient * path_length).exp();
+            let attenuated_fluence = *f * attenuation_factor;
+            
+            // Apply phase function correction for anisotropic scattering effects
+            let corrected_fluence = self.apply_phase_function_correction(attenuated_fluence, effective_rayleigh_coefficient * path_length);
             
             // Update fluence with scattering losses
             *f = corrected_fluence.max(0.0);
@@ -126,6 +138,6 @@ impl super::OpticalScatteringModel for RayleighOpticalScatteringModel {
             }
         });
         
-        debug!("Rayleigh optical scattering applied successfully");
+        debug!("Rayleigh optical scattering applied successfully with correct Beer-Lambert physics");
     }
 }

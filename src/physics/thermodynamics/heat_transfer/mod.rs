@@ -197,49 +197,174 @@ impl ThermalModel {
         // X boundaries (i=0 and i=nx-1)
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                if j > 0 && j < grid.ny-1 && k > 0 && k < grid.nz-1 {
-                    // Left boundary (i=0): use forward difference
-                    let i = 0;
-                    let t_ijk = self.temperature[[i, j, k]];
-                    let t_ip1 = self.temperature[[i+1, j, k]];
+                // Left boundary (i=0): use forward difference
+                let i = 0;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_ip1 = self.temperature[[i+1, j, k]];
+                
+                // Handle Y derivatives with boundary checks
+                let d2t_dy2 = if j == 0 {
+                    // Forward difference at j=0
+                    let t_jp1 = self.temperature[[i, j+1, k]];
+                    2.0 * (t_jp1 - t_ijk) / (grid.dy * grid.dy)
+                } else if j == grid.ny - 1 {
+                    // Backward difference at j=ny-1
+                    let t_jm1 = self.temperature[[i, j-1, k]];
+                    2.0 * (t_jm1 - t_ijk) / (grid.dy * grid.dy)
+                } else {
+                    // Central difference for interior
                     let t_jp1 = self.temperature[[i, j+1, k]];
                     let t_jm1 = self.temperature[[i, j-1, k]];
+                    (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy)
+                };
+                
+                // Handle Z derivatives with boundary checks
+                let d2t_dz2 = if k == 0 {
+                    // Forward difference at k=0
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    2.0 * (t_kp1 - t_ijk) / (grid.dz * grid.dz)
+                } else if k == grid.nz - 1 {
+                    // Backward difference at k=nz-1
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    2.0 * (t_km1 - t_ijk) / (grid.dz * grid.dz)
+                } else {
+                    // Central difference for interior
                     let t_kp1 = self.temperature[[i, j, k+1]];
                     let t_km1 = self.temperature[[i, j, k-1]];
-                    
-                    let d2t_dx2 = 2.0 * (t_ip1 - t_ijk) / (grid.dx * grid.dx); // Forward difference
-                    let d2t_dy2 = (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy);
-                    let d2t_dz2 = (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz);
-                    
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    let alpha = diffusivity_array[[i, j, k]];
-                    
-                    lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
-                    
-                    // Right boundary (i=nx-1): use backward difference  
-                    let i = grid.nx - 1;
-                    let t_ijk = self.temperature[[i, j, k]];
-                    let t_im1 = self.temperature[[i-1, j, k]];
+                    (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz)
+                };
+                
+                let d2t_dx2 = 2.0 * (t_ip1 - t_ijk) / (grid.dx * grid.dx); // Forward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
+                
+                // Right boundary (i=nx-1): use backward difference  
+                let i = grid.nx - 1;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_im1 = self.temperature[[i-1, j, k]];
+                
+                // Handle Y derivatives with boundary checks (same logic as above)
+                let d2t_dy2 = if j == 0 {
+                    let t_jp1 = self.temperature[[i, j+1, k]];
+                    2.0 * (t_jp1 - t_ijk) / (grid.dy * grid.dy)
+                } else if j == grid.ny - 1 {
+                    let t_jm1 = self.temperature[[i, j-1, k]];
+                    2.0 * (t_jm1 - t_ijk) / (grid.dy * grid.dy)
+                } else {
                     let t_jp1 = self.temperature[[i, j+1, k]];
                     let t_jm1 = self.temperature[[i, j-1, k]];
+                    (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy)
+                };
+                
+                // Handle Z derivatives with boundary checks (same logic as above)
+                let d2t_dz2 = if k == 0 {
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    2.0 * (t_kp1 - t_ijk) / (grid.dz * grid.dz)
+                } else if k == grid.nz - 1 {
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    2.0 * (t_km1 - t_ijk) / (grid.dz * grid.dz)
+                } else {
                     let t_kp1 = self.temperature[[i, j, k+1]];
                     let t_km1 = self.temperature[[i, j, k-1]];
-                    
-                    let d2t_dx2 = 2.0 * (t_im1 - t_ijk) / (grid.dx * grid.dx); // Backward difference
-                    let d2t_dy2 = (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy);
-                    let d2t_dz2 = (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz);
-                    
-                    let alpha = diffusivity_array[[i, j, k]];
-                    lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
-                }
+                    (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz)
+                };
+                
+                let d2t_dx2 = 2.0 * (t_im1 - t_ijk) / (grid.dx * grid.dx); // Backward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
             }
         }
         
-        // Similar boundary treatment for Y and Z boundaries (simplified for brevity)
-        // In production code, you'd implement all boundary faces
-
+        // Y boundaries (j=0 and j=ny-1) - excluding corners already handled in X boundaries
+        for i in 1..grid.nx-1 {
+            for k in 0..grid.nz {
+                // Bottom boundary (j=0): use forward difference
+                let j = 0;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_ip1 = self.temperature[[i+1, j, k]];
+                let t_im1 = self.temperature[[i-1, j, k]];
+                let t_jp1 = self.temperature[[i, j+1, k]];
+                
+                // Handle Z derivatives with boundary checks
+                let d2t_dz2 = if k == 0 {
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    2.0 * (t_kp1 - t_ijk) / (grid.dz * grid.dz)
+                } else if k == grid.nz - 1 {
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    2.0 * (t_km1 - t_ijk) / (grid.dz * grid.dz)
+                } else {
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz)
+                };
+                
+                let d2t_dx2 = (t_ip1 - 2.0 * t_ijk + t_im1) / (grid.dx * grid.dx);
+                let d2t_dy2 = 2.0 * (t_jp1 - t_ijk) / (grid.dy * grid.dy); // Forward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
+                
+                // Top boundary (j=ny-1): use backward difference
+                let j = grid.ny - 1;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_ip1 = self.temperature[[i+1, j, k]];
+                let t_im1 = self.temperature[[i-1, j, k]];
+                let t_jm1 = self.temperature[[i, j-1, k]];
+                
+                // Handle Z derivatives with boundary checks (same logic as above)
+                let d2t_dz2 = if k == 0 {
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    2.0 * (t_kp1 - t_ijk) / (grid.dz * grid.dz)
+                } else if k == grid.nz - 1 {
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    2.0 * (t_km1 - t_ijk) / (grid.dz * grid.dz)
+                } else {
+                    let t_kp1 = self.temperature[[i, j, k+1]];
+                    let t_km1 = self.temperature[[i, j, k-1]];
+                    (t_kp1 - 2.0 * t_ijk + t_km1) / (grid.dz * grid.dz)
+                };
+                
+                let d2t_dx2 = (t_ip1 - 2.0 * t_ijk + t_im1) / (grid.dx * grid.dx);
+                let d2t_dy2 = 2.0 * (t_jm1 - t_ijk) / (grid.dy * grid.dy); // Backward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
+            }
+        }
+        
+        // Z boundaries (k=0 and k=nz-1) - excluding edges already handled in X and Y boundaries
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                // Front boundary (k=0): use forward difference
+                let k = 0;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_ip1 = self.temperature[[i+1, j, k]];
+                let t_im1 = self.temperature[[i-1, j, k]];
+                let t_jp1 = self.temperature[[i, j+1, k]];
+                let t_jm1 = self.temperature[[i, j-1, k]];
+                let t_kp1 = self.temperature[[i, j, k+1]];
+                
+                let d2t_dx2 = (t_ip1 - 2.0 * t_ijk + t_im1) / (grid.dx * grid.dx);
+                let d2t_dy2 = (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy);
+                let d2t_dz2 = 2.0 * (t_kp1 - t_ijk) / (grid.dz * grid.dz); // Forward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
+                
+                // Back boundary (k=nz-1): use backward difference
+                let k = grid.nz - 1;
+                let t_ijk = self.temperature[[i, j, k]];
+                let t_ip1 = self.temperature[[i+1, j, k]];
+                let t_im1 = self.temperature[[i-1, j, k]];
+                let t_jp1 = self.temperature[[i, j+1, k]];
+                let t_jm1 = self.temperature[[i, j-1, k]];
+                let t_km1 = self.temperature[[i, j, k-1]];
+                
+                let d2t_dx2 = (t_ip1 - 2.0 * t_ijk + t_im1) / (grid.dx * grid.dx);
+                let d2t_dy2 = (t_jp1 - 2.0 * t_ijk + t_jm1) / (grid.dy * grid.dy);
+                let d2t_dz2 = 2.0 * (t_km1 - t_ijk) / (grid.dz * grid.dz); // Backward difference
+                let alpha = diffusivity_array[[i, j, k]];
+                lap_t[[i, j, k]] = alpha * (d2t_dx2 + d2t_dy2 + d2t_dz2);
+            }
+        }
+        
         let thermal_factor = self.thermal_factor.as_ref().unwrap();
 
         Zip::indexed(&mut temp_new)
