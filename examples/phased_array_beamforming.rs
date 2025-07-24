@@ -227,7 +227,8 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
         // Calculate source term off-axis (5mm lateral)
         let source_off_axis = array.get_source_term(0.0, 5e-3, focus_target.1, focus_target.2, &grid);
         
-        let contrast_ratio = if source_off_axis != 0.0 {
+        const EPSILON: f64 = 1e-10;
+        let contrast_ratio = if source_off_axis.abs() > EPSILON {
             20.0 * (source_at_focus.abs() / source_off_axis.abs()).log10()
         } else {
             f64::INFINITY
