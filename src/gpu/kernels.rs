@@ -3,7 +3,7 @@
 //! This module provides optimized GPU compute kernels for various
 //! physics operations in ultrasound simulation.
 
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::KwaversResult;
 
 /// GPU kernel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
