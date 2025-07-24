@@ -463,13 +463,23 @@ impl PhasedArrayTransducer {
         let kx = 2.0 * std::f64::consts::PI * dx / (self.sound_speed / self.config.frequency);
         let ky = 2.0 * std::f64::consts::PI * dy / (self.sound_speed / self.config.frequency);
         
-        let sinc_x = if kx.abs() < 1e-10 { 1.0 } else { (kx * element.width / 2.0).sin() / (kx * element.width / 2.0) };
-        let sinc_y = if ky.abs() < 1e-10 { 1.0 } else { (ky * element.height / 2.0).sin() / (ky * element.height / 2.0) };
+        let sinc_x = self.sinc(kx, element.width);
+        let sinc_y = self.sinc(ky, element.height);
         
         // Distance-based attenuation
         let distance_factor = if r > 0.0 { 1.0 / r } else { 1.0 };
         
         sinc_x * sinc_y * distance_factor
+    }
+
+    /// Helper method to calculate the sinc function for a given k and dimension
+    fn sinc(&self, k: f64, dimension: f64) -> f64 {
+        let argument = k * dimension / 2.0;
+        if argument.abs() < 1e-10 {
+            1.0
+        } else {
+            argument.sin() / argument
+        }
     }
 }
 
