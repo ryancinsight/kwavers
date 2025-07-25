@@ -89,7 +89,7 @@ impl InferenceEngine {
         // Compute logits:  input · W  + b
         let mut logits = input_2d.dot(&self.weights);
         if let Some(bias) = &self.bias {
-            logits.rows_mut().into_iter().for_each(|mut row| row += bias);
+            logits += bias;
         }
 
         // Apply numerically stable softmax
