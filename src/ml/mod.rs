@@ -129,7 +129,19 @@ impl MLEngine {
                         reason: e.to_string(),
                     }))?;
                 let rows = weights_vec.len();
+                if rows == 0 {
+                    return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
+                        required: 1,
+                        available: 0,
+                    }));
+                }
                 let cols = weights_vec[0].len();
+                if cols == 0 {
+                    return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
+                        required: 1,
+                        available: 0,
+                    }));
+                }
                 let flat: Vec<f32> = weights_vec.into_iter().flatten().collect();
                 let weights = Array2::from_shape_vec((rows, cols), flat).map_err(|e| {
                     KwaversError::Data(crate::error::DataError::Corruption {
@@ -193,7 +205,7 @@ impl MLEngine {
             .map_axis(Axis(1), |row| {
                 row.iter()
                     .enumerate()
-                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Less))
                     .map(|(idx, _)| idx as u8)
                     .unwrap_or(0)
             })
