@@ -666,7 +666,7 @@ impl fmt::Display for GpuError {
                        requested_bytes, available_bytes, reason)
             }
             GpuError::MemoryTransfer { direction, size_bytes, reason } => {
-                write!(f, "GPU memory transfer failed ({:?}, {} bytes): {}", direction, size_bytes, reason)
+                write!(f, "GPU memory transfer ({:?}) of {} bytes failed: {}", direction, size_bytes, reason)
             }
             GpuError::KernelCompilation { kernel_name, reason } => {
                 write!(f, "GPU kernel compilation failed ({}): {}", kernel_name, reason)
