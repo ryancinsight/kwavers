@@ -79,7 +79,7 @@ To democratize advanced ultrasound simulation through high-performance computing
 - Anomaly detection for identifying unusual acoustic patterns
 - Real-time prediction of simulation outcomes
 - Model training pipeline with data augmentation
-- Uncertainty quantification for predictions
+- Uncertainty quantification for predictions ✅ *(completed Sprint-2)*
 - Seamless integration with existing simulation pipeline
 
 **Success Metrics**:

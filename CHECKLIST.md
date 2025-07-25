@@ -3,7 +3,7 @@
 ## Next Phase: Phase 12 - AI/ML Integration & Optimization 🚀
 
 **Current Status**: Phase 12 IN PROGRESS 🚧 - AI/ML Integration & Optimization  
-**Progress**: Phase 12 Sprint-1 ✅  
+**Progress**: Phase 12 Sprint-2 🚀  
 **Target**: AI-powered parameter optimization and machine learning-assisted simulation
 
 ---
@@ -83,7 +83,7 @@
 - [ ] Pre-trained models for tissue classification *(blocked – awaiting data)*
 - [ ] Real-time prediction capabilities *(dependency: model training)*
 - [x] Model training pipeline *(R: Dev Team · A: Tech Lead · C: Data Science · I: Stakeholders)*
-- [ ] Uncertainty quantification *(dependency: training pipeline)*
+- [x] Uncertainty quantification *(R: Dev Team · A: Tech Lead · C: Data Science · I: Stakeholders)*
 - [ ] Integration with simulation pipeline *(final integration task)*
 
 ### Validation:

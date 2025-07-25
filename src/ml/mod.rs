@@ -221,6 +221,99 @@ impl MLEngine {
         Ok(classes)
     }
 
+    /// Run tissue classification **with uncertainty quantification** on the
+    /// given 3-D field.  The method returns two volumes:
+    /// 1. `classes` – the *arg-max* class IDs (*u8*) for each voxel.
+    /// 2. `entropy` – the predictive entropy (*f32* in the range 0-ln(C))*.
+    ///
+    /// The predictive entropy is computed as *H(p) = -∑ p_i·ln(p_i)* where
+    /// *p_i* are the soft-max probabilities output by the model.  Using
+    /// entropy provides an intuitive measure of confidence that is easy to
+    /// threshold for downstream tasks such as anomaly detection or adaptive
+    /// refinement.
+    pub fn classify_tissue_with_uncertainty(
+        &mut self,
+        field_data: &Array3<f64>,
+    ) -> KwaversResult<(Array3<u8>, Array3<f32>)> {
+        use ndarray::{Array2, Axis};
+
+        let model = self
+            .models
+            .get(&ModelType::TissueClassifier)
+            .ok_or_else(|| KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                parameter: "TissueClassifier model".to_string(),
+                section: "MLEngine".to_string(),
+            }))?;
+
+        // Flatten 3-D field into (cells, features = 1)
+        let flat_f32: Vec<f32> = field_data.iter().map(|&v| v as f32).collect();
+        let cells = flat_f32.len();
+        let input = Array2::from_shape_vec((cells, 1), flat_f32).map_err(|e| {
+            KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                requested_bytes: cells * std::mem::size_of::<f32>(),
+                reason: e.to_string(),
+            })
+        })?;
+
+        // Forward pass – obtain probability distribution for each voxel.
+        let probs = model.infer(&input)?; // (cells, classes)
+        let classes_count = probs.dim().1;
+        if classes_count == 0 {
+            return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
+                required: 1,
+                available: 0,
+            }));
+        }
+
+        // Compute arg-max class and entropy per voxel.
+        let mut classes_vec: Vec<u8> = Vec::with_capacity(cells);
+        let mut entropy_vec: Vec<f32> = Vec::with_capacity(cells);
+
+        for row in probs.rows() {
+            // Arg-max
+            let (idx, max_p) = row
+                .iter()
+                .enumerate()
+                .fold((0usize, f32::MIN), |(best_i, best_p), (i, &p)| {
+                    if p > best_p {
+                        (i, p)
+                    } else {
+                        (best_i, best_p)
+                    }
+                });
+            classes_vec.push(idx as u8);
+
+            // Entropy
+            let mut h = 0f32;
+            for &p in row {
+                if p > 0.0 {
+                    h -= p * p.ln();
+                }
+            }
+            entropy_vec.push(h);
+
+            debug_assert!(h.is_finite(), "Entropy must be finite");
+        }
+
+        let classes = Array3::from_shape_vec(field_data.dim(), classes_vec).map_err(|e| {
+            KwaversError::Data(crate::error::DataError::Corruption {
+                location: "classify_tissue_with_uncertainty reshape".to_string(),
+                reason: e.to_string(),
+            })
+        })?;
+        let entropy = Array3::from_shape_vec(field_data.dim(), entropy_vec).map_err(|e| {
+            KwaversError::Data(crate::error::DataError::Corruption {
+                location: "classify_tissue_with_uncertainty entropy reshape".to_string(),
+                reason: e.to_string(),
+            })
+        })?;
+
+        // Update counters
+        self.performance_metrics.total_inferences += 1;
+
+        Ok((classes, entropy))
+    }
+
     /// Optimize simulation parameters using the built-in RL optimiser.
     pub fn optimize_parameters(
         &self,
@@ -324,5 +417,41 @@ mod tests {
     fn test_ml_backend_enum() {
         let backend = MLBackend::ONNX;
         assert_eq!(backend, MLBackend::ONNX);
+    }
+
+    #[test]
+    fn test_classification_with_uncertainty() {
+        use crate::ml::models::TissueClassifierModel;
+        use ndarray::Array3;
+
+        // Create a small 2×2×1 field with arbitrary values
+        let field = Array3::from_shape_vec((2, 2, 1), vec![0.1, 0.2, 0.8, 0.9]).unwrap();
+
+        // Build identity-like classifier: high positive weight for class-0 when value <0.5, class-1 otherwise
+        // Since we only have one feature, we use opposite signs.
+        let weights = ndarray::array![[5.0_f32, -5.0_f32]]; // (features=1, classes=2)
+        let model = TissueClassifierModel::from_weights(weights, None);
+
+        // Create engine and register model
+        let mut engine = super::MLEngine::new(super::MLBackend::Native).unwrap();
+        engine.models.insert(super::ModelType::TissueClassifier, Box::new(model));
+
+        // Run classification with uncertainty quantification
+        let (classes, entropy) = engine.classify_tissue_with_uncertainty(&field).unwrap();
+
+        // Shape checks
+        assert_eq!(classes.dim(), field.dim());
+        assert_eq!(entropy.dim(), field.dim());
+
+        // Entropy must be non-negative and finite
+        for &h in entropy.iter() {
+            assert!(h.is_finite());
+            assert!(h >= 0.0);
+        }
+
+        // Classes must be 0 or 1
+        for &c in classes.iter() {
+            assert!(c == 0 || c == 1);
+        }
     }
 }
