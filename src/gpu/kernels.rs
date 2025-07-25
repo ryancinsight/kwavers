@@ -642,23 +642,29 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Optimize kernels based on runtime performance data
-    pub fn optimize_kernels(&mut self, grid: &Grid) -> KwaversResult<()> {
+    pub fn optimize_kernels(&mut self, _grid: &Grid) -> KwaversResult<()> {
         // Analyze performance metrics and adjust configurations
-        for (kernel_type, kernel) in &mut self.kernels {
-            if let Some(metrics) = &kernel.performance_metrics {
-                if !metrics.meets_targets() {
-                    // Try more aggressive optimization
-                    if kernel.config.optimization_level != OptimizationLevel::Aggressive {
+        let kernel_updates: Vec<_> = self.kernels
+            .iter()
+            .filter_map(|(kernel_type, kernel)| {
+                if let Some(metrics) = &kernel.performance_metrics {
+                    if !metrics.meets_targets() && kernel.config.optimization_level != OptimizationLevel::Aggressive {
                         let new_config = KernelConfig {
                             optimization_level: OptimizationLevel::Aggressive,
                             ..kernel.config.clone()
                         };
-                        
-                        let new_source = self.generate_kernel_source(*kernel_type, &new_config)?;
-                        kernel.source_code = new_source;
-                        kernel.config = new_config;
+                        return Some((*kernel_type, new_config));
                     }
                 }
+                None
+            })
+            .collect();
+        
+        for (kernel_type, new_config) in kernel_updates {
+            let new_source = self.generate_kernel_source(kernel_type, &new_config)?;
+            if let Some(kernel) = self.kernels.get_mut(&kernel_type) {
+                kernel.source_code = new_source;
+                kernel.config = new_config;
             }
         }
         Ok(())

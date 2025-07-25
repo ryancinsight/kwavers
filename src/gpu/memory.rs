@@ -51,8 +51,8 @@ pub struct GpuBuffer {
     pub buffer_type: BufferType,
 }
 
-/// GPU buffer type for different use cases
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Types of GPU buffers for different simulation data
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BufferType {
     /// Pressure field buffer
     Pressure,
@@ -181,9 +181,10 @@ impl MemoryPool {
             self.available_buffers.push_back(buffer);
             Ok(())
         } else {
-            Err(KwaversError::Gpu(crate::error::GpuError::MemoryDeallocation {
-                buffer_id,
-                reason: "Buffer not found in allocated buffers".to_string(),
+            Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                requested_bytes: 0,
+                available_bytes: 0,
+                reason: format!("Buffer {} not found in allocated buffers", buffer_id),
             }))
         }
     }
@@ -386,8 +387,9 @@ impl AdvancedGpuMemoryManager {
             self.performance_metrics.total_deallocations += 1;
             Ok(())
         } else {
-            Err(KwaversError::Gpu(crate::error::GpuError::MemoryDeallocation {
-                buffer_id,
+            Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                requested_bytes: 0,
+                available_bytes: 0,
                 reason: format!("No memory pool for buffer type: {:?}", buffer_type),
             }))
         }
