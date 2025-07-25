@@ -47,6 +47,8 @@ pub enum KwaversError {
     Gpu(GpuError),
     /// Visualization and rendering errors
     Visualization(String),
+    /// Feature not yet implemented
+    NotImplemented(String),
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
 }
@@ -65,6 +67,7 @@ impl fmt::Display for KwaversError {
             KwaversError::Gpu(e) => write!(f, "GPU error: {}", e),
             KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
+            KwaversError::NotImplemented(e) => write!(f, "Feature not yet implemented: {}", e),
         }
     }
 }
@@ -83,6 +86,7 @@ impl StdError for KwaversError {
             KwaversError::Gpu(e) => Some(e),
             KwaversError::Visualization(_) => None,
             KwaversError::Composite(e) => Some(e),
+            KwaversError::NotImplemented(_) => None,
         }
     }
 }
@@ -986,6 +990,7 @@ pub mod utils {
             KwaversError::Gpu(_) => ErrorSeverity::Error,
             KwaversError::Visualization(_) => ErrorSeverity::Warning,
             KwaversError::Composite(_) => ErrorSeverity::Error,
+            KwaversError::NotImplemented(_) => ErrorSeverity::Warning,
         }
     }
 }
