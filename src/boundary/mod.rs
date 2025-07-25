@@ -41,7 +41,7 @@ pub trait Boundary: Debug + Send + Sync {
     /// * `grid` - The simulation grid
     /// * `time_step` - Current simulation time step
     /// * `factor` - Scaling factor for boundary application
-    fn apply_acoustic_with_factor(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize, factor: f64) -> KwaversResult<()> {
+    fn apply_acoustic_with_factor(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize, _factor: f64) -> KwaversResult<()> {
         // Default implementation applies regular boundary conditions
         self.apply_acoustic(field, grid, time_step)?;
         // Scale the boundary effects by the factor if needed

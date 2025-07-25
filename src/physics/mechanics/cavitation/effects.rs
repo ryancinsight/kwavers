@@ -594,33 +594,14 @@ impl CavitationModel {
     }
 }
 
-// Helper macro to check if a field exists - proper implementation
-// Follows Information Expert principle: Field container knows about its own fields
-macro_rules! hasattr {
-    ($container:expr, $field:expr) => {
-        match $field {
-            "pressure" => true,      // Pressure field always exists
-            "temperature" => true,   // Temperature field always exists  
-            "light" => true,         // Light field exists for sonoluminescence
-            "bubble_radius" => true, // Bubble radius field exists
-            "velocity" => true,      // Velocity field exists
-            _ => {
-                // Check if field exists in the container's field map
-                // This would be expanded to check actual field registry
-                log::debug!("Field existence check for: {}", $field);
-                true // Conservative approach - assume field exists
-            }
-        }
-    };
-}
+// Note: hasattr macro removed as it was unused - following YAGNI principle
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::grid::Grid;
     use crate::medium::Medium;
-    use crate::medium::tissue_specific; // For tissue_type Option
-    use ndarray::{Array3, ShapeBuilder}; // Added ShapeBuilder for .f()
+    use ndarray::Array3;
 
     fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
         Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4)
@@ -751,7 +732,7 @@ mod tests {
     fn test_enhanced_light_emission_spectral_calculation() {
         let grid = create_test_grid(2, 2, 2);
         let spectral_params = SpectralParameters::default();
-        let mut enhanced_emission = EnhancedLightEmission::new(&grid, spectral_params);
+        let enhanced_emission = EnhancedLightEmission::new(&grid, spectral_params);
         
         // Test spectral emission calculation
         let temperature = 5000.0; // 5000 K

@@ -1063,14 +1063,15 @@ mod tests {
             .with_lame_lambda(lambda_val)
             .with_lame_mu(mu_val);
 
-        // Test lambda array
-        let lambda_arr1_ptr: *const f64 = medium.lame_lambda_array().as_ptr();
-        let lambda_arr1_clone = medium.lame_lambda_array().clone();
-        let lambda_arr2_ptr: *const f64 = medium.lame_lambda_array().as_ptr();
-        assert_eq!(lambda_arr1_ptr, lambda_arr2_ptr, "Expected lame_lambda_array to return same pointer (cached)");
-        assert_eq!(lambda_arr1_clone, medium.lame_lambda_array(), "Expected lame_lambda_array data to be consistent");
-        assert_eq!(medium.lame_lambda_array().dim(), grid_dims);
-        assert!(medium.lame_lambda_array().iter().all(|&val| (val - lambda_val).abs() < 1e-9 ));
+        // Test lambda array - method returns clones, so we test data consistency and caching behavior
+        let lambda_arr1 = medium.lame_lambda_array();
+        let lambda_arr2 = medium.lame_lambda_array();
+        assert_eq!(lambda_arr1, lambda_arr2, "Expected lame_lambda_array to return consistent data (cached)");
+        assert_eq!(lambda_arr1.dim(), grid_dims);
+        assert!(lambda_arr1.iter().all(|&val| (val - lambda_val).abs() < 1e-9 ));
+        
+        // Verify that the cache is populated (internal state check)
+        assert!(medium.lame_lambda_array.get().is_some(), "Expected lame_lambda_array cache to be populated");
 
         // Test mu array - since method returns clone, we test data consistency instead of pointer equality
         let mu_arr1 = medium.lame_mu_array();

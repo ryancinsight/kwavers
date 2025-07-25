@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // Note: Removed unused import following YAGNI principle
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
     use crate::source::MockSource;

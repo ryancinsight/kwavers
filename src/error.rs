@@ -602,82 +602,83 @@ impl fmt::Display for MemoryTransferDirection {
     }
 }
 
-/// GPU acceleration errors
-/// 
-/// Implements SOLID principles with specific error types for GPU operations
+/// GPU-related errors
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GpuError {
-    /// No GPU devices found
-    NoDevicesFound,
-    /// GPU device initialization failed
+    /// Device initialization failed
     DeviceInitialization {
         device_id: u32,
         reason: String,
     },
-    /// GPU memory allocation failed
+
+    /// Device detection failed
+    DeviceDetection {
+        reason: String,
+    },
+
+    /// Memory allocation failed
     MemoryAllocation {
         requested_bytes: usize,
         available_bytes: usize,
         reason: String,
     },
-    /// GPU memory transfer failed
+
+    /// Memory transfer failed
     MemoryTransfer {
         direction: MemoryTransferDirection,
         size_bytes: usize,
         reason: String,
     },
-    /// GPU kernel compilation failed
+
+    /// Kernel compilation failed
     KernelCompilation {
         kernel_name: String,
         reason: String,
     },
-    /// GPU kernel execution failed
+
+    /// Kernel execution failed
     KernelExecution {
         kernel_name: String,
         reason: String,
     },
-    /// GPU backend not available
+
+    /// Backend not available
     BackendNotAvailable {
         backend: String,
         reason: String,
     },
-    /// GPU performance below threshold
-    PerformanceThreshold {
-        actual_performance: f64,
-        required_performance: f64,
-        metric: String,
-    },
+
+    /// No GPU devices found
+    NoDevicesFound,
 }
 
 impl fmt::Display for GpuError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GpuError::NoDevicesFound => {
-                write!(f, "No GPU devices found")
-            }
             GpuError::DeviceInitialization { device_id, reason } => {
-                write!(f, "GPU device {} initialization failed: {}", device_id, reason)
+                write!(f, "GPU device initialization failed (device {}): {}", device_id, reason)
+            }
+            GpuError::DeviceDetection { reason } => {
+                write!(f, "GPU device detection failed: {}", reason)
             }
             GpuError::MemoryAllocation { requested_bytes, available_bytes, reason } => {
-                write!(f, "GPU memory allocation failed: requested {} bytes, available {} bytes: {}", 
+                write!(f, "GPU memory allocation failed (requested {} bytes, available {} bytes): {}", 
                        requested_bytes, available_bytes, reason)
             }
             GpuError::MemoryTransfer { direction, size_bytes, reason } => {
-                write!(f, "GPU memory transfer ({}) failed for {} bytes: {}", 
-                       direction, size_bytes, reason)
+                write!(f, "GPU memory transfer ({:?}) of {} bytes failed: {}", direction, size_bytes, reason)
             }
             GpuError::KernelCompilation { kernel_name, reason } => {
-                write!(f, "GPU kernel '{}' compilation failed: {}", kernel_name, reason)
+                write!(f, "GPU kernel compilation failed ({}): {}", kernel_name, reason)
             }
             GpuError::KernelExecution { kernel_name, reason } => {
-                write!(f, "GPU kernel '{}' execution failed: {}", kernel_name, reason)
+                write!(f, "GPU kernel execution failed ({}): {}", kernel_name, reason)
             }
             GpuError::BackendNotAvailable { backend, reason } => {
-                write!(f, "GPU backend '{}' not available: {}", backend, reason)
+                write!(f, "GPU backend not available ({}): {}", backend, reason)
             }
-            GpuError::PerformanceThreshold { actual_performance, required_performance, metric } => {
-                write!(f, "GPU performance below threshold: {} = {:.2}, required {:.2}", 
-                       metric, actual_performance, required_performance)
+            GpuError::NoDevicesFound => {
+                write!(f, "No GPU devices found")
             }
         }
     }

@@ -104,7 +104,7 @@ impl MediumConfig {
     /// Follows Information Expert principle - knows how to validate itself
     pub fn validate(&self) -> KwaversResult<()> {
         match &self.medium_type {
-            MediumType::Homogeneous { density, sound_speed, mu_a, mu_s_prime } => {
+            MediumType::Homogeneous { density: _, sound_speed: _, mu_a: _, mu_s_prime: _ } => {
                 // Check required properties for homogeneous medium
                 let required_props = ["density", "sound_speed"];
                 for prop in &required_props {

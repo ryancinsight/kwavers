@@ -5,6 +5,15 @@
 
 use crate::error::KwaversResult;
 
+// GPU kernel constants
+const LAUNCH_BOUNDS_THREADS: u32 = 256;
+const LAUNCH_BOUNDS_BLOCKS: u32 = 8;
+const MAX_THREADS_PER_BLOCK: u32 = 1024;
+const MIN_BLOCKS_PER_MULTIPROCESSOR: u32 = 2;
+const MODERATE_LAUNCH_BOUNDS: &str = "__launch_bounds__(512, 2)";
+const AGGRESSIVE_LAUNCH_BOUNDS: &str = "__launch_bounds__(1024, 1)";
+const DEFAULT_SHARED_MEMORY_BYTES: usize = 48 * 1024; // 48KB typical
+
 /// GPU kernel types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KernelType {
@@ -98,18 +107,31 @@ impl KernelConfig {
                 block_size * std::mem::size_of::<f64>()
             }
             KernelType::Cavitation => {
-                // Complex cavitation calculations need more shared memory
-                block_size * 8 * std::mem::size_of::<f64>() // Multiple bubble parameters
+                // Cavitation needs more shared memory for bubble dynamics
+                block_size * 8 * std::mem::size_of::<f64>() // Multiple bubble properties
             }
             KernelType::FFT => {
-                // FFT needs working space
+                // FFT needs temporary storage
                 block_size * 2 * std::mem::size_of::<f64>() // Complex numbers
             }
             KernelType::Boundary => {
-                // Minimal shared memory for boundary conditions
+                // Boundary conditions need minimal shared memory
                 block_size * std::mem::size_of::<f64>()
             }
         }
+    }
+
+    /// Get maximum shared memory per streaming multiprocessor
+    pub fn get_max_shared_memory_per_sm(&self) -> usize {
+        // Default to 48KB for most modern GPUs
+        // This should be queried from the actual device
+        DEFAULT_SHARED_MEMORY_BYTES
+    }
+
+    /// Set optimization level
+    pub fn with_optimization_level(mut self, level: OptimizationLevel) -> Self {
+        self.optimization_level = level;
+        self
     }
 
     /// Get grid dimensions for kernel launch
@@ -161,9 +183,8 @@ impl KernelConfig {
     fn generate_acoustic_cuda_kernel(&self) -> KwaversResult<String> {
         let optimization_flags = match self.optimization_level {
             OptimizationLevel::Basic => "",
-            OptimizationLevel::Moderate => format!("__launch_bounds__({}, {})", LAUNCH_BOUNDS_THREADS, LAUNCH_BOUNDS_BLOCKS).as_str(),
-            OptimizationLevel::Aggressive => 
-                &format!("__launch_bounds__({}, {}) __forceinline__", MAX_THREADS_PER_BLOCK, MIN_BLOCKS_PER_MULTIPROCESSOR),
+            OptimizationLevel::Moderate => "__launch_bounds__(256, 8)",
+            OptimizationLevel::Aggressive => "__launch_bounds__(1024, 2) __forceinline__",
         };
 
         Ok(format!(r#"
@@ -382,6 +403,15 @@ extern "C" {
         let occupancy = (max_blocks * threads_per_block) as f64 / max_threads_per_sm as f64;
         
         occupancy.min(1.0)
+    }
+
+    /// Get optimization flags for kernel compilation
+    fn get_optimization_flags(&self) -> &'static str {
+        match self.optimization_level {
+            OptimizationLevel::Basic => "",
+            OptimizationLevel::Moderate => "-O2 -use_fast_math",
+            OptimizationLevel::Aggressive => "-O3 -use_fast_math -ftz=true -prec-div=false -prec-sqrt=false",
+        }
     }
 }
 
