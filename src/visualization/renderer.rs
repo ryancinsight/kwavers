@@ -85,24 +85,23 @@ impl Renderer3D {
     ) -> KwaversResult<Self> {
         info!("Initializing GPU-accelerated 3D renderer");
         
-        #[cfg(feature = "advanced-visualization")]
-        {
+        // Check if the advanced visualization feature is enabled
+        if cfg!(feature = "advanced-visualization") {
             // For Phase 11, we'll create a mock implementation since the GPU context
             // doesn't yet have direct device/queue access for visualization
+            warn!("Advanced visualization feature is enabled, but GPU visualization is not yet implemented.");
             return Err(KwaversError::Visualization(
                 "GPU visualization not yet implemented - requires WebGPU device access".to_string()
             ));
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
-        {
-            Ok(Self {
-                gpu_context,
-                config: config.clone(),
-                memory_usage: 0,
-                primitive_count: 0,
-            })
-        }
+        // Fallback for when the advanced visualization feature is not enabled
+        Ok(Self {
+            gpu_context,
+            config: config.clone(),
+            memory_usage: 0,
+            primitive_count: 0,
+        })
     }
     
     /// Render a volume field using GPU acceleration
