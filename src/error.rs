@@ -45,6 +45,8 @@ pub enum KwaversError {
     System(SystemError),
     /// GPU acceleration errors
     Gpu(GpuError),
+    /// Visualization and rendering errors
+    Visualization(String),
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
 }
@@ -61,6 +63,7 @@ impl fmt::Display for KwaversError {
             KwaversError::Validation(e) => write!(f, "Validation error: {}", e),
             KwaversError::System(e) => write!(f, "System error: {}", e),
             KwaversError::Gpu(e) => write!(f, "GPU error: {}", e),
+            KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
         }
     }
@@ -78,6 +81,7 @@ impl StdError for KwaversError {
             KwaversError::Validation(e) => Some(e),
             KwaversError::System(e) => Some(e),
             KwaversError::Gpu(e) => Some(e),
+            KwaversError::Visualization(_) => None,
             KwaversError::Composite(e) => Some(e),
         }
     }
@@ -980,6 +984,7 @@ pub mod utils {
             KwaversError::Config(_) => ErrorSeverity::Warning,
             KwaversError::Validation(_) => ErrorSeverity::Info,
             KwaversError::Gpu(_) => ErrorSeverity::Error,
+            KwaversError::Visualization(_) => ErrorSeverity::Warning,
             KwaversError::Composite(_) => ErrorSeverity::Error,
         }
     }

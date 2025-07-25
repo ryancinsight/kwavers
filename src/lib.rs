@@ -20,6 +20,7 @@ pub mod config;
 pub mod error;
 pub mod factory;
 pub mod fft;
+pub mod gpu;
 pub mod grid;
 pub mod log;
 pub mod medium;
@@ -35,9 +36,9 @@ pub mod time;
 pub mod utils;
 pub mod validation;
 
-// GPU acceleration module (feature-gated)
-#[cfg(feature = "gpu-acceleration")]
-pub mod gpu;
+// Phase 11: Advanced Visualization & Real-Time Interaction
+#[cfg(any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support"))]
+pub mod visualization;
 
 // Re-export commonly used types for convenience
 pub use error::{KwaversResult, KwaversError};

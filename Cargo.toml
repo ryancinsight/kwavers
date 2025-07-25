@@ -34,6 +34,27 @@ rand = "0.8"
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }
 
+# Advanced 3D visualization and real-time interaction (Phase 11)
+egui = { version = "0.25", optional = true }
+eframe = { version = "0.25", optional = true }
+three-d = { version = "0.16", optional = true }
+winit = { version = "0.29", optional = true }
+pollster = { version = "0.3", optional = true }
+
+# WebGL and WASM support
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", optional = true }
+js-sys = { version = "0.3", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
+
+# VR/AR support
+openxr = { version = "0.17", optional = true }
+nalgebra = { version = "0.32", optional = true }
+
+# Image processing and export
+image = { version = "0.24", optional = true }
+resvg = { version = "0.38", optional = true }
+
 # Lazy static initialization
 lazy_static = "1.4"
 
@@ -69,9 +90,12 @@ mockall = "0.11"
 default = ["basic-physics"]
 basic-physics = []
 advanced-physics = ["plotly"]
-full-features = ["advanced-physics", "plotly", "tokio", "iterator-optimizations"]
+full-features = ["advanced-physics", "plotly", "tokio", "iterator-optimizations", "gpu-acceleration", "advanced-visualization"]
 iterator-optimizations = []
 gpu-acceleration = ["cudarc", "wgpu", "bytemuck"]  # Enhanced GPU feature
+advanced-visualization = ["egui", "eframe", "three-d", "winit", "pollster", "image", "nalgebra"]  # Phase 11 visualization
+web-visualization = ["wasm-bindgen", "web-sys", "js-sys", "console_error_panic_hook"]  # Web support
+vr-support = ["openxr", "nalgebra"]  # VR/AR capabilities
 nightly = [] # Nightly Rust features
 
 [profile.release]
