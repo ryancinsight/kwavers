@@ -89,6 +89,7 @@ let mut memory_manager = AdvancedGpuMemoryManager::new(
 )?;
 
 // Allocate GPU buffers
+let grid_size = 128 * 128 * 128; // Example grid size
 let pressure_buffer = memory_manager.allocate_buffer(
     grid_size * std::mem::size_of::<f64>(),
     BufferType::Pressure
