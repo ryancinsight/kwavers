@@ -376,6 +376,23 @@ impl MLEngine {
         self.performance_metrics.total_inferences += 1;
         Ok(predicted)
     }
+
+    /// Predict binary outcome probability using a ConvergencePredictor model.
+    /// Returns *p_success* in range [0,1] for each sample in `features`.
+    pub fn predict_outcome(&mut self, features: &Array2<f32>) -> KwaversResult<Array1<f32>> {
+        use ndarray::Axis;
+        let model = self.models.get(&ModelType::ConvergencePredictor).ok_or_else(|| {
+            KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                parameter: "ConvergencePredictor model".to_string(),
+                section: "MLEngine".to_string(),
+            })
+        })?;
+        let probs = model.infer(features)?; // (samples, 2)
+        // Extract probability of class-1 (success) for each sample
+        let p_success = probs.index_axis(Axis(1), 1).to_owned();
+        self.performance_metrics.total_inferences += probs.dim().0;
+        Ok(p_success)
+    }
 }
 
 /// Represents an anomalous region in the simulation
@@ -453,5 +470,25 @@ mod tests {
         for &c in classes.iter() {
             assert!(c == 0 || c == 1);
         }
+    }
+
+    #[test]
+    fn test_outcome_predictor() {
+        use crate::ml::models::OutcomePredictorModel;
+        use ndarray::{array, Array2};
+
+        // Simple predictor: if feature > 0 produces success
+        let weights = array![10.0_f32];
+        let bias = -5.0_f32; // threshold at 0.5 approx
+        let model = OutcomePredictorModel::from_weights(weights, bias);
+
+        let mut engine = MLEngine::new(MLBackend::Native).unwrap();
+        engine.models.insert(ModelType::ConvergencePredictor, Box::new(model));
+
+        let features: Array2<f32> = array![[0.0], [1.0]];
+        let probs = engine.predict_outcome(&features).unwrap();
+        assert_eq!(probs.len(), 2);
+        assert!(probs[0] < 0.5); // low chance for 0.0 input
+        assert!(probs[1] > 0.5); // high chance for 1.0 input
     }
 }

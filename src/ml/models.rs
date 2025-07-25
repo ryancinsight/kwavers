@@ -91,3 +91,67 @@ impl MLModel for TissueClassifierModel {
         Ok(())
     }
 }
+
+/// Simple outcome predictor model (binary logistic regression)
+pub struct OutcomePredictorModel {
+    weights: Array1<f32>,
+    bias: f32,
+    metadata: ModelMetadata,
+}
+
+impl OutcomePredictorModel {
+    /// Create predictor with explicit weights and bias (features length must match weights length).
+    pub fn from_weights(weights: Array1<f32>, bias: f32) -> Self {
+        let features = weights.len();
+        let metadata = ModelMetadata {
+            name: "OutcomePredictor".to_string(),
+            version: "1.0.0".to_string(),
+            input_shape: vec![features],
+            output_shape: vec![2], // binary outcome {0,1}
+            accuracy: 0.0,
+            inference_time_ms: 0.0,
+        };
+        Self { weights, bias, metadata }
+    }
+
+    /// Sigmoid function
+    fn sigmoid(x: f32) -> f32 { 1.0 / (1.0 + (-x).exp()) }
+}
+
+impl MLModel for OutcomePredictorModel {
+    fn model_type(&self) -> ModelType {
+        ModelType::ConvergencePredictor
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        // Input validation
+        let (samples, features) = input.dim();
+        if features != self.metadata.input_shape[0] {
+            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+        }
+
+        // Compute raw logit = x·w + b
+        let logits: Array1<f32> = input
+            .dot(&self.weights.insert_axis(Axis(1)))
+            .index_axis(Axis(1), 0)
+            .to_owned()
+            + self.bias;
+
+        // Convert to probabilities using sigmoid; output two-class probabilities [p0, p1]
+        let mut probs = Array2::<f32>::zeros((samples, 2));
+        for (i, &logit) in logits.iter().enumerate() {
+            let p1 = Self::sigmoid(logit);
+            let p0 = 1.0 - p1;
+            probs[(i, 0)] = p0;
+            probs[(i, 1)] = p1;
+        }
+        Ok(probs)
+    }
+
+    fn metadata(&self) -> &ModelMetadata { &self.metadata }
+
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        // Online learning not yet implemented for predictor
+        Err(KwaversError::NotImplemented("Online update for OutcomePredictor".to_string()))
+    }
+}
