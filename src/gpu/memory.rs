@@ -545,14 +545,24 @@ impl AdvancedGpuMemoryManager {
             GpuBackend::Cuda => {
                 // Would use cuMemAllocHost here
                 // For now, use regular allocation as placeholder
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 8).unwrap();
+                let layout = std::alloc::Layout::from_size_align(size_bytes, 8)
+                    .map_err(|_| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                        requested_bytes: size_bytes,
+                        available_bytes: 0,
+                        reason: "Invalid memory layout parameters".to_string(),
+                    }))?;
                 let ptr = unsafe { std::alloc::alloc(layout) };
                 Ok(ptr)
             }
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
                 // WebGPU doesn't have pinned memory concept, use regular allocation
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 8).unwrap();
+                let layout = std::alloc::Layout::from_size_align(size_bytes, 8)
+                    .map_err(|_| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                        requested_bytes: size_bytes,
+                        available_bytes: 0,
+                        reason: "Invalid memory layout parameters".to_string(),
+                    }))?;
                 let ptr = unsafe { std::alloc::alloc(layout) };
                 Ok(ptr)
             }
