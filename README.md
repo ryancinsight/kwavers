@@ -200,6 +200,7 @@ let config = PhasedArrayConfig::new(64)  // 64 elements
 
 // Create GPU-accelerated simulation
 let mut gpu_context = GpuContext::new().await?;
+let (grid, _, medium, _, _) = create_validated_simulation(create_default_config())?;
 let phased_array = config.initialize_source(&medium, &grid)?;
 
 // Electronic beamforming with GPU acceleration
