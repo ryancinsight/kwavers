@@ -1,5 +1,5 @@
 // src/physics/mechanics/cavitation/effects.rs
-use super::model::{CavitationModel, MIN_RADIUS_MODEL_DEFAULT};
+use super::model::{LegacyCavitationModel as CavitationModel, MIN_RADIUS_MODEL_DEFAULT};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::scattering::acoustic::{

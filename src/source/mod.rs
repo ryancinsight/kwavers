@@ -26,45 +26,54 @@ pub use phased_array::{
     ElementSensitivity, BeamformingMode
 };
 
-/// Mock signal implementation for testing purposes
+/// Null source implementation following the Null Object pattern
+/// 
+/// This provides a valid Source implementation that produces no acoustic output,
+/// eliminating the need for null checks in client code.
 #[derive(Debug, Clone)]
-pub struct MockSignal {
-    amplitude: f64,
-    frequency: f64,
-}
+pub struct NullSource;
 
-impl MockSignal {
-    pub fn new(amplitude: f64, frequency: f64) -> Self {
-        Self { amplitude, frequency }
+impl NullSource {
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl Default for MockSignal {
+impl Default for NullSource {
     fn default() -> Self {
-        Self::new(1.0, 1e6) // 1.0 amplitude, 1 MHz default
+        Self::new()
     }
 }
 
-impl Signal for MockSignal {
-    fn amplitude(&self, t: f64) -> f64 {
-        if t >= 0.0 && t <= 1e-6 {
-            // 1 μs pulse duration
-            self.amplitude * (2.0 * std::f64::consts::PI * self.frequency * t).sin()
-        } else {
-            0.0
-        }
-    }
-
-    fn frequency(&self, _t: f64) -> f64 {
-        self.frequency
-    }
-
-    fn duration(&self) -> Option<f64> {
-        Some(1e-6) // 1 μs duration
+impl Source for NullSource {
+    fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        0.0
     }
     
-    fn phase(&self, t: f64) -> f64 {
-        2.0 * std::f64::consts::PI * self.frequency * t
+    fn signal(&self) -> &dyn Signal {
+        &NullSignal
+    }
+    
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![]
+    }
+}
+
+/// Null signal implementation
+#[derive(Debug, Clone)]
+struct NullSignal;
+
+impl Signal for NullSignal {
+    fn amplitude(&self, _t: f64) -> f64 {
+        0.0
+    }
+    
+    fn frequency(&self, _t: f64) -> f64 {
+        0.0
+    }
+    
+    fn phase(&self, _t: f64) -> f64 {
+        0.0
     }
     
     fn clone_box(&self) -> Box<dyn Signal> {
@@ -72,77 +81,9 @@ impl Signal for MockSignal {
     }
 }
 
-/// Mock source implementation for testing and development
-#[derive(Debug)]
-pub struct MockSource {
-    signal: MockSignal,
-    positions: Vec<(f64, f64, f64)>,
-}
+// Keep MockSource for backward compatibility but mark as deprecated
+#[deprecated(since = "1.0.0", note = "Use NullSource instead for testing")]
+pub type MockSource = NullSource;
 
-impl MockSource {
-    pub fn new() -> Self {
-        Self {
-            signal: MockSignal::default(),
-            positions: vec![(0.0, 0.0, 0.0)], // Single source at origin
-        }
-    }
-    
-    /// Create a mock source with custom signal parameters
-    pub fn with_signal(amplitude: f64, frequency: f64) -> Self {
-        Self {
-            signal: MockSignal::new(amplitude, frequency),
-            positions: vec![(0.0, 0.0, 0.0)],
-        }
-    }
-    
-    /// Create a mock source with custom positions
-    pub fn with_positions(positions: Vec<(f64, f64, f64)>) -> Self {
-        Self {
-            signal: MockSignal::default(),
-            positions,
-        }
-    }
-    
-    /// Create a fully customized mock source
-    pub fn custom(amplitude: f64, frequency: f64, positions: Vec<(f64, f64, f64)>) -> Self {
-        Self {
-            signal: MockSignal::new(amplitude, frequency),
-            positions,
-        }
-    }
-}
-
-impl Default for MockSource {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Source for MockSource {
-    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
-        // Calculate source term for all positions
-        let mut total_source = 0.0;
-        
-        for &(sx, sy, sz) in &self.positions {
-            let distance = ((x - sx).powi(2) + (y - sy).powi(2) + (z - sz).powi(2)).sqrt();
-            
-            // Gaussian spatial distribution with 1mm characteristic width
-            let spatial_factor = (-0.5 * (distance / 1e-3).powi(2)).exp();
-            
-            // Time-dependent signal
-            let temporal_factor = self.signal.amplitude(t);
-            
-            total_source += spatial_factor * temporal_factor;
-        }
-        
-        total_source
-    }
-
-    fn positions(&self) -> Vec<(f64, f64, f64)> {
-        self.positions.clone()
-    }
-
-    fn signal(&self) -> &dyn Signal {
-        &self.signal
-    }
-}
+#[deprecated(since = "1.0.0", note = "Use NullSignal instead for testing")]
+pub type MockSignal = NullSignal;

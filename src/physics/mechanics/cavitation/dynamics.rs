@@ -1,6 +1,6 @@
 // src/physics/mechanics/cavitation/dynamics.rs
 use super::model::{
-    CavitationModel, MIN_RADIUS_MODEL_DEFAULT, MAX_RADIUS_MODEL_DEFAULT,
+    LegacyCavitationModel as CavitationModel, MIN_RADIUS_MODEL_DEFAULT, MAX_RADIUS_MODEL_DEFAULT,
     MAX_VELOCITY_MODEL_DEFAULT, MAX_ACCELERATION_MODEL_DEFAULT,
 };
 use crate::grid::Grid;

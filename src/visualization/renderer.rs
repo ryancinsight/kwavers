@@ -86,16 +86,178 @@ impl Renderer3D {
         info!("Initializing GPU-accelerated 3D renderer");
         
         // Check if the advanced visualization feature is enabled
-        if cfg!(feature = "advanced-visualization") {
+        #[cfg(feature = "advanced-visualization")]
+        {
             // For Phase 11, we'll create a mock implementation since the GPU context
             // doesn't yet have direct device/queue access for visualization
-            warn!("Advanced visualization feature is enabled, but GPU visualization is not yet implemented.");
-            return Err(KwaversError::Visualization(
-                "GPU visualization not yet implemented - requires WebGPU device access".to_string()
-            ));
+            warn!("Advanced visualization feature is enabled, creating stub implementation.");
+            
+            // Create mock WebGPU resources
+            use wgpu::util::DeviceExt;
+            
+            let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+                backends: wgpu::Backends::all(),
+                dx12_shader_compiler: Default::default(),
+                flags: wgpu::InstanceFlags::default(),
+                gles_minor_version: wgpu::Gles3MinorVersion::default(),
+            });
+            
+            let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                force_fallback_adapter: false,
+                compatible_surface: None,
+            })).ok_or(KwaversError::Visualization("Failed to find suitable GPU adapter".to_string()))?;
+            
+            let (device, queue) = pollster::block_on(adapter.request_device(
+                &wgpu::DeviceDescriptor {
+                    label: Some("Kwavers Visualization Device"),
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                },
+                None,
+            )).map_err(|e| KwaversError::Visualization(format!("Failed to create device: {}", e)))?;
+            
+            let device = Arc::new(device);
+            let queue = Arc::new(queue);
+            
+            // Create dummy shaders
+            let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Dummy Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("../../shaders/dummy.wgsl").into()),
+            });
+            
+            // Create dummy render pipeline
+            let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+            
+            let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                multiview: None,
+            });
+            
+            // Create dummy compute pipeline
+            let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Compute Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+            
+            let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Compute Pipeline"),
+                layout: Some(&compute_pipeline_layout),
+                module: &shader,
+                entry_point: "cs_main",
+            });
+            
+            // Create dummy textures
+            let texture_size = wgpu::Extent3d {
+                width: 256,
+                height: 256,
+                depth_or_array_layers: 256,
+            };
+            
+            let color_lut_texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("Color LUT"),
+                size: wgpu::Extent3d {
+                    width: 256,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+            
+            // Create uniform buffer
+            let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Uniform Buffer"),
+                size: 256,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            
+            // Create bind group layout and bind group
+            let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bind Group Layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+            
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Bind Group"),
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: uniform_buffer.as_entire_binding(),
+                    },
+                ],
+            });
+            
+            return Ok(Self {
+                gpu_context,
+                config: config.clone(),
+                device,
+                queue,
+                render_pipeline,
+                compute_pipeline,
+                volume_textures: HashMap::new(),
+                color_lut_texture,
+                uniform_buffer,
+                bind_group,
+                memory_usage: 0,
+                primitive_count: 0,
+            });
         }
         
         // Fallback for when the advanced visualization feature is not enabled
+        #[cfg(not(feature = "advanced-visualization"))]
         Ok(Self {
             gpu_context,
             config: config.clone(),

@@ -1,171 +1,146 @@
-// physics/scattering/acoustic/mod.rs
-pub mod bubble_interactions;
-pub mod mie;
-pub mod rayleigh;
+//! Acoustic scattering physics module
+//! 
+//! Implements various acoustic scattering models following SOLID principles.
 
-pub use bubble_interactions::compute_bubble_interactions;
-pub use mie::compute_mie_scattering;
-pub use rayleigh::compute_rayleigh_scattering;
-
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use log::debug;
+use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
 use ndarray::{Array3, Zip};
+use std::f64::consts::PI;
 
+pub mod rayleigh;
+pub mod mie;
+pub mod bubble_interactions;
 
+pub use rayleigh::{RayleighScattering, compute_rayleigh_scattering};
+pub use mie::compute_mie_scattering;
+pub use bubble_interactions::compute_bubble_interactions;
+
+/// Base acoustic scattering model
 #[derive(Debug, Clone)]
-pub struct AcousticScatteringModel {
-    scattered_field: Array3<f64>, // Changed to private (module private)
+pub struct AcousticScattering {
+    /// Physics state container
+    state: PhysicsState,
+    
+    /// Scattering parameters
+    scattering_strength: f64,
+    frequency: f64,
+    
+    /// Computed scattered field
+    scattered_field: Array3<f64>,
+    
+    /// Performance tracking
+    computation_time: std::time::Duration,
+    update_count: usize,
 }
 
-impl AcousticScatteringModel {
-    pub fn new(grid: &Grid) -> Self {
-        debug!("Initializing AcousticScatteringModel");
+impl AcousticScattering {
+    /// Create a new acoustic scattering model
+    pub fn new(grid: &Grid, frequency: f64, scattering_strength: f64) -> Self {
+        let state = PhysicsState::new(grid);
+        let scattered_field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
         Self {
-            scattered_field: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            state,
+            scattering_strength,
+            frequency,
+            scattered_field,
+            computation_time: std::time::Duration::ZERO,
+            update_count: 0,
+        }
+    }
+    
+    /// Compute scattering from particles/bubbles
+    pub fn compute_scattering(
+        &mut self,
+        incident_field: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<()> {
+        let start_time = std::time::Instant::now();
+        
+        // Get bubble properties from state
+        let bubble_radius = self.get_field(field_indices::BUBBLE_RADIUS)?;
+        let bubble_velocity = self.get_field(field_indices::BUBBLE_VELOCITY)?;
+        
+        // Reset scattered field
+        self.scattered_field.fill(0.0);
+        
+        // Compute scattering based on bubble properties
+        let k = 2.0 * PI * self.frequency / medium.sound_speed(0.0, 0.0, 0.0, grid);
+        
+        Zip::from(&mut self.scattered_field)
+            .and(incident_field)
+            .and(&bubble_radius)
+            .and(&bubble_velocity)
+            .for_each(|s, &p_inc, &r, &v| {
+                if r > 0.0 {
+                    // Simple monopole scattering model
+                    let ka = k * r;
+                    let scattering_cross_section = 4.0 * PI * r * r * (ka * ka) / (1.0 + ka * ka);
+                    
+                    // Include velocity effects (Doppler)
+                    let doppler_factor = 1.0 + v / medium.sound_speed(0.0, 0.0, 0.0, grid);
+                    
+                    *s = self.scattering_strength * scattering_cross_section * p_inc * doppler_factor;
+                }
+            });
+        
+        self.computation_time += start_time.elapsed();
+        self.update_count += 1;
+        
+        Ok(())
+    }
+    
+    /// Get the computed scattered field
+    pub fn scattered_field(&self) -> &Array3<f64> {
+        &self.scattered_field
+    }
+    
+    /// Report performance metrics
+    pub fn report_performance(&self) {
+        if self.update_count > 0 {
+            let avg_time = self.computation_time.as_secs_f64() / self.update_count as f64;
+            log::info!(
+                "AcousticScattering Performance: {} updates, {:.3} ms average per update",
+                self.update_count,
+                avg_time * 1000.0
+            );
         }
     }
 }
 
-use crate::physics::traits::AcousticScatteringModelTrait;
-
-impl AcousticScatteringModelTrait for AcousticScatteringModel {
-    fn compute_scattering(
-        &mut self,
-        incident_field: &Array3<f64>,
-        bubble_radius: &Array3<f64>,
-        bubble_velocity: &Array3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        frequency: f64,
-    ) {
-        debug!("Computing combined acoustic scattering (via trait)");
-        let mut rayleigh_scatter = Array3::zeros(incident_field.dim());
-        let mut mie_scatter = Array3::zeros(incident_field.dim());
-        let mut interaction_scatter = Array3::zeros(incident_field.dim());
-
-        compute_rayleigh_scattering(&mut rayleigh_scatter, bubble_radius, incident_field, grid, medium, frequency);
-        compute_mie_scattering(&mut mie_scatter, bubble_radius, incident_field, grid, medium, frequency);
-        compute_bubble_interactions(&mut interaction_scatter, bubble_radius, bubble_velocity, incident_field, grid, medium, frequency);
-
-        Zip::from(&mut self.scattered_field)
-            .and(&rayleigh_scatter)
-            .and(&mie_scatter)
-            .and(&interaction_scatter)
-            .for_each(|s, &ray, &mie, &inter| { // for_each needs rayon::prelude
-                *s = ray + mie + inter;
-                if s.is_nan() || s.is_infinite() {
-                    *s = 0.0;
-                }
-            });
-    }
-
-    fn scattered_field(&self) -> &Array3<f64> {
-        &self.scattered_field
+impl FieldAccessor for AcousticScattering {
+    fn physics_state(&self) -> &PhysicsState {
+        &self.state
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid::Grid;
-    use crate::medium::Medium;
-    use crate::medium::tissue_specific;
-    use ndarray::{Array3, ShapeBuilder};
-    use crate::physics::traits::AcousticScatteringModelTrait; // For testing trait methods
-
-    fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
-        Grid::new(nx, ny, nz, 0.01, 0.01, 0.01)
-    }
-
-    #[derive(Debug)]
-    struct MockMedium {
-        sound_speed_val: f64,
-        density_val: f64,
-        dummy_temperature: Array3<f64>,
-        dummy_bubble_radius: Array3<f64>,
-        dummy_bubble_velocity: Array3<f64>,
-    }
-
-    impl Default for MockMedium {
-        fn default() -> Self {
-            let default_dim = (2,2,2);
-            Self {
-                sound_speed_val: 1500.0,
-                density_val: 1000.0,
-                dummy_temperature: Array3::zeros(default_dim.f()),
-                dummy_bubble_radius: Array3::zeros(default_dim.f()),
-                dummy_bubble_velocity: Array3::zeros(default_dim.f()),
-            }
-        }
-    }
-
-    impl Medium for MockMedium {
-        fn sound_speed(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.sound_speed_val }
-        fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.density_val }
-        fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.001 }
-        fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.072 }
-        fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 101325.0 }
-        fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 2330.0 }
-        fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 1.4 }
-        fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.6 }
-        fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 2e-9 }
-        fn temperature(&self) -> &Array3<f64> { &self.dummy_temperature }
-        fn is_homogeneous(&self) -> bool { true }
-        fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 4186.0 }
-        fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 { 0.1 }
-        fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 2.1e-4 }
-        fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 1.43e-7 }
-        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 5.0 }
-        fn absorption_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.1 }
-        fn reduced_scattering_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 1.0 }
-        fn reference_frequency(&self) -> f64 { 1e6 }
-        fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<tissue_specific::TissueType> { None }
-        fn update_temperature(&mut self, _temperature: &Array3<f64>) {}
-        fn bubble_radius(&self) -> &Array3<f64> { &self.dummy_bubble_radius }
-        fn bubble_velocity(&self) -> &Array3<f64> { &self.dummy_bubble_velocity }
-        fn update_bubble_state(&mut self, _radius: &Array3<f64>, _velocity: &Array3<f64>) {}
-        fn density_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.density_val) }
-        fn sound_speed_array(&self) -> Array3<f64> { Array3::from_elem(self.dummy_temperature.dim(), self.sound_speed_val) }
-        // Default implementations for new elastic methods
-        fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
-        fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
-        fn lame_lambda_array(&self) -> Array3<f64> { Array3::zeros(self.dummy_temperature.dim()) }
-        fn lame_mu_array(&self) -> Array3<f64> { Array3::zeros(self.dummy_temperature.dim()) }
-    }
-
+    use crate::HomogeneousMedium;
+    
     #[test]
-    fn test_acoustic_scattering_model_new() {
-        let grid_dims = (2, 3, 4);
-        let test_grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
-        let model = AcousticScatteringModel::new(&test_grid);
-
-        assert_eq!(model.scattered_field().dim(), grid_dims); // Use trait accessor
-        assert!(model.scattered_field().iter().all(|&x| x == 0.0));
-    }
-
-    #[test]
-    fn test_compute_scattering_via_trait() { // Renamed to indicate trait usage
-        let grid_dims = (2, 2, 2);
-        let test_grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
-        let mut model: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&test_grid)); // Use trait object
+    fn test_acoustic_scattering() {
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let mut scattering = AcousticScattering::new(&grid, 1e6, 0.1);
         
-        let incident_field = Array3::from_elem(grid_dims.f(), 1.0);
-        let bubble_radius_data = Array3::from_elem(grid_dims.f(), 1e-5);
+        // Initialize bubble field
+        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS, 1e-6).unwrap();
         
-        let mock_medium = MockMedium::default();
-        let frequency = 1e6;
-
-        // Call trait method
-        model.compute_scattering(
-            &incident_field,
-            &bubble_radius_data, // Pass the owned array
-            mock_medium.bubble_velocity(),
-            &test_grid,
-            &mock_medium,
-            frequency
-        );
-
-        assert!(model.scattered_field().iter().all(|&x| x.is_finite()));
+        // Create incident field
+        let incident = Array3::from_elem((10, 10, 10), 1000.0);
+        
+        // Create test medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+        
+        // Compute scattering
+        scattering.compute_scattering(&incident, &grid, &medium).unwrap();
+        
+        // Check that scattered field is non-zero
+        let scattered = scattering.scattered_field();
+        assert!(scattered.iter().any(|&x| x != 0.0));
     }
 }

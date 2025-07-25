@@ -24,6 +24,7 @@ pub mod gpu;
 pub mod grid;
 pub mod log;
 pub mod medium;
+pub mod ml;
 pub mod output;
 pub mod physics;
 pub mod plotting;

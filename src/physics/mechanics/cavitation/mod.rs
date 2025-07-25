@@ -28,9 +28,8 @@ pub mod dynamics;
 pub mod effects;
 pub mod model;
 
-pub use model::CavitationModel;
-
-pub mod trait_impls; // Added to include the trait implementations
+pub use core::CavitationModel;
+pub use model::LegacyCavitationModel;
 
 // Note: All constants previously at the top level of this file 
 // (STEFAN_BOLTZMANN, MIN_RADIUS, MAX_RADIUS, MAX_VELOCITY, MAX_ACCELERATION)

@@ -18,12 +18,15 @@ use kwavers::{
     init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, 
     PMLConfig, KwaversResult, SensorConfig, RecorderConfig,
     physics::{
-        chemistry::{ChemicalModel, ChemicalUpdateParams},
-        mechanics::cavitation::model::CavitationModel,
-        optics::diffusion::LightDiffusion as LightDiffusionModel,
-        composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, FieldType},
-        traits::{CavitationModelBehavior, LightDiffusionModelTrait},
+        composable::{ComposableComponent, PhysicsPipeline},
+        chemistry::{ChemicalReaction, ReactionRate, Species},
+        mechanics::cavitation::{CavitationModel, RadiationDamping, ViscousTerms},
+        optics::sonoluminescence::{
+            BremsstrahlingEmission, BlackbodyRadiation, SonoluminescenceModel
+        },
+        thermal::{ThermalConduction, ThermalModel},
     },
+    medium::homogeneous::HomogeneousMedium,
     boundary::Boundary,
     source::Source,
     Grid, Time
@@ -157,21 +160,18 @@ impl AdvancedSonoluminescenceSimulation {
         let n_steps = (config.time_duration / dt).ceil() as usize;
         let time = Time::new(dt, n_steps);
         
-        // Create enhanced medium with optical properties
-        let medium = Arc::new(HomogeneousMedium::new(
-            998.0, // Density (kg/m³)
-            1482.0, // Sound speed (m/s)
+        // Create medium with advanced physics parameters
+        let mut medium = HomogeneousMedium::new(
+            config.density,
+            config.sound_speed,
             &grid,
             config.absorption_coefficient,
             config.scattering_coefficient,
-        ));
-        
-        // Configure medium for advanced physics
-        let mut medium_clone = Arc::clone(&medium);
-        let medium_mut = Arc::get_mut(&mut medium_clone).unwrap();
-        medium_mut.alpha0 = 0.3; // Power law absorption
-        medium_mut.delta = 1.1; // Power law exponent
-        medium_mut.b_a = 5.2; // Nonlinearity parameter
+        );
+        medium.alpha0 = 0.3; // Power law absorption
+        medium.delta = 1.1; // Power law exponent
+        medium.b_a = 5.2; // Nonlinearity parameter
+        let medium = Arc::new(medium);
         
         // Create physics pipeline with advanced components
         let mut physics_pipeline = PhysicsPipeline::new();
@@ -268,7 +268,7 @@ impl AdvancedSonoluminescenceSimulation {
         let mut boundary = PMLBoundary::new(pml_config)?;
         
         // Main simulation loop
-        let mut context = PhysicsContext::new(self.config.frequency);
+        let mut context = kwavers::physics::PhysicsContext::new(self.config.frequency);
         context = context
             .with_parameter("bubble_density", self.config.bubble_density)
             .with_parameter("cavitation_threshold", self.config.cavitation_threshold)
@@ -426,17 +426,17 @@ impl AdvancedCavitationComponent {
     }
 }
 
-impl PhysicsComponent for AdvancedCavitationComponent {
+impl ComposableComponent for AdvancedCavitationComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure] // Depends on acoustic pressure
+    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Pressure] // Depends on acoustic pressure
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Cavitation, FieldType::Light] // Produces cavitation and light
+    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Cavitation, kwavers::physics::composable::FieldType::Light] // Produces cavitation and light
     }
     
     fn apply(
@@ -446,7 +446,7 @@ impl PhysicsComponent for AdvancedCavitationComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         t: f64,
-        context: &PhysicsContext,
+        context: &kwavers::physics::PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
@@ -486,7 +486,7 @@ struct AdvancedLightComponent {
     id: String,
     config: SonoluminescenceConfig,
     metrics: std::collections::HashMap<String, f64>,
-    light_model: LightDiffusionModel,
+    light_model: kwavers::physics::optics::LightDiffusion,
 }
 
 impl AdvancedLightComponent {
@@ -495,7 +495,7 @@ impl AdvancedLightComponent {
             id,
             config,
             metrics: std::collections::HashMap::new(),
-            light_model: LightDiffusionModel::new(
+            light_model: kwavers::physics::optics::LightDiffusion::new(
                 &Grid::new(1, 1, 1, 1.0, 1.0, 1.0),
                 true, // Enable polarization
                 true, // Enable scattering
@@ -505,17 +505,17 @@ impl AdvancedLightComponent {
     }
 }
 
-impl PhysicsComponent for AdvancedLightComponent {
+impl ComposableComponent for AdvancedLightComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Light] // Depends on light source from cavitation
+    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Light] // Depends on light source from cavitation
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Light, FieldType::Temperature] // Produces light field and thermal effects
+    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Light, kwavers::physics::composable::FieldType::Temperature] // Produces light field and thermal effects
     }
     
     fn apply(
@@ -525,7 +525,7 @@ impl PhysicsComponent for AdvancedLightComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         _t: f64,
-        _context: &PhysicsContext,
+        _context: &kwavers::physics::PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
@@ -561,7 +561,7 @@ struct AdvancedChemicalComponent {
     id: String,
     config: SonoluminescenceConfig,
     metrics: std::collections::HashMap<String, f64>,
-    chemical_model: ChemicalModel,
+    chemical_model: kwavers::physics::chemistry::ChemicalModel,
 }
 
 impl AdvancedChemicalComponent {
@@ -570,22 +570,22 @@ impl AdvancedChemicalComponent {
             id,
             config,
             metrics: std::collections::HashMap::new(),
-            chemical_model: ChemicalModel::new(grid, true, true).expect("Failed to create chemical model"),
+            chemical_model: kwavers::physics::chemistry::ChemicalModel::new(grid, true, true).expect("Failed to create chemical model"),
         }
     }
 }
 
-impl PhysicsComponent for AdvancedChemicalComponent {
+impl ComposableComponent for AdvancedChemicalComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
-        vec![FieldType::Temperature, FieldType::Light] // Depends on temperature and light
+    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Temperature, kwavers::physics::composable::FieldType::Light] // Depends on temperature and light
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Chemical, FieldType::Temperature] // Produces chemical effects
+    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
+        vec![kwavers::physics::composable::FieldType::Chemical, kwavers::physics::composable::FieldType::Temperature] // Produces chemical effects
     }
     
     fn apply(
@@ -595,7 +595,7 @@ impl PhysicsComponent for AdvancedChemicalComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         t: f64,
-        context: &PhysicsContext,
+        context: &kwavers::physics::PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
@@ -604,7 +604,7 @@ impl PhysicsComponent for AdvancedChemicalComponent {
         let temperature_field = fields.index_axis(ndarray::Axis(0), 2).to_owned();
         let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
         
-        let chemical_params = ChemicalUpdateParams {
+        let chemical_params = kwavers::physics::chemistry::ChemicalUpdateParams {
             light: &light_field,
             emission_spectrum: &light_field, // Using light as spectrum for now
             bubble_radius: &light_field, // Using light field as placeholder

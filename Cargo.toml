@@ -81,22 +81,26 @@ cudarc = { version = "0.11", features = ["cuda-12050"], optional = true }
 wgpu = { version = "0.19", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.14", features = ["derive"], optional = true }
 
+# AI/ML Integration
+ort = { version = "2.0.0-rc.2", optional = true }
+candle-core = { version = "0.3", optional = true }
+candle-nn = { version = "0.3", optional = true }
+tch = { version = "0.14", optional = true }
+
 [dev-dependencies]
 criterion = "0.4"
 proptest = "1.2"
 mockall = "0.11"
 
 [features]
-default = ["basic-physics"]
-basic-physics = []
-advanced-physics = ["plotly"]
-full-features = ["advanced-physics", "plotly", "tokio", "iterator-optimizations", "gpu-acceleration", "advanced-visualization"]
-iterator-optimizations = []
-gpu-acceleration = ["cudarc", "wgpu", "bytemuck"]  # Enhanced GPU feature
-advanced-visualization = ["egui", "eframe", "three-d", "winit", "pollster", "image", "nalgebra"]  # Phase 11 visualization
-web-visualization = ["wasm-bindgen", "web-sys", "js-sys", "console_error_panic_hook"]  # Web support
-vr-support = ["openxr", "nalgebra"]  # VR/AR capabilities
-nightly = [] # Nightly Rust features
+default = ["parallel", "hdf5", "plotting", "gpu"]
+parallel = ["rayon", "crossbeam", "parking_lot"]
+hdf5 = ["dep:hdf5", "hdf5-sys"]
+plotting = ["plotters", "plotters-backend", "plotters-bitmap"]
+gpu = ["wgpu", "bytemuck", "futures", "pollster"]
+advanced-visualization = ["wgpu", "bytemuck", "futures", "pollster", "winit", "egui", "egui-wgpu", "egui-winit"]
+ml = ["ort", "candle-core", "candle-nn"]
+full = ["parallel", "hdf5", "plotting", "gpu", "advanced-visualization", "ml"]
 
 [profile.release]
 opt-level = 3

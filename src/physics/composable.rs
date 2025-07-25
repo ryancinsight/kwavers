@@ -29,6 +29,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
 
+
 /// Field identifiers for different physics quantities
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldType {
@@ -979,25 +980,21 @@ impl PhysicsComponent for CavitationComponent {
         // Create a mutable copy for cavitation processing
         let mut pressure_for_cavitation = pressure.clone();
         
-        // Update cavitation dynamics - this modifies the pressure field copy
-        let light_emission = self.cavitation_model.update_cavitation(
-            &mut pressure_for_cavitation,
+        // Update cavitation dynamics using the trait
+        self.cavitation_model.update_cavitation(
             &pressure,
             grid,
-            dt,
             medium,
-            1e6, // 1 MHz frequency
-        );
+            dt,
+            t,
+        )?;
         
         // Write the updated pressure back to the main fields array
         let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
         pressure_field_mut.assign(&pressure_for_cavitation);
         
-        // Store light emission in the appropriate field (assuming light is index 1)
-        if fields.shape()[0] > 1 {
-            let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1);
-            light_field.assign(&light_emission);
-        }
+        // Light emission is now handled separately by the cavitation model
+        // and should be retrieved through the state if needed
         
         // Record performance metrics
         self.metrics.insert("execution_time".to_string(), start_time.elapsed().as_secs_f64());
@@ -1065,7 +1062,7 @@ impl PhysicsComponent for ElasticWaveComponent {
         // Update elastic wave propagation
         // Use a dummy pressure field since ElasticWave doesn't use it
         let dummy_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let dummy_source = &crate::source::MockSource::new();
+        let dummy_source = &crate::source::NullSource::new();
         self.elastic_model.update_wave(fields, &dummy_pressure, dummy_source, grid, medium, dt, t);
         
         // Record performance metrics
