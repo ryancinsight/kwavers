@@ -291,6 +291,7 @@ pub struct MemoryPerformanceMetrics {
     pub total_deallocations: u64,
     pub total_transfers: u64,
     pub total_bytes_transferred: u64,
+    pub total_transfer_time_seconds: f64,
     pub average_transfer_bandwidth_gb_s: f64,
     pub peak_transfer_bandwidth_gb_s: f64,
     pub allocation_efficiency: f64,
@@ -304,6 +305,7 @@ impl Default for MemoryPerformanceMetrics {
             total_deallocations: 0,
             total_transfers: 0,
             total_bytes_transferred: 0,
+            total_transfer_time_seconds: 0.0,
             average_transfer_bandwidth_gb_s: 0.0,
             peak_transfer_bandwidth_gb_s: 0.0,
             allocation_efficiency: 1.0,
@@ -415,15 +417,18 @@ impl AdvancedGpuMemoryManager {
         // Update performance metrics
         self.performance_metrics.total_transfers += 1;
         self.performance_metrics.total_bytes_transferred += size_bytes as u64;
+        self.performance_metrics.total_transfer_time_seconds += transfer_time;
         
         if bandwidth_gb_s > self.performance_metrics.peak_transfer_bandwidth_gb_s {
             self.performance_metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;
         }
         
-        // Update average bandwidth
+        // Update average bandwidth using actual cumulative time
         let total_gb = self.performance_metrics.total_bytes_transferred as f64 / 1e9;
-        let total_time = self.performance_metrics.total_transfers as f64 * transfer_time; // Approximation
-        self.performance_metrics.average_transfer_bandwidth_gb_s = total_gb / total_time;
+        if self.performance_metrics.total_transfer_time_seconds > 0.0 {
+            self.performance_metrics.average_transfer_bandwidth_gb_s = 
+                total_gb / self.performance_metrics.total_transfer_time_seconds;
+        }
 
         Ok(self.performance_metrics.total_transfers as usize - 1) // Return transfer ID
     }
@@ -448,6 +453,7 @@ impl AdvancedGpuMemoryManager {
         // Update performance metrics
         self.performance_metrics.total_transfers += 1;
         self.performance_metrics.total_bytes_transferred += size_bytes as u64;
+        self.performance_metrics.total_transfer_time_seconds += transfer_time;
         
         if bandwidth_gb_s > self.performance_metrics.peak_transfer_bandwidth_gb_s {
             self.performance_metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;

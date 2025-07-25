@@ -245,20 +245,70 @@ impl KernelManager {
                 "#
             }
             OptimizationLevel::Moderate => {
-                // Use register blocking
+                // Use register blocking with proper boundary checks
                 r#"
-                // Load neighboring values into registers
+                // Load neighboring values into registers with proper boundary checks
                 double p_center = pressure[idx];
                 double p_xm1 = (i > 0) ? pressure[idx - 1] : p_center;
                 double p_xp1 = (i < nx - 1) ? pressure[idx + 1] : p_center;
+                double p_ym1 = (j > 0) ? pressure[idx - nx] : p_center;
+                double p_yp1 = (j < ny - 1) ? pressure[idx + nx] : p_center;
+                double p_zm1 = (k > 0) ? pressure[idx - nx*ny] : p_center;
+                double p_zp1 = (k < nz - 1) ? pressure[idx + nx*ny] : p_center;
+                
+                double vx_xm1 = (i > 0) ? velocity_x[idx - 1] : velocity_x[idx];
+                double vx_xp1 = (i < nx - 1) ? velocity_x[idx + 1] : velocity_x[idx];
+                double vy_ym1 = (j > 0) ? velocity_y[idx - nx] : velocity_y[idx];
+                double vy_yp1 = (j < ny - 1) ? velocity_y[idx + nx] : velocity_y[idx];
+                double vz_zm1 = (k > 0) ? velocity_z[idx - nx*ny] : velocity_z[idx];
+                double vz_zp1 = (k < nz - 1) ? velocity_z[idx + nx*ny] : velocity_z[idx];
                 "#
             }
             _ => {
-                // Direct global memory access
+                // Direct global memory access with boundary checks
                 r#"
                 double p_center = pressure[idx];
-                double p_xm1 = pressure[idx - 1];
-                double p_xp1 = pressure[idx + 1];
+                double p_xm1 = (i > 0) ? pressure[idx - 1] : p_center;
+                double p_xp1 = (i < nx - 1) ? pressure[idx + 1] : p_center;
+                double p_ym1 = (j > 0) ? pressure[idx - nx] : p_center;
+                double p_yp1 = (j < ny - 1) ? pressure[idx + nx] : p_center;
+                double p_zm1 = (k > 0) ? pressure[idx - nx*ny] : p_center;
+                double p_zp1 = (k < nz - 1) ? pressure[idx + nx*ny] : p_center;
+                "#
+            }
+        };
+
+        let computation = match config.optimization_level {
+            OptimizationLevel::Moderate => {
+                // Use register variables for computation
+                r#"
+    // Pressure update using velocity divergence with register variables
+    double div_v = (vx_xp1 - vx_xm1) * 0.5 * inv_dx +
+                   (vy_yp1 - vy_ym1) * 0.5 * inv_dy +
+                   (vz_zp1 - vz_zm1) * 0.5 * inv_dz;
+    
+    new_pressure[idx] = p_center - rho0 * c0 * c0 * dt * div_v;
+    
+    // Velocity updates using pressure gradients with register variables
+    double dp_dx = (p_xp1 - p_xm1) * 0.5 * inv_dx;
+    double dp_dy = (p_yp1 - p_ym1) * 0.5 * inv_dy;
+    double dp_dz = (p_zp1 - p_zm1) * 0.5 * inv_dz;
+                "#
+            }
+            _ => {
+                // Standard computation with boundary-safe access
+                r#"
+    // Pressure update using velocity divergence
+    double div_v = (vx_xp1 - vx_xm1) * 0.5 * inv_dx +
+                   (vy_yp1 - vy_ym1) * 0.5 * inv_dy +
+                   (vz_zp1 - vz_zm1) * 0.5 * inv_dz;
+    
+    new_pressure[idx] = p_center - rho0 * c0 * c0 * dt * div_v;
+    
+    // Velocity updates using pressure gradients
+    double dp_dx = (p_xp1 - p_xm1) * 0.5 * inv_dx;
+    double dp_dy = (p_yp1 - p_ym1) * 0.5 * inv_dy;
+    double dp_dz = (p_zp1 - p_zm1) * 0.5 * inv_dz;
                 "#
             }
         };
@@ -295,23 +345,13 @@ extern "C" __global__ void acoustic_wave_kernel(
     double inv_dy = 1.0 / dy;
     double inv_dz = 1.0 / dz;
     
-    // Pressure update using velocity divergence
-    double div_v = (velocity_x[idx + 1] - velocity_x[idx - 1]) * 0.5 * inv_dx +
-                   (velocity_y[idx + nx] - velocity_y[idx - nx]) * 0.5 * inv_dy +
-                   (velocity_z[idx + nx*ny] - velocity_z[idx - nx*ny]) * 0.5 * inv_dz;
-    
-    new_pressure[idx] = pressure[idx] - rho0 * c0 * c0 * dt * div_v;
-    
-    // Velocity updates using pressure gradients
-    double dp_dx = (pressure[idx + 1] - pressure[idx - 1]) * 0.5 * inv_dx;
-    double dp_dy = (pressure[idx + nx] - pressure[idx - nx]) * 0.5 * inv_dy;
-    double dp_dz = (pressure[idx + nx*ny] - pressure[idx - nx*ny]) * 0.5 * inv_dz;
+    {computation}
     
     new_velocity_x[idx] = velocity_x[idx] - dt / rho0 * dp_dx;
     new_velocity_y[idx] = velocity_y[idx] - dt / rho0 * dp_dy;
     new_velocity_z[idx] = velocity_z[idx] - dt / rho0 * dp_dz;
 }}
-"#, shared_memory = shared_memory, memory_access = memory_access)
+"#, shared_memory = shared_memory, memory_access = memory_access, computation = computation)
     }
 
     /// Generate optimized CUDA thermal diffusion kernel
@@ -330,13 +370,34 @@ extern "C" __global__ void acoustic_wave_kernel(
                 double temp_center = shared_temp[shared_idx];
                 double temp_xm1 = shared_temp[shared_idx - 1];
                 double temp_xp1 = shared_temp[shared_idx + 1];
+                double temp_ym1 = shared_temp[shared_idx - (blockDim.x + 2)];
+                double temp_yp1 = shared_temp[shared_idx + (blockDim.x + 2)];
+                double temp_zm1 = shared_temp[shared_idx - (blockDim.x + 2) * (blockDim.y + 2)];
+                double temp_zp1 = shared_temp[shared_idx + (blockDim.x + 2) * (blockDim.y + 2)];
+                "#
+            }
+            OptimizationLevel::Moderate => {
+                r#"
+                // Use register blocking with proper boundary checks
+                double temp_center = temperature[idx];
+                double temp_xm1 = (i > 0) ? temperature[idx - 1] : temp_center;
+                double temp_xp1 = (i < nx - 1) ? temperature[idx + 1] : temp_center;
+                double temp_ym1 = (j > 0) ? temperature[idx - nx] : temp_center;
+                double temp_yp1 = (j < ny - 1) ? temperature[idx + nx] : temp_center;
+                double temp_zm1 = (k > 0) ? temperature[idx - nx*ny] : temp_center;
+                double temp_zp1 = (k < nz - 1) ? temperature[idx + nx*ny] : temp_center;
                 "#
             }
             _ => {
                 r#"
+                // Direct global memory access with boundary checks
                 double temp_center = temperature[idx];
-                double temp_xm1 = temperature[idx - 1];
-                double temp_xp1 = temperature[idx + 1];
+                double temp_xm1 = (i > 0) ? temperature[idx - 1] : temp_center;
+                double temp_xp1 = (i < nx - 1) ? temperature[idx + 1] : temp_center;
+                double temp_ym1 = (j > 0) ? temperature[idx - nx] : temp_center;
+                double temp_yp1 = (j < ny - 1) ? temperature[idx + nx] : temp_center;
+                double temp_zm1 = (k > 0) ? temperature[idx - nx*ny] : temp_center;
+                double temp_zp1 = (k < nz - 1) ? temperature[idx + nx*ny] : temp_center;
                 "#
             }
         };
@@ -361,10 +422,10 @@ extern "C" __global__ void thermal_diffusion_kernel(
     
     {optimization_code}
     
-    // 3D thermal diffusion with second-order finite differences
+    // 3D thermal diffusion with second-order finite differences using register variables
     double d2T_dx2 = (temp_xp1 - 2.0 * temp_center + temp_xm1) / (dx * dx);
-    double d2T_dy2 = (temperature[idx + nx] - 2.0 * temp_center + temperature[idx - nx]) / (dy * dy);
-    double d2T_dz2 = (temperature[idx + nx*ny] - 2.0 * temp_center + temperature[idx - nx*ny]) / (dz * dz);
+    double d2T_dy2 = (temp_yp1 - 2.0 * temp_center + temp_ym1) / (dy * dy);
+    double d2T_dz2 = (temp_zp1 - 2.0 * temp_center + temp_zm1) / (dz * dz);
     
     double laplacian = d2T_dx2 + d2T_dy2 + d2T_dz2;
     

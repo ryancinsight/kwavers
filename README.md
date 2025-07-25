@@ -51,7 +51,7 @@ Kwavers is a cutting-edge, high-performance ultrasound simulation library writte
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/kwavers.git
+git clone https://github.com/ryancinsight/kwavers.git
 cd kwavers
 
 # Build with GPU acceleration (requires CUDA or OpenCL)
@@ -256,7 +256,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Follow NVIDIA CUDA installation guide
 
 # Clone and build
-git clone https://github.com/your-org/kwavers.git
+git clone https://github.com/ryancinsight/kwavers.git
 cd kwavers
 cargo build --all-features
 cargo test --all-features
@@ -308,7 +308,7 @@ If you use Kwavers in your research, please cite:
   title={Kwavers: Advanced GPU-Accelerated Ultrasound Simulation Toolbox},
   author={Kwavers Development Team},
   year={2024},
-  url={https://github.com/your-org/kwavers},
+  url={https://github.com/ryancinsight/kwavers},
   version={1.0.0}
 }
 ```
