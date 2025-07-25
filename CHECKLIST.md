@@ -82,7 +82,7 @@
 - [x] Anomaly detection algorithms *(R: Dev Team · A: Tech Lead · C: QA Team · I: Stakeholders)*
 - [ ] Pre-trained models for tissue classification *(blocked – awaiting data)*
 - [ ] Real-time prediction capabilities *(dependency: model training)*
-- [ ] Model training pipeline *(dependency: data augmentation scripts)*
+- [x] Model training pipeline *(R: Dev Team · A: Tech Lead · C: Data Science · I: Stakeholders)*
 - [ ] Uncertainty quantification *(dependency: training pipeline)*
 - [ ] Integration with simulation pipeline *(final integration task)*
 

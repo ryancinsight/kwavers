@@ -7,7 +7,7 @@ use rand::Rng;
 
 /// Tissue classification model
 pub struct TissueClassifierModel {
-    engine: InferenceEngine,
+    pub(crate) engine: InferenceEngine,
     metadata: ModelMetadata,
 }
 
@@ -56,9 +56,7 @@ impl MLModel for TissueClassifierModel {
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         let (batch, features) = input.dim();
         if features != self.metadata.input_shape[0] {
-            return Err(KwaversError::Validation(
-                crate::error::ValidationError::DimensionMismatch,
-            ));
+            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
         }
 
         // Reshape into the 3-D tensor expected by the engine: (batch, features, 1)
@@ -86,9 +84,7 @@ impl MLModel for TissueClassifierModel {
 
         // Sanity-check dimensionality
         if gradients.shape() != self.engine.weights_mut().shape() {
-            return Err(KwaversError::Validation(
-                crate::error::ValidationError::DimensionMismatch,
-            ));
+            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
         }
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
