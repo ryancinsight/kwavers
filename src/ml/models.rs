@@ -33,7 +33,7 @@ impl TissueClassifierModel {
     /// Create a classifier from explicit weights / bias.
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
         let (features, classes) = weights.dim();
-        let engine = InferenceEngine::from_weights(weights, bias.clone(), 32, false);
+        let engine = InferenceEngine::from_weights(weights, bias, 32, false);
 
         let metadata = ModelMetadata {
             name: "TissueClassifier".to_string(),
