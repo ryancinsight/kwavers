@@ -1,7 +1,7 @@
 # Kwavers - Advanced Ultrasound Simulation Toolbox
 
-**Version**: 1.0.0  
-**Status**: Phase 11 COMPLETED ✅ - Advanced 3D Visualization  
+**Version**: 1.2.0  
+**Status**: Phase 12 IN PROGRESS 🚧 - AI/ML Integration & Optimization  
 **Performance**: >17M grid updates/second with GPU acceleration
 
 ## 🚀 Latest Achievement - Phase 11 Completed
