@@ -28,7 +28,7 @@ pub(crate) const MAX_ACCELERATION_MODEL_DEFAULT: f64 = 1.0e12;
 /// and an initial bubble radius, and its state is updated over time by methods in `core.rs`,
 /// `dynamics.rs`, and `effects.rs`.
 #[derive(Debug)]
-pub struct CavitationModel {
+pub struct LegacyCavitationModel {
     /// 3D array representing the radius of cavitation bubbles at each grid point (meters).
     pub(crate) radius: Array3<f64>,
     /// 3D array representing the radial velocity of the bubble wall at each grid point (m/s).
@@ -53,7 +53,7 @@ pub struct CavitationModel {
     pub(crate) interaction_scatter: Array3<f64>,
 }
 
-impl CavitationModel {
+impl LegacyCavitationModel {
     /// Creates a new `CavitationModel` instance.
     ///
     /// Initializes the bubble field with a uniform `initial_radius` across the specified `grid`.
@@ -117,7 +117,7 @@ mod tests {
         let test_grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
         let initial_radius = 5e-6;
 
-        let model = CavitationModel::new(&test_grid, initial_radius);
+        let model = LegacyCavitationModel::new(&test_grid, initial_radius);
 
         // Assert dimensions
         assert_eq!(model.radius.dim(), grid_dims);
@@ -149,7 +149,7 @@ mod tests {
 
         // Test initial radius clamping
         let very_small_radius = MIN_RADIUS_MODEL_DEFAULT / 2.0;
-        let model_clamped = CavitationModel::new(&test_grid, very_small_radius);
+        let model_clamped = LegacyCavitationModel::new(&test_grid, very_small_radius);
         for &r in model_clamped.radius.iter() {
             assert_eq!(r, MIN_RADIUS_MODEL_DEFAULT);
         }
@@ -160,20 +160,20 @@ mod tests {
         let grid_dims = (2, 2, 2);
         let test_grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
         let initial_radius = 6e-6;
-        let mut model = CavitationModel::new(&test_grid, initial_radius);
+        let mut model = LegacyCavitationModel::new(&test_grid, initial_radius);
 
         // Modify a value to ensure accessors point to the right data
         model.radius[[0,0,0]] = 7e-6;
         model.velocity[[0,0,0]] = 1.0;
         model.temperature[[0,0,0]] = 300.0;
 
-        assert_eq!(model.radius().dim(), grid_dims);
-        assert_eq!(model.radius()[[0,0,0]], 7e-6);
+        assert_eq!(model.radius.dim(), grid_dims);
+        assert_eq!(model.radius[[0,0,0]], 7e-6);
 
-        assert_eq!(model.velocity().dim(), grid_dims);
-        assert_eq!(model.velocity()[[0,0,0]], 1.0);
-        
-        assert_eq!(model.temperature().dim(), grid_dims);
-        assert_eq!(model.temperature()[[0,0,0]], 300.0);
+                assert_eq!(model.velocity.dim(), grid_dims);
+        assert_eq!(model.velocity[[0,0,0]], 1.0);
+
+        assert_eq!(model.temperature.dim(), grid_dims);
+        assert_eq!(model.temperature[[0,0,0]], 300.0);
     }
 }

@@ -255,6 +255,12 @@ pub enum PhysicsError {
         max_dt: f64,
         reason: String,
     },
+    /// State management error
+    StateError(String),
+    /// Invalid field index
+    InvalidFieldIndex(usize),
+    /// Dimension mismatch
+    DimensionMismatch,
     /// General simulation error
     SimulationError {
         message: String,
@@ -285,6 +291,15 @@ impl fmt::Display for PhysicsError {
             }
             PhysicsError::TimeStepTooLarge { dt, max_dt, reason } => {
                 write!(f, "Time step {} too large (max {}): {}", dt, max_dt, reason)
+            }
+            PhysicsError::StateError(reason) => {
+                write!(f, "State management error: {}", reason)
+            }
+            PhysicsError::InvalidFieldIndex(index) => {
+                write!(f, "Invalid field index: {}", index)
+            }
+            PhysicsError::DimensionMismatch => {
+                write!(f, "Dimension mismatch in physics simulation")
             }
             PhysicsError::SimulationError { message } => {
                 write!(f, "Simulation error: {}", message)

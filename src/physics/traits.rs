@@ -52,48 +52,41 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     // For now, they are omitted. Implementations can provide their own config methods.
 }
 
-/// Trait for cavitation behavior models.
+/// Trait for cavitation models.
 ///
-/// Implementors of this trait simulate the dynamics of cavitation bubbles and their
+/// Implementors of this trait simulate bubble dynamics, considering the nonlinear
 /// effects on the acoustic field and other physical phenomena (e.g., sonoluminescence).
 pub trait CavitationModelBehavior: Debug + Send + Sync {
     /// Advances the cavitation simulation by a single time step `dt`.
     ///
     /// # Arguments
     ///
-    /// * `p_update` - A mutable reference to a 3D array representing the acoustic pressure field.
-    ///   This field will be modified to include pressure changes due to bubble activity.
-    /// * `p` - A reference to the current 3D acoustic pressure field driving bubble dynamics.
+    /// * `pressure` - A reference to the 3D acoustic pressure field driving bubble dynamics.
     /// * `grid` - A reference to the `Grid` structure.
-    /// * `dt` - The time step size for this update.
     /// * `medium` - A trait object implementing `Medium`.
-    /// * `frequency` - The driving acoustic frequency.
+    /// * `dt` - The time step size for this update.
+    /// * `t` - The current simulation time.
     ///
     /// # Returns
     ///
-    /// An `Array3<f64>` representing the light emission power density (W/m^3) from sonoluminescence.
+    /// A `KwaversResult<()>` indicating success or failure of the update.
     fn update_cavitation(
         &mut self,
-        p_update: &mut Array3<f64>,
-        p: &Array3<f64>,
+        pressure: &Array3<f64>,
         grid: &Grid,
-        dt: f64,
         medium: &dyn Medium,
-        frequency: f64,
-    ) -> Array3<f64>;
+        dt: f64,
+        t: f64,
+    ) -> crate::error::KwaversResult<()>;
 
-    /// Returns a reference to the 3D array of bubble radii (meters).
-    fn radius(&self) -> &Array3<f64>;
+    /// Returns the 3D array of bubble radii (meters).
+    fn bubble_radius(&self) -> crate::error::KwaversResult<Array3<f64>>;
 
-    /// Returns a reference to the 3D array of bubble wall velocities (m/s).
-    fn velocity(&self) -> &Array3<f64>;
+    /// Returns the 3D array of bubble wall velocities (m/s).
+    fn bubble_velocity(&self) -> crate::error::KwaversResult<Array3<f64>>;
 
-    /// Returns a reference to the 3D array of bubble temperatures (Kelvin).
-    fn temperature(&self) -> &Array3<f64>;
-
-    /// Sets the 3D array of bubble radii.
-    /// Required for numerical solvers that manage state externally.
-    fn set_radius(&mut self, new_radius: &Array3<f64>);
+    /// Reports performance metrics of the cavitation model.
+    fn report_performance(&self);
 }
 
 // Placeholder for other physics model traits that will be added later:
@@ -173,7 +166,7 @@ pub trait ThermalModelTrait: Debug + Send + Sync {
     fn report_performance(&self);
 }
 
-/// Trait for chemical reaction models.
+/// Trait for chemical models.
 ///
 /// Implementors of this trait simulate chemical reactions, radical formation,
 /// and other chemical processes occurring within the medium.
@@ -207,9 +200,6 @@ pub trait ChemicalModelTrait: Debug + Send + Sync {
 
     /// Returns a reference to the 3D array of the primary radical concentration.
     fn radical_concentration(&self) -> &Array3<f64>;
-
-    // Other accessors like hydroxyl_concentration, etc., could be added if needed by consumers
-    // using the trait object. For now, only the one used by solver::numerics is included.
 }
 
 /// Trait for acoustic streaming models.
@@ -233,8 +223,6 @@ pub trait StreamingModelTrait: Debug + Send + Sync {
     );
 
     /// Returns a reference to the 3D array of the streaming velocity field (m/s).
-    /// Note: This might represent a single component or magnitude depending on implementation.
-    /// For simplicity, matching current `StreamingModel` which has one velocity field.
     fn velocity(&self) -> &Array3<f64>;
 }
 
@@ -282,7 +270,4 @@ pub trait HeterogeneityModelTrait: Debug + Send + Sync {
     ///
     /// A 3D array representing the sound speed at each grid point.
     fn adjust_sound_speed(&self, grid: &Grid) -> Array3<f64>;
-
-    // Potentially add an accessor for the raw variance field if needed:
-    // fn sound_speed_variance_field(&self) -> &Array3<f64>;
 }

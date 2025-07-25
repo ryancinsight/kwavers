@@ -1,11 +1,45 @@
-// physics/chemistry/mod.rs
+//! Chemistry module for sonochemical reactions and radical formation
+//!
+//! Design principles:
+//! - Separation of Concerns: Each sub-module handles a specific aspect
+//! - Open/Closed: Easy to add new reaction types without modifying existing code  
+//! - Interface Segregation: Traits for specific chemical behaviors
+//! - Dependency Inversion: Depends on abstractions (traits) not concrete types
+//! - Single Responsibility: Each component has one clear purpose
+
+use crate::error::{KwaversResult, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, PhysicsError, NumericalError};
-use log::{debug, warn};
-use ndarray::Array3;
+use crate::physics::composable::{PhysicsComponent, PhysicsContext, ValidationResult, FieldType};
+use crate::physics::traits::ChemicalModelTrait;
+use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 use std::time::Instant;
+use log::{debug, warn};
+
+// Define reaction types locally
+#[derive(Debug, Clone)]
+pub struct ChemicalReaction {
+    pub name: String,
+    pub rate_constant: f64,
+}
+
+impl ChemicalReaction {
+    pub fn rate_constant(&self, _temperature: f64, _pressure: f64) -> f64 {
+        self.rate_constant
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReactionRate {
+    pub value: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Species {
+    pub name: String,
+    pub concentration: f64,
+}
 
 /// Parameters for chemical update operations
 /// Follows SOLID principles by grouping related parameters
@@ -39,7 +73,7 @@ impl<'a> ChemicalUpdateParams<'a> {
     ) -> KwaversResult<Self> {
         // Validate parameters following Information Expert principle
         if dt <= 0.0 {
-            return Err(NumericalError::Instability {
+            return Err(crate::error::NumericalError::Instability {
                 operation: "ChemicalUpdateParams validation".to_string(),
                 condition: "Time step must be positive".to_string(),
             }.into());
@@ -118,7 +152,7 @@ impl<'a> ChemicalUpdateParams<'a> {
             .collect();
             
         if !invalid_pressure_values.is_empty() {
-            return Err(NumericalError::NaN {
+            return Err(crate::error::NumericalError::NaN {
                 operation: "Chemical parameter validation".to_string(),
                 inputs: invalid_pressure_values,
             }.into());
@@ -340,6 +374,9 @@ pub struct ChemicalModel {
     metrics: ChemicalMetrics,
     reaction_configs: HashMap<String, ChemicalReactionConfig>,
     state: ChemicalModelState,
+    computation_time: std::time::Duration,
+    update_count: usize,
+    reactions: HashMap<String, ChemicalReaction>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -394,6 +431,9 @@ impl ChemicalModel {
             metrics: ChemicalMetrics::new(),
             reaction_configs: HashMap::new(),
             state: ChemicalModelState::Initialized,
+            computation_time: std::time::Duration::ZERO,
+            update_count: 0,
+            reactions: HashMap::new(),
         })
     }
 
@@ -477,27 +517,6 @@ impl ChemicalModel {
 
         self.state = ChemicalModelState::Completed;
         Ok(())
-    }
-
-    /// Legacy update method for backward compatibility
-    /// Follows Interface Segregation principle - provides alternative interface
-    pub fn update_chemical_legacy(
-        &mut self,
-        p: &Array3<f64>,
-        light: &Array3<f64>,
-        emission_spectrum: &Array3<f64>,
-        bubble_radius: &Array3<f64>,
-        temperature: &Array3<f64>,
-        grid: &Grid,
-        dt: f64,
-        medium: &dyn Medium,
-        frequency: f64,
-    ) -> KwaversResult<()> {
-        let params = ChemicalUpdateParams::new(
-            p, light, emission_spectrum, bubble_radius, temperature,
-            grid, dt, medium, frequency
-        )?;
-        self.update_chemical(&params)
     }
 
     /// Get radical concentration
@@ -602,25 +621,6 @@ impl ChemicalModel {
     }
 }
 
-/// Trait for chemical model components
-/// Follows Interface Segregation principle - defines minimal interface
-pub trait ChemicalModelTrait {
-    fn update_chemical(
-        &mut self,
-        p: &Array3<f64>,
-        light: &Array3<f64>,
-        emission_spectrum: &Array3<f64>,
-        bubble_radius: &Array3<f64>,
-        temperature: &Array3<f64>,
-        grid: &Grid,
-        dt: f64,
-        medium: &dyn Medium,
-        frequency: f64,
-    );
-
-    fn radical_concentration(&self) -> &Array3<f64>;
-}
-
 impl ChemicalModelTrait for ChemicalModel {
     fn update_chemical(
         &mut self,
@@ -634,9 +634,47 @@ impl ChemicalModelTrait for ChemicalModel {
         medium: &dyn Medium,
         frequency: f64,
     ) {
-        if let Err(e) = self.update_chemical_legacy(p, light, emission_spectrum, bubble_radius, temperature, grid, dt, medium, frequency) {
-            warn!("Chemical update failed: {}", e);
+        let start_time = Instant::now();
+        
+        // Create fields map for update
+        let mut fields = HashMap::new();
+        fields.insert(FieldType::Pressure, p.clone());
+        fields.insert(FieldType::Light, light.clone());
+        fields.insert(FieldType::Temperature, temperature.clone());
+        fields.insert(FieldType::Cavitation, bubble_radius.clone());
+        
+        // Create context with proper structure
+        let mut context = PhysicsContext::new(frequency);
+        context.parameters.insert("dt".to_string(), dt);
+        context.parameters.insert("time".to_string(), 0.0);
+        
+        // Add grid parameters
+        context.parameters.insert("nx".to_string(), grid.nx as f64);
+        context.parameters.insert("ny".to_string(), grid.ny as f64);
+        context.parameters.insert("nz".to_string(), grid.nz as f64);
+        context.parameters.insert("dx".to_string(), grid.dx);
+        context.parameters.insert("dy".to_string(), grid.dy);
+        context.parameters.insert("dz".to_string(), grid.dz);
+        
+        // Add medium parameters
+        context.parameters.insert("density".to_string(), medium.density(0.0, 0.0, 0.0, grid));
+        context.parameters.insert("sound_speed".to_string(), medium.sound_speed(0.0, 0.0, 0.0, grid));
+        
+        // Update using the parameters approach
+        let params = ChemicalUpdateParams::new(
+            p, light, emission_spectrum, bubble_radius, temperature,
+            grid, dt, medium, frequency
+        ).unwrap_or_else(|e| {
+            log::error!("Failed to create chemical update params: {}", e);
+            panic!("Chemical update params creation failed");
+        });
+        
+        if let Err(e) = self.update_chemical(&params) {
+            log::error!("Chemical update failed: {}", e);
         }
+        
+        self.computation_time += start_time.elapsed();
+        self.update_count += 1;
     }
 
     fn radical_concentration(&self) -> &Array3<f64> {
@@ -740,28 +778,3 @@ mod tests {
     }
 }
 
-// Implement the physics::traits::ChemicalModelTrait for compatibility with solver
-impl crate::physics::traits::ChemicalModelTrait for ChemicalModel {
-    fn update_chemical(
-        &mut self,
-        p: &Array3<f64>,
-        light: &Array3<f64>,
-        emission_spectrum: &Array3<f64>,
-        bubble_radius: &Array3<f64>,
-        temperature: &Array3<f64>,
-        grid: &Grid,
-        dt: f64,
-        medium: &dyn Medium,
-        frequency: f64,
-    ) {
-        // Delegate to the local trait implementation
-        <Self as ChemicalModelTrait>::update_chemical(
-            self, p, light, emission_spectrum, bubble_radius, temperature, grid, dt, medium, frequency
-        );
-    }
-
-    fn radical_concentration(&self) -> &Array3<f64> {
-        // Delegate to the local trait implementation
-        <Self as ChemicalModelTrait>::radical_concentration(self)
-    }
-}

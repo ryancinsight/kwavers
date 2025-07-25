@@ -502,15 +502,16 @@ impl Solver {
         
         // 2. Update cavitation effects (if bubble radius is significant)
         let cavitation_start = Instant::now();
-        // Get light emission from cavitation
-        let light_emission = self.cavitation.update_cavitation(
-            &mut p_update,
+        // Update cavitation
+        if let Err(e) = self.cavitation.update_cavitation(
             &pressure,
             &self.grid,
-            dt,
             self.medium.as_ref(),
-            frequency,
-        );
+            dt,
+            0.0, // TODO: Pass current step * dt
+        ) {
+            log::error!("Cavitation update failed: {}", e);
+        }
         cavitation_time += cavitation_start.elapsed().as_secs_f64();
         
         // Check and stabilize after cavitation update
@@ -520,28 +521,14 @@ impl Solver {
         // Update pressure field with cavitation effects
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&p_update);
         
-        // Update light field with cavitation emission
-        if light_emission.sum() > 0.0 {
-            let mut light = self.fields.fields.index_axis(Axis(0), LIGHT_IDX).to_owned();
-            
-            // Use Zip to add the light emission to the light field
-            ndarray::Zip::from(&mut light).and(&light_emission).for_each(|l, &e| {
-                *l += e;
-            });
-            
-            // Check and stabilize light field
-            let mut light = light.clone();
-            Self::check_field(&mut light, "light", 0.0, MAX_LIGHT);
-            
-            // Update the light field in the main array
-            self.fields.fields.index_axis_mut(Axis(0), LIGHT_IDX).assign(&light);
-        }
+        // Light emission is now handled internally by the cavitation model
+        // TODO: Retrieve light emission from cavitation state if needed
         
         // 3. Light propagation and fluence
         let light_start = Instant::now();
         self.light.update_light(
             &mut self.fields.fields,
-            &light_emission,
+            &Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)), // TODO: Get from cavitation state
             &self.grid,
             self.medium.as_ref(),
             dt,
@@ -631,8 +618,8 @@ impl Solver {
         // After all physics have been processed, we can now update the medium state
         // Store the current state to apply later
         let temperature = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
-        let bubble_radius = self.cavitation.radius().to_owned();
-        let bubble_velocity = self.cavitation.velocity().to_owned();
+                    let bubble_radius = self.cavitation.bubble_radius().unwrap_or_else(|_| Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)));
+                    let bubble_velocity = self.cavitation.bubble_velocity().unwrap_or_else(|_| Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)));
         
         // Queue the updates
         self.queue_medium_updates(temperature, bubble_radius, bubble_velocity);

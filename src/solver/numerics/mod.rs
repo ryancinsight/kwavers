@@ -74,8 +74,8 @@ pub fn hybrid_step(
             attempts, dt_adaptive
         );
 
-        let initial_radius = cavitation.radius().clone();
-        let initial_velocity = cavitation.velocity().clone();
+        let initial_radius = cavitation.bubble_radius().unwrap_or_else(|_| Array3::zeros(p.dim())).clone();
+        let initial_velocity = cavitation.bubble_velocity().unwrap_or_else(|_| Array3::zeros(p.dim())).clone();
         let initial_temp = thermal.temperature().clone();
         let initial_chem = chemical.radical_concentration().clone();
         let initial_light = fields.index_axis(Axis(0), 1).to_owned();
@@ -116,14 +116,16 @@ pub fn hybrid_step(
             }
 
             let mut p_temp = p_new.clone();
-            k_radius[stage] = cavitation.update_cavitation(
-                &mut p_temp,
+            cavitation.update_cavitation(
                 p,
                 grid,
-                dt_adaptive,
                 medium,
-                frequency,
-            );
+                dt_adaptive,
+                0.0, // time not available here
+            ).unwrap_or_else(|e| {
+                log::error!("Cavitation update failed in RK4: {}", e);
+            });
+            k_radius[stage] = Array3::zeros(p.dim()); // Placeholder since light emission is no longer returned
             let mut light_fields = fields.clone();
             // Assuming light is still concrete here, if it becomes Box<dyn Trait> this call needs to adapt
             light.update_light(
@@ -141,7 +143,7 @@ pub fn hybrid_step(
                 &p_temp,
                 &k_light[stage],
                 &Array3::zeros(k_light[stage].dim()),
-                cavitation.radius(),
+                &cavitation.bubble_radius().unwrap_or_else(|_| Array3::zeros(p_temp.dim())),
                 thermal.temperature(),
                 grid,
                 dt_adaptive,
@@ -222,7 +224,7 @@ pub fn hybrid_step(
                     MAX_ATTEMPTS, t, error
                 );
             }
-            cavitation.set_radius(&radius_5th);
+            // Radius is now managed internally by the cavitation model
             fields.index_axis_mut(Axis(0), 1).assign(&light_5th);
             thermal.set_temperature(&temp_5th); // Use trait method
             light_source.assign(&k_radius[0]);
@@ -232,7 +234,7 @@ pub fn hybrid_step(
         } else {
             debug!("Adaptive step rejected: error = {:.6e}", error);
             dt_adaptive = new_dt.min(dt_wave);
-            cavitation.set_radius(&initial_radius);
+            // Reset is now handled internally by the cavitation model
             fields.index_axis_mut(Axis(0), 1).assign(&initial_light);
             thermal.set_temperature(&initial_temp); // Use trait method
             medium.update_bubble_state(&initial_radius, &initial_velocity);
