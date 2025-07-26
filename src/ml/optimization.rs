@@ -8,14 +8,14 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Array3, Axis};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use rand::Rng;
 
 /// Advanced parameter optimizer using deep reinforcement learning
 pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,
-    experience_buffer: Vec<OptimizationExperience>,
+    experience_buffer: VecDeque<OptimizationExperience>,
     neural_network: SimpleNeuralNetwork,
     convergence_predictor: ConvergencePredictor,
 }
@@ -139,7 +139,17 @@ impl ConvergencePredictor {
             let avg_first: f64 = first_half.iter().sum::<f64>() / first_half.len() as f64;
             let avg_second: f64 = second_half.iter().sum::<f64>() / second_half.len() as f64;
             
-            (avg_first - avg_second) / avg_first
+            // Prevent division by zero
+            if avg_first.abs() < 1e-15 {
+                // If avg_first is effectively zero, use absolute difference as trend indicator
+                if avg_second.abs() < 1e-15 {
+                    0.0 // Both averages are zero - no trend
+                } else {
+                    -1.0 // Second half has values while first doesn't - trend down
+                }
+            } else {
+                (avg_first - avg_second) / avg_first
+            }
         } else {
             0.0
         };
@@ -342,7 +352,7 @@ impl ParameterOptimizer {
         Self {
             learning_rate,
             exploration_rate,
-            experience_buffer: Vec::new(),
+            experience_buffer: VecDeque::new(),
             neural_network: SimpleNeuralNetwork::new(10, 64, 5), // Example sizes
             convergence_predictor: ConvergencePredictor::new(20, 1e-6),
         }
@@ -409,11 +419,11 @@ impl ParameterOptimizer {
             done,
         };
         
-        self.experience_buffer.push(experience);
+        self.experience_buffer.push_back(experience);
         
-        // Keep buffer size manageable
+        // Keep buffer size manageable - O(1) operation with VecDeque
         if self.experience_buffer.len() > 10000 {
-            self.experience_buffer.remove(0);
+            self.experience_buffer.pop_front();
         }
     }
     
@@ -426,24 +436,53 @@ impl ParameterOptimizer {
         let mut total_loss = 0.0;
         let mut rng = rand::thread_rng();
         
+        let learning_rate_alpha = 0.001; // Learning rate for Q-learning update
+        let discount_gamma = 0.99;       // Discount factor for future rewards
+        
         for _ in 0..batch_size {
             let idx = rng.gen_range(0..self.experience_buffer.len());
             let experience = &self.experience_buffer[idx];
             
-            // Simple Q-learning update
+            // Current Q-values for the current state
             let current_q = self.neural_network.forward(&experience.state)?;
             let mut target_q = current_q.clone();
             
-            // Update Q-value with reward
-            for i in 0..target_q.len().min(experience.action.len()) {
-                target_q[i] = experience.reward + 0.99 * target_q[i]; // Discount factor 0.99
+            if experience.done {
+                // Terminal state: Q(s,a) = reward (no future value)
+                for i in 0..target_q.len().min(experience.action.len()) {
+                    if experience.action[i].abs() > 1e-6 { // Only update actions that were taken
+                        target_q[i] = experience.reward;
+                    }
+                }
+            } else {
+                // Non-terminal state: Apply Bellman equation
+                // Q(s,a) = Q(s,a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s,a))
+                if let Some(ref next_state) = experience.next_state {
+                    let next_q = self.neural_network.forward(next_state)?;
+                    let max_next_q = next_q.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+                    
+                    for i in 0..target_q.len().min(experience.action.len()) {
+                        if experience.action[i].abs() > 1e-6 { // Only update actions that were taken
+                            let td_target = experience.reward + discount_gamma * max_next_q;
+                            // Use learning rate to blend old and new values
+                            target_q[i] = current_q[i] + learning_rate_alpha * (td_target - current_q[i]);
+                        }
+                    }
+                } else {
+                    // No next state available, treat as terminal
+                    for i in 0..target_q.len().min(experience.action.len()) {
+                        if experience.action[i].abs() > 1e-6 {
+                            target_q[i] = experience.reward;
+                        }
+                    }
+                }
             }
             
-            // Calculate loss (MSE)
+            // Calculate loss (MSE between current and target Q-values)
             let loss = (&target_q - &current_q).mapv(|x| x * x).sum();
             total_loss += loss;
             
-            // Update network weights
+            // Update network weights using the corrected targets
             self.neural_network.update_weights(&experience.state, &target_q, self.learning_rate)?;
         }
         

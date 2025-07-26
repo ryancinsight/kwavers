@@ -469,7 +469,17 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
             let avg_first: f64 = first_half.iter().sum::<f64>() / first_half.len() as f64;
             let avg_second: f64 = second_half.iter().sum::<f64>() / second_half.len() as f64;
             
-            (avg_first - avg_second) / avg_first
+            // Prevent division by zero
+            if avg_first.abs() < 1e-15 {
+                // If avg_first is effectively zero, use absolute difference as trend indicator
+                if avg_second.abs() < 1e-15 {
+                    0.0 // Both averages are zero - no trend
+                } else {
+                    -1.0 // Second half has values while first doesn't - trend down
+                }
+            } else {
+                (avg_first - avg_second) / avg_first
+            }
         } else {
             0.0
         };

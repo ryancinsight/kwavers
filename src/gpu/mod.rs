@@ -443,12 +443,51 @@ mod tests {
 
     #[test]
     fn test_gpu_context_creation() {
-        // Test GPU context creation infrastructure
-        // In real async environment, use GpuContext::new().await
+        // Test GPU context creation (synchronous test for proper validation)
+        // This test validates the core functionality without requiring async runtime
         
-        // Mock test - just verify basic infrastructure
-        assert!(true); // Basic test passes
-        println!("GPU context creation test infrastructure verified");
+        // Test case 1: Mock successful context creation
+        let devices = vec![
+            GpuDevice {
+                id: 0,
+                name: "Test GPU".to_string(),
+                backend: GpuBackend::Cuda,
+                memory_size: 8192 * 1024 * 1024, // 8192 MB in bytes
+                compute_units: 20,
+                max_work_group_size: 1024,
+            }
+        ];
+        
+        let context = GpuContext {
+            devices: devices.clone(),
+            active_device: Some(0),
+            backend: GpuBackend::Cuda,
+        };
+        
+        // Validate device properties
+        assert!(!context.devices.is_empty());
+        assert!(context.active_device.is_some());
+        
+        if let Some(device) = context.active_device() {
+            assert!(!device.name.is_empty());
+            assert!(device.compute_units > 0);
+            assert!(device.memory_size > 0);
+        }
+        
+        // Test device list access
+        assert_eq!(context.devices().len(), 1);
+        assert_eq!(context.devices()[0].name, "Test GPU");
+        
+        // Test case 2: Empty devices (should handle gracefully)
+        let empty_context = GpuContext {
+            devices: vec![],
+            active_device: None,
+            backend: GpuBackend::OpenCL, // Use a valid backend even with no devices
+        };
+        
+        assert!(empty_context.devices.is_empty());
+        assert!(empty_context.active_device.is_none());
+        assert!(empty_context.active_device().is_none());
     }
 
     #[test]
