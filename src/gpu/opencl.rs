@@ -10,6 +10,7 @@ use ndarray::Array3;
 
 #[cfg(feature = "wgpu")]
 use wgpu::{Device, Queue, ComputePipeline};
+#[cfg(feature = "gpu")]
 use wgpu::util::DeviceExt;
 
 /// WebGPU-based GPU context
