@@ -16,6 +16,12 @@ pub mod models;
 pub mod optimization;
 pub mod training;
 
+// Re-export key types for easier access
+pub use optimization::{
+    ParameterOptimizer, PatternRecognizer, SimulationPatterns, PatternSummary,
+    CavitationEvent, AcousticEvent, ConvergencePredictor
+};
+
 /// ML model types supported by the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ModelType {
@@ -87,11 +93,27 @@ pub struct PerformanceMetrics {
 impl MLEngine {
     /// Create new ML engine with specified backend
     pub fn new(backend: MLBackend) -> KwaversResult<Self> {
-        Ok(Self {
+        let mut engine = Self {
             backend,
             models: HashMap::new(),
             performance_metrics: PerformanceMetrics::default(),
-        })
+        };
+        
+        // Initialize default models for Phase 12
+        engine.initialize_default_models()?;
+        
+        Ok(engine)
+    }
+    
+    /// Initialize default AI/ML models for Phase 12 capabilities
+    fn initialize_default_models(&mut self) -> KwaversResult<()> {
+        use crate::ml::models::TissueClassifierModel;
+        
+        // Initialize tissue classifier with enhanced features
+        let tissue_classifier = TissueClassifierModel::new_random(10, 5); // 10 features, 5 tissue types
+        self.models.insert(ModelType::TissueClassifier, Box::new(tissue_classifier));
+        
+        Ok(())
     }
     
     /// Load a pre-trained model
@@ -322,8 +344,10 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
     ) -> KwaversResult<HashMap<String, f64>> {
         use crate::ml::optimization::ParameterOptimizer;
 
-        let optimizer = ParameterOptimizer::new(0.1, 0.05);
-        optimizer.optimize(current_params, target_metrics)
+        let mut optimizer = ParameterOptimizer::new(0.1, 0.05);
+        // FIXME: This uses a dummy simulation state. The caller should provide a real state for meaningful optimization.
+        let sim_state = Array1::from_vec(vec![0.0; 5]);
+        optimizer.optimize_with_ai(current_params, target_metrics, &sim_state)
     }
 
     /// Detect anomalies via simple statistical thresholding (*mean + 3·σ*).
@@ -393,6 +417,108 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         self.performance_metrics.total_inferences += probs.dim().0;
         Ok(p_success)
     }
+    
+    /// Get performance metrics
+    pub fn performance_metrics(&self) -> &PerformanceMetrics {
+        &self.performance_metrics
+    }
+    
+    /// Advanced parameter optimization using AI (Phase 12)
+    pub fn optimize_parameters_ai(
+        &self,
+        current_params: &HashMap<String, f64>,
+        target_params: &HashMap<String, f64>,
+        simulation_state: &Array1<f64>,
+        optimizer: &mut ParameterOptimizer,
+    ) -> KwaversResult<HashMap<String, f64>> {
+        optimizer.optimize_with_ai(current_params, target_params, simulation_state)
+    }
+    
+    /// Pattern recognition for cavitation and acoustic events (Phase 12)
+    pub fn analyze_simulation_patterns(
+        &self,
+        pressure: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        acoustic_spectrum: &Array1<f64>,
+        frequencies: &Array1<f64>,
+    ) -> KwaversResult<SimulationPatterns> {
+        let recognizer = PatternRecognizer::new();
+        recognizer.analyze_simulation_patterns(pressure, bubble_radius, acoustic_spectrum, frequencies)
+    }
+    
+    /// Predict simulation convergence using AI (Phase 12)
+    pub fn predict_convergence_ai(&self, residual_history: &[f64]) -> (bool, f64) {
+        let predictor = ConvergencePredictor::new(20, 1e-6);
+        predictor.predict_convergence(residual_history)
+    }
+    
+    /// AI-assisted acceleration recommendations (Phase 12)
+    pub fn suggest_acceleration_parameters(
+        &self,
+        current_residual: f64,
+        residual_history: &[f64],
+    ) -> KwaversResult<AIAccelerationRecommendation> {
+        let predictor = ConvergencePredictor::new(20, 1e-6);
+        
+        // Calculate trend
+        let trend = if residual_history.len() > 1 {
+            let recent = &residual_history[residual_history.len().saturating_sub(10)..];
+            let first_half = &recent[0..recent.len()/2];
+            let second_half = &recent[recent.len()/2..];
+            
+            let avg_first: f64 = first_half.iter().sum::<f64>() / first_half.len() as f64;
+            let avg_second: f64 = second_half.iter().sum::<f64>() / second_half.len() as f64;
+            
+            // Prevent division by zero
+            if avg_first.abs() < 1e-15 {
+                // If avg_first is effectively zero, use absolute difference as trend indicator
+                if avg_second.abs() < 1e-15 {
+                    0.0 // Both averages are zero - no trend
+                } else {
+                    -1.0 // Second half has values while first doesn't - trend down
+                }
+            } else {
+                (avg_first - avg_second) / avg_first
+            }
+        } else {
+            0.0
+        };
+        
+        let acceleration_factor = predictor.suggest_acceleration(current_residual, trend);
+        let (will_converge, confidence) = predictor.predict_convergence(residual_history);
+        
+        Ok(AIAccelerationRecommendation {
+            acceleration_factor,
+            confidence_level: confidence,
+            predicted_convergence: will_converge,
+            recommended_actions: self.generate_acceleration_actions(trend, current_residual),
+        })
+    }
+    
+    fn generate_acceleration_actions(&self, trend: f64, residual: f64) -> Vec<String> {
+        let mut actions = Vec::new();
+        
+        if trend > 0.2 {
+            actions.push("Increase time step size by 1.5x".to_string());
+            actions.push("Enable multigrid acceleration".to_string());
+        }
+        
+        if residual > 1e-3 {
+            actions.push("Apply preconditioning".to_string());
+            actions.push("Switch to adaptive time stepping".to_string());
+        }
+        
+        if trend < 0.05 {
+            actions.push("Reduce time step for stability".to_string());
+            actions.push("Check for numerical instability".to_string());
+        }
+        
+        if actions.is_empty() {
+            actions.push("Continue with current parameters".to_string());
+        }
+        
+        actions
+    }
 }
 
 /// Represents an anomalous region in the simulation
@@ -413,6 +539,15 @@ pub struct SimulationState {
     pub convergence_metric: f64,
 }
 
+/// AI-powered acceleration recommendations (Phase 12)
+#[derive(Debug, Clone)]
+pub struct AIAccelerationRecommendation {
+    pub acceleration_factor: f64,
+    pub confidence_level: f64,
+    pub predicted_convergence: bool,
+    pub recommended_actions: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,7 +556,9 @@ mod tests {
     fn test_ml_engine_creation() {
         let engine = MLEngine::new(MLBackend::Native).unwrap();
         assert_eq!(engine.backend, MLBackend::Native);
-        assert!(engine.models.is_empty());
+        // In Phase 12, engine now includes default models for AI capabilities
+        assert!(!engine.models.is_empty()); // Should have default models
+        assert!(engine.models.contains_key(&ModelType::TissueClassifier));
     }
     
     #[test]

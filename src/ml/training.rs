@@ -1,8 +1,8 @@
 //! Model training pipeline with data augmentation
 
 use crate::error::{KwaversError, KwaversResult};
+use crate::ml::MLModel;
 use ndarray::{Array1, Array2, Array3, Axis};
-use ndarray::prelude::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use crate::ml::models::TissueClassifierModel;
@@ -105,7 +105,7 @@ impl TrainingPipeline {
 
                 // Loss & Gradient
                 let mut grad = probs.clone();
-                for (row, &tgt) in grad.rows_mut().into_iter().zip(batch_targets.iter()) {
+                for (mut row, &tgt) in grad.rows_mut().into_iter().zip(batch_targets.iter()) {
                     row[tgt] -= 1.0;
                 }
 
