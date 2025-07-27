@@ -12,7 +12,7 @@ use kwavers::{
         mechanics::{NonlinearWave, CavitationModel, StreamingModel},
         chemistry::ChemicalModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
-        scattering::acoustic::AcousticScatteringModel,
+        scattering::acoustic::AcousticScattering,
         thermodynamics::heat_transfer::ThermalModel,
         heterogeneity::HeterogeneityModel,
         traits::*, // Import all traits
@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let thermal_model: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid, 293.15, 1e-6, 1e-6));
     let chemical_model: Box<dyn kwavers::ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid, true, true)?);
     let streaming_model: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid));
-    let scattering_model: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid));
+    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid, 1e6, 0.1));
     let heterogeneity_model: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid, 1500.0, 0.05));
 
     // Create solver
@@ -159,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thermal_model,
         chemical_model,
         streaming_model,
-        scattering_model,
+        scattering,
         heterogeneity_model,
         4, // num_simulation_fields for acoustic + light + temp + bubble_radius
     );
