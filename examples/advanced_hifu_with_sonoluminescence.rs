@@ -7,7 +7,7 @@ use kwavers::{
         mechanics::streaming::StreamingModel,
         chemistry::ChemicalModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
-        scattering::acoustic::AcousticScatteringModel,
+        scattering::acoustic::AcousticScattering,
         thermodynamics::heat_transfer::ThermalModel,
         heterogeneity::HeterogeneityModel,
         traits::*, // Import all traits
@@ -146,7 +146,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let thermal: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
     let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true)?);
     let streaming: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid_clone));
-    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScatteringModel::new(&grid_clone));
+    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
     let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
 
     // Create the solver with our optimized medium and injected physics models

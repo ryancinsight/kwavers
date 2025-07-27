@@ -20,6 +20,7 @@ pub mod config;
 pub mod error;
 pub mod factory;
 pub mod fft;
+#[cfg(feature = "gpu")]
 pub mod gpu;
 pub mod grid;
 pub mod log;
@@ -38,7 +39,7 @@ pub mod utils;
 pub mod validation;
 
 // Phase 11: Advanced Visualization & Real-Time Interaction
-#[cfg(any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support"))]
+#[cfg(all(feature = "gpu", any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support")))]
 pub mod visualization;
 
 // Re-export commonly used types for convenience
@@ -57,6 +58,10 @@ pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
 pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, ComponentState, FieldType};
+
+// Re-export GPU-related items only when feature enabled
+#[cfg(feature = "gpu")]
+pub use gpu::{GpuContext, AdvancedGpuMemoryManager, GpuBackend};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel};
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::ElasticWave;
