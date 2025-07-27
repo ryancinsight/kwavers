@@ -12,7 +12,7 @@ categories = ["science", "simulation", "medical"]
 [dependencies]
 # Core numerical computing
 ndarray = "0.15"
-rayon = "1.5"
+rayon = { version = "1.5" }
 rustfft = "6.0"
 num-complex = "0.4"
 
@@ -33,13 +33,19 @@ rand = "0.8"
 
 # Visualization (optional)
 plotly = { version = "0.8", optional = true }
+plotters = { version = "0.3", optional = true }
+plotters-backend = { version = "0.3", optional = true }  
+plotters-bitmap = { version = "0.3", optional = true }
 
 # Advanced 3D visualization and real-time interaction (Phase 11)
-egui = { version = "0.25", optional = true }
-eframe = { version = "0.25", optional = true }
-three-d = { version = "0.16", optional = true }
-winit = { version = "0.29", optional = true }
+egui = { version = "0.29", optional = true }
+eframe = { version = "0.29", optional = true }
+egui-wgpu = { version = "0.29", optional = true }
+egui-winit = { version = "0.29", optional = true }
+three-d = { version = "0.17", optional = true }
+winit = { version = "0.30", optional = true }
 pollster = { version = "0.3", optional = true }
+futures = { version = "0.3", optional = true }
 
 # WebGL and WASM support
 wasm-bindgen = { version = "0.2", optional = true }
@@ -72,13 +78,18 @@ tokio = { version = "1.0", features = ["full"], optional = true }
 
 # Memory management
 crossbeam = "0.8"
+parking_lot = { version = "0.12", optional = true }
+
+# HDF5 support
+hdf5 = { version = "0.8", optional = true }
+hdf5-sys = { version = "0.8", optional = true }
 
 # Mathematical constants and functions
 libm = "0.2"
 
-# GPU acceleration dependencies
+# GPU acceleration dependencies  
 cudarc = { version = "0.11", features = ["cuda-12050"], optional = true }
-wgpu = { version = "0.19", features = ["wgsl"], optional = true }
+wgpu = { version = "22.0", features = ["wgsl"], optional = true }
 bytemuck = { version = "1.14", features = ["derive"], optional = true }
 
 # AI/ML Integration
@@ -93,13 +104,16 @@ proptest = "1.2"
 mockall = "0.11"
 
 [features]
-default = ["parallel", "hdf5", "plotting", "gpu"]
-parallel = ["rayon", "crossbeam", "parking_lot"]
-hdf5 = ["dep:hdf5", "hdf5-sys"]
+default = []
+parallel = ["dep:parking_lot"]
+hdf5 = ["dep:hdf5", "dep:hdf5-sys"]
 plotting = ["plotters", "plotters-backend", "plotters-bitmap"]
 gpu = ["wgpu", "bytemuck", "futures", "pollster"]
 advanced-visualization = ["wgpu", "bytemuck", "futures", "pollster", "winit", "egui", "egui-wgpu", "egui-winit"]
 ml = ["ort", "candle-core", "candle-nn"]
+nightly = []
+web-visualization = ["plotting"]
+vr-support = ["advanced-visualization"]
 full = ["parallel", "hdf5", "plotting", "gpu", "advanced-visualization", "ml"]
 
 [profile.release]
