@@ -9,6 +9,9 @@ pub mod state;
 pub mod thermodynamics;
 pub mod traits;
 
+#[cfg(test)]
+pub mod analytical_tests;
+
 // Re-export commonly used types
 pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
 pub use state::{PhysicsState, FieldAccessor, field_indices};

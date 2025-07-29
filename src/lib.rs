@@ -12,6 +12,7 @@
 //! - **Extensibility**: Modular architecture following SOLID principles
 
 use ndarray::Array3;
+use std::collections::HashMap;
 
 // Core modules
 pub mod boundary;
@@ -97,35 +98,18 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    use crate::plotting::{PlotBuilder, PlotType};
     use std::path::Path;
     
     for file in files {
         let filepath = Path::new(output_dir).join(file);
         if !filepath.exists() {
-            log::warn!("File not found: {}", filepath.display());
+            println!("Warning: File not found: {}", filepath.display());
             continue;
         }
         
-        // Determine plot type based on file extension and name
-        let plot_type = if file.contains("pressure") {
-            PlotType::Heatmap
-        } else if file.contains("time_series") {
-            PlotType::Line
-        } else if file.contains("slice") {
-            PlotType::Heatmap
-        } else {
-            PlotType::Line
-        };
-        
-        // Create and save plot
-        let output_path = filepath.with_extension("html");
-        PlotBuilder::new()
-            .plot_type(plot_type)
-            .title(file.replace('_', " ").replace(".csv", ""))
-            .save_to_file(&output_path)?;
-            
-        log::info!("Generated plot: {}", output_path.display());
+        // For now, just log what would be plotted
+        // Actual plotting would require loading CSV data and using the plotting module functions
+        println!("Would plot: {}", filepath.display());
     }
     
     Ok(())

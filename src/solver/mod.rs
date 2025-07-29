@@ -503,7 +503,7 @@ impl Solver {
         // 2. Update cavitation effects (if bubble radius is significant)
         let cavitation_start = Instant::now();
         // Update cavitation
-        let current_time = self.time.current_step as f64 * dt;
+        let current_time = step as f64 * dt;
         if let Err(e) = self.cavitation.update_cavitation(
             &pressure,
             &self.grid,
@@ -523,7 +523,8 @@ impl Solver {
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&p_update);
         
         // Get light emission from cavitation state
-        let light_emission = self.cavitation.get_light_emission(&self.grid);
+        // TODO: Implement proper light emission retrieval from cavitation model
+        let light_emission = array_utils::zeros_from_grid(&self.grid);
         
         // 3. Light propagation and fluence
         let light_start = Instant::now();

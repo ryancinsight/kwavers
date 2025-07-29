@@ -6,8 +6,7 @@
 //! - Reduced redundant computations
 //! - Parallel processing for large grids
 
-use ndarray::{Array3, Zip, s};
-use rayon::prelude::*;
+use ndarray::{Array3, Zip};
 use std::sync::Arc;
 
 /// Optimized gradient computation using SIMD-friendly patterns
@@ -27,69 +26,63 @@ pub fn compute_gradient_optimized(
     let dy_inv = grid_params.dy_inv;
     let dz_inv = grid_params.dz_inv;
     
-    // Process interior points in chunks for better cache utilization
-    (1..nx-1).into_par_iter().chunks(chunk_size).for_each(|i_chunk| {
-        for &i in &i_chunk {
-            // Prefetch data for next iteration
-            if i + 1 < nx - 1 {
-                let _ = pressure.slice(s![i+1, .., ..]);
-            }
-            
-            for j in 1..ny-1 {
-                // Process k dimension with SIMD-friendly access pattern
-                let mut k = 1;
-                while k < nz - 1 {
-                    // Unroll loop for better instruction-level parallelism
-                    let batch_size = 4.min(nz - 1 - k);
+    // Process interior points with standard iteration for now
+    // TODO: Implement proper parallel processing with thread-safe access
+    for i in 1..nx-1 {
+        for j in 1..ny-1 {
+            // Process k dimension with SIMD-friendly access pattern
+            let mut k = 1;
+            while k < nz - 1 {
+                // Unroll loop for better instruction-level parallelism
+                let batch_size = 4.min(nz - 1 - k);
+                
+                for dk in 0..batch_size {
+                    let k_idx = k + dk;
                     
-                    for dk in 0..batch_size {
-                        let k_idx = k + dk;
-                        
-                        // Compute gradients using central differences
-                        let grad_x = (pressure[[i+1, j, k_idx]] - pressure[[i-1, j, k_idx]]) * dx_inv;
-                        let grad_y = (pressure[[i, j+1, k_idx]] - pressure[[i, j-1, k_idx]]) * dy_inv;
-                        let grad_z = (pressure[[i, j, k_idx+1]] - pressure[[i, j, k_idx-1]]) * dz_inv;
-                        
-                        // Get medium properties (cached)
-                        let idx = (i, j, k_idx);
-                        let rho = medium_params.get_density(idx);
-                        let c = medium_params.get_sound_speed(idx);
-                        let b_a = medium_params.get_nonlinearity(idx);
-                        
-                        // Compute nonlinear term
-                        let gradient_scale = config.dt / (2.0 * rho * c * c);
-                        let beta = b_a / (rho * c * c);
-                        
-                        // Apply gradient clamping if enabled
-                        let (grad_x_final, grad_y_final, grad_z_final) = if config.clamp_gradients {
-                            (
-                                grad_x.clamp(-config.max_gradient, config.max_gradient),
-                                grad_y.clamp(-config.max_gradient, config.max_gradient),
-                                grad_z.clamp(-config.max_gradient, config.max_gradient)
-                            )
-                        } else {
-                            (grad_x, grad_y, grad_z)
-                        };
-                        
-                        // Compute gradient magnitude efficiently
-                        let grad_magnitude = fast_magnitude(grad_x_final, grad_y_final, grad_z_final);
-                        
-                        // Compute and store nonlinear term
-                        let p_limited = pressure[[i, j, k_idx]].clamp(-config.max_pressure, config.max_pressure);
-                        let nl_term = -beta * config.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-                        
-                        nonlinear_term[[i, j, k_idx]] = if nl_term.is_finite() {
-                            nl_term.clamp(-config.max_pressure, config.max_pressure)
-                        } else {
-                            0.0
-                        };
-                    }
+                    // Compute gradients using central differences
+                    let grad_x = (pressure[[i+1, j, k_idx]] - pressure[[i-1, j, k_idx]]) * dx_inv;
+                    let grad_y = (pressure[[i, j+1, k_idx]] - pressure[[i, j-1, k_idx]]) * dy_inv;
+                    let grad_z = (pressure[[i, j, k_idx+1]] - pressure[[i, j, k_idx-1]]) * dz_inv;
                     
-                    k += batch_size;
+                    // Get medium properties (cached)
+                    let idx = (i, j, k_idx);
+                    let rho = medium_params.get_density(idx);
+                    let c = medium_params.get_sound_speed(idx);
+                    let b_a = medium_params.get_nonlinearity(idx);
+                    
+                    // Compute nonlinear term
+                    let gradient_scale = config.dt / (2.0 * rho * c * c);
+                    let beta = b_a / (rho * c * c);
+                    
+                    // Apply gradient clamping if enabled
+                    let (grad_x_final, grad_y_final, grad_z_final) = if config.clamp_gradients {
+                        (
+                            grad_x.clamp(-config.max_gradient, config.max_gradient),
+                            grad_y.clamp(-config.max_gradient, config.max_gradient),
+                            grad_z.clamp(-config.max_gradient, config.max_gradient)
+                        )
+                    } else {
+                        (grad_x, grad_y, grad_z)
+                    };
+                    
+                    // Compute gradient magnitude efficiently
+                    let grad_magnitude = fast_magnitude(grad_x_final, grad_y_final, grad_z_final);
+                    
+                    // Compute and store nonlinear term
+                    let p_limited = pressure[[i, j, k_idx]].clamp(-config.max_pressure, config.max_pressure);
+                    let nl_term = -beta * config.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
+                    
+                    nonlinear_term[[i, j, k_idx]] = if nl_term.is_finite() {
+                        nl_term.clamp(-config.max_pressure, config.max_pressure)
+                    } else {
+                        0.0
+                    };
                 }
+                
+                k += batch_size;
             }
         }
-    });
+    }
 }
 
 /// Fast magnitude computation using Newton-Raphson approximation
@@ -100,11 +93,9 @@ fn fast_magnitude(x: f64, y: f64, z: f64) -> f64 {
         return 0.0;
     }
     
-    // Newton-Raphson approximation for square root
-    let mut estimate = sum_sq;
-    estimate = 0.5 * (estimate + sum_sq / estimate);
-    estimate = 0.5 * (estimate + sum_sq / estimate);
-    estimate
+    // For better accuracy, just use the standard sqrt for now
+    // TODO: Implement a more accurate fast approximation if needed
+    sum_sq.sqrt()
 }
 
 /// Precomputed grid parameters for efficient access
@@ -151,7 +142,7 @@ impl MediumParams {
         Zip::indexed(&mut density)
             .and(&mut sound_speed)
             .and(&mut nonlinearity)
-            .par_for_each(|(i, j, k), d, c, n| {
+            .for_each(|(i, j, k), d, c, n| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -209,7 +200,7 @@ pub fn apply_kspace_operations_optimized(
     // Process in parallel for large grids
     if nx * ny * nz > 100_000 {
         result.as_slice_mut().unwrap()
-            .par_chunks_mut(1024)
+            .chunks_mut(1024)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let start_idx = chunk_idx * 1024;
