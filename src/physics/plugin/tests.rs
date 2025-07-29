@@ -20,15 +20,25 @@ mod tests {
         dependencies: Vec<FieldType>,
         outputs: Vec<FieldType>,
         apply_called: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        metadata: PluginMetadata,
     }
 
     impl MockPlugin {
         fn new(id: &str) -> Self {
+            let metadata = PluginMetadata {
+                id: id.to_string(),
+                name: id.to_string(),
+                version: "1.0.0".to_string(),
+                description: format!("Mock plugin {}", id),
+                author: "Test".to_string(),
+                license: "MIT".to_string(),
+            };
             Self {
                 id: id.to_string(),
                 dependencies: vec![],
                 outputs: vec![],
                 apply_called: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+                metadata,
             }
         }
 

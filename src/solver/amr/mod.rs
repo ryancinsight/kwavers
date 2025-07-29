@@ -174,6 +174,11 @@ impl AMRManager {
         let cells_refined = self.refine_cells(&refine_cells)?;
         let cells_coarsened = self.coarsen_cells(&coarsen_cells)?;
         
+        // Compact octree if memory efficiency is low
+        if self.octree.memory_efficiency() < 0.75 {
+            self.octree.compact();
+        }
+        
         // Record refinement event
         let max_error = error_field.iter().cloned().fold(0.0, f64::max);
         self.refinement_history.push(RefinementEvent {

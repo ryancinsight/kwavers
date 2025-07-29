@@ -14,6 +14,15 @@ pub fn interpolate_to_refined(
     octree: &Octree,
     scheme: InterpolationScheme,
 ) -> KwaversResult<Array3<f64>> {
+    // Validate input dimensions
+    let (nx, ny, nz) = coarse_field.dim();
+    if nx == 0 || ny == 0 || nz == 0 {
+        return Err(crate::error::DataError::InvalidFormat {
+            format: "empty field".to_string(),
+            reason: "Cannot interpolate from empty field".to_string()
+        }.into());
+    }
+    
     match scheme {
         InterpolationScheme::Linear => linear_interpolation(coarse_field, octree),
         InterpolationScheme::Conservative => conservative_interpolation(coarse_field, octree),
@@ -28,6 +37,23 @@ pub fn restrict_to_coarse(
     octree: &Octree,
     scheme: InterpolationScheme,
 ) -> KwaversResult<Array3<f64>> {
+    // Validate input dimensions
+    let (nx, ny, nz) = fine_field.dim();
+    if nx == 0 || ny == 0 || nz == 0 {
+        return Err(crate::error::DataError::InvalidFormat {
+            format: "empty field".to_string(),
+            reason: "Cannot restrict from empty field".to_string()
+        }.into());
+    }
+    
+    // Validate that dimensions are even (required for restriction)
+    if nx % 2 != 0 || ny % 2 != 0 || nz % 2 != 0 {
+        return Err(crate::error::DataError::InvalidFormat {
+            format: "odd dimensions".to_string(),
+            reason: format!("Fine field dimensions must be even for restriction, got ({}, {}, {})", nx, ny, nz)
+        }.into());
+    }
+    
     match scheme {
         InterpolationScheme::Linear => linear_restriction(fine_field, octree),
         InterpolationScheme::Conservative => conservative_restriction(fine_field, octree),
@@ -42,36 +68,88 @@ fn linear_interpolation(
     octree: &Octree,
 ) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = coarse_field.dim();
+    
+    // Validate dimensions
+    if nx == 0 || ny == 0 || nz == 0 {
+        return Err(crate::error::DataError::InvalidFormat {
+            format: "zero dimension".to_string(),
+            reason: "Coarse field has zero dimension".to_string()
+        }.into());
+    }
+    
+    // Check for potential overflow
+    if nx > usize::MAX / 2 || ny > usize::MAX / 2 || nz > usize::MAX / 2 {
+        return Err(crate::error::DataError::InvalidFormat {
+            format: "dimensions too large".to_string(),
+            reason: "Coarse field dimensions too large for refinement".to_string()
+        }.into());
+    }
+    
     let mut fine_field = Array3::zeros((nx * 2, ny * 2, nz * 2));
     
-    // Interpolate to fine grid
+    // Interpolate to fine grid using correct trilinear interpolation
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                let coarse_val = coarse_field[[i, j, k]];
+                let v000 = coarse_field[[i, j, k]];
                 
-                // Get neighboring values for interpolation
-                let ip1 = if i < nx - 1 { coarse_field[[i + 1, j, k]] } else { coarse_val };
-                let jp1 = if j < ny - 1 { coarse_field[[i, j + 1, k]] } else { coarse_val };
-                let kp1 = if k < nz - 1 { coarse_field[[i, j, k + 1]] } else { coarse_val };
+                // Get all 8 corner values for the coarse cell
+                // Use boundary conditions (repeat values) at edges
+                let v100 = if i < nx - 1 { coarse_field[[i + 1, j, k]] } else { v000 };
+                let v010 = if j < ny - 1 { coarse_field[[i, j + 1, k]] } else { v000 };
+                let v001 = if k < nz - 1 { coarse_field[[i, j, k + 1]] } else { v000 };
+                let v110 = if i < nx - 1 && j < ny - 1 { coarse_field[[i + 1, j + 1, k]] } else { 
+                    if i < nx - 1 { v100 } else { v010 }
+                };
+                let v101 = if i < nx - 1 && k < nz - 1 { coarse_field[[i + 1, j, k + 1]] } else {
+                    if i < nx - 1 { v100 } else { v001 }
+                };
+                let v011 = if j < ny - 1 && k < nz - 1 { coarse_field[[i, j + 1, k + 1]] } else {
+                    if j < ny - 1 { v010 } else { v001 }
+                };
+                let v111 = if i < nx - 1 && j < ny - 1 && k < nz - 1 { 
+                    coarse_field[[i + 1, j + 1, k + 1]] 
+                } else {
+                    // Handle edge cases
+                    if i < nx - 1 && j < ny - 1 { v110 }
+                    else if i < nx - 1 && k < nz - 1 { v101 }
+                    else if j < ny - 1 && k < nz - 1 { v011 }
+                    else if i < nx - 1 { v100 }
+                    else if j < ny - 1 { v010 }
+                    else if k < nz - 1 { v001 }
+                    else { v000 }
+                };
                 
-                // Trilinear interpolation
+                // Fine grid indices
                 let fi = 2 * i;
                 let fj = 2 * j;
                 let fk = 2 * k;
                 
-                fine_field[[fi, fj, fk]] = coarse_val;
-                fine_field[[fi + 1, fj, fk]] = 0.5 * (coarse_val + ip1);
-                fine_field[[fi, fj + 1, fk]] = 0.5 * (coarse_val + jp1);
-                fine_field[[fi, fj, fk + 1]] = 0.5 * (coarse_val + kp1);
-                fine_field[[fi + 1, fj + 1, fk]] = 0.25 * (coarse_val + ip1 + jp1 + coarse_field[[i.min(nx-1), j.min(ny-1), k]]);
-                fine_field[[fi + 1, fj, fk + 1]] = 0.25 * (coarse_val + ip1 + kp1 + coarse_field[[i.min(nx-1), j, k.min(nz-1)]]);
-                fine_field[[fi, fj + 1, fk + 1]] = 0.25 * (coarse_val + jp1 + kp1 + coarse_field[[i, j.min(ny-1), k.min(nz-1)]]);
-                fine_field[[fi + 1, fj + 1, fk + 1]] = 0.125 * (coarse_val + ip1 + jp1 + kp1 + 
-                    coarse_field[[i.min(nx-1), j.min(ny-1), k]] +
-                    coarse_field[[i.min(nx-1), j, k.min(nz-1)]] +
-                    coarse_field[[i, j.min(ny-1), k.min(nz-1)]] +
-                    coarse_field[[i.min(nx-1), j.min(ny-1), k.min(nz-1)]]);
+                // Trilinear interpolation at 8 fine grid points
+                // (0,0,0) - original coarse point
+                fine_field[[fi, fj, fk]] = v000;
+                
+                // (1,0,0) - interpolate in x direction
+                fine_field[[fi + 1, fj, fk]] = 0.5 * (v000 + v100);
+                
+                // (0,1,0) - interpolate in y direction
+                fine_field[[fi, fj + 1, fk]] = 0.5 * (v000 + v010);
+                
+                // (0,0,1) - interpolate in z direction
+                fine_field[[fi, fj, fk + 1]] = 0.5 * (v000 + v001);
+                
+                // (1,1,0) - interpolate in x and y
+                fine_field[[fi + 1, fj + 1, fk]] = 0.25 * (v000 + v100 + v010 + v110);
+                
+                // (1,0,1) - interpolate in x and z
+                fine_field[[fi + 1, fj, fk + 1]] = 0.25 * (v000 + v100 + v001 + v101);
+                
+                // (0,1,1) - interpolate in y and z
+                fine_field[[fi, fj + 1, fk + 1]] = 0.25 * (v000 + v010 + v001 + v011);
+                
+                // (1,1,1) - interpolate in all directions
+                fine_field[[fi + 1, fj + 1, fk + 1]] = 0.125 * (v000 + v100 + v010 + v001 + 
+                                                                 v110 + v101 + v011 + v111);
             }
         }
     }

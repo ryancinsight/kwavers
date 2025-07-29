@@ -41,6 +41,10 @@ pub struct Octree {
     max_level: usize,
     /// Next available node index
     next_index: usize,
+    /// Free list for recycling node indices
+    free_nodes: Vec<usize>,
+    /// Number of inactive nodes (for tracking memory efficiency)
+    inactive_nodes: usize,
 }
 
 impl Octree {
@@ -52,6 +56,8 @@ impl Octree {
             base_dims: (nx, ny, nz),
             max_level,
             next_index: 0,
+            free_nodes: Vec::new(),
+            inactive_nodes: 0,
         };
         
         // Initialize with root node
@@ -176,10 +182,20 @@ impl Octree {
                 is_active: true,
             };
             
-            child_indices[child_num] = self.next_index;
-            self.coord_to_node.insert(bounds_min, self.next_index);
-            self.nodes.push(child);
-            self.next_index += 1;
+            // Reuse free node if available, otherwise allocate new
+            let child_idx = if let Some(free_idx) = self.free_nodes.pop() {
+                self.nodes[free_idx] = child;
+                self.inactive_nodes -= 1;
+                free_idx
+            } else {
+                self.nodes.push(child);
+                let idx = self.next_index;
+                self.next_index += 1;
+                idx
+            };
+            
+            child_indices[child_num] = child_idx;
+            self.coord_to_node.insert(bounds_min, child_idx);
         }
         
         // Update parent
@@ -202,18 +218,20 @@ impl Octree {
             None => return Ok(false),
         };
         
-        // Remove children from coord mapping
+        // Remove children from coord mapping and mark as free
         for &child_idx in &children {
             let child_bounds = self.nodes[child_idx].bounds_min;
             self.coord_to_node.remove(&child_bounds);
+            
+            // Mark child as inactive and add to free list
+            self.nodes[child_idx].is_active = false;
+            self.free_nodes.push(child_idx);
+            self.inactive_nodes += 1;
         }
         
         // Mark parent as leaf
         self.nodes[node_idx].children = None;
         self.nodes[node_idx].is_active = true;
-        
-        // Note: We don't actually remove nodes from the vector to avoid index invalidation
-        // In a production implementation, we might use a free list or periodic compaction
         
         Ok(true)
     }
@@ -266,6 +284,69 @@ impl Octree {
         self.nodes.iter()
             .filter(|node| node.is_active)
             .collect()
+    }
+    
+    /// Compact the octree to remove inactive nodes
+    /// This should be called periodically to prevent memory bloat
+    pub fn compact(&mut self) {
+        // Only compact if we have significant waste
+        if self.inactive_nodes < self.nodes.len() / 4 {
+            return;
+        }
+        
+        // Create mapping from old to new indices
+        let mut old_to_new: HashMap<usize, usize> = HashMap::new();
+        let mut new_nodes = Vec::new();
+        let mut new_index = 0;
+        
+        // Copy active nodes and build mapping
+        for (old_idx, node) in self.nodes.iter().enumerate() {
+            if node.is_active || (node.parent.is_some() && old_to_new.contains_key(&node.parent.unwrap())) {
+                let mut new_node = node.clone();
+                
+                // Update parent index
+                if let Some(parent_idx) = new_node.parent {
+                    new_node.parent = old_to_new.get(&parent_idx).copied();
+                }
+                
+                // Update index
+                new_node.index = new_index;
+                
+                old_to_new.insert(old_idx, new_index);
+                new_nodes.push(new_node);
+                new_index += 1;
+            }
+        }
+        
+        // Update children indices
+        for node in &mut new_nodes {
+            if let Some(mut children) = node.children {
+                for child in &mut children {
+                    if let Some(&new_idx) = old_to_new.get(child) {
+                        *child = new_idx;
+                    }
+                }
+                node.children = Some(children);
+            }
+        }
+        
+        // Rebuild coord_to_node mapping
+        self.coord_to_node.clear();
+        for (idx, node) in new_nodes.iter().enumerate() {
+            self.coord_to_node.insert(node.bounds_min, idx);
+        }
+        
+        // Update state
+        self.nodes = new_nodes;
+        self.next_index = self.nodes.len();
+        self.free_nodes.clear();
+        self.inactive_nodes = 0;
+    }
+    
+    /// Get memory efficiency ratio
+    pub fn memory_efficiency(&self) -> f64 {
+        let active_nodes = self.nodes.len() - self.inactive_nodes;
+        active_nodes as f64 / self.nodes.len() as f64
     }
     
     /// Get refinement statistics
