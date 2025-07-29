@@ -1,4 +1,7 @@
 // src/solver/mod.rs
+pub mod amr; // Adaptive Mesh Refinement module
+pub mod numerics; // Numerical methods module
+
 use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::boundary::Boundary;
@@ -780,5 +783,3 @@ impl Solver {
         Ok(())
     }
 }
-
-pub mod numerics;
