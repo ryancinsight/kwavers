@@ -12,6 +12,9 @@
 
 pub mod adapters;
 
+#[cfg(test)]
+mod tests;
+
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
@@ -178,9 +181,10 @@ impl PluginManager {
         // Check for ID conflicts
         let new_id = plugin.metadata().id.clone();
         if self.plugins.iter().any(|p| p.metadata().id == new_id) {
-            return Err(crate::error::PhysicsError::InvalidConfiguration(
-                format!("Plugin with ID '{}' already registered", new_id)
-            ).into());
+            return Err(crate::error::PhysicsError::InvalidConfiguration {
+                component: "PluginManager".to_string(),
+                reason: format!("Plugin with ID '{}' already registered", new_id)
+            }.into());
         }
         
         // Update field dependencies
@@ -249,7 +253,10 @@ impl PluginManager {
         // Visit all plugins
         for i in 0..n {
             visit(i, &self.plugins, &mut visited, &mut order, &field_providers)
-                .map_err(|e| crate::error::PhysicsError::InvalidConfiguration(e))?;
+                .map_err(|e| crate::error::PhysicsError::InvalidConfiguration {
+                    component: "PluginManager".to_string(),
+                    reason: e
+                })?;
         }
         
         self.execution_order = order;
@@ -341,8 +348,9 @@ impl Default for PluginManager {
     }
 }
 
+// Tests moved to tests.rs
 #[cfg(test)]
-mod tests {
+mod plugin_internal_tests {
     use super::*;
     
     #[derive(Debug)]
