@@ -257,7 +257,7 @@ impl MLEngine {
         &mut self,
         field_data: &Array3<f64>,
     ) -> KwaversResult<(Array3<u8>, Array3<f32>)> {
-        use ndarray::{Array2, Axis};
+        use ndarray::Array2;
 
         let model = self
             .models

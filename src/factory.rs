@@ -804,7 +804,7 @@ impl SimulationSetup {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         
         // Comprehensive medium validation with dimensional checks
-        let grid_volume = self.grid.dx * self.grid.dy * self.grid.dz * (nx * ny * nz) as f64;
+        let _grid_volume = self.grid.dx * self.grid.dy * self.grid.dz * (nx * ny * nz) as f64;
         
         // Validate medium properties at key points
         let test_points = vec![
@@ -944,7 +944,7 @@ impl SimulationSetup {
         
         // Time step recommendations
         let (dx, dy, dz) = self.grid.spacing();
-        let min_spacing = dx.min(dy).min(dz);
+        let _min_spacing = dx.min(dy).min(dz);
         
         // Get the maximum stable time step from the medium for CFL condition
         let max_dt = self.grid.cfl_timestep_from_medium(&*self.medium);

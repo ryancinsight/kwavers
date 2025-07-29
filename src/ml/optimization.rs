@@ -7,7 +7,7 @@
 //! - AI-assisted convergence acceleration
 
 use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3, Axis};
+use ndarray::{Array1, Array2, Array3};
 use std::collections::{HashMap, VecDeque};
 use rand::Rng;
 
@@ -318,7 +318,7 @@ impl AcousticEventAnalyzer {
         Ok(events)
     }
     
-    fn classify_acoustic_event(&self, frequency: f64, amplitude: f64) -> AcousticEventType {
+    fn classify_acoustic_event(&self, frequency: f64, _amplitude: f64) -> AcousticEventType {
         match frequency {
             f if f < 50e3 => AcousticEventType::LowFrequencyDisturbance,
             f if f < 500e3 => AcousticEventType::CavitationNoise,

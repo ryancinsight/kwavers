@@ -10,12 +10,12 @@
 use crate::error::{KwaversResult, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::composable::{PhysicsComponent, PhysicsContext, ValidationResult, FieldType};
+use crate::physics::composable::{PhysicsComponent, PhysicsContext, FieldType};
 use crate::physics::traits::ChemicalModelTrait;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;
-use log::{debug, warn};
+use log::debug;
 
 // Define reaction types locally
 #[derive(Debug, Clone)]

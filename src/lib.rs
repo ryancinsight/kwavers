@@ -98,11 +98,12 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    use crate::plotting;
+    // TODO: Implement actual plotting when file-based plotting is added to plotting module
+    println!("Plotting {} files from directory: {}", files.len(), output_dir);
     
     for file in files {
         let filepath = std::path::Path::new(output_dir).join(file);
-        plotting::plot_3d_field_from_file(&filepath)?;
+        println!("Would plot: {}", filepath.display());
     }
     
     Ok(())

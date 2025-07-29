@@ -4,13 +4,13 @@
 //! This module provides the fundamental cavitation model based on the
 //! Rayleigh-Plesset equation with proper state management.
 
-use crate::error::{KwaversResult, PhysicsError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
 use crate::physics::traits::CavitationModelBehavior;
 use ndarray::{Array3, Zip};
-use std::f64::consts::PI;
+
 
 /// Core cavitation model implementing the Rayleigh-Plesset equation
 #[derive(Debug, Clone)]
