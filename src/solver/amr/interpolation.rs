@@ -372,13 +372,19 @@ fn weno5_1d(stencil: &[f64; 5], x: f64) -> f64 {
 fn handle_boundaries(fine_field: &mut Array3<f64>, coarse_field: &Array3<f64>) {
     let (nx, ny, nz) = coarse_field.dim();
     
+    // Ensure that dim0 >= 3 to avoid out-of-bounds access
+    let dim0 = fine_field.dim().0;
+    if dim0 < 3 {
+        // If the grid is too small, return early without modifying fine_field
+        return;
+    }
+    
     // Simple extrapolation at boundaries
     // In production, would use proper boundary conditions
     for i in 0..2 {
         for j in 0..fine_field.dim().1 {
             for k in 0..fine_field.dim().2 {
                 fine_field[[i, j, k]] = fine_field[[2, j, k]];
-                let dim0 = fine_field.dim().0;
                 fine_field[[dim0 - 1 - i, j, k]] = 
                     fine_field[[dim0 - 3, j, k]];
             }
