@@ -10,9 +10,6 @@ use std::sync::Arc;
 /// Optimized 3D inverse FFT implementation with cache-friendly algorithms
 #[derive(Debug, Clone)]
 pub struct Ifft3d {
-    // nx: usize, // Removed
-    // ny: usize, // Removed
-    // nz: usize, // Removed
     padded_nx: usize,
     padded_ny: usize,
     padded_nz: usize,
@@ -22,6 +19,10 @@ pub struct Ifft3d {
     bit_reverse_indices_x: Arc<Vec<usize>>,
     bit_reverse_indices_y: Arc<Vec<usize>>,
     bit_reverse_indices_z: Arc<Vec<usize>>,
+    // Reusable buffers to avoid allocations
+    temp_x: Vec<Complex<f64>>,
+    temp_y: Vec<Complex<f64>>,
+    temp_z: Vec<Complex<f64>>,
 }
 
 impl Ifft3d {
@@ -46,9 +47,6 @@ impl Ifft3d {
         );
         
         Self {
-            // nx, // Removed
-            // ny, // Removed
-            // nz, // Removed
             padded_nx,
             padded_ny,
             padded_nz,
@@ -58,6 +56,9 @@ impl Ifft3d {
             bit_reverse_indices_x,
             bit_reverse_indices_y,
             bit_reverse_indices_z,
+            temp_x: vec![Complex::new(0.0, 0.0); padded_nx],
+            temp_y: vec![Complex::new(0.0, 0.0); padded_ny],
+            temp_z: vec![Complex::new(0.0, 0.0); padded_nz],
         }
     }
     
@@ -98,7 +99,7 @@ impl Ifft3d {
         field.mapv(|c| c.re)
     }
 
-    fn ifft_in_place(&self, field: &mut Array3<Complex<f64>>) {
+    fn ifft_in_place(&mut self, field: &mut Array3<Complex<f64>>) {
         let (nx, ny, nz) = (self.padded_nx, self.padded_ny, self.padded_nz);
         let total_size = nx * ny * nz;
         
@@ -111,8 +112,8 @@ impl Ifft3d {
         for i in 0..nx {
             let twiddles = &self.twiddles_z;
             for j in 0..ny {
-                // Create a temporary buffer for the z-slice
-                let mut temp = vec![Complex::new(0.0, 0.0); nz];
+                // Use reusable buffer for the z-slice
+                let temp = &mut self.temp_z;
                 
                 // Copy data to temp buffer (z-axis is not contiguous in memory)
                 for k in 0..nz {
@@ -120,7 +121,7 @@ impl Ifft3d {
                 }
                 
                 // Perform IFFT on temp buffer
-                butterfly_1d_optimized(&mut temp, twiddles, nz);
+                butterfly_1d_optimized(temp, twiddles, nz);
                 
                 // Copy back to field
                 for k in 0..nz {
@@ -133,8 +134,8 @@ impl Ifft3d {
         for i in 0..nx {
             let twiddles = &self.twiddles_y;
             for k in 0..nz {
-                // Create a temporary buffer for the y-slice
-                let mut temp = vec![Complex::new(0.0, 0.0); ny];
+                // Use reusable buffer for the y-slice
+                let temp = &mut self.temp_y;
                 
                 // Copy data to temp buffer (y-axis is not contiguous in memory)
                 for j in 0..ny {
@@ -142,7 +143,7 @@ impl Ifft3d {
                 }
                 
                 // Perform IFFT on temp buffer
-                butterfly_1d_optimized(&mut temp, twiddles, ny);
+                butterfly_1d_optimized(temp, twiddles, ny);
                 
                 // Copy back to field
                 for j in 0..ny {
@@ -155,8 +156,8 @@ impl Ifft3d {
         for j in 0..ny {
             let twiddles = &self.twiddles_x;
             for k in 0..nz {
-                // Create a temporary buffer for the x-slice
-                let mut temp = vec![Complex::new(0.0, 0.0); nx];
+                // Use reusable buffer for the x-slice
+                let temp = &mut self.temp_x;
                 
                 // Copy data to temp buffer
                 for i in 0..nx {
@@ -164,7 +165,7 @@ impl Ifft3d {
                 }
                 
                 // Perform IFFT on temp buffer
-                butterfly_1d_optimized(&mut temp, twiddles, nx);
+                butterfly_1d_optimized(temp, twiddles, nx);
                 
                 // Copy back to field
                 for i in 0..nx {
