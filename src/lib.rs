@@ -11,8 +11,8 @@
 //! - **Performance**: Optimized algorithms with SIMD and parallel processing
 //! - **Extensibility**: Modular architecture following SOLID principles
 
-use std::collections::HashMap;
 use ndarray::Array3;
+use std::collections::HashMap;
 
 // Core modules
 pub mod boundary;
@@ -98,11 +98,17 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    // TODO: Implement actual plotting when file-based plotting is added to plotting module
-    println!("Plotting {} files from directory: {}", files.len(), output_dir);
+    use std::path::Path;
     
     for file in files {
-        let filepath = std::path::Path::new(output_dir).join(file);
+        let filepath = Path::new(output_dir).join(file);
+        if !filepath.exists() {
+            println!("Warning: File not found: {}", filepath.display());
+            continue;
+        }
+        
+        // For now, just log what would be plotted
+        // Actual plotting would require loading CSV data and using the plotting module functions
         println!("Would plot: {}", filepath.display());
     }
     

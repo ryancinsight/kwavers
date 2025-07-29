@@ -62,7 +62,7 @@ struct PerformanceMetrics {
 ///     medium::homogeneous::HomogeneousMedium,
 ///     physics::mechanics::acoustic_wave::viscoelastic_wave::ViscoelasticWave,
 ///     physics::traits::AcousticWaveModel,
-///     source::MockSource,
+///     source::NullSource,
 /// };
 /// use ndarray::{Array3, Array4};
 /// 
@@ -74,7 +74,7 @@ struct PerformanceMetrics {
 /// // Example arrays for demonstration
 /// let mut fields = Array4::zeros((4, 16, 16, 16));
 /// let prev_pressure = Array3::zeros((16, 16, 16));
-/// let source = MockSource::new();
+/// let source = NullSource;
 /// let dt = 1e-7;
 /// let t = 0.0;
 /// 
@@ -538,7 +538,7 @@ mod tests {
     use super::*;
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
-    use crate::source::MockSource;
+    use crate::source::NullSource;
     use ndarray::Array4;
 
     #[test]
@@ -546,7 +546,7 @@ mod tests {
         let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001);
         let mut viscoelastic = ViscoelasticWave::new(&grid);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
-        let source = MockSource::new();
+        let source = NullSource;
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 8, 8, 8));
         let prev_pressure = Array3::<f64>::zeros((8, 8, 8));
         

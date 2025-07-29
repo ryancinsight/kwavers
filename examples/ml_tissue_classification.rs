@@ -158,7 +158,16 @@ fn demonstrate_parameter_optimization(ml_engine: &MLEngine) -> KwaversResult<()>
         println!("  - {}: {:.2e}", key, value);
     }
     
-    match ml_engine.optimize_parameters(&current_params, &target_metrics) {
+    // Create a dummy simulation state for the optimization
+    let simulation_state = ndarray::Array1::from_vec(vec![
+        1500.0,  // sound speed
+        1000.0,  // density
+        0.1,     // attenuation
+        1.0,     // nonlinearity
+        0.5,     // scattering
+    ]);
+    
+    match ml_engine.optimize_parameters(&current_params, &target_metrics, &simulation_state) {
         Ok(optimized) => {
             println!("\n✅ Optimized parameters:");
             for (key, value) in &optimized {

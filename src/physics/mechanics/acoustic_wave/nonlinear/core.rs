@@ -3,7 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::KwaversResult;
 
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, Zip, ShapeBuilder};
 use log::{debug, warn};
 use std::f64;
 
@@ -191,7 +191,7 @@ impl NonlinearWave {
     ///
     /// * `scaling` - The nonlinearity scaling factor. Must be greater than 0.0.
     pub fn set_nonlinearity_scaling(&mut self, scaling: f64) {
-        assert!(scaling > 0.0, "Nonlinearity scaling must be positive");
+        assert!(scaling >= 0.0, "Nonlinearity scaling must be non-negative");
         self.nonlinearity_scaling = scaling;
     }
 
@@ -404,7 +404,7 @@ use crate::source::Source;
 use crate::solver::PRESSURE_IDX;
 use crate::utils::{fft_3d, ifft_3d};
 use log::{trace};
-use ndarray::{Array4, Axis, ShapeBuilder};
+use ndarray::{Array4, Axis};
 use num_complex::Complex;
 use std::time::Instant;
 
@@ -525,45 +525,63 @@ impl AcousticWaveModel for NonlinearWave {
         let dy_inv = 1.0 / (2.0 * grid.dy);
         let dz_inv = 1.0 / (2.0 * grid.dz);
         
-        // Process interior points with iterator patterns
+        // Process interior points with cache-friendly access pattern
         for i in 1..grid.nx-1 {
             for j in 1..grid.ny-1 {
-                for k in 1..grid.nz-1 {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
+                // Process k dimension with loop unrolling for better performance
+                let mut k = 1;
+                while k < grid.nz - 1 {
+                    // Unroll up to 4 iterations for instruction-level parallelism
+                    let batch_size = 4.min(grid.nz - 1 - k);
                     
-                    // Compute gradients using central differences
-                    let grad_x = (pressure_at_start[[i+1, j, k]] - pressure_at_start[[i-1, j, k]]) * dx_inv;
-                    let grad_y = (pressure_at_start[[i, j+1, k]] - pressure_at_start[[i, j-1, k]]) * dy_inv;
-                    let grad_z = (pressure_at_start[[i, j, k+1]] - pressure_at_start[[i, j, k-1]]) * dz_inv;
+                    for dk in 0..batch_size {
+                        let k_idx = k + dk;
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k_idx as f64 * grid.dz;
+                        
+                        // Compute gradients using central differences
+                        let grad_x = (pressure_at_start[[i+1, j, k_idx]] - pressure_at_start[[i-1, j, k_idx]]) * dx_inv;
+                        let grad_y = (pressure_at_start[[i, j+1, k_idx]] - pressure_at_start[[i, j-1, k_idx]]) * dy_inv;
+                        let grad_z = (pressure_at_start[[i, j, k_idx+1]] - pressure_at_start[[i, j, k_idx-1]]) * dz_inv;
+                        
+                        // Get medium properties
+                        let rho = medium.density(x, y, z, grid).max(1e-9);
+                        let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                        let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+                        
+                        // Compute nonlinear term coefficients
+                        let gradient_scale = dt / (2.0 * rho * c * c);
+                        let beta = b_a / (rho * c * c);
+                        
+                        // Apply gradient clamping if enabled
+                        let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
+                            (
+                                grad_x.clamp(-max_gradient, max_gradient),
+                                grad_y.clamp(-max_gradient, max_gradient),
+                                grad_z.clamp(-max_gradient, max_gradient)
+                            )
+                        } else {
+                            (grad_x, grad_y, grad_z)
+                        };
+                        
+                        // Compute gradient magnitude
+                        let grad_magnitude = (grad_x_final * grad_x_final + 
+                                             grad_y_final * grad_y_final + 
+                                             grad_z_final * grad_z_final).sqrt();
+                        
+                        // Compute and store nonlinear term
+                        let p_limited = pressure_at_start[[i, j, k_idx]].clamp(-self.max_pressure, self.max_pressure);
+                        let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
+                        
+                        nonlinear_term[[i, j, k_idx]] = if nl_term.is_finite() {
+                            nl_term.clamp(-self.max_pressure, self.max_pressure)
+                        } else {
+                            0.0
+                        };
+                    }
                     
-                    let rho = medium.density(x, y, z, grid).max(1e-9);
-                    let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                    let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                    let gradient_scale = dt / (2.0 * rho * c * c);
-                    
-                    let (grad_x_clamped, grad_y_clamped, grad_z_clamped) = if self.clamp_gradients {
-                        (
-                            grad_x.clamp(-max_gradient, max_gradient),
-                            grad_y.clamp(-max_gradient, max_gradient),
-                            grad_z.clamp(-max_gradient, max_gradient)
-                        )
-                    } else {
-                        (grad_x, grad_y, grad_z)
-                    };
-                    
-                    let grad_magnitude_sq = grad_x_clamped.powi(2) + grad_y_clamped.powi(2) + grad_z_clamped.powi(2);
-                    let grad_magnitude = grad_magnitude_sq.sqrt();
-                    let beta = b_a / (rho * c * c);
-                    let p_limited = pressure_at_start[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
-                    let nl_term_calc = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-                    
-                    nonlinear_term[[i, j, k]] = if nl_term_calc.is_finite() {
-                        nl_term_calc.clamp(-self.max_pressure, self.max_pressure)
-                    } else { 
-                        0.0 
-                    };
+                    k += batch_size;
                 }
             }
         }
@@ -601,7 +619,12 @@ impl AcousticWaveModel for NonlinearWave {
                 let viscous_damping_arg = -mu * k_val.powi(2) * dt / rho;
                 let viscous_damping = if viscous_damping_arg.is_finite() { viscous_damping_arg.exp() } else { 1.0 };
 
-                let absorption_damping_arg = -medium.absorption_coefficient(x, y, z, grid, ref_freq) * dt;
+                // Apply absorption: exp(-alpha * c * dt) for spatial absorption
+                let alpha = medium.absorption_coefficient(x, y, z, grid, ref_freq);
+                if i == 0 && j == 0 && k == 0 && alpha > 0.0 {
+                    debug!("Absorption: alpha={}, c={}, dt={}, damping={}", alpha, c, dt, (-alpha * c * dt).exp());
+                }
+                let absorption_damping_arg = -alpha * c * dt;
                 let absorption_damping = if absorption_damping_arg.is_finite() { absorption_damping_arg.exp() } else { 1.0 };
 
                 let phase_complex = Complex::new(phase.cos(), phase.sin());

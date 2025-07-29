@@ -341,13 +341,12 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         &self,
         current_params: &HashMap<String, f64>,
         target_metrics: &HashMap<String, f64>,
+        simulation_state: &Array1<f64>,
     ) -> KwaversResult<HashMap<String, f64>> {
         use crate::ml::optimization::ParameterOptimizer;
 
         let mut optimizer = ParameterOptimizer::new(0.1, 0.05);
-        // FIXME: This uses a dummy simulation state. The caller should provide a real state for meaningful optimization.
-        let sim_state = Array1::from_vec(vec![0.0; 5]);
-        optimizer.optimize_with_ai(current_params, target_metrics, &sim_state)
+        optimizer.optimize_with_ai(current_params, target_metrics, simulation_state)
     }
 
     /// Detect anomalies via simple statistical thresholding (*mean + 3·σ*).
