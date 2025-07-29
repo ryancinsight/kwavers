@@ -3,7 +3,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::KwaversResult;
 
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, Zip, ShapeBuilder};
 use log::{debug, warn};
 use std::f64;
 
@@ -191,7 +191,7 @@ impl NonlinearWave {
     ///
     /// * `scaling` - The nonlinearity scaling factor. Must be greater than 0.0.
     pub fn set_nonlinearity_scaling(&mut self, scaling: f64) {
-        assert!(scaling > 0.0, "Nonlinearity scaling must be positive");
+        assert!(scaling >= 0.0, "Nonlinearity scaling must be non-negative");
         self.nonlinearity_scaling = scaling;
     }
 
@@ -404,7 +404,7 @@ use crate::source::Source;
 use crate::solver::PRESSURE_IDX;
 use crate::utils::{fft_3d, ifft_3d};
 use log::{trace};
-use ndarray::{Array4, Axis, ShapeBuilder};
+use ndarray::{Array4, Axis};
 use num_complex::Complex;
 use std::time::Instant;
 

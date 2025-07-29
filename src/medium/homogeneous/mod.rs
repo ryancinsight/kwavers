@@ -369,6 +369,18 @@ impl HomogeneousMedium {
         // self.shear_sound_speed_array = OnceLock::new(); // Removed, trait default will pick up change in lame_mu_array
         self
     }
+    
+    /// Sets the acoustic absorption coefficient parameters.
+    ///
+    /// # Arguments
+    /// * `alpha0` - Absorption coefficient at reference frequency (Np/m)
+    /// * `delta` - Power law exponent for frequency dependence
+    pub fn with_acoustic_absorption(mut self, alpha0: f64, delta: f64) -> Self {
+        self.alpha0 = alpha0;
+        self.delta = delta;
+        self.clear_caches();
+        self
+    }
 
     /// Creates a `HomogeneousMedium` instance with properties representative of water.
     ///
