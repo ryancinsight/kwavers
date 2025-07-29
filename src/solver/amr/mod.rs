@@ -281,9 +281,18 @@ impl AMRManager {
                             (1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1),
                             (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1),
                         ] {
-                            let ni = (i as i32 + si * di as i32) as usize;
-                            let nj = (j as i32 + sj * dj as i32) as usize;
-                            let nk = (k as i32 + sk * dk as i32) as usize;
+                            let ni_i32 = i as i32 + si * di as i32;
+                            let nj_i32 = j as i32 + sj * dj as i32;
+                            let nk_i32 = k as i32 + sk * dk as i32;
+                            
+                            // Ensure indices are non-negative before casting to usize
+                            if ni_i32 < 0 || nj_i32 < 0 || nk_i32 < 0 {
+                                continue;
+                            }
+                            
+                            let ni = ni_i32 as usize;
+                            let nj = nj_i32 as usize;
+                            let nk = nk_i32 as usize;
                             
                             if self.octree.is_valid_cell(ni, nj, nk) {
                                 buffer_cells.push((ni, nj, nk));
