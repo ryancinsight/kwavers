@@ -105,8 +105,12 @@ mod tests {
                     let fine_sum: f64 = fine.sum();
                     let coarse_sum: f64 = coarse.sum();
                     
-                    assert!((fine_sum - 8.0 * field_sum).abs() / field_sum < 1e-10);
-                    assert!((coarse_sum - field_sum).abs() / field_sum < 1e-10);
+                    if field_sum != 0.0 {
+                        assert!((fine_sum - 8.0 * field_sum).abs() / field_sum < 1e-10);
+                        assert!((coarse_sum - field_sum).abs() / field_sum < 1e-10);
+                    } else {
+                        panic!("field_sum is zero, cannot perform relative error calculation.");
+                    }
                 }
             }
         }
