@@ -98,11 +98,12 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    // Placeholder implementation - would integrate with actual plotting library
-    println!("Generating plots for {} files in directory: {}", files.len(), output_dir);
+    // TODO: Implement actual plotting when file-based plotting is added to plotting module
+    println!("Plotting {} files from directory: {}", files.len(), output_dir);
     
     for file in files {
-        println!("  - {}", file);
+        let filepath = std::path::Path::new(output_dir).join(file);
+        println!("Would plot: {}", filepath.display());
     }
     
     Ok(())

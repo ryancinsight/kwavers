@@ -68,7 +68,7 @@ impl InferenceEngine {
     /// weights.ncols()*.  If the input feature dimension does *not* match
     /// `weights.nrows()` an informative error is returned.
     pub fn infer_batch(&self, input: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let (batch, features, depth) = input.dim();
+        let (_batch, features, depth) = input.dim();
         if depth != 1 {
             return Err(KwaversError::Validation(
                 crate::error::ValidationError::FieldValidation {

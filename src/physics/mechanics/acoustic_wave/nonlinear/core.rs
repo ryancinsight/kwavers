@@ -267,40 +267,36 @@ impl NonlinearWave {
 
     /// Checks the stability of the simulation.
     pub(super) fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, pressure: &Array3<f64>) -> bool {
-        let mut max_c: f64 = 0.0;
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
-
-        if grid.nx > 0 && grid.ny > 0 && grid.nz > 0 {
-            for i in 0..grid.nx {
-                for j in 0..grid.ny {
-                    for k in 0..grid.nz {
-                        let x = i as f64 * grid.dx;
-                        let y = j as f64 * grid.dy;
-                        let z = k as f64 * grid.dz;
-                        let c = medium.sound_speed(x, y, z, grid);
-                        max_c = max_c.max(c);
-                    }
-                }
-            }
-        } else {
-            max_c = 0.0;
-        }
-
+        
+        // Combined pass for max sound speed and pressure validation
+        let mut max_c: f64 = 0.0;
         let mut max_pressure_val = f64::NEG_INFINITY;
         let mut min_pressure_val = f64::INFINITY;
         let mut has_nan = false;
         let mut has_inf = false;
-
-        for &p_val in pressure.iter() {
-            if p_val.is_nan() {
-                has_nan = true;
-                break;
-            } else if p_val.is_infinite() {
-                has_inf = true;
-                break;
-            } else {
-                max_pressure_val = max_pressure_val.max(p_val);
-                min_pressure_val = min_pressure_val.min(p_val);
+        
+        if grid.nx > 0 && grid.ny > 0 && grid.nz > 0 {
+            // Use indexed iteration to check both medium properties and pressure values
+            for ((i, j, k), &p_val) in pressure.indexed_iter() {
+                // Check pressure validity
+                if p_val.is_nan() {
+                    has_nan = true;
+                    break;
+                } else if p_val.is_infinite() {
+                    has_inf = true;
+                    break;
+                } else {
+                    max_pressure_val = max_pressure_val.max(p_val);
+                    min_pressure_val = min_pressure_val.min(p_val);
+                }
+                
+                // Update max sound speed
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let c = medium.sound_speed(x, y, z, grid);
+                max_c = max_c.max(c);
             }
         }
 
@@ -365,45 +361,39 @@ impl NonlinearWave {
         dt: f64,
     ) {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
         
-        // Collect boundary indices
-        let boundary_indices: Vec<(usize, usize, usize)> = (0..nx)
-            .flat_map(|i| {
-                (0..ny).flat_map(move |j| {
-                    (0..nz).filter_map(move |k| {
-                        if i == 0 || i == nx-1 || 
-                           j == 0 || j == ny-1 || 
-                           k == 0 || k == nz-1 {
-                            Some((i, j, k))
-                        } else {
-                            None
-                        }
-                    })
-                })
-            })
-            .collect();
-        
-        // Process boundary points
-        for (i, j, k) in boundary_indices {
-            let x = i as f64 * grid.dx;
-            let y = j as f64 * grid.dy;
-            let z = k as f64 * grid.dz;
-            
-            let rho = medium.density(x, y, z, grid).max(1e-9);
-            let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-            let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-            let gradient_scale = dt / (2.0 * rho * c * c);
-            
-            let p_val_current = pressure_current[[i, j, k]];
-            let p_prev_val = pressure_prev[[i, j, k]];
-            let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
-            let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
-            let dp_dt_limited = if dp_dt.is_finite() {
-                dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
-            } else { 0.0 };
-            let beta = b_a / (rho * c * c);
-            
-            nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+        // Process boundary points directly without collecting
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    // Skip internal points
+                    if i > 0 && i < nx-1 && 
+                       j > 0 && j < ny-1 && 
+                       k > 0 && k < nz-1 {
+                        continue;
+                    }
+                    
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    let rho = medium.density(x, y, z, grid).max(1e-9);
+                    let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                    let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+                    let gradient_scale = dt / (2.0 * rho * c * c);
+                    
+                    let p_val_current = pressure_current[[i, j, k]];
+                    let p_prev_val = pressure_prev[[i, j, k]];
+                    let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
+                    let dp_dt_limited = if dp_dt.is_finite() {
+                        dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
+                    } else { 0.0 };
+                    let beta = b_a / (rho * c * c);
+                    
+                    nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+                }
+            }
         }
     }
 }

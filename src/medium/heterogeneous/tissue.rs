@@ -236,25 +236,7 @@ impl HeterogeneousTissueMedium {
         self.lame_lambda_array = OnceLock::new();
         self.lame_mu_array = OnceLock::new();
     }
-    
-    /// Legacy method for backward compatibility
-    /// Deprecated: Use set_tissue_in_region with TissueRegion instead
-    #[deprecated(since = "0.1.0", note = "Use set_tissue_in_region with TissueRegion instead")]
-    #[allow(clippy::too_many_arguments)]
-    pub fn set_tissue_in_region_legacy(
-        &mut self,
-        tissue_type: TissueType,
-        x_min: f64,
-        x_max: f64,
-        y_min: f64,
-        y_max: f64,
-        z_min: f64,
-        z_max: f64,
-        grid: &Grid,
-    ) -> KwaversResult<()> {
-        let region = TissueRegion::new(tissue_type, x_min, x_max, y_min, y_max, z_min, z_max);
-        self.set_tissue_in_region(&region, grid)
-    }
+
 
     /// Set tissue type for a spherical region
     pub fn set_tissue_in_sphere(
