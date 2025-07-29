@@ -22,6 +22,7 @@ use ndarray::Array4;
 use crate::physics::{PhysicsComponent, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
 use crate::time::Time;
 use crate::validation::{ValidationResult};
+use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -699,6 +700,8 @@ pub struct SimulationBuilder {
     physics: Option<PhysicsPipeline>,
     time: Option<Time>,
     config: SimulationConfig,
+    amr_config: Option<AMRConfig>,
+    amr_adapt_interval: Option<usize>,
 }
 
 impl SimulationBuilder {
@@ -710,6 +713,8 @@ impl SimulationBuilder {
             physics: None,
             time: None,
             config,
+            amr_config: None,
+            amr_adapt_interval: None,
         }
     }
 
@@ -734,6 +739,53 @@ impl SimulationBuilder {
     /// Add time configuration to builder
     pub fn with_time(mut self, time: Time) -> Self {
         self.time = Some(time);
+        self
+    }
+    
+    /// Enable Adaptive Mesh Refinement with default configuration
+    pub fn enable_amr(mut self) -> Self {
+        self.amr_config = Some(AMRConfig::default());
+        self.amr_adapt_interval = Some(10); // Default: adapt every 10 steps
+        self
+    }
+    
+    /// Configure Adaptive Mesh Refinement
+    pub fn with_amr_config(mut self, config: AMRConfig, adapt_interval: usize) -> Self {
+        self.amr_config = Some(config);
+        self.amr_adapt_interval = Some(adapt_interval);
+        self
+    }
+    
+    /// Set AMR refinement thresholds
+    pub fn amr_thresholds(mut self, refine: f64, coarsen: f64) -> Self {
+        let mut config = self.amr_config.unwrap_or_default();
+        config.refine_threshold = refine;
+        config.coarsen_threshold = coarsen;
+        self.amr_config = Some(config);
+        self
+    }
+    
+    /// Set AMR maximum refinement level
+    pub fn amr_max_level(mut self, max_level: usize) -> Self {
+        let mut config = self.amr_config.unwrap_or_default();
+        config.max_level = max_level;
+        self.amr_config = Some(config);
+        self
+    }
+    
+    /// Set AMR wavelet type
+    pub fn amr_wavelet(mut self, wavelet: WaveletType) -> Self {
+        let mut config = self.amr_config.unwrap_or_default();
+        config.wavelet_type = wavelet;
+        self.amr_config = Some(config);
+        self
+    }
+    
+    /// Set AMR interpolation scheme
+    pub fn amr_interpolation(mut self, scheme: InterpolationScheme) -> Self {
+        let mut config = self.amr_config.unwrap_or_default();
+        config.interpolation_scheme = scheme;
+        self.amr_config = Some(config);
         self
     }
 
@@ -767,6 +819,8 @@ impl SimulationBuilder {
             physics,
             time,
             config: self.config,
+            amr_config: self.amr_config,
+            amr_adapt_interval: self.amr_adapt_interval,
         })
     }
 }
@@ -785,6 +839,8 @@ pub struct SimulationSetup {
     pub physics: PhysicsPipeline,
     pub time: Time,
     pub config: SimulationConfig,
+    pub amr_config: Option<AMRConfig>,
+    pub amr_adapt_interval: Option<usize>,
 }
 
 impl SimulationSetup {

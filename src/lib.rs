@@ -52,6 +52,7 @@ pub use sensor::Sensor;
 pub use recorder::Recorder;
 pub use boundary::{Boundary, pml::PMLBoundary, pml::PMLConfig};
 pub use solver::Solver;
+pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
 pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue};
 pub use error::{ValidationError, ConfigError};

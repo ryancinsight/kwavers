@@ -1,4 +1,7 @@
 // src/solver/mod.rs
+pub mod amr; // Adaptive Mesh Refinement module
+pub mod numerics; // Numerical methods module
+
 use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::boundary::Boundary;
@@ -16,6 +19,9 @@ use ndarray::{Array3, Array4, Axis};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
 use log::warn; // Added warn import
+
+// Import AMR types
+use self::amr::{AMRManager, AMRConfig};
 // Removed std::sync::atomic::{AtomicBool, Ordering}
 // Removed rayon::prelude::*;
 
@@ -86,12 +92,16 @@ pub struct Solver {
     pub scattering: Box<dyn AcousticScatteringModelTrait>,
     pub heterogeneity: Box<dyn HeterogeneityModelTrait>, // Refactored
     pub step_times: Vec<f64>,
-    pub physics_times: [Vec<f64>; 8], // Timing for different physics components
+    pub physics_times: [Vec<f64>; 9], // Timing for different physics components (including AMR)
     // Track pending medium updates
     pending_temperature_update: Option<Array3<f64>>,
     pending_bubble_update: Option<(Array3<f64>, Array3<f64>)>, // (radius, velocity)
     medium_update_attempts: usize,
     medium_update_successes: usize,
+    // Adaptive Mesh Refinement
+    pub amr_manager: Option<AMRManager>,
+    amr_adapt_interval: usize,
+    amr_last_adapt_step: usize,
 }
 
 impl Solver {
@@ -124,7 +134,7 @@ impl Solver {
         
         // Initialize physics timing arrays with proper type annotation
         let capacity = time_clone.n_steps / 10 + 1; // Store every 10th step
-        let physics_times: [Vec<f64>; 8] = [
+        let physics_times: [Vec<f64>; 9] = [
             Vec::with_capacity(capacity), // Acoustic wave
             Vec::with_capacity(capacity), // Boundary conditions
             Vec::with_capacity(capacity), // Cavitation
@@ -133,6 +143,7 @@ impl Solver {
             Vec::with_capacity(capacity), // Chemical
             Vec::with_capacity(capacity), // Streaming
             Vec::with_capacity(capacity), // Scattering
+            Vec::with_capacity(capacity), // AMR
         ];
         
         Self {
@@ -157,10 +168,34 @@ impl Solver {
             pending_bubble_update: None,
             medium_update_attempts: 0,
             medium_update_successes: 0,
+            amr_manager: None,
+            amr_adapt_interval: 10, // Default: adapt every 10 steps
+            amr_last_adapt_step: 0,
         }
     }
 
     // Removed duplicated pub fn run and part of new() method body
+
+    /// Enable Adaptive Mesh Refinement with given configuration
+    pub fn enable_amr(&mut self, config: AMRConfig, adapt_interval: usize) -> KwaversResult<()> {
+        info!("Enabling Adaptive Mesh Refinement");
+        info!("  Max level: {}", config.max_level);
+        info!("  Refine threshold: {:.2e}", config.refine_threshold);
+        info!("  Coarsen threshold: {:.2e}", config.coarsen_threshold);
+        info!("  Adaptation interval: {} steps", adapt_interval);
+        
+        self.amr_manager = Some(AMRManager::new(config, &self.grid));
+        self.amr_adapt_interval = adapt_interval;
+        self.amr_last_adapt_step = 0;
+        
+        Ok(())
+    }
+
+    /// Disable Adaptive Mesh Refinement
+    pub fn disable_amr(&mut self) {
+        info!("Disabling Adaptive Mesh Refinement");
+        self.amr_manager = None;
+    }
 
     pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) -> KwaversResult<()> {
         let dt = self.time.dt;
@@ -417,9 +452,47 @@ impl Solver {
         let mut _scattering_time = 0.0;     // Prefix with underscore to indicate intentionally unused
         let mut _heterogeneity_time = 0.0;  // Prefix with underscore to indicate intentionally unused
         let mut postprocessing_time = 0.0;
+        let mut amr_time = 0.0;
 
         let current_time = step as f64 * dt;
         let t = current_time;
+        
+        // Adaptive Mesh Refinement
+        if let Some(ref mut amr_manager) = self.amr_manager {
+            if step > 0 && (step - self.amr_last_adapt_step) >= self.amr_adapt_interval {
+                let amr_start = Instant::now();
+                
+                // Get pressure field for error estimation
+                let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+                
+                // Adapt mesh based on pressure field
+                match amr_manager.adapt_mesh(&pressure, current_time) {
+                    Ok(result) => {
+                        if result.cells_refined > 0 || result.cells_coarsened > 0 {
+                            info!("AMR adaptation at step {}: refined {} cells, coarsened {} cells, max error: {:.2e}",
+                                  step, result.cells_refined, result.cells_coarsened, result.max_error);
+                            
+                            // TODO: Interpolate all fields to new mesh structure
+                            // This would require updating the grid and fields based on AMR
+                            // For now, we just track the adaptation
+                        }
+                        
+                        // Report memory savings
+                        let stats = amr_manager.memory_stats();
+                        if step % 100 == 0 {
+                            info!("AMR memory stats: {:.1}% saved, {:.2}x compression",
+                                  stats.memory_saved_percent, stats.compression_ratio);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("AMR adaptation failed at step {}: {}", step, e);
+                    }
+                }
+                
+                self.amr_last_adapt_step = step;
+                amr_time = amr_start.elapsed().as_secs_f64();
+            }
+        }
         
         // Safe max and min values for physical properties to prevent instability
         const MAX_PRESSURE: f64 = 1e9;   // 1 GPa max pressure
@@ -641,12 +714,21 @@ impl Solver {
         self.physics_times[5].push(chemical_time);
         self.physics_times[6].push(streaming_time);
         self.physics_times[7].push(postprocessing_time);
+        self.physics_times[8].push(amr_time);
         
         if step % 100 == 0 {
-            info!(
-                "Step {} completed in {:.4} s (wave: {:.4}, cav: {:.4}, light: {:.4}, thermal: {:.4})",
-                step, step_time, wave_time, cavitation_time, light_time, thermal_time
-            );
+            let timing_msg = if amr_time > 0.0 {
+                format!(
+                    "Step {} completed in {:.4} s (wave: {:.4}, cav: {:.4}, light: {:.4}, thermal: {:.4}, AMR: {:.4})",
+                    step, step_time, wave_time, cavitation_time, light_time, thermal_time, amr_time
+                )
+            } else {
+                format!(
+                    "Step {} completed in {:.4} s (wave: {:.4}, cav: {:.4}, light: {:.4}, thermal: {:.4})",
+                    step, step_time, wave_time, cavitation_time, light_time, thermal_time
+                )
+            };
+            info!("{}", timing_msg);
         }
         Ok(())
     }
@@ -780,5 +862,3 @@ impl Solver {
         Ok(())
     }
 }
-
-pub mod numerics;

@@ -179,6 +179,26 @@ if memory_manager.meets_performance_targets() {
 3. 2–5 × faster parameter convergence
 4. <500 MB ML memory overhead
 
+### 📋 Upcoming: Phase 15 – Advanced Numerical Methods (2026)
+
+**Next-Generation Performance Target**: >100M grid updates/second
+
+**Key Enhancements**:
+- **Adaptive Mesh Refinement (AMR)**: 60-80% memory reduction, 2-5x speedup
+- **Hybrid Spectral-DG Methods**: Robust shock wave handling
+- **Multi-Rate Time Integration**: 10-100x speedup for multi-physics
+- **GPU-Optimized Kernels**: Custom CUDA/ROCm kernels for 20-50x speedup
+- **Convolutional PML**: Advanced boundary conditions with <-60dB reflections
+- **IMEX Schemes**: Improved stability for stiff problems
+- **Full Kuznetsov Equation**: Complete nonlinear acoustic model
+- **Plugin Architecture**: Modular, extensible physics system
+
+**Expected Impact**:
+- Petascale simulations on modern supercomputers
+- Real-time 2D simulations for clinical applications
+- Accurate modeling of extreme nonlinear phenomena
+- Seamless integration of new physics models
+
 ## Examples
 
 ### 1. Basic Acoustic Simulation
