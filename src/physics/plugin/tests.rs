@@ -45,16 +45,7 @@ mod tests {
 
     impl PhysicsPlugin for MockPlugin {
         fn metadata(&self) -> &PluginMetadata {
-            // This is a simplified approach for testing
-            // In real implementation, we'd store metadata as a field
-            Box::leak(Box::new(PluginMetadata {
-                id: self.id.clone(),
-                name: format!("Mock Plugin {}", self.id),
-                version: "1.0.0".to_string(),
-                author: "Test".to_string(),
-                description: "Mock plugin for testing".to_string(),
-                license: "MIT".to_string(),
-            }))
+            &self.metadata
         }
 
         fn initialize(
