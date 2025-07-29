@@ -1,5 +1,6 @@
 // src/fft/fft_core.rs
 use num_complex::Complex;
+use ndarray::Array3;
 use std::f64::consts::PI;
 use log::trace;
 
@@ -96,5 +97,85 @@ pub fn next_power_of_two_usize(n: usize) -> usize {
         n
     } else {
         n.next_power_of_two()
+    }
+}
+
+/// Optimized 1D butterfly FFT/IFFT algorithm that works on slices for better cache locality
+/// This is shared between FFT and IFFT implementations to avoid code duplication
+#[inline]
+pub fn butterfly_1d_optimized(data: &mut [Complex<f64>], twiddles: &[Complex<f64>], n: usize) {
+    let mut len = 1;
+    while len < n {
+        let half_len = len;
+        len *= 2;
+        
+        // Process each butterfly stage
+        for k in (0..n).step_by(len) {
+            // Use SIMD-friendly loop with fewer branches
+            for j in 0..half_len {
+                let idx = k + j;
+                let idx2 = idx + half_len;
+                
+                // Avoid bounds checking in release mode
+                debug_assert!(idx < n && idx2 < n && j * (n / len) < twiddles.len());
+                
+                // Compute butterfly operation
+                let t = twiddles[j * (n / len)] * data[idx2];
+                let u = data[idx];
+                
+                data[idx] = u + t;
+                data[idx2] = u - t;
+            }
+        }
+    }
+}
+
+/// Apply bit reversal permutation to a 3D complex array
+/// This is shared between FFT and IFFT implementations to avoid code duplication
+pub fn apply_bit_reversal_3d(
+    field: &mut Array3<Complex<f64>>,
+    bit_reverse_indices_x: &[usize],
+    bit_reverse_indices_y: &[usize],
+    bit_reverse_indices_z: &[usize],
+) {
+    let (nx, ny, nz) = field.dim();
+    
+    // Apply bit reversal in x dimension
+    for j in 0..ny {
+        for k in 0..nz {
+            let mut temp = vec![Complex::new(0.0, 0.0); nx];
+            for i in 0..nx {
+                temp[bit_reverse_indices_x[i]] = field[[i, j, k]];
+            }
+            for i in 0..nx {
+                field[[i, j, k]] = temp[i];
+            }
+        }
+    }
+    
+    // Apply bit reversal in y dimension
+    for i in 0..nx {
+        for k in 0..nz {
+            let mut temp = vec![Complex::new(0.0, 0.0); ny];
+            for j in 0..ny {
+                temp[bit_reverse_indices_y[j]] = field[[i, j, k]];
+            }
+            for j in 0..ny {
+                field[[i, j, k]] = temp[j];
+            }
+        }
+    }
+    
+    // Apply bit reversal in z dimension
+    for i in 0..nx {
+        for j in 0..ny {
+            let mut temp = vec![Complex::new(0.0, 0.0); nz];
+            for k in 0..nz {
+                temp[bit_reverse_indices_z[k]] = field[[i, j, k]];
+            }
+            for k in 0..nz {
+                field[[i, j, k]] = temp[k];
+            }
+        }
     }
 }

@@ -98,11 +98,11 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    // Placeholder implementation - would integrate with actual plotting library
-    println!("Generating plots for {} files in directory: {}", files.len(), output_dir);
+    use crate::plotting;
     
     for file in files {
-        println!("  - {}", file);
+        let filepath = std::path::Path::new(output_dir).join(file);
+        plotting::plot_3d_field_from_file(&filepath)?;
     }
     
     Ok(())
