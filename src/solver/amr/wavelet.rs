@@ -9,12 +9,14 @@ use ndarray::{Array1, Array3, ArrayView1, ArrayViewMut1, s};
 use super::WaveletType;
 
 /// Wavelet transform for error estimation
+#[derive(Debug)]
 pub struct WaveletTransform {
     wavelet_type: WaveletType,
     filter_bank: FilterBank,
 }
 
 /// Filter bank for wavelet transforms
+#[derive(Debug)]
 struct FilterBank {
     /// Low-pass decomposition filter
     h0: Array1<f64>,

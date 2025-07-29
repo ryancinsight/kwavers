@@ -29,6 +29,7 @@ struct OctreeNode {
 }
 
 /// Octree for adaptive mesh refinement
+#[derive(Debug)]
 pub struct Octree {
     /// All nodes in the octree
     nodes: Vec<OctreeNode>,

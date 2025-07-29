@@ -167,16 +167,16 @@
 **RACI**: R-Dev Team, A-Tech Lead, C-Research Team, I-All Stakeholders
 
 ### Quarter 1: Foundation (Months 1-3)
-- [ ] **Adaptive Mesh Refinement (AMR)** *(60-80% memory reduction, 2-5x speedup)*
-  - [ ] Wavelet-based error estimators
-  - [ ] Octree data structures for 3D refinement
-  - [ ] Conservative interpolation between levels
-  - [ ] Integration with existing grid system
-- [ ] **Plugin Architecture** *(Easier extensibility)*
-  - [ ] Define PhysicsPlugin trait interface
-  - [ ] Runtime composition framework
-  - [ ] Plugin discovery and loading system
-  - [ ] API documentation and examples
+- [x] **Adaptive Mesh Refinement (AMR)** *(60-80% memory reduction, 2-5x speedup)*
+  - [x] Wavelet-based error estimators
+  - [x] Octree data structures for 3D refinement
+  - [x] Conservative interpolation between levels
+  - [x] Integration with existing grid system
+- [x] **Plugin Architecture** *(Easier extensibility)*
+  - [x] Define PhysicsPlugin trait interface
+  - [x] Runtime composition framework
+  - [x] Plugin discovery and loading system
+  - [x] API documentation and examples
 - [ ] **GPU-Optimized FFT Kernels** *(20-50x speedup potential)*
   - [ ] CUDA kernel implementation
   - [ ] Memory coalescing optimization

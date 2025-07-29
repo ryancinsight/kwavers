@@ -9,6 +9,7 @@ use ndarray::{Array3, s};
 use super::{WaveletType, wavelet::WaveletTransform};
 
 /// Error estimator for AMR
+#[derive(Debug)]
 pub struct ErrorEstimator {
     /// Wavelet transform for analysis
     wavelet_transform: WaveletTransform,

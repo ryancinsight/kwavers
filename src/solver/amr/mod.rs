@@ -103,6 +103,7 @@ pub struct CellStatus {
 }
 
 /// Adaptive Mesh Refinement manager
+#[derive(Debug)]
 pub struct AMRManager {
     /// Configuration parameters
     config: AMRConfig,
