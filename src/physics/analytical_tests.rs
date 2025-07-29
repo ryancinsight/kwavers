@@ -155,7 +155,7 @@ mod tests {
         
         // Initialize wave
         let mut wave = NonlinearWave::new(&grid);
-        wave.set_nonlinearity_scaling(0.0); // Linear case
+        wave.set_nonlinearity_scaling(1e-10); // Nearly linear case (avoid zero)
         
         // Wave parameters
         let frequency = 1e6; // 1 MHz
@@ -179,7 +179,25 @@ mod tests {
             let envelope = amplitude * (-(x - pulse_center).powi(2) / (2.0 * pulse_width.powi(2))).exp();
             let p = envelope * (k * x).sin();
             fields[[crate::solver::PRESSURE_IDX, i, 0, 0]] = p;
+            // For k-space method, prev_pressure should be the same as current pressure initially
             prev_pressure[[i, 0, 0]] = p;
+        }
+        
+        // Also initialize velocity fields to zero (important for k-space method)
+        if crate::solver::VX_IDX < crate::solver::TOTAL_FIELDS {
+            for i in 0..nx {
+                fields[[crate::solver::VX_IDX, i, 0, 0]] = 0.0;
+            }
+        }
+        if crate::solver::VY_IDX < crate::solver::TOTAL_FIELDS {
+            for i in 0..nx {
+                fields[[crate::solver::VY_IDX, i, 0, 0]] = 0.0;
+            }
+        }
+        if crate::solver::VZ_IDX < crate::solver::TOTAL_FIELDS {
+            for i in 0..nx {
+                fields[[crate::solver::VZ_IDX, i, 0, 0]] = 0.0;
+            }
         }
         
         // Propagate for a specific distance
@@ -190,12 +208,17 @@ mod tests {
         let source = NullSource;
         
         // Store initial max amplitude
-        let initial_max = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX)
+        let initial_pressure = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX).to_owned();
+        let initial_max = initial_pressure
             .iter()
             .map(|&p| p.abs())
             .fold(0.0, f64::max);
         
-        for _ in 0..n_steps {
+        println!("Initial field setup - max pressure: {:.3e}", initial_max);
+        println!("Grid size: {}x{}x{}", nx, ny, nz);
+        println!("dt: {:.3e}, CFL: {}", dt, cfl);
+        
+        for step in 0..n_steps {
             wave.update_wave(
                 &mut fields,
                 &prev_pressure,
@@ -203,21 +226,39 @@ mod tests {
                 &grid,
                 &medium,
                 dt,
-                0.0,
+                step as f64 * dt,
             );
             prev_pressure.assign(&fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX));
+            
+            if step == 0 {
+                let pressure_after_1 = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX);
+                let max_after_1 = pressure_after_1.iter().map(|&p| p.abs()).fold(0.0, f64::max);
+                println!("After step 1: max pressure = {:.3e}", max_after_1);
+            }
         }
         
         // Find max amplitude after propagation
-        let final_max = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX)
+        let final_pressure = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX);
+        let final_max = final_pressure
             .iter()
             .map(|&p| p.abs())
             .fold(0.0, f64::max);
         
+        // Debug output
+        println!("Initial max amplitude: {:.3e}", initial_max);
+        println!("Final max amplitude: {:.3e}", final_max);
+        println!("Number of steps: {}", n_steps);
+        println!("Propagation distance: {:.3e} m", propagation_distance);
+        println!("Alpha: {} Np/m", alpha);
+        
         // Expected attenuation after traveling the distance
         let expected_attenuation = (-alpha * propagation_distance).exp();
-        let actual_attenuation = final_max / initial_max;
-        let error = (actual_attenuation - expected_attenuation).abs() / expected_attenuation;
+        let actual_attenuation = if initial_max > 0.0 { final_max / initial_max } else { 0.0 };
+        let error = if expected_attenuation > 0.0 { 
+            (actual_attenuation - expected_attenuation).abs() / expected_attenuation 
+        } else { 
+            1.0 
+        };
         
         assert!(
             error < 0.1, // 10% tolerance for numerical effects

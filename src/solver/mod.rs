@@ -523,8 +523,7 @@ impl Solver {
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&p_update);
         
         // Get light emission from cavitation state
-        // TODO: Implement proper light emission retrieval from cavitation model
-        let light_emission = array_utils::zeros_from_grid(&self.grid);
+        let light_emission = self.cavitation.light_emission();
         
         // 3. Light propagation and fluence
         let light_start = Instant::now();

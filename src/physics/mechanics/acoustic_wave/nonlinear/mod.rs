@@ -5,8 +5,5 @@
 // Core simulation logic (implementation of the AcousticWaveModel trait)
 pub mod core;
 
-// Optimized computation algorithms
-pub mod optimized;
-
 // Re-export the main struct and multi-frequency configuration
 pub use core::{NonlinearWave, MultiFrequencyConfig};

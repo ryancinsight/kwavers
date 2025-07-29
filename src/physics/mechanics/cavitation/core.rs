@@ -141,6 +141,31 @@ impl CavitationModelBehavior for CavitationModel {
         self.get_field(field_indices::BUBBLE_VELOCITY)
     }
     
+    fn light_emission(&self) -> Array3<f64> {
+        // Calculate light emission based on bubble dynamics
+        // Light emission is proportional to the rate of bubble collapse
+        let radius = self.get_field(field_indices::BUBBLE_RADIUS).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        
+        let mut emission = Array3::zeros(radius.dim());
+        
+        // Simple model: light emission when bubble is collapsing rapidly
+        Zip::from(&mut emission)
+            .and(&radius)
+            .and(&velocity)
+            .for_each(|e, &r, &v| {
+                // Emit light during rapid collapse (negative velocity, small radius)
+                if v < -100.0 && r < 1e-5 {
+                    // Intensity proportional to collapse rate and inversely to radius
+                    let collapse_rate = -v;
+                    let intensity = (collapse_rate / 1000.0) * (1e-6 / r).min(1e6);
+                    *e = intensity * 1e-12; // Scale to realistic power density (W/m³)
+                }
+            });
+        
+        emission
+    }
+    
     fn report_performance(&self) {
         if self.update_count > 0 {
             let avg_time = self.computation_time.as_secs_f64() / self.update_count as f64;
