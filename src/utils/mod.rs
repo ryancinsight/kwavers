@@ -1,5 +1,6 @@
 // src/utils/mod.rs
 pub mod iterators;
+pub mod array_utils;
 
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;

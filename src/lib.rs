@@ -11,7 +11,6 @@
 //! - **Performance**: Optimized algorithms with SIMD and parallel processing
 //! - **Extensibility**: Modular architecture following SOLID principles
 
-use std::collections::HashMap;
 use ndarray::Array3;
 
 // Core modules
@@ -98,12 +97,35 @@ pub fn plot_simulation_outputs(
     output_dir: &str,
     files: &[&str],
 ) -> KwaversResult<()> {
-    // TODO: Implement actual plotting when file-based plotting is added to plotting module
-    println!("Plotting {} files from directory: {}", files.len(), output_dir);
+    use crate::plotting::{PlotBuilder, PlotType};
+    use std::path::Path;
     
     for file in files {
-        let filepath = std::path::Path::new(output_dir).join(file);
-        println!("Would plot: {}", filepath.display());
+        let filepath = Path::new(output_dir).join(file);
+        if !filepath.exists() {
+            log::warn!("File not found: {}", filepath.display());
+            continue;
+        }
+        
+        // Determine plot type based on file extension and name
+        let plot_type = if file.contains("pressure") {
+            PlotType::Heatmap
+        } else if file.contains("time_series") {
+            PlotType::Line
+        } else if file.contains("slice") {
+            PlotType::Heatmap
+        } else {
+            PlotType::Line
+        };
+        
+        // Create and save plot
+        let output_path = filepath.with_extension("html");
+        PlotBuilder::new()
+            .plot_type(plot_type)
+            .title(file.replace('_', " ").replace(".csv", ""))
+            .save_to_file(&output_path)?;
+            
+        log::info!("Generated plot: {}", output_path.display());
     }
     
     Ok(())

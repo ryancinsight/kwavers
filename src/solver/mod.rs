@@ -9,7 +9,7 @@ use crate::physics::{
 use crate::recorder::Recorder;
 use crate::source::Source;
 use crate::time::Time;
-use crate::utils::{fft_3d, ifft_3d}; // Removed warm_fft_cache, report_fft_statistics
+use crate::utils::{fft_3d, ifft_3d, array_utils}; // Removed warm_fft_cache, report_fft_statistics
 use log::{info, trace}; // Removed debug, warn (used as log::debug, log::warn)
 use ndarray::{Array3, Array4, Axis};
 // Removed num_complex::Complex
@@ -117,7 +117,7 @@ impl Solver {
         let nz = grid.nz;
         // Use the provided num_simulation_fields for field initialization
         let fields = SimulationFields::new(num_simulation_fields, nx, ny, nz);
-        let prev_pressure = Array3::zeros((nx, ny, nz));
+        let prev_pressure = array_utils::zeros_from_grid(&grid);
         
         // Create a clone of time for use in capacity calculation
         let time_clone = time.clone();
@@ -503,12 +503,13 @@ impl Solver {
         // 2. Update cavitation effects (if bubble radius is significant)
         let cavitation_start = Instant::now();
         // Update cavitation
+        let current_time = self.time.current_step as f64 * dt;
         if let Err(e) = self.cavitation.update_cavitation(
             &pressure,
             &self.grid,
             self.medium.as_ref(),
             dt,
-            0.0, // TODO: Pass current step * dt
+            current_time,
         ) {
             log::error!("Cavitation update failed: {}", e);
         }
@@ -521,14 +522,14 @@ impl Solver {
         // Update pressure field with cavitation effects
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&p_update);
         
-        // Light emission is now handled internally by the cavitation model
-        // TODO: Retrieve light emission from cavitation state if needed
+        // Get light emission from cavitation state
+        let light_emission = self.cavitation.get_light_emission(&self.grid);
         
         // 3. Light propagation and fluence
         let light_start = Instant::now();
         self.light.update_light(
             &mut self.fields.fields,
-            &Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)), // TODO: Get from cavitation state
+            &light_emission,
             &self.grid,
             self.medium.as_ref(),
             dt,

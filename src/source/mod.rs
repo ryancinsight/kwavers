@@ -80,10 +80,3 @@ impl Signal for NullSignal {
         Box::new(self.clone())
     }
 }
-
-// Keep MockSource for backward compatibility but mark as deprecated
-#[deprecated(since = "1.0.0", note = "Use NullSource instead for testing")]
-pub type MockSource = NullSource;
-
-#[deprecated(since = "1.0.0", note = "Use NullSignal instead for testing")]
-pub type MockSignal = NullSignal;
