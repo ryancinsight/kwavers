@@ -42,28 +42,28 @@ impl SpectralRange {
     pub fn wavelength_to_rgb(wavelength: f64) -> (f64, f64, f64) {
         let w = wavelength * 1e9; // Convert to nm
         
-        let (r, g, b) = if w < 380.0 {
-            (0.0, 0.0, 0.0) // Invisible UV
-        } else if w < 440.0 {
-            let t = (w - 380.0) / 60.0;
-            (t, 0.0, 1.0)
-        } else if w < 490.0 {
-            let t = (w - 440.0) / 50.0;
-            (0.0, t, 1.0)
-        } else if w < 510.0 {
-            let t = (w - 490.0) / 20.0;
-            (0.0, 1.0, 1.0 - t)
-        } else if w < 580.0 {
-            let t = (w - 510.0) / 70.0;
-            (t, 1.0, 0.0)
-        } else if w < 645.0 {
-            let t = (w - 580.0) / 65.0;
-            (1.0, 1.0 - t, 0.0)
-        } else if w < 780.0 {
-            (1.0, 0.0, 0.0)
-        } else {
-            (0.0, 0.0, 0.0) // Invisible IR
-        };
+        // Pre-computed RGB lookup table for wavelengths (in nm)
+        const RGB_TABLE: &[(f64, f64, f64)] = &[
+            (380.0, 0.0, 0.0, 0.0), // UV
+            (440.0, 0.0, 0.0, 1.0),
+            (490.0, 0.0, 1.0, 1.0),
+            (510.0, 0.0, 1.0, 0.0),
+            (580.0, 1.0, 1.0, 0.0),
+            (645.0, 1.0, 0.0, 0.0),
+            (780.0, 0.0, 0.0, 0.0), // IR
+        ];
+        
+        // Find the two closest points in the table
+        let (mut r, mut g, mut b) = (0.0, 0.0, 0.0);
+        for i in 0..RGB_TABLE.len() - 1 {
+            if w >= RGB_TABLE[i].0 && w <= RGB_TABLE[i + 1].0 {
+                let t = (w - RGB_TABLE[i].0) / (RGB_TABLE[i + 1].0 - RGB_TABLE[i].0);
+                r = RGB_TABLE[i].1 + t * (RGB_TABLE[i + 1].1 - RGB_TABLE[i].1);
+                g = RGB_TABLE[i].2 + t * (RGB_TABLE[i + 1].2 - RGB_TABLE[i].2);
+                b = RGB_TABLE[i].3 + t * (RGB_TABLE[i + 1].3 - RGB_TABLE[i].3);
+                break;
+            }
+        }
         
         // Apply intensity correction for eye sensitivity
         let intensity = if w < 420.0 {
