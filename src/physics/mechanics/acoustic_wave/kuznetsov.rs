@@ -332,7 +332,7 @@ impl KuznetsovWave {
     }
     
     /// Check CFL condition for stability
-    fn check_cfl_condition(&self, grid: &Grid, medium: &dyn Medium, dt: f64) -> bool {
+    pub fn check_cfl_condition(&self, grid: &Grid, medium: &dyn Medium, dt: f64) -> bool {
         // Find maximum sound speed
         let mut c_max: f64 = 0.0;
         for i in 0..grid.nx {
