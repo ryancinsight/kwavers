@@ -2,7 +2,7 @@
 
 use ndarray::Array3;
 use crate::error::KwaversResult;
-use super::implicit_solver::ImplicitSolver;
+use super::ImplicitSolverType;
 use std::fmt::Debug;
 
 /// Configuration for IMEX schemes
@@ -44,7 +44,7 @@ pub trait IMEXScheme: Debug + Send + Sync {
         dt: f64,
         explicit_rhs: F,
         implicit_rhs: G,
-        implicit_solver: &dyn ImplicitSolver,
+        implicit_solver: &ImplicitSolverType,
     ) -> KwaversResult<Array3<f64>>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,

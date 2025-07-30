@@ -193,7 +193,9 @@ impl IMEXIntegrator {
         scheme: IMEXSchemeType,
         grid: Arc<Grid>,
     ) -> Self {
-        let implicit_solver = ImplicitSolverType::Newton(NewtonSolver::default());
+        let implicit_solver = ImplicitSolverType::Newton(
+            NewtonSolver::new(config.tolerance, config.max_iterations)
+        );
         let stiffness_detector = StiffnessDetector::new(config.stiffness_threshold);
         let stability_analyzer = IMEXStabilityAnalyzer::new();
         

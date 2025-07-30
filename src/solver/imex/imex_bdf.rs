@@ -3,7 +3,7 @@
 use ndarray::{Array3, Zip};
 use crate::error::KwaversResult;
 use super::traits::IMEXScheme;
-use super::implicit_solver::ImplicitSolver;
+use super::ImplicitSolverType;
 use std::collections::VecDeque;
 
 /// Configuration for IMEX-BDF schemes
@@ -28,7 +28,7 @@ impl Default for IMEXBDFConfig {
 }
 
 /// IMEX-BDF scheme
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IMEXBDF {
     config: IMEXBDFConfig,
     /// BDF coefficients for implicit part
@@ -154,7 +154,7 @@ impl IMEXScheme for IMEXBDF {
         dt: f64,
         explicit_rhs: F,
         implicit_rhs: G,
-        implicit_solver: &dyn ImplicitSolver,
+        implicit_solver: &ImplicitSolverType,
     ) -> KwaversResult<Array3<f64>>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
@@ -166,13 +166,14 @@ impl IMEXScheme for IMEXBDF {
         if effective_order == 0 {
             // First step: use backward Euler
             let explicit_eval = explicit_rhs(field)?;
+            let dt_copy = dt;
             let implicit_fn = |y: &Array3<f64>| -> KwaversResult<Array3<f64>> {
                 let mut residual = y - field;
                 let g = implicit_rhs(y)?;
                 Zip::from(&mut residual)
                     .and(&g)
                     .and(&explicit_eval)
-                    .for_each(|r, &gi, &fe| *r -= dt * (gi + fe));
+                    .for_each(|r, &gi, &fe| *r -= dt_copy * (gi + fe));
                 Ok(residual)
             };
             
@@ -187,11 +188,12 @@ impl IMEXScheme for IMEXBDF {
                 if i < self.explicit_history.len() {
                     Zip::from(&mut explicit_extrap)
                         .and(&self.explicit_history[i])
-                        .for_each(|e, &h| *e += coeff * h);
+                        .for_each(|e, h: &f64| *e += *coeff * *h);
                 }
             }
             
             // Build implicit equation
+            let dt_copy = dt;
             let implicit_fn = |y: &Array3<f64>| -> KwaversResult<Array3<f64>> {
                 let mut residual = Array3::zeros(field.dim());
                 
@@ -210,7 +212,7 @@ impl IMEXScheme for IMEXBDF {
                     if i < self.history.len() {
                         Zip::from(&mut residual)
                             .and(&self.history[i])
-                            .for_each(|r, &h| *r += coeff * h);
+                            .for_each(|r, h: &f64| *r += *coeff * *h);
                     }
                 }
                 
@@ -219,7 +221,7 @@ impl IMEXScheme for IMEXBDF {
                 Zip::from(&mut residual)
                     .and(&g)
                     .and(&explicit_extrap)
-                    .for_each(|r, &gi, &ee| *r -= dt * (gi + ee));
+                    .for_each(|r, gi: &f64, ee: &f64| *r -= dt_copy * (*gi + *ee));
                 
                 Ok(residual)
             };

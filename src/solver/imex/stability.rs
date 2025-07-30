@@ -2,7 +2,7 @@
 
 use ndarray::Array3;
 use crate::error::KwaversResult;
-use super::traits::IMEXScheme;
+use super::IMEXSchemeType;
 use std::f64::consts::PI;
 
 /// Stability region information
@@ -49,7 +49,7 @@ impl IMEXStabilityAnalyzer {
     }
     
     /// Compute stability region for a scheme
-    pub fn compute_region(&self, scheme: &dyn IMEXScheme) -> StabilityRegion {
+    pub fn compute_region(&self, scheme: &IMEXSchemeType) -> StabilityRegion {
         // For explicit part, estimate based on order
         let explicit_dt_max = match scheme.order() {
             1 => 2.0,
@@ -89,7 +89,7 @@ impl IMEXStabilityAnalyzer {
     /// Estimate maximum stable time step
     pub fn max_stable_timestep<F, G>(
         &self,
-        scheme: &dyn IMEXScheme,
+        scheme: &IMEXSchemeType,
         field: &Array3<f64>,
         explicit_rhs: &F,
         implicit_rhs: &G,
@@ -176,7 +176,7 @@ impl IMEXStabilityAnalyzer {
     /// Check if a time step is stable
     pub fn is_stable<F, G>(
         &self,
-        scheme: &dyn IMEXScheme,
+        scheme: &IMEXSchemeType,
         field: &Array3<f64>,
         dt: f64,
         explicit_rhs: &F,
@@ -193,7 +193,7 @@ impl IMEXStabilityAnalyzer {
     /// Compute stability function value at a point
     pub fn stability_function_at_point(
         &self,
-        scheme: &dyn IMEXScheme,
+        scheme: &IMEXSchemeType,
         z_explicit: f64,
         z_implicit: f64,
     ) -> f64 {

@@ -3,7 +3,7 @@
 use ndarray::{Array3, Zip};
 use crate::error::KwaversResult;
 use super::traits::IMEXScheme;
-use super::implicit_solver::ImplicitSolver;
+use super::ImplicitSolverType;
 
 /// Types of IMEX-RK schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -182,7 +182,7 @@ impl IMEXScheme for IMEXRK {
         dt: f64,
         explicit_rhs: F,
         implicit_rhs: G,
-        implicit_solver: &dyn ImplicitSolver,
+        implicit_solver: &ImplicitSolverType,
     ) -> KwaversResult<Array3<f64>>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
