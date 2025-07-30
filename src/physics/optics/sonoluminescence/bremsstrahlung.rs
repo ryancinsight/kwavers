@@ -161,8 +161,10 @@ impl BremsstrahlungModel {
         let saha_factor = saha_const * temperature.powf(1.5) 
             * (-e_ion / (BOLTZMANN_CONSTANT * temperature)).exp() / n_total;
         
-        // Quadratic solution for ionization fraction
-        (-1.0 + (1.0 + 4.0 * saha_factor).sqrt()) / (2.0 * saha_factor)
+        // Saha equation: x²/(1-x) = K, which gives x² + Kx - K = 0
+        // Using quadratic formula: x = (-K + sqrt(K² + 4K)) / 2
+        let k = saha_factor;
+        (-k + (k * k + 4.0 * k).sqrt()) / 2.0
     }
     
     /// Calculate emission spectrum

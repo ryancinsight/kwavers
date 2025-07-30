@@ -106,6 +106,23 @@ impl Source for FocusedTransducerSource {
     fn velocity_z(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
 }
 
+impl FocusedTransducerSource {
+    /// Calculate the time derivative of pressure analytically
+    fn pressure_time_derivative(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
+        let dx = x - self.focal_point.0;
+        let dy = y - self.focal_point.1;
+        let dz = z - self.focal_point.2;
+        let r = (dx*dx + dy*dy + dz*dz).sqrt();
+        
+        let beam_width = self.aperture / 4.0;
+        let spatial = (-r*r / (2.0 * beam_width*beam_width)).exp();
+        let omega = 2.0 * PI * self.frequency;
+        
+        // d/dt[A*spatial*sin(ωt)] = A*spatial*ω*cos(ωt)
+        self.amplitude * spatial * omega * (omega * t).cos()
+    }
+}
+
 /// Run MBSL simulation
 fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     println!("=== Multi-Bubble Sonoluminescence Simulation ===");
@@ -226,14 +243,15 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     println!("\nStarting simulation...");
     let start_time = std::time::Instant::now();
     
+    // Pre-allocate arrays for efficiency
+    let mut pressure_field = Array3::zeros((n, n, n));
+    let mut dp_dt_field = Array3::zeros((n, n, n));
+    
     // Main simulation loop
     for step in 0..n_steps {
         let t = step as f64 * dt;
         
         // Generate acoustic field
-        let mut pressure_field = Array3::zeros((n, n, n));
-        let mut dp_dt_field = Array3::zeros((n, n, n));
-        
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
@@ -243,10 +261,8 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
                     
                     pressure_field[[i, j, k]] = source.pressure(x, y, z, t);
                     
-                    // Pressure derivative
-                    let dt_small = 1e-9;
-                    let p_future = source.pressure(x, y, z, t + dt_small);
-                    dp_dt_field[[i, j, k]] = (p_future - pressure_field[[i, j, k]]) / dt_small;
+                    // Use analytical pressure derivative
+                    dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
                 }
             }
         }

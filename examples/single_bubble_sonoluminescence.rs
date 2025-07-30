@@ -125,6 +125,22 @@ impl Source for StandingWaveSource {
     fn velocity_z(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
 }
 
+impl StandingWaveSource {
+    /// Calculate the time derivative of pressure analytically
+    fn pressure_time_derivative(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
+        let r = ((x - self.center.0).powi(2) + 
+                 (y - self.center.1).powi(2) + 
+                 (z - self.center.2).powi(2)).sqrt();
+        
+        let k = 2.0 * PI / self.wavelength;
+        let spatial_pattern = (k * r).cos();
+        let omega = 2.0 * PI * self.frequency;
+        
+        // d/dt[A*spatial*sin(ωt)] = A*spatial*ω*cos(ωt)
+        self.amplitude * spatial_pattern * omega * (omega * t).cos()
+    }
+}
+
 /// Run SBSL simulation
 fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
     println!("=== Single-Bubble Sonoluminescence Simulation ===");
@@ -219,14 +235,15 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
     println!("Starting simulation...");
     let start_time = std::time::Instant::now();
     
+    // Pre-allocate arrays for efficiency
+    let mut pressure_field = Array3::zeros((n, n, n));
+    let mut dp_dt_field = Array3::zeros((n, n, n));
+    
     // Main simulation loop
     for step in 0..n_steps {
         let t = step as f64 * dt;
         
         // Generate acoustic field
-        let mut pressure_field = Array3::zeros((n, n, n));
-        let mut dp_dt_field = Array3::zeros((n, n, n));
-        
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
@@ -236,10 +253,8 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
                     
                     pressure_field[[i, j, k]] = source.pressure(x, y, z, t);
                     
-                    // Approximate pressure time derivative
-                    let dt_small = 1e-9;
-                    let p_future = source.pressure(x, y, z, t + dt_small);
-                    dp_dt_field[[i, j, k]] = (p_future - pressure_field[[i, j, k]]) / dt_small;
+                    // Use analytical pressure time derivative
+                    dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
                 }
             }
         }
@@ -264,6 +279,25 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
             &bubble_states.radius,
             t,
         );
+        
+        // Update chemistry - convert bubble states to format expected by chemistry
+        // Note: This is a simplified approach. A full implementation would
+        // properly convert BubbleStateFields to bubble state array
+        if !bubble_field.bubbles.is_empty() {
+            // For demonstration, we'll update chemistry based on temperature field
+            // In practice, you'd create a proper bubble state array
+            // chemistry.update_ros_generation(&bubble_states_array, dt, (dx, dx, dx));
+            
+            // Simplified: Generate ROS based on high-temperature regions
+            for ((i, j, k), &temp) in bubble_states.temperature.indexed_iter() {
+                if temp > 5000.0 && bubble_states.is_collapsing[[i, j, k]] > 0.5 {
+                    // Estimate ROS generation from hot collapse
+                    let energy_density = bubble_states.pressure[[i, j, k]] * bubble_states.radius[[i, j, k]].powi(3);
+                    // This is a placeholder - proper implementation would use
+                    // the sonochemistry model's update_ros_generation method
+                }
+            }
+        }
         
         // Collect data for center bubble
         let center = (n/2, n/2, n/2);

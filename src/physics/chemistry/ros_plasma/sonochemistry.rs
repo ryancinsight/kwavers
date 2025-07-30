@@ -60,6 +60,7 @@ impl SonochemistryModel {
         &mut self,
         bubble_states: &Array3<BubbleState>,
         dt: f64,
+        grid_spacing: (f64, f64, f64), // (dx, dy, dz)
     ) {
         // Clear previous yields
         self.yields.clear();
@@ -130,7 +131,7 @@ impl SonochemistryModel {
         }
         
         // Update radical reactions in liquid
-        self.update_liquid_phase_chemistry(dt);
+        self.update_liquid_phase_chemistry(dt, grid_spacing);
     }
     
     /// Transfer ROS from bubble to surrounding liquid
@@ -168,7 +169,7 @@ impl SonochemistryModel {
     }
     
     /// Update liquid phase radical chemistry
-    fn update_liquid_phase_chemistry(&mut self, dt: f64) {
+    fn update_liquid_phase_chemistry(&mut self, dt: f64, grid_spacing: (f64, f64, f64)) {
         // Apply radical reactions
         for i in 0..self.shape.0 {
             for j in 0..self.shape.1 {
@@ -196,8 +197,8 @@ impl SonochemistryModel {
         }
         
         // Apply diffusion
-        let dx = 1e-4; // 100 μm typical
-        self.ros_concentrations.apply_diffusion(dx, dx, dx, dt);
+        let (dx, dy, dz) = grid_spacing;
+        self.ros_concentrations.apply_diffusion(dx, dy, dz, dt);
         
         // Apply decay
         self.ros_concentrations.apply_decay(dt);
@@ -311,7 +312,7 @@ mod tests {
         };
         
         // Update model
-        model.update_ros_generation(&bubble_states, 1e-9);
+        model.update_ros_generation(&bubble_states, 1e-9, (1e-4, 1e-4, 1e-4));
         
         // Check that ROS was generated
         assert!(model.ros_concentrations.total_ros[[5, 5, 5]] > 0.0);
