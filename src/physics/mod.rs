@@ -14,7 +14,7 @@ pub mod traits;
 pub mod analytical_tests;
 
 // Re-export commonly used types
-pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
+pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent, KuznetsovWaveComponent};
 pub use state::{PhysicsState, FieldAccessor, field_indices};
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports

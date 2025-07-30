@@ -58,12 +58,12 @@ pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, Val
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
-pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, ComponentState, FieldType};
+pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, KuznetsovWaveComponent, ComponentState, FieldType};
 
 // Re-export GPU-related items only when feature enabled
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuContext, AdvancedGpuMemoryManager, GpuBackend};
-pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel};
+pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::ElasticWave;
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};

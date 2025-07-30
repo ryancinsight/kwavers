@@ -6,3 +6,6 @@ pub use nonlinear::NonlinearWave;
 
 pub mod viscoelastic_wave;
 pub use viscoelastic_wave::ViscoelasticWave;
+
+pub mod kuznetsov;
+pub use kuznetsov::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme};
