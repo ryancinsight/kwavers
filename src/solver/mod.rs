@@ -1,6 +1,7 @@
 // src/solver/mod.rs
 pub mod amr; // Adaptive Mesh Refinement module
 pub mod numerics; // Numerical methods module
+pub mod spectral_dg; // Hybrid Spectral-DG methods module
 
 use crate::grid::Grid;
 use crate::KwaversResult;
