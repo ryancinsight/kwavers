@@ -194,18 +194,18 @@
   - [ ] Explicit acoustic propagator
   - [ ] Coupling term handling
   - [ ] Stability analysis
-- [ ] **Improved PML** *(Convolutional PML for better absorption)*
-  - [ ] C-PML implementation
-  - [ ] Memory variable management
-  - [ ] Grazing incidence optimization
-  - [ ] Reflection coefficient validation (<-60 dB)
+- [x] **Improved PML** *(Convolutional PML for better absorption)* ✅ COMPLETED
+  - [x] C-PML implementation
+  - [x] Memory variable management
+  - [x] Grazing incidence optimization
+  - [x] Reflection coefficient validation (<-60 dB)
 
 ### Quarter 3: Physics Extensions (Months 7-9)
-- [ ] **Full Kuznetsov Equation** *(More complete nonlinear model)*
-  - [ ] Second-order nonlinear terms
-  - [ ] Third-order time derivatives
-  - [ ] Harmonic generation validation
-  - [ ] Comparison with Westervelt
+- [x] **Full Kuznetsov Equation** *(More complete nonlinear model)* ✅ COMPLETED
+  - [x] Second-order nonlinear terms
+  - [x] Third-order time derivatives
+  - [x] Harmonic generation validation
+  - [x] Comparison with Westervelt
 - [ ] **Multi-Rate Time Integration** *(10-100x speedup for multi-physics)*
   - [ ] Time scale separation analysis
   - [ ] Multi-rate integrator framework

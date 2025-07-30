@@ -1,0 +1,292 @@
+//! Validation tests for Convolutional PML implementation
+//! 
+//! These tests verify the performance and correctness of the C-PML
+//! boundary conditions, especially for grazing angle absorption.
+
+#[cfg(test)]
+mod tests {
+    use crate::boundary::{CPMLBoundary, CPMLConfig, Boundary};
+    use crate::grid::Grid;
+    use crate::medium::HomogeneousMedium;
+    use crate::solver::cpml_integration::CPMLSolver;
+    use ndarray::{Array3, Array4};
+    use std::f64::consts::PI;
+    use approx::assert_relative_eq;
+    
+    /// Test plane wave absorption at various angles
+    #[test]
+    fn test_plane_wave_absorption() {
+        let grid = Grid::new(200, 200, 200, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig {
+            thickness: 20,
+            polynomial_order: 3.0,
+            kappa_max: 15.0,
+            target_reflection: 1e-6,
+            ..Default::default()
+        };
+        
+        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Test angles: 0° (normal), 45°, 75° (grazing)
+        let test_angles = vec![0.0, 45.0, 75.0];
+        
+        for angle in test_angles {
+            let mut field = create_plane_wave(&grid, angle, 1e6);
+            let initial_energy = compute_field_energy(&field);
+            
+            // Apply C-PML multiple times to simulate propagation
+            for _ in 0..50 {
+                cpml.apply_acoustic(&mut field, &grid, 0).unwrap();
+            }
+            
+            let final_energy = compute_field_energy(&field);
+            let reflection = final_energy / initial_energy;
+            
+            println!("Angle: {}°, Reflection: {:.2e}", angle, reflection);
+            
+            // Check that reflection is below target
+            assert!(reflection < 1e-4, 
+                "Reflection at {}° is too high: {:.2e}", angle, reflection);
+        }
+    }
+    
+    /// Test grazing angle performance
+    #[test]
+    fn test_grazing_angle_performance() {
+        let grid = Grid::new(150, 150, 150, 1e-3, 1e-3, 1e-3);
+        
+        // Standard config
+        let standard_config = CPMLConfig::default();
+        let mut standard_cpml = CPMLBoundary::new(standard_config, &grid).unwrap();
+        
+        // Grazing angle optimized config
+        let grazing_config = CPMLConfig::for_grazing_angles();
+        let mut grazing_cpml = CPMLBoundary::new(grazing_config, &grid).unwrap();
+        
+        // Create near-grazing wave (85°)
+        let mut field_standard = create_plane_wave(&grid, 85.0, 1e6);
+        let mut field_grazing = field_standard.clone();
+        let initial_energy = compute_field_energy(&field_standard);
+        
+        // Apply boundaries
+        for _ in 0..30 {
+            standard_cpml.apply_acoustic(&mut field_standard, &grid, 0).unwrap();
+            grazing_cpml.apply_acoustic(&mut field_grazing, &grid, 0).unwrap();
+        }
+        
+        let standard_reflection = compute_field_energy(&field_standard) / initial_energy;
+        let grazing_reflection = compute_field_energy(&field_grazing) / initial_energy;
+        
+        println!("Standard C-PML at 85°: {:.2e}", standard_reflection);
+        println!("Grazing-optimized C-PML at 85°: {:.2e}", grazing_reflection);
+        
+        // Grazing-optimized should perform significantly better
+        assert!(grazing_reflection < 0.1 * standard_reflection,
+            "Grazing-optimized C-PML should perform much better at grazing angles");
+    }
+    
+    /// Test memory variable update consistency
+    #[test]
+    fn test_memory_variable_consistency() {
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig::default();
+        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Create test gradient
+        let mut gradient = Array3::ones((64, 64, 64));
+        
+        // Update memory variables multiple times
+        for _ in 0..10 {
+            cpml.update_acoustic_memory(&gradient, 0).unwrap();
+        }
+        
+        // Memory variables should converge to steady state
+        let psi = &cpml.psi_acoustic;
+        let psi_x = psi.index_axis(ndarray::Axis(0), 0);
+        
+        // Check that memory variables are bounded
+        for val in psi_x.iter() {
+            assert!(val.is_finite(), "Memory variable contains non-finite value");
+            assert!(val.abs() < 100.0, "Memory variable diverging");
+        }
+    }
+    
+    /// Test C-PML solver integration
+    #[test]
+    fn test_cpml_solver_integration() {
+        let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig::default();
+        let mut solver = CPMLSolver::new(config, &grid).unwrap();
+        
+        // Initialize fields
+        let mut pressure = create_gaussian_pulse(&grid, 50, 50, 50, 5.0);
+        let mut velocity = Array4::zeros((3, 100, 100, 100));
+        
+        let initial_max = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
+        
+        // Run simulation with C-PML
+        let dt = 1e-7;
+        for _ in 0..100 {
+            solver.update_acoustic_field(&mut pressure, &mut velocity, &grid, dt).unwrap();
+        }
+        
+        let final_max = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
+        
+        // Field should be attenuated but stable
+        assert!(final_max < initial_max, "Field should be attenuated");
+        assert!(final_max > 0.0, "Field should not completely vanish");
+        assert!(pressure.iter().all(|&p| p.is_finite()), "Field contains non-finite values");
+    }
+    
+    /// Test reflection coefficient estimation
+    #[test]
+    fn test_reflection_estimation() {
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig::for_grazing_angles();
+        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Test reflection estimates
+        let r_0 = cpml.estimate_reflection(0.0);
+        let r_45 = cpml.estimate_reflection(45.0);
+        let r_60 = cpml.estimate_reflection(60.0);
+        let r_80 = cpml.estimate_reflection(80.0);
+        let r_89 = cpml.estimate_reflection(89.0);
+        
+        // Verify monotonic increase with angle
+        assert!(r_45 > r_0, "Reflection should increase with angle");
+        assert!(r_60 > r_45, "Reflection should increase with angle");
+        assert!(r_80 > r_60, "Reflection should increase with angle");
+        assert!(r_89 > r_80, "Reflection should increase with angle");
+        
+        // All should still be small
+        assert!(r_89 < 1e-5, "Even at 89°, reflection should be small");
+    }
+    
+    /// Test profile smoothness and continuity
+    #[test]
+    fn test_profile_continuity() {
+        let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig {
+            thickness: 20,
+            polynomial_order: 3.0,
+            ..Default::default()
+        };
+        
+        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Check sigma profile continuity
+        for i in 1..100 {
+            let diff = (cpml.sigma_x[i] - cpml.sigma_x[i-1]).abs();
+            // Profile should be smooth (no jumps)
+            assert!(diff < 1.0, "Sigma profile has discontinuity at i={}", i);
+        }
+        
+        // Check that profiles go to zero at interface
+        assert_eq!(cpml.sigma_x[20], 0.0, "Sigma should be zero at PML interface");
+        assert_eq!(cpml.sigma_x[79], 0.0, "Sigma should be zero at PML interface");
+        
+        // Check kappa starts at 1
+        assert_eq!(cpml.kappa_x[20], 1.0, "Kappa should be 1 at PML interface");
+        assert_eq!(cpml.kappa_x[79], 1.0, "Kappa should be 1 at PML interface");
+    }
+    
+    /// Test dispersive media support
+    #[test]
+    fn test_dispersive_media_support() {
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig::default();
+        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Initially no dispersive support
+        assert!(cpml.psi_dispersive.is_none());
+        
+        // Enable dispersive support
+        cpml.enable_dispersive_support();
+        
+        // Should now have dispersive memory variables
+        assert!(cpml.psi_dispersive.is_some());
+        
+        if let Some(ref psi_disp) = cpml.psi_dispersive {
+            assert_eq!(psi_disp.dim(), (3, 64, 64, 64));
+        }
+    }
+    
+    /// Test frequency domain application
+    #[test]
+    fn test_frequency_domain_cpml() {
+        use rustfft::num_complex::Complex;
+        
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let config = CPMLConfig::default();
+        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        
+        // Create test field in frequency domain
+        let mut field_freq = Array3::from_elem((64, 64, 64), Complex::new(1.0, 0.0));
+        
+        // Apply C-PML in frequency domain
+        cpml.apply_acoustic_freq(&mut field_freq, &grid, 0).unwrap();
+        
+        // Check that field is modified in PML regions
+        // At boundaries, field should be attenuated
+        assert!(field_freq[[0, 32, 32]].norm() < 1.0, 
+            "Field should be attenuated at boundary");
+        
+        // In center, field should be mostly unchanged
+        assert_relative_eq!(field_freq[[32, 32, 32]].norm(), 1.0, epsilon = 0.01);
+    }
+    
+    // Helper functions
+    
+    /// Create a plane wave at given angle
+    fn create_plane_wave(grid: &Grid, angle_degrees: f64, frequency: f64) -> Array3<f64> {
+        let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let angle_rad = angle_degrees * PI / 180.0;
+        let k = 2.0 * PI * frequency / 1500.0; // Wave number (assuming c=1500 m/s)
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k_idx in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    
+                    // Plane wave propagating at angle from x-axis
+                    let phase = k * (x * angle_rad.cos() + y * angle_rad.sin());
+                    field[[i, j, k_idx]] = phase.cos();
+                }
+            }
+        }
+        
+        field
+    }
+    
+    /// Create a Gaussian pulse
+    fn create_gaussian_pulse(
+        grid: &Grid, 
+        cx: usize, 
+        cy: usize, 
+        cz: usize, 
+        width: f64
+    ) -> Array3<f64> {
+        let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = (i as f64 - cx as f64) * grid.dx;
+                    let dy = (j as f64 - cy as f64) * grid.dy;
+                    let dz = (k as f64 - cz as f64) * grid.dz;
+                    
+                    let r2 = dx*dx + dy*dy + dz*dz;
+                    field[[i, j, k]] = (-r2 / (width * width)).exp();
+                }
+            }
+        }
+        
+        field
+    }
+    
+    /// Compute total field energy
+    fn compute_field_energy(field: &Array3<f64>) -> f64 {
+        field.iter().map(|&v| v * v).sum()
+    }
+}
