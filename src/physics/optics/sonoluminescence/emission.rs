@@ -252,7 +252,10 @@ impl SonoluminescenceEmission {
                     );
                     spectrum.time = time;
                     spectrum.position = Some((i, j, k));
-                    spectral_field.intensities[[i, j, k, ..]] = spectrum.intensities.to_owned();
+                    // Assign spectrum intensities to the 4D array
+                    for (idx, &intensity) in spectrum.intensities.iter().enumerate() {
+                        spectral_field.intensities[[i, j, k, idx]] = intensity;
+                    }
                 }
             }
         }

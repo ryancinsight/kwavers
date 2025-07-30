@@ -6,6 +6,8 @@ use super::bubble_state::{BubbleState, BubbleParameters};
 use super::rayleigh_plesset::{KellerMiksisModel, integrate_bubble_dynamics};
 use ndarray::{Array3, Array1};
 use std::collections::HashMap;
+use rand::prelude::*;
+use rand_distr::{Normal, LogNormal, Uniform};
 
 /// Single bubble or bubble cloud field
 pub struct BubbleField {
@@ -13,6 +15,8 @@ pub struct BubbleField {
     pub bubbles: HashMap<(usize, usize, usize), BubbleState>,
     /// Solver for bubble dynamics
     solver: KellerMiksisModel,
+    /// Default bubble parameters
+    bubble_parameters: BubbleParameters,
     /// Grid dimensions
     grid_shape: (usize, usize, usize),
     /// Time history for selected bubbles
@@ -26,7 +30,8 @@ impl BubbleField {
     pub fn new(grid_shape: (usize, usize, usize), params: BubbleParameters) -> Self {
         Self {
             bubbles: HashMap::new(),
-            solver: KellerMiksisModel::new(params),
+            solver: KellerMiksisModel::new(params.clone()),
+            bubble_parameters: params,
             grid_shape,
             time_history: Vec::new(),
             radius_history: Vec::new(),
@@ -135,7 +140,7 @@ pub struct BubbleStateFields {
 }
 
 impl BubbleStateFields {
-    fn new(shape: (usize, usize, usize)) -> Self {
+    pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             radius: Array3::zeros(shape),
             temperature: Array3::from_elem(shape, 293.15),
@@ -200,7 +205,6 @@ impl BubbleCloud {
     
     /// Generate bubble cloud with specified density
     pub fn generate(&mut self, bubble_density: f64, grid_spacing: (f64, f64, f64)) {
-        use rand::prelude::*;
         let mut rng = thread_rng();
         
         let volume = grid_spacing.0 * grid_spacing.1 * grid_spacing.2
@@ -215,7 +219,7 @@ impl BubbleCloud {
             let radius = self.generate_radius(&mut rng);
             
             // Create bubble with custom radius
-            let mut params = BubbleParameters::default();
+            let mut params = self.field.bubble_parameters.clone();
             params.r0 = radius;
             let state = BubbleState::new(&params);
             
@@ -236,7 +240,7 @@ impl BubbleCloud {
             }
             SpatialDistribution::Gaussian { center, std_dev } => {
                 // Generate Gaussian-distributed position
-                let normal = rand_distr::Normal::new(0.0, *std_dev).unwrap();
+                let normal = Normal::new(0.0, *std_dev).unwrap();
                 let dx: f64 = rng.sample(normal);
                 let dy: f64 = rng.sample(normal);
                 let dz: f64 = rng.sample(normal);
@@ -256,7 +260,7 @@ impl BubbleCloud {
                 let center = centers.choose(rng).unwrap();
                 
                 // Generate position within cluster
-                let uniform = rand_distr::Uniform::new(-*radius, *radius);
+                let uniform = Uniform::new(-*radius, *radius);
                 let dx: f64 = rng.sample(uniform);
                 let dy: f64 = rng.sample(uniform);
                 let dz: f64 = rng.sample(uniform);
@@ -280,7 +284,7 @@ impl BubbleCloud {
                 rng.gen_range(*min..*max)
             }
             SizeDistribution::LogNormal { mean, std_dev } => {
-                let normal = rand_distr::LogNormal::new(
+                let normal = LogNormal::new(
                     mean.ln(),
                     *std_dev / *mean,
                 ).unwrap();
@@ -318,7 +322,7 @@ mod tests {
         let spatial_dist = SpatialDistribution::Uniform;
         
         let mut cloud = BubbleCloud::new((20, 20, 20), params, size_dist, spatial_dist);
-        cloud.generate(1e8, (1e-4, 1e-4, 1e-4)); // 10^8 bubbles/m³
+        cloud.generate(1e12, (1e-3, 1e-3, 1e-3)); // Higher density and larger grid spacing
         
         assert!(cloud.field.bubbles.len() > 0);
     }

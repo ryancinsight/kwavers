@@ -13,22 +13,16 @@
 //! - ROS generation and chemistry
 
 use kwavers::{
-    Grid, Time, HomogeneousMedium, PMLBoundary, Source, Sensor, Recorder,
+    Grid, Time, HomogeneousMedium, Source, Sensor, Recorder,
     SensorConfig, RecorderConfig, KwaversResult,
     physics::{
-        bubble_dynamics::{
-            BubbleField, BubbleParameters, GasSpecies,
-        },
-        mechanics::cavitation::{
-            CavitationDamage, MaterialProperties, DamageParameters,
-        },
-        optics::sonoluminescence::{
-            SonoluminescenceEmission, EmissionParameters,
-        },
+        bubble_dynamics::{BubbleField, BubbleParameters, GasSpecies},
+        mechanics::cavitation::{CavitationDamage, MaterialProperties, DamageParameters},
+        optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters},
         chemistry::{SonochemistryModel, ROSSpecies},
     },
 };
-use ndarray::{Array3, Array1, s};
+use ndarray::Array3;
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
@@ -98,34 +92,26 @@ impl Default for SBSLParameters {
     }
 }
 
-/// Standing wave acoustic source for SBSL
+/// Acoustic standing wave source for SBSL
 struct StandingWaveSource {
     frequency: f64,
     amplitude: f64,
     wavelength: f64,
     center: (f64, f64, f64),
-}
-
-impl Source for StandingWaveSource {
-    fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        // Standing wave pattern with antinode at center
-        let r = ((x - self.center.0).powi(2) + 
-                 (y - self.center.1).powi(2) + 
-                 (z - self.center.2).powi(2)).sqrt();
-        
-        let k = 2.0 * PI / self.wavelength;
-        let spatial_pattern = (k * r).cos();
-        let temporal_pattern = (2.0 * PI * self.frequency * t).sin();
-        
-        self.amplitude * spatial_pattern * temporal_pattern
-    }
-    
-    fn velocity_x(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_y(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_z(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
+    signal: kwavers::signal::SineWave,
 }
 
 impl StandingWaveSource {
+    fn new(frequency: f64, amplitude: f64, center: (f64, f64, f64), sound_speed: f64) -> Self {
+        Self {
+            frequency,
+            amplitude,
+            wavelength: sound_speed / frequency,
+            center,
+            signal: kwavers::signal::SineWave::new(frequency, amplitude, 0.0),
+        }
+    }
+    
     /// Calculate the time derivative of pressure analytically
     fn pressure_time_derivative(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let r = ((x - self.center.0).powi(2) + 
@@ -138,6 +124,40 @@ impl StandingWaveSource {
         
         // d/dt[A*spatial*sin(ωt)] = A*spatial*ω*cos(ωt)
         self.amplitude * spatial_pattern * omega * (omega * t).cos()
+    }
+}
+
+use std::fmt::Debug;
+
+impl Debug for StandingWaveSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StandingWaveSource")
+            .field("frequency", &self.frequency)
+            .field("amplitude", &self.amplitude)
+            .finish()
+    }
+}
+
+impl Source for StandingWaveSource {
+    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
+        // Standing wave pattern with antinode at center
+        let r = ((x - self.center.0).powi(2) + 
+                 (y - self.center.1).powi(2) + 
+                 (z - self.center.2).powi(2)).sqrt();
+        
+        let k = 2.0 * PI / self.wavelength;
+        let spatial_pattern = (k * r).cos();
+        let temporal_pattern = (2.0 * PI * self.frequency * t).sin();
+        
+        self.amplitude * spatial_pattern * temporal_pattern
+    }
+    
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![self.center]
+    }
+    
+    fn signal(&self) -> &dyn kwavers::Signal {
+        &self.signal
     }
 }
 
@@ -213,16 +233,16 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
     let mut chemistry = SonochemistryModel::new(n, n, n, 7.0); // pH 7
     
     // Create acoustic source
-    let source = StandingWaveSource {
-        frequency: params.frequency,
-        amplitude: params.pressure_amplitude,
-        wavelength: params.sound_speed / params.frequency,
-        center: (
+    let source = StandingWaveSource::new(
+        params.frequency,
+        params.pressure_amplitude,
+        (
             params.domain_size / 2.0,
             params.domain_size / 2.0,
             params.domain_size / 2.0,
         ),
-    };
+        params.sound_speed,
+    );
     
     // Data collection
     let mut time_data = Vec::new();
@@ -251,7 +271,7 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
                     let y = j as f64 * dx;
                     let z = k as f64 * dx;
                     
-                    pressure_field[[i, j, k]] = source.pressure(x, y, z, t);
+                    pressure_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
                     
                     // Use analytical pressure time derivative
                     dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
@@ -436,10 +456,20 @@ fn save_sbsl_data(
     light_intensities: &[f64],
     filename: &str,
 ) -> KwaversResult<()> {
-    let mut file = File::create(filename)?;
+    use kwavers::error::DataError;
+    
+    let mut file = File::create(filename)
+        .map_err(|e| DataError::WriteError { 
+            path: filename.to_string(),
+            reason: e.to_string() 
+        })?;
     
     // Write header
-    writeln!(file, "time_us,radius_um,temperature_K,light_intensity_W_m3")?;
+    writeln!(file, "time_us,radius_um,temperature_K,light_intensity_W_m3")
+        .map_err(|e| DataError::WriteError {
+            path: filename.to_string(),
+            reason: e.to_string()
+        })?;
     
     // Write data
     for i in 0..times.len() {
@@ -450,7 +480,10 @@ fn save_sbsl_data(
             radii[i] * 1e6,
             temperatures[i],
             light_intensities[i]
-        )?;
+        ).map_err(|e| DataError::WriteError {
+            path: filename.to_string(),
+            reason: e.to_string()
+        })?;
     }
     
     println!("\nData saved to {}", filename);

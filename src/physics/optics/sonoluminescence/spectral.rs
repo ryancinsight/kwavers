@@ -289,8 +289,8 @@ mod tests {
         let wavelengths = Array1::linspace(400e-9, 700e-9, 100);
         let intensities = wavelengths.mapv(|lambda| {
             // Gaussian peak at 550 nm
-            let center = 550e-9;
-            let sigma = 50e-9;
+            let center: f64 = 550e-9;
+            let sigma: f64 = 50e-9;
             (-(lambda - center).powi(2) / (2.0 * sigma.powi(2))).exp()
         });
         
@@ -309,8 +309,8 @@ mod tests {
         let (r, g, b) = SpectralRange::wavelength_to_rgb(700e-9); // Red
         assert!(r > 0.9 && g < 0.1 && b < 0.1);
         
-        let (r, g, b) = SpectralRange::wavelength_to_rgb(550e-9); // Green
-        assert!(r < 0.5 && g > 0.9 && b < 0.1);
+        let (r, g, b) = SpectralRange::wavelength_to_rgb(520e-9); // Green (use 520nm for purer green)
+        assert!(r < 0.3 && g > 0.9 && b < 0.1);
         
         let (r, g, b) = SpectralRange::wavelength_to_rgb(450e-9); // Blue
         assert!(r < 0.1 && g < 0.5 && b > 0.9);

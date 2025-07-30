@@ -7,12 +7,13 @@
 //! - Lauterborn & Kurz (2010) "Physics of bubble oscillations"
 
 use kwavers::{
-    Grid, Time, HomogeneousMedium, AbsorbingBoundary, Source, Sensor, Recorder,
+    Grid, Time, HomogeneousMedium, Source, Sensor, Recorder,
     SensorConfig, RecorderConfig, KwaversResult,
     physics::{
         bubble_dynamics::{
             BubbleCloud, BubbleParameters, GasSpecies, BubbleInteractions,
-            SizeDistribution, SpatialDistribution, CollectiveEffects,
+            CollectiveEffects, BubbleStateFields,
+            bubble_field::{SizeDistribution, SpatialDistribution},
         },
         mechanics::cavitation::{
             CavitationDamage, MaterialProperties, DamageParameters,
@@ -24,10 +25,11 @@ use kwavers::{
         chemistry::{SonochemistryModel, ROSSpecies},
     },
 };
-use ndarray::{Array3, Array2, s};
+use ndarray::{Array3, s};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
+use std::fmt::Debug;
 
 /// MBSL experimental parameters
 #[derive(Debug, Clone)]
@@ -84,29 +86,20 @@ struct FocusedTransducerSource {
     amplitude: f64,
     focal_point: (f64, f64, f64),
     aperture: f64,
-}
-
-impl Source for FocusedTransducerSource {
-    fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        let dx = x - self.focal_point.0;
-        let dy = y - self.focal_point.1;
-        let dz = z - self.focal_point.2;
-        let r = (dx*dx + dy*dy + dz*dz).sqrt();
-        
-        // Focused beam pattern
-        let beam_width = self.aperture / 4.0;
-        let spatial = (-r*r / (2.0 * beam_width*beam_width)).exp();
-        let temporal = (2.0 * PI * self.frequency * t).sin();
-        
-        self.amplitude * spatial * temporal
-    }
-    
-    fn velocity_x(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_y(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_z(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
+    signal: kwavers::signal::SineWave,
 }
 
 impl FocusedTransducerSource {
+    fn new(frequency: f64, amplitude: f64, focal_point: (f64, f64, f64), aperture: f64) -> Self {
+        Self {
+            frequency,
+            amplitude,
+            focal_point,
+            aperture,
+            signal: kwavers::signal::SineWave::new(frequency, amplitude, 0.0),
+        }
+    }
+    
     /// Calculate the time derivative of pressure analytically
     fn pressure_time_derivative(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let dx = x - self.focal_point.0;
@@ -120,6 +113,39 @@ impl FocusedTransducerSource {
         
         // d/dt[A*spatial*sin(ωt)] = A*spatial*ω*cos(ωt)
         self.amplitude * spatial * omega * (omega * t).cos()
+    }
+}
+
+impl Debug for FocusedTransducerSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FocusedTransducerSource")
+            .field("frequency", &self.frequency)
+            .field("amplitude", &self.amplitude)
+            .finish()
+    }
+}
+
+impl Source for FocusedTransducerSource {
+    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
+        let dx = x - self.focal_point.0;
+        let dy = y - self.focal_point.1;
+        let dz = z - self.focal_point.2;
+        let r = (dx*dx + dy*dy + dz*dz).sqrt();
+        
+        // Focused beam pattern
+        let beam_width = self.aperture / 4.0;
+        let spatial = (-r*r / (2.0 * beam_width*beam_width)).exp();
+        let temporal = (2.0 * PI * self.frequency * t).sin();
+        
+        self.amplitude * spatial * temporal
+    }
+    
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![self.focal_point]
+    }
+    
+    fn signal(&self) -> &dyn kwavers::Signal {
+        &self.signal
     }
 }
 
@@ -221,16 +247,16 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     let interactions = BubbleInteractions::default();
     
     // Create acoustic source
-    let source = FocusedTransducerSource {
-        frequency: params.frequency,
-        amplitude: params.pressure_amplitude,
-        focal_point: (
+    let source = FocusedTransducerSource::new(
+        params.frequency,
+        params.pressure_amplitude,
+        (
             params.domain_size / 2.0,
             params.domain_size / 2.0,
             params.domain_size / 2.0,
         ),
-        aperture: params.domain_size / 2.0,
-    };
+        params.domain_size / 2.0,
+    );
     
     // Data collection
     let mut time_history = Vec::new();
@@ -259,7 +285,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
                     let y = j as f64 * dx;
                     let z = k as f64 * dx;
                     
-                    pressure_field[[i, j, k]] = source.pressure(x, y, z, t);
+                    pressure_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
                     
                     // Use analytical pressure derivative
                     dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
@@ -344,6 +370,8 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         &time_history,
         &active_bubbles,
         &total_light,
+        &max_temperature,
+        &total_damage,
         &ros_production,
         "mbsl_results.csv",
     )?;
@@ -426,27 +454,46 @@ fn analyze_mbsl_results(
     println!("  Collective bubble dynamics: ✓");
 }
 
-/// Save MBSL data
+/// Save MBSL data to CSV file
 fn save_mbsl_data(
     times: &[f64],
     active_bubbles: &[usize],
     total_light: &[f64],
+    max_temperature: &[f64],
+    total_damage: &[f64],
     ros_production: &[f64],
     filename: &str,
 ) -> KwaversResult<()> {
-    let mut file = File::create(filename)?;
+    use kwavers::error::DataError;
     
-    writeln!(file, "time_us,active_bubbles,total_light_W,ros_production_mol")?;
+    let mut file = File::create(filename)
+        .map_err(|e| DataError::WriteError { 
+            path: filename.to_string(),
+            reason: e.to_string() 
+        })?;
     
+    // Write header
+    writeln!(file, "time_us,active_bubbles,total_light_W_m3,max_temperature_K,total_damage,ros_production")
+        .map_err(|e| DataError::WriteError {
+            path: filename.to_string(),
+            reason: e.to_string()
+        })?;
+    
+    // Write data
     for i in 0..times.len() {
         writeln!(
             file,
-            "{:.3},{},{:.3e},{:.3e}",
+            "{:.3},{},{:.3e},{:.0},{:.3e},{:.3e}",
             times[i] * 1e6,
             active_bubbles[i],
             total_light[i],
+            max_temperature[i],
+            total_damage[i],
             ros_production[i]
-        )?;
+        ).map_err(|e| DataError::WriteError {
+            path: filename.to_string(),
+            reason: e.to_string()
+        })?;
     }
     
     println!("\nData saved to {}", filename);
@@ -482,16 +529,34 @@ fn create_spatial_maps(
 
 /// Helper to save 2D field
 fn save_2d_field(field: &ndarray::ArrayView2<f64>, filename: &str) -> KwaversResult<()> {
-    let mut file = File::create(filename)?;
+    use kwavers::error::DataError;
+    
+    let mut file = File::create(filename)
+        .map_err(|e| DataError::WriteError { 
+            path: filename.to_string(),
+            reason: e.to_string() 
+        })?;
     
     for i in 0..field.shape()[0] {
         for j in 0..field.shape()[1] {
-            write!(file, "{:.6e}", field[[i, j]])?;
+            write!(file, "{:.6e}", field[[i, j]])
+                .map_err(|e| DataError::WriteError {
+                    path: filename.to_string(),
+                    reason: e.to_string()
+                })?;
             if j < field.shape()[1] - 1 {
-                write!(file, ",")?;
+                write!(file, ",")
+                    .map_err(|e| DataError::WriteError {
+                        path: filename.to_string(),
+                        reason: e.to_string()
+                    })?;
             }
         }
-        writeln!(file)?;
+        writeln!(file)
+            .map_err(|e| DataError::WriteError {
+                path: filename.to_string(),
+                reason: e.to_string()
+            })?;
     }
     
     Ok(())

@@ -357,10 +357,6 @@ impl ChemicalReactionConfig {
     }
 }
 
-pub mod radical_initiation;
-pub mod photochemistry;
-pub mod reaction_kinetics;
-
 use radical_initiation::RadicalInitiation;
 use photochemistry::PhotochemicalEffects;
 use reaction_kinetics::ReactionKinetics;

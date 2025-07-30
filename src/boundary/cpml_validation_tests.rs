@@ -118,6 +118,9 @@ mod tests {
         let config = CPMLConfig::default();
         let mut solver = CPMLSolver::new(config, &grid).unwrap();
         
+        // Create medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        
         // Initialize fields
         let mut pressure = create_gaussian_pulse(&grid, 50, 50, 50, 5.0);
         let mut velocity = Array4::zeros((3, 100, 100, 100));
@@ -126,8 +129,8 @@ mod tests {
         
         // Run simulation with C-PML
         let dt = 1e-7;
-        for _ in 0..100 {
-            solver.update_acoustic_field(&mut pressure, &mut velocity, &grid, dt).unwrap();
+        for step in 0..100 {
+            solver.update_acoustic_field(&mut pressure, &mut velocity, &grid, &medium, dt, step).unwrap();
         }
         
         let final_max = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));

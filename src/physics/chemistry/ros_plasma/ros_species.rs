@@ -192,13 +192,20 @@ impl ROSConcentrations {
             );
         }
         
-        for (species, conc) in &mut self.fields {
+        // Collect updates to avoid borrow checker issues
+        let mut updates: Vec<(ROSSpecies, Array3<f64>)> = Vec::new();
+        
+        for (species, conc) in &self.fields {
             let d = species.diffusion_coefficient();
             
             // For high stability factors, use implicit scheme (simplified ADI)
             if d * dt / dx.min(dy).min(dz).powi(2) > 0.25 {
                 // Use semi-implicit scheme for better stability
-                self.apply_semi_implicit_diffusion(conc, d, dx, dy, dz, dt);
+                let mut updated_conc = conc.clone();
+                Self::apply_semi_implicit_diffusion_static(
+                    &mut updated_conc, d, dx, dy, dz, dt, self.shape
+                );
+                updates.push((*species, updated_conc));
             } else {
                 // Use explicit scheme for small stability factors
                 let mut new_conc = conc.clone();
@@ -217,32 +224,37 @@ impl ROSConcentrations {
                     }
                 }
                 
-                *conc = new_conc;
+                updates.push((*species, new_conc));
             }
+        }
+        
+        // Apply updates
+        for (species, new_conc) in updates {
+            self.fields.insert(species, new_conc);
         }
     }
     
-    /// Apply semi-implicit diffusion for better stability
-    fn apply_semi_implicit_diffusion(
-        &self,
+    /// Apply semi-implicit diffusion for better stability (static version)
+    fn apply_semi_implicit_diffusion_static(
         conc: &mut Array3<f64>,
         d: f64,
         dx: f64,
         dy: f64,
         dz: f64,
         dt: f64,
+        shape: (usize, usize, usize),
     ) {
         // Simplified ADI (Alternating Direction Implicit) method
         // This is more stable than explicit Euler
         let mut temp = conc.clone();
         
         // X-direction sweep
-        for j in 1..self.shape.1-1 {
-            for k in 1..self.shape.2-1 {
+        for j in 1..shape.1-1 {
+            for k in 1..shape.2-1 {
                 let alpha = d * dt / (2.0 * dx * dx);
                 // Solve tridiagonal system for each line
                 // Simplified: use Crank-Nicolson approximation
-                for i in 1..self.shape.0-1 {
+                for i in 1..shape.0-1 {
                     let rhs = conc[[i, j, k]] + 
                         alpha * (conc[[i+1, j, k]] - 2.0 * conc[[i, j, k]] + conc[[i-1, j, k]]);
                     temp[[i, j, k]] = rhs / (1.0 + 2.0 * alpha);

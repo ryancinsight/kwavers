@@ -330,7 +330,7 @@ mod tests {
     fn test_erosion_threshold() {
         let material = MaterialProperties::default();
         let params = DamageParameters::default();
-        let damage = CavitationDamage::new((5, 5, 5), material, params);
+        let damage = CavitationDamage::new((5, 5, 5), material.clone(), params);
         
         // Below threshold pressure - no erosion
         let rate = damage.calculate_erosion_rate(

@@ -256,7 +256,7 @@ impl PlasmaChemistry {
             self.update(1.0);
             
             // Check convergence
-            let mut max_change = 0.0;
+            let mut max_change: f64 = 0.0;
             for (species, &old_conc) in &old_concentrations {
                 if let Some(&new_conc) = self.concentrations.get(species) {
                     let change = ((new_conc - old_conc) / old_conc.max(1e-20)).abs();
