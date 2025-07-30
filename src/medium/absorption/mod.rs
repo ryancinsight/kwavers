@@ -1,15 +1,11 @@
 // medium/absorption/mod.rs
 
-use log::{debug, trace};
+use log::trace;
 
 pub mod power_law_absorption;
 pub mod tissue_specific;
 
 pub fn absorption_coefficient(frequency: f64, temperature: f64, bubble_radius: Option<f64>) -> f64 {
-    debug!(
-        "Computing basic absorption: freq = {:.2e} Hz, temp = {:.2} K",
-        frequency, temperature
-    );
     assert!(
         frequency > 0.0 && temperature > 0.0,
         "Frequency and temperature must be positive"

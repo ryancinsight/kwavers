@@ -132,6 +132,7 @@ impl CPMLConfig {
 }
 
 /// Convolutional PML boundary condition
+#[derive(Debug)]
 pub struct CPMLBoundary {
     config: CPMLConfig,
     
@@ -225,11 +226,6 @@ impl CPMLBoundary {
         
         // X-direction profiles
         self.compute_profile_1d(
-            &mut self.sigma_x,
-            &mut self.kappa_x,
-            &mut self.alpha_x,
-            &mut self.b_x,
-            &mut self.c_x,
             self.nx,
             thickness,
             m,
@@ -238,12 +234,7 @@ impl CPMLBoundary {
         );
         
         // Y-direction profiles
-        self.compute_profile_1d(
-            &mut self.sigma_y,
-            &mut self.kappa_y,
-            &mut self.alpha_y,
-            &mut self.b_y,
-            &mut self.c_y,
+        self.compute_profile_1d_y(
             self.ny,
             thickness,
             m,
@@ -252,12 +243,7 @@ impl CPMLBoundary {
         );
         
         // Z-direction profiles
-        self.compute_profile_1d(
-            &mut self.sigma_z,
-            &mut self.kappa_z,
-            &mut self.alpha_z,
-            &mut self.b_z,
-            &mut self.c_z,
+        self.compute_profile_1d_z(
             self.nz,
             thickness,
             m,
@@ -282,14 +268,9 @@ impl CPMLBoundary {
         sigma_opt * self.config.sigma_factor
     }
     
-    /// Compute 1D profile for a given direction
+    /// Compute 1D profile for X direction
     fn compute_profile_1d(
-        &self,
-        sigma: &mut [f64],
-        kappa: &mut [f64],
-        alpha: &mut [f64],
-        b: &mut [f64],
-        c: &mut [f64],
+        &mut self,
         n: usize,
         thickness: f64,
         m: f64,
@@ -319,40 +300,180 @@ impl CPMLBoundary {
                 let d_m = d.powf(m);
                 
                 // Conductivity profile
-                sigma[i] = sigma_max * d_m;
+                self.sigma_x[i] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
                 if self.config.enhanced_grazing {
                     // Enhanced profile for grazing angles
                     let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
-                    kappa[i] = 1.0 + kappa_grad;
+                    self.kappa_x[i] = 1.0 + kappa_grad;
                 } else {
-                    kappa[i] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
+                    self.kappa_x[i] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
                 }
                 
                 // Frequency shifting profile (quadratic for stability)
-                alpha[i] = self.config.alpha_max * (1.0 - d).powi(2);
+                self.alpha_x[i] = self.config.alpha_max * (1.0 - d).powi(2);
                 
                 // Compute update coefficients
-                let sigma_i = sigma[i];
-                let kappa_i = kappa[i];
-                let alpha_i = alpha[i];
+                let sigma_i = self.sigma_x[i];
+                let kappa_i = self.kappa_x[i];
+                let alpha_i = self.alpha_x[i];
                 
                 // Time integration coefficients
-                b[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
+                self.b_x[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
                 
                 if (sigma_i + kappa_i * alpha_i).abs() > 1e-10 {
-                    c[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (b[i] - 1.0);
+                    self.c_x[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (self.b_x[i] - 1.0);
                 } else {
-                    c[i] = 0.0;
+                    self.c_x[i] = 0.0;
                 }
             } else {
                 // Outside PML region
-                sigma[i] = 0.0;
-                kappa[i] = 1.0;
-                alpha[i] = 0.0;
-                b[i] = 0.0;
-                c[i] = 0.0;
+                self.sigma_x[i] = 0.0;
+                self.kappa_x[i] = 1.0;
+                self.alpha_x[i] = 0.0;
+                self.b_x[i] = 0.0;
+                self.c_x[i] = 0.0;
+            }
+        }
+    }
+    
+    /// Compute 1D profile for Y direction
+    fn compute_profile_1d_y(
+        &mut self,
+        n: usize,
+        thickness: f64,
+        m: f64,
+        sigma_max: f64,
+        dy: f64,
+    ) {
+        let dt = dy * self.config.cfl_number; // Approximate time step
+        
+        for j in 0..n {
+            // Distance from PML interface (0 at interface, 1 at boundary)
+            let d_left = if j < thickness as usize {
+                (thickness - j as f64) / thickness
+            } else {
+                0.0
+            };
+            
+            let d_right = if j >= n - thickness as usize {
+                (j as f64 - (n as f64 - thickness - 1.0)) / thickness
+            } else {
+                0.0
+            };
+            
+            let d = d_left.max(d_right);
+            
+            if d > 0.0 {
+                // Polynomial grading
+                let d_m = d.powf(m);
+                
+                // Conductivity profile
+                self.sigma_y[j] = sigma_max * d_m;
+                
+                // Coordinate stretching profile
+                if self.config.enhanced_grazing {
+                    // Enhanced profile for grazing angles
+                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
+                    self.kappa_y[j] = 1.0 + kappa_grad;
+                } else {
+                    self.kappa_y[j] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
+                }
+                
+                // Frequency shifting profile (quadratic for stability)
+                self.alpha_y[j] = self.config.alpha_max * (1.0 - d).powi(2);
+                
+                // Compute update coefficients
+                let sigma_j = self.sigma_y[j];
+                let kappa_j = self.kappa_y[j];
+                let alpha_j = self.alpha_y[j];
+                
+                // Time integration coefficients
+                self.b_y[j] = (-(sigma_j / kappa_j + alpha_j) * dt).exp();
+                
+                if (sigma_j + kappa_j * alpha_j).abs() > 1e-10 {
+                    self.c_y[j] = sigma_j / (sigma_j + kappa_j * alpha_j) * (self.b_y[j] - 1.0);
+                } else {
+                    self.c_y[j] = 0.0;
+                }
+            } else {
+                // Outside PML region
+                self.sigma_y[j] = 0.0;
+                self.kappa_y[j] = 1.0;
+                self.alpha_y[j] = 0.0;
+                self.b_y[j] = 0.0;
+                self.c_y[j] = 0.0;
+            }
+        }
+    }
+    
+    /// Compute 1D profile for Z direction
+    fn compute_profile_1d_z(
+        &mut self,
+        n: usize,
+        thickness: f64,
+        m: f64,
+        sigma_max: f64,
+        dz: f64,
+    ) {
+        let dt = dz * self.config.cfl_number; // Approximate time step
+        
+        for k in 0..n {
+            // Distance from PML interface (0 at interface, 1 at boundary)
+            let d_left = if k < thickness as usize {
+                (thickness - k as f64) / thickness
+            } else {
+                0.0
+            };
+            
+            let d_right = if k >= n - thickness as usize {
+                (k as f64 - (n as f64 - thickness - 1.0)) / thickness
+            } else {
+                0.0
+            };
+            
+            let d = d_left.max(d_right);
+            
+            if d > 0.0 {
+                // Polynomial grading
+                let d_m = d.powf(m);
+                
+                // Conductivity profile
+                self.sigma_z[k] = sigma_max * d_m;
+                
+                // Coordinate stretching profile
+                if self.config.enhanced_grazing {
+                    // Enhanced profile for grazing angles
+                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
+                    self.kappa_z[k] = 1.0 + kappa_grad;
+                } else {
+                    self.kappa_z[k] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
+                }
+                
+                // Frequency shifting profile (quadratic for stability)
+                self.alpha_z[k] = self.config.alpha_max * (1.0 - d).powi(2);
+                
+                // Compute update coefficients
+                let sigma_k = self.sigma_z[k];
+                let kappa_k = self.kappa_z[k];
+                let alpha_k = self.alpha_z[k];
+                
+                // Time integration coefficients
+                self.b_z[k] = (-(sigma_k / kappa_k + alpha_k) * dt).exp();
+                
+                if (sigma_k + kappa_k * alpha_k).abs() > 1e-10 {
+                    self.c_z[k] = sigma_k / (sigma_k + kappa_k * alpha_k) * (self.b_z[k] - 1.0);
+                } else {
+                    self.c_z[k] = 0.0;
+                }
+            } else {
+                // Outside PML region
+                self.sigma_z[k] = 0.0;
+                self.kappa_z[k] = 1.0;
+                self.alpha_z[k] = 0.0;
+                self.b_z[k] = 0.0;
+                self.c_z[k] = 0.0;
             }
         }
     }
@@ -462,6 +583,11 @@ impl CPMLBoundary {
             // Standard model
             r_normal / cos_theta.max(0.1)
         }
+    }
+    
+    /// Get the C-PML configuration
+    pub fn config(&self) -> &CPMLConfig {
+        &self.config
     }
 }
 
@@ -601,7 +727,7 @@ mod tests {
             ..Default::default()
         };
         
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Check that profiles are properly graded
         // At PML interface (i=10), values should be zero/one

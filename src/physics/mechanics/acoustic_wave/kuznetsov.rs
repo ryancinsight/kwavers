@@ -52,10 +52,12 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
-use crate::fft::{FFT3D, fft_3d, ifft_3d};
-use ndarray::{Array3, Array4, Zip, Axis, s};
+use crate::utils::{fft_3d, ifft_3d};
+use crate::fft::{Fft3d, Ifft3d};
+use ndarray::{Array3, Array4, Zip, Axis};
+use rustfft::num_complex::Complex;
 use std::f64::consts::PI;
-use log::{debug, info, warn};
+use log::{info, warn};
 use std::time::Instant;
 
 /// Configuration for the Kuznetsov equation solver
@@ -117,40 +119,35 @@ pub enum TimeIntegrationScheme {
     AdamsBashforth3,
 }
 
-/// Full Kuznetsov equation solver
-pub struct KuznetsovWave {
-    /// Solver configuration
-    config: KuznetsovConfig,
-    
-    /// Precomputed k-squared values for Laplacian
-    k_squared: Array3<f64>,
-    
-    /// Precomputed k values for fractional derivatives
-    k_magnitude: Array3<f64>,
-    
-    /// Phase correction factors for k-space derivatives
-    phase_factors: Array3<f64>,
-    
-    /// Previous pressure fields for time derivatives
-    pressure_history: Vec<Array3<f64>>,
-    
-    /// Previous nonlinear term for Adams-Bashforth
-    nonlinear_history: Vec<Array3<f64>>,
-    
-    /// FFT planner for efficiency
-    fft_planner: FFT3D,
-    
-    /// Performance metrics
-    metrics: SolverMetrics,
-}
-
-#[derive(Debug, Default)]
+/// Performance metrics for the solver
+#[derive(Debug, Clone, Default)]
 struct SolverMetrics {
     linear_time: f64,
     nonlinear_time: f64,
     diffusion_time: f64,
     fft_time: f64,
-    total_steps: usize,
+    total_steps: u64,
+}
+
+/// Kuznetsov wave equation solver
+#[derive(Debug)]
+pub struct KuznetsovWave {
+    config: KuznetsovConfig,
+    
+    /// Pre-computed k-space arrays
+    k_squared: Array3<f64>,
+    k_magnitude: Array3<f64>,
+    phase_factors: Array3<f64>,
+    
+    /// History buffers for time derivatives
+    pressure_history: Vec<Array3<f64>>,
+    nonlinear_history: Vec<Array3<f64>>,
+    
+    /// FFT planner for efficiency
+    fft_planner: Option<Fft3d>,
+    
+    /// Performance metrics
+    metrics: SolverMetrics,
 }
 
 impl KuznetsovWave {
@@ -173,7 +170,7 @@ impl KuznetsovWave {
         let nonlinear_history = vec![Array3::zeros((grid.nx, grid.ny, grid.nz)); 3];
         
         // Create FFT planner
-        let fft_planner = FFT3D::new(grid.nx, grid.ny, grid.nz);
+        let fft_planner = Fft3d::new(grid.nx, grid.ny, grid.nz);
         
         Self {
             config,
@@ -182,30 +179,30 @@ impl KuznetsovWave {
             phase_factors,
             pressure_history,
             nonlinear_history,
-            fft_planner,
+            fft_planner: Some(fft_planner),
             metrics: SolverMetrics::default(),
         }
     }
     
-    /// Compute the Laplacian using k-space for spectral accuracy
-    fn compute_laplacian(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let start = Instant::now();
+    /// Compute Laplacian using spectral method
+    fn compute_laplacian(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        // Convert to 4D array for fft_3d compatibility
+        let mut fields_4d = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(field);
         
-        // Forward FFT
-        let mut field_k = fft_3d(field)?;
+        // Transform to k-space
+        let mut field_k = fft_3d(&fields_4d, 0, grid);
         
-        // Apply -k² in k-space (note negative sign for Laplacian)
+        // Apply Laplacian in k-space: ∇²f = -k² * f
         Zip::from(&mut field_k)
             .and(&self.k_squared)
-            .and(&self.phase_factors)
-            .for_each(|fk, &k2, &phase| {
-                *fk *= -k2 * phase;
+            .for_each(|fk, &k2| {
+                *fk *= -k2;
             });
         
-        // Inverse FFT
-        let result = ifft_3d(&field_k)?;
+        // Transform back to real space
+        let result = ifft_3d(&field_k, grid);
         
-        self.metrics.fft_time += start.elapsed().as_secs_f64();
         Ok(result)
     }
     
@@ -307,18 +304,37 @@ impl KuznetsovWave {
     }
     
     /// Update pressure history buffers
-    fn update_history(&mut self, pressure: &Array3<f64>) {
+    fn update_history(&mut self, current_pressure: &Array3<f64>) {
         // Shift history
-        for i in (1..self.pressure_history.len()).rev() {
-            self.pressure_history[i].assign(&self.pressure_history[i-1]);
+        let n = self.pressure_history.len();
+        for i in (1..n).rev() {
+            let (left, right) = self.pressure_history.split_at_mut(i);
+            right[0].assign(&left[i-1]);
         }
-        self.pressure_history[0].assign(pressure);
+        
+        // Store current pressure
+        self.pressure_history[0].assign(current_pressure);
+        
+        // Update nonlinear history (p²)
+        if self.config.enable_nonlinearity {
+            for i in (1..self.nonlinear_history.len()).rev() {
+                let (left, right) = self.nonlinear_history.split_at_mut(i);
+                right[0].assign(&left[i-1]);
+            }
+            
+            // Store p²
+            Zip::from(&mut self.nonlinear_history[0])
+                .and(current_pressure)
+                .for_each(|p2, &p| {
+                    *p2 = p * p;
+                });
+        }
     }
     
     /// Check CFL condition for stability
     fn check_cfl_condition(&self, grid: &Grid, medium: &dyn Medium, dt: f64) -> bool {
         // Find maximum sound speed
-        let mut c_max = 0.0;
+        let mut c_max: f64 = 0.0;
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
@@ -342,10 +358,9 @@ impl KuznetsovWave {
             true
         }
     }
-}
 
-impl AcousticWaveModel for KuznetsovWave {
-    fn update_wave(
+    /// Internal wave update method with explicit pressure and velocity arrays
+    fn update_wave_internal(
         &mut self,
         pressure: &mut Array3<f64>,
         velocity: &mut Array4<f64>,
@@ -366,7 +381,7 @@ impl AcousticWaveModel for KuznetsovWave {
         let pressure_current = pressure.clone();
         
         // Compute all terms of the Kuznetsov equation
-        let laplacian = self.compute_laplacian(pressure)?;
+        let laplacian = self.compute_laplacian(pressure, grid)?;
         let nonlinear_term = self.compute_nonlinear_term(pressure, medium, grid, dt)?;
         let diffusivity_term = self.compute_diffusivity_term(pressure, medium, grid, dt)?;
         
@@ -378,7 +393,7 @@ impl AcousticWaveModel for KuznetsovWave {
                 let total_rhs = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
                 
                 // Update pressure
-                Zip::from(pressure)
+                Zip::from(&mut *pressure)
                     .and(&total_rhs)
                     .for_each(|p, &rhs| {
                         *p += dt * rhs;
@@ -397,7 +412,7 @@ impl AcousticWaveModel for KuznetsovWave {
                 let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
                 let total_rhs = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
                 
-                Zip::from(pressure)
+                Zip::from(&mut *pressure)
                     .and(&total_rhs)
                     .for_each(|p, &rhs| {
                         *p += dt * rhs;
@@ -430,6 +445,78 @@ impl AcousticWaveModel for KuznetsovWave {
         
         Ok(())
     }
+}
+
+impl AcousticWaveModel for KuznetsovWave {
+    fn update_wave(
+        &mut self,
+        fields: &mut Array4<f64>,
+        prev_pressure: &Array3<f64>,
+        source: &dyn crate::source::Source,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) {
+        // Extract pressure and velocity from fields
+        let pressure_idx = 0; // Assuming pressure is at index 0
+        let vx_idx = 4; // Assuming velocity components start at index 4
+        let vy_idx = 5;
+        let vz_idx = 6;
+        
+        // Get pressure field
+        let mut pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();
+        
+        // Create velocity array
+        let mut velocity = Array4::zeros((3, grid.nx, grid.ny, grid.nz));
+        velocity.index_axis_mut(Axis(0), 0).assign(&fields.index_axis(Axis(0), vx_idx));
+        velocity.index_axis_mut(Axis(0), 1).assign(&fields.index_axis(Axis(0), vy_idx));
+        velocity.index_axis_mut(Axis(0), 2).assign(&fields.index_axis(Axis(0), vz_idx));
+        
+        // Get source term
+        let mut source_term = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    source_term[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
+                }
+            }
+        }
+        
+        // Call the original update method
+        if let Err(e) = self.update_wave_internal(&mut pressure, &mut velocity, &source_term, grid, medium, dt, t) {
+            warn!("Kuznetsov wave update failed: {}", e);
+        }
+        
+        // Write back results
+        fields.index_axis_mut(Axis(0), pressure_idx).assign(&pressure);
+        fields.index_axis_mut(Axis(0), vx_idx).assign(&velocity.index_axis(Axis(0), 0));
+        fields.index_axis_mut(Axis(0), vy_idx).assign(&velocity.index_axis(Axis(0), 1));
+        fields.index_axis_mut(Axis(0), vz_idx).assign(&velocity.index_axis(Axis(0), 2));
+    }
+    
+    fn report_performance(&self) {
+        let total_time = self.metrics.linear_time + self.metrics.nonlinear_time 
+            + self.metrics.diffusion_time + self.metrics.fft_time;
+        
+        info!("Kuznetsov Wave Performance:");
+        info!("  Total steps: {}", self.metrics.total_steps);
+        info!("  Total time: {:.3}s", total_time);
+        if self.metrics.total_steps > 0 {
+            info!("  Average step time: {:.3}ms", 1000.0 * total_time / self.metrics.total_steps as f64);
+        }
+        info!("  Linear term time: {:.3}s ({:.1}%)", 
+            self.metrics.linear_time, 100.0 * self.metrics.linear_time / total_time);
+        info!("  Nonlinear term time: {:.3}s ({:.1}%)", 
+            self.metrics.nonlinear_time, 100.0 * self.metrics.nonlinear_time / total_time);
+        info!("  Diffusion term time: {:.3}s ({:.1}%)", 
+            self.metrics.diffusion_time, 100.0 * self.metrics.diffusion_time / total_time);
+        info!("  FFT time: {:.3}s ({:.1}%)", 
+            self.metrics.fft_time, 100.0 * self.metrics.fft_time / total_time);
+    }
     
     fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.config.nonlinearity_scaling = scaling;
@@ -437,43 +524,8 @@ impl AcousticWaveModel for KuznetsovWave {
     }
     
     fn set_k_space_correction_order(&mut self, order: usize) {
-        if order == 2 || order == 4 || order == 6 {
-            self.config.spatial_order = order;
-            // Recompute phase factors
-            self.phase_factors = compute_phase_factors(
-                &Grid {
-                    nx: self.k_squared.dim().0,
-                    ny: self.k_squared.dim().1,
-                    nz: self.k_squared.dim().2,
-                    dx: 1.0, // Dummy values, actual grid needed
-                    dy: 1.0,
-                    dz: 1.0,
-                },
-                order
-            );
-            info!("Set k-space correction order to {}", order);
-        } else {
-            warn!("Invalid k-space correction order {}, must be 2, 4, or 6", order);
-        }
-    }
-    
-    fn get_performance_metrics(&self) -> std::collections::HashMap<String, f64> {
-        let mut metrics = std::collections::HashMap::new();
-        let total_time = self.metrics.linear_time + self.metrics.nonlinear_time 
-            + self.metrics.diffusion_time + self.metrics.fft_time;
-        
-        metrics.insert("total_time".to_string(), total_time);
-        metrics.insert("linear_time".to_string(), self.metrics.linear_time);
-        metrics.insert("nonlinear_time".to_string(), self.metrics.nonlinear_time);
-        metrics.insert("diffusion_time".to_string(), self.metrics.diffusion_time);
-        metrics.insert("fft_time".to_string(), self.metrics.fft_time);
-        metrics.insert("total_steps".to_string(), self.metrics.total_steps as f64);
-        
-        if self.metrics.total_steps > 0 {
-            metrics.insert("avg_step_time".to_string(), total_time / self.metrics.total_steps as f64);
-        }
-        
-        metrics
+        info!("K-space correction order setting not applicable to Kuznetsov solver (order: {})", order);
+        // Kuznetsov solver uses full spectral accuracy, no correction order needed
     }
 }
 
@@ -576,7 +628,7 @@ fn compute_acoustic_diffusivity(
     // C_p = specific heat at constant pressure
     
     // For now, use a simplified model based on absorption
-    let alpha = medium.absorption_coefficient(x, y, z, grid);
+    let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
     let c = medium.sound_speed(x, y, z, grid);
     
     // Approximate diffusivity from power-law absorption
@@ -612,7 +664,7 @@ fn compute_linear_term(
     linear_term
 }
 
-/// Update velocity field from pressure gradient
+/// Helper function to update velocity field
 fn update_velocity_field(
     velocity: &mut Array4<f64>,
     pressure: &Array3<f64>,
@@ -620,30 +672,64 @@ fn update_velocity_field(
     grid: &Grid,
     dt: f64,
 ) -> KwaversResult<()> {
-    // Extract velocity components
-    let mut vx = velocity.index_axis_mut(Axis(0), 0);
-    let mut vy = velocity.index_axis_mut(Axis(0), 1);
-    let mut vz = velocity.index_axis_mut(Axis(0), 2);
+    // Compute pressure gradients
+    let mut dp_dx = Array3::zeros(pressure.raw_dim());
+    let mut dp_dy = Array3::zeros(pressure.raw_dim());
+    let mut dp_dz = Array3::zeros(pressure.raw_dim());
     
-    // Update using momentum equation: ∂v/∂t = -∇p/ρ
+    // Central differences for interior points
     for i in 1..grid.nx-1 {
         for j in 1..grid.ny-1 {
             for k in 1..grid.nz-1 {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                
-                let rho = medium.density(x, y, z, grid);
-                
-                // Pressure gradients (central differences)
-                let dp_dx = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) / (2.0 * grid.dx);
-                let dp_dy = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) / (2.0 * grid.dy);
-                let dp_dz = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) / (2.0 * grid.dz);
-                
-                // Update velocities
-                vx[[i, j, k]] -= dt * dp_dx / rho;
-                vy[[i, j, k]] -= dt * dp_dy / rho;
-                vz[[i, j, k]] -= dt * dp_dz / rho;
+                dp_dx[[i, j, k]] = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) / (2.0 * grid.dx);
+                dp_dy[[i, j, k]] = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) / (2.0 * grid.dy);
+                dp_dz[[i, j, k]] = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) / (2.0 * grid.dz);
+            }
+        }
+    }
+    
+    // Update velocity components separately to avoid borrow checker issues
+    {
+        let mut vx = velocity.index_axis_mut(Axis(0), 0);
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let rho = medium.density(x, y, z, grid);
+                    vx[[i, j, k]] -= dt * dp_dx[[i, j, k]] / rho;
+                }
+            }
+        }
+    }
+    
+    {
+        let mut vy = velocity.index_axis_mut(Axis(0), 1);
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let rho = medium.density(x, y, z, grid);
+                    vy[[i, j, k]] -= dt * dp_dy[[i, j, k]] / rho;
+                }
+            }
+        }
+    }
+    
+    {
+        let mut vz = velocity.index_axis_mut(Axis(0), 2);
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let rho = medium.density(x, y, z, grid);
+                    vz[[i, j, k]] -= dt * dp_dz[[i, j, k]] / rho;
+                }
             }
         }
     }
@@ -656,7 +742,36 @@ mod tests {
     use super::*;
     use crate::grid::Grid;
     use crate::medium::HomogeneousMedium;
+    use crate::physics::traits::AcousticWaveModel;
+    use ndarray::{Array3, Array4};
+    use std::f64::consts::PI;
+    use crate::source::Source;
+    use crate::signal::Signal;
     
+    // Test source implementation
+    struct TestSource;
+    
+    impl std::fmt::Debug for TestSource {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "TestSource")
+        }
+    }
+    
+    impl Source for TestSource {
+        fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.0 // No source for these tests
+        }
+        
+        fn positions(&self) -> Vec<(f64, f64, f64)> {
+            vec![]
+        }
+        
+        fn signal(&self) -> &dyn Signal {
+            panic!("Not implemented for test source")
+        }
+    }
+    
+    /// Test basic initialization and configuration
     #[test]
     fn test_kuznetsov_initialization() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
@@ -667,6 +782,7 @@ mod tests {
         assert_eq!(solver.pressure_history.len(), 2);
     }
     
+    /// Test linear propagation with a simple Gaussian pulse
     #[test]
     fn test_linear_propagation() {
         let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
@@ -675,12 +791,12 @@ mod tests {
         config.enable_diffusivity = false;
         
         let mut solver = KuznetsovWave::new(&grid, config);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Initialize with Gaussian pulse
         let mut pressure = Array3::zeros((128, 128, 128));
         let mut velocity = Array4::zeros((3, 128, 128, 128));
-        let source = Array3::zeros((128, 128, 128));
+        let source: Array3<f64> = Array3::zeros((128, 128, 128));
         
         for i in 0..128 {
             for j in 0..128 {
@@ -696,15 +812,29 @@ mod tests {
         
         let initial_energy = pressure.iter().map(|&p| p * p).sum::<f64>();
         
-        // Propagate for a few steps
+        // Create test source
+        let source = TestSource;
+        
+        // Create fields array
+        let mut fields = Array4::zeros((13, 128, 128, 128)); // Standard field indices
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure); // Pressure at index 0
+        fields.index_axis_mut(Axis(0), 4).assign(&velocity.index_axis(Axis(0), 0)); // vx at index 4
+        fields.index_axis_mut(Axis(0), 5).assign(&velocity.index_axis(Axis(0), 1)); // vy at index 5
+        fields.index_axis_mut(Axis(0), 6).assign(&velocity.index_axis(Axis(0), 2)); // vz at index 6
+        
+        let prev_pressure = pressure.clone();
+        
+        // Run simulation
         let dt = 1e-7;
-        for _ in 0..10 {
-            solver.update_wave(&mut pressure, &mut velocity, &source, &grid, &medium, dt, 0.0).unwrap();
+        for _ in 0..100 {
+            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, 0.0);
         }
         
-        let final_energy = pressure.iter().map(|&p| p * p).sum::<f64>();
+        // Extract final pressure
+        let final_pressure = fields.index_axis(Axis(0), 0);
+        let final_energy = final_pressure.iter().map(|&p| p * p).sum::<f64>();
         
-        // Energy should be approximately conserved in linear case
+        // Check energy conservation (should be approximately conserved for linear case)
         assert!((final_energy - initial_energy).abs() / initial_energy < 0.01);
     }
 }

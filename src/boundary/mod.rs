@@ -60,5 +60,5 @@ pub trait Boundary: Debug + Send + Sync {
     fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize);
 }
 
-pub use pml::PMLBoundary;
+pub use pml::{PMLBoundary, PMLConfig};
 pub use cpml::{CPMLBoundary, CPMLConfig};

@@ -21,10 +21,10 @@
 //! - CRP: Common reuse principle
 //! - ADP: Acyclic dependency principle
 
-use crate::error::{KwaversResult, PhysicsError};
+use crate::error::{KwaversResult, PhysicsError, KwaversError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4};
+use ndarray::{Array3, Array4, Axis};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
@@ -843,9 +843,9 @@ impl PhysicsComponent for AcousticWaveComponent {
         if self.use_kspace {
             // K-space implementation for spectral accuracy
             // This provides exact derivatives in the spectral domain
-            return Err(PhysicsError::NotImplemented(
-                "K-space derivatives not yet implemented in composable component".to_string()
-            ).into());
+            return Err(KwaversError::NotImplemented(
+                "KuznetsovWaveComponent only supports pressure field".to_string()
+            ));
         }
         
         // Create temporary arrays to avoid borrowing conflicts
@@ -979,8 +979,18 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         // Temperature field is at index 2
         let mut temperature_field = fields.index_axis_mut(ndarray::Axis(0), 2);
         
-        // Get thermal properties
-        let kappa_array = medium.thermal_diffusivity_array();
+        // Get thermal diffusivity from medium
+        let mut kappa_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    kappa_array[[i, j, k]] = medium.thermal_diffusivity(x, y, z, grid);
+                }
+            }
+        }
         
         // Simple explicit thermal diffusion update
         let mut temp_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
@@ -1074,8 +1084,10 @@ impl KuznetsovWaveComponent {
     /// Update pressure history
     fn update_history(&mut self, pressure: &Array3<f64>) {
         // Shift history
-        for i in (1..self.pressure_history.len()).rev() {
-            self.pressure_history[i].assign(&self.pressure_history[i-1]);
+        let n = self.pressure_history.len();
+        for i in (1..n).rev() {
+            let (left, right) = self.pressure_history.split_at_mut(i);
+            right[0].assign(&left[i-1]);
         }
         self.pressure_history[0].assign(pressure);
     }
@@ -1103,7 +1115,7 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         _t: f64,
         context: &PhysicsContext,
     ) -> KwaversResult<()> {
-        use crate::fft::{fft_3d, ifft_3d};
+        use crate::utils::{fft_3d, ifft_3d};
         
         self.state = ComponentState::Running;
         let start_time = Instant::now();
@@ -1116,17 +1128,19 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         
         // Compute Laplacian using k-space for spectral accuracy
         let laplacian = if let Some(ref k_squared) = self.k_squared {
-            let pressure_k = fft_3d(&pressure_field)?;
+            // Convert pressure to 4D array for fft_3d
+            let mut pressure_4d = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
+            pressure_4d.index_axis_mut(Axis(0), 0).assign(&pressure_field);
+            
+            let pressure_k = fft_3d(&pressure_4d, 0, grid);
+            
+            // Compute Laplacian in k-space
             let mut lap_k = pressure_k.clone();
+            lap_k.iter_mut().zip(k_squared.iter())
+                .for_each(|(p, &k2)| *p *= -k2);
             
-            // Apply -k² in k-space
-            ndarray::Zip::from(&mut lap_k)
-                .and(k_squared)
-                .for_each(|lk, &k2| {
-                    *lk *= -k2;
-                });
-            
-            ifft_3d(&lap_k)?
+            // Transform back
+            ifft_3d(&lap_k, grid)
         } else {
             // Fallback to finite differences
             let mut lap = Array3::zeros(pressure_field.raw_dim());
@@ -1208,7 +1222,7 @@ impl PhysicsComponent for KuznetsovWaveComponent {
                         let z = k as f64 * grid.dz;
                         
                         let c0 = medium.sound_speed(x, y, z, grid);
-                        let alpha = medium.absorption_coefficient(x, y, z, grid);
+                        let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
                         
                         // Approximate diffusivity from absorption
                         let omega_ref = 2.0 * std::f64::consts::PI * 1e6; // 1 MHz reference

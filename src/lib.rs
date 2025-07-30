@@ -50,7 +50,7 @@ pub use medium::{Medium, homogeneous::HomogeneousMedium};
 pub use source::Source;
 pub use sensor::Sensor;
 pub use recorder::Recorder;
-pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PeriodicBoundary, ReflectingBoundary};
+pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
 pub use solver::Solver;
 pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};

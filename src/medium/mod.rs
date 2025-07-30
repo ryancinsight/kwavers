@@ -9,6 +9,7 @@ pub mod homogeneous;
 
 pub use absorption::power_law_absorption;
 pub use absorption::tissue_specific;
+pub use homogeneous::HomogeneousMedium;
 
 /// Get the maximum sound speed from a medium for CFL condition calculations.
 /// 

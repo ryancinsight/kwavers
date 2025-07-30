@@ -153,13 +153,14 @@ impl NonlinearWave {
         }
     }
     
-    /// Update pressure history for time derivative calculations
-    fn update_pressure_history(&mut self, pressure: &Array3<f64>) {
-        // Shift history backwards
-        for i in (1..self.pressure_history.len()).rev() {
-            self.pressure_history[i].assign(&self.pressure_history[i-1]);
+    /// Update pressure history for Kuznetsov terms
+    pub(super) fn update_pressure_history(&mut self, pressure: &Array3<f64>) {
+        // Shift history
+        let n = self.pressure_history.len();
+        for i in (1..n).rev() {
+            let (left, right) = self.pressure_history.split_at_mut(i);
+            right[0].assign(&left[i-1]);
         }
-        // Store current pressure
         self.pressure_history[0].assign(pressure);
     }
     
@@ -524,7 +525,7 @@ impl NonlinearWave {
                 let z = k as f64 * grid.dz;
                 
                 let c0 = medium.sound_speed(x, y, z, grid).max(1e-9);
-                let alpha = medium.absorption_coefficient(x, y, z, grid);
+                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
                 
                 // Approximate diffusivity from power-law absorption
                 // δ ≈ 2αc³/(ω²) for typical soft tissues
@@ -792,7 +793,7 @@ impl AcousticWaveModel for NonlinearWave {
                 let viscous_damping = if viscous_damping_arg.is_finite() { viscous_damping_arg.exp() } else { 1.0 };
 
                 // Apply absorption: exp(-alpha * c * dt) for spatial absorption
-                let alpha = medium.absorption_coefficient(x, y, z, grid, ref_freq);
+                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
                 if i == 0 && j == 0 && k == 0 && alpha > 0.0 {
                     debug!("Absorption: alpha={}, c={}, dt={}, damping={}", alpha, c, dt, (-alpha * c * dt).exp());
                 }

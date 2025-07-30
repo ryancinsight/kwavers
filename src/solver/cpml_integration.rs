@@ -7,7 +7,7 @@ use crate::boundary::cpml::{CPMLBoundary, CPMLConfig};
 use crate::grid::Grid;
 use crate::error::KwaversResult;
 use ndarray::{Array3, Array4, Axis};
-use log::{debug, trace};
+use log::trace;
 
 /// C-PML solver integration for acoustic wave propagation
 pub struct CPMLSolver {
@@ -155,20 +155,27 @@ impl CPMLSolver {
     fn update_velocity_with_cpml(
         &self,
         velocity: &mut Array4<f64>,
-        grid: &Grid,
+        _grid: &Grid,
         dt: f64,
     ) {
-        let mut vx = velocity.index_axis_mut(Axis(0), 0);
-        let mut vy = velocity.index_axis_mut(Axis(0), 1);
-        let mut vz = velocity.index_axis_mut(Axis(0), 2);
-        
         // Assuming constant density for simplicity (should use medium properties)
         let rho_inv = 1.0 / 1000.0; // 1/density
         
-        // Update velocity components
-        vx.scaled_add(-dt * rho_inv, &self.grad_x);
-        vy.scaled_add(-dt * rho_inv, &self.grad_y);
-        vz.scaled_add(-dt * rho_inv, &self.grad_z);
+        // Update velocity components separately to avoid borrow checker issues
+        {
+            let mut vx = velocity.index_axis_mut(Axis(0), 0);
+            vx.scaled_add(-dt * rho_inv, &self.grad_x);
+        }
+        
+        {
+            let mut vy = velocity.index_axis_mut(Axis(0), 1);
+            vy.scaled_add(-dt * rho_inv, &self.grad_y);
+        }
+        
+        {
+            let mut vz = velocity.index_axis_mut(Axis(0), 2);
+            vz.scaled_add(-dt * rho_inv, &self.grad_z);
+        }
     }
     
     /// Compute velocity divergence for pressure update
@@ -216,7 +223,7 @@ impl CPMLSolver {
     
     /// Get C-PML configuration
     pub fn config(&self) -> &CPMLConfig {
-        &self.cpml.config
+        self.cpml.config()
     }
     
     /// Enable dispersive media support
