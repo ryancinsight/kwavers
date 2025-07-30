@@ -1,6 +1,9 @@
 // src/solver/mod.rs
 pub mod amr; // Adaptive Mesh Refinement module
 pub mod numerics; // Numerical methods module
+pub mod spectral_dg; // Hybrid Spectral-DG methods module
+pub mod time_integration; // Multi-Rate Time Integration module
+pub mod imex; // IMEX (Implicit-Explicit) schemes module
 
 use crate::grid::Grid;
 use crate::KwaversResult;

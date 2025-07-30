@@ -173,7 +173,12 @@ impl Grid {
         let k2 = self.k_squared();
         k2.mapv(|k2_val| {
             let k = k2_val.sqrt();
-            (c * k * dt / 2.0).sin() / (k + 1e-10) // Avoid division by zero
+            let arg = c * k * dt / 2.0;
+            if arg.abs() < 1e-10 {
+                1.0  // sinc(0) = 1
+            } else {
+                arg.sin() / arg  // sinc(x) = sin(x)/x
+            }
         })
     }
 
