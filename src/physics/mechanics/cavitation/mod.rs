@@ -19,16 +19,20 @@
 //!   entire process of advancing the cavitation simulation by a single time step.
 //!   It calls methods from `dynamics` and `effects` to update the bubble states
 //!   and calculate their impact on the surrounding fields.
+//! - `damage`: Calculates mechanical damage, erosion, and material fatigue from
+//!   cavitation bubble collapse impacts.
 //!
 //! The `CavitationModel` struct is re-exported from the `model` submodule for
 //! convenient access from other parts of the simulation framework.
 
 pub mod core;
+pub mod damage;
 pub mod dynamics;
 pub mod effects;
 pub mod model;
 
 pub use core::CavitationModel;
+pub use damage::{CavitationDamage, MaterialProperties, DamageParameters};
 pub use model::LegacyCavitationModel;
 
 // Note: All constants previously at the top level of this file 
