@@ -2,7 +2,7 @@
 //!
 //! Integrates blackbody, bremsstrahlung, and molecular emission models
 
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array3, Array4, s};
 use super::{
     blackbody::{BlackbodyModel, calculate_blackbody_emission},
     bremsstrahlung::{BremsstrahlungModel, calculate_bremsstrahlung_emission},
@@ -39,6 +39,75 @@ impl Default for EmissionParameters {
     }
 }
 
+/// Spectral field using Struct-of-Arrays for better performance
+#[derive(Debug)]
+pub struct SpectralField {
+    /// Wavelength grid (shared for all spatial points)
+    pub wavelengths: Array1<f64>,
+    /// Spectral intensities: dimensions (nx, ny, nz, n_wavelengths)
+    pub intensities: Array4<f64>,
+    /// Peak wavelength at each point: dimensions (nx, ny, nz)
+    pub peak_wavelength: Array3<f64>,
+    /// Total intensity at each point: dimensions (nx, ny, nz)
+    pub total_intensity: Array3<f64>,
+    /// Color temperature at each point: dimensions (nx, ny, nz)
+    pub color_temperature: Array3<f64>,
+}
+
+impl SpectralField {
+    /// Create new spectral field
+    pub fn new(grid_shape: (usize, usize, usize), wavelengths: Array1<f64>) -> Self {
+        let n_wavelengths = wavelengths.len();
+        let shape_4d = (grid_shape.0, grid_shape.1, grid_shape.2, n_wavelengths);
+        
+        Self {
+            wavelengths,
+            intensities: Array4::zeros(shape_4d),
+            peak_wavelength: Array3::zeros(grid_shape),
+            total_intensity: Array3::zeros(grid_shape),
+            color_temperature: Array3::zeros(grid_shape),
+        }
+    }
+    
+    /// Update derived quantities (peak wavelength, total intensity, etc.)
+    pub fn update_derived_quantities(&mut self) {
+        let shape = (self.intensities.shape()[0], 
+                     self.intensities.shape()[1], 
+                     self.intensities.shape()[2]);
+        
+        for i in 0..shape.0 {
+            for j in 0..shape.1 {
+                for k in 0..shape.2 {
+                    // Get spectrum at this point
+                    let spectrum = self.intensities.slice(s![i, j, k, ..]);
+                    
+                    // Total intensity
+                    self.total_intensity[[i, j, k]] = spectrum.sum();
+                    
+                    // Peak wavelength
+                    if let Some(max_idx) = spectrum.iter()
+                        .enumerate()
+                        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                        .map(|(idx, _)| idx) {
+                        self.peak_wavelength[[i, j, k]] = self.wavelengths[max_idx];
+                    }
+                    
+                    // Color temperature (simplified Wien's law)
+                    if self.peak_wavelength[[i, j, k]] > 0.0 {
+                        self.color_temperature[[i, j, k]] = 2.898e-3 / self.peak_wavelength[[i, j, k]];
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Get spectrum at a specific point
+    pub fn get_spectrum_at(&self, i: usize, j: usize, k: usize) -> EmissionSpectrum {
+        let intensities = self.intensities.slice(s![i, j, k, ..]).to_owned();
+        EmissionSpectrum::new(self.wavelengths.clone(), intensities, 0.0)
+    }
+}
+
 /// Main sonoluminescence emission calculator
 #[derive(Debug)]
 pub struct SonoluminescenceEmission {
@@ -52,8 +121,8 @@ pub struct SonoluminescenceEmission {
     pub analyzer: SpectralAnalyzer,
     /// Total emission field (W/m³)
     pub emission_field: Array3<f64>,
-    /// Spectral emission field
-    pub spectral_field: Option<Array3<EmissionSpectrum>>,
+    /// Spectral emission field (Struct-of-Arrays)
+    pub spectral_field: Option<SpectralField>,
 }
 
 impl SonoluminescenceEmission {
@@ -170,7 +239,8 @@ impl SonoluminescenceEmission {
         time: f64,
     ) {
         let shape = temperature_field.dim();
-        let mut spectra = Vec::new();
+        let wavelengths = self.analyzer.range.wavelengths();
+        let mut spectral_field = SpectralField::new(shape, wavelengths);
         
         for i in 0..shape.0 {
             for j in 0..shape.1 {
@@ -182,19 +252,13 @@ impl SonoluminescenceEmission {
                     );
                     spectrum.time = time;
                     spectrum.position = Some((i, j, k));
-                    spectra.push(spectrum);
+                    spectral_field.intensities[[i, j, k, ..]] = spectrum.intensities.to_owned();
                 }
             }
         }
         
-        // Store spectral field (would need proper Array3<EmissionSpectrum> implementation)
-        // For now, just analyze the brightest spectrum
-        if let Some(brightest) = spectra.iter()
-            .max_by(|a, b| {
-                a.total_intensity().partial_cmp(&b.total_intensity()).unwrap()
-            }) {
-            self.analyzer.add_spectrum(brightest.clone());
-        }
+        spectral_field.update_derived_quantities();
+        self.spectral_field = Some(spectral_field);
     }
     
     /// Get total light output
@@ -222,6 +286,35 @@ impl SonoluminescenceEmission {
         let (i, j, k) = self.peak_emission_location();
         temperature_field[[i, j, k]]
     }
+    
+    /// Get spectral statistics from the spectral field
+    pub fn get_spectral_statistics(&self) -> Option<SpectralStatistics> {
+        self.spectral_field.as_ref().map(|field| {
+            SpectralStatistics {
+                mean_peak_wavelength: field.peak_wavelength.mean().unwrap_or(0.0),
+                mean_color_temperature: field.color_temperature.mean().unwrap_or(0.0),
+                max_total_intensity: field.total_intensity.iter().cloned().fold(0.0, f64::max),
+                peak_location: self.peak_emission_location(),
+            }
+        })
+    }
+    
+    /// Get spectrum at peak emission location
+    pub fn get_peak_spectrum(&self) -> Option<EmissionSpectrum> {
+        self.spectral_field.as_ref().map(|field| {
+            let (i, j, k) = self.peak_emission_location();
+            field.get_spectrum_at(i, j, k)
+        })
+    }
+}
+
+/// Spectral statistics
+#[derive(Debug, Clone)]
+pub struct SpectralStatistics {
+    pub mean_peak_wavelength: f64,
+    pub mean_color_temperature: f64,
+    pub max_total_intensity: f64,
+    pub peak_location: (usize, usize, usize),
 }
 
 /// Calculate sonoluminescence pulse characteristics
