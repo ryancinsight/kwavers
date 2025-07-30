@@ -7,6 +7,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array3;
 use log::debug;
+use std::f64::consts::PI;
 
 impl CavitationModel {
     /// Calculates the second time derivative of the bubble radius (acceleration) for each bubble in the grid.
@@ -35,10 +36,14 @@ impl CavitationModel {
         p: &Array3<f64>,
         grid: &Grid,
         medium: &dyn Medium,
-        _frequency: f64, 
-        _dt: f64,       
+        frequency: f64, 
+        dt: f64,       
     ) {
         self.d2r_dt2.fill(0.0);
+        
+        // Calculate acoustic wavelength for compressibility effects
+        let c0 = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let wavelength = c0 / frequency.max(1.0);
         
         for i in 0..grid.nx {
             let x = i as f64 * grid.dx;
@@ -56,6 +61,7 @@ impl CavitationModel {
                     let kappa = medium.thermal_conductivity(x, y, z, grid);
                     let dg = medium.gas_diffusion_coefficient(x, y, z, grid);
                     let medium_temp = medium.temperature()[[i, j, k]]; 
+                    let c = medium.sound_speed(x, y, z, grid);
                     
                     let r = self.radius[[i, j, k]];
                     let v = self.velocity[[i, j, k]];
@@ -68,26 +74,77 @@ impl CavitationModel {
                     }
                     
                     let r_clamped = r.max(MIN_RADIUS_MODEL_DEFAULT); 
-                    let r0 = 10e-6; 
+                    let r0 = self.r0[[i, j, k]].max(1e-9); // Use actual equilibrium radius
                     
-                    let r_ratio = (r0 / r_clamped).min(1.0e3); 
-                    let p_gas = (p0 + 2.0 * sigma / r0 - pv) * r_ratio.powf(3.0 * gamma);
+                    // Van der Waals hard-core correction for extreme compression
+                    let b_factor = 8.65e-6; // m³/mol for air
+                    let n_gas = self.n_gas[[i, j, k]];
+                    let vh = 4.0 * PI * r0.powi(3) / 3.0;
+                    let v_current = 4.0 * PI * r_clamped.powi(3) / 3.0;
+                    
+                    // Modified polytropic relation with hard core
+                    let volume_ratio = if n_gas > 0.0 {
+                        ((vh - n_gas * b_factor) / (v_current - n_gas * b_factor)).max(0.001)
+                    } else {
+                        (r0 / r_clamped).powi(3)
+                    };
+                    
+                    // Effective polytropic index based on Peclet number
+                    let thermal_diffusivity = kappa / (rho * 4200.0); // Approximate specific heat
+                    let peclet = (r_clamped * v.abs()) / thermal_diffusivity.max(1e-10);
+                    let gamma_eff = 1.0 + (gamma - 1.0) / (1.0 + 10.0 / peclet.max(0.1));
+                    
+                    let p_gas = (p0 + 2.0 * sigma / r0 - pv) * volume_ratio.powf(gamma_eff);
                     
                     let r_inv = 1.0 / r_clamped;
                     let viscous_term = 4.0 * mu * v * r_inv;
                     let surface_term = 2.0 * sigma * r_inv;
                     
-                    let temp_diff = (t_bubble - medium_temp).clamp(-100.0, 100.0); 
-                    let thermal_damping = 3.0 * gamma * kappa * temp_diff * r_inv * r_inv;
+                    // Enhanced thermal damping with radiation
+                    let temp_diff = (t_bubble - medium_temp).clamp(-1000.0, 10000.0); 
+                    let thermal_damping = 3.0 * gamma_eff * kappa * temp_diff * r_inv * r_inv;
+                    
+                    // Radiation damping for small bubbles
+                    let radiation_damping = if r_clamped < wavelength / (2.0 * PI) {
+                        2.0 * PI * frequency * r_clamped / c
+                    } else {
+                        0.0
+                    };
                     
                     let p_diff = (p0 - p_gas).clamp(-1.0e9, 1.0e9); 
                     let diffusion_term = dg * p_diff * r_inv / rho;
                     
-                    let pressure_diff = (p_gas + pv - p_val).clamp(-1.0e9, 1.0e9);
-                    let rhs = (pressure_diff - viscous_term - surface_term - thermal_damping - diffusion_term) / rho;
-                    let velocity_term = 1.5 * v.powi(2).min(1.0e6); 
+                    // Liquid pressure at bubble wall (including compressibility)
+                    let p_liquid = p0 + p_val - pv;
                     
-                    let d2r = (rhs - velocity_term) * r_inv;
+                    // Keller-Miksis formulation for compressibility
+                    let mach = v / c;
+                    let compressibility_factor = 1.0 - mach;
+                    
+                    // Pressure gradient term for Keller-Miksis
+                    let dp_dt = if frequency > 0.0 {
+                        // Estimate pressure time derivative from acoustic field
+                        -p_val * (2.0 * PI * frequency) * (2.0 * PI * frequency * dt).sin()
+                    } else {
+                        0.0
+                    };
+                    
+                    let pressure_diff = (p_gas - p_liquid).clamp(-1.0e9, 1.0e9);
+                    
+                    // Keller-Miksis equation
+                    let numerator = (pressure_diff - viscous_term - surface_term - thermal_damping 
+                                    - radiation_damping * rho * c * v - diffusion_term) / rho
+                                    + r_clamped * dp_dt / (rho * c);
+                    
+                    let denominator = r_clamped * compressibility_factor + r_clamped * r_clamped * mach / c;
+                    
+                    let velocity_correction = 1.5 * v.powi(2) * (1.0 - mach / 3.0);
+                    
+                    let d2r = if denominator.abs() > 1e-10 {
+                        (numerator - velocity_correction) / denominator
+                    } else {
+                        0.0
+                    };
                     
                     self.d2r_dt2[[i, j, k]] = if d2r.is_finite() { 
                         d2r.clamp(-MAX_ACCELERATION_MODEL_DEFAULT, MAX_ACCELERATION_MODEL_DEFAULT) 
@@ -194,6 +251,104 @@ impl CavitationModel {
                 nan_count,
                 clamped_count
             );
+        }
+    }
+    
+    /// Updates the temperature of cavitation bubbles based on compression and shock heating.
+    ///
+    /// This method implements:
+    /// - Adiabatic compression heating
+    /// - Shock wave heating during violent collapse
+    /// - Heat transfer to surrounding liquid
+    /// - Tracking of maximum temperatures for sonoluminescence
+    ///
+    /// # Arguments
+    ///
+    /// * `grid` - Reference to the simulation grid
+    /// * `medium` - Reference to the medium properties
+    /// * `dt` - Time step
+    pub(crate) fn update_temperature(
+        &mut self,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) {
+        let shape = self.radius.shape();
+        
+        for i in 0..shape[0] {
+            let x = i as f64 * grid.dx;
+            for j in 0..shape[1] {
+                let y = j as f64 * grid.dy;
+                for k in 0..shape[2] {
+                    let z = k as f64 * grid.dz;
+                    
+                    let r = self.radius[[i, j, k]];
+                    let v = self.velocity[[i, j, k]];
+                    let r0 = self.r0[[i, j, k]];
+                    let t_current = self.temperature[[i, j, k]];
+                    let t_ambient = medium.temperature()[[i, j, k]];
+                    
+                    // Skip if bubble is too small
+                    if r < MIN_RADIUS_MODEL_DEFAULT {
+                        continue;
+                    }
+                    
+                    // Calculate compression ratio
+                    let compression_ratio = r0 / r;
+                    self.max_compression[[i, j, k]] = self.max_compression[[i, j, k]].max(compression_ratio);
+                    
+                    // Get medium properties
+                    let rho = medium.density(x, y, z, grid);
+                    let c = medium.sound_speed(x, y, z, grid);
+                    let kappa = medium.thermal_conductivity(x, y, z, grid);
+                    let gamma = medium.polytropic_index(x, y, z, grid);
+                    
+                    // Calculate effective polytropic index based on Peclet number
+                    let thermal_diffusivity = kappa / (rho * 4200.0); // Approximate cp
+                    let peclet = (r * v.abs()) / thermal_diffusivity.max(1e-10);
+                    let gamma_eff = 1.0 + (gamma - 1.0) / (1.0 + 10.0 / peclet.max(0.1));
+                    
+                    // Adiabatic compression temperature
+                    let t_adiabatic = t_ambient * compression_ratio.powf(gamma_eff - 1.0);
+                    
+                    // Shock heating during violent collapse
+                    let mach = v.abs() / c;
+                    let t_shock = if v < 0.0 && mach > 0.3 {
+                        // Rankine-Hugoniot shock temperature jump
+                        let shock_factor = 2.0 * gamma_eff * mach.powi(2) - (gamma_eff - 1.0);
+                        t_current * shock_factor / (gamma_eff + 1.0)
+                    } else {
+                        0.0
+                    };
+                    
+                    // Heat transfer to liquid
+                    let h = kappa / r; // Heat transfer coefficient
+                    let area = 4.0 * PI * r * r;
+                    let volume = 4.0 * PI * r.powi(3) / 3.0;
+                    let mass = self.n_gas[[i, j, k]] * 0.029 / 6.022e23; // Air molecular mass
+                    let cv = 717.0; // J/(kg·K) for air
+                    
+                    // PdV work
+                    let p_internal = self.pressure_internal[[i, j, k]];
+                    let pdv_work = -p_internal * 4.0 * PI * r * r * v;
+                    
+                    // Heat transfer rate
+                    let q_transfer = h * area * (t_ambient - t_current);
+                    
+                    // Temperature change
+                    let dt_adiabatic = (t_adiabatic - t_current) / dt;
+                    let dt_shock = t_shock / dt;
+                    let dt_work = pdv_work / (mass * cv).max(1e-10);
+                    let dt_transfer = q_transfer / (mass * cv).max(1e-10);
+                    
+                    // Update temperature
+                    let new_temp = t_current + (dt_adiabatic + dt_shock + dt_work + dt_transfer) * dt;
+                    self.temperature[[i, j, k]] = new_temp.max(t_ambient).min(50000.0); // Cap at 50,000K
+                    
+                    // Track maximum temperature
+                    self.max_temperature[[i, j, k]] = self.max_temperature[[i, j, k]].max(new_temp);
+                }
+            }
         }
     }
 }

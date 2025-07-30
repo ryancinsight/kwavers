@@ -17,6 +17,15 @@ use std::collections::HashMap;
 use std::time::Instant;
 use log::debug;
 
+// Sub-modules
+pub mod photochemistry;
+pub mod radical_initiation;
+pub mod reaction_kinetics;
+pub mod ros_plasma;
+
+// Re-export commonly used types
+pub use ros_plasma::{ROSSpecies, ROSConcentrations, SonochemistryModel, SonochemicalYield};
+
 // Define reaction types locally
 #[derive(Debug, Clone)]
 pub struct ChemicalReaction {

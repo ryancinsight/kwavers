@@ -18,3 +18,4 @@ pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, Acoustic
 pub use state::{PhysicsState, FieldAccessor, field_indices};
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
+pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};

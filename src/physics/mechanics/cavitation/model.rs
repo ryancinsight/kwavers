@@ -38,6 +38,20 @@ pub struct LegacyCavitationModel {
     /// 3D array representing the temperature inside the cavitation bubbles at each grid point (Kelvin).
     pub(crate) temperature: Array3<f64>,
     
+    // Enhanced physics fields
+    /// 3D array representing the equilibrium radius of bubbles at each grid point (meters).
+    pub(crate) r0: Array3<f64>,
+    /// 3D array representing the number of gas molecules in each bubble.
+    pub(crate) n_gas: Array3<f64>,
+    /// 3D array representing the number of vapor molecules in each bubble.
+    pub(crate) n_vapor: Array3<f64>,
+    /// 3D array representing the internal pressure of bubbles (Pa).
+    pub(crate) pressure_internal: Array3<f64>,
+    /// 3D array storing maximum temperature reached during collapse (for sonoluminescence).
+    pub(crate) max_temperature: Array3<f64>,
+    /// 3D array storing maximum compression ratio reached during collapse.
+    pub(crate) max_compression: Array3<f64>,
+    
     // Cached values for better performance
     /// 3D array storing the second time derivative of the bubble radius (acceleration, m/s^2) at each grid point.
     /// Calculated in `dynamics.rs`.
@@ -74,11 +88,27 @@ impl LegacyCavitationModel {
             initial_radius
         );
         let dim = (grid.nx, grid.ny, grid.nz);
+        let r0_clamped = initial_radius.max(MIN_RADIUS_MODEL_DEFAULT);
+        
+        // Initialize gas content based on equilibrium conditions
+        // Using ideal gas law: n = PV/(RT)
+        let p0 = 101325.0; // 1 atm
+        let t0 = 293.15; // 20°C
+        let r_gas = 8.314; // J/(mol·K)
+        let v0 = 4.0 * std::f64::consts::PI * r0_clamped.powi(3) / 3.0;
+        let n_gas_init = p0 * v0 / (r_gas * t0) * 6.022e23; // Convert to number of molecules
+        
         Self {
-            radius: Array3::from_elem(dim, initial_radius.max(MIN_RADIUS_MODEL_DEFAULT)), // Ensure initial radius is not too small
+            radius: Array3::from_elem(dim, r0_clamped),
             velocity: Array3::zeros(dim),
             prev_velocity: Array3::zeros(dim),
             temperature: Array3::from_elem(dim, 293.15), // Default initial temperature (e.g., room temp)
+            r0: Array3::from_elem(dim, r0_clamped),
+            n_gas: Array3::from_elem(dim, n_gas_init),
+            n_vapor: Array3::zeros(dim),
+            pressure_internal: Array3::zeros(dim),
+            max_temperature: Array3::zeros(dim),
+            max_compression: Array3::zeros(dim),
             d2r_dt2: Array3::zeros(dim),
             rayleigh_scatter: Array3::zeros(dim),
             mie_scatter: Array3::zeros(dim),
