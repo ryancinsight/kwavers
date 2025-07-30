@@ -160,9 +160,13 @@ impl CavitationDamage {
         let stress_intensity = impact_pressure * self.params.concentration_factor;
         
         // Fatigue damage (Miner's rule)
-        let cycles_to_failure = (self.material.ultimate_strength / stress_intensity)
-            .powf(self.material.fatigue_exponent);
-        let fatigue_damage = 1.0 / cycles_to_failure;
+        let fatigue_damage = if stress_intensity > 0.0 {
+            let cycles_to_failure = (self.material.ultimate_strength / stress_intensity)
+                .powf(self.material.fatigue_exponent);
+            1.0 / cycles_to_failure
+        } else {
+            0.0
+        };
         
         // Pit formation probability
         let pit_probability = self.params.pit_efficiency * 
