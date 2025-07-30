@@ -525,12 +525,9 @@ impl NonlinearWave {
                 let z = k as f64 * grid.dz;
                 
                 let c0 = medium.sound_speed(x, y, z, grid).max(1e-9);
-                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
                 
-                // Approximate diffusivity from power-law absorption
-                // δ ≈ 2αc³/(ω²) for typical soft tissues
-                let omega_ref = 2.0 * std::f64::consts::PI * 1e6; // 1 MHz reference
-                let delta = alpha * c0.powi(3) / (omega_ref * omega_ref);
+                // Use the shared acoustic diffusivity function
+                let delta = super::super::compute_acoustic_diffusivity(medium, x, y, z, grid, 1e6);
                 
                 let coeff = -delta / c0.powi(4);
                 *diff = coeff * d3p;

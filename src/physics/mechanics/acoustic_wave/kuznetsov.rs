@@ -293,7 +293,7 @@ impl KuznetsovWave {
                 let z = k as f64 * grid.dz;
                 
                 let c0 = medium.sound_speed(x, y, z, grid);
-                let delta = compute_acoustic_diffusivity(medium, x, y, z, grid);
+                let delta = super::compute_acoustic_diffusivity(medium, x, y, z, grid, 1e6);
                 
                 let coeff = -delta / c0.powi(4);
                 *diff = coeff * d3p;
@@ -643,38 +643,104 @@ fn compute_phase_factors(grid: &Grid, order: usize) -> Array3<f64> {
                 }
             }
         }
-        _ => {} // Higher orders not yet implemented
+        4 => {
+            // Fourth-order correction
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    for k in 0..grid.nz {
+                        let kx = if i <= grid.nx/2 {
+                            PI * i as f64 / (grid.nx as f64)
+                        } else {
+                            -PI * (grid.nx - i) as f64 / (grid.nx as f64)
+                        };
+                        let ky = if j <= grid.ny/2 {
+                            PI * j as f64 / (grid.ny as f64)
+                        } else {
+                            -PI * (grid.ny - j) as f64 / (grid.ny as f64)
+                        };
+                        let kz = if k <= grid.nz/2 {
+                            PI * k as f64 / (grid.nz as f64)
+                        } else {
+                            -PI * (grid.nz - k) as f64 / (grid.nz as f64)
+                        };
+                        
+                        // Fourth-order finite difference correction
+                        // d/dx ≈ (8*sin(kx) - sin(2*kx))/(6*dx) => correction factor
+                        let corr_x = if kx.abs() > 1e-10 {
+                            kx / ((8.0 * kx.sin() - (2.0 * kx).sin()) / 6.0)
+                        } else {
+                            1.0
+                        };
+                        let corr_y = if ky.abs() > 1e-10 {
+                            ky / ((8.0 * ky.sin() - (2.0 * ky).sin()) / 6.0)
+                        } else {
+                            1.0
+                        };
+                        let corr_z = if kz.abs() > 1e-10 {
+                            kz / ((8.0 * kz.sin() - (2.0 * kz).sin()) / 6.0)
+                        } else {
+                            1.0
+                        };
+                        
+                        factors[[i, j, k]] = corr_x * corr_y * corr_z;
+                    }
+                }
+            }
+        }
+        6 => {
+            // Sixth-order correction
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    for k in 0..grid.nz {
+                        let kx = if i <= grid.nx/2 {
+                            PI * i as f64 / (grid.nx as f64)
+                        } else {
+                            -PI * (grid.nx - i) as f64 / (grid.nx as f64)
+                        };
+                        let ky = if j <= grid.ny/2 {
+                            PI * j as f64 / (grid.ny as f64)
+                        } else {
+                            -PI * (grid.ny - j) as f64 / (grid.ny as f64)
+                        };
+                        let kz = if k <= grid.nz/2 {
+                            PI * k as f64 / (grid.nz as f64)
+                        } else {
+                            -PI * (grid.nz - k) as f64 / (grid.nz as f64)
+                        };
+                        
+                        // Sixth-order finite difference correction
+                        // d/dx ≈ (45*sin(kx) - 9*sin(2*kx) + sin(3*kx))/(30*dx) => correction factor
+                        let corr_x = if kx.abs() > 1e-10 {
+                            kx / ((45.0 * kx.sin() - 9.0 * (2.0 * kx).sin() + (3.0 * kx).sin()) / 30.0)
+                        } else {
+                            1.0
+                        };
+                        let corr_y = if ky.abs() > 1e-10 {
+                            ky / ((45.0 * ky.sin() - 9.0 * (2.0 * ky).sin() + (3.0 * ky).sin()) / 30.0)
+                        } else {
+                            1.0
+                        };
+                        let corr_z = if kz.abs() > 1e-10 {
+                            kz / ((45.0 * kz.sin() - 9.0 * (2.0 * kz).sin() + (3.0 * kz).sin()) / 30.0)
+                        } else {
+                            1.0
+                        };
+                        
+                        factors[[i, j, k]] = corr_x * corr_y * corr_z;
+                    }
+                }
+            }
+        }
+        _ => {
+            warn!("Unsupported spatial order {} for phase correction, using no correction (order 1)", order);
+            // factors already initialized to ones
+        }
     }
     
     factors
 }
 
-/// Compute acoustic diffusivity from medium properties
-fn compute_acoustic_diffusivity(
-    medium: &dyn Medium,
-    x: f64,
-    y: f64,
-    z: f64,
-    grid: &Grid,
-) -> f64 {
-    // Acoustic diffusivity δ = (4μ/3 + μ_B + κ(γ-1)/C_p) / ρ₀
-    // Where:
-    // μ = shear viscosity
-    // μ_B = bulk viscosity
-    // κ = thermal conductivity
-    // γ = specific heat ratio
-    // C_p = specific heat at constant pressure
-    
-    // For now, use a simplified model based on absorption
-    let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
-    let c = medium.sound_speed(x, y, z, grid);
-    
-    // Approximate diffusivity from power-law absorption
-    // δ ≈ 2αc³/(ω²) for typical soft tissues
-    // Using a reference frequency of 1 MHz
-    let omega_ref = 2.0 * PI * 1e6;
-    2.0 * alpha * c.powi(3) / (omega_ref * omega_ref)
-}
+
 
 /// Compute the linear wave equation term
 fn compute_linear_term(
@@ -874,6 +940,45 @@ mod tests {
         
         // Check energy conservation (should be approximately conserved for linear case)
         assert!((final_energy - initial_energy).abs() / initial_energy < 0.01);
+    }
+    
+    /// Test phase correction factors for all supported orders
+    #[test]
+    fn test_phase_correction_factors() {
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        
+        // Test order 2
+        let factors_2 = compute_phase_factors(&grid, 2);
+        assert_eq!(factors_2.dim(), (64, 64, 64));
+        // Check that DC component has no correction
+        assert!((factors_2[[0, 0, 0]] - 1.0).abs() < 1e-10);
+        // Check that high frequencies have correction > 1
+        assert!(factors_2[[32, 0, 0]] > 1.0);
+        
+        // Test order 4
+        let factors_4 = compute_phase_factors(&grid, 4);
+        assert_eq!(factors_4.dim(), (64, 64, 64));
+        // Check that DC component has no correction
+        assert!((factors_4[[0, 0, 0]] - 1.0).abs() < 1e-10);
+        // Check that corrections are different from order 2
+        assert!((factors_4[[32, 0, 0]] - factors_2[[32, 0, 0]]).abs() > 1e-3);
+        
+        // Test order 6
+        let factors_6 = compute_phase_factors(&grid, 6);
+        assert_eq!(factors_6.dim(), (64, 64, 64));
+        // Check that DC component has no correction
+        assert!((factors_6[[0, 0, 0]] - 1.0).abs() < 1e-10);
+        // Check that corrections are different from order 4
+        assert!((factors_6[[32, 0, 0]] - factors_4[[32, 0, 0]]).abs() > 1e-3);
+        
+        // Test unsupported order (should use no correction)
+        let _ = env_logger::builder().is_test(true).try_init();
+        let factors_8 = compute_phase_factors(&grid, 8);
+        assert_eq!(factors_8.dim(), (64, 64, 64));
+        // Should be all ones (no correction)
+        for val in factors_8.iter() {
+            assert!((val - 1.0).abs() < 1e-10);
+        }
     }
 }
 
