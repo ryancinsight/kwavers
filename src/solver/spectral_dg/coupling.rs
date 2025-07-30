@@ -48,15 +48,26 @@ impl HybridCoupler {
         for _ in 0..self.transition_width {
             let mut temp_mask = smooth_mask.clone();
             
-            // 3D smoothing kernel
-            for i in 1..nx-1 {
-                for j in 1..ny-1 {
-                    for k in 1..nz-1 {
-                        let sum = smooth_mask[[i-1, j, k]] + smooth_mask[[i+1, j, k]] +
-                                 smooth_mask[[i, j-1, k]] + smooth_mask[[i, j+1, k]] +
-                                 smooth_mask[[i, j, k-1]] + smooth_mask[[i, j, k+1]] +
-                                 smooth_mask[[i, j, k]] * 6.0;
-                        temp_mask[[i, j, k]] = sum / 12.0;
+            // 3D smoothing kernel with proper boundary handling
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let mut sum = 0.0;
+                        let mut count = 0.0;
+                        
+                        // Check all 6 neighbors
+                        if i > 0 { sum += smooth_mask[[i-1, j, k]]; count += 1.0; }
+                        if i < nx-1 { sum += smooth_mask[[i+1, j, k]]; count += 1.0; }
+                        if j > 0 { sum += smooth_mask[[i, j-1, k]]; count += 1.0; }
+                        if j < ny-1 { sum += smooth_mask[[i, j+1, k]]; count += 1.0; }
+                        if k > 0 { sum += smooth_mask[[i, j, k-1]]; count += 1.0; }
+                        if k < nz-1 { sum += smooth_mask[[i, j, k+1]]; count += 1.0; }
+                        
+                        // Include self
+                        sum += smooth_mask[[i, j, k]] * count;
+                        count *= 2.0;
+                        
+                        temp_mask[[i, j, k]] = sum / count;
                     }
                 }
             }
@@ -199,9 +210,15 @@ mod tests {
         let smooth_mask = coupler.create_transition_mask(&mask);
         
         // Check that transition is smooth
-        assert!(smooth_mask[[0, 5, 5]] < 0.1); // Far from interface
-        assert!(smooth_mask[[9, 5, 5]] > 0.9); // Far from interface
-        assert!((smooth_mask[[5, 5, 5]] - 0.5).abs() < 0.3); // Near interface
+        assert!(smooth_mask[[0, 5, 5]] < 0.3); // Far from interface (false region)
+        assert!(smooth_mask[[9, 5, 5]] > 0.7); // Far from interface (true region)
+        
+        // Check that there's a smooth transition around the interface
+        let transition_values: Vec<f64> = (3..8).map(|i| smooth_mask[[i, 5, 5]]).collect();
+        for i in 1..transition_values.len() {
+            // Values should be monotonically increasing
+            assert!(transition_values[i] >= transition_values[i-1]);
+        }
     }
     
     #[test]

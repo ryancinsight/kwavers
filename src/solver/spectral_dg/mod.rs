@@ -101,9 +101,7 @@ impl HybridSpectralDGSolver {
         self.discontinuity_mask = Some(discontinuity_mask.clone());
         
         // Step 2: Apply appropriate solver in each region
-        let mut result = Array3::zeros(field.dim());
-        
-        if self.config.adaptive_switching {
+        let result = if self.config.adaptive_switching {
             // Use spectral solver in smooth regions
             let spectral_result = self.spectral_solver.solve(field, dt, &discontinuity_mask)?;
             
@@ -111,16 +109,16 @@ impl HybridSpectralDGSolver {
             let dg_result = self.dg_solver.solve(field, dt, &discontinuity_mask)?;
             
             // Step 3: Couple the solutions ensuring conservation
-            result = self.coupler.couple(
+            self.coupler.couple(
                 &spectral_result,
                 &dg_result,
                 &discontinuity_mask,
                 field,
-            )?;
+            )?
         } else {
             // Use only spectral solver if adaptive switching is disabled
-            result = self.spectral_solver.solve(field, dt, &Array3::from_elem(field.dim(), false))?;
-        }
+            self.spectral_solver.solve(field, dt, &Array3::from_elem(field.dim(), false))?
+        };
         
         // Step 4: Verify conservation properties
         self.verify_conservation(field, &result)?;
