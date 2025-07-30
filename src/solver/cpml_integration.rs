@@ -158,8 +158,8 @@ impl CPMLSolver {
         _grid: &Grid,
         dt: f64,
     ) {
-        // Assuming constant density for simplicity (should use medium properties)
-        let rho_inv = 1.0 / 1000.0; // 1/density
+        // Use medium density from struct property
+        let rho_inv = 1.0 / self.density; // 1/density
         
         // Update velocity components separately to avoid borrow checker issues
         {
