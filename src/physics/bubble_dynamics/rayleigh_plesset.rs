@@ -209,7 +209,7 @@ pub fn integrate_bubble_dynamics(
     state.radius += state.wall_velocity * dt + 0.5 * acceleration * dt * dt;
     
     // Enforce physical limits
-    state.radius = state.radius.max(0.1e-6).min(1e-3);
+    state.radius = state.radius.max(MIN_RADIUS).min(MAX_RADIUS);
     state.wall_velocity = state.wall_velocity.max(-1000.0).min(1000.0);
     
     // Update derived quantities
