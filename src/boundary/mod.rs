@@ -6,6 +6,7 @@ use ndarray::Array3;
 use std::fmt::Debug;
 
 pub mod pml;
+pub mod cpml;
 
 /// Trait for boundary condition implementations
 /// Follows Interface Segregation Principle - clients depend only on methods they use
@@ -60,3 +61,4 @@ pub trait Boundary: Debug + Send + Sync {
 }
 
 pub use pml::PMLBoundary;
+pub use cpml::{CPMLBoundary, CPMLConfig};

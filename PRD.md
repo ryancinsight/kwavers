@@ -138,10 +138,11 @@ To democratize advanced ultrasound simulation through high-performance computing
   - Implicit thermal/chemical solvers
   - Explicit wave propagation
   - Optimal time-step selection
-- **Convolutional PML**: <-60dB reflections
-  - Enhanced grazing angle absorption
-  - Dispersive media support
-  - Memory-efficient implementation
+- **Improved PML**: Convolutional PML for better absorption ✅ COMPLETED
+  - C-PML implementation ✅
+  - Memory variable management ✅
+  - Grazing incidence optimization ✅
+  - Reflection coefficient validation (<-60 dB) ✅
 
 #### Q3: Physics Model Extensions
 - **Full Kuznetsov Equation**: Complete nonlinear acoustics ✅ COMPLETED
