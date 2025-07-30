@@ -179,16 +179,13 @@ impl ROSConcentrations {
     }
     
     /// Apply diffusion using simple forward Euler
-    pub fn apply_diffusion(&mut self, dx: f64, dy: f64, dz: f64, dt: f64) {
-        // Check stability condition for explicit diffusion
-        let max_diffusion_coeff = ROSSpecies::AtomicHydrogen.diffusion_coefficient(); // Highest D
-        let stability_factor = max_diffusion_coeff * dt / dx.min(dy).min(dz).powi(2);
-        
-        if stability_factor > 0.5 {
+    pub fn apply_diffusion(&mut self, dt: f64) {
+        // Use precomputed stability factor
+        if self.stability_factor > 0.5 {
             log::warn!(
                 "Diffusion stability condition violated: D*dt/dx² = {:.3} > 0.5. \
                 Consider reducing timestep or using implicit scheme.",
-                stability_factor
+                self.stability_factor
             );
         }
         
