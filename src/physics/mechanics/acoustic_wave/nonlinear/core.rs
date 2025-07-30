@@ -527,7 +527,7 @@ impl NonlinearWave {
                 let c0 = medium.sound_speed(x, y, z, grid).max(1e-9);
                 
                 // Use the shared acoustic diffusivity function
-                let delta = super::super::compute_acoustic_diffusivity(medium, x, y, z, grid, 1e6);
+                let delta = super::super::compute_acoustic_diffusivity(medium, x, y, z, grid, NonlinearWave::DEFAULT_REFERENCE_FREQUENCY);
                 
                 let coeff = -delta / c0.powi(4);
                 *diff = coeff * d3p;
