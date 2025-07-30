@@ -488,24 +488,25 @@ impl CPMLBoundary {
         
         match component {
             0 => { // X-component
+                // Use indexed iteration for SIMD-friendly access patterns
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi_val, &grad| {
-                        *psi_val = self.b_x[i] * *psi_val + self.c_x[i] * grad;
+                    .for_each(|(i, j, k), psi, &grad| {
+                        *psi = self.b_x[i] * *psi + self.c_x[i] * grad;
                     });
             }
             1 => { // Y-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi_val, &grad| {
-                        *psi_val = self.b_y[j] * *psi_val + self.c_y[j] * grad;
+                    .for_each(|(i, j, k), psi, &grad| {
+                        *psi = self.b_y[j] * *psi + self.c_y[j] * grad;
                     });
             }
             2 => { // Z-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi_val, &grad| {
-                        *psi_val = self.b_z[k] * *psi_val + self.c_z[k] * grad;
+                    .for_each(|(i, j, k), psi, &grad| {
+                        *psi = self.b_z[k] * *psi + self.c_z[k] * grad;
                     });
             }
             _ => return Err(ConfigError::InvalidValue {

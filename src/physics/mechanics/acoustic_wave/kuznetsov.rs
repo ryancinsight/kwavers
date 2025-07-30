@@ -129,6 +129,32 @@ struct SolverMetrics {
     total_steps: u64,
 }
 
+/// Workspace for RK4 integration to avoid repeated allocations
+#[derive(Debug)]
+struct RK4Workspace {
+    pressure_temp: Array3<f64>,
+    k1: Array3<f64>,
+    k2: Array3<f64>,
+    k3: Array3<f64>,
+    k4: Array3<f64>,
+    laplacian_cache: Array3<f64>,
+    linear_term_cache: Array3<f64>,
+}
+
+impl RK4Workspace {
+    fn new(nx: usize, ny: usize, nz: usize) -> Self {
+        Self {
+            pressure_temp: Array3::zeros((nx, ny, nz)),
+            k1: Array3::zeros((nx, ny, nz)),
+            k2: Array3::zeros((nx, ny, nz)),
+            k3: Array3::zeros((nx, ny, nz)),
+            k4: Array3::zeros((nx, ny, nz)),
+            laplacian_cache: Array3::zeros((nx, ny, nz)),
+            linear_term_cache: Array3::zeros((nx, ny, nz)),
+        }
+    }
+}
+
 /// Kuznetsov wave equation solver
 #[derive(Debug)]
 pub struct KuznetsovWave {
@@ -148,6 +174,9 @@ pub struct KuznetsovWave {
     
     /// Performance metrics
     metrics: SolverMetrics,
+    
+    /// RK4 workspace (lazily initialized)
+    rk4_workspace: Option<RK4Workspace>,
 }
 
 impl KuznetsovWave {
@@ -181,6 +210,7 @@ impl KuznetsovWave {
             nonlinear_history,
             fft_planner: Some(fft_planner),
             metrics: SolverMetrics::default(),
+            rk4_workspace: None,
         }
     }
     
@@ -408,56 +438,101 @@ impl KuznetsovWave {
             TimeIntegrationScheme::RK4 => {
                 // Fourth-order Runge-Kutta implementation
                 // RK4: y_{n+1} = y_n + (k1 + 2*k2 + 2*k3 + k4)/6
-                // where k1 = dt*f(t_n, y_n)
-                //       k2 = dt*f(t_n + dt/2, y_n + k1/2)
-                //       k3 = dt*f(t_n + dt/2, y_n + k2/2)
-                //       k4 = dt*f(t_n + dt, y_n + k3)
                 
-                let pressure_0 = pressure.clone();
+                // Initialize workspace if needed
+                if self.rk4_workspace.is_none() {
+                    self.rk4_workspace = Some(RK4Workspace::new(grid.nx, grid.ny, grid.nz));
+                }
                 
-                // Stage 1: k1 = dt * f(p_n)
-                let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
-                let k1 = (&linear_term + &nonlinear_term + &diffusivity_term + source_term) * dt;
+                // Use a local scope to limit the workspace borrow
+                {
+                    let workspace = self.rk4_workspace.as_mut().unwrap();
+                    
+                    // Save initial pressure
+                    workspace.pressure_temp.assign(pressure);
+                    
+                    // Stage 1: k1 = dt * f(p_n)
+                    // Reuse the already computed laplacian and terms
+                    compute_linear_term_into(&laplacian, pressure, medium, grid, &mut workspace.linear_term_cache);
+                    workspace.k1.assign(&workspace.linear_term_cache);
+                    workspace.k1.scaled_add(1.0, &nonlinear_term);
+                    workspace.k1.scaled_add(1.0, &diffusivity_term);
+                    workspace.k1.scaled_add(1.0, source_term);
+                    workspace.k1.mapv_inplace(|x| x * dt);
+                    
+                    // Stage 2: k2 = dt * f(p_n + k1/2)
+                    pressure.assign(&workspace.pressure_temp);
+                    pressure.scaled_add(0.5, &workspace.k1);
+                }
                 
-                // Stage 2: k2 = dt * f(p_n + k1/2)
-                let mut pressure_temp = &pressure_0 + &(&k1 * 0.5);
-                let laplacian_2 = self.compute_laplacian(&pressure_temp, grid)?;
-                let nonlinear_2 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
-                let diffusivity_2 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
-                let linear_2 = compute_linear_term(&laplacian_2, &pressure_temp, medium, grid);
-                let k2 = (&linear_2 + &nonlinear_2 + &diffusivity_2 + source_term) * dt;
+                // Compute stage 2 terms
+                let laplacian_2 = self.compute_laplacian(pressure, grid)?;
+                let nonlinear_2 = self.compute_nonlinear_term(pressure, medium, grid, dt)?;
+                let diffusivity_2 = self.compute_diffusivity_term(pressure, medium, grid, dt)?;
                 
-                // Stage 3: k3 = dt * f(p_n + k2/2)
-                pressure_temp = &pressure_0 + &(&k2 * 0.5);
-                let laplacian_3 = self.compute_laplacian(&pressure_temp, grid)?;
-                let nonlinear_3 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
-                let diffusivity_3 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
-                let linear_3 = compute_linear_term(&laplacian_3, &pressure_temp, medium, grid);
-                let k3 = (&linear_3 + &nonlinear_3 + &diffusivity_3 + source_term) * dt;
+                {
+                    let workspace = self.rk4_workspace.as_mut().unwrap();
+                    compute_linear_term_into(&laplacian_2, pressure, medium, grid, &mut workspace.linear_term_cache);
+                    workspace.k2.assign(&workspace.linear_term_cache);
+                    workspace.k2.scaled_add(1.0, &nonlinear_2);
+                    workspace.k2.scaled_add(1.0, &diffusivity_2);
+                    workspace.k2.scaled_add(1.0, source_term);
+                    workspace.k2.mapv_inplace(|x| x * dt);
+                    
+                    // Stage 3: k3 = dt * f(p_n + k2/2)
+                    pressure.assign(&workspace.pressure_temp);
+                    pressure.scaled_add(0.5, &workspace.k2);
+                }
                 
-                // Stage 4: k4 = dt * f(p_n + k3)
-                pressure_temp = &pressure_0 + &k3;
-                let laplacian_4 = self.compute_laplacian(&pressure_temp, grid)?;
-                let nonlinear_4 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
-                let diffusivity_4 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
-                let linear_4 = compute_linear_term(&laplacian_4, &pressure_temp, medium, grid);
-                let k4 = (&linear_4 + &nonlinear_4 + &diffusivity_4 + source_term) * dt;
+                // Compute stage 3 terms
+                let laplacian_3 = self.compute_laplacian(pressure, grid)?;
+                let nonlinear_3 = self.compute_nonlinear_term(pressure, medium, grid, dt)?;
+                let diffusivity_3 = self.compute_diffusivity_term(pressure, medium, grid, dt)?;
                 
-                // Combine stages: p_{n+1} = p_n + (k1 + 2*k2 + 2*k3 + k4)/6
-                Zip::from(&mut *pressure)
-                    .and(&pressure_0)
-                    .and(&k1)
-                    .and(&k2)
-                    .and(&k3)
-                    .and(&k4)
-                    .for_each(|p, &p0, &k1_val, &k2_val, &k3_val, &k4_val| {
-                        *p = p0 + (k1_val + 2.0 * k2_val + 2.0 * k3_val + k4_val) / 6.0;
-                        
-                        // Clamp for stability
-                        if p.abs() > self.config.max_pressure {
-                            *p = p.signum() * self.config.max_pressure;
-                        }
-                    });
+                {
+                    let workspace = self.rk4_workspace.as_mut().unwrap();
+                    compute_linear_term_into(&laplacian_3, pressure, medium, grid, &mut workspace.linear_term_cache);
+                    workspace.k3.assign(&workspace.linear_term_cache);
+                    workspace.k3.scaled_add(1.0, &nonlinear_3);
+                    workspace.k3.scaled_add(1.0, &diffusivity_3);
+                    workspace.k3.scaled_add(1.0, source_term);
+                    workspace.k3.mapv_inplace(|x| x * dt);
+                    
+                    // Stage 4: k4 = dt * f(p_n + k3)
+                    pressure.assign(&workspace.pressure_temp);
+                    pressure.scaled_add(1.0, &workspace.k3);
+                }
+                
+                // Compute stage 4 terms
+                let laplacian_4 = self.compute_laplacian(pressure, grid)?;
+                let nonlinear_4 = self.compute_nonlinear_term(pressure, medium, grid, dt)?;
+                let diffusivity_4 = self.compute_diffusivity_term(pressure, medium, grid, dt)?;
+                
+                {
+                    let workspace = self.rk4_workspace.as_mut().unwrap();
+                    compute_linear_term_into(&laplacian_4, pressure, medium, grid, &mut workspace.linear_term_cache);
+                    workspace.k4.assign(&workspace.linear_term_cache);
+                    workspace.k4.scaled_add(1.0, &nonlinear_4);
+                    workspace.k4.scaled_add(1.0, &diffusivity_4);
+                    workspace.k4.scaled_add(1.0, source_term);
+                    workspace.k4.mapv_inplace(|x| x * dt);
+                    
+                    // Combine stages: p_{n+1} = p_n + (k1 + 2*k2 + 2*k3 + k4)/6
+                    pressure.assign(&workspace.pressure_temp);
+                    pressure.scaled_add(1.0 / 6.0, &workspace.k1);
+                    pressure.scaled_add(2.0 / 6.0, &workspace.k2);
+                    pressure.scaled_add(2.0 / 6.0, &workspace.k3);
+                    pressure.scaled_add(1.0 / 6.0, &workspace.k4);
+                }
+                
+                // Clamp for stability
+                pressure.mapv_inplace(|p| {
+                    if p.abs() > self.config.max_pressure {
+                        p.signum() * self.config.max_pressure
+                    } else {
+                        p
+                    }
+                });
             }
             
             _ => {
@@ -839,6 +914,29 @@ fn update_velocity_field(
     }
     
     Ok(())
+}
+
+/// Helper function to compute linear term into a pre-allocated array
+fn compute_linear_term_into(
+    laplacian: &Array3<f64>,
+    pressure: &Array3<f64>,
+    medium: &dyn Medium,
+    grid: &Grid,
+    linear_term: &mut Array3<f64>,
+) {
+    Zip::indexed(linear_term)
+        .and(laplacian)
+        .and(pressure)
+        .for_each(|(i, j, k), lin, &lap, &p| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            
+            let c = medium.sound_speed(x, y, z, grid);
+            
+            // Linear wave equation term: c²∇²p
+            *lin = c * c * lap;
+        });
 }
 
 #[cfg(test)]

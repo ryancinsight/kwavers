@@ -6,6 +6,7 @@
 use crate::boundary::cpml::{CPMLBoundary, CPMLConfig};
 use crate::grid::Grid;
 use crate::error::KwaversResult;
+use crate::medium::Medium;
 use ndarray::{Array3, Array4, Axis};
 use log::trace;
 
@@ -50,7 +51,9 @@ impl CPMLSolver {
         pressure: &mut Array3<f64>,
         velocity: &mut Array4<f64>,
         grid: &Grid,
+        medium: &dyn Medium,
         dt: f64,
+        step: usize,
     ) -> KwaversResult<()> {
         trace!("Updating acoustic field with C-PML");
         
@@ -68,13 +71,13 @@ impl CPMLSolver {
         self.cpml.apply_cpml_gradient(&mut self.grad_z, 2)?;
         
         // Step 4: Update velocity field with modified gradients
-        self.update_velocity_with_cpml(velocity, grid, dt);
+        self.update_velocity_with_cpml(velocity, grid, medium, dt);
         
         // Step 5: Compute velocity divergence for pressure update
         let div_v = self.compute_velocity_divergence(velocity, grid);
         
         // Step 6: Update pressure field
-        self.update_pressure_with_cpml(pressure, &div_v, grid, dt);
+        self.update_pressure_with_cpml(pressure, &div_v, grid, medium, dt);
         
         Ok(())
     }
@@ -155,26 +158,54 @@ impl CPMLSolver {
     fn update_velocity_with_cpml(
         &self,
         velocity: &mut Array4<f64>,
-        _grid: &Grid,
+        grid: &Grid,
+        medium: &dyn Medium,
         dt: f64,
     ) {
-        // Use medium density from struct property
-        let rho_inv = 1.0 / self.density; // 1/density
-        
         // Update velocity components separately to avoid borrow checker issues
         {
             let mut vx = velocity.index_axis_mut(Axis(0), 0);
-            vx.scaled_add(-dt * rho_inv, &self.grad_x);
+            for i in 0..self.nx {
+                for j in 0..self.ny {
+                    for k in 0..self.nz {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        let rho = medium.density(x, y, z, grid);
+                        vx[[i, j, k]] -= dt * self.grad_x[[i, j, k]] / rho;
+                    }
+                }
+            }
         }
         
         {
             let mut vy = velocity.index_axis_mut(Axis(0), 1);
-            vy.scaled_add(-dt * rho_inv, &self.grad_y);
+            for i in 0..self.nx {
+                for j in 0..self.ny {
+                    for k in 0..self.nz {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        let rho = medium.density(x, y, z, grid);
+                        vy[[i, j, k]] -= dt * self.grad_y[[i, j, k]] / rho;
+                    }
+                }
+            }
         }
         
         {
             let mut vz = velocity.index_axis_mut(Axis(0), 2);
-            vz.scaled_add(-dt * rho_inv, &self.grad_z);
+            for i in 0..self.nx {
+                for j in 0..self.ny {
+                    for k in 0..self.nz {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        let rho = medium.density(x, y, z, grid);
+                        vz[[i, j, k]] -= dt * self.grad_z[[i, j, k]] / rho;
+                    }
+                }
+            }
         }
     }
     
@@ -211,14 +242,24 @@ impl CPMLSolver {
         &self,
         pressure: &mut Array3<f64>,
         div_v: &Array3<f64>,
-        _grid: &Grid,
+        grid: &Grid,
+        medium: &dyn Medium,
         dt: f64,
     ) {
-        // Assuming constant sound speed and density for simplicity
-        let rho_c2 = 1000.0 * 1500.0 * 1500.0; // density * c^2
-        
         // Update pressure: dp/dt = -rho*c^2 * div(v)
-        pressure.scaled_add(-dt * rho_c2, div_v);
+        for i in 0..self.nx {
+            for j in 0..self.ny {
+                for k in 0..self.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let rho = medium.density(x, y, z, grid);
+                    let c = medium.sound_speed(x, y, z, grid);
+                    let rho_c2 = rho * c * c;
+                    pressure[[i, j, k]] -= dt * rho_c2 * div_v[[i, j, k]];
+                }
+            }
+        }
     }
     
     /// Get C-PML configuration
