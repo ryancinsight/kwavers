@@ -5,6 +5,8 @@ pub mod spectral_dg; // Hybrid Spectral-DG methods module
 pub mod time_integration; // Multi-Rate Time Integration module
 pub mod imex; // IMEX (Implicit-Explicit) schemes module
 pub mod cpml_integration; // C-PML integration module
+pub mod pstd; // PSTD (Pseudo-Spectral Time Domain) module
+pub mod fdtd; // FDTD (Finite-Difference Time Domain) module
 
 use crate::grid::Grid;
 use crate::KwaversResult;
