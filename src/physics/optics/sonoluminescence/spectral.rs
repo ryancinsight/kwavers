@@ -105,14 +105,10 @@ impl EmissionSpectrum {
     
     /// Calculate total integrated intensity
     pub fn total_intensity(&self) -> f64 {
-        // Trapezoidal integration
-        let mut total = 0.0;
-        for i in 1..self.wavelengths.len() {
-            let dlambda = self.wavelengths[i] - self.wavelengths[i-1];
-            let avg_intensity = 0.5 * (self.intensities[i] + self.intensities[i-1]);
-            total += avg_intensity * dlambda;
-        }
-        total
+        // Vectorized trapezoidal integration
+        let dlambda = &self.wavelengths.slice(s![1..]) - &self.wavelengths.slice(s![..-1]);
+        let avg_intensity = 0.5 * (&self.intensities.slice(s![1..]) + &self.intensities.slice(s![..-1]));
+        (avg_intensity * dlambda).sum()
     }
     
     /// Find peak wavelength
