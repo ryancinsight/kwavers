@@ -24,7 +24,7 @@
 use crate::error::{KwaversResult, PhysicsError, KwaversError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array3, Array4, Axis, ArrayView3};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
@@ -741,7 +741,7 @@ impl AcousticWaveComponent {
     /// Compute spatial derivatives with specified order accuracy
     fn compute_derivatives(
         &self,
-        field: &Array3<f64>,
+        field: &ArrayView3<f64>,
         grid: &Grid,
         axis: usize,
     ) -> Array3<f64> {
@@ -865,20 +865,30 @@ impl PhysicsComponent for AcousticWaveComponent {
         let c_array = medium.sound_speed_array();
         
         // Compute velocity derivatives with higher-order accuracy
-        let dvx_dx = self.compute_derivatives(&velocity_x.to_owned(), grid, 0);
-        let dvy_dy = self.compute_derivatives(&velocity_y.to_owned(), grid, 1);
-        let dvz_dz = self.compute_derivatives(&velocity_z.to_owned(), grid, 2);
+        let dvx_dx = self.compute_derivatives(&velocity_x, grid, 0);
+        let dvy_dy = self.compute_derivatives(&velocity_y, grid, 1);
+        let dvz_dz = self.compute_derivatives(&velocity_z, grid, 2);
         
         // Compute pressure derivatives
-        let dp_dx = self.compute_derivatives(&pressure_field.to_owned(), grid, 0);
-        let dp_dy = self.compute_derivatives(&pressure_field.to_owned(), grid, 1);
-        let dp_dz = self.compute_derivatives(&pressure_field.to_owned(), grid, 2);
+        let dp_dx = self.compute_derivatives(&pressure_field, grid, 0);
+        let dp_dy = self.compute_derivatives(&pressure_field, grid, 1);
+        let dp_dz = self.compute_derivatives(&pressure_field, grid, 2);
         
         // Enhanced finite difference update with proper wave physics
         // Solve: ∂p/∂t = -ρc²∇·v and ∂v/∂t = -∇p/ρ
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
+        
+        // Determine valid region based on spatial order
+        let boundary_width = match self.spatial_order {
+            2 => 1,
+            4 => 2,
+            6 => 3,
+            _ => 1,
+        };
+        
+        // Only update interior points where derivatives are valid
+        for i in boundary_width..grid.nx-boundary_width {
+            for j in boundary_width..grid.ny-boundary_width {
+                for k in boundary_width..grid.nz-boundary_width {
                     let rho = rho_array[[i, j, k]];
                     let c_sq = c_array[[i, j, k]].powi(2);
                     
@@ -970,17 +980,29 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PhysicsContext,
+        context: &PhysicsContext,
     ) -> KwaversResult<()> {
         self.state = ComponentState::Running;
         
         let start_time = Instant::now();
         
-        // Temperature field is at index 2
-        let mut temperature_field = fields.index_axis_mut(ndarray::Axis(0), 2);
+        // Get field indices
+        let pressure_idx = 0;
+        let temperature_idx = 2;
         
-        // Get thermal diffusivity from medium
+        // Get pressure field for acoustic heating calculation (clone to avoid borrow conflict)
+        let pressure_field = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
+        
+        // Temperature field is at index 2
+        let mut temperature_field = fields.index_axis_mut(ndarray::Axis(0), temperature_idx);
+        
+        // Get thermal and acoustic properties from medium
         let mut kappa_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut rho_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut cp_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut alpha_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut c_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
@@ -988,17 +1010,25 @@ impl PhysicsComponent for ThermalDiffusionComponent {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
                     kappa_array[[i, j, k]] = medium.thermal_diffusivity(x, y, z, grid);
+                    rho_array[[i, j, k]] = medium.density(x, y, z, grid);
+                    cp_array[[i, j, k]] = medium.specific_heat(x, y, z, grid);
+                    alpha_array[[i, j, k]] = medium.absorption_coefficient(x, y, z, grid, context.frequency);
+                    c_array[[i, j, k]] = medium.sound_speed(x, y, z, grid);
                 }
             }
         }
         
-        // Simple explicit thermal diffusion update
+        // Thermal update with both diffusion and acoustic heating
         let mut temp_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         
         for i in 1..grid.nx - 1 {
             for j in 1..grid.ny - 1 {
                 for k in 1..grid.nz - 1 {
                     let kappa = kappa_array[[i, j, k]];
+                    let rho = rho_array[[i, j, k]];
+                    let cp = cp_array[[i, j, k]];
+                    let alpha = alpha_array[[i, j, k]];
+                    let c = c_array[[i, j, k]];
                     
                     // Calculate Laplacian of temperature
                     let laplacian_t = 
@@ -1006,8 +1036,13 @@ impl PhysicsComponent for ThermalDiffusionComponent {
                         (temperature_field[[i, j+1, k]] - 2.0 * temperature_field[[i, j, k]] + temperature_field[[i, j-1, k]]) / (grid.dy * grid.dy) +
                         (temperature_field[[i, j, k+1]] - 2.0 * temperature_field[[i, j, k]] + temperature_field[[i, j, k-1]]) / (grid.dz * grid.dz);
                     
-                    // Update temperature: ∂T/∂t = κ∇²T
-                    temp_updates[[i, j, k]] = kappa * laplacian_t * dt;
+                    // Calculate acoustic heating term Q = 2αI/ρc, where I = p²/(ρc)
+                    let pressure = pressure_field[[i, j, k]];
+                    let intensity = pressure * pressure / (rho * c);
+                    let heating_rate = 2.0 * alpha * intensity / (rho * cp);
+                    
+                    // Update temperature: ∂T/∂t = κ∇²T + Q/(ρcp)
+                    temp_updates[[i, j, k]] = (kappa * laplacian_t + heating_rate) * dt;
                 }
             }
         }
@@ -1016,6 +1051,8 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         temperature_field += &temp_updates;
         
         self.metrics.insert("execution_time".to_string(), start_time.elapsed().as_secs_f64());
+        self.metrics.insert("max_heating_rate".to_string(), 
+            temp_updates.iter().fold(0.0_f64, |a, &b| a.max(b.abs())) / dt);
         Ok(())
     }
     

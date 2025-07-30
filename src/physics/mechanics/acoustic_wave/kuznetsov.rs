@@ -406,16 +406,54 @@ impl KuznetsovWave {
             }
             
             TimeIntegrationScheme::RK4 => {
-                // Fourth-order Runge-Kutta
-                // TODO: Implement full RK4 scheme
-                // For now, use improved Euler as placeholder
-                let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
-                let total_rhs = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
+                // Fourth-order Runge-Kutta implementation
+                // RK4: y_{n+1} = y_n + (k1 + 2*k2 + 2*k3 + k4)/6
+                // where k1 = dt*f(t_n, y_n)
+                //       k2 = dt*f(t_n + dt/2, y_n + k1/2)
+                //       k3 = dt*f(t_n + dt/2, y_n + k2/2)
+                //       k4 = dt*f(t_n + dt, y_n + k3)
                 
+                let pressure_0 = pressure.clone();
+                
+                // Stage 1: k1 = dt * f(p_n)
+                let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
+                let k1 = (&linear_term + &nonlinear_term + &diffusivity_term + source_term) * dt;
+                
+                // Stage 2: k2 = dt * f(p_n + k1/2)
+                let mut pressure_temp = &pressure_0 + &(&k1 * 0.5);
+                let laplacian_2 = self.compute_laplacian(&pressure_temp, grid)?;
+                let nonlinear_2 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
+                let diffusivity_2 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
+                let linear_2 = compute_linear_term(&laplacian_2, &pressure_temp, medium, grid);
+                let k2 = (&linear_2 + &nonlinear_2 + &diffusivity_2 + source_term) * dt;
+                
+                // Stage 3: k3 = dt * f(p_n + k2/2)
+                pressure_temp = &pressure_0 + &(&k2 * 0.5);
+                let laplacian_3 = self.compute_laplacian(&pressure_temp, grid)?;
+                let nonlinear_3 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
+                let diffusivity_3 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
+                let linear_3 = compute_linear_term(&laplacian_3, &pressure_temp, medium, grid);
+                let k3 = (&linear_3 + &nonlinear_3 + &diffusivity_3 + source_term) * dt;
+                
+                // Stage 4: k4 = dt * f(p_n + k3)
+                pressure_temp = &pressure_0 + &k3;
+                let laplacian_4 = self.compute_laplacian(&pressure_temp, grid)?;
+                let nonlinear_4 = self.compute_nonlinear_term(&pressure_temp, medium, grid, dt)?;
+                let diffusivity_4 = self.compute_diffusivity_term(&pressure_temp, medium, grid, dt)?;
+                let linear_4 = compute_linear_term(&laplacian_4, &pressure_temp, medium, grid);
+                let k4 = (&linear_4 + &nonlinear_4 + &diffusivity_4 + source_term) * dt;
+                
+                // Combine stages: p_{n+1} = p_n + (k1 + 2*k2 + 2*k3 + k4)/6
                 Zip::from(&mut *pressure)
-                    .and(&total_rhs)
-                    .for_each(|p, &rhs| {
-                        *p += dt * rhs;
+                    .and(&pressure_0)
+                    .and(&k1)
+                    .and(&k2)
+                    .and(&k3)
+                    .and(&k4)
+                    .for_each(|p, &p0, &k1_val, &k2_val, &k3_val, &k4_val| {
+                        *p = p0 + (k1_val + 2.0 * k2_val + 2.0 * k3_val + k4_val) / 6.0;
+                        
+                        // Clamp for stability
                         if p.abs() > self.config.max_pressure {
                             *p = p.signum() * self.config.max_pressure;
                         }
@@ -635,7 +673,7 @@ fn compute_acoustic_diffusivity(
     // δ ≈ 2αc³/(ω²) for typical soft tissues
     // Using a reference frequency of 1 MHz
     let omega_ref = 2.0 * PI * 1e6;
-    alpha * c.powi(3) / (omega_ref * omega_ref)
+    2.0 * alpha * c.powi(3) / (omega_ref * omega_ref)
 }
 
 /// Compute the linear wave equation term
