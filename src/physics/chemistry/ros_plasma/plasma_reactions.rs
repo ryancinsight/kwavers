@@ -151,6 +151,9 @@ impl PlasmaChemistry {
     /// Initialize species concentrations based on initial conditions
     fn initialize_concentrations(&mut self) {
         let r_gas = 8.314;
+        if self.temperature <= 0.0 {
+            panic!("Temperature must be greater than 0 K to initialize concentrations.");
+        }
         let total_conc = self.pressure / (r_gas * self.temperature);
         
         // Assume initial composition: 50% water vapor, 50% air
