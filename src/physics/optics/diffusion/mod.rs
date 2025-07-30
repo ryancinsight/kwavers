@@ -1,10 +1,11 @@
 // physics/optics/diffusion/mod.rs
+use ndarray::{Array3, Array4, Axis, Zip};
 use crate::grid::Grid;
+use crate::physics::optics::{PolarizationModel, polarization::SimplePolarizationModel};
+use crate::physics::optics::thermal::OpticalThermalModel;
 use crate::medium::Medium;
-use crate::physics::optics::{PolarizationModel, OpticalThermalModel, polarization::SimplePolarizationModel};
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
 use log::debug;
-use ndarray::{Array3, Array4, Axis};
 
 use std::time::Instant;
 use crate::physics::traits::LightDiffusionModelTrait;
