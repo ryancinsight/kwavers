@@ -471,7 +471,6 @@ impl PhysicsPlugin for PstdPlugin {
     
     fn initialize(
         &mut self,
-        _config: Option<Box<dyn PluginConfig>>,
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<()> {
