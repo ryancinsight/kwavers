@@ -272,8 +272,12 @@ fn compare_results(pstd: &SimulationResult, fdtd: &SimulationResult, _grid: &Gri
     let rms_diff = (diff.iter().map(|&d| d * d).sum::<f64>() / diff.len() as f64).sqrt();
     
     // Normalize by maximum pressure
-    let normalized_max_diff = max_diff / pstd.max_pressure.max(fdtd.max_pressure);
-    let normalized_rms_diff = rms_diff / pstd.max_pressure.max(fdtd.max_pressure);
+    let max_p = pstd.max_pressure.max(fdtd.max_pressure);
+    let (normalized_max_diff, normalized_rms_diff) = if max_p > 1e-9 { // Use a small epsilon
+        (max_diff / max_p, rms_diff / max_p)
+    } else {
+        (0.0, 0.0)
+    };
     
     println!("Accuracy comparison:");
     println!("  Maximum difference: {:.2e} ({:.2}%)", max_diff, normalized_max_diff * 100.0);
