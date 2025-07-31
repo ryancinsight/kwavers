@@ -207,7 +207,7 @@ fn run_fdtd_simulation(
                 let z = (k as f64 - center.2 as f64) * grid.dz;
                 let r2 = x * x + y * y + z * z;
                 
-                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp() * (2.0 * PI * frequency * 0.0).sin();
+                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
             }
         }
     }
