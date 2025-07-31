@@ -165,6 +165,7 @@ impl SystemScheduler for ParallelScheduler {
 }
 
 /// Effect-based physics system
+#[derive(Debug)]
 pub struct EffectSystem {
     /// Name of this system
     name: String,
