@@ -585,7 +585,6 @@ impl PhysicsPlugin for FdtdPlugin {
     
     fn initialize(
         &mut self,
-        _config: Option<Box<dyn PluginConfig>>,
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<()> {
