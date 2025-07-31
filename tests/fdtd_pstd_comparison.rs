@@ -219,8 +219,8 @@ fn test_dispersion_characteristics() {
     let expected_index = (expected_position / grid.dx).round() as usize;
     
     // PSTD should have less dispersion error
-    let fdtd_error = (fdtd_peak as i32 - expected_index as i32).abs();
-    let pstd_error = (pstd_peak as i32 - expected_index as i32).abs();
+    let fdtd_error = usize::abs_diff(fdtd_peak, expected_index);
+    let pstd_error = usize::abs_diff(pstd_peak, expected_index);
     
     assert!(pstd_error <= fdtd_error, 
         "PSTD should have less dispersion than FDTD. PSTD error: {}, FDTD error: {}", 
