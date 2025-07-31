@@ -5,7 +5,7 @@
 
 use crate::grid::Grid;
 use crate::KwaversResult;
-use super::traits::{TimeStepper, TimeStepperConfig, TimeStepperType};
+use super::traits::{TimeStepper, TimeStepperConfig};
 use ndarray::{Array3, Zip};
 use std::collections::VecDeque;
 

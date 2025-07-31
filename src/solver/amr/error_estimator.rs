@@ -1,11 +1,12 @@
 // src/solver/amr/error_estimator.rs
 //! Error estimation for adaptive mesh refinement
 //! 
-//! Uses wavelet transforms to estimate local truncation error
-//! and determine regions requiring refinement or coarsening.
+//! This module provides error estimators used to determine where mesh refinement
+//! is needed in adaptive simulations.
 
+use ndarray::{Array3, ArrayView3, Zip};
+use crate::grid::Grid;
 use crate::error::KwaversResult;
-use ndarray::{Array3, s};
 use super::{WaveletType, wavelet::WaveletTransform};
 
 /// Error estimator for AMR

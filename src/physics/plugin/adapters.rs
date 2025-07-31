@@ -42,7 +42,6 @@ impl<C: PhysicsComponent + Debug + 'static> PhysicsPlugin for ComponentPluginAda
     
     fn initialize(
         &mut self,
-        _config: Option<Box<dyn PluginConfig>>,
         _grid: &Grid,
         _medium: &dyn Medium,
     ) -> KwaversResult<()> {
