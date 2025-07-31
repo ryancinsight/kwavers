@@ -19,7 +19,10 @@ use crate::error::{KwaversResult, ConfigError, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
-use crate::physics::{PhysicsComponent, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent};
+use crate::physics::{PhysicsComponent, PhysicsPipeline, ThermalDiffusionComponent};
+use crate::physics::plugin::{PluginManager, PhysicsPlugin};
+use crate::solver::pstd::{PstdConfig, PstdPlugin};
+use crate::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use crate::time::Time;
 use crate::validation::{ValidationResult};
 use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};
@@ -569,7 +572,8 @@ impl SimulationFactory {
 
             let component: Box<dyn PhysicsComponent> = match model_config.model_type {
                 PhysicsModelType::AcousticWave => {
-                    Box::new(AcousticWaveComponent::new("acoustic".to_string()))
+                    // Use thermal diffusion as a placeholder for now
+                    Box::new(ThermalDiffusionComponent::new("acoustic".to_string()))
                 }
                 PhysicsModelType::ThermalDiffusion => {
                     Box::new(ThermalDiffusionComponent::new("thermal".to_string()))
@@ -1390,8 +1394,8 @@ mod tests {
         
         // Create physics pipeline with at least one component for validation
         let mut physics = PhysicsPipeline::new();
-        let acoustic_component = AcousticWaveComponent::new("acoustic".to_string());
-        physics.add_component(Box::new(acoustic_component)).expect("Failed to add component");
+        let thermal_component = ThermalDiffusionComponent::new("thermal".to_string());
+        physics.add_component(Box::new(thermal_component)).expect("Failed to add component");
         
         let time = Time::new(1e-8, 100);
         

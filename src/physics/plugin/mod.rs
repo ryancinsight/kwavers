@@ -11,6 +11,7 @@
 //! - **Clean**: Clear abstractions and comprehensive documentation
 
 pub mod adapters;
+pub use adapters::{ComponentPluginAdapter, factories::{acoustic_wave_plugin, thermal_diffusion_plugin}};
 
 #[cfg(test)]
 mod tests;

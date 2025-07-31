@@ -700,6 +700,7 @@ impl Default for PhysicsPipeline {
 /// Acoustic wave propagation component
 /// 
 /// Implements YAGNI principle by providing only necessary functionality
+#[derive(Debug)]
 pub struct AcousticWaveComponent {
     id: String,
     metrics: HashMap<String, f64>,
@@ -942,6 +943,7 @@ impl PhysicsComponent for AcousticWaveComponent {
 }
 
 /// Thermal diffusion component implementation
+#[derive(Debug)]
 pub struct ThermalDiffusionComponent {
     id: String,
     metrics: HashMap<String, f64>,

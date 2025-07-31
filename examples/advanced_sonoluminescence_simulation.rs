@@ -1,39 +1,86 @@
 // examples/advanced_sonoluminescence_simulation.rs
-//! Advanced Sonoluminescence Simulation Example
-//!
-//! This example demonstrates the advanced physics capabilities of kwavers,
-//! particularly focusing on:
-//! - Multi-bubble cavitation dynamics
-//! - Sonoluminescence with spectral analysis
-//! - Light-tissue interactions
-//! - Advanced thermal modeling
-//! - Chemical reaction kinetics
-//!
-//! The simulation models a focused ultrasound field that generates
-//! cavitation bubbles, which then emit light through sonoluminescence.
-//! This light interacts with the tissue, causing photothermal effects
-//! and potentially triggering chemical reactions.
+//! Advanced Sonoluminescence Simulation
+//! 
+//! This example demonstrates the complete physics of sonoluminescence including:
+//! - Acoustic cavitation and bubble dynamics
+//! - Thermal effects and heat transfer
+//! - Light emission mechanisms
+//! - Chemical reactions and radical formation
 
 use kwavers::{
-    init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, 
-    PMLConfig, KwaversResult, SensorConfig, RecorderConfig,
+    Grid, Time, HomogeneousMedium, Source, Sensor, Recorder, SimulationResults,
+    SensorConfig, RecorderConfig, LinearArray, SineWave, HanningApodization,
     physics::{
-        composable::{ComposableComponent, PhysicsPipeline},
-        chemistry::{ChemicalReaction, ReactionRate, Species},
-        mechanics::cavitation::{CavitationModel, RadiationDamping, ViscousTerms},
-        optics::sonoluminescence::{
+        composable::{
+            PhysicsComponent, PhysicsContext, PhysicsPipeline, 
+            ThermalDiffusionComponent, FieldType
+        },
+        plugin::{PluginManager, PhysicsPlugin, PluginMetadata, PluginContext},
+        mechanics::{
+            CavitationModel, RayleighPlessetModel, BubbleState,
+            ElasticWave, ElasticParameters
+        },
+        optics::{
             BremsstrahlingEmission, BlackbodyRadiation, SonoluminescenceModel
         },
         thermal::{ThermalConduction, ThermalModel},
     },
+    solver::pstd::{PstdConfig, PstdPlugin},
     medium::homogeneous::HomogeneousMedium,
     boundary::Boundary,
-    source::Source,
-    Grid, Time
+    error::KwaversResult,
 };
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Instant;
+use ndarray::{Array3, Array4, Axis, Zip};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+
+/// Generic adapter to convert PhysicsComponent to PhysicsPlugin
+#[derive(Debug)]
+struct ComponentPluginAdapter<T: PhysicsComponent + Debug + Send + Sync + 'static> {
+    component: T,
+    metadata: PluginMetadata,
+}
+
+impl<T: PhysicsComponent + Debug + Send + Sync + 'static> ComponentPluginAdapter<T> {
+    fn new(component: T, metadata: PluginMetadata) -> Self {
+        Self { component, metadata }
+    }
+}
+
+impl<T: PhysicsComponent + Debug + Send + Sync + 'static> PhysicsPlugin for ComponentPluginAdapter<T> {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+    
+    fn required_fields(&self) -> Vec<FieldType> {
+        self.component.dependencies()
+    }
+    
+    fn provided_fields(&self) -> Vec<FieldType> {
+        self.component.output_fields()
+    }
+    
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn kwavers::medium::Medium) -> KwaversResult<()> {
+        Ok(())
+    }
+    
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn kwavers::medium::Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        // Convert PluginContext to PhysicsContext
+        let physics_context = PhysicsContext::new(context.frequency);
+        self.component.apply(fields, grid, medium, dt, t, &physics_context)
+    }
+}
 
 /// Advanced sonoluminescence simulation configuration
 #[derive(Debug, Clone)]
@@ -99,13 +146,13 @@ impl Default for SonoluminescenceConfig {
     }
 }
 
-/// Advanced sonoluminescence simulation with enhanced physics
+/// Advanced sonoluminescence simulation state
 struct AdvancedSonoluminescenceSimulation {
     config: SonoluminescenceConfig,
     grid: Grid,
     time: Time,
     medium: Arc<HomogeneousMedium>,
-    physics_pipeline: PhysicsPipeline,
+    plugin_manager: PluginManager,
     recorder: Recorder,
     performance_metrics: PerformanceMetrics,
 }
@@ -143,7 +190,7 @@ impl AdvancedSonoluminescenceSimulation {
         let start_time = Instant::now();
         
         // Initialize logging
-        init_logging()?;
+        kwavers::init_logging()?;
         
         // Create grid
         let grid = Grid::new(
@@ -174,32 +221,70 @@ impl AdvancedSonoluminescenceSimulation {
         let medium = Arc::new(medium);
         
         // Create physics pipeline with advanced components
-        let mut physics_pipeline = PhysicsPipeline::new();
+        let mut plugin_manager = PluginManager::new();
         
-        // Add acoustic wave component
-        physics_pipeline.add_component(Box::new(
-            kwavers::physics::composable::AcousticWaveComponent::new("acoustic".to_string())
-        ))?;
+        // Add PSTD solver plugin for acoustic wave propagation
+        let pstd_config = PstdConfig {
+            k_space_correction: true,
+            k_space_order: 4,
+            anti_aliasing: true,
+            pml_stencil_size: 10,
+            cfl_factor: 0.3,
+        };
+        plugin_manager.register(Box::new(PstdPlugin::new(pstd_config, &grid)?))?;
         
-        // Add thermal diffusion component
-        physics_pipeline.add_component(Box::new(
-            kwavers::physics::composable::ThermalDiffusionComponent::new("thermal".to_string())
+        // Add thermal diffusion component using adapter
+        plugin_manager.register(Box::new(
+            kwavers::physics::plugin::adapters::thermal_diffusion_plugin("thermal".to_string())
         ))?;
         
         // Add custom cavitation component
-        physics_pipeline.add_component(Box::new(
-            AdvancedCavitationComponent::new("cavitation".to_string(), config.clone(), &grid)
+        plugin_manager.register(Box::new(
+            ComponentPluginAdapter::new(
+                AdvancedCavitationComponent::new("cavitation".to_string(), config.clone(), &grid),
+                PluginMetadata {
+                    id: "cavitation".to_string(),
+                    name: "Advanced Cavitation Plugin".to_string(),
+                    version: "1.0.0".to_string(),
+                    description: "Cavitation dynamics with sonoluminescence".to_string(),
+                    author: "Kwavers Team".to_string(),
+                    license: "MIT".to_string(),
+                }
+            )
         ))?;
         
         // Add custom light diffusion component
-        physics_pipeline.add_component(Box::new(
-            AdvancedLightComponent::new("light".to_string(), config.clone())
+        plugin_manager.register(Box::new(
+            ComponentPluginAdapter::new(
+                AdvancedLightComponent::new("light".to_string(), config.clone()),
+                PluginMetadata {
+                    id: "light".to_string(),
+                    name: "Advanced Light Plugin".to_string(),
+                    version: "1.0.0".to_string(),
+                    description: "Light diffusion and photothermal effects".to_string(),
+                    author: "Kwavers Team".to_string(),
+                    license: "MIT".to_string(),
+                }
+            )
         ))?;
         
         // Add custom chemical component
-        physics_pipeline.add_component(Box::new(
-            AdvancedChemicalComponent::new("chemical".to_string(), config.clone(), &grid)
+        plugin_manager.register(Box::new(
+            ComponentPluginAdapter::new(
+                AdvancedChemicalComponent::new("chemical".to_string(), config.clone(), &grid),
+                PluginMetadata {
+                    id: "chemical".to_string(),
+                    name: "Advanced Chemical Plugin".to_string(),
+                    version: "1.0.0".to_string(),
+                    description: "Chemical reactions and radical formation".to_string(),
+                    author: "Kwavers Team".to_string(),
+                    license: "MIT".to_string(),
+                }
+            )
         ))?;
+        
+        // Initialize the plugin manager
+        plugin_manager.initialize(&grid, medium.as_ref())?;
         
         // Create recorder with enhanced sensor configuration
         let sensor_config = SensorConfig::new()
@@ -226,7 +311,7 @@ impl AdvancedSonoluminescenceSimulation {
             grid,
             time,
             medium,
-            physics_pipeline,
+            plugin_manager,
             recorder,
             performance_metrics: PerformanceMetrics {
                 total_time,
@@ -257,7 +342,7 @@ impl AdvancedSonoluminescenceSimulation {
         let source = self.create_focused_source()?;
         
         // Create boundary conditions
-        let mut pml_config = PMLConfig::default()
+        let mut pml_config = kwavers::physics::PMLConfig::default()
             .with_thickness(10)
             .with_reflection_coefficient(1e-6);
         
@@ -265,7 +350,7 @@ impl AdvancedSonoluminescenceSimulation {
         pml_config.sigma_max_acoustic = 100.0;
         pml_config.sigma_max_light = 10.0;
         
-        let mut boundary = PMLBoundary::new(pml_config)?;
+        let mut boundary = kwavers::boundary::PMLBoundary::new(pml_config)?;
         
         // Main simulation loop
         let mut context = kwavers::physics::PhysicsContext::new(self.config.frequency);
@@ -294,13 +379,18 @@ impl AdvancedSonoluminescenceSimulation {
             
             // Apply physics pipeline
             let physics_start = Instant::now();
-            self.physics_pipeline.execute(
+            let plugin_context = PluginContext::new(
+                step,
+                self.time.n_t,
+                self.config.frequency
+            );
+            self.plugin_manager.update(
                 &mut fields,
                 &self.grid,
                 self.medium.as_ref(),
                 self.time.dt,
                 t,
-                &mut context,
+                &plugin_context,
             )?;
             self.performance_metrics.physics_time += physics_start.elapsed().as_secs_f64();
             
@@ -327,7 +417,21 @@ impl AdvancedSonoluminescenceSimulation {
         self.report_performance();
         
         // Generate visualizations
-        self.generate_visualizations()?;
+        kwavers::plot_simulation_outputs(
+            "sonoluminescence_output",
+            &[
+                "pressure_time_series.html",
+                "light_time_series.html", 
+                "temperature_time_series.html",
+                "cavitation_time_series.html",
+                "pressure_slice.html",
+                "light_slice.html",
+                "temperature_slice.html",
+                "cavitation_slice.html",
+                "source_positions.html",
+                "sensor_positions.html",
+            ],
+        )?;
         
         println!("Advanced Sonoluminescence Simulation completed successfully!");
         Ok(())
@@ -370,7 +474,7 @@ impl AdvancedSonoluminescenceSimulation {
             self.performance_metrics.total_time / self.performance_metrics.step_count as f64);
         
         // Get component-specific metrics
-        let all_metrics = self.physics_pipeline.get_all_metrics();
+        let all_metrics = self.plugin_manager.get_all_metrics();
         println!("\n=== Component Performance ===");
         for (component_name, metrics) in all_metrics {
             println!("{}:", component_name);
@@ -385,7 +489,7 @@ impl AdvancedSonoluminescenceSimulation {
         println!("Generating advanced visualizations...");
         
         // Create comprehensive visualization suite
-        plot_simulation_outputs(
+        kwavers::plot_simulation_outputs(
             "sonoluminescence_output",
             &[
                 "pressure_time_series.html",
@@ -426,17 +530,17 @@ impl AdvancedCavitationComponent {
     }
 }
 
-impl ComposableComponent for AdvancedCavitationComponent {
+impl PhysicsComponent for AdvancedCavitationComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Pressure] // Depends on acoustic pressure
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure] // Depends on acoustic pressure
     }
     
-    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Cavitation, kwavers::physics::composable::FieldType::Light] // Produces cavitation and light
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Cavitation, FieldType::Light] // Produces cavitation and light
     }
     
     fn apply(
@@ -446,7 +550,7 @@ impl ComposableComponent for AdvancedCavitationComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         t: f64,
-        context: &kwavers::physics::PhysicsContext,
+        context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
@@ -505,17 +609,17 @@ impl AdvancedLightComponent {
     }
 }
 
-impl ComposableComponent for AdvancedLightComponent {
+impl PhysicsComponent for AdvancedLightComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Light] // Depends on light source from cavitation
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Light] // Depends on light source from cavitation
     }
     
-    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Light, kwavers::physics::composable::FieldType::Temperature] // Produces light field and thermal effects
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Light, FieldType::Temperature] // Produces light field and thermal effects
     }
     
     fn apply(
@@ -525,7 +629,7 @@ impl ComposableComponent for AdvancedLightComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         _t: f64,
-        _context: &kwavers::physics::PhysicsContext,
+        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         
@@ -575,17 +679,17 @@ impl AdvancedChemicalComponent {
     }
 }
 
-impl ComposableComponent for AdvancedChemicalComponent {
+impl PhysicsComponent for AdvancedChemicalComponent {
     fn component_id(&self) -> &str {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Temperature, kwavers::physics::composable::FieldType::Light] // Depends on temperature and light
+    fn dependencies(&self) -> Vec<FieldType> {
+        vec![FieldType::Temperature, FieldType::Light] // Depends on temperature and light
     }
     
-    fn output_fields(&self) -> Vec<kwavers::physics::composable::FieldType> {
-        vec![kwavers::physics::composable::FieldType::Chemical, kwavers::physics::composable::FieldType::Temperature] // Produces chemical effects
+    fn output_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Chemical, FieldType::Temperature] // Produces chemical effects
     }
     
     fn apply(
@@ -595,7 +699,7 @@ impl ComposableComponent for AdvancedChemicalComponent {
         medium: &dyn kwavers::medium::Medium,
         dt: f64,
         t: f64,
-        context: &kwavers::physics::PhysicsContext,
+        context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = std::time::Instant::now();
         

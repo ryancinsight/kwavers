@@ -16,7 +16,7 @@ pub mod analytical_tests;
 
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleState, BubbleParameters};
-pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, AcousticWaveComponent, ThermalDiffusionComponent, KuznetsovWaveComponent};
+pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, ThermalDiffusionComponent, KuznetsovWaveComponent};
 pub use state::{PhysicsState, FieldAccessor, field_indices};
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports

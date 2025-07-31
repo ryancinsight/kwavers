@@ -58,7 +58,8 @@ pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, Val
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics components
-pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, AcousticWaveComponent, ThermalDiffusionComponent, KuznetsovWaveComponent, ComponentState, FieldType};
+pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, ThermalDiffusionComponent, KuznetsovWaveComponent, ComponentState, FieldType};
+pub use physics::plugin::{PhysicsPlugin, PluginManager, PluginContext, PluginMetadata};
 
 // Re-export GPU-related items only when feature enabled
 #[cfg(feature = "gpu")]
@@ -297,17 +298,24 @@ pub fn run_advanced_simulation(
     // Create validated simulation components
     let (grid, time, medium, source, mut recorder) = create_validated_simulation(config)?;
     
-    // Create physics pipeline with advanced components
-    let mut physics_pipeline = PhysicsPipeline::new();
+    // Create plugin manager for physics simulation
+    let mut plugin_manager = PluginManager::new();
     
-    // Add acoustic wave component
-    physics_pipeline.add_component(Box::new(
-        physics::composable::AcousticWaveComponent::new("acoustic".to_string())
+    // Add PSTD solver for acoustic wave propagation
+    let pstd_config = solver::pstd::PstdConfig {
+        k_space_correction: true,
+        k_space_order: 2,
+        anti_aliasing: true,
+        pml_stencil_size: 10,
+        cfl_factor: 0.3,
+    };
+    plugin_manager.register(Box::new(
+        solver::pstd::PstdPlugin::new(pstd_config, &grid)?
     ))?;
     
-    // Add thermal diffusion component
-    physics_pipeline.add_component(Box::new(
-        physics::composable::ThermalDiffusionComponent::new("thermal".to_string())
+    // Add thermal diffusion component using adapter
+    plugin_manager.register(Box::new(
+        physics::plugin::thermal_diffusion_plugin("thermal".to_string())
     ))?;
     
     // Create boundary conditions
@@ -350,14 +358,15 @@ pub fn run_advanced_simulation(
         }
         context.add_source_term("acoustic_source".to_string(), source_field);
         
-        // Apply physics pipeline
-        physics_pipeline.execute(
+        // Apply physics using plugin manager
+        let plugin_context = PluginContext::new(step, time.n_steps, 100e3);
+        plugin_manager.update_all(
             &mut fields,
             &grid,
             &medium,
             time.dt,
             t,
-            &mut context,
+            &plugin_context,
         )?;
         
         // Apply boundary conditions

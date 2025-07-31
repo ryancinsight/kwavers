@@ -12,14 +12,13 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::boundary::Boundary;
 use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginConfig, PluginContext};
-use crate::physics::composable::{FieldType, ValidationResult};
-use ndarray::{Array3, Array4, Axis, Zip, s};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
+use crate::physics::composable::FieldType;
+use ndarray::{Array3, Array4, Axis, Zip};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// FDTD solver configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -616,33 +615,38 @@ impl PhysicsPlugin for FdtdPlugin {
         _t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Work directly with field views to avoid cloning
-        
         // Update velocities first (leapfrog scheme)
-        // Need to clone pressure for velocity update
+        // We need to work with owned arrays for the solver methods
         let pressure = fields.index_axis(Axis(0), 0).to_owned();
-        {
-            let mut velocity_x = fields.index_axis_mut(Axis(0), 4);
-            let mut velocity_y = fields.index_axis_mut(Axis(0), 5);
-            let mut velocity_z = fields.index_axis_mut(Axis(0), 6);
-            
-            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
-        }
+        
+        // Extract velocity fields as owned arrays
+        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
+        
+        // Update velocities
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        
+        // Copy back to fields
+        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
+        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
+        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
         
         // Then update pressure using the updated velocities
-        {
-            let velocity_x = fields.index_axis(Axis(0), 4);
-            let velocity_y = fields.index_axis(Axis(0), 5);
-            let velocity_z = fields.index_axis(Axis(0), 6);
-            let mut pressure = fields.index_axis_mut(Axis(0), 0);
-            
-            self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
-        }
+        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
+        self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
         
         // Handle subgrids if enabled
         if self.solver.config.subgridding {
             let subgrid_factor = self.solver.config.subgrid_factor;
             let fine_dt = dt / subgrid_factor as f64;
+            
+            // Get field references for subgridding
+            let pressure = fields.index_axis(Axis(0), 0).to_owned();
+            let velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+            let velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+            let velocity_z = fields.index_axis(Axis(0), 6).to_owned();
             
             for i in 0..self.solver.subgrids.len() {
                 // Interpolate to fine grid
@@ -664,10 +668,22 @@ impl PhysicsPlugin for FdtdPlugin {
                 }
                 
                 // Restrict back to coarse grid
-                self.solver.restrict_to_coarse(&fine_pressure, &mut pressure, subgrid);
-                self.solver.restrict_to_coarse(&fine_vx, &mut velocity_x, subgrid);
-                self.solver.restrict_to_coarse(&fine_vy, &mut velocity_y, subgrid);
-                self.solver.restrict_to_coarse(&fine_vz, &mut velocity_z, subgrid);
+                // Get owned arrays for restriction
+                let mut pressure_coarse = fields.index_axis(Axis(0), 0).to_owned();
+                let mut velocity_x_coarse = fields.index_axis(Axis(0), 4).to_owned();
+                let mut velocity_y_coarse = fields.index_axis(Axis(0), 5).to_owned();
+                let mut velocity_z_coarse = fields.index_axis(Axis(0), 6).to_owned();
+                
+                self.solver.restrict_to_coarse(&fine_pressure, &mut pressure_coarse, subgrid);
+                self.solver.restrict_to_coarse(&fine_vx, &mut velocity_x_coarse, subgrid);
+                self.solver.restrict_to_coarse(&fine_vy, &mut velocity_y_coarse, subgrid);
+                self.solver.restrict_to_coarse(&fine_vz, &mut velocity_z_coarse, subgrid);
+                
+                // Copy back to fields
+                fields.index_axis_mut(Axis(0), 0).assign(&pressure_coarse);
+                fields.index_axis_mut(Axis(0), 4).assign(&velocity_x_coarse);
+                fields.index_axis_mut(Axis(0), 5).assign(&velocity_y_coarse);
+                fields.index_axis_mut(Axis(0), 6).assign(&velocity_z_coarse);
                 
                 // Update the subgrid
                 let subgrid_mut = &mut self.solver.subgrids[i];

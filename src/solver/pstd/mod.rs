@@ -11,12 +11,11 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::boundary::Boundary;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginConfig, PluginContext};
-use crate::physics::composable::{FieldType, ValidationResult};
-use ndarray::{Array3, Array4, Axis, Zip, s};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
+use crate::physics::composable::FieldType;
+use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
 use std::f64::consts::PI;
 use std::collections::HashMap;
@@ -501,32 +500,28 @@ impl PhysicsPlugin for PstdPlugin {
         _t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Work with views to avoid cloning
-        // First compute divergence - this needs temporary clones for FFT
+        // Extract velocity fields as owned arrays for divergence computation
         let velocity_x = fields.index_axis(Axis(0), 4).to_owned();
         let velocity_y = fields.index_axis(Axis(0), 5).to_owned();
         let velocity_z = fields.index_axis(Axis(0), 6).to_owned();
         let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
         
-        // Update pressure in-place using a mutable view
-        {
-            let mut pressure = fields.index_axis_mut(Axis(0), 0);
-            self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
-        }
+        // Update pressure
+        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
+        self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
         
-        // Update velocities in-place using mutable views
-        // Need to clone pressure for the velocity update since we can't have overlapping mutable borrows
-        let pressure = fields.index_axis(Axis(0), 0).to_owned();
+        // Update velocities
+        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
         
-        {
-            let mut velocity_x = fields.index_axis_mut(Axis(0), 4);
-            let mut velocity_y = fields.index_axis_mut(Axis(0), 5);
-            let mut velocity_z = fields.index_axis_mut(Axis(0), 6);
-            
-            // Update all three velocity components
-            // Note: This requires modifying update_velocity to handle individual components
-            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
-        }
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        
+        // Copy back to fields
+        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
+        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
+        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
         
         Ok(())
     }
