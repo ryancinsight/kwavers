@@ -41,7 +41,7 @@ impl SpectralRange {
     pub fn wavelength_to_rgb(wavelength: f64) -> (f64, f64, f64) {
         let w = wavelength * 1e9; // Convert to nm
         
-        // Pre-computed RGB lookup table for wavelengths (in nm)
+        // Pre-computed wavelength-to-RGB lookup table: (wavelength_nm, R, G, B)
         const RGB_TABLE: &[(f64, f64, f64, f64)] = &[
             (380.0, 0.0, 0.0, 0.0), // UV
             (440.0, 0.0, 0.0, 1.0),
