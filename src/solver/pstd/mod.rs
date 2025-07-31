@@ -60,14 +60,17 @@ pub struct PstdSolver {
     kx: Array3<f64>,
     ky: Array3<f64>,
     kz: Array3<f64>,
-    /// k-squared array for Laplacian
+    /// K-squared array
     k_squared: Array3<f64>,
     /// Anti-aliasing filter
-    filter: Option<Array3<f64>>,
-    /// k-space correction factors
+    anti_alias_filter: Option<Array3<f64>>,
+    /// K-space correction
     kappa: Option<Array3<f64>>,
     /// Performance metrics
     metrics: HashMap<String, f64>,
+    /// Workspace arrays to avoid allocations
+    workspace_real: Array3<f64>,
+    workspace_complex: Array3<Complex<f64>>,
 }
 
 impl PstdSolver {
@@ -113,9 +116,11 @@ impl PstdSolver {
             ky,
             kz,
             k_squared,
-            filter,
+            anti_alias_filter: filter,
             kappa,
             metrics: HashMap::new(),
+            workspace_real: Array3::zeros((nx, ny, nz)),
+            workspace_complex: Array3::zeros((nx, ny, nz)),
         })
     }
     
@@ -249,7 +254,7 @@ impl PstdSolver {
         let mut div_v_hat = fft_3d(&fields_4d, 0, &self.grid);
         
         // Apply anti-aliasing filter if enabled
-        if let Some(ref filter) = self.filter {
+        if let Some(ref filter) = self.anti_alias_filter {
             Zip::from(&mut div_v_hat)
                 .and(filter)
                 .for_each(|d, &f| *d *= f);
@@ -307,7 +312,7 @@ impl PstdSolver {
         let mut pressure_hat = fft_3d(&fields_4d, 0, &self.grid);
         
         // Apply anti-aliasing filter if enabled
-        if let Some(ref filter) = self.filter {
+        if let Some(ref filter) = self.anti_alias_filter {
             Zip::from(&mut pressure_hat)
                 .and(filter)
                 .for_each(|p, &f| *p *= f);
@@ -497,26 +502,32 @@ impl PhysicsPlugin for PstdPlugin {
         _t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Extract velocity and pressure fields
-        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
-        
-        // Compute velocity divergence
+        // Work with views to avoid cloning
+        // First compute divergence - this needs temporary clones for FFT
+        let velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+        let velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+        let velocity_z = fields.index_axis(Axis(0), 6).to_owned();
         let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
         
-        // Update pressure
-        self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
+        // Update pressure in-place using a mutable view
+        {
+            let mut pressure = fields.index_axis_mut(Axis(0), 0);
+            self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
+        }
         
-        // Update velocities
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        // Update velocities in-place using mutable views
+        // Need to clone pressure for the velocity update since we can't have overlapping mutable borrows
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
         
-        // Write back to fields array
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
+        {
+            let mut velocity_x = fields.index_axis_mut(Axis(0), 4);
+            let mut velocity_y = fields.index_axis_mut(Axis(0), 5);
+            let mut velocity_z = fields.index_axis_mut(Axis(0), 6);
+            
+            // Update all three velocity components
+            // Note: This requires modifying update_velocity to handle individual components
+            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        }
         
         Ok(())
     }

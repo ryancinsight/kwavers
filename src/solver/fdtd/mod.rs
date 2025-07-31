@@ -583,17 +583,28 @@ impl PhysicsPlugin for FdtdPlugin {
         _t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Extract velocity and pressure fields
-        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
+        // Work directly with field views to avoid cloning
         
         // Update velocities first (leapfrog scheme)
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        // Need to clone pressure for velocity update
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
+        {
+            let mut velocity_x = fields.index_axis_mut(Axis(0), 4);
+            let mut velocity_y = fields.index_axis_mut(Axis(0), 5);
+            let mut velocity_z = fields.index_axis_mut(Axis(0), 6);
+            
+            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        }
         
-        // Then update pressure
-        self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
+        // Then update pressure using the updated velocities
+        {
+            let velocity_x = fields.index_axis(Axis(0), 4);
+            let velocity_y = fields.index_axis(Axis(0), 5);
+            let velocity_z = fields.index_axis(Axis(0), 6);
+            let mut pressure = fields.index_axis_mut(Axis(0), 0);
+            
+            self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
+        }
         
         // Handle subgrids if enabled
         if self.solver.config.subgridding {
