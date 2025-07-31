@@ -125,7 +125,7 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     fn metadata(&self) -> &PluginMetadata;
     fn required_fields(&self) -> Vec<FieldType>;
     fn provided_fields(&self) -> Vec<FieldType>;
-    fn update(&mut self, fields: &mut Array4<f64>, ...) -> KwaversResult<()>;
+    fn update(&mut self, fields: &mut Array4<f64>, grid: &Grid, medium: &dyn Medium, dt: f64, t: f64, context: &PluginContext) -> KwaversResult<()>;
 }
 ```
 
