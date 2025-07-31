@@ -101,7 +101,7 @@ fn run_pstd_simulation(
     plugin_manager.register(Box::new(pstd_plugin))?;
     
     // Initialize fields
-    let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz));
+    let mut fields = Array4::zeros((kwavers::solver::TOTAL_FIELDS, grid.nx, grid.ny, grid.nz));
     
     // Add initial Gaussian pulse
     let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
