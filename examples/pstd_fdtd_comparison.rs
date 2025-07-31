@@ -116,7 +116,7 @@ fn run_pstd_simulation(
                 let r2 = x * x + y * y + z * z;
                 
                 // Gaussian pulse
-                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp() * (2.0 * PI * frequency * 0.0).sin();
+                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
             }
         }
     }
