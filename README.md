@@ -1,18 +1,18 @@
 # Kwavers - Advanced Ultrasound Simulation Toolbox
 
 **Version**: 1.2.0  
-**Status**: Phase 12 IN PROGRESS 🚧 – AI/ML Integration & Optimization  
+**Status**: Phase 15 IN PROGRESS 🚧 – Advanced Numerical Methods  
 **Performance**: >17M grid updates/second with GPU acceleration
 
-## 🚀 Latest Achievement - Phase 12 In Progress – AI/ML Integration & Optimization
+## 🚀 Latest Achievement - Phase 15 In Progress – Advanced Numerical Methods
 
-**Major Breakthrough**: AI-driven simulation intelligence and optimization:
+**Major Breakthrough**: Next-generation numerical methods for 100M+ grid updates/second:
 
-- **🤖 AI-Powered Optimization**: Neural-network parameter tuning with <10 ms latency
-- **🧠 Pattern Recognition**: Cavitation/anomaly detection with >90 % accuracy  
-- **📊 Predictive Modeling**: Real-time outcome prediction and uncertainty metrics
-- **⚡ Reinforcement Learning**: Adaptive simulation convergence acceleration
-- **📈 Performance Monitoring**: AI inference metrics & GPU utilization tracking
+- **🔬 Adaptive Mesh Refinement**: Octree-based AMR with 60-80% memory reduction potential
+- **🎯 Full Kuznetsov Equation**: Complete nonlinear acoustics with diffusivity  
+- **🛡️ Convolutional PML**: >60dB absorption at grazing angles achieved
+- **🔌 Plugin Architecture**: Modular, composable physics components
+- **⚡ PSTD/FDTD**: High-accuracy wave solvers in development
 
 ---
 
@@ -163,23 +163,32 @@ if memory_manager.meets_performance_targets() {
 - **Multi-Backend Support**: CUDA, OpenCL, and WebGPU unified interface
 - **Production Performance**: >17M grid updates/second achieved
 
-### 🚀 Current Phase: Phase 12 – AI/ML Integration & Optimization
+### 🚀 Current Phase: Phase 15 – Advanced Numerical Methods
 
-**Sprint-3 Focus (IN PROGRESS)**
+**Q2 Focus (IN PROGRESS)**
 
-- ✅ Neural-network inference engine (complete)
-- ✅ Parameter optimization models (complete)
-- ✅ Anomaly detection (complete)
-- ✅ Uncertainty quantification (new)
-- ✅ Real-time prediction pipeline (complete)
-- ⏳ Simulation-loop integration (upcoming)
+- ⏳ PSTD (Pseudo-Spectral Time Domain) implementation
+- ⏳ FDTD (Finite-Difference Time Domain) with staggered grids
+- ✅ Spectral solver framework (complete)
+- ✅ C-PML boundary conditions (complete)
+- ⏳ Hybrid Spectral-DG methods (in progress)
+- ⏳ IMEX schemes for stiff problems (upcoming)
 
 **Target Milestones**:
 
-1. <10 ms inference latency
-2. >90 % tissue-classification accuracy
-3. 2–5 × faster parameter convergence
-4. <500 MB ML memory overhead
+1. 100M+ grid updates/second performance
+2. 60-80% memory reduction with AMR
+3. <1% numerical dispersion error
+4. Robust shock wave handling
+
+### 📋 Completed: Phase 15 Q1 – Foundation Enhancements
+
+**Achievements**:
+- **Adaptive Mesh Refinement (AMR)**: Complete framework with wavelet error estimation
+- **Plugin Architecture**: Runtime-composable physics modules following SOLID principles
+- **Full Kuznetsov Equation**: All nonlinear terms and acoustic diffusivity
+- **Convolutional PML**: Enhanced boundary conditions with memory variables
+- **Design Principles**: SOLID, CUPID, GRASP, DRY, KISS, YAGNI fully implemented
 
 ### 📋 Upcoming: Phase 15 – Advanced Numerical Methods (2026)
 
@@ -351,9 +360,9 @@ If you use Kwavers in your research, please cite:
 
 ---
 
-**🚀 Ready for Phase 12**: AI/ML Integration & Optimization  
-**📅 Target Completion**: Q1 2025  
-**🎯 Next Milestone**: Seamless AI-assisted simulation loop
+**🚀 Ready for Phase 15**: Advanced Numerical Methods  
+**📅 Target Completion**: Q4 2026  
+**🎯 Next Milestone**: PSTD/FDTD plugin implementation
 
 ### Advanced Physics Models
 

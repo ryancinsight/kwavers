@@ -3,8 +3,8 @@
 //! This module calculates mechanical damage from cavitation bubble collapse
 //! including erosion, pitting, and material fatigue
 
-use crate::physics::bubble_dynamics::{BubbleState, BubbleStateFields};
-use ndarray::{Array3, Array2};
+use crate::physics::bubble_dynamics::BubbleStateFields;
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Cavitation damage model

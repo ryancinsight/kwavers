@@ -33,7 +33,7 @@ pub struct NonlinearWave {
     /// Flag to enable or disable adaptive time-stepping for potentially more stable simulations.
     pub(super) use_adaptive_timestep: bool,
     /// Order of k-space correction for dispersion handling (e.g., 1 for first-order, 2 for second-order).
-    pub(super) k_space_correction_order: usize,
+
 
     // Precomputed arrays
     /// Precomputed k-squared values (square of wavenumber magnitudes) for the grid, used to speed up calculations.
@@ -111,7 +111,7 @@ impl NonlinearWave {
             call_count: 0,
             nonlinearity_scaling: 1.0,     // Default scaling factor for nonlinearity
             use_adaptive_timestep: false,  // Default to fixed timestep
-            k_space_correction_order: 2,   // Default to second-order correction
+
             k_squared,
             max_pressure: 1e8,  // 100 MPa maximum pressure
             stability_threshold: 0.5, // CFL condition threshold
@@ -251,18 +251,7 @@ impl NonlinearWave {
         self.use_adaptive_timestep = enable;
     }
 
-    /// Sets the order of k-space correction for dispersion.
-    ///
-    /// Higher orders can provide more accurate handling of wave dispersion but may increase
-    /// computational cost. The order must be between 1 and 4 (inclusive).
-    ///
-    /// # Arguments
-    ///
-    /// * `order` - The desired order of k-space correction (1-4).
-    pub fn set_k_space_correction_order(&mut self, order: usize) {
-        assert!(order > 0 && order <= 4, "Correction order must be between 1 and 4");
-        self.k_space_correction_order = order;
-    }
+
 
     /// Sets the maximum allowed absolute pressure value in the simulation.
     ///
@@ -291,23 +280,9 @@ impl NonlinearWave {
     /// Calculates the phase factor for wave propagation in k-space.
     #[inline]
     pub(super) fn calculate_phase_factor(&self, k_val: f64, c: f64, dt: f64) -> f64 {
-        match self.k_space_correction_order {
-            1 => -c * k_val * dt,
-            2 => {
-                let kc_pi = k_val * c * dt / f64::consts::PI;
-                -c * k_val * dt * (1.0 - 0.25 * kc_pi.powi(2))
-            },
-            3 => {
-                let kc_pi = k_val * c * dt / f64::consts::PI;
-                let kc_pi_sq = kc_pi.powi(2);
-                -c * k_val * dt * (1.0 - 0.25 * kc_pi_sq + 0.05 * kc_pi_sq.powi(2))
-            },
-            _ => {
-                let kc_pi = k_val * c * dt / f64::consts::PI;
-                let kc_pi_sq = kc_pi.powi(2);
-                -c * k_val * dt * (1.0 - 0.25 * kc_pi_sq + 0.05 * kc_pi_sq.powi(2) - 0.008 * kc_pi_sq.powi(3))
-            },
-        }
+        // Using second-order k-space correction (was the default)
+        let kc_pi = k_val * c * dt / f64::consts::PI;
+        -c * k_val * dt * (1.0 - 0.25 * kc_pi.powi(2))
     }
 
     /// Checks the stability of the simulation.
@@ -885,7 +860,5 @@ impl AcousticWaveModel for NonlinearWave {
         self.set_nonlinearity_scaling(scaling);
     }
 
-    fn set_k_space_correction_order(&mut self, order: usize) {
-        self.set_k_space_correction_order(order);
-    }
+
 }

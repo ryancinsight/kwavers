@@ -1,9 +1,15 @@
-//! Rayleigh-Plesset and Keller-Miksis equation solvers
-//!
-//! Core bubble dynamics equations
+//! Rayleigh-Plesset equation solver for bubble dynamics
+//! 
+//! This module implements the Rayleigh-Plesset equation for modeling
+//! the dynamics of spherical bubbles in liquids.
 
 use super::bubble_state::{BubbleState, BubbleParameters};
 use std::f64::consts::PI;
+
+
+// Physical constants for bubble dynamics
+const MIN_RADIUS: f64 = 1e-9;  // Minimum bubble radius (1 nm)
+const MAX_RADIUS: f64 = 1e-2;  // Maximum bubble radius (1 cm)
 
 /// Rayleigh-Plesset equation solver (incompressible)
 pub struct RayleighPlessetSolver {

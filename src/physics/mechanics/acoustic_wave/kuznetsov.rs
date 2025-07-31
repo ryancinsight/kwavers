@@ -53,10 +53,10 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::utils::{fft_3d, ifft_3d};
-use crate::fft::{Fft3d, Ifft3d};
+use crate::fft::Fft3d;
 use ndarray::{Array3, Array4, Zip, Axis};
-use rustfft::num_complex::Complex;
 use std::f64::consts::PI;
+
 use log::{info, warn};
 use std::time::Instant;
 
@@ -636,10 +636,7 @@ impl AcousticWaveModel for KuznetsovWave {
         info!("Set nonlinearity scaling to {}", scaling);
     }
     
-    fn set_k_space_correction_order(&mut self, order: usize) {
-        info!("K-space correction order setting not applicable to Kuznetsov solver (order: {})", order);
-        // Kuznetsov solver uses full spectral accuracy, no correction order needed
-    }
+
 }
 
 // Helper functions
@@ -946,7 +943,6 @@ mod tests {
     use crate::medium::HomogeneousMedium;
     use crate::physics::traits::AcousticWaveModel;
     use ndarray::{Array3, Array4};
-    use std::f64::consts::PI;
     use crate::source::Source;
     use crate::signal::Signal;
     

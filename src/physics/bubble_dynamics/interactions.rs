@@ -195,7 +195,7 @@ impl CollectiveEffects {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::bubble_dynamics::bubble_state::{BubbleParameters, GasSpecies};
+    use crate::physics::bubble_dynamics::bubble_state::BubbleParameters;
     
     #[test]
     fn test_bjerknes_interaction_type() {

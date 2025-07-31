@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create nonlinear wave solver with enhanced physics
     let mut nonlinear_wave = NonlinearWave::new(&grid);
     nonlinear_wave.set_nonlinearity_scaling(2.0); // Enhance nonlinearity
-    nonlinear_wave.set_k_space_correction_order(3); // Higher-order correction
+
     info!("Configured nonlinear wave solver with enhanced physics");
     
     // Configure solver

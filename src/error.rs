@@ -91,6 +91,17 @@ impl StdError for KwaversError {
     }
 }
 
+impl KwaversError {
+    /// Helper to create a field validation error
+    pub fn field_validation(field: &str, value: impl ToString, constraint: &str) -> Self {
+        KwaversError::Validation(ValidationError::FieldValidation {
+            field: field.to_string(),
+            value: value.to_string(),
+            constraint: constraint.to_string(),
+        })
+    }
+}
+
 /// Grid-related errors
 /// 
 /// Implements Single Responsibility Principle - only handles grid-specific errors

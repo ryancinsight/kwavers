@@ -179,13 +179,18 @@ impl ROSConcentrations {
     }
     
     /// Apply diffusion using simple forward Euler
-    pub fn apply_diffusion(&mut self, dt: f64) {
-        // Use precomputed stability factor
-        if self.stability_factor > 0.5 {
+    pub fn apply_diffusion(&mut self, dx: f64, dy: f64, dz: f64, dt: f64) {
+        // Calculate maximum stability factor for the most diffusive species
+        let max_d = ROSSpecies::HydroxylRadical.diffusion_coefficient();
+        let min_spacing = dx.min(dy).min(dz);
+        let stability_factor = max_d * dt / min_spacing.powi(2);
+        
+        // Check stability condition
+        if stability_factor > 0.5 {
             log::warn!(
                 "Diffusion stability condition violated: D*dt/dx² = {:.3} > 0.5. \
                 Consider reducing timestep or using implicit scheme.",
-                self.stability_factor
+                stability_factor
             );
         }
         

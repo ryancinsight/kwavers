@@ -94,7 +94,7 @@ pub struct ViscoelasticWave {
 
     // Configuration parameters
     nonlinearity_scaling: f64,
-    k_space_correction_order: usize, // May not be used if we follow NonlinearWave's sinc correction
+
     max_pressure: f64,             // For clamping
     // clamp_gradients: bool, - Unused
 
@@ -141,7 +141,7 @@ impl ViscoelasticWave {
             // ky: Some(ky_arr_nd), // Field commented out
             // kz: Some(kz_arr_nd), // Field commented out
             nonlinearity_scaling: 1.0, // Default, can be adjusted
-            k_space_correction_order: 1, // Default
+
             max_pressure: 1e9,         // Default max pressure for clamping
             // clamp_gradients: false,     // Field commented out
             pressure_history: None,
@@ -526,11 +526,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         debug!("ViscoelasticWave: Nonlinearity scaling set to {}", scaling);
     }
 
-    fn set_k_space_correction_order(&mut self, order: usize) {
-        self.k_space_correction_order = order;
-        // Note: current implementation uses a specific sinc correction, order not directly used in the same way.
-        debug!("ViscoelasticWave: k-space correction order set to {} (may have limited effect in current impl)", order);
-    }
+
 }
 
 #[cfg(test)]

@@ -1,10 +1,10 @@
 # Kwavers Development Checklist
 
-## Next Phase: Phase 12 – AI/ML Integration & Optimization 🚧
+## Next Phase: Phase 15 – Advanced Numerical Methods 🚧
 
-**Current Status**: Phase 12 IN PROGRESS 🚧 – AI/ML Integration & Optimization  
-**Progress**: Sprint-4 (Integration) underway  
-**Target**: Seamless AI/simulation integration & model deployment
+**Current Status**: Phase 15 IN PROGRESS 🚧 – Advanced Numerical Methods  
+**Progress**: Q2 (Advanced Numerics) underway  
+**Target**: PSTD/FDTD implementation with plugin architecture
 
 ---
 
@@ -13,38 +13,40 @@
 ### ✅ **COMPLETED PHASES**
 - **Phase 1-10**: Foundation & GPU Performance Optimization ✅
 - **Phase 11**: Advanced Visualization & Real-Time Interaction ✅
+- **Phase 12**: AI/ML Integration & Optimization ✅
+- **Phase 13**: Cloud Computing & Distributed Simulation ✅
+- **Phase 14**: Clinical Applications & Validation ✅
 
 ### 🚀 **CURRENT PHASE**
-- **Phase 12**: AI/ML Integration & Optimization (Sprint-4 – Integration)
+- **Phase 15**: Advanced Numerical Methods (Q2 – PSTD/FDTD Implementation)
 
-### 📋 **UPCOMING PHASES**
-- **Phase 13**: Cloud Computing & Distributed Simulation
-- **Phase 14**: Clinical Applications & Validation
+### 📋 **UPCOMING WORK**
+- **Phase 15 Q3**: Physics Model Extensions
+- **Phase 15 Q4**: Optimization and Validation
 
 ---
 
-## Phase 12 Progress Summary (Sprints 1-3) ✅
+## Phase 15 Progress Summary (Q1) ✅
 
-### **Major Achievements - Phase 12** ✅
-- **Neural Network Framework**: Advanced AI/ML optimization with deep reinforcement learning ✅
-- **Parameter Optimization**: Neural network-based parameter optimization with experience replay ✅
-- **Pattern Recognition**: Cavitation and acoustic event detection with AI analysis ✅
-- **Convergence Prediction**: AI-assisted simulation convergence acceleration ✅
-- **Comprehensive Testing**: Full test coverage for ML/AI components with 11 passing tests ✅
+### **Major Achievements - Phase 15 Q1** ✅
+- **Adaptive Mesh Refinement (AMR)**: Complete framework with wavelet-based error estimation ✅
+- **Plugin Architecture**: Modular physics system with runtime composition ✅
+- **Full Kuznetsov Equation**: Complete nonlinear acoustic model with all terms ✅
+- **Convolutional PML (C-PML)**: Advanced boundary conditions with >60dB absorption ✅
+- **Spectral Solver Framework**: Foundation for hybrid spectral-DG methods ✅
 
 ### **Technical Implementation** ✅
-- **SimpleNeuralNetwork**: Custom neural network with Xavier initialization and ReLU activation ✅
-- **ParameterOptimizer**: Reinforcement learning optimizer with experience buffer and Q-learning ✅
-- **PatternRecognizer**: Cavitation detector and acoustic event analyzer ✅
-- **ConvergencePredictor**: AI-powered convergence prediction and acceleration recommendations ✅
-- **MLEngine Integration**: Enhanced ML engine with AI capabilities and default model initialization ✅
+- **AMRManager**: Octree-based refinement with conservative interpolation ✅
+- **PhysicsPlugin Trait**: Standardized interface for modular components ✅
+- **KuznetsovWave**: Full implementation with diffusivity and nonlinearity ✅
+- **CPMLBoundary**: Memory variable management and grazing angle optimization ✅
+- **SpectralSolver**: FFT-based derivatives and de-aliasing filters ✅
 
 ### **Infrastructure Established** ✅
-- **AI-Powered Optimization**: Complete reinforcement learning pipeline for parameter tuning ✅
-- **Pattern Analysis**: Real-time cavitation and acoustic event detection with classification ✅
-- **Convergence Acceleration**: AI-assisted simulation optimization with confidence metrics ✅
-- **Comprehensive API**: Full API for AI/ML integration with physics simulation ✅
-- **Phase 12 Milestone**: All requirements met, advancing to Phase 13 (Cloud Computing) ✅
+- **Composable Physics Pipeline**: CUPID-compliant component system ✅
+- **Numerical Methods Module**: Organized solver hierarchy ✅
+- **Comprehensive Testing**: Physics validation and accuracy tests ✅
+- **Design Principles**: SOLID, CUPID, GRASP, DRY, KISS, YAGNI fully applied ✅
 
 ---
 
@@ -161,12 +163,12 @@
 
 ---
 
-## Phase 15: Advanced Numerical Methods 📋 NEW
-**Status**: 📋 PLANNED  
+## Phase 15: Advanced Numerical Methods 🚧 IN PROGRESS
+**Status**: 🚧 IN PROGRESS (Q2 - Advanced Numerics)
 **Timeline**: 12 months (4 quarters)
 **RACI**: R-Dev Team, A-Tech Lead, C-Research Team, I-All Stakeholders
 
-### Quarter 1: Foundation (Months 1-3)
+### Quarter 1: Foundation (Months 1-3) ✅ COMPLETED
 - [x] **Adaptive Mesh Refinement (AMR)** *(60-80% memory reduction, 2-5x speedup)*
   - [x] Wavelet-based error estimators
   - [x] Octree data structures for 3D refinement
@@ -183,8 +185,21 @@
   - [ ] Multi-GPU support infrastructure
   - [ ] Benchmark against CPU implementation
 
-### Quarter 2: Advanced Numerics (Months 4-6)
+### Quarter 2: Advanced Numerics (Months 4-6) 🚧 IN PROGRESS
+- [ ] **PSTD Implementation** *(Pseudo-Spectral Time Domain)*
+  - [ ] K-space derivative computation
+  - [ ] Anti-aliasing filters (2/3 rule)
+  - [ ] Perfectly Matched Layer integration
+  - [ ] Numerical dispersion analysis
+  - [ ] Plugin-based architecture
+- [ ] **FDTD Implementation** *(Finite-Difference Time Domain)*
+  - [ ] Staggered grid (Yee cell) implementation
+  - [ ] Higher-order spatial schemes (4th, 6th order)
+  - [ ] Subgridding support
+  - [ ] ABC boundary conditions
+  - [ ] Plugin integration
 - [ ] **Hybrid Spectral-DG Methods** *(Better shock handling)*
+  - [x] Spectral solver framework
   - [ ] Discontinuity detection algorithms
   - [ ] DG solver implementation
   - [ ] Spectral-DG coupling interface
@@ -198,64 +213,4 @@
   - [x] C-PML implementation
   - [x] Memory variable management
   - [x] Grazing incidence optimization
-  - [x] Reflection coefficient validation (<-60 dB)
-
-### Quarter 3: Physics Extensions (Months 7-9)
-- [x] **Full Kuznetsov Equation** *(More complete nonlinear model)* ✅ COMPLETED
-  - [x] Second-order nonlinear terms
-  - [x] Third-order time derivatives
-  - [x] Harmonic generation validation
-  - [x] Comparison with Westervelt
-- [ ] **Multi-Rate Time Integration** *(10-100x speedup for multi-physics)*
-  - [ ] Time scale separation analysis
-  - [ ] Multi-rate integrator framework
-  - [ ] Coupling interval optimization
-  - [ ] Conservation property verification
-- [ ] **Advanced Tissue Models**
-  - [ ] Fractional derivative absorption
-  - [ ] Frequency-dependent properties
-  - [ ] Anisotropic tissue modeling
-  - [ ] Validation against experimental data
-
-### Quarter 4: Optimization and Validation (Months 10-12)
-- [ ] Performance profiling and tuning
-- [ ] Comprehensive validation suite
-- [ ] Benchmark comparisons with k-Wave
-- [ ] Documentation and tutorials
-- [ ] Integration testing
-- [ ] Release preparation
-
-### Success Metrics:
-- [ ] AMR: 60-80% memory reduction achieved
-- [ ] GPU Kernels: 20x minimum speedup
-- [ ] Multi-rate: 10x speedup for coupled problems
-- [ ] Shock handling: No spurious oscillations
-- [ ] Overall: 100M+ grid updates/second
-
-### Design Principles Compliance:
-- **SOLID**: Each enhancement as separate, testable module
-- **CUPID**: Composable physics plugins, Unix-like interfaces
-- **GRASP**: Clear responsibility separation
-- **DRY**: Shared numerical utilities
-- **KISS**: Simple interfaces for complex methods
-- **YAGNI**: Implement only validated requirements
-- **Clean**: Comprehensive documentation and tests
-
----
-
-## Completed Phases Summary
-
-### ✅ Phase 1-10: Foundation & GPU Optimization
-- Core physics engine with multi-physics support
-- GPU acceleration achieving >17M grid updates/second
-- Comprehensive validation framework
-
-### ✅ Phase 11: Advanced 3D Visualization  
-- WebGPU-based real-time rendering
-- Interactive parameter controls
-- Multi-field visualization support
-
-### 🚧 Phase 12: AI/ML Integration (Current)
-- Neural network optimization
-- Pattern recognition systems
-- Convergence acceleration 
+  - [x] Reflection coefficient validation (<-60 dB) 

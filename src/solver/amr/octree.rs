@@ -6,7 +6,7 @@
 //! - Memory-efficient storage
 //! - Fast parent-child navigation
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Octree node representing a spatial region
