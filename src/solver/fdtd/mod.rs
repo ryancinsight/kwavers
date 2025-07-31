@@ -114,9 +114,10 @@ impl FdtdSolver {
             }));
         }
         
-        // Initialize finite difference coefficients
+        // Initialize finite difference coefficients for central differences
+        // Each coefficient is multiplied by (f(x+ih) - f(x-ih)) for i=1,2,3...
         let mut fd_coeffs = HashMap::new();
-        fd_coeffs.insert(2, vec![1.0, -1.0]); // 2nd order
+        fd_coeffs.insert(2, vec![1.0]); // 2nd order: (f(x+h) - f(x-h))
         fd_coeffs.insert(4, vec![8.0/12.0, -1.0/12.0]); // 4th order
         fd_coeffs.insert(6, vec![45.0/60.0, -9.0/60.0, 1.0/60.0]); // 6th order
         
@@ -150,79 +151,41 @@ impl FdtdSolver {
             _ => panic!("Invalid axis"),
         };
         
-        // Apply finite differences based on order
-        match self.config.spatial_order {
-            2 => {
-                // 2nd order central differences
-                for i in 1..nx-1 {
-                    for j in 1..ny-1 {
-                        for k in 1..nz-1 {
-                            let val = match axis {
-                                0 => (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx),
-                                1 => (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx),
-                                2 => (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx),
-                                _ => 0.0,
-                            };
-                            deriv[[i, j, k]] = val;
+        // Determine bounds based on stencil size
+        let half_stencil = n_coeffs;
+        let start = half_stencil;
+        let (end_x, end_y, end_z) = (nx - half_stencil, ny - half_stencil, nz - half_stencil);
+        
+        // Apply finite differences generically using coefficients
+        for i in start..end_x {
+            for j in start..end_y {
+                for k in start..end_z {
+                    let mut val = 0.0;
+                    
+                    // Apply stencil coefficients
+                    for (idx, &coeff) in coeffs.iter().enumerate() {
+                        let offset = idx + 1;
+                        match axis {
+                            0 => {
+                                val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                            }
+                            1 => {
+                                val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                            }
+                            2 => {
+                                val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                            }
+                            _ => {}
                         }
                     }
+                    
+                    deriv[[i, j, k]] = val / dx;
                 }
             }
-            4 => {
-                // 4th order central differences
-                for i in 2..nx-2 {
-                    for j in 2..ny-2 {
-                        for k in 2..nz-2 {
-                            let val = match axis {
-                                0 => {
-                                    (-field[[i+2, j, k]] + 8.0*field[[i+1, j, k]] 
-                                     - 8.0*field[[i-1, j, k]] + field[[i-2, j, k]]) / (12.0 * dx)
-                                }
-                                1 => {
-                                    (-field[[i, j+2, k]] + 8.0*field[[i, j+1, k]] 
-                                     - 8.0*field[[i, j-1, k]] + field[[i, j-2, k]]) / (12.0 * dx)
-                                }
-                                2 => {
-                                    (-field[[i, j, k+2]] + 8.0*field[[i, j, k+1]] 
-                                     - 8.0*field[[i, j, k-1]] + field[[i, j, k-2]]) / (12.0 * dx)
-                                }
-                                _ => 0.0,
-                            };
-                            deriv[[i, j, k]] = val;
-                        }
-                    }
-                }
-            }
-            6 => {
-                // 6th order central differences
-                for i in 3..nx-3 {
-                    for j in 3..ny-3 {
-                        for k in 3..nz-3 {
-                            let val = match axis {
-                                0 => {
-                                    (field[[i+3, j, k]] - 9.0*field[[i+2, j, k]] 
-                                     + 45.0*field[[i+1, j, k]] - 45.0*field[[i-1, j, k]] 
-                                     + 9.0*field[[i-2, j, k]] - field[[i-3, j, k]]) / (60.0 * dx)
-                                }
-                                1 => {
-                                    (field[[i, j+3, k]] - 9.0*field[[i, j+2, k]] 
-                                     + 45.0*field[[i, j+1, k]] - 45.0*field[[i, j-1, k]] 
-                                     + 9.0*field[[i, j-2, k]] - field[[i, j-3, k]]) / (60.0 * dx)
-                                }
-                                2 => {
-                                    (field[[i, j, k+3]] - 9.0*field[[i, j, k+2]] 
-                                     + 45.0*field[[i, j, k+1]] - 45.0*field[[i, j, k-1]] 
-                                     + 9.0*field[[i, j, k-2]] - field[[i, j, k-3]]) / (60.0 * dx)
-                                }
-                                _ => 0.0,
-                            };
-                            deriv[[i, j, k]] = val;
-                        }
-                    }
-                }
-            }
-            _ => unreachable!(),
         }
+        
+        // Handle boundaries with lower-order schemes
+        self.apply_boundary_derivatives(&mut deriv, field, axis, dx);
         
         // Apply stagger offset if using staggered grid
         if self.config.staggered_grid && stagger_offset != 0.0 {
@@ -230,6 +193,77 @@ impl FdtdSolver {
             self.interpolate_to_staggered(&deriv, axis, stagger_offset)
         } else {
             deriv
+        }
+    }
+    
+    /// Apply lower-order derivatives at boundaries
+    fn apply_boundary_derivatives(
+        &self,
+        deriv: &mut Array3<f64>,
+        field: &Array3<f64>,
+        axis: usize,
+        dx: f64,
+    ) {
+        let (nx, ny, nz) = field.dim();
+        let half_stencil = self.fd_coeffs[&self.config.spatial_order].len();
+        
+        // Use 2nd order at boundaries
+        match axis {
+            0 => {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        // Left boundary
+                        for i in 0..half_stencil.min(nx) {
+                            if i > 0 && i < nx - 1 {
+                                deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
+                            }
+                        }
+                        // Right boundary
+                        for i in (nx - half_stencil).max(0)..nx {
+                            if i > 0 && i < nx - 1 {
+                                deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
+                            }
+                        }
+                    }
+                }
+            }
+            1 => {
+                for i in 0..nx {
+                    for k in 0..nz {
+                        // Bottom boundary
+                        for j in 0..half_stencil.min(ny) {
+                            if j > 0 && j < ny - 1 {
+                                deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
+                            }
+                        }
+                        // Top boundary
+                        for j in (ny - half_stencil).max(0)..ny {
+                            if j > 0 && j < ny - 1 {
+                                deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
+                            }
+                        }
+                    }
+                }
+            }
+            2 => {
+                for i in 0..nx {
+                    for j in 0..ny {
+                        // Front boundary
+                        for k in 0..half_stencil.min(nz) {
+                            if k > 0 && k < nz - 1 {
+                                deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
+                            }
+                        }
+                        // Back boundary
+                        for k in (nz - half_stencil).max(0)..nz {
+                            if k > 0 && k < nz - 1 {
+                                deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
     
