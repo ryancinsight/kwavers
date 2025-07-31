@@ -13,15 +13,16 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::boundary::Boundary;
-use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::physics::plugin::{PhysicsPlugin, PluginPriority, PluginConfig};
+use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginConfig, PluginContext};
+use crate::physics::composable::{FieldType, ValidationResult};
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{debug, info, warn};
 
 /// FDTD solver configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FdtdConfig {
     /// Spatial derivative order (2, 4, or 6)
     pub spatial_order: usize,
@@ -106,10 +107,10 @@ impl FdtdSolver {
         
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
-            return Err(KwaversError::Validation(ValidationError::InvalidParameter {
-                parameter: "spatial_order".to_string(),
-                reason: "spatial order must be 2, 4, or 6".to_string(),
-                suggestion: "Use 2 for speed, 4 for balance, 6 for accuracy".to_string(),
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "spatial_order".to_string(),
+                value: config.spatial_order.to_string(),
+                constraint: "must be 2, 4, or 6".to_string(),
             }));
         }
         
@@ -383,9 +384,11 @@ impl FdtdSolver {
         end: (usize, usize, usize),
     ) -> KwaversResult<()> {
         if !self.config.subgridding {
-            return Err(KwaversError::Configuration(
-                "Subgridding is not enabled".to_string()
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "subgridding".to_string(),
+                value: "false".to_string(),
+                constraint: "must be enabled to add subgrids".to_string(),
+            }));
         }
         
         let factor = self.config.subgrid_factor;
@@ -498,68 +501,87 @@ impl FdtdSolver {
 /// FDTD solver as a physics plugin
 pub struct FdtdPlugin {
     solver: FdtdSolver,
-    enabled: bool,
+    metadata: PluginMetadata,
 }
 
 impl FdtdPlugin {
     pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
         let solver = FdtdSolver::new(config, grid)?;
+        let metadata = PluginMetadata {
+            id: "fdtd_solver".to_string(),
+            name: "FDTD Solver".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Finite-Difference Time Domain solver with staggered grid support".to_string(),
+            author: "Kwavers Team".to_string(),
+            license: "MIT".to_string(),
+        };
         Ok(Self {
             solver,
-            enabled: true,
+            metadata,
         })
     }
 }
 
+impl std::fmt::Debug for FdtdPlugin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FdtdPlugin")
+            .field("metadata", &self.metadata)
+            .finish()
+    }
+}
+
 impl PhysicsPlugin for FdtdPlugin {
-    fn name(&self) -> &str {
-        "FDTD Solver"
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
     }
     
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn required_fields(&self) -> Vec<FieldType> {
+        vec![
+            FieldType::Pressure,  // Needs pressure for velocity update
+            FieldType::Velocity,  // Needs velocity for pressure update
+        ]
     }
     
-    fn description(&self) -> &str {
-        "Finite-Difference Time Domain solver with staggered grid support"
+    fn provided_fields(&self) -> Vec<FieldType> {
+        vec![
+            FieldType::Pressure,  // Updates pressure field
+            FieldType::Velocity,  // Updates velocity fields
+        ]
     }
     
-    fn priority(&self) -> PluginPriority {
-        PluginPriority::Normal // Can work alongside other solvers
-    }
-    
-    fn enabled(&self) -> bool {
-        self.enabled
-    }
-    
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-    }
-    
-    fn configure(&mut self, config: &PluginConfig) -> KwaversResult<()> {
-        // Parse FDTD-specific configuration
-        if let Some(spatial_order) = config.get("spatial_order").and_then(|v| v.as_u64()) {
-            self.solver.config.spatial_order = spatial_order as usize;
+    fn initialize(
+        &mut self,
+        _config: Option<Box<dyn PluginConfig>>,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<()> {
+        // Check grid size compatibility with spatial order
+        let min_size = match self.solver.config.spatial_order {
+            2 => 3,
+            4 => 5,
+            6 => 7,
+            _ => 3,
+        };
+        
+        if grid.nx < min_size || grid.ny < min_size || grid.nz < min_size {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "grid_size".to_string(),
+                value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
+                constraint: format!("minimum {} points for order {}", min_size, self.solver.config.spatial_order),
+            }));
         }
-        if let Some(staggered_grid) = config.get("staggered_grid").and_then(|v| v.as_bool()) {
-            self.solver.config.staggered_grid = staggered_grid;
-        }
-        if let Some(cfl_factor) = config.get("cfl_factor").and_then(|v| v.as_f64()) {
-            self.solver.config.cfl_factor = cfl_factor;
-        }
-        if let Some(subgridding) = config.get("subgridding").and_then(|v| v.as_bool()) {
-            self.solver.config.subgridding = subgridding;
-        }
+        
         Ok(())
     }
     
-    fn process(
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
+        _context: &PluginContext,
     ) -> KwaversResult<()> {
         // Extract velocity and pressure fields
         let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
@@ -575,25 +597,40 @@ impl PhysicsPlugin for FdtdPlugin {
         
         // Handle subgrids if enabled
         if self.solver.config.subgridding {
-            for subgrid in &mut self.solver.subgrids {
+            let subgrid_factor = self.solver.config.subgrid_factor;
+            let fine_dt = dt / subgrid_factor as f64;
+            
+            for i in 0..self.solver.subgrids.len() {
                 // Interpolate to fine grid
-                self.solver.interpolate_to_fine(&pressure, &mut subgrid.fine_pressure, subgrid);
-                self.solver.interpolate_to_fine(&velocity_x, &mut subgrid.fine_vx, subgrid);
-                self.solver.interpolate_to_fine(&velocity_y, &mut subgrid.fine_vy, subgrid);
-                self.solver.interpolate_to_fine(&velocity_z, &mut subgrid.fine_vz, subgrid);
+                let subgrid = &self.solver.subgrids[i];
+                let mut fine_pressure = subgrid.fine_pressure.clone();
+                let mut fine_vx = subgrid.fine_vx.clone();
+                let mut fine_vy = subgrid.fine_vy.clone();
+                let mut fine_vz = subgrid.fine_vz.clone();
+                
+                self.solver.interpolate_to_fine(&pressure, &mut fine_pressure, subgrid);
+                self.solver.interpolate_to_fine(&velocity_x, &mut fine_vx, subgrid);
+                self.solver.interpolate_to_fine(&velocity_y, &mut fine_vy, subgrid);
+                self.solver.interpolate_to_fine(&velocity_z, &mut fine_vz, subgrid);
                 
                 // Update fine grid with smaller time steps
-                let fine_dt = dt / self.solver.config.subgrid_factor as f64;
-                for _ in 0..self.solver.config.subgrid_factor {
+                for _ in 0..subgrid_factor {
                     // Update fine grid (simplified - would need proper boundary handling)
                     // This is a placeholder for actual subgrid updates
                 }
                 
                 // Restrict back to coarse grid
-                self.solver.restrict_to_coarse(&subgrid.fine_pressure, &mut pressure, subgrid);
-                self.solver.restrict_to_coarse(&subgrid.fine_vx, &mut velocity_x, subgrid);
-                self.solver.restrict_to_coarse(&subgrid.fine_vy, &mut velocity_y, subgrid);
-                self.solver.restrict_to_coarse(&subgrid.fine_vz, &mut velocity_z, subgrid);
+                self.solver.restrict_to_coarse(&fine_pressure, &mut pressure, subgrid);
+                self.solver.restrict_to_coarse(&fine_vx, &mut velocity_x, subgrid);
+                self.solver.restrict_to_coarse(&fine_vy, &mut velocity_y, subgrid);
+                self.solver.restrict_to_coarse(&fine_vz, &mut velocity_z, subgrid);
+                
+                // Update the subgrid
+                let subgrid_mut = &mut self.solver.subgrids[i];
+                subgrid_mut.fine_pressure = fine_pressure;
+                subgrid_mut.fine_vx = fine_vx;
+                subgrid_mut.fine_vy = fine_vy;
+                subgrid_mut.fine_vz = fine_vz;
             }
         }
         
@@ -606,35 +643,14 @@ impl PhysicsPlugin for FdtdPlugin {
         Ok(())
     }
     
-    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        // Check grid size compatibility with spatial order
-        let min_size = match self.solver.config.spatial_order {
-            2 => 3,
-            4 => 5,
-            6 => 7,
-            _ => 3,
-        };
-        
-        if grid.nx < min_size || grid.ny < min_size || grid.nz < min_size {
-            return Err(KwaversError::Validation(ValidationError::InvalidParameter {
-                parameter: "grid_size".to_string(),
-                reason: format!("FDTD with order {} requires minimum {} points in each dimension", 
-                               self.solver.config.spatial_order, min_size),
-                suggestion: "Increase grid resolution or reduce spatial order".to_string(),
-            }));
-        }
-        
-        Ok(())
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.solver.get_metrics().clone()
     }
     
     fn reset(&mut self) -> KwaversResult<()> {
         self.solver.metrics.clear();
         self.solver.subgrids.clear();
         Ok(())
-    }
-    
-    fn get_metrics(&self) -> HashMap<String, f64> {
-        self.solver.get_metrics().clone()
     }
 }
 

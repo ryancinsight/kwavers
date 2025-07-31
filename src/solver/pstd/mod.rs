@@ -14,7 +14,8 @@ use crate::medium::Medium;
 use crate::boundary::Boundary;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
-use crate::physics::plugin::{PhysicsPlugin, PluginPriority, PluginConfig};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginConfig, PluginContext};
+use crate::physics::composable::{FieldType, ValidationResult};
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -23,7 +24,7 @@ use serde::{Serialize, Deserialize};
 use log::{debug, info, warn};
 
 /// PSTD solver configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PstdConfig {
     /// Enable k-space correction for improved accuracy
     pub k_space_correction: bool,
@@ -76,10 +77,10 @@ impl PstdSolver {
         
         // Validate configuration
         if config.k_space_order % 2 != 0 {
-            return Err(KwaversError::Validation(ValidationError::InvalidParameter {
-                parameter: "k_space_order".to_string(),
-                reason: "k-space order must be even".to_string(),
-                suggestion: "Use 2, 4, 6, or 8".to_string(),
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "k_space_order".to_string(),
+                value: config.k_space_order.to_string(),
+                constraint: "must be even (2, 4, 6, or 8)".to_string(),
             }));
         }
         
@@ -242,11 +243,8 @@ impl PstdSolver {
             .map_collect(|&rho, &c| rho * c * c);
         
         // Transform velocity divergence to k-space
-        let div_v_complex = velocity_divergence.mapv(|x| Complex::new(x, 0.0));
-        let fields_4d = Array4::from_shape_vec(
-            (1, velocity_divergence.shape()[0], velocity_divergence.shape()[1], velocity_divergence.shape()[2]),
-            div_v_complex.into_raw_vec()
-        ).unwrap();
+        let mut fields_4d = Array4::zeros((1, velocity_divergence.shape()[0], velocity_divergence.shape()[1], velocity_divergence.shape()[2]));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(velocity_divergence);
         
         let mut div_v_hat = fft_3d(&fields_4d, 0, &self.grid);
         
@@ -276,7 +274,7 @@ impl PstdSolver {
             .and(&pressure_update)
             .and(&rho_c2)
             .for_each(|p, &update, &rho_c2_val| {
-                *p += update.re * rho_c2_val;
+                *p += update * rho_c2_val;
             });
         
         // Update metrics
@@ -303,11 +301,8 @@ impl PstdSolver {
         let rho_array = medium.density_array();
         
         // Transform pressure to k-space
-        let pressure_complex = pressure.mapv(|x| Complex::new(x, 0.0));
-        let fields_4d = Array4::from_shape_vec(
-            (1, pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]),
-            pressure_complex.into_raw_vec()
-        ).unwrap();
+        let mut fields_4d = Array4::zeros((1, pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(pressure);
         
         let mut pressure_hat = fft_3d(&fields_4d, 0, &self.grid);
         
@@ -324,12 +319,14 @@ impl PstdSolver {
         let grad_z_hat = &pressure_hat * &self.kz.mapv(|k| Complex::new(0.0, k));
         
         // Apply k-space correction if enabled
-        if let Some(ref kappa) = self.kappa {
+        let (grad_x_hat, grad_y_hat, grad_z_hat) = if let Some(ref kappa) = self.kappa {
             let kappa_complex = kappa.mapv(|k| Complex::new(k, 0.0));
-            let grad_x_hat = grad_x_hat * &kappa_complex;
-            let grad_y_hat = grad_y_hat * &kappa_complex;
-            let grad_z_hat = grad_z_hat * &kappa_complex;
-        }
+            (grad_x_hat * &kappa_complex,
+             grad_y_hat * &kappa_complex,
+             grad_z_hat * &kappa_complex)
+        } else {
+            (grad_x_hat, grad_y_hat, grad_z_hat)
+        };
         
         // Transform back to physical space
         let grad_x = ifft_3d(&grad_x_hat, &self.grid);
@@ -341,21 +338,21 @@ impl PstdSolver {
             .and(&grad_x)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
-                *v -= dt * grad.re / rho;
+                *v -= dt * grad / rho;
             });
         
         Zip::from(velocity_y)
             .and(&grad_y)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
-                *v -= dt * grad.re / rho;
+                *v -= dt * grad / rho;
             });
         
         Zip::from(velocity_z)
             .and(&grad_z)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
-                *v -= dt * grad.re / rho;
+                *v -= dt * grad / rho;
             });
         
         // Update metrics
@@ -373,22 +370,13 @@ impl PstdSolver {
         velocity_z: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
         // Transform velocities to k-space
-        let vx_complex = velocity_x.mapv(|x| Complex::new(x, 0.0));
-        let vy_complex = velocity_y.mapv(|x| Complex::new(x, 0.0));
-        let vz_complex = velocity_z.mapv(|x| Complex::new(x, 0.0));
+        let mut fields_x = Array4::zeros((1, velocity_x.shape()[0], velocity_x.shape()[1], velocity_x.shape()[2]));
+        let mut fields_y = Array4::zeros((1, velocity_y.shape()[0], velocity_y.shape()[1], velocity_y.shape()[2]));
+        let mut fields_z = Array4::zeros((1, velocity_z.shape()[0], velocity_z.shape()[1], velocity_z.shape()[2]));
         
-        let fields_x = Array4::from_shape_vec(
-            (1, velocity_x.shape()[0], velocity_x.shape()[1], velocity_x.shape()[2]),
-            vx_complex.into_raw_vec()
-        ).unwrap();
-        let fields_y = Array4::from_shape_vec(
-            (1, velocity_y.shape()[0], velocity_y.shape()[1], velocity_y.shape()[2]),
-            vy_complex.into_raw_vec()
-        ).unwrap();
-        let fields_z = Array4::from_shape_vec(
-            (1, velocity_z.shape()[0], velocity_z.shape()[1], velocity_z.shape()[2]),
-            vz_complex.into_raw_vec()
-        ).unwrap();
+        fields_x.index_axis_mut(Axis(0), 0).assign(velocity_x);
+        fields_y.index_axis_mut(Axis(0), 0).assign(velocity_y);
+        fields_z.index_axis_mut(Axis(0), 0).assign(velocity_z);
         
         let vx_hat = fft_3d(&fields_x, 0, &self.grid);
         let vy_hat = fft_3d(&fields_y, 0, &self.grid);
@@ -411,7 +399,7 @@ impl PstdSolver {
         
         // Transform back to physical space
         let divergence = ifft_3d(&div_hat, &self.grid);
-        Ok(divergence.mapv(|c| c.re))
+        Ok(divergence)
     }
     
     /// Get maximum stable time step
@@ -429,65 +417,85 @@ impl PstdSolver {
 /// PSTD solver as a physics plugin
 pub struct PstdPlugin {
     solver: PstdSolver,
-    enabled: bool,
+    metadata: PluginMetadata,
 }
 
 impl PstdPlugin {
     pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
         let solver = PstdSolver::new(config, grid)?;
+        let metadata = PluginMetadata {
+            id: "pstd_solver".to_string(),
+            name: "PSTD Solver".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Pseudo-Spectral Time Domain solver for high-accuracy wave propagation".to_string(),
+            author: "Kwavers Team".to_string(),
+            license: "MIT".to_string(),
+        };
         Ok(Self {
             solver,
-            enabled: true,
+            metadata,
         })
     }
 }
 
+impl std::fmt::Debug for PstdPlugin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PstdPlugin")
+            .field("metadata", &self.metadata)
+            .finish()
+    }
+}
+
 impl PhysicsPlugin for PstdPlugin {
-    fn name(&self) -> &str {
-        "PSTD Solver"
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
     }
     
-    fn version(&self) -> &str {
-        "1.0.0"
+    fn required_fields(&self) -> Vec<FieldType> {
+        vec![
+            FieldType::Velocity,  // Needs velocity fields for divergence
+        ]
     }
     
-    fn description(&self) -> &str {
-        "Pseudo-Spectral Time Domain solver for high-accuracy wave propagation"
+    fn provided_fields(&self) -> Vec<FieldType> {
+        vec![
+            FieldType::Pressure,  // Updates pressure field
+            FieldType::Velocity,  // Updates velocity fields
+        ]
     }
     
-    fn priority(&self) -> PluginPriority {
-        PluginPriority::High // Should run before other wave solvers
-    }
-    
-    fn enabled(&self) -> bool {
-        self.enabled
-    }
-    
-    fn set_enabled(&mut self, enabled: bool) {
-        self.enabled = enabled;
-    }
-    
-    fn configure(&mut self, config: &PluginConfig) -> KwaversResult<()> {
-        // Parse PSTD-specific configuration
-        if let Some(k_space_order) = config.get("k_space_order").and_then(|v| v.as_u64()) {
-            self.solver.config.k_space_order = k_space_order as usize;
+    fn initialize(
+        &mut self,
+        _config: Option<Box<dyn PluginConfig>>,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<()> {
+        // Validate grid compatibility
+        if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "grid_size".to_string(),
+                value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
+                constraint: "minimum 16 points in each dimension".to_string(),
+            }));
         }
-        if let Some(anti_aliasing) = config.get("anti_aliasing").and_then(|v| v.as_bool()) {
-            self.solver.config.anti_aliasing = anti_aliasing;
+        
+        // Check if grid sizes are suitable for FFT (power of 2 is optimal)
+        let is_power_of_2 = |n: usize| (n & (n - 1)) == 0;
+        if !is_power_of_2(grid.nx) || !is_power_of_2(grid.ny) || !is_power_of_2(grid.nz) {
+            warn!("Grid dimensions are not powers of 2, FFT performance may be suboptimal");
         }
-        if let Some(cfl_factor) = config.get("cfl_factor").and_then(|v| v.as_f64()) {
-            self.solver.config.cfl_factor = cfl_factor;
-        }
+        
         Ok(())
     }
     
-    fn process(
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
+        _context: &PluginContext,
     ) -> KwaversResult<()> {
         // Extract velocity and pressure fields
         let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
@@ -513,32 +521,13 @@ impl PhysicsPlugin for PstdPlugin {
         Ok(())
     }
     
-    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        // Check grid size compatibility
-        if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
-            return Err(KwaversError::Validation(ValidationError::InvalidParameter {
-                parameter: "grid_size".to_string(),
-                reason: "PSTD requires minimum 16 points in each dimension".to_string(),
-                suggestion: "Increase grid resolution".to_string(),
-            }));
-        }
-        
-        // Check if grid sizes are suitable for FFT (power of 2 is optimal)
-        let is_power_of_2 = |n: usize| (n & (n - 1)) == 0;
-        if !is_power_of_2(grid.nx) || !is_power_of_2(grid.ny) || !is_power_of_2(grid.nz) {
-            warn!("Grid dimensions are not powers of 2, FFT performance may be suboptimal");
-        }
-        
-        Ok(())
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.solver.get_metrics().clone()
     }
     
     fn reset(&mut self) -> KwaversResult<()> {
         self.solver.metrics.clear();
         Ok(())
-    }
-    
-    fn get_metrics(&self) -> HashMap<String, f64> {
-        self.solver.get_metrics().clone()
     }
 }
 

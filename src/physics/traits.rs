@@ -43,9 +43,6 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     /// Sets the scaling factor for the nonlinearity term.
     fn set_nonlinearity_scaling(&mut self, scaling: f64);
 
-    /// Sets the order of k-space correction for dispersion.
-    fn set_k_space_correction_order(&mut self, order: usize);
-
     // Consider adding methods for configuration if common settings are identifiable
     // e.g., set_adaptive_timestep, etc.
     // However, these might be too implementation-specific for a general trait.

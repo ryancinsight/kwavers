@@ -23,7 +23,7 @@ mod tests {
         
         let density = 1000.0;
         let sound_speed = 1500.0;
-        let medium = HomogeneousMedium::new(density, sound_speed, 0.0, 1.0);
+        let medium = HomogeneousMedium::new(density, sound_speed, &grid, 0.0, 1.0);
         
         let config = FdtdConfig {
             spatial_order: 4,
@@ -42,8 +42,8 @@ mod tests {
         
         let mut pressure = Array3::zeros((nx, ny, nz));
         let mut velocity_x = Array3::zeros((nx, ny, nz));
-        let velocity_y = Array3::zeros((nx, ny, nz));
-        let velocity_z = Array3::zeros((nx, ny, nz));
+        let mut velocity_y = Array3::zeros((nx, ny, nz));
+        let mut velocity_z = Array3::zeros((nx, ny, nz));
         
         // Initial conditions
         let amplitude = 1.0;

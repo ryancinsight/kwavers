@@ -627,10 +627,7 @@ impl AcousticWaveModel for ElasticWave {
         debug!("Nonlinearity scaling not applicable for linear elastic waves");
     }
 
-    fn set_k_space_correction_order(&mut self, _order: usize) {
-        // Not applicable for linear elastic waves
-        debug!("K-space correction order not applicable for linear elastic waves");
-    }
+
 }
 
 mod tests;

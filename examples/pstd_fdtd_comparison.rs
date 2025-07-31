@@ -7,7 +7,7 @@
 use kwavers::*;
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
-use kwavers::physics::plugin::{PhysicsPluginManager, PluginConfig};
+use kwavers::physics::plugin::{PluginManager, PluginContext};
 use ndarray::{Array3, Array4, Axis};
 use std::f64::consts::PI;
 use std::time::Instant;
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grid = Grid::new(grid_points, grid_points, grid_points, dx, dx, dx);
     
     // Create medium (homogeneous water)
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 1.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
     
     // Time parameters
     let c_max = 1500.0;
@@ -97,8 +97,8 @@ fn run_pstd_simulation(
     let pstd_plugin = PstdPlugin::new(pstd_config.clone(), grid)?;
     
     // Set up plugin manager
-    let mut plugin_manager = PhysicsPluginManager::new();
-    plugin_manager.add_plugin(Box::new(pstd_plugin))?;
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.register(Box::new(pstd_plugin))?;
     
     // Initialize fields
     let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz));
@@ -130,12 +130,15 @@ fn run_pstd_simulation(
     println!("  Number of steps: {}", n_steps);
     println!("  CFL number: {:.3}", c_max * dt / grid.dx);
     
-    let mut max_pressure = 0.0;
+    let mut max_pressure: f64 = 0.0;
     
     // Main time loop
     for step in 0..n_steps {
+        // Create plugin context
+        let context = PluginContext::new(step, n_steps, 1e6);
+        
         // Process with plugins
-        plugin_manager.process(&mut fields, grid, medium, dt, step as f64 * dt)?;
+        plugin_manager.update_all(&mut fields, grid, medium, dt, step as f64 * dt, &context)?;
         
         // Track maximum pressure
         let pressure = fields.index_axis(Axis(0), 0);
@@ -186,8 +189,8 @@ fn run_fdtd_simulation(
     let fdtd_plugin = FdtdPlugin::new(fdtd_config.clone(), grid)?;
     
     // Set up plugin manager
-    let mut plugin_manager = PhysicsPluginManager::new();
-    plugin_manager.add_plugin(Box::new(fdtd_plugin))?;
+    let mut plugin_manager = PluginManager::new();
+    plugin_manager.register(Box::new(fdtd_plugin))?;
     
     // Initialize fields (same as PSTD)
     let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz));
@@ -224,12 +227,15 @@ fn run_fdtd_simulation(
     println!("  Number of steps: {}", n_steps);
     println!("  CFL number: {:.3}", c_max * dt / grid.dx);
     
-    let mut max_pressure = 0.0;
+    let mut max_pressure: f64 = 0.0;
     
     // Main time loop
     for step in 0..n_steps {
+        // Create plugin context
+        let context = PluginContext::new(step, n_steps, 1e6);
+        
         // Process with plugins
-        plugin_manager.process(&mut fields, grid, medium, dt, step as f64 * dt)?;
+        plugin_manager.update_all(&mut fields, grid, medium, dt, step as f64 * dt, &context)?;
         
         // Track maximum pressure
         let pressure = fields.index_axis(Axis(0), 0);
@@ -259,7 +265,7 @@ fn run_fdtd_simulation(
 }
 
 /// Compare results from PSTD and FDTD
-fn compare_results(pstd: &SimulationResult, fdtd: &SimulationResult, grid: &Grid) {
+fn compare_results(pstd: &SimulationResult, fdtd: &SimulationResult, _grid: &Grid) {
     // Compute difference
     let diff = &pstd.final_pressure - &fdtd.final_pressure;
     let max_diff = diff.iter().map(|&d| d.abs()).fold(0.0, f64::max);

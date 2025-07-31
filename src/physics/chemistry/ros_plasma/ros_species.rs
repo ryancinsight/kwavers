@@ -98,6 +98,8 @@ pub struct ROSConcentrations {
     pub total_ros: Array3<f64>,
     /// Grid dimensions
     shape: (usize, usize, usize),
+    /// Stability factor for diffusion
+    stability_factor: f64,
 }
 
 impl ROSConcentrations {
@@ -124,6 +126,7 @@ impl ROSConcentrations {
             fields,
             total_ros: Array3::zeros(shape),
             shape,
+            stability_factor: 0.0,
         }
     }
     
@@ -179,7 +182,11 @@ impl ROSConcentrations {
     }
     
     /// Apply diffusion using simple forward Euler
-    pub fn apply_diffusion(&mut self, dt: f64) {
+    pub fn apply_diffusion(&mut self, dx: f64, dy: f64, dz: f64, dt: f64) {
+        // Calculate maximum stability factor
+        let max_d = ROSSpecies::HydroxylRadical.diffusion_coefficient();
+        self.stability_factor = max_d * dt / dx.min(dy).min(dz).powi(2);
+        
         // Use precomputed stability factor
         if self.stability_factor > 0.5 {
             log::warn!(

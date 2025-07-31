@@ -636,10 +636,7 @@ impl AcousticWaveModel for KuznetsovWave {
         info!("Set nonlinearity scaling to {}", scaling);
     }
     
-    fn set_k_space_correction_order(&mut self, order: usize) {
-        info!("K-space correction order setting not applicable to Kuznetsov solver (order: {})", order);
-        // Kuznetsov solver uses full spectral accuracy, no correction order needed
-    }
+
 }
 
 // Helper functions

@@ -706,10 +706,6 @@ pub struct AcousticWaveComponent {
     state: ComponentState,
     /// Use higher-order spatial derivatives for improved accuracy
     spatial_order: usize,
-    /// Enable k-space derivatives for spectral accuracy
-    use_kspace: bool,
-    /// Precomputed k-squared values for efficiency
-    k_squared: Option<Array3<f64>>,
 }
 
 impl AcousticWaveComponent {
@@ -719,17 +715,7 @@ impl AcousticWaveComponent {
             metrics: HashMap::new(),
             state: ComponentState::Initialized,
             spatial_order: 4, // Default to 4th order accuracy
-            use_kspace: false, // Default to finite differences for compatibility
-            k_squared: None,
         }
-    }
-    
-    /// Create with k-space derivatives for improved accuracy
-    pub fn with_kspace(id: String, grid: &Grid) -> Self {
-        let mut component = Self::new(id);
-        component.use_kspace = true;
-        component.k_squared = Some(grid.k_squared());
-        component
     }
     
     /// Set spatial derivative order (2, 4, or 6)
@@ -859,15 +845,6 @@ impl PhysicsComponent for AcousticWaveComponent {
         self.state = ComponentState::Running;
         
         let start_time = Instant::now();
-        
-        // Enhanced wave equation update with improved physics
-        if self.use_kspace {
-            // K-space implementation for spectral accuracy
-            // This provides exact derivatives in the spectral domain
-            return Err(KwaversError::NotImplemented(
-                "KuznetsovWaveComponent only supports pressure field".to_string()
-            ));
-        }
         
         // Create temporary arrays to avoid borrowing conflicts
         let mut pressure_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));

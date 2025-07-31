@@ -138,7 +138,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut acoustic_wave_model = NonlinearWave::new(&grid_clone);
     // Configure the nonlinear wave solver for better HIFU physics
     acoustic_wave_model.set_nonlinearity_scaling(2.0);
-    acoustic_wave_model.set_k_space_correction_order(3);
+
 
     let wave: Box<dyn AcousticWaveModel> = Box::new(acoustic_wave_model);
     let cavitation: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid_clone, 10e-6));

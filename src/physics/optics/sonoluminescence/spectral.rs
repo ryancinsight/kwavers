@@ -2,7 +2,8 @@
 //!
 //! Tools for analyzing emission spectra and extracting physical parameters
 
-use ndarray::{Array1, Array2};
+use crate::error::KwaversResult;
+use ndarray::{Array1, Array2, s};
 use std::f64::consts::PI;
 
 /// Wavelength range for spectral analysis
@@ -43,7 +44,7 @@ impl SpectralRange {
         let w = wavelength * 1e9; // Convert to nm
         
         // Pre-computed RGB lookup table for wavelengths (in nm)
-        const RGB_TABLE: &[(f64, f64, f64)] = &[
+        const RGB_TABLE: &[(f64, f64, f64, f64)] = &[
             (380.0, 0.0, 0.0, 0.0), // UV
             (440.0, 0.0, 0.0, 1.0),
             (490.0, 0.0, 1.0, 1.0),

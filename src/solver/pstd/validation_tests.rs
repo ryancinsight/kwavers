@@ -25,7 +25,7 @@ mod tests {
         // Create homogeneous medium
         let density = 1000.0; // kg/m³
         let sound_speed = 1500.0; // m/s
-        let medium = HomogeneousMedium::new(density, sound_speed, 0.0, 1.0);
+        let medium = HomogeneousMedium::new(density, sound_speed, &grid, 0.0, 1.0);
         
         // PSTD configuration
         let config = PstdConfig {
@@ -45,8 +45,8 @@ mod tests {
         
         let mut pressure = Array3::zeros((nx, ny, nz));
         let mut velocity_x = Array3::zeros((nx, ny, nz));
-        let velocity_y = Array3::zeros((nx, ny, nz));
-        let velocity_z = Array3::zeros((nx, ny, nz));
+        let mut velocity_y = Array3::zeros((nx, ny, nz));
+        let mut velocity_z = Array3::zeros((nx, ny, nz));
         
         // Initial conditions: p = A*sin(kx), vx = (A/ρc)*sin(kx)
         let amplitude = 1.0;
@@ -98,7 +98,7 @@ mod tests {
     fn test_numerical_dispersion() {
         let nx = 128;
         let grid = Grid::new(nx, nx, nx, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 1.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: true,
@@ -179,7 +179,7 @@ mod tests {
     fn test_energy_conservation() {
         let nx = 64;
         let grid = Grid::new(nx, nx, nx, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 1.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: true,
