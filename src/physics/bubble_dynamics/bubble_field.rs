@@ -4,7 +4,7 @@
 
 use super::bubble_state::{BubbleState, BubbleParameters};
 use super::rayleigh_plesset::{KellerMiksisModel, integrate_bubble_dynamics};
-use ndarray::{Array3, Array1};
+use ndarray::Array3;
 use std::collections::HashMap;
 use rand::prelude::*;
 use rand_distr::{Normal, LogNormal, Uniform};

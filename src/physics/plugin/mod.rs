@@ -65,13 +65,12 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     /// Get the list of field types this plugin provides as output
     fn provided_fields(&self) -> Vec<FieldType>;
     
-    /// Initialize the plugin with configuration
+    /// Initialize the plugin
     /// 
     /// This method is called once before the simulation starts.
     /// Plugins should perform any necessary setup here.
     fn initialize(
         &mut self,
-        config: Option<Box<dyn PluginConfig>>,
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<()>;
@@ -270,7 +269,7 @@ impl PluginManager {
         medium: &dyn Medium,
     ) -> KwaversResult<()> {
         for plugin in &mut self.plugins {
-            plugin.initialize(None, grid, medium)?;
+            plugin.initialize(grid, medium)?;
         }
         Ok(())
     }

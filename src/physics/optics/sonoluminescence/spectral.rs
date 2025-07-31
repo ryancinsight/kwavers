@@ -2,9 +2,7 @@
 //!
 //! Tools for analyzing emission spectra and extracting physical parameters
 
-use crate::error::KwaversResult;
-use ndarray::{Array1, Array2, s};
-use std::f64::consts::PI;
+use ndarray::{Array1, s};
 
 /// Wavelength range for spectral analysis
 #[derive(Debug, Clone)]

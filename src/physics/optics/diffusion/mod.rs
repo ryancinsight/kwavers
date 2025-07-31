@@ -1,5 +1,5 @@
 // physics/optics/diffusion/mod.rs
-use ndarray::{Array3, Array4, Axis, Zip};
+use ndarray::{Array3, Array4, Axis};
 use crate::grid::Grid;
 use crate::physics::optics::{PolarizationModel, polarization::SimplePolarizationModel};
 use crate::physics::optics::thermal::OpticalThermalModel;

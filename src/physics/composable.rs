@@ -21,7 +21,7 @@
 //! - CRP: Common reuse principle
 //! - ADP: Acyclic dependency principle
 
-use crate::error::{KwaversResult, PhysicsError, KwaversError};
+use crate::error::{KwaversResult, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::{Array3, Array4, Axis, ArrayView3};

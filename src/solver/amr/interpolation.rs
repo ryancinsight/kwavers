@@ -5,7 +5,7 @@
 //! for transferring data between refinement levels.
 
 use crate::error::KwaversResult;
-use ndarray::{Array3, s};
+use ndarray::Array3;
 use super::{InterpolationScheme, octree::Octree};
 
 /// Interpolate field from coarse to fine mesh

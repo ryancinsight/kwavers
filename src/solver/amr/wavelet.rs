@@ -5,7 +5,7 @@
 //! requiring refinement based on solution smoothness.
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array3, ArrayView1, ArrayViewMut1, s};
+use ndarray::{Array1, Array3, s};
 use super::WaveletType;
 
 /// Wavelet transform for error estimation

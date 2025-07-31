@@ -5,7 +5,7 @@
 
 use super::bubble_state::{BubbleState, BubbleParameters};
 use std::f64::consts::PI;
-use crate::error::KwaversResult;
+
 
 // Physical constants for bubble dynamics
 const MIN_RADIUS: f64 = 1e-9;  // Minimum bubble radius (1 nm)
