@@ -681,9 +681,6 @@ impl PhysicsPlugin for FdtdPlugin {
         
         // Write back to fields array
         fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
         
         Ok(())
     }
