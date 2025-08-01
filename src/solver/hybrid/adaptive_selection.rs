@@ -28,12 +28,10 @@
 //! - **DRY**: Reusable analysis utilities
 
 use crate::grid::Grid;
-use crate::error::{KwaversResult, KwaversError};
-use ndarray::{Array3, Array4, Axis, Zip, s};
-use std::f64::consts::PI;
-use std::collections::HashMap;
+use crate::error::KwaversResult;
+use ndarray::{Array4, Axis, s};
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// Selection criteria for adaptive method choice
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,7 +185,7 @@ impl AdaptiveSelector {
                           criteria.efficiency_weight;
         
         if (total_weight - 1.0).abs() > 1e-6 {
-            return Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
+            return Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
                 parameter: "selection_weights".to_string(),
                 value: total_weight.to_string(),
                 constraint: "weights must sum to 1.0".to_string(),
@@ -195,7 +193,7 @@ impl AdaptiveSelector {
         }
         
         if criteria.switch_threshold < 0.0 || criteria.switch_threshold > 1.0 {
-            return Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
+            return Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
                 parameter: "switch_threshold".to_string(),
                 value: criteria.switch_threshold.to_string(),
                 constraint: "must be between 0.0 and 1.0".to_string(),

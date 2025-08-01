@@ -1,62 +1,26 @@
-//! Hybrid PSTD/FDTD Solver Framework
+//! Hybrid PSTD/FDTD solver combining the strengths of both methods
 //!
-//! This module implements an advanced hybrid numerical solver that intelligently
-//! combines Pseudo-Spectral Time Domain (PSTD) and Finite-Difference Time Domain (FDTD)
-//! methods to achieve optimal accuracy and performance across different wave regimes.
-//!
-//! # Physics Background
-//!
-//! ## PSTD Method:
-//! - **Strengths**: Spectral accuracy, minimal dispersion, efficient for smooth solutions
-//! - **Weaknesses**: Global method, sensitive to discontinuities, Gibbs phenomenon
-//! - **Best for**: Homogeneous media, far-field propagation, high-frequency accuracy
-//!
-//! ## FDTD Method:
-//! - **Strengths**: Local method, handles discontinuities well, flexible boundaries
-//! - **Weaknesses**: Numerical dispersion, requires fine grids, computational cost
-//! - **Best for**: Complex geometries, interfaces, heterogeneous media
-//!
-//! ## Hybrid Approach:
-//! The hybrid solver automatically selects the optimal method based on:
-//! - **Local smoothness**: Spectral analysis of field variations
-//! - **Material properties**: Homogeneity vs heterogeneity
-//! - **Frequency content**: High vs low frequency components
-//! - **Boundary proximity**: Distance to interfaces and boundaries
-//!
-//! # Design Principles Applied:
-//!
-//! - **SOLID**: Single responsibility, interface segregation, dependency inversion
-//! - **CUPID**: Composable methods, predictable behavior, domain-focused
-//! - **GRASP**: Information expert, low coupling, high cohesion
-//! - **DRY**: Reusable selection algorithms and validation utilities
-//! - **KISS**: Simple interface hiding complex adaptive logic
-//! - **YAGNI**: Only implements proven beneficial features
-//! - **SSOT**: Single source of truth for domain selection criteria
-
-use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
-use crate::physics::composable::FieldType;
-use crate::solver::pstd::{PstdSolver, PstdConfig};
-use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
-use crate::utils::{fft_3d, ifft_3d};
-use ndarray::{Array3, Array4, Axis, Zip, s};
-use num_complex::Complex;
-use std::f64::consts::PI;
-use std::collections::HashMap;
-use std::time::Instant;
-use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+//! This module implements an intelligent hybrid solver that adaptively
+//! selects between PSTD and FDTD methods based on local field characteristics.
 
 pub mod domain_decomposition;
 pub mod coupling_interface;
 pub mod adaptive_selection;
 pub mod validation;
 
-use domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
-use coupling_interface::{CouplingInterface, InterpolationScheme};
-use adaptive_selection::{AdaptiveSelector, SelectionCriteria, QualityMetrics};
+use crate::grid::Grid;
+use crate::medium::Medium;
+use crate::error::{KwaversResult, KwaversError, ConfigError};
+use crate::solver::pstd::{PstdSolver, PstdConfig};
+use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
+use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
+use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
+use crate::solver::hybrid::coupling_interface::{CouplingInterface, InterpolationScheme};
+use ndarray::{Array4, Zip, s};
+use std::collections::HashMap;
+use std::time::Instant;
+use serde::{Serialize, Deserialize};
+use log::{debug, info, warn};
 
 /// Configuration for the hybrid PSTD/FDTD solver
 #[derive(Debug, Clone, Serialize, Deserialize)]

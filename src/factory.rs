@@ -20,7 +20,6 @@ use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
 use crate::physics::{PhysicsComponent, PhysicsPipeline, ThermalDiffusionComponent};
-use crate::physics::plugin::PhysicsPlugin;
 use crate::time::Time;
 use crate::validation::{ValidationResult};
 use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};

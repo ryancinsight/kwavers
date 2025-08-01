@@ -135,8 +135,8 @@ impl PMLBoundary {
         
         // Fix: Improved PML profile with better absorption characteristics
         // Theoretical optimal sigma for reflection coefficient R
-        let target_reflection = 1e-6; // -120 dB reflection
-        let optimal_sigma = -(order + 1) as f64 * target_reflection.ln() / (2.0 * thickness as f64 * dx);
+        let target_reflection: f64 = 1e-6; // -120 dB reflection
+        let optimal_sigma = -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
         let sigma_eff = sigma_max.min(optimal_sigma * 2.0); // Don't exceed theoretical optimum
         
         // Apply PML at both domain boundaries (left/right or top/bottom)

@@ -142,7 +142,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     let field = fields.index_axis(Axis(0), field_index);
     
     // Get or create the thread-local buffer
-    let mut field_complex = FFT_BUFFER.with(|buffer| {
+    let field_complex = FFT_BUFFER.with(|buffer| {
         let mut b = buffer.borrow_mut();
         if b.is_none() || b.as_ref().unwrap().dim() != field.dim() {
             // First use or dimensions changed, create new buffer

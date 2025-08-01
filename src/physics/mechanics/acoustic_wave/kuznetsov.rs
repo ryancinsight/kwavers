@@ -404,7 +404,7 @@ impl KuznetsovWave {
                     let z = k as f64 * grid.dz;
                     
                     // Get spatially varying diffusivity
-                    let alpha = medium.diffusivity(x, y, z, grid).unwrap_or(self.config.diffusivity);
+                    let alpha = medium.thermal_diffusivity(x, y, z, grid);
                     let k2 = k_mag[[i, j, k]].powi(2);
                     
                     // Apply diffusivity operator with stability limiting
@@ -424,7 +424,7 @@ impl KuznetsovWave {
         let result = ifft_3d(&laplacian_hat, grid);
         
         // Update metrics
-        self.metrics.diffusivity_time += start.elapsed().as_secs_f64();
+        self.metrics.diffusion_time += start.elapsed().as_secs_f64();
         
         Ok(result)
     }

@@ -32,14 +32,14 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError};
-use crate::solver::hybrid::{HybridSolver, HybridConfig, HybridMetrics, ValidationResults};
-use ndarray::{Array3, Array4, Axis, Zip};
-use std::f64::consts::PI;
+use crate::error::KwaversResult;
+use crate::solver::hybrid::{HybridSolver, HybridConfig, ValidationResults};
+use ndarray::{Array4, Zip};
 use std::collections::HashMap;
+use std::f64::consts::PI;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{info, warn};
 
 /// Comprehensive validation suite for hybrid solver
 pub struct HybridValidationSuite {

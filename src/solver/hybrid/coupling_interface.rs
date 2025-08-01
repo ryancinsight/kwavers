@@ -32,9 +32,8 @@
 
 use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType, BufferZones};
-use ndarray::{Array3, Array4, Axis, Zip, s};
-use std::f64::consts::PI;
+use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{debug, info, warn};

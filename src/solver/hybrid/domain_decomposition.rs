@@ -31,15 +31,13 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError, ValidationError};
+use crate::error::KwaversResult;
+use crate::solver::hybrid::DecompositionStrategy;
 use crate::solver::hybrid::adaptive_selection::QualityMetrics;
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::collections::HashMap;
-use std::f64::consts::PI;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
-
-use super::DecompositionStrategy;
+use log::{debug, info};
 
 /// Domain region with associated solver type
 #[derive(Debug, Clone)]
