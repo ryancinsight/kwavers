@@ -61,11 +61,9 @@ pub struct SolverWorkspace {
 
 ### In-Place Operations:
 ```rust
-pub mod inplace_ops {
-    pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>)
-    pub fn scale_inplace(a: &mut Array3<f64>, scalar: f64)
-    pub fn fma_inplace(a: &mut Array3<f64>, b: &Array3<f64>, c: &Array3<f64>)
-}
+    pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {}
+    pub fn scale_inplace(a: &mut Array3<f64>, scalar: f64) {}
+    pub fn fma_inplace(a: &mut Array3<f64>, b: &Array3<f64>, c: &Array3<f64>) {}
 ```
 
 ### Results:
