@@ -115,7 +115,7 @@ pub fn hybrid_step(
                 thermal.set_temperature(&temp_temp); // Use trait method
             }
 
-            let mut p_temp = p_new.clone();
+            let p_temp = p_new.clone();
             cavitation.update_cavitation(
                 p,
                 grid,

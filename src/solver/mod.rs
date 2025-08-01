@@ -577,7 +577,7 @@ impl Solver {
 
         // Get updated pressure field 
         pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        let mut p_update = pressure.clone();
+        let p_update = pressure.clone();
         
         // 2. Update cavitation effects (if bubble radius is significant)
         let cavitation_start = Instant::now();

@@ -115,7 +115,7 @@ impl BubbleField {
     pub fn get_statistics(&self) -> BubbleFieldStats {
         let mut stats = BubbleFieldStats::default();
         
-        for (_, state) in &self.bubbles {
+        for state in self.bubbles.values() {
             stats.total_bubbles += 1;
             if state.is_collapsing {
                 stats.collapsing_bubbles += 1;
@@ -293,9 +293,9 @@ impl BubbleCloud {
             SizeDistribution::PowerLaw { min, max, exponent } => {
                 let u: f64 = rng.gen();
                 let alpha = exponent + 1.0;
-                let r = (u * (max.powf(alpha) - min.powf(alpha)) + min.powf(alpha))
-                    .powf(1.0 / alpha);
-                r
+                
+                (u * (max.powf(alpha) - min.powf(alpha)) + min.powf(alpha))
+                    .powf(1.0 / alpha)
             }
         }
     }

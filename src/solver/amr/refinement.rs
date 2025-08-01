@@ -4,11 +4,15 @@
 //! This module will contain advanced refinement strategies
 //! such as feature-based refinement, physics-aware refinement, etc.
 
-use crate::error::KwaversResult;
-use ndarray::Array3;
 
 /// Placeholder for future refinement strategies
 pub struct RefinementStrategy;
+
+impl Default for RefinementStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RefinementStrategy {
     pub fn new() -> Self {

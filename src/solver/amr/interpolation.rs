@@ -98,15 +98,9 @@ fn linear_interpolation(
                 let v100 = if i < nx - 1 { coarse_field[[i + 1, j, k]] } else { v000 };
                 let v010 = if j < ny - 1 { coarse_field[[i, j + 1, k]] } else { v000 };
                 let v001 = if k < nz - 1 { coarse_field[[i, j, k + 1]] } else { v000 };
-                let v110 = if i < nx - 1 && j < ny - 1 { coarse_field[[i + 1, j + 1, k]] } else { 
-                    if i < nx - 1 { v100 } else { v010 }
-                };
-                let v101 = if i < nx - 1 && k < nz - 1 { coarse_field[[i + 1, j, k + 1]] } else {
-                    if i < nx - 1 { v100 } else { v001 }
-                };
-                let v011 = if j < ny - 1 && k < nz - 1 { coarse_field[[i, j + 1, k + 1]] } else {
-                    if j < ny - 1 { v010 } else { v001 }
-                };
+                let v110 = if i < nx - 1 && j < ny - 1 { coarse_field[[i + 1, j + 1, k]] } else if i < nx - 1 { v100 } else { v010 };
+                let v101 = if i < nx - 1 && k < nz - 1 { coarse_field[[i + 1, j, k + 1]] } else if i < nx - 1 { v100 } else { v001 };
+                let v011 = if j < ny - 1 && k < nz - 1 { coarse_field[[i, j + 1, k + 1]] } else if j < ny - 1 { v010 } else { v001 };
                 let v111 = if i < nx - 1 && j < ny - 1 && k < nz - 1 { 
                     coarse_field[[i + 1, j + 1, k + 1]] 
                 } else {
@@ -278,7 +272,7 @@ fn spectral_interpolation(
     let mut planner = FftPlanner::<f64>::new();
     
     // Convert to complex for FFT
-    let mut complex_field: Vec<Complex<f64>> = coarse_field.iter()
+    let complex_field: Vec<Complex<f64>> = coarse_field.iter()
         .map(|&x| Complex::new(x, 0.0))
         .collect();
     

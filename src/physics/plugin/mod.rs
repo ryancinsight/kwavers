@@ -191,7 +191,7 @@ impl PluginManager {
         for field in plugin.provided_fields() {
             self.field_dependencies
                 .entry(field)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(new_id.clone());
         }
         

@@ -128,9 +128,9 @@ impl KellerMiksisModel {
         // Van der Waals constants (simplified)
         let b = 3.0e-5 * n_total / 6.022e23; // Excluded volume
         
-        let p_gas = n_total * r_gas * state.temperature / (6.022e23 * (volume - b));
         
-        p_gas
+        
+        n_total * r_gas * state.temperature / (6.022e23 * (volume - b))
     }
     
     /// Update bubble temperature

@@ -219,7 +219,7 @@ impl TimeStepper for AdamsBashforth {
         match self.config.order {
             2 => {
                 // AB2: y_{n+1} = y_n + dt * (3/2 * f_n - 1/2 * f_{n-1})
-                if self.rhs_history.len() >= 1 {
+                if !self.rhs_history.is_empty() {
                     let f_n = &current_rhs;
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     

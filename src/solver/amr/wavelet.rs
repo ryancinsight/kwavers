@@ -158,7 +158,7 @@ impl WaveletTransform {
         levels: usize,
     ) -> KwaversResult<Vec<Array3<f64>>> {
         let mut decompositions = Vec::with_capacity(levels);
-        let mut current = field.clone();
+        let current = field.clone();
         
         for level in 0..levels {
             // Get current level size
@@ -172,7 +172,7 @@ impl WaveletTransform {
             }
             
             // Apply transform to low-frequency part only
-            let mut low_freq = current.slice(s![..new_nx, ..new_ny, ..new_nz]).to_owned();
+            let low_freq = current.slice(s![..new_nx, ..new_ny, ..new_nz]).to_owned();
             let coeffs = self.forward_transform(&low_freq)?;
             
             decompositions.push(coeffs);

@@ -140,7 +140,7 @@ impl ROSConcentrations {
     /// Update total ROS concentration
     pub fn update_total(&mut self) {
         self.total_ros.fill(0.0);
-        for (_, conc) in &self.fields {
+        for conc in self.fields.values() {
             self.total_ros = &self.total_ros + conc;
         }
     }

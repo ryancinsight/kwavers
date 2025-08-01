@@ -4,8 +4,7 @@
 //! This module provides error estimators used to determine where mesh refinement
 //! is needed in adaptive simulations.
 
-use ndarray::{Array3, ArrayView3, Zip};
-use crate::grid::Grid;
+use ndarray::Array3;
 use crate::error::KwaversResult;
 use super::{WaveletType, wavelet::WaveletTransform};
 

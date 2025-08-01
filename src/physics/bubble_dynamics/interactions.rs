@@ -117,9 +117,9 @@ impl BjerknesForce {
         let v2_dot = 4.0 * std::f64::consts::PI * bubble2.radius.powi(2) * bubble2.wall_velocity;
         
         // Force magnitude
-        let force = -liquid_density * v1_dot * v2_dot / (4.0 * std::f64::consts::PI * distance);
         
-        force
+        
+        -liquid_density * v1_dot * v2_dot / (4.0 * std::f64::consts::PI * distance)
     }
     
     /// Check if bubbles attract or repel

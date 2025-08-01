@@ -20,9 +20,7 @@ use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
 use crate::physics::{PhysicsComponent, PhysicsPipeline, ThermalDiffusionComponent};
-use crate::physics::plugin::{PluginManager, PhysicsPlugin};
-use crate::solver::pstd::{PstdConfig, PstdPlugin};
-use crate::solver::fdtd::{FdtdConfig, FdtdPlugin};
+use crate::physics::plugin::PhysicsPlugin;
 use crate::time::Time;
 use crate::validation::{ValidationResult};
 use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};
@@ -896,7 +894,7 @@ impl SimulationSetup {
             
             // Validate thermal properties for thermal simulations
             let thermal_conductivity = self.medium.thermal_conductivity(x, y, z, &self.grid);
-            if thermal_conductivity < 0.0 || thermal_conductivity > 1000.0 { // 0 to 1000 W/(m·K)
+            if !(0.0..=1000.0).contains(&thermal_conductivity) { // 0 to 1000 W/(m·K)
                 return Err(ConfigError::ValidationFailed {
                     section: "medium".to_string(),
                     reason: format!("Invalid thermal conductivity {:.2e} W/(m·K) at position ({:.3e}, {:.3e}, {:.3e})", 
