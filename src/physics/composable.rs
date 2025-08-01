@@ -1430,7 +1430,7 @@ impl PhysicsComponent for CavitationComponent {
         let pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
         
         // Create a mutable copy for cavitation processing
-        let mut pressure_for_cavitation = pressure.clone();
+        let pressure_for_cavitation = pressure.clone();
         
         // Update cavitation dynamics using the trait
         self.cavitation_model.update_cavitation(

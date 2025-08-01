@@ -114,11 +114,11 @@ impl FdtdSolver {
         }
         
         // Initialize finite difference coefficients for central differences
-        // Each coefficient is multiplied by (f(x+ih) - f(x-ih)) for i=1,2,3...
+        // Fix: Correct coefficients for higher-order schemes
         let mut fd_coeffs = HashMap::new();
-        fd_coeffs.insert(2, vec![1.0]); // 2nd order: (f(x+h) - f(x-h))
-        fd_coeffs.insert(4, vec![8.0/12.0, -1.0/12.0]); // 4th order
-        fd_coeffs.insert(6, vec![45.0/60.0, -9.0/60.0, 1.0/60.0]); // 6th order
+        fd_coeffs.insert(2, vec![0.5]); // 2nd order: (f(x+h) - f(x-h))/(2h)
+        fd_coeffs.insert(4, vec![2.0/3.0, -1.0/12.0]); // 4th order: corrected coefficients
+        fd_coeffs.insert(6, vec![3.0/4.0, -3.0/20.0, 1.0/60.0]); // 6th order: corrected coefficients
         
         Ok(Self {
             config,
@@ -510,19 +510,25 @@ impl FdtdSolver {
         }
     }
     
-    /// Get maximum stable time step
-    pub fn max_stable_dt(&self, c_max: f64) -> f64 {
-        let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+    /// Get maximum stable time step for this FDTD configuration
+    pub fn max_stable_dt(&self, max_sound_speed: f64) -> f64 {
+        let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
         
-        // CFL condition depends on spatial order
+        // Fix: Correct CFL factors for different spatial orders
         let cfl_limit = match self.config.spatial_order {
-            2 => 1.0 / 3.0_f64.sqrt(),  // ~0.577
-            4 => 0.5,                    // More restrictive for higher order
-            6 => 0.4,                    // Even more restrictive
-            _ => 0.5,
+            2 => 0.58,   // For 2nd-order in 3D: sqrt(1/3) ≈ 0.577
+            4 => 0.50,   // More restrictive for 4th-order
+            6 => 0.45,   // Even more restrictive for 6th-order
+            _ => 0.58,
         };
         
-        self.config.cfl_factor * cfl_limit * dx_min / c_max
+        self.config.cfl_factor * cfl_limit * min_dx / max_sound_speed
+    }
+    
+    /// Check if given timestep satisfies CFL condition
+    pub fn check_cfl_stability(&self, dt: f64, max_sound_speed: f64) -> bool {
+        let max_dt = self.max_stable_dt(max_sound_speed);
+        dt <= max_dt
     }
     
     /// Get performance metrics

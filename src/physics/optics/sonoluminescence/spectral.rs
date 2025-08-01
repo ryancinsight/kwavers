@@ -241,7 +241,7 @@ impl SpectralAnalyzer {
         let mut avg_intensities = Array1::zeros(wavelengths.len());
         
         for spectrum in &self.spectra_history {
-            avg_intensities = avg_intensities + &spectrum.intensities;
+            avg_intensities += &spectrum.intensities;
         }
         
         avg_intensities /= self.spectra_history.len() as f64;

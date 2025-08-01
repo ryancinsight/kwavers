@@ -570,7 +570,7 @@ impl CPMLBoundary {
     /// Get reflection coefficient estimate at given angle
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
         // Validate input angle range
-        if angle_degrees < 0.0 || angle_degrees > 90.0 {
+        if !(0.0..=90.0).contains(&angle_degrees) {
             debug!("Invalid angle: {}. Angle must be between 0 and 90 degrees.", angle_degrees);
             return 0.0; // Return a default value for invalid input
         }

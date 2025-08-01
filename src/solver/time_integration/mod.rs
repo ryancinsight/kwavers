@@ -120,7 +120,7 @@ impl MultiRateTimeIntegrator {
             for (component, &local_dt) in &component_time_steps {
                 self.time_step_history
                     .entry(component.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(local_dt);
             }
         }

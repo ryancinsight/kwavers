@@ -1,12 +1,13 @@
 // src/solver/mod.rs
-pub mod amr; // Adaptive Mesh Refinement module
-pub mod numerics; // Numerical methods module
-pub mod spectral_dg; // Hybrid Spectral-DG methods module
-pub mod time_integration; // Multi-Rate Time Integration module
-pub mod imex; // IMEX (Implicit-Explicit) schemes module
-pub mod cpml_integration; // C-PML integration module
-pub mod pstd; // PSTD (Pseudo-Spectral Time Domain) module
-pub mod fdtd; // FDTD (Finite-Difference Time Domain) module
+pub mod pstd;
+pub mod fdtd;
+pub mod hybrid;
+pub mod time_integration;
+pub mod spectral_dg;
+pub mod imex;
+pub mod amr;
+pub mod cpml_integration;
+pub mod validation;
 
 use crate::grid::Grid;
 use crate::KwaversResult;
@@ -577,7 +578,7 @@ impl Solver {
 
         // Get updated pressure field 
         pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        let mut p_update = pressure.clone();
+        let p_update = pressure.clone();
         
         // 2. Update cavitation effects (if bubble radius is significant)
         let cavitation_start = Instant::now();

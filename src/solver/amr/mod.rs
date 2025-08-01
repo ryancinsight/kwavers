@@ -24,7 +24,7 @@ pub mod refinement;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array3, ArrayView3};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// AMR configuration parameters

@@ -187,6 +187,12 @@ pub struct CavitationDetector {
     collapse_threshold: f64,
 }
 
+impl Default for CavitationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CavitationDetector {
     pub fn new() -> Self {
         Self {
@@ -260,6 +266,12 @@ pub enum CavitationEventType {
 pub struct AcousticEventAnalyzer {
     frequency_bands: Vec<(f64, f64)>,
     amplitude_threshold: f64,
+}
+
+impl Default for AcousticEventAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AcousticEventAnalyzer {
@@ -512,6 +524,12 @@ impl ParameterOptimizer {
         }
         
         Ok(Array1::from_vec(state_vec))
+    }
+}
+
+impl Default for PatternRecognizer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

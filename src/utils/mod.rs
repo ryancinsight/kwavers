@@ -119,27 +119,27 @@ pub fn report_fft_statistics() {
     );
 }
 
-/// Optimized 3D FFT for simulation fields
+/// Optimized 3D FFT for simulation fields with proper normalization
 /// 
-/// This function performs a 3D FFT on a specific field in the simulation.
+/// This function performs a 3D FFT on the specified field component from a 4D array.
 /// It uses a cached FFT instance for better performance when called multiple times
 /// with the same grid dimensions, and employs thread-local storage to reduce allocations.
-///
+/// 
 /// # Arguments
 ///
-/// * `fields` - The 4D array containing all simulation fields
-/// * `field_idx` - The index of the field to transform
+/// * `fields` - 4D array containing multiple field components
+/// * `field_index` - Index of the field to transform (0-based)
 /// * `grid` - The simulation grid
 ///
 /// # Returns
 ///
-/// A 3D complex array containing the FFT of the specified field
-pub fn fft_3d(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Array3<Complex<f64>> {
+/// A 3D complex array containing the FFT of the specified field component
+pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<Complex<f64>> {
     let start_time = Instant::now();
-    trace!("Performing optimized 3D FFT on field {}", field_idx);
+    trace!("Performing optimized 3D FFT on field index {}", field_index);
     
-    // Get field to transform
-    let field = fields.index_axis(Axis(0), field_idx);
+    // Get the field slice to transform
+    let field = fields.index_axis(Axis(0), field_index);
     
     // Get or create the thread-local buffer
     let field_complex = FFT_BUFFER.with(|buffer| {
@@ -189,6 +189,9 @@ pub fn fft_3d(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Array3<Com
     // Process the FFT
     fft.process(&mut result, grid);
     
+    // Fix: Apply proper normalization for forward FFT (no scaling needed for forward)
+    // The normalization is applied in ifft_3d for consistency with physics conventions
+    
     // Update timing statistics
     let elapsed = start_time.elapsed();
     let mut total_time = TOTAL_FFT_TIME.lock().unwrap();
@@ -197,7 +200,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Array3<Com
     result
 }
 
-/// Optimized 3D inverse FFT for simulation fields
+/// Optimized 3D inverse FFT for simulation fields with proper normalization
 /// 
 /// This function performs a 3D inverse FFT on a complex field in the simulation.
 /// It uses a cached IFFT instance for better performance when called multiple times
@@ -258,7 +261,12 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     let mut ifft = (*ifft_arc).clone();
     
     // Process the IFFT and get the result
-    let result = ifft.process(&mut field_complex, grid);
+    let mut result = ifft.process(&mut field_complex, grid);
+    
+    // Fix: Apply proper normalization for inverse FFT
+    // Standard normalization is 1/N for inverse FFT
+    let normalization = 1.0 / (grid.nx * grid.ny * grid.nz) as f64;
+    result.mapv_inplace(|x| x * normalization);
     
     // Update timing statistics
     let elapsed = start_time.elapsed();

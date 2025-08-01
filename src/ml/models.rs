@@ -135,7 +135,7 @@ impl MLModel for OutcomePredictorModel {
             .dot(&self.weights.view().insert_axis(Axis(1)))
             .index_axis(Axis(1), 0)
             .to_owned()
-            + self.bias.clone();
+            + self.bias;
 
         // Convert to probabilities using sigmoid; output two-class probabilities [p0, p1]
         let mut probs = Array2::<f32>::zeros((samples, 2));
