@@ -7,6 +7,7 @@ pub mod imex; // IMEX (Implicit-Explicit) schemes module
 pub mod cpml_integration; // C-PML integration module
 pub mod pstd; // PSTD (Pseudo-Spectral Time Domain) module
 pub mod fdtd; // FDTD (Finite-Difference Time Domain) module
+pub mod hybrid; // Hybrid PSTD/FDTD solver module
 
 use crate::grid::Grid;
 use crate::KwaversResult;
