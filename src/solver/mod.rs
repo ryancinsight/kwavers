@@ -8,6 +8,7 @@ pub mod imex;
 pub mod amr;
 pub mod cpml_integration;
 pub mod validation;
+pub mod workspace;
 
 use crate::grid::Grid;
 use crate::KwaversResult;
