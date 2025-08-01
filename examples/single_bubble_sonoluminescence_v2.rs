@@ -8,7 +8,7 @@
 
 use kwavers::{
     Grid, Time, HomogeneousMedium, PMLBoundary, Source, Sensor, Recorder,
-    SensorConfig, RecorderConfig, KwaversResult,
+    SensorConfig, RecorderConfig, KwaversResult, signal::Signal,
     physics::{
         // Core bubble dynamics
         bubble_dynamics::{
@@ -72,6 +72,7 @@ impl Default for SBSLConfig {
 }
 
 /// Acoustic standing wave source
+#[derive(Debug)]
 struct StandingWaveSource {
     frequency: f64,
     amplitude: f64,
@@ -79,7 +80,7 @@ struct StandingWaveSource {
 }
 
 impl Source for StandingWaveSource {
-    fn pressure(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
+    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
         let dx = x - self.center.0;
         let dy = y - self.center.1;
         let dz = z - self.center.2;
@@ -93,9 +94,13 @@ impl Source for StandingWaveSource {
         self.amplitude * spatial * temporal
     }
     
-    fn velocity_x(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_y(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
-    fn velocity_z(&self, _x: f64, _y: f64, _z: f64, _t: f64) -> f64 { 0.0 }
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![self.center]
+    }
+    
+    fn signal(&self) -> &dyn Signal {
+        panic!("StandingWaveSource doesn't use a separate signal")
+    }
 }
 
 /// Run integrated SBSL simulation
@@ -151,7 +156,7 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
     let damage_params = DamageParameters::default();
     let mut cavitation_damage = CavitationDamage::new(
         (n, n, n),
-        config.wall_material,
+        config.wall_material.clone(),
         damage_params,
     );
     
@@ -208,7 +213,7 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
                     let y = j as f64 * dx;
                     let z = k as f64 * dx;
                     
-                    pressure[[i, j, k]] = source.pressure(x, y, z, t);
+                    pressure[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
                     // Approximate time derivative
                     dp_dt[[i, j, k]] = -config.pressure_amplitude * 2.0 * PI * config.frequency
                         * (2.0 * PI * config.frequency * t).cos();
