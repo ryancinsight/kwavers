@@ -518,7 +518,7 @@ impl FdtdSolver {
         let cfl_limit = match self.config.spatial_order {
             2 => 0.58,   // For 2nd-order in 3D: sqrt(1/3) ≈ 0.577
             4 => 0.50,   // More restrictive for 4th-order
-            6 => 0.45,   // Even more restrictive for 6th-order
+            6 => 0.40,   // Even more restrictive for 6th-order
             _ => 0.58,
         };
         

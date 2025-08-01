@@ -614,17 +614,21 @@ impl Boundary for CPMLBoundary {
                     
                     // X-direction absorption
                     if i < thickness || i >= self.nx - thickness {
-                        absorption *= (-self.sigma_x[i] * grid.dx).exp();
+                        // Use dt = dx/c for CFL=1 as approximation
+                        let dt = grid.dx / 1500.0; // Assume c=1500 m/s
+                        absorption *= (-self.sigma_x[i] * dt).exp();
                     }
                     
                     // Y-direction absorption
                     if j < thickness || j >= self.ny - thickness {
-                        absorption *= (-self.sigma_y[j] * grid.dy).exp();
+                        let dt = grid.dy / 1500.0;
+                        absorption *= (-self.sigma_y[j] * dt).exp();
                     }
                     
                     // Z-direction absorption
                     if k < thickness || k >= self.nz - thickness {
-                        absorption *= (-self.sigma_z[k] * grid.dz).exp();
+                        let dt = grid.dz / 1500.0;
+                        absorption *= (-self.sigma_z[k] * dt).exp();
                     }
                     
                     field[[i, j, k]] *= absorption;

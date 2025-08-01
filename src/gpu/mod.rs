@@ -432,7 +432,7 @@ mod tests {
             reason: "Test error".to_string(),
         };
         let display = format!("{}", error);
-        assert!(display.contains("GPU device 0 initialization failed"));
+        assert!(display.contains("GPU device initialization failed"));
         assert!(display.contains("Test error"));
 
         // Test memory allocation error
