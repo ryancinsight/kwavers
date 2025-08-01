@@ -4,8 +4,8 @@
 //! This module will contain advanced refinement strategies
 //! such as feature-based refinement, physics-aware refinement, etc.
 
-use crate::error::KwaversResult;
-use ndarray::Array3;
+// use crate::error::KwaversResult;
+// use ndarray::Array3;
 
 /// Placeholder for future refinement strategies
 pub struct RefinementStrategy;

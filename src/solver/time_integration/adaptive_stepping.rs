@@ -4,7 +4,7 @@
 //! error estimation and tolerance requirements.
 
 use crate::KwaversResult;
-use super::traits::{TimeStepper, AdaptiveTimeStepperTrait, ErrorEstimatorTrait};
+use super::traits::{TimeStepper, ErrorEstimatorTrait};
 use ndarray::{Array3, Zip};
 
 /// Adaptive time stepper wrapper

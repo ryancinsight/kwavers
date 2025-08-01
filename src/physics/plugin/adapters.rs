@@ -4,7 +4,7 @@
 //! This module provides adapters that allow existing PhysicsComponent implementations
 //! to be used as plugins, following the Adapter pattern from GRASP.
 
-use super::{PhysicsPlugin, PluginMetadata, PluginConfig, PluginContext};
+use super::{PhysicsPlugin, PluginMetadata, PluginContext};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;

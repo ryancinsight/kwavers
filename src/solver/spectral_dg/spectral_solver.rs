@@ -8,7 +8,7 @@ use crate::KwaversResult;
 use crate::error::{KwaversError, ValidationError};
 use crate::utils::ifft_3d;
 use super::traits::{NumericalSolver, SpectralOperations};
-use ndarray::{Array3, Array4, Zip, s};
+use ndarray::{Array3, Zip, s};
 use num_complex::Complex;
 use std::sync::Arc;
 use std::f64::consts::PI;

@@ -20,9 +20,9 @@ use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
 use crate::physics::{PhysicsComponent, PhysicsPipeline, ThermalDiffusionComponent};
-use crate::physics::plugin::{PluginManager, PhysicsPlugin};
-use crate::solver::pstd::{PstdConfig, PstdPlugin};
-use crate::solver::fdtd::{FdtdConfig, FdtdPlugin};
+// use crate::physics::plugin::{PluginManager, PhysicsPlugin}; // removed unused import
+// use crate::solver::pstd::{PstdConfig, PstdPlugin}; // removed unused import
+// use crate::solver::fdtd::{FdtdConfig, FdtdPlugin}; // removed unused import
 use crate::time::Time;
 use crate::validation::{ValidationResult};
 use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};
