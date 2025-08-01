@@ -6,7 +6,8 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
-use ndarray::{Array3, Zip};
+use crate::physics::traits::AcousticScatteringModelTrait;
+use ndarray::{Array3, Zip, Array4, Axis};
 use std::f64::consts::PI;
 
 pub mod rayleigh;
@@ -114,6 +115,31 @@ impl AcousticScattering {
 impl FieldAccessor for AcousticScattering {
     fn physics_state(&self) -> &PhysicsState {
         &self.state
+    }
+}
+
+impl AcousticScatteringModelTrait for AcousticScattering {
+    fn compute_scattering(
+        &mut self,
+        incident_field: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        bubble_velocity: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        frequency: f64,
+    ) {
+        // Store frequency
+        self.frequency = frequency;
+        
+        // Call the existing compute_scattering method
+        // For now, ignore bubble parameters as the existing method doesn't use them
+        let _ = self.compute_scattering(incident_field, grid, medium);
+        
+        self.update_count += 1;
+    }
+    
+    fn scattered_field(&self) -> &Array3<f64> {
+        &self.scattered_field
     }
 }
 

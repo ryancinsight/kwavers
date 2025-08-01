@@ -33,7 +33,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let medium = HomogeneousMedium::new(
         1000.0,  // Density (kg/m³) - water
         1500.0,  // Sound speed (m/s) - water
-        0.0      // No absorption for clear comparison
+        grid,    // Grid reference
+        0.0,     // No absorption (mu_a)
+        0.0      // No scattering (mu_s_prime)
     );
     
     // Demonstrate different aspects of C-PML
@@ -176,7 +178,8 @@ fn demonstrate_cpml_solver(grid: &Grid, medium: &HomogeneousMedium) -> Result<()
     println!("  Running {} time steps with dt = {} s", steps, dt);
     
     for step in 0..steps {
-        cpml_solver.update_acoustic_field(&mut pressure, &mut velocity, grid, dt)?;
+        // Apply C-PML boundary to pressure field
+        cpml.apply_acoustic(&mut pressure, grid, step)?;
         
         if step % 50 == 0 {
             let max_p = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));

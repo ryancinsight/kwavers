@@ -15,22 +15,22 @@ use kwavers::{
     Grid, HomogeneousMedium,
 };
 use ndarray::Array4;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 
 /// Custom plugin for modeling frequency-dependent absorption
 #[derive(Debug)]
 struct FrequencyAbsorptionPlugin {
     metadata: PluginMetadata,
-    absorption_coefficients: HashMap<f64, f64>,
+    absorption_coefficients: HashMap<u64, f64>, // frequency in Hz -> absorption coefficient
 }
 
 impl FrequencyAbsorptionPlugin {
     fn new() -> Self {
         let mut absorption_coefficients = HashMap::new();
         // Example tissue absorption at different frequencies
-        absorption_coefficients.insert(1e6, 0.5);   // 1 MHz
-        absorption_coefficients.insert(3e6, 1.5);   // 3 MHz
-        absorption_coefficients.insert(5e6, 2.5);   // 5 MHz
+        absorption_coefficients.insert(1_000_000, 0.5);   // 1 MHz
+        absorption_coefficients.insert(3_000_000, 1.5);   // 3 MHz
+        absorption_coefficients.insert(5_000_000, 2.5);   // 5 MHz
         
         Self {
             metadata: PluginMetadata {
@@ -51,6 +51,10 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         &self.metadata
     }
     
+    fn state(&self) -> kwavers::physics::plugin::PluginState {
+        kwavers::physics::plugin::PluginState::Created
+    }
+    
     fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure]
     }
@@ -61,7 +65,6 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
     
     fn initialize(
         &mut self,
-        _config: Option<Box<dyn kwavers::physics::plugin::PluginConfig>>,
         _grid: &Grid,
         _medium: &dyn kwavers::medium::Medium,
     ) -> KwaversResult<()> {
@@ -79,8 +82,9 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         context: &PluginContext,
     ) -> KwaversResult<()> {
         // Get absorption coefficient for current frequency
+        let freq_hz = context.frequency as u64;
         let alpha = self.absorption_coefficients
-            .get(&context.frequency)
+            .get(&freq_hz)
             .copied()
             .unwrap_or(1.0);
         
@@ -92,10 +96,17 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         let mut metrics = HashMap::new();
         metrics.insert("absorption_coefficient".to_string(), 1.0);
         metrics
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(Self {
+            metadata: self.metadata.clone(),
+            absorption_coefficients: self.absorption_coefficients.clone(),
+        })
     }
 }
 
@@ -131,6 +142,10 @@ impl PhysicsPlugin for StatisticsPlugin {
         &self.metadata
     }
     
+    fn state(&self) -> kwavers::physics::plugin::PluginState {
+        kwavers::physics::plugin::PluginState::Created
+    }
+    
     fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure]
     }
@@ -141,7 +156,6 @@ impl PhysicsPlugin for StatisticsPlugin {
     
     fn initialize(
         &mut self,
-        _config: Option<Box<dyn kwavers::physics::plugin::PluginConfig>>,
         _grid: &Grid,
         _medium: &dyn kwavers::medium::Medium,
     ) -> KwaversResult<()> {
@@ -175,12 +189,21 @@ impl PhysicsPlugin for StatisticsPlugin {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         let mut metrics = HashMap::new();
         metrics.insert("max_pressure".to_string(), self.max_pressure);
         metrics.insert("min_pressure".to_string(), self.min_pressure);
         metrics.insert("update_count".to_string(), self.update_count as f64);
         metrics
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(Self {
+            metadata: self.metadata.clone(),
+            max_pressure: self.max_pressure,
+            min_pressure: self.min_pressure,
+            update_count: self.update_count,
+        })
     }
 }
 
@@ -189,7 +212,7 @@ fn main() -> KwaversResult<()> {
     
     // Create simulation components
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0, 0.0, 0.0, 0.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
     
     // Create plugin manager
     let mut plugin_manager = PluginManager::new();

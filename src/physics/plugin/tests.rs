@@ -239,7 +239,7 @@ mod tests {
         
         // Update plugins
         let mut fields = Array4::zeros((10, 16, 16, 16));
-        let context = PluginContext::new(1e6);
+        let context = PluginContext::new(0, 100, 1e6);
         assert!(manager.update_all(&mut fields, &grid, &medium, 1e-6, 0.0, &context).is_ok());
     }
     

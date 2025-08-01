@@ -83,7 +83,7 @@ fn demonstrate_direct_solver(grid: &Grid, medium: &HomogeneousMedium) -> Result<
     println!("    - Time scheme: RK4");
     
     // Create solver
-    let mut solver = KuznetsovWave::new(grid, config);
+    let mut solver = KuznetsovWave::new(grid, config).expect("Failed to create Kuznetsov solver");
     
     // Initialize fields array (standard field layout)
     let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz));
