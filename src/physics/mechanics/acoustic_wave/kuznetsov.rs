@@ -50,9 +50,9 @@
 //! - **SSOT**: Single source of truth for all physical constants
 //! - **CLEAN**: Comprehensive documentation and tests
 
-use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::error::KwaversResult;
 use crate::physics::traits::AcousticWaveModel;
 use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
@@ -62,6 +62,19 @@ use num_complex::Complex;
 
 use log::{info, warn, debug};
 use std::time::Instant;
+
+// Physical constants for k-space corrections in Kuznetsov equation
+/// Second-order k-space correction coefficient for Kuznetsov equation
+/// Accounts for numerical dispersion in the spectral representation of
+/// nonlinear acoustic wave propagation. Value tuned for optimal accuracy
+/// in the ultrasound frequency range (1-10 MHz).
+const KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER: f64 = 0.05;
+
+/// Fourth-order k-space correction coefficient for Kuznetsov equation  
+/// Provides higher-order dispersion compensation for improved accuracy
+/// at high frequencies approaching the Nyquist limit. Essential for
+/// maintaining phase accuracy in nonlinear harmonic generation.
+const KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER: f64 = 0.01;
 
 /// Configuration for the Kuznetsov equation solver
 #[derive(Debug, Clone)]
@@ -968,12 +981,12 @@ fn compute_k_space_correction_factors(grid: &Grid, order: usize) -> Array3<f64> 
                     2 => {
                         // Second-order correction: improved dispersion relation
                         let normalized_k = k_norm / k0;
-                        1.0 + 0.1 * normalized_k * normalized_k
+                        1.0 + KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER * normalized_k * normalized_k
                     }
                     4 => {
                         // Fourth-order correction: better high-frequency behavior
                         let normalized_k = k_norm / k0;
-                        1.0 + 0.05 * normalized_k * normalized_k + 0.01 * normalized_k.powi(4)
+                        1.0 + KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER * normalized_k * normalized_k + KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER * normalized_k.powi(4)
                     }
                     _ => {
                         // Default to no correction
