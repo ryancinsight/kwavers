@@ -51,14 +51,28 @@ pub trait PluginConfig: Debug + Send + Sync {
     fn clone_boxed(&self) -> Box<dyn Any + Send + Sync>;
 }
 
-/// Core trait for physics plugins
-/// 
-/// This trait defines the interface that all physics plugins must implement.
-/// It follows the Interface Segregation Principle by keeping the interface minimal
-/// and focused on essential functionality.
+/// Plugin lifecycle state
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PluginState {
+    /// Plugin is created but not initialized
+    Created,
+    /// Plugin is initialized and ready to run
+    Initialized,
+    /// Plugin is currently processing
+    Running,
+    /// Plugin encountered an error
+    Error,
+    /// Plugin has been finalized
+    Finalized,
+}
+
+/// Enhanced plugin trait with lifecycle management
 pub trait PhysicsPlugin: Debug + Send + Sync {
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
+    
+    /// Get current plugin state
+    fn state(&self) -> PluginState;
     
     /// Get the list of field types this plugin requires as input
     fn required_fields(&self) -> Vec<FieldType>;
@@ -90,6 +104,14 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
         context: &PluginContext,
     ) -> KwaversResult<()>;
     
+    /// Finalize the plugin
+    /// 
+    /// Called when the simulation is complete or the plugin is being removed.
+    /// Plugins should clean up resources here.
+    fn finalize(&mut self) -> KwaversResult<()> {
+        Ok(())
+    }
+    
     /// Check if the plugin can execute with the given available fields
     fn can_execute(&self, available_fields: &[FieldType]) -> bool {
         self.required_fields()
@@ -98,31 +120,17 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     }
     
     /// Get current performance metrics
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         HashMap::new()
     }
     
-    /// Validate plugin state and configuration
+    /// Validate plugin configuration and state
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut result = ValidationResult::new();
-        
-        // Default validation checks
-        if self.required_fields().is_empty() && self.provided_fields().is_empty() {
-            result.add_warning("Plugin neither requires nor provides any fields".to_string());
-        }
-        
-        result
+        ValidationResult::new()
     }
     
-    /// Reset plugin state
-    fn reset(&mut self) -> KwaversResult<()> {
-        Ok(())
-    }
-    
-    /// Finalize and cleanup
-    fn finalize(&mut self) -> KwaversResult<()> {
-        Ok(())
-    }
+    /// Clone the plugin as a boxed trait object
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin>;
 }
 
 /// Context passed to plugins during update
@@ -335,7 +343,7 @@ impl PluginManager {
         for plugin in &self.plugins {
             all_metrics.insert(
                 plugin.metadata().id.clone(),
-                plugin.get_metrics(),
+                plugin.performance_metrics(),
             );
         }
         all_metrics
@@ -353,7 +361,7 @@ impl Default for PluginManager {
 mod plugin_internal_tests {
     use super::*;
     
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct TestPlugin {
         metadata: PluginMetadata,
         required: Vec<FieldType>,
@@ -363,6 +371,10 @@ mod plugin_internal_tests {
     impl PhysicsPlugin for TestPlugin {
         fn metadata(&self) -> &PluginMetadata {
             &self.metadata
+        }
+        
+        fn state(&self) -> PluginState {
+            PluginState::Created
         }
         
         fn required_fields(&self) -> Vec<FieldType> {
@@ -391,6 +403,14 @@ mod plugin_internal_tests {
             _context: &PluginContext,
         ) -> KwaversResult<()> {
             Ok(())
+        }
+
+        fn finalize(&mut self) -> KwaversResult<()> {
+            Ok(())
+        }
+
+        fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+            Box::new(self.clone())
         }
     }
     

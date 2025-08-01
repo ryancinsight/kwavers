@@ -161,7 +161,6 @@ pub struct CPMLBoundary {
     /// Memory variables for convolutional integration
     /// Stored as 4D arrays: [component, nx, ny, nz]
     psi_acoustic: Array4<f64>,
-    psi_velocity: Array4<f64>,
     
     /// Auxiliary memory for dispersive media
     psi_dispersive: Option<Array4<f64>>,
@@ -201,7 +200,6 @@ impl CPMLBoundary {
             c_y: vec![0.0; ny],
             c_z: vec![0.0; nz],
             psi_acoustic: Array4::zeros((3, nx, ny, nz)), // 3 components for x, y, z
-            psi_velocity: Array4::zeros((3, nx, ny, nz)),
             psi_dispersive: None,
             nx,
             ny,

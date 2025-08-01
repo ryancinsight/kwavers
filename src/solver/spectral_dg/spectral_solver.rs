@@ -127,13 +127,13 @@ impl SpectralSolver {
     /// Compute wavenumbers for FFT
     fn compute_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
         let mut k = vec![0.0; n];
-        let L = n as f64 * dx;  // Total domain size
+        let l = n as f64 * dx;  // Total domain size
         
         for i in 0..n {
             if i <= n / 2 {
-                k[i] = 2.0 * PI * i as f64 / L;
+                k[i] = 2.0 * PI * i as f64 / l;
             } else {
-                k[i] = 2.0 * PI * (i as f64 - n as f64) / L;
+                k[i] = 2.0 * PI * (i as f64 - n as f64) / l;
             }
         }
         

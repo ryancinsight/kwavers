@@ -109,47 +109,51 @@ impl ValidationResult {
     }
 }
 
-/// A composable physics component that can be combined with others
+/// Core trait for physics components
 /// 
-/// This trait implements SOLID principles:
+/// This trait follows SOLID principles:
 /// - Single Responsibility: Each component has one clear purpose
 /// - Open/Closed: New components can be added without modifying existing ones
 /// - Liskov Substitution: All components are substitutable
 /// - Interface Segregation: Minimal interface with focused methods
 /// - Dependency Inversion: Depends on abstractions, not concretions
-pub trait PhysicsComponent: Send + Sync {
+pub trait PhysicsComponent: Send + Sync + std::fmt::Debug {
     /// Unique identifier for this component
     fn component_id(&self) -> &str;
     
     /// Dependencies this component requires from other components
-    fn dependencies(&self) -> Vec<FieldType>;
+    fn required_fields(&self) -> Vec<FieldType>;
     
     /// Fields this component produces or modifies
-    fn output_fields(&self) -> Vec<FieldType>;
+    fn provided_fields(&self) -> Vec<FieldType>;
+    
+    /// Initialize the component
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        Ok(())
+    }
     
     /// Apply this component's physics for one time step
-    fn apply(
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PhysicsContext,
     ) -> KwaversResult<()>;
     
     /// Check if this component can run with the given inputs
     fn can_execute(&self, available_fields: &[FieldType]) -> bool {
-        self.dependencies().iter().all(|dep| available_fields.contains(dep))
+        self.required_fields().iter().all(|dep| available_fields.contains(dep))
     }
     
     /// Get performance metrics for this component
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         HashMap::new()
     }
     
     /// Validate component configuration and state
-    fn validate(&self, _context: &PhysicsContext) -> ValidationResult {
+    fn validate(&self, _grid: &Grid, _medium: &dyn Medium) -> ValidationResult {
         ValidationResult::new()
     }
     
@@ -171,6 +175,38 @@ pub trait PhysicsComponent: Send + Sync {
     /// Check if component is optional (can be skipped if dependencies missing)
     fn is_optional(&self) -> bool {
         false
+    }
+    
+    /// Clone the component as a boxed trait object
+    fn clone_component(&self) -> Box<dyn PhysicsComponent>;
+    
+    // Deprecated methods for backward compatibility
+    #[deprecated(since = "0.2.0", note = "Use `required_fields` instead")]
+    fn dependencies(&self) -> Vec<FieldType> {
+        self.required_fields()
+    }
+    
+    #[deprecated(since = "0.2.0", note = "Use `provided_fields` instead")]
+    fn output_fields(&self) -> Vec<FieldType> {
+        self.provided_fields()
+    }
+    
+    #[deprecated(since = "0.2.0", note = "Use `update` instead")]
+    fn apply(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        _context: &PhysicsContext,
+    ) -> KwaversResult<()> {
+        self.update(fields, grid, medium, dt, t)
+    }
+    
+    #[deprecated(since = "0.2.0", note = "Use `performance_metrics` instead")]
+    fn get_metrics(&self) -> HashMap<String, f64> {
+        self.performance_metrics()
     }
 }
 
@@ -362,7 +398,7 @@ impl PhysicsPipeline {
         }
         
         // Add output fields to available fields
-        for field in component.output_fields() {
+        for field in component.provided_fields() {
             self.available_fields.insert(field);
         }
         
@@ -383,13 +419,13 @@ impl PhysicsPipeline {
         
         // Check if removing this component would break dependencies
         let removed_outputs: HashSet<FieldType> = self.components[index]
-            .output_fields()
+            .provided_fields()
             .into_iter()
             .collect();
         
         for (i, component) in self.components.iter().enumerate() {
             if i != index {
-                let deps: HashSet<FieldType> = component.dependencies().into_iter().collect();
+                let deps: HashSet<FieldType> = component.required_fields().into_iter().collect();
                 if !deps.is_disjoint(&removed_outputs) {
                     return Err(PhysicsError::IncompatibleModels {
                         model1: component_id.to_string(),
@@ -448,7 +484,7 @@ impl PhysicsPipeline {
             // Execute component with performance tracking
             let start_time = Instant::now();
             let component_id = component.component_id().to_string();
-            let result = component.apply(fields, grid, medium, dt, t, context);
+            let result = component.update(fields, grid, medium, dt, t);
             let duration = start_time.elapsed().as_secs_f64();
             
             context.performance_tracker.record_execution(&component_id, duration);
@@ -464,12 +500,12 @@ impl PhysicsPipeline {
     }
     
     /// Validate the entire pipeline
-    pub fn validate_pipeline(&mut self, context: &PhysicsContext) -> ValidationResult {
+    pub fn validate_pipeline(&mut self, context: &PhysicsContext, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
         let mut result = ValidationResult::new();
         
         // Validate each component
         for component in &self.components {
-            let component_validation = component.validate(context);
+            let component_validation = component.validate(grid, medium);
             if !component_validation.is_valid {
                 result.add_error(format!(
                     "Component '{}' validation failed: {}",
@@ -501,7 +537,7 @@ impl PhysicsPipeline {
     pub fn get_all_metrics(&self) -> HashMap<String, HashMap<String, f64>> {
         self.components
             .iter()
-            .map(|c| (c.component_id().to_string(), c.get_metrics()))
+            .map(|c| (c.component_id().to_string(), c.performance_metrics()))
             .collect()
     }
     
@@ -535,7 +571,7 @@ impl PhysicsPipeline {
         // Aggregate execution times
         let mut total_time = 0.0;
         for component in &self.components {
-            let comp_metrics = component.get_metrics();
+            let comp_metrics = component.performance_metrics();
             if let Some(time) = comp_metrics.get("execution_time") {
                 total_time += time;
             }
@@ -616,7 +652,7 @@ impl PhysicsPipeline {
         temp_visited[idx] = true;
         
         // Visit dependencies first
-        let deps = self.components[idx].dependencies();
+        let deps = self.components[idx].required_fields();
         for dep in deps {
             if let Some(dep_idx) = self.find_component_by_output(&dep) {
                 self.visit_component(dep_idx, visited, temp_visited, order)?;
@@ -633,7 +669,7 @@ impl PhysicsPipeline {
     fn find_component_by_output(&self, field: &FieldType) -> Option<usize> {
         self.components
             .iter()
-            .position(|c| c.output_fields().contains(field))
+            .position(|c| c.provided_fields().contains(field))
     }
     
     fn validate_component(&self, component: &Box<dyn PhysicsComponent>) -> KwaversResult<ValidationResult> {
@@ -645,14 +681,14 @@ impl PhysicsPipeline {
         }
         
         // Check for duplicate dependencies
-        let deps = component.dependencies();
+        let deps = component.required_fields();
         let dep_set: HashSet<&FieldType> = deps.iter().collect();
         if dep_set.len() != deps.len() {
             result.add_error("Duplicate dependencies detected".to_string());
         }
         
         // Check for duplicate outputs
-        let outputs = component.output_fields();
+        let outputs = component.provided_fields();
         let output_set: HashSet<&FieldType> = outputs.iter().collect();
         if output_set.len() != outputs.len() {
             result.add_error("Duplicate output fields detected".to_string());
@@ -680,7 +716,7 @@ impl PhysicsPipeline {
         let available: HashSet<FieldType> = self.available_fields.iter().cloned().collect();
         
         for component in &self.components {
-            for dep in component.dependencies() {
+            for dep in component.required_fields() {
                 if !available.contains(&dep) {
                     missing.push(format!("{}:{}", component.component_id(), dep.as_str()));
                 }
@@ -700,7 +736,7 @@ impl Default for PhysicsPipeline {
 /// Acoustic wave propagation component
 /// 
 /// Implements YAGNI principle by providing only necessary functionality
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AcousticWaveComponent {
     id: String,
     metrics: HashMap<String, f64>,
@@ -826,22 +862,26 @@ impl PhysicsComponent for AcousticWaveComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![] // Acoustic wave doesn't depend on its own output
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         self.state = ComponentState::Running;
         
@@ -927,7 +967,7 @@ impl PhysicsComponent for AcousticWaveComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -940,10 +980,14 @@ impl PhysicsComponent for AcousticWaveComponent {
         self.metrics.clear();
         Ok(())
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
+    }
 }
 
 /// Thermal diffusion component implementation
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThermalDiffusionComponent {
     id: String,
     metrics: HashMap<String, f64>,
@@ -965,22 +1009,26 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![] // Thermal diffusion doesn't depend on its own output
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Temperature]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        context: &PhysicsContext,
     ) -> KwaversResult<()> {
         self.state = ComponentState::Running;
         
@@ -1012,7 +1060,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
                     kappa_array[[i, j, k]] = medium.thermal_diffusivity(x, y, z, grid);
                     rho_array[[i, j, k]] = medium.density(x, y, z, grid);
                     cp_array[[i, j, k]] = medium.specific_heat(x, y, z, grid);
-                    alpha_array[[i, j, k]] = medium.absorption_coefficient(x, y, z, grid, context.frequency);
+                    alpha_array[[i, j, k]] = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
                     c_array[[i, j, k]] = medium.sound_speed(x, y, z, grid);
                 }
             }
@@ -1056,7 +1104,7 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1069,12 +1117,17 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         self.metrics.clear();
         Ok(())
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
+    }
 }
 
 /// Kuznetsov wave equation component for full nonlinear acoustics
 /// 
 /// Implements the complete Kuznetsov equation with all second-order nonlinear terms
 /// and acoustic diffusivity for accurate modeling of finite-amplitude sound propagation
+#[derive(Debug, Clone)]
 pub struct KuznetsovWaveComponent {
     id: String,
     metrics: HashMap<String, f64>,
@@ -1135,22 +1188,26 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![] // Kuznetsov wave is self-contained
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure, FieldType::Velocity]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        context: &PhysicsContext,
     ) -> KwaversResult<()> {
         use crate::utils::{fft_3d, ifft_3d};
         
@@ -1272,10 +1329,7 @@ impl PhysicsComponent for KuznetsovWaveComponent {
             }
         }
         
-        // Add source terms if available
-        if let Some(source) = context.source_terms.get("acoustic") {
-            pressure_update += source;
-        }
+        // Source terms would be added here if available
         
         // Update pressure field
         {
@@ -1349,7 +1403,7 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1367,7 +1421,7 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         Ok(())
     }
     
-    fn validate(&self, _context: &PhysicsContext) -> ValidationResult {
+    fn validate(&self, _grid: &Grid, _medium: &dyn Medium) -> ValidationResult {
         let mut result = ValidationResult::new();
         
         if self.pressure_history.is_empty() {
@@ -1380,10 +1434,15 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         
         result
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
+    }
 }
 
 /// Cavitation Physics Component
 /// Follows Single Responsibility: Handles only cavitation dynamics
+#[derive(Debug, Clone)]
 pub struct CavitationComponent {
     id: String,
     cavitation_model: crate::physics::mechanics::cavitation::CavitationModel,
@@ -1407,22 +1466,26 @@ impl PhysicsComponent for CavitationComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure]
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Cavitation, FieldType::Light]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
@@ -1454,7 +1517,7 @@ impl PhysicsComponent for CavitationComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1465,10 +1528,15 @@ impl PhysicsComponent for CavitationComponent {
     fn priority(&self) -> u32 {
         2 // Execute after acoustic wave
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
+    }
 }
 
 /// Elastic Wave Physics Component
 /// Follows Single Responsibility: Handles only elastic wave propagation
+#[derive(Debug, Clone)]
 pub struct ElasticWaveComponent {
     id: String,
     elastic_model: crate::physics::mechanics::elastic_wave::ElasticWave,
@@ -1492,22 +1560,26 @@ impl PhysicsComponent for ElasticWaveComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Pressure]
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Stress, FieldType::Velocity]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
@@ -1523,7 +1595,7 @@ impl PhysicsComponent for ElasticWaveComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1534,10 +1606,15 @@ impl PhysicsComponent for ElasticWaveComponent {
     fn priority(&self) -> u32 {
         1 // Execute with acoustic wave
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
+    }
 }
 
 /// Light Diffusion Physics Component
 /// Follows Single Responsibility: Handles only light propagation and diffusion
+#[derive(Debug)]
 pub struct LightDiffusionComponent {
     id: String,
     light_model: crate::physics::optics::diffusion::LightDiffusion,
@@ -1561,22 +1638,26 @@ impl PhysicsComponent for LightDiffusionComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Light, FieldType::Temperature]
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Light, FieldType::Temperature]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
-        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
@@ -1591,7 +1672,7 @@ impl PhysicsComponent for LightDiffusionComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1602,10 +1683,20 @@ impl PhysicsComponent for LightDiffusionComponent {
     fn priority(&self) -> u32 {
         3 // Execute after cavitation
     }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(Self {
+            id: self.id.clone(),
+            light_model: crate::physics::optics::diffusion::LightDiffusion::new(&crate::grid::Grid::new(1, 1, 1, 1.0, 1.0, 1.0), false, false, false),
+            state: ComponentState::Initialized,
+            metrics: HashMap::new(),
+        })
+    }
 }
 
 /// Chemical Reaction Physics Component
 /// Follows Single Responsibility: Handles only chemical reactions and kinetics
+#[derive(Debug, Clone)]
 pub struct ChemicalComponent {
     id: String,
     chemical_model: crate::physics::chemistry::ChemicalModel,
@@ -1630,22 +1721,26 @@ impl PhysicsComponent for ChemicalComponent {
         &self.id
     }
     
-    fn dependencies(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Light, FieldType::Temperature, FieldType::Pressure]
     }
     
-    fn output_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<FieldType> {
         vec![FieldType::Chemical, FieldType::Temperature]
     }
     
-    fn apply(
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = ComponentState::Ready;
+        Ok(())
+    }
+    
+    fn update(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
@@ -1713,7 +1808,7 @@ impl PhysicsComponent for ChemicalComponent {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.metrics.clone()
     }
     
@@ -1723,6 +1818,10 @@ impl PhysicsComponent for ChemicalComponent {
     
     fn priority(&self) -> u32 {
         4 // Execute last
+    }
+    
+    fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+        Box::new(self.clone())
     }
 }
 

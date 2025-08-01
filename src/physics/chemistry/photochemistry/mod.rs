@@ -5,7 +5,7 @@ use log::debug;
 use ndarray::{Array3, Zip};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PhotochemicalEffects {
     pub reactive_oxygen_species: Array3<f64>, // ROS like singlet oxygen (¹O₂), superoxide (O₂•⁻)
 }

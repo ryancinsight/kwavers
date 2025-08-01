@@ -50,7 +50,6 @@ pub enum MLBackend {
 
 /// Main ML engine for simulation intelligence
 pub struct MLEngine {
-    backend: MLBackend,
     models: HashMap<ModelType, Box<dyn MLModel>>,
     performance_metrics: PerformanceMetrics,
 }
@@ -92,9 +91,8 @@ pub struct PerformanceMetrics {
 
 impl MLEngine {
     /// Create new ML engine with specified backend
-    pub fn new(backend: MLBackend) -> KwaversResult<Self> {
+    pub fn new(_backend: MLBackend) -> KwaversResult<Self> {
         let mut engine = Self {
-            backend,
             models: HashMap::new(),
             performance_metrics: PerformanceMetrics::default(),
         };
@@ -554,7 +552,6 @@ mod tests {
     #[test]
     fn test_ml_engine_creation() {
         let engine = MLEngine::new(MLBackend::Native).unwrap();
-        assert_eq!(engine.backend, MLBackend::Native);
         // In Phase 12, engine now includes default models for AI capabilities
         assert!(!engine.models.is_empty()); // Should have default models
         assert!(engine.models.contains_key(&ModelType::TissueClassifier));

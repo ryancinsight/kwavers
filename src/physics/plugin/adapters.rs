@@ -4,48 +4,61 @@
 //! This module provides adapters that allow existing PhysicsComponent implementations
 //! to be used as plugins, following the Adapter pattern from GRASP.
 
-use super::{PhysicsPlugin, PluginMetadata, PluginContext};
+use super::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::composable::{PhysicsComponent, PhysicsContext as ComposableContext, FieldType, ValidationResult};
+use crate::physics::composable::{PhysicsComponent, FieldType, ValidationResult};
 use ndarray::Array4;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-/// Adapter to convert a PhysicsComponent into a PhysicsPlugin
+/// Adapter that wraps a PhysicsComponent to implement the PhysicsPlugin trait
+/// 
+/// This follows the Adapter pattern to allow existing components to work
+/// with the plugin system without modification.
 #[derive(Debug)]
-pub struct ComponentPluginAdapter<C: PhysicsComponent> {
-    component: C,
+pub struct ComponentPluginAdapter {
+    component: Box<dyn PhysicsComponent>,
     metadata: PluginMetadata,
+    state: PluginState,
 }
 
-impl<C: PhysicsComponent> ComponentPluginAdapter<C> {
+impl ComponentPluginAdapter {
     /// Create a new adapter for a physics component
-    pub fn new(component: C, metadata: PluginMetadata) -> Self {
-        Self { component, metadata }
+    pub fn new(component: Box<dyn PhysicsComponent>, metadata: PluginMetadata) -> Self {
+        Self {
+            component,
+            metadata,
+            state: PluginState::Created,
+        }
     }
 }
 
-impl<C: PhysicsComponent + Debug + 'static> PhysicsPlugin for ComponentPluginAdapter<C> {
+impl PhysicsPlugin for ComponentPluginAdapter {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
     
+    fn state(&self) -> PluginState {
+        self.state
+    }
+    
     fn required_fields(&self) -> Vec<FieldType> {
-        self.component.dependencies()
+        self.component.required_fields()
     }
     
     fn provided_fields(&self) -> Vec<FieldType> {
-        self.component.output_fields()
+        self.component.provided_fields()
     }
     
     fn initialize(
         &mut self,
-        _grid: &Grid,
-        _medium: &dyn Medium,
+        grid: &Grid,
+        medium: &dyn Medium,
     ) -> KwaversResult<()> {
-        // Components are typically initialized in their constructors
+        self.component.initialize(grid, medium)?;
+        self.state = PluginState::Initialized;
         Ok(())
     }
     
@@ -56,24 +69,40 @@ impl<C: PhysicsComponent + Debug + 'static> PhysicsPlugin for ComponentPluginAda
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-        context: &PluginContext,
+        _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Convert PluginContext to ComposableContext
-        let composable_context = ComposableContext::new(context.frequency);
-        
-        // Call the component's apply method
-        self.component.apply(fields, grid, medium, dt, t, &composable_context)
+        self.state = PluginState::Running;
+        match self.component.update(fields, grid, medium, dt, t) {
+            Ok(()) => {
+                self.state = PluginState::Initialized;
+                Ok(())
+            }
+            Err(e) => {
+                self.state = PluginState::Error;
+                Err(e)
+            }
+        }
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
-        self.component.get_metrics()
+    fn finalize(&mut self) -> KwaversResult<()> {
+        self.state = PluginState::Finalized;
+        Ok(())
+    }
+    
+    fn performance_metrics(&self) -> HashMap<String, f64> {
+        self.component.performance_metrics()
     }
     
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        // Use the component's validate method with a PhysicsContext
-        let context = ComposableContext::new(1e6); // Default frequency of 1 MHz
-        
-        self.component.validate(&context)
+        self.component.validate(grid, medium)
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(Self {
+            component: self.component.clone_component(),
+            metadata: self.metadata.clone(),
+            state: PluginState::Created,
+        })
     }
 }
 
@@ -83,7 +112,7 @@ pub mod factories {
     use crate::physics::composable::{AcousticWaveComponent, ThermalDiffusionComponent};
     
     /// Create a plugin adapter for the acoustic wave component
-    pub fn acoustic_wave_plugin(id: String) -> ComponentPluginAdapter<AcousticWaveComponent> {
+    pub fn acoustic_wave_plugin(id: String) -> ComponentPluginAdapter {
         let metadata = PluginMetadata {
             id: id.clone(),
             name: "Acoustic Wave Propagation".to_string(),
@@ -94,13 +123,13 @@ pub mod factories {
         };
         
         ComponentPluginAdapter::new(
-            AcousticWaveComponent::new(id),
+            Box::new(AcousticWaveComponent::new(id)),
             metadata,
         )
     }
     
     /// Create a plugin adapter for the thermal diffusion component
-    pub fn thermal_diffusion_plugin(id: String) -> ComponentPluginAdapter<ThermalDiffusionComponent> {
+    pub fn thermal_diffusion_plugin(id: String) -> ComponentPluginAdapter {
         let metadata = PluginMetadata {
             id: id.clone(),
             name: "Thermal Diffusion".to_string(),
@@ -111,7 +140,7 @@ pub mod factories {
         };
         
         ComponentPluginAdapter::new(
-            ThermalDiffusionComponent::new(id),
+            Box::new(ThermalDiffusionComponent::new(id)),
             metadata,
         )
     }

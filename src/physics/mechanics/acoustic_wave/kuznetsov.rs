@@ -813,6 +813,7 @@ fn compute_k_magnitude(grid: &Grid) -> Array3<f64> {
 }
 
 /// Compute phase correction factors for k-space derivatives
+#[cfg(test)]
 fn compute_phase_factors(grid: &Grid, order: usize) -> Array3<f64> {
     let mut factors = Array3::ones((grid.nx, grid.ny, grid.nz));
     

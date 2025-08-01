@@ -5,7 +5,7 @@ use log::debug;
 use ndarray::{Array3, Zip};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReactionKinetics {
     pub hydroxyl_concentration: Array3<f64>,
     pub hydrogen_peroxide: Array3<f64>,

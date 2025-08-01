@@ -959,6 +959,7 @@ impl SimulationSetup {
     }
 
     /// Get validation summary
+    #[allow(dead_code)]
     fn get_validation_summary(&self) -> HashMap<String, String> {
         let mut summary = HashMap::new();
         

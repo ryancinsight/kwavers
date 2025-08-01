@@ -7,7 +7,7 @@ use ndarray::{Array3, Array4, Axis, Zip};
 
 pub const TEMPERATURE_IDX: usize = 2;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OpticalThermalModel {
     temperature_contribution: Array3<f64>, // Optical contribution to temperature field
 }
