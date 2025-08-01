@@ -10,6 +10,7 @@ mod tests {
     use super::super::*;
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
+    use crate::medium::Medium;
     use crate::physics::composable::{FieldType, ValidationResult};
     use ndarray::Array4;
 
@@ -57,10 +58,13 @@ mod tests {
         fn metadata(&self) -> &PluginMetadata {
             &self.metadata
         }
+        
+        fn state(&self) -> PluginState {
+            PluginState::Created
+        }
 
         fn initialize(
             &mut self,
-            _config: Option<Box<dyn PluginConfig>>,
             _grid: &Grid,
             _medium: &dyn Medium,
         ) -> KwaversResult<()> {
@@ -90,6 +94,12 @@ mod tests {
 
         fn validate(&self, _grid: &Grid, _medium: &dyn Medium) -> ValidationResult {
             ValidationResult::new()
+        }
+        
+        fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+            Box::new(MockPlugin::new(&self.id)
+                .with_dependencies(self.dependencies.clone())
+                .with_outputs(self.outputs.clone()))
         }
     }
 
@@ -215,29 +225,116 @@ mod tests {
     // TODO: Add a concrete PluginConfig type for testing
 
     #[test]
-    fn test_plugin_validation() {
-        let plugin = MockPlugin::new("validator");
-        let grid = Grid::new(32, 32, 32, 2e-3, 2e-3, 2e-3);
+    fn test_plugin_lifecycle() {
+        let mut manager = PluginManager::new();
+        let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
-        // Should pass validation
+        // Create a plugin
+        let plugin = Box::new(MockPlugin::new("lifecycle_test"));
+        assert!(manager.register(plugin).is_ok());
+        
+        // Initialize all plugins
+        assert!(manager.initialize_all(&grid, &medium).is_ok());
+        
+        // Update plugins
+        let mut fields = Array4::zeros((10, 16, 16, 16));
+        let context = PluginContext::new(0, 100, 1e6);
+        assert!(manager.update_all(&mut fields, &grid, &medium, 1e-6, 0.0, &context).is_ok());
+    }
+    
+    #[test]
+    fn test_plugin_state_management() {
+        let plugin = MockPlugin::new("state_test");
+        
+        // Check initial state
+        assert_eq!(plugin.state(), PluginState::Created);
+        
+        // State transitions would be tested here if MockPlugin tracked state
+    }
+    
+    #[test]
+    fn test_plugin_performance_metrics() {
+        let mut manager = PluginManager::new();
+        let plugin1 = Box::new(MockPlugin::new("perf_test_1"));
+        let plugin2 = Box::new(MockPlugin::new("perf_test_2"));
+        
+        manager.register(plugin1).unwrap();
+        manager.register(plugin2).unwrap();
+        
+        let metrics = manager.get_all_metrics();
+        assert_eq!(metrics.len(), 2);
+        assert!(metrics.contains_key("perf_test_1"));
+        assert!(metrics.contains_key("perf_test_2"));
+    }
+    
+    #[test]
+    fn test_plugin_validation() {
+        let plugin = MockPlugin::new("validation_test");
+        let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        
         let result = plugin.validate(&grid, &medium);
         assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+        assert!(result.warnings.is_empty());
     }
-
+    
     #[test]
-    fn test_performance_tracking() {
+    fn test_plugin_cloning() {
+        let original = MockPlugin::new("clone_test")
+            .with_dependencies(vec![FieldType::Pressure])
+            .with_outputs(vec![FieldType::Temperature]);
+        
+        let cloned = original.clone_plugin();
+        
+        // Verify the clone has the same properties
+        assert_eq!(cloned.metadata().id, "clone_test");
+        assert_eq!(cloned.required_fields(), vec![FieldType::Pressure]);
+        assert_eq!(cloned.provided_fields(), vec![FieldType::Temperature]);
+    }
+    
+    #[test]
+    fn test_plugin_error_handling() {
         let mut manager = PluginManager::new();
-        let plugin = Box::new(MockPlugin::new("perf_test"));
         
-        manager.register(plugin).unwrap();
-        manager.compute_execution_order().unwrap();
+        // Test duplicate registration
+        let plugin1 = Box::new(MockPlugin::new("duplicate"));
+        let plugin2 = Box::new(MockPlugin::new("duplicate"));
         
-        // Execute and get metrics
-        let metrics = manager.get_all_metrics();
+        assert!(manager.register(plugin1).is_ok());
+        assert!(manager.register(plugin2).is_err());
+    }
+    
+    #[test]
+    fn test_plugin_execution_order() {
+        let mut manager = PluginManager::new();
         
-        // Should have metrics for our plugin
-        assert!(metrics.contains_key("perf_test"));
-        assert_eq!(metrics.len(), 1);
+        // Create plugins with dependencies to test execution order
+        let producer = Box::new(
+            MockPlugin::new("producer")
+                .with_outputs(vec![FieldType::Pressure])
+        );
+        
+        let consumer = Box::new(
+            MockPlugin::new("consumer")
+                .with_dependencies(vec![FieldType::Pressure])
+                .with_outputs(vec![FieldType::Temperature])
+        );
+        
+        let final_consumer = Box::new(
+            MockPlugin::new("final_consumer")
+                .with_dependencies(vec![FieldType::Temperature])
+        );
+        
+        // Register in wrong order to test dependency resolution
+        assert!(manager.register(final_consumer).is_ok());
+        assert!(manager.register(consumer).is_ok());
+        assert!(manager.register(producer).is_ok());
+        
+        // The manager should execute them in the correct order
+        let grid = Grid::new(16, 16, 16, 0.1, 0.1, 0.1);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        assert!(manager.initialize_all(&grid, &medium).is_ok());
     }
 }

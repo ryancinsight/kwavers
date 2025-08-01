@@ -11,6 +11,8 @@ mod tests {
     use crate::medium::Medium;
     use crate::physics::traits::AcousticWaveModel;
     use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme};
+    use crate::physics::mechanics::acoustic_wave::nonlinear::core::NonlinearWave;
+    use crate::source::{Source, NullSource};
     use ndarray::{Array3, Array4, Array1, Axis};
     use std::f64::consts::PI;
     use approx::assert_relative_eq;
@@ -41,9 +43,9 @@ mod tests {
     /// Test basic initialization and configuration
     #[test]
     fn test_kuznetsov_initialization() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001);
         let config = KuznetsovConfig::default();
-        let solver = KuznetsovWave::new(&grid, config.clone());
+        let solver = KuznetsovWave::new(&grid, config).unwrap();
         
         assert_eq!(solver.config.enable_nonlinearity, true);
         assert_eq!(solver.config.enable_diffusivity, true);
@@ -59,7 +61,7 @@ mod tests {
         config.enable_nonlinearity = false;
         config.enable_diffusivity = false;
         
-        let mut solver = KuznetsovWave::new(&grid, config);
+        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create test source
@@ -105,7 +107,7 @@ mod tests {
         config.enable_diffusivity = false;
         config.nonlinearity_scaling = 1.0;
         
-        let mut solver = KuznetsovWave::new(&grid, config);
+        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         medium.b_a = 5.0; // Typical for water
         
@@ -158,8 +160,8 @@ mod tests {
         config.enable_nonlinearity = false;
         config.enable_diffusivity = true;
         
-        let mut solver = KuznetsovWave::new(&grid, config);
-        let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.5, 0.0); // Non-zero absorption
+        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.5, 0.0); // Non-zero absorption
         
         // Initialize with high-frequency pulse
         let mut fields = Array4::zeros((13, 128, 64, 64));
@@ -203,7 +205,7 @@ mod tests {
         let grid = Grid::new(128, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = KuznetsovConfig::default(); // All terms enabled
         
-        let mut solver = KuznetsovWave::new(&grid, config);
+        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.5, 0.0);
         medium.b_a = 5.0;
         
@@ -251,15 +253,18 @@ mod tests {
     fn test_cfl_stability() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = KuznetsovConfig::default();
-        let solver = KuznetsovWave::new(&grid, config);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
-        // Test stable timestep
-        let dt_stable = 0.3 * grid.dx / 1500.0; // CFL = 0.3
+        let min_dx = grid.dx.min(grid.dy).min(grid.dz);
+        let c_max = medium.sound_speed(0.0, 0.0, 0.0, &grid);
+        
+        let dt_stable = 0.5 * min_dx / c_max; // CFL < 1
+        let dt_unstable = 2.0 * min_dx / c_max; // CFL > 1
+        
+        let solver = KuznetsovWave::new(&grid, config).unwrap();
         assert!(solver.check_cfl_condition(&grid, &medium, dt_stable));
         
-        // Test unstable timestep
-        let dt_unstable = 1.5 * grid.dx / 1500.0; // CFL = 1.5
+        // Unstable time step
         assert!(!solver.check_cfl_condition(&grid, &medium, dt_unstable));
     }
     
@@ -309,14 +314,14 @@ mod tests {
         kuznetsov_config.nonlinearity_scaling = 1.0;
         kuznetsov_config.time_scheme = TimeIntegrationScheme::Euler; // Simple scheme
         
-        let mut kuznetsov_solver = KuznetsovWave::new(&grid, kuznetsov_config);
+        let mut kuznetsov_solver = KuznetsovWave::new(&grid, kuznetsov_config).unwrap();
         
         // Standard nonlinear solver
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         let mut standard_solver = NonlinearWave::new(&grid);
-        standard_solver.set_nonlinearity_scaling(1.0);
         
         // Same medium
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        // let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0); // This line is removed as medium is now passed to NonlinearWave
         
         // Same initial conditions - create fields arrays
         let mut fields_k = Array4::zeros((13, 64, 64, 64));

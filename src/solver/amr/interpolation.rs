@@ -415,11 +415,6 @@ fn compute_polynomial_coeffs(stencil: &[f64]) -> Vec<f64> {
     ]
 }
 
-/// Evaluate polynomial at given point
-fn evaluate_polynomial(coeffs: &[f64], x: f64, y: f64, z: f64) -> f64 {
-    coeffs[0] + coeffs[1] * x + coeffs[2] * y + coeffs[3] * z
-}
-
 /// WENO5 1D interpolation
 fn weno5_1d(stencil: &[f64; 5], x: f64) -> f64 {
     // WENO5 weights

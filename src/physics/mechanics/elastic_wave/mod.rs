@@ -283,7 +283,7 @@ impl ElasticWaveMetrics {
 /// - GRASP: Information expert, creator, controller, low coupling, high cohesion
 /// - SSOT: Single source of truth for performance metrics
 /// - ADP: Acyclic dependency principle
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ElasticWave {
     kx: Array3<f64>,
     ky: Array3<f64>,

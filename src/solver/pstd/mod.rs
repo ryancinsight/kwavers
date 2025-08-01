@@ -13,7 +13,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
 use crate::physics::composable::FieldType;
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
@@ -486,6 +486,10 @@ impl PhysicsPlugin for PstdPlugin {
         &self.metadata
     }
     
+    fn state(&self) -> PluginState {
+        PluginState::Created
+    }
+    
     fn required_fields(&self) -> Vec<FieldType> {
         vec![
             FieldType::Velocity,  // Needs velocity fields for divergence
@@ -557,13 +561,15 @@ impl PhysicsPlugin for PstdPlugin {
         Ok(())
     }
     
-    fn get_metrics(&self) -> HashMap<String, f64> {
+    fn performance_metrics(&self) -> HashMap<String, f64> {
         self.solver.get_metrics().clone()
     }
     
-    fn reset(&mut self) -> KwaversResult<()> {
-        self.solver.metrics.clear();
-        Ok(())
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(Self {
+            metadata: self.metadata.clone(),
+            solver: PstdSolver::new(self.solver.config, &self.solver.grid).unwrap(),
+        })
     }
 }
 

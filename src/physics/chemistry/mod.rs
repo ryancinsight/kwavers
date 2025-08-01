@@ -369,7 +369,7 @@ use reaction_kinetics::ReactionKinetics;
 /// - GRASP: Information expert, creator, controller, low coupling, high cohesion
 /// - SSOT: Single source of truth for chemical state and metrics
 /// - ADP: Acyclic dependency principle
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChemicalModel {
     radical_initiation: RadicalInitiation,
     kinetics: Option<ReactionKinetics>,
