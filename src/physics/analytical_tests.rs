@@ -191,7 +191,7 @@ mod tests {
         let frequency = 1e6; // 1 MHz
         let amplitude = 1e5;  // 100 kPa
         let initial_pressure = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
-            &grid, frequency, amplitude, medium.sound_speed(0.0, 0.0, 0.0).unwrap(), 0.0, true
+            &grid, frequency, amplitude, medium.sound_speed(0.0, 0.0, 0.0).expect("sound speed should be available for homogeneous medium"), 0.0, true
         );
         
         let mut fields = Array4::zeros((6, grid.nx, grid.ny, grid.nz));
