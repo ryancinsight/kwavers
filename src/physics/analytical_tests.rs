@@ -216,10 +216,11 @@ mod tests {
         info!("Starting plane wave propagation test with {} steps", num_steps);
         
         let source = NullSource;
+        let mut pressure_view = fields.index_axis(Axis(0), 0).to_owned();
         
         for step in 0..num_steps {
             let t = step as f64 * dt;
-            let pressure_view = fields.index_axis(Axis(0), 0).to_owned();
+            pressure_view.assign(&fields.index_axis(Axis(0), 0));
             solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, dt, t);
         }
         
@@ -297,10 +298,11 @@ mod tests {
         let num_steps = 50;
         
         let source = NullSource;
+        let mut pressure_view = fields.index_axis(Axis(0), 0).to_owned();
         
         for step in 0..num_steps {
             let t = step as f64 * dt;
-            let pressure_view = fields.index_axis(Axis(0), 0).to_owned();
+            pressure_view.assign(&fields.index_axis(Axis(0), 0));
             solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, dt, t);
         }
         
