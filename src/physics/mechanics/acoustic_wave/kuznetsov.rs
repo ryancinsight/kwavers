@@ -58,6 +58,7 @@ use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
 use ndarray::{Array3, Array4, Zip, Axis};
 use std::f64::consts::PI;
+use num_complex::Complex;
 
 use log::{info, warn, debug};
 use std::time::Instant;
@@ -94,6 +95,15 @@ pub struct KuznetsovConfig {
     
     /// Enable dispersion compensation
     pub enable_dispersion_compensation: bool,
+
+    /// Enable stability filter for diffusivity term
+    pub stability_filter: bool,
+
+    /// Maximum frequency for stability filter (Hz)
+    pub max_frequency: f64,
+
+    /// Default diffusivity coefficient for stability filter
+    pub diffusivity: f64,
 }
 
 impl Default for KuznetsovConfig {
@@ -109,6 +119,9 @@ impl Default for KuznetsovConfig {
             adaptive_timestep: false,
             cfl_factor: 0.3,
             enable_dispersion_compensation: true, // Enable by default
+            stability_filter: true,
+            max_frequency: 1e6, // 1 MHz
+            diffusivity: 1.0,
         }
     }
 }
@@ -353,7 +366,8 @@ impl KuznetsovWave {
         Ok(nonlinear_term)
     }
     
-    /// Compute the diffusivity term: -(δ/c₀⁴)∂³p/∂t³
+    /// Compute diffusivity/absorption term for the Kuznetsov equation
+    /// ∇²(α ∇²p) where α is the diffusivity coefficient
     fn compute_diffusivity_term(
         &mut self,
         pressure: &Array3<f64>,
@@ -363,43 +377,81 @@ impl KuznetsovWave {
     ) -> KwaversResult<Array3<f64>> {
         let start = Instant::now();
         
-        if !self.config.enable_diffusivity {
-            return Ok(Array3::zeros(pressure.raw_dim()));
+        // Fix: Improved stability for diffusivity term
+        // First compute ∇²p
+        let laplacian = self.compute_laplacian(pressure, grid)?;
+        
+        // Apply a stability filter to prevent high-frequency instabilities
+        let mut filtered_laplacian = laplacian;
+        if self.config.stability_filter {
+            self.apply_stability_filter(&mut filtered_laplacian, grid, dt);
         }
         
-        // Need at least 3 time levels for third derivative
-        if self.pressure_history.len() < 3 {
-            return Ok(Array3::zeros(pressure.raw_dim()));
+        // Transform to k-space for diffusivity computation
+        let mut fields_4d = Array4::zeros((1, filtered_laplacian.shape()[0], filtered_laplacian.shape()[1], filtered_laplacian.shape()[2]));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(&filtered_laplacian);
+        
+        let mut laplacian_hat = fft_3d(&fields_4d, 0, grid);
+        
+        // Apply diffusivity operator in k-space: -k²α
+        let k_mag = &self.k_magnitude;
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    // Get spatially varying diffusivity
+                    let alpha = medium.diffusivity(x, y, z, grid).unwrap_or(self.config.diffusivity);
+                    let k2 = k_mag[[i, j, k]].powi(2);
+                    
+                    // Apply diffusivity operator with stability limiting
+                    let damping_factor = if k2 > 0.0 {
+                        let max_damping = 0.1 / dt; // Limit to prevent excessive damping
+                        (-alpha * k2).min(max_damping)
+                    } else {
+                        0.0
+                    };
+                    
+                    laplacian_hat[[i, j, k]] *= Complex::new(damping_factor, 0.0);
+                }
+            }
         }
         
-        // Get previous pressure values
-        let p_prev = &self.pressure_history[0];
-        let p_prev2 = &self.pressure_history[1];
-        let p_prev3 = &self.pressure_history[2];
+        // Transform back to physical space
+        let result = ifft_3d(&laplacian_hat, grid);
         
-        // Third-order finite difference for ∂³p/∂t³
-        // Using backward difference formula
-        let d3p_dt3 = (pressure - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / (dt * dt * dt);
+        // Update metrics
+        self.metrics.diffusivity_time += start.elapsed().as_secs_f64();
         
-        // Apply diffusivity coefficient
-        let mut diffusivity_term = Array3::zeros(pressure.raw_dim());
+        Ok(result)
+    }
+    
+    /// Apply stability filter to prevent high-frequency instabilities
+    fn apply_stability_filter(&self, field: &mut Array3<f64>, grid: &Grid, dt: f64) {
+        // Simple 3-point smoothing filter for stability
+        let filter_strength = (dt * self.config.max_frequency).min(0.1);
         
-        Zip::indexed(&mut diffusivity_term)
-            .and(&d3p_dt3)
-            .for_each(|(i, j, k), diff, &d3p| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                
-                let c0 = medium.sound_speed(x, y, z, grid);
-                let delta = super::compute_acoustic_diffusivity(medium, x, y, z, grid, 1e6);
-                
-                let coeff = -delta / c0.powi(4);
-                *diff = coeff * d3p;
-            });
-        
-        self.metrics.diffusion_time += start.elapsed().as_secs_f64();
-        Ok(diffusivity_term)
+        if filter_strength > 1e-6 {
+            let mut filtered = field.clone();
+            
+            for i in 1..grid.nx-1 {
+                for j in 1..grid.ny-1 {
+                    for k in 1..grid.nz-1 {
+                        let neighbors = field[[i-1,j,k]] + field[[i+1,j,k]] +
+                                       field[[i,j-1,k]] + field[[i,j+1,k]] +
+                                       field[[i,j,k-1]] + field[[i,j,k+1]];
+                        let center = field[[i,j,k]];
+                        
+                        filtered[[i,j,k]] = center + filter_strength * (neighbors/6.0 - center);
+                    }
+                }
+            }
+            
+            field.assign(&filtered);
+        }
     }
     
     /// Update pressure history buffers

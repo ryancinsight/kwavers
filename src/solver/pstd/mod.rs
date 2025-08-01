@@ -205,23 +205,52 @@ impl PstdSolver {
     ) -> Array3<f64> {
         let mut kappa = Array3::ones(k_squared.raw_dim());
         
-        // k-space correction based on exact dispersion relation
-        // κ = sinc(k·Δx/2)^order
-        Zip::from(&mut kappa)
-            .and(k_squared)
-            .for_each(|kap, &k2| {
-                if k2 > 0.0 {
-                    let k = k2.sqrt();
-                    let dx_eff = (grid.dx + grid.dy + grid.dz) / 3.0; // Average spacing
-                    let arg = k * dx_eff / 2.0;
-                    let sinc = if arg.abs() < 1e-10 {
-                        1.0
+        // Fix: Properly compute wavenumber components for k-space correction
+        // The current implementation incorrectly uses average spacing
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    // Compute individual wavenumber components correctly
+                    let kx = if i <= nx / 2 {
+                        2.0 * PI * i as f64 / (nx as f64 * grid.dx)
                     } else {
-                        arg.sin() / arg
+                        2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
                     };
-                    *kap = sinc.powi(order as i32);
+                    
+                    let ky = if j <= ny / 2 {
+                        2.0 * PI * j as f64 / (ny as f64 * grid.dy)
+                    } else {
+                        2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+                    };
+                    
+                    let kz = if k <= nz / 2 {
+                        2.0 * PI * k as f64 / (nz as f64 * grid.dz)
+                    } else {
+                        2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
+                    };
+                    
+                    // Apply proper k-space correction for each direction
+                    let arg_x = kx * grid.dx / 2.0;
+                    let arg_y = ky * grid.dy / 2.0;
+                    let arg_z = kz * grid.dz / 2.0;
+                    
+                    let sinc_x = if arg_x.abs() < 1e-12 { 1.0 } else { arg_x.sin() / arg_x };
+                    let sinc_y = if arg_y.abs() < 1e-12 { 1.0 } else { arg_y.sin() / arg_y };
+                    let sinc_z = if arg_z.abs() < 1e-12 { 1.0 } else { arg_z.sin() / arg_z };
+                    
+                    // Combine corrections with proper order handling
+                    kappa[[i, j, k]] = match order {
+                        2 => sinc_x * sinc_y * sinc_z,
+                        4 => (sinc_x * sinc_y * sinc_z).powi(2),
+                        6 => (sinc_x * sinc_y * sinc_z).powi(3),
+                        8 => (sinc_x * sinc_y * sinc_z).powi(4),
+                        _ => sinc_x * sinc_y * sinc_z,
+                    };
                 }
-            });
+            }
+        }
         
         kappa
     }
@@ -236,15 +265,6 @@ impl PstdSolver {
     ) -> KwaversResult<()> {
         debug!("PSTD pressure update, dt={}", dt);
         let start = std::time::Instant::now();
-        
-        // Get medium properties
-        let rho_array = medium.density_array();
-        let c_array = medium.sound_speed_array();
-        
-        // Compute ρc² array
-        let rho_c2 = Zip::from(&rho_array)
-            .and(&c_array)
-            .map_collect(|&rho, &c| rho * c * c);
         
         // Transform velocity divergence to k-space
         let mut fields_4d = Array4::zeros((1, velocity_divergence.shape()[0], velocity_divergence.shape()[1], velocity_divergence.shape()[2]));
@@ -267,19 +287,30 @@ impl PstdSolver {
         }
         
         // Update pressure in k-space: ∂p/∂t = -ρc²∇·v
-        // In k-space, this becomes a simple multiplication
-        let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(-dt, 0.0));
+        // Apply proper FFT scaling factor
+        let scale_factor = -dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+        let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
         
         // Transform back to physical space
         let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
         
-        // Apply the update with spatially varying ρc²
-        Zip::from(pressure)
-            .and(&pressure_update)
-            .and(&rho_c2)
-            .for_each(|p, &update, &rho_c2_val| {
-                *p += update * rho_c2_val;
-            });
+        // Apply the update with spatially varying ρc² - Fix: Handle this properly
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    
+                    // Get local medium properties
+                    let rho = medium.density(x, y, z, &self.grid);
+                    let c = medium.sound_speed(x, y, z, &self.grid);
+                    let rho_c2 = rho * c * c;
+                    
+                    pressure[[i, j, k]] += pressure_update[[i, j, k]] * rho_c2;
+                }
+            }
+        }
         
         // Update metrics
         let elapsed = start.elapsed().as_secs_f64();

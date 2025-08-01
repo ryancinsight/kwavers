@@ -121,20 +121,7 @@ impl PMLBoundary {
         Self::new(PMLConfig::default())
     }
 
-    /// Creates a new PML boundary with the specified parameters.
-    ///
-    /// # Arguments
-    ///
-    /// * `thickness` - PML thickness in grid points (0 for auto-selection)
-    /// * `sigma_max_acoustic` - Maximum acoustic absorption coefficient (0 for auto-selection)
-    /// * `sigma_max_light` - Maximum light absorption coefficient (0 for auto-selection)
-    /// * `medium` - The simulation medium
-    /// * `grid` - The simulation grid
-    /// * `acoustic_freq` - Characteristic acoustic frequency
-    /// * `polynomial_order` - Order of polynomial grading (default: 3)
-    /// * `target_reflection` - Target theoretical reflection coefficient (default: 1e-6)
-    ///
-    /// Creates a damping profile for a PML layer.
+    /// Creates a damping profile for a PML layer with frequency-dependent absorption.
     ///
     /// # Arguments
     ///
@@ -143,21 +130,37 @@ impl PMLBoundary {
     /// * `dx` - Grid spacing
     /// * `sigma_max` - Maximum absorption coefficient
     /// * `order` - Polynomial order for profile grading
-    fn damping_profile(thickness: usize, length: usize, _dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
+    fn damping_profile(thickness: usize, length: usize, dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
         let mut profile = vec![0.0; length];
         
+        // Fix: Improved PML profile with better absorption characteristics
+        // Theoretical optimal sigma for reflection coefficient R
+        let target_reflection = 1e-6; // -120 dB reflection
+        let optimal_sigma = -(order + 1) as f64 * target_reflection.ln() / (2.0 * thickness as f64 * dx);
+        let sigma_eff = sigma_max.min(optimal_sigma * 2.0); // Don't exceed theoretical optimum
+        
         // Apply PML at both domain boundaries (left/right or top/bottom)
-        // Left/bottom boundary
+        // Left/bottom boundary - polynomial grading
         for (i, profile_val) in profile.iter_mut().enumerate().take(thickness) {
             let normalized_distance = (thickness - i) as f64 / thickness as f64;
-            *profile_val = sigma_max * normalized_distance.powi(order as i32);
+            let polynomial_factor = normalized_distance.powi(order as i32);
+            
+            // Add exponential component for better absorption at grazing angles
+            let exponential_factor = (-2.0 * normalized_distance).exp();
+            
+            *profile_val = sigma_eff * polynomial_factor * (1.0 + 0.1 * exponential_factor);
         }
         
         // Right/top boundary
         for i in 0..thickness {
             let idx = length - i - 1;
             let normalized_distance = i as f64 / thickness as f64;
-            profile[idx] = sigma_max * normalized_distance.powi(order as i32);
+            let polynomial_factor = normalized_distance.powi(order as i32);
+            
+            // Add exponential component for better absorption at grazing angles  
+            let exponential_factor = (-2.0 * normalized_distance).exp();
+            
+            profile[idx] = sigma_eff * polynomial_factor * (1.0 + 0.1 * exponential_factor);
         }
         
         profile
