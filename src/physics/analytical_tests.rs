@@ -5,7 +5,12 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::Array3;
+use crate::medium::homogeneous::HomogeneousMedium;
+use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovWave, KuznetsovConfig};
+use crate::physics::mechanics::acoustic_wave::nonlinear::core::NonlinearWave;
+use crate::physics::traits::AcousticWaveModel;
+use crate::source::{Source, NullSource};
+use ndarray::{Array3, Array4, Axis};
 use std::f64::consts::PI;
 use log::{debug, info};
 
@@ -197,7 +202,7 @@ mod tests {
         let frequency = 1e6; // 1 MHz
         let amplitude = 1e5;  // 100 kPa
         let initial_pressure = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
-            &grid, frequency, amplitude, medium.sound_speed(0.0, 0.0, 0.0).expect("sound speed should be available for homogeneous medium"), 0.0, true
+            &grid, frequency, amplitude, medium.sound_speed(0.0, 0.0, 0.0, &grid), 0.0, true
         );
         
         let mut fields = Array4::zeros((6, grid.nx, grid.ny, grid.nz));
@@ -210,10 +215,12 @@ mod tests {
         
         info!("Starting plane wave propagation test with {} steps", num_steps);
         
+        let source = NullSource;
+        
         for step in 0..num_steps {
             let t = step as f64 * dt;
             let pressure_view = fields.index_axis(Axis(0), 0).to_owned();
-            solver.update_wave(&mut fields, &pressure_view, &medium, &grid, dt, t);
+            solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, dt, t);
         }
         
         let final_pressure = fields.index_axis(Axis(0), 0).to_owned();
@@ -221,10 +228,10 @@ mod tests {
         // Use improved wave detection with sub-grid accuracy
         let (actual_speed, correlation) = PhysicsTestUtils::detect_wave_propagation_subgrid(
             &initial_pressure, &final_pressure, &grid, 
-            medium.sound_speed(0.0, 0.0, 0.0).unwrap(), total_time
+            medium.sound_speed(0.0, 0.0, 0.0, &grid), total_time
         );
         
-        let expected_speed = medium.sound_speed(0.0, 0.0, 0.0).unwrap();
+        let expected_speed = medium.sound_speed(0.0, 0.0, 0.0, &grid);
         let speed_error = (actual_speed - expected_speed).abs() / expected_speed;
         
         info!("Wave propagation test results:");
@@ -289,10 +296,12 @@ mod tests {
         let dt = 5e-8; // 50 ns
         let num_steps = 50;
         
+        let source = NullSource;
+        
         for step in 0..num_steps {
             let t = step as f64 * dt;
             let pressure_view = fields.index_axis(Axis(0), 0).to_owned();
-            solver.update_wave(&mut fields, &pressure_view, &medium, &grid, dt, t);
+            solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, dt, t);
         }
         
         let final_pressure = fields.index_axis(Axis(0), 0).to_owned();

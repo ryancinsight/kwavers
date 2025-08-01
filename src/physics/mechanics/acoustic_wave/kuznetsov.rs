@@ -1163,7 +1163,7 @@ mod tests {
     fn test_kuznetsov_initialization() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = KuznetsovConfig::default();
-        let solver = KuznetsovWave::new(&grid, config);
+        let solver = KuznetsovWave::new(&grid, config).unwrap();
         
         assert_eq!(solver.k_squared.dim(), (64, 64, 64));
         assert_eq!(solver.pressure_history.len(), 2);
