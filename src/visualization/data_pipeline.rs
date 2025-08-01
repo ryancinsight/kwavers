@@ -7,7 +7,7 @@
 use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::GpuContext;
 use crate::visualization::FieldType;
-use log::{debug, info, warn};
+use log::{debug, info};
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -346,6 +346,8 @@ impl DataPipeline {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: "cs_main",
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
         });
         
         Ok(pipeline)
@@ -413,6 +415,8 @@ impl DataPipeline {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: "cs_main",
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
         });
         
         Ok(pipeline)
@@ -473,6 +477,8 @@ impl DataPipeline {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: "cs_main",
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
         });
         
         Ok(pipeline)

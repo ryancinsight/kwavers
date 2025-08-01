@@ -287,7 +287,7 @@ pub fn calculate_ros_generation(
         generation_rates.insert(ROSSpecies::AtomicHydrogen, oh_rate);
         
         // O₂ dissociation
-        if temperature > 3000.0 {
+        if temperature >= O2_DISSOCIATION_TEMP_THRESHOLD {
             let o2_fraction = 0.21 * (1.0 - water_vapor_fraction); // Air composition
             let k_o2 = 1e14 * (-6.0e4 / temperature).exp();
             let o_rate = 2.0 * k_o2 * o2_fraction * pressure / (8.314 * temperature);

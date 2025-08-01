@@ -5,8 +5,7 @@
 //! with memory pool management and asynchronous operations.
 
 use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
-use crate::gpu::{GpuBackend, GpuPerformanceMetrics};
-use ndarray::Array3;
+use crate::gpu::GpuBackend;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -170,6 +169,11 @@ impl MemoryPool {
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
+            })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: format!("{:?}", self.backend),
+                reason: "Backend not available with current features".to_string(),
             })),
         }
     }
@@ -488,6 +492,12 @@ impl AdvancedGpuMemoryManager {
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "No GPU backend available".to_string(),
             })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                direction: MemoryTransferDirection::HostToDevice,
+                size_bytes: host_data.len() * std::mem::size_of::<f64>(),
+                reason: "Backend not available with current features".to_string(),
+            })),
         }
     }
 
@@ -516,6 +526,12 @@ impl AdvancedGpuMemoryManager {
                 direction: MemoryTransferDirection::DeviceToHost,
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "No GPU backend available".to_string(),
+            })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                direction: MemoryTransferDirection::DeviceToHost,
+                size_bytes: host_data.len() * std::mem::size_of::<f64>(),
+                reason: "Backend not available with current features".to_string(),
             })),
         }
     }
@@ -571,6 +587,12 @@ impl AdvancedGpuMemoryManager {
                 requested_bytes: size_bytes,
                 available_bytes: 0,
                 reason: "No GPU backend available".to_string(),
+            })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+                requested_bytes: size_bytes,
+                available_bytes: 0,
+                reason: "Backend not available with current features".to_string(),
             })),
         }
     }

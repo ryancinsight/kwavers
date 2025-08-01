@@ -233,6 +233,11 @@ impl GpuMemoryManager {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
             })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: format!("{:?}", self.context.backend),
+                reason: "Backend not available with current features".to_string(),
+            })),
         }
     }
 
@@ -248,6 +253,11 @@ impl GpuMemoryManager {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
             })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: format!("{:?}", self.context.backend),
+                reason: "Backend not available with current features".to_string(),
+            })),
         }
     }
 
@@ -262,6 +272,11 @@ impl GpuMemoryManager {
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
+            })),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                backend: format!("{:?}", self.context.backend),
+                reason: "Backend not available with current features".to_string(),
             })),
         }
     }
@@ -417,7 +432,7 @@ mod tests {
             reason: "Test error".to_string(),
         };
         let display = format!("{}", error);
-        assert!(display.contains("GPU device 0 initialization failed"));
+        assert!(display.contains("GPU device initialization failed"));
         assert!(display.contains("Test error"));
 
         // Test memory allocation error

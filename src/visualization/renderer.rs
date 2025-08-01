@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "advanced-visualization")]
 use {
-    nalgebra::{Matrix4, Vector3, Vector4},
+    nalgebra::Matrix4,
     std::collections::HashMap,
     wgpu::*,
 };
@@ -93,7 +93,7 @@ impl Renderer3D {
             warn!("Advanced visualization feature is enabled, creating stub implementation.");
             
             // Create mock WebGPU resources
-            use wgpu::util::DeviceExt;
+            
             
             let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
@@ -113,6 +113,7 @@ impl Renderer3D {
                     label: Some("Kwavers Visualization Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
+                    memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
             )).map_err(|e| KwaversError::Visualization(format!("Failed to create device: {}", e)))?;
@@ -140,6 +141,7 @@ impl Renderer3D {
                     module: &shader,
                     entry_point: "vs_main",
                     buffers: &[],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
@@ -149,6 +151,7 @@ impl Renderer3D {
                         blend: Some(wgpu::BlendState::REPLACE),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
                 }),
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
@@ -166,6 +169,7 @@ impl Renderer3D {
                     alpha_to_coverage_enabled: false,
                 },
                 multiview: None,
+                cache: None,
             });
             
             // Create dummy compute pipeline
@@ -180,6 +184,8 @@ impl Renderer3D {
                 layout: Some(&compute_pipeline_layout),
                 module: &shader,
                 entry_point: "cs_main",
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
             });
             
             // Create dummy textures
@@ -299,7 +305,7 @@ impl Renderer3D {
             self.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
             
             // Record rendering commands
-            let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
+            let encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
                 label: Some("Volume Render Encoder"),
             });
             
@@ -416,6 +422,7 @@ impl Renderer3D {
                 module: &shader,
                 entry_point: "vs_main",
                 buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(FragmentState {
                 module: &shader,
@@ -425,6 +432,7 @@ impl Renderer3D {
                     blend: Some(BlendState::ALPHA_BLENDING),
                     write_mask: ColorWrites::ALL,
                 })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
@@ -442,6 +450,7 @@ impl Renderer3D {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
+            cache: None,
         });
         
         Ok(pipeline)
@@ -465,6 +474,8 @@ impl Renderer3D {
             layout: Some(&compute_pipeline_layout),
             module: &shader,
             entry_point: "cs_main",
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
         });
         
         Ok(pipeline)

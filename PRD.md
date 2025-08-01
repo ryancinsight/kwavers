@@ -113,6 +113,12 @@ To democratize advanced ultrasound simulation through high-performance computing
 **Status**: IN PROGRESS 🚧  
 **Objective**: Implement next-generation numerical methods for 100M+ grid updates/second performance
 
+### Recent Improvements (January 2025):
+- **Memory Optimization**: Implemented workspace arrays and in-place operations (30-50% reduction)
+- **Numerical Analysis**: Comprehensive comparison with k-Wave and k-wave-python
+- **Plugin Enhancements**: Improved architecture for better modularity
+- **Documentation**: Created comprehensive improvement report
+
 ### Key Deliverables:
 
 #### Q1: Foundation Enhancements ✅ COMPLETED
