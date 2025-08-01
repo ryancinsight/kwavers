@@ -8,7 +8,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::visualization::VisualizationConfig;
 use log::{debug, info, warn};
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 #[cfg(feature = "advanced-visualization")]
 use egui::{Context, Ui, Vec2, Window};

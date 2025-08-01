@@ -8,7 +8,7 @@
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
 use crate::grid::Grid;
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use num_complex::Complex;
 use std::sync::Arc;
 use parking_lot::Mutex;

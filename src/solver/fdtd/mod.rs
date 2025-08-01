@@ -532,6 +532,7 @@ impl FdtdSolver {
     }
     
     /// Get performance metrics
+    /// Get performance metrics
     pub fn get_metrics(&self) -> &HashMap<String, f64> {
         &self.metrics
     }

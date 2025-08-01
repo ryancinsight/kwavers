@@ -26,8 +26,8 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::gpu::{GpuContext, GpuFieldOps};
-use log::{debug, info, warn};
+use crate::gpu::GpuContext;
+use log::{debug, info};
 use ndarray::{Array3, Array4};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -490,8 +490,8 @@ mod tests {
         assert!(!engine.meets_performance_targets());
     }
     
-    #[tokio::test]
-    async fn test_parameter_update() {
+    #[test]
+    fn test_parameter_update() {
         let config = VisualizationConfig::default();
         let mut engine = VisualizationEngine::new(config).unwrap();
         
@@ -499,8 +499,8 @@ mod tests {
         assert!(result.is_ok());
     }
     
-    #[tokio::test]
-    async fn test_render_field_without_gpu() {
+    #[test]
+    fn test_render_field_without_gpu() {
         let config = VisualizationConfig::default();
         let mut engine = VisualizationEngine::new(config).unwrap();
         
@@ -508,12 +508,12 @@ mod tests {
         let field = create_test_field();
         
         // Should not fail even without GPU context
-        let result = engine.render_field(&field, FieldType::Pressure, &grid).await;
+        let result = pollster::block_on(engine.render_field(&field, FieldType::Pressure, &grid));
         assert!(result.is_ok());
     }
     
-    #[tokio::test]
-    async fn test_render_multi_field_without_gpu() {
+    #[test]
+    fn test_render_multi_field_without_gpu() {
         let config = VisualizationConfig::default();
         let mut engine = VisualizationEngine::new(config).unwrap();
         
@@ -522,7 +522,7 @@ mod tests {
         let field_types = vec![FieldType::Pressure, FieldType::Temperature, FieldType::OpticalIntensity];
         
         // Should not fail even without GPU context
-        let result = engine.render_multi_field(&fields, &field_types, &grid).await;
+        let result = pollster::block_on(engine.render_multi_field(&fields, &field_types, &grid));
         assert!(result.is_ok());
     }
     

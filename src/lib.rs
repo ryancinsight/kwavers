@@ -63,7 +63,9 @@ pub use physics::plugin::{PhysicsPlugin, PluginManager, PluginContext, PluginMet
 
 // Re-export GPU-related items only when feature enabled
 #[cfg(feature = "gpu")]
-pub use gpu::{GpuContext, AdvancedGpuMemoryManager, GpuBackend};
+pub use gpu::{GpuContext, GpuBackend};
+#[cfg(feature = "gpu")]
+pub use gpu::memory::AdvancedGpuMemoryManager;
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::ElasticWave;

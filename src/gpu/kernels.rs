@@ -4,10 +4,9 @@
 //! thermal diffusion, and FFT operations. Implements Phase 10 optimization targets
 //! of >17M grid updates/second with optimized memory access patterns.
 
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::gpu::{GpuBackend, GpuPerformanceMetrics};
-use ndarray::Array3;
 use std::collections::HashMap;
 
 /// GPU kernel types for different physics operations

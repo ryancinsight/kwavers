@@ -56,11 +56,11 @@ impl<T: PhysicsComponent + Debug + Send + Sync + 'static> PhysicsPlugin for Comp
     }
     
     fn required_fields(&self) -> Vec<FieldType> {
-        self.component.dependencies()
+        self.component.required_fields()
     }
     
     fn provided_fields(&self) -> Vec<FieldType> {
-        self.component.output_fields()
+        self.component.provided_fields()
     }
     
     fn initialize(&mut self, _grid: &Grid, _medium: &dyn kwavers::medium::Medium) -> KwaversResult<()> {
@@ -78,7 +78,7 @@ impl<T: PhysicsComponent + Debug + Send + Sync + 'static> PhysicsPlugin for Comp
     ) -> KwaversResult<()> {
         // Convert PluginContext to PhysicsContext
         let physics_context = PhysicsContext::new(context.frequency);
-        self.component.apply(fields, grid, medium, dt, t, &physics_context)
+        self.component.update(fields, grid, medium, dt, t)
     }
 }
 
@@ -342,7 +342,7 @@ impl AdvancedSonoluminescenceSimulation {
         let source = self.create_focused_source()?;
         
         // Create boundary conditions
-        let mut pml_config = kwavers::physics::PMLConfig::default()
+        let mut pml_config = kwavers::boundary::PMLConfig::default()
             .with_thickness(10)
             .with_reflection_coefficient(1e-6);
         

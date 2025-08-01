@@ -5,10 +5,9 @@
 //! thermal diffusion, and FFT operations.
 
 use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
-use crate::gpu::{GpuDevice, GpuBackend, GpuFieldOps};
+use crate::gpu::{GpuDevice, GpuFieldOps, GpuBackend};
 use crate::grid::Grid;
 use ndarray::Array3;
-use std::sync::Arc;
 
 #[cfg(feature = "cudarc")]
 use cudarc::driver::{CudaDevice, CudaSlice};

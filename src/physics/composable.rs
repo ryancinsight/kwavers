@@ -179,35 +179,6 @@ pub trait PhysicsComponent: Send + Sync + std::fmt::Debug {
     
     /// Clone the component as a boxed trait object
     fn clone_component(&self) -> Box<dyn PhysicsComponent>;
-    
-    // Deprecated methods for backward compatibility
-    #[deprecated(since = "0.2.0", note = "Use `required_fields` instead")]
-    fn dependencies(&self) -> Vec<FieldType> {
-        self.required_fields()
-    }
-    
-    #[deprecated(since = "0.2.0", note = "Use `provided_fields` instead")]
-    fn output_fields(&self) -> Vec<FieldType> {
-        self.provided_fields()
-    }
-    
-    #[deprecated(since = "0.2.0", note = "Use `update` instead")]
-    fn apply(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-        _context: &PhysicsContext,
-    ) -> KwaversResult<()> {
-        self.update(fields, grid, medium, dt, t)
-    }
-    
-    #[deprecated(since = "0.2.0", note = "Use `performance_metrics` instead")]
-    fn get_metrics(&self) -> HashMap<String, f64> {
-        self.performance_metrics()
-    }
 }
 
 /// Context shared between physics components
