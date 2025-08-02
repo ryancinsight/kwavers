@@ -16,12 +16,10 @@
 use crate::{
     error::{KwaversResult, KwaversError},
     grid::Grid,
-    solver::spectral_dg::traits::{DiscontinuityDetection, NumericalSolver},
 };
-use ndarray::{Array3, Array4, Axis, s, Zip};
+use ndarray::{Array3, Array4, Axis, Zip};
 use rayon::prelude::*;
-use log::{debug, info, warn};
-use std::f64::consts::PI;
+use log::warn;
 
 /// Enhanced shock detector with multiple indicators
 #[derive(Debug, Clone)]

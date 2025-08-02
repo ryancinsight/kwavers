@@ -13,16 +13,9 @@
 //! - **DRY**: Reusable refinement patterns
 //! - **KISS**: Simple API despite complex algorithms
 
-use crate::{
-    error::{KwaversResult, KwaversError, NumericalError},
-    grid::Grid,
-    solver::amr::{AMRConfig, WaveletType, InterpolationScheme, CellStatus},
-};
-use ndarray::{Array3, Array4, Axis, s};
+use ndarray::Array3;
 use rayon::prelude::*;
-use std::collections::{HashMap, HashSet};
-use log::{info, debug, warn};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 /// Dynamic refinement criterion trait
 pub trait RefinementCriterion: Send + Sync {

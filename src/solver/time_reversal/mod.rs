@@ -15,10 +15,10 @@ use crate::{
     grid::Grid,
     solver::{Solver, PRESSURE_IDX},
     sensor::{SensorData},
-    validation::{ValidationManager, ValidationValue},
+    validation::ValidationManager,
     recorder::Recorder,
 };
-use ndarray::{Array3, Array4, Axis};
+use ndarray::Array3;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use log::{info, debug, warn};

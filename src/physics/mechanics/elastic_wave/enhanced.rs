@@ -17,14 +17,11 @@ use crate::{
     error::{KwaversResult, PhysicsError},
     grid::Grid,
     medium::Medium,
-    physics::traits::AcousticWaveModel,
     solver::{VX_IDX, VY_IDX, VZ_IDX, SXX_IDX, SYY_IDX, SZZ_IDX, SXY_IDX, SXZ_IDX, SYZ_IDX},
-    utils::{fft_3d, ifft_3d},
 };
 use ndarray::{Array2, Array3, Array4, s, Axis};
-use num_complex::Complex;
 use rayon::prelude::*;
-use log::{debug, info, warn};
+use log::{debug, info};
 use std::sync::Arc;
 
 /// Mode conversion configuration

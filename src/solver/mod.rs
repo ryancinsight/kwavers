@@ -885,7 +885,7 @@ pub mod lazy {
     use crate::error::KwaversResult;
     use ndarray::{Array3, Array4};
     use std::cell::RefCell;
-    use std::rc::Rc;
+    
     
     /// Lazy field computation that defers calculation until needed
     pub struct LazyField<T> {
@@ -929,7 +929,7 @@ pub mod lazy {
     pub struct LazySolverState {
         base_fields: Array4<f64>,
         lazy_derivatives: Vec<LazyField<f64>>,
-        grid: Grid,
+        _grid: Grid,
     }
     
     impl LazySolverState {
@@ -937,7 +937,7 @@ pub mod lazy {
             Self {
                 base_fields: fields,
                 lazy_derivatives: Vec::new(),
-                grid,
+                _grid: grid,
             }
         }
         
@@ -1021,7 +1021,6 @@ pub mod lazy {
         current_step: usize,
         max_steps: usize,
         dt: f64,
-        frequency: f64,
     }
     
     impl<'a> LazyTimeStepIterator<'a> {
@@ -1029,14 +1028,12 @@ pub mod lazy {
             solver: &'a mut Solver,
             max_steps: usize,
             dt: f64,
-            frequency: f64,
         ) -> Self {
             Self {
                 solver,
                 current_step: 0,
                 max_steps,
                 dt,
-                frequency,
             }
         }
     }

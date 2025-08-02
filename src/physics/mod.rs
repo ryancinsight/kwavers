@@ -24,9 +24,9 @@ pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters}
 
 /// Functional transformation utilities for physics calculations
 pub mod functional {
-    use ndarray::{Array3, Array4, Axis};
+    use ndarray::Array3;
     use rayon::prelude::*;
-    use std::ops::{Add, Mul};
+    use std::ops::Add;
     
     /// Apply a transformation pipeline to a field
     pub struct FieldTransform<T> {

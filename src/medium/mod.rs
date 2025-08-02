@@ -184,7 +184,7 @@ pub trait Medium: Debug + Sync + Send {
 pub mod iterators {
     use super::*;
     use crate::grid::Grid;
-    use ndarray::Array3;
+    
     use rayon::prelude::*;
     
     /// Iterator over medium properties at each grid point

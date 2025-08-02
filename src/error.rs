@@ -1023,7 +1023,7 @@ pub mod utils {
 
 /// Advanced error handling utilities using iterator combinators
 pub mod advanced {
-    use super::*;
+    
     use std::fmt::Debug;
     
     /// Chain multiple fallible operations with early return on error

@@ -14,14 +14,9 @@
 //! - **DRY**: Reusable optimization patterns
 //! - **KISS**: Simple API despite complex optimizations
 
-use crate::{
-    error::{KwaversResult, KwaversError, ConfigError},
-    grid::Grid,
-};
-use std::sync::Arc;
-use std::arch::x86_64::*;
+use crate::error::{KwaversResult, KwaversError, ConfigError};
 use rayon::prelude::*;
-use log::{info, debug};
+use log::info;
 use ndarray::{Array3, s};
 
 /// Performance optimization configuration
