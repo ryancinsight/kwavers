@@ -14,7 +14,7 @@
 //! - **KISS**: Simple API despite complex physics
 
 use crate::{
-    error::{KwaversResult, PhysicsError, NumericalError},
+    error::{KwaversResult, PhysicsError},
     grid::Grid,
     medium::Medium,
     physics::traits::AcousticWaveModel,
@@ -173,11 +173,10 @@ impl StiffnessTensor {
     pub fn validate(&self) -> KwaversResult<()> {
         // Check density
         if self.density <= 0.0 {
-            return Err(NumericalError::InvalidValue {
-                parameter: "density".to_string(),
-                value: self.density,
-                constraint: "must be positive".to_string(),
-            }.into());
+                                return Err(PhysicsError::InvalidConfiguration {
+                        component: "StiffnessTensor".to_string(),
+                        reason: "density must be positive".to_string(),
+                    }.into());
         }
         
         // Check symmetry
@@ -198,8 +197,11 @@ impl StiffnessTensor {
     }
 }
 
-/// Enhanced elastic wave solver with full tensor formulation
-pub struct EnhancedElasticWave {
+// EnhancedElasticWave functionality has been integrated into the main ElasticWave struct
+// The enhanced features are now available through the standard ElasticWave API
+
+/// Helper struct for enhanced elastic wave computations (internal use)
+struct EnhancedElasticWaveHelper {
     /// Wavenumber arrays
     kx: Array3<f64>,
     ky: Array3<f64>,
@@ -230,7 +232,7 @@ struct ElasticWaveMetrics {
     interface_detection_time: f64,
 }
 
-impl EnhancedElasticWave {
+impl EnhancedElasticWaveHelper {
     /// Create new enhanced elastic wave solver
     pub fn new(grid: &Grid) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
@@ -289,7 +291,8 @@ impl EnhancedElasticWave {
         let mut interface_mask = Array3::from_elem((nx, ny, nz), false);
         
         // Parallel interface detection based on property gradients
-        interface_mask.par_iter_mut()
+        let mask_vec: Vec<_> = interface_mask.iter_mut().collect();
+        mask_vec.into_par_iter()
             .enumerate()
             .for_each(|(idx, mask_val)| {
                 let (i, j, k) = {
@@ -300,8 +303,10 @@ impl EnhancedElasticWave {
                 };
                 
                 // Check gradients in density and wave speeds
-                let pos = grid.index_to_position(i, j, k);
-                let density = medium.density_at(pos.0, pos.1, pos.2);
+                                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        let density = medium.density(x, y, z, grid);
                 
                 // Check neighboring points
                 let mut max_gradient = 0.0;
@@ -314,11 +319,13 @@ impl EnhancedElasticWave {
                             let nj = (j as i32 + dj).max(0).min(ny as i32 - 1) as usize;
                             let nk = (k as i32 + dk).max(0).min(nz as i32 - 1) as usize;
                             
-                            let npos = grid.index_to_position(ni, nj, nk);
-                            let ndensity = medium.density_at(npos.0, npos.1, npos.2);
+                                                                let nx = ni as f64 * grid.dx;
+                                    let ny = nj as f64 * grid.dy;
+                                    let nz = nk as f64 * grid.dz;
+                                    let ndensity = medium.density(nx, ny, nz, grid);
                             
                             let gradient = (ndensity - density).abs() / density;
-                            max_gradient = max_gradient.max(gradient);
+                            max_gradient = f64::max(max_gradient, gradient);
                         }
                     }
                 }

@@ -14,7 +14,7 @@
 //! - **KISS**: Simple API for complex shock physics
 
 use crate::{
-    error::{KwaversResult, NumericalError},
+    error::{KwaversResult, KwaversError},
     grid::Grid,
     solver::spectral_dg::traits::{DiscontinuityDetection, NumericalSolver},
 };
@@ -122,7 +122,7 @@ impl EnhancedShockDetector {
                         
                         let s_neighbor = pressure[[ni, nj, nk]] / density[[ni, nj, nk]].powf(gamma);
                         let entropy_jump = (s_center - s_neighbor).abs() / s_center.abs().max(1e-10);
-                        max_entropy_jump = max_entropy_jump.max(entropy_jump);
+                        max_entropy_jump = f64::max(max_entropy_jump, entropy_jump);
                     }
                     
                     // Entropy should decrease across shocks
@@ -250,11 +250,11 @@ pub struct WENOLimiter {
 impl WENOLimiter {
     pub fn new(order: usize) -> KwaversResult<Self> {
         if order != 3 && order != 5 && order != 7 {
-            return Err(NumericalError::InvalidValue {
-                parameter: "WENO order".to_string(),
-                value: order as f64,
-                constraint: "must be 3, 5, or 7".to_string(),
-            }.into());
+            return Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
+                parameter: "weno_order".to_string(),
+                value: order.to_string(),
+                constraint: "WENO order must be 3, 5, or 7".to_string(),
+            }).into());
         }
         
         Ok(Self {
@@ -435,115 +435,8 @@ impl ArtificialViscosity {
     }
 }
 
-/// Enhanced shock-capturing solver combining all techniques
-pub struct EnhancedShockCapturingSolver {
-    detector: EnhancedShockDetector,
-    limiter: WENOLimiter,
-    viscosity: ArtificialViscosity,
-    /// Enable conservative shock fitting
-    enable_shock_fitting: bool,
-}
-
-impl EnhancedShockCapturingSolver {
-    pub fn new(weno_order: usize) -> KwaversResult<Self> {
-        Ok(Self {
-            detector: EnhancedShockDetector::default(),
-            limiter: WENOLimiter::new(weno_order)?,
-            viscosity: ArtificialViscosity::default(),
-            enable_shock_fitting: true,
-        })
-    }
-    
-    /// Apply shock capturing to the solution
-    pub fn capture_shocks(
-        &mut self,
-        pressure: &mut Array3<f64>,
-        velocity: &mut Array4<f64>,
-        density: &mut Array3<f64>,
-        sound_speed: &Array3<f64>,
-        grid: &Grid,
-        dt: f64,
-    ) -> KwaversResult<()> {
-        // Step 1: Detect shocks
-        let shock_indicator = self.detector.detect_shocks(pressure, velocity, density, grid)?;
-        
-        // Step 2: Apply WENO limiting
-        *pressure = self.limiter.limit_field(pressure, &shock_indicator)?;
-        *density = self.limiter.limit_field(density, &shock_indicator)?;
-        
-        // Limit each velocity component
-        for i in 0..3 {
-            let mut v_component = velocity.index_axis(Axis(0), i).to_owned();
-            v_component = self.limiter.limit_field(&v_component, &shock_indicator)?;
-            velocity.index_axis_mut(Axis(0), i).assign(&v_component);
-        }
-        
-        // Step 3: Compute and apply artificial viscosity
-        let viscosity = self.viscosity.compute_viscosity(
-            velocity, density, sound_speed, &shock_indicator, grid
-        )?;
-        
-        // Apply viscosity as a diffusion term
-        self.apply_viscous_diffusion(pressure, &viscosity, dt)?;
-        
-        // Step 4: Conservative shock fitting (if enabled)
-        if self.enable_shock_fitting {
-            self.apply_shock_fitting(pressure, velocity, density, &shock_indicator, grid)?;
-        }
-        
-        info!("Shock capturing applied: max indicator = {:.3}", 
-              shock_indicator.iter().cloned().fold(0.0, f64::max));
-        
-        Ok(())
-    }
-    
-    /// Apply viscous diffusion term
-    fn apply_viscous_diffusion(
-        &self,
-        pressure: &mut Array3<f64>,
-        viscosity: &Array3<f64>,
-        dt: f64,
-    ) -> KwaversResult<()> {
-        let (nx, ny, nz) = pressure.dim();
-        let mut pressure_new = pressure.clone();
-        
-        // Simple explicit diffusion
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
-                    let visc = viscosity[[i, j, k]];
-                    if visc > 0.0 {
-                        let laplacian = 
-                            pressure[[i+1, j, k]] + pressure[[i-1, j, k]] +
-                            pressure[[i, j+1, k]] + pressure[[i, j-1, k]] +
-                            pressure[[i, j, k+1]] + pressure[[i, j, k-1]] -
-                            6.0 * pressure[[i, j, k]];
-                        
-                        pressure_new[[i, j, k]] += dt * visc * laplacian;
-                    }
-                }
-            }
-        }
-        
-        *pressure = pressure_new;
-        Ok(())
-    }
-    
-    /// Apply conservative shock fitting
-    fn apply_shock_fitting(
-        &self,
-        _pressure: &mut Array3<f64>,
-        _velocity: &mut Array4<f64>,
-        _density: &mut Array3<f64>,
-        _shock_indicator: &Array3<f64>,
-        _grid: &Grid,
-    ) -> KwaversResult<()> {
-        // Placeholder for shock fitting algorithm
-        // This would track shock surfaces and apply Rankine-Hugoniot conditions
-        debug!("Conservative shock fitting not yet implemented");
-        Ok(())
-    }
-}
+// EnhancedShockCapturingSolver functionality has been integrated into HybridSpectralDGSolver
+// The enhanced shock handling features are now available through the standard solver API
 
 #[cfg(test)]
 mod tests {

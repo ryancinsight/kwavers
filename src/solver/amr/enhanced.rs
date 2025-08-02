@@ -180,7 +180,7 @@ impl FeatureCriterion {
                     if ni < field.dim().0 && nj < field.dim().1 && nk < field.dim().2 {
                         let neighbor = field[[ni, nj, nk]];
                         let ratio = (center / neighbor).abs().max(neighbor / center).abs();
-                        max_ratio = max_ratio.max(ratio);
+                        max_ratio = f64::max(max_ratio, ratio);
                     }
                 }
             }
@@ -265,14 +265,14 @@ impl RefinementCriterion for PredictiveCriterion {
                         if distance <= search_radius as f64 {
                             let feature_strength = field[[ni, nj, nk]].abs();
                             let influence = feature_strength * (1.0 - distance / search_radius as f64);
-                            max_influence = max_influence.max(influence);
+                                                            max_influence = f64::max(max_influence, influence);
                         }
                     }
                 }
             }
         }
         
-        max_influence.min(1.0)
+        f64::min(max_influence, 1.0)
     }
     
     fn name(&self) -> &str { "Predictive" }
@@ -428,118 +428,8 @@ fn morton_encode_3d(x: usize, y: usize, z: usize) -> u64 {
     morton
 }
 
-/// Enhanced AMR manager with dynamic criteria and load balancing
-pub struct EnhancedAMRManager {
-    /// Base configuration
-    config: AMRConfig,
-    /// Dynamic refinement criteria
-    criteria: Vec<Box<dyn RefinementCriterion>>,
-    /// Criterion weights
-    criterion_weights: Vec<f64>,
-    /// Load balancer
-    load_balancer: LoadBalancer,
-    /// Memory limit (bytes)
-    memory_limit: Option<usize>,
-    /// Current memory usage estimate
-    memory_usage: usize,
-}
-
-impl EnhancedAMRManager {
-    pub fn new(config: AMRConfig) -> Self {
-        Self {
-            config,
-            criteria: Vec::new(),
-            criterion_weights: Vec::new(),
-            load_balancer: LoadBalancer::new(LoadBalancingStrategy::Dynamic),
-            memory_limit: None,
-            memory_usage: 0,
-        }
-    }
-    
-    /// Add a refinement criterion with weight
-    pub fn add_criterion(&mut self, criterion: Box<dyn RefinementCriterion>, weight: f64) {
-        info!("Adding refinement criterion: {} (weight: {})", criterion.name(), weight);
-        self.criteria.push(criterion);
-        self.criterion_weights.push(weight);
-    }
-    
-    /// Set memory limit for refinement
-    pub fn set_memory_limit(&mut self, limit_mb: usize) {
-        self.memory_limit = Some(limit_mb * 1024 * 1024);
-        info!("Set AMR memory limit to {} MB", limit_mb);
-    }
-    
-    /// Set load balancing strategy
-    pub fn set_load_balancing_strategy(&mut self, strategy: LoadBalancingStrategy) {
-        self.load_balancer = LoadBalancer::new(strategy);
-        info!("Set load balancing strategy to {:?}", strategy);
-    }
-    
-    /// Evaluate all criteria for a field
-    pub fn evaluate_criteria(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut refinement_field = Array3::zeros(field.dim());
-        
-        // Evaluate each criterion in parallel
-        for (criterion, &weight) in self.criteria.iter().zip(&self.criterion_weights) {
-            let criterion_values: Vec<_> = (0..field.len())
-                .into_par_iter()
-                .map(|idx| {
-                    let k = idx % field.dim().2;
-                    let j = (idx / field.dim().2) % field.dim().1;
-                    let i = idx / (field.dim().1 * field.dim().2);
-                    
-                    criterion.evaluate(field, (i, j, k)) * weight
-                })
-                .collect();
-            
-            // Add weighted criterion values
-            refinement_field.iter_mut()
-                .zip(criterion_values.iter())
-                .for_each(|(total, &value)| *total += value);
-        }
-        
-        // Normalize by total weight
-        let total_weight: f64 = self.criterion_weights.iter().sum();
-        if total_weight > 0.0 {
-            refinement_field.mapv_inplace(|x| x / total_weight);
-        }
-        
-        Ok(refinement_field)
-    }
-    
-    /// Perform memory-aware refinement
-    pub fn refine_with_memory_limit(
-        &mut self,
-        cells_to_refine: Vec<(usize, usize, usize)>,
-        cell_size: usize,
-    ) -> Vec<(usize, usize, usize)> {
-        if let Some(limit) = self.memory_limit {
-            let mut refined_cells = Vec::new();
-            let cells_per_refinement = 8; // Octree refinement
-            
-            for cell in cells_to_refine {
-                let additional_memory = cell_size * (cells_per_refinement - 1);
-                
-                if self.memory_usage + additional_memory <= limit {
-                    refined_cells.push(cell);
-                    self.memory_usage += additional_memory;
-                } else {
-                    warn!("Memory limit reached, skipping refinement of cell {:?}", cell);
-                    break;
-                }
-            }
-            
-            info!("Refined {} cells (memory usage: {:.1} MB / {:.1} MB)",
-                  refined_cells.len(),
-                  self.memory_usage as f64 / 1e6,
-                  limit as f64 / 1e6);
-            
-            refined_cells
-        } else {
-            cells_to_refine
-        }
-    }
-}
+// EnhancedAMRManager functionality has been integrated into the main AMRManager
+// The enhanced features are now available through the standard AMRManager API
 
 #[cfg(test)]
 mod tests {

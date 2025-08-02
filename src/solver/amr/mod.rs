@@ -104,7 +104,6 @@ pub struct CellStatus {
 }
 
 /// Adaptive Mesh Refinement manager
-#[derive(Debug)]
 pub struct AMRManager {
     /// Configuration parameters
     config: AMRConfig,
@@ -116,6 +115,16 @@ pub struct AMRManager {
     cell_status: HashMap<(usize, usize, usize), CellStatus>,
     /// Refinement history for adaptation
     refinement_history: Vec<RefinementEvent>,
+    /// Dynamic refinement criteria
+    criteria: Vec<Box<dyn enhanced::RefinementCriterion>>,
+    /// Criterion weights
+    criterion_weights: Vec<f64>,
+    /// Load balancer for parallel execution
+    load_balancer: Option<enhanced::LoadBalancer>,
+    /// Memory limit (bytes)
+    memory_limit: Option<usize>,
+    /// Current memory usage estimate
+    memory_usage: usize,
 }
 
 /// Refinement event for history tracking
@@ -153,7 +162,28 @@ impl AMRManager {
             error_estimator,
             cell_status: HashMap::new(),
             refinement_history: Vec::new(),
+            criteria: Vec::new(),
+            criterion_weights: Vec::new(),
+            load_balancer: None,
+            memory_limit: None,
+            memory_usage: 0,
         }
+    }
+    
+    /// Add a refinement criterion with weight
+    pub fn add_criterion(&mut self, criterion: Box<dyn enhanced::RefinementCriterion>, weight: f64) {
+        self.criteria.push(criterion);
+        self.criterion_weights.push(weight);
+    }
+    
+    /// Set memory limit for refinement
+    pub fn set_memory_limit(&mut self, limit_mb: usize) {
+        self.memory_limit = Some(limit_mb * 1024 * 1024);
+    }
+    
+    /// Set load balancing strategy
+    pub fn set_load_balancing(&mut self, strategy: enhanced::LoadBalancingStrategy) {
+        self.load_balancer = Some(enhanced::LoadBalancer::new(strategy));
     }
     
     /// Adapt the mesh based on current solution
@@ -162,8 +192,12 @@ impl AMRManager {
         solution: &Array3<f64>,
         time: f64,
     ) -> KwaversResult<AdaptationResult> {
-        // Estimate error using wavelets
-        let error_field = self.error_estimator.estimate_error(solution)?;
+        // Use dynamic criteria if available, otherwise fall back to wavelet-based
+        let error_field = if !self.criteria.is_empty() {
+            self.evaluate_criteria(solution)?
+        } else {
+            self.error_estimator.estimate_error(solution)?
+        };
         
         // Mark cells for refinement/coarsening
         let (refine_cells, coarsen_cells) = self.mark_cells(&error_field)?;
@@ -171,9 +205,19 @@ impl AMRManager {
         // Apply buffer zone around refined regions
         let refine_cells = self.apply_buffer_zone(refine_cells);
         
+        // Apply memory limit if set
+        let refine_cells = if let Some(limit) = self.memory_limit {
+            self.apply_memory_limit(refine_cells, limit)?
+        } else {
+            refine_cells
+        };
+        
         // Update octree structure
         let cells_refined = self.refine_cells(&refine_cells)?;
         let cells_coarsened = self.coarsen_cells(&coarsen_cells)?;
+        
+        // Update memory usage estimate
+        self.memory_usage = self.estimate_memory_usage();
         
         // Compact octree if memory efficiency is low
         if self.octree.memory_efficiency() < 0.75 {
@@ -195,6 +239,51 @@ impl AMRManager {
             max_error,
             total_active_cells: self.count_active_cells(),
         })
+    }
+    
+    /// Evaluate all dynamic criteria
+    fn evaluate_criteria(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let mut refinement_field = Array3::zeros(field.dim());
+        
+        // Evaluate each criterion
+        for (criterion, &weight) in self.criteria.iter().zip(&self.criterion_weights) {
+            for ((i, j, k), val) in refinement_field.indexed_iter_mut() {
+                *val += weight * criterion.evaluate(field, (i, j, k));
+            }
+        }
+        
+        // Normalize by total weight
+        let total_weight: f64 = self.criterion_weights.iter().sum();
+        if total_weight > 0.0 {
+            refinement_field.mapv_inplace(|x| x / total_weight);
+        }
+        
+        Ok(refinement_field)
+    }
+    
+    /// Apply memory limit to refinement
+    fn apply_memory_limit(&self, cells: Vec<(usize, usize, usize)>, limit: usize) -> KwaversResult<Vec<(usize, usize, usize)>> {
+        let cell_size = std::mem::size_of::<f64>() * 8; // Assuming 8 fields per cell
+        let mut refined_cells = Vec::new();
+        let mut current_usage = self.memory_usage;
+        
+        for cell in cells {
+            let additional_memory = cell_size * 7; // Octree refinement creates 7 new cells
+            if current_usage + additional_memory <= limit {
+                refined_cells.push(cell);
+                current_usage += additional_memory;
+            } else {
+                break;
+            }
+        }
+        
+        Ok(refined_cells)
+    }
+    
+    /// Estimate current memory usage
+    fn estimate_memory_usage(&self) -> usize {
+        // Estimate based on active cells
+        self.count_active_cells() * std::mem::size_of::<f64>() * 8
     }
     
     /// Interpolate field to refined mesh

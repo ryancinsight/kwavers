@@ -293,6 +293,14 @@ pub struct ElasticWave {
     metrics: ElasticWaveMetrics,
     is_anisotropic: bool,
     anisotropic_properties: Option<AnisotropicElasticProperties>,
+    /// Mode conversion configuration
+    mode_conversion: Option<enhanced::ModeConversionConfig>,
+    /// Viscoelastic damping configuration
+    viscoelastic: Option<enhanced::ViscoelasticConfig>,
+    /// Material stiffness tensors (spatially varying)
+    stiffness_tensors: Option<Array4<f64>>,
+    /// Interface detection mask
+    interface_mask: Option<Array3<bool>>,
 }
 
 impl ElasticWave {
@@ -329,6 +337,10 @@ impl ElasticWave {
             metrics: ElasticWaveMetrics::new(),
             is_anisotropic: false,
             anisotropic_properties: None,
+            mode_conversion: None,
+            viscoelastic: None,
+            stiffness_tensors: None,
+            interface_mask: None,
         })
     }
 
@@ -351,6 +363,81 @@ impl ElasticWave {
         properties.validate()?;
         self.anisotropic_properties = Some(properties);
         self.is_anisotropic = true;
+        Ok(())
+    }
+    
+    /// Enable mode conversion with custom configuration
+    pub fn with_mode_conversion(&mut self, config: enhanced::ModeConversionConfig) -> &mut Self {
+        self.mode_conversion = Some(config);
+        self
+    }
+    
+    /// Enable viscoelastic damping
+    pub fn with_viscoelastic(&mut self, config: enhanced::ViscoelasticConfig) -> &mut Self {
+        self.viscoelastic = Some(config);
+        self
+    }
+    
+    /// Set spatially varying stiffness tensors
+    pub fn set_stiffness_field(&mut self, tensors: Array4<f64>) -> KwaversResult<()> {
+        // Validate dimensions
+        let (nx, ny, nz) = (self.kx.dim().0, self.ky.dim().1, self.kz.dim().2);
+        if tensors.dim() != (nx, ny, nz, 21) {
+            return Err(PhysicsError::InvalidConfiguration {
+                component: "StiffnessTensor field".to_string(),
+                reason: format!("Expected shape ({}, {}, {}, 21), got {:?}", nx, ny, nz, tensors.dim()),
+            }.into());
+        }
+        
+        self.stiffness_tensors = Some(tensors);
+        Ok(())
+    }
+    
+    /// Detect material interfaces for mode conversion
+    pub fn detect_interfaces(&mut self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
+        if let Some(ref config) = self.mode_conversion {
+            info!("Detecting material interfaces for mode conversion");
+            let (nx, ny, nz) = grid.dimensions();
+            let mut interface_mask = Array3::from_elem((nx, ny, nz), false);
+            
+            // Detect interfaces based on property gradients
+            for i in 1..nx-1 {
+                for j in 1..ny-1 {
+                    for k in 1..nz-1 {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        let density = medium.density(x, y, z, grid);
+                        
+                        // Check neighboring points
+                        let mut max_gradient = 0.0;
+                        for di in -1..=1 {
+                            for dj in -1..=1 {
+                                for dk in -1..=1 {
+                                    if di == 0 && dj == 0 && dk == 0 { continue; }
+                                    
+                                    let ni = (i as i32 + di).max(0).min(nx as i32 - 1) as usize;
+                                    let nj = (j as i32 + dj).max(0).min(ny as i32 - 1) as usize;
+                                    let nk = (k as i32 + dk).max(0).min(nz as i32 - 1) as usize;
+                                    
+                                    let nx = ni as f64 * grid.dx;
+                                    let ny = nj as f64 * grid.dy;
+                                    let nz = nk as f64 * grid.dz;
+                                    let ndensity = medium.density(nx, ny, nz, grid);
+                                    
+                                    let gradient = (ndensity - density).abs() / density;
+                                    max_gradient = f64::max(max_gradient, gradient);
+                                }
+                            }
+                        }
+                        
+                        interface_mask[[i, j, k]] = max_gradient > config.interface_threshold;
+                    }
+                }
+            }
+            
+            self.interface_mask = Some(interface_mask);
+        }
         Ok(())
     }
 

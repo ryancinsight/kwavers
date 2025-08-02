@@ -83,7 +83,6 @@ impl SimulationFields {
     }
 }
 
-#[derive(Debug)]
 pub struct Solver {
     pub grid: Grid,
     pub time: Time,
