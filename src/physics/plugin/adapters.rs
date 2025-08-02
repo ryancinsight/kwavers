@@ -8,6 +8,7 @@ use super::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
+use std::any::Any;
 use crate::physics::composable::{PhysicsComponent, FieldType, ValidationResult};
 use ndarray::Array4;
 use std::collections::HashMap;
@@ -103,6 +104,14 @@ impl PhysicsPlugin for ComponentPluginAdapter {
             metadata: self.metadata.clone(),
             state: PluginState::Created,
         })
+    }
+    
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

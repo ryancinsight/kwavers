@@ -131,6 +131,12 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     
     /// Clone the plugin as a boxed trait object
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin>;
+
+    /// Get a reference to the underlying Any object
+    fn as_any(&self) -> &dyn Any;
+
+    /// Get a mutable reference to the underlying Any object
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 /// Context passed to plugins during update
@@ -356,6 +362,339 @@ impl Default for PluginManager {
     }
 }
 
+/// Type-safe plugin handle with phantom types for compile-time guarantees
+pub struct PluginHandle<T: PhysicsPlugin + 'static> {
+    plugin: Box<T>,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: PhysicsPlugin + 'static> PluginHandle<T> {
+    /// Create a new plugin handle
+    pub fn new(plugin: T) -> Self {
+        Self {
+            plugin: Box::new(plugin),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+    
+    /// Get a reference to the plugin
+    pub fn plugin(&self) -> &T {
+        &self.plugin
+    }
+    
+    /// Get a mutable reference to the plugin
+    pub fn plugin_mut(&mut self) -> &mut T {
+        &mut self.plugin
+    }
+    
+    /// Convert to a dynamic plugin handle
+    pub fn into_dynamic(self) -> DynamicPluginHandle {
+        DynamicPluginHandle {
+            plugin: self.plugin as Box<dyn PhysicsPlugin>,
+        }
+    }
+}
+
+/// Dynamic plugin handle for runtime plugin management
+pub struct DynamicPluginHandle {
+    plugin: Box<dyn PhysicsPlugin>,
+}
+
+impl DynamicPluginHandle {
+    /// Try to downcast to a specific plugin type
+    pub fn downcast<T: PhysicsPlugin + 'static>(&self) -> Option<&T> {
+        self.plugin.as_any().downcast_ref::<T>()
+    }
+    
+    /// Try to downcast to a specific plugin type (mutable)
+    pub fn downcast_mut<T: PhysicsPlugin + 'static>(&mut self) -> Option<&mut T> {
+        self.plugin.as_any_mut().downcast_mut::<T>()
+    }
+}
+
+/// Plugin factory trait for creating plugins
+pub trait PluginFactory: Send + Sync {
+    /// The type of plugin this factory creates
+    type Plugin: PhysicsPlugin;
+    
+    /// Create a new plugin instance
+    fn create(&self, config: Box<dyn PluginConfig>) -> KwaversResult<Self::Plugin>;
+    
+    /// Get metadata about the plugin this factory creates
+    fn metadata(&self) -> PluginMetadata;
+}
+
+/// Registry for plugin factories
+pub struct PluginRegistry {
+    factories: HashMap<String, Box<dyn Any + Send + Sync>>,
+    metadata: HashMap<String, PluginMetadata>,
+}
+
+impl PluginRegistry {
+    /// Create a new plugin registry
+    pub fn new() -> Self {
+        Self {
+            factories: HashMap::new(),
+            metadata: HashMap::new(),
+        }
+    }
+    
+    /// Register a plugin factory
+    pub fn register<F: PluginFactory + 'static>(&mut self, factory: F) {
+        let metadata = factory.metadata();
+        self.factories.insert(metadata.id.clone(), Box::new(factory));
+        self.metadata.insert(metadata.id.clone(), metadata);
+    }
+    
+    /// Get metadata for all registered plugins
+    pub fn list_plugins(&self) -> Vec<&PluginMetadata> {
+        self.metadata.values().collect()
+    }
+    
+    /// Create a plugin instance by ID
+    pub fn create_plugin(
+        &self,
+        plugin_id: &str,
+        config: Box<dyn PluginConfig>,
+    ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+        let factory = self.factories.get(plugin_id)
+            .ok_or_else(|| crate::error::KwaversError::Config(
+                crate::error::ConfigError::InvalidValue {
+                    parameter: "plugin_id".to_string(),
+                    value: plugin_id.to_string(),
+                    constraint: "Plugin not found in registry".to_string(),
+                }
+            ))?;
+        
+        // This is a limitation of the type system - we need to know the concrete type
+        // In a real implementation, we'd use a macro or code generation
+        Err(crate::error::KwaversError::Config(
+            crate::error::ConfigError::InvalidValue {
+                parameter: "plugin_id".to_string(),
+                value: plugin_id.to_string(),
+                constraint: "Dynamic plugin creation not yet implemented".to_string(),
+            }
+        ))
+    }
+}
+
+/// Plugin composition using the Composite pattern
+#[derive(Debug)]
+pub struct CompositePlugin {
+    metadata: PluginMetadata,
+    plugins: Vec<Box<dyn PhysicsPlugin>>,
+    state: PluginState,
+}
+
+impl CompositePlugin {
+    /// Create a new composite plugin
+    pub fn new(id: String, name: String) -> Self {
+        Self {
+            metadata: PluginMetadata {
+                id,
+                name,
+                version: "1.0.0".to_string(),
+                description: "Composite plugin".to_string(),
+                author: "kwavers".to_string(),
+                license: "MIT".to_string(),
+            },
+            plugins: Vec::new(),
+            state: PluginState::Created,
+        }
+    }
+    
+    /// Add a plugin to the composite
+    pub fn add_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) {
+        self.plugins.push(plugin);
+    }
+    
+    /// Remove a plugin by ID
+    pub fn remove_plugin(&mut self, plugin_id: &str) -> Option<Box<dyn PhysicsPlugin>> {
+        self.plugins.iter()
+            .position(|p| p.metadata().id == plugin_id)
+            .map(|idx| self.plugins.remove(idx))
+    }
+}
+
+impl PhysicsPlugin for CompositePlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+    
+    fn state(&self) -> PluginState {
+        self.state
+    }
+    
+    fn required_fields(&self) -> Vec<FieldType> {
+        self.plugins.iter()
+            .flat_map(|p| p.required_fields())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
+    
+    fn provided_fields(&self) -> Vec<FieldType> {
+        self.plugins.iter()
+            .flat_map(|p| p.provided_fields())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
+    
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        for plugin in &mut self.plugins {
+            plugin.initialize(grid, medium)?;
+        }
+        self.state = PluginState::Initialized;
+        Ok(())
+    }
+    
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        self.state = PluginState::Running;
+        for plugin in &mut self.plugins {
+            plugin.update(fields, grid, medium, dt, t, context)?;
+        }
+        Ok(())
+    }
+    
+    fn finalize(&mut self) -> KwaversResult<()> {
+        for plugin in &mut self.plugins {
+            plugin.finalize()?;
+        }
+        self.state = PluginState::Finalized;
+        Ok(())
+    }
+    
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        let mut cloned = CompositePlugin::new(
+            self.metadata.id.clone(),
+            self.metadata.name.clone(),
+        );
+        cloned.metadata = self.metadata.clone();
+        
+        // Clone all child plugins
+        for plugin in &self.plugins {
+            cloned.add_plugin(plugin.clone_plugin());
+        }
+        
+        Box::new(cloned)
+    }
+}
+
+/// Plugin execution strategy using the Strategy pattern
+pub trait ExecutionStrategy: Send + Sync {
+    /// Execute plugins according to the strategy
+    fn execute(
+        &self,
+        plugins: &mut [Box<dyn PhysicsPlugin>],
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()>;
+}
+
+/// Sequential execution strategy
+pub struct SequentialStrategy;
+
+impl ExecutionStrategy for SequentialStrategy {
+    fn execute(
+        &self,
+        plugins: &mut [Box<dyn PhysicsPlugin>],
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        for plugin in plugins {
+            plugin.update(fields, grid, medium, dt, t, context)?;
+        }
+        Ok(())
+    }
+}
+
+/// Parallel execution strategy (for independent plugins)
+pub struct ParallelStrategy;
+
+impl ExecutionStrategy for ParallelStrategy {
+    fn execute(
+        &self,
+        plugins: &mut [Box<dyn PhysicsPlugin>],
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        use rayon::prelude::*;
+        
+        // Note: This is a simplified implementation
+        // Real parallel execution would need careful handling of mutable fields
+        plugins.iter_mut()
+            .try_for_each(|plugin| {
+                plugin.update(fields, grid, medium, dt, t, context)
+            })
+    }
+}
+
+/// Plugin visitor pattern for traversing plugin hierarchies
+pub trait PluginVisitor {
+    /// Visit a plugin
+    fn visit(&mut self, plugin: &dyn PhysicsPlugin);
+    
+    /// Visit a composite plugin
+    fn visit_composite(&mut self, composite: &CompositePlugin) {
+        self.visit(composite);
+        for plugin in &composite.plugins {
+            self.visit(plugin.as_ref());
+        }
+    }
+}
+
+/// Example visitor that collects plugin metadata
+pub struct MetadataCollector {
+    metadata: Vec<PluginMetadata>,
+}
+
+impl MetadataCollector {
+    pub fn new() -> Self {
+        Self {
+            metadata: Vec::new(),
+        }
+    }
+    
+    pub fn metadata(self) -> Vec<PluginMetadata> {
+        self.metadata
+    }
+}
+
+impl PluginVisitor for MetadataCollector {
+    fn visit(&mut self, plugin: &dyn PhysicsPlugin) {
+        self.metadata.push(plugin.metadata().clone());
+    }
+}
+
 // Tests moved to tests.rs
 #[cfg(test)]
 mod plugin_internal_tests {
@@ -411,6 +750,14 @@ mod plugin_internal_tests {
 
         fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
             Box::new(self.clone())
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn as_any_mut(&mut self) -> &mut dyn Any {
+            self
         }
     }
     
