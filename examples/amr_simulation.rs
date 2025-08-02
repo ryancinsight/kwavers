@@ -7,7 +7,7 @@ use kwavers::{
     KwaversResult,
     Grid,
     HomogeneousMedium,
-    Solver,
+    medium::Medium,
     Time,
     SineWave,
     PMLBoundary,

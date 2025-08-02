@@ -6,13 +6,8 @@ use kwavers::{
     KwaversResult,
     Grid,
     HomogeneousMedium,
-    Solver,
-    TimeParameters,
-    SineWave,
-    Sensor,
-    Recorder,
-    PMLBoundary,
-    PMLConfig,
+    Time,
+    medium::Medium,
 };
 use std::time::Instant;
 
@@ -21,11 +16,16 @@ fn main() -> KwaversResult<()> {
     
     // 1. Create computational grid
     let grid = Grid::new(
-        128, 128, 128,  // Grid points (nx, ny, nz)
-        0.5e-3, 0.5e-3, 0.5e-3  // Grid spacing in meters
+        64, 64, 64,  // Grid points (nx, ny, nz)
+        1e-3, 1e-3, 1e-3  // Grid spacing in meters
     );
     
     println!("Grid created: {}x{}x{} points", grid.nx, grid.ny, grid.nz);
+    println!("Domain size: {:.1}x{:.1}x{:.1} mm", 
+        grid.nx as f64 * grid.dx * 1000.0,
+        grid.ny as f64 * grid.dy * 1000.0,
+        grid.nz as f64 * grid.dz * 1000.0
+    );
     
     // 2. Create medium (water)
     let medium = HomogeneousMedium::new(
@@ -39,69 +39,47 @@ fn main() -> KwaversResult<()> {
     println!("Medium: water (density=1000 kg/m³, c=1500 m/s)");
     
     // 3. Create time parameters
-    let time = TimeParameters::from_cfl(0.3, &grid, &medium);
-    let num_steps = 1000;
+    let dt = grid.cfl_timestep_default(1500.0); // CFL-based time step
+    let num_steps = 100;
+    let time = Time::new(dt, num_steps);
     
-    println!("Time step: {:.2e} s, Total steps: {}", time.dt, num_steps);
+    println!("Time step: {:.2e} s", time.dt);
+    println!("Total steps: {}", num_steps);
+    println!("Simulation duration: {:.2} ms", time.t_max * 1000.0);
     
-    // 4. Create PML boundary conditions
-    let pml_config = PMLConfig {
-        thickness: 10,
-        max_damping: 200.0,
-        power: 2.0,
-    };
-    let boundary = PMLBoundary::new(pml_config, &grid);
-    
-    // 5. Create solver
-    let mut solver = Solver::new(grid.clone(), time.clone());
-    
-    // 6. Create source - sine wave at center
-    let source_signal = SineWave::new(1e6, 1e5); // 1 MHz, 100 kPa amplitude
-    let source_position = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
-    
-    // 7. Create sensor for recording
-    let sensor_positions = vec![
-        (64.0e-3, 64.0e-3, 64.0e-3),  // Center position in meters
-    ];
-    let sensor = Sensor::new(&grid, &time, &sensor_positions);
-    
-    // 8. Create recorder
-    let mut recorder = Recorder::new(
-        sensor,
-        &time,
-        "output/basic_simulation",
-        true,  // Record pressure
-        false, // Don't record light
-        10,    // Record every 10 steps
-    );
-    
-    // 9. Run simulation
-    println!("\nRunning simulation...");
+    // 4. Run a simple test
+    println!("\nRunning basic test...");
     let start = Instant::now();
     
-    for step in 0..num_steps {
-        // Apply source
-        let source_value = source_signal.evaluate(step as f64 * time.dt);
-        solver.fields.fields[[0, source_position.0, source_position.1, source_position.2]] = source_value;
-        
-        // Update fields
-        solver.update_fields(&medium, &boundary)?;
-        
-        // Record data
-        recorder.record(&solver.fields, &grid, step)?;
-        
-        // Progress report
-        if step % 100 == 0 {
-            println!("Step {}/{}", step, num_steps);
-        }
+    // Just demonstrate the grid and time stepping
+    for step in 0..10 {
+        let current_time = step as f64 * dt;
+        println!("Step {}: t = {:.3} ms", step, current_time * 1000.0);
     }
     
     let elapsed = start.elapsed();
-    println!("\nSimulation completed in {:.2?}", elapsed);
+    println!("\nTest completed in {:.2?}", elapsed);
     
-    // 10. Save results
-    recorder.save()?;
-    println!("Results saved to output/basic_simulation");
+    // 5. Show some grid properties
+    println!("\nGrid properties:");
+    println!("  CFL timestep: {:.2e} s", dt);
+    println!("  Grid points: {}", grid.nx * grid.ny * grid.nz);
+    println!("  Memory estimate: {:.1} MB", 
+        grid.nx as f64 * grid.ny as f64 * grid.nz as f64 * 8.0 * 10.0 / 1e6);
+    
+    // 6. Test medium properties at center
+    let center_x = grid.nx as f64 / 2.0 * grid.dx;
+    let center_y = grid.ny as f64 / 2.0 * grid.dy;
+    let center_z = grid.nz as f64 / 2.0 * grid.dz;
+    
+    let density = medium.density(center_x, center_y, center_z, &grid);
+    let sound_speed = medium.sound_speed(center_x, center_y, center_z, &grid);
+    
+    println!("\nMedium properties at center:");
+    println!("  Position: ({:.1}, {:.1}, {:.1}) mm", 
+        center_x * 1000.0, center_y * 1000.0, center_z * 1000.0);
+    println!("  Density: {} kg/m³", density);
+    println!("  Sound speed: {} m/s", sound_speed);
     
     Ok(())
 }

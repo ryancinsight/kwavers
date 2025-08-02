@@ -927,7 +927,7 @@ pub mod lazy {
     
     /// Lazy solver state that computes fields on demand
     pub struct LazySolverState {
-        base_fields: Array4<f64>,
+        _base_fields: Array4<f64>,
         lazy_derivatives: Vec<LazyField<f64>>,
         _grid: Grid,
     }
@@ -935,7 +935,7 @@ pub mod lazy {
     impl LazySolverState {
         pub fn new(fields: Array4<f64>, grid: Grid) -> Self {
             Self {
-                base_fields: fields,
+                _base_fields: fields,
                 lazy_derivatives: Vec::new(),
                 _grid: grid,
             }
