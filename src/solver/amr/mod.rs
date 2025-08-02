@@ -21,6 +21,7 @@ pub mod wavelet;
 pub mod interpolation;
 pub mod error_estimator;
 pub mod refinement;
+pub mod enhanced;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;

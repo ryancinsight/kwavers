@@ -9,6 +9,7 @@ pub mod amr;
 pub mod cpml_integration;
 pub mod validation;
 pub mod workspace;
+pub mod time_reversal;
 
 use crate::grid::Grid;
 use crate::KwaversResult;
@@ -203,6 +204,13 @@ impl Solver {
     pub fn disable_amr(&mut self) {
         info!("Disabling Adaptive Mesh Refinement");
         self.amr_manager = None;
+    }
+    
+    /// Clear all sources from the solver
+    pub fn clear_sources(&mut self) {
+        // For now, we'll need to implement a way to clear sources
+        // This is a placeholder that will be expanded when we refactor the source system
+        warn!("clear_sources called but source clearing not yet implemented");
     }
 
     pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) -> KwaversResult<()> {

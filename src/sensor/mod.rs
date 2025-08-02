@@ -4,6 +4,7 @@ use crate::grid::Grid;
 use crate::time::Time;
 use log::{debug, error, info};
 use ndarray::{Array1, Array2, Array3};
+use std::collections::HashMap;
 
 /// Configuration for sensor setup
 #[derive(Debug, Clone)]
@@ -50,6 +51,73 @@ pub struct Sensor {
     pressure_data: Array2<f64>,            // Pressure time series
     light_data: Array2<f64>,               // Light fluence rate time series
     grid: Grid,
+}
+
+/// Sensor data collection for time-reversal reconstruction
+#[derive(Debug, Clone)]
+pub struct SensorData {
+    /// Map from sensor ID to recorded data
+    data: HashMap<usize, Vec<f64>>,
+    /// Sensor configurations
+    sensors: Vec<SensorInfo>,
+}
+
+/// Information about a single sensor
+#[derive(Debug, Clone)]
+pub struct SensorInfo {
+    /// Sensor ID
+    id: usize,
+    /// Position in grid coordinates
+    position: [usize; 3],
+    /// Position in physical coordinates (meters)
+    position_meters: [f64; 3],
+}
+
+impl SensorInfo {
+    pub fn position(&self) -> &[usize; 3] {
+        &self.position
+    }
+}
+
+impl SensorData {
+    /// Create new sensor data collection
+    pub fn new() -> Self {
+        Self {
+            data: HashMap::new(),
+            sensors: Vec::new(),
+        }
+    }
+    
+    /// Check if sensor data is empty
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+    
+    /// Get sensor configurations
+    pub fn sensors(&self) -> &[SensorInfo] {
+        &self.sensors
+    }
+    
+    /// Get data iterator
+    pub fn data_iter(&self) -> impl Iterator<Item = (&usize, &Vec<f64>)> {
+        self.data.iter()
+    }
+    
+    /// Add sensor data
+    pub fn add_sensor_data(&mut self, sensor_id: usize, position: [usize; 3], position_meters: [f64; 3], data: Vec<f64>) {
+        self.data.insert(sensor_id, data);
+        self.sensors.push(SensorInfo {
+            id: sensor_id,
+            position,
+            position_meters,
+        });
+    }
+}
+
+impl Default for SensorData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Sensor {

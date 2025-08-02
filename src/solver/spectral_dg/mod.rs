@@ -17,6 +17,7 @@ pub mod spectral_solver;
 pub mod dg_solver;
 pub mod coupling;
 pub mod traits;
+pub mod enhanced_shock_handling;
 
 #[cfg(test)]
 mod tests;

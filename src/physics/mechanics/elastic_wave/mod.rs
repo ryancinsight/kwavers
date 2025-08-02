@@ -1,4 +1,6 @@
 // src/physics/mechanics/elastic_wave/mod.rs
+pub mod enhanced;
+
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
