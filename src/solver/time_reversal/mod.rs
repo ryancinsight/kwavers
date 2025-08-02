@@ -140,7 +140,7 @@ impl TimeReversalReconstructor {
             solver.fields.fields.index_axis_mut(ndarray::Axis(0), PRESSURE_IDX).fill(0.0);
             
             // Apply time-reversed signals as sources
-            self.apply_reversed_sources(&reversed_signals, solver)?;
+            self.apply_reversed_sources(&reversed_signals, solver, sensor_data)?;
             
             // Propagate backwards in time
             let iteration_result = self.propagate_backwards(
@@ -252,14 +252,46 @@ impl TimeReversalReconstructor {
         &self,
         reversed_signals: &HashMap<usize, Vec<f64>>,
         solver: &mut Solver,
+        sensor_data: &SensorData,
     ) -> KwaversResult<()> {
+        use crate::source::{Source, TimeVaryingSource};
+        use std::sync::Arc;
+        
         // Clear existing sources
         solver.clear_sources();
         
-        // Add time-reversed sources at sensor positions
+        // Create a time-varying source for each sensor
+        let mut sources: Vec<Box<dyn Source>> = Vec::new();
+        
         for (sensor_id, signal) in reversed_signals {
-            // TODO: Create source at sensor position with reversed signal
-            debug!("Adding reversed source for sensor {}", sensor_id);
+            // Get sensor position from sensor data
+            let sensor_info = sensor_data.sensors().get(*sensor_id)
+                .ok_or_else(|| KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "sensor_id".to_string(),
+                    value: sensor_id.to_string(),
+                    constraint: "sensor not found in sensor data".to_string(),
+                }))?;
+            
+            let position_array = sensor_info.position();
+            let position = (position_array[0], position_array[1], position_array[2]);
+            
+            // Create time-varying source with reversed signal
+            let source = TimeVaryingSource::new(
+                position,
+                signal.clone(),
+                solver.time.dt,
+            );
+            
+            sources.push(Box::new(source));
+            debug!("Added reversed source for sensor {} at position {:?}", sensor_id, position);
+        }
+        
+        // Replace solver's source with a composite source containing all reversed sources
+        if !sources.is_empty() {
+            use crate::source::CompositeSource;
+            let composite_source = CompositeSource::new(sources);
+            solver.source = Box::new(composite_source);
+            info!("Applied {} reversed sources for time-reversal", reversed_signals.len());
         }
         
         Ok(())

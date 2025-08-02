@@ -295,12 +295,89 @@ impl PerformanceOptimizer {
     #[cfg(feature = "gpu")]
     fn fuse_kernels(
         &mut self,
-        _gpu_context: &mut dyn std::any::Any,
-        _kernels: Vec<Box<dyn std::any::Any>>,
+        gpu_context: &mut dyn std::any::Any,
+        kernels: Vec<Box<dyn std::any::Any>>,
     ) -> KwaversResult<()> {
+        use crate::gpu::{GpuContext, GpuKernel};
+        
         info!("Fusing {} GPU kernels", kernels.len());
         
-        log::warn!("GPU kernel fusion not yet implemented");
+        // Downcast GPU context
+        let context = gpu_context.downcast_mut::<GpuContext>()
+            .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "gpu_context".to_string(),
+                value: "invalid type".to_string(),
+                constraint: "Expected GpuContext".to_string(),
+            }))?;
+        
+        // Downcast and collect kernels
+        let mut gpu_kernels = Vec::new();
+        let mut all_parameters = Vec::new();
+        let mut fused_code = String::new();
+        let mut fused_body = String::new();
+        
+        for (i, kernel_box) in kernels.into_iter().enumerate() {
+            let kernel = kernel_box.downcast::<GpuKernel>()
+                .map_err(|_| KwaversError::Config(ConfigError::InvalidValue {
+                    parameter: "kernel".to_string(),
+                    value: format!("kernel {}", i),
+                    constraint: "Expected GpuKernel".to_string(),
+                }))?;
+            
+            // Collect parameters from this kernel
+            for param in &kernel.parameters {
+                all_parameters.push(param.clone());
+            }
+            
+            // Append kernel code
+            fused_code.push_str(&kernel.code);
+            fused_code.push_str("\n");
+            
+            // Append kernel body with unique function name
+            fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel.name));
+            fused_body.push_str(&format!("    {{\n"));
+            fused_body.push_str(&kernel.body);
+            fused_body.push_str(&format!("    }}\n\n"));
+            
+            gpu_kernels.push(*kernel);
+        }
+        
+        // Create fused kernel
+        let fused_kernel_code = format!(
+            "__global__ void fused_kernel({}) {{\n{}\n}}\n",
+            all_parameters.iter()
+                .map(|p| format!("{} {}{}", p.dtype, p.name, p.suffix))
+                .collect::<Vec<_>>()
+                .join(", "),
+            fused_body
+        );
+        
+        // Prepare kernel arguments
+        let kernel_args: Vec<&dyn std::any::Any> = all_parameters.iter()
+            .map(|p| {
+                // This is a placeholder - actual implementation would need to map
+                // parameter names to actual buffer/value references
+                &p.name as &dyn std::any::Any
+            })
+            .collect();
+        
+        // Launch the fused kernel
+        let block_size = gpu_kernels.first()
+            .map(|k| k.block_size)
+            .unwrap_or((256, 1, 1));
+            
+        let grid_size = gpu_kernels.first()
+            .map(|k| k.grid_size)
+            .unwrap_or(1024);
+        
+        context.launch_kernel(
+            "fused_kernel",
+            &fused_kernel_code,
+            block_size,
+            (grid_size as u32, 1, 1),
+            &kernel_args,
+        )?;
+        
         Ok(())
     }
     

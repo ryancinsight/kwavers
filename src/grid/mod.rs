@@ -46,6 +46,15 @@ impl Grid {
         grid
     }
 
+    /// Convert physical position (meters) to grid indices
+    pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
+        (
+            (x / self.dx).round() as usize,
+            (y / self.dy).round() as usize,
+            (z / self.dz).round() as usize,
+        )
+    }
+    
     /// Returns the total number of grid points.
     pub fn total_points(&self) -> usize {
         self.nx * self.ny * self.nz
