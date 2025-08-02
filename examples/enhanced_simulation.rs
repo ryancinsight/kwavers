@@ -28,7 +28,7 @@ fn main() -> KwaversResult<()> {
     println!("Demonstrating advanced multi-physics simulation with proper architecture.\n");
     
     // Step 1: Create advanced configuration
-    let config = create_enhanced_simulation_config();
+    let config = create_simulation_config();
     
     // Step 2: Build simulation using factory
     let builder = SimulationFactory::create_simulation(config)?;
@@ -53,11 +53,11 @@ fn main() -> KwaversResult<()> {
     // Step 5: Run enhanced simulation with complex initial conditions
     println!("\nRunning enhanced multi-physics simulation...");
     let results = simulation.run_with_initial_conditions(|fields, grid| {
-        set_enhanced_initial_conditions(fields, grid)
+        set_initial_conditions(fields, grid)
     })?;
     
     // Step 6: Advanced results analysis
-    analyze_enhanced_results(&results);
+    analyze_results(&results);
     
     // Step 7: Validate physics principles
     validate_physics_principles(&results)?;
@@ -69,7 +69,7 @@ fn main() -> KwaversResult<()> {
 }
 
 /// Create enhanced configuration with multiple physics components
-fn create_enhanced_simulation_config() -> SimulationConfig {
+fn create_simulation_config() -> SimulationConfig {
     SimulationConfig {
         grid: GridConfig {
             nx: 32,
@@ -162,7 +162,7 @@ fn create_enhanced_simulation_config() -> SimulationConfig {
 }
 
 /// Set enhanced initial conditions with multiple sources and gradients
-fn set_enhanced_initial_conditions(fields: &mut Array4<f64>, grid: &kwavers::Grid) -> KwaversResult<()> {
+fn set_initial_conditions(fields: &mut Array4<f64>, grid: &kwavers::Grid) -> KwaversResult<()> {
     println!("Setting enhanced initial conditions:");
     
     // Primary acoustic source - focused beam
@@ -258,7 +258,7 @@ fn set_bubble_nuclei(fields: &mut Array4<f64>, grid: &kwavers::Grid, num_nuclei:
 }
 
 /// Advanced results analysis for multi-physics simulation
-fn analyze_enhanced_results(results: &SimulationResults) {
+fn analyze_results(results: &SimulationResults) {
     println!("\n📊 Enhanced Results Analysis:");
     println!("  Total simulation time: {:.2} seconds", results.total_time());
     println!("  Maximum pressure reached: {:.2e} Pa", results.max_pressure());
@@ -360,7 +360,7 @@ mod tests {
     
     #[test]
     fn test_enhanced_simulation_config() {
-        let config = create_enhanced_simulation_config();
+        let config = create_simulation_config();
         assert_eq!(config.grid.nx, 32);
         assert_eq!(config.physics.models.len(), 3); // Multi-physics
         assert!(config.validation.strict_mode);
@@ -374,7 +374,7 @@ mod tests {
         let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4);
         let mut fields = Array4::<f64>::zeros((8, 16, 16, 16));
         
-        let result = set_enhanced_initial_conditions(&mut fields, &grid);
+        let result = set_initial_conditions(&mut fields, &grid);
         assert!(result.is_ok());
         
         // Check that some pressure was set

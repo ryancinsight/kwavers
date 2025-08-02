@@ -103,7 +103,7 @@ pub fn next_power_of_two_usize(n: usize) -> usize {
 /// Optimized 1D butterfly FFT/IFFT algorithm that works on slices for better cache locality
 /// This is shared between FFT and IFFT implementations to avoid code duplication
 #[inline]
-pub fn butterfly_1d_optimized(data: &mut [Complex<f64>], twiddles: &[Complex<f64>], n: usize) {
+pub fn butterfly_1d(data: &mut [Complex<f64>], twiddles: &[Complex<f64>], n: usize) {
     let mut len = 1;
     while len < n {
         let half_len = len;

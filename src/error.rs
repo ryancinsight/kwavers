@@ -1021,6 +1021,259 @@ pub mod utils {
     }
 }
 
+/// Advanced error handling utilities using iterator combinators
+pub mod advanced {
+    use super::*;
+    use std::fmt::Debug;
+    
+    /// Chain multiple fallible operations with early return on error
+    pub struct ErrorChain<T, E> {
+        operations: Vec<Box<dyn FnOnce(T) -> Result<T, E>>>,
+    }
+    
+    impl<T, E> ErrorChain<T, E> {
+        pub fn new() -> Self {
+            Self {
+                operations: Vec::new(),
+            }
+        }
+        
+        /// Add an operation to the chain
+        pub fn then<F>(mut self, f: F) -> Self
+        where
+            F: FnOnce(T) -> Result<T, E> + 'static,
+        {
+            self.operations.push(Box::new(f));
+            self
+        }
+        
+        /// Execute all operations in sequence
+        pub fn execute(self, initial: T) -> Result<T, E> {
+            self.operations.into_iter()
+                .try_fold(initial, |acc, op| op(acc))
+        }
+    }
+    
+    /// Collect multiple Results into a single Result
+    pub trait ResultCollector<T, E> {
+        /// Collect all Ok values or return the first error
+        fn collect_results(self) -> Result<Vec<T>, E>;
+        
+        /// Collect all values, separating successes and failures
+        fn partition_results(self) -> (Vec<T>, Vec<E>);
+    }
+    
+    impl<I, T, E> ResultCollector<T, E> for I
+    where
+        I: Iterator<Item = Result<T, E>>,
+    {
+        fn collect_results(self) -> Result<Vec<T>, E> {
+            self.collect()
+        }
+        
+        fn partition_results(self) -> (Vec<T>, Vec<E>) {
+            let (oks, errs): (Vec<_>, Vec<_>) = self.partition(Result::is_ok);
+            
+            let values = oks.into_iter()
+                .filter_map(|r| r.ok())
+                .collect();
+                
+            let errors = errs.into_iter()
+                .filter_map(|r| r.err())
+                .collect();
+                
+            (values, errors)
+        }
+    }
+    
+    /// Error accumulator for collecting multiple errors
+    #[derive(Debug, Clone)]
+    pub struct ErrorAccumulator<E> {
+        errors: Vec<E>,
+        context: Vec<String>,
+    }
+    
+    impl<E> ErrorAccumulator<E> {
+        pub fn new() -> Self {
+            Self {
+                errors: Vec::new(),
+                context: Vec::new(),
+            }
+        }
+        
+        /// Add an error to the accumulator
+        pub fn add_error(&mut self, error: E) {
+            self.errors.push(error);
+        }
+        
+        /// Add context information
+        pub fn with_context<S: Into<String>>(mut self, context: S) -> Self {
+            self.context.push(context.into());
+            self
+        }
+        
+        /// Check if any errors were accumulated
+        pub fn has_errors(&self) -> bool {
+            !self.errors.is_empty()
+        }
+        
+        /// Convert to a Result
+        pub fn into_result<T, F>(self, ok_value: F) -> Result<T, Self>
+        where
+            F: FnOnce() -> T,
+        {
+            if self.has_errors() {
+                Err(self)
+            } else {
+                Ok(ok_value())
+            }
+        }
+        
+        /// Get all accumulated errors
+        pub fn errors(&self) -> &[E] {
+            &self.errors
+        }
+    }
+    
+    /// Retry logic with exponential backoff
+    pub struct RetryStrategy<E> {
+        max_attempts: usize,
+        backoff_ms: u64,
+        backoff_factor: f64,
+        error_handler: Option<Box<dyn Fn(&E, usize)>>,
+    }
+    
+    impl<E> RetryStrategy<E> {
+        pub fn new() -> Self {
+            Self {
+                max_attempts: 3,
+                backoff_ms: 100,
+                backoff_factor: 2.0,
+                error_handler: None,
+            }
+        }
+        
+        pub fn with_max_attempts(mut self, attempts: usize) -> Self {
+            self.max_attempts = attempts;
+            self
+        }
+        
+        pub fn with_backoff(mut self, initial_ms: u64, factor: f64) -> Self {
+            self.backoff_ms = initial_ms;
+            self.backoff_factor = factor;
+            self
+        }
+        
+        pub fn with_error_handler<F>(mut self, handler: F) -> Self
+        where
+            F: Fn(&E, usize) + 'static,
+        {
+            self.error_handler = Some(Box::new(handler));
+            self
+        }
+        
+        /// Execute an operation with retry logic
+        pub fn execute<T, F>(&self, mut operation: F) -> Result<T, E>
+        where
+            F: FnMut() -> Result<T, E>,
+            E: Debug,
+        {
+            let mut last_error = None;
+            let mut backoff = self.backoff_ms;
+            
+            for attempt in 1..=self.max_attempts {
+                match operation() {
+                    Ok(value) => return Ok(value),
+                    Err(e) => {
+                        if let Some(ref handler) = self.error_handler {
+                            handler(&e, attempt);
+                        }
+                        
+                        last_error = Some(e);
+                        
+                        if attempt < self.max_attempts {
+                            std::thread::sleep(std::time::Duration::from_millis(backoff));
+                            backoff = (backoff as f64 * self.backoff_factor) as u64;
+                        }
+                    }
+                }
+            }
+            
+            Err(last_error.unwrap())
+        }
+    }
+    
+    /// Transform errors using a pipeline
+    pub trait ErrorTransform<T, E> {
+        /// Map the error to a different type
+        fn map_error<F, E2>(self, f: F) -> Result<T, E2>
+        where
+            F: FnOnce(E) -> E2;
+        
+        /// Add context to the error
+        fn with_error_context<F, S>(self, f: F) -> Result<T, String>
+        where
+            F: FnOnce(&E) -> S,
+            S: Into<String>;
+    }
+    
+    impl<T, E> ErrorTransform<T, E> for Result<T, E> {
+        fn map_error<F, E2>(self, f: F) -> Result<T, E2>
+        where
+            F: FnOnce(E) -> E2,
+        {
+            self.map_err(f)
+        }
+        
+        fn with_error_context<F, S>(self, f: F) -> Result<T, String>
+        where
+            F: FnOnce(&E) -> S,
+            S: Into<String>,
+        {
+            self.map_err(|e| f(&e).into())
+        }
+    }
+    
+    /// Validate multiple conditions and collect all failures
+    pub struct ValidationChain<T> {
+        value: T,
+        validators: Vec<Box<dyn Fn(&T) -> Result<(), String>>>,
+    }
+    
+    impl<T> ValidationChain<T> {
+        pub fn new(value: T) -> Self {
+            Self {
+                value,
+                validators: Vec::new(),
+            }
+        }
+        
+        /// Add a validation rule
+        pub fn validate<F>(mut self, validator: F) -> Self
+        where
+            F: Fn(&T) -> Result<(), String> + 'static,
+        {
+            self.validators.push(Box::new(validator));
+            self
+        }
+        
+        /// Run all validations and collect errors
+        pub fn run(self) -> Result<T, Vec<String>> {
+            let errors: Vec<String> = self.validators.iter()
+                .filter_map(|validator| {
+                    validator(&self.value).err()
+                })
+                .collect();
+            
+            if errors.is_empty() {
+                Ok(self.value)
+            } else {
+                Err(errors)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

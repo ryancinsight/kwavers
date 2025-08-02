@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     demonstrate_component(&grid, &medium)?;
     
     println!("\n3. Enhanced NonlinearWave with Kuznetsov terms:");
-    demonstrate_enhanced_nonlinear(&grid, &medium)?;
+    demonstrate_nonlinear(&grid, &medium)?;
     
     println!("\n=== Demonstration Complete ===");
     Ok(())
@@ -183,7 +183,7 @@ fn demonstrate_component(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), 
 }
 
 /// Demonstrate enhanced NonlinearWave with Kuznetsov terms
-fn demonstrate_enhanced_nonlinear(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
+fn demonstrate_nonlinear(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
     println!("Using enhanced NonlinearWave with Kuznetsov terms:");
     
     // Create enhanced nonlinear solver

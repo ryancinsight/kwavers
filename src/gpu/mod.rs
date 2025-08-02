@@ -21,6 +21,7 @@ pub mod opencl;
 pub mod memory;
 pub mod kernels;
 pub mod benchmarks;
+pub mod fft_kernels;
 
 /// GPU backend types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
