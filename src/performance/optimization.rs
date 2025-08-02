@@ -141,9 +141,9 @@ impl PerformanceOptimizer {
         
         if self.config.enable_simd {
             match self.config.simd_level {
-                SimdLevel::AVX512 => self.stencil_avx512(input, output, stencil)?,
-                SimdLevel::AVX2 => self.stencil_avx2(input, output, stencil)?,
-                SimdLevel::SSE42 => self.stencil_sse42(input, output, stencil)?,
+                SimdLevel::AVX512 => unsafe { self.stencil_avx512(input, output, stencil)? },
+                SimdLevel::AVX2 => unsafe { self.stencil_avx2(input, output, stencil)? },
+                SimdLevel::SSE42 => unsafe { self.stencil_sse42(input, output, stencil)? },
                 SimdLevel::None => self.stencil_scalar(input, output, stencil)?,
             }
         } else {
@@ -270,7 +270,7 @@ impl PerformanceOptimizer {
         let (nx, ny, nz) = input.dim();
         
         // Parallel execution over outer dimensions
-        let output_slice = output.slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1]);
+        let mut output_slice = output.slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1]);
         let output_vec: Vec<_> = output_slice.iter_mut().collect();
         output_vec.into_par_iter()
             .enumerate()

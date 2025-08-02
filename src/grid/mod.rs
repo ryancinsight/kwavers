@@ -229,6 +229,218 @@ impl Grid {
     }
 }
 
+/// Iterator over grid points with their physical coordinates
+pub struct GridPointIterator<'a> {
+    grid: &'a Grid,
+    current: usize,
+}
+
+impl<'a> Iterator for GridPointIterator<'a> {
+    type Item = ((usize, usize, usize), (f64, f64, f64));
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.grid.total_points() {
+            return None;
+        }
+        
+        let k = self.current % self.grid.nz;
+        let j = (self.current / self.grid.nz) % self.grid.ny;
+        let i = self.current / (self.grid.ny * self.grid.nz);
+        
+        let coords = self.grid.coordinates(i, j, k);
+        self.current += 1;
+        
+        Some(((i, j, k), coords))
+    }
+    
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.grid.total_points() - self.current;
+        (remaining, Some(remaining))
+    }
+}
+
+impl<'a> ExactSizeIterator for GridPointIterator<'a> {}
+
+/// Iterator over grid slices in a specific dimension
+pub struct GridSliceIterator<'a> {
+    grid: &'a Grid,
+    dimension: Dimension,
+    current: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Dimension {
+    X,
+    Y,
+    Z,
+}
+
+impl<'a> Iterator for GridSliceIterator<'a> {
+    type Item = GridSlice<'a>;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        let (max_slices, slice_type) = match self.dimension {
+            Dimension::X => (self.grid.nx, SliceType::YZ(self.current)),
+            Dimension::Y => (self.grid.ny, SliceType::XZ(self.current)),
+            Dimension::Z => (self.grid.nz, SliceType::XY(self.current)),
+        };
+        
+        if self.current >= max_slices {
+            return None;
+        }
+        
+        let slice = GridSlice {
+            grid: self.grid,
+            slice_type,
+        };
+        
+        self.current += 1;
+        Some(slice)
+    }
+}
+
+#[derive(Debug)]
+pub struct GridSlice<'a> {
+    grid: &'a Grid,
+    slice_type: SliceType,
+}
+
+#[derive(Debug)]
+enum SliceType {
+    XY(usize), // z-index
+    XZ(usize), // y-index
+    YZ(usize), // x-index
+}
+
+impl<'a> GridSlice<'a> {
+    /// Iterator over points in this slice
+    pub fn points(&self) -> impl Iterator<Item = ((usize, usize, usize), (f64, f64, f64))> + '_ {
+        let (i_start, i_end, j_start, j_end, k_start, k_end) = match self.slice_type {
+            SliceType::XY(z) => (0, self.grid.nx, 0, self.grid.ny, z, z+1),
+            SliceType::XZ(y) => (0, self.grid.nx, y, y+1, 0, self.grid.nz),
+            SliceType::YZ(x) => (x, x+1, 0, self.grid.ny, 0, self.grid.nz),
+        };
+        
+        (i_start..i_end).flat_map(move |i| {
+            (j_start..j_end).flat_map(move |j| {
+                (k_start..k_end).map(move |k| {
+                    ((i, j, k), self.grid.coordinates(i, j, k))
+                })
+            })
+        })
+    }
+}
+
+/// Advanced grid methods using iterators
+impl Grid {
+    /// Returns an iterator over all grid points with their indices and coordinates
+    pub fn iter_points(&self) -> GridPointIterator {
+        GridPointIterator {
+            grid: self,
+            current: 0,
+        }
+    }
+    
+    /// Returns an iterator over grid slices in the specified dimension
+    pub fn iter_slices(&self, dimension: Dimension) -> GridSliceIterator {
+        GridSliceIterator {
+            grid: self,
+            dimension,
+            current: 0,
+        }
+    }
+    
+    /// Find all grid points within a sphere using iterator combinators
+    pub fn points_in_sphere(&self, center: (f64, f64, f64), radius: f64) -> impl Iterator<Item = (usize, usize, usize)> + '_ {
+        self.iter_points()
+            .filter(move |(_, (x, y, z))| {
+                let dx = x - center.0;
+                let dy = y - center.1;
+                let dz = z - center.2;
+                dx * dx + dy * dy + dz * dz <= radius * radius
+            })
+            .map(|(indices, _)| indices)
+    }
+    
+    /// Find all boundary points using iterator combinators
+    pub fn boundary_points(&self) -> impl Iterator<Item = (usize, usize, usize)> + '_ {
+        self.iter_points()
+            .filter(|((i, j, k), _)| {
+                *i == 0 || *i == self.nx - 1 ||
+                *j == 0 || *j == self.ny - 1 ||
+                *k == 0 || *k == self.nz - 1
+            })
+            .map(|(indices, _)| indices)
+    }
+    
+    /// Apply a function to all grid points in parallel using rayon
+    pub fn par_map_points<F, T>(&self, f: F) -> Vec<T>
+    where
+        F: Fn((usize, usize, usize), (f64, f64, f64)) -> T + Sync + Send,
+        T: Send,
+    {
+        use rayon::prelude::*;
+        
+        (0..self.total_points())
+            .into_par_iter()
+            .map(|idx| {
+                let k = idx % self.nz;
+                let j = (idx / self.nz) % self.ny;
+                let i = idx / (self.ny * self.nz);
+                let coords = self.coordinates(i, j, k);
+                f((i, j, k), coords)
+            })
+            .collect()
+    }
+    
+    /// Create a field with values computed from coordinates using iterator
+    pub fn create_field_from<F>(&self, f: F) -> Array3<f64>
+    where
+        F: Fn(f64, f64, f64) -> f64,
+    {
+        let mut field = self.create_field();
+        
+        self.iter_points()
+            .for_each(|((i, j, k), (x, y, z))| {
+                field[[i, j, k]] = f(x, y, z);
+            });
+            
+        field
+    }
+    
+    /// Compute statistics over a field using iterator combinators
+    pub fn field_statistics(&self, field: &Array3<f64>) -> FieldStatistics {
+        let values: Vec<f64> = field.iter().copied().collect();
+        
+        let (sum, sum_sq, min, max) = values.iter()
+            .fold((0.0, 0.0, f64::INFINITY, f64::NEG_INFINITY), 
+                  |(sum, sum_sq, min, max), &val| {
+                (sum + val, sum_sq + val * val, min.min(val), max.max(val))
+            });
+        
+        let count = values.len() as f64;
+        let mean = sum / count;
+        let variance = (sum_sq / count) - mean * mean;
+        
+        FieldStatistics {
+            mean,
+            variance,
+            std_dev: variance.sqrt(),
+            min,
+            max,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldStatistics {
+    pub mean: f64,
+    pub variance: f64,
+    pub std_dev: f64,
+    pub min: f64,
+    pub max: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

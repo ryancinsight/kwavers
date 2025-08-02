@@ -120,6 +120,187 @@ impl Default for SensorData {
     }
 }
 
+/// Iterator adapter for sensor data processing
+pub struct SensorDataIterator<'a> {
+    data: &'a SensorData,
+    sensors: Vec<&'a SensorInfo>,
+    current: usize,
+}
+
+impl<'a> Iterator for SensorDataIterator<'a> {
+    type Item = (&'a SensorInfo, &'a Vec<f64>);
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.sensors.len() {
+            return None;
+        }
+        
+        let sensor = self.sensors[self.current];
+        let data = self.data.data.get(&sensor.id)?;
+        self.current += 1;
+        
+        Some((sensor, data))
+    }
+}
+
+/// Advanced sensor data processing methods
+impl SensorData {
+    /// Create an iterator over sensor data
+    pub fn iter(&self) -> SensorDataIterator {
+        let sensors: Vec<_> = self.sensors.iter().collect();
+        SensorDataIterator {
+            data: self,
+            sensors,
+            current: 0,
+        }
+    }
+    
+    /// Apply a transformation to all sensor data
+    pub fn map_data<F>(&self, f: F) -> HashMap<usize, Vec<f64>>
+    where
+        F: Fn(&Vec<f64>) -> Vec<f64>,
+    {
+        self.data.iter()
+            .map(|(id, data)| (*id, f(data)))
+            .collect()
+    }
+    
+    /// Filter sensors based on a predicate
+    pub fn filter_sensors<F>(&self, predicate: F) -> Vec<&SensorInfo>
+    where
+        F: Fn(&SensorInfo) -> bool,
+    {
+        self.sensors.iter()
+            .filter(|sensor| predicate(sensor))
+            .collect()
+    }
+    
+    /// Compute statistics for each sensor using iterator combinators
+    pub fn compute_statistics(&self) -> HashMap<usize, SensorStatistics> {
+        self.data.iter()
+            .map(|(id, data)| {
+                let stats = data.iter()
+                    .fold(SensorStatisticsAccumulator::new(), |acc, &val| {
+                        acc.update(val)
+                    })
+                    .finalize(data.len());
+                (*id, stats)
+            })
+            .collect()
+    }
+    
+    /// Find sensors with data exceeding a threshold
+    pub fn sensors_exceeding_threshold(&self, threshold: f64) -> Vec<usize> {
+        self.data.iter()
+            .filter_map(|(id, data)| {
+                data.iter()
+                    .any(|&val| val > threshold)
+                    .then_some(*id)
+            })
+            .collect()
+    }
+    
+    /// Apply windowed processing to sensor data
+    pub fn windowed_processing<F, T>(&self, window_size: usize, f: F) -> HashMap<usize, Vec<T>>
+    where
+        F: Fn(&[f64]) -> T,
+    {
+        self.data.iter()
+            .map(|(id, data)| {
+                let processed: Vec<T> = data.windows(window_size)
+                    .map(&f)
+                    .collect();
+                (*id, processed)
+            })
+            .collect()
+    }
+    
+    /// Parallel processing of sensor data using rayon
+    pub fn par_process<F, T>(&self, f: F) -> HashMap<usize, T>
+    where
+        F: Fn(&Vec<f64>) -> T + Sync + Send,
+        T: Send,
+    {
+        use rayon::prelude::*;
+        
+        self.data.par_iter()
+            .map(|(id, data)| (*id, f(data)))
+            .collect()
+    }
+    
+    /// Combine data from multiple sensors using a reduction operation
+    pub fn reduce_all<F, T>(&self, init: T, f: F) -> T
+    where
+        F: Fn(T, &Vec<f64>) -> T,
+    {
+        self.data.values()
+            .fold(init, f)
+    }
+    
+    /// Create a lazy iterator that applies transformations on demand
+    pub fn lazy_transform<'a, F, T>(&'a self, f: F) -> impl Iterator<Item = (usize, T)> + 'a
+    where
+        F: Fn(&Vec<f64>) -> T + 'a,
+        T: 'a,
+    {
+        self.data.iter()
+            .map(move |(id, data)| (*id, f(data)))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SensorStatistics {
+    pub mean: f64,
+    pub variance: f64,
+    pub std_dev: f64,
+    pub min: f64,
+    pub max: f64,
+    pub peak_to_peak: f64,
+}
+
+struct SensorStatisticsAccumulator {
+    sum: f64,
+    sum_sq: f64,
+    min: f64,
+    max: f64,
+}
+
+impl SensorStatisticsAccumulator {
+    fn new() -> Self {
+        Self {
+            sum: 0.0,
+            sum_sq: 0.0,
+            min: f64::INFINITY,
+            max: f64::NEG_INFINITY,
+        }
+    }
+    
+    fn update(self, value: f64) -> Self {
+        Self {
+            sum: self.sum + value,
+            sum_sq: self.sum_sq + value * value,
+            min: self.min.min(value),
+            max: self.max.max(value),
+        }
+    }
+    
+    fn finalize(self, count: usize) -> SensorStatistics {
+        let mean = self.sum / count as f64;
+        let variance = (self.sum_sq / count as f64) - mean * mean;
+        
+        SensorStatistics {
+            mean,
+            variance,
+            std_dev: variance.sqrt(),
+            min: self.min,
+            max: self.max,
+            peak_to_peak: self.max - self.min,
+        }
+    }
+}
+
+
+
 impl Sensor {
     /// Creates a new sensor with positions in meters, converted to grid indices.
     pub fn new(grid: &Grid, time: &Time, positions_meters: &[(f64, f64, f64)]) -> Self {

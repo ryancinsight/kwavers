@@ -10,7 +10,7 @@ use crate::utils::{fft_3d, ifft_3d};
 use crate::error::{KwaversResult, PhysicsError, NumericalError};
 use ndarray::{Array3, Array4, s};
 use num_complex::Complex;
-use log::{debug, warn};
+use log::{debug, warn, info};
 use std::time::Instant;
 use std::collections::HashMap;
 

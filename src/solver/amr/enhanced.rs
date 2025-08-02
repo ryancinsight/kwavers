@@ -464,7 +464,7 @@ mod tests {
         let mut balancer = LoadBalancer::new(LoadBalancingStrategy::Static);
         let cells = vec![(0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0)];
         
-        let distribution = balancer.distribute_work(cells, None);
+        let distribution = balancer.distribute_work::<(usize, usize, usize)>(cells, None);
         assert!(!distribution.is_empty());
         
         let total_cells: usize = distribution.iter().map(|d| d.len()).sum();
