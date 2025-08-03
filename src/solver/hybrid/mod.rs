@@ -668,10 +668,46 @@ impl HybridSolver {
         fields: &Array4<f64>,
         time: f64,
     ) -> KwaversResult<()> {
-        // TODO: Implement comprehensive validation
-        // For now, placeholder implementation
-        self.validation_results.quality_score = 0.95; // Placeholder
-        debug!("Solution validation completed at time {:.3e}", time);
+        use crate::solver::PRESSURE_IDX;
+        
+        // Check for NaN or infinite values
+        let pressure = fields.index_axis(ndarray::Axis(0), PRESSURE_IDX);
+        let has_nan = pressure.iter().any(|&x| x.is_nan());
+        let has_inf = pressure.iter().any(|&x| x.is_infinite());
+        
+        if has_nan || has_inf {
+            self.validation_results.quality_score = 0.0;
+            return Err(crate::error::ValidationError::FieldValidation {
+                field: "pressure".to_string(),
+                value: "NaN or Inf detected".to_string(),
+                constraint: "finite values required".to_string(),
+            }.into());
+        }
+        
+        // Calculate quality metrics
+        let max_pressure = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        let mean_pressure = pressure.iter().sum::<f64>() / pressure.len() as f64;
+        
+        // Check conservation (mass/energy)
+        let total_energy = pressure.iter().map(|&p| p * p).sum::<f64>();
+        let energy_change = if self.validation_results.energy_conservation_error > 0.0 {
+            (total_energy - self.validation_results.energy_conservation_error).abs() / self.validation_results.energy_conservation_error
+        } else {
+            0.0
+        };
+        self.validation_results.energy_conservation_error = total_energy;
+        
+        // Calculate quality score based on multiple factors
+        let stability_score = if max_pressure < 1e6 { 1.0 } else { 0.5 };
+        let conservation_score = if energy_change < 0.01 { 1.0 } else { 0.8 };
+        let smoothness_score = 0.95; // Could be improved with gradient analysis
+        
+        self.validation_results.quality_score = 
+            (stability_score + conservation_score + smoothness_score) / 3.0;
+        
+        debug!("Solution validation: quality={:.3}, max_p={:.2e}, energy_change={:.2e}", 
+               self.validation_results.quality_score, max_pressure, energy_change);
+        
         Ok(())
     }
     

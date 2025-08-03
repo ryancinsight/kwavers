@@ -705,11 +705,13 @@ impl AcousticWaveModel for KuznetsovWave {
         dt: f64,
         t: f64,
     ) {
+        use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
+        
         // Extract pressure and velocity from fields
-        let pressure_idx = 0; // Assuming pressure is at index 0
-        let vx_idx = 4; // Assuming velocity components start at index 4
-        let vy_idx = 5;
-        let vz_idx = 6;
+        let pressure_idx = PRESSURE_IDX;
+        let vx_idx = VX_IDX;
+        let vy_idx = VY_IDX;
+        let vz_idx = VZ_IDX;
         
         // Get pressure field
         let mut pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();

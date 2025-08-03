@@ -243,6 +243,8 @@ pub struct WENOLimiter {
     epsilon: f64,
     /// Power parameter for smoothness indicators
     p: f64,
+    /// Threshold for shock detection
+    shock_threshold: f64,
 }
 
 impl WENOLimiter {
@@ -259,6 +261,7 @@ impl WENOLimiter {
             order,
             epsilon: 1e-6,
             p: 2.0,
+            shock_threshold: 0.1, // Default shock threshold
         })
     }
     
@@ -334,13 +337,195 @@ impl WENOLimiter {
         w0 * q0 + w1 * q1
     }
     
-    /// WENO5 limiting (placeholder for full implementation)
+    /// WENO5 limiting implementation
     fn weno5_limit(
         &self,
-        _field: &mut Array3<f64>,
-        _shock_indicator: &Array3<f64>,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
-        warn!("WENO5 limiting not fully implemented, using WENO3");
+        let (nx, ny, nz) = field.dim();
+        let epsilon = 1e-6;
+        
+        // Process each direction
+        for direction in 0..3 {
+            match direction {
+                0 => self.weno5_limit_x(field, shock_indicator, nx, ny, nz, epsilon)?,
+                1 => self.weno5_limit_y(field, shock_indicator, nx, ny, nz, epsilon)?,
+                2 => self.weno5_limit_z(field, shock_indicator, nx, ny, nz, epsilon)?,
+                _ => unreachable!(),
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// WENO5 limiting in x-direction
+    fn weno5_limit_x(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        for j in 0..ny {
+            for k in 0..nz {
+                for i in 2..nx-2 {
+                    if shock_indicator[[i, j, k]] > self.shock_threshold {
+                        // Compute WENO5 weights
+                        let v = [
+                            field[[i.saturating_sub(2), j, k]],
+                            field[[i.saturating_sub(1), j, k]],
+                            field[[i, j, k]],
+                            field[[i.min(nx-1).saturating_add(1), j, k]],
+                            field[[(i+2).min(nx-1), j, k]],
+                        ];
+                        
+                        // Three stencils for WENO5
+                        let p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
+                        let p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
+                        let p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+                        
+                        // Smoothness indicators
+                        let beta0 = 13.0/12.0 * (v[0] - 2.0*v[1] + v[2]).powi(2) + 
+                                   0.25 * (v[0] - 4.0*v[1] + 3.0*v[2]).powi(2);
+                        let beta1 = 13.0/12.0 * (v[1] - 2.0*v[2] + v[3]).powi(2) + 
+                                   0.25 * (v[1] - v[3]).powi(2);
+                        let beta2 = 13.0/12.0 * (v[2] - 2.0*v[3] + v[4]).powi(2) + 
+                                   0.25 * (3.0*v[2] - 4.0*v[3] + v[4]).powi(2);
+                        
+                        // Optimal weights
+                        let d0 = 0.1;
+                        let d1 = 0.6;
+                        let d2 = 0.3;
+                        
+                        // WENO weights
+                        let alpha0 = d0 / (epsilon + beta0).powi(2);
+                        let alpha1 = d1 / (epsilon + beta1).powi(2);
+                        let alpha2 = d2 / (epsilon + beta2).powi(2);
+                        let sum_alpha = alpha0 + alpha1 + alpha2;
+                        
+                        let w0 = alpha0 / sum_alpha;
+                        let w1 = alpha1 / sum_alpha;
+                        let w2 = alpha2 / sum_alpha;
+                        
+                        // WENO5 reconstruction
+                        field[[i, j, k]] = w0 * p0 + w1 * p1 + w2 * p2;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    
+    /// WENO5 limiting in y-direction
+    fn weno5_limit_y(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        // Similar implementation for y-direction
+        for i in 0..nx {
+            for k in 0..nz {
+                for j in 2..ny-2 {
+                    if shock_indicator[[i, j, k]] > self.shock_threshold {
+                        let v = [
+                            field[[i, j.saturating_sub(2), k]],
+                            field[[i, j.saturating_sub(1), k]],
+                            field[[i, j, k]],
+                            field[[i, j.min(ny-1).saturating_add(1), k]],
+                            field[[i, (j+2).min(ny-1), k]],
+                        ];
+                        
+                        let p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
+                        let p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
+                        let p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+                        
+                        let beta0 = 13.0/12.0 * (v[0] - 2.0*v[1] + v[2]).powi(2) + 
+                                   0.25 * (v[0] - 4.0*v[1] + 3.0*v[2]).powi(2);
+                        let beta1 = 13.0/12.0 * (v[1] - 2.0*v[2] + v[3]).powi(2) + 
+                                   0.25 * (v[1] - v[3]).powi(2);
+                        let beta2 = 13.0/12.0 * (v[2] - 2.0*v[3] + v[4]).powi(2) + 
+                                   0.25 * (3.0*v[2] - 4.0*v[3] + v[4]).powi(2);
+                        
+                        let d0 = 0.1;
+                        let d1 = 0.6;
+                        let d2 = 0.3;
+                        
+                        let alpha0 = d0 / (epsilon + beta0).powi(2);
+                        let alpha1 = d1 / (epsilon + beta1).powi(2);
+                        let alpha2 = d2 / (epsilon + beta2).powi(2);
+                        let sum_alpha = alpha0 + alpha1 + alpha2;
+                        
+                        let w0 = alpha0 / sum_alpha;
+                        let w1 = alpha1 / sum_alpha;
+                        let w2 = alpha2 / sum_alpha;
+                        
+                        field[[i, j, k]] = w0 * p0 + w1 * p1 + w2 * p2;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    
+    /// WENO5 limiting in z-direction
+    fn weno5_limit_z(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        // Similar implementation for z-direction
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 2..nz-2 {
+                    if shock_indicator[[i, j, k]] > self.shock_threshold {
+                        let v = [
+                            field[[i, j, k.saturating_sub(2)]],
+                            field[[i, j, k.saturating_sub(1)]],
+                            field[[i, j, k]],
+                            field[[i, j, k.min(nz-1).saturating_add(1)]],
+                            field[[i, j, (k+2).min(nz-1)]],
+                        ];
+                        
+                        let p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
+                        let p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
+                        let p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+                        
+                        let beta0 = 13.0/12.0 * (v[0] - 2.0*v[1] + v[2]).powi(2) + 
+                                   0.25 * (v[0] - 4.0*v[1] + 3.0*v[2]).powi(2);
+                        let beta1 = 13.0/12.0 * (v[1] - 2.0*v[2] + v[3]).powi(2) + 
+                                   0.25 * (v[1] - v[3]).powi(2);
+                        let beta2 = 13.0/12.0 * (v[2] - 2.0*v[3] + v[4]).powi(2) + 
+                                   0.25 * (3.0*v[2] - 4.0*v[3] + v[4]).powi(2);
+                        
+                        let d0 = 0.1;
+                        let d1 = 0.6;
+                        let d2 = 0.3;
+                        
+                        let alpha0 = d0 / (epsilon + beta0).powi(2);
+                        let alpha1 = d1 / (epsilon + beta1).powi(2);
+                        let alpha2 = d2 / (epsilon + beta2).powi(2);
+                        let sum_alpha = alpha0 + alpha1 + alpha2;
+                        
+                        let w0 = alpha0 / sum_alpha;
+                        let w1 = alpha1 / sum_alpha;
+                        let w2 = alpha2 / sum_alpha;
+                        
+                        field[[i, j, k]] = w0 * p0 + w1 * p1 + w2 * p2;
+                    }
+                }
+            }
+        }
         Ok(())
     }
     
