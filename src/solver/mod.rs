@@ -9,6 +9,7 @@ pub mod amr;
 pub mod cpml_integration;
 pub mod validation;
 pub mod workspace;
+pub mod time_reversal;
 
 use crate::grid::Grid;
 use crate::KwaversResult;
@@ -82,7 +83,6 @@ impl SimulationFields {
     }
 }
 
-#[derive(Debug)]
 pub struct Solver {
     pub grid: Grid,
     pub time: Time,
@@ -203,6 +203,13 @@ impl Solver {
     pub fn disable_amr(&mut self) {
         info!("Disabling Adaptive Mesh Refinement");
         self.amr_manager = None;
+    }
+    
+    /// Clear all sources from the solver
+    pub fn clear_sources(&mut self) {
+        // For now, we'll need to implement a way to clear sources
+        // This is a placeholder that will be expanded when we refactor the source system
+        warn!("clear_sources called but source clearing not yet implemented");
     }
 
     pub fn run(&mut self, recorder: &mut Recorder, frequency: f64) -> KwaversResult<()> {
@@ -868,5 +875,242 @@ impl Solver {
         }
         
         Ok(())
+    }
+}
+
+/// Lazy evaluation utilities for solver operations
+pub mod lazy {
+    use super::*;
+    use crate::grid::Grid;
+    use crate::error::KwaversResult;
+    use ndarray::{Array3, Array4};
+    use std::cell::RefCell;
+    
+    
+    /// Lazy field computation that defers calculation until needed
+    pub struct LazyField<T> {
+        computation: RefCell<Option<Box<dyn FnOnce() -> Array3<T>>>>,
+        cached_value: RefCell<Option<Array3<T>>>,
+    }
+    
+    impl<T: Clone> LazyField<T> {
+        /// Create a new lazy field
+        pub fn new<F>(computation: F) -> Self
+        where
+            F: FnOnce() -> Array3<T> + 'static,
+        {
+            Self {
+                computation: RefCell::new(Some(Box::new(computation))),
+                cached_value: RefCell::new(None),
+            }
+        }
+        
+        /// Get the computed value, calculating it if necessary
+        pub fn get(&self) -> Array3<T> {
+            if self.cached_value.borrow().is_none() {
+                if let Some(computation) = self.computation.borrow_mut().take() {
+                    *self.cached_value.borrow_mut() = Some(computation());
+                }
+            }
+            
+            self.cached_value.borrow()
+                .as_ref()
+                .expect("LazyField computation failed")
+                .clone()
+        }
+        
+        /// Check if the value has been computed
+        pub fn is_computed(&self) -> bool {
+            self.cached_value.borrow().is_some()
+        }
+    }
+    
+    /// Lazy solver state that computes fields on demand
+    pub struct LazySolverState {
+        _base_fields: Array4<f64>,
+        lazy_derivatives: Vec<LazyField<f64>>,
+        _grid: Grid,
+    }
+    
+    impl LazySolverState {
+        pub fn new(fields: Array4<f64>, grid: Grid) -> Self {
+            Self {
+                _base_fields: fields,
+                lazy_derivatives: Vec::new(),
+                _grid: grid,
+            }
+        }
+        
+        /// Add a lazy derivative computation
+        pub fn add_derivative<F>(&mut self, computation: F)
+        where
+            F: FnOnce() -> Array3<f64> + 'static,
+        {
+            self.lazy_derivatives.push(LazyField::new(computation));
+        }
+        
+        /// Get a specific derivative, computing it if needed
+        pub fn get_derivative(&self, index: usize) -> Option<Array3<f64>> {
+            self.lazy_derivatives.get(index)
+                .map(|lazy| lazy.get())
+        }
+        
+        /// Compute only the derivatives that are needed
+        pub fn compute_required(&self, indices: &[usize]) -> Vec<Array3<f64>> {
+            indices.iter()
+                .filter_map(|&idx| self.get_derivative(idx))
+                .collect()
+        }
+    }
+    
+    /// Lazy chain of solver operations
+    pub struct LazySolverChain {
+        operations: Vec<Box<dyn FnOnce(&mut Solver) -> KwaversResult<()>>>,
+    }
+    
+    impl LazySolverChain {
+        pub fn new() -> Self {
+            Self {
+                operations: Vec::new(),
+            }
+        }
+        
+        /// Add an operation to the chain
+        pub fn then<F>(mut self, operation: F) -> Self
+        where
+            F: FnOnce(&mut Solver) -> KwaversResult<()> + 'static,
+        {
+            self.operations.push(Box::new(operation));
+            self
+        }
+        
+        /// Execute all operations
+        pub fn execute(self, solver: &mut Solver) -> KwaversResult<()> {
+            for operation in self.operations {
+                operation(solver)?;
+            }
+            Ok(())
+        }
+        
+        /// Execute operations until a condition is met
+        pub fn execute_until<F>(
+            self,
+            solver: &mut Solver,
+            condition: F,
+        ) -> KwaversResult<usize>
+        where
+            F: Fn(&Solver) -> bool,
+        {
+            let mut executed = 0;
+            
+            for operation in self.operations {
+                if condition(solver) {
+                    break;
+                }
+                operation(solver)?;
+                executed += 1;
+            }
+            
+            Ok(executed)
+        }
+    }
+    
+    /// Lazy iterator over solver time steps
+    pub struct LazyTimeStepIterator<'a> {
+        solver: &'a mut Solver,
+        current_step: usize,
+        max_steps: usize,
+        dt: f64,
+    }
+    
+    impl<'a> LazyTimeStepIterator<'a> {
+        pub fn new(
+            solver: &'a mut Solver,
+            max_steps: usize,
+            dt: f64,
+        ) -> Self {
+            Self {
+                solver,
+                current_step: 0,
+                max_steps,
+                dt,
+            }
+        }
+    }
+    
+    impl<'a> Iterator for LazyTimeStepIterator<'a> {
+        type Item = KwaversResult<SolverSnapshot>;
+        
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current_step >= self.max_steps {
+                return None;
+            }
+            
+            // Note: step is private, so we'll return a snapshot instead
+            let snapshot = SolverSnapshot {
+                step: self.current_step,
+                time: self.current_step as f64 * self.dt,
+                fields: self.solver.fields.fields.clone(),
+                max_pressure: self.solver.fields.fields
+                    .index_axis(ndarray::Axis(0), PRESSURE_IDX)
+                    .iter()
+                    .map(|&p| p.abs())
+                    .fold(0.0, f64::max),
+            };
+            
+            self.current_step += 1;
+            Some(Ok(snapshot))
+        }
+    }
+    
+    #[derive(Clone)]
+    pub struct SolverSnapshot {
+        pub step: usize,
+        pub time: f64,
+        pub fields: Array4<f64>,
+        pub max_pressure: f64,
+    }
+    
+    /// Lazy field transformation pipeline
+    pub struct LazyFieldPipeline<T> {
+        source: LazyField<T>,
+        transforms: Vec<Box<dyn Fn(&Array3<T>) -> Array3<T>>>,
+    }
+    
+    impl<T: Clone + 'static> LazyFieldPipeline<T> {
+        pub fn new<F>(source: F) -> Self
+        where
+            F: FnOnce() -> Array3<T> + 'static,
+        {
+            Self {
+                source: LazyField::new(source),
+                transforms: Vec::new(),
+            }
+        }
+        
+        /// Add a transformation to the pipeline
+        pub fn transform<F>(mut self, f: F) -> Self
+        where
+            F: Fn(&Array3<T>) -> Array3<T> + 'static,
+        {
+            self.transforms.push(Box::new(f));
+            self
+        }
+        
+        /// Execute the pipeline and get the result
+        pub fn execute(self) -> Array3<T> {
+            let mut result = self.source.get();
+            
+            for transform in self.transforms {
+                result = transform(&result);
+            }
+            
+            result
+        }
+        
+        /// Create a new lazy field from this pipeline
+        pub fn to_lazy(self) -> LazyField<T> {
+            LazyField::new(move || self.execute())
+        }
     }
 }

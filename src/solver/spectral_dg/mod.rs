@@ -17,6 +17,7 @@ pub mod spectral_solver;
 pub mod dg_solver;
 pub mod coupling;
 pub mod traits;
+pub mod enhanced_shock_handling;
 
 #[cfg(test)]
 mod tests;
@@ -69,6 +70,12 @@ pub struct HybridSpectralDGSolver {
     coupler: HybridCoupler,
     /// Mask indicating regions where DG should be used (true) vs spectral (false)
     discontinuity_mask: Option<Array3<bool>>,
+    /// Enhanced shock detector for advanced shock capturing
+    enhanced_detector: Option<enhanced_shock_handling::EnhancedShockDetector>,
+    /// WENO limiter for shock regions
+    weno_limiter: Option<enhanced_shock_handling::WENOLimiter>,
+    /// Artificial viscosity for stabilization
+    artificial_viscosity: Option<enhanced_shock_handling::ArtificialViscosity>,
 }
 
 impl HybridSpectralDGSolver {
@@ -86,7 +93,28 @@ impl HybridSpectralDGSolver {
             dg_solver,
             coupler,
             discontinuity_mask: None,
+            enhanced_detector: None,
+            weno_limiter: None,
+            artificial_viscosity: None,
         }
+    }
+    
+    /// Enable enhanced shock detection
+    pub fn with_enhanced_shock_detection(&mut self) -> &mut Self {
+        self.enhanced_detector = Some(enhanced_shock_handling::EnhancedShockDetector::default());
+        self
+    }
+    
+    /// Enable WENO limiting with specified order (3, 5, or 7)
+    pub fn with_weno_limiting(&mut self, order: usize) -> KwaversResult<&mut Self> {
+        self.weno_limiter = Some(enhanced_shock_handling::WENOLimiter::new(order)?);
+        Ok(self)
+    }
+    
+    /// Enable artificial viscosity
+    pub fn with_artificial_viscosity(&mut self) -> &mut Self {
+        self.artificial_viscosity = Some(enhanced_shock_handling::ArtificialViscosity::default());
+        self
     }
     
     /// Update the solution using the hybrid method

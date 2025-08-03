@@ -11,7 +11,10 @@ use crate::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
 use std::sync::Arc;
+#[cfg(feature = "parallel")]
 use parking_lot::Mutex;
+#[cfg(not(feature = "parallel"))]
+use std::sync::Mutex;
 
 /// Pre-allocated workspace for solver operations
 #[derive(Debug)]
@@ -101,7 +104,10 @@ impl WorkspacePool {
     
     /// Borrow a workspace from the pool
     pub fn acquire(&self) -> WorkspaceGuard {
+        #[cfg(feature = "parallel")]
         let mut pool = self.workspaces.lock();
+        #[cfg(not(feature = "parallel"))]
+        let mut pool = self.workspaces.lock().unwrap();
         
         let workspace = if let Some(ws) = pool.pop() {
             ws
@@ -118,7 +124,11 @@ impl WorkspacePool {
     
     /// Get the current pool size
     pub fn size(&self) -> usize {
-        self.workspaces.lock().len()
+        #[cfg(feature = "parallel")]
+        let pool = self.workspaces.lock();
+        #[cfg(not(feature = "parallel"))]
+        let pool = self.workspaces.lock().unwrap();
+        pool.len()
     }
 }
 
@@ -144,7 +154,10 @@ impl Drop for WorkspaceGuard {
     fn drop(&mut self) {
         if let Some(workspace) = self.workspace.take() {
             // Return workspace to pool
+            #[cfg(feature = "parallel")]
             self.pool.lock().push(workspace);
+            #[cfg(not(feature = "parallel"))]
+            self.pool.lock().unwrap().push(workspace);
         }
     }
 }

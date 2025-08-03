@@ -1,5 +1,5 @@
 // src/fft/fft3d.rs
-use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil, butterfly_1d_optimized, apply_bit_reversal_3d};
+use crate::fft::fft_core::{precompute_twiddles, reverse_bits, FftDirection, next_power_of_two_usize, log2_ceil, butterfly_1d, apply_bit_reversal_3d};
 use crate::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
@@ -118,7 +118,7 @@ impl Fft3d {
                 }
                 
                 // Perform FFT on temp buffer
-                butterfly_1d_optimized(temp, twiddles, nx);
+                butterfly_1d(temp, twiddles, nx);
                 
                 // Copy back to field
                 for i in 0..nx {
@@ -140,7 +140,7 @@ impl Fft3d {
                 }
                 
                 // Perform FFT on temp buffer
-                butterfly_1d_optimized(temp, twiddles, ny);
+                butterfly_1d(temp, twiddles, ny);
                 
                 // Copy back to field
                 for j in 0..ny {
@@ -162,7 +162,7 @@ impl Fft3d {
                 }
                 
                 // Perform FFT on temp buffer
-                butterfly_1d_optimized(temp, twiddles, nz);
+                butterfly_1d(temp, twiddles, nz);
                 
                 // Copy back to field
                 for k in 0..nz {

@@ -108,6 +108,14 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
             absorption_coefficients: self.absorption_coefficients.clone(),
         })
     }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 /// Custom plugin for monitoring simulation statistics
@@ -204,6 +212,14 @@ impl PhysicsPlugin for StatisticsPlugin {
             min_pressure: self.min_pressure,
             update_count: self.update_count,
         })
+    }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 

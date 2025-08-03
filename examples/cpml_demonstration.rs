@@ -1,67 +1,60 @@
-//! Demonstration of Convolutional PML (C-PML) for Enhanced Boundary Absorption
+//! Example demonstrating Convolutional PML (C-PML) boundary conditions
 //! 
-//! This example shows the superior performance of C-PML compared to standard PML,
-//! especially for grazing angle incidence and evanescent waves.
+//! This example shows the effectiveness of C-PML for absorbing acoustic waves
+//! at boundaries with minimal reflections.
 
-use kwavers::*;
-use kwavers::boundary::{CPMLBoundary, CPMLConfig, PMLBoundary, PMLConfig};
-use kwavers::solver::cpml_integration::CPMLSolver;
-use ndarray::{Array3, Array4};
+use kwavers::{
+    KwaversResult,
+    Grid,
+    medium::homogeneous::HomogeneousMedium,
+    boundary::{
+        pml::{PMLBoundary, PMLConfig},
+        cpml::{CPMLBoundary, CPMLConfig},
+        Boundary,
+    },
+};
+use ndarray::{Array3, s};
 use std::error::Error;
-use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Initialize logging
-    init_logging();
+    env_logger::init();
     
-    println!("=== Convolutional PML (C-PML) Demonstration ===\n");
+    println!("=== Kwavers C-PML Demonstration ===\n");
     
-    // Create computational grid
-    let grid = Grid::new(
-        300, 300, 100,  // Grid dimensions
-        0.5e-3, 0.5e-3, 0.5e-3  // Grid spacing (0.5mm)
-    );
-    
-    println!("Grid created: {}x{}x{} points", grid.nx, grid.ny, grid.nz);
-    println!("Domain size: {:.1}mm x {:.1}mm x {:.1}mm\n", 
-        grid.nx as f64 * grid.dx * 1000.0,
-        grid.ny as f64 * grid.dy * 1000.0,
-        grid.nz as f64 * grid.dz * 1000.0
+    // Create grid
+    let grid = Grid::new(200, 200, 200, 1e-3, 1e-3, 1e-3);
+    println!("Grid: {}x{}x{} cells", grid.nx, grid.ny, grid.nz);
+    println!("Domain: {:.1}x{:.1}x{:.1} mm", 
+             grid.nx as f64 * grid.dx * 1000.0,
+             grid.ny as f64 * grid.dy * 1000.0,
+             grid.nz as f64 * grid.dz * 1000.0
     );
     
     // Create medium
     let medium = HomogeneousMedium::new(
         1000.0,  // Density (kg/m³) - water
         1500.0,  // Sound speed (m/s) - water
-        grid,    // Grid reference
+        &grid,   // Grid reference
         0.0,     // No absorption (mu_a)
         0.0      // No scattering (mu_s_prime)
     );
     
-    // Demonstrate different aspects of C-PML
-    println!("1. Comparing Standard PML vs C-PML for normal incidence:");
-    compare_normal_incidence(&grid, &medium)?;
+    // Compare standard PML vs C-PML
+    println!("\n1. Comparing Standard PML vs C-PML:");
+    compare_pml_cpml(&grid)?;
     
-    println!("\n2. Comparing Standard PML vs C-PML for grazing angles:");
-    compare_grazing_angles(&grid, &medium)?;
+    // Demonstrate C-PML with different configurations
+    println!("\n2. C-PML Configuration Effects:");
+    demonstrate_cpml_configs(&grid)?;
     
-    println!("\n3. Demonstrating C-PML solver integration:");
-    demonstrate_cpml_solver(&grid, &medium)?;
-    
-    println!("\n4. Analyzing reflection coefficients:");
-    analyze_reflection_coefficients()?;
-    
-    println!("\n=== Demonstration Complete ===");
     Ok(())
 }
 
-/// Compare standard PML and C-PML for normal incidence
-fn compare_normal_incidence(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
+/// Compare standard PML and C-PML performance
+fn compare_pml_cpml(grid: &Grid) -> KwaversResult<()> {
     // Standard PML configuration
     let pml_config = PMLConfig {
         thickness: 20,
-        sigma_max_acoustic: 2.0,
-        target_reflection: Some(1e-6),
         ..Default::default()
     };
     let mut standard_pml = PMLBoundary::new(pml_config)?;
@@ -75,212 +68,113 @@ fn compare_normal_incidence(grid: &Grid, medium: &HomogeneousMedium) -> Result<(
     };
     let mut cpml = CPMLBoundary::new(cpml_config, grid)?;
     
-    // Create plane wave at normal incidence
-    let mut field_pml = create_plane_wave(grid, 0.0, 1e6);
+    // Create plane wave
+    let mut field_pml = create_plane_wave(grid, 0.0);
     let mut field_cpml = field_pml.clone();
     let initial_energy = compute_field_energy(&field_pml);
     
-    // Apply boundaries
-    for step in 0..100 {
+    // Apply boundaries multiple times
+    let steps = 100;
+    for step in 0..steps {
         standard_pml.apply_acoustic(&mut field_pml, grid, step)?;
         cpml.apply_acoustic(&mut field_cpml, grid, step)?;
     }
     
+    // Compare reflections
     let pml_energy = compute_field_energy(&field_pml);
     let cpml_energy = compute_field_energy(&field_cpml);
     
-    println!("  Initial energy: {:.2e}", initial_energy);
-    println!("  Standard PML final energy: {:.2e} (reflection: {:.2e})", 
-        pml_energy, pml_energy / initial_energy);
-    println!("  C-PML final energy: {:.2e} (reflection: {:.2e})", 
-        cpml_energy, cpml_energy / initial_energy);
+    println!("  Initial energy: {:.3e}", initial_energy);
+    println!("  Standard PML - Final energy: {:.3e} (reflection: {:.2}%)", 
+             pml_energy, (pml_energy / initial_energy) * 100.0);
+    println!("  C-PML - Final energy: {:.3e} (reflection: {:.2}%)", 
+             cpml_energy, (cpml_energy / initial_energy) * 100.0);
     
     Ok(())
 }
 
-/// Compare standard PML and C-PML for grazing angles
-fn compare_grazing_angles(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
-    // Test multiple angles
-    let angles = vec![60.0, 75.0, 85.0, 89.0];
-    
-    println!("  Angle | Standard PML | C-PML (default) | C-PML (grazing)");
-    println!("  ------|--------------|-----------------|----------------");
-    
-    for angle in angles {
-        // Standard PML
-        let pml_config = PMLConfig::default();
-        let mut standard_pml = PMLBoundary::new(pml_config)?;
-        
-        // C-PML default
-        let cpml_config = CPMLConfig::default();
-        let mut cpml_default = CPMLBoundary::new(cpml_config, grid)?;
-        
-        // C-PML optimized for grazing
-        let cpml_grazing_config = CPMLConfig::for_grazing_angles();
-        let mut cpml_grazing = CPMLBoundary::new(cpml_grazing_config, grid)?;
-        
-        // Create plane wave at angle
-        let mut field_pml = create_plane_wave(grid, angle, 1e6);
-        let mut field_cpml_default = field_pml.clone();
-        let mut field_cpml_grazing = field_pml.clone();
-        let initial_energy = compute_field_energy(&field_pml);
-        
-        // Apply boundaries
-        for step in 0..50 {
-            standard_pml.apply_acoustic(&mut field_pml, grid, step)?;
-            cpml_default.apply_acoustic(&mut field_cpml_default, grid, step)?;
-            cpml_grazing.apply_acoustic(&mut field_cpml_grazing, grid, step)?;
-        }
-        
-        let pml_reflection = compute_field_energy(&field_pml) / initial_energy;
-        let cpml_default_reflection = compute_field_energy(&field_cpml_default) / initial_energy;
-        let cpml_grazing_reflection = compute_field_energy(&field_cpml_grazing) / initial_energy;
-        
-        println!("  {:>4.0}° | {:>12.2e} | {:>15.2e} | {:>15.2e}", 
-            angle, pml_reflection, cpml_default_reflection, cpml_grazing_reflection);
-    }
-    
-    Ok(())
-}
-
-/// Demonstrate C-PML solver integration
-fn demonstrate_cpml_solver(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
-    // Create C-PML solver with optimized configuration
-    let config = CPMLConfig {
-        thickness: 30,
-        polynomial_order: 4.0,
-        kappa_max: 20.0,
-        alpha_max: 0.3,
-        target_reflection: 1e-8,
-        enhanced_grazing: true,
-        ..Default::default()
-    };
-    
-    let mut cpml_solver = CPMLSolver::new(config, grid)?;
-    
-    println!("  C-PML solver created with enhanced configuration:");
-    println!("    - Thickness: 30 cells");
-    println!("    - Polynomial order: 4.0");
-    println!("    - κ_max: 20.0 (high for grazing angles)");
-    println!("    - α_max: 0.3 (frequency shifting)");
-    
-    // Initialize fields with focused beam
-    let mut pressure = create_focused_beam(grid, 3e6, 0.01);
-    let mut velocity = Array4::zeros((3, grid.nx, grid.ny, grid.nz));
-    
-    let initial_max = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
-    println!("\n  Initial maximum pressure: {:.2e} Pa", initial_max);
-    
-    // Time stepping
-    let dt = 1e-7;
-    let steps = 200;
-    
-    println!("  Running {} time steps with dt = {} s", steps, dt);
-    
-    for step in 0..steps {
-        // Apply C-PML boundary to pressure field
-        cpml.apply_acoustic(&mut pressure, grid, step)?;
-        
-        if step % 50 == 0 {
-            let max_p = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
-            let center_p = pressure[[grid.nx/2, grid.ny/2, grid.nz/2]];
-            println!("    Step {:>3}: max pressure = {:.2e} Pa, center = {:.2e} Pa", 
-                step, max_p, center_p);
-        }
-    }
-    
-    let final_max = pressure.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
-    println!("  Final maximum pressure: {:.2e} Pa", final_max);
-    println!("  Attenuation: {:.1} dB", 20.0 * (initial_max / final_max).log10());
-    
-    Ok(())
-}
-
-/// Analyze reflection coefficients at various angles
-fn analyze_reflection_coefficients() -> Result<(), Box<dyn Error>> {
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    
-    // Different C-PML configurations
+/// Demonstrate different C-PML configurations
+fn demonstrate_cpml_configs(grid: &Grid) -> KwaversResult<()> {
     let configs = vec![
-        ("Default", CPMLConfig::default()),
-        ("Grazing-optimized", CPMLConfig::for_grazing_angles()),
-        ("Custom high-κ", CPMLConfig {
-            kappa_max: 30.0,
+        ("Standard", CPMLConfig {
+            thickness: 10,
+            polynomial_order: 2.0,
+            target_reflection: 1e-3,
+            ..Default::default()
+        }),
+        ("High-order", CPMLConfig {
+            thickness: 10,
             polynomial_order: 4.0,
-            enhanced_grazing: true,
+            target_reflection: 1e-3,
+            ..Default::default()
+        }),
+        ("Thick layer", CPMLConfig {
+            thickness: 30,
+            polynomial_order: 3.0,
+            target_reflection: 1e-3,
+            ..Default::default()
+        }),
+        ("Ultra-low reflection", CPMLConfig {
+            thickness: 20,
+            polynomial_order: 3.5,
+            target_reflection: 1e-8,
             ..Default::default()
         }),
     ];
     
-    println!("  Configuration comparison:");
-    println!("  Angle | Default | Grazing-opt | High-κ");
-    println!("  ------|---------|-------------|--------");
-    
-    for angle in (0..=90).step_by(15) {
-        print!("  {:>4}° |", angle);
+    for (name, config) in configs {
+        println!("\n  Testing {} configuration:", name);
+        println!("    Thickness: {} cells", config.thickness);
+        println!("    Polynomial order: {}", config.polynomial_order);
+        println!("    Target reflection: {:.1e}", config.target_reflection);
         
-        for (_, config) in &configs {
-            let cpml = CPMLBoundary::new(config.clone(), &grid)?;
-            let reflection = cpml.estimate_reflection(angle as f64);
-            print!(" {:>7.1e} |", reflection);
+        let mut cpml = CPMLBoundary::new(config, grid)?;
+        let mut field = create_gaussian_pulse(grid);
+        let initial_max = field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        
+        // Apply boundary
+        for step in 0..50 {
+            cpml.apply_acoustic(&mut field, grid, step)?;
         }
-        println!();
+        
+        let final_max = field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        println!("    Amplitude reduction: {:.1}%", 
+                 (1.0 - final_max / initial_max) * 100.0);
     }
-    
-    println!("\n  Note: These are theoretical estimates. Actual performance");
-    println!("  depends on wave frequency, grid resolution, and other factors.");
     
     Ok(())
 }
 
-// Helper functions
-
-/// Create a plane wave at given angle
-fn create_plane_wave(grid: &Grid, angle_degrees: f64, frequency: f64) -> Array3<f64> {
+/// Create a plane wave propagating in the x-direction
+fn create_plane_wave(grid: &Grid, angle: f64) -> Array3<f64> {
     let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let angle_rad = angle_degrees * PI / 180.0;
-    let k = 2.0 * PI * frequency / 1500.0; // Wave number
+    let k = 2.0 * std::f64::consts::PI / (10.0 * grid.dx); // 10 cells per wavelength
     
     for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k_idx in 0..grid.nz {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                
-                // Plane wave propagating at angle from x-axis
-                let phase = k * (x * angle_rad.cos() + y * angle_rad.sin());
-                field[[i, j, k_idx]] = phase.sin();
-            }
-        }
+        let x = i as f64 * grid.dx;
+        let value = (k * x * angle.cos()).sin();
+        field.slice_mut(s![i, .., ..]).fill(value);
     }
     
     field
 }
 
-/// Create a focused Gaussian beam
-fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f64> {
+/// Create a Gaussian pulse at the center
+fn create_gaussian_pulse(grid: &Grid) -> Array3<f64> {
     let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    
-    let center_y = grid.ny as f64 / 2.0;
-    let center_z = grid.nz as f64 / 2.0;
+    let center_x = grid.nx / 2;
+    let center_y = grid.ny / 2;
+    let center_z = grid.nz / 2;
+    let sigma = 5.0; // 5 cells standard deviation
     
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                let x = i as f64 * grid.dx;
-                let y = (j as f64 - center_y) * grid.dy;
-                let z = (k as f64 - center_z) * grid.dz;
-                
-                // Gaussian beam profile
-                let r2 = y*y + z*z;
-                let envelope = (-r2 / (beam_width * beam_width)).exp();
-                
-                // Sinusoidal carrier
-                if x < 0.05 { // 50mm extent
-                    let wavelength = 0.0015; // 1.5mm (1 MHz in water)
-                    let k_wave = 2.0 * PI / wavelength;
-                    field[[i, j, k]] = amplitude * envelope * (k_wave * x).sin();
-                }
+                let dx = (i as f64 - center_x as f64) * grid.dx;
+                let dy = (j as f64 - center_y as f64) * grid.dy;
+                let dz = (k as f64 - center_z as f64) * grid.dz;
+                let r2 = dx * dx + dy * dy + dz * dz;
+                field[[i, j, k]] = (-r2 / (2.0 * sigma * sigma * grid.dx * grid.dx)).exp();
             }
         }
     }
@@ -290,5 +184,5 @@ fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f
 
 /// Compute total field energy
 fn compute_field_energy(field: &Array3<f64>) -> f64 {
-    field.iter().map(|&v| v * v).sum()
+    field.iter().map(|&v| v * v).sum::<f64>()
 }
