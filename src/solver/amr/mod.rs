@@ -186,6 +186,16 @@ impl AMRManager {
         self.load_balancer = Some(enhanced::LoadBalancer::new(strategy));
     }
     
+    /// Get reference to the octree
+    pub fn octree(&self) -> Option<&octree::Octree> {
+        Some(&self.octree)
+    }
+    
+    /// Get the interpolation scheme
+    pub fn interpolation_scheme(&self) -> InterpolationScheme {
+        self.config.interpolation_scheme
+    }
+    
     /// Adapt the mesh based on current solution
     pub fn adapt_mesh(
         &mut self,

@@ -17,11 +17,15 @@ use crate::{
     sensor::{SensorData},
     validation::ValidationManager,
     recorder::Recorder,
+    medium::Medium,
 };
 use ndarray::Array3;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use log::{info, debug, warn};
+use rustfft::{FftPlanner, num_complex::Complex};
+use std::f64::consts::PI;
+use std::sync::Arc;
 
 /// Configuration for time-reversal reconstruction
 #[derive(Debug, Clone)]
@@ -127,7 +131,7 @@ impl TimeReversalReconstructor {
         self.validate_inputs(sensor_data, grid)?;
         
         // Prepare time-reversed signals
-        let reversed_signals = self.prepare_reversed_signals(sensor_data)?;
+        let reversed_signals = self.prepare_reversed_signals(sensor_data, grid, solver.time.dt, &solver.medium)?;
         
         // Initialize reconstruction field
         let mut reconstruction = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
@@ -197,7 +201,7 @@ impl TimeReversalReconstructor {
     }
     
     /// Prepare time-reversed signals
-    fn prepare_reversed_signals(&self, sensor_data: &SensorData) -> KwaversResult<HashMap<usize, Vec<f64>>> {
+    fn prepare_reversed_signals(&self, sensor_data: &SensorData, grid: &Grid, dt: f64, medium: &Arc<dyn Medium>) -> KwaversResult<HashMap<usize, Vec<f64>>> {
         let mut reversed_signals = HashMap::new();
         
         for (sensor_id, data) in sensor_data.data_iter() {
@@ -206,12 +210,12 @@ impl TimeReversalReconstructor {
             
             // Apply frequency filtering if configured
             if self.config.apply_frequency_filter {
-                reversed = self.apply_frequency_filter(reversed)?;
+                reversed = self.apply_frequency_filter(reversed, dt)?;
             }
             
             // Apply amplitude correction if configured
             if self.config.amplitude_correction {
-                reversed = self.apply_amplitude_correction(reversed)?;
+                reversed = self.apply_amplitude_correction(reversed, dt, medium, grid)?;
             }
             
             reversed_signals.insert(*sensor_id, reversed);
@@ -221,29 +225,120 @@ impl TimeReversalReconstructor {
     }
     
     /// Apply frequency filter to signal
-    fn apply_frequency_filter(&self, signal: Vec<f64>) -> KwaversResult<Vec<f64>> {
+    fn apply_frequency_filter(&self, signal: Vec<f64>, dt: f64) -> KwaversResult<Vec<f64>> {
         if let Some((f_min, f_max)) = self.config.frequency_range {
-            // TODO: Implement FFT-based frequency filtering
-            // For now, return the signal as-is
-            warn!("Frequency filtering not yet implemented");
-            Ok(signal)
+            let n = signal.len();
+            let fs = 1.0 / dt; // Sampling frequency
+            
+            // Convert to complex for FFT
+            let mut complex_signal: Vec<Complex<f64>> = signal.iter()
+                .map(|&x| Complex::new(x, 0.0))
+                .collect();
+            
+            // Create FFT planner
+            let mut planner = FftPlanner::new();
+            let fft = planner.plan_fft_forward(n);
+            
+            // Perform FFT
+            fft.process(&mut complex_signal);
+            
+            // Create frequency array
+            let df = fs / n as f64;
+            
+            // Apply frequency filter
+            for (i, sample) in complex_signal.iter_mut().enumerate() {
+                let freq = if i <= n / 2 {
+                    i as f64 * df
+                } else {
+                    (i as f64 - n as f64) * df
+                };
+                
+                // Apply bandpass filter
+                if freq.abs() < f_min || freq.abs() > f_max {
+                    *sample = Complex::new(0.0, 0.0);
+                } else {
+                    // Apply smooth transition using a Tukey window
+                    let transition_width = (f_max - f_min) * 0.1; // 10% transition
+                    let window = if freq.abs() < f_min + transition_width {
+                        let x = (freq.abs() - f_min) / transition_width;
+                        0.5 * (1.0 + (PI * x).cos())
+                    } else if freq.abs() > f_max - transition_width {
+                        let x = (f_max - freq.abs()) / transition_width;
+                        0.5 * (1.0 + (PI * x).cos())
+                    } else {
+                        1.0
+                    };
+                    *sample *= window;
+                }
+            }
+            
+            // Perform inverse FFT
+            let ifft = planner.plan_fft_inverse(n);
+            ifft.process(&mut complex_signal);
+            
+            // Convert back to real and normalize
+            let filtered_signal: Vec<f64> = complex_signal.iter()
+                .map(|c| c.re / n as f64)
+                .collect();
+            
+            debug!("Applied frequency filter: [{:.1} Hz, {:.1} Hz]", f_min, f_max);
+            Ok(filtered_signal)
         } else {
             Ok(signal)
         }
     }
     
     /// Apply amplitude correction
-    fn apply_amplitude_correction(&self, signal: Vec<f64>) -> KwaversResult<Vec<f64>> {
-        // Apply geometric spreading correction
-        // TODO: Implement proper amplitude correction based on propagation distance
+    fn apply_amplitude_correction(&self, signal: Vec<f64>, dt: f64, medium: &Arc<dyn Medium>, grid: &Grid) -> KwaversResult<Vec<f64>> {
+        // Apply geometric spreading correction and absorption compensation
+        let n = signal.len();
+        
+        // Get medium properties at the center of the grid
+        let cx = grid.nx as f64 / 2.0 * grid.dx;
+        let cy = grid.ny as f64 / 2.0 * grid.dy;
+        let cz = grid.nz as f64 / 2.0 * grid.dz;
+        
+        let c0 = medium.sound_speed(cx, cy, cz, grid);
+        
+        // Get medium absorption coefficient at center frequency (1 MHz default)
+        let frequency = 1e6; // 1 MHz default frequency
+        let alpha = medium.absorption_coefficient(cx, cy, cz, grid, frequency);
+        
         let corrected: Vec<f64> = signal.iter()
             .enumerate()
             .map(|(i, &val)| {
-                let time_factor = (i as f64 + 1.0).sqrt();
-                val * time_factor
+                // Time from the beginning of the recording
+                let t = i as f64 * dt;
+                
+                // Estimate propagation distance (assuming spherical spreading)
+                // This is approximate - in practice, you'd use actual source-receiver distance
+                let distance = c0 * t;
+                
+                // Geometric spreading correction (1/r for 3D spherical waves)
+                let geometric_correction = if distance > 0.0 {
+                    distance
+                } else {
+                    1.0
+                };
+                
+                // Absorption compensation: exp(alpha * distance)
+                // Note: alpha is typically frequency-dependent, but we use a simplified model
+                let absorption_correction = (alpha * distance).exp();
+                
+                // Apply both corrections
+                let corrected_val = val * geometric_correction * absorption_correction;
+                
+                // Prevent excessive amplification
+                let max_amplification = 100.0;
+                if corrected_val.abs() > val.abs() * max_amplification {
+                    val * max_amplification * corrected_val.signum()
+                } else {
+                    corrected_val
+                }
             })
             .collect();
         
+        debug!("Applied amplitude correction with geometric spreading and absorption compensation");
         Ok(corrected)
     }
     
@@ -312,35 +407,38 @@ impl TimeReversalReconstructor {
             .max()
             .unwrap_or(0);
         
+        info!("Starting time-reversal propagation for {} time steps", time_steps);
+        
         // Propagate for the duration of the reversed signals
         for step in 0..time_steps {
-            // Update sources with current time step values
-            for (sensor_id, signal) in reversed_signals {
-                if step < signal.len() {
-                    // TODO: Update source amplitude for this time step
-                    let _amplitude = signal[step];
-                }
-            }
+            // The sources have already been set up as TimeVaryingSource objects
+            // which will automatically provide the correct amplitude for each time step
             
-                            // Advance solver one step
-                // Note: We need a public method to advance the solver
-                // For now, we'll skip the actual propagation
-                warn!("Time reversal propagation not yet fully implemented");
+            // Advance solver one step
+            solver.step(step, solver.time.dt, frequency)?;
             
             // Track maximum amplitude at each point
             let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), PRESSURE_IDX);
-                            // Update max amplitude field
-                for ((i, j, k), max_val) in max_amplitude_field.indexed_iter_mut() {
-                    let current_val = pressure[[i, j, k]];
-                    *max_val = f64::max(*max_val, current_val.abs());
-                }
+            
+            // Update max amplitude field
+            for ((i, j, k), max_val) in max_amplitude_field.indexed_iter_mut() {
+                let current_val = pressure[[i, j, k]];
+                *max_val = f64::max(*max_val, current_val.abs());
+            }
             
             // Record if needed
             if step % 10 == 0 {
                 recorder.record(&solver.fields.fields, step, step as f64 * solver.time.dt);
             }
+            
+            // Progress reporting
+            if step % 100 == 0 || step == time_steps - 1 {
+                let progress = 100.0 * (step + 1) as f64 / time_steps as f64;
+                debug!("Time-reversal progress: {:.1}%", progress);
+            }
         }
         
+        info!("Time-reversal propagation complete");
         Ok(max_amplitude_field)
     }
     

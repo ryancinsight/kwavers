@@ -22,7 +22,7 @@ use crate::recorder::Recorder;
 use crate::source::Source;
 use crate::time::Time;
 use crate::utils::{fft_3d, ifft_3d, array_utils}; // Removed warm_fft_cache, report_fft_statistics
-use log::{info, trace}; // Removed debug, warn (used as log::debug, log::warn)
+use log::{info, trace, debug}; // Removed debug, warn (used as log::debug, log::warn)
 use ndarray::{Array3, Array4, Axis};
 // Removed num_complex::Complex
 use std::time::{Duration, Instant};
@@ -453,7 +453,7 @@ impl Solver {
         unstable_found
     }
 
-    fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
+    pub fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
         // Performance tracking
         let step_start = Instant::now();
         let mut preprocessing_time = 0.0;
@@ -487,9 +487,51 @@ impl Solver {
                             info!("AMR adaptation at step {}: refined {} cells, coarsened {} cells, max error: {:.2e}",
                                   step, result.cells_refined, result.cells_coarsened, result.max_error);
                             
-                            // TODO: Interpolate all fields to new mesh structure
-                            // This would require updating the grid and fields based on AMR
-                            // For now, we just track the adaptation
+                            // Interpolate all fields to new mesh structure
+                            if let Some(ref octree) = amr_manager.octree() {
+                                use self::amr::interpolation::{interpolate_to_refined, restrict_to_coarse};
+                                
+                                // Process each field in the simulation
+                                for field_idx in 0..self.fields.fields.shape()[0] {
+                                    let field = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
+                                    let field_shape = field.shape().to_vec(); // Store shape before moving field
+                                    
+                                    // Determine if we need to interpolate or restrict based on refinement
+                                    let new_field = if result.cells_refined > result.cells_coarsened {
+                                        // More refinement than coarsening - interpolate to finer mesh
+                                        match interpolate_to_refined(&field, octree, amr_manager.interpolation_scheme()) {
+                                            Ok(f) => f,
+                                            Err(e) => {
+                                                warn!("Failed to interpolate field {}: {}", field_idx, e);
+                                                continue;
+                                            }
+                                        }
+                                    } else if result.cells_coarsened > 0 {
+                                        // Coarsening - restrict to coarser mesh
+                                        match restrict_to_coarse(&field, octree, amr_manager.interpolation_scheme()) {
+                                            Ok(f) => f,
+                                            Err(e) => {
+                                                warn!("Failed to restrict field {}: {}", field_idx, e);
+                                                continue;
+                                            }
+                                        }
+                                    } else {
+                                        // No change needed
+                                        field
+                                    };
+                                    
+                                    // Update the field if dimensions match
+                                    if new_field.shape() == field_shape.as_slice() {
+                                        self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&new_field);
+                                    } else {
+                                        // Handle dimension mismatch - this would require resizing all fields
+                                        warn!("AMR field interpolation resulted in dimension change from {:?} to {:?}, which is not yet supported", 
+                                              field_shape, new_field.shape());
+                                    }
+                                }
+                                
+                                debug!("Completed field interpolation for AMR adaptation");
+                            }
                         }
                         
                         // Report memory savings

@@ -226,9 +226,8 @@ mod tests {
         assert_eq!(apply_count.load(std::sync::atomic::Ordering::Relaxed), 1);
     }
 
-    // Skip adapter test for now as AcousticWaveComponent doesn't implement Debug
-    // TODO: Add Debug derive to AcousticWaveComponent and re-enable this test
-
+    // Adapter tests are now in adapters.rs module
+    
     // Skip configuration test as it requires a concrete PluginConfig implementation
     // TODO: Add a concrete PluginConfig type for testing
 
