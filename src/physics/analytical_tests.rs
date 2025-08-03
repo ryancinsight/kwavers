@@ -182,7 +182,6 @@ mod tests {
     use env_logger;
 
     #[test]
-    #[ignore] // TODO: Fix array index out of bounds issue
     fn test_plane_wave_propagation_corrected() {
         let _ = env_logger::builder().is_test(true).try_init();
         
@@ -256,7 +255,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix energy conservation issue in Kuznetsov solver
     fn test_amplitude_preservation_improved() {
         let _ = env_logger::builder().is_test(true).try_init();
         
@@ -344,7 +342,6 @@ mod tests {
     /// p(x,t) = A * exp(-α*c*t) * sin(k*x - ω*t)
     /// where the wave travels distance x = c*t
     #[test]
-    #[ignore = "Attenuation implementation needs investigation"]
     fn test_acoustic_attenuation() {
         let nx = 256;
         let ny = 1;
@@ -661,5 +658,48 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_kuznetsov_basic_functionality() {
+        let _ = env_logger::builder().is_test(true).try_init();
+        
+        // Small grid for quick test
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        
+        let config = KuznetsovConfig {
+            enable_nonlinearity: false,
+            enable_diffusivity: false,
+            enable_dispersion_compensation: false,
+            ..Default::default()
+        };
+        
+        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
+        
+        // Create simple initial condition
+        let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
+        
+        // Set a small pressure pulse in the center
+        let cx = grid.nx / 2;
+        let cy = grid.ny / 2;
+        let cz = grid.nz / 2;
+        fields[[0, cx, cy, cz]] = 1.0;
+        
+        // Single step
+        let source = NullSource;
+        let pressure_view = fields.index_axis(Axis(0), 0).to_owned();
+        
+        // This should not crash or hang
+        solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, 1e-8, 0.0);
+        
+        // Check that we still have finite values
+        let final_pressure = fields.index_axis(Axis(0), 0);
+        let max_val = final_pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        
+        assert!(max_val.is_finite(), "Solver produced non-finite values");
+        assert!(max_val < 1e10, "Solver produced unreasonably large values: {}", max_val);
+        
+        println!("Basic functionality test passed. Max pressure: {:.2e}", max_val);
     }
 }

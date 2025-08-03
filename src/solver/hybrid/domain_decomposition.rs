@@ -787,38 +787,42 @@ impl DomainDecomposer {
         let (nx, ny, nz) = field.dim();
         let mut gradient_mag = Array3::zeros((nx, ny, nz));
         
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
-                    // Central differences
-                    let dx = (field[[i+1, j, k]] - field[[i-1, j, k]]) / 2.0;
-                    let dy = (field[[i, j+1, k]] - field[[i, j-1, k]]) / 2.0;
-                    let dz = (field[[i, j, k+1]] - field[[i, j, k-1]]) / 2.0;
-                    
-                    gradient_mag[[i, j, k]] = (dx*dx + dy*dy + dz*dz).sqrt();
-                }
-            }
-        }
+        // Use ndarray's windows for efficient gradient computation
+        // Process interior points with central differences
+        gradient_mag
+            .slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1])
+            .indexed_iter_mut()
+            .for_each(|((i, j, k), grad)| {
+                let i = i + 1;
+                let j = j + 1;
+                let k = k + 1;
+                
+                // Central differences
+                let dx = (field[[i+1, j, k]] - field[[i-1, j, k]]) / 2.0;
+                let dy = (field[[i, j+1, k]] - field[[i, j-1, k]]) / 2.0;
+                let dz = (field[[i, j, k+1]] - field[[i, j, k-1]]) / 2.0;
+                
+                *grad = (dx*dx + dy*dy + dz*dz).sqrt();
+            });
         
-        // Handle boundaries with one-sided differences
-        for j in 0..ny {
-            for k in 0..nz {
-                gradient_mag[[0, j, k]] = gradient_mag[[1, j, k]];
-                gradient_mag[[nx-1, j, k]] = gradient_mag[[nx-2, j, k]];
-            }
-        }
-        for i in 0..nx {
-            for k in 0..nz {
-                gradient_mag[[i, 0, k]] = gradient_mag[[i, 1, k]];
-                gradient_mag[[i, ny-1, k]] = gradient_mag[[i, ny-2, k]];
-            }
-        }
-        for i in 0..nx {
-            for j in 0..ny {
-                gradient_mag[[i, j, 0]] = gradient_mag[[i, j, 1]];
-                gradient_mag[[i, j, nz-1]] = gradient_mag[[i, j, nz-2]];
-            }
-        }
+        // Handle boundaries with one-sided differences using slices
+        // X boundaries
+        let temp = gradient_mag.slice(s![1, .., ..]).to_owned();
+        gradient_mag.slice_mut(s![0, .., ..]).assign(&temp);
+        let temp = gradient_mag.slice(s![nx-2, .., ..]).to_owned();
+        gradient_mag.slice_mut(s![nx-1, .., ..]).assign(&temp);
+        
+        // Y boundaries
+        let temp = gradient_mag.slice(s![.., 1, ..]).to_owned();
+        gradient_mag.slice_mut(s![.., 0, ..]).assign(&temp);
+        let temp = gradient_mag.slice(s![.., ny-2, ..]).to_owned();
+        gradient_mag.slice_mut(s![.., ny-1, ..]).assign(&temp);
+        
+        // Z boundaries
+        let temp = gradient_mag.slice(s![.., .., 1]).to_owned();
+        gradient_mag.slice_mut(s![.., .., 0]).assign(&temp);
+        let temp = gradient_mag.slice(s![.., .., nz-2]).to_owned();
+        gradient_mag.slice_mut(s![.., .., nz-1]).assign(&temp);
         
         gradient_mag
     }
