@@ -95,33 +95,39 @@ impl LightDiffusionModelTrait for LightDiffusion {
         let mut new_light_field = Array3::zeros(light_field.raw_dim());
         new_light_field.assign(&light_field);
         
-        for i in 1..light_field.shape()[0] - 1 {
-            for j in 1..light_field.shape()[1] - 1 {
-                for k in 1..light_field.shape()[2] - 1 {
-                    // Calculate Laplacian using central differences
-                    let d2phi_dx2 = (light_field[[i+1, j, k]] - 2.0 * light_field[[i, j, k]] + light_field[[i-1, j, k]]) / (grid.dx * grid.dx);
-                    let d2phi_dy2 = (light_field[[i, j+1, k]] - 2.0 * light_field[[i, j, k]] + light_field[[i, j-1, k]]) / (grid.dy * grid.dy);
-                    let d2phi_dz2 = (light_field[[i, j, k+1]] - 2.0 * light_field[[i, j, k]] + light_field[[i, j, k-1]]) / (grid.dz * grid.dz);
-                    
-                    let laplacian_phi = d2phi_dx2 + d2phi_dy2 + d2phi_dz2;
-                    
-                    // Get source term
+        // Use optimized iteration for interior points
+        let dx2_inv = 1.0 / (grid.dx * grid.dx);
+        let dy2_inv = 1.0 / (grid.dy * grid.dy);
+        let dz2_inv = 1.0 / (grid.dz * grid.dz);
+        
+        let (nx, ny, nz) = light_field.dim();
+        
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                for k in 1..nz-1 {
+                    // Compute Laplacian using neighboring values
+                    let center_val = light_field[[i, j, k]];
                     let source_term = light_source[[i, j, k]];
                     
+                    let laplacian_phi = 
+                        (light_field[[i+1, j, k]] - 2.0 * center_val + light_field[[i-1, j, k]]) * dx2_inv +
+                        (light_field[[i, j+1, k]] - 2.0 * center_val + light_field[[i, j-1, k]]) * dy2_inv +
+                        (light_field[[i, j, k+1]] - 2.0 * center_val + light_field[[i, j, k-1]]) * dz2_inv;
+                    
                     // Update using diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
-                    new_light_field[[i, j, k]] = light_field[[i, j, k]] + dt * (
+                    let update = center_val + dt * (
                         diffusion_coefficient * laplacian_phi - 
-                        absorption_coeff * light_field[[i, j, k]] + 
+                        absorption_coeff * center_val + 
                         source_term
                     );
                     
                     // Ensure non-negative values (physical constraint)
-                    new_light_field[[i, j, k]] = new_light_field[[i, j, k]].max(0.0);
+                    new_light_field[[i, j, k]] = update.max(0.0);
                 }
             }
         }
         
-        // Copy the updated values back
+        // Update the light field
         light_field.assign(&new_light_field);
         
         // Update fluence_rate to match

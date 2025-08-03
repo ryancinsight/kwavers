@@ -6,14 +6,9 @@
 use kwavers::{
     KwaversResult,
     Grid,
-    HomogeneousMedium,
-    medium::Medium,
-    Time,
-    SineWave,
-    PMLBoundary,
-    PMLConfig,
     solver::amr::{AMRManager, AMRConfig, WaveletType, InterpolationScheme},
 };
+use ndarray::{Array3, s};
 use std::time::Instant;
 
 fn main() -> KwaversResult<()> {
@@ -21,13 +16,6 @@ fn main() -> KwaversResult<()> {
     
     // Create grid - start with moderate resolution
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3); // 1mm spacing
-    
-    // Create medium (water)
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
-    
-    // Create time parameters
-    let dt = grid.cfl_timestep_default(medium.sound_speed(0.0, 0.0, 0.0, &grid));
-    let time = Time::new(dt, 1000);
     
     // Create AMR configuration
     let amr_config = AMRConfig {
@@ -44,76 +32,118 @@ fn main() -> KwaversResult<()> {
     // Create AMR manager
     let mut amr_manager = AMRManager::new(amr_config.clone(), &grid);
     
-    // Create PML boundary
-    let pml_config = PMLConfig {
-        thickness: 10,
-        ..Default::default()
-    };
-    let boundary = PMLBoundary::new(pml_config);
-    
-    // Create solver
-    let mut solver = Solver::new(grid.clone(), time.clone());
-    
-    // Source configuration
-    let source_signal = SineWave::new(1e6, 1e5); // 1 MHz, 100 kPa
-    let source_position = (grid.nx / 2, grid.ny / 2, grid.nz / 4);
-    
-    println!("Initial grid: {}x{}x{}", grid.nx, grid.ny, grid.nz);
+    println!("Grid: {}x{}x{} points", grid.nx, grid.ny, grid.nz);
     println!("AMR Configuration:");
-    println!("  Max refinement levels: {}", amr_config.max_level);
+    println!("  Max refinement level: {}", amr_config.max_level);
+    println!("  Refinement threshold: {:.1e}", amr_config.refine_threshold);
+    println!("  Coarsening threshold: {:.1e}", amr_config.coarsen_threshold);
     println!("  Refinement ratio: {}", amr_config.refinement_ratio);
-    println!("  Wavelet type: {:?}", amr_config.wavelet_type);
+    println!();
     
-    // Simulation parameters
-    let num_steps = 1000;
-    let adapt_interval = 20; // Adapt mesh every 20 steps
+    // Create a test field with a focused region
+    let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
     
-    println!("\nRunning simulation with AMR...");
-    println!("Time step: {:.2e} s", time.dt);
-    println!("Total steps: {}", num_steps);
+    // Create a Gaussian focus in the center
+    let cx = grid.nx / 2;
+    let cy = grid.ny / 2;
+    let cz = grid.nz / 2;
+    let sigma = 5.0; // Width of the Gaussian
     
-    let start = Instant::now();
-    let mut refinement_count = 0;
-    
-    for step in 0..num_steps {
-        // Apply source
-        let source_value = source_signal.evaluate(step as f64 * time.dt);
-        solver.fields.fields[[0, source_position.0, source_position.1, source_position.2]] = source_value;
-        
-        // Update fields
-        solver.update_fields(&medium, &boundary)?;
-        
-        // Adapt mesh periodically
-        if step % adapt_interval == 0 && step > 0 {
-            // Get pressure field
-            let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), 0);
-            
-            // Estimate error and adapt mesh
-            let error = amr_manager.estimate_error(&pressure);
-            let max_error = error.iter().cloned().fold(0.0, f64::max);
-            
-            if max_error > amr_config.refine_threshold {
-                amr_manager.adapt_mesh(&pressure)?;
-                refinement_count += 1;
-                
-                println!(
-                    "Step {}: Adapted mesh, max error: {:.2e}",
-                    step, max_error
-                );
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                let dx = (i as f64 - cx as f64) / sigma;
+                let dy = (j as f64 - cy as f64) / sigma;
+                let dz = (k as f64 - cz as f64) / sigma;
+                let r2 = dx * dx + dy * dy + dz * dz;
+                field[[i, j, k]] = 1e5 * (-r2).exp(); // Peak amplitude of 100 kPa
             }
-        }
-        
-        // Progress report
-        if step % 100 == 0 {
-            let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), 0);
-            let max_pressure = pressure.iter().cloned().map(f64::abs).fold(0.0, f64::max);
-            println!("Step {}/{}: max pressure = {:.2e} Pa", step, num_steps, max_pressure);
         }
     }
     
-    let elapsed = start.elapsed();
-    println!("\nSimulation completed in {:.2?}", elapsed);
-    println!("Total mesh adaptations: {}", refinement_count);
+    println!("Initial field created with Gaussian focus");
+    let max_val = field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    println!("Max field value: {:.2e} Pa", max_val);
+    
+    let start_time = Instant::now();
+    
+    // Demonstrate AMR adaptation
+    println!("\nPerforming AMR adaptation...");
+    
+    // First adaptation
+    let result1 = amr_manager.adapt_mesh(&field, 1e6)?;
+    println!("First adaptation:");
+    println!("  Cells refined: {}", result1.cells_refined);
+    println!("  Cells coarsened: {}", result1.cells_coarsened);
+    println!("  Max error: {:.2e}", result1.max_error);
+    
+    // Modify the field to simulate wave propagation
+    // Shift the Gaussian slightly
+    let mut field2 = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    let shift = 5.0;
+    
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                let dx = (i as f64 - cx as f64 - shift) / sigma;
+                let dy = (j as f64 - cy as f64) / sigma;
+                let dz = (k as f64 - cz as f64) / sigma;
+                let r2 = dx * dx + dy * dy + dz * dz;
+                field2[[i, j, k]] = 0.8e5 * (-r2).exp(); // Slightly attenuated
+            }
+        }
+    }
+    
+    // Second adaptation with modified field
+    let result2 = amr_manager.adapt_mesh(&field2, 1e6)?;
+    println!("\nSecond adaptation (after field change):");
+    println!("  Cells refined: {}", result2.cells_refined);
+    println!("  Cells coarsened: {}", result2.cells_coarsened);
+    println!("  Max error: {:.2e}", result2.max_error);
+    
+    // Demonstrate refinement patterns
+    println!("\nRefinement pattern analysis:");
+    
+    // Create a more complex field with multiple features
+    let mut complex_field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    
+    // Add multiple Gaussian peaks at different locations
+    let peaks = vec![
+        (grid.nx / 4, grid.ny / 4, grid.nz / 2, 1e5),
+        (3 * grid.nx / 4, grid.ny / 2, grid.nz / 2, 0.8e5),
+        (grid.nx / 2, 3 * grid.ny / 4, grid.nz / 2, 0.6e5),
+    ];
+    
+    for (px, py, pz, amplitude) in peaks {
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let dx = (i as f64 - px as f64) / sigma;
+                    let dy = (j as f64 - py as f64) / sigma;
+                    let dz = (k as f64 - pz as f64) / sigma;
+                    let r2 = dx * dx + dy * dy + dz * dz;
+                    complex_field[[i, j, k]] += amplitude * (-r2).exp();
+                }
+            }
+        }
+    }
+    
+    // Third adaptation with complex field
+    let result3 = amr_manager.adapt_mesh(&complex_field, 1e6)?;
+    println!("\nThird adaptation (complex field with multiple peaks):");
+    println!("  Cells refined: {}", result3.cells_refined);
+    println!("  Cells coarsened: {}", result3.cells_coarsened);
+    println!("  Max error: {:.2e}", result3.max_error);
+    
+    let total_time = start_time.elapsed();
+    println!("\nAMR demonstration completed in {:.2?}", total_time);
+    
+    // Show memory usage estimate
+    let base_memory = (grid.nx * grid.ny * grid.nz * 8) as f64 / 1e6; // MB
+    let refined_memory = base_memory * (1.0 + 0.125 * result3.cells_refined as f64 / (grid.nx * grid.ny * grid.nz) as f64);
+    println!("\nMemory usage:");
+    println!("  Base grid: {:.1} MB", base_memory);
+    println!("  With refinement: {:.1} MB (estimated)", refined_memory);
     
     Ok(())
 }
