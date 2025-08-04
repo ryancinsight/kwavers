@@ -261,10 +261,10 @@ impl TimeReversalReconstructor {
                     let transition_width = (f_max - f_min) * 0.1; // 10% transition
                     let window = if freq.abs() < f_min + transition_width {
                         let x = (freq.abs() - f_min) / transition_width;
-                        0.5 * (1.0 + (PI * x).cos())
+                        0.5 * (1.0 - (PI * x).cos())
                     } else if freq.abs() > f_max - transition_width {
                         let x = (f_max - freq.abs()) / transition_width;
-                        0.5 * (1.0 + (PI * x).cos())
+                        0.5 * (1.0 - (PI * x).cos())
                     } else {
                         1.0
                     };
