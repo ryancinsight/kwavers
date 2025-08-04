@@ -9,23 +9,37 @@
 use crate::error::KwaversResult;
 use std::collections::HashMap;
 
-/// Octree node representing a spatial region
-#[derive(Debug, Clone, Default)]
-struct OctreeNode {
-    /// Node index in the octree
-    index: usize,
-    /// Refinement level (0 = root)
-    level: usize,
-    /// Spatial bounds (i, j, k) start
-    bounds_min: (usize, usize, usize),
-    /// Spatial bounds (i, j, k) end (exclusive)
-    bounds_max: (usize, usize, usize),
+/// Node in the octree structure
+#[derive(Debug)]
+pub struct OctreeNode {
+    /// Cell boundaries (min_x, min_y, min_z, max_x, max_y, max_z)
+    bounds: [f64; 6],
     /// Parent node index (None for root)
     parent: Option<usize>,
     /// Child node indices (None if leaf)
     children: Option<[usize; 8]>,
     /// Whether this node is active (leaf)
     is_active: bool,
+    /// Refinement level (0 = root, positive = refined, negative = coarsened)
+    level: i32,
+}
+
+impl OctreeNode {
+    /// Check if this node is a leaf
+    pub fn is_leaf(&self) -> bool {
+        self.children.is_none()
+    }
+    
+    /// Get the refinement level
+    pub fn level(&self) -> i32 {
+        self.level
+    }
+    
+    /// Get children if they exist
+    pub fn children(&self) -> Vec<Option<&OctreeNode>> {
+        // This is a placeholder - in real implementation would need access to octree
+        vec![]
+    }
 }
 
 /// Octree for adaptive mesh refinement
@@ -69,13 +83,11 @@ impl Octree {
     /// Create the root node covering entire domain
     fn create_root(&mut self) {
         let root = OctreeNode {
-            index: 0,
-            level: 0,
-            bounds_min: (0, 0, 0),
-            bounds_max: self.base_dims,
+            bounds: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
             parent: None,
             children: None,
             is_active: true,
+            level: 0,
         };
         
         self.nodes.push(root);
@@ -91,7 +103,7 @@ impl Octree {
     /// Get the refinement level of a cell
     pub fn get_level(&self, i: usize, j: usize, k: usize) -> usize {
         if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
-            self.nodes[node_idx].level
+            self.nodes[node_idx].level as usize
         } else {
             0
         }
@@ -352,15 +364,15 @@ impl Octree {
         active_nodes as f64 / self.nodes.len() as f64
     }
     
-    /// Get refinement statistics
-    pub fn get_stats(&self) -> OctreeStats {
+    /// Get statistics about the octree structure
+    pub fn stats(&self) -> OctreeStats {
         let mut level_counts = vec![0; self.max_level + 1];
         let mut active_counts = vec![0; self.max_level + 1];
         
         for node in &self.nodes {
-            level_counts[node.level] += 1;
+            level_counts[node.level as usize] += 1;
             if node.is_active {
-                active_counts[node.level] += 1;
+                active_counts[node.level as usize] += 1;
             }
         }
         
@@ -373,6 +385,16 @@ impl Octree {
             active_counts,
             max_level_used,
         }
+    }
+    
+    /// Get the root node
+    pub fn root(&self) -> &OctreeNode {
+        &self.nodes[0]
+    }
+    
+    /// Get the base resolution
+    pub fn base_resolution(&self) -> (usize, usize, usize) {
+        self.base_dims
     }
 }
 

@@ -17,11 +17,12 @@
 //! - **Clean**: Clear abstractions for refinement criteria
 
 pub mod octree;
-pub mod wavelet;
 pub mod interpolation;
-pub mod error_estimator;
-pub mod refinement;
+pub mod local_operations;
+pub mod local_operations_simple;
+pub mod wavelet;
 pub mod enhanced;
+pub mod error_estimator;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -521,10 +522,10 @@ pub struct MemoryStats {
 }
 
 // Re-export key types
-pub use octree::Octree;
-pub use wavelet::WaveletTransform;
-pub use interpolation::{interpolate_to_refined, restrict_to_coarse};
-pub use error_estimator::ErrorEstimator;
+pub use self::error_estimator::{ErrorEstimator};
+pub use self::octree::{Octree, OctreeNode};
+pub use self::interpolation::{interpolate_to_refined, restrict_to_coarse};
+pub use self::local_operations::{adapt_field_to_octree, adapt_all_fields, LocalAMRResult};
 
 #[cfg(test)]
 mod tests;

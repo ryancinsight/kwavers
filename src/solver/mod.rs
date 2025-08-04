@@ -487,52 +487,49 @@ impl Solver {
                             info!("AMR adaptation at step {}: refined {} cells, coarsened {} cells, max error: {:.2e}",
                                   step, result.cells_refined, result.cells_coarsened, result.max_error);
                             
-                            // Interpolate all fields to new mesh structure
+                            // Adapt all fields to new mesh structure using local operations
                             if let Some(ref octree) = amr_manager.octree() {
-                                use self::amr::interpolation::{interpolate_to_refined, restrict_to_coarse};
+                                use self::amr::local_operations::adapt_all_fields;
                                 
-                                // Process each field in the simulation
-                                for field_idx in 0..self.fields.fields.shape()[0] {
-                                    let field = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
-                                    let field_shape = field.shape().to_vec(); // Store shape before moving field
-                                    
-                                    // Determine if we need to interpolate or restrict based on refinement
-                                    let new_field = if result.cells_refined > result.cells_coarsened {
-                                        // More refinement than coarsening - interpolate to finer mesh
-                                        match interpolate_to_refined(&field, octree, amr_manager.interpolation_scheme()) {
-                                            Ok(f) => f,
-                                            Err(e) => {
-                                                warn!("Failed to interpolate field {}: {}", field_idx, e);
-                                                continue;
+                                match adapt_all_fields(&self.fields.fields, octree, amr_manager.interpolation_scheme()) {
+                                    Ok(new_fields) => {
+                                        // Check if dimensions changed
+                                        let old_shape = self.fields.fields.shape();
+                                        let new_shape = new_fields.shape();
+                                        
+                                        if old_shape != new_shape {
+                                            info!("AMR: Grid dimensions changed from {:?} to {:?}", 
+                                                  &old_shape[1..], &new_shape[1..]);
+                                            
+                                            // Update grid dimensions if needed
+                                            if new_shape[1] != self.grid.nx || 
+                                               new_shape[2] != self.grid.ny || 
+                                               new_shape[3] != self.grid.nz {
+                                                // Note: This would require updating the grid structure
+                                                // For now, we log a warning
+                                                warn!("Grid dimensions need to be updated to match AMR fields");
                                             }
                                         }
-                                    } else if result.cells_coarsened > 0 {
-                                        // Coarsening - restrict to coarser mesh
-                                        match restrict_to_coarse(&field, octree, amr_manager.interpolation_scheme()) {
-                                            Ok(f) => f,
-                                            Err(e) => {
-                                                warn!("Failed to restrict field {}: {}", field_idx, e);
-                                                continue;
-                                            }
+                                        
+                                        // Replace fields with adapted version
+                                        self.fields.fields = new_fields;
+                                        
+                                        // Update previous pressure array to match new dimensions
+                                        if self.prev_pressure.shape() != self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).shape() {
+                                            self.prev_pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
                                         }
-                                    } else {
-                                        // No change needed
-                                        field
-                                    };
-                                    
-                                    // Update the field if dimensions match
-                                    if new_field.shape() == field_shape.as_slice() {
-                                        self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&new_field);
-                                    } else {
-                                        // Handle dimension mismatch - this would require resizing all fields
-                                        warn!("AMR field interpolation resulted in dimension change from {:?} to {:?}, which is not yet supported", 
-                                              field_shape, new_field.shape());
+                                        
+                                        debug!("Completed AMR field adaptation");
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to adapt fields for AMR: {}", e);
                                     }
                                 }
-                                
-                                debug!("Completed field interpolation for AMR adaptation");
                             }
                         }
+                        
+                        // Update last adapt step
+                        self.amr_last_adapt_step = step;
                         
                         // Report memory savings
                         let stats = amr_manager.memory_stats();
@@ -546,7 +543,6 @@ impl Solver {
                     }
                 }
                 
-                self.amr_last_adapt_step = step;
                 amr_time = amr_start.elapsed().as_secs_f64();
             }
         }
