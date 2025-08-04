@@ -301,8 +301,7 @@ impl TimeReversalReconstructor {
         
         let c0 = medium.sound_speed(cx, cy, cz, grid);
         
-        // Get medium absorption coefficient at center frequency (1 MHz default)
-        let frequency = 1e6; // 1 MHz default frequency
+        // Get medium absorption coefficient at the simulation frequency
         let alpha = medium.absorption_coefficient(cx, cy, cz, grid, frequency);
         
         let corrected: Vec<f64> = signal.iter()
