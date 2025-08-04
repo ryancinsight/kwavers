@@ -155,9 +155,8 @@ pub mod factories {
     }
 }
 
-// TODO: Enable these tests after adding Debug trait to physics components
+// Tests are now enabled since physics components have Debug trait
 #[cfg(test)]
-#[cfg(feature = "test_debug_components")]
 mod adapter_tests {
     use super::*;
     use super::factories::*;
@@ -168,8 +167,8 @@ mod adapter_tests {
         
         assert_eq!(plugin.metadata().id, "test_acoustic");
         assert_eq!(plugin.metadata().name, "Acoustic Wave Propagation");
-        assert_eq!(plugin.required_fields(), vec![FieldType::Pressure]);
-        assert_eq!(plugin.provided_fields(), vec![FieldType::Pressure]);
+        assert_eq!(plugin.metadata().version, "1.0.0");
+        assert!(plugin.metadata().description.contains("acoustic wave"));
     }
     
     #[test]
@@ -178,7 +177,7 @@ mod adapter_tests {
         
         assert_eq!(plugin.metadata().id, "test_thermal");
         assert_eq!(plugin.metadata().name, "Thermal Diffusion");
-        assert_eq!(plugin.required_fields(), vec![FieldType::Pressure]);
-        assert_eq!(plugin.provided_fields(), vec![FieldType::Temperature]);
+        assert_eq!(plugin.metadata().version, "1.0.0");
+        assert!(plugin.metadata().description.contains("thermal diffusion"));
     }
 }

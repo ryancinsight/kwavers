@@ -1,24 +1,20 @@
-//! Enhanced Shock Handling for Hybrid Spectral-DG Methods
-//!
-//! This module provides advanced shock-capturing capabilities with:
-//! - WENO-based shock detection and limiting
-//! - Artificial viscosity for shock stabilization
-//! - Entropy-based discontinuity indicators
-//! - Sub-cell resolution for shock tracking
-//! - Conservative shock-fitting techniques
-//!
-//! # Design Principles
-//! - **SOLID**: Separate shock detection, limiting, and stabilization components
-//! - **CUPID**: Clear interfaces for shock handling strategies
-//! - **DRY**: Reusable shock detection patterns
-//! - **KISS**: Simple API for complex shock physics
+//! Enhanced shock handling for spectral DG methods
+//! 
+//! Implements advanced techniques for handling discontinuities:
+//! - WENO5 limiting for smooth shock capturing
+//! - Artificial viscosity with adaptive strength
+//! - Sub-cell resolution via h-p adaptation
+//! - Entropy-stable flux corrections
+//! 
+//! Design principles:
+//! - SOLID: Separate concerns for detection, limiting, and adaptation
+//! - DRY: Reusable shock detection metrics
+//! - KISS: Clear interfaces despite complex algorithms
 
-use crate::{
-    error::{KwaversResult, KwaversError},
-    grid::Grid,
-};
-use ndarray::{Array3, Array4, Axis, Zip};
-use rayon::prelude::*;
+use crate::error::KwaversResult;
+use crate::grid::Grid;
+use ndarray::{Array3, Array4, Axis, s};
+use std::f64::consts::PI;
 use log::warn;
 
 /// Enhanced shock detector with multiple indicators
@@ -74,7 +70,7 @@ impl EnhancedShockDetector {
         let divergence_indicator = self.compute_divergence_indicator(velocity, grid)?;
         
         // Combine indicators with weights
-        Zip::from(&mut shock_indicator)
+        ndarray::Zip::from(&mut shock_indicator)
             .and(&entropy_indicator)
             .and(&pressure_indicator)
             .and(&divergence_indicator)
@@ -243,12 +239,14 @@ pub struct WENOLimiter {
     epsilon: f64,
     /// Power parameter for smoothness indicators
     p: f64,
+    /// Threshold for shock detection
+    shock_threshold: f64,
 }
 
 impl WENOLimiter {
     pub fn new(order: usize) -> KwaversResult<Self> {
         if order != 3 && order != 5 && order != 7 {
-            return Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
+            return Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
                 parameter: "weno_order".to_string(),
                 value: order.to_string(),
                 constraint: "WENO order must be 3, 5, or 7".to_string(),
@@ -259,6 +257,7 @@ impl WENOLimiter {
             order,
             epsilon: 1e-6,
             p: 2.0,
+            shock_threshold: 0.1, // Default shock threshold
         })
     }
     
@@ -334,13 +333,164 @@ impl WENOLimiter {
         w0 * q0 + w1 * q1
     }
     
-    /// WENO5 limiting (placeholder for full implementation)
+    /// WENO5 limiting implementation
     fn weno5_limit(
         &self,
-        _field: &mut Array3<f64>,
-        _shock_indicator: &Array3<f64>,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
-        warn!("WENO5 limiting not fully implemented, using WENO3");
+        let (nx, ny, nz) = field.dim();
+        let epsilon = 1e-6;
+        
+        // Process each direction
+        for direction in 0..3 {
+            match direction {
+                0 => self.weno5_limit_x(field, shock_indicator, nx, ny, nz, epsilon)?,
+                1 => self.weno5_limit_y(field, shock_indicator, nx, ny, nz, epsilon)?,
+                2 => self.weno5_limit_z(field, shock_indicator, nx, ny, nz, epsilon)?,
+                _ => unreachable!(),
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// WENO5 limiting in x-direction
+    fn weno5_limit_x(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        // Collect indices where shock indicator exceeds threshold
+        let indices: Vec<(usize, usize, usize)> = (0..nx)
+            .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
+            .filter(|&(i, j, k)| {
+                i >= 2 && i < nx - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+            })
+            .collect();
+        
+        // Process each index
+        for (i, j, k) in indices {
+            // Extract stencil values
+            let v = [
+                field[[i.saturating_sub(2), j, k]],
+                field[[i.saturating_sub(1), j, k]],
+                field[[i, j, k]],
+                field[[i.min(nx-1).saturating_add(1), j, k]],
+                field[[(i+2).min(nx-1), j, k]],
+            ];
+            
+            field[[i, j, k]] = self.compute_weno5_value(&v, epsilon);
+        }
+        
+        Ok(())
+    }
+    
+    /// Compute WENO5 reconstruction value from stencil
+    fn compute_weno5_value(&self, v: &[f64; 5], epsilon: f64) -> f64 {
+        // Three stencils for WENO5
+        let p0 = (2.0 * v[0] - 7.0 * v[1] + 11.0 * v[2]) / 6.0;
+        let p1 = (-v[1] + 5.0 * v[2] + 2.0 * v[3]) / 6.0;
+        let p2 = (2.0 * v[2] + 5.0 * v[3] - v[4]) / 6.0;
+        
+        // Smoothness indicators
+        let beta0 = 13.0/12.0 * (v[0] - 2.0*v[1] + v[2]).powi(2) + 
+                   0.25 * (v[0] - 4.0*v[1] + 3.0*v[2]).powi(2);
+        let beta1 = 13.0/12.0 * (v[1] - 2.0*v[2] + v[3]).powi(2) + 
+                   0.25 * (v[1] - v[3]).powi(2);
+        let beta2 = 13.0/12.0 * (v[2] - 2.0*v[3] + v[4]).powi(2) + 
+                   0.25 * (3.0*v[2] - 4.0*v[3] + v[4]).powi(2);
+        
+        // Optimal weights
+        let d0 = 0.1;
+        let d1 = 0.6;
+        let d2 = 0.3;
+        
+        // WENO weights
+        let alpha0 = d0 / (epsilon + beta0).powi(2);
+        let alpha1 = d1 / (epsilon + beta1).powi(2);
+        let alpha2 = d2 / (epsilon + beta2).powi(2);
+        let sum_alpha = alpha0 + alpha1 + alpha2;
+        
+        let w0 = alpha0 / sum_alpha;
+        let w1 = alpha1 / sum_alpha;
+        let w2 = alpha2 / sum_alpha;
+        
+        // WENO5 reconstruction
+        w0 * p0 + w1 * p1 + w2 * p2
+    }
+    
+    /// WENO5 limiting in y-direction
+    fn weno5_limit_y(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        // Collect indices where shock indicator exceeds threshold
+        let indices: Vec<(usize, usize, usize)> = (0..nx)
+            .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
+            .filter(|&(i, j, k)| {
+                j >= 2 && j < ny - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+            })
+            .collect();
+        
+        // Process each index
+        for (i, j, k) in indices {
+            // Extract stencil values
+            let v = [
+                field[[i, j.saturating_sub(2), k]],
+                field[[i, j.saturating_sub(1), k]],
+                field[[i, j, k]],
+                field[[i, j.min(ny-1).saturating_add(1), k]],
+                field[[i, (j+2).min(ny-1), k]],
+            ];
+            
+            field[[i, j, k]] = self.compute_weno5_value(&v, epsilon);
+        }
+        
+        Ok(())
+    }
+    
+    /// WENO5 limiting in z-direction
+    fn weno5_limit_z(
+        &self,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        epsilon: f64,
+    ) -> KwaversResult<()> {
+        // Collect indices where shock indicator exceeds threshold
+        let indices: Vec<(usize, usize, usize)> = (0..nx)
+            .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
+            .filter(|&(i, j, k)| {
+                k >= 2 && k < nz - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+            })
+            .collect();
+        
+        // Process each index
+        for (i, j, k) in indices {
+            // Extract stencil values
+            let v = [
+                field[[i, j, k.saturating_sub(2)]],
+                field[[i, j, k.saturating_sub(1)]],
+                field[[i, j, k]],
+                field[[i, j, k.min(nz-1).saturating_add(1)]],
+                field[[i, j, (k+2).min(nz-1)]],
+            ];
+            
+            field[[i, j, k]] = self.compute_weno5_value(&v, epsilon);
+        }
+        
         Ok(())
     }
     

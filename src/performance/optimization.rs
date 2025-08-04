@@ -1,23 +1,11 @@
-//! Performance Optimization Module
-//!
-//! This module implements advanced optimization techniques to achieve 100M+ grid updates/second:
-//! - SIMD vectorization with AVX-512
-//! - Cache-aware algorithms
-//! - Memory bandwidth optimization
-//! - GPU kernel fusion
-//! - Asynchronous execution
-//! - Multi-GPU scaling
-//!
-//! # Design Principles
-//! - **SOLID**: Each optimization technique is a separate component
-//! - **CUPID**: Clear interfaces for performance tuning
-//! - **DRY**: Reusable optimization patterns
-//! - **KISS**: Simple API despite complex optimizations
+//! Performance optimization module for high-performance computing
+//! Provides SIMD operations, cache optimization, and parallelization strategies
 
 use crate::error::{KwaversResult, KwaversError, ConfigError};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3, Axis, Zip, s};
 use rayon::prelude::*;
+use std::sync::Arc;
 use log::info;
-use ndarray::{Array3, s};
 
 /// Performance optimization configuration
 #[derive(Debug, Clone)]

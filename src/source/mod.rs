@@ -26,6 +26,43 @@ pub use phased_array::{
     ElementSensitivity, BeamformingMode
 };
 
+/// Simple point source implementation
+#[derive(Debug)]
+pub struct PointSource {
+    position: (f64, f64, f64),
+    signal: std::sync::Arc<dyn Signal>,
+}
+
+impl PointSource {
+    pub fn new(position: (f64, f64, f64), signal: std::sync::Arc<dyn Signal>) -> Self {
+        Self { position, signal }
+    }
+}
+
+impl Source for PointSource {
+    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Simple point source - return signal amplitude at source position
+        let dx = (x - self.position.0).abs();
+        let dy = (y - self.position.1).abs();
+        let dz = (z - self.position.2).abs();
+        
+        // Check if we're within one grid spacing of the source
+        if dx < grid.dx && dy < grid.dy && dz < grid.dz {
+            self.signal.amplitude(t)
+        } else {
+            0.0
+        }
+    }
+    
+    fn positions(&self) -> Vec<(f64, f64, f64)> {
+        vec![self.position]
+    }
+    
+    fn signal(&self) -> &dyn Signal {
+        self.signal.as_ref()
+    }
+}
+
 /// Time-varying source for time-reversal reconstruction
 #[derive(Debug)]
 pub struct TimeVaryingSource {

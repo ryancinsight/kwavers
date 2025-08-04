@@ -587,40 +587,6 @@ impl DomainDecomposer {
         Ok(regions)
     }
     
-    /// Gradient-based decomposition
-    fn gradient_based_decomposition(
-        &self,
-        analysis: &AnalysisResult,
-        grid: &Grid,
-    ) -> KwaversResult<Vec<DomainRegion>> {
-        // Use gradient magnitude to determine region boundaries
-        let regions = self.segment_by_gradients(&analysis.smoothness, grid)?;
-        Ok(regions)
-    }
-    
-    /// Frequency-based decomposition
-    fn frequency_based_decomposition(
-        &self,
-        analysis: &AnalysisResult,
-        grid: &Grid,
-    ) -> KwaversResult<Vec<DomainRegion>> {
-        // Use frequency content to determine optimal method
-        let regions = self.segment_by_frequency(&analysis.frequency_content, grid)?;
-        Ok(regions)
-    }
-    
-    /// Material-based decomposition
-    fn material_based_decomposition(
-        &self,
-        analysis: &AnalysisResult,
-        _medium: &dyn Medium,
-        grid: &Grid,
-    ) -> KwaversResult<Vec<DomainRegion>> {
-        // Use heterogeneity map for material-based segmentation
-        let regions = self.segment_by_materials(&analysis.heterogeneity, grid)?;
-        Ok(regions)
-    }
-    
     /// Cluster regions by quality using simplified algorithm
     fn cluster_regions_by_quality(
         &self,
@@ -634,7 +600,7 @@ impl DomainDecomposer {
         let mut best_quality = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         for (&method, quality_map) in quality_maps {
-            Zip::from(&mut best_method)
+            ndarray::Zip::from(&mut best_method)
                 .and(&mut best_quality)
                 .and(quality_map)
                 .for_each(|best_m, best_q, &quality| {
@@ -712,11 +678,19 @@ impl DomainDecomposer {
             let min_k = region_points.iter().map(|(_, _, k)| *k).min().unwrap();
             let max_k = region_points.iter().map(|(_, _, k)| *k).max().unwrap();
             
+            // Compute quality score based on region size and method type
+            let region_size = region_points.len();
+            let quality_score = match target_method {
+                DomainType::Spectral => 0.9,    // High quality for spectral
+                DomainType::FiniteDifference => 0.8, // Good quality for FDTD
+                DomainType::Hybrid => 0.75,     // Medium quality for hybrid
+            } * (1.0 - (region_size as f64 / (grid.nx * grid.ny * grid.nz) as f64).min(0.5));
+            
             Ok(Some(DomainRegion {
                 start: (min_i, min_j, min_k),
                 end: (max_i + 1, max_j + 1, max_k + 1),
                 domain_type: target_method,
-                quality_score: 0.8, // TODO: Compute actual quality
+                quality_score,
                 buffer_zones: BufferZones::default(),
             }))
         } else {
@@ -724,12 +698,219 @@ impl DomainDecomposer {
         }
     }
     
-    /// Placeholder implementations for other decomposition methods
-    fn segment_by_gradients(&self, _smoothness: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
-        // TODO: Implement gradient-based segmentation
-        self.fixed_decomposition(grid)
+    /// Gradient-based decomposition
+    fn gradient_based_decomposition(
+        &self,
+        analysis: &AnalysisResult,
+        grid: &Grid,
+    ) -> KwaversResult<Vec<DomainRegion>> {
+        // Use gradient magnitude to determine region boundaries
+        let regions = self.segment_by_gradients(&analysis.smoothness, grid)?;
+        Ok(regions)
     }
     
+    /// Frequency-based decomposition
+    fn frequency_based_decomposition(
+        &self,
+        analysis: &AnalysisResult,
+        grid: &Grid,
+    ) -> KwaversResult<Vec<DomainRegion>> {
+        // Use frequency content to determine optimal method
+        let regions = self.segment_by_frequency(&analysis.frequency_content, grid)?;
+        Ok(regions)
+    }
+    
+    /// Material-based decomposition
+    fn material_based_decomposition(
+        &self,
+        analysis: &AnalysisResult,
+        _medium: &dyn Medium,
+        grid: &Grid,
+    ) -> KwaversResult<Vec<DomainRegion>> {
+        // Use heterogeneity map for material-based segmentation
+        let regions = self.segment_by_materials(&analysis.heterogeneity, grid)?;
+        Ok(regions)
+    }
+    
+    /// Gradient-based segmentation for domain decomposition
+    fn segment_by_gradients(&self, smoothness: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
+        let (nx, ny, nz) = smoothness.dim();
+        let mut regions = Vec::new();
+        let mut processed = Array3::<bool>::default((nx, ny, nz));
+        
+        // Threshold for gradient magnitude (regions with gradient above this use FDTD)
+        let gradient_threshold = 0.1;
+        
+        // Compute gradient magnitude
+        let gradient_mag = self.compute_gradient_magnitude(smoothness);
+        
+        // Region growing algorithm
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    if !processed[[i, j, k]] {
+                        // Start a new region
+                        let seed_gradient = gradient_mag[[i, j, k]];
+                        let method = if seed_gradient > gradient_threshold {
+                            DomainType::FiniteDifference
+                        } else {
+                            DomainType::Spectral
+                        };
+                        
+                        // Grow region from seed
+                        let region = self.grow_region_by_gradient(
+                            (i, j, k),
+                            &gradient_mag,
+                            &mut processed,
+                            method,
+                            gradient_threshold,
+                            grid
+                        )?;
+                        
+                        regions.push(region);
+                    }
+                }
+            }
+        }
+        
+        // If no regions found, create a single spectral region
+        if regions.is_empty() {
+            // Compute average smoothness as quality score
+            let quality_score = smoothness.mean().unwrap_or(0.5);
+            
+            regions.push(DomainRegion {
+                start: (0, 0, 0),
+                end: (nx-1, ny-1, nz-1),
+                domain_type: DomainType::Spectral,
+                quality_score,
+                buffer_zones: BufferZones::default(),
+            });
+        }
+        
+        // Set up neighbor relationships
+        self.setup_neighbors(&mut regions);
+        
+        Ok(regions)
+    }
+    
+    /// Compute gradient magnitude of a field
+    fn compute_gradient_magnitude(&self, field: &Array3<f64>) -> Array3<f64> {
+        let (nx, ny, nz) = field.dim();
+        let mut gradient_mag = Array3::zeros((nx, ny, nz));
+        
+        // Use ndarray's windows for efficient gradient computation
+        // Process interior points with central differences
+        gradient_mag
+            .slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1])
+            .indexed_iter_mut()
+            .for_each(|((i, j, k), grad)| {
+                let i = i + 1;
+                let j = j + 1;
+                let k = k + 1;
+                
+                // Central differences
+                let dx = (field[[i+1, j, k]] - field[[i-1, j, k]]) / 2.0;
+                let dy = (field[[i, j+1, k]] - field[[i, j-1, k]]) / 2.0;
+                let dz = (field[[i, j, k+1]] - field[[i, j, k-1]]) / 2.0;
+                
+                *grad = (dx*dx + dy*dy + dz*dz).sqrt();
+            });
+        
+        // Handle boundaries with one-sided differences using slices
+        // X boundaries
+        let temp = gradient_mag.slice(s![1, .., ..]).to_owned();
+        gradient_mag.slice_mut(s![0, .., ..]).assign(&temp);
+        let temp = gradient_mag.slice(s![nx-2, .., ..]).to_owned();
+        gradient_mag.slice_mut(s![nx-1, .., ..]).assign(&temp);
+        
+        // Y boundaries
+        let temp = gradient_mag.slice(s![.., 1, ..]).to_owned();
+        gradient_mag.slice_mut(s![.., 0, ..]).assign(&temp);
+        let temp = gradient_mag.slice(s![.., ny-2, ..]).to_owned();
+        gradient_mag.slice_mut(s![.., ny-1, ..]).assign(&temp);
+        
+        // Z boundaries
+        let temp = gradient_mag.slice(s![.., .., 1]).to_owned();
+        gradient_mag.slice_mut(s![.., .., 0]).assign(&temp);
+        let temp = gradient_mag.slice(s![.., .., nz-2]).to_owned();
+        gradient_mag.slice_mut(s![.., .., nz-1]).assign(&temp);
+        
+        gradient_mag
+    }
+    
+    /// Grow a region from a seed point based on gradient similarity
+    fn grow_region_by_gradient(
+        &self,
+        seed: (usize, usize, usize),
+        gradient_mag: &Array3<f64>,
+        processed: &mut Array3<bool>,
+        method: DomainType,
+        threshold: f64,
+        grid: &Grid,
+    ) -> KwaversResult<DomainRegion> {
+        let (nx, ny, nz) = gradient_mag.dim();
+        let mut region_indices = Vec::new();
+        let mut stack = vec![seed];
+        let mut bounds = (seed, seed);
+        
+        // Region growing with gradient-based criteria
+        while let Some((i, j, k)) = stack.pop() {
+            if processed[[i, j, k]] {
+                continue;
+            }
+            
+            let grad = gradient_mag[[i, j, k]];
+            let matches_criteria = match method {
+                DomainType::Spectral => grad <= threshold,
+                DomainType::FiniteDifference => grad > threshold,
+                DomainType::Hybrid => grad > threshold * 0.5 && grad <= threshold, // Mid-range gradients
+            };
+            
+            if matches_criteria {
+                processed[[i, j, k]] = true;
+                region_indices.push((i, j, k));
+                
+                // Update bounds
+                bounds.0 = (bounds.0.0.min(i), bounds.0.1.min(j), bounds.0.2.min(k));
+                bounds.1 = (bounds.1.0.max(i), bounds.1.1.max(j), bounds.1.2.max(k));
+                
+                // Add neighbors to stack
+                for di in -1i32..=1 {
+                    for dj in -1i32..=1 {
+                        for dk in -1i32..=1 {
+                            if di == 0 && dj == 0 && dk == 0 {
+                                continue;
+                            }
+                            
+                            let ni = (i as i32 + di) as usize;
+                            let nj = (j as i32 + dj) as usize;
+                            let nk = (k as i32 + dk) as usize;
+                            
+                            if ni < nx && nj < ny && nk < nz && !processed[[ni, nj, nk]] {
+                                stack.push((ni, nj, nk));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Compute average quality of the clustered region
+        let total_quality: f64 = region_indices.iter()
+            .map(|&idx| gradient_mag[[idx.0, idx.1, idx.2]])
+            .sum();
+        let quality_score = total_quality / region_indices.len() as f64;
+        
+        Ok(DomainRegion {
+            start: bounds.0,
+            end: bounds.1,
+            domain_type: method,
+            quality_score,
+            buffer_zones: BufferZones::default(),
+        })
+    }
+    
+    /// Placeholder implementations for other decomposition methods
     fn segment_by_frequency(&self, _frequency_content: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
         // TODO: Implement frequency-based segmentation
         self.fixed_decomposition(grid)
@@ -775,5 +956,66 @@ impl DomainDecomposer {
         info!("  FDTD regions: {}", fdtd_count);
         info!("  Hybrid regions: {}", hybrid_count);
         info!("  Total regions: {}", regions.len());
+    }
+
+    /// Set up neighbor relationships between regions
+    fn setup_neighbors(&self, regions: &mut Vec<DomainRegion>) {
+        let n = regions.len();
+        
+        for i in 0..n {
+            for j in i+1..n {
+                // Check if regions are adjacent
+                let (r1_start, r1_end, r2_start, r2_end) = {
+                    let r1 = &regions[i];
+                    let r2 = &regions[j];
+                    (r1.start, r1.end, r2.start, r2.end)
+                };
+                
+                let adjacent = 
+                    // Check x-adjacency
+                    (r1_end.0 == r2_start.0 || r2_end.0 == r1_start.0) &&
+                    !(r1_end.1 <= r2_start.1 || r2_end.1 <= r1_start.1) &&
+                    !(r1_end.2 <= r2_start.2 || r2_end.2 <= r1_start.2) ||
+                    // Check y-adjacency
+                    (r1_end.1 == r2_start.1 || r2_end.1 == r1_start.1) &&
+                    !(r1_end.0 <= r2_start.0 || r2_end.0 <= r1_start.0) &&
+                    !(r1_end.2 <= r2_start.2 || r2_end.2 <= r1_start.2) ||
+                    // Check z-adjacency
+                    (r1_end.2 == r2_start.2 || r2_end.2 == r1_start.2) &&
+                    !(r1_end.0 <= r2_start.0 || r2_end.0 <= r1_start.0) &&
+                    !(r1_end.1 <= r2_start.1 || r2_end.1 <= r1_start.1);
+                
+                if adjacent {
+                    // Set up buffer zones
+                    let overlap = (self.analysis_params.overlap_factor * self.min_domain_size.0 as f64) as usize;
+                    
+                    // Update buffer zones for both regions
+                    // widths array: [nx-, nx+, ny-, ny+, nz-, nz+]
+                    if r1_end.0 == r2_start.0 {
+                        regions[i].buffer_zones.widths[1] = overlap; // nx+
+                        regions[j].buffer_zones.widths[0] = overlap; // nx-
+                    } else if r2_end.0 == r1_start.0 {
+                        regions[j].buffer_zones.widths[1] = overlap; // nx+
+                        regions[i].buffer_zones.widths[0] = overlap; // nx-
+                    }
+                    
+                    if r1_end.1 == r2_start.1 {
+                        regions[i].buffer_zones.widths[3] = overlap; // ny+
+                        regions[j].buffer_zones.widths[2] = overlap; // ny-
+                    } else if r2_end.1 == r1_start.1 {
+                        regions[j].buffer_zones.widths[3] = overlap; // ny+
+                        regions[i].buffer_zones.widths[2] = overlap; // ny-
+                    }
+                    
+                    if r1_end.2 == r2_start.2 {
+                        regions[i].buffer_zones.widths[5] = overlap; // nz+
+                        regions[j].buffer_zones.widths[4] = overlap; // nz-
+                    } else if r2_end.2 == r1_start.2 {
+                        regions[j].buffer_zones.widths[5] = overlap; // nz+
+                        regions[i].buffer_zones.widths[4] = overlap; // nz-
+                    }
+                }
+            }
+        }
     }
 }

@@ -15,8 +15,8 @@ use std::f64::consts::PI;
 use log::{info, warn};
 */
 
-/// Placeholder validation results
-#[derive(Debug)]
+/// Validation results for numerical accuracy tests
+#[derive(Debug, Clone)]
 pub struct ValidationResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
@@ -25,43 +25,115 @@ pub struct ValidationResults {
     pub convergence_tests: ConvergenceResults,
 }
 
-#[derive(Debug)]
+impl Default for ValidationResults {
+    fn default() -> Self {
+        Self {
+            dispersion_tests: DispersionResults::default(),
+            stability_tests: StabilityResults::default(),
+            boundary_tests: BoundaryResults::default(),
+            conservation_tests: ConservationResults::default(),
+            convergence_tests: ConvergenceResults::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DispersionResults {
     pub pstd_phase_error: f64,
     pub fdtd_phase_error: f64,
     pub kuznetsov_phase_error: f64,
-    pub pstd_amplitude_error: f64,
-    pub fdtd_amplitude_error: f64,
-    pub kuznetsov_amplitude_error: f64,
+    pub numerical_wavelength: f64,
+    pub group_velocity_error: f64,
 }
 
-#[derive(Debug)]
+impl Default for DispersionResults {
+    fn default() -> Self {
+        Self {
+            pstd_phase_error: 0.0,
+            fdtd_phase_error: 0.0,
+            kuznetsov_phase_error: 0.0,
+            numerical_wavelength: 0.0,
+            group_velocity_error: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct StabilityResults {
     pub pstd_stable: bool,
     pub fdtd_stable: bool,
     pub kuznetsov_stable: bool,
-    pub max_growth_rate: f64,
+    pub max_cfl_number: f64,
+    pub growth_rate: f64,
 }
 
-#[derive(Debug)]
+impl Default for StabilityResults {
+    fn default() -> Self {
+        Self {
+            pstd_stable: true,
+            fdtd_stable: true,
+            kuznetsov_stable: true,
+            max_cfl_number: 0.0,
+            growth_rate: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct BoundaryResults {
     pub reflection_coefficient: f64,
-    pub absorption_efficiency: f64,
-    pub spurious_modes: f64,
+    pub absorption_coefficient: f64,
+    pub spurious_reflections: f64,
+    pub boundary_stability: bool,
 }
 
-#[derive(Debug)]
+impl Default for BoundaryResults {
+    fn default() -> Self {
+        Self {
+            reflection_coefficient: 0.0,
+            absorption_coefficient: 1.0,
+            spurious_reflections: 0.0,
+            boundary_stability: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ConservationResults {
-    pub energy_drift: f64,
-    pub mass_drift: f64,
-    pub momentum_drift: f64,
+    pub energy_conservation_error: f64,
+    pub mass_conservation_error: f64,
+    pub momentum_conservation_error: f64,
+    pub conservation_stable: bool,
 }
 
-#[derive(Debug)]
+impl Default for ConservationResults {
+    fn default() -> Self {
+        Self {
+            energy_conservation_error: 0.0,
+            mass_conservation_error: 0.0,
+            momentum_conservation_error: 0.0,
+            conservation_stable: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ConvergenceResults {
-    pub pstd_convergence_rate: f64,
-    pub fdtd_convergence_rate: f64,
-    pub kuznetsov_convergence_rate: f64,
+    pub spatial_order: f64,
+    pub temporal_order: f64,
+    pub convergence_rate: f64,
+    pub error_norm: f64,
+}
+
+impl Default for ConvergenceResults {
+    fn default() -> Self {
+        Self {
+            spatial_order: 2.0,
+            temporal_order: 2.0,
+            convergence_rate: 0.0,
+            error_norm: 0.0,
+        }
+    }
 }
 
 /// Simplified numerical accuracy validator (stub implementation)
@@ -80,30 +152,33 @@ impl NumericalValidator {
                 pstd_phase_error: 0.001,
                 fdtd_phase_error: 0.005,
                 kuznetsov_phase_error: 0.002,
-                pstd_amplitude_error: 0.0001,
-                fdtd_amplitude_error: 0.0005,
-                kuznetsov_amplitude_error: 0.0002,
+                numerical_wavelength: 0.0,
+                group_velocity_error: 0.0,
             },
             stability_tests: StabilityResults {
                 pstd_stable: true,
                 fdtd_stable: true,
                 kuznetsov_stable: true,
-                max_growth_rate: 0.001,
+                max_cfl_number: 0.0,
+                growth_rate: 0.0,
             },
             boundary_tests: BoundaryResults {
-                reflection_coefficient: 1e-6,
-                absorption_efficiency: 0.999,
-                spurious_modes: 1e-8,
+                reflection_coefficient: 0.0,
+                absorption_coefficient: 1.0,
+                spurious_reflections: 0.0,
+                boundary_stability: true,
             },
             conservation_tests: ConservationResults {
-                energy_drift: 1e-12,
-                mass_drift: 1e-14,
-                momentum_drift: 1e-13,
+                energy_conservation_error: 0.0,
+                mass_conservation_error: 0.0,
+                momentum_conservation_error: 0.0,
+                conservation_stable: true,
             },
             convergence_tests: ConvergenceResults {
-                pstd_convergence_rate: 4.0,
-                fdtd_convergence_rate: 2.0,
-                kuznetsov_convergence_rate: 3.0,
+                spatial_order: 2.0,
+                temporal_order: 2.0,
+                convergence_rate: 0.0,
+                error_norm: 0.0,
             },
         })
     }
@@ -114,15 +189,14 @@ pub fn report_validation_results(results: &ValidationResults) {
     println!("=== Numerical Accuracy Validation Report ===");
     
     println!("Dispersion Analysis:");
-    println!("  PSTD   - Phase Error: {:.2e}, Amplitude Error: {:.2e}", 
+    println!("  PSTD   - Phase Error: {:.2e}, Wavelength: {:.2e}", 
           results.dispersion_tests.pstd_phase_error,
-          results.dispersion_tests.pstd_amplitude_error);
-    println!("  FDTD   - Phase Error: {:.2e}, Amplitude Error: {:.2e}", 
+          results.dispersion_tests.numerical_wavelength);
+    println!("  FDTD   - Phase Error: {:.2e}, Group Velocity Error: {:.2e}", 
           results.dispersion_tests.fdtd_phase_error,
-          results.dispersion_tests.fdtd_amplitude_error);
-    println!("  Kuznetsov - Phase Error: {:.2e}, Amplitude Error: {:.2e}", 
-          results.dispersion_tests.kuznetsov_phase_error,
-          results.dispersion_tests.kuznetsov_amplitude_error);
+          results.dispersion_tests.group_velocity_error);
+    println!("  Kuznetsov - Phase Error: {:.2e}", 
+          results.dispersion_tests.kuznetsov_phase_error);
     
     println!("✓ All validation tests PASSED (simplified validation)");
 }

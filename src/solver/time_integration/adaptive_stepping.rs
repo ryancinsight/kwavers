@@ -3,8 +3,7 @@
 //! This module provides adaptive time step control based on
 //! error estimation and tolerance requirements.
 
-use crate::KwaversResult;
-use super::traits::{TimeStepper, AdaptiveTimeStepperTrait, ErrorEstimatorTrait};
+use super::traits::{TimeStepper, ErrorEstimatorTrait};
 use ndarray::{Array3, Zip};
 
 /// Adaptive time stepper wrapper
@@ -56,9 +55,9 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         field: &Array3<f64>,
         rhs_fn: F,
         grid: &crate::grid::Grid,
-    ) -> KwaversResult<(Array3<f64>, f64)>
+    ) -> crate::KwaversResult<(Array3<f64>, f64)>
     where
-        F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>> + Clone,
+        F: Fn(&Array3<f64>) -> crate::KwaversResult<Array3<f64>> + Clone,
     {
         let mut dt = self.current_dt;
         let mut attempts = 0;

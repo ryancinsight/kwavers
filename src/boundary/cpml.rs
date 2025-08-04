@@ -607,34 +607,31 @@ impl Boundary for CPMLBoundary {
         let thickness = self.config.thickness;
         
         // Apply PML absorption in each direction
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    let mut absorption = 1.0;
-                    
-                    // X-direction absorption
-                    if i < thickness || i >= self.nx - thickness {
-                        // Use dt = dx/c for CFL=1 as approximation
-                        let dt = grid.dx / 1500.0; // Assume c=1500 m/s
-                        absorption *= (-self.sigma_x[i] * dt).exp();
-                    }
-                    
-                    // Y-direction absorption
-                    if j < thickness || j >= self.ny - thickness {
-                        let dt = grid.dy / 1500.0;
-                        absorption *= (-self.sigma_y[j] * dt).exp();
-                    }
-                    
-                    // Z-direction absorption
-                    if k < thickness || k >= self.nz - thickness {
-                        let dt = grid.dz / 1500.0;
-                        absorption *= (-self.sigma_z[k] * dt).exp();
-                    }
-                    
-                    field[[i, j, k]] *= absorption;
+        let dt_x = grid.dx / 1500.0; // Assume c=1500 m/s
+        let dt_y = grid.dy / 1500.0;
+        let dt_z = grid.dz / 1500.0;
+        
+        field.indexed_iter_mut()
+            .for_each(|((i, j, k), val)| {
+                let mut absorption = 1.0;
+                
+                // X-direction absorption
+                if i < thickness || i >= self.nx - thickness {
+                    absorption *= (-self.sigma_x[i] * dt_x).exp();
                 }
-            }
-        }
+                
+                // Y-direction absorption
+                if j < thickness || j >= self.ny - thickness {
+                    absorption *= (-self.sigma_y[j] * dt_y).exp();
+                }
+                
+                // Z-direction absorption
+                if k < thickness || k >= self.nz - thickness {
+                    absorption *= (-self.sigma_z[k] * dt_z).exp();
+                }
+                
+                *val *= absorption;
+            });
         
         Ok(())
     }

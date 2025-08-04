@@ -22,7 +22,7 @@ use crate::recorder::Recorder;
 use crate::source::Source;
 use crate::time::Time;
 use crate::utils::{fft_3d, ifft_3d, array_utils}; // Removed warm_fft_cache, report_fft_statistics
-use log::{info, trace}; // Removed debug, warn (used as log::debug, log::warn)
+use log::{info, trace, debug}; // Removed debug, warn (used as log::debug, log::warn)
 use ndarray::{Array3, Array4, Axis};
 // Removed num_complex::Complex
 use std::time::{Duration, Instant};
@@ -453,7 +453,7 @@ impl Solver {
         unstable_found
     }
 
-    fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
+    pub fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
         // Performance tracking
         let step_start = Instant::now();
         let mut preprocessing_time = 0.0;
@@ -487,10 +487,48 @@ impl Solver {
                             info!("AMR adaptation at step {}: refined {} cells, coarsened {} cells, max error: {:.2e}",
                                   step, result.cells_refined, result.cells_coarsened, result.max_error);
                             
-                            // TODO: Interpolate all fields to new mesh structure
-                            // This would require updating the grid and fields based on AMR
-                            // For now, we just track the adaptation
+                            // Adapt all fields to new mesh structure using local operations
+                            let octree = amr_manager.octree();
+                            use self::amr::local_operations::adapt_all_fields;
+                            
+                            match adapt_all_fields(&self.fields.fields, octree, amr_manager.interpolation_scheme()) {
+                                    Ok(new_fields) => {
+                                        // Check if dimensions changed
+                                        let old_shape = self.fields.fields.shape();
+                                        let new_shape = new_fields.shape();
+                                        
+                                        if old_shape != new_shape {
+                                            info!("AMR: Grid dimensions changed from {:?} to {:?}", 
+                                                  &old_shape[1..], &new_shape[1..]);
+                                            
+                                            // Update grid dimensions if needed
+                                            if new_shape[1] != self.grid.nx || 
+                                               new_shape[2] != self.grid.ny || 
+                                               new_shape[3] != self.grid.nz {
+                                                // Note: This would require updating the grid structure
+                                                // For now, we log a warning
+                                                warn!("Grid dimensions need to be updated to match AMR fields");
+                                            }
+                                        }
+                                        
+                                        // Replace fields with adapted version
+                                        self.fields.fields = new_fields;
+                                        
+                                        // Update previous pressure array to match new dimensions
+                                        if self.prev_pressure.shape() != self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).shape() {
+                                            self.prev_pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+                                        }
+                                        
+                                        debug!("Completed AMR field adaptation");
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to adapt fields for AMR: {}", e);
+                                    }
+                                }
                         }
+                        
+                        // Update last adapt step
+                        self.amr_last_adapt_step = step;
                         
                         // Report memory savings
                         let stats = amr_manager.memory_stats();
@@ -504,7 +542,6 @@ impl Solver {
                     }
                 }
                 
-                self.amr_last_adapt_step = step;
                 amr_time = amr_start.elapsed().as_secs_f64();
             }
         }

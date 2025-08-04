@@ -17,11 +17,12 @@
 //! - **Clean**: Clear abstractions for refinement criteria
 
 pub mod octree;
-pub mod wavelet;
 pub mod interpolation;
-pub mod error_estimator;
-pub mod refinement;
+pub mod local_operations;
+pub mod local_operations_simple;
+pub mod wavelet;
 pub mod enhanced;
+pub mod error_estimator;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -184,6 +185,16 @@ impl AMRManager {
     /// Set load balancing strategy
     pub fn set_load_balancing(&mut self, strategy: enhanced::LoadBalancingStrategy) {
         self.load_balancer = Some(enhanced::LoadBalancer::new(strategy));
+    }
+    
+    /// Get reference to the octree
+    pub fn octree(&self) -> &octree::Octree {
+        &self.octree
+    }
+    
+    /// Get the interpolation scheme
+    pub fn interpolation_scheme(&self) -> InterpolationScheme {
+        self.config.interpolation_scheme
     }
     
     /// Adapt the mesh based on current solution
@@ -511,10 +522,10 @@ pub struct MemoryStats {
 }
 
 // Re-export key types
-pub use octree::Octree;
-pub use wavelet::WaveletTransform;
-pub use interpolation::{interpolate_to_refined, restrict_to_coarse};
-pub use error_estimator::ErrorEstimator;
+pub use self::error_estimator::{ErrorEstimator};
+pub use self::octree::{Octree, OctreeNode};
+pub use self::interpolation::{interpolate_to_refined, restrict_to_coarse};
+pub use self::local_operations::{adapt_field_to_octree, adapt_all_fields, LocalAMRResult};
 
 #[cfg(test)]
 mod tests;

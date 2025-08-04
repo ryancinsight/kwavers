@@ -38,6 +38,7 @@ pub mod source;
 pub mod time;
 pub mod utils;
 pub mod validation;
+pub mod benchmarks;
 
 // Phase 11: Advanced Visualization & Real-Time Interaction
 #[cfg(all(feature = "gpu", any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support")))]

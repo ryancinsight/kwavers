@@ -212,16 +212,24 @@ impl ROSConcentrations {
                 // Use explicit scheme for small stability factors
                 let mut new_conc = conc.clone();
                 
-                // Simple 3D diffusion (central differences)
+                // Use optimized 3D diffusion computation
+                let dx2_inv = 1.0 / (dx * dx);
+                let dy2_inv = 1.0 / (dy * dy);
+                let dz2_inv = 1.0 / (dz * dz);
+                
+                // Process interior points
                 for i in 1..self.shape.0-1 {
                     for j in 1..self.shape.1-1 {
                         for k in 1..self.shape.2-1 {
-                            let laplacian = 
-                                (conc[[i+1, j, k]] - 2.0 * conc[[i, j, k]] + conc[[i-1, j, k]]) / (dx * dx) +
-                                (conc[[i, j+1, k]] - 2.0 * conc[[i, j, k]] + conc[[i, j-1, k]]) / (dy * dy) +
-                                (conc[[i, j, k+1]] - 2.0 * conc[[i, j, k]] + conc[[i, j, k-1]]) / (dz * dz);
+                            let center_val = conc[[i, j, k]];
                             
-                            new_conc[[i, j, k]] = conc[[i, j, k]] + d * laplacian * dt;
+                            // Compute Laplacian using neighboring values
+                            let laplacian = 
+                                (conc[[i+1, j, k]] - 2.0 * center_val + conc[[i-1, j, k]]) * dx2_inv +
+                                (conc[[i, j+1, k]] - 2.0 * center_val + conc[[i, j-1, k]]) * dy2_inv +
+                                (conc[[i, j, k+1]] - 2.0 * center_val + conc[[i, j, k-1]]) * dz2_inv;
+                            
+                            new_conc[[i, j, k]] = center_val + d * laplacian * dt;
                         }
                     }
                 }

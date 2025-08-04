@@ -1,20 +1,15 @@
-//! Enhanced Adaptive Mesh Refinement Module
-//!
-//! This module provides advanced AMR capabilities with:
-//! - Dynamic refinement criteria based on physics
+//! Enhanced AMR features for advanced applications
+//! 
+//! Provides:
+//! - Feature-based refinement criteria
 //! - Load balancing for parallel execution
-//! - Multi-criteria refinement (gradient, curvature, feature-based)
-//! - Predictive refinement based on wave propagation
-//! - Memory-aware refinement strategies
-//!
-//! # Design Principles
-//! - **SOLID**: Each refinement criterion is a separate component
-//! - **CUPID**: Clear interfaces for criteria and load balancing
-//! - **DRY**: Reusable refinement patterns
-//! - **KISS**: Simple API despite complex algorithms
+//! - Advanced interpolation schemes
+//! - Refinement prediction
 
-use ndarray::Array3;
-use rayon::prelude::*;
+use crate::error::KwaversResult;
+use crate::grid::Grid;
+use ndarray::{Array3, ArrayView3};
+use super::{AMRConfig, InterpolationScheme};
 use std::collections::HashMap;
 
 /// Dynamic refinement criterion trait
