@@ -329,7 +329,7 @@ impl TimeReversalReconstructor {
                 let corrected_val = val * geometric_correction * absorption_correction;
                 
                 // Prevent excessive amplification
-                let max_amplification = 100.0;
+                let max_amplification = self.config.max_amplification; // Assumes max_amplification is added to TimeReversalConfig
                 if corrected_val.abs() > val.abs() * max_amplification {
                     val * max_amplification * corrected_val.signum()
                 } else {
