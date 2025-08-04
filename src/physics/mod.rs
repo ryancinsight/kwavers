@@ -14,6 +14,9 @@ pub mod traits;
 #[cfg(test)]
 pub mod analytical_tests;
 
+#[cfg(test)]
+pub mod validation_tests;
+
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleState, BubbleParameters};
 pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, ThermalDiffusionComponent, KuznetsovWaveComponent};

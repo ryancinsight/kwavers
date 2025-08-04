@@ -3,8 +3,8 @@
 //! This module provides efficient, generic stencil operations that compile
 //! down to optimal machine code with no runtime overhead.
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip, s};
-use std::ops::{Add, Mul};
+use ndarray::{ArrayView3, ArrayViewMut3};
+use std::ops::Add;
 
 /// Trait for types that can be used in stencil operations
 pub trait StencilValue: Copy + Add<Output = Self> + Default {
@@ -126,8 +126,8 @@ fn gradient_3d_order2<T: StencilValue>(
 fn gradient_3d_order4<T: StencilValue>(
     input: ArrayView3<T>,
     mut grad_x: ArrayViewMut3<T>,
-    mut grad_y: ArrayViewMut3<T>,
-    mut grad_z: ArrayViewMut3<T>,
+    grad_y: ArrayViewMut3<T>,
+    grad_z: ArrayViewMut3<T>,
     dx_inv: f64,
     dy_inv: f64,
     dz_inv: f64,

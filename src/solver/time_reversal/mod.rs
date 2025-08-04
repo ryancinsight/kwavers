@@ -22,7 +22,7 @@ use crate::{
 use ndarray::Array3;
 use rayon::prelude::*;
 use std::collections::HashMap;
-use log::{info, debug, warn};
+use log::{info, debug};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
 use std::sync::Arc;
@@ -350,7 +350,7 @@ impl TimeReversalReconstructor {
         sensor_data: &SensorData,
     ) -> KwaversResult<()> {
         use crate::source::{Source, TimeVaryingSource};
-        use std::sync::Arc;
+        
         
         // Clear existing sources
         solver.clear_sources();
