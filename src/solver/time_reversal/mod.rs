@@ -20,7 +20,6 @@ use crate::{
     medium::Medium,
 };
 use ndarray::Array3;
-use rayon::prelude::*;
 use std::collections::HashMap;
 use log::{info, debug};
 use rustfft::{FftPlanner, num_complex::Complex};
@@ -38,6 +37,9 @@ pub struct TimeReversalConfig {
     
     /// Whether to use amplitude correction
     pub amplitude_correction: bool,
+    
+    /// Maximum amplification factor for amplitude correction
+    pub max_amplification: f64,
     
     /// Time window for reconstruction (seconds)
     pub time_window: Option<(f64, f64)>,
@@ -62,6 +64,7 @@ impl Default for TimeReversalConfig {
             apply_frequency_filter: true,
             frequency_range: None,
             amplitude_correction: true,
+            max_amplification: 10.0,  // Reasonable default to prevent instability
             time_window: None,
             spatial_windowing: false,
             iterations: 1,
@@ -133,7 +136,7 @@ impl TimeReversalReconstructor {
         self.validate_inputs(sensor_data, grid)?;
         
         // Prepare time-reversed signals
-        let reversed_signals = self.prepare_reversed_signals(sensor_data, grid, solver.time.dt, &solver.medium)?;
+        let reversed_signals = self.prepare_reversed_signals(sensor_data, grid, solver.time.dt, &solver.medium, frequency)?;
         
         // Initialize reconstruction field
         let mut reconstruction = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
@@ -203,7 +206,7 @@ impl TimeReversalReconstructor {
     }
     
     /// Prepare time-reversed signals
-    fn prepare_reversed_signals(&mut self, sensor_data: &SensorData, grid: &Grid, dt: f64, medium: &Arc<dyn Medium>) -> KwaversResult<HashMap<usize, Vec<f64>>> {
+    fn prepare_reversed_signals(&mut self, sensor_data: &SensorData, grid: &Grid, dt: f64, medium: &Arc<dyn Medium>, frequency: f64) -> KwaversResult<HashMap<usize, Vec<f64>>> {
         let mut reversed_signals = HashMap::new();
         
         for (sensor_id, data) in sensor_data.data_iter() {
@@ -217,7 +220,7 @@ impl TimeReversalReconstructor {
             
             // Apply amplitude correction if configured
             if self.config.amplitude_correction {
-                reversed = self.apply_amplitude_correction(reversed, dt, medium, grid)?;
+                reversed = self.apply_amplitude_correction(reversed, dt, medium, grid, frequency)?;
             }
             
             reversed_signals.insert(*sensor_id, reversed);
@@ -290,7 +293,7 @@ impl TimeReversalReconstructor {
     }
     
     /// Apply amplitude correction
-    fn apply_amplitude_correction(&self, signal: Vec<f64>, dt: f64, medium: &Arc<dyn Medium>, grid: &Grid) -> KwaversResult<Vec<f64>> {
+    fn apply_amplitude_correction(&self, signal: Vec<f64>, dt: f64, medium: &Arc<dyn Medium>, grid: &Grid, frequency: f64) -> KwaversResult<Vec<f64>> {
         // Apply geometric spreading correction and absorption compensation
         let n = signal.len();
         

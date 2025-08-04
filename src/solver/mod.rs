@@ -488,10 +488,10 @@ impl Solver {
                                   step, result.cells_refined, result.cells_coarsened, result.max_error);
                             
                             // Adapt all fields to new mesh structure using local operations
-                            if let Some(ref octree) = amr_manager.octree() {
-                                use self::amr::local_operations::adapt_all_fields;
-                                
-                                match adapt_all_fields(&self.fields.fields, octree, amr_manager.interpolation_scheme()) {
+                            let octree = amr_manager.octree();
+                            use self::amr::local_operations::adapt_all_fields;
+                            
+                            match adapt_all_fields(&self.fields.fields, octree, amr_manager.interpolation_scheme()) {
                                     Ok(new_fields) => {
                                         // Check if dimensions changed
                                         let old_shape = self.fields.fields.shape();
@@ -525,7 +525,6 @@ impl Solver {
                                         warn!("Failed to adapt fields for AMR: {}", e);
                                     }
                                 }
-                            }
                         }
                         
                         // Update last adapt step

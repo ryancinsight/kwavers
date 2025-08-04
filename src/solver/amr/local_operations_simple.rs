@@ -3,10 +3,9 @@
 //! This module shows how AMR field operations should work locally
 //! on specific cells rather than globally on the entire field.
 
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::{KwaversResult, KwaversError, ConfigError};
 use ndarray::{Array3, Array4, Axis};
 use super::InterpolationScheme;
-use std::collections::HashMap;
 
 /// Information about a refined/coarsened region
 #[derive(Debug, Clone)]
@@ -96,9 +95,11 @@ pub fn adapt_fields_locally(
                     cells_coarsened += region.new_size.0 * region.new_size.1 * region.new_size.2;
                 }
                 _ => {
-                    return Err(KwaversError::Configuration(
-                        format!("Unsupported refinement level change: {}", region.level_change)
-                    ));
+                    return Err(KwaversError::Config(ConfigError::InvalidValue {
+                        parameter: "refinement_level_change".to_string(),
+                        value: region.level_change.to_string(),
+                        constraint: format!("Unsupported refinement level change: {}", region.level_change),
+                    }));
                 }
             }
         }

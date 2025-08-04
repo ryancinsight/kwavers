@@ -10,18 +10,22 @@ use crate::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Node in the octree structure
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OctreeNode {
-    /// Cell boundaries (min_x, min_y, min_z, max_x, max_y, max_z)
-    bounds: [f64; 6],
+    /// Node index in the octree
+    index: usize,
+    /// Refinement level (0 = root, positive = refined)
+    level: i32,
+    /// Spatial bounds (i, j, k) start
+    bounds_min: (usize, usize, usize),
+    /// Spatial bounds (i, j, k) end (exclusive)
+    bounds_max: (usize, usize, usize),
     /// Parent node index (None for root)
     parent: Option<usize>,
     /// Child node indices (None if leaf)
     children: Option<[usize; 8]>,
     /// Whether this node is active (leaf)
     is_active: bool,
-    /// Refinement level (0 = root, positive = refined, negative = coarsened)
-    level: i32,
 }
 
 impl OctreeNode {
@@ -39,6 +43,20 @@ impl OctreeNode {
     pub fn children(&self) -> Vec<Option<&OctreeNode>> {
         // This is a placeholder - in real implementation would need access to octree
         vec![]
+    }
+}
+
+impl Default for OctreeNode {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            level: 0,
+            bounds_min: (0, 0, 0),
+            bounds_max: (0, 0, 0),
+            parent: None,
+            children: None,
+            is_active: true,
+        }
     }
 }
 
@@ -83,16 +101,17 @@ impl Octree {
     /// Create the root node covering entire domain
     fn create_root(&mut self) {
         let root = OctreeNode {
-            bounds: [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            index: 0,
+            level: 0,
+            bounds_min: (0, 0, 0),
+            bounds_max: self.base_dims,
             parent: None,
             children: None,
             is_active: true,
-            level: 0,
         };
         
         self.nodes.push(root);
         self.coord_to_node.insert((0, 0, 0), 0);
-        self.next_index = 1;
     }
     
     /// Check if cell coordinates are valid
@@ -156,7 +175,7 @@ impl Octree {
         };
         
         // Check if already refined or at max level
-        if self.nodes[node_idx].children.is_some() || self.nodes[node_idx].level >= self.max_level {
+        if self.nodes[node_idx].children.is_some() || self.nodes[node_idx].level >= self.max_level as i32 {
             return Ok(false);
         }
         

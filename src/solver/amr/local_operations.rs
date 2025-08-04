@@ -3,8 +3,8 @@
 //! This module provides the correct implementation of AMR field operations
 //! that work locally on specific cells rather than globally on the entire field.
 
-use crate::error::{KwaversResult, KwaversError};
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, s, Axis};
+use crate::error::{KwaversResult, KwaversError, ConfigError};
+use ndarray::{Array3, Array4, Axis};
 use super::{InterpolationScheme, octree::Octree};
 use std::collections::HashMap;
 
@@ -321,16 +321,11 @@ fn interpolate_region(
         }
         _ => {
             // For other schemes, fall back to linear for now
-            return interpolate_region(
-                old_field,
-                new_field,
-                origin,
-                size,
-                refinement_level,
-                index_map,
-                cells_refined,
-                InterpolationScheme::Linear,
-            );
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "refinement_level_change".to_string(),
+                value: "region.level_change".to_string(),
+                constraint: "Unsupported refinement level change".to_string(),
+            }));
         }
     }
     
@@ -466,9 +461,11 @@ pub fn adapt_all_fields(
     
     // All fields should have the same dimensions after adaptation
     if results.is_empty() {
-        return Err(KwaversError::Configuration(
-            "No fields to adapt".to_string()
-        ));
+        return Err(KwaversError::Config(ConfigError::InvalidValue {
+            parameter: "no_fields_to_adapt".to_string(),
+            value: "0".to_string(),
+            constraint: "No fields to adapt".to_string(),
+        }));
     }
     
     let new_dims = results[0].new_field.dim();

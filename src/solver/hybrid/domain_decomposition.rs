@@ -678,11 +678,19 @@ impl DomainDecomposer {
             let min_k = region_points.iter().map(|(_, _, k)| *k).min().unwrap();
             let max_k = region_points.iter().map(|(_, _, k)| *k).max().unwrap();
             
+            // Compute quality score based on region size and method type
+            let region_size = region_points.len();
+            let quality_score = match target_method {
+                DomainType::Spectral => 0.9,    // High quality for spectral
+                DomainType::FiniteDifference => 0.8, // Good quality for FDTD
+                DomainType::Hybrid => 0.75,     // Medium quality for hybrid
+            } * (1.0 - (region_size as f64 / (grid.nx * grid.ny * grid.nz) as f64).min(0.5));
+            
             Ok(Some(DomainRegion {
                 start: (min_i, min_j, min_k),
                 end: (max_i + 1, max_j + 1, max_k + 1),
                 domain_type: target_method,
-                quality_score: 0.8, // TODO: Compute actual quality
+                quality_score,
                 buffer_zones: BufferZones::default(),
             }))
         } else {
@@ -765,13 +773,16 @@ impl DomainDecomposer {
             }
         }
         
-        // Ensure we have at least one region
+        // If no regions found, create a single spectral region
         if regions.is_empty() {
+            // Compute average smoothness as quality score
+            let quality_score = smoothness.mean().unwrap_or(0.5);
+            
             regions.push(DomainRegion {
                 start: (0, 0, 0),
                 end: (nx-1, ny-1, nz-1),
                 domain_type: DomainType::Spectral,
-                quality_score: 0.8, // TODO: Compute actual quality
+                quality_score,
                 buffer_zones: BufferZones::default(),
             });
         }
@@ -884,11 +895,17 @@ impl DomainDecomposer {
             }
         }
         
+        // Compute average quality of the clustered region
+        let total_quality: f64 = region_indices.iter()
+            .map(|&idx| gradient_mag[[idx.0, idx.1, idx.2]])
+            .sum();
+        let quality_score = total_quality / region_indices.len() as f64;
+        
         Ok(DomainRegion {
             start: bounds.0,
             end: bounds.1,
             domain_type: method,
-            quality_score: 0.8, // TODO: Compute actual quality
+            quality_score,
             buffer_zones: BufferZones::default(),
         })
     }

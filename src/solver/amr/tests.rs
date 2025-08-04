@@ -13,6 +13,7 @@ mod tests {
     use crate::grid::Grid;
     use ndarray::Array3;
     use std::time::Instant;
+    use super::super::wavelet::WaveletTransform;
     
     /// Test basic AMR manager creation and configuration
     #[test]
@@ -162,7 +163,7 @@ mod tests {
         assert_eq!(octree.total_cells(), 17); // Nodes not removed, just marked
         
         // Test statistics
-        let stats = octree.get_stats();
+        let stats = octree.stats();
         assert_eq!(stats.active_nodes, 15); // 7 from first refinement + 8 leaves
         assert_eq!(stats.max_level_used, 1);
     }
