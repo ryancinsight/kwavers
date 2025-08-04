@@ -188,8 +188,8 @@ impl AMRManager {
     }
     
     /// Get reference to the octree
-    pub fn octree(&self) -> Option<&octree::Octree> {
-        Some(&self.octree)
+    pub fn octree(&self) -> &octree::Octree {
+        &self.octree
     }
     
     /// Get the interpolation scheme
