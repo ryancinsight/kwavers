@@ -303,13 +303,7 @@ impl PerformanceOptimizer {
                     constraint: "Expected GpuKernel".to_string(),
                 }))?;
             
-            // Clone the kernel to avoid borrow checker issues
-            let kernel_data = (*kernel).clone();
-            
-            // Collect parameters from this kernel
-            for param in &kernel_data.parameters {
-                all_parameters.push(param.clone());
-            }
+            let kernel_data = *kernel;
             
             // Append kernel code
             fused_code.push_str(&kernel_data.code);
@@ -320,6 +314,11 @@ impl PerformanceOptimizer {
             fused_body.push_str(&format!("    {{\n"));
             fused_body.push_str(&kernel_data.body);
             fused_body.push_str(&format!("    }}\n\n"));
+            
+            // Collect parameters - do this after using other fields to avoid partial moves
+            for param in kernel_data.parameters.iter() {
+                all_parameters.push(param.clone());
+            }
             
             gpu_kernels.push(kernel_data);
         }

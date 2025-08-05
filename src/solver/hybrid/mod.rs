@@ -1091,8 +1091,28 @@ impl PhysicsPlugin for HybridSolver {
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<()> {
-        // Initialize is already handled by the solver's own initialization
-        // This is a no-op for compatibility
+        // Validate that the solver is properly configured for the given grid
+        if self.grid.nx != grid.nx || self.grid.ny != grid.ny || self.grid.nz != grid.nz {
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "grid".to_string(),
+                value: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
+                constraint: format!("Grid dimensions must match solver configuration: ({}, {}, {})", 
+                    self.grid.nx, self.grid.ny, self.grid.nz),
+            }));
+        }
+        
+        // The HybridSolver is already initialized in its constructor with the grid.
+        // This method serves as a validation checkpoint and state transition.
+        self.state = SolverState::Initialized;
+        
+        // Log initialization for debugging
+        log::debug!(
+            "HybridSolver initialized for grid {}x{}x{} with {} PSTD and {} FDTD domains",
+            grid.nx, grid.ny, grid.nz,
+            self.pstd_solvers.len(),
+            self.fdtd_solvers.len()
+        );
+        
         Ok(())
     }
     

@@ -480,6 +480,25 @@ pub fn allocate_wgpu_memory(_size: usize) -> KwaversResult<usize> {
     }))
 }
 
+/// Host to device memory transfer (bytes)
+pub fn host_to_device_bytes(_host_data: &[u8], _device_buffer: usize) -> KwaversResult<()> {
+    #[cfg(feature = "wgpu")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::HostToDevice,
+            size_bytes: _host_data.len(),
+            reason: "WebGPU memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "wgpu"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU support not compiled".to_string(),
+        }))
+    }
+}
+
 /// Host to device memory transfer
 #[cfg(feature = "wgpu")]
 pub fn host_to_device_wgpu(_host_data: &[f64], _device_buffer: usize) -> KwaversResult<()> {
@@ -496,6 +515,25 @@ pub fn host_to_device_wgpu(_host_data: &[f64], _device_buffer: usize) -> Kwavers
         backend: "WebGPU".to_string(),
         reason: "WebGPU support not compiled".to_string(),
     }))
+}
+
+/// Device to host memory transfer (bytes)
+pub fn device_to_host_bytes(_device_buffer: usize, _host_data: &mut [u8]) -> KwaversResult<()> {
+    #[cfg(feature = "wgpu")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::DeviceToHost,
+            size_bytes: _host_data.len(),
+            reason: "WebGPU memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "wgpu"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU support not compiled".to_string(),
+        }))
+    }
 }
 
 /// Device to host memory transfer

@@ -428,6 +428,25 @@ pub fn allocate_cuda_memory(_size: usize) -> KwaversResult<usize> {
     }))
 }
 
+/// Host to device memory transfer (bytes)
+pub fn host_to_device_bytes(_host_data: &[u8], _device_buffer: usize) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::HostToDevice,
+            size_bytes: _host_data.len(),
+            reason: "CUDA memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
+}
+
 /// Host to device memory transfer
 #[cfg(feature = "cudarc")]
 pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> KwaversResult<()> {
@@ -444,6 +463,25 @@ pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> Kwavers
         backend: "CUDA".to_string(),
         reason: "CUDA support not compiled".to_string(),
     }))
+}
+
+/// Device to host memory transfer (bytes)
+pub fn device_to_host_bytes(_device_buffer: usize, _host_data: &mut [u8]) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::DeviceToHost,
+            size_bytes: _host_data.len(),
+            reason: "CUDA memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
 }
 
 /// Device to host memory transfer

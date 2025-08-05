@@ -587,7 +587,8 @@ impl AdvancedGpuMemoryManager {
         }
         
         unsafe {
-            // Reconstruct the Vec to properly deallocate the memory
+            // Reconstruct the Vec<u8> to properly deallocate the memory
+            // Since we allocated Vec<u8>, size is in bytes which matches both length and capacity
             let _ = Vec::from_raw_parts(ptr, size, size);
             // The Vec will be dropped here, properly freeing the memory
         }

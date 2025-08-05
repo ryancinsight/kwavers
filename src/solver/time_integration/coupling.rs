@@ -105,7 +105,10 @@ impl TimeCoupling for AveragingStrategy {
         global_dt: f64,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        // Store initial states - use Arc to avoid cloning large arrays
+        // Store initial states - we need to clone here because the multi-rate
+        // integration requires preserving the initial state while fields are
+        // modified during subcycling. Arc is used to share these cloned states
+        // efficiently across multiple references.
         use std::sync::Arc;
         let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
             .iter()
@@ -173,7 +176,9 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         global_dt: f64,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        // Store initial states - use Arc to avoid redundant cloning
+        // Store initial states - we need to clone here because predictor-corrector
+        // methods require resetting to the initial state for each iteration.
+        // Arc is used to share these cloned states efficiently.
         use std::sync::Arc;
         let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
             .iter()

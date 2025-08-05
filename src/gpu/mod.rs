@@ -211,17 +211,14 @@ impl GpuContext {
             })
         })?;
         
+        // Convert to byte slice safely using bytemuck
+        let byte_slice = bytemuck::cast_slice(data);
+        
         match self.backend {
             #[cfg(feature = "cudarc")]
-            GpuBackend::Cuda => cuda::host_to_device_cuda(
-                unsafe { std::slice::from_raw_parts(data.as_ptr() as *const f64, data.len() * std::mem::size_of::<T>() / std::mem::size_of::<f64>()) },
-                device_ptr as usize
-            ),
+            GpuBackend::Cuda => cuda::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_wgpu(
-                unsafe { std::slice::from_raw_parts(data.as_ptr() as *const f64, data.len() * std::mem::size_of::<T>() / std::mem::size_of::<f64>()) },
-                device_ptr as usize
-            ),
+            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -239,17 +236,14 @@ impl GpuContext {
             })
         })?;
         
+        // Convert to mutable byte slice safely using bytemuck
+        let byte_slice = bytemuck::cast_slice_mut(data);
+        
         match self.backend {
             #[cfg(feature = "cudarc")]
-            GpuBackend::Cuda => cuda::device_to_host_cuda(
-                device_ptr as usize,
-                unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut f64, data.len() * std::mem::size_of::<T>() / std::mem::size_of::<f64>()) }
-            ),
+            GpuBackend::Cuda => cuda::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_wgpu(
-                device_ptr as usize,
-                unsafe { std::slice::from_raw_parts_mut(data.as_mut_ptr() as *mut f64, data.len() * std::mem::size_of::<T>() / std::mem::size_of::<f64>()) }
-            ),
+            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
