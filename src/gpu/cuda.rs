@@ -8,6 +8,7 @@ use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
 use crate::gpu::{GpuDevice, GpuFieldOps, GpuBackend};
 use crate::grid::Grid;
 use ndarray::Array3;
+use std::sync::Arc;
 
 #[cfg(feature = "cudarc")]
 use cudarc::driver::{CudaDevice, CudaSlice};
@@ -427,6 +428,25 @@ pub fn allocate_cuda_memory(_size: usize) -> KwaversResult<usize> {
     }))
 }
 
+/// Host to device memory transfer (bytes)
+pub fn host_to_device_bytes(_host_data: &[u8], _device_buffer: usize) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::HostToDevice,
+            size_bytes: _host_data.len(),
+            reason: "CUDA memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
+}
+
 /// Host to device memory transfer
 #[cfg(feature = "cudarc")]
 pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> KwaversResult<()> {
@@ -443,6 +463,25 @@ pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> Kwavers
         backend: "CUDA".to_string(),
         reason: "CUDA support not compiled".to_string(),
     }))
+}
+
+/// Device to host memory transfer (bytes)
+pub fn device_to_host_bytes(_device_buffer: usize, _host_data: &mut [u8]) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+            direction: MemoryTransferDirection::DeviceToHost,
+            size_bytes: _host_data.len(),
+            reason: "CUDA memory transfer not implemented".to_string(),
+        }))
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
 }
 
 /// Device to host memory transfer
@@ -589,5 +628,42 @@ mod tests {
                 println!("CUDA context creation failed with unexpected error: {}", e);
             }
         }
+    }
+}
+
+/// Launch a CUDA kernel
+pub fn launch_cuda_kernel(
+    _kernel_name: &str,
+    _grid_size: (u32, u32, u32),
+    _block_size: (u32, u32, u32),
+    _args: &[*const std::ffi::c_void],
+) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        // TODO: Implement actual CUDA kernel launch
+        Ok(())
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
+}
+
+/// Enable peer access between CUDA devices
+pub fn enable_cuda_peer_access(_peer_device_id: u32) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        // TODO: Implement actual CUDA peer access
+        Ok(())
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
     }
 }

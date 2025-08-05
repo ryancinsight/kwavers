@@ -12,7 +12,7 @@
 //! - **KISS**: Simple API hiding complex GPU details
 
 use crate::{
-    error::{KwaversResult, KwaversError, GpuError, ConfigError},
+    error::{KwaversResult, KwaversError, GpuError},
     gpu::{GpuContext, GpuBackend, memory::GpuBuffer},
 };
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
@@ -118,10 +118,10 @@ impl GpuFftPlan {
             GpuBackend::OpenCL => BackendFftPlan::OpenCL(Self::create_opencl_plan(dimensions)?),
             #[cfg(feature = "webgpu")]
             GpuBackend::WebGPU => BackendFftPlan::WebGPU(Self::create_webgpu_plan(context, dimensions)?),
-            _ => return Err(GpuError::UnsupportedBackend {
+            _ => return Err(KwaversError::Gpu(GpuError::BackendNotAvailable {
                 backend: format!("{:?}", context.backend()),
-                operation: "FFT".to_string(),
-            }.into()),
+                reason: "FFT not supported for this backend".to_string(),
+            })),
         };
         
         Ok(Self {
@@ -220,6 +220,11 @@ impl GpuFftPlan {
             BackendFftPlan::OpenCL(plan) => self.execute_opencl_fft(context, plan),
             #[cfg(feature = "webgpu")]
             BackendFftPlan::WebGPU(plan) => self.execute_webgpu_fft(context, plan),
+            #[allow(unreachable_patterns)]
+            _ => Err(KwaversError::Gpu(GpuError::BackendNotAvailable {
+                backend: "Unknown".to_string(),
+                reason: "FFT backend not available".to_string(),
+            })),
         }
     }
     

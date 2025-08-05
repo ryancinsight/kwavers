@@ -157,6 +157,7 @@ pub struct InterfaceQualityMetrics {
 }
 
 /// Main coupling interface manager
+#[derive(Clone, Debug)]
 pub struct CouplingInterface {
     /// Configuration
     config: CouplingInterfaceConfig,
@@ -171,6 +172,7 @@ pub struct CouplingInterface {
 }
 
 /// Interpolation scheme manager
+#[derive(Clone, Debug)]
 struct InterpolationManager {
     /// Current interpolation scheme
     current_scheme: InterpolationScheme,
@@ -192,6 +194,7 @@ struct AdaptiveInterpolationCriteria {
 }
 
 /// Conservation law enforcer
+#[derive(Clone, Debug)]
 struct ConservationEnforcer {
     /// Enable mass conservation
     enforce_mass: bool,
@@ -204,6 +207,7 @@ struct ConservationEnforcer {
 }
 
 /// Interface quality monitor
+#[derive(Clone, Debug)]
 struct QualityMonitor {
     /// Historical quality metrics
     quality_history: Vec<InterfaceQualityMetrics>,

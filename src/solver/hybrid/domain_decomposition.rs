@@ -106,6 +106,7 @@ impl Default for BufferZones {
 }
 
 /// Domain decomposer for hybrid solver
+#[derive(Clone, Debug)]
 pub struct DomainDecomposer {
     /// Decomposition strategy
     strategy: DecompositionStrategy,

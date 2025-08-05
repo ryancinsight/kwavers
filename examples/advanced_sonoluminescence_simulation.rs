@@ -21,6 +21,7 @@ use kwavers::{
 use std::sync::Arc;
 use std::time::Instant;
 use ndarray::Array4;
+use ndarray::Array3;
 
 fn main() -> KwaversResult<()> {
     println!("=== Advanced Sonoluminescence Simulation ===\n");
@@ -87,19 +88,26 @@ fn main() -> KwaversResult<()> {
     let k = 2.0 * std::f64::consts::PI / wavelength;
     let amplitude = 1.4e5; // 1.4 atm driving pressure
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k_idx in 0..grid.nz {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k_idx as f64 * grid.dz;
-                
-                // Standing wave pattern
-                fields[[0, i, j, k_idx]] = amplitude * 
-                    (k * x).sin() * (k * y).sin() * (k * z).sin();
-            }
-        }
-    }
+    // Initialize pressure field with a Gaussian distribution
+    let sigma = 0.02; // Standard deviation for Gaussian
+    let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
+    
+    // Use iterator combinators instead of nested loops
+    let pressure_values: Vec<f64> = (0..grid.nx)
+        .flat_map(|i| (0..grid.ny)
+            .flat_map(move |j| (0..grid.nz)
+                .map(move |k| {
+                    let x = i as f64 * grid.dx - center.0 as f64 * grid.dx;
+                    let y = j as f64 * grid.dy - center.1 as f64 * grid.dy;
+                    let z = k as f64 * grid.dz - center.2 as f64 * grid.dz;
+                    let r = (x * x + y * y + z * z).sqrt();
+                    1e6 * (-r * r / (2.0 * sigma * sigma)).exp()
+                })))
+        .collect();
+    
+    let pressure = Array3::from_shape_vec((grid.nx, grid.ny, grid.nz), pressure_values)
+        .expect("Failed to create pressure array");
+    fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
     
     println!("Grid: {}×{}×{} points", grid.nx, grid.ny, grid.nz);
     println!("Time step: {:.2e} s", dt);

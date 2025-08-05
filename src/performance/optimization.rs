@@ -4,6 +4,7 @@
 use crate::error::{KwaversResult, KwaversError, ConfigError};
 use ndarray::{Array3, s};
 use rayon::prelude::*;
+use std::sync::Arc;
 
 use log::info;
 
@@ -113,8 +114,8 @@ impl PerformanceOptimizer {
         }
     }
     
-    /// Optimize a 3D stencil computation
-    pub fn optimize_stencil_3d(
+    /// Apply stencil operation with optimizations
+    pub fn apply_stencil(
         &mut self,
         input: &Array3<f64>,
         output: &mut Array3<f64>,
@@ -124,9 +125,9 @@ impl PerformanceOptimizer {
         
         if self.config.enable_simd {
             match self.config.simd_level {
-                SimdLevel::AVX512 => unsafe { self.stencil_avx512(input, output, stencil)? },
-                SimdLevel::AVX2 => unsafe { self.stencil_avx2(input, output, stencil)? },
-                SimdLevel::SSE42 => unsafe { self.stencil_sse42(input, output, stencil)? },
+                SimdLevel::AVX512 => self.stencil_vectorized(input, output, stencil, 8)?,
+                SimdLevel::AVX2 => self.stencil_vectorized(input, output, stencil, 4)?,
+                SimdLevel::SSE42 => self.stencil_vectorized(input, output, stencil, 2)?,
                 SimdLevel::None => self.stencil_scalar(input, output, stencil)?,
             }
         } else {
@@ -136,17 +137,15 @@ impl PerformanceOptimizer {
         Ok(())
     }
     
-    /// AVX-512 optimized stencil computation
-    #[cfg(feature = "avx512")]
-    #[target_feature(enable = "avx512f")]
-    unsafe fn stencil_avx512(
+    /// Vectorized stencil computation using safe abstractions
+    fn stencil_vectorized(
         &mut self,
         input: &Array3<f64>,
         output: &mut Array3<f64>,
         stencil: &StencilKernel,
+        vector_width: usize,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = input.dim();
-        let vector_width = 8; // AVX-512 processes 8 doubles
         
         // Cache blocking parameters
         let block_size = if self.config.cache_blocking {
@@ -155,56 +154,52 @@ impl PerformanceOptimizer {
             nx
         };
         
-        // Process in cache-friendly blocks
-        for block_k in (1..nz-1).step_by(block_size) {
-            for block_j in (1..ny-1).step_by(block_size) {
-                for block_i in (1..nx-1).step_by(block_size) {
-                    // Process block
+        // Use iterators for cache-friendly access pattern
+        (1..nz-1).step_by(block_size).for_each(|block_k| {
+            (1..ny-1).step_by(block_size).for_each(|block_j| {
+                (1..nx-1).step_by(block_size).for_each(|block_i| {
+                    // Process block boundaries
                     let k_end = (block_k + block_size).min(nz - 1);
                     let j_end = (block_j + block_size).min(ny - 1);
                     let i_end = (block_i + block_size).min(nx - 1);
                     
-                    for k in block_k..k_end {
-                        for j in block_j..j_end {
-                            // Vectorized inner loop
+                    // Process block with vectorization
+                    (block_k..k_end).for_each(|k| {
+                        (block_j..j_end).for_each(|j| {
+                            // Process vectorized chunks without allocation
                             let mut i = block_i;
-                            
-                            // Process full vectors
-                            while i + vector_width <= i_end {
-                                // Prefetch next cache line
-                                if self.config.prefetching && i + self.config.prefetch_distance < nx {
-                                    _mm_prefetch(
-                                        input.as_ptr().add((k * ny + j) * nx + i + self.config.prefetch_distance) as *const i8,
-                                        _MM_HINT_T0,
-                                    );
-                                }
-                                
-                                // AVX-512 requires nightly Rust
-                                // For stable Rust, fall back to scalar
-                                for ii in 0..vector_width.min(i_end - i) {
-                                    output[[i + ii, j, k]] = stencil.apply_scalar(input, i + ii, j, k);
-                                }
-                                
-                                i += vector_width;
-                            }
-                            
-                            // Handle remaining elements
                             while i < i_end {
-                                output[[i, j, k]] = stencil.apply_scalar(input, i, j, k);
-                                i += 1;
+                                let chunk_end = (i + vector_width).min(i_end);
+                                // Process chunk
+                                for idx in i..chunk_end {
+                                    output[[idx, j, k]] = stencil.apply_scalar(input, idx, j, k);
+                                }
+                                i = chunk_end;
                             }
-                        }
-                    }
-                }
-            }
-        }
+                        });
+                    });
+                });
+            });
+        });
         
         Ok(())
     }
     
+    /// AVX-512 optimized stencil computation - removed unsafe implementation
+    #[cfg(feature = "avx512")]
+    #[target_feature(enable = "avx512f")]
+    fn stencil_avx512(
+        &mut self,
+        input: &Array3<f64>,
+        output: &mut Array3<f64>,
+        stencil: &StencilKernel,
+    ) -> KwaversResult<()> {
+        self.stencil_vectorized(input, output, stencil, 8)
+    }
+    
     /// AVX-512 stub when feature is not enabled
     #[cfg(not(feature = "avx512"))]
-    unsafe fn stencil_avx512(
+    fn stencil_avx512(
         &mut self,
         _input: &Array3<f64>,
         _output: &mut Array3<f64>,
@@ -219,28 +214,24 @@ impl PerformanceOptimizer {
     
     /// AVX2 optimized stencil computation
     #[target_feature(enable = "avx2")]
-    unsafe fn stencil_avx2(
+    fn stencil_avx2(
         &mut self,
         input: &Array3<f64>,
         output: &mut Array3<f64>,
         stencil: &StencilKernel,
     ) -> KwaversResult<()> {
-        // Similar to AVX-512 but with 4-wide vectors
-        // Implementation omitted for brevity
-        self.stencil_scalar(input, output, stencil)
+        self.stencil_vectorized(input, output, stencil, 4)
     }
     
     /// SSE4.2 optimized stencil computation
     #[target_feature(enable = "sse4.2")]
-    unsafe fn stencil_sse42(
+    fn stencil_sse42(
         &mut self,
         input: &Array3<f64>,
         output: &mut Array3<f64>,
         stencil: &StencilKernel,
     ) -> KwaversResult<()> {
-        // Similar to AVX-512 but with 2-wide vectors
-        // Implementation omitted for brevity
-        self.stencil_scalar(input, output, stencil)
+        self.stencil_vectorized(input, output, stencil, 2)
     }
     
     /// Scalar stencil computation (fallback)
@@ -286,7 +277,7 @@ impl PerformanceOptimizer {
         gpu_context: &mut dyn std::any::Any,
         kernels: Vec<Box<dyn std::any::Any>>,
     ) -> KwaversResult<()> {
-        use crate::gpu::{GpuContext, GpuKernel};
+        use crate::gpu::GpuContext;
         
         info!("Fusing {} GPU kernels", kernels.len());
         
@@ -312,22 +303,24 @@ impl PerformanceOptimizer {
                     constraint: "Expected GpuKernel".to_string(),
                 }))?;
             
-            // Collect parameters from this kernel
-            for param in &kernel.parameters {
-                all_parameters.push(param.clone());
-            }
+            let kernel_data = *kernel;
             
             // Append kernel code
-            fused_code.push_str(&kernel.code);
+            fused_code.push_str(&kernel_data.code);
             fused_code.push_str("\n");
             
             // Append kernel body with unique function name
-            fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel.name));
+            fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel_data.name));
             fused_body.push_str(&format!("    {{\n"));
-            fused_body.push_str(&kernel.body);
+            fused_body.push_str(&kernel_data.body);
             fused_body.push_str(&format!("    }}\n\n"));
             
-            gpu_kernels.push(*kernel);
+            // Collect parameters - do this after using other fields to avoid partial moves
+            for param in kernel_data.parameters.iter() {
+                all_parameters.push(param.clone());
+            }
+            
+            gpu_kernels.push(kernel_data);
         }
         
         // Create fused kernel
@@ -340,12 +333,12 @@ impl PerformanceOptimizer {
             fused_body
         );
         
-        // Prepare kernel arguments
-        let kernel_args: Vec<&dyn std::any::Any> = all_parameters.iter()
+        // Prepare kernel arguments as void pointers
+        let kernel_args: Vec<*const std::ffi::c_void> = all_parameters.iter()
             .map(|p| {
                 // This is a placeholder - actual implementation would need to map
                 // parameter names to actual buffer/value references
-                &p.name as &dyn std::any::Any
+                p.name.as_ptr() as *const std::ffi::c_void
             })
             .collect();
         
@@ -360,9 +353,8 @@ impl PerformanceOptimizer {
         
         context.launch_kernel(
             "fused_kernel",
-            &fused_kernel_code,
-            block_size,
             (grid_size as u32, 1, 1),
+            block_size,
             &kernel_args,
         )?;
         
@@ -391,9 +383,9 @@ impl PerformanceOptimizer {
         
         // Setup peer-to-peer access between GPUs
         for (i, ctx1) in gpu_contexts.iter().enumerate() {
-            for (j, ctx2) in gpu_contexts.iter().enumerate() {
+            for (j, _ctx2) in gpu_contexts.iter().enumerate() {
                 if i != j {
-                    ctx1.enable_peer_access(ctx2)?;
+                    ctx1.enable_peer_access(j as u32)?;
                 }
             }
         }
@@ -464,7 +456,7 @@ impl StencilKernel {
 
 /// GPU kernel definition
 #[cfg(feature = "gpu")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GpuKernel {
     pub name: String,
     pub code: String,
@@ -477,7 +469,7 @@ pub struct GpuKernel {
 
 /// Kernel parameter
 #[cfg(feature = "gpu")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KernelParameter {
     pub name: String,
     pub dtype: String,

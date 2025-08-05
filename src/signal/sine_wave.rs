@@ -67,6 +67,3 @@ impl Signal for SineWave {
         Box::new(self.clone())
     }
 }
-
-unsafe impl Send for SineWave {}
-unsafe impl Sync for SineWave {}

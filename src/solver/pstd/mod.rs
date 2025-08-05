@@ -119,6 +119,7 @@ impl Default for PstdConfig {
 }
 
 /// PSTD solver for acoustic wave propagation
+#[derive(Clone, Debug)]
 pub struct PstdSolver {
     /// Configuration
     config: PstdConfig,
