@@ -31,6 +31,7 @@ pub use coupling::{TimeCoupling, SubcyclingStrategy};
 use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::error::{KwaversError, ValidationError};
+use crate::physics::PhysicsComponent;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -48,23 +49,27 @@ pub struct MultiRateTimeIntegrator {
     stability_analyzer: StabilityAnalyzer,
     /// Time coupling strategy
     coupling: Box<dyn TimeCoupling>,
-    /// Time step history for each component
+    /// History of time steps for each component
     time_step_history: HashMap<String, Vec<f64>>,
+    /// CFL safety factor
+    cfl_safety_factor: f64,
 }
 
 impl MultiRateTimeIntegrator {
     /// Create a new multi-rate time integrator
     pub fn new(config: MultiRateConfig) -> Self {
+        // Create time steppers for each component
         let controller = MultiRateController::new(config.clone());
         let stability_analyzer = StabilityAnalyzer::new(config.stability_factor);
         let coupling = SubcyclingStrategy::new(config.max_subcycles);
         
         Self {
-            config,
+            config: config.clone(),
             controller,
             stability_analyzer,
             coupling: Box::new(coupling),
             time_step_history: HashMap::new(),
+            cfl_safety_factor: config.cfl_safety_factor,
         }
     }
     
@@ -117,12 +122,16 @@ impl MultiRateTimeIntegrator {
             current_time += dt;
             
             // Update time step history
+            let mut updates = HashMap::new();
             for (component, &local_dt) in &component_time_steps {
-                self.time_step_history
-                    .entry(component.clone())
-                    .or_default()
-                    .push(local_dt);
+                let mut history = self.time_step_history
+                    .get(component)
+                    .cloned()
+                    .unwrap_or_default();
+                history.push(local_dt);
+                updates.insert(component.clone(), history);
             }
+            self.time_step_history.extend(updates);
         }
         
         Ok(current_time)
@@ -135,28 +144,29 @@ impl MultiRateTimeIntegrator {
         physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
-        let mut time_steps = HashMap::new();
-        
-        for (name, component) in physics_components {
-            // Get the field associated with this component
-            let field = fields.get(name)
-                .ok_or_else(|| KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "fields".to_string(),
-                    value: name.clone(),
-                    constraint: "Field not found for component".to_string(),
-                }))?;
-            
-            // Compute CFL-limited time step
-            let max_dt = self.stability_analyzer.compute_stable_dt(
-                component.as_ref(),
-                field,
-                grid,
-            )?;
-            
-            time_steps.insert(name.clone(), max_dt);
-        }
-        
-        Ok(time_steps)
+        physics_components.iter()
+            .map(|(name, component)| {
+                // Get the field associated with this component
+                let field = fields.get(name)
+                    .ok_or_else(|| KwaversError::Validation(ValidationError::FieldValidation {
+                        field: "fields".to_string(),
+                        value: name.clone(),
+                        constraint: "Field not found for component".to_string(),
+                    }))?;
+                
+                // Get stability constraints from the component
+                let constraints = component.stability_constraints();
+                
+                // Compute CFL-limited time step
+                let max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(
+                    field,
+                    grid,
+                    &constraints,
+                )?;
+                
+                Ok((name.clone(), max_dt * self.cfl_safety_factor))
+            })
+            .collect::<KwaversResult<HashMap<String, f64>>>()
     }
     
     /// Get time stepping statistics
@@ -196,16 +206,6 @@ pub struct TimeSteppingStatistics {
     pub average_time_steps: HashMap<String, f64>,
     /// Efficiency ratio (actual work vs single-rate)
     pub efficiency_ratio: f64,
-}
-
-/// Placeholder trait for physics components
-/// In practice, this would be imported from the physics module
-pub trait PhysicsComponent: Send + Sync {
-    /// Get maximum wave speed for CFL calculation
-    fn max_wave_speed(&self, field: &Array3<f64>, grid: &Grid) -> f64;
-    
-    /// Evaluate the physics (compute time derivatives)
-    fn evaluate(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>>;
 }
 
 #[cfg(test)]

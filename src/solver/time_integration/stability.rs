@@ -5,7 +5,6 @@
 
 use crate::grid::Grid;
 use crate::KwaversResult;
-use super::PhysicsComponent;
 use ndarray::Array3;
 
 /// Stability analyzer for time integration
@@ -24,7 +23,7 @@ impl StabilityAnalyzer {
     /// Compute stable time step based on CFL condition
     pub fn compute_stable_dt(
         &self,
-        physics: &dyn PhysicsComponent,
+        physics: &dyn crate::physics::PhysicsComponent,
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
@@ -36,6 +35,40 @@ impl StabilityAnalyzer {
         let cfl_dt = self.safety_factor * dx_min / max_speed.max(1e-10);
         
         Ok(cfl_dt)
+    }
+    
+    /// Compute stable time step based on stability constraints
+    pub fn compute_stable_dt_from_constraints(
+        &self,
+        field: &Array3<f64>,
+        grid: &Grid,
+        constraints: &std::collections::HashMap<String, f64>,
+    ) -> KwaversResult<f64> {
+        // Get maximum wave speed from constraints
+        let max_speed = constraints.get("max_wave_speed")
+            .copied()
+            .unwrap_or_else(|| {
+                // Fallback: estimate from field
+                let max_val = field.iter().map(|v| v.abs()).fold(0.0, f64::max);
+                max_val.max(1500.0) // Default sound speed in water
+            });
+        
+        // Get other constraints if available
+        let diffusion_coeff = constraints.get("diffusion_coefficient").copied();
+        
+        // Compute CFL-limited time step
+        let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+        let cfl_dt = self.safety_factor * dx_min / max_speed.max(1e-10);
+        
+        // If diffusion is present, also check diffusion stability
+        let dt = if let Some(d) = diffusion_coeff {
+            let diffusion_dt = self.safety_factor * dx_min * dx_min / (2.0 * d.max(1e-10));
+            cfl_dt.min(diffusion_dt)
+        } else {
+            cfl_dt
+        };
+        
+        Ok(dt)
     }
     
     /// Check if a given time step is stable

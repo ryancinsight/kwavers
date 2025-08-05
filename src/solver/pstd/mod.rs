@@ -3,6 +3,75 @@
 //! This module implements the PSTD method for solving acoustic wave equations
 //! with high accuracy and minimal numerical dispersion.
 //! 
+//! # Theory
+//! 
+//! The PSTD method computes spatial derivatives in the frequency domain using
+//! the Fast Fourier Transform (FFT), which provides spectral accuracy for
+//! smooth fields. The key advantages are:
+//! 
+//! - **Spectral accuracy**: Exponential convergence for smooth solutions
+//! - **No numerical dispersion**: Exact representation of wave propagation
+//! - **Large time steps**: Limited only by physical CFL condition
+//! - **Efficient for large domains**: O(N log N) complexity via FFT
+//! 
+//! # Algorithm
+//! 
+//! The acoustic wave equation:
+//! ```text
+//! ∂p/∂t = -ρc²∇·v
+//! ∂v/∂t = -∇p/ρ
+//! ```
+//! 
+//! In PSTD, spatial derivatives are computed as:
+//! ```text
+//! ∂f/∂x = F⁻¹{ikₓ F{f}}
+//! ```
+//! where F denotes the FFT and kₓ is the wavenumber.
+//! 
+//! # Literature References
+//! 
+//! 1. **Liu, Q. H. (1997)**. "The PSTD algorithm: A time-domain method requiring 
+//!    only two cells per wavelength." *Microwave and Optical Technology Letters*, 
+//!    15(3), 158-165. DOI: 10.1002/(SICI)1098-2760(19970620)15:3<158::AID-MOP11>3.0.CO;2-3
+//!    - Original PSTD formulation for electromagnetic waves
+//! 
+//! 2. **Tabei, M., Mast, T. D., & Waag, R. C. (2002)**. "A k-space method for 
+//!    coupled first-order acoustic propagation equations." *The Journal of the 
+//!    Acoustical Society of America*, 111(1), 53-63. DOI: 10.1121/1.1421344
+//!    - Extension to acoustic wave propagation
+//!    - k-space correction for improved accuracy
+//! 
+//! 3. **Mast, T. D., Souriau, L. P., Liu, D. L., Tabei, M., Nachman, A. I., & 
+//!    Waag, R. C. (2001)**. "A k-space method for large-scale models of wave 
+//!    propagation in tissue." *IEEE Transactions on Ultrasonics, Ferroelectrics, 
+//!    and Frequency Control*, 48(2), 341-354. DOI: 10.1109/58.911717
+//!    - Application to medical ultrasound
+//!    - Handling of heterogeneous media
+//! 
+//! 4. **Treeby, B. E., & Cox, B. T. (2010)**. "k-Wave: MATLAB toolbox for the 
+//!    simulation and reconstruction of photoacoustic wave fields." *Journal of 
+//!    Biomedical Optics*, 15(2), 021314. DOI: 10.1117/1.3360308
+//!    - Comprehensive k-Wave implementation
+//!    - Validation and benchmarking
+//! 
+//! # Implementation Details
+//! 
+//! ## Anti-aliasing (2/3 Rule)
+//! 
+//! To prevent aliasing from nonlinear operations, we apply the 2/3 rule:
+//! - Zero out wavenumbers above 2/3 of the Nyquist frequency
+//! - Based on: Orszag, S. A. (1971). "On the elimination of aliasing in 
+//!   finite-difference schemes by filtering high-wavenumber components." 
+//!   *Journal of the Atmospheric Sciences*, 28(6), 1074-1074.
+//! 
+//! ## k-space Correction
+//! 
+//! For improved accuracy at high frequencies, we apply k-space corrections:
+//! ```text
+//! κ = sinc(kΔx/2) × sinc(kΔt·c/2)
+//! ```
+//! This corrects for the finite difference approximation in time.
+//! 
 //! # Design Principles
 //! - SOLID: Single responsibility for spectral wave propagation
 //! - CUPID: Composable with other solvers via plugin architecture
@@ -294,23 +363,21 @@ impl PstdSolver {
         // Transform back to physical space
         let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
         
-        // Apply the update with spatially varying ρc² - Fix: Handle this properly
-        for i in 0..self.grid.nx {
-            for j in 0..self.grid.ny {
-                for k in 0..self.grid.nz {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
-                    
-                    // Get local medium properties
-                    let rho = medium.density(x, y, z, &self.grid);
-                    let c = medium.sound_speed(x, y, z, &self.grid);
-                    let rho_c2 = rho * c * c;
-                    
-                    pressure[[i, j, k]] += pressure_update[[i, j, k]] * rho_c2;
-                }
-            }
-        }
+        // Apply the update with spatially varying ρc² using iterators
+        pressure.indexed_iter_mut()
+            .zip(pressure_update.iter())
+            .for_each(|(((i, j, k), p), &update)| {
+                let x = i as f64 * self.grid.dx;
+                let y = j as f64 * self.grid.dy;
+                let z = k as f64 * self.grid.dz;
+                
+                // Get local medium properties
+                let rho = medium.density(x, y, z, &self.grid);
+                let c = medium.sound_speed(x, y, z, &self.grid);
+                let rho_c2 = rho * c * c;
+                
+                *p += update * rho_c2;
+            });
         
         // Update metrics
         let elapsed = start.elapsed().as_secs_f64();

@@ -182,12 +182,11 @@ mod tests {
     use env_logger;
 
     #[test]
-    #[ignore] // TODO: Optimize test performance
     fn test_plane_wave_propagation_corrected() {
         let _ = env_logger::builder().is_test(true).try_init();
         
-        // Setup grid and medium
-        let grid = Grid::new(128, 64, 64, 1e-4, 1e-4, 1e-4);
+        // Setup grid and medium - reduced size for faster testing
+        let grid = Grid::new(64, 32, 32, 2e-4, 2e-4, 2e-4);  // Reduced grid size
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create solver with optimized configuration
@@ -209,9 +208,9 @@ mod tests {
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
         fields.index_axis_mut(Axis(0), 0).assign(&initial_pressure);
         
-        // Propagate for multiple time steps
-        let dt = 1e-7; // 0.1 μs
-        let num_steps = 100;
+        // Propagate for multiple time steps - reduced for testing
+        let dt = 2e-7; // 0.2 μs - larger time step
+        let num_steps = 50; // Reduced steps
         let total_time = dt * num_steps as f64;
         
         info!("Starting plane wave propagation test with {} steps", num_steps);
@@ -219,11 +218,12 @@ mod tests {
         let source = NullSource;
         let mut pressure_view = fields.index_axis(Axis(0), 0).to_owned();
         
-        for step in 0..num_steps {
+        // Use iterator for time stepping
+        (0..num_steps).for_each(|step| {
             let t = step as f64 * dt;
             pressure_view.assign(&fields.index_axis(Axis(0), 0));
             solver.update_wave(&mut fields, &pressure_view, &source, &grid, &medium, dt, t);
-        }
+        });
         
         let final_pressure = fields.index_axis(Axis(0), 0).to_owned();
         

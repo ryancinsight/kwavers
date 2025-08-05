@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
 use log::{debug, info, warn};
+use rayon::prelude::*;
 
 /// Configuration for the hybrid PSTD/FDTD solver
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -419,7 +420,7 @@ impl HybridSolver {
     }
     
     /// Process all domains with appropriate solvers
-    fn process_domains(
+    pub fn process_domains(
         &mut self,
         fields: &mut Array4<f64>,
         medium: &dyn Medium,
@@ -449,7 +450,7 @@ impl HybridSolver {
         Ok(())
     }
     
-    /// Process domains in parallel (placeholder for future implementation)
+    /// Process domains in parallel using rayon
     fn process_domains_parallel(
         &mut self,
         fields: &mut Array4<f64>,
@@ -457,10 +458,96 @@ impl HybridSolver {
         dt: f64,
         time: f64,
     ) -> KwaversResult<()> {
-        // For now, fall back to sequential processing
-        // TODO: Implement parallel processing with proper synchronization
-        warn!("Parallel domain processing not yet implemented, falling back to sequential");
-        self.process_domains_sequential(fields, medium, dt, time)
+        use rayon::prelude::*;
+        use std::sync::{Arc, Mutex};
+        
+        // Create thread-safe wrappers
+        let errors: Arc<Mutex<Vec<KwaversError>>> = Arc::new(Mutex::new(Vec::new()));
+        
+        // Collect domain updates in parallel
+        let domain_updates: Vec<_> = self.current_domains.par_iter().enumerate()
+            .filter_map(|(idx, domain)| {
+                // Skip hybrid domains for parallel processing
+                if matches!(domain.domain_type, DomainType::Hybrid) {
+                    return None;
+                }
+                
+                // Extract domain fields
+                match self.extract_domain_fields(fields, domain) {
+                    Ok(mut domain_fields) => {
+                        // Process the domain based on type
+                        let result = match domain.domain_type {
+                            DomainType::Spectral => {
+                                // Create a temporary solver for parallel execution
+                                let mut temp_solver = PstdSolver::new(self.config.pstd_config, &self.grid).ok()?;
+                                Self::apply_pstd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time)
+                            }
+                            DomainType::FiniteDifference => {
+                                // Create a temporary solver for parallel execution
+                                let mut temp_solver = FdtdSolver::new(self.config.fdtd_config, &self.grid).ok()?;
+                                Self::apply_fdtd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time)
+                            }
+                            _ => Ok(())
+                        };
+                        
+                        match result {
+                            Ok(_) => Some((idx, domain.clone(), domain_fields)),
+                            Err(e) => {
+                                if let Ok(mut errors_guard) = errors.lock() {
+                                    errors_guard.push(e);
+                                }
+                                None
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        if let Ok(mut errors_guard) = errors.lock() {
+                            errors_guard.push(e);
+                        }
+                        None
+                    }
+                }
+            })
+            .collect();
+        
+        // Check for errors
+        let errors_guard = errors.lock().unwrap();
+        if !errors_guard.is_empty() {
+            return Err(errors_guard[0].clone());
+        }
+        
+        // Apply all updates sequentially
+        for (idx, domain, domain_fields) in domain_updates {
+            self.copy_domain_to_fields(fields, &domain_fields, &domain)?;
+            
+            // Update solver states if needed
+            match domain.domain_type {
+                DomainType::Spectral => {
+                    if let Some(solver) = self.pstd_solvers.get_mut(&idx) {
+                        // Update any solver state if necessary
+                    }
+                }
+                DomainType::FiniteDifference => {
+                    if let Some(solver) = self.fdtd_solvers.get_mut(&idx) {
+                        // Update any solver state if necessary
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        // Process hybrid domains sequentially
+        let hybrid_domains: Vec<_> = self.current_domains.iter()
+            .enumerate()
+            .filter(|(_, domain)| matches!(domain.domain_type, DomainType::Hybrid))
+            .map(|(idx, domain)| (idx, domain.clone()))
+            .collect();
+            
+        for (idx, domain) in hybrid_domains {
+            self.process_single_domain(idx, &domain, fields, medium, dt, time)?;
+        }
+        
+        Ok(())
     }
     
     /// Process a single domain with appropriate solver
@@ -560,31 +647,103 @@ impl HybridSolver {
         Ok(())
     }
     
+    /// Copy domain fields back to main fields
+    fn copy_domain_to_fields(
+        &self,
+        fields: &mut Array4<f64>,
+        domain_fields: &Array4<f64>,
+        domain: &DomainRegion,
+    ) -> KwaversResult<()> {
+        for field_idx in 0..fields.shape()[0] {
+            let mut target_slice = fields.slice_mut(s![field_idx,
+                domain.start.0..domain.end.0,
+                domain.start.1..domain.end.1,
+                domain.start.2..domain.end.2]);
+            target_slice.assign(&domain_fields.slice(s![field_idx, .., .., ..]));
+        }
+        Ok(())
+    }
+    
     /// Apply PSTD update to domain (static version to avoid borrowing issues)
     fn apply_pstd_update_static(
-        _pstd_solver: &mut PstdSolver,
-        _domain_fields: &mut Array4<f64>,
-        _medium: &dyn Medium,
-        _dt: f64,
+        pstd_solver: &mut PstdSolver,
+        domain_fields: &mut Array4<f64>,
+        medium: &dyn Medium,
+        dt: f64,
         _time: f64,
     ) -> KwaversResult<()> {
-        // TODO: Interface with actual PSTD solver
-        // For now, placeholder implementation
         debug!("Applying PSTD update to spectral domain");
+        
+        // Extract pressure and velocity fields
+        let pressure_idx = 0; // Assuming pressure is at index 0
+        let vx_idx = 1;       // Assuming velocity components follow
+        let vy_idx = 2;
+        let vz_idx = 3;
+        
+        // Get field slices
+        let mut pressure = domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).to_owned();
+        let velocity_x = domain_fields.index_axis(ndarray::Axis(0), vx_idx).to_owned();
+        let velocity_y = domain_fields.index_axis(ndarray::Axis(0), vy_idx).to_owned();
+        let velocity_z = domain_fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
+        
+        // Compute velocity divergence
+        let div_v = pstd_solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
+        
+        // Update pressure using PSTD
+        pstd_solver.update_pressure(&mut pressure, &div_v, medium, dt)?;
+        
+        // Update velocities using PSTD
+        let mut vx_mut = velocity_x.clone();
+        let mut vy_mut = velocity_y.clone();
+        let mut vz_mut = velocity_z.clone();
+        pstd_solver.update_velocity(&mut vx_mut, &mut vy_mut, &mut vz_mut, &pressure, medium, dt)?;
+        
+        // Copy results back
+        domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).assign(&pressure);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vx_idx).assign(&vx_mut);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vy_idx).assign(&vy_mut);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vz_idx).assign(&vz_mut);
+        
         Ok(())
     }
     
     /// Apply FDTD update to domain (static version to avoid borrowing issues)
     fn apply_fdtd_update_static(
-        _fdtd_solver: &mut FdtdSolver,
-        _domain_fields: &mut Array4<f64>,
-        _medium: &dyn Medium,
-        _dt: f64,
+        fdtd_solver: &mut FdtdSolver,
+        domain_fields: &mut Array4<f64>,
+        medium: &dyn Medium,
+        dt: f64,
         _time: f64,
     ) -> KwaversResult<()> {
-        // TODO: Interface with actual FDTD solver
-        // For now, placeholder implementation
         debug!("Applying FDTD update to finite-difference domain");
+        
+        // Extract pressure and velocity fields
+        let pressure_idx = 0;
+        let vx_idx = 1;
+        let vy_idx = 2;
+        let vz_idx = 3;
+        
+        // Get field slices
+        let mut pressure = domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).to_owned();
+        let velocity_x = domain_fields.index_axis(ndarray::Axis(0), vx_idx).to_owned();
+        let velocity_y = domain_fields.index_axis(ndarray::Axis(0), vy_idx).to_owned();
+        let velocity_z = domain_fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
+        
+        // Update pressure using FDTD
+        fdtd_solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
+        
+        // Update velocities using FDTD
+        let mut vx_mut = velocity_x.clone();
+        let mut vy_mut = velocity_y.clone();
+        let mut vz_mut = velocity_z.clone();
+        fdtd_solver.update_velocity(&mut vx_mut, &mut vy_mut, &mut vz_mut, &pressure, medium, dt)?;
+        
+        // Copy results back
+        domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).assign(&pressure);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vx_idx).assign(&vx_mut);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vy_idx).assign(&vy_mut);
+        domain_fields.index_axis_mut(ndarray::Axis(0), vz_idx).assign(&vz_mut);
+        
         Ok(())
     }
     
