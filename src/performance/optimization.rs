@@ -166,13 +166,16 @@ impl PerformanceOptimizer {
                     // Process block with vectorization
                     (block_k..k_end).for_each(|k| {
                         (block_j..j_end).for_each(|j| {
-                            // Process vectorized chunks
-                            let chunks = (block_i..i_end).collect::<Vec<_>>();
-                            chunks.chunks(vector_width).for_each(|chunk| {
-                                chunk.iter().for_each(|&i| {
-                                    output[[i, j, k]] = stencil.apply_scalar(input, i, j, k);
-                                });
-                            });
+                            // Process vectorized chunks without allocation
+                            let mut i = block_i;
+                            while i < i_end {
+                                let chunk_end = (i + vector_width).min(i_end);
+                                // Process chunk
+                                for idx in i..chunk_end {
+                                    output[[idx, j, k]] = stencil.apply_scalar(input, idx, j, k);
+                                }
+                                i = chunk_end;
+                            }
                         });
                     });
                 });

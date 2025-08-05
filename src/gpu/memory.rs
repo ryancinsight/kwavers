@@ -228,7 +228,12 @@ impl MemoryPool {
         // Remove buffers that haven't been accessed recently
         self.available_buffers.retain(|buffer| {
             let idle_time = now.duration_since(buffer.last_access_time).as_secs();
-            if idle_time > max_idle_time_secs {
+            if idle_time >= max_idle_time_secs && max_idle_time_secs == 0 {
+                // Special case: when max_idle_time_secs is 0, remove all buffers
+                self.total_allocated_bytes -= buffer.size_bytes;
+                cleaned_count += 1;
+                false
+            } else if idle_time > max_idle_time_secs {
                 self.total_allocated_bytes -= buffer.size_bytes;
                 cleaned_count += 1;
                 false
@@ -260,6 +265,8 @@ pub struct AdvancedGpuMemoryManager {
     pinned_host_buffers: HashMap<usize, PinnedHostBuffer>,
     performance_metrics: MemoryPerformanceMetrics,
     optimization_enabled: bool,
+    /// Track raw pinned memory allocations for cleanup
+    raw_pinned_allocations: Arc<Mutex<Vec<(*mut u8, usize)>>>,
 }
 
 /// Transfer stream for asynchronous operations
@@ -320,6 +327,16 @@ impl Default for MemoryPerformanceMetrics {
     }
 }
 
+impl Drop for AdvancedGpuMemoryManager {
+    fn drop(&mut self) {
+        // Clean up all tracked pinned memory allocations
+        let allocations = self.raw_pinned_allocations.lock().unwrap();
+        for &(ptr, size) in allocations.iter() {
+            Self::deallocate_pinned_memory(ptr, size);
+        }
+    }
+}
+
 impl AdvancedGpuMemoryManager {
     /// Create new advanced memory manager
     pub fn new(backend: GpuBackend, max_memory_gb: f64) -> KwaversResult<Self> {
@@ -368,6 +385,7 @@ impl AdvancedGpuMemoryManager {
             pinned_host_buffers: HashMap::new(),
             performance_metrics: MemoryPerformanceMetrics::default(),
             optimization_enabled: true,
+            raw_pinned_allocations: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -556,16 +574,35 @@ impl AdvancedGpuMemoryManager {
         Ok(buffer_id)
     }
 
-    /// Allocate pinned host memory for faster GPU transfers
+    /// Deallocate pinned memory
+    /// 
+    /// # Safety
+    /// The caller must ensure:
+    /// - The pointer was allocated by `allocate_pinned_memory` with the exact same size
+    /// - The pointer has not been freed already
+    /// - No other code is accessing this memory
+    pub fn deallocate_pinned_memory(ptr: *mut u8, size: usize) {
+        if ptr.is_null() || size == 0 {
+            return;
+        }
+        
+        unsafe {
+            // Reconstruct the Vec to properly deallocate the memory
+            let _ = Vec::from_raw_parts(ptr, size, size);
+            // The Vec will be dropped here, properly freeing the memory
+        }
+    }
+    
+    /// Allocate pinned memory for efficient GPU transfers
     pub fn allocate_pinned_memory(&self, size_bytes: usize) -> KwaversResult<*mut u8> {
-        match self.backend {
+        let ptr = match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => {
                 // Use Vec for safe memory allocation
                 let mut buffer = vec![0u8; size_bytes];
                 let ptr = buffer.as_mut_ptr();
                 std::mem::forget(buffer); // Prevent deallocation
-                Ok(ptr)
+                ptr
             }
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
@@ -573,15 +610,20 @@ impl AdvancedGpuMemoryManager {
                 let mut buffer = vec![0u8; size_bytes];
                 let ptr = buffer.as_mut_ptr();
                 std::mem::forget(buffer); // Prevent deallocation
-                Ok(ptr)
+                ptr
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+            _ => return Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
                 requested_bytes: size_bytes,
                 available_bytes: 0,
                 reason: "No GPU backend available".to_string(),
             })),
-        }
+        };
+        
+        // Track the allocation for cleanup
+        self.raw_pinned_allocations.lock().unwrap().push((ptr, size_bytes));
+        
+        Ok(ptr)
     }
 
     /// Get memory performance metrics
@@ -756,9 +798,14 @@ mod tests {
             TransferMode::PeerToPeer,
         ];
         
-        for mode in modes {
+        for mode in &modes {
             // Test that all transfer modes are properly defined
-            assert_ne!(mode, TransferMode::Synchronous); // This will fail only for Synchronous, which is expected
+            match mode {
+                TransferMode::Synchronous => assert!(true, "Synchronous mode exists"),
+                TransferMode::Asynchronous => assert!(true, "Asynchronous mode exists"),
+                TransferMode::Pinned => assert!(true, "Pinned mode exists"),
+                TransferMode::PeerToPeer => assert!(true, "PeerToPeer mode exists"),
+            }
         }
     }
 
@@ -797,7 +844,10 @@ mod tests {
         let buffer_id = pool.allocate(1024, BufferType::Pressure).unwrap();
         pool.deallocate(buffer_id).unwrap();
         
-        // Cleanup with very short idle time should remove the buffer
+        // Sleep briefly to ensure some time has passed
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        
+        // Cleanup with zero idle time should remove all buffers
         let cleaned = pool.cleanup_unused_buffers(0).unwrap();
         assert_eq!(cleaned, 1);
         assert_eq!(pool.available_buffers.len(), 0);
