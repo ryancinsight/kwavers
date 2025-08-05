@@ -228,7 +228,7 @@ impl MemoryPool {
         // Remove buffers that haven't been accessed recently
         self.available_buffers.retain(|buffer| {
             let idle_time = now.duration_since(buffer.last_access_time).as_secs();
-            if idle_time >= max_idle_time_secs && max_idle_time_secs == 0 {
+            if max_idle_time_secs == 0 {
                 // Special case: when max_idle_time_secs is 0, remove all buffers
                 self.total_allocated_bytes -= buffer.size_bytes;
                 cleaned_count += 1;
