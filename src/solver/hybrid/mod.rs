@@ -16,12 +16,11 @@ use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
 use crate::solver::hybrid::coupling_interface::{CouplingInterface, InterpolationScheme};
-use ndarray::{Array4, Zip, s};
+use ndarray::{Array4, s, Zip};
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
 use log::{debug, info, warn};
-use rayon::prelude::*;
 
 /// Configuration for the hybrid PSTD/FDTD solver
 #[derive(Debug, Clone, Serialize, Deserialize)]

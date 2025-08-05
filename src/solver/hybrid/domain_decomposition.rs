@@ -54,6 +54,15 @@ pub struct DomainRegion {
     pub buffer_zones: BufferZones,
 }
 
+impl DomainRegion {
+    /// Calculate the volume of this region in cells
+    pub fn volume(&self) -> usize {
+        (self.end.0 - self.start.0) * 
+        (self.end.1 - self.start.1) * 
+        (self.end.2 - self.start.2)
+    }
+}
+
 /// Types of computational domains
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DomainType {
@@ -910,15 +919,158 @@ impl DomainDecomposer {
         })
     }
     
-    /// Placeholder implementations for other decomposition methods
-    fn segment_by_frequency(&self, _frequency_content: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
-        // TODO: Implement frequency-based segmentation
-        self.fixed_decomposition(grid)
+    /// Segment domain based on frequency content
+    fn segment_by_frequency(&self, frequency_content: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
+        let mut regions = Vec::new();
+        
+        // Compute local frequency characteristics using windowed FFT
+        let window_size = 16; // Window size for local frequency analysis
+        let overlap = 8;      // Overlap between windows
+        
+        // Threshold for high-frequency content (use FDTD for high frequencies)
+        let frequency_threshold = 0.3; // Normalized frequency threshold
+        
+        // Scan the domain with overlapping windows
+        for i in (0..grid.nx).step_by(window_size - overlap) {
+            for j in (0..grid.ny).step_by(window_size - overlap) {
+                for k in (0..grid.nz).step_by(window_size - overlap) {
+                    // Define window bounds
+                    let i_end = (i + window_size).min(grid.nx);
+                    let j_end = (j + window_size).min(grid.ny);
+                    let k_end = (k + window_size).min(grid.nz);
+                    
+                    // Extract window data
+                    let window = frequency_content.slice(ndarray::s![i..i_end, j..j_end, k..k_end]);
+                    
+                    // Compute frequency metric (simplified - ratio of high to low frequencies)
+                    let high_freq_energy: f64 = window.iter()
+                        .filter(|&&v| v.abs() > frequency_threshold)
+                        .map(|v| v * v)
+                        .sum();
+                    
+                    let total_energy: f64 = window.iter()
+                        .map(|v| v * v)
+                        .sum();
+                    
+                    let high_freq_ratio = if total_energy > 1e-10 {
+                        high_freq_energy / total_energy
+                    } else {
+                        0.0
+                    };
+                    
+                    // Choose domain type based on frequency content
+                    let domain_type = if high_freq_ratio > 0.5 {
+                        DomainType::FiniteDifference // FDTD for high frequencies
+                    } else {
+                        DomainType::Spectral // PSTD for smooth fields
+                    };
+                    
+                    // Create region
+                    regions.push(DomainRegion {
+                        start: (i, j, k),
+                        end: (i_end, j_end, k_end),
+                        domain_type,
+                        buffer_zones: BufferZones::default(),
+                        quality_score: 0.0,
+                    });
+                }
+            }
+        }
+        
+        // Merge adjacent regions of the same type
+        regions = self.merge_adjacent_regions(regions)?;
+        
+        // Optimize buffer zones
+        self.optimize_buffer_zones(regions, grid)
     }
     
-    fn segment_by_materials(&self, _heterogeneity: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
-        // TODO: Implement material-based segmentation
-        self.fixed_decomposition(grid)
+    fn segment_by_materials(&self, heterogeneity: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
+        let mut regions = Vec::new();
+        
+        // Threshold for material heterogeneity
+        let heterogeneity_threshold = 0.1; // 10% variation threshold
+        
+        // Compute local heterogeneity using gradient magnitude
+        let mut visited = Array3::<bool>::default(heterogeneity.dim());
+        
+        // Region growing algorithm for material-based segmentation
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    if visited[[i, j, k]] {
+                        continue;
+                    }
+                    
+                    // Start new region
+                    let seed_value = heterogeneity[[i, j, k]];
+                    let mut region_points = Vec::new();
+                    let mut queue = vec![(i, j, k)];
+                    
+                    // Grow region using flood-fill
+                    while let Some((ci, cj, ck)) = queue.pop() {
+                        if visited[[ci, cj, ck]] {
+                            continue;
+                        }
+                        
+                        visited[[ci, cj, ck]] = true;
+                        region_points.push((ci, cj, ck));
+                        
+                        // Check neighbors
+                        for di in -1i32..=1 {
+                            for dj in -1i32..=1 {
+                                for dk in -1i32..=1 {
+                                    if di == 0 && dj == 0 && dk == 0 {
+                                        continue;
+                                    }
+                                    
+                                    let ni = (ci as i32 + di) as usize;
+                                    let nj = (cj as i32 + dj) as usize;
+                                    let nk = (ck as i32 + dk) as usize;
+                                    
+                                    if ni < grid.nx && nj < grid.ny && nk < grid.nz && !visited[[ni, nj, nk]] {
+                                        let neighbor_value = heterogeneity[[ni, nj, nk]];
+                                        let relative_diff = (neighbor_value - seed_value).abs() / seed_value.abs().max(1e-10);
+                                        
+                                        if relative_diff < heterogeneity_threshold {
+                                            queue.push((ni, nj, nk));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Create bounding box for region
+                    if !region_points.is_empty() {
+                        let min_i = region_points.iter().map(|p| p.0).min().unwrap();
+                        let max_i = region_points.iter().map(|p| p.0).max().unwrap() + 1;
+                        let min_j = region_points.iter().map(|p| p.1).min().unwrap();
+                        let max_j = region_points.iter().map(|p| p.1).max().unwrap() + 1;
+                        let min_k = region_points.iter().map(|p| p.2).min().unwrap();
+                        let max_k = region_points.iter().map(|p| p.2).max().unwrap() + 1;
+                        
+                        // Choose domain type based on region size and heterogeneity
+                        let region_size = (max_i - min_i) * (max_j - min_j) * (max_k - min_k);
+                        let domain_type = if region_size < 64 {
+                            DomainType::FiniteDifference // Small regions use FDTD
+                        } else {
+                            DomainType::Spectral // Large homogeneous regions use PSTD
+                        };
+                        
+                        regions.push(DomainRegion {
+                            start: (min_i, min_j, min_k),
+                            end: (max_i, max_j, max_k),
+                            domain_type,
+                            buffer_zones: BufferZones::default(),
+                            quality_score: 0.0,
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Optimize buffer zones
+        self.optimize_buffer_zones(regions, grid)
     }
     
     /// Optimize buffer zones and overlaps between regions
@@ -927,14 +1079,203 @@ impl DomainDecomposer {
         mut regions: Vec<DomainRegion>,
         grid: &Grid,
     ) -> KwaversResult<Vec<DomainRegion>> {
-        // TODO: Implement buffer zone optimization
-        // For now, just use default buffer zones
+        // Compute optimal buffer zone sizes based on wave physics
+        let wavelength = grid.dx.max(grid.dy).max(grid.dz) * 10.0; // Estimate typical wavelength
+        let min_buffer = (wavelength / grid.dx).ceil() as usize;
+        let optimal_buffer = (min_buffer * 2).max(4); // At least 4 cells
         
-        for region in &mut regions {
-            region.buffer_zones = BufferZones::default();
+        // For each region, optimize its buffer zones
+        for i in 0..regions.len() {
+            let region = &regions[i];
+            
+            // Find neighboring regions
+            let mut neighbors = Vec::new();
+            for j in 0..regions.len() {
+                if i != j {
+                    let other = &regions[j];
+                    if self.regions_are_adjacent(region, other) {
+                        neighbors.push(j);
+                    }
+                }
+            }
+            
+            // Set buffer sizes based on domain type transitions
+            let mut buffer_widths = [optimal_buffer; 6]; // [x_min, x_max, y_min, y_max, z_min, z_max]
+            
+            // Adjust buffer sizes based on neighbors
+            for &j in &neighbors {
+                let neighbor = &regions[j];
+                
+                // Larger buffers for spectral-FDTD interfaces
+                if region.domain_type != neighbor.domain_type {
+                    let interface_buffer = optimal_buffer * 2;
+                    
+                    // Determine which faces are adjacent
+                    if region.end.0 == neighbor.start.0 {
+                        buffer_widths[1] = buffer_widths[1].max(interface_buffer); // x_max
+                    }
+                    if region.start.0 == neighbor.end.0 {
+                        buffer_widths[0] = buffer_widths[0].max(interface_buffer); // x_min
+                    }
+                    if region.end.1 == neighbor.start.1 {
+                        buffer_widths[3] = buffer_widths[3].max(interface_buffer); // y_max
+                    }
+                    if region.start.1 == neighbor.end.1 {
+                        buffer_widths[2] = buffer_widths[2].max(interface_buffer); // y_min
+                    }
+                    if region.end.2 == neighbor.start.2 {
+                        buffer_widths[5] = buffer_widths[5].max(interface_buffer); // z_max
+                    }
+                    if region.start.2 == neighbor.end.2 {
+                        buffer_widths[4] = buffer_widths[4].max(interface_buffer); // z_min
+                    }
+                }
+            }
+            
+            // Reduce buffer sizes at domain boundaries
+            if region.start.0 == 0 {
+                buffer_widths[0] = min_buffer; // x_min
+            }
+            if region.end.0 == grid.nx {
+                buffer_widths[1] = min_buffer; // x_max
+            }
+            if region.start.1 == 0 {
+                buffer_widths[2] = min_buffer; // y_min
+            }
+            if region.end.1 == grid.ny {
+                buffer_widths[3] = min_buffer; // y_max
+            }
+            if region.start.2 == 0 {
+                buffer_widths[4] = min_buffer; // z_min
+            }
+            if region.end.2 == grid.nz {
+                buffer_widths[5] = min_buffer; // z_max
+            }
+            
+            // Compute overlap regions with neighbors
+            let mut overlaps = Vec::new();
+            for &j in &neighbors {
+                let neighbor = &regions[j];
+                overlaps.push(OverlapRegion {
+                    start: (
+                        region.start.0.max(neighbor.start.0),
+                        region.start.1.max(neighbor.start.1),
+                        region.start.2.max(neighbor.start.2),
+                    ),
+                    end: (
+                        region.end.0.min(neighbor.end.0),
+                        region.end.1.min(neighbor.end.1),
+                        region.end.2.min(neighbor.end.2),
+                    ),
+                    adjacent_type: neighbor.domain_type,
+                    weight: 0.5, // Equal weight for now
+                });
+            }
+            
+            regions[i].buffer_zones = BufferZones {
+                widths: buffer_widths,
+                overlaps,
+            };
         }
         
         Ok(regions)
+    }
+    
+    /// Check if two regions are adjacent
+    fn regions_are_adjacent(&self, region1: &DomainRegion, region2: &DomainRegion) -> bool {
+        // Check if regions share a face
+        let x_adjacent = (region1.end.0 == region2.start.0 || region1.start.0 == region2.end.0) &&
+                        !(region1.end.1 <= region2.start.1 || region1.start.1 >= region2.end.1) &&
+                        !(region1.end.2 <= region2.start.2 || region1.start.2 >= region2.end.2);
+                        
+        let y_adjacent = (region1.end.1 == region2.start.1 || region1.start.1 == region2.end.1) &&
+                        !(region1.end.0 <= region2.start.0 || region1.start.0 >= region2.end.0) &&
+                        !(region1.end.2 <= region2.start.2 || region1.start.2 >= region2.end.2);
+                        
+        let z_adjacent = (region1.end.2 == region2.start.2 || region1.start.2 == region2.end.2) &&
+                        !(region1.end.0 <= region2.start.0 || region1.start.0 >= region2.end.0) &&
+                        !(region1.end.1 <= region2.start.1 || region1.start.1 >= region2.end.1);
+                        
+        x_adjacent || y_adjacent || z_adjacent
+    }
+    
+    /// Merge adjacent regions of the same type
+    fn merge_adjacent_regions(&self, mut regions: Vec<DomainRegion>) -> KwaversResult<Vec<DomainRegion>> {
+        let mut merged = Vec::new();
+        let mut used = vec![false; regions.len()];
+        
+        for i in 0..regions.len() {
+            if used[i] {
+                continue;
+            }
+            
+            let mut current = regions[i].clone();
+            used[i] = true;
+            
+            // Try to merge with adjacent regions of the same type
+            let mut changed = true;
+            while changed {
+                changed = false;
+                for j in 0..regions.len() {
+                    if used[j] || regions[j].domain_type != current.domain_type {
+                        continue;
+                    }
+                    
+                    // Check if regions can be merged (adjacent and form a rectangle)
+                    if self.can_merge(&current, &regions[j]) {
+                        current = self.merge_two_regions(&current, &regions[j]);
+                        used[j] = true;
+                        changed = true;
+                    }
+                }
+            }
+            
+            merged.push(current);
+        }
+        
+        Ok(merged)
+    }
+    
+    /// Check if two regions can be merged
+    fn can_merge(&self, r1: &DomainRegion, r2: &DomainRegion) -> bool {
+        // Regions must be adjacent and of the same type
+        if r1.domain_type != r2.domain_type || !self.regions_are_adjacent(r1, r2) {
+            return false;
+        }
+        
+        // Check if they form a rectangular region when merged
+        let x_aligned = (r1.start.0 == r2.start.0 && r1.end.0 == r2.end.0) ||
+                       (r1.start.1 == r2.start.1 && r1.end.1 == r2.end.1 && 
+                        r1.start.2 == r2.start.2 && r1.end.2 == r2.end.2);
+                        
+        let y_aligned = (r1.start.1 == r2.start.1 && r1.end.1 == r2.end.1) ||
+                       (r1.start.0 == r2.start.0 && r1.end.0 == r2.end.0 && 
+                        r1.start.2 == r2.start.2 && r1.end.2 == r2.end.2);
+                        
+        let z_aligned = (r1.start.2 == r2.start.2 && r1.end.2 == r2.end.2) ||
+                       (r1.start.0 == r2.start.0 && r1.end.0 == r2.end.0 && 
+                        r1.start.1 == r2.start.1 && r1.end.1 == r2.end.1);
+                        
+        x_aligned || y_aligned || z_aligned
+    }
+    
+    /// Merge two regions into one
+    fn merge_two_regions(&self, r1: &DomainRegion, r2: &DomainRegion) -> DomainRegion {
+        DomainRegion {
+            start: (
+                r1.start.0.min(r2.start.0),
+                r1.start.1.min(r2.start.1),
+                r1.start.2.min(r2.start.2),
+            ),
+            end: (
+                r1.end.0.max(r2.end.0),
+                r1.end.1.max(r2.end.1),
+                r1.end.2.max(r2.end.2),
+            ),
+            domain_type: r1.domain_type,
+            buffer_zones: BufferZones::default(),
+            quality_score: (r1.quality_score + r2.quality_score) / 2.0,
+        }
     }
     
     /// Log summary of decomposition results

@@ -32,7 +32,7 @@
 
 use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType, BufferZones};
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
@@ -701,8 +701,8 @@ impl CouplingInterface {
     /// Enforce conservation laws across interfaces
     fn enforce_conservation_laws(
         &mut self,
-        _fields: &mut Array4<f64>,
-        _grid: &Grid,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
     ) -> KwaversResult<()> {
         if !self.conservation_enforcer.enforce_mass &&
            !self.conservation_enforcer.enforce_momentum &&
@@ -710,7 +710,174 @@ impl CouplingInterface {
             return Ok(());
         }
         
-        // TODO: Implement conservation law enforcement
+        // Enforce conservation laws for each interface coupling
+        for coupling in &mut self.interface_couplings {
+            // Get field indices
+            let pressure_idx = 0;
+            let vx_idx = 1;
+            let vy_idx = 2;
+            let vz_idx = 3;
+            
+            // Compute interface fluxes based on interface geometry
+            let interface_geom = &coupling.interface_geometry;
+            let plane_idx = interface_geom.plane_position as usize;
+            let buffer = interface_geom.buffer_width;
+            
+            // Create a region around the interface
+            let interface_region = match interface_geom.normal_direction {
+                0 => DomainRegion { // X-normal interface
+                    start: (plane_idx.saturating_sub(buffer), 0, 0),
+                    end: ((plane_idx + buffer).min(grid.nx), grid.ny, grid.nz),
+                    domain_type: DomainType::Hybrid,
+                    buffer_zones: BufferZones::default(),
+                    quality_score: 0.0,
+                },
+                1 => DomainRegion { // Y-normal interface
+                    start: (0, plane_idx.saturating_sub(buffer), 0),
+                    end: (grid.nx, (plane_idx + buffer).min(grid.ny), grid.nz),
+                    domain_type: DomainType::Hybrid,
+                    buffer_zones: BufferZones::default(),
+                    quality_score: 0.0,
+                },
+                2 => DomainRegion { // Z-normal interface
+                    start: (0, 0, plane_idx.saturating_sub(buffer)),
+                    end: (grid.nx, grid.ny, (plane_idx + buffer).min(grid.nz)),
+                    domain_type: DomainType::Hybrid,
+                    buffer_zones: BufferZones::default(),
+                    quality_score: 0.0,
+                },
+                _ => DomainRegion { // Default to full domain
+                    start: (0, 0, 0),
+                    end: (grid.nx, grid.ny, grid.nz),
+                    domain_type: DomainType::Hybrid,
+                    buffer_zones: BufferZones::default(),
+                    quality_score: 0.0,
+                },
+            };
+            
+            if self.conservation_enforcer.enforce_mass {
+                // Mass conservation: ∂ρ/∂t + ∇·(ρv) = 0
+                // For acoustic waves: ∂p/∂t + ρc²∇·v = 0
+                let mut mass_flux = 0.0;
+                
+                // Compute mass flux across interface
+                for i in interface_region.start.0..interface_region.end.0 {
+                    for j in interface_region.start.1..interface_region.end.1 {
+                        for k in interface_region.start.2..interface_region.end.2 {
+                            let vx = fields[[vx_idx, i, j, k]];
+                            let vy = fields[[vy_idx, i, j, k]];
+                            let vz = fields[[vz_idx, i, j, k]];
+                            
+                            // Compute divergence contribution
+                            mass_flux += (vx * grid.dx + vy * grid.dy + vz * grid.dz);
+                        }
+                    }
+                }
+                
+                // Apply correction to maintain mass conservation
+                if mass_flux.abs() > self.conservation_enforcer.tolerance {
+                    let correction = -mass_flux / (interface_region.volume() as f64);
+                    for i in interface_region.start.0..interface_region.end.0 {
+                        for j in interface_region.start.1..interface_region.end.1 {
+                            for k in interface_region.start.2..interface_region.end.2 {
+                                fields[[pressure_idx, i, j, k]] += correction;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if self.conservation_enforcer.enforce_momentum {
+                // Momentum conservation: ∂(ρv)/∂t + ∇p = 0
+                // Apply momentum correction at interfaces
+                let mut momentum_error = [0.0, 0.0, 0.0];
+                
+                // Compute momentum imbalance
+                for i in interface_region.start.0..interface_region.end.0 {
+                    for j in interface_region.start.1..interface_region.end.1 {
+                        for k in interface_region.start.2..interface_region.end.2 {
+                            momentum_error[0] += fields[[vx_idx, i, j, k]];
+                            momentum_error[1] += fields[[vy_idx, i, j, k]];
+                            momentum_error[2] += fields[[vz_idx, i, j, k]];
+                        }
+                    }
+                }
+                
+                // Apply momentum correction
+                let volume = interface_region.volume() as f64;
+                if momentum_error[0].abs() > self.conservation_enforcer.tolerance {
+                    let correction = -momentum_error[0] / volume;
+                    for i in interface_region.start.0..interface_region.end.0 {
+                        for j in interface_region.start.1..interface_region.end.1 {
+                            for k in interface_region.start.2..interface_region.end.2 {
+                                fields[[vx_idx, i, j, k]] += correction;
+                            }
+                        }
+                    }
+                }
+                
+                if momentum_error[1].abs() > self.conservation_enforcer.tolerance {
+                    let correction = -momentum_error[1] / volume;
+                    for i in interface_region.start.0..interface_region.end.0 {
+                        for j in interface_region.start.1..interface_region.end.1 {
+                            for k in interface_region.start.2..interface_region.end.2 {
+                                fields[[vy_idx, i, j, k]] += correction;
+                            }
+                        }
+                    }
+                }
+                
+                if momentum_error[2].abs() > self.conservation_enforcer.tolerance {
+                    let correction = -momentum_error[2] / volume;
+                    for i in interface_region.start.0..interface_region.end.0 {
+                        for j in interface_region.start.1..interface_region.end.1 {
+                            for k in interface_region.start.2..interface_region.end.2 {
+                                fields[[vz_idx, i, j, k]] += correction;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if self.conservation_enforcer.enforce_energy {
+                // Energy conservation: ∂E/∂t + ∇·(Ev) = 0
+                // For acoustic waves: E = p²/(2ρc²) + ρv²/2
+                let mut energy_flux = 0.0;
+                let rho = 1000.0; // Default density, should be from medium
+                let c = 1500.0;   // Default sound speed, should be from medium
+                
+                for i in interface_region.start.0..interface_region.end.0 {
+                    for j in interface_region.start.1..interface_region.end.1 {
+                        for k in interface_region.start.2..interface_region.end.2 {
+                            let p = fields[[pressure_idx, i, j, k]];
+                            let vx = fields[[vx_idx, i, j, k]];
+                            let vy = fields[[vy_idx, i, j, k]];
+                            let vz = fields[[vz_idx, i, j, k]];
+                            
+                            // Acoustic energy density
+                            let energy = p * p / (2.0 * rho * c * c) + 
+                                        0.5 * rho * (vx * vx + vy * vy + vz * vz);
+                            
+                            // Energy flux
+                            energy_flux += energy * (vx * grid.dx + vy * grid.dy + vz * grid.dz);
+                        }
+                    }
+                }
+                
+                // Apply energy correction if needed
+                if energy_flux.abs() > self.conservation_enforcer.tolerance {
+                    let correction = -energy_flux / (interface_region.volume() as f64 * rho * c * c);
+                    for i in interface_region.start.0..interface_region.end.0 {
+                        for j in interface_region.start.1..interface_region.end.1 {
+                            for k in interface_region.start.2..interface_region.end.2 {
+                                fields[[pressure_idx, i, j, k]] += correction;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         debug!("Conservation law enforcement applied");
         Ok(())
     }
