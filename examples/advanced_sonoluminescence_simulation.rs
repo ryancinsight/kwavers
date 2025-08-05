@@ -107,6 +107,7 @@ fn main() -> KwaversResult<()> {
     
     let pressure = Array3::from_shape_vec((grid.nx, grid.ny, grid.nz), pressure_values)
         .expect("Failed to create pressure array");
+    fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
     
     println!("Grid: {}×{}×{} points", grid.nx, grid.ny, grid.nz);
     println!("Time step: {:.2e} s", dt);
