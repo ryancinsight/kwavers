@@ -1015,26 +1015,33 @@ impl DomainDecomposer {
                         visited[[ci, cj, ck]] = true;
                         region_points.push((ci, cj, ck));
                         
-                        // Check neighbors
-                        for di in -1i32..=1 {
-                            for dj in -1i32..=1 {
-                                for dk in -1i32..=1 {
-                                    if di == 0 && dj == 0 && dk == 0 {
-                                        continue;
-                                    }
-                                    
-                                    let ni = (ci as i32 + di) as usize;
-                                    let nj = (cj as i32 + dj) as usize;
-                                    let nk = (ck as i32 + dk) as usize;
-                                    
-                                    if ni < grid.nx && nj < grid.ny && nk < grid.nz && !visited[[ni, nj, nk]] {
-                                        let neighbor_value = heterogeneity[[ni, nj, nk]];
-                                        let relative_diff = (neighbor_value - seed_value).abs() / seed_value.abs().max(1e-10);
-                                        
-                                        if relative_diff < heterogeneity_threshold {
-                                            queue.push((ni, nj, nk));
-                                        }
-                                    }
+                        // Check neighbors using precomputed offsets
+                        const NEIGHBOR_OFFSETS: [(i32, i32, i32); 26] = [
+                            (-1, -1, -1), (-1, -1,  0), (-1, -1,  1),
+                            (-1,  0, -1), (-1,  0,  0), (-1,  0,  1),
+                            (-1,  1, -1), (-1,  1,  0), (-1,  1,  1),
+                            ( 0, -1, -1), ( 0, -1,  0), ( 0, -1,  1),
+                            ( 0,  0, -1),               ( 0,  0,  1),
+                            ( 0,  1, -1), ( 0,  1,  0), ( 0,  1,  1),
+                            ( 1, -1, -1), ( 1, -1,  0), ( 1, -1,  1),
+                            ( 1,  0, -1), ( 1,  0,  0), ( 1,  0,  1),
+                            ( 1,  1, -1), ( 1,  1,  0), ( 1,  1,  1),
+                        ];
+                        for &(di, dj, dk) in NEIGHBOR_OFFSETS.iter() {
+                            let ni = ci as i32 + di;
+                            let nj = cj as i32 + dj;
+                            let nk = ck as i32 + dk;
+                            if ni < 0 || nj < 0 || nk < 0 {
+                                continue;
+                            }
+                            let ni = ni as usize;
+                            let nj = nj as usize;
+                            let nk = nk as usize;
+                            if ni < grid.nx && nj < grid.ny && nk < grid.nz && !visited[[ni, nj, nk]] {
+                                let neighbor_value = heterogeneity[[ni, nj, nk]];
+                                let relative_diff = (neighbor_value - seed_value).abs() / seed_value.abs().max(1e-10);
+                                if relative_diff < heterogeneity_threshold {
+                                    queue.push((ni, nj, nk));
                                 }
                             }
                         }
