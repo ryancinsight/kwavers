@@ -280,13 +280,13 @@ impl CPMLBoundary {
         for i in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if i < thickness as usize {
-                (thickness - i as f64) / thickness
+                (thickness - i as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if i >= n - thickness as usize {
-                (i as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (i as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };
@@ -350,13 +350,13 @@ impl CPMLBoundary {
         for j in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if j < thickness as usize {
-                (thickness - j as f64) / thickness
+                (thickness - j as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if j >= n - thickness as usize {
-                (j as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (j as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };
@@ -420,13 +420,13 @@ impl CPMLBoundary {
         for k in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if k < thickness as usize {
-                (thickness - k as f64) / thickness
+                (thickness - k as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if k >= n - thickness as usize {
-                (k as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (k as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };

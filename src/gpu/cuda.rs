@@ -645,9 +645,9 @@ pub fn launch_cuda_kernel(
         
         // Get the current CUDA device
         let device = CudaDevice::new(0).map_err(|e| {
-            KwaversError::Gpu(crate::error::GpuError::InitializationFailed {
-                backend: "CUDA".to_string(),
-                details: format!("Failed to get CUDA device: {}", e),
+            KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
+                device_id: 0,
+                reason: format!("Failed to get CUDA device: {}", e),
             })
         })?;
         
@@ -682,17 +682,17 @@ pub fn enable_cuda_peer_access(_peer_device_id: u32) -> KwaversResult<()> {
         
         // Get current device
         let current_device = CudaDevice::new(0).map_err(|e| {
-            KwaversError::Gpu(crate::error::GpuError::InitializationFailed {
-                backend: "CUDA".to_string(),
-                details: format!("Failed to get current CUDA device: {}", e),
+            KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
+                device_id: 0,
+                reason: format!("Failed to get current CUDA device: {}", e),
             })
         })?;
         
         // Get peer device
         let peer_device = CudaDevice::new(_peer_device_id as usize).map_err(|e| {
-            KwaversError::Gpu(crate::error::GpuError::InitializationFailed {
-                backend: "CUDA".to_string(),
-                details: format!("Failed to get peer CUDA device {}: {}", _peer_device_id, e),
+            KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
+                device_id: _peer_device_id,
+                reason: format!("Failed to get peer CUDA device {}: {}", _peer_device_id, e),
             })
         })?;
         

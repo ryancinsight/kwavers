@@ -436,6 +436,9 @@ impl GpuPerformanceMetrics {
     }
 }
 
+// Re-export FFT kernels
+pub use fft_kernels::{GpuFft3d, MultiGpuFft3d, DataDistribution};
+
 #[cfg(test)]
 mod tests {
     use super::*;

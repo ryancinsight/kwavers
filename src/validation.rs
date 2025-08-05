@@ -509,7 +509,7 @@ impl ValidationRule for RequiredFieldValidationRule {
         "Validates that a required field is present and not null"
     }
     
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult {
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult {
         let start_time = std::time::Instant::now();
         
         if value.is_null() {
