@@ -1105,26 +1105,8 @@ impl PhysicsPlugin for HybridSolver {
         t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Update pressure and velocity fields
-        let pressure_idx = 0;
-        let velocity_x_idx = 1;
-        let velocity_y_idx = 2;
-        let velocity_z_idx = 3;
-        
-        // Extract field slices
-        let mut pressure = fields.slice_mut(s![pressure_idx, .., .., ..]).to_owned();
-        let mut velocity_x = fields.slice_mut(s![velocity_x_idx, .., .., ..]).to_owned();
-        let mut velocity_y = fields.slice_mut(s![velocity_y_idx, .., .., ..]).to_owned();
-        let mut velocity_z = fields.slice_mut(s![velocity_z_idx, .., .., ..]).to_owned();
-        
         // Perform the hybrid solver update
-        self.update_fields(&mut pressure, &mut velocity_x, &mut velocity_y, &mut velocity_z, dt)?;
-        
-        // Copy back to the fields array
-        fields.slice_mut(s![pressure_idx, .., .., ..]).assign(&pressure);
-        fields.slice_mut(s![velocity_x_idx, .., .., ..]).assign(&velocity_x);
-        fields.slice_mut(s![velocity_y_idx, .., .., ..]).assign(&velocity_y);
-        fields.slice_mut(s![velocity_z_idx, .., .., ..]).assign(&velocity_z);
+        self.update_fields(fields, medium, dt, t)?;
         
         Ok(())
     }
@@ -1230,14 +1212,14 @@ mod tests {
     #[test]
     fn test_hybrid_solver_validation() {
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.01, 1.0);
         
         let config = HybridConfig::default();
         let solver = HybridSolver::new(config, &grid).unwrap();
         
         // Validate the solver
         let result = solver.validate(&grid, &medium);
-        assert!(result.is_valid(), "Validation failed: {:?}", result.errors);
+        assert!(result.is_valid, "Validation failed: {:?}", result.errors);
     }
     
     #[test]

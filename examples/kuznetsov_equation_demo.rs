@@ -8,7 +8,7 @@ use kwavers::*;
 use kwavers::physics::mechanics::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme, NonlinearWave};
 use kwavers::physics::{KuznetsovWaveComponent, PhysicsPipeline, PhysicsContext};
 use kwavers::medium::HomogeneousMedium;
-use kwavers::source::Source;
+use kwavers::source::{Source, NullSource};
 use ndarray::{Array3, Array4, ArrayView3, Axis};
 use std::error::Error;
 

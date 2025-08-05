@@ -67,6 +67,8 @@ pub enum BufferType {
     FFT,
     /// Boundary condition buffer
     Boundary,
+    /// General purpose buffer
+    General,
 }
 
 /// Memory pool for efficient allocation

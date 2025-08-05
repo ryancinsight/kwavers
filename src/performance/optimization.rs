@@ -300,22 +300,25 @@ impl PerformanceOptimizer {
                     constraint: "Expected GpuKernel".to_string(),
                 }))?;
             
+            // Clone the kernel to avoid borrow checker issues
+            let kernel_data = (*kernel).clone();
+            
             // Collect parameters from this kernel
-            for param in &kernel.parameters {
+            for param in &kernel_data.parameters {
                 all_parameters.push(param.clone());
             }
             
             // Append kernel code
-            fused_code.push_str(&kernel.code);
+            fused_code.push_str(&kernel_data.code);
             fused_code.push_str("\n");
             
             // Append kernel body with unique function name
-            fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel.name));
+            fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel_data.name));
             fused_body.push_str(&format!("    {{\n"));
-            fused_body.push_str(&kernel.body);
+            fused_body.push_str(&kernel_data.body);
             fused_body.push_str(&format!("    }}\n\n"));
             
-            gpu_kernels.push(*kernel);
+            gpu_kernels.push(kernel_data);
         }
         
         // Create fused kernel
@@ -328,12 +331,12 @@ impl PerformanceOptimizer {
             fused_body
         );
         
-        // Prepare kernel arguments
-        let kernel_args: Vec<&dyn std::any::Any> = all_parameters.iter()
+        // Prepare kernel arguments as void pointers
+        let kernel_args: Vec<*const std::ffi::c_void> = all_parameters.iter()
             .map(|p| {
                 // This is a placeholder - actual implementation would need to map
                 // parameter names to actual buffer/value references
-                &p.name as &dyn std::any::Any
+                p.name.as_ptr() as *const std::ffi::c_void
             })
             .collect();
         
@@ -348,9 +351,8 @@ impl PerformanceOptimizer {
         
         context.launch_kernel(
             "fused_kernel",
-            &fused_kernel_code,
-            block_size,
             (grid_size as u32, 1, 1),
+            block_size,
             &kernel_args,
         )?;
         
@@ -379,9 +381,9 @@ impl PerformanceOptimizer {
         
         // Setup peer-to-peer access between GPUs
         for (i, ctx1) in gpu_contexts.iter().enumerate() {
-            for (j, ctx2) in gpu_contexts.iter().enumerate() {
+            for (j, _ctx2) in gpu_contexts.iter().enumerate() {
                 if i != j {
-                    ctx1.enable_peer_access(ctx2)?;
+                    ctx1.enable_peer_access(j as u32)?;
                 }
             }
         }
@@ -452,7 +454,7 @@ impl StencilKernel {
 
 /// GPU kernel definition
 #[cfg(feature = "gpu")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GpuKernel {
     pub name: String,
     pub code: String,
@@ -465,7 +467,7 @@ pub struct GpuKernel {
 
 /// Kernel parameter
 #[cfg(feature = "gpu")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KernelParameter {
     pub name: String,
     pub dtype: String,

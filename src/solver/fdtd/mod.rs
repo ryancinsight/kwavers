@@ -145,6 +145,7 @@ impl Default for StaggeredGrid {
 }
 
 /// FDTD solver for acoustic wave propagation
+#[derive(Clone, Debug)]
 pub struct FdtdSolver {
     /// Configuration
     config: FdtdConfig,

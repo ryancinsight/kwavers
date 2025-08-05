@@ -592,3 +592,40 @@ mod tests {
         }
     }
 }
+
+/// Launch a CUDA kernel
+pub fn launch_cuda_kernel(
+    _kernel_name: &str,
+    _grid_size: (u32, u32, u32),
+    _block_size: (u32, u32, u32),
+    _args: &[*const std::ffi::c_void],
+) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        // TODO: Implement actual CUDA kernel launch
+        Ok(())
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
+}
+
+/// Enable peer access between CUDA devices
+pub fn enable_cuda_peer_access(_peer_device_id: u32) -> KwaversResult<()> {
+    #[cfg(feature = "cudarc")]
+    {
+        // TODO: Implement actual CUDA peer access
+        Ok(())
+    }
+    #[cfg(not(feature = "cudarc"))]
+    {
+        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        }))
+    }
+}

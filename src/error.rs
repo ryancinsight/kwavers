@@ -684,6 +684,12 @@ pub enum GpuError {
 
     /// No GPU devices found
     NoDevicesFound,
+    
+    /// Invalid operation
+    InvalidOperation {
+        operation: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for GpuError {
@@ -713,6 +719,9 @@ impl fmt::Display for GpuError {
             }
             GpuError::NoDevicesFound => {
                 write!(f, "No GPU devices found")
+            }
+            GpuError::InvalidOperation { operation, reason } => {
+                write!(f, "Invalid GPU operation '{}': {}", operation, reason)
             }
         }
     }
