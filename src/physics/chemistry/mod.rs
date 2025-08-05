@@ -157,6 +157,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         // Check for NaN or infinite values in pressure field
         let invalid_pressure_values: Vec<f64> = self.pressure.iter()
             .filter(|&&x| x.is_nan() || x.is_infinite())
+            .copied()
             .collect();
             
         if !invalid_pressure_values.is_empty() {
@@ -169,6 +170,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         // Check for negative temperatures
         let negative_temperatures: Vec<f64> = self.temperature.iter()
             .filter(|&&x| x < 0.0)
+            .copied()
             .collect();
             
         if !negative_temperatures.is_empty() {
@@ -183,6 +185,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         // Check for extremely high temperatures (> 1000 K)
         let high_temperatures: Vec<f64> = self.temperature.iter()
             .filter(|&&x| x > 1000.0)
+            .copied()
             .collect();
             
         if !high_temperatures.is_empty() {
@@ -194,6 +197,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         // Check for extremely high pressures (> 100 MPa)
         let high_pressures: Vec<f64> = self.pressure.iter()
             .filter(|&&x| x.abs() > 1e8)
+            .copied()
             .collect();
             
         if !high_pressures.is_empty() {

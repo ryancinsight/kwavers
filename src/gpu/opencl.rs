@@ -640,10 +640,9 @@ pub fn launch_webgpu_kernel(
         
         // Validate workgroup dimensions
         if workgroups_x == 0 || workgroups_y == 0 || workgroups_z == 0 {
-            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidConfiguration {
-                parameter: "workgroup dimensions".to_string(),
-                value: format!("({}, {}, {})", workgroups_x, workgroups_y, workgroups_z),
-                constraint: "all dimensions must be > 0".to_string(),
+            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
+                operation: "workgroup dimensions".to_string(),
+                reason: format!("all dimensions must be > 0, got ({}, {}, {})", workgroups_x, workgroups_y, workgroups_z),
             }));
         }
         

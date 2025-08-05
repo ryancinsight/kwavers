@@ -623,11 +623,9 @@ mod tests {
 mod validation_tests;
 
 // Plugin implementation for PSTD solver
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
-use crate::error::KwaversError;
-use std::collections::HashMap;
 
 /// PSTD solver plugin for integration with the physics pipeline
+#[derive(Debug)]
 pub struct PstdPlugin {
     solver: PstdSolver,
     metadata: PluginMetadata,
@@ -638,10 +636,12 @@ impl PstdPlugin {
     pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
         let solver = PstdSolver::new(config, grid)?;
         let metadata = PluginMetadata {
+            id: "pstd_solver".to_string(),
             name: "PSTD Solver".to_string(),
             version: "1.0.0".to_string(),
             author: "Kwavers Team".to_string(),
             description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
+            license: "MIT".to_string(),
         };
         
         Ok(Self { solver, metadata })
@@ -653,6 +653,10 @@ impl PhysicsPlugin for PstdPlugin {
         &self.metadata
     }
     
+    fn state(&self) -> PluginState {
+        PluginState::Initialized
+    }
+    
     fn initialize(&mut self, _grid: &Grid, _medium: &dyn crate::medium::Medium) -> KwaversResult<()> {
         // Solver is already initialized in new()
         Ok(())
@@ -660,67 +664,65 @@ impl PhysicsPlugin for PstdPlugin {
     
     fn update(
         &mut self,
-        fields: &mut HashMap<String, Array3<f64>>,
-        context: &PluginContext,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn crate::medium::Medium,
         dt: f64,
+        t: f64,
+        context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Get required fields
-        let pressure = fields.get("pressure")
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
-                field: "pressure".to_string(),
-                value: "missing".to_string(),
-                constraint: "required field for PSTD solver".to_string(),
-            }))?;
-        let vx = fields.get("velocity_x")
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
-                field: "velocity_x".to_string(),
-                value: "missing".to_string(),
-                constraint: "required field for PSTD solver".to_string(),
-            }))?;
-        let vy = fields.get("velocity_y")
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
-                field: "velocity_y".to_string(),
-                value: "missing".to_string(),
-                constraint: "required field for PSTD solver".to_string(),
-            }))?;
-        let vz = fields.get("velocity_z")
-            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
-                field: "velocity_z".to_string(),
-                value: "missing".to_string(),
-                constraint: "required field for PSTD solver".to_string(),
-            }))?;
+        use ndarray::Axis;
         
-        // Get medium properties
-        let density = context.get_field("density")
-            .unwrap_or(&Array3::from_elem((1, 1, 1), 1000.0)); // Default to water
-        let sound_speed = context.get_field("sound_speed")
-            .unwrap_or(&Array3::from_elem((1, 1, 1), 1500.0)); // Default to water
+        // Extract fields from the Array4 as owned arrays
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
+        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
         
-        // Update fields using PSTD
-        let (new_pressure, new_vx, new_vy, new_vz) = self.solver.step(
-            pressure, vx, vy, vz, density, sound_speed, dt
-        )?;
+        // Compute divergence of velocity
+        let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
         
-        // Update fields in place
-        fields.insert("pressure".to_string(), new_pressure);
-        fields.insert("velocity_x".to_string(), new_vx);
-        fields.insert("velocity_y".to_string(), new_vy);
-        fields.insert("velocity_z".to_string(), new_vz);
+        // Update pressure using divergence
+        let mut pressure_new = pressure.clone();
+        self.solver.update_pressure(&mut pressure_new, &divergence, medium, dt)?;
+        
+        // Update velocities using new pressure
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure_new, medium, dt)?;
+        
+        // Copy back to fields
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure_new);
+        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
+        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
+        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
         
         Ok(())
     }
     
-    fn required_fields(&self) -> Vec<String> {
+    fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+        use crate::physics::composable::FieldType;
         vec![
-            "pressure".to_string(),
-            "velocity_x".to_string(),
-            "velocity_y".to_string(),
-            "velocity_z".to_string(),
+            FieldType::Pressure,
+            FieldType::Velocity,
         ]
     }
     
-    fn provided_fields(&self) -> Vec<String> {
+    fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
         // PSTD updates the same fields it requires
         self.required_fields()
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(PstdPlugin {
+            solver: PstdSolver::new(self.solver.config.clone(), &self.solver.grid).unwrap(),
+            metadata: self.metadata.clone(),
+        })
+    }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

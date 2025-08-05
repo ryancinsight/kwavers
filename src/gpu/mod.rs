@@ -258,7 +258,7 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::launch_cuda_kernel(kernel_name, grid_size, block_size, args),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::launch_wgpu_kernel(kernel_name, grid_size, block_size, args),
+            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::launch_webgpu_kernel(kernel_name, grid_size, block_size, args),
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),

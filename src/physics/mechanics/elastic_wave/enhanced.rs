@@ -202,25 +202,30 @@ impl StiffnessTensor {
     }
 
     /// Check if a 6x6 symmetric matrix is positive definite
-    fn is_positive_definite(&self, matrix: &[[f64; 6]; 6]) -> bool {
+    fn is_positive_definite(&self, matrix: &Array2<f64>) -> bool {
         // For a symmetric matrix to be positive definite, all leading principal minors must be positive
         // We'll use Sylvester's criterion
         
+        // Check dimensions
+        if matrix.shape() != &[6, 6] {
+            return false;
+        }
+        
         // Check 1x1 minor
-        if matrix[0][0] <= 0.0 {
+        if matrix[[0, 0]] <= 0.0 {
             return false;
         }
         
         // Check 2x2 minor
-        let det2 = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[0][1];
+        let det2 = matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[0, 1]];
         if det2 <= 0.0 {
             return false;
         }
         
         // Check 3x3 minor
-        let det3 = matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[1][2])
-                 - matrix[0][1] * (matrix[0][1] * matrix[2][2] - matrix[0][2] * matrix[1][2])
-                 + matrix[0][2] * (matrix[0][1] * matrix[1][2] - matrix[0][2] * matrix[1][1]);
+        let det3 = matrix[[0, 0]] * (matrix[[1, 1]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[1, 2]])
+                 - matrix[[0, 1]] * (matrix[[0, 1]] * matrix[[2, 2]] - matrix[[0, 2]] * matrix[[1, 2]])
+                 + matrix[[0, 2]] * (matrix[[0, 1]] * matrix[[1, 2]] - matrix[[0, 2]] * matrix[[1, 1]]);
         if det3 <= 0.0 {
             return false;
         }
@@ -229,7 +234,7 @@ impl StiffnessTensor {
         // For now, we also check that diagonal elements are positive
         // and that the matrix satisfies basic physical constraints
         for i in 0..6 {
-            if matrix[i][i] <= 0.0 {
+            if matrix[[i, i]] <= 0.0 {
                 return false;
             }
         }
@@ -237,7 +242,7 @@ impl StiffnessTensor {
         // Additional check: ensure the matrix satisfies thermodynamic stability
         // C11, C22, C33 > 0 (already checked above)
         // C11 + C22 + 2*C12 > 0 (bulk modulus constraint)
-        if matrix[0][0] + matrix[1][1] + 2.0 * matrix[0][1] <= 0.0 {
+        if matrix[[0, 0]] + matrix[[1, 1]] + 2.0 * matrix[[0, 1]] <= 0.0 {
             return false;
         }
         
@@ -250,6 +255,9 @@ impl StiffnessTensor {
 
 /// Helper struct for enhanced elastic wave computations (internal use)
 struct EnhancedElasticWaveHelper {
+    /// Grid reference
+    grid: Grid,
+    
     /// Wavenumber arrays
     kx: Array3<f64>,
     ky: Array3<f64>,
@@ -260,6 +268,9 @@ struct EnhancedElasticWaveHelper {
     
     /// Viscoelastic damping configuration
     viscoelastic: Option<ViscoelasticConfig>,
+    
+    /// Material stiffness tensor (6x6 symmetric matrix)
+    stiffness_tensor: StiffnessTensor,
     
     /// Material stiffness tensors (spatially varying)
     stiffness_tensors: Option<Array4<f64>>, // Shape: (nx, ny, nz, 21) for upper triangle
@@ -290,11 +301,13 @@ impl EnhancedElasticWaveHelper {
         let (kx, ky, kz) = Self::create_wavenumber_arrays(nx, ny, nz, dx, dy, dz);
         
         Ok(Self {
+            grid: grid.clone(),
             kx,
             ky,
             kz,
             mode_conversion: ModeConversionConfig::default(),
             viscoelastic: None,
+            stiffness_tensor: StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap(), // Default isotropic
             stiffness_tensors: None,
             interface_mask: None,
             metrics: ElasticWaveMetrics::default(),
@@ -316,7 +329,7 @@ impl EnhancedElasticWaveHelper {
     /// Set spatially varying stiffness tensors
     pub fn set_stiffness_field(&mut self, tensors: Array4<f64>) -> KwaversResult<()> {
         // Validate dimensions
-        let (nx, ny, nz) = (self.kx.dim().0, self.ky.dim().1, self.kz.dim().2);
+        let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         if tensors.dim() != (nx, ny, nz, 21) {
             return Err(PhysicsError::InvalidConfiguration {
                 component: "StiffnessTensor field".to_string(),
@@ -396,12 +409,12 @@ impl EnhancedElasticWaveHelper {
         vx: &mut Array3<f64>,
         vy: &mut Array3<f64>,
         vz: &mut Array3<f64>,
-        sxx: &Array3<f64>,
-        syy: &Array3<f64>,
-        szz: &Array3<f64>,
-        sxy: &Array3<f64>,
-        sxz: &Array3<f64>,
-        syz: &Array3<f64>,
+        sxx: &mut Array3<f64>,
+        syy: &mut Array3<f64>,
+        szz: &mut Array3<f64>,
+        sxy: &mut Array3<f64>,
+        sxz: &mut Array3<f64>,
+        syz: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         if !self.mode_conversion.enable_p_to_s && !self.mode_conversion.enable_s_to_p {
             return Ok(());
@@ -539,15 +552,15 @@ impl EnhancedElasticWaveHelper {
         let mut vy = fields.index_axis(Axis(0), VY_IDX).to_owned();
         let mut vz = fields.index_axis(Axis(0), VZ_IDX).to_owned();
         
-        let sxx = fields.index_axis(Axis(0), SXX_IDX).to_owned();
-        let syy = fields.index_axis(Axis(0), SYY_IDX).to_owned();
-        let szz = fields.index_axis(Axis(0), SZZ_IDX).to_owned();
-        let sxy = fields.index_axis(Axis(0), SXY_IDX).to_owned();
-        let sxz = fields.index_axis(Axis(0), SXZ_IDX).to_owned();
-        let syz = fields.index_axis(Axis(0), SYZ_IDX).to_owned();
+        let mut sxx = fields.index_axis(Axis(0), SXX_IDX).to_owned();
+        let mut syy = fields.index_axis(Axis(0), SYY_IDX).to_owned();
+        let mut szz = fields.index_axis(Axis(0), SZZ_IDX).to_owned();
+        let mut sxy = fields.index_axis(Axis(0), SXY_IDX).to_owned();
+        let mut sxz = fields.index_axis(Axis(0), SXZ_IDX).to_owned();
+        let mut syz = fields.index_axis(Axis(0), SYZ_IDX).to_owned();
         
         // Apply mode conversion at interfaces
-        self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &sxx, &syy, &szz, &sxy, &sxz, &syz)?;
+        self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz)?;
         
         // Update fields using spectral method
         // Implement full spectral update with stiffness tensors
@@ -596,22 +609,35 @@ impl EnhancedElasticWaveHelper {
                     let exy = 0.5 * (dvx_dy[idx] + dvy_dx[idx]);
                     
                     // Apply stiffness tensor
-                    sxx[idx] += dt * (c[0][0]*exx + c[0][1]*eyy + c[0][2]*ezz + c[0][3]*eyz + c[0][4]*exz + c[0][5]*exy);
-                    syy[idx] += dt * (c[1][0]*exx + c[1][1]*eyy + c[1][2]*ezz + c[1][3]*eyz + c[1][4]*exz + c[1][5]*exy);
-                    szz[idx] += dt * (c[2][0]*exx + c[2][1]*eyy + c[2][2]*ezz + c[2][3]*eyz + c[2][4]*exz + c[2][5]*exy);
-                    syz[idx] += dt * (c[3][0]*exx + c[3][1]*eyy + c[3][2]*ezz + c[3][3]*eyz + c[3][4]*exz + c[3][5]*exy);
-                    sxz[idx] += dt * (c[4][0]*exx + c[4][1]*eyy + c[4][2]*ezz + c[4][3]*eyz + c[4][4]*exz + c[4][5]*exy);
-                    sxy[idx] += dt * (c[5][0]*exx + c[5][1]*eyy + c[5][2]*ezz + c[5][3]*eyz + c[5][4]*exz + c[5][5]*exy);
+                    sxx[idx] += dt * (c.c[[0,0]]*exx + c.c[[0,1]]*eyy + c.c[[0,2]]*ezz + c.c[[0,3]]*eyz + c.c[[0,4]]*exz + c.c[[0,5]]*exy);
+                    syy[idx] += dt * (c.c[[1,0]]*exx + c.c[[1,1]]*eyy + c.c[[1,2]]*ezz + c.c[[1,3]]*eyz + c.c[[1,4]]*exz + c.c[[1,5]]*exy);
+                    szz[idx] += dt * (c.c[[2,0]]*exx + c.c[[2,1]]*eyy + c.c[[2,2]]*ezz + c.c[[2,3]]*eyz + c.c[[2,4]]*exz + c.c[[2,5]]*exy);
+                    syz[idx] += dt * (c.c[[3,0]]*exx + c.c[[3,1]]*eyy + c.c[[3,2]]*ezz + c.c[[3,3]]*eyz + c.c[[3,4]]*exz + c.c[[3,5]]*exy);
+                    sxz[idx] += dt * (c.c[[4,0]]*exx + c.c[[4,1]]*eyy + c.c[[4,2]]*ezz + c.c[[4,3]]*eyz + c.c[[4,4]]*exz + c.c[[4,5]]*exy);
+                    sxy[idx] += dt * (c.c[[5,0]]*exx + c.c[[5,1]]*eyy + c.c[[5,2]]*ezz + c.c[[5,3]]*eyz + c.c[[5,4]]*exz + c.c[[5,5]]*exy);
                 }
             }
         }
+        
+        // Copy back updated fields
+        fields.index_axis_mut(Axis(0), VX_IDX).assign(&vx);
+        fields.index_axis_mut(Axis(0), VY_IDX).assign(&vy);
+        fields.index_axis_mut(Axis(0), VZ_IDX).assign(&vz);
+        fields.index_axis_mut(Axis(0), SXX_IDX).assign(&sxx);
+        fields.index_axis_mut(Axis(0), SYY_IDX).assign(&syy);
+        fields.index_axis_mut(Axis(0), SZZ_IDX).assign(&szz);
+        fields.index_axis_mut(Axis(0), SXY_IDX).assign(&sxy);
+        fields.index_axis_mut(Axis(0), SXZ_IDX).assign(&sxz);
+        fields.index_axis_mut(Axis(0), SYZ_IDX).assign(&syz);
         
         Ok(())
     }
 
     /// Compute spatial derivative using spectral method
     fn compute_derivative(&self, field: &Array3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
-        use crate::solver::numerics::spectral::compute_spectral_derivative;
+        use crate::utils::{fft_3d, ifft_3d};
+        use num_complex::Complex64;
+        use ndarray::Zip;
         
         // Validate direction
         if direction > 2 {
@@ -622,8 +648,35 @@ impl EnhancedElasticWaveHelper {
             }));
         }
         
-        // Compute derivative in specified direction
-        compute_spectral_derivative(field, &self.grid, direction)
+        // Transform to spectral domain
+        // Create a temporary Array4 for the FFT function
+        let mut field_4d = Array4::zeros((1, field.shape()[0], field.shape()[1], field.shape()[2]));
+        field_4d.index_axis_mut(Axis(0), 0).assign(field);
+        let field_spectral = fft_3d(&field_4d, 0, &self.grid);
+        
+        // Get wavenumbers
+        let (kx, ky, kz) = self.get_wavenumbers()?;
+        
+        // Apply spectral derivative
+        let mut result = field_spectral.clone();
+        for i in 0..self.grid.nx {
+            for j in 0..self.grid.ny {
+                for k in 0..self.grid.nz {
+                    let idx = [i, j, k];
+                    let ik = match direction {
+                        0 => Complex64::new(0.0, kx[i]),
+                        1 => Complex64::new(0.0, ky[j]),
+                        2 => Complex64::new(0.0, kz[k]),
+                        _ => unreachable!(),
+                    };
+                    result[idx] *= ik;
+                }
+            }
+        }
+        
+        // Transform back to physical domain
+        let result_real = ifft_3d(&result, &self.grid);
+        Ok(result_real)
     }
     
     /// Get wavenumbers for spectral derivatives

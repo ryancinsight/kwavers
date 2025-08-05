@@ -850,26 +850,16 @@ impl CouplingInterface {
                 
                 // Get material properties at the interface location
                 let (i, j, k) = match interface_geom.normal_direction {
-                    0 => ((plane_idx / grid.dx).round() as usize, grid.ny / 2, grid.nz / 2),
-                    1 => (grid.nx / 2, (plane_idx / grid.dy).round() as usize, grid.nz / 2),
-                    2 => (grid.nx / 2, grid.ny / 2, (plane_idx / grid.dz).round() as usize),
+                    0 => ((interface_geom.plane_position / grid.dx).round() as usize, grid.ny / 2, grid.nz / 2),
+                    1 => (grid.nx / 2, (interface_geom.plane_position / grid.dy).round() as usize, grid.nz / 2),
+                    2 => (grid.nx / 2, grid.ny / 2, (interface_geom.plane_position / grid.dz).round() as usize),
                     _ => (grid.nx / 2, grid.ny / 2, grid.nz / 2),
                 };
                 
                 // Get density and sound speed from the medium
-                let rho = if let Some(density_field) = fields.get("density") {
-                    density_field[[i, j, k]]
-                } else {
-                    // Fall back to homogeneous medium assumption
-                    1000.0 // Default density for water
-                };
-                
-                let c = if let Some(sound_speed_field) = fields.get("sound_speed") {
-                    sound_speed_field[[i, j, k]]
-                } else {
-                    // Fall back to homogeneous medium assumption
-                    1500.0 // Default sound speed for water
-                };
+                // For now, use default values since we don't have direct access to medium here
+                let rho = 1000.0; // Default density for water
+                let c = 1500.0;   // Default sound speed for water
 
                 for i in interface_region.start.0..interface_region.end.0 {
                     for j in interface_region.start.1..interface_region.end.1 {

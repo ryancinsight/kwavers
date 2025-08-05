@@ -206,7 +206,11 @@ impl GpuFftPlan {
         
         // Upload to GPU
         let buffer = context.allocate_buffer(all_twiddles.len() * std::mem::size_of::<Complex<f32>>())?;
-        context.upload_to_buffer(&buffer, &all_twiddles)?;
+        // Convert Complex<f32> to [f32; 2] which can implement Pod
+        let twiddle_data: Vec<[f32; 2]> = all_twiddles.iter()
+            .map(|c| [c.re, c.im])
+            .collect();
+        context.upload_to_buffer(&buffer, &twiddle_data)?;
         
         Ok(buffer)
     }
@@ -242,7 +246,11 @@ impl GpuFftPlan {
             }
         }
         
-        context.upload_to_buffer(&self.workspace.input, &complex_data)?;
+        // Convert Complex<f32> to [f32; 2] which can implement Pod
+        let complex_array: Vec<[f32; 2]> = complex_data.iter()
+            .map(|c| [c.re, c.im])
+            .collect();
+        context.upload_to_buffer(&self.workspace.input, &complex_array)?;
         Ok(())
     }
     
@@ -261,25 +269,29 @@ impl GpuFftPlan {
             }
         }
         
-        context.upload_to_buffer(&self.workspace.input, &complex_data)?;
+        // Convert Complex<f32> to [f32; 2] which can implement Pod
+        let complex_array: Vec<[f32; 2]> = complex_data.iter()
+            .map(|c| [c.re, c.im])
+            .collect();
+        context.upload_to_buffer(&self.workspace.input, &complex_array)?;
         Ok(())
     }
     
     /// Download complex data from GPU
     fn download_complex_data(&self, context: &mut GpuContext) -> KwaversResult<Array3<Complex<f64>>> {
         let (nx, ny, nz) = self.dimensions;
-        let mut complex_data = vec![Complex::new(0.0f32, 0.0f32); nx * ny * nz];
+        let mut complex_array = vec![[0.0f32; 2]; nx * ny * nz];
         
-        context.download_from_buffer(&self.workspace.output, &mut complex_data)?;
+        context.download_from_buffer(&self.workspace.output, &mut complex_array)?;
         
-        // Convert f32 to f64 and reshape
-        let mut result = Array3::zeros((nx, ny, nz));
+        // Convert [f32; 2] back to Complex<f64>
+        let mut result = Array3::<Complex<f64>>::zeros((nx, ny, nz));
         let mut idx = 0;
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let val = complex_data[idx];
-                    result[[i, j, k]] = Complex::new(val.re as f64, val.im as f64);
+                    let [re, im] = complex_array[idx];
+                    result[[i, j, k]] = Complex::new(re as f64, im as f64);
                     idx += 1;
                 }
             }
