@@ -149,7 +149,7 @@ pub fn calculate_blackbody_emission(
             
             // Convert to power density (W/m³)
             let volume = 4.0 / 3.0 * PI * radius.powi(3);
-            power / volume
+            power / volume.max(1e-20)
         } else {
             0.0
         }
