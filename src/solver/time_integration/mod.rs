@@ -122,16 +122,12 @@ impl MultiRateTimeIntegrator {
             current_time += dt;
             
             // Update time step history
-            let mut updates = HashMap::new();
             for (component, &local_dt) in &component_time_steps {
-                let mut history = self.time_step_history
-                    .get(component)
-                    .cloned()
-                    .unwrap_or_default();
-                history.push(local_dt);
-                updates.insert(component.clone(), history);
+                self.time_step_history
+                    .entry(component.clone())
+                    .or_default()
+                    .push(local_dt);
             }
-            self.time_step_history.extend(updates);
         }
         
         Ok(current_time)

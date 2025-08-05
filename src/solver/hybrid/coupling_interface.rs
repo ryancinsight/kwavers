@@ -843,10 +843,10 @@ impl CouplingInterface {
                 // Energy conservation: ∂E/∂t + ∇·(Ev) = 0
                 // For acoustic waves: E = p²/(2ρc²) + ρv²/2
                 let mut energy_flux = 0.0;
-                // Obtain density and sound speed from the medium associated with the interface region
-                let medium = interface_region.medium();
-                let rho = medium.density();
-                let c = medium.sound_speed();
+                // Use default values for density and sound speed
+                // TODO: Get these from the actual medium at the interface location
+                let rho = 1000.0; // Default density for water
+                let c = 1500.0;   // Default sound speed for water
                 
                 for i in interface_region.start.0..interface_region.end.0 {
                     for j in interface_region.start.1..interface_region.end.1 {
