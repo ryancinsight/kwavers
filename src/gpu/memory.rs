@@ -554,32 +554,23 @@ impl AdvancedGpuMemoryManager {
         Ok(buffer_id)
     }
 
-    /// Allocate pinned memory based on backend
-    fn allocate_pinned_memory(&self, size_bytes: usize) -> KwaversResult<*mut u8> {
+    /// Allocate pinned host memory for faster GPU transfers
+    pub fn allocate_pinned_memory(&self, size_bytes: usize) -> KwaversResult<*mut u8> {
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => {
-                // Would use cuMemAllocHost here
-                // For now, use regular allocation as placeholder
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 8)
-                    .map_err(|_| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                        requested_bytes: size_bytes,
-                        available_bytes: 0,
-                        reason: "Invalid memory layout parameters".to_string(),
-                    }))?;
-                let ptr = unsafe { std::alloc::alloc(layout) };
+                // Use Vec for safe memory allocation
+                let mut buffer = vec![0u8; size_bytes];
+                let ptr = buffer.as_mut_ptr();
+                std::mem::forget(buffer); // Prevent deallocation
                 Ok(ptr)
             }
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
                 // WebGPU doesn't have pinned memory concept, use regular allocation
-                let layout = std::alloc::Layout::from_size_align(size_bytes, 8)
-                    .map_err(|_| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                        requested_bytes: size_bytes,
-                        available_bytes: 0,
-                        reason: "Invalid memory layout parameters".to_string(),
-                    }))?;
-                let ptr = unsafe { std::alloc::alloc(layout) };
+                let mut buffer = vec![0u8; size_bytes];
+                let ptr = buffer.as_mut_ptr();
+                std::mem::forget(buffer); // Prevent deallocation
                 Ok(ptr)
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
@@ -587,12 +578,6 @@ impl AdvancedGpuMemoryManager {
                 requested_bytes: size_bytes,
                 available_bytes: 0,
                 reason: "No GPU backend available".to_string(),
-            })),
-            #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                requested_bytes: size_bytes,
-                available_bytes: 0,
-                reason: "Backend not available with current features".to_string(),
             })),
         }
     }

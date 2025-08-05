@@ -157,6 +157,7 @@ pub struct InterfaceQualityMetrics {
 }
 
 /// Main coupling interface manager
+#[derive(Clone, Debug)]
 pub struct CouplingInterface {
     /// Configuration
     config: CouplingInterfaceConfig,

@@ -2,6 +2,59 @@
 //!
 //! This module implements an intelligent hybrid solver that adaptively
 //! selects between PSTD and FDTD methods based on local field characteristics.
+//!
+//! ## Overview
+//!
+//! The hybrid solver leverages the advantages of both Pseudo-Spectral Time Domain (PSTD)
+//! and Finite-Difference Time Domain (FDTD) methods:
+//!
+//! - **PSTD**: High accuracy, no numerical dispersion, efficient for smooth fields
+//! - **FDTD**: Robust shock handling, local operations, better for discontinuities
+//!
+//! ## Architecture
+//!
+//! The solver uses a domain decomposition approach where different regions of the
+//! computational domain can use different numerical methods based on local field
+//! characteristics. The selection is performed by the `AdaptiveSelector` which
+//! analyzes field gradients, frequency content, and other metrics.
+//!
+//! ## Features
+//!
+//! - **Adaptive Method Selection**: Automatically chooses PSTD or FDTD based on local conditions
+//! - **Domain Decomposition**: Efficient partitioning of the computational domain
+//! - **Coupling Interface**: Seamless data exchange between PSTD and FDTD regions
+//! - **Performance Monitoring**: Real-time metrics for method efficiency
+//! - **Plugin Architecture**: Compatible with the Kwavers physics plugin system
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use kwavers::solver::hybrid::{HybridSolver, HybridConfig};
+//! use kwavers::grid::Grid;
+//!
+//! let grid = Grid::new(128, 128, 128, 0.001, 0.001, 0.001);
+//! let config = HybridConfig::default();
+//! let solver = HybridSolver::new(config, &grid)?;
+//! ```
+//!
+//! ## Design Principles
+//!
+//! This implementation follows key software design principles:
+//!
+//! - **SOLID**: Single responsibility for each component, open for extension
+//! - **CUPID**: Composable solvers, Unix philosophy, predictable behavior
+//! - **GRASP**: Information expert pattern with domain-specific knowledge
+//! - **DRY**: Shared numerical algorithms between PSTD and FDTD
+//! - **KISS**: Simple interfaces despite complex internals
+//! - **YAGNI**: Only essential features implemented
+//!
+//! ## Performance
+//!
+//! The hybrid solver aims to achieve:
+//! - >100M grid updates/second with optimized kernels
+//! - <1% numerical dispersion error in PSTD regions
+//! - Robust shock handling in FDTD regions
+//! - Minimal overhead from domain coupling
 
 pub mod domain_decomposition;
 pub mod coupling_interface;
@@ -16,7 +69,8 @@ use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
 use crate::solver::hybrid::coupling_interface::{CouplingInterface, InterpolationScheme};
-use ndarray::{Array4, s, Zip};
+use crate::physics::plugin::PluginMetadata;
+use ndarray::{Array4, s, Zip, Array3};
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
@@ -163,12 +217,19 @@ impl Default for ValidationConfig {
 }
 
 /// Main hybrid PSTD/FDTD solver
+#[derive(Clone, Debug)]
 pub struct HybridSolver {
+    /// Plugin metadata
+    metadata: PluginMetadata,
+    
     /// Configuration
     config: HybridConfig,
     
     /// Grid reference
     grid: Grid,
+    
+    /// Solver state
+    state: SolverState,
     
     /// Domain decomposer
     domain_decomposer: DomainDecomposer,
@@ -198,6 +259,15 @@ pub struct HybridSolver {
     step_count: u64,
 }
 
+/// Solver state for tracking lifecycle
+#[derive(Debug, Clone)]
+pub enum SolverState {
+    Initialized,
+    Running,
+    Error(String),
+    Finalized,
+}
+
 /// Performance metrics for hybrid solver
 #[derive(Debug, Clone, Default)]
 pub struct HybridMetrics {
@@ -215,6 +285,23 @@ pub struct HybridMetrics {
     pub total_time: f64,
     /// Efficiency metrics
     pub efficiency: EfficiencyMetrics,
+}
+
+impl HybridMetrics {
+    /// Get a summary of metrics as a HashMap
+    pub fn get_summary(&self) -> HashMap<String, f64> {
+        let mut summary = HashMap::new();
+        summary.insert("pstd_time".to_string(), self.pstd_time);
+        summary.insert("fdtd_time".to_string(), self.fdtd_time);
+        summary.insert("coupling_time".to_string(), self.coupling_time);
+        summary.insert("selection_time".to_string(), self.selection_time);
+        summary.insert("domain_switches".to_string(), self.domain_switches as f64);
+        summary.insert("total_time".to_string(), self.total_time);
+        summary.insert("updates_per_second".to_string(), self.efficiency.updates_per_second);
+        summary.insert("memory_efficiency".to_string(), self.efficiency.memory_efficiency);
+        summary.insert("load_balance_efficiency".to_string(), self.efficiency.load_balance_efficiency);
+        summary
+    }
 }
 
 /// Efficiency metrics
@@ -243,6 +330,26 @@ pub struct ValidationResults {
 
 impl HybridSolver {
     /// Create a new hybrid PSTD/FDTD solver
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration for the hybrid solver
+    /// * `grid` - Computational grid
+    ///
+    /// # Returns
+    ///
+    /// A new `HybridSolver` instance or an error if initialization fails
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// # use kwavers::solver::hybrid::{HybridSolver, HybridConfig};
+    /// # use kwavers::grid::Grid;
+    /// let grid = Grid::new(128, 128, 128, 0.001, 0.001, 0.001);
+    /// let config = HybridConfig::default();
+    /// let solver = HybridSolver::new(config, &grid)?;
+    /// # Ok::<(), kwavers::error::KwaversError>(())
+    /// ```
     pub fn new(config: HybridConfig, grid: &Grid) -> KwaversResult<Self> {
         info!("Initializing hybrid PSTD/FDTD solver");
         
@@ -255,8 +362,10 @@ impl HybridSolver {
         let coupling_interface = CouplingInterface::new(config.coupling_interface.clone())?;
         
         let solver = Self {
+            metadata: Self::create_metadata(),
             config,
             grid: grid.clone(),
+            state: SolverState::Initialized,
             domain_decomposer,
             adaptive_selector,
             coupling_interface,
@@ -951,5 +1060,194 @@ impl HybridSolver {
     }
 }
 
-// TODO: Implement PhysicsPlugin trait for compatibility with plugin architecture
-// The trait implementation is deferred until trait interfaces are stabilized
+use crate::physics::plugin::{PhysicsPlugin, PluginState, PluginContext};
+use crate::physics::composable::FieldType;
+use std::any::Any;
+
+impl PhysicsPlugin for HybridSolver {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+    
+    fn state(&self) -> PluginState {
+        match self.state {
+            SolverState::Initialized => PluginState::Initialized,
+            SolverState::Running => PluginState::Running,
+            SolverState::Error(_) => PluginState::Error,
+            SolverState::Finalized => PluginState::Finalized,
+        }
+    }
+    
+    fn required_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure, FieldType::Velocity]
+    }
+    
+    fn provided_fields(&self) -> Vec<FieldType> {
+        vec![FieldType::Pressure, FieldType::Velocity]
+    }
+    
+    fn initialize(
+        &mut self,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<()> {
+        // Initialize is already handled by the solver's own initialization
+        // This is a no-op for compatibility
+        Ok(())
+    }
+    
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        _context: &PluginContext,
+    ) -> KwaversResult<()> {
+        // Update pressure and velocity fields
+        let pressure_idx = 0;
+        let velocity_x_idx = 1;
+        let velocity_y_idx = 2;
+        let velocity_z_idx = 3;
+        
+        // Extract field slices
+        let mut pressure = fields.slice_mut(s![pressure_idx, .., .., ..]).to_owned();
+        let mut velocity_x = fields.slice_mut(s![velocity_x_idx, .., .., ..]).to_owned();
+        let mut velocity_y = fields.slice_mut(s![velocity_y_idx, .., .., ..]).to_owned();
+        let mut velocity_z = fields.slice_mut(s![velocity_z_idx, .., .., ..]).to_owned();
+        
+        // Perform the hybrid solver update
+        self.update_fields(&mut pressure, &mut velocity_x, &mut velocity_y, &mut velocity_z, dt)?;
+        
+        // Copy back to the fields array
+        fields.slice_mut(s![pressure_idx, .., .., ..]).assign(&pressure);
+        fields.slice_mut(s![velocity_x_idx, .., .., ..]).assign(&velocity_x);
+        fields.slice_mut(s![velocity_y_idx, .., .., ..]).assign(&velocity_y);
+        fields.slice_mut(s![velocity_z_idx, .., .., ..]).assign(&velocity_z);
+        
+        Ok(())
+    }
+    
+    fn finalize(&mut self) -> KwaversResult<()> {
+        // Clear all solver instances
+        self.pstd_solvers.clear();
+        self.fdtd_solvers.clear();
+        self.state = SolverState::Finalized;
+        Ok(())
+    }
+    
+    fn can_execute(&self, available_fields: &[FieldType]) -> bool {
+        // Check if required fields are available
+        self.required_fields()
+            .iter()
+            .all(|req| available_fields.contains(req))
+    }
+    
+    fn performance_metrics(&self) -> HashMap<String, f64> {
+        self.metrics.get_summary()
+    }
+    
+    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> crate::physics::composable::ValidationResult {
+        let mut result = crate::physics::composable::ValidationResult::new();
+        
+        // Validate grid compatibility
+        if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
+            result.add_error("Grid dimensions must be at least 16x16x16 for hybrid solver".to_string());
+        }
+        
+        // Validate configuration
+        if self.config.coupling_interface.buffer_width == 0 {
+            result.add_error("Buffer width must be greater than 0".to_string());
+        }
+        
+        if self.config.coupling_interface.smoothing_factor < 0.0 || self.config.coupling_interface.smoothing_factor > 1.0 {
+            result.add_error("Smoothing factor must be between 0 and 1".to_string());
+        }
+        
+        result
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(self.clone())
+    }
+    
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+// Add metadata field to HybridSolver struct
+impl HybridSolver {
+    fn create_metadata() -> PluginMetadata {
+        PluginMetadata {
+            id: "hybrid_pstd_fdtd".to_string(),
+            name: "Hybrid PSTD/FDTD Solver".to_string(),
+            version: "1.0.0".to_string(),
+            description: "Adaptive hybrid solver combining PSTD and FDTD methods".to_string(),
+            author: "Kwavers Team".to_string(),
+            license: "MIT".to_string(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::Grid;
+    use crate::medium::homogeneous::HomogeneousMedium;
+    use ndarray::Array4;
+
+    #[test]
+    fn test_hybrid_solver_as_plugin() {
+        // Create a simple grid
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        
+        // Create hybrid solver
+        let config = HybridConfig::default();
+        let mut solver = HybridSolver::new(config, &grid).unwrap();
+        
+        // Test metadata
+        assert_eq!(solver.metadata().id, "hybrid_pstd_fdtd");
+        assert_eq!(solver.metadata().name, "Hybrid PSTD/FDTD Solver");
+        
+        // Test required and provided fields
+        let required = solver.required_fields();
+        let provided = solver.provided_fields();
+        assert!(required.contains(&FieldType::Pressure));
+        assert!(required.contains(&FieldType::Velocity));
+        assert!(provided.contains(&FieldType::Pressure));
+        assert!(provided.contains(&FieldType::Velocity));
+        
+        // Test state
+        assert_eq!(solver.state(), PluginState::Initialized);
+    }
+    
+    #[test]
+    fn test_hybrid_solver_validation() {
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0);
+        
+        let config = HybridConfig::default();
+        let solver = HybridSolver::new(config, &grid).unwrap();
+        
+        // Validate the solver
+        let result = solver.validate(&grid, &medium);
+        assert!(result.is_valid(), "Validation failed: {:?}", result.errors);
+    }
+    
+    #[test]
+    fn test_hybrid_solver_clone() {
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let config = HybridConfig::default();
+        let solver = HybridSolver::new(config, &grid).unwrap();
+        
+        // Test cloning
+        let cloned = solver.clone_plugin();
+        assert_eq!(cloned.metadata().id, solver.metadata().id);
+    }
+}

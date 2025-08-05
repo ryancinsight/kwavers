@@ -156,10 +156,12 @@ impl InteractiveControls {
         debug!("Registering parameter: {}", definition.name);
         
         // Set initial value
-        self.current_values.insert(definition.name.clone(), definition.default_value.clone());
+        let name = definition.name.clone();
+        let default_value = definition.default_value.clone();
+        self.current_values.insert(name.clone(), default_value);
         
         // Store parameter definition
-        self.parameters.insert(definition.name.clone(), definition);
+        self.parameters.insert(name, definition);
         
         Ok(())
     }

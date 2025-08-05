@@ -105,15 +105,16 @@ impl TimeCoupling for AveragingStrategy {
         global_dt: f64,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        // Store initial states
-        let initial_fields: HashMap<String, Array3<f64>> = fields
+        // Store initial states - use Arc to avoid cloning large arrays
+        use std::sync::Arc;
+        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
             .collect();
         
         // First pass: advance all components independently
         for (name, component) in physics_components {
-            let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
+            let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
             let local_dt = global_dt / n_subcycles as f64;
             
             let field = fields.get_mut(name).ok_or_else(|| {
@@ -140,7 +141,7 @@ impl TimeCoupling for AveragingStrategy {
             for (name, field) in fields.iter_mut() {
                 if let Some(initial) = initial_fields.get(name) {
                     // Simple linear interpolation for demonstration
-                    field.zip_mut_with(initial, |f, &i| *f = 0.5 * (*f + i));
+                    field.zip_mut_with(initial.as_ref(), |f, &i| *f = 0.5 * (*f + i));
                 }
             }
         }
@@ -172,10 +173,11 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         global_dt: f64,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        // Store initial states
-        let initial_fields: HashMap<String, Array3<f64>> = fields
+        // Store initial states - use Arc to avoid redundant cloning
+        use std::sync::Arc;
+        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
             .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
             .collect();
         
         // Predictor-corrector iterations
@@ -184,7 +186,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             if iteration < self.corrector_iterations {
                 for (name, initial) in &initial_fields {
                     if let Some(field) = fields.get_mut(name) {
-                        field.assign(initial);
+                        field.assign(initial.as_ref());
                     }
                 }
             }

@@ -74,6 +74,3 @@ impl ChirpSignal {
         }
     }
 }
-
-unsafe impl Send for ChirpSignal {}
-unsafe impl Sync for ChirpSignal {}

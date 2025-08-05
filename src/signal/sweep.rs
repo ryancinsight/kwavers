@@ -73,6 +73,3 @@ impl SweepSignal {
         }
     }
 }
-
-unsafe impl Send for SweepSignal {}
-unsafe impl Sync for SweepSignal {}

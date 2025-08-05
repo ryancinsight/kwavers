@@ -206,20 +206,27 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
         let mut pressure = Array3::zeros((n, n, n));
         let mut dp_dt = Array3::zeros((n, n, n));
         
-        for i in 0..n {
-            for j in 0..n {
-                for k in 0..n {
-                    let x = i as f64 * dx;
-                    let y = j as f64 * dx;
-                    let z = k as f64 * dx;
-                    
-                    pressure[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
-                    // Approximate time derivative
-                    dp_dt[[i, j, k]] = -config.pressure_amplitude * 2.0 * PI * config.frequency
-                        * (2.0 * PI * config.frequency * t).cos();
-                }
-            }
-        }
+        // Update pressure field with standing wave
+        let time = step as f64 * dt;
+        let omega = 2.0 * std::f64::consts::PI * config.frequency;
+        let k_wave = 2.0 * PI * config.frequency / 1500.0; // Wave number
+        
+        // Use iterators for field updates
+        pressure.indexed_iter_mut()
+            .for_each(|((i, j, k), p)| {
+                let x = i as f64 * dx;
+                let y = j as f64 * dx;
+                let z = k as f64 * dx;
+                *p = config.pressure_amplitude * (omega * time).sin() * 
+                     (k_wave * x).sin() * (k_wave * y).sin() * (k_wave * z).sin();
+            });
+        
+        // Approximate time derivative
+        dp_dt.indexed_iter_mut()
+            .for_each(|((i, j, k), dp)| {
+                *dp = -config.pressure_amplitude * 2.0 * PI * config.frequency
+                    * (2.0 * PI * config.frequency * time).cos();
+            });
         
         // Update bubble dynamics
         bubble_field.update(&pressure, &dp_dt, dt, t);

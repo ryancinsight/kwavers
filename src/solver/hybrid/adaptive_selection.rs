@@ -150,6 +150,7 @@ pub struct ResolutionMetrics {
 }
 
 /// Adaptive selector for numerical methods
+#[derive(Clone, Debug)]
 pub struct AdaptiveSelector {
     /// Selection criteria
     criteria: SelectionCriteria,
