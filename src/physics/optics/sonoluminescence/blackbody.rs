@@ -135,10 +135,11 @@ pub fn calculate_blackbody_emission(
     bubble_radius_field: &Array3<f64>,
     model: &BlackbodyModel,
 ) -> Array3<f64> {
-    let mut emission_field = Array3::zeros(temperature_field.dim());
-    
-    for ((i, j, k), &temp) in temperature_field.indexed_iter() {
+    // Use zip and map for zero-copy iteration
+    Array3::from_shape_fn(temperature_field.dim(), |(i, j, k)| {
+        let temp = temperature_field[[i, j, k]];
         let radius = bubble_radius_field[[i, j, k]];
+        
         if radius > 0.0 && temp > 0.0 {
             // Surface area of bubble
             let surface_area = 4.0 * PI * radius * radius;
@@ -148,11 +149,11 @@ pub fn calculate_blackbody_emission(
             
             // Convert to power density (W/m³)
             let volume = 4.0 / 3.0 * PI * radius.powi(3);
-            emission_field[[i, j, k]] = power / volume.max(1e-20);
+            power / volume.max(1e-20)
+        } else {
+            0.0
         }
-    }
-    
-    emission_field
+    })
 }
 
 #[cfg(test)]

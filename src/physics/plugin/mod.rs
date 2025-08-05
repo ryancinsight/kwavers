@@ -647,7 +647,7 @@ impl ExecutionStrategy for ParallelStrategy {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use rayon::prelude::*;
+
         
         // Note: This is a simplified implementation
         // Real parallel execution would need careful handling of mutable fields

@@ -104,6 +104,8 @@ pub struct MultiRateConfig {
     pub adaptive: bool,
     /// Time stepper type for each component
     pub time_steppers: std::collections::HashMap<String, TimeStepperType>,
+    /// CFL safety factor for time step computation
+    pub cfl_safety_factor: f64,
 }
 
 impl Default for MultiRateConfig {
@@ -116,6 +118,7 @@ impl Default for MultiRateConfig {
             max_dt: 1.0,
             adaptive: true,
             time_steppers: std::collections::HashMap::new(),
+            cfl_safety_factor: 0.9,
         }
     }
 }

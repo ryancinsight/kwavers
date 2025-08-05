@@ -93,20 +93,6 @@ fn demonstrate_direct_solver(grid: &Grid, medium: &HomogeneousMedium) -> Result<
     fields.index_axis_mut(Axis(0), 0).assign(&beam); // Pressure at index 0
     
     // Create a null source for this demo
-    struct NullSource;
-    impl std::fmt::Debug for NullSource {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "NullSource")
-        }
-    }
-    impl Source for NullSource {
-        fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
-        fn positions(&self) -> Vec<(f64, f64, f64)> { vec![] }
-        fn signal(&self) -> &dyn crate::signal::Signal {
-            panic!("Not implemented for null source")
-        }
-    }
-    
     let source = NullSource;
     let prev_pressure = fields.index_axis(Axis(0), 0).to_owned();
     
@@ -205,20 +191,6 @@ fn demonstrate_nonlinear(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), 
     fields.index_axis_mut(Axis(0), 0).assign(&beam);
     
     // Create null source
-    struct NullSource;
-    impl std::fmt::Debug for NullSource {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "NullSource")
-        }
-    }
-    impl Source for NullSource {
-        fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.0 }
-        fn positions(&self) -> Vec<(f64, f64, f64)> { vec![] }
-        fn signal(&self) -> &dyn crate::signal::Signal {
-            panic!("Not implemented for null source")
-        }
-    }
-    
     let source = NullSource;
     let prev_pressure = fields.index_axis(Axis(0), 0).to_owned();
     

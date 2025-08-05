@@ -17,6 +17,36 @@ mod tests {
     }
     
     impl PhysicsComponent for MockPhysics {
+        fn component_id(&self) -> &str {
+            "mock_physics"
+        }
+        
+        fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+            vec![]
+        }
+        
+        fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+            vec![crate::physics::composable::FieldType::Custom("test".to_string())]
+        }
+        
+        fn update(
+            &mut self,
+            _fields: &mut ndarray::Array4<f64>,
+            _grid: &Grid,
+            _medium: &dyn crate::medium::Medium,
+            _dt: f64,
+            _t: f64,
+        ) -> KwaversResult<()> {
+            Ok(())
+        }
+        
+        fn clone_component(&self) -> Box<dyn PhysicsComponent> {
+            Box::new(MockPhysics {
+                wave_speed: self.wave_speed,
+                frequency: self.frequency,
+            })
+        }
+        
         fn max_wave_speed(&self, _field: &Array3<f64>, _grid: &Grid) -> f64 {
             self.wave_speed
         }

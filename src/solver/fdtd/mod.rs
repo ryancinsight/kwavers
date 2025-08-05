@@ -3,6 +3,81 @@
 //! This module implements the FDTD method using Yee's staggered grid scheme
 //! for solving Maxwell's equations and acoustic wave equations.
 //! 
+//! # Theory
+//! 
+//! The FDTD method discretizes both space and time using finite differences.
+//! Key features include:
+//! 
+//! - **Explicit time stepping**: Simple, efficient updates
+//! - **Staggered grid (Yee cell)**: Natural enforcement of divergence conditions
+//! - **Second-order accuracy**: In both space and time
+//! - **Conditional stability**: CFL condition limits time step
+//! 
+//! # Algorithm
+//! 
+//! For acoustic waves, the update equations on a staggered grid are:
+//! ```text
+//! p^{n+1} = p^n - Δt·ρc²·(∇·v)^{n+1/2}
+//! v^{n+3/2} = v^{n+1/2} - Δt/ρ·∇p^{n+1}
+//! ```
+//! 
+//! # Literature References
+//! 
+//! 1. **Yee, K. S. (1966)**. "Numerical solution of initial boundary value 
+//!    problems involving Maxwell's equations in isotropic media." *IEEE 
+//!    Transactions on Antennas and Propagation*, 14(3), 302-307. 
+//!    DOI: 10.1109/TAP.1966.1138693
+//!    - Original Yee algorithm for electromagnetic waves
+//!    - Introduction of the staggered grid concept
+//! 
+//! 2. **Virieux, J. (1986)**. "P-SV wave propagation in heterogeneous media: 
+//!    Velocity-stress finite-difference method." *Geophysics*, 51(4), 889-901. 
+//!    DOI: 10.1190/1.1442147
+//!    - Extension to elastic wave propagation
+//!    - Velocity-stress formulation
+//! 
+//! 3. **Graves, R. W. (1996)**. "Simulating seismic wave propagation in 3D 
+//!    elastic media using staggered-grid finite differences." *Bulletin of the 
+//!    Seismological Society of America*, 86(4), 1091-1106.
+//!    - 3D implementation details
+//!    - Higher-order accuracy schemes
+//! 
+//! 4. **Moczo, P., Kristek, J., & Gális, M. (2014)**. "The finite-difference 
+//!    modelling of earthquake motions: Waves and ruptures." *Cambridge University 
+//!    Press*. ISBN: 978-1107028814
+//!    - Comprehensive treatment of FDTD for wave propagation
+//!    - Stability analysis and optimization techniques
+//! 
+//! 5. **Taflove, A., & Hagness, S. C. (2005)**. "Computational electrodynamics: 
+//!    The finite-difference time-domain method" (3rd ed.). *Artech House*. 
+//!    ISBN: 978-1580538329
+//!    - Definitive reference for FDTD methods
+//!    - Advanced topics including subgridding and PML
+//! 
+//! # Implementation Details
+//! 
+//! ## Spatial Derivatives
+//! 
+//! We support 2nd, 4th, and 6th order accurate finite differences:
+//! - 2nd order: [-1, 0, 1] / (2Δx)
+//! - 4th order: [1/12, -2/3, 0, 2/3, -1/12] / Δx
+//! - 6th order: [-1/60, 3/20, -3/4, 0, 3/4, -3/20, 1/60] / Δx
+//! 
+//! ## Stability Condition
+//! 
+//! The CFL condition for FDTD is:
+//! ```text
+//! Δt ≤ CFL / (c√(1/Δx² + 1/Δy² + 1/Δz²))
+//! ```
+//! where CFL ≈ 0.95 for stability margin.
+//! 
+//! ## Subgridding
+//! 
+//! Local mesh refinement following:
+//! - Berenger, J. P. (2002). "Application of the CFS PML to the absorption of 
+//!   evanescent waves in waveguides." *IEEE Microwave and Wireless Components 
+//!   Letters*, 12(6), 218-220.
+//! 
 //! # Design Principles
 //! - SOLID: Single responsibility for finite-difference wave propagation
 //! - CUPID: Composable with other solvers via plugin architecture
@@ -274,49 +349,46 @@ impl FdtdSolver {
         offset: f64,
     ) -> Array3<f64> {
         let (nx, ny, nz) = field.dim();
-        let mut interpolated = Array3::zeros((nx, ny, nz));
         
         // Simple linear interpolation for staggered grid
         if offset == 0.5 {
             match axis {
                 0 => {
                     // Interpolate to x-face centers
-                    for i in 0..nx-1 {
-                        for j in 0..ny {
-                            for k in 0..nz {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i+1, j, k]]);
-                            }
+                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                        if i < nx - 1 {
+                            0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
+                        } else {
+                            field[[i, j, k]]
                         }
-                    }
+                    })
                 }
                 1 => {
                     // Interpolate to y-face centers
-                    for i in 0..nx {
-                        for j in 0..ny-1 {
-                            for k in 0..nz {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i, j+1, k]]);
-                            }
+                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                        if j < ny - 1 {
+                            0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
+                        } else {
+                            field[[i, j, k]]
                         }
-                    }
+                    })
                 }
                 2 => {
                     // Interpolate to z-face centers
-                    for i in 0..nx {
-                        for j in 0..ny {
-                            for k in 0..nz-1 {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i, j, k+1]]);
-                            }
+                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                        if k < nz - 1 {
+                            0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
+                        } else {
+                            field[[i, j, k]]
                         }
-                    }
+                    })
                 }
                 _ => panic!("Invalid axis"),
             }
         } else {
             // For non-0.5 offsets, just copy (could implement higher-order interpolation)
-            interpolated.assign(field);
+            field.to_owned()
         }
-        
-        interpolated
     }
     
     /// Update pressure field using FDTD
@@ -532,9 +604,29 @@ impl FdtdSolver {
     }
     
     /// Get performance metrics
-    /// Get performance metrics
     pub fn get_metrics(&self) -> &HashMap<String, f64> {
         &self.metrics
+    }
+    
+    /// Merge metrics from another solver instance
+    pub fn merge_metrics(&mut self, other_metrics: &HashMap<String, f64>) {
+        for (key, value) in other_metrics {
+            // For most metrics, we'll take the maximum value
+            // This can be customized based on the metric type
+            if key.contains("time") || key.contains("elapsed") {
+                // For time-based metrics, accumulate
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current + value);
+            } else if key.contains("count") || key.contains("calls") {
+                // For counters, accumulate
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current + value);
+            } else {
+                // For other metrics (like errors, norms), take the maximum
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current.max(*value));
+            }
+        }
     }
 }
 

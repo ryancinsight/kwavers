@@ -85,8 +85,8 @@ tokio = { version = "1.0", features = ["full"], optional = true }
 crossbeam = "0.8"
 
 # HDF5 support
-hdf5 = { version = "0.8", optional = true }
-hdf5-sys = { version = "0.8", optional = true }
+# hdf5 = { version = "0.8", optional = true }
+# hdf5-sys = { version = "0.8", optional = true }
 
 # Mathematical constants and functions
 libm = "0.2"
@@ -100,7 +100,7 @@ bytemuck = { version = "1.14", features = ["derive"], optional = true }
 ort = { version = "2.0.0-rc.2", optional = true }
 candle-core = { version = "0.7", optional = true }
 candle-nn = { version = "0.7", optional = true }
-tch = { version = "0.14", optional = true }
+# tch = { version = "0.14", optional = true }
 
 [dev-dependencies]
 criterion = "0.4"
@@ -110,7 +110,7 @@ mockall = "0.11"
 [features]
 default = []
 parallel = ["dep:parking_lot"]
-hdf5 = ["dep:hdf5", "dep:hdf5-sys"]
+# hdf5 = ["dep:hdf5", "dep:hdf5-sys"]
 plotting = ["plotters", "plotters-backend", "plotters-bitmap"]
 gpu = ["wgpu", "bytemuck", "futures", "pollster"]
 advanced-visualization = ["gpu", "wgpu", "bytemuck", "futures", "pollster", "winit", "egui", "egui-wgpu", "egui-winit"]
@@ -118,7 +118,7 @@ ml = ["ort", "candle-core", "candle-nn"]
 nightly = []
 web-visualization = ["plotting"]
 vr-support = ["advanced-visualization"]
-full = ["parallel", "hdf5", "plotting", "gpu", "advanced-visualization", "ml"]
+full = ["parallel", "plotting", "gpu", "advanced-visualization", "ml"]
 
 [profile.release]
 opt-level = 3

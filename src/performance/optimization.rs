@@ -2,9 +2,9 @@
 //! Provides SIMD operations, cache optimization, and parallelization strategies
 
 use crate::error::{KwaversResult, KwaversError, ConfigError};
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Axis, Zip, s};
+use ndarray::{Array3, s};
 use rayon::prelude::*;
-use std::sync::Arc;
+
 use log::info;
 
 /// Performance optimization configuration

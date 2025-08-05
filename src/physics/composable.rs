@@ -179,6 +179,24 @@ pub trait PhysicsComponent: Send + Sync + std::fmt::Debug {
     
     /// Clone the component as a boxed trait object
     fn clone_component(&self) -> Box<dyn PhysicsComponent>;
+    
+    /// Get stability constraints for time stepping
+    /// Returns a map of constraint names to their values
+    fn stability_constraints(&self) -> HashMap<String, f64> {
+        HashMap::new()
+    }
+    
+    /// Get maximum wave speed for CFL calculation
+    fn max_wave_speed(&self, field: &Array3<f64>, grid: &Grid) -> f64 {
+        // Default implementation - subclasses should override
+        1500.0 // Default sound speed in water
+    }
+    
+    /// Evaluate the physics (compute time derivatives)
+    fn evaluate(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        // Default implementation - creates a zero field
+        Ok(Array3::zeros(field.dim()))
+    }
 }
 
 /// Context shared between physics components
