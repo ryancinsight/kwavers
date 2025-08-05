@@ -184,11 +184,33 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     // Get a mutable clone of the FFT instance
     let mut fft = (*fft_arc).clone();
     
-    // Use the buffer for the FFT operation
-    let mut result = field_complex.clone();
+    // Convert to complex array
+    let mut complex_buffer = Array3::<Complex<f64>>::zeros(field.dim());
+    complex_buffer.zip_mut_with(field, |c, &r| {
+        *c = Complex::new(r, 0.0);
+    });
     
-    // Process the FFT
-    fft.process(&mut result, grid);
+    // Apply FFT
+    let fft_arc = Arc::new(fft);
+    let fft_ref = &*fft_arc;
+    let mut result = complex_buffer.view_mut();
+    
+    // Apply forward FFT along each axis
+    for axis in 0..3 {
+        let axis_enum = match axis {
+            0 => Axis(0),
+            1 => Axis(1),
+            2 => Axis(2),
+            _ => unreachable!(),
+        };
+        
+        // Process each slice along the axis
+        let n_slices = result.len_of(axis_enum);
+        for i in 0..n_slices {
+            let mut slice = result.index_axis_mut(axis_enum, i);
+            fft_ref.process(&mut slice.as_slice_mut().unwrap());
+        }
+    }
     
     // Fix: Apply proper normalization for forward FFT (no scaling needed for forward)
     // The normalization is applied in ifft_3d for consistency with physics conventions
@@ -198,7 +220,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     let mut total_time = TOTAL_FFT_TIME.lock().unwrap();
     *total_time += elapsed;
     
-    result
+    complex_buffer
 }
 
 /// Optimized 3D inverse FFT for simulation fields with proper normalization
@@ -261,13 +283,37 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     // Get a mutable clone of the IFFT instance
     let mut ifft = (*ifft_arc).clone();
     
-    // Process the IFFT and get the result
-    let mut result = ifft.process(&mut field_complex, grid);
+    // Convert to complex array
+    let mut complex_buffer = Array3::<Complex<f64>>::zeros(field.dim());
+    complex_buffer.zip_mut_with(field, |c, &r| {
+        *c = Complex::new(r, 0.0);
+    });
+    
+    // Apply FFT
+    let ifft_arc = Arc::new(ifft);
+    let ifft_ref = &*ifft_arc;
+
+    // Apply inverse FFT along each axis
+    for axis in 0..3 {
+        let axis_enum = match axis {
+            0 => Axis(0),
+            1 => Axis(1),
+            2 => Axis(2),
+            _ => unreachable!(),
+        };
+        
+        // Process each slice along the axis
+        let n_slices = complex_buffer.len_of(axis_enum);
+        for i in 0..n_slices {
+            let mut slice = complex_buffer.index_axis_mut(axis_enum, i);
+            ifft_ref.process(&mut slice.as_slice_mut().unwrap());
+        }
+    }
     
     // Fix: Apply proper normalization for inverse FFT
     // Standard normalization is 1/N for inverse FFT
     let normalization = 1.0 / (grid.nx * grid.ny * grid.nz) as f64;
-    result.mapv_inplace(|x| x * normalization);
+    let result = complex_buffer.mapv(|c| c * normalization);
     
     // Update timing statistics
     let elapsed = start_time.elapsed();

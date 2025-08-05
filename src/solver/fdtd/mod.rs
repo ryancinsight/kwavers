@@ -631,199 +631,6 @@ impl FdtdSolver {
     }
 }
 
-/// FDTD solver as a physics plugin
-pub struct FdtdPlugin {
-    solver: FdtdSolver,
-    metadata: PluginMetadata,
-}
-
-impl FdtdPlugin {
-    pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = FdtdSolver::new(config, grid)?;
-        let metadata = PluginMetadata {
-            id: "fdtd_solver".to_string(),
-            name: "FDTD Solver".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Finite-Difference Time Domain solver with staggered grid support".to_string(),
-            author: "Kwavers Team".to_string(),
-            license: "MIT".to_string(),
-        };
-        Ok(Self {
-            solver,
-            metadata,
-        })
-    }
-}
-
-impl std::fmt::Debug for FdtdPlugin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FdtdPlugin")
-            .field("metadata", &self.metadata)
-            .finish()
-    }
-}
-
-impl PhysicsPlugin for FdtdPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-    
-    fn state(&self) -> PluginState {
-        PluginState::Created
-    }
-    
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![
-            FieldType::Pressure,  // Needs pressure for velocity update
-            FieldType::Velocity,  // Needs velocity for pressure update
-        ]
-    }
-    
-    fn provided_fields(&self) -> Vec<FieldType> {
-        vec![
-            FieldType::Pressure,  // Updates pressure field
-            FieldType::Velocity,  // Updates velocity fields
-        ]
-    }
-    
-    fn initialize(
-        &mut self,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<()> {
-        // Check grid size compatibility with spatial order
-        let min_size = match self.solver.config.spatial_order {
-            2 => 3,
-            4 => 5,
-            6 => 7,
-            _ => 3,
-        };
-        
-        if grid.nx < min_size || grid.ny < min_size || grid.nz < min_size {
-            return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "grid_size".to_string(),
-                value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
-                constraint: format!("minimum {} points for order {}", min_size, self.solver.config.spatial_order),
-            }));
-        }
-        
-        Ok(())
-    }
-    
-    fn update(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        _t: f64,
-        _context: &PluginContext,
-    ) -> KwaversResult<()> {
-        // Update velocities first (leapfrog scheme)
-        // We need to work with owned arrays for the solver methods
-        let pressure = fields.index_axis(Axis(0), 0).to_owned();
-        
-        // Extract velocity fields as owned arrays
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
-        
-        // Update velocities
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
-        
-        // Copy back to fields
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
-        
-        // Then update pressure using the updated velocities
-        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
-        self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        
-        // Handle subgrids if enabled
-        if self.solver.config.subgridding {
-            let subgrid_factor = self.solver.config.subgrid_factor;
-            let fine_dt = dt / subgrid_factor as f64;
-            
-            // Get field references for subgridding
-            let pressure = fields.index_axis(Axis(0), 0).to_owned();
-            let velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-            let velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-            let velocity_z = fields.index_axis(Axis(0), 6).to_owned();
-            
-            for i in 0..self.solver.subgrids.len() {
-                // Interpolate to fine grid
-                let subgrid = &self.solver.subgrids[i];
-                let mut fine_pressure = subgrid.fine_pressure.clone();
-                let mut fine_vx = subgrid.fine_vx.clone();
-                let mut fine_vy = subgrid.fine_vy.clone();
-                let mut fine_vz = subgrid.fine_vz.clone();
-                
-                self.solver.interpolate_to_fine(&pressure, &mut fine_pressure, subgrid);
-                self.solver.interpolate_to_fine(&velocity_x, &mut fine_vx, subgrid);
-                self.solver.interpolate_to_fine(&velocity_y, &mut fine_vy, subgrid);
-                self.solver.interpolate_to_fine(&velocity_z, &mut fine_vz, subgrid);
-                
-                // Update fine grid with smaller time steps
-                for _ in 0..subgrid_factor {
-                    // Update fine grid (simplified - would need proper boundary handling)
-                    // This is a placeholder for actual subgrid updates
-                }
-                
-                // Restrict back to coarse grid
-                // Get owned arrays for restriction
-                let mut pressure_coarse = fields.index_axis(Axis(0), 0).to_owned();
-                let mut velocity_x_coarse = fields.index_axis(Axis(0), 4).to_owned();
-                let mut velocity_y_coarse = fields.index_axis(Axis(0), 5).to_owned();
-                let mut velocity_z_coarse = fields.index_axis(Axis(0), 6).to_owned();
-                
-                self.solver.restrict_to_coarse(&fine_pressure, &mut pressure_coarse, subgrid);
-                self.solver.restrict_to_coarse(&fine_vx, &mut velocity_x_coarse, subgrid);
-                self.solver.restrict_to_coarse(&fine_vy, &mut velocity_y_coarse, subgrid);
-                self.solver.restrict_to_coarse(&fine_vz, &mut velocity_z_coarse, subgrid);
-                
-                // Copy back to fields
-                fields.index_axis_mut(Axis(0), 0).assign(&pressure_coarse);
-                fields.index_axis_mut(Axis(0), 4).assign(&velocity_x_coarse);
-                fields.index_axis_mut(Axis(0), 5).assign(&velocity_y_coarse);
-                fields.index_axis_mut(Axis(0), 6).assign(&velocity_z_coarse);
-                
-                // Update the subgrid
-                let subgrid_mut = &mut self.solver.subgrids[i];
-                subgrid_mut.fine_pressure = fine_pressure;
-                subgrid_mut.fine_vx = fine_vx;
-                subgrid_mut.fine_vy = fine_vy;
-                subgrid_mut.fine_vz = fine_vz;
-            }
-        }
-        
-        // Write back to fields array
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        
-        Ok(())
-    }
-    
-    fn performance_metrics(&self) -> HashMap<String, f64> {
-        self.solver.get_metrics().clone()
-    }
-    
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(Self {
-            metadata: self.metadata.clone(),
-            solver: FdtdSolver::new(self.solver.config, &self.solver.grid).unwrap(),
-        })
-    }
-    
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -915,3 +722,106 @@ mod tests {
 
 #[cfg(test)]
 mod validation_tests;
+
+// Plugin implementation for FDTD solver
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
+use crate::error::KwaversError;
+use std::collections::HashMap;
+
+/// FDTD solver plugin for integration with the physics pipeline
+pub struct FdtdPlugin {
+    solver: FdtdSolver,
+    metadata: PluginMetadata,
+}
+
+impl FdtdPlugin {
+    /// Create a new FDTD plugin
+    pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
+        let solver = FdtdSolver::new(config, &grid)?;
+        let metadata = PluginMetadata {
+            name: "FDTD Solver".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Kwavers Team".to_string(),
+            description: "Finite-Difference Time Domain solver with staggered grid".to_string(),
+        };
+        
+        Ok(Self { solver, metadata })
+    }
+}
+
+impl PhysicsPlugin for FdtdPlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+    
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn crate::medium::Medium) -> KwaversResult<()> {
+        // Solver is already initialized in new()
+        Ok(())
+    }
+    
+    fn update(
+        &mut self,
+        fields: &mut HashMap<String, Array3<f64>>,
+        context: &PluginContext,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        // Get required fields
+        let pressure = fields.get("pressure")
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
+                field: "pressure".to_string(),
+                value: "missing".to_string(),
+                constraint: "required field for FDTD solver".to_string(),
+            }))?;
+        let vx = fields.get("velocity_x")
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
+                field: "velocity_x".to_string(),
+                value: "missing".to_string(),
+                constraint: "required field for FDTD solver".to_string(),
+            }))?;
+        let vy = fields.get("velocity_y")
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
+                field: "velocity_y".to_string(),
+                value: "missing".to_string(),
+                constraint: "required field for FDTD solver".to_string(),
+            }))?;
+        let vz = fields.get("velocity_z")
+            .ok_or_else(|| KwaversError::Validation(crate::error::ValidationError::FieldValidation {
+                field: "velocity_z".to_string(),
+                value: "missing".to_string(),
+                constraint: "required field for FDTD solver".to_string(),
+            }))?;
+        
+        // Get medium properties
+        let density = context.get_field("density")
+            .unwrap_or(&Array3::from_elem((1, 1, 1), 1000.0)); // Default to water
+        let sound_speed = context.get_field("sound_speed")
+            .unwrap_or(&Array3::from_elem((1, 1, 1), 1500.0)); // Default to water
+        
+        // Update fields using FDTD
+        let (new_pressure, new_vx, new_vy, new_vz) = self.solver.step(
+            pressure, vx, vy, vz, density, sound_speed, dt
+        )?;
+        
+        // Update fields in place
+        fields.insert("pressure".to_string(), new_pressure);
+        fields.insert("velocity_x".to_string(), new_vx);
+        fields.insert("velocity_y".to_string(), new_vy);
+        fields.insert("velocity_z".to_string(), new_vz);
+        
+        Ok(())
+    }
+    
+    fn required_fields(&self) -> Vec<String> {
+        vec![
+            "pressure".to_string(),
+            "velocity_x".to_string(),
+            "velocity_y".to_string(),
+            "velocity_z".to_string(),
+        ]
+    }
+    
+    fn provided_fields(&self) -> Vec<String> {
+        // FDTD updates the same fields it requires
+        self.required_fields()
+    }
+}

@@ -847,11 +847,30 @@ impl CouplingInterface {
                 // Energy conservation: ∂E/∂t + ∇·(Ev) = 0
                 // For acoustic waves: E = p²/(2ρc²) + ρv²/2
                 let mut energy_flux = 0.0;
-                // Use default values for density and sound speed
-                // TODO: Get these from the actual medium at the interface location
-                let rho = 1000.0; // Default density for water
-                let c = 1500.0;   // Default sound speed for water
                 
+                // Get material properties at the interface location
+                let (i, j, k) = match interface_geom.normal_direction {
+                    0 => ((plane_idx / grid.dx).round() as usize, grid.ny / 2, grid.nz / 2),
+                    1 => (grid.nx / 2, (plane_idx / grid.dy).round() as usize, grid.nz / 2),
+                    2 => (grid.nx / 2, grid.ny / 2, (plane_idx / grid.dz).round() as usize),
+                    _ => (grid.nx / 2, grid.ny / 2, grid.nz / 2),
+                };
+                
+                // Get density and sound speed from the medium
+                let rho = if let Some(density_field) = fields.get("density") {
+                    density_field[[i, j, k]]
+                } else {
+                    // Fall back to homogeneous medium assumption
+                    1000.0 // Default density for water
+                };
+                
+                let c = if let Some(sound_speed_field) = fields.get("sound_speed") {
+                    sound_speed_field[[i, j, k]]
+                } else {
+                    // Fall back to homogeneous medium assumption
+                    1500.0 // Default sound speed for water
+                };
+
                 for i in interface_region.start.0..interface_region.end.0 {
                     for j in interface_region.start.1..interface_region.end.1 {
                         for k in interface_region.start.2..interface_region.end.2 {

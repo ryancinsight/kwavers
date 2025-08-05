@@ -126,6 +126,11 @@ fn create_simulation_config() -> FactorySimulationConfig {
                 "source_validation".to_string(),
             ],
         },
+        sensor_positions: vec![
+            (0.02, 0.02, 0.02),
+            (0.05, 0.05, 0.05),
+            (0.08, 0.08, 0.08),
+        ],
     }
 }
 
