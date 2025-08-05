@@ -514,6 +514,27 @@ impl PstdSolver {
     pub fn get_metrics(&self) -> &HashMap<String, f64> {
         &self.metrics
     }
+    
+    /// Merge metrics from another solver instance
+    pub fn merge_metrics(&mut self, other_metrics: &HashMap<String, f64>) {
+        for (key, value) in other_metrics {
+            // For most metrics, we'll take the maximum value
+            // This can be customized based on the metric type
+            if key.contains("time") || key.contains("elapsed") {
+                // For time-based metrics, accumulate
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current + value);
+            } else if key.contains("count") || key.contains("calls") {
+                // For counters, accumulate
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current + value);
+            } else {
+                // For other metrics (like errors, norms), take the maximum
+                let current = self.metrics.get(key).copied().unwrap_or(0.0);
+                self.metrics.insert(key.clone(), current.max(*value));
+            }
+        }
+    }
 }
 
 /// PSTD solver as a physics plugin

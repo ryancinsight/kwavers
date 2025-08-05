@@ -459,9 +459,19 @@ impl HybridSolver {
     ) -> KwaversResult<()> {
         use rayon::prelude::*;
         use std::sync::{Arc, Mutex};
+        use crate::error::CompositeError;
         
         // Create thread-safe wrappers
         let errors: Arc<Mutex<Vec<KwaversError>>> = Arc::new(Mutex::new(Vec::new()));
+        
+        // Structure to hold solver state updates
+        #[derive(Clone)]
+        struct SolverUpdate {
+            domain_idx: usize,
+            domain_type: DomainType,
+            domain_fields: Array4<f64>,
+            metrics: HashMap<String, f64>,
+        }
         
         // Collect domain updates in parallel
         let domain_updates: Vec<_> = self.current_domains.par_iter().enumerate()
@@ -474,23 +484,38 @@ impl HybridSolver {
                 // Extract domain fields
                 match self.extract_domain_fields(fields, domain) {
                     Ok(mut domain_fields) => {
-                        // Process the domain based on type
-                        let result = match domain.domain_type {
+                        // Process the domain based on type and collect metrics
+                        let (result, metrics) = match domain.domain_type {
                             DomainType::Spectral => {
-                                // Create a temporary solver for parallel execution
-                                let mut temp_solver = PstdSolver::new(self.config.pstd_config, &self.grid).ok()?;
-                                Self::apply_pstd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time)
+                                match PstdSolver::new(self.config.pstd_config.clone(), &self.grid) {
+                                    Ok(mut temp_solver) => {
+                                        let update_result = Self::apply_pstd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time);
+                                        let metrics = temp_solver.get_metrics().clone();
+                                        (update_result, metrics)
+                                    }
+                                    Err(e) => (Err(e), HashMap::new())
+                                }
                             }
                             DomainType::FiniteDifference => {
-                                // Create a temporary solver for parallel execution
-                                let mut temp_solver = FdtdSolver::new(self.config.fdtd_config, &self.grid).ok()?;
-                                Self::apply_fdtd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time)
+                                match FdtdSolver::new(self.config.fdtd_config.clone(), &self.grid) {
+                                    Ok(mut temp_solver) => {
+                                        let update_result = Self::apply_fdtd_update_static(&mut temp_solver, &mut domain_fields, medium, dt, time);
+                                        let metrics = temp_solver.get_metrics().clone();
+                                        (update_result, metrics)
+                                    }
+                                    Err(e) => (Err(e), HashMap::new())
+                                }
                             }
-                            _ => Ok(())
+                            _ => (Ok(()), HashMap::new())
                         };
                         
                         match result {
-                            Ok(_) => Some((idx, domain.clone(), domain_fields)),
+                            Ok(_) => Some(SolverUpdate {
+                                domain_idx: idx,
+                                domain_type: domain.domain_type,
+                                domain_fields,
+                                metrics,
+                            }),
                             Err(e) => {
                                 if let Ok(mut errors_guard) = errors.lock() {
                                     errors_guard.push(e);
@@ -509,26 +534,38 @@ impl HybridSolver {
             })
             .collect();
         
-        // Check for errors
+        // Check for errors and return CompositeError if multiple errors occurred
         let errors_guard = errors.lock().unwrap();
         if !errors_guard.is_empty() {
-            return Err(errors_guard[0].clone());
+            if errors_guard.len() == 1 {
+                return Err(errors_guard[0].clone());
+            } else {
+                return Err(KwaversError::Composite(CompositeError {
+                    context: format!("Multiple errors occurred during parallel domain processing ({} errors)", errors_guard.len()),
+                    errors: errors_guard.clone(),
+                }));
+            }
         }
         
-        // Apply all updates sequentially
-        for (idx, domain, domain_fields) in domain_updates {
-            self.copy_domain_to_fields(fields, &domain_fields, &domain)?;
+        // Apply all updates sequentially and merge metrics
+        for update in domain_updates {
+            // Find the corresponding domain region
+            if let Some(domain) = self.current_domains.get(update.domain_idx) {
+                self.copy_domain_to_fields(fields, &update.domain_fields, domain)?;
+            }
             
-            // Update solver states if needed
-            match domain.domain_type {
+            // Update solver metrics
+            match update.domain_type {
                 DomainType::Spectral => {
-                    if let Some(solver) = self.pstd_solvers.get_mut(&idx) {
-                        // Update any solver state if necessary
+                    if let Some(solver) = self.pstd_solvers.get_mut(&update.domain_idx) {
+                        // Merge metrics from parallel execution
+                        solver.merge_metrics(&update.metrics);
                     }
                 }
                 DomainType::FiniteDifference => {
-                    if let Some(solver) = self.fdtd_solvers.get_mut(&idx) {
-                        // Update any solver state if necessary
+                    if let Some(solver) = self.fdtd_solvers.get_mut(&update.domain_idx) {
+                        // Merge metrics from parallel execution
+                        solver.merge_metrics(&update.metrics);
                     }
                 }
                 _ => {}

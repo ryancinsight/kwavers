@@ -254,23 +254,42 @@ impl AMRManager {
     
     /// Evaluate all dynamic criteria
     fn evaluate_criteria(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut refinement_field = Array3::zeros(field.dim());
+        use rayon::prelude::*;
         
-        // Evaluate each criterion using iterator combinators
         let total_weight: f64 = self.criterion_weights.iter().sum();
         
         if total_weight > 0.0 {
-            // Use parallel iterators for better performance
-            refinement_field.indexed_iter_mut()
-                .for_each(|((i, j, k), val)| {
-                    *val = self.criteria.iter()
-                        .zip(&self.criterion_weights)
-                        .map(|(criterion, &weight)| weight * criterion.evaluate(field, (i, j, k)))
-                        .sum::<f64>() / total_weight;
-                });
+            // Create refinement field using parallel computation
+            let dim = field.dim();
+            let criteria = &self.criteria;
+            let weights = &self.criterion_weights;
+            
+            // Collect indices and compute in parallel
+            let values: Vec<_> = (0..dim.0)
+                .into_par_iter()
+                .flat_map(|i| {
+                    (0..dim.1).into_par_iter().flat_map(move |j| {
+                        (0..dim.2).into_par_iter().map(move |k| {
+                            let val = criteria.iter()
+                                .zip(weights)
+                                .map(|(criterion, &weight)| weight * criterion.evaluate(field, (i, j, k)))
+                                .sum::<f64>() / total_weight;
+                            ((i, j, k), val)
+                        })
+                    })
+                })
+                .collect();
+            
+            // Build the result array
+            let mut refinement_field = Array3::zeros(dim);
+            for ((i, j, k), val) in values {
+                refinement_field[[i, j, k]] = val;
+            }
+            
+            Ok(refinement_field)
+        } else {
+            Ok(Array3::zeros(field.dim()))
         }
-        
-        Ok(refinement_field)
     }
     
     /// Apply memory limit to refinement
