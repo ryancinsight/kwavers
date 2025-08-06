@@ -101,7 +101,7 @@ mod tests {
         }
         
         // Verify that we have a wave pattern and reasonable amplitude
-        assert!(max_pressure > 0.1 * amplitude, 
+        assert!(max_pressure > MIN_WAVE_AMPLITUDE_RATIO * amplitude, 
             "Wave amplitude too small: {} (expected ~{})", max_pressure, amplitude);
         assert!(has_wave_pattern || max_pressure > 0.5 * amplitude,
             "No wave pattern detected");
