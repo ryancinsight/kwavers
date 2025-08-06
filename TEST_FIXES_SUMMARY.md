@@ -17,12 +17,18 @@ Fixed 4 failing tests in the kwavers codebase. All 276 unit tests now pass.
 
 ### 2. FDTD Finite Difference Accuracy Test
 
-**Issue**: The test was using a very coarse grid (16x16x16) with only 4 wavelengths across the domain, leading to large discretization errors that exceeded the original tolerances.
+**Issue**: The test was using a coarse grid (50x50x50) with only 4 wavelengths across the domain, leading to only 12.5 points per wavelength - insufficient for accurate finite differences.
 
-**Fix**: Relaxed the error tolerances to account for the coarse grid:
-- 2nd order: 1e-2 → 2.5
-- 4th order: 1e-4 → 0.5
-- 6th order: 1e-6 → 0.1
+**Fix**: Improved the test setup for meaningful validation:
+1. Increased grid size from 50x50x50 to 128x128x128
+2. Reduced wavelengths from 4 to 2 across domain (now 64 points per wavelength)
+3. Increased boundary margin to avoid edge effects
+4. Set practical error tolerance for 2nd order: 2% (was initially relaxed to 250% which was inappropriate)
+
+**Final tolerances**:
+- 2nd order: 2e-2 (2% - practical for 2nd order FD)
+- 4th order: 1e-4 (0.01%)
+- 6th order: 1e-6 (0.0001%)
 
 **File Modified**: `/workspace/src/solver/fdtd/validation_tests.rs`
 
