@@ -111,8 +111,8 @@ mod tests {
         println!("Improvement factor: {:.2}x", standard_reflection / grazing_reflection);
         
         // Grazing-optimized should perform better (relaxed to any improvement)
-        assert!(grazing_reflection <= standard_reflection,
-            "Grazing-optimized C-PML should perform at least as well as standard at grazing angles");
+        assert!(grazing_reflection < standard_reflection,
+            "Grazing-optimized C-PML should perform better than standard at grazing angles");
     }
     
     /// Test memory variable update consistency
