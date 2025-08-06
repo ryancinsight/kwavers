@@ -19,7 +19,6 @@
 pub mod octree;
 pub mod interpolation;
 pub mod local_operations;
-pub mod local_operations_simple;
 pub mod wavelet;
 pub mod enhanced;
 pub mod error_estimator;

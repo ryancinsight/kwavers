@@ -12,6 +12,11 @@ mod tests {
     use std::f64::consts::PI;
     use approx::assert_relative_eq;
     
+    // Test constants
+    const MIN_WAVE_AMPLITUDE_RATIO: f64 = 0.1;
+    const RELATIVE_TOLERANCE_FACTOR: f64 = 1.1;
+    const ABSOLUTE_TOLERANCE: f64 = 1e-10;
+    
     /// Test plane wave propagation accuracy
     #[test]
     fn test_plane_wave_propagation() {

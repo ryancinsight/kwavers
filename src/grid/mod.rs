@@ -46,6 +46,13 @@ impl Grid {
         grid
     }
 
+    /// Create a zero-initialized 3D array with the grid dimensions
+    /// This follows DRY principle by centralizing array creation
+    #[inline]
+    pub fn zeros_array(&self) -> Array3<f64> {
+        Array3::zeros((self.nx, self.ny, self.nz))
+    }
+
     /// Convert physical position (meters) to grid indices
     pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
         (

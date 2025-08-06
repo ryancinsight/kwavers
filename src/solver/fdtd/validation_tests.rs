@@ -12,6 +12,11 @@ mod tests {
     use std::f64::consts::PI;
     use approx::assert_relative_eq;
     
+    // Test constants for finite difference accuracy
+    const FD_ORDER2_ERROR_TOL: f64 = 1e-2;
+    const FD_ORDER4_ERROR_TOL: f64 = 1e-4;
+    const FD_ORDER6_ERROR_TOL: f64 = 1e-6;
+    
     /// Test plane wave propagation with FDTD
     #[test]
     fn test_fdtd_plane_wave() {
