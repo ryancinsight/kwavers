@@ -84,12 +84,23 @@ mod tests {
             }
         }
         
-        // Skip this test due to fundamental issue with the Kuznetsov implementation
-        // The linear term is implemented as first-order in time instead of second-order
-        // This causes unconditional instability
-        // TODO: Reimplement Kuznetsov equation with proper second-order time derivatives
-        eprintln!("WARNING: Skipping test_linear_wave_propagation due to known instability in Kuznetsov linear term implementation");
-        return;
+        // Run the solver for a few steps and check for stability
+        let medium_ref = &medium;
+        let source_ref = &source;
+        let mut unstable = false;
+        for _ in 0..10 {
+            if let Err(e) = solver.step(medium_ref, source_ref, &mut fields, 1e-7) {
+                panic!("Solver step failed: {:?}", e);
+            }
+            // Check for unphysical values (e.g., NaN or extremely large)
+            let max_p = fields.index_axis(Axis(0), 0).iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let min_p = fields.index_axis(Axis(0), 0).iter().cloned().fold(f64::INFINITY, f64::min);
+            if !max_p.is_finite() || !min_p.is_finite() || max_p.abs() > 1e12 || min_p.abs() > 1e12 {
+                unstable = true;
+                break;
+            }
+        }
+        assert!(!unstable, "Kuznetsov solver is unstable: pressure field blew up or became non-finite");
     }
     
     /// Test nonlinear steepening with Kuznetsov equation
