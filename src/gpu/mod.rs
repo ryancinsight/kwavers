@@ -182,7 +182,7 @@ impl GpuContext {
             GpuBackend::Cuda => cuda::allocate_cuda_memory(size_bytes)? as u64,
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::allocate_wgpu_memory(size_bytes)? as u64,
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -219,7 +219,7 @@ impl GpuContext {
             GpuBackend::Cuda => cuda::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_bytes(byte_slice, device_ptr as usize),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -244,7 +244,7 @@ impl GpuContext {
             GpuBackend::Cuda => cuda::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_bytes(device_ptr as usize, byte_slice),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -259,7 +259,7 @@ impl GpuContext {
             GpuBackend::Cuda => cuda::launch_cuda_kernel(kernel_name, grid_size, block_size, args),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::launch_webgpu_kernel(kernel_name, grid_size, block_size, args),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -277,7 +277,7 @@ impl GpuContext {
                 // WebGPU doesn't have direct peer access
                 Ok(())
             }
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -343,7 +343,7 @@ impl GpuMemoryManager {
             GpuBackend::Cuda => cuda::allocate_cuda_memory(size),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::allocate_wgpu_memory(size),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -363,7 +363,7 @@ impl GpuMemoryManager {
             GpuBackend::Cuda => cuda::host_to_device_cuda(host_data, device_buffer),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_wgpu(host_data, device_buffer),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),
@@ -383,7 +383,7 @@ impl GpuMemoryManager {
             GpuBackend::Cuda => cuda::device_to_host_cuda(device_buffer, host_data),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_wgpu(device_buffer, host_data),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
                 reason: "No GPU backend available".to_string(),

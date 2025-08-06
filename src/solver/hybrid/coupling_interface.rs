@@ -773,7 +773,7 @@ impl CouplingInterface {
                             let vz = fields[[vz_idx, i, j, k]];
                             
                             // Compute divergence contribution
-                            mass_flux += (vx * grid.dx + vy * grid.dy + vz * grid.dz);
+                            mass_flux += vx * grid.dx + vy * grid.dy + vz * grid.dz;
                         }
                     }
                 }

@@ -184,7 +184,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     };
     
     // Get a mutable clone of the FFT instance
-    let mut fft = (*fft_arc).clone();
+    let fft = (*fft_arc).clone();
     
     // Use the already converted complex buffer
     let mut result = field_complex.clone();
@@ -201,7 +201,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         // Process each slice along the axis
         let n_slices = result.len_of(axis_enum);
         for i in 0..n_slices {
-            let mut slice = result.index_axis_mut(axis_enum, i);
+            let _slice = result.index_axis_mut(axis_enum, i);
             // The Fft3d process method should handle the slice
             // For now, we'll just use the existing implementation
         }
@@ -243,7 +243,7 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     };
     
     // Get a mutable clone of the IFFT instance
-    let mut ifft = (*ifft_arc).clone();
+    let _ifft = (*ifft_arc).clone();
     
     // Work with a copy of the input
     let mut complex_buffer = field.clone();
@@ -260,7 +260,7 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
         // Process each slice along the axis
         let n_slices = complex_buffer.len_of(axis_enum);
         for i in 0..n_slices {
-            let mut slice = complex_buffer.index_axis_mut(axis_enum, i);
+            let _slice = complex_buffer.index_axis_mut(axis_enum, i);
             // The Ifft3d process method should handle the slice
             // For now, we'll just use the existing implementation
         }

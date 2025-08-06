@@ -613,7 +613,7 @@ impl AdvancedGpuMemoryManager {
                 std::mem::forget(buffer); // Prevent deallocation
                 ptr
             }
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => {
                 return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                     backend: format!("{:?}", self.backend),

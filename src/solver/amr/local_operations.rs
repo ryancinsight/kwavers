@@ -4,7 +4,7 @@
 //! that work locally on specific cells rather than globally on the entire field.
 
 use crate::error::{KwaversResult, KwaversError, ConfigError};
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array3, Array4};
 use super::{InterpolationScheme, octree::Octree};
 use std::collections::HashMap;
 

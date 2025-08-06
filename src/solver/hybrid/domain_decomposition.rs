@@ -1208,7 +1208,7 @@ impl DomainDecomposer {
     }
     
     /// Merge adjacent regions of the same type
-    fn merge_adjacent_regions(&self, mut regions: Vec<DomainRegion>) -> KwaversResult<Vec<DomainRegion>> {
+    fn merge_adjacent_regions(&self, regions: Vec<DomainRegion>) -> KwaversResult<Vec<DomainRegion>> {
         let mut merged = Vec::new();
         let mut used = vec![false; regions.len()];
         

@@ -867,6 +867,20 @@ mod tests {
     fn test_performance_metrics_integration() {
         let mut manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
         
+        // First, we need to compile a kernel to add it to the manager
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let config = KernelConfig {
+            block_size: (256, 1, 1),
+            grid_size: (10, 1, 1),
+            shared_memory_size: 0,
+            kernel_type: KernelType::AcousticWave,
+            optimization_level: OptimizationLevel::Moderate,
+            registers_per_thread: 32,
+        };
+        
+        // Generate and compile a kernel (this adds it to the kernels HashMap)
+        let _ = manager.compile_kernels(&grid);
+        
         let metrics = GpuPerformanceMetrics::new(
             1_000_000, // 1M grid points
             10.0,      // 10ms kernel time

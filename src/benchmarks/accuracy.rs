@@ -95,9 +95,9 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
     
     // Wave parameters - ensure we have at least 10 points per wavelength
     let c = 1500.0;
-    let L = nx as f64 * dx; // Domain length
+    let domain_length = nx as f64 * dx; // Domain length
     let n_mode = 5; // Use 5th mode to have good resolution
-    let k = n_mode as f64 * PI / L;
+    let k = n_mode as f64 * PI / domain_length;
     let wavelength = 2.0 * PI / k;
     let frequency = c / wavelength;
     let omega = 2.0 * PI * frequency;

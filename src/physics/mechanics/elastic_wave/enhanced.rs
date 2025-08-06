@@ -637,7 +637,7 @@ impl EnhancedElasticWaveHelper {
     fn compute_derivative(&self, field: &Array3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
         use crate::utils::{fft_3d, ifft_3d};
         use num_complex::Complex64;
-        use ndarray::Zip;
+        
         
         // Validate direction
         if direction > 2 {

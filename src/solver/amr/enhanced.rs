@@ -7,9 +7,7 @@
 //! - Refinement prediction
 
 
-use crate::grid::Grid;
-use ndarray::{Array3, ArrayView3};
-use super::{AMRConfig, InterpolationScheme};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Dynamic refinement criterion trait

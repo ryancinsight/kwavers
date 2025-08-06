@@ -1143,7 +1143,7 @@ impl GpuFft3d {
             GpuBackend::Cuda => self.execute_fft_stage_cuda(context, stage, stride, fft_size, num_ffts, twiddle_offset),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => self.execute_fft_stage_webgpu(context, stage, stride, fft_size, num_ffts, twiddle_offset),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(GpuError::BackendNotAvailable {
                 backend: format!("{:?}", self.backend),
                 reason: "GPU backend not compiled with required features".to_string(),
@@ -1158,7 +1158,7 @@ impl GpuFft3d {
             GpuBackend::Cuda => self.transpose_xy_cuda(context),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => self.transpose_xy_webgpu(context),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(GpuError::BackendNotAvailable {
                 backend: format!("{:?}", self.backend),
                 reason: "GPU backend not compiled with required features".to_string(),
@@ -1173,7 +1173,7 @@ impl GpuFft3d {
             GpuBackend::Cuda => self.transpose_xz_cuda(context),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => self.transpose_xz_webgpu(context),
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
+            #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(GpuError::BackendNotAvailable {
                 backend: format!("{:?}", self.backend),
                 reason: "GPU backend not compiled with required features".to_string(),

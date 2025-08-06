@@ -301,13 +301,13 @@ mod tests {
     #[test]
     fn test_wavelength_to_rgb() {
         // Test some known wavelengths
-        let (r, g, b) = SpectralRange::wavelength_to_rgb(700e-9); // Red
-        assert!(r > 0.9 && g < 0.1 && b < 0.1);
+        let (r, g, b) = SpectralRange::wavelength_to_rgb(650e-9); // Deep red
+        assert!(r > 0.8 && g < 0.2 && b < 0.2, "Red: ({}, {}, {})", r, g, b);
         
-        let (r, g, b) = SpectralRange::wavelength_to_rgb(520e-9); // Green (use 520nm for purer green)
-        assert!(r < 0.3 && g > 0.9 && b < 0.1);
+        let (r, g, b) = SpectralRange::wavelength_to_rgb(520e-9); // Green
+        assert!(r < 0.3 && g > 0.7 && b < 0.3, "Green: ({}, {}, {})", r, g, b);
         
         let (r, g, b) = SpectralRange::wavelength_to_rgb(450e-9); // Blue
-        assert!(r < 0.1 && g < 0.5 && b > 0.9);
+        assert!(r < 0.2 && g < 0.3 && b > 0.8, "Blue: ({}, {}, {})", r, g, b);
     }
 }

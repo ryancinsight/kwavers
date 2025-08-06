@@ -83,13 +83,12 @@ use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
-use crate::physics::composable::FieldType;
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
 use std::f64::consts::PI;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// PSTD solver configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

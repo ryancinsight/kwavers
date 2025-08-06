@@ -581,11 +581,13 @@ impl CPMLBoundary {
         
         // Enhanced model for grazing angles
         if self.config.enhanced_grazing {
-            let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt();
-            let kappa_effect = 1.0 / self.config.kappa_max.powf(grazing_factor);
-            r_normal * kappa_effect
+            // For grazing angles, reflection should increase
+            let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt(); // sin(theta)
+            // Increase reflection for larger angles (smaller cos_theta)
+            let angle_enhancement = 1.0 + grazing_factor * (self.config.kappa_max - 1.0);
+            r_normal * angle_enhancement
         } else {
-            // Standard model
+            // Standard model - reflection increases as angle increases (cos_theta decreases)
             r_normal / cos_theta.max(0.1)
         }
     }

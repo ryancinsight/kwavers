@@ -70,11 +70,11 @@ use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion
 use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
 use crate::solver::hybrid::coupling_interface::{CouplingInterface, InterpolationScheme};
 use crate::physics::plugin::PluginMetadata;
-use ndarray::{Array4, s, Zip, Array3};
+use ndarray::{Array4, s, Zip};
 use std::collections::HashMap;
 use std::time::Instant;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// Configuration for the hybrid PSTD/FDTD solver
 #[derive(Debug, Clone, Serialize, Deserialize)]

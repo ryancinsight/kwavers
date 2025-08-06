@@ -1,8 +1,8 @@
-//! Performance optimization module for high-performance computing
-//! Provides SIMD operations, cache optimization, and parallelization strategies
+//! Performance optimization module for the Kwavers acoustic simulation library
 
-use crate::error::{KwaversResult, KwaversError, ConfigError};
-use ndarray::{Array3, s};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
+use crate::grid::Grid;
+use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis, s};
 use rayon::prelude::*;
 use std::sync::Arc;
 
