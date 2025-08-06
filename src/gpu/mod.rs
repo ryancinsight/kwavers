@@ -271,7 +271,7 @@ impl GpuContext {
     pub fn enable_peer_access(&self, peer_device_id: u32) -> KwaversResult<()> {
         match self.backend {
             #[cfg(feature = "cudarc")]
-            GpuBackend::Cuda => cuda::enable_cuda_peer_access(peer_device_id),
+            GpuBackend::Cuda => cuda::enable_peer_access(0, peer_device_id),
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
                 // WebGPU doesn't have direct peer access

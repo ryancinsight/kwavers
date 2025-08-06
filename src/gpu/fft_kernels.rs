@@ -902,7 +902,6 @@ impl GpuFftPlan {
                 &[
                     &self.workspace.input,
                     &self.workspace.twiddle_factors,
-                    &params,
                 ],
             )?;
         }
@@ -1231,7 +1230,6 @@ impl GpuFft3d {
             &[
                 &self.workspace.input,
                 &self.workspace.twiddle_factors,
-                &params,
             ],
         )?;
         
@@ -1249,7 +1247,6 @@ impl GpuFft3d {
         use crate::gpu::opencl::dispatch_compute_kernel;
         
         let (nx, ny, nz) = self.dimensions;
-        let params = vec![nx as f32, ny as f32, nz as f32, 0.0];
         
         // Calculate workgroup dimensions
         let workgroup_size = (8, 8, 8);
@@ -1267,7 +1264,6 @@ impl GpuFft3d {
             &[
                 &self.workspace.input,
                 &self.workspace.output,
-                &params,
             ],
         )?;
         
@@ -1287,7 +1283,6 @@ impl GpuFft3d {
         use crate::gpu::opencl::dispatch_compute_kernel;
         
         let (nx, ny, nz) = self.dimensions;
-        let params = vec![nx as f32, ny as f32, nz as f32, 0.0];
         
         // Calculate workgroup dimensions
         let workgroup_size = (8, 8, 8);
@@ -1305,7 +1300,6 @@ impl GpuFft3d {
             &[
                 &self.workspace.input,
                 &self.workspace.output,
-                &params,
             ],
         )?;
         

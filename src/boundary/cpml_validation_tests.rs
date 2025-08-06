@@ -207,7 +207,7 @@ mod tests {
         let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Check sigma profile continuity
-        let mut max_diff = 0.0;
+        let mut max_diff = 0.0f64;
         for i in 1..100 {
             let diff = (cpml.sigma_x[i] - cpml.sigma_x[i-1]).abs();
             max_diff = max_diff.max(diff);
