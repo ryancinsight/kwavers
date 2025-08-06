@@ -83,13 +83,12 @@ use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
-use crate::physics::composable::FieldType;
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
 use std::f64::consts::PI;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// PSTD solver configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -538,138 +537,6 @@ impl PstdSolver {
     }
 }
 
-/// PSTD solver as a physics plugin
-pub struct PstdPlugin {
-    solver: PstdSolver,
-    metadata: PluginMetadata,
-}
-
-impl PstdPlugin {
-    pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = PstdSolver::new(config, grid)?;
-        let metadata = PluginMetadata {
-            id: "pstd_solver".to_string(),
-            name: "PSTD Solver".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Pseudo-Spectral Time Domain solver for high-accuracy wave propagation".to_string(),
-            author: "Kwavers Team".to_string(),
-            license: "MIT".to_string(),
-        };
-        Ok(Self {
-            solver,
-            metadata,
-        })
-    }
-}
-
-impl std::fmt::Debug for PstdPlugin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PstdPlugin")
-            .field("metadata", &self.metadata)
-            .finish()
-    }
-}
-
-impl PhysicsPlugin for PstdPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-    
-    fn state(&self) -> PluginState {
-        PluginState::Created
-    }
-    
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![
-            FieldType::Velocity,  // Needs velocity fields for divergence
-        ]
-    }
-    
-    fn provided_fields(&self) -> Vec<FieldType> {
-        vec![
-            FieldType::Pressure,  // Updates pressure field
-            FieldType::Velocity,  // Updates velocity fields
-        ]
-    }
-    
-    fn initialize(
-        &mut self,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<()> {
-        // Validate grid compatibility
-        if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
-            return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "grid_size".to_string(),
-                value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
-                constraint: "minimum 16 points in each dimension".to_string(),
-            }));
-        }
-        
-        // Check if grid sizes are suitable for FFT (power of 2 is optimal)
-        let is_power_of_2 = |n: usize| (n & (n - 1)) == 0;
-        if !is_power_of_2(grid.nx) || !is_power_of_2(grid.ny) || !is_power_of_2(grid.nz) {
-            warn!("Grid dimensions are not powers of 2, FFT performance may be suboptimal");
-        }
-        
-        Ok(())
-    }
-    
-    fn update(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        _t: f64,
-        _context: &PluginContext,
-    ) -> KwaversResult<()> {
-        // Extract velocity fields as owned arrays for divergence computation
-        let velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let velocity_z = fields.index_axis(Axis(0), 6).to_owned();
-        let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
-        
-        // Update pressure
-        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
-        self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        
-        // Update velocities
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
-        
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
-        
-        // Copy back to fields
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
-        
-        Ok(())
-    }
-    
-    fn performance_metrics(&self) -> HashMap<String, f64> {
-        self.solver.get_metrics().clone()
-    }
-    
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(Self {
-            metadata: self.metadata.clone(),
-            solver: PstdSolver::new(self.solver.config, &self.solver.grid).unwrap(),
-        })
-    }
-    
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -753,3 +620,108 @@ mod tests {
 
 #[cfg(test)]
 mod validation_tests;
+
+// Plugin implementation for PSTD solver
+
+/// PSTD solver plugin for integration with the physics pipeline
+#[derive(Debug)]
+pub struct PstdPlugin {
+    solver: PstdSolver,
+    metadata: PluginMetadata,
+}
+
+impl PstdPlugin {
+    /// Create a new PSTD plugin
+    pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
+        let solver = PstdSolver::new(config, grid)?;
+        let metadata = PluginMetadata {
+            id: "pstd_solver".to_string(),
+            name: "PSTD Solver".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Kwavers Team".to_string(),
+            description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
+            license: "MIT".to_string(),
+        };
+        
+        Ok(Self { solver, metadata })
+    }
+}
+
+impl PhysicsPlugin for PstdPlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+    
+    fn state(&self) -> PluginState {
+        PluginState::Initialized
+    }
+    
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn crate::medium::Medium) -> KwaversResult<()> {
+        // Solver is already initialized in new()
+        Ok(())
+    }
+    
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn crate::medium::Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        use ndarray::Axis;
+        
+        // Extract fields from the Array4 as owned arrays
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
+        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
+        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
+        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
+        
+        // Compute divergence of velocity
+        let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
+        
+        // Update pressure using divergence
+        let mut pressure_new = pressure.clone();
+        self.solver.update_pressure(&mut pressure_new, &divergence, medium, dt)?;
+        
+        // Update velocities using new pressure
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure_new, medium, dt)?;
+        
+        // Copy back to fields
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure_new);
+        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
+        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
+        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
+        
+        Ok(())
+    }
+    
+    fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+        use crate::physics::composable::FieldType;
+        vec![
+            FieldType::Pressure,
+            FieldType::Velocity,
+        ]
+    }
+    
+    fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+        // PSTD updates the same fields it requires
+        self.required_fields()
+    }
+    
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(PstdPlugin {
+            solver: PstdSolver::new(self.solver.config.clone(), &self.solver.grid).unwrap(),
+            metadata: self.metadata.clone(),
+        })
+    }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}

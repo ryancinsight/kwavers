@@ -613,12 +613,13 @@ impl AdvancedGpuMemoryManager {
                 std::mem::forget(buffer); // Prevent deallocation
                 ptr
             }
-            #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => return Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                requested_bytes: size_bytes,
-                available_bytes: 0,
-                reason: "No GPU backend available".to_string(),
-            })),
+            #[allow(unreachable_patterns)]
+            _ => {
+                return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+                    backend: format!("{:?}", self.backend),
+                    reason: "GPU backend not compiled with required features".to_string(),
+                }));
+            }
         };
         
         // Track the allocation for cleanup

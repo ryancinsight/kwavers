@@ -58,7 +58,6 @@ use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
 use ndarray::{Array3, Array4, Zip, Axis};
 use std::f64::consts::PI;
-use num_complex::Complex;
 
 use log::{info, warn, debug};
 use std::time::Instant;
@@ -379,8 +378,8 @@ impl KuznetsovWave {
         Ok(nonlinear_term)
     }
     
-    /// Compute diffusivity/absorption term for the Kuznetsov equation
-    /// ∇²(α ∇²p) where α is the diffusivity coefficient
+    /// Compute diffusivity term for thermal and viscous losses
+    /// α ∇²p where α is the diffusivity coefficient
     fn compute_diffusivity_term(
         &mut self,
         pressure: &Array3<f64>,
@@ -390,25 +389,12 @@ impl KuznetsovWave {
     ) -> KwaversResult<Array3<f64>> {
         let start = Instant::now();
         
-        // Fix: Improved stability for diffusivity term
-        // First compute ∇²p
+        // For the Kuznetsov equation, the diffusivity term is α∇²p
+        // where α is the thermal diffusivity
         let laplacian = self.compute_laplacian(pressure, grid)?;
         
-        // Apply a stability filter to prevent high-frequency instabilities
-        let mut filtered_laplacian = laplacian;
-        if self.config.stability_filter {
-            self.apply_stability_filter(&mut filtered_laplacian, grid, dt);
-        }
-        
-        // Transform to k-space for diffusivity computation
-        let mut fields_4d = Array4::zeros((1, filtered_laplacian.shape()[0], filtered_laplacian.shape()[1], filtered_laplacian.shape()[2]));
-        fields_4d.index_axis_mut(Axis(0), 0).assign(&filtered_laplacian);
-        
-        let mut laplacian_hat = fft_3d(&fields_4d, 0, grid);
-        
-        // Apply diffusivity operator in k-space: -k²α
-        let k_mag = &self.k_magnitude;
-        
+        // Apply spatially varying diffusivity
+        let mut result = Array3::zeros(pressure.dim());
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
@@ -418,23 +404,12 @@ impl KuznetsovWave {
                     
                     // Get spatially varying diffusivity
                     let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                    let k2 = k_mag[[i, j, k]].powi(2);
                     
-                    // Apply diffusivity operator with stability limiting
-                    let damping_factor = if k2 > 0.0 {
-                        let max_damping = 0.1 / dt; // Limit to prevent excessive damping
-                        (-alpha * k2).min(max_damping)
-                    } else {
-                        0.0
-                    };
-                    
-                    laplacian_hat[[i, j, k]] *= Complex::new(damping_factor, 0.0);
+                    // Apply diffusivity: α∇²p
+                    result[[i, j, k]] = alpha * laplacian[[i, j, k]];
                 }
             }
         }
-        
-        // Transform back to physical space
-        let result = ifft_3d(&laplacian_hat, grid);
         
         // Update metrics
         self.metrics.diffusion_time += start.elapsed().as_secs_f64();

@@ -20,7 +20,7 @@ mod tests {
     fn test_amr_creation() {
         let config = AMRConfig::default();
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-        let amr = AMRManager::new(config.clone(), &grid);
+        let _amr = AMRManager::new(config.clone(), &grid);
         
         assert_eq!(config.max_level, 5);
         assert_eq!(config.refinement_ratio, 2);
@@ -268,7 +268,7 @@ mod tests {
             
             // Benchmark restriction
             let start = Instant::now();
-            let coarse = amr.restrict_to_coarse(&fine).unwrap();
+            let _coarse = amr.restrict_to_coarse(&fine).unwrap();
             let restrict_time = start.elapsed();
             
             println!("  Adaptation: {:?} ({} cells refined)", 

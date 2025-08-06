@@ -23,6 +23,7 @@ mod plotting_impl {
 
     pub fn plot_positions(positions: &[(f64, f64, f64)], title: &str, filename: &str) {
         info!("Generating 3D scatter plot: {}", filename);
+        // Create 3D scatter plot
         let x: Vec<f64> = positions.iter().map(|&(x, _, _)| x).collect();
         let y: Vec<f64> = positions.iter().map(|&(_, y, _)| y).collect();
         let z: Vec<f64> = positions.iter().map(|&(_, _, z)| z).collect();

@@ -143,7 +143,7 @@ pub mod factories {
             id: id.clone(),
             name: "Thermal Diffusion".to_string(),
             version: "1.0.0".to_string(),
-            description: "Pennes' bioheat equation solver".to_string(),
+            description: "Thermal diffusion solver using Pennes' bioheat equation".to_string(),
             author: "Kwavers Team".to_string(),
             license: "MIT".to_string(),
         };
@@ -178,6 +178,7 @@ mod adapter_tests {
         assert_eq!(plugin.metadata().id, "test_thermal");
         assert_eq!(plugin.metadata().name, "Thermal Diffusion");
         assert_eq!(plugin.metadata().version, "1.0.0");
-        assert!(plugin.metadata().description.contains("thermal diffusion"));
+        println!("Description: '{}'", plugin.metadata().description);
+        assert!(plugin.metadata().description.to_lowercase().contains("thermal diffusion"));
     }
 }

@@ -280,13 +280,13 @@ impl CPMLBoundary {
         for i in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if i < thickness as usize {
-                (thickness - i as f64) / thickness
+                (thickness - i as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if i >= n - thickness as usize {
-                (i as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (i as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };
@@ -350,13 +350,13 @@ impl CPMLBoundary {
         for j in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if j < thickness as usize {
-                (thickness - j as f64) / thickness
+                (thickness - j as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if j >= n - thickness as usize {
-                (j as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (j as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };
@@ -420,13 +420,13 @@ impl CPMLBoundary {
         for k in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
             let d_left = if k < thickness as usize {
-                (thickness - k as f64) / thickness
+                (thickness - k as f64 - 0.5) / thickness
             } else {
                 0.0
             };
             
             let d_right = if k >= n - thickness as usize {
-                (k as f64 - (n as f64 - thickness - 1.0)) / thickness
+                (k as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
             } else {
                 0.0
             };
@@ -581,11 +581,13 @@ impl CPMLBoundary {
         
         // Enhanced model for grazing angles
         if self.config.enhanced_grazing {
-            let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt();
-            let kappa_effect = 1.0 / self.config.kappa_max.powf(grazing_factor);
-            r_normal * kappa_effect
+            // For grazing angles, reflection should increase
+            let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt(); // sin(theta)
+            // Increase reflection for larger angles (smaller cos_theta)
+            let angle_enhancement = 1.0 + grazing_factor * (self.config.kappa_max - 1.0);
+            r_normal * angle_enhancement
         } else {
-            // Standard model
+            // Standard model - reflection increases as angle increases (cos_theta decreases)
             r_normal / cos_theta.max(0.1)
         }
     }

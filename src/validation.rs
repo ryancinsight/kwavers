@@ -285,7 +285,7 @@ impl ValidationRule for RangeValidationRule {
         "Validates that a numeric value is within a specified range"
     }
     
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult {
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult {
         let start_time = std::time::Instant::now();
         
         if let Some(val) = value.as_float() {
@@ -367,7 +367,7 @@ impl ValidationRule for StringLengthValidationRule {
         "Validates that a string value has a length within specified bounds"
     }
     
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult {
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult {
         let start_time = std::time::Instant::now();
         
         if let Some(s) = value.as_string() {
@@ -449,7 +449,7 @@ impl ValidationRule for PatternValidationRule {
         &self.description
     }
     
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult {
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult {
         let start_time = std::time::Instant::now();
         
         if let Some(s) = value.as_string() {
@@ -509,7 +509,7 @@ impl ValidationRule for RequiredFieldValidationRule {
         "Validates that a required field is present and not null"
     }
     
-    fn validate(&self, value: &ValidationValue, context: &ValidationContext) -> ValidationResult {
+    fn validate(&self, value: &ValidationValue, _context: &ValidationContext) -> ValidationResult {
         let start_time = std::time::Instant::now();
         
         if value.is_null() {

@@ -1,6 +1,5 @@
 //! Performance benchmarks for solvers and operations
 
-use std::time::Instant;
 
 /// Performance benchmark result
 #[derive(Debug, Clone)]

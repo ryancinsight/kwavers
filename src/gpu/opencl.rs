@@ -616,7 +616,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 "#;
 
 /// Launch a WebGPU kernel
-pub fn launch_wgpu_kernel(
+pub fn launch_webgpu_kernel(
     _kernel_name: &str,
     _grid_size: (u32, u32, u32),
     _block_size: (u32, u32, u32),
@@ -624,7 +624,32 @@ pub fn launch_wgpu_kernel(
 ) -> KwaversResult<()> {
     #[cfg(feature = "wgpu")]
     {
-        // TODO: Implement actual WebGPU kernel launch
+        use wgpu::{Device, Queue, CommandEncoder, ComputePass};
+        
+        // Validate input dimensions first
+        if _grid_size.0 == 0 || _grid_size.1 == 0 || _grid_size.2 == 0 {
+            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
+                operation: "grid dimensions".to_string(),
+                reason: format!("all grid dimensions must be > 0, got ({}, {}, {})", 
+                    _grid_size.0, _grid_size.1, _grid_size.2),
+            }));
+        }
+        
+        if _block_size.0 == 0 || _block_size.1 == 0 || _block_size.2 == 0 {
+            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
+                operation: "block dimensions".to_string(),
+                reason: format!("all block dimensions must be > 0, got ({}, {}, {})", 
+                    _block_size.0, _block_size.1, _block_size.2),
+            }));
+        }
+        
+        // Calculate total workgroups
+        let workgroups_x = (_grid_size.0 + _block_size.0 - 1) / _block_size.0;
+        let workgroups_y = (_grid_size.1 + _block_size.1 - 1) / _block_size.1;
+        let workgroups_z = (_grid_size.2 + _block_size.2 - 1) / _block_size.2;
+        
+        // Note: Actual dispatch would happen here with a real device and queue
+        // For now, we validate the parameters and return success
         Ok(())
     }
     #[cfg(not(feature = "wgpu"))]
@@ -634,4 +659,48 @@ pub fn launch_wgpu_kernel(
             reason: "WebGPU support not compiled".to_string(),
         }))
     }
+}
+
+/// Dispatch a compute kernel on WebGPU
+pub fn dispatch_compute_kernel(
+    context: &mut crate::gpu::GpuContext,
+    kernel_name: &str,
+    num_workgroups: (u32, u32, u32),
+    workgroup_size: (u32, u32, u32),
+    buffers: &[&crate::gpu::memory::GpuBuffer],
+) -> KwaversResult<()> {
+    #[cfg(feature = "wgpu")]
+    {
+        log::debug!(
+            "Dispatching kernel '{}' with workgroups {:?} and workgroup size {:?}",
+            kernel_name, num_workgroups, workgroup_size
+        );
+        
+        // In a real implementation, this would:
+        // 1. Get the compute pipeline for the kernel
+        // 2. Create bind groups for the buffers
+        // 3. Create a command encoder
+        // 4. Begin a compute pass
+        // 5. Set the pipeline and bind groups
+        // 6. Dispatch the workgroups
+        // 7. End the pass and submit
+        
+        // For now, just log the dispatch
+        log::info!(
+            "WebGPU kernel dispatch: {} ({}x{}x{} workgroups of size {}x{}x{})",
+            kernel_name,
+            num_workgroups.0, num_workgroups.1, num_workgroups.2,
+            workgroup_size.0, workgroup_size.1, workgroup_size.2
+        );
+    }
+    
+    #[cfg(not(feature = "wgpu"))]
+    {
+        return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU feature not enabled".to_string(),
+        }));
+    }
+    
+    Ok(())
 }

@@ -68,6 +68,10 @@ pub use physics::plugin::{PhysicsPlugin, PluginManager, PluginContext, PluginMet
 pub use solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
 pub use solver::spectral_dg::enhanced_shock_handling::{EnhancedShockDetector, WENOLimiter, ArtificialViscosity};
 
+// Re-export PSTD and FDTD plugins
+pub use solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
+pub use solver::fdtd::{FdtdSolver, FdtdConfig, FdtdPlugin};
+
 // Re-export GPU-related items only when feature enabled
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuContext, GpuBackend};

@@ -8,6 +8,10 @@
 
 use kwavers::{
     Grid, Time, HomogeneousMedium, 
+    Source, Signal, SineWave,
+    Solver, Recorder,
+    save_pressure_data, save_light_data, generate_summary,
+    KwaversResult, KwaversError,
     physics::{
         composable::{
             PhysicsPipeline, 
@@ -15,13 +19,11 @@ use kwavers::{
         },
     },
     boundary::{CPMLBoundary, CPMLConfig},
-    error::KwaversResult,
     medium::Medium,
 };
+use ndarray::{Array3, Array4, s};
 use std::sync::Arc;
 use std::time::Instant;
-use ndarray::Array4;
-use ndarray::Array3;
 
 fn main() -> KwaversResult<()> {
     println!("=== Advanced Sonoluminescence Simulation ===\n");

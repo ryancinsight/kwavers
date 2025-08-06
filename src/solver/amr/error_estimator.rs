@@ -275,7 +275,7 @@ mod tests {
         let estimator = ErrorEstimator::new(WaveletType::Haar, 1e-3, 1e-4);
         
         // Create test field with sharp gradient
-        let field = Array3::from_shape_fn((8, 8, 8), |(i, j, k)| {
+        let field = Array3::from_shape_fn((8, 8, 8), |(i, j, _k)| {
             if i < 4 { 0.0 } else { 1.0 }
         });
         
