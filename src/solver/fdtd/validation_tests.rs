@@ -8,7 +8,7 @@ mod tests {
     use super::super::*;
     use crate::grid::Grid;
     use crate::medium::HomogeneousMedium;
-    use ndarray::{Array3, Array4, Axis};
+    use ndarray::Array3;
     use std::f64::consts::PI;
     use approx::assert_relative_eq;
     
@@ -203,10 +203,10 @@ mod tests {
                 // Error should decrease with order
                 let error = (actual - expected).abs();
                 let max_error = match order {
-                    2 => 1.5,   // Increased from 0.1
-                    4 => 0.1,   // Increased from 0.01
-                    6 => 0.01,  // Increased from 0.001
-                    _ => 1.5,
+                    2 => FD_ORDER2_ERROR_TOL,
+                    4 => FD_ORDER4_ERROR_TOL,
+                    6 => FD_ORDER6_ERROR_TOL,
+                    _ => FD_ORDER2_ERROR_TOL,
                 };
                 
                 assert!(error < max_error, 

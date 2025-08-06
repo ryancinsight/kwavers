@@ -52,7 +52,7 @@ pub fn compute_acoustic_diffusivity(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::medium::HomogeneousMedium;
+    
     
     #[test]
     fn test_acoustic_diffusivity_calculation() {

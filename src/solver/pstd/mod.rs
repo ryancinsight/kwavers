@@ -540,7 +540,7 @@ impl PstdSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::medium::HomogeneousMedium;
+    
     
     #[test]
     fn test_pstd_creation() {

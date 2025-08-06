@@ -146,11 +146,12 @@ impl PhysicsState {
         Ok(())
     }
     
-    /// Get all fields as a 4D array
+    /// Get all fields
     pub fn get_all_fields(&self) -> KwaversResult<Array4<f64>> {
         let fields = self.fields.read().map_err(|e| 
             PhysicsError::StateError(format!("Failed to acquire read lock: {}", e))
         )?;
+        
         Ok(fields.clone())
     }
     

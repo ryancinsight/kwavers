@@ -422,8 +422,8 @@ mod tests {
         
         // Create test fields
         let mut temp_field = Array3::zeros(shape);
-        let mut pressure_field = Array3::from_elem(shape, 101325.0); // 1 atm
-        let mut radius_field = Array3::from_elem(shape, 5e-6); // 5 μm
+        let pressure_field = Array3::from_elem(shape, 101325.0); // 1 atm
+        let radius_field = Array3::from_elem(shape, 5e-6); // 5 μm
         
         // Set high temperature at center
         temp_field[[5, 5, 5]] = 20000.0; // 20,000 K

@@ -489,21 +489,21 @@ impl CPMLBoundary {
                 // Use indexed iteration for SIMD-friendly access patterns
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi, &grad| {
+                    .for_each(|(i, _j, _k), psi, &grad| {
                         *psi = self.b_x[i] * *psi + self.c_x[i] * grad;
                     });
             }
             1 => { // Y-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi, &grad| {
+                    .for_each(|(_i, j, _k), psi, &grad| {
                         *psi = self.b_y[j] * *psi + self.c_y[j] * grad;
                     });
             }
             2 => { // Z-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, j, k), psi, &grad| {
+                    .for_each(|(_i, _j, k), psi, &grad| {
                         *psi = self.b_z[k] * *psi + self.c_z[k] * grad;
                     });
             }
@@ -735,7 +735,7 @@ mod tests {
             ..Default::default()
         };
         
-        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Check that profiles are properly graded
         // At PML interface (i=10), values should be zero/one

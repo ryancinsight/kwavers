@@ -6,7 +6,7 @@
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::Array3;
-use crate::physics::PhysicsComponent;
+
 
 /// Stability analyzer for time integration
 #[derive(Debug)]

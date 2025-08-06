@@ -343,7 +343,7 @@ impl<'a> GridSlice<'a> {
 /// Advanced grid methods using iterators
 impl Grid {
     /// Returns an iterator over all grid points with their indices and coordinates
-    pub fn iter_points(&self) -> GridPointIterator {
+    pub fn iter_points(&self) -> GridPointIterator<'_> {
         GridPointIterator {
             grid: self,
             current: 0,
@@ -351,7 +351,7 @@ impl Grid {
     }
     
     /// Returns an iterator over grid slices in the specified dimension
-    pub fn iter_slices(&self, dimension: Dimension) -> GridSliceIterator {
+    pub fn iter_slices(&self, dimension: Dimension) -> GridSliceIterator<'_> {
         GridSliceIterator {
             grid: self,
             dimension,

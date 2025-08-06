@@ -316,19 +316,27 @@ pub fn log2_ceil(n: usize) -> usize {
     log
 }
 
+/// Compute the Laplacian of a field (second spatial derivatives)
+/// 
+/// Uses the centralized stencil implementation for consistency and performance
 pub fn laplacian(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<Array3<f64>, &'static str> {
     debug!("Computing Laplacian for field {}", field_idx);
-    let mut field_fft = fft_3d(fields, field_idx, grid);
-    let k2 = grid.k_squared();
-
-    // Multiply by -k² in parallel for better performance
-    Zip::from(&mut field_fft)
-        .and(&k2)
-        .for_each(|f, &k_val| {
-            *f *= Complex::new(-k_val, 0.0);
-        });
-
-    let result = ifft_3d(&field_fft, grid);
+    
+    if field_idx >= fields.shape()[0] {
+        return Err("Field index out of bounds");
+    }
+    
+    let field = fields.index_axis(Axis(0), field_idx);
+    let mut result = Array3::zeros(field.raw_dim());
+    
+    // Use the centralized stencil implementation
+    use crate::utils::stencil::laplacian_3d;
+    let dx_inv2 = 1.0 / (grid.dx * grid.dx);
+    let dy_inv2 = 1.0 / (grid.dy * grid.dy);
+    let dz_inv2 = 1.0 / (grid.dz * grid.dz);
+    
+    laplacian_3d(field.view(), result.view_mut(), dx_inv2, dy_inv2, dz_inv2);
+    
     Ok(result)
 }
 

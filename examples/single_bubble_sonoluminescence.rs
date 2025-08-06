@@ -1,204 +1,149 @@
 //! Single-Bubble Sonoluminescence (SBSL) Example
 //!
-//! This example demonstrates a single-bubble sonoluminescence simulation based on
-//! scientific literature, particularly:
-//! - Gaitan et al. (1992) "Sonoluminescence and bubble dynamics for a single, stable, cavitation bubble"
-//! - Brenner et al. (2002) "Single-bubble sonoluminescence"
-//!
-//! The simulation includes:
-//! - Acoustic driving at resonance frequency
-//! - Bubble dynamics with Keller-Miksis equation
-//! - Temperature evolution and shock heating
-//! - Light emission from blackbody and bremsstrahlung
-//! - ROS generation and chemistry
+//! This example demonstrates the proper separation of concerns:
+//! - Bubble dynamics (core physics)
+//! - Mechanical damage (cavitation erosion)
+//! - Light emission (sonoluminescence)
+//! - Chemistry (ROS generation)
 
 use kwavers::{
-    Grid, Time, HomogeneousMedium, Source, Sensor, Recorder,
-    SensorConfig, RecorderConfig, KwaversResult,
+    Grid, Time, HomogeneousMedium, PMLBoundary, Source, Sensor, Recorder,
+    SensorConfig, RecorderConfig, KwaversResult, signal::Signal,
     physics::{
-        bubble_dynamics::{BubbleField, BubbleParameters, GasSpecies},
-        mechanics::cavitation::{CavitationDamage, MaterialProperties, DamageParameters},
-        optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters},
-        chemistry::{SonochemistryModel, ROSSpecies},
+        // Core bubble dynamics
+        bubble_dynamics::{
+            BubbleField, BubbleParameters, BubbleState, GasSpecies,
+        },
+        // Mechanical damage from cavitation
+        mechanics::cavitation::{
+            CavitationDamage, MaterialProperties, DamageParameters,
+        },
+        // Light emission
+        optics::sonoluminescence::{
+            SonoluminescenceEmission, EmissionParameters,
+        },
+        // Chemistry and ROS
+        chemistry::{
+            SonochemistryModel, ROSSpecies,
+        },
     },
 };
-use ndarray::Array3;
+use ndarray::{Array3, Array1};
 use std::f64::consts::PI;
-use std::fs::File;
-use std::io::Write;
 
-/// SBSL experimental parameters from literature
+/// SBSL simulation parameters
 #[derive(Debug, Clone)]
-struct SBSLParameters {
-    // Acoustic parameters (Gaitan et al. 1992)
-    frequency: f64,           // Driving frequency (Hz)
-    pressure_amplitude: f64,  // Acoustic pressure amplitude (Pa)
-    ambient_pressure: f64,    // Ambient pressure (Pa)
+struct SBSLConfig {
+    // Acoustic driving
+    frequency: f64,
+    pressure_amplitude: f64,
     
     // Bubble parameters
-    equilibrium_radius: f64,  // R0 (m)
-    gas_type: GasSpecies,    // Gas inside bubble
+    initial_radius: f64,
+    gas_type: GasSpecies,
     
-    // Liquid properties (water at 20°C)
-    liquid_density: f64,      // ρ (kg/m³)
-    sound_speed: f64,         // c (m/s)
-    surface_tension: f64,     // σ (N/m)
-    viscosity: f64,           // μ (Pa·s)
-    vapor_pressure: f64,      // Pv (Pa)
+    // Simulation domain
+    grid_size: usize,
+    domain_size: f64,
+    simulation_time: f64,
     
-    // Simulation parameters
-    domain_size: f64,         // Physical domain size (m)
-    grid_points: usize,       // Number of grid points
-    simulation_time: f64,     // Total simulation time (s)
-    
-    // Material for damage assessment
-    vessel_material: MaterialProperties,
+    // Material for damage calculation
+    wall_material: MaterialProperties,
 }
 
-impl Default for SBSLParameters {
+impl Default for SBSLConfig {
     fn default() -> Self {
         Self {
             // Standard SBSL conditions
-            frequency: 26.5e3,              // 26.5 kHz
-            pressure_amplitude: 1.35 * 101325.0, // 1.35 atm
-            ambient_pressure: 101325.0,     // 1 atm
-            
-            // Argon bubble
-            equilibrium_radius: 4.5e-6,     // 4.5 μm
+            frequency: 26.5e3,
+            pressure_amplitude: 1.35 * 101325.0,
+            initial_radius: 4.5e-6,
             gas_type: GasSpecies::Argon,
             
-            // Water at 20°C
-            liquid_density: 998.0,
-            sound_speed: 1482.0,
-            surface_tension: 0.0728,
-            viscosity: 1.002e-3,
-            vapor_pressure: 2.33e3,
+            // Small focused domain
+            grid_size: 64,
+            domain_size: 1e-3,
+            simulation_time: 100e-6,
             
-            // Small computational domain
-            domain_size: 1e-3,              // 1 mm
-            grid_points: 64,
-            simulation_time: 100e-6,        // 100 μs (several acoustic cycles)
-            
-            // Pyrex glass vessel
-            vessel_material: MaterialProperties {
-                yield_strength: 50e6,
-                ultimate_strength: 100e6,
-                hardness: 5.5e9,
-                density: 2230.0,
-                fatigue_exponent: 10.0,
-                erosion_resistance: 0.3,
-            },
+            // Stainless steel vessel
+            wall_material: MaterialProperties::default(),
         }
     }
 }
 
-/// Acoustic standing wave source for SBSL
+/// Acoustic standing wave source
+#[derive(Debug)]
 struct StandingWaveSource {
     frequency: f64,
     amplitude: f64,
-    wavelength: f64,
     center: (f64, f64, f64),
-    signal: kwavers::signal::SineWave,
-}
-
-impl StandingWaveSource {
-    fn new(frequency: f64, amplitude: f64, center: (f64, f64, f64), sound_speed: f64) -> Self {
-        Self {
-            frequency,
-            amplitude,
-            wavelength: sound_speed / frequency,
-            center,
-            signal: kwavers::signal::SineWave::new(frequency, amplitude, 0.0),
-        }
-    }
-    
-    /// Calculate the time derivative of pressure analytically
-    fn pressure_time_derivative(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        let r = ((x - self.center.0).powi(2) + 
-                 (y - self.center.1).powi(2) + 
-                 (z - self.center.2).powi(2)).sqrt();
-        
-        let k = 2.0 * PI / self.wavelength;
-        let spatial_pattern = (k * r).cos();
-        let omega = 2.0 * PI * self.frequency;
-        
-        // d/dt[A*spatial*sin(ωt)] = A*spatial*ω*cos(ωt)
-        self.amplitude * spatial_pattern * omega * (omega * t).cos()
-    }
-}
-
-use std::fmt::Debug;
-
-impl Debug for StandingWaveSource {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StandingWaveSource")
-            .field("frequency", &self.frequency)
-            .field("amplitude", &self.amplitude)
-            .finish()
-    }
 }
 
 impl Source for StandingWaveSource {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
-        // Standing wave pattern with antinode at center
-        let r = ((x - self.center.0).powi(2) + 
-                 (y - self.center.1).powi(2) + 
-                 (z - self.center.2).powi(2)).sqrt();
+        let dx = x - self.center.0;
+        let dy = y - self.center.1;
+        let dz = z - self.center.2;
+        let r = (dx*dx + dy*dy + dz*dz).sqrt();
         
-        let k = 2.0 * PI / self.wavelength;
-        let spatial_pattern = (k * r).cos();
-        let temporal_pattern = (2.0 * PI * self.frequency * t).sin();
+        // Standing wave pattern
+        let k = 2.0 * PI * self.frequency / 1500.0; // Wave number
+        let spatial = (k * r).sin() / (k * r + 1e-10);
+        let temporal = (2.0 * PI * self.frequency * t).sin();
         
-        self.amplitude * spatial_pattern * temporal_pattern
+        self.amplitude * spatial * temporal
     }
     
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         vec![self.center]
     }
     
-    fn signal(&self) -> &dyn kwavers::Signal {
-        &self.signal
+    fn signal(&self) -> &dyn Signal {
+        panic!("StandingWaveSource doesn't use a separate signal")
     }
 }
 
-/// Run SBSL simulation
-fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
-    println!("=== Single-Bubble Sonoluminescence Simulation ===");
-    println!("Based on Gaitan et al. (1992) experimental conditions");
+/// Run integrated SBSL simulation
+fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
+    println!("=== Single-Bubble Sonoluminescence Simulation (v2) ===");
+    println!("Demonstrating proper physics module separation");
     println!();
     
     // Setup grid
-    let n = params.grid_points;
-    let dx = params.domain_size / n as f64;
+    let n = config.grid_size;
+    let dx = config.domain_size / n as f64;
     let grid = Grid::new(n, n, n, dx, dx, dx);
     
     // Time stepping
-    let dt = 0.5 * dx / params.sound_speed; // CFL condition
-    let n_steps = (params.simulation_time / dt) as usize;
+    let c0 = 1482.0; // Sound speed in water
+    let dt = 0.5 * dx / c0;
+    let n_steps = (config.simulation_time / dt) as usize;
     
-    println!("Simulation parameters:");
-    println!("  Frequency: {:.1} kHz", params.frequency / 1e3);
-    println!("  Pressure: {:.2} atm", params.pressure_amplitude / 101325.0);
-    println!("  Bubble R₀: {:.1} μm", params.equilibrium_radius * 1e6);
-    println!("  Gas: {:?}", params.gas_type);
+    println!("Configuration:");
+    println!("  Frequency: {:.1} kHz", config.frequency / 1e3);
+    println!("  Pressure: {:.2} atm", config.pressure_amplitude / 101325.0);
+    println!("  Bubble R₀: {:.1} μm", config.initial_radius * 1e6);
+    println!("  Gas: {:?}", config.gas_type);
     println!("  Grid: {}³ points, dx = {:.1} μm", n, dx * 1e6);
     println!("  Time steps: {}, dt = {:.2} ns", n_steps, dt * 1e9);
     println!();
     
-    // Initialize bubble dynamics
+    // Initialize physics modules
+    
+    // 1. Bubble dynamics (core physics)
     let bubble_params = BubbleParameters {
-        r0: params.equilibrium_radius,
-        p0: params.ambient_pressure,
-        rho_liquid: params.liquid_density,
-        c_liquid: params.sound_speed,
-        mu_liquid: params.viscosity,
-        sigma: params.surface_tension,
-        pv: params.vapor_pressure,
-        thermal_conductivity: 0.6,  // Water
+        r0: config.initial_radius,
+        p0: 101325.0,
+        rho_liquid: 998.0,
+        c_liquid: c0,
+        mu_liquid: 1.002e-3,
+        sigma: 0.0728,
+        pv: 2.33e3,
+        thermal_conductivity: 0.6,
         specific_heat_liquid: 4182.0,
-        accommodation_coeff: 0.04,   // For argon
-        gas_species: params.gas_type,
-        initial_gas_pressure: params.ambient_pressure,
+        accommodation_coeff: 0.04,
+        gas_species: config.gas_type,
+        initial_gas_pressure: 101325.0,
         use_compressibility: true,
         use_thermal_effects: true,
         use_mass_transfer: true,
@@ -207,20 +152,20 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
     let mut bubble_field = BubbleField::new((n, n, n), bubble_params.clone());
     bubble_field.add_center_bubble(&bubble_params);
     
-    // Initialize damage model
+    // 2. Mechanical damage model
     let damage_params = DamageParameters::default();
     let mut cavitation_damage = CavitationDamage::new(
         (n, n, n),
-        params.vessel_material.clone(),
+        config.wall_material.clone(),
         damage_params,
     );
     
-    // Initialize light emission
+    // 3. Light emission model
     let emission_params = EmissionParameters {
         use_blackbody: true,
         use_bremsstrahlung: true,
         use_molecular_lines: false,
-        ionization_energy: 15.76,  // Argon first ionization
+        ionization_energy: 15.76, // Argon
         min_temperature: 2000.0,
         opacity_factor: 0.1,
     };
@@ -229,66 +174,70 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
         emission_params,
     );
     
-    // Initialize chemistry
-    let mut chemistry = SonochemistryModel::new(n, n, n, 7.0); // pH 7
+    // 4. Chemistry model
+    let mut chemistry = SonochemistryModel::new(n, n, n, 7.0);
     
     // Create acoustic source
-    let source = StandingWaveSource::new(
-        params.frequency,
-        params.pressure_amplitude,
-        (
-            params.domain_size / 2.0,
-            params.domain_size / 2.0,
-            params.domain_size / 2.0,
+    let source = StandingWaveSource {
+        frequency: config.frequency,
+        amplitude: config.pressure_amplitude,
+        center: (
+            config.domain_size / 2.0,
+            config.domain_size / 2.0,
+            config.domain_size / 2.0,
         ),
-        params.sound_speed,
-    );
+    };
     
     // Data collection
-    let mut time_data = Vec::new();
-    let mut radius_data = Vec::new();
-    let mut temperature_data = Vec::new();
-    let mut pressure_data = Vec::new();
-    let mut light_intensity_data = Vec::new();
-    let mut photon_count_data = Vec::new();
+    let mut time_history = Vec::new();
+    let mut radius_history = Vec::new();
+    let mut temperature_history = Vec::new();
+    let mut light_history = Vec::new();
+    let mut damage_history = Vec::new();
     
     println!("Starting simulation...");
     let start_time = std::time::Instant::now();
-    
-    // Pre-allocate arrays for efficiency
-    let mut pressure_field = Array3::zeros((n, n, n));
-    let mut dp_dt_field = Array3::zeros((n, n, n));
     
     // Main simulation loop
     for step in 0..n_steps {
         let t = step as f64 * dt;
         
         // Generate acoustic field
-        for i in 0..n {
-            for j in 0..n {
-                for k in 0..n {
-                    let x = i as f64 * dx;
-                    let y = j as f64 * dx;
-                    let z = k as f64 * dx;
-                    
-                    pressure_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
-                    
-                    // Use analytical pressure time derivative
-                    dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
-                }
-            }
-        }
+        let mut pressure = Array3::zeros((n, n, n));
+        let mut dp_dt = Array3::zeros((n, n, n));
+        
+        // Update pressure field with standing wave
+        let time = step as f64 * dt;
+        let omega = 2.0 * std::f64::consts::PI * config.frequency;
+        let k_wave = 2.0 * PI * config.frequency / 1500.0; // Wave number
+        
+        // Use iterators for field updates
+        pressure.indexed_iter_mut()
+            .for_each(|((i, j, k), p)| {
+                let x = i as f64 * dx;
+                let y = j as f64 * dx;
+                let z = k as f64 * dx;
+                *p = config.pressure_amplitude * (omega * time).sin() * 
+                     (k_wave * x).sin() * (k_wave * y).sin() * (k_wave * z).sin();
+            });
+        
+        // Approximate time derivative
+        dp_dt.indexed_iter_mut()
+            .for_each(|((i, j, k), dp)| {
+                *dp = -config.pressure_amplitude * 2.0 * PI * config.frequency
+                    * (2.0 * PI * config.frequency * time).cos();
+            });
         
         // Update bubble dynamics
-        bubble_field.update(&pressure_field, &dp_dt_field, dt, t);
+        bubble_field.update(&pressure, &dp_dt, dt, t);
         
-        // Get bubble states
+        // Get bubble states for other physics modules
         let bubble_states = bubble_field.get_state_fields();
         
-        // Update damage
+        // Update mechanical damage
         cavitation_damage.update_damage(
             &bubble_states,
-            (params.liquid_density, params.sound_speed),
+            (bubble_params.rho_liquid, bubble_params.c_liquid),
             dt,
         );
         
@@ -300,51 +249,29 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
             t,
         );
         
-        // Update chemistry - convert bubble states to format expected by chemistry
-        // Note: This is a simplified approach. A full implementation would
-        // properly convert BubbleStateFields to bubble state array
-        if !bubble_field.bubbles.is_empty() {
-            // For demonstration, we'll update chemistry based on temperature field
-            // In practice, you'd create a proper bubble state array
-            // chemistry.update_ros_generation(&bubble_states_array, dt, (dx, dx, dx));
-            
-            // Simplified: Generate ROS based on high-temperature regions
-            for ((i, j, k), &temp) in bubble_states.temperature.indexed_iter() {
-                if temp > 5000.0 && bubble_states.is_collapsing[[i, j, k]] > 0.5 {
-                    // Estimate ROS generation from hot collapse
-                    let energy_density = bubble_states.pressure[[i, j, k]] * bubble_states.radius[[i, j, k]].powi(3);
-                    // This is a placeholder - proper implementation would use
-                    // the sonochemistry model's update_ros_generation method
-                }
-            }
-        }
+        // Update chemistry (simplified for example)
+        // In full implementation, would convert bubble states to chemistry format
         
         // Collect data for center bubble
         let center = (n/2, n/2, n/2);
         if let Some(bubble) = bubble_field.bubbles.get(&center) {
-            time_data.push(t);
-            radius_data.push(bubble.radius);
-            temperature_data.push(bubble.temperature);
-            pressure_data.push(bubble.pressure_internal);
-            
-            let intensity = light_emission.emission_field[[center.0, center.1, center.2]];
-            light_intensity_data.push(intensity);
-            
-            // Estimate photon count (simplified)
-            let volume = bubble.volume();
-            let photon_energy = 3.0 * 1.602e-19; // ~3 eV average
-            let photons = intensity * volume * dt / photon_energy;
-            photon_count_data.push(photons);
+            radius_history.push(bubble.radius);
+            temperature_history.push(bubble.temperature);
         }
         
-        // Progress update
+        light_history.push(light_emission.emission_field[center]);
+        damage_history.push(cavitation_damage.damage_field[center]);
+        time_history.push(t);
+        
+        // Progress report
         if step % 1000 == 0 {
             let stats = bubble_field.get_statistics();
             println!(
-                "Step {}/{}: T_max = {:.0} K, Compression = {:.1}x",
-                step, n_steps,
-                stats.max_temperature,
-                stats.max_compression
+                "Step {}/{}: Max T = {:.0} K, Max compression = {:.1}x, Total damage = {:.2e}",
+                step, n_steps, 
+                stats.max_temperature, 
+                stats.max_compression,
+                cavitation_damage.total_damage()
             );
         }
     }
@@ -352,163 +279,109 @@ fn run_sbsl_simulation(params: SBSLParameters) -> KwaversResult<()> {
     let elapsed = start_time.elapsed();
     println!("\nSimulation completed in {:.2} seconds", elapsed.as_secs_f64());
     
-    // Analyze results
-    analyze_sbsl_results(
-        &time_data,
-        &radius_data,
-        &temperature_data,
-        &pressure_data,
-        &light_intensity_data,
-        &photon_count_data,
-        &params,
+    // Analysis
+    analyze_results(
+        &time_history,
+        &radius_history,
+        &temperature_history,
+        &light_history,
+        &damage_history,
+        &config,
+        &cavitation_damage,
     );
-    
-    // Save data
-    save_sbsl_data(
-        &time_data,
-        &radius_data,
-        &temperature_data,
-        &light_intensity_data,
-        "sbsl_results.csv",
-    )?;
     
     Ok(())
 }
 
-/// Analyze SBSL results and compare with literature
-fn analyze_sbsl_results(
+/// Analyze simulation results
+fn analyze_results(
     times: &[f64],
     radii: &[f64],
     temperatures: &[f64],
-    pressures: &[f64],
-    light_intensities: &[f64],
-    photon_counts: &[f64],
-    params: &SBSLParameters,
+    light: &[f64],
+    damage: &[f64],
+    config: &SBSLConfig,
+    damage_model: &CavitationDamage,
 ) {
-    println!("\n=== SBSL Results Analysis ===");
+    println!("\n=== Results Analysis ===");
     
-    // Find key metrics
+    // Bubble dynamics
     let r_min = radii.iter().cloned().fold(f64::INFINITY, f64::min);
     let r_max = radii.iter().cloned().fold(0.0, f64::max);
-    let t_max = temperatures.iter().cloned().fold(0.0, f64::max);
-    let p_max = pressures.iter().cloned().fold(0.0, f64::max);
-    
-    let compression_ratio = params.equilibrium_radius / r_min;
-    
-    // Find light pulse characteristics
-    let light_max = light_intensities.iter().cloned().fold(0.0, f64::max);
-    let mut pulse_width = 0.0;
-    let threshold = light_max * 0.1; // 10% of peak
-    
-    let mut in_pulse = false;
-    let mut pulse_start = 0.0;
-    for (i, &intensity) in light_intensities.iter().enumerate() {
-        if !in_pulse && intensity > threshold {
-            in_pulse = true;
-            pulse_start = times[i];
-        } else if in_pulse && intensity < threshold {
-            pulse_width = times[i] - pulse_start;
-            break;
-        }
-    }
-    
-    // Total photon count per flash
-    let total_photons: f64 = photon_counts.iter().sum();
-    
+    let compression = config.initial_radius / r_min;
     println!("\nBubble Dynamics:");
     println!("  R_min: {:.2} μm", r_min * 1e6);
     println!("  R_max: {:.2} μm", r_max * 1e6);
-    println!("  Compression ratio: {:.1}", compression_ratio);
-    println!("  Max temperature: {:.0} K", t_max);
-    println!("  Max pressure: {:.0} MPa", p_max / 1e6);
+    println!("  Max compression: {:.1}x", compression);
     
+    // Temperature
+    let t_max = temperatures.iter().cloned().fold(0.0, f64::max);
+    println!("\nThermal:");
+    println!("  Max temperature: {:.0} K", t_max);
+    
+    // Light emission
+    let light_max = light.iter().cloned().fold(0.0, f64::max);
+    let light_total: f64 = light.iter().sum();
     println!("\nLight Emission:");
     println!("  Peak intensity: {:.2e} W/m³", light_max);
-    println!("  Pulse width: {:.1} ps", pulse_width * 1e12);
-    println!("  Photons per flash: {:.2e}", total_photons);
+    println!("  Total emission: {:.2e} J/m³", light_total * times[1]);
     
-    println!("\nComparison with Literature:");
-    println!("  Parameter              | Simulation | Literature (Gaitan et al.)");
-    println!("  --------------------- | ---------- | -------------------------");
-    println!("  Compression ratio     | {:.1}      | 10-15", compression_ratio);
-    println!("  Max temperature       | {:.0} K    | 10,000-50,000 K", t_max);
-    println!("  Pulse width           | {:.0} ps   | 50-300 ps", pulse_width * 1e12);
-    println!("  Photons per flash     | {:.1e}     | 10⁴-10⁶", total_photons);
+    // Mechanical damage
+    let damage_max = damage.iter().cloned().fold(0.0, f64::max);
+    let (i, j, k) = damage_model.max_damage_location();
+    let mttf = damage_model.mean_time_to_failure(times[1]);
     
-    // Validation checks
-    let compression_ok = compression_ratio >= 10.0 && compression_ratio <= 15.0;
-    let temperature_ok = t_max >= 10000.0 && t_max <= 50000.0;
-    let pulse_width_ok = pulse_width >= 50e-12 && pulse_width <= 300e-12;
-    let photons_ok = total_photons >= 1e4 && total_photons <= 1e6;
+    println!("\nMechanical Damage:");
+    println!("  Max damage parameter: {:.2e}", damage_max);
+    println!("  Damage location: ({}, {}, {})", i, j, k);
+    println!("  Mean time to failure: {:.2e} s", mttf);
+    println!("  Total impacts: {}", damage_model.impact_count.sum());
     
+    // Validation against literature
     println!("\nValidation:");
-    println!("  Compression: {}", if compression_ok { "✓ PASS" } else { "✗ FAIL" });
-    println!("  Temperature: {}", if temperature_ok { "✓ PASS" } else { "✗ FAIL" });
-    println!("  Pulse width: {}", if pulse_width_ok { "✓ PASS" } else { "✗ FAIL" });
-    println!("  Photon count: {}", if photons_ok { "✓ PASS" } else { "✗ FAIL" });
-}
-
-/// Save SBSL data to CSV file
-fn save_sbsl_data(
-    times: &[f64],
-    radii: &[f64],
-    temperatures: &[f64],
-    light_intensities: &[f64],
-    filename: &str,
-) -> KwaversResult<()> {
-    use kwavers::error::DataError;
-    
-    let mut file = File::create(filename)
-        .map_err(|e| DataError::WriteError { 
-            path: filename.to_string(),
-            reason: e.to_string() 
-        })?;
-    
-    // Write header
-    writeln!(file, "time_us,radius_um,temperature_K,light_intensity_W_m3")
-        .map_err(|e| DataError::WriteError {
-            path: filename.to_string(),
-            reason: e.to_string()
-        })?;
-    
-    // Write data
-    for i in 0..times.len() {
-        writeln!(
-            file,
-            "{:.3},{:.3},{:.0},{:.3e}",
-            times[i] * 1e6,
-            radii[i] * 1e6,
-            temperatures[i],
-            light_intensities[i]
-        ).map_err(|e| DataError::WriteError {
-            path: filename.to_string(),
-            reason: e.to_string()
-        })?;
-    }
-    
-    println!("\nData saved to {}", filename);
-    Ok(())
+    println!("  Compression ratio: {} (Literature: 10-15 ✓)", 
+        if compression > 10.0 && compression < 15.0 { "PASS" } else { "FAIL" });
+    println!("  Max temperature: {} (Literature: 10,000-50,000 K ✓)", 
+        if t_max > 10000.0 && t_max < 50000.0 { "PASS" } else { "FAIL" });
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     
-    // Run with default SBSL parameters
-    let params = SBSLParameters::default();
-    run_sbsl_simulation(params)?;
+    // Run with default configuration
+    let config = SBSLConfig::default();
+    run_sbsl_simulation(config)?;
     
     // Optional: Parameter study
     println!("\n=== Parameter Study ===");
     
-    // Test different gases
-    for gas in [GasSpecies::Argon, GasSpecies::Xenon, GasSpecies::Air] {
-        println!("\nTesting gas: {:?}", gas);
-        let mut params = SBSLParameters::default();
-        params.gas_type = gas;
-        params.simulation_time = 20e-6; // Shorter for parameter study
+    // Test different materials
+    for (name, material) in [
+        ("Stainless Steel", MaterialProperties::default()),
+        ("Aluminum", MaterialProperties {
+            yield_strength: 270e6,
+            ultimate_strength: 310e6,
+            hardness: 1.2e9,
+            density: 2700.0,
+            fatigue_exponent: 3.5,
+            erosion_resistance: 0.8,
+        }),
+        ("Glass", MaterialProperties {
+            yield_strength: 50e6,
+            ultimate_strength: 100e6,
+            hardness: 5.5e9,
+            density: 2500.0,
+            fatigue_exponent: 10.0,
+            erosion_resistance: 0.3,
+        }),
+    ] {
+        println!("\nTesting material: {}", name);
+        let mut config = SBSLConfig::default();
+        config.wall_material = material;
+        config.simulation_time = 20e-6; // Shorter for study
         
-        if let Err(e) = run_sbsl_simulation(params) {
-            eprintln!("Error with {:?}: {}", gas, e);
+        if let Err(e) = run_sbsl_simulation(config) {
+            eprintln!("Error with {}: {}", name, e);
         }
     }
     

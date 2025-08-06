@@ -6,7 +6,7 @@ mod tests {
     use crate::grid::Grid;
     use ndarray::Array3;
     use std::collections::HashMap;
-    use crate::solver::time_integration::time_stepper::{AdamsBashforthConfig, RK4Config};
+    use crate::solver::time_integration::time_stepper::AdamsBashforthConfig;
     use crate::solver::time_integration::adaptive_stepping::RichardsonErrorEstimator;
     
     /// Mock physics component for testing

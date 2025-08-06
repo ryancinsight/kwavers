@@ -1,10 +1,8 @@
 //! Performance optimization module for the Kwavers acoustic simulation library
 
 use crate::error::{ConfigError, KwaversError, KwaversResult};
-use crate::grid::Grid;
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis, s};
+use ndarray::{Array3, s};
 use rayon::prelude::*;
-use std::sync::Arc;
 
 use log::info;
 
