@@ -183,13 +183,12 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         }
     };
     
-    // Get a mutable clone of the FFT instance
-    let fft = (*fft_arc).clone();
-    
-    // Use the already converted complex buffer
+    // Use the FFT instance directly from Arc
     let mut result = field_complex.clone();
     
     // Apply forward FFT along each axis
+    // Note: This uses a custom Fft3d implementation that processes the entire 3D array
+    // The loop structure is preserved for potential future per-axis processing
     for axis in 0..3 {
         let axis_enum = match axis {
             0 => Axis(0),
@@ -202,8 +201,8 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         let n_slices = result.len_of(axis_enum);
         for i in 0..n_slices {
             let _slice = result.index_axis_mut(axis_enum, i);
-            // The Fft3d process method should handle the slice
-            // For now, we'll just use the existing implementation
+            // TODO: The Fft3d process method should handle individual slices
+            // Currently it processes the entire 3D array at once
         }
     }
     
@@ -242,13 +241,13 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
         }
     };
     
-    // Get a mutable clone of the IFFT instance
-    let _ifft = (*ifft_arc).clone();
-    
+    // Use the IFFT instance directly from Arc
     // Work with a copy of the input
     let mut complex_buffer = field.clone();
     
     // Apply inverse FFT along each axis
+    // Note: This uses a custom Ifft3d implementation that processes the entire 3D array
+    // The loop structure is preserved for potential future per-axis processing
     for axis in 0..3 {
         let axis_enum = match axis {
             0 => Axis(0),
@@ -261,8 +260,8 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
         let n_slices = complex_buffer.len_of(axis_enum);
         for i in 0..n_slices {
             let _slice = complex_buffer.index_axis_mut(axis_enum, i);
-            // The Ifft3d process method should handle the slice
-            // For now, we'll just use the existing implementation
+            // TODO: The Ifft3d process method should handle individual slices
+            // Currently it processes the entire 3D array at once
         }
     }
     

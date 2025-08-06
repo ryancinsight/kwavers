@@ -626,25 +626,27 @@ pub fn launch_webgpu_kernel(
     {
         use wgpu::{Device, Queue, CommandEncoder, ComputePass};
         
-        // In a real implementation, we would:
-        // 1. Get the compute pipeline from a registry based on kernel_name
-        // 2. Create bind groups for the arguments
-        // 3. Create a command encoder and compute pass
-        // 4. Dispatch the compute workgroups
-        // 5. Submit the command buffer
+        // Validate input dimensions first
+        if _grid_size.0 == 0 || _grid_size.1 == 0 || _grid_size.2 == 0 {
+            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
+                operation: "grid dimensions".to_string(),
+                reason: format!("all grid dimensions must be > 0, got ({}, {}, {})", 
+                    _grid_size.0, _grid_size.1, _grid_size.2),
+            }));
+        }
+        
+        if _block_size.0 == 0 || _block_size.1 == 0 || _block_size.2 == 0 {
+            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
+                operation: "block dimensions".to_string(),
+                reason: format!("all block dimensions must be > 0, got ({}, {}, {})", 
+                    _block_size.0, _block_size.1, _block_size.2),
+            }));
+        }
         
         // Calculate total workgroups
         let workgroups_x = (_grid_size.0 + _block_size.0 - 1) / _block_size.0;
         let workgroups_y = (_grid_size.1 + _block_size.1 - 1) / _block_size.1;
         let workgroups_z = (_grid_size.2 + _block_size.2 - 1) / _block_size.2;
-        
-        // Validate workgroup dimensions
-        if workgroups_x == 0 || workgroups_y == 0 || workgroups_z == 0 {
-            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
-                operation: "workgroup dimensions".to_string(),
-                reason: format!("all dimensions must be > 0, got ({}, {}, {})", workgroups_x, workgroups_y, workgroups_z),
-            }));
-        }
         
         // Note: Actual dispatch would happen here with a real device and queue
         // For now, we validate the parameters and return success

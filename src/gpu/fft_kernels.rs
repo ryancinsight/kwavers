@@ -287,21 +287,20 @@ impl GpuFftPlan {
     /// Upload real data to GPU
     fn upload_real_data(&mut self, context: &mut GpuContext, data: ArrayView3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = self.dimensions;
-        let mut complex_data = Vec::with_capacity(nx * ny * nz);
         
-        // Convert real to complex
+        // Pre-allocate the array buffer with exact size
+        let mut complex_array = Vec::with_capacity(nx * ny * nz);
+        
+        // Convert real to complex and directly to [f32; 2] format
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    complex_data.push(Complex::new(data[[i, j, k]] as f32, 0.0));
+                    let real_val = data[[i, j, k]] as f32;
+                    complex_array.push([real_val, 0.0f32]);
                 }
             }
         }
         
-        // Convert Complex<f32> to [f32; 2] which can implement Pod
-        let complex_array: Vec<[f32; 2]> = complex_data.iter()
-            .map(|c| [c.re, c.im])
-            .collect();
         context.upload_to_buffer(&self.workspace.input, &complex_array)?;
         Ok(())
     }
