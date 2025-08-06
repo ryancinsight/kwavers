@@ -203,10 +203,10 @@ mod tests {
                 // Error should decrease with order
                 let error = (actual - expected).abs();
                 let max_error = match order {
-                    2 => 2.5,   // Increased for coarse grids with boundary effects
-                    4 => 0.15,  // Slightly increased
-                    6 => 0.02,  // Slightly increased
-                    _ => 2.5,
+                    2 => FD_ORDER2_ERROR_TOL,
+                    4 => FD_ORDER4_ERROR_TOL,
+                    6 => FD_ORDER6_ERROR_TOL,
+                    _ => FD_ORDER2_ERROR_TOL,
                 };
                 
                 assert!(error < max_error, 
