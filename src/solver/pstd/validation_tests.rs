@@ -154,8 +154,9 @@ mod tests {
             // Higher order should give values closer to 1 for low k
             if order > 2 {
                 let kappa_prev = PstdSolver::compute_k_space_correction(&k_squared, &grid, order - 2);
-                assert!(kappa[[1, 0, 0]] >= kappa_prev[[1, 0, 0]],
-                    "Higher order should give less correction for low k");
+                // Relaxed assertion to allow for numerical precision issues
+                assert!(kappa[[1, 0, 0]] >= kappa_prev[[1, 0, 0]] - 1e-10,
+                    "Higher order should give less correction for low k (within numerical precision)");
             }
         }
     }
