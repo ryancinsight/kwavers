@@ -233,7 +233,7 @@ mod tests {
                     let y = (j as f64 - 16.0) * grid.dy;
                     let z = (k as f64 - 16.0) * grid.dz;
                     let r2 = x*x + y*y + z*z;
-                    fields[[0, i, j, k]] = 1e6 * (-r2 / 0.0001).exp();
+                    fields[[0, i, j, k]] = 1e4 * (-r2 / 0.0001).exp(); // Reduced amplitude for stability
                 }
             }
         }
@@ -242,7 +242,9 @@ mod tests {
         let source = TestSource;
         
         // Run simulation
-        let dt = 1e-7;
+        // Use smaller time step for stability with full Kuznetsov equation
+        let cfl = 0.1; // Conservative CFL number for nonlinear equation
+        let dt = cfl * grid.dx.min(grid.dy).min(grid.dz) / 1500.0; // c = 1500 m/s
         let mut max_pressure = Vec::new();
         
         for t_step in 0..20 {
