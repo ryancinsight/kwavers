@@ -722,7 +722,7 @@ pub use crate::physics::mechanics::elastic_wave::{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    
     
     #[test]
     fn test_stiffness_tensor_isotropic() {

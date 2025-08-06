@@ -1202,7 +1202,7 @@ mod tests {
     use super::*;
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
-    use ndarray::Array4;
+    
 
     #[test]
     fn test_hybrid_solver_as_plugin() {
@@ -1211,7 +1211,7 @@ mod tests {
         
         // Create hybrid solver
         let config = HybridConfig::default();
-        let mut solver = HybridSolver::new(config, &grid).unwrap();
+        let solver = HybridSolver::new(config, &grid).unwrap();
         
         // Test metadata
         assert_eq!(solver.metadata().id, "hybrid_pstd_fdtd");
