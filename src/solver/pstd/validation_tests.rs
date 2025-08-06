@@ -180,7 +180,7 @@ mod tests {
                 // Higher order should have smaller difference from 1
                 // Allow some tolerance for numerical precision
                 assert!(
-                    diff_from_1_current <= diff_from_1_previous * 1.1 || diff_from_1_current < 1e-6,
+                    diff_from_1_current <= diff_from_1_previous * RELATIVE_TOLERANCE_FACTOR || diff_from_1_current < ABSOLUTE_TOLERANCE,
                     "Higher order should give less correction for low k: order {} = {} (diff={}), order {} = {} (diff={})",
                     order, current, diff_from_1_current, order - 2, previous, diff_from_1_previous
                 );
