@@ -184,7 +184,7 @@ mod tests {
                 
                 // Higher order should have smaller difference from 1
                 // Allow some tolerance for numerical precision
-                // TODO: Fix k-space correction implementation - currently order 4 has more correction than order 2
+                // FIXME: See https://github.com/<your-org>/<your-repo>/issues/<issue-number> - k-space correction implementation bug: currently order 4 has more correction than order 2
                 // For now, just check that corrections are reasonable
                 assert!(
                     diff_from_1_current < 0.01 && diff_from_1_previous < 0.01,
