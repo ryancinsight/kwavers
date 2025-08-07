@@ -386,13 +386,16 @@ impl AnisotropicTissueProperties {
         let mut eigenvalues = [0.0; 3];
         
         if discriminant >= 0.0 {
-            // Three real roots
+            // Three real roots using trigonometric solution (Cardano's method)
+            // The offsets 2π/3 and 4π/3 correspond to the three cube roots of unity.
+            const TWO_PI_OVER_THREE: f64 = 2.0 * std::f64::consts::PI / 3.0;
+            const FOUR_PI_OVER_THREE: f64 = 4.0 * std::f64::consts::PI / 3.0;
             let m = 2.0 * (-p/3.0).sqrt();
             let theta = (3.0*q / (p*m)).acos() / 3.0;
             
             eigenvalues[0] = m * (theta).cos() + p2/3.0;
-            eigenvalues[1] = m * (theta - 2.0*std::f64::consts::PI/3.0).cos() + p2/3.0;
-            eigenvalues[2] = m * (theta - 4.0*std::f64::consts::PI/3.0).cos() + p2/3.0;
+            eigenvalues[1] = m * (theta - TWO_PI_OVER_THREE).cos() + p2/3.0;
+            eigenvalues[2] = m * (theta - FOUR_PI_OVER_THREE).cos() + p2/3.0;
             
             // Sort eigenvalues
             eigenvalues.sort_by(|a, b| a.partial_cmp(b).unwrap());
