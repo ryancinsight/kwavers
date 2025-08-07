@@ -279,16 +279,7 @@ struct EnhancedElasticWaveHelper {
     interface_mask: Option<Array3<bool>>,
     
     /// Performance metrics
-    metrics: ElasticWaveMetrics,
-}
-
-/// Performance metrics for enhanced solver
-#[derive(Debug, Clone, Default)]
-struct ElasticWaveMetrics {
-    mode_conversion_time: f64,
-    viscoelastic_time: f64,
-    tensor_operation_time: f64,
-    interface_detection_time: f64,
+    metrics: super::ElasticWaveMetrics,
 }
 
 impl EnhancedElasticWaveHelper {
@@ -298,7 +289,24 @@ impl EnhancedElasticWaveHelper {
         let (dx, dy, dz) = grid.spacing();
         
         // Create wavenumber arrays
-        let (kx, ky, kz) = Self::create_wavenumber_arrays(nx, ny, nz, dx, dy, dz);
+        let mut kx = grid.zeros_array();
+        let mut ky = grid.zeros_array();
+        let mut kz = grid.zeros_array();
+        
+        // Fill kx array (varies along x, constant along y and z)
+        for i in 0..nx {
+            kx.slice_mut(s![i, .., ..]).fill(Self::create_1d_wavenumbers(nx, dx)[i]);
+        }
+        
+        // Fill ky array (varies along y, constant along x and z)
+        for j in 0..ny {
+            ky.slice_mut(s![.., j, ..]).fill(Self::create_1d_wavenumbers(ny, dy)[j]);
+        }
+        
+        // Fill kz array (varies along z, constant along x and y)
+        for k in 0..nz {
+            kz.slice_mut(s![.., .., k]).fill(Self::create_1d_wavenumbers(nz, dz)[k]);
+        }
         
         Ok(Self {
             grid: grid.clone(),
@@ -310,7 +318,7 @@ impl EnhancedElasticWaveHelper {
             stiffness_tensor: StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap(), // Default isotropic
             stiffness_tensors: None,
             interface_mask: None,
-            metrics: ElasticWaveMetrics::default(),
+            metrics: super::ElasticWaveMetrics::default(),
         })
     }
     
@@ -393,7 +401,7 @@ impl EnhancedElasticWaveHelper {
             });
         
         self.interface_mask = Some(interface_mask);
-        self.metrics.interface_detection_time += start.elapsed().as_secs_f64();
+        // Metrics tracking removed - not available in parent module
         
         let interface_count = self.interface_mask.as_ref().unwrap().iter().filter(|&&x| x).count();
         info!("Detected {} interface points ({:.1}% of grid)", 
@@ -405,7 +413,7 @@ impl EnhancedElasticWaveHelper {
     
     /// Apply mode conversion at interfaces
     fn apply_mode_conversion(
-        &mut self,
+        &self,
         vx: &mut Array3<f64>,
         vy: &mut Array3<f64>,
         vz: &mut Array3<f64>,
@@ -415,44 +423,52 @@ impl EnhancedElasticWaveHelper {
         sxy: &mut Array3<f64>,
         sxz: &mut Array3<f64>,
         syz: &mut Array3<f64>,
+        interface_mask: &Array3<bool>,
     ) -> KwaversResult<()> {
         if !self.mode_conversion.enable_p_to_s && !self.mode_conversion.enable_s_to_p {
             return Ok(());
         }
         
-        let start = std::time::Instant::now();
+        let (nx, ny, nz) = self.grid.dimensions();
         
-        if let Some(ref interface_mask) = self.interface_mask {
-            // Apply mode conversion at interface points
-            interface_mask.indexed_iter()
-                .filter(|(_, &is_interface)| is_interface)
-                .for_each(|((i, j, k), _)| {
-                    // Calculate incident wave properties
-                    let p_wave = (sxx[[i, j, k]] + syy[[i, j, k]] + szz[[i, j, k]]) / 3.0;
+        // Process only points marked as interfaces
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                for k in 1..nz-1 {
+                    // Skip non-interface points
+                    if !interface_mask[[i, j, k]] {
+                        continue;
+                    }
                     
-                    // Calculate shear components
-                    let s_wave_xy = sxy[[i, j, k]];
-                    let s_wave_xz = sxz[[i, j, k]];
-                    let s_wave_yz = syz[[i, j, k]];
+                    // Mode conversion at interface
+                    let idx = [i, j, k];
                     
-                    // Apply mode conversion
+                    // P-to-S conversion
                     if self.mode_conversion.enable_p_to_s {
-                        // P-to-S conversion: dilatational to shear
+                        let p_wave = (sxx[idx] + syy[idx] + szz[idx]) / 3.0;
                         let conversion_factor = self.mode_conversion.conversion_efficiency;
-                        vx[[i, j, k]] += conversion_factor * p_wave * 0.5;
-                        vy[[i, j, k]] += conversion_factor * p_wave * 0.5;
+                        
+                        // Convert part of P-wave to S-wave
+                        sxy[idx] += conversion_factor * p_wave * 0.1;
+                        sxz[idx] += conversion_factor * p_wave * 0.1;
+                        syz[idx] += conversion_factor * p_wave * 0.1;
                     }
                     
+                    // S-to-P conversion
                     if self.mode_conversion.enable_s_to_p {
-                        // S-to-P conversion: shear to dilatational
-                        let s_magnitude = (s_wave_xy.powi(2) + s_wave_xz.powi(2) + s_wave_yz.powi(2)).sqrt();
-                        let conversion_factor = self.mode_conversion.conversion_efficiency * 0.3;
-                        vz[[i, j, k]] += conversion_factor * s_magnitude;
+                        let s_wave = (sxy[idx].powi(2) + sxz[idx].powi(2) + syz[idx].powi(2)).sqrt();
+                        let conversion_factor = self.mode_conversion.conversion_efficiency * 0.3; // S-to-P is typically less efficient
+                        
+                        // Convert part of S-wave to P-wave
+                        let p_contribution = conversion_factor * s_wave;
+                        sxx[idx] += p_contribution;
+                        syy[idx] += p_contribution;
+                        szz[idx] += p_contribution;
                     }
-                });
+                }
+            }
         }
         
-        self.metrics.mode_conversion_time += start.elapsed().as_secs_f64();
         Ok(())
     }
     
@@ -493,47 +509,22 @@ impl EnhancedElasticWaveHelper {
         Ok(())
     }
     
-    /// Create wavenumber arrays for spectral methods
-    fn create_wavenumber_arrays(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        // Create 1D wavenumber arrays for each dimension
-        let kx_1d = Self::create_1d_wavenumbers(nx, dx);
-        let ky_1d = Self::create_1d_wavenumbers(ny, dy);
-        let kz_1d = Self::create_1d_wavenumbers(nz, dz);
+    /// Create 1D wavenumber array for a given dimension
+    fn create_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
+        let mut k = vec![0.0; n];
+        let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
         
-        // Create 3D arrays using broadcasting
-        let mut kx = Array3::zeros((nx, ny, nz));
-        let mut ky = Array3::zeros((nx, ny, nz));
-        let mut kz = Array3::zeros((nx, ny, nz));
-        
-        // Fill kx array (varies along x, constant along y and z)
-        for i in 0..nx {
-            kx.slice_mut(s![i, .., ..]).fill(kx_1d[i]);
+        // Positive frequencies (including Nyquist for even n)
+        for i in 0..=n/2 {
+            k[i] = i as f64 * dk;
         }
         
-        // Fill ky array (varies along y, constant along x and z)
-        for j in 0..ny {
-            ky.slice_mut(s![.., j, ..]).fill(ky_1d[j]);
+        // Negative frequencies
+        for i in n/2+1..n {
+            k[i] = -((n - i) as f64) * dk;
         }
         
-        // Fill kz array (varies along z, constant along x and y)
-        for k in 0..nz {
-            kz.slice_mut(s![.., .., k]).fill(kz_1d[k]);
-        }
-        
-        (kx, ky, kz)
-    }
-    
-    /// Create 1D wavenumber array for a single dimension
-    fn create_1d_wavenumbers(n: usize, d: f64) -> Vec<f64> {
-        let dk = 2.0 * std::f64::consts::PI / (n as f64 * d);
-        
-        (0..n).map(|i| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                ((i as f64) - n as f64) * dk
-            }
-        }).collect()
+        k
     }
     
     /// Update elastic fields with full tensor formulation
@@ -560,7 +551,11 @@ impl EnhancedElasticWaveHelper {
         let mut syz = fields.index_axis(Axis(0), SYZ_IDX).to_owned();
         
         // Apply mode conversion at interfaces
-        self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz)?;
+        if self.mode_conversion.enable_p_to_s || self.mode_conversion.enable_s_to_p {
+            if let Some(ref interface_mask) = self.interface_mask {
+                self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz, interface_mask)?;
+            }
+        }
         
         // Update fields using spectral method
         // Implement full spectral update with stiffness tensors

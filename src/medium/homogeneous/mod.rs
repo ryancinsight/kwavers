@@ -456,6 +456,12 @@ impl Medium for HomogeneousMedium {
     fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.vapor_pressure }
     /// Returns the uniform polytropic index (dimensionless) for gas within bubbles.
     fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.polytropic_index }
+    
+    /// Returns the adiabatic index (gamma) - same as polytropic index
+    fn gamma(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 
+        self.polytropic_index 
+    }
+
     /// Returns the uniform specific heat capacity (J/kg·K) of the medium.
     fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.specific_heat }
     /// Returns the uniform thermal conductivity (W/m·K) of the medium.

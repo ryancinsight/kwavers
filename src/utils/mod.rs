@@ -32,8 +32,15 @@ thread_local! {
 }
 
 // Cache for FFT instances to avoid recreating them for the same grid dimensions
+// 
+// Note: Double mutex pattern is used here because:
+// 1. The outer mutex protects the cache HashMap
+// 2. The inner mutex protects the Fft3d instance which has mutable temp buffers
+// 
+// TODO: Consider using a pool pattern or thread-local FFT instances to avoid 
+// the inner mutex, as FFT operations are typically not concurrent on the same grid.
 lazy_static! {
-    static ref FFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Fft3d>>> = Mutex::new(HashMap::new());
+    static ref FFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Mutex<Fft3d>>>> = Mutex::new(HashMap::new());
     static ref IFFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Ifft3d>>> = Mutex::new(HashMap::new());
 }
 
@@ -48,8 +55,8 @@ pub fn warm_fft_cache(grid: &Grid) {
     {
         let mut cache = FFT_CACHE.lock().unwrap();
         cache.entry(key).or_insert_with(|| {
-            debug!("Pre-creating FFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
-            Arc::new(Fft3d::new(grid.nx, grid.ny, grid.nz))
+            debug!("Pre-creating Fft3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
+            Arc::new(Mutex::new(Fft3d::new(grid.nx, grid.ny, grid.nz)))
         });
     }
     
@@ -167,14 +174,14 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     });
     
     // Get or create FFT instance from cache
-    let fft_arc = {
+    let fft = {
         let mut cache = FFT_CACHE.lock().unwrap();
         let key = (grid.nx, grid.ny, grid.nz);
         
         if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
-            debug!("Cache miss: Creating new FFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
-            let fft = Arc::new(Fft3d::new(grid.nx, grid.ny, grid.nz));
+            debug!("Cache miss: Creating new Fft3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
+            let fft = Arc::new(Mutex::new(Fft3d::new(grid.nx, grid.ny, grid.nz)));
             e.insert(Arc::clone(&fft));
             fft
         } else {
@@ -186,28 +193,8 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     // Use the FFT instance directly from Arc
     let mut result = field_complex.clone();
     
-    // Apply forward FFT along each axis
-    // Note: This uses a custom Fft3d implementation that processes the entire 3D array
-    // The loop structure is preserved for potential future per-axis processing
-    for axis in 0..3 {
-        let axis_enum = match axis {
-            0 => Axis(0),
-            1 => Axis(1),
-            2 => Axis(2),
-            _ => unreachable!(),
-        };
-        
-        // Process each slice along the axis
-        let n_slices = result.len_of(axis_enum);
-        for i in 0..n_slices {
-            let _slice = result.index_axis_mut(axis_enum, i);
-            // TODO: The Fft3d process method should handle individual slices
-            // Currently it processes the entire 3D array at once
-        }
-    }
-    
-    // Fix: Apply proper normalization for forward FFT (no scaling needed for forward)
-    // The normalization is applied in ifft_3d for consistency with physics conventions
+    // Apply the 3D FFT transform
+    fft.lock().unwrap().process(&mut result, grid);
     
     // Update timing statistics
     let elapsed = start_time.elapsed();
@@ -220,55 +207,69 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
 }
 
 /// Optimized 3D inverse FFT for simulation fields with proper normalization
-pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
+pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     let start_time = Instant::now();
     trace!("Performing optimized 3D inverse FFT");
     
-    // Get or create IFFT instance from cache
-    let ifft_arc = {
-        let mut cache = IFFT_CACHE.lock().unwrap();
-        let key = (grid.nx, grid.ny, grid.nz);
-        
+    // Create a copy for processing
+    let mut result = field_complex.clone();
+    
+    // Get or create FFT instance from cache (for inverse, we'll use a flag)
+    let (nx, ny, nz) = grid.dimensions();
+    let key = (nx, ny, nz);
+    
+    // For inverse FFT, we need to apply conjugate, forward FFT, conjugate, and scale
+    // This is a common technique when only forward FFT is available
+    
+    // Step 1: Conjugate the input
+    result.mapv_inplace(|c| c.conj());
+    
+    let fft = {
+        let mut cache = FFT_CACHE.lock().unwrap();
         if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
-            IFFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
-            debug!("Cache miss: Creating new IFFT3d instance for grid {}x{}x{}", grid.nx, grid.ny, grid.nz);
-            let ifft = Arc::new(Ifft3d::new(grid.nx, grid.ny, grid.nz));
-            e.insert(Arc::clone(&ifft));
-            ifft
+            FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
+            let fft = Arc::new(Mutex::new(Fft3d::new(nx, ny, nz)));
+            e.insert(Arc::clone(&fft));
+            fft
         } else {
-            IFFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
+            FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
             Arc::clone(cache.get(&key).unwrap())
         }
     };
     
-    // Use the IFFT instance directly from Arc
-    // Work with a copy of the input
-    let mut complex_buffer = field.clone();
+    // Step 2: Apply forward FFT
+    fft.lock().unwrap().process(&mut result, grid);
     
-    // Apply inverse FFT along each axis
-    // Note: This uses a custom Ifft3d implementation that processes the entire 3D array
-    // The loop structure is preserved for potential future per-axis processing
-    for axis in 0..3 {
-        let axis_enum = match axis {
-            0 => Axis(0),
-            1 => Axis(1),
-            2 => Axis(2),
-            _ => unreachable!(),
-        };
-        
-        // Process each slice along the axis
-        let n_slices = complex_buffer.len_of(axis_enum);
-        for i in 0..n_slices {
-            let _slice = complex_buffer.index_axis_mut(axis_enum, i);
-            // TODO: The Ifft3d process method should handle individual slices
-            // Currently it processes the entire 3D array at once
+    // Step 3: Conjugate again and normalize
+    let normalization = 1.0 / (nx * ny * nz) as f64;
+    result.mapv_inplace(|c| c.conj() * normalization);
+
+    // Convert back to real values in parallel
+    let real_buffer = FFT_BUFFER.with(|buffer| {
+        let mut b = buffer.borrow_mut();
+        if b.is_none() || b.as_ref().unwrap().dim() != result.dim() {
+            *b = Some(Array3::zeros(result.dim()));
         }
-    }
-    
-    // Fix: Apply proper normalization for inverse FFT
-    // Standard normalization is 1/N for inverse FFT
-    let normalization = 1.0 / (grid.nx * grid.ny * grid.nz) as f64;
-    let result = complex_buffer.mapv(|c| c.re * normalization);
+        
+        let complex_buffer = b.as_mut().unwrap();
+        
+        // Extract real parts in parallel
+        Zip::from(&result)
+            .and(&mut *complex_buffer)
+            .for_each(|&c, r| {
+                *r = Complex::new(c.re, 0.0);
+            });
+        
+        // Create output array
+        let mut output = Array3::zeros(result.dim());
+        Zip::from(&mut output)
+            .and(&*complex_buffer)
+            .for_each(|o, &c| {
+                *o = c.re;
+            });
+        
+        output
+    });
     
     // Update timing statistics
     let elapsed = start_time.elapsed();
@@ -277,7 +278,7 @@ pub fn ifft_3d(field: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     let mut total_time = TOTAL_IFFT_TIME.lock().unwrap();
     *total_time += elapsed;
     
-    result
+    real_buffer
 }
 
 /// Utility function to check if a value is a power of two

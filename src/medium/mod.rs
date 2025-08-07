@@ -50,6 +50,13 @@ pub trait Medium: Debug + Sync + Send {
     fn absorption_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn reduced_scattering_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn reference_frequency(&self) -> f64; // Added for absorption calculations
+    
+    /// Get the adiabatic index (gamma) for the medium
+    /// Default is 1.4 for air, but different media have different values
+    fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        1.4 // Default for air
+    }
+    
     /// Get the tissue type at a specific position (if medium supports tissue types)
     fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<tissue_specific::TissueType> { None }
 

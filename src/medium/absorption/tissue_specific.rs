@@ -328,15 +328,52 @@ pub fn tissue_absorption_coefficient(
     let temp_factor = 1.0 + 0.015 * (temp_c - 37.0);
     alpha *= temp_factor.max(0.5); // Limit reduction to 50% at very low temperatures
     
-    // High intensity effects (optional)
-    // In high-intensity fields, the absorption can increase due to nonlinear effects
+    // High intensity effects with comprehensive nonlinear model
+    // Based on Duck (1990) and ter Haar (2016) for biological tissue nonlinearity
     if let Some(p_amp) = pressure_amplitude {
-        // For very high pressures, absorption increases
-        // This is a simplified model that approximates additional nonlinear losses
-        let p_threshold = 1.0e6; // 1 MPa threshold for nonlinear effects
-        if p_amp > p_threshold {
-            let nonlinear_factor = 1.0 + 0.05 * (p_amp - p_threshold) / 1.0e6;
-            alpha *= nonlinear_factor.min(2.0); // Cap at doubling the absorption
+        // Nonlinear parameter B/A for biological tissues (typically 5-12)
+        let beta_over_a = match tissue_type {
+            TissueType::Fat => 10.0,
+            TissueType::Liver => 6.8,
+            TissueType::Muscle => 7.4,
+            TissueType::BloodVessel => 6.1, // Corrected from Blood to BloodVessel
+            TissueType::Brain => 6.6,
+            TissueType::Kidney => 7.0,
+            TissueType::Bone => 8.0,
+            _ => 7.0, // Default for other tissues
+        };
+        
+        // Calculate acoustic Mach number
+        let sound_speed = db.get(&tissue_type)
+            .map(|t| t.sound_speed)
+            .unwrap_or(1540.0);
+        let density = db.get(&tissue_type)
+            .map(|t| t.density)
+            .unwrap_or(1000.0); // Default density for calculation
+        let particle_velocity = p_amp / (density * sound_speed);
+        let mach_number = particle_velocity / sound_speed;
+        
+        // Goldberg number for shock formation distance
+        let wavelength = sound_speed / frequency;
+        let goldberg_number = beta_over_a * mach_number * frequency * wavelength / sound_speed;
+        
+        // Enhanced absorption due to nonlinear effects
+        if goldberg_number > 0.05 {
+            // Shock formation enhances absorption
+            // Model based on Bacon (1984) and Cleveland et al. (1996)
+            let shock_parameter = (goldberg_number / 0.05).min(10.0);
+            
+            // Additional absorption from harmonic generation
+            let harmonic_factor = 1.0 + 0.3 * shock_parameter.ln();
+            
+            // Temperature-dependent effects
+            let thermal_factor = 1.0 + 0.002 * (temperature - 37.0).abs();
+            
+            alpha *= harmonic_factor * thermal_factor;
+            
+            // Cap total enhancement to physically realistic values
+            let max_enhancement = 3.0; // Maximum tripling of absorption
+            alpha = alpha.min(props.alpha0 * f_mhz.powf(props.y) * max_enhancement);
         }
     }
     

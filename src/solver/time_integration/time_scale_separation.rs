@@ -13,7 +13,7 @@
 
 use crate::{KwaversResult, KwaversError, ValidationError};
 use crate::Grid;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, Zip, Array4, Axis};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component
@@ -31,116 +31,88 @@ pub struct TimeScale {
     pub is_stiff: bool,
 }
 
-/// Automatic time-scale separator using spectral analysis
+/// Time scale separator for multi-rate integration
+/// 
+/// This component analyzes the system to identify different time scales
+/// and determine appropriate sub-cycling ratios.
+#[derive(Debug)]
 pub struct TimeScaleSeparator {
-    /// Threshold for considering a component stiff
-    stiffness_threshold: f64,
-    /// History of time scales for adaptive learning
-    history: HashMap<String, Vec<f64>>,
-    /// Learning rate for adaptive time scale estimation
-    learning_rate: f64,
+    /// Grid reference
+    grid: Grid,
+    /// Minimum time scale ratio for separation
+    min_separation_ratio: f64,
+    /// History of time scales
+    time_scale_history: Vec<Vec<f64>>,
 }
 
 impl TimeScaleSeparator {
-    /// Create a new time-scale separator
-    pub fn new(stiffness_threshold: f64) -> Self {
+    /// Create a new time scale separator
+    pub fn new(grid: &Grid) -> Self {
         Self {
-            stiffness_threshold,
-            history: HashMap::new(),
-            learning_rate: 0.1,
+            grid: grid.clone(),
+            min_separation_ratio: 10.0,
+            time_scale_history: Vec::new(),
         }
     }
     
-    /// Analyze time scales for all components
-    pub fn analyze_time_scales(
+    /// Analyze fields to identify time scales
+    pub fn analyze(
         &mut self,
-        fields: &HashMap<String, Array3<f64>>,
-        grid: &Grid,
-    ) -> KwaversResult<HashMap<String, TimeScale>> {
-        let mut time_scales = HashMap::new();
+        fields: &Array4<f64>,
+        tolerance: f64,
+    ) -> KwaversResult<Vec<f64>> {
+        let mut time_scales = Vec::new();
         
-        for (name, field) in fields {
-            let time_scale = self.compute_time_scale(name, field, grid)?;
-            time_scales.insert(name.clone(), time_scale);
+        // Analyze each field component
+        for f in 0..fields.shape()[0] {
+            let field = fields.index_axis(Axis(0), f);
+            
+            // Compute characteristic time scales
+            let (grad_max, laplacian_max) = self.compute_spatial_derivatives(&field.to_owned(), &self.grid)?;
+            
+            // Acoustic time scale: τ_acoustic ~ 1/√(c²∇²)
+            if laplacian_max > tolerance {
+                let acoustic_scale = 1.0 / laplacian_max.sqrt();
+                time_scales.push(acoustic_scale);
+            }
+            
+            // Diffusive time scale: τ_diffusive ~ 1/∇²
+            if grad_max > tolerance {
+                let diffusive_scale = 1.0 / grad_max;
+                time_scales.push(diffusive_scale);
+            }
         }
+        
+        // Sort time scales from fastest to slowest
+        time_scales.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        
+        // Store in history
+        self.time_scale_history.push(time_scales.clone());
         
         Ok(time_scales)
     }
     
-    /// Compute time scale for a single component
-    fn compute_time_scale(
-        &mut self,
-        component: &str,
-        field: &Array3<f64>,
-        grid: &Grid,
-    ) -> KwaversResult<TimeScale> {
-        // Compute spatial gradients to estimate wave speeds
-        let (grad_max, laplacian_max) = self.compute_spatial_derivatives(field, grid)?;
-        
-        // Estimate characteristic speeds
-        let advection_speed = grad_max;
-        let diffusion_speed = laplacian_max;
-        
-        // Compute time scales
-        let advection_time = if advection_speed > 1e-10 {
-            grid.dx.min(grid.dy).min(grid.dz) / advection_speed
-        } else {
-            f64::INFINITY
-        };
-        
-        let diffusion_time = if diffusion_speed > 1e-10 {
-            let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-            dx_min * dx_min / diffusion_speed
-        } else {
-            f64::INFINITY
-        };
-        
-        // Overall time scale is the minimum
-        let time_scale = advection_time.min(diffusion_time);
-        
-        // Compute stiffness ratio
-        let stiffness = if advection_time.is_finite() && diffusion_time.is_finite() {
-            (advection_time / diffusion_time).abs()
-        } else {
-            1.0
-        };
-        
-        // Update history with exponential moving average
-        let history = self.history.entry(component.to_string()).or_default();
-        if !history.is_empty() {
-            let avg = history.iter().sum::<f64>() / history.len() as f64;
-            let updated = (1.0 - self.learning_rate) * avg + self.learning_rate * time_scale;
-            history.push(updated);
-            if history.len() > 100 {
-                history.remove(0);
+    /// Determine if the system is stiff based on time scale separation
+    pub fn is_stiff(&self) -> bool {
+        if let Some(last_scales) = self.time_scale_history.last() {
+            if last_scales.len() >= 2 {
+                let ratio = last_scales[last_scales.len() - 1] / last_scales[0];
+                return ratio > self.min_separation_ratio;
             }
-        } else {
-            history.push(time_scale);
         }
-        
-        Ok(TimeScale {
-            component: component.to_string(),
-            time_scale,
-            spatial_scale: grid.dx.min(grid.dy).min(grid.dz),
-            stiffness,
-            is_stiff: stiffness > self.stiffness_threshold,
-        })
+        false
     }
     
-    /// Compute spatial derivatives using iterators
-    fn compute_spatial_derivatives(
-        &self,
-        field: &Array3<f64>,
-        grid: &Grid,
-    ) -> KwaversResult<(f64, f64)> {
+    /// Compute spatial derivatives for time scale analysis
+    fn compute_spatial_derivatives(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<(f64, f64)> {
         let (nx, ny, nz) = field.dim();
-        let mut grad_max = 0.0;
-        let mut laplacian_max = 0.0;
+        let mut grad_max: f64 = 0.0;
+        let mut laplacian_max: f64 = 0.0;
         
-        // Use windows for efficient derivative computation
-        for k in 1..nz-1 {
+        // Compute gradients and Laplacian
+        for i in 1..nx-1 {
             for j in 1..ny-1 {
-                for i in 1..nx-1 {
+                for k in 1..nz-1 {
                     // Gradient magnitude
                     let dx = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * grid.dx);
                     let dy = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * grid.dy);
