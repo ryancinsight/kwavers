@@ -668,7 +668,7 @@ mod tests {
     }
 
     #[test]
-    fn test_heterogeneous_new_defaults() {
+    fn test_heterogeneous_defaults() {
         let grid = create_test_grid_ht(10, 10, 10);
         let medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 

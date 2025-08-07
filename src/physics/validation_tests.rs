@@ -133,30 +133,30 @@ mod tests {
         
         // Time evolution
         let n_steps = 50; // Reduced from 100
-        let mut temp_new = temperature.clone();
+        let mut next_temperature = temperature.clone();
         
-        for _step in 0..n_steps {
-            // Apply heat equation with central differences
-            for i in 1..nx-1 {
-                for j in 1..nx-1 {
+        (0..n_steps).for_each(|_step| {
+            // Apply heat equation with central differences using iterators
+            (1..nx-1).for_each(|i| {
+                (1..nx-1).for_each(|j| {
                     let laplacian = 
                         (temperature[[i+1, j, 0]] - 2.0 * temperature[[i, j, 0]] + temperature[[i-1, j, 0]]) / (dx * dx) +
                         (temperature[[i, j+1, 0]] - 2.0 * temperature[[i, j, 0]] + temperature[[i, j-1, 0]]) / (dx * dx);
                     
-                    temp_new[[i, j, 0]] = temperature[[i, j, 0]] + alpha * dt * laplacian;
-                }
-            }
+                    next_temperature[[i, j, 0]] = temperature[[i, j, 0]] + alpha * dt * laplacian;
+                });
+            });
             
-            // Apply zero boundary conditions
-            for i in 0..nx {
-                temp_new[[i, 0, 0]] = 0.0;
-                temp_new[[i, nx-1, 0]] = 0.0;
-                temp_new[[0, i, 0]] = 0.0;
-                temp_new[[nx-1, i, 0]] = 0.0;
-            }
+            // Apply zero boundary conditions using iterators
+            (0..nx).for_each(|i| {
+                next_temperature[[i, 0, 0]] = 0.0;
+                next_temperature[[i, nx-1, 0]] = 0.0;
+                next_temperature[[0, i, 0]] = 0.0;
+                next_temperature[[nx-1, i, 0]] = 0.0;
+            });
             
-            temperature.assign(&temp_new);
-        }
+            temperature.assign(&next_temperature);
+        });
         
         // Analytical solution for 2D heat equation with Gaussian initial condition
         let t_final = n_steps as f64 * dt;
@@ -318,20 +318,20 @@ mod tests {
         let n_steps = (periods / frequency / dt) as usize;
         
         let rho = 1000.0;
-        let mut pressure_new = pressure.clone();
+        let mut updated_pressure = pressure.clone();
         
         for step in 0..n_steps {
-            // Update pressure using velocity
-            for i in 1..nx-1 {
+            // Update pressure using velocity with iterators
+            (1..nx-1).for_each(|i| {
                 let dvdx = (velocity[[i, 0, 0]] - velocity[[i-1, 0, 0]]) / dx;
-                pressure_new[[i, 0, 0]] = pressure[[i, 0, 0]] - rho * c * c * dt * dvdx;
-            }
+                updated_pressure[[i, 0, 0]] = pressure[[i, 0, 0]] - rho * c * c * dt * dvdx;
+            });
             
             // Rigid boundary conditions (v=0 at boundaries)
-            pressure_new[[0, 0, 0]] = pressure_new[[1, 0, 0]];
-            pressure_new[[nx-1, 0, 0]] = pressure_new[[nx-2, 0, 0]];
+            updated_pressure[[0, 0, 0]] = updated_pressure[[1, 0, 0]];
+            updated_pressure[[nx-1, 0, 0]] = updated_pressure[[nx-2, 0, 0]];
             
-            pressure.assign(&pressure_new);
+            pressure.assign(&updated_pressure);
             
             // Update velocity using pressure
             for i in 1..nx-1 {

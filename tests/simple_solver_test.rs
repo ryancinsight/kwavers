@@ -13,7 +13,7 @@ fn test_fdtd_basic() {
     let medium = HomogeneousMedium::water(&grid);
     
     // Simple initial condition
-    let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut initial_pressure = grid.zeros_array();
     initial_pressure[[16, 16, 16]] = 1e6; // Point source
     
     let config = FdtdConfig {
@@ -58,7 +58,7 @@ fn test_pstd_basic() {
     let medium = HomogeneousMedium::water(&grid);
     
     // Simple initial condition
-    let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut initial_pressure = grid.zeros_array();
     initial_pressure[[16, 16, 16]] = 1e6; // Point source
     
     let config = PstdConfig {
@@ -103,7 +103,7 @@ fn test_wave_propagation() {
     let medium = HomogeneousMedium::water(&grid);
     
     // Gaussian initial condition
-    let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut initial_pressure = grid.zeros_array();
     let center = 32;
     let sigma: f64 = 3.0;
     

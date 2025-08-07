@@ -705,7 +705,7 @@ mod tests {
 
     // --- AbsorptionCache Tests ---
     #[test]
-    fn test_absorption_cache_new_empty() {
+    fn test_absorption_cache_empty() {
         let cache = AbsorptionCache::new();
         assert!(cache.cache.lock().unwrap().is_empty());
     }
@@ -730,7 +730,7 @@ mod tests {
     }
     
     #[test]
-    fn test_absorption_cache_clone_is_new() {
+    fn test_absorption_cache_clone_is_independent() {
         let cache1 = AbsorptionCache::new();
         cache1.insert(FloatKey(100.0), 0.5);
         
@@ -741,7 +741,7 @@ mod tests {
 
     // --- HomogeneousMedium Constructor Tests ---
     #[test]
-    fn test_homogeneous_medium_new() {
+    fn test_homogeneous_medium_creation() {
         let grid_dims = (2,3,4);
         let test_grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
         let density = 1000.0;
@@ -787,28 +787,28 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Density must be positive.")]
-    fn test_homogeneous_medium_new_panic_density() {
+    fn test_homogeneous_medium_panic_density() {
         let grid = create_test_grid(2,2,2);
         HomogeneousMedium::new(0.0, 1500.0, &grid, 0.5, 10.0);
     }
 
     #[test]
     #[should_panic(expected = "Sound speed must be positive.")]
-    fn test_homogeneous_medium_new_panic_sound_speed() {
+    fn test_homogeneous_medium_panic_sound_speed() {
         let grid = create_test_grid(2,2,2);
         HomogeneousMedium::new(1000.0, 0.0, &grid, 0.5, 10.0);
     }
     
     #[test]
     #[should_panic(expected = "Optical absorption mu_a must be non-negative.")]
-    fn test_homogeneous_medium_new_panic_mu_a() {
+    fn test_homogeneous_medium_panic_mu_a() {
         let grid = create_test_grid(2,2,2);
         HomogeneousMedium::new(1000.0, 1500.0, &grid, -0.5, 10.0);
     }
 
     #[test]
     #[should_panic(expected = "Reduced optical scattering mu_s_prime must be non-negative.")]
-    fn test_homogeneous_medium_new_panic_mu_s_prime() {
+    fn test_homogeneous_medium_panic_mu_s_prime() {
         let grid = create_test_grid(2,2,2);
         HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.5, -10.0);
     }
@@ -974,7 +974,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_shear_fields_initialization() {
+    fn test_shear_fields_initialization() {
         let grid = create_test_grid(2, 2, 2);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
         // assert_eq!(medium.shear_sound_speed_val, 0.0); // Field removed

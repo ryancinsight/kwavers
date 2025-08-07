@@ -88,7 +88,7 @@ impl CavitationModelBehavior for CavitationModel {
             .and(&radius)
             .and(&velocity)
             .and(pressure)
-            .for_each(|v_new, &r, &v, &p| {
+            .for_each(|v_updated, &r, &v, &p| {
                 if r > 0.0 {
                     // Get medium properties at bubble location
                     let rho = medium.density(0.0, 0.0, 0.0, grid);
@@ -109,7 +109,7 @@ impl CavitationModelBehavior for CavitationModel {
                         - self.damping_coefficient * v;
                     
                     // Update velocity (semi-implicit for stability)
-                    *v_new = v + acceleration * dt;
+                    *v_updated = v + acceleration * dt;
                 }
             });
         
@@ -117,10 +117,10 @@ impl CavitationModelBehavior for CavitationModel {
         Zip::from(&mut new_radius)
             .and(&radius)
             .and(&new_velocity)
-            .for_each(|r_new, &r, &v_new| {
-                let new_r = r + v_new * dt;
+            .for_each(|r_updated, &r, &v_updated| {
+                let updated_r = r + v_updated * dt;
                 // Prevent negative radius
-                *r_new = new_r.max(1e-10);
+                *r_updated = updated_r.max(1e-10);
             });
         
         // Update state

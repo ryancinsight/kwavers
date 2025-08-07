@@ -359,7 +359,7 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_enhanced_simulation_config() {
+    fn test_simulation_config() {
         let config = create_simulation_config();
         assert_eq!(config.grid.nx, 32);
         assert_eq!(config.physics.models.len(), 3); // Multi-physics
@@ -367,7 +367,7 @@ mod tests {
     }
     
     #[test]
-    fn test_enhanced_initial_conditions() {
+    fn test_initial_conditions() {
         use kwavers::Grid;
         use ndarray::Array4;
         

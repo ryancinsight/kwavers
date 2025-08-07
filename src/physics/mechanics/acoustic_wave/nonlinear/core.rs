@@ -747,7 +747,7 @@ impl AcousticWaveModel for NonlinearWave {
 
         Zip::indexed(&mut p_linear_fft)
             .and(&p_fft)
-            .for_each(|idx, p_new_fft_val, p_old_fft_val_ref| {
+            .for_each(|idx, p_updated_fft_val, p_old_fft_val_ref| {
                 let (i,j,k) = idx;
                 let p_old_fft_val = *p_old_fft_val_ref;
                 let x = i as f64 * grid.dx;
@@ -774,7 +774,7 @@ impl AcousticWaveModel for NonlinearWave {
 
                 let phase_complex = Complex::new(phase.cos(), phase.sin());
                 let decay = absorption_damping * viscous_damping;
-                *p_new_fft_val = p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
+                *p_updated_fft_val = p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
             });
 
         let p_linear = ifft_3d(&p_linear_fft, grid);
