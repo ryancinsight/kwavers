@@ -95,7 +95,13 @@ impl StiffnessTensor {
     
     /// Create orthotropic tensor
     pub fn orthotropic(components: [[f64; 6]; 6]) -> KwaversResult<Self> {
-        let c = Array2::from_shape_fn((6, 6), |(i, j)| components[i][j]);
+        let flat: Vec<f64> = components.iter().flat_map(|row| row.iter()).cloned().collect();
+        let c = Array2::from_shape_vec((6, 6), flat)
+            .map_err(|_| KwaversError::Validation(ValidationError::FieldValidation {
+                field: "stiffness_tensor".to_string(),
+                value: "invalid shape".to_string(),
+                constraint: "Failed to create stiffness tensor from components".to_string(),
+            }))?;
         
         // Verify symmetry
         for i in 0..6 {
