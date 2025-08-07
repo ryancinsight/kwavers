@@ -380,7 +380,6 @@ impl InteractiveControls {
                         }
                     }
                     (ParameterType::Vector3 { min, max, step }, ParameterValue::Vector3(mut values)) => {
-                        let _old_values = values;
                         let mut changed = false;
                         ui.horizontal(|ui| {
                             for (_, value) in values.iter_mut().enumerate() {

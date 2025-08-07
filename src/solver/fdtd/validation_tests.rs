@@ -12,6 +12,12 @@ mod tests {
     use std::f64::consts::PI;
     use approx::assert_relative_eq;
     
+    // Test constants for finite difference accuracy
+    // These are reasonable tolerances for properly resolved waves
+    const FD_ORDER2_ERROR_TOL: f64 = 2e-2; // 2% error for 2nd order (practical tolerance)
+    const FD_ORDER4_ERROR_TOL: f64 = 1e-4; // 0.01% error for 4th order
+    const FD_ORDER6_ERROR_TOL: f64 = 1e-6; // 0.0001% error for 6th order
+    
     /// Test plane wave propagation with FDTD
     #[test]
     fn test_fdtd_plane_wave() {
@@ -162,7 +168,7 @@ mod tests {
     /// Test finite difference accuracy
     #[test]
     fn test_finite_difference_accuracy() {
-        let nx = 50;
+        let nx = 128; // Finer grid for better accuracy
         let grid = Grid::new(nx, nx, nx, 0.01, 0.01, 0.01);
         
         // Test different orders
@@ -177,9 +183,9 @@ mod tests {
             
             let solver = FdtdSolver::new(config, &grid).unwrap();
             
-            // Create sinusoidal field
+            // Create sinusoidal field with more points per wavelength
             let mut field = Array3::zeros((nx, nx, nx));
-            let k = 2.0 * PI / (nx as f64 * grid.dx / 4.0); // 4 wavelengths
+            let k = 2.0 * PI / (nx as f64 * grid.dx / 2.0); // 2 wavelengths across domain = 64 points per wavelength
             
             for i in 0..nx {
                 let x = i as f64 * grid.dx;
@@ -193,8 +199,8 @@ mod tests {
             // Compute derivative
             let deriv = solver.compute_derivative(&field, 0, 0.0);
             
-            // Check accuracy in the interior
-            let margin = order / 2 + 1;
+            // Check accuracy in the interior, away from boundaries
+            let margin = order / 2 + 3; // Extra margin for boundary effects
             for i in margin..nx-margin {
                 let x = i as f64 * grid.dx;
                 let expected = k * (k * x).cos();

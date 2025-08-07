@@ -160,7 +160,7 @@ impl PMLBoundary {
         }
         
         // Right/top boundary
-        for i in 0..thickness {
+        (0..thickness).for_each(|i| {
             let idx = length - i - 1;
             let normalized_distance = i as f64 / thickness as f64;
             let polynomial_factor = normalized_distance.powi(order as i32);
@@ -169,7 +169,7 @@ impl PMLBoundary {
             let exponential_factor = (-2.0 * normalized_distance).exp();
             
             profile[idx] = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_ENHANCEMENT_FACTOR * exponential_factor);
-        }
+        });
         
         profile
     }

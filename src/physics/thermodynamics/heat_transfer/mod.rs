@@ -118,35 +118,32 @@ impl ThermalModel {
         let light = fields.index_axis(Axis(0), 1); // Light field
         
         // Compute heat source from acoustic and optical absorption
-        let mut heat_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        for i in 0..grid.nx {
-            let x = i as f64 * grid.dx;
-            for j in 0..grid.ny {
+        let mut heat_source = grid.zeros_array();
+        ndarray::Zip::indexed(&mut heat_source)
+            .and(&pressure)
+            .and(&light)
+            .for_each(|(i, j, k), heat, &p_val, &light_val| {
+                let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
-                for k in 0..grid.nz {
-                    let z = k as f64 * grid.dz;
-                    let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
-                    let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
-                    let rho = medium.density(x, y, z, grid);
-                    let c = medium.sound_speed(x, y, z, grid);
-                    let p_val = pressure[[i, j, k]];
-                    let acoustic_heating = 2.0 * alpha * p_val * p_val / (rho * c);
-                    let light_val = light[[i, j, k]];
-                    let optical_heating = mu_a * light_val;
-                    heat_source[[i, j, k]] = acoustic_heating + optical_heating;
-                }
-            }
-        }
+                let z = k as f64 * grid.dz;
+                let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
+                let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
+                let rho = medium.density(x, y, z, grid);
+                let c = medium.sound_speed(x, y, z, grid);
+                let acoustic_heating = 2.0 * alpha * p_val * p_val / (rho * c);
+                let optical_heating = mu_a * light_val;
+                *heat = acoustic_heating + optical_heating;
+            });
         self.heat_source_time += start_heat_source.elapsed().as_secs_f64();
 
         let start_diffusion = Instant::now();
-        let mut temp_new = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut temp_new = grid.zeros_array();
 
         // Compute Laplacian of temperature using efficient ndarray operations
-        let mut lap_t = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut lap_t = grid.zeros_array();
         
         // Calculate thermal diffusivity array for heterogeneous media
-        let mut diffusivity_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut diffusivity_array = grid.zeros_array();
         Zip::indexed(&mut diffusivity_array).for_each(|(i, j, k), diff| {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
