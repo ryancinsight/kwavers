@@ -413,7 +413,7 @@ impl EnhancedElasticWaveHelper {
     
     /// Apply mode conversion at interfaces
     fn apply_mode_conversion(
-        &mut self,
+        &self,
         vx: &mut Array3<f64>,
         vy: &mut Array3<f64>,
         vz: &mut Array3<f64>,
@@ -423,44 +423,52 @@ impl EnhancedElasticWaveHelper {
         sxy: &mut Array3<f64>,
         sxz: &mut Array3<f64>,
         syz: &mut Array3<f64>,
+        interface_mask: &Array3<bool>,
     ) -> KwaversResult<()> {
         if !self.mode_conversion.enable_p_to_s && !self.mode_conversion.enable_s_to_p {
             return Ok(());
         }
         
-        let start = std::time::Instant::now();
+        let (nx, ny, nz) = self.grid.dimensions();
         
-        if let Some(ref interface_mask) = self.interface_mask {
-            // Apply mode conversion at interface points
-            interface_mask.indexed_iter()
-                .filter(|(_, &is_interface)| is_interface)
-                .for_each(|((i, j, k), _)| {
-                    // Calculate incident wave properties
-                    let p_wave = (sxx[[i, j, k]] + syy[[i, j, k]] + szz[[i, j, k]]) / 3.0;
+        // Process only points marked as interfaces
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                for k in 1..nz-1 {
+                    // Skip non-interface points
+                    if !interface_mask[[i, j, k]] {
+                        continue;
+                    }
                     
-                    // Calculate shear components
-                    let s_wave_xy = sxy[[i, j, k]];
-                    let s_wave_xz = sxz[[i, j, k]];
-                    let s_wave_yz = syz[[i, j, k]];
+                    // Mode conversion at interface
+                    let idx = [i, j, k];
                     
-                    // Apply mode conversion
+                    // P-to-S conversion
                     if self.mode_conversion.enable_p_to_s {
-                        // P-to-S conversion: dilatational to shear
+                        let p_wave = (sxx[idx] + syy[idx] + szz[idx]) / 3.0;
                         let conversion_factor = self.mode_conversion.conversion_efficiency;
-                        vx[[i, j, k]] += conversion_factor * p_wave * 0.5;
-                        vy[[i, j, k]] += conversion_factor * p_wave * 0.5;
+                        
+                        // Convert part of P-wave to S-wave
+                        sxy[idx] += conversion_factor * p_wave * 0.1;
+                        sxz[idx] += conversion_factor * p_wave * 0.1;
+                        syz[idx] += conversion_factor * p_wave * 0.1;
                     }
                     
+                    // S-to-P conversion
                     if self.mode_conversion.enable_s_to_p {
-                        // S-to-P conversion: shear to dilatational
-                        let s_magnitude = (s_wave_xy.powi(2) + s_wave_xz.powi(2) + s_wave_yz.powi(2)).sqrt();
-                        let conversion_factor = self.mode_conversion.conversion_efficiency * 0.3;
-                        vz[[i, j, k]] += conversion_factor * s_magnitude;
+                        let s_wave = (sxy[idx].powi(2) + sxz[idx].powi(2) + syz[idx].powi(2)).sqrt();
+                        let conversion_factor = self.mode_conversion.conversion_efficiency * 0.3; // S-to-P is typically less efficient
+                        
+                        // Convert part of S-wave to P-wave
+                        let p_contribution = conversion_factor * s_wave;
+                        sxx[idx] += p_contribution;
+                        syy[idx] += p_contribution;
+                        szz[idx] += p_contribution;
                     }
-                });
+                }
+            }
         }
         
-        // Metrics tracking removed - not available in parent module
         Ok(())
     }
     
@@ -545,7 +553,7 @@ impl EnhancedElasticWaveHelper {
         // Apply mode conversion at interfaces
         if self.mode_conversion.enable_p_to_s || self.mode_conversion.enable_s_to_p {
             if let Some(ref interface_mask) = self.interface_mask {
-                self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz)?;
+                self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz, interface_mask)?;
             }
         }
         
