@@ -13,6 +13,7 @@
 use crate::{KwaversResult, KwaversError, ValidationError};
 use crate::Grid;
 use ndarray::{Array2, Array3, Array4, Zip};
+use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Anisotropic material types

@@ -16,6 +16,7 @@ use crate::{KwaversResult, KwaversError, ValidationError};
 use crate::Grid;
 use ndarray::{Array3, Array1, Zip};
 use rustfft::{FftPlanner, num_complex::Complex};
+use std::collections::VecDeque;
 use std::f64::consts::PI;
 
 /// Fractional derivative absorption model
@@ -36,8 +37,8 @@ pub struct FractionalDerivativeAbsorption {
 /// Memory variables for time-domain fractional derivative
 #[derive(Debug, Clone)]
 struct MemoryVariables {
-    /// Previous pressure values for convolution
-    pressure_history: Vec<Array3<f64>>,
+    /// Previous pressure values for convolution (newest at front)
+    pressure_history: VecDeque<Array3<f64>>,
     /// Convolution weights
     weights: Vec<f64>,
     /// Maximum history length
@@ -74,10 +75,11 @@ impl FractionalDerivativeAbsorption {
         // Compute convolution weights using Grünwald-Letnikov approximation
         let weights = self.compute_grunwald_weights(history_length, dt)?;
         
-        // Initialize pressure history
-        let pressure_history = (0..history_length)
-            .map(|_| grid.zeros_array())
-            .collect();
+        // Initialize pressure history as VecDeque with capacity
+        let mut pressure_history = VecDeque::with_capacity(history_length);
+        for _ in 0..history_length {
+            pressure_history.push_back(grid.zeros_array());
+        }
         
         self.memory_variables = Some(MemoryVariables {
             pressure_history,
@@ -143,9 +145,10 @@ impl FractionalDerivativeAbsorption {
                 *p += absorption_factor * fl * dt;
             });
         
-        // Update history (shift and add current pressure)
-        memory.pressure_history.pop();
-        memory.pressure_history.insert(0, pressure.clone());
+        // Update history efficiently with VecDeque
+        // This is O(1) for both operations, compared to O(n) for Vec::insert(0)
+        memory.pressure_history.pop_back();  // Remove oldest
+        memory.pressure_history.push_front(pressure.clone());  // Add newest
         
         Ok(())
     }
