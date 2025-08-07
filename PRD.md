@@ -1,13 +1,13 @@
 # Kwavers Product Requirements Document (PRD)
 
 **Product Name**: Kwavers  
-**Version**: 1.3.1  
-**Status**: Phase 15 Q2 COMPLETED ✅ - Advanced Numerical Methods  
+**Version**: 1.4.0  
+**Status**: Phase 15 Q3 COMPLETED ✅ - Physics Model Extensions  
 **Performance**: >17M grid updates/second + Real-time 3D visualization
 
 ---
 
-## Latest Achievement - Phase 15 Q2 Completed ✅
+## Latest Achievement - Phase 15 Q3 Completed ✅
 
 ### **Key Breakthroughs - Phase 15 Q2** ✅
 - **PSTD/FDTD Implementation**: Both solvers complete with plugin integration ✅
@@ -122,6 +122,24 @@ To democratize advanced ultrasound simulation through high-performance computing
 - **Code Quality**: Enhanced design principles (SOLID/CUPID/GRASP/DRY/KISS/YAGNI)
 - **Zero-Copy Abstractions**: Extensive iterator usage throughout codebase
 - **Codebase Cleanup**: Removed all redundant files and implementations
+
+### **Key Breakthroughs - Phase 15 Q3** ✅
+- **Multi-Rate Integration**: Automatic time-scale separation with 10-100x speedup potential
+  - TimeScaleSeparator with spectral analysis
+  - ConservationMonitor for mass/momentum/energy tracking
+  - Literature-based algorithms (Gear & Wells, 1984)
+- **Fractional Derivative Absorption**: Accurate tissue modeling
+  - Grünwald-Letnikov approximation implementation
+  - Tissue-specific parameters (liver, breast, brain, muscle, fat)
+  - Frequency power law validation (Szabo, 1994)
+- **Frequency-Dependent Properties**: Realistic dispersion modeling
+  - Phase and group velocity calculations
+  - Relaxation process modeling
+  - Kramers-Kronig relations for causality
+- **Anisotropic Material Support**: Full tensor operations
+  - Transversely isotropic (muscle fibers)
+  - Orthotropic (cortical bone)
+  - Christoffel matrix for wave velocities
 
 ### Key Deliverables:
 

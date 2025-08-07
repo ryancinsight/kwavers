@@ -4,6 +4,7 @@ use log::trace;
 
 pub mod power_law_absorption;
 pub mod tissue_specific;
+pub mod fractional_derivative;
 
 pub fn absorption_coefficient(frequency: f64, temperature: f64, bubble_radius: Option<f64>) -> f64 {
     assert!(

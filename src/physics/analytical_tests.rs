@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     #[ignore] // TODO: Optimize test performance  
-    fn test_amplitude_preservation_improved() {
+    fn test_amplitude_preservation() {
         let _ = env_logger::builder().is_test(true).try_init();
         
         // Setup for amplitude preservation test

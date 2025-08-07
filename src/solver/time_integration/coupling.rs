@@ -5,7 +5,7 @@
 
 use crate::grid::Grid;
 use crate::KwaversResult;
-use super::PhysicsComponent;
+use crate::physics::PhysicsComponent;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::fmt::Debug;
