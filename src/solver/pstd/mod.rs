@@ -83,7 +83,7 @@ use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
-use ndarray::{Array3, Array4, Axis, Zip};
+use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
 use std::collections::HashMap;
@@ -195,9 +195,9 @@ impl PstdSolver {
     /// Compute wavenumber arrays for FFT
     fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let mut kx = Array3::zeros((nx, ny, nz));
-        let mut ky = Array3::zeros((nx, ny, nz));
-        let mut kz = Array3::zeros((nx, ny, nz));
+        let mut kx = grid.zeros_array();
+        let mut ky = grid.zeros_array();
+        let mut kz = grid.zeros_array();
         
         // Compute 1D wavenumbers
         let kx_1d: Vec<f64> = (0..nx).map(|i| {
@@ -224,15 +224,15 @@ impl PstdSolver {
             }
         }).collect();
         
-        // Fill 3D arrays
+        // Fill 3D arrays using slices for better performance
         for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    kx[[i, j, k]] = kx_1d[i];
-                    ky[[i, j, k]] = ky_1d[j];
-                    kz[[i, j, k]] = kz_1d[k];
-                }
-            }
+            kx.slice_mut(s![i, .., ..]).fill(kx_1d[i]);
+        }
+        for j in 0..ny {
+            ky.slice_mut(s![.., j, ..]).fill(ky_1d[j]);
+        }
+        for k in 0..nz {
+            kz.slice_mut(s![.., .., k]).fill(kz_1d[k]);
         }
         
         (kx, ky, kz)

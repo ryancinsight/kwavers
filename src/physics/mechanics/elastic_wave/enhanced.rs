@@ -279,16 +279,7 @@ struct EnhancedElasticWaveHelper {
     interface_mask: Option<Array3<bool>>,
     
     /// Performance metrics
-    metrics: ElasticWaveMetrics,
-}
-
-/// Performance metrics for enhanced solver
-#[derive(Debug, Clone, Default)]
-struct ElasticWaveMetrics {
-    mode_conversion_time: f64,
-    viscoelastic_time: f64,
-    tensor_operation_time: f64,
-    interface_detection_time: f64,
+    metrics: super::ElasticWaveMetrics,
 }
 
 impl EnhancedElasticWaveHelper {
@@ -298,7 +289,24 @@ impl EnhancedElasticWaveHelper {
         let (dx, dy, dz) = grid.spacing();
         
         // Create wavenumber arrays
-        let (kx, ky, kz) = Self::create_wavenumber_arrays(nx, ny, nz, dx, dy, dz);
+        let mut kx = grid.zeros_array();
+        let mut ky = grid.zeros_array();
+        let mut kz = grid.zeros_array();
+        
+        // Fill kx array (varies along x, constant along y and z)
+        for i in 0..nx {
+            kx.slice_mut(s![i, .., ..]).fill(Self::create_1d_wavenumbers(nx, dx)[i]);
+        }
+        
+        // Fill ky array (varies along y, constant along x and z)
+        for j in 0..ny {
+            ky.slice_mut(s![.., j, ..]).fill(Self::create_1d_wavenumbers(ny, dy)[j]);
+        }
+        
+        // Fill kz array (varies along z, constant along x and y)
+        for k in 0..nz {
+            kz.slice_mut(s![.., .., k]).fill(Self::create_1d_wavenumbers(nz, dz)[k]);
+        }
         
         Ok(Self {
             grid: grid.clone(),
@@ -310,7 +318,7 @@ impl EnhancedElasticWaveHelper {
             stiffness_tensor: StiffnessTensor::isotropic(1e10, 5e9, 2700.0).unwrap(), // Default isotropic
             stiffness_tensors: None,
             interface_mask: None,
-            metrics: ElasticWaveMetrics::default(),
+            metrics: super::ElasticWaveMetrics::default(),
         })
     }
     
@@ -493,47 +501,19 @@ impl EnhancedElasticWaveHelper {
         Ok(())
     }
     
-    /// Create wavenumber arrays for spectral methods
-    fn create_wavenumber_arrays(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        // Create 1D wavenumber arrays for each dimension
-        let kx_1d = Self::create_1d_wavenumbers(nx, dx);
-        let ky_1d = Self::create_1d_wavenumbers(ny, dy);
-        let kz_1d = Self::create_1d_wavenumbers(nz, dz);
+    /// Create 1D wavenumber array for a given dimension
+    fn create_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
+        let mut k = vec![0.0; n];
+        let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
         
-        // Create 3D arrays using broadcasting
-        let mut kx = Array3::zeros((nx, ny, nz));
-        let mut ky = Array3::zeros((nx, ny, nz));
-        let mut kz = Array3::zeros((nx, ny, nz));
-        
-        // Fill kx array (varies along x, constant along y and z)
-        for i in 0..nx {
-            kx.slice_mut(s![i, .., ..]).fill(kx_1d[i]);
+        for i in 0..n/2 {
+            k[i] = i as f64 * dk;
+        }
+        for i in n/2..n {
+            k[i] = -(n - i) as f64 * dk;
         }
         
-        // Fill ky array (varies along y, constant along x and z)
-        for j in 0..ny {
-            ky.slice_mut(s![.., j, ..]).fill(ky_1d[j]);
-        }
-        
-        // Fill kz array (varies along z, constant along x and y)
-        for k in 0..nz {
-            kz.slice_mut(s![.., .., k]).fill(kz_1d[k]);
-        }
-        
-        (kx, ky, kz)
-    }
-    
-    /// Create 1D wavenumber array for a single dimension
-    fn create_1d_wavenumbers(n: usize, d: f64) -> Vec<f64> {
-        let dk = 2.0 * std::f64::consts::PI / (n as f64 * d);
-        
-        (0..n).map(|i| {
-            if i <= n / 2 {
-                i as f64 * dk
-            } else {
-                ((i as f64) - n as f64) * dk
-            }
-        }).collect()
+        k
     }
     
     /// Update elastic fields with full tensor formulation

@@ -66,20 +66,17 @@ fn main() -> KwaversResult<()> {
     let initial_radius = 5e-6; // 5 μm initial bubble radius
     
     // Initialize bubble radius field (assuming it's at index 7)
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let dx = (i as f64 - bubble_center.0 as f64) * grid.dx;
-                let dy = (j as f64 - bubble_center.1 as f64) * grid.dy;
-                let dz = (k as f64 - bubble_center.2 as f64) * grid.dz;
-                let r = (dx * dx + dy * dy + dz * dz).sqrt();
-                
-                if r < 10.0 * grid.dx {
-                    fields[[7, i, j, k]] = initial_radius;
-                }
+    grid.iter_points()
+        .for_each(|((i, j, k), (x, y, z))| {
+            let dx = x - bubble_center.0 as f64 * grid.dx;
+            let dy = y - bubble_center.1 as f64 * grid.dy;
+            let dz = z - bubble_center.2 as f64 * grid.dz;
+            let r = (dx * dx + dy * dy + dz * dz).sqrt();
+            
+            if r < 10.0 * grid.dx {
+                fields[[7, i, j, k]] = initial_radius;
             }
-        }
-    }
+        });
     
     // Set initial temperature (293K = 20°C)
     fields.index_axis_mut(ndarray::Axis(0), 2).fill(293.0);
@@ -94,22 +91,15 @@ fn main() -> KwaversResult<()> {
     let sigma = 0.02; // Standard deviation for Gaussian
     let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
     
-    // Use iterator combinators instead of nested loops
-    let pressure_values: Vec<f64> = (0..grid.nx)
-        .flat_map(|i| (0..grid.ny)
-            .flat_map(move |j| (0..grid.nz)
-                .map(move |k| {
-                    let x = i as f64 * grid.dx - center.0 as f64 * grid.dx;
-                    let y = j as f64 * grid.dy - center.1 as f64 * grid.dy;
-                    let z = k as f64 * grid.dz - center.2 as f64 * grid.dz;
-                    let r = (x * x + y * y + z * z).sqrt();
-                    1e6 * (-r * r / (2.0 * sigma * sigma)).exp()
-                })))
-        .collect();
-    
-    let pressure = Array3::from_shape_vec((grid.nx, grid.ny, grid.nz), pressure_values)
-        .expect("Failed to create pressure array");
-    fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
+    // Generate initial pressure field using iterators
+    grid.iter_points()
+        .for_each(|((i, j, k), (x, y, z))| {
+            let center_x = center.0 as f64 * grid.dx;
+            let center_y = center.1 as f64 * grid.dy;
+            let center_z = center.2 as f64 * grid.dz;
+            let r = ((x - center_x).powi(2) + (y - center_y).powi(2) + (z - center_z).powi(2)).sqrt();
+            fields[[0, i, j, k]] = 1e6 * (-r * r / (2.0 * sigma * sigma)).exp();
+        });
     
     println!("Grid: {}×{}×{} points", grid.nx, grid.ny, grid.nz);
     println!("Time step: {:.2e} s", dt);

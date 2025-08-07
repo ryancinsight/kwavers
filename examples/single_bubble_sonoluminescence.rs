@@ -203,8 +203,8 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
         let t = step as f64 * dt;
         
         // Generate acoustic field
-        let mut pressure = Array3::zeros((n, n, n));
-        let mut dp_dt = Array3::zeros((n, n, n));
+        let mut pressure = grid.zeros_array();
+        let mut dp_dt = grid.zeros_array();
         
         // Update pressure field with standing wave
         let time = step as f64 * dt;

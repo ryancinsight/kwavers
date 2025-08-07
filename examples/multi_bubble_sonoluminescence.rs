@@ -269,9 +269,9 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     println!("\nStarting simulation...");
     let start_time = std::time::Instant::now();
     
-    // Pre-allocate arrays for efficiency
-    let mut pressure_field = Array3::zeros((n, n, n));
-    let mut dp_dt_field = Array3::zeros((n, n, n));
+    // Initialize pressure fields for acoustic simulation
+    let mut pressure_field = grid.zeros_array();
+    let mut dp_dt_field = grid.zeros_array();
     
     // Main simulation loop
     for step in 0..n_steps {

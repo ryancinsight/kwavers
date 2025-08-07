@@ -76,31 +76,31 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 /// Generate synthetic acoustic data for demonstration
 fn generate_synthetic_acoustic_data(grid: &Grid) -> Array3<f64> {
-    let mut data = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut data = grid.zeros_array();
     
-    // Create three distinct regions with different acoustic properties
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let x = i as f64 / grid.nx as f64;
-                let y = j as f64 / grid.ny as f64;
-                let z = k as f64 / grid.nz as f64;
-                
-                // Region 1: Soft tissue (top-left)
-                if x < 0.5 && y < 0.5 {
-                    data[[i, j, k]] = 1000.0 + 50.0 * (x + y);
-                }
-                // Region 2: Bone (top-right)
-                else if x >= 0.5 && y < 0.5 {
-                    data[[i, j, k]] = 2000.0 + 100.0 * (x - 0.5);
-                }
-                // Region 3: Fat (bottom)
-                else {
-                    data[[i, j, k]] = 920.0 + 30.0 * z;
-                }
+    // Create three distinct regions with different acoustic properties using iterators
+    grid.iter_points()
+        .for_each(|((i, j, k), (x, y, z))| {
+            let norm_x = x / (grid.nx as f64 * grid.dx);
+            let norm_y = y / (grid.ny as f64 * grid.dy);
+            let norm_z = z / (grid.nz as f64 * grid.dz);
+            
+            // Region 1: Soft tissue (top-left)
+            if norm_x < 0.5 && norm_y < 0.5 {
+                data[[i, j, k]] = 1000.0 + 50.0 * (norm_x + norm_y);
             }
-        }
-    }
+            // Region 2: Bone (top-right)
+            else if norm_x >= 0.5 && norm_y < 0.5 {
+                data[[i, j, k]] = 3000.0 + 100.0 * norm_z;
+            }
+            // Region 3: Fat (bottom half)
+            else {
+                data[[i, j, k]] = 1450.0 + 30.0 * (norm_x + norm_y + norm_z);
+            }
+            
+            // Add some noise
+            data[[i, j, k]] += 10.0 * (rand::random::<f64>() - 0.5);
+        });
     
     data
 }
