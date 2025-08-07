@@ -6,10 +6,15 @@ use std::fmt::Debug;
 pub mod absorption;
 pub mod heterogeneous;
 pub mod homogeneous;
+pub mod frequency_dependent;
+pub mod anisotropic;
 
 pub use absorption::power_law_absorption;
 pub use absorption::tissue_specific;
+pub use absorption::fractional_derivative;
 pub use homogeneous::HomogeneousMedium;
+pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
+pub use anisotropic::{AnisotropicTissueProperties, StiffnessTensor, AnisotropyType};
 
 /// Get the maximum sound speed from a medium for CFL condition calculations.
 /// 

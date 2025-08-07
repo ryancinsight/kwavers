@@ -19,6 +19,8 @@ pub mod adaptive_stepping;
 pub mod multi_rate_controller;
 pub mod stability;
 pub mod coupling;
+pub mod time_scale_separation;
+pub mod conservation;
 
 // Re-export main types
 pub use traits::{TimeStepper, TimeStepperConfig, MultiRateConfig, TimeStepperType};
@@ -27,6 +29,8 @@ pub use adaptive_stepping::{AdaptiveTimeStepper, ErrorEstimator};
 pub use multi_rate_controller::MultiRateController;
 pub use stability::{StabilityAnalyzer, CFLCondition};
 pub use coupling::{TimeCoupling, SubcyclingStrategy};
+pub use time_scale_separation::{TimeScaleSeparator, TimeScale};
+pub use conservation::{ConservationMonitor, ConservedQuantities, ConservationError};
 
 use crate::grid::Grid;
 use crate::KwaversResult;
@@ -53,6 +57,10 @@ pub struct MultiRateTimeIntegrator {
     time_step_history: HashMap<String, Vec<f64>>,
     /// CFL safety factor
     cfl_safety_factor: f64,
+    /// Time scale separator for automatic detection
+    time_scale_separator: TimeScaleSeparator,
+    /// Conservation monitor
+    conservation_monitor: ConservationMonitor,
 }
 
 impl MultiRateTimeIntegrator {
@@ -62,6 +70,8 @@ impl MultiRateTimeIntegrator {
         let controller = MultiRateController::new(config.clone());
         let stability_analyzer = StabilityAnalyzer::new(config.stability_factor);
         let coupling = SubcyclingStrategy::new(config.max_subcycles);
+        let time_scale_separator = TimeScaleSeparator::new(10.0); // stiffness threshold
+        let conservation_monitor = ConservationMonitor::new(1e-10); // conservation tolerance
         
         Self {
             config: config.clone(),
@@ -70,6 +80,8 @@ impl MultiRateTimeIntegrator {
             coupling: Box::new(coupling),
             time_step_history: HashMap::new(),
             cfl_safety_factor: config.cfl_safety_factor,
+            time_scale_separator,
+            conservation_monitor,
         }
     }
     
@@ -131,6 +143,12 @@ impl MultiRateTimeIntegrator {
         }
         
         Ok(current_time)
+    }
+    
+    /// Configure conservation monitor for specific medium
+    pub fn configure_for_medium(&mut self, medium_type: &str) {
+        let gamma = ConservationMonitor::gamma_for_medium(medium_type);
+        self.conservation_monitor.set_gamma(gamma);
     }
     
     /// Compute stable time steps for each physics component

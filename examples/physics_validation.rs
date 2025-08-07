@@ -55,20 +55,20 @@ fn test_heat_diffusion() {
     
     // Time evolution
     let n_steps = 100;
-    let mut temp_new = temperature.clone();
+    let mut next_temperature = temperature.clone();
     
     for _step in 0..n_steps {
-        // Apply heat equation with central differences
-        for i in 1..nx-1 {
-            for j in 1..nx-1 {
+        // Apply heat equation with central differences using iterators
+        (1..nx-1).for_each(|i| {
+            (1..nx-1).for_each(|j| {
                 let laplacian = 
                     (temperature[[i+1, j, 0]] - 2.0 * temperature[[i, j, 0]] + temperature[[i-1, j, 0]]) / (dx * dx) +
                     (temperature[[i, j+1, 0]] - 2.0 * temperature[[i, j, 0]] + temperature[[i, j-1, 0]]) / (dx * dx);
                 
-                temp_new[[i, j, 0]] = temperature[[i, j, 0]] + alpha * dt * laplacian;
-            }
-        }
-        temperature.assign(&temp_new);
+                next_temperature[[i, j, 0]] = temperature[[i, j, 0]] + alpha * dt * laplacian;
+            });
+        });
+        temperature.assign(&next_temperature);
     }
     
     // Analytical solution for 2D heat equation

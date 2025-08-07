@@ -361,7 +361,7 @@ impl AcousticWaveModel for ViscoelasticWave {
 
         Zip::indexed(&mut p_linear_fft)
             .and(&p_fft)
-            .for_each(|(i, j, k), p_new_k, &p_old_k| {
+            .for_each(|(i, j, k), p_updated_k, &p_old_k| {
                 let k_sq = k_squared_vals[[i, j, k]];
                 let k_val = k_sq.sqrt();
 
@@ -418,7 +418,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                 let phase_angle_corrected = -c * k_eff * dt;
                 let phase_complex_corrected = Complex::new(phase_angle_corrected.cos(), phase_angle_corrected.sin());
 
-                *p_new_k = p_old_k * phase_complex_corrected * damping_factor;
+                *p_updated_k = p_old_k * phase_complex_corrected * damping_factor;
             });
         metrics.kspace_ops_time += start_kspace_ops.elapsed().as_secs_f64();
 

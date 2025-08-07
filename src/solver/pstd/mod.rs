@@ -682,14 +682,14 @@ impl PhysicsPlugin for PstdPlugin {
         let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
         
         // Update pressure using divergence
-        let mut pressure_new = pressure.clone();
-        self.solver.update_pressure(&mut pressure_new, &divergence, medium, dt)?;
+        let mut updated_pressure = pressure.clone();
+        self.solver.update_pressure(&mut updated_pressure, &divergence, medium, dt)?;
         
         // Update velocities using new pressure
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure_new, medium, dt)?;
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &updated_pressure, medium, dt)?;
         
         // Copy back to fields
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure_new);
+        fields.index_axis_mut(Axis(0), 0).assign(&updated_pressure);
         fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
         fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
         fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);

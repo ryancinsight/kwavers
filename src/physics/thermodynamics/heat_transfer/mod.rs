@@ -137,7 +137,7 @@ impl ThermalModel {
         self.heat_source_time += start_heat_source.elapsed().as_secs_f64();
 
         let start_diffusion = Instant::now();
-        let mut temp_new = grid.zeros_array();
+        let mut updated_temperature = grid.zeros_array();
 
         // Compute Laplacian of temperature using efficient ndarray operations
         let mut lap_t = grid.zeros_array();
@@ -364,12 +364,12 @@ impl ThermalModel {
         
         let thermal_factor = self.thermal_factor.as_ref().unwrap();
 
-        Zip::indexed(&mut temp_new)
+        Zip::indexed(&mut updated_temperature)
             .and(&self.temperature)
             .and(&lap_t)
             .and(&heat_source)
             .and(thermal_factor)
-            .for_each(|(i, j, k), t_new, &t_old, &lap, &q, &factor| {
+            .for_each(|(i, j, k), t_updated, &t_old, &lap, &q, &factor| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -378,13 +378,13 @@ impl ThermalModel {
                 let term1 = d_alpha * lap;
                 let term2 = q * (1.0 - self.tau_q / dt);
                 let term3 = self.tau_t * k_thermal * lap;
-                *t_new = t_old + (term1 + term2 + term3) * factor;
-                let is_valid = t_new.is_finite() && *t_new > 0.0;
-                *t_new = if is_valid { *t_new } else { t_old };
+                *t_updated = t_old + (term1 + term2 + term3) * factor;
+                let is_valid = t_updated.is_finite() && *t_updated > 0.0;
+                *t_updated = if is_valid { *t_updated } else { t_old };
             });
         self.diffusion_time += start_diffusion.elapsed().as_secs_f64();
 
-        self.temperature.assign(&temp_new);
+        self.temperature.assign(&updated_temperature);
         fields.index_axis_mut(Axis(0), TEMPERATURE_IDX).assign(&self.temperature);
 
         self.update_time += start_total.elapsed().as_secs_f64();

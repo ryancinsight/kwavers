@@ -28,7 +28,6 @@ struct SimplePointSource {
 }
 
 impl SimplePointSource {
-    #[allow(dead_code)]
     pub fn new(position: (f64, f64, f64), signal: Box<dyn Signal>, magnitude: f64) -> Self {
         Self { position, signal, magnitude }
     }

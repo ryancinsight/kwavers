@@ -265,7 +265,7 @@ impl Medium for HeterogeneousMedium {
     fn update_temperature(&mut self, temperature: &Array3<f64>) {
         Zip::from(&mut self.temperature)
             .and(temperature)
-            .for_each(|t_self, &t_new| *t_self = t_new.max(273.15));
+            .for_each(|t_self, &t_updated| *t_self = t_updated.max(273.15));
     }
     fn temperature(&self) -> &Array3<f64> { &self.temperature }
     fn bubble_radius(&self) -> &Array3<f64> { &self.bubble_radius }
@@ -273,10 +273,10 @@ impl Medium for HeterogeneousMedium {
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>) {
         Zip::from(&mut self.bubble_radius)
             .and(radius)
-            .for_each(|r_self, &r_new| *r_self = r_new.max(1e-10));
+            .for_each(|r_self, &r_updated| *r_self = r_updated.max(1e-10));
         Zip::from(&mut self.bubble_velocity)
             .and(velocity)
-            .for_each(|v_self, &v_new| *v_self = v_new);
+            .for_each(|v_self, &v_updated| *v_self = v_updated);
     }
     fn density_array(&self) -> Array3<f64> { self.density.clone() }
     fn sound_speed_array(&self) -> Array3<f64> { self.sound_speed.clone() }
@@ -306,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_tissue_initialization_includes_shear_props() {
+    fn test_tissue_initialization_includes_shear_props() {
         let grid_dims = (2, 3, 4);
         let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
         let medium = HeterogeneousMedium::new_tissue(&grid);

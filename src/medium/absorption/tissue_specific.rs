@@ -382,7 +382,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tissue_properties_struct_has_new_fields() {
+    fn test_tissue_properties_struct_has_all_fields() {
         // This test mainly checks if the struct can be instantiated with new fields,
         // confirming their existence.
         let props = TissueProperties {

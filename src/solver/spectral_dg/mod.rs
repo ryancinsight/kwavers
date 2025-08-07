@@ -100,7 +100,7 @@ impl HybridSpectralDGSolver {
     }
     
     /// Enable enhanced shock detection
-    pub fn with_enhanced_shock_detection(&mut self) -> &mut Self {
+    pub fn with_shock_detection(&mut self) -> &mut Self {
         self.enhanced_detector = Some(enhanced_shock_handling::EnhancedShockDetector::default());
         self
     }
