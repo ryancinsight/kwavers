@@ -401,7 +401,7 @@ impl EnhancedElasticWaveHelper {
             });
         
         self.interface_mask = Some(interface_mask);
-        self.metrics.interface_detection_time += start.elapsed().as_secs_f64();
+        // Metrics tracking removed - not available in parent module
         
         let interface_count = self.interface_mask.as_ref().unwrap().iter().filter(|&&x| x).count();
         info!("Detected {} interface points ({:.1}% of grid)", 
@@ -460,7 +460,7 @@ impl EnhancedElasticWaveHelper {
                 });
         }
         
-        self.metrics.mode_conversion_time += start.elapsed().as_secs_f64();
+        // Metrics tracking removed - not available in parent module
         Ok(())
     }
     
@@ -510,7 +510,7 @@ impl EnhancedElasticWaveHelper {
             k[i] = i as f64 * dk;
         }
         for i in n/2..n {
-            k[i] = -(n - i) as f64 * dk;
+            k[i] = -((n - i) as f64) * dk;
         }
         
         k
@@ -540,7 +540,11 @@ impl EnhancedElasticWaveHelper {
         let mut syz = fields.index_axis(Axis(0), SYZ_IDX).to_owned();
         
         // Apply mode conversion at interfaces
-        self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz)?;
+        if self.mode_conversion.enable_p_to_s || self.mode_conversion.enable_s_to_p {
+            if let Some(ref interface_mask) = self.interface_mask {
+                self.apply_mode_conversion(&mut vx, &mut vy, &mut vz, &mut sxx, &mut syy, &mut szz, &mut sxy, &mut sxz, &mut syz)?;
+            }
+        }
         
         // Update fields using spectral method
         // Implement full spectral update with stiffness tensors

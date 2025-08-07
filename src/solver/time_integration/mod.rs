@@ -65,13 +65,12 @@ pub struct MultiRateTimeIntegrator {
 
 impl MultiRateTimeIntegrator {
     /// Create a new multi-rate time integrator
-    pub fn new(config: MultiRateConfig) -> Self {
-        // Create time steppers for each component
+    pub fn new(config: MultiRateConfig, grid: &Grid) -> Self {
         let controller = MultiRateController::new(config.clone());
         let stability_analyzer = StabilityAnalyzer::new(config.stability_factor);
         let coupling = SubcyclingStrategy::new(config.max_subcycles);
-        let time_scale_separator = TimeScaleSeparator::new(10.0); // stiffness threshold
-        let conservation_monitor = ConservationMonitor::new(1e-10); // conservation tolerance
+        let time_scale_separator = TimeScaleSeparator::new(grid);
+        let conservation_monitor = ConservationMonitor::new(grid);
         
         Self {
             config: config.clone(),
@@ -143,12 +142,6 @@ impl MultiRateTimeIntegrator {
         }
         
         Ok(current_time)
-    }
-    
-    /// Configure conservation monitor for specific medium
-    pub fn configure_for_medium(&mut self, medium_type: &str) {
-        let gamma = ConservationMonitor::gamma_for_medium(medium_type);
-        self.conservation_monitor.set_gamma(gamma);
     }
     
     /// Compute stable time steps for each physics component

@@ -303,7 +303,7 @@ impl AnisotropicTissueProperties {
         
         // Christoffel matrix calculation (simplified)
         // M_ik = C_ijkl * n_j * n_l
-        let mut christoffel = Array2::zeros((3, 3));
+        let mut christoffel: Array2<f64> = Array2::zeros((3, 3));
         
         // This is a simplified version - full implementation would use
         // proper tensor contraction with the full stiffness tensor
@@ -350,22 +350,22 @@ impl AnisotropicWavePropagator {
         let mut stress = Array4::zeros((6, nx, ny, nz));
         
         // Apply Hooke's law: σ = C : ε
-        (0..nx).into_par_iter().for_each(|i| {
-            (0..ny).for_each(|j| {
-                (0..nz).for_each(|k| {
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
                     let c = &self.properties[[i, j, k]].stiffness.c;
                     
                     // Matrix-vector multiplication in Voigt notation
-                    (0..6).for_each(|m| {
+                    for m in 0..6 {
                         let mut sum = 0.0;
-                        (0..6).for_each(|n| {
+                        for n in 0..6 {
                             sum += c[[m, n]] * strain[[n, i, j, k]];
-                        });
+                        }
                         stress[[m, i, j, k]] = sum;
-                    });
-                });
-            });
-        });
+                    }
+                }
+            }
+        }
         
         Ok(stress)
     }

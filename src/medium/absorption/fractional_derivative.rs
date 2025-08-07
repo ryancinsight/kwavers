@@ -64,11 +64,10 @@ impl FractionalDerivativeAbsorption {
     pub fn initialize_memory(&mut self, grid: &Grid, dt: f64, history_length: usize) -> KwaversResult<()> {
         // Validate parameters
         if self.power_law_exponent < 0.0 || self.power_law_exponent > 3.0 {
-            return Err(KwaversError::Validation(ValidationError::RangeValidation {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "power_law_exponent".to_string(),
                 value: self.power_law_exponent.to_string(),
-                min: 0.0,
-                max: 3.0,
+                constraint: format!("Must be between 0.0 and 3.0, got {}", self.power_law_exponent),
             }));
         }
         
@@ -139,7 +138,7 @@ impl FractionalDerivativeAbsorption {
         // Apply absorption
         let absorption_factor = -self.alpha_0 * self.reference_frequency.powf(2.0 - self.power_law_exponent);
         
-        Zip::from(pressure)
+        Zip::from(&mut *pressure)
             .and(&fractional_laplacian)
             .for_each(|p, &fl| {
                 *p += absorption_factor * fl * dt;
@@ -148,7 +147,7 @@ impl FractionalDerivativeAbsorption {
         // Update history efficiently with VecDeque
         // This is O(1) for both operations, compared to O(n) for Vec::insert(0)
         memory.pressure_history.pop_back();  // Remove oldest
-        memory.pressure_history.push_front(pressure.clone());  // Add newest
+        memory.pressure_history.push_front(pressure.to_owned());  // Add newest
         
         Ok(())
     }

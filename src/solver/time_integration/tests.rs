@@ -220,8 +220,8 @@ mod tests {
         let mut config = MultiRateConfig::default();
         config.max_subcycles = 5;
         
-        let mut integrator = MultiRateTimeIntegrator::new(config);
         let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
+        let mut integrator = MultiRateTimeIntegrator::new(config, &grid);
         
         let mut fields = HashMap::new();
         fields.insert("component1".to_string(), Array3::ones((4, 4, 4)));
