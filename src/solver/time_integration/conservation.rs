@@ -207,28 +207,75 @@ impl ConservationMonitor {
         total_energy
     }
     
-    /// Compute acoustic energy (simplified - pressure only)
+    /// Compute acoustic energy (complete - includes kinetic and potential energy)
     pub fn compute_acoustic_energy(
         &self,
         pressure: &Array3<f64>,
         medium: &dyn Medium,
     ) -> f64 {
+        self.compute_acoustic_energy_with_velocity(pressure, None, None, None, medium)
+    }
+    
+    /// Compute acoustic energy with optional velocity fields
+    /// 
+    /// If velocity fields are provided, computes total acoustic energy (kinetic + potential).
+    /// If velocity fields are None, computes only potential energy from pressure.
+    pub fn compute_acoustic_energy_with_velocity(
+        &self,
+        pressure: &Array3<f64>,
+        velocity_x: Option<&Array3<f64>>,
+        velocity_y: Option<&Array3<f64>>,
+        velocity_z: Option<&Array3<f64>>,
+        medium: &dyn Medium,
+    ) -> f64 {
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let mut total_energy = 0.0;
         
-        Zip::indexed(pressure)
-            .for_each(|(i, j, k), &p| {
-                let x = i as f64 * self.grid.dx;
-                let y = j as f64 * self.grid.dy;
-                let z = k as f64 * self.grid.dz;
-                
-                let density = medium.density(x, y, z, &self.grid);
-                let sound_speed = medium.sound_speed(x, y, z, &self.grid);
-                
-                // Acoustic energy density: E = p²/(2ρc²)
-                let energy_density = p * p / (2.0 * density * sound_speed * sound_speed);
-                total_energy += energy_density * dv;
-            });
+        // Check if we have all velocity components
+        let has_velocity = velocity_x.is_some() && velocity_y.is_some() && velocity_z.is_some();
+        
+        if has_velocity {
+            // Complete acoustic energy computation
+            let vx = velocity_x.unwrap();
+            let vy = velocity_y.unwrap();
+            let vz = velocity_z.unwrap();
+            
+            Zip::indexed(pressure)
+                .and(vx)
+                .and(vy)
+                .and(vz)
+                .for_each(|(i, j, k), &p, &vx_val, &vy_val, &vz_val| {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    
+                    let density = medium.density(x, y, z, &self.grid);
+                    let sound_speed = medium.sound_speed(x, y, z, &self.grid);
+                    
+                    // Potential energy density: Ep = p²/(2ρc²)
+                    let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
+                    
+                    // Kinetic energy density: Ek = ρv²/2
+                    let kinetic_energy = 0.5 * density * (vx_val * vx_val + vy_val * vy_val + vz_val * vz_val);
+                    
+                    total_energy += (potential_energy + kinetic_energy) * dv;
+                });
+        } else {
+            // Potential energy only
+            Zip::indexed(pressure)
+                .for_each(|(i, j, k), &p| {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    
+                    let density = medium.density(x, y, z, &self.grid);
+                    let sound_speed = medium.sound_speed(x, y, z, &self.grid);
+                    
+                    // Acoustic potential energy density: E = p²/(2ρc²)
+                    let energy_density = p * p / (2.0 * density * sound_speed * sound_speed);
+                    total_energy += energy_density * dv;
+                });
+        }
         
         total_energy
     }

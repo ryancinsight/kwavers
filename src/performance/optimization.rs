@@ -221,10 +221,82 @@ impl PerformanceOptimizer {
         output: &mut Array3<f64>,
         grid: &Grid,
     ) {
-        // AVX2-optimized stencil computation
-        // This is a placeholder for actual SIMD implementation
-        // For now, just copy the field
-        output.assign(field);
+        use std::arch::x86_64::*;
+        
+        let (nx, ny, nz) = field.dim();
+        let dx_inv2 = 1.0 / (grid.dx * grid.dx);
+        let dy_inv2 = 1.0 / (grid.dy * grid.dy);
+        let dz_inv2 = 1.0 / (grid.dz * grid.dz);
+        
+        // Broadcast coefficients to AVX2 registers
+        let dx_inv2_vec = _mm256_set1_pd(dx_inv2);
+        let dy_inv2_vec = _mm256_set1_pd(dy_inv2);
+        let dz_inv2_vec = _mm256_set1_pd(dz_inv2);
+        let neg_two = _mm256_set1_pd(-2.0);
+        
+        // Process interior points with AVX2 (4 doubles at a time)
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                let mut k = 1;
+                
+                // Process 4 elements at a time with AVX2
+                while k + 3 < nz - 1 {
+                    // Load center values
+                    let center = _mm256_loadu_pd(&field[[i, j, k]] as *const f64);
+                    
+                    // X-direction stencil
+                    let xm = _mm256_loadu_pd(&field[[i-1, j, k]] as *const f64);
+                    let xp = _mm256_loadu_pd(&field[[i+1, j, k]] as *const f64);
+                    let x_contrib = _mm256_mul_pd(
+                        _mm256_add_pd(_mm256_add_pd(xm, xp), _mm256_mul_pd(center, neg_two)),
+                        dx_inv2_vec
+                    );
+                    
+                    // Y-direction stencil
+                    let ym = _mm256_loadu_pd(&field[[i, j-1, k]] as *const f64);
+                    let yp = _mm256_loadu_pd(&field[[i, j+1, k]] as *const f64);
+                    let y_contrib = _mm256_mul_pd(
+                        _mm256_add_pd(_mm256_add_pd(ym, yp), _mm256_mul_pd(center, neg_two)),
+                        dy_inv2_vec
+                    );
+                    
+                    // Z-direction stencil (need to gather)
+                    let zm0 = field[[i, j, k-1]];
+                    let zm1 = field[[i, j, k]];
+                    let zm2 = field[[i, j, k+1]];
+                    let zm3 = field[[i, j, k+2]];
+                    let zm = _mm256_set_pd(zm3, zm2, zm1, zm0);
+                    
+                    let zp0 = field[[i, j, k+1]];
+                    let zp1 = field[[i, j, k+2]];
+                    let zp2 = field[[i, j, k+3]];
+                    let zp3 = field[[i, j, k+4]];
+                    let zp = _mm256_set_pd(zp3, zp2, zp1, zp0);
+                    
+                    let z_contrib = _mm256_mul_pd(
+                        _mm256_add_pd(_mm256_add_pd(zm, zp), _mm256_mul_pd(center, neg_two)),
+                        dz_inv2_vec
+                    );
+                    
+                    // Sum contributions
+                    let result = _mm256_add_pd(_mm256_add_pd(x_contrib, y_contrib), z_contrib);
+                    
+                    // Store result
+                    _mm256_storeu_pd(&mut output[[i, j, k]] as *mut f64, result);
+                    
+                    k += 4;
+                }
+                
+                // Handle remaining elements
+                while k < nz - 1 {
+                    output[[i, j, k]] = 
+                        (field[[i-1, j, k]] - 2.0 * field[[i, j, k]] + field[[i+1, j, k]]) * dx_inv2 +
+                        (field[[i, j-1, k]] - 2.0 * field[[i, j, k]] + field[[i, j+1, k]]) * dy_inv2 +
+                        (field[[i, j, k-1]] - 2.0 * field[[i, j, k]] + field[[i, j, k+1]]) * dz_inv2;
+                    k += 1;
+                }
+            }
+        }
     }
 
     #[target_feature(enable = "sse4.2")]
@@ -233,10 +305,71 @@ impl PerformanceOptimizer {
         output: &mut Array3<f64>,
         grid: &Grid,
     ) {
-        // SSE4.2-optimized stencil computation
-        // This is a placeholder for actual SIMD implementation
-        // For now, just copy the field
-        output.assign(field);
+        use std::arch::x86_64::*;
+        
+        let (nx, ny, nz) = field.dim();
+        let dx_inv2 = 1.0 / (grid.dx * grid.dx);
+        let dy_inv2 = 1.0 / (grid.dy * grid.dy);
+        let dz_inv2 = 1.0 / (grid.dz * grid.dz);
+        
+        // Broadcast coefficients to SSE registers
+        let dx_inv2_vec = _mm_set1_pd(dx_inv2);
+        let dy_inv2_vec = _mm_set1_pd(dy_inv2);
+        let dz_inv2_vec = _mm_set1_pd(dz_inv2);
+        let neg_two = _mm_set1_pd(-2.0);
+        
+        // Process interior points with SSE4.2 (2 doubles at a time)
+        for i in 1..nx-1 {
+            for j in 1..ny-1 {
+                let mut k = 1;
+                
+                // Process 2 elements at a time with SSE
+                while k + 1 < nz - 1 {
+                    // Load center values
+                    let center = _mm_loadu_pd(&field[[i, j, k]] as *const f64);
+                    
+                    // X-direction stencil
+                    let xm = _mm_loadu_pd(&field[[i-1, j, k]] as *const f64);
+                    let xp = _mm_loadu_pd(&field[[i+1, j, k]] as *const f64);
+                    let x_contrib = _mm_mul_pd(
+                        _mm_add_pd(_mm_add_pd(xm, xp), _mm_mul_pd(center, neg_two)),
+                        dx_inv2_vec
+                    );
+                    
+                    // Y-direction stencil
+                    let ym = _mm_loadu_pd(&field[[i, j-1, k]] as *const f64);
+                    let yp = _mm_loadu_pd(&field[[i, j+1, k]] as *const f64);
+                    let y_contrib = _mm_mul_pd(
+                        _mm_add_pd(_mm_add_pd(ym, yp), _mm_mul_pd(center, neg_two)),
+                        dy_inv2_vec
+                    );
+                    
+                    // Z-direction stencil
+                    let zm = _mm_set_pd(field[[i, j, k]], field[[i, j, k-1]]);
+                    let zp = _mm_set_pd(field[[i, j, k+2]], field[[i, j, k+1]]);
+                    let z_contrib = _mm_mul_pd(
+                        _mm_add_pd(_mm_add_pd(zm, zp), _mm_mul_pd(center, neg_two)),
+                        dz_inv2_vec
+                    );
+                    
+                    // Sum contributions
+                    let result = _mm_add_pd(_mm_add_pd(x_contrib, y_contrib), z_contrib);
+                    
+                    // Store result
+                    _mm_storeu_pd(&mut output[[i, j, k]] as *mut f64, result);
+                    
+                    k += 2;
+                }
+                
+                // Handle remaining element
+                if k < nz - 1 {
+                    output[[i, j, k]] = 
+                        (field[[i-1, j, k]] - 2.0 * field[[i, j, k]] + field[[i+1, j, k]]) * dx_inv2 +
+                        (field[[i, j-1, k]] - 2.0 * field[[i, j, k]] + field[[i, j+1, k]]) * dy_inv2 +
+                        (field[[i, j, k-1]] - 2.0 * field[[i, j, k]] + field[[i, j, k+1]]) * dz_inv2;
+                }
+            }
+        }
     }
     
     /// Scalar stencil computation (fallback)

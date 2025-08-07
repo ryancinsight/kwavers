@@ -7,7 +7,7 @@
 //! - AI-assisted convergence acceleration
 
 use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3};
+use ndarray::{Array1, Array2, Array3, Axis};
 use std::collections::{HashMap, VecDeque};
 use rand::Rng;
 
@@ -84,25 +84,45 @@ impl SimpleNeuralNetwork {
         Ok(output)
     }
     
-    /// Update weights using gradient descent (simplified)
+    /// Update weights using gradient descent with proper backpropagation
     pub fn update_weights(&mut self, input: &Array1<f64>, target: &Array1<f64>, learning_rate: f64) -> KwaversResult<()> {
-        let prediction = self.forward(input)?;
-        let error = target - &prediction;
+        // Forward pass with intermediate values
+        let z1 = self.weights1.dot(input) + &self.bias1;
+        let a1 = z1.mapv(Self::relu);
+        let z2 = self.weights2.dot(&a1) + &self.bias2;
+        let prediction = z2.clone(); // Linear output for regression
         
-        // Simplified weight update (in practice would use proper backpropagation)
-        let update_scale = learning_rate * error.sum();
+        // Compute loss gradient
+        let error = &prediction - target;
         
-        // Update output weights
-        for mut row in self.weights2.rows_mut() {
-            row.mapv_inplace(|w| w + update_scale * 0.01);
-        }
+        // Backpropagation
+        // Output layer gradients
+        let delta2 = error; // For MSE loss with linear output
+        let grad_w2 = delta2.clone().insert_axis(Axis(1)).dot(&a1.clone().insert_axis(Axis(0)));
+        let grad_b2 = delta2.clone();
         
-        // Update hidden weights  
-        for mut row in self.weights1.rows_mut() {
-            row.mapv_inplace(|w| w + update_scale * 0.001);
-        }
+        // Hidden layer gradients
+        let delta1 = self.weights2.t().dot(&delta2) * z1.mapv(Self::relu_derivative);
+        let grad_w1 = delta1.clone().insert_axis(Axis(1)).dot(&input.clone().insert_axis(Axis(0)));
+        let grad_b1 = delta1;
+        
+        // Update weights and biases with gradient descent
+        self.weights2 -= &(learning_rate * grad_w2);
+        self.bias2 -= &(learning_rate * grad_b2);
+        self.weights1 -= &(learning_rate * grad_w1);
+        self.bias1 -= &(learning_rate * grad_b1);
         
         Ok(())
+    }
+    
+    /// ReLU activation function
+    fn relu(x: f64) -> f64 {
+        x.max(0.0)
+    }
+    
+    /// ReLU derivative
+    fn relu_derivative(x: f64) -> f64 {
+        if x > 0.0 { 1.0 } else { 0.0 }
     }
 }
 

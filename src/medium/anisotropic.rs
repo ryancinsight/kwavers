@@ -8,9 +8,9 @@
 //! - Royer, D., & Dieulesaint, E. (2000). "Elastic waves in solids I:
 //!   Free and guided propagation" Springer.
 //! - Aristizabal, S., et al. (2018). "Shear wave vibrometry in ex vivo
-//!   porcine lens" Journal of Biomechanics, 72, 24-32.
+//!   porcine lens." J Biomech 75: 19-25.
 
-use crate::{KwaversResult, KwaversError, ValidationError};
+use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::Grid;
 use ndarray::{Array2, Array3, Array4, Zip};
 use rayon::prelude::*;
@@ -301,19 +301,111 @@ impl AnisotropicTissueProperties {
         let n_mag = (nx*nx + ny*ny + nz*nz).sqrt();
         let (nx, ny, nz) = (nx/n_mag, ny/n_mag, nz/n_mag);
         
-        // Christoffel matrix calculation (simplified)
-        // M_ik = C_ijkl * n_j * n_l
+        // Christoffel matrix calculation
+        // M_ik = C_ijkl * n_j * n_l (using Voigt notation)
         let mut christoffel: Array2<f64> = Array2::zeros((3, 3));
         
-        // This is a simplified version - full implementation would use
-        // proper tensor contraction with the full stiffness tensor
+        // Convert direction vector to strain-like vector in Voigt notation
+        // For wave propagation, we need the dyadic product n⊗n
+        let n_voigt = [nx*nx, ny*ny, nz*nz, 2.0*ny*nz, 2.0*nx*nz, 2.0*nx*ny];
         
-        // For now, return approximate values
-        let vp = (self.stiffness.c[[0, 0]] / self.density).sqrt();  // P-wave
-        let vs1 = (self.stiffness.c[[3, 3]] / self.density).sqrt(); // S-wave 1
-        let vs2 = (self.stiffness.c[[4, 4]] / self.density).sqrt(); // S-wave 2
+        // First, compute stress-like vector: σ = C : (n⊗n)
+        let mut stress_voigt = [0.0; 6];
+        for i in 0..6 {
+            for j in 0..6 {
+                stress_voigt[i] += self.stiffness.c[[i, j]] * n_voigt[j];
+            }
+        }
+        
+        // Convert back to Christoffel matrix components
+        // M_11 = σ_11*nx*nx + σ_22*ny*ny + σ_33*nz*nz + 2(σ_23*ny*nz + σ_13*nx*nz + σ_12*nx*ny)
+        christoffel[[0, 0]] = stress_voigt[0]*nx*nx + stress_voigt[1]*ny*ny + stress_voigt[2]*nz*nz +
+                              stress_voigt[3]*ny*nz + stress_voigt[4]*nx*nz + stress_voigt[5]*nx*ny;
+        
+        // M_22 = similar pattern but with different indices
+        christoffel[[1, 1]] = stress_voigt[0]*ny*ny + stress_voigt[1]*nz*nz + stress_voigt[2]*nx*nx +
+                              stress_voigt[3]*nz*nx + stress_voigt[4]*ny*nx + stress_voigt[5]*ny*nz;
+        
+        // M_33
+        christoffel[[2, 2]] = stress_voigt[0]*nz*nz + stress_voigt[1]*nx*nx + stress_voigt[2]*ny*ny +
+                              stress_voigt[3]*nx*ny + stress_voigt[4]*nz*ny + stress_voigt[5]*nz*nx;
+        
+        // Off-diagonal terms (matrix is symmetric)
+        christoffel[[0, 1]] = stress_voigt[5]*(nx*nx + ny*ny)/2.0 + 
+                              stress_voigt[4]*nx*nz/2.0 + stress_voigt[3]*ny*nz/2.0;
+        christoffel[[1, 0]] = christoffel[[0, 1]];
+        
+        christoffel[[0, 2]] = stress_voigt[4]*(nx*nx + nz*nz)/2.0 + 
+                              stress_voigt[5]*nx*ny/2.0 + stress_voigt[3]*ny*nz/2.0;
+        christoffel[[2, 0]] = christoffel[[0, 2]];
+        
+        christoffel[[1, 2]] = stress_voigt[3]*(ny*ny + nz*nz)/2.0 + 
+                              stress_voigt[5]*nx*ny/2.0 + stress_voigt[4]*nx*nz/2.0;
+        christoffel[[2, 1]] = christoffel[[1, 2]];
+        
+        // Normalize by density to get velocity-squared eigenvalues
+        christoffel.mapv_inplace(|x| x / self.density);
+        
+        // Solve eigenvalue problem for phase velocities
+        // For 3x3 symmetric matrices, we can use analytical methods
+        let eigenvalues = self.compute_eigenvalues_3x3(&christoffel)?;
+        
+        // Extract wave velocities (sqrt of eigenvalues)
+        // Eigenvalues are sorted in ascending order
+        let vs1 = eigenvalues[0].sqrt(); // Slowest shear wave
+        let vs2 = eigenvalues[1].sqrt(); // Faster shear wave  
+        let vp = eigenvalues[2].sqrt();  // Compressional wave
         
         Ok((vp, vs1, vs2))
+    }
+    
+    /// Compute eigenvalues of a 3x3 symmetric matrix analytically
+    fn compute_eigenvalues_3x3(&self, matrix: &Array2<f64>) -> KwaversResult<[f64; 3]> {
+        // For a 3x3 symmetric matrix, we can use Cardano's method
+        let a11 = matrix[[0, 0]];
+        let a22 = matrix[[1, 1]];
+        let a33 = matrix[[2, 2]];
+        let a12 = matrix[[0, 1]];
+        let a13 = matrix[[0, 2]];
+        let a23 = matrix[[1, 2]];
+        
+        // Characteristic polynomial: det(A - λI) = 0
+        // -λ³ + p₂λ² + p₁λ + p₀ = 0
+        let p2 = a11 + a22 + a33; // Trace
+        let p1 = -(a11*a22 + a11*a33 + a22*a33 - a12*a12 - a13*a13 - a23*a23);
+        let p0 = a11*a22*a33 + 2.0*a12*a13*a23 - a11*a23*a23 - a22*a13*a13 - a33*a12*a12;
+        
+        // Convert to depressed cubic: t³ + pt + q = 0
+        // where λ = t + p₂/3
+        let p = p1 - p2*p2/3.0;
+        let q = 2.0*p2*p2*p2/27.0 - p2*p1/3.0 + p0;
+        
+        // Discriminant
+        let discriminant = -(4.0*p*p*p + 27.0*q*q) / 108.0;
+        
+        let mut eigenvalues = [0.0; 3];
+        
+        if discriminant >= 0.0 {
+            // Three real roots
+            let m = 2.0 * (-p/3.0).sqrt();
+            let theta = (3.0*q / (p*m)).acos() / 3.0;
+            
+            eigenvalues[0] = m * (theta).cos() + p2/3.0;
+            eigenvalues[1] = m * (theta - 2.0*std::f64::consts::PI/3.0).cos() + p2/3.0;
+            eigenvalues[2] = m * (theta - 4.0*std::f64::consts::PI/3.0).cos() + p2/3.0;
+            
+            // Sort eigenvalues
+            eigenvalues.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        } else {
+            // Should not happen for positive definite matrices
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "christoffel_matrix".to_string(),
+                value: "complex eigenvalues".to_string(),
+                constraint: "Matrix must be positive definite".to_string(),
+            }));
+        }
+        
+        Ok(eigenvalues)
     }
 }
 
