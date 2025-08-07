@@ -506,10 +506,13 @@ impl EnhancedElasticWaveHelper {
         let mut k = vec![0.0; n];
         let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
         
-        for i in 0..n/2 {
+        // Positive frequencies (including Nyquist for even n)
+        for i in 0..=n/2 {
             k[i] = i as f64 * dk;
         }
-        for i in n/2..n {
+        
+        // Negative frequencies
+        for i in n/2+1..n {
             k[i] = -((n - i) as f64) * dk;
         }
         

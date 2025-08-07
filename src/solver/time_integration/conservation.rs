@@ -180,9 +180,6 @@ impl ConservationMonitor {
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let mut total_energy = 0.0;
         
-        // Use default gamma for air
-        let gamma = 1.4;
-        
         Zip::indexed(pressure)
             .and(velocity_x)
             .and(velocity_y)
@@ -193,15 +190,20 @@ impl ConservationMonitor {
                 let z = k as f64 * self.grid.dz;
                 
                 let density = medium.density(x, y, z, &self.grid);
+                let gamma = medium.gamma(x, y, z, &self.grid);
                 
                 // Kinetic energy density
                 let kinetic = 0.5 * density * (vx*vx + vy*vy + vz*vz);
                 
                 // Internal energy density (ideal gas)
                 let gamma_minus_one = gamma - 1.0;
-                let internal = p / gamma_minus_one;
-                
-                total_energy += (kinetic + internal) * dv;
+                if gamma_minus_one.abs() > 1e-9 { // Avoid division by zero for gamma = 1
+                    let internal = p / gamma_minus_one;
+                    total_energy += (kinetic + internal) * dv;
+                } else {
+                    // For gamma = 1 (isothermal), only kinetic energy
+                    total_energy += kinetic * dv;
+                }
             });
         
         total_energy
