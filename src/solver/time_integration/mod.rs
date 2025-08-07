@@ -145,6 +145,12 @@ impl MultiRateTimeIntegrator {
         Ok(current_time)
     }
     
+    /// Configure conservation monitor for specific medium
+    pub fn configure_for_medium(&mut self, medium_type: &str) {
+        let gamma = ConservationMonitor::gamma_for_medium(medium_type);
+        self.conservation_monitor.set_gamma(gamma);
+    }
+    
     /// Compute stable time steps for each physics component
     fn compute_component_time_steps(
         &self,

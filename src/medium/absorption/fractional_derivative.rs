@@ -154,28 +154,31 @@ impl FractionalDerivativeAbsorption {
     pub fn apply_absorption_frequency_domain(
         &self,
         pressure_spectrum: &mut Array3<Complex<f64>>,
-        k_squared: &Array3<f64>,
-        grid: &Grid,
+        k_vec: &Array3<f64>,
+        c0: f64,
         dt: f64,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = pressure_spectrum.dim();
         
         // Apply frequency-dependent absorption
+        // For power law absorption: α(f) = α₀ * (f/f_ref)^y
+        // The attenuation over time dt is: exp(-α(f) * c₀ * dt)
+        
         (0..nx).for_each(|i| {
             (0..ny).for_each(|j| {
                 (0..nz).for_each(|k| {
-                    let k2 = k_squared[[i, j, k]];
-                    if k2 > 0.0 {
-                        // Fractional Laplacian in k-space: (-k²)^(α/2)
-                        let k_mag = k2.sqrt();
-                        let fractional_k = k_mag.powf(self.fractional_order);
+                    let k_mag = k_vec[[i, j, k]];
+                    if k_mag > 0.0 {
+                        // Convert wavenumber to frequency: f = k * c₀ / (2π)
+                        let frequency = k_mag * c0 / (2.0 * PI);
                         
-                        // Absorption coefficient
-                        let alpha = self.alpha_0 * (k_mag / (2.0 * PI * self.reference_frequency))
-                            .powf(self.power_law_exponent - 1.0);
+                        // Power law absorption coefficient
+                        let alpha = self.alpha_0 * (frequency / self.reference_frequency)
+                            .powf(self.power_law_exponent);
                         
                         // Apply absorption as exponential decay
-                        let decay = (-alpha * fractional_k * dt).exp();
+                        // exp(-α * c₀ * dt) for propagation over distance c₀ * dt
+                        let decay = (-alpha * c0 * dt).exp();
                         pressure_spectrum[[i, j, k]] *= decay;
                     }
                 });
@@ -296,5 +299,34 @@ mod tests {
         let alpha_2mhz = model.absorption_coefficient(2e6);
         let expected = 0.5 * 2.0_f64.powf(1.1);
         assert!((alpha_2mhz - expected).abs() < 1e-6);
+    }
+    
+    #[test]
+    fn test_frequency_domain_absorption() {
+        use rustfft::num_complex::Complex;
+        let model = FractionalDerivativeAbsorption::new(1.0, 0.1, 1e6);
+        
+        // Create test spectrum
+        let mut spectrum = Array3::from_elem((3, 3, 3), Complex::new(1.0, 0.0));
+        let mut k_vec = Array3::zeros((3, 3, 3));
+        
+        // Set a specific wavenumber
+        let c0 = 1500.0;
+        let freq = 2e6;
+        k_vec[[1, 1, 1]] = 2.0 * PI * freq / c0;
+        
+        // Apply absorption
+        let dt = 1e-6;
+        model.apply_absorption_frequency_domain(&mut spectrum, &k_vec, c0, dt).unwrap();
+        
+        // Check that the center point was attenuated
+        let expected_alpha = 0.1 * (freq / 1e6).powf(1.0);
+        let expected_decay = (-expected_alpha * c0 * dt).exp();
+        
+        assert!((spectrum[[1, 1, 1]].re - expected_decay).abs() < 1e-10);
+        assert!(spectrum[[1, 1, 1]].im.abs() < 1e-10);
+        
+        // Check that zero-frequency points were not attenuated
+        assert!((spectrum[[0, 0, 0]].re - 1.0).abs() < 1e-10);
     }
 }

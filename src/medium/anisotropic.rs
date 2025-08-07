@@ -132,16 +132,72 @@ impl StiffnessTensor {
     
     /// Rotate stiffness tensor by Euler angles
     pub fn rotate(&self, phi: f64, theta: f64, psi: f64) -> Self {
-        // Bond transformation matrix for rotation
+        // Build 3x3 rotation matrix from Euler angles (ZYX convention)
         let (sp, cp) = phi.sin_cos();
         let (st, ct) = theta.sin_cos();
         let (ss, cs) = psi.sin_cos();
         
-        // Rotation matrix (simplified for demonstration)
-        let mut rotated = self.c.clone();
+        // Rotation matrix R
+        let r = [
+            [ct*cp, ct*sp, -st],
+            [ss*st*cp - cs*sp, ss*st*sp + cs*cp, ss*ct],
+            [cs*st*cp + ss*sp, cs*st*sp - ss*cp, cs*ct],
+        ];
+        
+        // Build 6x6 Bond transformation matrix
+        let mut bond = Array2::zeros((6, 6));
+        
+        // Fill Bond matrix according to Voigt notation transformation rules
+        // For stress/strain: σ' = M σ, where M is the Bond matrix
+        
+        // Normal components (11, 22, 33)
+        bond[[0, 0]] = r[0][0] * r[0][0];
+        bond[[0, 1]] = r[0][1] * r[0][1];
+        bond[[0, 2]] = r[0][2] * r[0][2];
+        bond[[0, 3]] = 2.0 * r[0][1] * r[0][2];
+        bond[[0, 4]] = 2.0 * r[0][0] * r[0][2];
+        bond[[0, 5]] = 2.0 * r[0][0] * r[0][1];
+        
+        bond[[1, 0]] = r[1][0] * r[1][0];
+        bond[[1, 1]] = r[1][1] * r[1][1];
+        bond[[1, 2]] = r[1][2] * r[1][2];
+        bond[[1, 3]] = 2.0 * r[1][1] * r[1][2];
+        bond[[1, 4]] = 2.0 * r[1][0] * r[1][2];
+        bond[[1, 5]] = 2.0 * r[1][0] * r[1][1];
+        
+        bond[[2, 0]] = r[2][0] * r[2][0];
+        bond[[2, 1]] = r[2][1] * r[2][1];
+        bond[[2, 2]] = r[2][2] * r[2][2];
+        bond[[2, 3]] = 2.0 * r[2][1] * r[2][2];
+        bond[[2, 4]] = 2.0 * r[2][0] * r[2][2];
+        bond[[2, 5]] = 2.0 * r[2][0] * r[2][1];
+        
+        // Shear components (23, 13, 12)
+        bond[[3, 0]] = r[1][0] * r[2][0];
+        bond[[3, 1]] = r[1][1] * r[2][1];
+        bond[[3, 2]] = r[1][2] * r[2][2];
+        bond[[3, 3]] = r[1][1] * r[2][2] + r[1][2] * r[2][1];
+        bond[[3, 4]] = r[1][0] * r[2][2] + r[1][2] * r[2][0];
+        bond[[3, 5]] = r[1][0] * r[2][1] + r[1][1] * r[2][0];
+        
+        bond[[4, 0]] = r[0][0] * r[2][0];
+        bond[[4, 1]] = r[0][1] * r[2][1];
+        bond[[4, 2]] = r[0][2] * r[2][2];
+        bond[[4, 3]] = r[0][1] * r[2][2] + r[0][2] * r[2][1];
+        bond[[4, 4]] = r[0][0] * r[2][2] + r[0][2] * r[2][0];
+        bond[[4, 5]] = r[0][0] * r[2][1] + r[0][1] * r[2][0];
+        
+        bond[[5, 0]] = r[0][0] * r[1][0];
+        bond[[5, 1]] = r[0][1] * r[1][1];
+        bond[[5, 2]] = r[0][2] * r[1][2];
+        bond[[5, 3]] = r[0][1] * r[1][2] + r[0][2] * r[1][1];
+        bond[[5, 4]] = r[0][0] * r[1][2] + r[0][2] * r[1][0];
+        bond[[5, 5]] = r[0][0] * r[1][1] + r[0][1] * r[1][0];
         
         // Apply Bond transformation: C' = M^T C M
-        // This is simplified - full implementation would use 6x6 Bond matrices
+        let bond_t = bond.t();
+        let temp = bond_t.dot(&self.c);
+        let rotated = temp.dot(&bond);
         
         Self {
             c: rotated,
@@ -365,5 +421,31 @@ mod tests {
         let (vp, vs1, vs2) = muscle.wave_velocities((1.0, 0.0, 0.0)).unwrap();
         assert!(vp > vs1);
         assert!(vp > vs2);
+    }
+    
+    #[test]
+    fn test_stiffness_rotation() {
+        // Create a simple transversely isotropic tensor
+        let stiffness = StiffnessTensor::transversely_isotropic(
+            10e9, 6e9, 8e9, 20e9, 3e9
+        ).unwrap();
+        
+        // Rotate by 90 degrees around z-axis
+        let rotated = stiffness.rotate(0.0, 0.0, PI / 2.0);
+        
+        // After 90° rotation around z, C11 and C22 should swap
+        assert!((rotated.c[[0, 0]] - stiffness.c[[1, 1]]).abs() < 1e-6);
+        assert!((rotated.c[[1, 1]] - stiffness.c[[0, 0]]).abs() < 1e-6);
+        
+        // C33 should remain unchanged (z-direction)
+        assert!((rotated.c[[2, 2]] - stiffness.c[[2, 2]]).abs() < 1e-6);
+        
+        // Test that the rotated tensor is still symmetric
+        for i in 0..6 {
+            for j in i+1..6 {
+                assert!((rotated.c[[i, j]] - rotated.c[[j, i]]).abs() < 1e-10,
+                    "Rotated tensor not symmetric at [{}, {}]", i, j);
+            }
+        }
     }
 }

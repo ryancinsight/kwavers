@@ -35,6 +35,8 @@ pub struct ConservationMonitor {
     error_history: Vec<ConservationError>,
     /// Tolerance for conservation violations
     tolerance: f64,
+    /// Adiabatic index (gamma) for the medium
+    gamma: f64,
 }
 
 /// Conservation error at a time step
@@ -55,10 +57,16 @@ pub struct ConservationError {
 impl ConservationMonitor {
     /// Create a new conservation monitor
     pub fn new(tolerance: f64) -> Self {
+        Self::with_gamma(tolerance, 1.4) // Default to air
+    }
+    
+    /// Create a new conservation monitor with specified gamma
+    pub fn with_gamma(tolerance: f64, gamma: f64) -> Self {
         Self {
             initial_quantities: None,
             error_history: Vec::new(),
             tolerance,
+            gamma,
         }
     }
     
@@ -206,6 +214,8 @@ impl ConservationMonitor {
             if let (Some(vx), Some(vy), Some(vz)) = 
                 (fields.get("velocity_x"), fields.get("velocity_y"), fields.get("velocity_z")) {
                 
+                let gamma_minus_one = self.gamma - 1.0;
+                
                 Zip::from(density)
                     .and(vx)
                     .and(vy)
@@ -215,12 +225,14 @@ impl ConservationMonitor {
                         // Kinetic energy: 0.5 * rho * v²
                         let kinetic = 0.5 * rho * (vx*vx + vy*vy + vz*vz);
                         // Internal energy: p / (gamma - 1) for ideal gas
-                        let internal = p / 0.4; // gamma = 1.4 for air
+                        // For liquids, a different equation of state may be needed
+                        let internal = p / gamma_minus_one;
                         total_energy += (kinetic + internal) * dv;
                     });
             } else {
                 // Just internal energy
-                total_energy = pressure.iter().sum::<f64>() * dv / 0.4;
+                let gamma_minus_one = self.gamma - 1.0;
+                total_energy = pressure.iter().sum::<f64>() * dv / gamma_minus_one;
             }
             
             total_energy
@@ -253,6 +265,23 @@ impl ConservationMonitor {
             })
             .cloned()
     }
+    
+    /// Set the adiabatic index for the medium
+    pub fn set_gamma(&mut self, gamma: f64) {
+        self.gamma = gamma;
+    }
+    
+    /// Get gamma value for common media
+    pub fn gamma_for_medium(medium: &str) -> f64 {
+        match medium.to_lowercase().as_str() {
+            "air" => 1.4,
+            "water" | "liquid" => 7.15, // Tait equation parameter for water
+            "tissue" => 4.0, // Approximate for soft tissue
+            "helium" => 1.66,
+            "argon" => 1.67,
+            _ => 1.4, // Default to air
+        }
+    }
 }
 
 /// Conservative coupling interface for multi-rate integration
@@ -272,4 +301,45 @@ pub trait ConservativeCoupling {
         fields: &HashMap<String, Array3<f64>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, Array3<f64>>>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Grid;
+    
+    #[test]
+    fn test_gamma_for_medium() {
+        assert!((ConservationMonitor::gamma_for_medium("air") - 1.4).abs() < 1e-10);
+        assert!((ConservationMonitor::gamma_for_medium("water") - 7.15).abs() < 1e-10);
+        assert!((ConservationMonitor::gamma_for_medium("tissue") - 4.0).abs() < 1e-10);
+    }
+    
+    #[test]
+    fn test_conservation_with_different_gamma() {
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        
+        // Create fields
+        let mut fields = HashMap::new();
+        let density = Array3::from_elem((10, 10, 10), 1000.0); // kg/m³
+        let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa
+        fields.insert("density".to_string(), density);
+        fields.insert("pressure".to_string(), pressure);
+        
+        // Test with air
+        let mut monitor_air = ConservationMonitor::with_gamma(1e-10, 1.4);
+        monitor_air.initialize(&fields, &grid).unwrap();
+        let quantities_air = monitor_air.compute_conserved_quantities(&fields, &grid).unwrap();
+        
+        // Test with water
+        let mut monitor_water = ConservationMonitor::with_gamma(1e-10, 7.15);
+        monitor_water.initialize(&fields, &grid).unwrap();
+        let quantities_water = monitor_water.compute_conserved_quantities(&fields, &grid).unwrap();
+        
+        // Energy should be different due to different gamma
+        assert!((quantities_air.energy - quantities_water.energy).abs() > 1e-6);
+        
+        // But mass should be the same
+        assert!((quantities_air.mass - quantities_water.mass).abs() < 1e-10);
+    }
 }
