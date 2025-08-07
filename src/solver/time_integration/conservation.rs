@@ -315,39 +315,57 @@ pub trait ConservativeCoupling {
 mod tests {
     use super::*;
     use crate::Grid;
+    use crate::HomogeneousMedium;
     
     #[test]
-    fn test_gamma_for_medium() {
-        assert!((ConservationMonitor::gamma_for_medium("air") - 1.4).abs() < 1e-10);
-        assert!((ConservationMonitor::gamma_for_medium("water") - 7.15).abs() < 1e-10);
-        assert!((ConservationMonitor::gamma_for_medium("tissue") - 4.0).abs() < 1e-10);
+    fn test_conservation_monitoring() {
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let mut monitor = ConservationMonitor::new(&grid);
+        
+        // Create initial conserved quantities
+        let initial = ConservedQuantities {
+            mass: 1000.0,
+            momentum: (0.0, 0.0, 0.0),
+            energy: 1e6,
+            angular_momentum: (0.0, 0.0, 0.0),
+        };
+        
+        monitor.set_initial(initial.clone());
+        
+        // Test conservation check with no change
+        let error = monitor.check_conservation(0.1, initial.clone()).unwrap();
+        assert!(error.max_error() < 1e-10);
+        
+        // Test conservation check with small change
+        let mut changed = initial.clone();
+        changed.mass *= 1.001; // 0.1% change
+        let error = monitor.check_conservation(0.2, changed).unwrap();
+        assert!(error.mass_error > 0.0);
+        assert!(error.mass_error < 0.002);
     }
     
     #[test]
-    fn test_conservation_with_different_gamma() {
+    fn test_energy_computation() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let monitor = ConservationMonitor::new(&grid);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
-        // Create fields
-        let mut fields = HashMap::new();
-        let density = Array3::from_elem((10, 10, 10), 1000.0); // kg/m³
+        // Create test fields
         let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa
-        fields.insert("density".to_string(), density);
-        fields.insert("pressure".to_string(), pressure);
+        let velocity_x = Array3::zeros((10, 10, 10));
+        let velocity_y = Array3::zeros((10, 10, 10));
+        let velocity_z = Array3::zeros((10, 10, 10));
         
-        // Test with air
-        let mut monitor_air = ConservationMonitor::with_gamma(1e-10, 1.4);
-        monitor_air.initialize(&fields, &grid).unwrap();
-        let quantities_air = monitor_air.compute_conserved_quantities(&fields, &grid).unwrap();
+        // Compute total energy
+        let energy = monitor.compute_total_energy(
+            &pressure, &velocity_x, &velocity_y, &velocity_z, &medium
+        );
         
-        // Test with water
-        let mut monitor_water = ConservationMonitor::with_gamma(1e-10, 7.15);
-        monitor_water.initialize(&fields, &grid).unwrap();
-        let quantities_water = monitor_water.compute_conserved_quantities(&fields, &grid).unwrap();
+        // Energy should be positive
+        assert!(energy > 0.0);
         
-        // Energy should be different due to different gamma
-        assert!((quantities_air.energy - quantities_water.energy).abs() > 1e-6);
-        
-        // But mass should be the same
-        assert!((quantities_air.mass - quantities_water.mass).abs() < 1e-10);
+        // Compute acoustic energy
+        let acoustic_energy = monitor.compute_acoustic_energy(&pressure, &medium);
+        assert!(acoustic_energy > 0.0);
     }
 }
