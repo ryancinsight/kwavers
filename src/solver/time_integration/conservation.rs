@@ -175,31 +175,26 @@ impl ConservationMonitor {
             let (nx, ny, nz) = density.dim();
             
             // Compute momentum and angular momentum using iterators
-            (0..nx).for_each(|i| {
-                (0..ny).for_each(|j| {
-                    (0..nz).for_each(|k| {
-                        let rho = density[[i, j, k]];
-                        let vx_val = vx[[i, j, k]];
-                        let vy_val = vy[[i, j, k]];
-                        let vz_val = vz[[i, j, k]];
-                        
-                        // Linear momentum
-                        px += rho * vx_val * dv;
-                        py += rho * vy_val * dv;
-                        pz += rho * vz_val * dv;
-                        
-                        // Position relative to grid center
-                        let x = (i as f64 - nx as f64 / 2.0) * grid.dx;
-                        let y = (j as f64 - ny as f64 / 2.0) * grid.dy;
-                        let z = (k as f64 - nz as f64 / 2.0) * grid.dz;
-                        
-                        // Angular momentum L = r × p
-                        lx += rho * (y * vz_val - z * vy_val) * dv;
-                        ly += rho * (z * vx_val - x * vz_val) * dv;
-                        lz += rho * (x * vy_val - y * vx_val) * dv;
-                    });
+            Zip::indexed(&density)
+                .and(&vx)
+                .and(&vy)
+                .and(&vz)
+                .for_each(|(i, j, k), &rho, &vx_val, &vy_val, &vz_val| {
+                    // Linear momentum
+                    px += rho * vx_val * dv;
+                    py += rho * vy_val * dv;
+                    pz += rho * vz_val * dv;
+
+                    // Position relative to grid center
+                    let x = (i as f64 - nx as f64 / 2.0) * grid.dx;
+                    let y = (j as f64 - ny as f64 / 2.0) * grid.dy;
+                    let z = (k as f64 - nz as f64 / 2.0) * grid.dz;
+
+                    // Angular momentum L = r × p
+                    lx += rho * (y * vz_val - z * vy_val) * dv;
+                    ly += rho * (z * vx_val - x * vz_val) * dv;
+                    lz += rho * (x * vy_val - y * vx_val) * dv;
                 });
-            });
             
             ((px, py, pz), (lx, ly, lz))
         } else {
