@@ -103,7 +103,8 @@ impl BenchmarkSuite {
         println!("=== Kwavers Benchmark Suite ===\n");
         
         // Run benchmarks for each grid size
-        for &grid_size in &self.config.grid_sizes {
+        let grid_sizes = self.config.grid_sizes.clone();
+        for &grid_size in &grid_sizes {
             println!("Running benchmarks for {}³ grid...", grid_size);
             
             self.benchmark_pstd(grid_size)?;
@@ -132,24 +133,26 @@ impl BenchmarkSuite {
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         let profiler = PerformanceProfiler::new(&grid);
         
-        // Initialize plugin system
-        let mut plugin_manager = PluginManager::new();
+        // Initialize PSTD solver
         let config = crate::solver::pstd::PstdConfig::default();
-        let pstd_plugin = PstdPlugin::new(config);
-        plugin_manager.add_plugin(Box::new(pstd_plugin))?;
+        let mut solver = crate::solver::pstd::PstdSolver::new(config, &grid)?;
         
-        // Create context
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-        let mut context = PluginContext::new(&grid, &medium);
+        // Create medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Initialize fields
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
         self.initialize_gaussian_pulse(&mut fields, &grid);
-        context.fields = fields;
+        let mut pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let mut vx = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut vy = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut vz = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         // Warmup
         for _ in 0..10 {
-            plugin_manager.execute_plugins(&mut context, 1e-6)?;
+            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            solver.update_pressure(&mut pressure, &divergence, &medium, 1e-6)?;
+            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, 1e-6)?;
         }
         
         // Benchmark
@@ -160,11 +163,13 @@ impl BenchmarkSuite {
             let _scope = profiler.time_scope("pstd_step");
             
             for _ in 0..self.config.time_steps {
-                plugin_manager.execute_plugins(&mut context, 1e-6)?;
+                let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+                solver.update_pressure(&mut pressure, &divergence, &medium, 1e-6)?;
+                solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, 1e-6)?;
             }
             
             // Estimate memory usage
-            let field_memory = context.fields.len() * std::mem::size_of::<f64>();
+            let field_memory = (pressure.len() + vx.len() + vy.len() + vz.len()) * std::mem::size_of::<f64>();
             total_memory = total_memory.max(field_memory);
         }
         
@@ -191,32 +196,32 @@ impl BenchmarkSuite {
         
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         
-        // Initialize plugin system
-        let mut plugin_manager = PluginManager::new();
+        // Initialize FDTD solver
         let config = crate::solver::fdtd::FdtdConfig::default();
-        let fdtd_plugin = FdtdPlugin::new(config);
-        plugin_manager.add_plugin(Box::new(fdtd_plugin))?;
+        let mut solver = crate::solver::fdtd::FdtdSolver::new(config, &grid)?;
         
-        // Create context
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-        let mut context = PluginContext::new(&grid, &medium);
+        // Create medium
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Initialize fields
         let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz)); // FDTD uses 13 fields
         self.initialize_gaussian_pulse(&mut fields, &grid);
-        context.fields = fields;
+        
+        // Create plugin context for FDTD
+        let context = PluginContext::new(0, 100, 1e6);
         
         // Warmup
         for _ in 0..10 {
-            plugin_manager.execute_plugins(&mut context, 1e-6)?;
+            solver.update(&mut fields, &grid, &medium, 1e-6, 0.0, &context)?;
         }
         
         // Benchmark
         let start = Instant::now();
         
         for _ in 0..self.config.iterations {
-            for _ in 0..self.config.time_steps {
-                plugin_manager.execute_plugins(&mut context, 1e-6)?;
+            for step in 0..self.config.time_steps {
+                let t = step as f64 * 1e-6;
+                solver.update(&mut fields, &grid, &medium, 1e-6, t, &context)?;
             }
         }
         
@@ -253,8 +258,8 @@ impl BenchmarkSuite {
             enable_diffusivity: true,
             ..Default::default()
         };
-        let mut solver = KuznetsovWave::new(&grid, config);
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let mut solver = KuznetsovWave::new(&grid, config)?;
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create fields array (7 fields typical for acoustic simulation)
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
@@ -363,7 +368,7 @@ impl BenchmarkSuite {
     }
 
     /// Benchmark GPU operations
-    fn benchmark_gpu(&mut self, grid_size: usize) -> KwaversResult<()> {
+    fn benchmark_gpu(&mut self, _grid_size: usize) -> KwaversResult<()> {
         #[cfg(feature = "gpu-acceleration")]
         {
             // Note: GPU benchmarking would require async runtime

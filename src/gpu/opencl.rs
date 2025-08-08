@@ -624,7 +624,7 @@ pub fn launch_webgpu_kernel(
 ) -> KwaversResult<()> {
     #[cfg(feature = "wgpu")]
     {
-        use wgpu::{Device, Queue, CommandEncoder, ComputePass};
+        // WebGPU types would be imported here if needed
         
         // Validate input dimensions first
         if _grid_size.0 == 0 || _grid_size.1 == 0 || _grid_size.2 == 0 {

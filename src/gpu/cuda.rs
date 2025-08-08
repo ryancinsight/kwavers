@@ -640,8 +640,7 @@ pub fn launch_cuda_kernel(
 ) -> KwaversResult<()> {
     #[cfg(feature = "cudarc")]
     {
-        use cudarc::driver::{CudaDevice, CudaFunction, LaunchAsync, LaunchConfig};
-        use std::sync::Arc;
+        use cudarc::driver::{CudaDevice, LaunchConfig};
         
         // Get the current CUDA device
         let device = CudaDevice::new(0).map_err(|e| {
