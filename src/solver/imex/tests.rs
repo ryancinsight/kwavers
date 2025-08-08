@@ -135,7 +135,7 @@ mod tests {
     }
     
     #[test]
-    fn test_implicit_solver_using_newton() {
+    fn test_implicit_solver_linear() {
         // Use linear solver for simple linear problem
         let solver = LinearSolver::default();
         let initial = Array3::from_elem((4, 4, 4), 1.0);

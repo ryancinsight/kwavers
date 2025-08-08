@@ -85,7 +85,10 @@ mod tests {
         }
         
         // Update pressure using the wave equation
-        solver.update(&fields.index_axis(Axis(0), 0).to_owned(), &medium, 1e-8).unwrap();
+        // KuznetsovWave uses update_wave from AcousticWaveModel trait
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
+        let source = crate::source::NullSource;
+        solver.update_wave(&mut fields, &pressure, &source, &grid, &medium, 1e-8, 0.0);
     }
     
     /// Test nonlinear steepening with Kuznetsov equation

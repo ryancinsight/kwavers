@@ -376,19 +376,30 @@
   - Updated PstdSolver API calls to use correct methods
   - Fixed PhasedArrayConfig field names and initialization
   - Corrected HeterogeneousMedium construction
+  - Fixed all solver API mismatches in tests and benchmarks
 - **Additional Iterator Enhancements** ✅
   - Replaced nested loops in kuznetsov.rs source term calculation
   - Improved 3D stencil operations with Zip::indexed
   - Enhanced RK4Workspace initialization with DRY principle
   - Converted grid-based array initialization to use grid.zeros_array()
+  - Replaced triple nested loops in bubble_dynamics interactions with iterator patterns
+  - Enhanced stencil gradient computations with slice-based iterators
 - **Code Cleanup** ✅
   - Removed unused imports (CUDA, wgpu, etc.)
   - Fixed closure argument patterns
   - Improved error handling with appropriate error types
+  - Fixed all variable naming violations (old_to_new → index_mapping, field_new → updated_field)
+  - Renamed misleading test function test_implicit_solver_using_newton → test_implicit_solver_linear
 - **Zero-Copy Improvements** ✅
   - Enhanced stability filter with iterator-based approach
   - Eliminated unnecessary intermediate allocations
-  - Improved memory efficiency in validation tests 
+  - Improved memory efficiency in validation tests
+  - Applied functional patterns with flat_map, fold, and iterator combinators
+- **Plugin System Integration** ✅
+  - Updated validation tests to use plugin system correctly
+  - Fixed benchmark suite to use PluginManager.register() and update_all()
+  - Corrected PluginContext constructor usage (3 args: step, total_steps, frequency)
+  - Fixed KuznetsovWave test to use update_wave method from AcousticWaveModel trait 
 
 ## **k-Wave Feature Parity Analysis** 🔍
 

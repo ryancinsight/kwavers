@@ -545,13 +545,13 @@ impl KuznetsovWave {
         // Now update pressure using second-order time derivative
         // ∂²p/∂t² = c²∇²p + nonlinear_terms + diffusivity_terms
         
-        // Get previous pressure for second-order derivative
-        let pressure_prev = self.pressure_prev.as_ref().unwrap();
-        
         // Compute all terms of the Kuznetsov equation
         let laplacian = self.compute_laplacian(pressure, grid)?;
         let nonlinear_term = self.compute_nonlinear_term(pressure, medium, grid, dt)?;
         let diffusivity_term = self.compute_diffusivity_term(pressure, medium, grid, dt)?;
+        
+        // Get previous pressure for second-order derivative
+        let pressure_prev = self.pressure_prev.as_ref().unwrap();
         
         // Compute linear wave term (c²∇²p)
         let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);

@@ -92,34 +92,32 @@ fn gradient_3d_order2<T: StencilValue>(
     let (nx, ny, nz) = input.dim();
     
     // X-gradient
-    for i in 1..nx-1 {
-        for j in 0..ny {
-            for k in 0..nz {
-                let diff = input[[i+1, j, k]] + input[[i-1, j, k]].mul_f64(-1.0);
-                grad_x[[i, j, k]] = diff.mul_f64(0.5 * dx_inv);
-            }
-        }
-    }
+    use ndarray::s;
+    let x_interior = s![1..nx-1, .., ..];
+    ndarray::Zip::indexed(&mut grad_x.slice_mut(x_interior))
+        .for_each(|(i, j, k), grad| {
+            let i = i + 1; // Adjust for slice offset
+            let diff = input[[i+1, j, k]] + input[[i-1, j, k]].mul_f64(-1.0);
+            *grad = diff.mul_f64(0.5 * dx_inv);
+        });
     
     // Y-gradient
-    for i in 0..nx {
-        for j in 1..ny-1 {
-            for k in 0..nz {
-                let diff = input[[i, j+1, k]] + input[[i, j-1, k]].mul_f64(-1.0);
-                grad_y[[i, j, k]] = diff.mul_f64(0.5 * dy_inv);
-            }
-        }
-    }
+    let y_interior = s![.., 1..ny-1, ..];
+    ndarray::Zip::indexed(&mut grad_y.slice_mut(y_interior))
+        .for_each(|(i, j, k), grad| {
+            let j = j + 1; // Adjust for slice offset
+            let diff = input[[i, j+1, k]] + input[[i, j-1, k]].mul_f64(-1.0);
+            *grad = diff.mul_f64(0.5 * dy_inv);
+        });
     
     // Z-gradient
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 1..nz-1 {
-                let diff = input[[i, j, k+1]] + input[[i, j, k-1]].mul_f64(-1.0);
-                grad_z[[i, j, k]] = diff.mul_f64(0.5 * dz_inv);
-            }
-        }
-    }
+    let z_interior = s![.., .., 1..nz-1];
+    ndarray::Zip::indexed(&mut grad_z.slice_mut(z_interior))
+        .for_each(|(i, j, k), grad| {
+            let k = k + 1; // Adjust for slice offset
+            let diff = input[[i, j, k+1]] + input[[i, j, k-1]].mul_f64(-1.0);
+            *grad = diff.mul_f64(0.5 * dz_inv);
+        });
 }
 
 #[inline(always)]

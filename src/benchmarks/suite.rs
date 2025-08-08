@@ -196,9 +196,14 @@ impl BenchmarkSuite {
         
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         
-        // Initialize FDTD solver
-        let config = crate::solver::fdtd::FdtdConfig::default();
-        let mut solver = crate::solver::fdtd::FdtdSolver::new(config, &grid)?;
+        // Initialize FDTD solver through plugin system
+        
+        let mut plugin_manager = PluginManager::new();
+        
+        // Create and add FDTD plugin
+        let fdtd_config = crate::solver::fdtd::FdtdConfig::default();
+        let fdtd_plugin = FdtdPlugin::new(fdtd_config, &grid)?;
+        plugin_manager.register(Box::new(fdtd_plugin))?;
         
         // Create medium
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
@@ -207,12 +212,12 @@ impl BenchmarkSuite {
         let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz)); // FDTD uses 13 fields
         self.initialize_gaussian_pulse(&mut fields, &grid);
         
-        // Create plugin context for FDTD
-        let context = PluginContext::new(0, 100, 1e6);
+        let dt = 1e-6;
         
         // Warmup
         for _ in 0..10 {
-            solver.update(&mut fields, &grid, &medium, 1e-6, 0.0, &context)?;
+            let context = PluginContext::new(0, 10, 1e6);
+            plugin_manager.update_all(&mut fields, &grid, &medium, dt, 0.0, &context)?;
         }
         
         // Benchmark
@@ -220,8 +225,9 @@ impl BenchmarkSuite {
         
         for _ in 0..self.config.iterations {
             for step in 0..self.config.time_steps {
-                let t = step as f64 * 1e-6;
-                solver.update(&mut fields, &grid, &medium, 1e-6, t, &context)?;
+                let t = step as f64 * dt;
+                let context = PluginContext::new(step, self.config.time_steps, 1e6);
+                plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)?;
             }
         }
         
@@ -234,7 +240,7 @@ impl BenchmarkSuite {
             grid_size,
             runtime,
             grid_updates_per_second,
-            memory_mb: context.fields.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
+            memory_mb: fields.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
             metrics: HashMap::new(),
         });
         
@@ -281,7 +287,7 @@ impl BenchmarkSuite {
         let dt = 1e-6;
         let mut t = 0.0;
         for _ in 0..10 {
-            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
+            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
             prev_pressure.assign(&fields.index_axis(Axis(0), 0));
             t += dt;
         }
@@ -291,7 +297,7 @@ impl BenchmarkSuite {
         
         for _ in 0..self.config.iterations {
             for _ in 0..self.config.time_steps {
-                solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
+                solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
                 prev_pressure.assign(&fields.index_axis(Axis(0), 0));
                 t += dt;
             }
@@ -331,7 +337,7 @@ impl BenchmarkSuite {
             interpolation_scheme: InterpolationScheme::Conservative,
         };
         
-        let mut amr_manager = AMRManager::new(amr_config, &grid)?;
+        let mut amr_manager = AMRManager::new(amr_config, &grid);
         let mut field = grid.zeros_array();
         
         // Create sharp feature for refinement
@@ -341,7 +347,7 @@ impl BenchmarkSuite {
         let start = Instant::now();
         
         for _ in 0..self.config.iterations {
-            amr_manager.adapt_mesh(&field)?;
+            amr_manager.adapt_mesh(&field, 0.0)?;
         }
         
         let runtime = start.elapsed() / self.config.iterations as u32;
@@ -360,7 +366,7 @@ impl BenchmarkSuite {
             grid_size,
             runtime,
             grid_updates_per_second: 0.0, // Not applicable for AMR
-            memory_mb: memory_stats.total_bytes as f64 / 1e6,
+            memory_mb: memory_stats.active_cells as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
             metrics,
         });
         
