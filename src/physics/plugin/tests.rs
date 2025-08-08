@@ -235,8 +235,21 @@ mod tests {
 
     // Adapter tests are now in adapters.rs module
     
-    // Skip configuration test as it requires a concrete PluginConfig implementation
-    // TODO: Add a concrete PluginConfig type for testing
+    // Test configuration
+    #[derive(Debug, Clone)]
+    struct TestPluginConfig {
+        enabled: bool,
+        test_value: f64,
+    }
+    
+    impl Default for TestPluginConfig {
+        fn default() -> Self {
+            Self {
+                enabled: true,
+                test_value: 1.0,
+            }
+        }
+    }
 
     #[test]
     fn test_plugin_lifecycle() {

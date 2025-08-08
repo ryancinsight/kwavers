@@ -37,8 +37,8 @@ thread_local! {
 // 1. The outer mutex protects the cache HashMap
 // 2. The inner mutex protects the Fft3d instance which has mutable temp buffers
 // 
-// TODO: Consider using a pool pattern or thread-local FFT instances to avoid 
-// the inner mutex, as FFT operations are typically not concurrent on the same grid.
+// FFT planner instances are thread-safe and can be reused.
+// For better performance in production, consider using a global planner pool.
 lazy_static! {
     static ref FFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Mutex<Fft3d>>>> = Mutex::new(HashMap::new());
     static ref IFFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Ifft3d>>> = Mutex::new(HashMap::new());

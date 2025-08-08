@@ -84,10 +84,8 @@ mod tests {
             }
         }
         
-        // Skip this test due to missing step method
-        // TODO: Update test to use update_wave method instead of step
-        eprintln!("WARNING: Skipping stability test due to missing step method");
-        // The test would need to be rewritten to use update_wave method from AcousticWaveModel trait
+        // Update pressure using the wave equation
+        solver.update(&fields.index_axis(Axis(0), 0).to_owned(), &medium, 1e-8).unwrap();
     }
     
     /// Test nonlinear steepening with Kuznetsov equation

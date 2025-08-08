@@ -8,7 +8,7 @@ use kwavers::*;
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::physics::plugin::{PluginManager, PluginContext};
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array3, Array4, Axis, s};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -107,19 +107,17 @@ fn run_pstd_simulation(
     let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
     let sigma = grid.nx as f64 * grid.dx / 10.0; // Width of Gaussian
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let x = (i as f64 - center.0 as f64) * grid.dx;
-                let y = (j as f64 - center.1 as f64) * grid.dy;
-                let z = (k as f64 - center.2 as f64) * grid.dz;
-                let r2 = x * x + y * y + z * z;
-                
-                // Gaussian pulse
-                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
-            }
-        }
-    }
+    // Use iterator-based approach for better performance and zero-copy
+    fields.slice_mut(s![0, .., .., ..]).indexed_iter_mut()
+        .for_each(|((i, j, k), value)| {
+            let x = (i as f64 - center.0 as f64) * grid.dx;
+            let y = (j as f64 - center.1 as f64) * grid.dy;
+            let z = (k as f64 - center.2 as f64) * grid.dz;
+            let r2 = x * x + y * y + z * z;
+            
+            // Gaussian pulse
+            *value = (-r2 / (2.0 * sigma * sigma)).exp();
+        });
     
     // Time stepping
     let c_max = 1500.0;
@@ -199,18 +197,16 @@ fn run_fdtd_simulation(
     let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
     let sigma = grid.nx as f64 * grid.dx / 10.0;
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let x = (i as f64 - center.0 as f64) * grid.dx;
-                let y = (j as f64 - center.1 as f64) * grid.dy;
-                let z = (k as f64 - center.2 as f64) * grid.dz;
-                let r2 = x * x + y * y + z * z;
-                
-                fields[[0, i, j, k]] = (-r2 / (2.0 * sigma * sigma)).exp();
-            }
-        }
-    }
+    // Use iterator-based approach for better performance and zero-copy
+    fields.slice_mut(s![0, .., .., ..]).indexed_iter_mut()
+        .for_each(|((i, j, k), value)| {
+            let x = (i as f64 - center.0 as f64) * grid.dx;
+            let y = (j as f64 - center.1 as f64) * grid.dy;
+            let z = (k as f64 - center.2 as f64) * grid.dz;
+            let r2 = x * x + y * y + z * z;
+            
+            *value = (-r2 / (2.0 * sigma * sigma)).exp();
+        });
     
     // Time stepping
     let c_max = 1500.0;

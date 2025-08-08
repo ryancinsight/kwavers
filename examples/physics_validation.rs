@@ -4,7 +4,7 @@
 //! known analytical solutions in physics.
 
 use kwavers::{Grid, HomogeneousMedium, medium::Medium};
-use ndarray::Array3;
+use ndarray::{Array3, s};
 use std::f64::consts::PI;
 
 fn main() {
@@ -41,14 +41,14 @@ fn test_heat_diffusion() {
     
     // Initialize temperature field
     let mut temperature = Array3::<f64>::zeros((nx, nx, 1));
-    for i in 0..nx {
-        for j in 0..nx {
+    // Use iterator-based approach with slice for 2D iteration
+    temperature.slice_mut(ndarray::s![.., .., 0]).indexed_iter_mut()
+        .for_each(|((i, j), value)| {
             let x = i as f64 * dx;
             let y = j as f64 * dx;
             let r2 = (x - x0).powi(2) + (y - y0).powi(2);
-            temperature[[i, j, 0]] = T0 * (-r2 / (2.0 * sigma0 * sigma0)).exp();
-        }
-    }
+            *value = T0 * (-r2 / (2.0 * sigma0 * sigma0)).exp();
+        });
     
     // Store initial max temperature
     let initial_max = temperature.iter().fold(0.0f64, |a, &b| a.max(b));
@@ -146,11 +146,18 @@ fn test_wave_dispersion() {
         let mut p_prev = Array3::<f64>::zeros((nx, 1, 1));
         let mut p_curr = Array3::<f64>::zeros((nx, 1, 1));
         
-        for i in 0..nx {
-            let x = i as f64 * dx;
-            p_curr[[i, 0, 0]] = (k * x).sin();
-            p_prev[[i, 0, 0]] = (k * x - omega_exact * dt).sin();
-        }
+        // Use iterator approach for initialization
+        p_curr.slice_mut(ndarray::s![.., 0, 0]).indexed_iter_mut()
+            .for_each(|(i, value)| {
+                let x = i as f64 * dx;
+                *value = (k * x).sin();
+            });
+        
+        p_prev.slice_mut(ndarray::s![.., 0, 0]).indexed_iter_mut()
+            .for_each(|(i, value)| {
+                let x = i as f64 * dx;
+                *value = (k * x - omega_exact * dt).sin();
+            });
         
         // Propagate for one period
         let period = 2.0 * PI / omega_exact;
@@ -179,15 +186,15 @@ fn test_wave_dispersion() {
         let mut sum_expected = 0.0;
         let mut sum_actual = 0.0;
         
-        for i in 0..nx {
-            let x = i as f64 * dx;
-            let expected = (k * x).sin();
-            let actual = p_curr[[i, 0, 0]];
-            
-            sum_product += expected * actual;
-            sum_expected += expected * expected;
-            sum_actual += actual * actual;
-        }
+        // Use iterator with enumerate for index access
+        p_curr.slice(ndarray::s![.., 0, 0]).iter().enumerate()
+            .for_each(|(i, &actual)| {
+                let x = i as f64 * dx;
+                let expected = (k * x).sin();
+                sum_product += expected * actual;
+                sum_expected += expected * expected;
+                sum_actual += actual * actual;
+            });
         
         let correlation = sum_product / (sum_expected.sqrt() * sum_actual.sqrt());
         let phase_error = correlation.acos(); // Phase shift in radians

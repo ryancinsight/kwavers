@@ -417,7 +417,6 @@ mod tests {
 
     /// Test spherical spreading: p ∝ 1/r for 3D waves
     #[test]
-    #[ignore] // TODO: Fix implementation - wave propagation timing issues
     fn test_spherical_spreading_3d() {
         // Use smaller grid for 3D test
         let n = 64;

@@ -6,7 +6,40 @@
 //! where some terms are stiff (requiring implicit treatment) and others
 //! are non-stiff (allowing explicit treatment).
 //!
-//! # Features
+//! ## Literature References
+//! 
+//! 1. **Ascher, U. M., Ruuth, S. J., & Spiteri, R. J. (1997)**. "Implicit-explicit 
+//!    Runge-Kutta methods for time-dependent partial differential equations." 
+//!    *Applied Numerical Mathematics*, 25(2-3), 151-167. 
+//!    DOI: 10.1016/S0168-9274(97)00056-1
+//!    - Original IMEX-RK formulation
+//!    - Stability analysis
+//! 
+//! 2. **Kennedy, C. A., & Carpenter, M. H. (2003)**. "Additive Runge-Kutta schemes 
+//!    for convection-diffusion-reaction equations." *Applied Numerical Mathematics*, 
+//!    44(1-2), 139-181. DOI: 10.1016/S0168-9274(02)00138-1
+//!    - High-order IMEX-RK schemes
+//!    - ARK methods
+//! 
+//! 3. **Pareschi, L., & Russo, G. (2005)**. "Implicit-explicit Runge-Kutta schemes 
+//!    and applications to hyperbolic systems with relaxation." *Journal of Scientific 
+//!    Computing*, 25(1), 129-155. DOI: 10.1007/s10915-004-4636-4
+//!    - IMEX for hyperbolic systems
+//!    - Asymptotic preserving properties
+//! 
+//! 4. **Frank, J., Hundsdorfer, W., & Verwer, J. G. (1997)**. "On the stability of 
+//!    implicit-explicit linear multistep methods." *Applied Numerical Mathematics*, 
+//!    25(2-3), 193-205. DOI: 10.1016/S0168-9274(97)00059-7
+//!    - IMEX-BDF methods
+//!    - Stability regions
+//! 
+//! 5. **Knoth, O., & Wolke, R. (1998)**. "Implicit-explicit Runge-Kutta methods for 
+//!    computing atmospheric reactive flows." *Applied Numerical Mathematics*, 
+//!    28(2-4), 327-341. DOI: 10.1016/S0168-9274(98)00051-8
+//!    - Application to atmospheric modeling
+//!    - Stiffness detection strategies
+//!
+//! ## Features
 //!
 //! - IMEX Runge-Kutta schemes (IMEX-RK)
 //! - IMEX Backward Differentiation Formulas (IMEX-BDF)
@@ -15,7 +48,7 @@
 //! - Adaptive time stepping with stability control
 //! - Linear and nonlinear implicit solvers
 //!
-//! # Design Principles
+//! ## Design Principles
 //!
 //! - **SOLID**: Each component has a single responsibility
 //! - **DRY**: Common functionality is abstracted into traits
