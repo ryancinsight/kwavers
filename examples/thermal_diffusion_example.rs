@@ -12,7 +12,7 @@ use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
     physics::{
-        composable::{ThermalDiffusionComponent, AcousticWaveComponent},
+        composable::{ThermalDiffusionComponent, AcousticWaveComponent, PhysicsComponent},
         plugin::{PluginManager, PluginContext},
     },
     solver::thermal_diffusion::{ThermalDiffusionConfig, ThermalDiffusionPlugin},
@@ -294,13 +294,15 @@ fn composable_component_usage(grid: &Grid, medium: &dyn kwavers::medium::Medium)
     let mut pipeline = PhysicsPipeline::new();
     
     // Add acoustic wave component
-    let acoustic = AcousticWaveComponent::new("acoustic".to_string());
+    let mut acoustic = AcousticWaveComponent::new("acoustic".to_string());
+    acoustic.initialize(grid, medium)?;
     pipeline.add_component(Box::new(acoustic))?;
     
     // Add thermal diffusion component with bioheat
-    let thermal = ThermalDiffusionComponent::new("thermal".to_string())
+    let mut thermal = ThermalDiffusionComponent::new("thermal".to_string())
         .with_bioheat(0.5e-3)
         .with_thermal_dose();
+    thermal.initialize(grid, medium)?;
     pipeline.add_component(Box::new(thermal))?;
     
     // Create physics context

@@ -259,12 +259,15 @@ impl ThermalDiffusionSolver {
         medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        // Store previous temperature if not already stored
+        let tau = self.config.relaxation_time;
+        
+        // For first timestep, use first-order scheme
         if self.temperature_prev.is_none() {
+            // First timestep: use parabolic equation as approximation
             self.temperature_prev = Some(self.temperature.clone());
+            return self.update_standard(heat_source, grid, medium, dt);
         }
         
-        let tau = self.config.relaxation_time;
         let temp_prev = self.temperature_prev.as_ref().unwrap();
         
         // Compute Laplacian
@@ -691,6 +694,8 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
         })
     }
 }
+
+mod validation;
 
 #[cfg(test)]
 mod tests {
