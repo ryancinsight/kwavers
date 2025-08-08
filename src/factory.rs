@@ -569,8 +569,7 @@ impl SimulationFactory {
 
             let component: Box<dyn PhysicsComponent> = match model_config.model_type {
                 PhysicsModelType::AcousticWave => {
-                    // Use thermal diffusion as a placeholder for now
-                    Box::new(ThermalDiffusionComponent::new("acoustic".to_string()))
+                    Box::new(crate::physics::composable::AcousticWaveComponent::new("acoustic".to_string()))
                 }
                 PhysicsModelType::ThermalDiffusion => {
                     Box::new(ThermalDiffusionComponent::new("thermal".to_string()))

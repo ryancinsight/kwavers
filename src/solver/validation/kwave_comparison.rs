@@ -19,13 +19,11 @@
 //! - **Zero-Copy**: Efficient data handling with slices
 //! - **Comprehensive**: Tests all major features
 
-use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
+use crate::{KwaversResult, KwaversError, ConfigError};
 use crate::grid::Grid;
 use crate::medium::{HomogeneousMedium, Medium};
-use crate::source::{Source, phased_array::PhasedArrayTransducer};
-use crate::solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
-use crate::solver::fdtd::FdtdSolver;
-use crate::physics::{PluginManager, PluginContext};
+use crate::source::Source;
+use crate::solver::pstd::{PstdSolver, PstdConfig};
 use ndarray::{Array3, Array4, Array1, s, Zip};
 use std::f64::consts::PI;
 
@@ -204,7 +202,7 @@ impl KWaveValidator {
         
         // Configure C-PML
         let pml_config = CPMLConfig::default();
-        let mut cpml = CPMLBoundary::new(pml_config, &self.grid)?;
+        let cpml = CPMLBoundary::new(pml_config, &self.grid)?;
         
         // Create plane wave
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
@@ -273,7 +271,7 @@ impl KWaveValidator {
 
     /// Test 3: Heterogeneous medium
     fn test_heterogeneous_medium(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
-        use crate::medium::heterogeneous::HeterogeneousMedium;
+        
         
         // Create layered medium
         let mut sound_speed = self.grid.zeros_array();
@@ -491,7 +489,7 @@ impl KWaveValidator {
 
     /// Test 6: Time reversal
     fn test_time_reversal(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
-        use crate::solver::time_reversal::TimeReversalReconstructor;
+        
         
         // Create point source
         let source_pos = (self.grid.nx / 4, self.grid.ny / 2, self.grid.nz / 2);

@@ -1,14 +1,14 @@
 # Kwavers - Advanced Ultrasound Simulation Toolbox
 
-**Version**: 1.4.0  
-**Status**: Phase 15 Q4 COMPLETED ✅ – Optimization & Validation  
+**Version**: 1.5.0  
+**Status**: Phase 15 COMPLETED ✅ – Advanced Numerical Methods  
 **Performance**: >17M grid updates/second with GPU acceleration
 
-## 🚀 Latest Progress - Phase 15 Q4 – Optimization & Validation ✅
+## 🚀 Latest Progress - Phase 15 COMPLETED ✅
 
-**Completed**: Performance profiling, k-Wave validation, and benchmark suite
+**Phase 15 Summary**: Advanced Numerical Methods fully implemented with comprehensive validation
 
-### Recent Improvements (January 2025):
+### Recent Improvements (January 2025) - Phase 15 Completion:
 - **🧹 Codebase Cleanup**: Removed all redundancy and deprecated components
 - **📐 Design Principles**: Enhanced SOLID/CUPID/GRASP/DRY/KISS/YAGNI compliance
 - **⚡ Zero-Copy Optimizations**: Extensive iterator usage and slice operations
@@ -23,6 +23,8 @@
 - **📖 Tutorials**: Advanced features documentation with examples
 - **🔧 Kuznetsov Fix**: Implemented proper second-order time derivatives for stability
 - **🎯 Functional Style**: Enhanced with flat_map, fold, and iterator combinators
+- **🔌 Factory Pattern**: Fixed placeholder to use proper AcousticWaveComponent
+- **🧪 Van der Waals**: Enhanced with literature-based constants (Qin et al. 2023)
 
 ### Recent Improvements (January 2025) - Continued:
 - **🔧 API Consistency**: Fixed solver APIs and plugin system usage
@@ -431,9 +433,9 @@ If you use Kwavers in your research, please cite:
 
 ---
 
-**✅ Phase 15 Q4 Completed**: Optimization & Validation  
+**✅ Phase 15 Completed**: Advanced Numerical Methods  
 **📅 Completion Date**: January 2025  
-**🎯 Next Phase**: Phase 16 - Production Release
+**🎯 Next Phase**: Phase 16 - Production Release (Q1 2025)
 
 ### Advanced Physics Models
 

@@ -23,7 +23,7 @@
 mod tests {
     use super::super::*;
     use crate::{grid::Grid, medium::HomogeneousMedium};
-    use ndarray::{Array3, s};
+    use ndarray::Array3;
     use approx::assert_relative_eq;
     
     /// Test 1: 1D heat diffusion with analytical solution

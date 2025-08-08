@@ -121,16 +121,35 @@ impl KellerMiksisModel {
         }
         
         // Van der Waals equation for real gas
+        // Literature reference: Qin et al. (2023) "Numerical investigation on acoustic cavitation 
+        // characteristics of an air-vapor bubble", Ultrasonics Sonochemistry
         let r_gas = 8.314; // J/(mol·K)
         let n_total = state.n_gas + state.n_vapor;
         let volume = state.volume();
+        let avogadro = 6.022e23;
         
-        // Van der Waals constants (simplified)
-        let b = 3.0e-5 * n_total / 6.022e23; // Excluded volume
+        // Van der Waals constants for air (approximated as 79% N2 + 21% O2)
+        // Values from NIST Chemistry WebBook and literature
+        let a_n2 = 1.370; // bar·L²/mol² for N2
+        let b_n2 = 0.0387; // L/mol for N2
+        let a_o2 = 1.382; // bar·L²/mol² for O2
+        let b_o2 = 0.0319; // L/mol for O2
         
+        // Weighted average for air
+        let a_air = 0.79 * a_n2 + 0.21 * a_o2; // bar·L²/mol²
+        let b_air = 0.79 * b_n2 + 0.21 * b_o2; // L/mol
         
+        // Convert units: 1 bar·L²/mol² = 0.1 Pa·m⁶/mol²
+        let a = a_air * 0.1; // Pa·m⁶/mol²
+        let b = b_air * 1e-3; // m³/mol
         
-        n_total * r_gas * state.temperature / (6.022e23 * (volume - b))
+        // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
+        // Solving for P: P = nRT/(V - nb) - a*n²/V²
+        let n_moles = n_total / avogadro;
+        let pressure = n_moles * r_gas * state.temperature / (volume - n_moles * b) 
+                     - a * n_moles * n_moles / (volume * volume);
+        
+        pressure
     }
     
     /// Update bubble temperature

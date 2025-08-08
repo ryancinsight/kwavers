@@ -4,7 +4,7 @@ use kwavers::*;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
 use kwavers::physics::plugin::{PluginManager, PluginContext};
-use ndarray::{Array3, Array4};
+use ndarray::Array4;
 
 /// Test that FDTD solver doesn't crash and produces non-zero output
 #[test]

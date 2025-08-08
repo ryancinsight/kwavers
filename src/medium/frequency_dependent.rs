@@ -11,9 +11,7 @@
 //!   Society of America, 88(3), 1584-1591.
 
 use crate::{KwaversResult, KwaversError, ValidationError};
-use crate::Grid;
-use ndarray::{Array3, Array1, Zip};
-use std::collections::HashMap;
+use ndarray::Array3;
 
 /// Frequency-dependent tissue properties
 #[derive(Debug, Clone)]

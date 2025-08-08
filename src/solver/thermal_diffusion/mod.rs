@@ -34,7 +34,7 @@ use crate::{
 };
 use ndarray::{Array3, Array4, s, Zip};
 use std::collections::HashMap;
-use log::{info, debug};
+use log::info;
 
 /// Configuration for thermal diffusion solver
 #[derive(Debug, Clone)]

@@ -14,8 +14,8 @@
 
 use crate::{KwaversResult, KwaversError, ValidationError};
 use crate::Grid;
-use ndarray::{Array3, Array1, Zip};
-use rustfft::{FftPlanner, num_complex::Complex};
+use ndarray::{Array3, Zip};
+use rustfft::num_complex::Complex;
 use std::collections::VecDeque;
 use std::f64::consts::PI;
 

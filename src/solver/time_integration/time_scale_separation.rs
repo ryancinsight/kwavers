@@ -11,9 +11,9 @@
 //!   for computing atmospheric reactive flows" Applied Numerical Mathematics,
 //!   28(2-4), 327-341.
 
-use crate::{KwaversResult, KwaversError, ValidationError};
+use crate::KwaversResult;
 use crate::Grid;
-use ndarray::{Array3, Zip, Array4, Axis};
+use ndarray::{Array3, Array4, Axis};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component

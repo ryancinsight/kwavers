@@ -7,7 +7,7 @@ use crate::{
     Grid, KwaversResult, KwaversError, ValidationError,
     medium::Medium,
 };
-use ndarray::{Array3, Array4, Zip};
+use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 use log::warn;
 

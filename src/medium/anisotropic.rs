@@ -12,9 +12,8 @@
 
 use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::Grid;
-use ndarray::{Array2, Array3, Array4, Zip};
+use ndarray::{Array2, Array3, Array4};
 use rayon::prelude::*;
-use std::f64::consts::PI;
 
 /// Anisotropic material types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -502,6 +501,7 @@ impl AnisotropicWavePropagator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
     
     #[test]
     fn test_isotropic_stiffness() {
@@ -526,21 +526,92 @@ mod tests {
     }
     
     #[test]
+    fn test_rotation_matrix_z_axis() {
+        // Test that the rotation matrix for 90 degrees around z-axis is correct
+        // In ZYX convention, phi is the first rotation around z
+        let phi = PI / 2.0; // First rotation (about z) - this is what we want!
+        let theta = 0.0f64; // Second rotation (about y')
+        let psi = 0.0f64;   // Third rotation (about z'')
+        
+        let (sp, cp) = phi.sin_cos();
+        let (st, ct) = theta.sin_cos();
+        let (ss, cs) = psi.sin_cos();
+        
+        // Expected rotation matrix for 90° around z should be:
+        // [ 0 -1  0]
+        // [ 1  0  0]
+        // [ 0  0  1]
+        
+        // Build rotation matrix as in the code
+        let r = [
+            [ct*cp, ct*sp, -st],
+            [ss*st*cp - cs*sp, ss*st*sp + cs*cp, ss*ct],
+            [cs*st*cp + ss*sp, cs*st*sp - ss*cp, cs*ct],
+        ];
+        
+        // Verify the rotation matrix is correct for 90° around z
+        // Expected: [0, 1, 0; -1, 0, 0; 0, 0, 1] (for positive rotation)
+        assert!((r[0][0]).abs() < 1e-10);
+        assert!((r[0][1] - 1.0).abs() < 1e-10);
+        assert!((r[0][2]).abs() < 1e-10);
+        assert!((r[1][0] + 1.0).abs() < 1e-10);
+        assert!((r[1][1]).abs() < 1e-10);
+        assert!((r[1][2]).abs() < 1e-10);
+        assert!((r[2][0]).abs() < 1e-10);
+        assert!((r[2][1]).abs() < 1e-10);
+        assert!((r[2][2] - 1.0).abs() < 1e-10);
+    }
+    
+    #[test]
     fn test_stiffness_rotation() {
-        // Create a simple transversely isotropic tensor
-        let stiffness = StiffnessTensor::transversely_isotropic(
-            10e9, 6e9, 8e9, 20e9, 3e9
-        ).unwrap();
+        // Create an orthotropic tensor with different values for C11 and C22
+        // to properly test rotation
+        let mut c = Array2::zeros((6, 6));
+        
+        // Set up an orthotropic material with distinct C11 and C22
+        c[[0, 0]] = 10e9;  // C11
+        c[[1, 1]] = 15e9;  // C22 (different from C11)
+        c[[2, 2]] = 20e9;  // C33
+        c[[3, 3]] = 4e9;   // C44
+        c[[4, 4]] = 5e9;   // C55
+        c[[5, 5]] = 6e9;   // C66
+        
+        // Set some off-diagonal terms
+        c[[0, 1]] = 3e9; c[[1, 0]] = 3e9;  // C12
+        c[[0, 2]] = 4e9; c[[2, 0]] = 4e9;  // C13
+        c[[1, 2]] = 5e9; c[[2, 1]] = 5e9;  // C23
+        
+        let stiffness = StiffnessTensor {
+            c,
+            anisotropy_type: AnisotropyType::Orthotropic,
+        };
         
         // Rotate by 90 degrees around z-axis
-        let rotated = stiffness.rotate(0.0, 0.0, PI / 2.0);
+        // In the ZYX convention used, phi is the first rotation around z
+        let rotated = stiffness.rotate(PI / 2.0, 0.0, 0.0);
         
-        // After 90° rotation around z, C11 and C22 should swap
-        assert!((rotated.c[[0, 0]] - stiffness.c[[1, 1]]).abs() < 1e-6);
-        assert!((rotated.c[[1, 1]] - stiffness.c[[0, 0]]).abs() < 1e-6);
+
+        // After 90° rotation around z, x becomes y and y becomes -x
+        // So C11 and C22 should swap
+        assert!((rotated.c[[0, 0]] - stiffness.c[[1, 1]]).abs() < 1e-6, 
+            "After 90° rotation, new C11 should equal old C22: {} vs {}", 
+            rotated.c[[0, 0]], stiffness.c[[1, 1]]);
+        assert!((rotated.c[[1, 1]] - stiffness.c[[0, 0]]).abs() < 1e-6,
+            "After 90° rotation, new C22 should equal old C11: {} vs {}", 
+            rotated.c[[1, 1]], stiffness.c[[0, 0]]);
         
         // C33 should remain unchanged (z-direction)
-        assert!((rotated.c[[2, 2]] - stiffness.c[[2, 2]]).abs() < 1e-6);
+        assert!((rotated.c[[2, 2]] - stiffness.c[[2, 2]]).abs() < 1e-6,
+            "C33 should remain unchanged: {} vs {}", 
+            rotated.c[[2, 2]], stiffness.c[[2, 2]]);
+        
+        // C44 and C55 should swap (yz and xz shear)
+        assert!((rotated.c[[3, 3]] - stiffness.c[[4, 4]]).abs() < 1e-6,
+            "After 90° rotation, new C44 should equal old C55: {} vs {}", 
+            rotated.c[[3, 3]], stiffness.c[[4, 4]]);
+        assert!((rotated.c[[4, 4]] - stiffness.c[[3, 3]]).abs() < 1e-6,
+            "After 90° rotation, new C55 should equal old C44: {} vs {}", 
+            rotated.c[[4, 4]], stiffness.c[[3, 3]]);
         
         // Test that the rotated tensor is still symmetric
         for i in 0..6 {

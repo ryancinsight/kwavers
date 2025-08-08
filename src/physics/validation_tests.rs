@@ -65,7 +65,7 @@ mod tests {
         medium::Medium,
         physics::analytical_tests::PhysicsTestUtils,
     };
-    use ndarray::{Array3, Array4, s};
+    use ndarray::{Array4, s};
     use std::f64::consts::PI;
 
     /// Test 1D wave equation solution: u(x,t) = A*sin(kx - ωt)
@@ -732,7 +732,7 @@ mod tests {
     #[test]
     fn test_pstd_plane_wave_accuracy() -> Result<(), Box<dyn std::error::Error>> {
         use crate::solver::pstd::{PstdSolver, PstdConfig};
-        use ndarray::Array4;
+        
         
         let grid = Grid::new(256, 256, 1, 1e-3, 1e-3, 1e-3);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
@@ -809,7 +809,7 @@ mod tests {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
-        let mut monitor = ConservationMonitor::new(&grid);
+        let monitor = ConservationMonitor::new(&grid);
         
         // Initialize with Gaussian pulse
         let mut pressure = grid.zeros_array();
@@ -898,7 +898,7 @@ mod tests {
                 "Insufficient time scale separation: {:.2e}", separation_ratio);
         
         // Test conservation with multi-rate integration
-        let mut monitor = ConservationMonitor::new(&grid);
+        let monitor = ConservationMonitor::new(&grid);
         let initial_energy = monitor.compute_total_energy(
             &pressure, &grid.zeros_array(), &grid.zeros_array(), &grid.zeros_array(), &medium
         );
