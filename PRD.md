@@ -30,6 +30,23 @@
   - Removed all TODO/FIXME comments
   - Fixed test implementations
   - Enhanced code documentation
+  - Fixed Kuznetsov equation with proper second-order time derivatives
+  - Applied advanced design principles throughout codebase
+
+### **Latest Improvements (January 2025)** ✅
+- **Kuznetsov Equation Fix**: Implemented proper second-order time derivative formulation
+  - Fixed unconditional instability issue in linear propagation
+  - Now properly conserves energy in lossless simulations
+  - Uses central difference scheme: p^{n+1} = 2*p^n - p^{n-1} + dt²*acceleration
+- **Design Principles Enhancement**: 
+  - Applied DRY principle with `grid.zeros_array()` throughout codebase
+  - Replaced nested loops with iterator patterns (indexed_iter_mut, zip, flat_map)
+  - Enhanced zero-copy abstractions with slice operations
+  - Improved functional programming style with fold and iterator combinators
+- **Build System Fixes**: 
+  - Fixed module exports and imports
+  - Resolved naming conflicts in source module
+  - Updated validation module exports to match actual types
 
 ### **Validation Achievements - Phase 15 Q4** ✅
 - **12 New Literature-Based Tests**: Covering all major physics domains

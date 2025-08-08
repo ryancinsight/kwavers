@@ -21,6 +21,8 @@
 - **✅ k-Wave Validation**: Comprehensive validation suite against reference implementation
 - **🚀 Benchmark Suite**: Automated performance testing framework
 - **📖 Tutorials**: Advanced features documentation with examples
+- **🔧 Kuznetsov Fix**: Implemented proper second-order time derivatives for stability
+- **🎯 Functional Style**: Enhanced with flat_map, fold, and iterator combinators
 
 ### Phase 15 Q3 Achievements ✅:
 - **🔬 Multi-Rate Integration**: 10-100x speedup with automatic time-scale separation

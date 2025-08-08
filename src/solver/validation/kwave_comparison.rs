@@ -23,9 +23,10 @@ use crate::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{HomogeneousMedium, Medium};
 use crate::source::Source;
-use crate::solver::pstd::PstdSolver;
+use crate::solver::pstd::{PstdSolver, PstdConfig};
 use crate::solver::fdtd::FdtdSolver;
-use ndarray::{Array3, Array1, s, Zip};
+use crate::physics::{PluginManager, PluginContext};
+use ndarray::{Array3, Array4, Array1, s, Zip};
 use std::f64::consts::PI;
 
 /// k-Wave validation test case
@@ -396,7 +397,7 @@ impl KWaveValidator {
 
     /// Test 5: Focused transducer
     fn test_focused_transducer(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
-        use crate::source::phased_array::{PhasedArraySource, PhasedArrayConfig, ElementGeometry};
+        use crate::source::phased_array::{PhasedArrayTransducer, PhasedArrayConfig};
         
         // Create focused bowl transducer
         let config = PhasedArrayConfig {
@@ -452,7 +453,7 @@ impl KWaveValidator {
 
     /// Test 6: Time reversal
     fn test_time_reversal(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
-        use crate::solver::time_reversal::TimeReversalSolver;
+        use crate::solver::time_reversal::TimeReversalReconstructor;
         
         // Create point source
         let source_pos = (self.grid.nx / 4, self.grid.ny / 2, self.grid.nz / 2);

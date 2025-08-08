@@ -7,9 +7,13 @@ pub mod numerical_accuracy;
 pub mod kwave_comparison;
 
 pub use numerical_accuracy::{
-    NumericalAccuracyValidator,
-    AccuracyMetric,
-    ValidationResult,
+    NumericalValidator,
+    ValidationResults,
+    DispersionResults,
+    StabilityResults,
+    BoundaryResults,
+    ConservationResults,
+    ConvergenceResults,
 };
 
 pub use kwave_comparison::{

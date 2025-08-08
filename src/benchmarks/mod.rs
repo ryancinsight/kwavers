@@ -6,7 +6,7 @@
 pub mod accuracy;
 pub mod suite;
 
-pub use accuracy::{AccuracyBenchmark, AccuracyMetrics};
+pub use accuracy::AccuracyResult;
 pub use suite::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFormat};
 
 #[cfg(test)]

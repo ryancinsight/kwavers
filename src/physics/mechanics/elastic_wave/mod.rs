@@ -533,16 +533,11 @@ impl ElasticWave {
         let start_time = Instant::now();
         
         // Create a source field array from the source term
-        let (nx, ny, nz) = grid.dimensions();
-        let mut source_field = Array3::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let (x, y, z) = grid.coordinates(i, j, k);
-                    source_field[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
-                }
-            }
-        }
+        let mut source_field = grid.zeros_array();
+        source_field.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            let (x, y, z) = grid.coordinates(i, j, k);
+            *val = source.get_source_term(t, x, y, z, grid);
+        });
         let source_fft = self._perform_fft(&source_field, grid);
         
         let source_time = start_time.elapsed().as_secs_f64();

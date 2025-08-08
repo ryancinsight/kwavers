@@ -118,12 +118,15 @@
   - Removed duplicate `ElasticWaveMetrics` struct in enhanced module
   - Eliminated redundant `create_wavenumber_arrays` method
   - Fixed all naming violations (no _enhanced, _optimized, _fixed suffixes)
+  - Fixed TODO in kuznetsov.rs - implemented proper second-order time derivatives ✅
 - **Design Principles Enhancement** ✅
   - Replaced `Array3::zeros` with `grid.zeros_array()` throughout (DRY)
   - Converted index-based loops to iterator patterns in examples
   - Improved slice-based operations for better performance
   - Added proper imports for slice operations (s! macro)
   - Enhanced SSOT, SOLID, CUPID, GRASP, ACID, ADP, KISS, SOC, DRY, DIP, CLEAN, and YAGNI principles
+  - Applied DRY principle to elastic_wave module and examples ✅
+  - Replaced triple nested loops with iterator patterns in kuznetsov.rs ✅
 - **Zero-Copy Optimizations** ✅
   - Enhanced iterator usage in examples and core modules
   - Utilized slice operations for efficient array filling
@@ -131,6 +134,7 @@
   - Improved memory efficiency with workspace arrays
   - Replaced nested loops with `indexed_iter_mut()` and iterator combinators
   - Added parallel iterator patterns with `zip()` for simultaneous updates
+  - Converted CFL check to use flat_map and fold for functional style ✅
 - **Literature-Based Validation** ✅
   - Added 12 comprehensive validation tests with literature references
   - Validated against Pierce (1989) for fundamental wave equations
