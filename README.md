@@ -65,7 +65,7 @@ git clone https://github.com/ryancinsight/kwavers.git
 cd kwavers
 
 # Build with GPU acceleration (requires CUDA or OpenCL)
-cargo build --release --features gpu-acceleration
+cargo build --release --features gpu
 
 # Run tests
 cargo test --all-features

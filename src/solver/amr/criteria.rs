@@ -1,11 +1,10 @@
-//! Enhanced AMR features for advanced applications
+//! AMR refinement criteria and features
 //! 
 //! Provides:
 //! - Feature-based refinement criteria
 //! - Load balancing for parallel execution
 //! - Advanced interpolation schemes
 //! - Refinement prediction
-
 
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -180,7 +179,7 @@ impl FeatureCriterion {
         self.detect_shock(field, position) * 0.7 // Similar but with lower weight
     }
     
-    fn detect_vortex(&self, field: &Array3<f64>, position: (usize, usize, usize)) -> f64 {
+    fn detect_vortex(&self, _field: &Array3<f64>, _position: (usize, usize, usize)) -> f64 {
         // Simplified vorticity detection
         // In real implementation, would need velocity components
         0.0 // Placeholder
@@ -251,7 +250,7 @@ impl RefinementCriterion for PredictiveCriterion {
                         if distance <= search_radius as f64 {
                             let feature_strength = field[[ni, nj, nk]].abs();
                             let influence = feature_strength * (1.0 - distance / search_radius as f64);
-                                                            max_influence = f64::max(max_influence, influence);
+                            max_influence = f64::max(max_influence, influence);
                         }
                     }
                 }
@@ -413,9 +412,6 @@ fn morton_encode_3d(x: usize, y: usize, z: usize) -> u64 {
     
     morton
 }
-
-// EnhancedAMRManager functionality has been integrated into the main AMRManager
-// The enhanced features are now available through the standard AMRManager API
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-//! Enhanced shock handling for spectral DG methods
+//! Shock handling for spectral DG methods
 //! 
 //! Implements advanced techniques for handling discontinuities:
 //! - WENO5 limiting for smooth shock capturing
@@ -16,7 +16,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 use log::warn;
 
-/// Enhanced shock detector with multiple indicators
+/// Shock detector with multiple indicators
 #[derive(Debug, Clone)]
 pub struct EnhancedShockDetector {
     /// Base threshold for shock detection
@@ -581,9 +581,6 @@ impl ArtificialViscosity {
         Ok(viscosity)
     }
 }
-
-// EnhancedShockCapturingSolver functionality has been integrated into HybridSpectralDGSolver
-// The enhanced shock handling features are now available through the standard solver API
 
 #[cfg(test)]
 mod tests {

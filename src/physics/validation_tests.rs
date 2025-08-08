@@ -664,7 +664,7 @@ mod tests {
     /// Christoffel equation for wave velocities in anisotropic media
     #[test]
     fn test_anisotropic_christoffel_equation() -> Result<(), Box<dyn std::error::Error>> {
-        use crate::physics::mechanics::elastic_wave::enhanced::{StiffnessTensor, MaterialSymmetry};
+        use crate::physics::mechanics::elastic_wave::features::{StiffnessTensor, MaterialSymmetry};
         
         // Test transversely isotropic material (muscle fiber)
         // Reference values from Royer & Dieulesaint, Table 2.3

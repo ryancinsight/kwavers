@@ -99,7 +99,7 @@ fn generate_synthetic_acoustic_data(grid: &Grid) -> Array3<f64> {
             }
             
             // Add some noise
-            data[[i, j, k]] += 10.0 * (rng.gen::<f64>() - 0.5);
+            data[[i, j, k]] += 10.0 * (rand::random::<f64>() - 0.5);
         });
     
     data
