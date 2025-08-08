@@ -10,7 +10,7 @@ use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovWave, Kuznets
 use crate::physics::mechanics::acoustic_wave::nonlinear::core::NonlinearWave;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::NullSource;
-use ndarray::{Array3, Array4, Axis};
+use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::f64::consts::PI;
 use log::info;
 
@@ -64,7 +64,6 @@ impl PhysicsTestUtils {
             k_analytical
         };
         
-        use ndarray::Zip;
         Zip::indexed(&mut pressure).for_each(|(i, j, k), p| {
             let x = i as f64 * grid.dx;
             let phase = k_corrected * x - 2.0 * PI * frequency * time;

@@ -6,12 +6,6 @@
 
 use crate::grid::Grid;
 use crate::medium::{HomogeneousMedium, Medium};
-use crate::solver::{pstd::PstdSolver, fdtd::FdtdSolver};
-use crate::physics::mechanics::acoustic_wave::kuznetsov::KuznetsovWave;
-use crate::error::KwaversResult;
-use ndarray::Array3;
-use std::f64::consts::PI;
-use log::{info, warn};
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone)]

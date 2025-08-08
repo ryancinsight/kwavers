@@ -12,9 +12,8 @@
 
 use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::Grid;
-use ndarray::{Array2, Array3, Array4, Zip};
+use ndarray::{Array2, Array3, Array4};
 use rayon::prelude::*;
-use std::f64::consts::PI;
 
 /// Anisotropic material types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -502,6 +501,7 @@ impl AnisotropicWavePropagator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
     
     #[test]
     fn test_isotropic_stiffness() {
