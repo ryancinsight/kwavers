@@ -536,35 +536,32 @@ fn save_2d_field(field: &ndarray::ArrayView2<f64>, filename: &str) -> KwaversRes
             reason: e.to_string() 
         })?;
     
-    // Use indexed iterator for cleaner CSV writing
-    field.indexed_iter()
-        .try_for_each(|((i, j), &value)| -> Result<(), DataError> {
+    // Write data using row-based iteration for cleaner code and proper formatting
+    for (i, row) in field.rows().into_iter().enumerate() {
+        for (j, &value) in row.iter().enumerate() {
             write!(file, "{:.6e}", value)
                 .map_err(|e| DataError::WriteError {
                     path: filename.to_string(),
                     reason: e.to_string()
                 })?;
             
-            // Add comma except for last element in row
-            if j < field.shape()[1] - 1 {
+            // Add comma between values (but not after the last value)
+            if j < row.len() - 1 {
                 write!(file, ",")
                     .map_err(|e| DataError::WriteError {
                         path: filename.to_string(),
                         reason: e.to_string()
                     })?;
             }
-            
-            // Add newline at end of row
-            if j == field.shape()[1] - 1 && i < field.shape()[0] - 1 {
-                writeln!(file)
-                    .map_err(|e| DataError::WriteError {
-                        path: filename.to_string(),
-                        reason: e.to_string()
-                    })?;
-            }
-            
-            Ok(())
-        })?;
+        }
+        
+        // Add newline at end of each row (including the last one)
+        writeln!(file)
+            .map_err(|e| DataError::WriteError {
+                path: filename.to_string(),
+                reason: e.to_string()
+            })?;
+    }
     
     Ok(())
 }
