@@ -367,3 +367,25 @@
   - [x] Frequency-dependent properties (Duck, 1990)
   - [x] Anisotropic material support (Royer & Dieulesaint, 2000)
   - [x] Tissue-specific models (liver, muscle, tendon, bone) 
+
+### **Latest Improvements (January 2025) - Continued** ✅
+- **Build System Fixes** ✅
+  - Fixed module imports and exports throughout codebase
+  - Resolved PstdPlugin, PluginManager API usage issues
+  - Fixed ValidationError and KwaversError variant usage
+  - Updated PstdSolver API calls to use correct methods
+  - Fixed PhasedArrayConfig field names and initialization
+  - Corrected HeterogeneousMedium construction
+- **Additional Iterator Enhancements** ✅
+  - Replaced nested loops in kuznetsov.rs source term calculation
+  - Improved 3D stencil operations with Zip::indexed
+  - Enhanced RK4Workspace initialization with DRY principle
+  - Converted grid-based array initialization to use grid.zeros_array()
+- **Code Cleanup** ✅
+  - Removed unused imports (CUDA, wgpu, etc.)
+  - Fixed closure argument patterns
+  - Improved error handling with appropriate error types
+- **Zero-Copy Improvements** ✅
+  - Enhanced stability filter with iterator-based approach
+  - Eliminated unnecessary intermediate allocations
+  - Improved memory efficiency in validation tests 

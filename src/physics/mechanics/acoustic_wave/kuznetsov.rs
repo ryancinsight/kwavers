@@ -180,15 +180,16 @@ struct RK4Workspace {
 
 impl RK4Workspace {
     fn new(nx: usize, ny: usize, nz: usize) -> Self {
+        let shape = (nx, ny, nz);
         Self {
-            pressure_temp: Array3::zeros((nx, ny, nz)),
-            k1: Array3::zeros((nx, ny, nz)),
-            k2: Array3::zeros((nx, ny, nz)),
-            k3: Array3::zeros((nx, ny, nz)),
-            k4: Array3::zeros((nx, ny, nz)),
-            linear_term_cache: Array3::zeros((nx, ny, nz)),
-            nonlinear_term_cache: Array3::zeros((nx, ny, nz)),
-            diffusion_term_cache: Array3::zeros((nx, ny, nz)),
+            pressure_temp: Array3::zeros(shape),
+            k1: Array3::zeros(shape),
+            k2: Array3::zeros(shape),
+            k3: Array3::zeros(shape),
+            k4: Array3::zeros(shape),
+            linear_term_cache: Array3::zeros(shape),
+            nonlinear_term_cache: Array3::zeros(shape),
+            diffusion_term_cache: Array3::zeros(shape),
         }
     }
 }
@@ -253,8 +254,8 @@ impl KuznetsovWave {
             TimeIntegrationScheme::AdamsBashforth3 => 3,
         };
         
-        let pressure_history = vec![Array3::zeros((grid.nx, grid.ny, grid.nz)); history_size];
-        let nonlinear_history = vec![Array3::zeros((grid.nx, grid.ny, grid.nz)); 3];
+        let pressure_history = vec![grid.zeros_array(); history_size];
+        let nonlinear_history = vec![grid.zeros_array(); 3];
         
         // Create FFT planner
         let fft_planner = Fft3d::new(grid.nx, grid.ny, grid.nz);
@@ -431,18 +432,18 @@ impl KuznetsovWave {
         if filter_strength > 1e-6 {
             let mut filtered = field.clone();
             
-            for i in 1..grid.nx-1 {
-                for j in 1..grid.ny-1 {
-                    for k in 1..grid.nz-1 {
+            // Apply 3D smoothing filter using iterator-based approach
+            ndarray::Zip::indexed(&mut filtered)
+                .for_each(|(i, j, k), val| {
+                    if i > 0 && i < grid.nx-1 && j > 0 && j < grid.ny-1 && k > 0 && k < grid.nz-1 {
                         let neighbors = field[[i-1,j,k]] + field[[i+1,j,k]] +
                                        field[[i,j-1,k]] + field[[i,j+1,k]] +
                                        field[[i,j,k-1]] + field[[i,j,k+1]];
                         let center = field[[i,j,k]];
                         
-                        filtered[[i,j,k]] = center + filter_strength * (neighbors/6.0 - center);
+                        *val = center + filter_strength * (neighbors/6.0 - center);
                     }
-                }
-            }
+                });
             
             field.assign(&filtered);
         }
@@ -613,17 +614,13 @@ impl AcousticWaveModel for KuznetsovWave {
         velocity.index_axis_mut(Axis(0), 2).assign(&fields.index_axis(Axis(0), vz_idx));
         
         // Get source term
-        let mut source_term = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    source_term[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
-                }
-            }
-        }
+        let mut source_term = grid.zeros_array();
+        source_term.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            *val = source.get_source_term(t, x, y, z, grid);
+        });
         
         // Call the original update method
         if let Err(e) = self.update_wave_internal(&mut pressure, &mut velocity, &source_term, grid, medium, dt, t) {
