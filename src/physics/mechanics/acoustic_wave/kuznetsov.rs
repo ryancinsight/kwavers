@@ -155,6 +155,13 @@ pub enum TimeIntegrationScheme {
 }
 
 /// Performance metrics for the solver
+/// 
+/// Tracks time spent in different parts of the solver:
+/// - linear_time: Time for linear operations (velocity update, pressure update, filters)
+/// - nonlinear_time: Time computing nonlinear terms
+/// - diffusion_time: Time computing diffusion/absorption terms
+/// - fft_time: Time in FFT operations
+/// - prev_other_ops_time: Used to calculate linear_time by subtraction
 #[derive(Debug, Clone, Default)]
 struct SolverMetrics {
     linear_time: f64,
@@ -163,6 +170,7 @@ struct SolverMetrics {
     fft_time: f64,
     total_steps: u64,
     k_space_correction_time: f64,
+    prev_other_ops_time: f64,
 }
 
 /// Workspace for RK4 integration to avoid repeated allocations
@@ -579,7 +587,15 @@ impl KuznetsovWave {
         // Update metrics
         self.metrics.total_steps += 1;
         let elapsed = start.elapsed().as_secs_f64();
-        self.metrics.linear_time += elapsed;
+        
+        // Calculate time spent on linear operations (total time minus other tracked operations)
+        // Note: We need to track the time spent in this specific call, not cumulative
+        let other_ops_time = (self.metrics.nonlinear_time + self.metrics.diffusion_time + self.metrics.fft_time) 
+            - self.metrics.prev_other_ops_time;
+        let linear_ops_time = elapsed - other_ops_time;
+        
+        self.metrics.linear_time += linear_ops_time.max(0.0); // Ensure non-negative
+        self.metrics.prev_other_ops_time = self.metrics.nonlinear_time + self.metrics.diffusion_time + self.metrics.fft_time;
         
         Ok(())
     }
@@ -644,13 +660,14 @@ impl AcousticWaveModel for KuznetsovWave {
         if self.metrics.total_steps > 0 {
             info!("  Average step time: {:.3}ms", 1000.0 * total_time / self.metrics.total_steps as f64);
         }
-        info!("  Linear term time: {:.3}s ({:.1}%)", 
+        info!("  Time breakdown:");
+        info!("    Linear operations: {:.3}s ({:.1}%)", 
             self.metrics.linear_time, 100.0 * self.metrics.linear_time / total_time);
-        info!("  Nonlinear term time: {:.3}s ({:.1}%)", 
+        info!("    Nonlinear term: {:.3}s ({:.1}%)", 
             self.metrics.nonlinear_time, 100.0 * self.metrics.nonlinear_time / total_time);
-        info!("  Diffusion term time: {:.3}s ({:.1}%)", 
+        info!("    Diffusion term: {:.3}s ({:.1}%)", 
             self.metrics.diffusion_time, 100.0 * self.metrics.diffusion_time / total_time);
-        info!("  FFT time: {:.3}s ({:.1}%)", 
+        info!("    FFT operations: {:.3}s ({:.1}%)", 
             self.metrics.fft_time, 100.0 * self.metrics.fft_time / total_time);
     }
     
