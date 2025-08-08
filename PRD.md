@@ -38,18 +38,42 @@
   - Fixed all solver API usage to match actual implementations
   - Corrected plugin system integration in validation tests
   - Updated error handling to use appropriate error variants
+  - Fixed benchmark suite to use PluginManager.register() and update_all()
+  - Corrected PluginContext constructor usage (3 args: step, total_steps, frequency)
 - **Iterator Enhancements**:
   - Replaced remaining nested loops with functional patterns
   - Applied Zip::indexed for 3D stencil operations
   - Enhanced source term calculation with indexed_iter_mut
+  - Replaced triple nested loops in bubble_dynamics interactions
+  - Enhanced stencil gradient computations with slice-based iterators
 - **Memory Optimization**:
   - Consistent use of grid.zeros_array() for array initialization
   - Improved RK4Workspace with DRY principle
   - Eliminated redundant allocations in validation tests
+  - Applied functional patterns with flat_map, fold, and iterator combinators
 - **Code Quality**:
   - Removed all unused imports across the codebase
   - Fixed API mismatches in test code
   - Improved error messages and handling
+  - Fixed all variable naming violations (old_to_new → index_mapping, field_new → updated_field)
+  - Renamed misleading test function names for clarity
+
+### **Thermal Simulation Suite (January 2025)** ✅
+- **Dedicated Thermal Diffusion Solver**:
+  - Comprehensive solver in `solver/thermal_diffusion` module
+  - Standard heat diffusion, Pennes bioheat, and hyperbolic models
+  - 2nd, 4th, and 6th order spatial discretization options
+  - Zero-copy workspace arrays for optimal performance
+- **Advanced Features**:
+  - CEM43 thermal dose tracking for treatment planning
+  - Configurable blood perfusion parameters
+  - Cattaneo-Vernotte equation for non-Fourier heat transfer
+  - Literature-based implementations with full citations
+- **Integration**:
+  - ThermalDiffusionPlugin for plugin system compatibility
+  - Automatic acoustic heating from pressure fields
+  - Works with all existing solver types
+  - Comprehensive example demonstrating all features
 
 ### **Validation Achievements - Phase 15 Q4** ✅
 - **12 New Literature-Based Tests**: Covering all major physics domains

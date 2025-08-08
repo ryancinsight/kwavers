@@ -329,35 +329,35 @@ impl Octree {
         }
         
         // Create mapping from old to new indices
-        let mut old_to_new: HashMap<usize, usize> = HashMap::new();
-        let mut new_nodes = Vec::new();
-        let mut new_index = 0;
+        let mut index_mapping: HashMap<usize, usize> = HashMap::new();
+        let mut compacted_nodes = Vec::new();
+        let mut current_index = 0;
         
         // Copy active nodes and build mapping
         for (old_idx, node) in self.nodes.iter().enumerate() {
-            if node.is_active || (node.parent.is_some() && old_to_new.contains_key(&node.parent.unwrap())) {
-                let mut new_node = node.clone();
+            if node.is_active || (node.parent.is_some() && index_mapping.contains_key(&node.parent.unwrap())) {
+                let mut compacted_node = node.clone();
                 
                 // Update parent index
-                if let Some(parent_idx) = new_node.parent {
-                    new_node.parent = old_to_new.get(&parent_idx).copied();
+                if let Some(parent_idx) = compacted_node.parent {
+                    compacted_node.parent = index_mapping.get(&parent_idx).copied();
                 }
                 
                 // Update index
-                new_node.index = new_index;
+                compacted_node.index = current_index;
                 
-                old_to_new.insert(old_idx, new_index);
-                new_nodes.push(new_node);
-                new_index += 1;
+                index_mapping.insert(old_idx, current_index);
+                compacted_nodes.push(compacted_node);
+                current_index += 1;
             }
         }
         
         // Update children indices
-        for node in &mut new_nodes {
+        for node in &mut compacted_nodes {
             if let Some(mut children) = node.children {
                 for child in &mut children {
-                    if let Some(&new_idx) = old_to_new.get(child) {
-                        *child = new_idx;
+                    if let Some(&mapped_idx) = index_mapping.get(child) {
+                        *child = mapped_idx;
                     }
                 }
                 node.children = Some(children);
@@ -366,12 +366,12 @@ impl Octree {
         
         // Rebuild coord_to_node mapping
         self.coord_to_node.clear();
-        for (idx, node) in new_nodes.iter().enumerate() {
+        for (idx, node) in compacted_nodes.iter().enumerate() {
             self.coord_to_node.insert(node.bounds_min, idx);
         }
         
         // Update state
-        self.nodes = new_nodes;
+        self.nodes = compacted_nodes;
         self.next_index = self.nodes.len();
         self.free_nodes.clear();
         self.inactive_nodes = 0;

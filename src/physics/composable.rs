@@ -21,10 +21,10 @@
 //! - CRP: Common reuse principle
 //! - ADP: Acyclic dependency principle
 
-use crate::error::{KwaversResult, PhysicsError};
+use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4, Axis, ArrayView3};
+use ndarray::{Array3, Array4, Axis, ArrayView3, Zip};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use crate::physics::traits::{CavitationModelBehavior, LightDiffusionModelTrait, AcousticWaveModel};
@@ -981,6 +981,10 @@ pub struct ThermalDiffusionComponent {
     id: String,
     metrics: HashMap<String, f64>,
     state: ComponentState,
+    /// Configuration for thermal diffusion
+    config: crate::solver::thermal_diffusion::ThermalDiffusionConfig,
+    /// Dedicated thermal diffusion solver
+    solver: Option<Box<crate::solver::thermal_diffusion::ThermalDiffusionSolver>>,
 }
 
 impl ThermalDiffusionComponent {
@@ -989,7 +993,28 @@ impl ThermalDiffusionComponent {
             id,
             metrics: HashMap::new(),
             state: ComponentState::Initialized,
+            config: crate::solver::thermal_diffusion::ThermalDiffusionConfig::default(),
+            solver: None,
         }
+    }
+    
+    /// Configure the thermal diffusion solver
+    pub fn with_config(mut self, config: crate::solver::thermal_diffusion::ThermalDiffusionConfig) -> Self {
+        self.config = config;
+        self
+    }
+    
+    /// Enable bioheat equation
+    pub fn with_bioheat(mut self, perfusion_rate: f64) -> Self {
+        self.config.enable_bioheat = true;
+        self.config.perfusion_rate = perfusion_rate;
+        self
+    }
+    
+    /// Enable thermal dose tracking
+    pub fn with_thermal_dose(mut self) -> Self {
+        self.config.track_thermal_dose = true;
+        self
     }
 }
 
@@ -1006,7 +1031,14 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         vec![FieldType::Temperature]
     }
     
-    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+    fn initialize(&mut self, grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
+        // Create the dedicated thermal diffusion solver
+        self.solver = Some(Box::new(
+            crate::solver::thermal_diffusion::ThermalDiffusionSolver::new(
+                self.config.clone(),
+                grid
+            )?
+        ));
         self.state = ComponentState::Ready;
         Ok(())
     }
@@ -1023,73 +1055,54 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         
         let start_time = Instant::now();
         
+        // Get the solver
+        let solver = self.solver.as_mut()
+            .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidConfiguration {
+                component: "ThermalDiffusionComponent".to_string(),
+                reason: "Thermal diffusion solver not initialized".to_string()
+            }))?;
+        
         // Get field indices
         let pressure_idx = 0;
         let temperature_idx = 2;
         
-        // Get pressure field for acoustic heating calculation (clone to avoid borrow conflict)
-        let pressure_field = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
+        // Calculate acoustic heating: Q = 2αI = 2α|p|²/(ρc)
+        let pressure = fields.index_axis(ndarray::Axis(0), pressure_idx);
+        let mut heat_source = grid.zeros_array();
         
-        // Temperature field is at index 2
-        let mut temperature_field = fields.index_axis_mut(ndarray::Axis(0), temperature_idx);
+        Zip::indexed(&mut heat_source)
+            .and(&pressure)
+            .for_each(|(i, j, k), source, &p| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                
+                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // 1 MHz default frequency
+                let rho = medium.density(x, y, z, grid);
+                let c = medium.sound_speed(x, y, z, grid);
+                
+                // Acoustic intensity I = |p|²/(ρc)
+                let intensity = p * p / (rho * c);
+                *source = 2.0 * alpha * intensity;
+            });
         
-        // Get thermal and acoustic properties from medium
-        let mut kappa_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut rho_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut cp_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut alpha_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut c_array = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        // Update temperature using dedicated solver
+        solver.update(&heat_source, grid, medium, dt)?;
         
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    kappa_array[[i, j, k]] = medium.thermal_diffusivity(x, y, z, grid);
-                    rho_array[[i, j, k]] = medium.density(x, y, z, grid);
-                    cp_array[[i, j, k]] = medium.specific_heat(x, y, z, grid);
-                    alpha_array[[i, j, k]] = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
-                    c_array[[i, j, k]] = medium.sound_speed(x, y, z, grid);
-                }
-            }
-        }
+        // Copy temperature back to fields
+        fields.index_axis_mut(ndarray::Axis(0), temperature_idx)
+            .assign(solver.temperature());
         
-        // Thermal update with both diffusion and acoustic heating
-        let mut temp_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-        
-        for i in 1..grid.nx - 1 {
-            for j in 1..grid.ny - 1 {
-                for k in 1..grid.nz - 1 {
-                    let kappa = kappa_array[[i, j, k]];
-                    let rho = rho_array[[i, j, k]];
-                    let cp = cp_array[[i, j, k]];
-                    let alpha = alpha_array[[i, j, k]];
-                    let c = c_array[[i, j, k]];
-                    
-                    // Calculate Laplacian of temperature
-                    let laplacian_t = 
-                        (temperature_field[[i+1, j, k]] - 2.0 * temperature_field[[i, j, k]] + temperature_field[[i-1, j, k]]) / (grid.dx * grid.dx) +
-                        (temperature_field[[i, j+1, k]] - 2.0 * temperature_field[[i, j, k]] + temperature_field[[i, j-1, k]]) / (grid.dy * grid.dy) +
-                        (temperature_field[[i, j, k+1]] - 2.0 * temperature_field[[i, j, k]] + temperature_field[[i, j, k-1]]) / (grid.dz * grid.dz);
-                    
-                    // Calculate acoustic heating term Q = 2αI/ρc, where I = p²/(ρc)
-                    let pressure = pressure_field[[i, j, k]];
-                    let intensity = pressure * pressure / (rho * c);
-                    let heating_rate = 2.0 * alpha * intensity / (rho * cp);
-                    
-                    // Update temperature: ∂T/∂t = κ∇²T + Q/(ρcp)
-                    temp_updates[[i, j, k]] = (kappa * laplacian_t + heating_rate) * dt;
-                }
-            }
-        }
-        
-        // Apply updates
-        temperature_field += &temp_updates;
-        
+        // Update metrics
         self.metrics.insert("execution_time".to_string(), start_time.elapsed().as_secs_f64());
-        self.metrics.insert("max_heating_rate".to_string(), 
-            temp_updates.iter().fold(0.0_f64, |a, &b| a.max(b.abs())) / dt);
+        self.metrics.extend(solver.metrics().clone());
+        
+        // If tracking thermal dose, add to metrics
+        if let Some(dose) = solver.thermal_dose() {
+            let max_dose = dose.iter().fold(0.0_f64, |a, &b| a.max(b));
+            self.metrics.insert("max_thermal_dose_cem43".to_string(), max_dose);
+        }
+        
         Ok(())
     }
     
@@ -1104,6 +1117,14 @@ impl PhysicsComponent for ThermalDiffusionComponent {
     fn reset(&mut self) -> KwaversResult<()> {
         self.state = ComponentState::Initialized;
         self.metrics.clear();
+        if let Some(solver) = &mut self.solver {
+            // Reset temperature to arterial temperature
+            let shape = solver.temperature().raw_dim();
+            solver.set_temperature(Array3::from_elem(
+                shape,
+                self.config.arterial_temperature
+            ))?;
+        }
         Ok(())
     }
     

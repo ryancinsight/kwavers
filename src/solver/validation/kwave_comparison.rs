@@ -223,23 +223,32 @@ impl KWaveValidator {
             .map(|&p| p * p)
             .sum();
         
-        // Use PSTD solver with CPML boundary
-        let config = PstdConfig::default();
-        let mut solver = PstdSolver::new(&self.grid, config)?;
+        // Use PSTD solver through plugin system
+        use crate::physics::plugin::{PluginManager, PluginContext};
+        use crate::solver::pstd::PstdPlugin;
+        
+        let mut plugin_manager = PluginManager::new();
+        
+        // Create and add PSTD plugin
+        let pstd_config = PstdConfig::default();
+        let pstd_plugin = PstdPlugin::new(pstd_config, &self.grid)?;
+        plugin_manager.register(Box::new(pstd_plugin))?;
         
         // Create fields array
         let mut fields = Array4::zeros((13, self.grid.nx, self.grid.ny, self.grid.nz));
         fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
-        
-        // Create a null source
-        let source = crate::source::NullSource;
         
         let dt = 5e-8;
         let n_steps = 1000;
         
         for step in 0..n_steps {
             let t = step as f64 * dt;
-            solver.update(&mut fields, &source, &self.grid, &medium, dt, t)?;
+            
+            // Create plugin context
+            let context = PluginContext::new(step, n_steps, 1e6); // 1 MHz reference frequency
+            
+            // Update through plugin manager
+            plugin_manager.update_all(&mut fields, &self.grid, &medium, dt, t, &context)?;
         }
         
         // Extract final pressure
@@ -394,7 +403,7 @@ impl KWaveValidator {
         let mut t = 0.0;
         
         for _ in 0..n_steps {
-            solver.update_wave(&mut fields, &prev_pressure, &source, &self.grid, &medium, dt, t)?;
+            solver.update_wave(&mut fields, &prev_pressure, &source, &self.grid, &medium, dt, t);
             prev_pressure.assign(&fields.index_axis(Axis(0), 0));
             t += dt;
         }
@@ -439,7 +448,7 @@ impl KWaveValidator {
         };
         
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
-        let signal = std::sync::Arc::new(crate::signal::SineWave::new(2e6, 1.0));
+        let signal = std::sync::Arc::new(crate::signal::SineWave::new(2e6, 1.0, 0.0));
         let transducer = PhasedArrayTransducer::new(config, signal, &medium, &self.grid)?;
         
         // Calculate pressure field

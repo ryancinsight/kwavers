@@ -61,7 +61,7 @@ pub trait AdaptiveTimeStepperTrait: TimeStepper {
     fn estimate_error(
         &self,
         field: &Array3<f64>,
-        field_new: &Array3<f64>,
+        updated_field: &Array3<f64>,
         dt: f64,
     ) -> f64;
     

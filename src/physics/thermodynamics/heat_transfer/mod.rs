@@ -1,4 +1,10 @@
 // physics/thermodynamics/heat_transfer/mod.rs
+//! Legacy thermal model implementation
+//! 
+//! **DEPRECATED**: This module is maintained for backward compatibility with the legacy Solver struct.
+//! For new code, use the plugin-based thermal diffusion solver in `crate::solver::thermal_diffusion`
+//! or the `ThermalDiffusionComponent` in the composable physics system.
+
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::ThermalModelTrait;
@@ -9,6 +15,7 @@ use std::time::Instant;
 
 pub const TEMPERATURE_IDX: usize = 2;
 
+#[deprecated(since = "1.4.0", note = "Use crate::solver::thermal_diffusion::ThermalDiffusionSolver or ThermalDiffusionComponent instead")]
 #[derive(Debug)]
 pub struct ThermalModel {
     temperature: Array3<f64>, // Changed to private (or pub(crate) by default within module)

@@ -34,37 +34,27 @@ impl BubbleInteractions {
         let mut interaction_field = Array3::zeros(grid_shape);
         
         // For each grid point
-        for i in 0..grid_shape.0 {
-            for j in 0..grid_shape.1 {
-                for k in 0..grid_shape.2 {
-                    let mut total_interaction = 0.0;
+        ndarray::Zip::indexed(&mut interaction_field).for_each(|(i, j, k), field_val| {
+            let total_interaction = bubbles.iter()
+                .filter(|((bi, bj, bk), _)| !(i == *bi && j == *bj && k == *bk)) // Skip self-interaction
+                .filter_map(|((bi, bj, bk), state)| {
+                    // Calculate distance
+                    let dx = (i as f64 - *bi as f64) * grid_spacing.0;
+                    let dy = (j as f64 - *bj as f64) * grid_spacing.1;
+                    let dz = (k as f64 - *bk as f64) * grid_spacing.2;
+                    let distance = (dx*dx + dy*dy + dz*dz).sqrt();
                     
-                    // Sum contributions from all bubbles
-                    for ((bi, bj, bk), state) in bubbles {
-                        if i == *bi && j == *bj && k == *bk {
-                            continue; // Skip self-interaction
-                        }
-                        
-                        // Calculate distance
-                        let dx = (i as f64 - *bi as f64) * grid_spacing.0;
-                        let dy = (j as f64 - *bj as f64) * grid_spacing.1;
-                        let dz = (k as f64 - *bk as f64) * grid_spacing.2;
-                        let distance = (dx*dx + dy*dy + dz*dz).sqrt();
-                        
-                        if distance < self.cutoff_distance && distance > 0.0 {
-                            // Bjerknes force contribution
-                            let bjerknes = self.calculate_bjerknes_contribution(
-                                state,
-                                distance,
-                            );
-                            total_interaction += bjerknes;
-                        }
+                    if distance < self.cutoff_distance && distance > 0.0 {
+                        // Bjerknes force contribution
+                        Some(self.calculate_bjerknes_contribution(state, distance))
+                    } else {
+                        None
                     }
-                    
-                    interaction_field[[i, j, k]] = total_interaction * self.interaction_strength;
-                }
-            }
-        }
+                })
+                .sum::<f64>();
+            
+            *field_val = total_interaction * self.interaction_strength;
+        });
         
         interaction_field
     }

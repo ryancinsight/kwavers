@@ -10,6 +10,7 @@ pub mod cpml_integration;
 pub mod validation;
 pub mod workspace;
 pub mod time_reversal;
+pub mod thermal_diffusion;
 
 use crate::grid::Grid;
 use crate::KwaversResult;
