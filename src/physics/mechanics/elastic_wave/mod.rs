@@ -1,5 +1,5 @@
 // src/physics/mechanics/elastic_wave/mod.rs
-pub mod enhanced;
+pub mod features;
 
 use crate::grid::Grid;
 use crate::medium::Medium;
@@ -294,9 +294,9 @@ pub struct ElasticWave {
     is_anisotropic: bool,
     anisotropic_properties: Option<AnisotropicElasticProperties>,
     /// Mode conversion configuration
-    mode_conversion: Option<enhanced::ModeConversionConfig>,
+    mode_conversion: Option<features::ModeConversionConfig>,
     /// Viscoelastic damping configuration
-    viscoelastic: Option<enhanced::ViscoelasticConfig>,
+    viscoelastic: Option<features::ViscoelasticConfig>,
     /// Material stiffness tensors (spatially varying)
     stiffness_tensors: Option<Array4<f64>>,
     /// Interface detection mask
@@ -367,13 +367,13 @@ impl ElasticWave {
     }
     
     /// Enable mode conversion with custom configuration
-    pub fn with_mode_conversion(&mut self, config: enhanced::ModeConversionConfig) -> &mut Self {
+    pub fn with_mode_conversion(&mut self, config: features::ModeConversionConfig) -> &mut Self {
         self.mode_conversion = Some(config);
         self
     }
     
     /// Enable viscoelastic damping
-    pub fn with_viscoelastic(&mut self, config: enhanced::ViscoelasticConfig) -> &mut Self {
+    pub fn with_viscoelastic(&mut self, config: features::ViscoelasticConfig) -> &mut Self {
         self.viscoelastic = Some(config);
         self
     }
