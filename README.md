@@ -33,6 +33,14 @@
 - **📦 Build Fixes**: Resolved all compilation errors and API mismatches
 - **🏗️ Test Updates**: Fixed validation tests to use correct APIs
 - **⚡ Zero-Copy**: Further improvements in stability filters and validation
+
+### Thermal Simulation Suite (January 2025):
+- **🌡️ Dedicated Thermal Solver**: Complete thermal diffusion solver with 2nd/4th/6th order accuracy
+- **🩸 Pennes Bioheat Equation**: Full implementation with blood perfusion modeling
+- **📊 Thermal Dose (CEM43)**: Real-time cumulative dose tracking for ablation planning
+- **🌊 Hyperbolic Heat Transfer**: Cattaneo-Vernotte equation for finite propagation speed
+- **🔌 Plugin Integration**: Seamless integration with acoustic solvers via plugin system
+- **📖 Comprehensive Example**: thermal_diffusion_example.rs demonstrating all features
 - **🔌 Plugin Integration**: Corrected PluginManager usage with register() and update_all()
 - **🏷️ Clean Naming**: Fixed all variable naming violations for better code clarity
 - **🔄 Iterator Refactoring**: Replaced nested loops in bubble dynamics and stencil operations

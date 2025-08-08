@@ -58,6 +58,23 @@
   - Fixed all variable naming violations (old_to_new → index_mapping, field_new → updated_field)
   - Renamed misleading test function names for clarity
 
+### **Thermal Simulation Suite (January 2025)** ✅
+- **Dedicated Thermal Diffusion Solver**:
+  - Comprehensive solver in `solver/thermal_diffusion` module
+  - Standard heat diffusion, Pennes bioheat, and hyperbolic models
+  - 2nd, 4th, and 6th order spatial discretization options
+  - Zero-copy workspace arrays for optimal performance
+- **Advanced Features**:
+  - CEM43 thermal dose tracking for treatment planning
+  - Configurable blood perfusion parameters
+  - Cattaneo-Vernotte equation for non-Fourier heat transfer
+  - Literature-based implementations with full citations
+- **Integration**:
+  - ThermalDiffusionPlugin for plugin system compatibility
+  - Automatic acoustic heating from pressure fields
+  - Works with all existing solver types
+  - Comprehensive example demonstrating all features
+
 ### **Validation Achievements - Phase 15 Q4** ✅
 - **12 New Literature-Based Tests**: Covering all major physics domains
 - **Error Tolerances Met**: < 1% for spectral methods, < 5% for finite differences
