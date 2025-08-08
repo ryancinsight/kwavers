@@ -26,6 +26,9 @@ pub use phased_array::{
     ElementSensitivity, BeamformingMode
 };
 
+// Export source implementations from this module
+pub use self::{PointSource, TimeVaryingSource, CompositeSource, NullSource};
+
 /// Simple point source implementation
 #[derive(Debug)]
 pub struct PointSource {

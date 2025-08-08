@@ -17,7 +17,7 @@ The performance profiling infrastructure provides comprehensive insights into yo
 ### Basic Usage
 
 ```rust
-use kwavers::performance::profiling::{PerformanceProfiler, ProfileReport};
+use kwavers::performance::profiling::{PerformanceProfiler, ProfileReport, MemoryEventType, PerformanceBound};
 use kwavers::{Grid, HomogeneousMedium};
 
 // Create profiler
@@ -309,14 +309,20 @@ if matches!(report.roofline.bound_type, PerformanceBound::MemoryBound) {
 Always validate against known solutions:
 
 ```rust
-// Run physics validation tests
-use kwavers::physics::validation_tests;
+use kwavers::{Grid, solver::validation::KWaveValidator};
 
-// Validate wave equation
-validation_tests::test_1d_wave_equation_analytical()?;
+// Run validation tests
+let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
+let validator = KWaveValidator::new(grid);
+let report = validator.run_all_tests()?;
 
-// Validate nonlinear acoustics
-validation_tests::test_kuznetsov_second_harmonic()?;
+// Check results
+if report.all_passed() {
+    println!("All validation tests passed!");
+} else {
+    println!("Some validation tests failed - check report for details");
+    report.print_summary();
+}
 ```
 
 ## Example: Complete Simulation Pipeline
@@ -327,7 +333,11 @@ Here's a complete example combining multiple advanced features:
 use kwavers::*;
 use kwavers::performance::profiling::PerformanceProfiler;
 use kwavers::solver::amr::{AMRManager, AMRConfig};
-use kwavers::physics::mechanics::acoustic_wave::KuznetsovWave;
+use kwavers::physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig};
+use kwavers::physics::traits::AcousticWaveModel;
+use kwavers::source::NullSource;
+use kwavers::medium::HomogeneousMedium;
+use ndarray::{Array3, Array4, Axis};
 
 fn advanced_simulation() -> KwaversResult<()> {
     // Setup
@@ -346,13 +356,19 @@ fn advanced_simulation() -> KwaversResult<()> {
     };
     let mut solver = KuznetsovWave::new(&grid, kuznetsov_config);
     
-    // Initialize
-    let mut pressure = grid.zeros_array();
-    initialize_focused_source(&mut pressure, &grid);
+    // Initialize fields
+    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
+    let mut prev_pressure = grid.zeros_array();
+    initialize_focused_source(&mut fields.index_axis_mut(Axis(0), 0).to_owned(), &grid);
+    
+    // Create medium and source
+    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+    let source = NullSource;
     
     // Time stepping
     let dt = 1e-6;
     let n_steps = 1000;
+    let mut t = 0.0;
     
     for step in 0..n_steps {
         // Profile time step
@@ -360,17 +376,20 @@ fn advanced_simulation() -> KwaversResult<()> {
         
         // Adaptive mesh refinement
         if step % 10 == 0 {
+            let pressure = fields.index_axis(Axis(0), 0).to_owned();
             amr.adapt_mesh(&pressure)?;
         }
         
         // Solve
-        solver.update(&pressure, &medium, dt)?;
+        solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
+        prev_pressure.assign(&fields.index_axis(Axis(0), 0));
+        t += dt;
         
         // Record statistics
         if step % 100 == 0 {
-            let stats = amr.get_statistics();
-            println!("Step {}: compression ratio = {:.2}", 
-                    step, stats.compression_ratio);
+            let stats = amr.memory_stats();
+            println!("Step {}: active cells = {}", 
+                    step, stats.active_cells);
         }
     }
     
@@ -379,6 +398,19 @@ fn advanced_simulation() -> KwaversResult<()> {
     report.print_summary();
     
     Ok(())
+}
+
+fn initialize_focused_source(field: &mut Array3<f64>, grid: &Grid) {
+    // Implementation of source initialization
+    let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
+    field.indexed_iter_mut()
+        .for_each(|((i, j, k), value)| {
+            let x = (i as f64 - center.0 as f64) * grid.dx;
+            let y = (j as f64 - center.1 as f64) * grid.dy;
+            let z = (k as f64 - center.2 as f64) * grid.dz;
+            let r2 = x*x + y*y + z*z;
+            *value = (-r2 / (2.0 * 0.01 * 0.01)).exp();
+        });
 }
 ```
 

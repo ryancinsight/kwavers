@@ -51,4 +51,6 @@ pub use profiling::{
     MemoryProfile,
     CacheProfile,
     RooflineAnalysis,
+    MemoryEventType,
+    PerformanceBound,
 };

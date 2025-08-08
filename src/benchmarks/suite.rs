@@ -16,9 +16,10 @@ use crate::solver::fdtd::FdtdSolver;
 use crate::solver::amr::AMRManager;
 use crate::physics::mechanics::acoustic_wave::KuznetsovWave;
 use crate::medium::{HomogeneousMedium, Medium};
-use ndarray::{Array3, s};
+use ndarray::{Array3, s, Array4};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Benchmark configuration
 #[derive(Debug, Clone)]
@@ -125,20 +126,30 @@ impl BenchmarkSuite {
 
     /// Benchmark PSTD solver
     fn benchmark_pstd(&mut self, grid_size: usize) -> KwaversResult<()> {
+        use crate::physics::plugin::{PluginManager, PluginContext};
+        use crate::solver::pstd::PstdPlugin;
+        
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         let profiler = PerformanceProfiler::new(&grid);
         
-        // Initialize
-        let solver = PstdSolver::new(&grid)?;
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-        let mut fields = solver.create_fields();
+        // Initialize plugin system
+        let mut plugin_manager = PluginManager::new();
+        let config = crate::solver::pstd::PstdConfig::default();
+        let pstd_plugin = PstdPlugin::new(config);
+        plugin_manager.add_plugin(Box::new(pstd_plugin))?;
         
-        // Initial condition
+        // Create context
+        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let mut context = PluginContext::new(&grid, &medium);
+        
+        // Initialize fields
+        let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
         self.initialize_gaussian_pulse(&mut fields, &grid);
+        context.fields = fields;
         
         // Warmup
         for _ in 0..10 {
-            solver.step(&mut fields, &medium, 1e-6)?;
+            plugin_manager.execute_plugins(&mut context, 1e-6)?;
         }
         
         // Benchmark
@@ -149,11 +160,11 @@ impl BenchmarkSuite {
             let _scope = profiler.time_scope("pstd_step");
             
             for _ in 0..self.config.time_steps {
-                solver.step(&mut fields, &medium, 1e-6)?;
+                plugin_manager.execute_plugins(&mut context, 1e-6)?;
             }
             
             // Estimate memory usage
-            let field_memory = fields.len() * std::mem::size_of::<f64>();
+            let field_memory = context.fields.len() * std::mem::size_of::<f64>();
             total_memory = total_memory.max(field_memory);
         }
         
@@ -175,19 +186,29 @@ impl BenchmarkSuite {
 
     /// Benchmark FDTD solver
     fn benchmark_fdtd(&mut self, grid_size: usize) -> KwaversResult<()> {
+        use crate::physics::plugin::{PluginManager, PluginContext};
+        use crate::solver::fdtd::FdtdPlugin;
+        
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         
-        // Initialize
-        let solver = FdtdSolver::new(&grid)?;
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-        let mut fields = solver.create_fields();
+        // Initialize plugin system
+        let mut plugin_manager = PluginManager::new();
+        let config = crate::solver::fdtd::FdtdConfig::default();
+        let fdtd_plugin = FdtdPlugin::new(config);
+        plugin_manager.add_plugin(Box::new(fdtd_plugin))?;
         
-        // Initial condition
+        // Create context
+        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let mut context = PluginContext::new(&grid, &medium);
+        
+        // Initialize fields
+        let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz)); // FDTD uses 13 fields
         self.initialize_gaussian_pulse(&mut fields, &grid);
+        context.fields = fields;
         
         // Warmup
         for _ in 0..10 {
-            solver.step(&mut fields, &medium, 1e-6)?;
+            plugin_manager.execute_plugins(&mut context, 1e-6)?;
         }
         
         // Benchmark
@@ -195,7 +216,7 @@ impl BenchmarkSuite {
         
         for _ in 0..self.config.iterations {
             for _ in 0..self.config.time_steps {
-                solver.step(&mut fields, &medium, 1e-6)?;
+                plugin_manager.execute_plugins(&mut context, 1e-6)?;
             }
         }
         
@@ -208,7 +229,7 @@ impl BenchmarkSuite {
             grid_size,
             runtime,
             grid_updates_per_second,
-            memory_mb: fields.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
+            memory_mb: context.fields.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
             metrics: HashMap::new(),
         });
         
@@ -218,6 +239,11 @@ impl BenchmarkSuite {
     /// Benchmark Kuznetsov solver
     fn benchmark_kuznetsov(&mut self, grid_size: usize) -> KwaversResult<()> {
         use crate::physics::mechanics::KuznetsovConfig;
+        use crate::physics::traits::AcousticWaveModel;
+        use crate::source::PointSource;
+        use crate::signal::SineWave;
+        use ndarray::Axis;
+        use std::sync::Arc;
         
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         
@@ -229,14 +255,30 @@ impl BenchmarkSuite {
         };
         let mut solver = KuznetsovWave::new(&grid, config);
         let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
-        let mut pressure = grid.zeros_array();
         
-        // Initial condition
-        self.initialize_gaussian_field(&mut pressure, &grid);
+        // Create fields array (7 fields typical for acoustic simulation)
+        let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
+        let mut prev_pressure = grid.zeros_array();
+        
+        // Initialize pressure field
+        let mut initial_pressure = fields.index_axis(Axis(0), 0).to_owned();
+        self.initialize_gaussian_field(&mut initial_pressure, &grid);
+        fields.slice_mut(s![0, .., .., ..]).assign(&initial_pressure);
+        
+        // Create a dummy source
+        let signal = Arc::new(SineWave::new(1e6, 1e6, 0.0));
+        let position = (grid.nx as f64 / 2.0 * grid.dx, 
+                       grid.ny as f64 / 2.0 * grid.dy, 
+                       grid.nz as f64 / 2.0 * grid.dz);
+        let source = PointSource::new(position, signal);
         
         // Warmup
+        let dt = 1e-6;
+        let mut t = 0.0;
         for _ in 0..10 {
-            solver.update(&pressure, &medium, 1e-6)?;
+            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
+            prev_pressure.assign(&fields.index_axis(Axis(0), 0));
+            t += dt;
         }
         
         // Benchmark
@@ -244,7 +286,9 @@ impl BenchmarkSuite {
         
         for _ in 0..self.config.iterations {
             for _ in 0..self.config.time_steps {
-                solver.update(&pressure, &medium, 1e-6)?;
+                solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t)?;
+                prev_pressure.assign(&fields.index_axis(Axis(0), 0));
+                t += dt;
             }
         }
         
@@ -257,7 +301,7 @@ impl BenchmarkSuite {
             grid_size,
             runtime,
             grid_updates_per_second,
-            memory_mb: pressure.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
+            memory_mb: fields.len() as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
             metrics: HashMap::new(),
         });
         
@@ -298,19 +342,20 @@ impl BenchmarkSuite {
         let runtime = start.elapsed() / self.config.iterations as u32;
         
         // Get refinement statistics
-        let stats = amr_manager.get_statistics();
-        let compression_ratio = stats.total_cells as f64 / (grid_size * grid_size * grid_size) as f64;
+        let memory_stats = amr_manager.memory_stats();
+        let total_cells = grid_size * grid_size * grid_size;
+        let compression_ratio = total_cells as f64 / memory_stats.active_cells as f64;
         
         let mut metrics = HashMap::new();
         metrics.insert("compression_ratio".to_string(), compression_ratio);
-        metrics.insert("refined_cells".to_string(), stats.refined_cells as f64);
+        metrics.insert("refined_cells".to_string(), memory_stats.active_cells as f64);
         
         self.results.push(BenchmarkResult {
             name: "AMR".to_string(),
             grid_size,
             runtime,
             grid_updates_per_second: 0.0, // Not applicable for AMR
-            memory_mb: stats.memory_usage_mb,
+            memory_mb: memory_stats.total_bytes as f64 / 1e6,
             metrics,
         });
         
@@ -321,41 +366,16 @@ impl BenchmarkSuite {
     fn benchmark_gpu(&mut self, grid_size: usize) -> KwaversResult<()> {
         #[cfg(feature = "gpu-acceleration")]
         {
-            use crate::gpu::{GpuContext, GpuKernel};
-            
-            let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
-            
-            // Initialize GPU
-            let gpu_context = GpuContext::new().await?;
-            let kernel = gpu_context.create_acoustic_kernel(&grid)?;
-            
-            let mut pressure = grid.zeros_array();
-            let mut velocity = (grid.zeros_array(), grid.zeros_array(), grid.zeros_array());
-            
-            // Warmup
-            for _ in 0..10 {
-                kernel.execute(&mut pressure, &mut velocity, 1e-6)?;
-            }
-            
-            // Benchmark
-            let start = Instant::now();
-            
-            for _ in 0..self.config.iterations {
-                for _ in 0..self.config.time_steps {
-                    kernel.execute(&mut pressure, &mut velocity, 1e-6)?;
-                }
-            }
-            
-            let runtime = start.elapsed() / self.config.iterations as u32;
-            let total_points = grid_size * grid_size * grid_size;
-            let grid_updates_per_second = (total_points * self.config.time_steps) as f64 / runtime.as_secs_f64();
+            // Note: GPU benchmarking would require async runtime
+            // For now, we'll skip the actual GPU benchmark
+            println!("GPU benchmarking requires async runtime - skipping");
             
             self.results.push(BenchmarkResult {
                 name: "GPU".to_string(),
                 grid_size,
-                runtime,
-                grid_updates_per_second,
-                memory_mb: 0.0, // GPU memory tracked separately
+                runtime: Duration::from_secs(0),
+                grid_updates_per_second: 0.0,
+                memory_mb: 0.0,
                 metrics: HashMap::new(),
             });
         }

@@ -91,7 +91,10 @@ pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig
 pub use output::{save_pressure_data, save_light_data, generate_summary};
 
 // Re-export performance optimization
-pub use performance::{PerformanceOptimizer, OptimizationConfig, SimdLevel};
+pub use performance::{
+    PerformanceOptimizer, OptimizationConfig, SimdLevel,
+    profiling::{PerformanceProfiler, ProfileReport, TimingScope, MemoryProfile, CacheProfile, RooflineAnalysis}
+};
 
 // Re-export signal types
 pub use signal::{SineWave, Signal};
@@ -102,6 +105,12 @@ pub use source::{LinearArray, HanningApodization};
 // Re-export configuration types
 pub use sensor::SensorConfig;
 pub use recorder::RecorderConfig;
+
+// Re-export benchmarks
+pub use benchmarks::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFormat};
+
+// Re-export solver validation
+pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
 
 /// Initialize logging for the kwavers library
 /// 
