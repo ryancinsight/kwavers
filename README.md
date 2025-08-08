@@ -594,3 +594,47 @@ cargo test -- --nocapture
 - **Energy Conservation**: < 0.1% drift in 10,000 time steps
 - **Tissue Properties**: Within 5% of published values
 - **Shock Detection**: 100% accuracy for step discontinuities
+
+## 🔬 Comparison with k-Wave
+
+Kwavers is inspired by k-Wave but goes beyond it in several key areas:
+
+### ✅ **Features Matching k-Wave**
+- **k-space pseudospectral methods** for accurate wave propagation
+- **Nonlinear acoustics** with full Westervelt equation support
+- **Power law absorption** using fractional Laplacian
+- **Heterogeneous media** with arbitrary material distributions
+- **PML boundaries** (enhanced C-PML implementation)
+- **Phased array transducers** with beamforming
+- **Time reversal** reconstruction
+- **GPU acceleration** (CUDA, OpenCL, WebGPU)
+
+### 🚀 **Features Beyond k-Wave**
+- **Multi-physics coupling**: Acoustic-thermal-elastic-optical interactions
+- **Advanced numerics**: AMR, Spectral-DG, IMEX schemes
+- **Bubble dynamics**: Rayleigh-Plesset and Keller-Miksis models
+- **Elastic waves**: Full elastic wave propagation (not just acoustic)
+- **Plugin architecture**: Extensible framework for custom physics
+- **Modern Rust**: Memory safety, zero-copy optimizations, fearless concurrency
+- **Multiple GPU backends**: Not just CUDA - also OpenCL and WebGPU
+- **Advanced PML**: Convolutional PML with better absorption
+
+### 📊 **Performance Comparison**
+| Feature | k-Wave | Kwavers |
+|---------|---------|----------|
+| Language | MATLAB/C++ | Rust |
+| Memory Safety | Manual | Guaranteed |
+| GPU Support | CUDA only | CUDA/OpenCL/WebGPU |
+| Parallelism | Limited | Native (Rayon) |
+| Zero-copy | No | Yes |
+| Plugin System | No | Yes |
+
+### 🔴 **Current Gaps** (Planned for 2025)
+- [ ] Reconstruction algorithms (kspaceLineRecon, kspacePlaneRecon)
+- [ ] Focused bowl transducers (makeBowl, makeMultiBowl)
+- [ ] Angular spectrum methods
+- [ ] Built-in movie generation
+- [ ] MATLAB .mat file I/O
+- [ ] Dedicated thermal diffusion solver
+
+See [CHECKLIST.md](CHECKLIST.md#k-wave-feature-parity-analysis-) for detailed gap analysis.

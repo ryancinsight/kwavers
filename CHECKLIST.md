@@ -389,3 +389,66 @@
   - Enhanced stability filter with iterator-based approach
   - Eliminated unnecessary intermediate allocations
   - Improved memory efficiency in validation tests 
+
+## **k-Wave Feature Parity Analysis** 🔍
+
+### **Features Already Implemented in Kwavers** ✅
+- **Core Simulation Methods**:
+  - [x] k-space pseudospectral (PSTD) solver
+  - [x] Finite-difference time domain (FDTD) solver
+  - [x] Nonlinear wave propagation (Kuznetsov equation)
+  - [x] Power law absorption (fractional Laplacian)
+  - [x] Heterogeneous media support
+  - [x] PML boundaries (enhanced C-PML implementation)
+  
+- **Advanced Features Beyond k-Wave**:
+  - [x] Elastic wave propagation (not just acoustic)
+  - [x] Thermal physics coupling
+  - [x] Bubble dynamics (Rayleigh-Plesset, Keller-Miksis)
+  - [x] AMR (Adaptive Mesh Refinement)
+  - [x] Spectral-DG methods
+  - [x] IMEX time integration schemes
+  - [x] Multi-rate time stepping
+  - [x] Plugin architecture for extensibility
+
+### **Major Gaps vs k-Wave** ❌
+1. **Reconstruction Algorithms**:
+   - [ ] kspaceLineRecon (2D linear array reconstruction)
+   - [ ] kspacePlaneRecon (3D planar array reconstruction)
+   - [ ] Iterative reconstruction methods
+   - [ ] Adjoint-based reconstruction
+
+2. **Specialized Sources**:
+   - [ ] Focused bowl transducers (makeBowl equivalent)
+   - [ ] Multi-element bowl arrays (makeMultiBowl)
+   - [ ] Arc sources for 2D (makeArc)
+   - [ ] Continuous wave (CW) signal generation utilities
+
+3. **Utility Functions**:
+   - [ ] Angular spectrum propagation methods
+   - [ ] Hounsfield to density conversion (CT support)
+   - [ ] Water attenuation models
+   - [ ] O'Neil solution for focused bowls
+   - [ ] Bioheat exact solutions
+
+4. **Visualization & I/O**:
+   - [ ] Built-in movie generation
+   - [ ] k-Wave compatible HDF5 format
+   - [ ] MATLAB .mat file support
+   - [ ] Interactive plotting utilities
+
+5. **Sensor Features**:
+   - [ ] Acoustic intensity recording
+   - [ ] Directional sensor patterns (beyond current implementation)
+   - [ ] Sensor frequency response modeling
+
+6. **Thermal Simulations**:
+   - [ ] Dedicated diffusion solver (kWaveDiffusion equivalent)
+   - [ ] Pennes bioheat equation solver
+   - [ ] Thermal dose calculations
+
+### **Phase 16 Priorities** 🎯
+1. **Q1 2025**: Reconstruction algorithms (kspaceLineRecon, kspacePlaneRecon)
+2. **Q2 2025**: Focused transducer sources and angular spectrum methods
+3. **Q3 2025**: Enhanced visualization and k-Wave format compatibility
+4. **Q4 2025**: Complete thermal simulation suite 
