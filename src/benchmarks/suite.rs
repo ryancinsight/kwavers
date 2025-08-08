@@ -214,10 +214,11 @@ impl BenchmarkSuite {
         
         let dt = 1e-6;
         
-        // Warmup
-        for _ in 0..10 {
-            let context = PluginContext::new(0, 10, 1e6);
-            plugin_manager.update_all(&mut fields, &grid, &medium, dt, 0.0, &context)?;
+        // Warmup - mimic the actual benchmark loop
+        for step in 0..10 {
+            let t = step as f64 * dt;
+            let context = PluginContext::new(step, 10, 1e6);
+            plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)?;
         }
         
         // Benchmark
