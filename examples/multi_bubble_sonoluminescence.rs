@@ -278,20 +278,19 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         let t = step as f64 * dt;
         
         // Generate acoustic field
-        for i in 0..n {
-            for j in 0..n {
-                for k in 0..n {
-                    let x = i as f64 * dx;
-                    let y = j as f64 * dx;
-                    let z = k as f64 * dx;
-                    
-                    pressure_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
-                    
-                    // Use analytical pressure derivative
-                    dp_dt_field[[i, j, k]] = source.pressure_time_derivative(x, y, z, t);
-                }
-            }
-        }
+        // Use parallel iterators for better performance
+        pressure_field.indexed_iter_mut()
+            .zip(dp_dt_field.indexed_iter_mut())
+            .for_each(|(((i, j, k), pressure), (_, dp_dt))| {
+                let x = i as f64 * dx;
+                let y = j as f64 * dx;
+                let z = k as f64 * dx;
+                
+                *pressure = source.get_source_term(t, x, y, z, &grid);
+                
+                // Use analytical pressure derivative
+                *dp_dt = source.pressure_time_derivative(x, y, z, t);
+            });
         
         // Add bubble-bubble interaction pressure
         let interaction_field = interactions.calculate_interaction_field(
@@ -537,13 +536,16 @@ fn save_2d_field(field: &ndarray::ArrayView2<f64>, filename: &str) -> KwaversRes
             reason: e.to_string() 
         })?;
     
-    for i in 0..field.shape()[0] {
-        for j in 0..field.shape()[1] {
-            write!(file, "{:.6e}", field[[i, j]])
+    // Use indexed iterator for cleaner CSV writing
+    field.indexed_iter()
+        .try_for_each(|((i, j), &value)| -> Result<(), DataError> {
+            write!(file, "{:.6e}", value)
                 .map_err(|e| DataError::WriteError {
                     path: filename.to_string(),
                     reason: e.to_string()
                 })?;
+            
+            // Add comma except for last element in row
             if j < field.shape()[1] - 1 {
                 write!(file, ",")
                     .map_err(|e| DataError::WriteError {
@@ -551,13 +553,18 @@ fn save_2d_field(field: &ndarray::ArrayView2<f64>, filename: &str) -> KwaversRes
                         reason: e.to_string()
                     })?;
             }
-        }
-        writeln!(file)
-            .map_err(|e| DataError::WriteError {
-                path: filename.to_string(),
-                reason: e.to_string()
-            })?;
-    }
+            
+            // Add newline at end of row
+            if j == field.shape()[1] - 1 && i < field.shape()[0] - 1 {
+                writeln!(file)
+                    .map_err(|e| DataError::WriteError {
+                        path: filename.to_string(),
+                        reason: e.to_string()
+                    })?;
+            }
+            
+            Ok(())
+        })?;
     
     Ok(())
 }

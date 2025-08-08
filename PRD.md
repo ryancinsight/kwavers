@@ -21,6 +21,15 @@
   - Szabo (1994): Tissue absorption models ✅
   - Treeby & Cox (2010): PSTD accuracy ✅
   - Royer & Dieulesaint (2000): Anisotropic media ✅
+- **Documentation Enhancement**: Added literature references to all major modules ✅
+  - AMR module: Berger & Oliger (1984), Vasilyev & Kevlahan (2005)
+  - Spectral-DG: Hesthaven & Warburton (2008), Persson & Peraire (2006)
+  - IMEX: Ascher et al. (1997), Kennedy & Carpenter (2003)
+- **Iterator Improvements**: Replaced nested loops with advanced iterator patterns ✅
+  - Used `indexed_iter_mut()` for zero-copy array updates
+  - Applied `zip()` for parallel field updates
+  - Leveraged slice operations with `s!` macro
+- **Domain Organization**: Verified proper feature-based module structure ✅
 
 ### **Validation Achievements - Phase 15 Q4** ✅
 - **12 New Literature-Based Tests**: Covering all major physics domains

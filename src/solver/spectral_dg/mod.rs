@@ -3,7 +3,40 @@
 //! This module implements hybrid spectral and discontinuous Galerkin methods
 //! for robust shock handling and high-order accuracy in smooth regions.
 //! 
-//! # Design Principles
+//! ## Literature References
+//! 
+//! 1. **Hesthaven, J. S., & Warburton, T. (2008)**. "Nodal discontinuous Galerkin 
+//!    methods: algorithms, analysis, and applications." *Springer Science & Business 
+//!    Media*. DOI: 10.1007/978-0-387-72067-8
+//!    - Comprehensive DG theory and implementation
+//!    - High-order polynomial bases
+//! 
+//! 2. **Persson, P. O., & Peraire, J. (2006)**. "Sub-cell shock capturing for 
+//!    discontinuous Galerkin methods." *44th AIAA Aerospace Sciences Meeting and 
+//!    Exhibit* (p. 112). DOI: 10.2514/6.2006-112
+//!    - Shock detection algorithms
+//!    - Artificial viscosity methods
+//! 
+//! 3. **Krivodonova, L., Xin, J., Remacle, J. F., Chevaugeon, N., & Flaherty, J. E. 
+//!    (2004)**. "Shock detection and limiting with discontinuous Galerkin methods 
+//!    for hyperbolic conservation laws." *Applied Numerical Mathematics*, 48(3-4), 
+//!    323-338. DOI: 10.1016/j.apnum.2003.11.002
+//!    - Discontinuity indicators
+//!    - Limiting strategies
+//! 
+//! 4. **Cockburn, B., & Shu, C. W. (2001)**. "Runge–Kutta discontinuous Galerkin 
+//!    methods for convection-dominated problems." *Journal of Scientific Computing*, 
+//!    16(3), 173-261. DOI: 10.1023/A:1012873910884
+//!    - Time integration for DG methods
+//!    - Stability analysis
+//! 
+//! 5. **Gassner, G., Staudenmaier, M., Hindenlang, F., Atak, M., & Munz, C. D. 
+//!    (2015)**. "A space–time adaptive discontinuous Galerkin scheme." *Computers & 
+//!    Fluids*, 117, 247-261. DOI: 10.1016/j.compfluid.2015.05.002
+//!    - Hybrid spectral-DG approaches
+//!    - Adaptive method switching
+//! 
+//! ## Design Principles
 //! - SOLID: Each component (spectral solver, DG solver, discontinuity detector) is a separate module
 //! - CUPID: Composable solvers with clear interfaces
 //! - GRASP: Clear separation of responsibilities between detection, solving, and coupling

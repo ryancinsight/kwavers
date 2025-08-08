@@ -9,7 +9,40 @@
 //! - 60-80% memory reduction
 //! - 2-5x performance improvement
 //!
-//! Design Principles:
+//! ## Literature References
+//! 
+//! 1. **Berger, M. J., & Oliger, J. (1984)**. "Adaptive mesh refinement for 
+//!    hyperbolic partial differential equations." *Journal of Computational 
+//!    Physics*, 53(3), 484-512. DOI: 10.1016/0021-9991(84)90073-1
+//!    - Original AMR algorithm
+//!    - Conservative interpolation techniques
+//! 
+//! 2. **Berger, M. J., & Colella, P. (1989)**. "Local adaptive mesh refinement 
+//!    for shock hydrodynamics." *Journal of Computational Physics*, 82(1), 64-84. 
+//!    DOI: 10.1016/0021-9991(89)90035-1
+//!    - Extension to conservation laws
+//!    - Proper nesting and synchronization
+//! 
+//! 3. **Vasilyev, O. V., & Kevlahan, N. K. R. (2005)**. "An adaptive multilevel 
+//!    wavelet collocation method for elliptic problems." *Journal of Computational 
+//!    Physics*, 206(2), 412-431. DOI: 10.1016/j.jcp.2004.12.013
+//!    - Wavelet-based error estimation
+//!    - Adaptive grid generation
+//! 
+//! 4. **Popinet, S. (2003)**. "Gerris: a tree-based adaptive solver for the 
+//!    incompressible Euler equations in complex geometries." *Journal of 
+//!    Computational Physics*, 190(2), 572-600. DOI: 10.1016/S0021-9991(03)00298-5
+//!    - Octree-based refinement
+//!    - Efficient tree traversal algorithms
+//! 
+//! 5. **Domingues, M. O., Gomes, S. M., Roussel, O., & Schneider, K. (2008)**. 
+//!    "An adaptive multiresolution scheme with local time stepping for evolutionary 
+//!    PDEs." *Journal of Computational Physics*, 227(8), 3758-3780. 
+//!    DOI: 10.1016/j.jcp.2007.11.046
+//!    - Multiresolution analysis
+//!    - Local time stepping with AMR
+//!
+//! ## Design Principles
 //! - **SOLID**: Modular components with clear interfaces
 //! - **DRY**: Shared refinement logic across dimensions
 //! - **KISS**: Simple octree structure with efficient operations

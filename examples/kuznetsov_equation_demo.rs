@@ -227,24 +227,22 @@ fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f
     let center_y = grid.ny as f64 / 2.0;
     let center_z = grid.nz as f64 / 2.0;
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let x = i as f64 * grid.dx;
-                let y = (j as f64 - center_y) * grid.dy;
-                let z = (k as f64 - center_z) * grid.dz;
-                
-                // Gaussian beam profile
-                let r2 = y*y + z*z;
-                let envelope = (-r2 / (beam_width * beam_width)).exp();
-                
-                // Initial pressure profile
-                if x < 0.02 { // 20mm extent
-                    field[[i, j, k]] = amplitude * envelope;
-                }
+    // Use iterator-based approach for better performance
+    field.indexed_iter_mut()
+        .for_each(|((i, j, k), value)| {
+            let x = i as f64 * grid.dx;
+            let y = (j as f64 - center_y) * grid.dy;
+            let z = (k as f64 - center_z) * grid.dz;
+            
+            // Gaussian beam profile
+            let r2 = y*y + z*z;
+            let envelope = (-r2 / (beam_width * beam_width)).exp();
+            
+            // Initial pressure profile
+            if x < 0.02 { // 20mm extent
+                *value = amplitude * envelope;
             }
-        }
-    }
+        });
     
     field
 }
@@ -253,18 +251,16 @@ fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f
 fn create_gaussian_pulse(grid: &Grid, amplitude: f64, cx: usize, cy: usize, cz: usize, width: f64) -> Array3<f64> {
     let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let dx = (i as f64 - cx as f64) * grid.dx;
-                let dy = (j as f64 - cy as f64) * grid.dy;
-                let dz = (k as f64 - cz as f64) * grid.dz;
-                
-                let r2 = dx*dx + dy*dy + dz*dz;
-                field[[i, j, k]] = amplitude * (-r2 / (width * width)).exp();
-            }
-        }
-    }
+    // Use iterator-based approach for better performance
+    field.indexed_iter_mut()
+        .for_each(|((i, j, k), value)| {
+            let dx = (i as f64 - cx as f64) * grid.dx;
+            let dy = (j as f64 - cy as f64) * grid.dy;
+            let dz = (k as f64 - cz as f64) * grid.dz;
+            
+            let r2 = dx*dx + dy*dy + dz*dz;
+            *value = amplitude * (-r2 / (width * width)).exp();
+        });
     
     field
 }
