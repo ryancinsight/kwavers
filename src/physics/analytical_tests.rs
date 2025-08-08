@@ -47,7 +47,7 @@ impl PhysicsTestUtils {
         time: f64,
         dispersion_correction: bool
     ) -> Array3<f64> {
-        let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut pressure = grid.zeros_array();
         let wavelength = sound_speed / frequency;
         let k_analytical = 2.0 * PI / wavelength;
         
@@ -64,15 +64,12 @@ impl PhysicsTestUtils {
             k_analytical
         };
         
-        for i in 0..grid.nx {
+        use ndarray::Zip;
+        Zip::indexed(&mut pressure).for_each(|(i, j, k), p| {
             let x = i as f64 * grid.dx;
             let phase = k_corrected * x - 2.0 * PI * frequency * time;
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    pressure[[i, j, k]] = amplitude * phase.cos();
-                }
-            }
-        }
+            *p = amplitude * phase.cos();
+        });
         
         pressure
     }
@@ -282,7 +279,7 @@ mod tests {
         let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         
         // Initialize with Gaussian pulse for better amplitude tracking
-        let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut initial_pressure = grid.zeros_array();
         let center_x = grid.nx as f64 * grid.dx * 0.5;
         let center_y = grid.ny as f64 * grid.dy * 0.5;
         let center_z = grid.nz as f64 * grid.dz * 0.5;
@@ -390,7 +387,7 @@ mod tests {
         
         // Initialize fields
         let mut fields = Array4::zeros((crate::solver::TOTAL_FIELDS, nx, ny, nz));
-        let mut prev_pressure = Array3::zeros((nx, ny, nz));
+        let mut prev_pressure = grid.zeros_array();
         
         // Set initial condition: Gaussian pulse
         let pulse_width = 10.0 * dx;
@@ -508,25 +505,21 @@ mod tests {
         let reference_distance = 3.0 * dx; // 3 grid points to avoid singularity
         
         // Initialize spherical wave
-        let mut pressure = Array3::zeros((n, n, n));
+        let mut pressure = grid.zeros_array();
         
-        for i in 0..n {
-            for j in 0..n {
-                for k in 0..n {
-                    let r = (((i as i32 - center as i32).pow(2) + 
-                             (j as i32 - center as i32).pow(2) + 
-                             (k as i32 - center as i32).pow(2)) as f64).sqrt() * dx;
-                    
-                    if r >= reference_distance {
-                        // Spherical spreading law: p ∝ 1/r
-                        pressure[[i, j, k]] = source_amplitude * reference_distance / r;
-                    } else if r > 0.0 {
-                        // Near source, use reference amplitude
-                        pressure[[i, j, k]] = source_amplitude;
-                    }
-                }
+        Zip::indexed(&mut pressure).for_each(|(i, j, k), p| {
+            let r = (((i as i32 - center as i32).pow(2) + 
+                     (j as i32 - center as i32).pow(2) + 
+                     (k as i32 - center as i32).pow(2)) as f64).sqrt() * dx;
+            
+            if r >= reference_distance {
+                // Spherical spreading law: p ∝ 1/r
+                *p = source_amplitude * reference_distance / r;
+            } else if r > 0.0 {
+                // Near source, use reference amplitude
+                *p = source_amplitude;
             }
-        }
+        });
         
         // Check 1/r decay at various distances
         let test_distances = vec![10e-3, 20e-3, 40e-3]; // meters
@@ -562,18 +555,17 @@ mod tests {
         let beam_waist = 2e-3; // 2 mm
         
         // Initialize Gaussian beam
-        let mut pressure = Array3::zeros((n, n, 1));
+        let mut pressure = grid.zeros_array();
         let center = n / 2;
         
-        for i in 0..n {
-            for j in 0..n {
+        use ndarray::s;
+        pressure.slice_mut(s![.., .., 0]).indexed_iter_mut()
+            .for_each(|((i, j), p)| {
                 let x = (i as f64 - center as f64) * dx;
                 let y = (j as f64 - center as f64) * dx;
                 let r_squared = x * x + y * y;
-                
-                pressure[[i, j, 0]] = amplitude * (-r_squared / (beam_waist * beam_waist)).exp();
-            }
-        }
+                *p = amplitude * (-r_squared / (beam_waist * beam_waist)).exp();
+            });
         
         // Check Gaussian profile at various radii
         let test_radii = vec![0.0, beam_waist / 2.0, beam_waist, 2.0 * beam_waist];
@@ -611,7 +603,7 @@ mod tests {
         let amplitude = 1e5; // 100 kPa
         
         // Initialize standing wave pattern with smoother profile
-        let mut pressure = Array3::zeros((nx, 1, 1));
+        let mut pressure = grid.zeros_array();
         
         // Add window function to reduce edge effects
         let window_width = 10.0 * dx;

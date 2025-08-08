@@ -14,7 +14,7 @@ impl PhotochemicalEffects {
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing PhotochemicalEffects");
         Self {
-            reactive_oxygen_species: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            reactive_oxygen_species: grid.zeros_array(),
         }
     }
 
