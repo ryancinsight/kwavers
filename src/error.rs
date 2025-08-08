@@ -589,6 +589,11 @@ pub enum SystemError {
         call: String,
         reason: String,
     },
+    /// IO error
+    Io {
+        operation: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for SystemError {
@@ -609,11 +614,23 @@ impl fmt::Display for SystemError {
             SystemError::SystemCall { call, reason } => {
                 write!(f, "System call '{}' failed: {}", call, reason)
             }
+            SystemError::Io { operation, reason } => {
+                write!(f, "IO operation '{}' failed: {}", operation, reason)
+            }
         }
     }
 }
 
 impl StdError for SystemError {}
+
+impl From<std::io::Error> for KwaversError {
+    fn from(err: std::io::Error) -> Self {
+        KwaversError::System(SystemError::Io {
+            operation: "file".to_string(),
+            reason: err.to_string(),
+        })
+    }
+}
 
 /// Memory transfer direction for GPU operations
 #[derive(Debug, Clone, Serialize, Deserialize)]

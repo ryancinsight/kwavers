@@ -22,7 +22,7 @@
 use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::grid::Grid;
 use crate::medium::{HomogeneousMedium, Medium};
-use crate::source::Source;
+use crate::source::{Source, phased_array::PhasedArrayTransducer};
 use crate::solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
 use crate::solver::fdtd::FdtdSolver;
 use crate::physics::{PluginManager, PluginContext};
@@ -134,9 +134,9 @@ impl KWaveValidator {
             "focused_transducer" => self.test_focused_transducer(test_case),
             "time_reversal" => self.test_time_reversal(test_case),
             _ => Err(KwaversError::Config(ConfigError::InvalidValue {
-                field: "test_case".to_string(),
+                parameter: "test_case".to_string(),
                 value: test_case.name.clone(),
-                reason: "Unknown test case type".to_string(),
+                constraint: "Must be one of: homogeneous_propagation, boundary_conditions, heterogeneous_media, nonlinear_propagation, focused_transducer, time_reversal".to_string(),
             })),
         }
     }
@@ -146,7 +146,7 @@ impl KWaveValidator {
         // Plugin types are already imported at module level
         
         // Create test configuration matching k-Wave example
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         let dt = 5e-8;
         let t_end = 40e-6;
         
@@ -207,7 +207,7 @@ impl KWaveValidator {
         let mut cpml = CPMLBoundary::new(pml_config, &self.grid)?;
         
         // Create plane wave
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         let mut pressure = self.grid.zeros_array();
         
         // Initialize plane wave traveling in +x direction
@@ -297,24 +297,30 @@ impl KWaveValidator {
         pressure.slice_mut(s![source_pos, .., ..]).fill(1e6);
         
         // Run simulation
-        let mut plugin_manager = PluginManager::new();
+        // Use PSTD solver directly
         let config = PstdConfig::default();
-        let pstd_plugin = PstdPlugin::new(config);
-        plugin_manager.add_plugin(Box::new(pstd_plugin))?;
+        let mut solver = PstdSolver::new(config, &self.grid)?;
         
-        let mut context = PluginContext::new(&self.grid, &medium);
-        let mut fields = Array4::zeros((7, self.grid.nx, self.grid.ny, self.grid.nz));
-        fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
-        context.fields = fields;
+        // Initialize velocity fields
+        let mut vx = self.grid.zeros_array();
+        let mut vy = self.grid.zeros_array();
+        let mut vz = self.grid.zeros_array();
         
         let dt = 5e-8;
         let n_steps = 500;
         for _ in 0..n_steps {
-            plugin_manager.execute_plugins(&mut context, dt)?;
+            // Compute velocity divergence
+            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            
+            // Update pressure
+            solver.update_pressure(&mut pressure, &divergence, &medium, dt)?;
+            
+            // Update velocity
+            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt)?;
         }
         
         // Check for proper transmission and reflection
-        let final_pressure = context.fields.slice(s![0, .., .., ..]).to_owned();
+        let final_pressure = pressure.clone();
         
         // Simple validation: check energy distribution
         let energy_layer1: f64 = final_pressure.slice(s![..self.grid.nx/3, .., ..])
@@ -356,8 +362,8 @@ impl KWaveValidator {
             ..Default::default()
         };
         
-        let mut solver = KuznetsovWave::new(&self.grid, config);
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let mut solver = KuznetsovWave::new(&self.grid, config)?;
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         
         // High-amplitude sinusoidal source
         let frequency = 1e6; // 1 MHz
@@ -432,8 +438,9 @@ impl KWaveValidator {
             crosstalk_coefficient: 0.0,
         };
         
-        let transducer = PhasedArrayTransducer::new(config);
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let signal = std::sync::Arc::new(crate::signal::SineWave::new(2e6, 1.0));
+        let transducer = PhasedArrayTransducer::new(config, signal, &medium, &self.grid)?;
         
         // Calculate pressure field
         let mut pressure = self.grid.zeros_array();
@@ -482,18 +489,17 @@ impl KWaveValidator {
         let mut initial_pressure = self.grid.zeros_array();
         initial_pressure[source_pos] = 1e6;
         
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         
-        // Forward propagation
-        let mut plugin_manager = PluginManager::new();
+        // Forward propagation using PSTD solver
         let config = PstdConfig::default();
-        let pstd_plugin = PstdPlugin::new(config);
-        plugin_manager.add_plugin(Box::new(pstd_plugin))?;
+        let mut solver = PstdSolver::new(config, &self.grid)?;
         
-        let mut context = PluginContext::new(&self.grid, &medium);
-        let mut fields = Array4::zeros((7, self.grid.nx, self.grid.ny, self.grid.nz));
-        fields.slice_mut(s![0, .., .., ..]).assign(&initial_pressure);
-        context.fields = fields;
+        // Initialize pressure and velocity fields
+        let mut pressure = initial_pressure.clone();
+        let mut vx = self.grid.zeros_array();
+        let mut vy = self.grid.zeros_array();
+        let mut vz = self.grid.zeros_array();
         
         let dt = 5e-8;
         let n_steps = 1000;
@@ -501,8 +507,15 @@ impl KWaveValidator {
         // Record boundary data
         let mut boundary_data = Vec::new();
         for _ in 0..n_steps {
-            plugin_manager.execute_plugins(&mut context, dt)?;
-            let pressure = context.fields.slice(s![0, .., .., ..]).to_owned();
+            // Compute velocity divergence
+            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            
+            // Update pressure
+            solver.update_pressure(&mut pressure, &divergence, &medium, dt)?;
+            
+            // Update velocity
+            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt)?;
+            
             boundary_data.push(self.extract_boundary(&pressure));
         }
         

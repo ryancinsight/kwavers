@@ -406,7 +406,7 @@ impl KuznetsovWave {
         let mut result = Array3::zeros(pressure.dim());
         result.indexed_iter_mut()
             .zip(laplacian.iter())
-            .for_each(|((i, j, k), res), &lap| {
+            .for_each(|(((i, j, k), res), &lap)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
