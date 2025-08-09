@@ -11,6 +11,30 @@ use std::f64::consts::PI;
 const MIN_RADIUS: f64 = 1e-9;  // Minimum bubble radius (1 nm)
 const MAX_RADIUS: f64 = 1e-2;  // Maximum bubble radius (1 cm)
 
+// Air composition constants
+const N2_FRACTION: f64 = 0.79;  // Nitrogen fraction in air
+const O2_FRACTION: f64 = 0.21;  // Oxygen fraction in air
+
+// Unit conversion constants
+const BAR_L2_TO_PA_M6: f64 = 0.1;   // Convert bar·L²/mol² to Pa·m⁶/mol²
+const L_TO_M3: f64 = 1e-3;          // Convert L/mol to m³/mol
+
+// Physical constants
+const AVOGADRO: f64 = 6.022e23;     // Avogadro's number (molecules/mol)
+const R_GAS: f64 = 8.314;           // Universal gas constant (J/(mol·K))
+
+// Van der Waals constants for gases (from NIST Chemistry WebBook)
+const VDW_A_N2: f64 = 1.370;        // bar·L²/mol² for N2
+const VDW_B_N2: f64 = 0.0387;       // L/mol for N2
+const VDW_A_O2: f64 = 1.382;        // bar·L²/mol² for O2
+const VDW_B_O2: f64 = 0.0319;       // L/mol for O2
+
+// Molecular properties
+const M_WATER: f64 = 0.018;         // Molecular weight of water (kg/mol)
+
+// Reference conditions
+const T_AMBIENT: f64 = 293.15;       // Ambient temperature (K)
+
 /// Rayleigh-Plesset equation solver (incompressible)
 pub struct RayleighPlessetSolver {
     params: BubbleParameters,
@@ -121,16 +145,26 @@ impl KellerMiksisModel {
         }
         
         // Van der Waals equation for real gas
-        let r_gas = 8.314; // J/(mol·K)
+        // Literature reference: Qin et al. (2023) "Numerical investigation on acoustic cavitation 
+        // characteristics of an air-vapor bubble", Ultrasonics Sonochemistry
         let n_total = state.n_gas + state.n_vapor;
         let volume = state.volume();
         
-        // Van der Waals constants (simplified)
-        let b = 3.0e-5 * n_total / 6.022e23; // Excluded volume
+        // Van der Waals constants for air (weighted average of N2 and O2)
+        let a_air = N2_FRACTION * VDW_A_N2 + O2_FRACTION * VDW_A_O2; // bar·L²/mol²
+        let b_air = N2_FRACTION * VDW_B_N2 + O2_FRACTION * VDW_B_O2; // L/mol
         
+        // Convert units to SI
+        let a = a_air * BAR_L2_TO_PA_M6; // Pa·m⁶/mol²
+        let b = b_air * L_TO_M3; // m³/mol
         
+        // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
+        // Solving for P: P = nRT/(V - nb) - a*n²/V²
+        let n_moles = n_total / AVOGADRO;
+        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b) 
+                     - a * n_moles * n_moles / (volume * volume);
         
-        n_total * r_gas * state.temperature / (6.022e23 * (volume - b))
+        pressure
     }
     
     /// Update bubble temperature
@@ -159,14 +193,14 @@ impl KellerMiksisModel {
         let nusselt = 2.0 + 0.6 * peclet.powf(0.5); // Simplified Nusselt number
         let h = nusselt * self.params.thermal_conductivity / r;
         let area = state.surface_area();
-        let mass = state.total_molecules() * state.gas_species.molecular_weight() / 6.022e23;
-        let cv = 8.314 / state.gas_species.molecular_weight() / (gamma - 1.0);
+        let mass = state.total_molecules() * state.gas_species.molecular_weight() / AVOGADRO;
+        let cv = R_GAS / state.gas_species.molecular_weight() / (gamma - 1.0);
         
-        let dt_transfer = -h * area * (state.temperature - 293.15) / (mass * cv) * dt;
+        let dt_transfer = -h * area * (state.temperature - T_AMBIENT) / (mass * cv) * dt;
         
         // Update temperature
         state.temperature += dt_compression + dt_transfer;
-        state.temperature = state.temperature.max(293.15); // Don't go below ambient
+        state.temperature = state.temperature.max(T_AMBIENT); // Don't go below ambient
         
         // Track maximum
         state.update_max_temperature();
@@ -179,18 +213,17 @@ impl KellerMiksisModel {
         }
         
         // Simplified mass transfer model
-        let p_sat = self.params.pv * (state.temperature / 293.15).powf(2.0); // Rough approximation
-        let p_vapor_current = state.n_vapor * 8.314 * state.temperature / 
-            (6.022e23 * state.volume());
+        let p_sat = self.params.pv * (state.temperature / T_AMBIENT).powf(2.0); // Rough approximation
+        let p_vapor_current = state.n_vapor * R_GAS * state.temperature / 
+            (AVOGADRO * state.volume());
         
         // Mass transfer rate
         let accommodation = self.params.accommodation_coeff;
-        let m_water = 0.018; // kg/mol
         let rate = accommodation * state.surface_area() * 
-            (p_sat - p_vapor_current) / (2.0 * PI * m_water * 8.314 * state.temperature).sqrt();
+            (p_sat - p_vapor_current) / (2.0 * PI * M_WATER * R_GAS * state.temperature).sqrt();
         
         // Update vapor molecules
-        state.n_vapor += rate * 6.022e23 * dt;
+        state.n_vapor += rate * AVOGADRO * dt;
         state.n_vapor = state.n_vapor.max(0.0);
     }
 }

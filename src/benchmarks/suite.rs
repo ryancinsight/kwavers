@@ -10,16 +10,13 @@
 //! - **Zero-Copy**: Efficient benchmark implementations
 
 use crate::{KwaversResult, Grid};
-use crate::performance::profiling::{PerformanceProfiler, ProfileReport};
-use crate::solver::pstd::PstdSolver;
-use crate::solver::fdtd::FdtdSolver;
+use crate::performance::profiling::PerformanceProfiler;
 use crate::solver::amr::AMRManager;
 use crate::physics::mechanics::acoustic_wave::KuznetsovWave;
-use crate::medium::{HomogeneousMedium, Medium};
+use crate::medium::HomogeneousMedium;
 use ndarray::{Array3, s, Array4};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Benchmark configuration
 #[derive(Debug, Clone)]
@@ -127,8 +124,8 @@ impl BenchmarkSuite {
 
     /// Benchmark PSTD solver
     fn benchmark_pstd(&mut self, grid_size: usize) -> KwaversResult<()> {
-        use crate::physics::plugin::{PluginManager, PluginContext};
-        use crate::solver::pstd::PstdPlugin;
+        
+        
         
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
         let profiler = PerformanceProfiler::new(&grid);

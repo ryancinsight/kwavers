@@ -103,7 +103,7 @@ fn standard_thermal_diffusion(grid: &Grid, medium: &dyn kwavers::medium::Medium)
     solver.set_temperature(initial_temp)?;
     
     // No external heat source
-    let heat_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let heat_source = grid.zeros_array();
     
     // Simulate for 10 seconds
     let dt = 1e-3; // 1ms time step
@@ -142,7 +142,7 @@ fn bioheat_equation(grid: &Grid, medium: &dyn kwavers::medium::Medium) -> Kwaver
     solver.set_temperature(initial_temp)?;
     
     // No external heating
-    let heat_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let heat_source = grid.zeros_array();
     
     // Simulate cooling due to perfusion
     let dt = 1e-2; // 10ms time step
