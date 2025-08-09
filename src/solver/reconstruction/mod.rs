@@ -263,7 +263,18 @@ impl LineRecon {
                            (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2 +
                            (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
                 } else {
-                    self.interpolate(data, index) // Fall back to linear
+                    // Fall back to linear interpolation when cubic cannot be applied
+                    let idx0 = index.floor() as usize;
+                    let idx1 = idx0 + 1;
+                    
+                    if idx1 < data.len() {
+                        let t = index - idx0 as f64;
+                        data[idx0] * (1.0 - t) + data[idx1] * t
+                    } else if idx0 < data.len() {
+                        data[idx0]
+                    } else {
+                        0.0
+                    }
                 }
             }
         }
@@ -792,7 +803,8 @@ mod tests {
     
     #[test]
     fn test_interpolation_methods() {
-        let config = LineReconConfig {
+        // Test linear interpolation
+        let config_linear = LineReconConfig {
             sensor_positions: Array2::zeros((1, 3)),
             speed_of_sound: 1500.0,
             sampling_frequency: 20e6,
@@ -804,18 +816,51 @@ mod tests {
             dynamic_range: 60.0,
         };
         
-        let recon = LineRecon::new(config);
+        let recon_linear = LineRecon::new(config_linear);
         
         // Test data
         let data = Array1::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
         let view = data.view();
         
         // Test linear interpolation
-        let val = recon.interpolate(&view, 1.5);
+        let val = recon_linear.interpolate(&view, 1.5);
         assert_relative_eq!(val, 2.5, epsilon = 1e-10);
         
         // Test boundary
-        let val = recon.interpolate(&view, 0.0);
+        let val = recon_linear.interpolate(&view, 0.0);
         assert_relative_eq!(val, 1.0, epsilon = 1e-10);
+        
+        // Test cubic interpolation with edge cases
+        let config_cubic = LineReconConfig {
+            sensor_positions: Array2::zeros((1, 3)),
+            speed_of_sound: 1500.0,
+            sampling_frequency: 20e6,
+            interpolation: InterpolationMethod::Cubic,
+            apply_filter: false,
+            filter_range: None,
+            envelope_detection: false,
+            log_compression: false,
+            dynamic_range: 60.0,
+        };
+        
+        let recon_cubic = LineRecon::new(config_cubic);
+        
+        // Test cubic at boundaries (should fall back to linear)
+        let val = recon_cubic.interpolate(&view, 0.5); // Near start, should use linear fallback
+        assert!(val > 0.0 && val < 5.0); // Reasonable value
+        
+        let val = recon_cubic.interpolate(&view, 4.5); // Near end, should use linear fallback
+        assert!(val > 0.0 && val < 6.0); // Reasonable value
+        
+        // Test cubic in the middle (should use cubic)
+        let val = recon_cubic.interpolate(&view, 2.5);
+        assert!(val > 2.0 && val < 4.0); // Should be around 3.5
+        
+        // Test out of bounds
+        let val = recon_cubic.interpolate(&view, -1.0);
+        assert_eq!(val, 0.0);
+        
+        let val = recon_cubic.interpolate(&view, 10.0);
+        assert_eq!(val, 0.0);
     }
 }
