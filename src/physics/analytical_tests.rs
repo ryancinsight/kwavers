@@ -64,10 +64,10 @@ impl PhysicsTestUtils {
             k_analytical
         };
         
-        Zip::indexed(&mut pressure).for_each(|(i, j, k), p| {
+        pressure.axis_iter_mut(Axis(0)).enumerate().for_each(|(i, mut plane)| {
             let x = i as f64 * grid.dx;
             let phase = k_corrected * x - 2.0 * PI * frequency * time;
-            *p = amplitude * phase.cos();
+            plane.fill(amplitude * phase.cos());
         });
         
         pressure
@@ -705,5 +705,37 @@ mod tests {
         assert!(max_val < 1e10, "Solver produced unreasonably large values: {}", max_val);
         
         println!("Basic functionality test passed. Max pressure: {:.2e}", max_val);
+    }
+
+    #[test]
+    fn test_plane_wave_generation_efficiency() {
+        // Test that plane wave generation produces correct results
+        // This also serves as documentation for the performance improvement
+        let grid = Grid::new(64, 32, 32, 1e-4, 1e-4, 1e-4);
+        let frequency = 1e6;
+        let amplitude = 1e5;
+        let sound_speed = 1500.0;
+        let time = 0.0;
+        
+        let pressure = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
+            &grid, frequency, amplitude, sound_speed, time, false
+        );
+        
+        // Verify that all values in a y-z plane are identical (plane wave property)
+        for i in 0..grid.nx {
+            let expected_value = pressure[[i, 0, 0]];
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    assert_eq!(
+                        pressure[[i, j, k]], expected_value,
+                        "Plane wave should have constant value in y-z plane at x index {}", i
+                    );
+                }
+            }
+        }
+        
+        // Note: The refactoring from Zip::indexed to axis_iter_mut improves performance
+        // by calculating the phase only once per x-slice instead of for every grid point.
+        // This reduces redundant calculations from O(nx*ny*nz) to O(nx).
     }
 }
