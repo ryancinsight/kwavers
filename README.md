@@ -608,6 +608,67 @@ cargo test -- --nocapture
 - **Tissue Properties**: Within 5% of published values
 - **Shock Detection**: 100% accuracy for step discontinuities
 
+## 🆕 New Features (January 2025)
+
+### Reconstruction Algorithms
+```rust
+use kwavers::solver::reconstruction::{LineRecon, PlaneRecon, LineReconConfig, PlaneReconConfig};
+
+// Linear array reconstruction (kspaceLineRecon equivalent)
+let config = LineReconConfig {
+    sensor_positions,
+    speed_of_sound: 1500.0,
+    sampling_frequency: 20e6,
+    interpolation: InterpolationMethod::Linear,
+    envelope_detection: true,
+    log_compression: true,
+    dynamic_range: 60.0,
+    ..Default::default()
+};
+let mut recon = LineRecon::new(config);
+let image = recon.reconstruct(&sensor_data, &grid)?;
+```
+
+### Focused Transducers
+```rust
+use kwavers::source::{BowlTransducer, ArcSource, make_bowl};
+
+// Create focused bowl transducer (makeBowl equivalent)
+let bowl = make_bowl(
+    0.064,  // radius of curvature
+    0.064,  // diameter
+    [0.0, 0.0, 0.0],  // center
+    1e6,    // frequency
+    1e6     // amplitude
+)?;
+
+// Generate focused field
+let source_field = bowl.generate_source(&grid, time)?;
+
+// Get O'Neil analytical solution
+let on_axis_pressure = bowl.oneil_solution(focal_distance);
+```
+
+### k-Wave Utilities
+```rust
+use kwavers::utils::kwave_utils::{
+    AngularSpectrum, WaterProperties, HounsfieldUnits, BeamPatterns
+};
+
+// Angular spectrum propagation
+let mut propagator = AngularSpectrum::new(nx, ny, dx, dy);
+let propagated = propagator.forward_propagate(&field, distance, wavelength)?;
+
+// Water properties
+let density = WaterProperties::density(temperature);
+let sound_speed = WaterProperties::sound_speed(temperature);
+let absorption = WaterProperties::absorption_coefficient(freq, temp, depth, salinity, ph);
+
+// CT data conversion
+let density = HounsfieldUnits::to_density(hu_value);
+let tissue_type = HounsfieldUnits::classify_tissue(hu_value);
+```
+
 ## 🔬 Comparison with k-Wave
 
 Kwavers is inspired by k-Wave but goes beyond it in several key areas:
@@ -642,12 +703,19 @@ Kwavers is inspired by k-Wave but goes beyond it in several key areas:
 | Zero-copy | No | Yes |
 | Plugin System | No | Yes |
 
-### 🔴 **Current Gaps** (Planned for 2025)
-- [ ] Reconstruction algorithms (kspaceLineRecon, kspacePlaneRecon)
-- [ ] Focused bowl transducers (makeBowl, makeMultiBowl)
-- [ ] Angular spectrum methods
+### ✅ **Recently Implemented** (January 2025)
+- [x] Reconstruction algorithms (kspaceLineRecon, kspacePlaneRecon) ✅
+- [x] Focused bowl transducers (makeBowl, makeMultiBowl, makeArc) ✅
+- [x] Angular spectrum propagation methods ✅
+- [x] Water properties and attenuation models ✅
+- [x] Hounsfield unit conversions for CT data ✅
+- [x] Beam pattern calculations and directivity ✅
+- [x] Time reversal utilities ✅
+- [x] Dedicated thermal diffusion solver ✅
+
+### ⚠️ **Remaining Gaps** (Planned for 2025)
 - [ ] Built-in movie generation
 - [ ] MATLAB .mat file I/O
-- [ ] Dedicated thermal diffusion solver
+- [ ] HDF5 format compatibility
 
 See [CHECKLIST.md](CHECKLIST.md#k-wave-feature-parity-analysis-) for detailed gap analysis.
