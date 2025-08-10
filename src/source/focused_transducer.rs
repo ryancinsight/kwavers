@@ -579,7 +579,7 @@ pub fn make_annular_array(
     let mut configs = Vec::new();
     
     for i in 0..n_rings {
-        let t = i as f64 / (n_rings - 1) as f64;
+        let t = if n_rings > 1 { i as f64 / (n_rings - 1) as f64 } else { 0.0 };
         let radius = inner_radius + t * (outer_radius - inner_radius);
         
         let config = BowlConfig {
