@@ -717,6 +717,30 @@ impl NumericalUtils {
 }
 
 /// Bessel function J1 approximation
+///
+/// Approximates the Bessel function of the first kind, order one (J₁(x)), using:
+/// - A polynomial expansion for |x| < 3.0
+/// - An asymptotic expansion for |x| >= 3.0
+///
+/// # Approximation Accuracy
+/// - For |x| < 3.0, the polynomial expansion provides reasonable accuracy for small arguments,
+///   but may deviate from the true value as |x| approaches 3.0.
+/// - For |x| >= 3.0, the asymptotic expansion is accurate for large arguments, but may lose
+///   precision for moderately sized x (e.g., 3 < |x| < 5).
+/// - Maximum relative error is typically less than 1% for |x| > 5, but can be higher near the transition.
+///
+/// # Valid Range
+/// - Valid for all real x, but accuracy is best for |x| << 3.0 (polynomial) and |x| >> 3.0 (asymptotic).
+/// - For |x| ≈ 3.0, accuracy may be reduced.
+///
+/// # Numerical Limitations
+/// - For very large |x|, floating-point precision may degrade.
+/// - For very small |x|, the polynomial expansion is stable.
+/// - No special handling for NaN or infinite values.
+///
+/// # References
+/// - Abramowitz & Stegun, "Handbook of Mathematical Functions", 9.1.21, 9.2.1
+/// - Numerical Recipes, 6.5
 fn bessel_j1(x: f64) -> f64 {
     // Polynomial approximation for small x
     if x.abs() < 3.0 {
