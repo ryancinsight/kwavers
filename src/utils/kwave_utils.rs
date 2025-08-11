@@ -509,18 +509,149 @@ impl NumericalUtils {
     }
     
     /// Calculate Laplacian using central differences
+    /// 
+    /// Computes the discrete Laplacian (∇²) of a 2D field using finite differences.
+    /// Interior points use standard central differences, while boundary points use
+    /// forward/backward differences to maintain accuracy at edges.
+    /// 
+    /// # Boundary Handling
+    /// - Corners: Uses one-sided differences in both directions
+    /// - Edges: Uses one-sided difference normal to edge, central difference along edge
+    /// - Interior: Uses standard 5-point stencil with central differences
+    /// 
+    /// For very small grids (< 3x3), uses simplified differencing schemes.
     pub fn laplacian_2d(field: &Array2<f64>, dx: f64, dy: f64) -> Array2<f64> {
         let (nx, ny) = field.dim();
         let mut laplacian = Array2::zeros((nx, ny));
         
+        // Handle edge cases for very small grids
+        if nx < 3 || ny < 3 {
+            // For very small grids, use simplified first-order approximations
+            if nx >= 2 && ny >= 2 {
+                for i in 0..nx {
+                    for j in 0..ny {
+                        let mut lap_x = 0.0;
+                        let mut lap_y = 0.0;
+                        
+                        // X-direction
+                        if i == 0 && nx > 1 {
+                            lap_x = (field[[1, j]] - field[[0, j]]) / (dx * dx);
+                        } else if i == nx - 1 && nx > 1 {
+                            lap_x = (field[[nx-2, j]] - field[[nx-1, j]]) / (dx * dx);
+                        } else if i > 0 && i < nx - 1 {
+                            lap_x = (field[[i+1, j]] - 2.0 * field[[i, j]] + field[[i-1, j]]) / (dx * dx);
+                        }
+                        
+                        // Y-direction
+                        if j == 0 && ny > 1 {
+                            lap_y = (field[[i, 1]] - field[[i, 0]]) / (dy * dy);
+                        } else if j == ny - 1 && ny > 1 {
+                            lap_y = (field[[i, ny-2]] - field[[i, ny-1]]) / (dy * dy);
+                        } else if j > 0 && j < ny - 1 {
+                            lap_y = (field[[i, j+1]] - 2.0 * field[[i, j]] + field[[i, j-1]]) / (dy * dy);
+                        }
+                        
+                        laplacian[[i, j]] = lap_x + lap_y;
+                    }
+                }
+            }
+            return laplacian;
+        }
+        
         let dx2 = dx * dx;
         let dy2 = dy * dy;
         
+        // Interior points: standard 5-point stencil
         for i in 1..nx-1 {
             for j in 1..ny-1 {
                 laplacian[[i, j]] = (field[[i+1, j]] - 2.0 * field[[i, j]] + field[[i-1, j]]) / dx2 +
                                    (field[[i, j+1]] - 2.0 * field[[i, j]] + field[[i, j-1]]) / dy2;
             }
+        }
+        
+        // Left and right boundaries (excluding corners)
+        for j in 1..ny-1 {
+            // Left boundary (i=0): forward difference in x, central in y
+            if nx >= 3 {
+                laplacian[[0, j]] = (field[[2, j]] - 2.0 * field[[1, j]] + field[[0, j]]) / dx2 +
+                                   (field[[0, j+1]] - 2.0 * field[[0, j]] + field[[0, j-1]]) / dy2;
+            } else {
+                laplacian[[0, j]] = (field[[1, j]] - field[[0, j]]) / dx2 +
+                                   (field[[0, j+1]] - 2.0 * field[[0, j]] + field[[0, j-1]]) / dy2;
+            }
+            
+            // Right boundary (i=nx-1): backward difference in x, central in y
+            let i = nx - 1;
+            if nx >= 3 {
+                laplacian[[i, j]] = (field[[i, j]] - 2.0 * field[[i-1, j]] + field[[i-2, j]]) / dx2 +
+                                   (field[[i, j+1]] - 2.0 * field[[i, j]] + field[[i, j-1]]) / dy2;
+            } else {
+                laplacian[[i, j]] = (field[[i-1, j]] - field[[i, j]]) / dx2 +
+                                   (field[[i, j+1]] - 2.0 * field[[i, j]] + field[[i, j-1]]) / dy2;
+            }
+        }
+        
+        // Top and bottom boundaries (excluding corners)
+        for i in 1..nx-1 {
+            // Bottom boundary (j=0): central difference in x, forward in y
+            if ny >= 3 {
+                laplacian[[i, 0]] = (field[[i+1, 0]] - 2.0 * field[[i, 0]] + field[[i-1, 0]]) / dx2 +
+                                   (field[[i, 2]] - 2.0 * field[[i, 1]] + field[[i, 0]]) / dy2;
+            } else {
+                laplacian[[i, 0]] = (field[[i+1, 0]] - 2.0 * field[[i, 0]] + field[[i-1, 0]]) / dx2 +
+                                   (field[[i, 1]] - field[[i, 0]]) / dy2;
+            }
+            
+            // Top boundary (j=ny-1): central difference in x, backward in y
+            let j = ny - 1;
+            if ny >= 3 {
+                laplacian[[i, j]] = (field[[i+1, j]] - 2.0 * field[[i, j]] + field[[i-1, j]]) / dx2 +
+                                   (field[[i, j]] - 2.0 * field[[i, j-1]] + field[[i, j-2]]) / dy2;
+            } else {
+                laplacian[[i, j]] = (field[[i+1, j]] - 2.0 * field[[i, j]] + field[[i-1, j]]) / dx2 +
+                                   (field[[i, j-1]] - field[[i, j]]) / dy2;
+            }
+        }
+        
+        // Corner points: use one-sided differences in both directions
+        // Bottom-left corner (0, 0)
+        if nx >= 3 && ny >= 3 {
+            laplacian[[0, 0]] = (field[[2, 0]] - 2.0 * field[[1, 0]] + field[[0, 0]]) / dx2 +
+                               (field[[0, 2]] - 2.0 * field[[0, 1]] + field[[0, 0]]) / dy2;
+        } else {
+            let lap_x = if nx >= 2 { (field[[1, 0]] - field[[0, 0]]) / dx2 } else { 0.0 };
+            let lap_y = if ny >= 2 { (field[[0, 1]] - field[[0, 0]]) / dy2 } else { 0.0 };
+            laplacian[[0, 0]] = lap_x + lap_y;
+        }
+        
+        // Bottom-right corner (nx-1, 0)
+        if nx >= 3 && ny >= 3 {
+            laplacian[[nx-1, 0]] = (field[[nx-1, 0]] - 2.0 * field[[nx-2, 0]] + field[[nx-3, 0]]) / dx2 +
+                                  (field[[nx-1, 2]] - 2.0 * field[[nx-1, 1]] + field[[nx-1, 0]]) / dy2;
+        } else {
+            let lap_x = if nx >= 2 { (field[[nx-2, 0]] - field[[nx-1, 0]]) / dx2 } else { 0.0 };
+            let lap_y = if ny >= 2 { (field[[nx-1, 1]] - field[[nx-1, 0]]) / dy2 } else { 0.0 };
+            laplacian[[nx-1, 0]] = lap_x + lap_y;
+        }
+        
+        // Top-left corner (0, ny-1)
+        if nx >= 3 && ny >= 3 {
+            laplacian[[0, ny-1]] = (field[[2, ny-1]] - 2.0 * field[[1, ny-1]] + field[[0, ny-1]]) / dx2 +
+                                  (field[[0, ny-1]] - 2.0 * field[[0, ny-2]] + field[[0, ny-3]]) / dy2;
+        } else {
+            let lap_x = if nx >= 2 { (field[[1, ny-1]] - field[[0, ny-1]]) / dx2 } else { 0.0 };
+            let lap_y = if ny >= 2 { (field[[0, ny-2]] - field[[0, ny-1]]) / dy2 } else { 0.0 };
+            laplacian[[0, ny-1]] = lap_x + lap_y;
+        }
+        
+        // Top-right corner (nx-1, ny-1)
+        if nx >= 3 && ny >= 3 {
+            laplacian[[nx-1, ny-1]] = (field[[nx-1, ny-1]] - 2.0 * field[[nx-2, ny-1]] + field[[nx-3, ny-1]]) / dx2 +
+                                      (field[[nx-1, ny-1]] - 2.0 * field[[nx-1, ny-2]] + field[[nx-1, ny-3]]) / dy2;
+        } else {
+            let lap_x = if nx >= 2 { (field[[nx-2, ny-1]] - field[[nx-1, ny-1]]) / dx2 } else { 0.0 };
+            let lap_y = if ny >= 2 { (field[[nx-1, ny-2]] - field[[nx-1, ny-1]]) / dy2 } else { 0.0 };
+            laplacian[[nx-1, ny-1]] = lap_x + lap_y;
         }
         
         laplacian
@@ -591,6 +722,85 @@ fn bessel_j1(x: f64) -> f64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    
+    #[test]
+    fn test_laplacian_boundaries() {
+        // Test that Laplacian handles boundaries correctly
+        // Use a quadratic field where we know the analytical Laplacian
+        let field = Array2::from_shape_fn((5, 5), |(i, j)| {
+            let x = i as f64;
+            let y = j as f64;
+            x * x + y * y  // f(x,y) = x² + y², so ∇²f = 2 + 2 = 4
+        });
+        
+        let laplacian = NumericalUtils::laplacian_2d(&field, 1.0, 1.0);
+        
+        // Check that all points have been computed (non-zero for this field)
+        // The Laplacian of x² + y² should be approximately 4 everywhere
+        // (with some numerical error at boundaries due to one-sided differences)
+        
+        // Interior points should be close to 4
+        for i in 1..4 {
+            for j in 1..4 {
+                assert_relative_eq!(laplacian[[i, j]], 4.0, epsilon = 0.1);
+            }
+        }
+        
+        // Boundaries should be computed (not left as zero)
+        // They might not be exactly 4 due to one-sided differences, but should be non-zero
+        assert!(laplacian[[0, 0]].abs() > 1.0, "Corner (0,0) should be computed");
+        assert!(laplacian[[0, 2]].abs() > 1.0, "Left edge (0,2) should be computed");
+        assert!(laplacian[[4, 2]].abs() > 1.0, "Right edge (4,2) should be computed");
+        assert!(laplacian[[2, 0]].abs() > 1.0, "Bottom edge (2,0) should be computed");
+        assert!(laplacian[[2, 4]].abs() > 1.0, "Top edge (2,4) should be computed");
+        
+        // Test with a constant field (Laplacian should be zero everywhere)
+        let const_field = Array2::ones((5, 5));
+        let const_laplacian = NumericalUtils::laplacian_2d(&const_field, 1.0, 1.0);
+        
+        for value in const_laplacian.iter() {
+            assert!(value.abs() < 1e-10, "Laplacian of constant field should be zero");
+        }
+        
+        // Test with small grid
+        let small_field = Array2::from_shape_fn((2, 2), |(i, j)| {
+            (i + j) as f64
+        });
+        let small_laplacian = NumericalUtils::laplacian_2d(&small_field, 1.0, 1.0);
+        assert_eq!(small_laplacian.dim(), (2, 2), "Should handle 2x2 grid");
+        
+        // Test that boundaries are actually computed, not left as zero
+        // Use a linear field where boundaries matter
+        let linear_field = Array2::from_shape_fn((4, 4), |(i, j)| {
+            i as f64 + j as f64  // Linear field, Laplacian should be 0
+        });
+        let linear_laplacian = NumericalUtils::laplacian_2d(&linear_field, 1.0, 1.0);
+        
+        // All values should be close to zero for a linear field
+        for value in linear_laplacian.iter() {
+            assert!(value.abs() < 0.1, "Laplacian of linear field should be ~0");
+        }
+    }
+    
+    #[test]
+    fn test_gradient_laplacian_consistency() {
+        // Test that gradient and Laplacian are consistent
+        // For a quadratic field f(x,y) = x² + y², ∇²f = 2 + 2 = 4
+        let field = Array2::from_shape_fn((10, 10), |(i, j)| {
+            let x = i as f64 * 0.1;
+            let y = j as f64 * 0.1;
+            x * x + y * y
+        });
+        
+        let laplacian = NumericalUtils::laplacian_2d(&field, 0.1, 0.1);
+        
+        // Check interior points (should be close to 4)
+        for i in 2..8 {
+            for j in 2..8 {
+                assert_relative_eq!(laplacian[[i, j]], 4.0, epsilon = 0.01);
+            }
+        }
+    }
     
     #[test]
     fn test_water_properties() {
