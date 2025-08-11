@@ -482,13 +482,14 @@ Kwavers aims to be a modern, Rust-based alternative to k-Wave that:
 2. **Exceeds** k-Wave in multi-physics, performance, and safety
 3. **Integrates** seamlessly with modern scientific computing ecosystems
 
-### **Current Status vs k-Wave**
+### **Current Status vs k-Wave** (Updated January 2025)
 - ✅ **Core acoustics**: Full parity achieved
 - ✅ **Performance**: Superior (Rust + modern GPU support)
 - ✅ **Multi-physics**: Far beyond k-Wave capabilities
-- ❌ **Reconstruction**: Major gap in photoacoustic reconstruction
-- ❌ **Utilities**: Missing specialized helper functions
-- ❌ **File formats**: Limited k-Wave compatibility
+- ✅ **Reconstruction**: kspaceLineRecon, kspacePlaneRecon implemented
+- ✅ **Focused Sources**: Bowl transducers, arc sources, multi-bowl arrays
+- ✅ **Utilities**: Angular spectrum, water properties, HU conversions
+- ⚠️ **File formats**: HDF5/MATLAB .mat support pending
 
 ### **Strategic Gaps to Address**
 

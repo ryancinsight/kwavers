@@ -11,6 +11,7 @@ pub mod validation;
 pub mod workspace;
 pub mod time_reversal;
 pub mod thermal_diffusion;
+pub mod reconstruction;
 
 use crate::grid::Grid;
 use crate::KwaversResult;

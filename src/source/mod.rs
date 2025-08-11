@@ -8,6 +8,7 @@ pub mod apodization;
 pub mod linear_array;
 pub mod matrix_array;
 pub mod phased_array;
+pub mod focused_transducer;
 
 pub trait Source: Debug + Sync + Send {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
@@ -24,6 +25,10 @@ pub use matrix_array::MatrixArray;
 pub use phased_array::{
     PhasedArrayTransducer, PhasedArrayConfig, TransducerElement, 
     ElementSensitivity, BeamformingMode
+};
+pub use focused_transducer::{
+    BowlTransducer, BowlConfig, ArcSource, ArcConfig,
+    MultiBowlArray, ApodizationType, make_bowl, make_annular_array
 };
 
 // Source implementations are defined in this module

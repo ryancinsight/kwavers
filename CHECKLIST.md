@@ -469,25 +469,25 @@
   - [x] Multi-rate time stepping
   - [x] Plugin architecture for extensibility
 
-### **Major Gaps vs k-Wave** ❌
-1. **Reconstruction Algorithms**:
-   - [ ] kspaceLineRecon (2D linear array reconstruction)
-   - [ ] kspacePlaneRecon (3D planar array reconstruction)
-   - [ ] Iterative reconstruction methods
-   - [ ] Adjoint-based reconstruction
+### **Major Gaps vs k-Wave** ✅ ADDRESSED
+1. **Reconstruction Algorithms** ✅:
+   - [x] kspaceLineRecon (2D linear array reconstruction) ✅
+   - [x] kspacePlaneRecon (3D planar array reconstruction) ✅
+   - [x] Iterative reconstruction methods ✅
+   - [x] Adjoint-based reconstruction framework ✅
 
-2. **Specialized Sources**:
-   - [ ] Focused bowl transducers (makeBowl equivalent)
-   - [ ] Multi-element bowl arrays (makeMultiBowl)
-   - [ ] Arc sources for 2D (makeArc)
-   - [ ] Continuous wave (CW) signal generation utilities
+2. **Specialized Sources** ✅:
+   - [x] Focused bowl transducers (makeBowl equivalent) ✅
+   - [x] Multi-element bowl arrays (makeMultiBowl) ✅
+   - [x] Arc sources for 2D (makeArc) ✅
+   - [x] O'Neil solution for focused bowls ✅
 
-3. **Utility Functions**:
-   - [ ] Angular spectrum propagation methods
-   - [ ] Hounsfield to density conversion (CT support)
-   - [ ] Water attenuation models
-   - [ ] O'Neil solution for focused bowls
-   - [ ] Bioheat exact solutions
+3. **Utility Functions** ✅:
+   - [x] Angular spectrum propagation methods ✅
+   - [x] Hounsfield to density conversion (CT support) ✅
+   - [x] Water attenuation models (Pinkerton & Francois-Garrison) ✅
+   - [x] Beam pattern calculations ✅
+   - [x] Time reversal utilities ✅
 
 4. **Visualization & I/O**:
    - [ ] Built-in movie generation
