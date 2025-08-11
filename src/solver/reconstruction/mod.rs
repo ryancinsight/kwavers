@@ -19,9 +19,10 @@ use crate::{
     grid::Grid,
     sensor::SensorData,
 };
-use ndarray::{Array1, Array2, Array3, Axis, Zip, s};
+use ndarray::{Array1, Array2, Array3, ArrayView1, Axis, Zip, s};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
+use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
 
 /// Configuration for linear array reconstruction
@@ -53,6 +54,9 @@ pub struct LineReconConfig {
     
     /// Dynamic range for log compression (dB)
     pub dynamic_range: f64,
+    
+    /// Apodization weights for sensor elements
+    pub apodization: Option<Vec<f64>>,
 }
 
 /// Configuration for planar array reconstruction
@@ -81,6 +85,15 @@ pub struct PlaneReconConfig {
     
     /// Sensor element size for directivity
     pub element_size: Option<f64>,
+    
+    /// Apply envelope detection
+    pub envelope_detection: bool,
+    
+    /// Apply log compression
+    pub log_compression: bool,
+    
+    /// Dynamic range for log compression (dB)
+    pub dynamic_range: f64,
 }
 
 /// Interpolation methods for reconstruction
@@ -94,129 +107,29 @@ pub enum InterpolationMethod {
     Cubic,
 }
 
-/// Linear array reconstruction (kspaceLineRecon equivalent)
-///
-/// Implements delay-and-sum beamforming for linear array transducers
-pub struct LineRecon {
-    config: LineReconConfig,
-    fft_planner: FftPlanner<f64>,
-}
-
-impl LineRecon {
-    /// Create a new linear array reconstruction instance
-    pub fn new(config: LineReconConfig) -> Self {
-        Self {
-            config,
-            fft_planner: FftPlanner::new(),
-        }
-    }
+/// Trait for common reconstruction operations
+/// 
+/// This trait encapsulates shared functionality between different reconstruction
+/// algorithms to promote code reuse and maintainability (DRY principle).
+trait ReconstructionOps {
+    /// Get the interpolation method
+    fn interpolation_method(&self) -> InterpolationMethod;
     
-    /// Reconstruct image from sensor data
-    ///
-    /// # Arguments
-    /// * `sensor_data` - Recorded pressure data [n_time x n_elements]
-    /// * `grid` - Reconstruction grid
-    ///
-    /// # Returns
-    /// Reconstructed image volume
-    pub fn reconstruct(&mut self, sensor_data: &Array2<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-        let n_time = sensor_data.nrows();
-        let n_elements = sensor_data.ncols();
-        
-        // Validate sensor configuration
-        if n_elements != self.config.sensor_positions.nrows() {
-            return Err(KwaversError::field_validation(
-                "sensor_elements",
-                n_elements,
-                &format!("expected {} elements", self.config.sensor_positions.nrows())
-            ));
-        }
-        
-        // Initialize reconstruction volume
-        let mut image = grid.zeros_array();
-        
-        // Apply frequency filtering if requested
-        let filtered_data = if self.config.apply_filter {
-            self.apply_frequency_filter(sensor_data)?
-        } else {
-            sensor_data.clone()
-        };
-        
-        // Time vector
-        let dt = 1.0 / self.config.sampling_frequency;
-        let time: Vec<f64> = (0..n_time).map(|i| i as f64 * dt).collect();
-        
-        // Perform delay-and-sum beamforming using parallel iterators
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let dx = grid.dx;
-        
-        // Use parallel chunks for better performance
-        let image_slice = image.as_slice_mut().unwrap();
-        image_slice.par_chunks_mut(nx).enumerate().for_each(|(iz, chunk)| {
-            for iy in 0..ny {
-                for ix in 0..nx {
-                    let idx = iy * nx + ix;
-                    if idx < chunk.len() {
-                        // Reconstruction point in physical coordinates
-                        let x = ix as f64 * dx;
-                        let y = iy as f64 * dx;
-                        let z = iz as f64 * dx;
-                        
-                        // Accumulate contributions from all sensor elements
-                        let mut sum = 0.0;
-                        for elem in 0..n_elements {
-                            // Calculate distance from sensor to reconstruction point
-                            let sensor_pos = self.config.sensor_positions.row(elem);
-                            let distance = ((x - sensor_pos[0]).powi(2) +
-                                          (y - sensor_pos[1]).powi(2) +
-                                          (z - sensor_pos[2]).powi(2)).sqrt();
-                            
-                            // Calculate time delay
-                            let delay = distance / self.config.speed_of_sound;
-                            
-                            // Find corresponding time index
-                            let time_idx = delay / dt;
-                            
-                            // Interpolate sensor data at delayed time
-                            if time_idx >= 0.0 && time_idx < (n_time - 1) as f64 {
-                                let value = self.interpolate(&filtered_data.column(elem), time_idx);
-                                
-                                // Apply distance-based amplitude correction
-                                let amplitude_correction = if distance > 0.0 {
-                                    1.0 / distance.sqrt()
-                                } else {
-                                    1.0
-                                };
-                                
-                                sum += value * amplitude_correction;
-                            }
-                        }
-                        
-                        chunk[idx] = sum / n_elements as f64;
-                    }
-                }
-            }
-        });
-        
-        // Reshape back to 3D
-        let mut image_3d = image;
-        
-        // Apply envelope detection if requested
-        if self.config.envelope_detection {
-            image_3d = self.apply_envelope_detection(image_3d)?;
-        }
-        
-        // Apply log compression if requested
-        if self.config.log_compression {
-            image_3d = self.apply_log_compression(image_3d);
-        }
-        
-        Ok(image_3d)
-    }
+    /// Get the FFT planner
+    fn fft_planner(&self) -> &Arc<Mutex<FftPlanner<f64>>>;
+    
+    /// Get sampling frequency
+    fn sampling_frequency(&self) -> f64;
+    
+    /// Get filter range
+    fn filter_range(&self) -> Option<(f64, f64)>;
+    
+    /// Get dynamic range for log compression
+    fn dynamic_range(&self) -> f64;
     
     /// Interpolate sensor data at fractional time index
-    fn interpolate(&self, data: &ndarray::ArrayView1<f64>, index: f64) -> f64 {
-        match self.config.interpolation {
+    fn interpolate(&self, data: &ArrayView1<f64>, index: f64) -> f64 {
+        match self.interpolation_method() {
             InterpolationMethod::Nearest => {
                 let idx = index.round() as usize;
                 if idx < data.len() {
@@ -232,6 +145,8 @@ impl LineRecon {
                 if idx1 < data.len() {
                     let t = index - idx0 as f64;
                     data[idx0] * (1.0 - t) + data[idx1] * t
+                } else if idx0 < data.len() {
+                    data[idx0]
                 } else {
                     0.0
                 }
@@ -277,12 +192,13 @@ impl LineRecon {
     }
     
     /// Apply frequency filter to sensor data
-    fn apply_frequency_filter(&mut self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    fn apply_frequency_filter(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let (n_time, n_elements) = data.dim();
         let mut filtered = Array2::zeros((n_time, n_elements));
         
-        if let Some((f_min, f_max)) = self.config.filter_range {
-            let df = self.config.sampling_frequency / n_time as f64;
+        if let Some((f_min, f_max)) = self.filter_range() {
+            let df = self.sampling_frequency() / n_time as f64;
+            let planner = self.fft_planner();
             
             for elem in 0..n_elements {
                 // Convert to complex for FFT
@@ -292,7 +208,7 @@ impl LineRecon {
                     .collect();
                 
                 // Forward FFT
-                let fft = self.fft_planner.plan_fft_forward(n_time);
+                let fft = planner.lock().unwrap().plan_fft_forward(n_time);
                 fft.process(&mut complex_data);
                 
                 // Apply frequency filter
@@ -304,40 +220,25 @@ impl LineRecon {
                 }
                 
                 // Inverse FFT
-                let ifft = self.fft_planner.plan_fft_inverse(n_time);
+                let ifft = planner.lock().unwrap().plan_fft_inverse(n_time);
                 ifft.process(&mut complex_data);
                 
-                // Extract real part and normalize
-                for (i, &c) in complex_data.iter().enumerate() {
-                    filtered[[i, elem]] = c.re / n_time as f64;
+                // Store filtered data
+                for (i, value) in complex_data.iter().enumerate() {
+                    filtered[[i, elem]] = value.re / n_time as f64;
                 }
             }
         } else {
-            filtered.assign(data);
+            filtered = data.clone();
         }
         
         Ok(filtered)
     }
     
-    /// Apply envelope detection using Hilbert transform
-    fn apply_envelope_detection(&mut self, mut image: Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = image.dim();
-        
-        // Apply Hilbert transform along each line
-        for iz in 0..nz {
-            for iy in 0..ny {
-                let mut line = image.slice_mut(s![.., iy, iz]);
-                let envelope = self.hilbert_envelope(line.as_slice().unwrap())?;
-                line.assign(&Array1::from_vec(envelope));
-            }
-        }
-        
-        Ok(image)
-    }
-    
     /// Compute envelope using Hilbert transform
-    fn hilbert_envelope(&mut self, signal: &[f64]) -> KwaversResult<Vec<f64>> {
+    fn hilbert_envelope(&self, signal: &[f64]) -> KwaversResult<Vec<f64>> {
         let n = signal.len();
+        let planner = self.fft_planner();
         
         // Convert to complex
         let mut complex_signal: Vec<Complex<f64>> = signal
@@ -345,26 +246,49 @@ impl LineRecon {
             .map(|&x| Complex::new(x, 0.0))
             .collect();
         
-        // FFT
-        let fft = self.fft_planner.plan_fft_forward(n);
+        // Forward FFT
+        let fft = planner.lock().unwrap().plan_fft_forward(n);
         fft.process(&mut complex_signal);
         
         // Apply Hilbert transform in frequency domain
+        // Zero negative frequencies, double positive frequencies
         for i in 1..n/2 {
             complex_signal[i] *= 2.0;
         }
-        for i in n/2 + 1..n {
+        for i in n/2+1..n {
             complex_signal[i] = Complex::new(0.0, 0.0);
         }
         
         // Inverse FFT
-        let ifft = self.fft_planner.plan_fft_inverse(n);
+        let ifft = planner.lock().unwrap().plan_fft_inverse(n);
         ifft.process(&mut complex_signal);
         
-        // Compute magnitude (envelope)
-        Ok(complex_signal.iter()
+        // Compute envelope (magnitude of analytic signal)
+        let envelope: Vec<f64> = complex_signal
+            .iter()
             .map(|c| (c.norm() / n as f64))
-            .collect())
+            .collect();
+        
+        Ok(envelope)
+    }
+    
+    /// Apply envelope detection using Hilbert transform
+    fn apply_envelope_detection(&self, mut image: Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = image.dim();
+        
+        // Apply Hilbert transform along time dimension for each pixel
+        for ix in 0..nx {
+            for iy in 0..ny {
+                let signal: Vec<f64> = (0..nz).map(|iz| image[[ix, iy, iz]]).collect();
+                let envelope = self.hilbert_envelope(&signal)?;
+                
+                for (iz, &val) in envelope.iter().enumerate() {
+                    image[[ix, iy, iz]] = val;
+                }
+            }
+        }
+        
+        Ok(image)
     }
     
     /// Apply log compression for display
@@ -372,14 +296,17 @@ impl LineRecon {
         let max_val = image.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
         
         if max_val > 0.0 {
-            let threshold = max_val * 10.0_f64.powf(-self.config.dynamic_range / 20.0);
+            let threshold = max_val * 10.0_f64.powf(-self.dynamic_range() / 20.0);
+            let dynamic_range = self.dynamic_range();
             
-            Zip::from(&mut image).for_each(|x| {
-                let val = x.abs();
-                *x = if val > threshold {
-                    20.0 * (val / max_val).log10()
+            // Use parallel iteration over slices
+            let slice = image.as_slice_mut().unwrap();
+            slice.par_iter_mut().for_each(|x| {
+                let abs_x = x.abs();
+                *x = if abs_x > threshold {
+                    20.0 * (abs_x / max_val).log10()
                 } else {
-                    -self.config.dynamic_range
+                    -dynamic_range
                 };
             });
         }
@@ -388,12 +315,167 @@ impl LineRecon {
     }
 }
 
+/// Linear array reconstruction (kspaceLineRecon equivalent)
+///
+/// Implements delay-and-sum beamforming for linear array transducers
+pub struct LineRecon {
+    config: LineReconConfig,
+    fft_planner: Arc<Mutex<FftPlanner<f64>>>,
+}
+
+impl ReconstructionOps for LineRecon {
+    fn interpolation_method(&self) -> InterpolationMethod {
+        self.config.interpolation
+    }
+    
+    fn fft_planner(&self) -> &Arc<Mutex<FftPlanner<f64>>> {
+        &self.fft_planner
+    }
+    
+    fn sampling_frequency(&self) -> f64 {
+        self.config.sampling_frequency
+    }
+    
+    fn filter_range(&self) -> Option<(f64, f64)> {
+        self.config.filter_range
+    }
+    
+    fn dynamic_range(&self) -> f64 {
+        self.config.dynamic_range
+    }
+}
+
+impl LineRecon {
+    /// Create a new linear array reconstruction instance
+    pub fn new(config: LineReconConfig) -> Self {
+        Self {
+            config,
+            fft_planner: Arc::new(Mutex::new(FftPlanner::new())),
+        }
+    }
+    
+    /// Perform linear array reconstruction
+    pub fn reconstruct(&mut self, sensor_data: &Array2<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        let (n_time, n_elements) = sensor_data.dim();
+        
+        // Validate inputs
+        if n_elements != self.config.sensor_positions.nrows() {
+            return Err(KwaversError::field_validation(
+                "sensor_data",
+                n_elements,
+                &format!("expected {} elements", self.config.sensor_positions.nrows())
+            ));
+        }
+        
+        // Apply frequency filter if requested
+        let filtered_data = if self.config.filter_range.is_some() {
+            self.apply_frequency_filter(sensor_data)?
+        } else {
+            sensor_data.clone()
+        };
+        
+        // Create output image
+        let image = grid.zeros_array();
+        let (nx, ny, nz) = image.dim();
+        
+        // Parallel reconstruction over image slices
+        let mut image_flat = image.into_shape(nx * ny * nz).unwrap();
+        let dx = grid.dx;
+        
+        image_flat.as_slice_mut().unwrap().par_chunks_mut(nx * ny).enumerate().for_each(|(iz, chunk)| {
+            for iy in 0..ny {
+                for ix in 0..nx {
+                    let idx = iy * nx + ix;
+                    if idx < chunk.len() {
+                        // Reconstruction point position
+                        let x = ix as f64 * dx;
+                        let y = iy as f64 * dx;
+                        let z = iz as f64 * dx;
+                        
+                        // Delay-and-sum beamforming
+                        let mut sum = 0.0;
+                        let mut weight_sum = 0.0;
+                        
+                        for elem in 0..n_elements {
+                            // Distance from element to reconstruction point
+                            let elem_pos = self.config.sensor_positions.row(elem);
+                            let distance = ((x - elem_pos[0]).powi(2) + 
+                                           (y - elem_pos[1]).powi(2) + 
+                                           (z - elem_pos[2]).powi(2)).sqrt();
+                            
+                            // Time delay for this element
+                            let delay = distance / self.config.speed_of_sound;
+                            let sample_idx = delay * self.config.sampling_frequency;
+                            
+                            // Interpolate sensor data at fractional sample index
+                            if sample_idx >= 0.0 && sample_idx < n_time as f64 - 1.0 {
+                                let data_slice = filtered_data.column(elem);
+                                let value = self.interpolate(&data_slice.view(), sample_idx);
+                                
+                                // Apply apodization weight if specified
+                                let weight = if let Some(ref apod) = self.config.apodization {
+                                    apod[elem]
+                                } else {
+                                    1.0
+                                };
+                                
+                                sum += value * weight;
+                                weight_sum += weight;
+                            }
+                        }
+                        
+                        // Normalize and store
+                        chunk[idx] = if weight_sum > 0.0 { sum / weight_sum } else { 0.0 };
+                    }
+                }
+            }
+        });
+        
+        // Reshape back to 3D
+        let mut image_3d = image_flat.into_shape((nx, ny, nz)).unwrap();
+        
+        // Apply envelope detection if requested
+        if self.config.envelope_detection {
+            image_3d = self.apply_envelope_detection(image_3d)?;
+        }
+        
+        // Apply log compression if requested
+        if self.config.log_compression {
+            image_3d = self.apply_log_compression(image_3d);
+        }
+        
+        Ok(image_3d)
+    }
+}
+
 /// Planar array reconstruction (kspacePlaneRecon equivalent)
 ///
 /// Implements 3D reconstruction for planar sensor arrays
 pub struct PlaneRecon {
     config: PlaneReconConfig,
-    fft_planner: FftPlanner<f64>,
+    fft_planner: Arc<Mutex<FftPlanner<f64>>>,
+}
+
+impl ReconstructionOps for PlaneRecon {
+    fn interpolation_method(&self) -> InterpolationMethod {
+        self.config.interpolation
+    }
+    
+    fn fft_planner(&self) -> &Arc<Mutex<FftPlanner<f64>>> {
+        &self.fft_planner
+    }
+    
+    fn sampling_frequency(&self) -> f64 {
+        self.config.sampling_frequency
+    }
+    
+    fn filter_range(&self) -> Option<(f64, f64)> {
+        self.config.filter_range
+    }
+    
+    fn dynamic_range(&self) -> f64 {
+        self.config.dynamic_range
+    }
 }
 
 impl PlaneRecon {
@@ -401,108 +483,94 @@ impl PlaneRecon {
     pub fn new(config: PlaneReconConfig) -> Self {
         Self {
             config,
-            fft_planner: FftPlanner::new(),
+            fft_planner: Arc::new(Mutex::new(FftPlanner::new())),
         }
     }
     
-    /// Reconstruct 3D image from planar sensor data
-    ///
-    /// # Arguments
-    /// * `sensor_data` - Recorded pressure data [n_time x n_elements]
-    /// * `grid` - Reconstruction grid
-    ///
-    /// # Returns
-    /// Reconstructed 3D image volume
+    /// Perform planar array reconstruction
     pub fn reconstruct(&mut self, sensor_data: &Array2<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
-        let n_time = sensor_data.nrows();
-        let n_elements = sensor_data.ncols();
+        let (n_time, n_sensors) = sensor_data.dim();
         
         // Validate sensor configuration
-        if n_elements != self.config.sensor_positions.nrows() {
+        if n_sensors != self.config.sensor_positions.nrows() {
             return Err(KwaversError::field_validation(
-                "sensor_elements",
-                n_elements,
-                &format!("expected {} elements", self.config.sensor_positions.nrows())
+                "sensor_data",
+                n_sensors,
+                &format!("expected {} sensors", self.config.sensor_positions.nrows())
             ));
         }
         
-        // Initialize reconstruction volume
-        let mut image = grid.zeros_array();
-        
-        // Apply frequency filtering if requested
-        let filtered_data = if self.config.apply_filter {
+        // Apply frequency filter if requested
+        let filtered_data = if self.config.filter_range.is_some() {
             self.apply_frequency_filter(sensor_data)?
         } else {
             sensor_data.clone()
         };
         
-        // Perform 3D back-projection reconstruction
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        // Create output image
+        let mut image = grid.zeros_array();
+        let (nx, ny, nz) = image.dim();
         let dx = grid.dx;
-        let dt = 1.0 / self.config.sampling_frequency;
         
-        // Use parallel processing for efficiency
-        let image_slice = image.as_slice_mut().unwrap();
-        image_slice.par_chunks_mut(nx * ny).enumerate().for_each(|(iz, chunk)| {
+        // Parallel reconstruction using back-projection
+        image.as_slice_mut().unwrap().par_chunks_mut(nx * ny).enumerate().for_each(|(iz, chunk)| {
             for iy in 0..ny {
                 for ix in 0..nx {
                     let idx = iy * nx + ix;
                     if idx < chunk.len() {
-                        // Reconstruction point
+                        // Reconstruction point position
                         let x = ix as f64 * dx;
                         let y = iy as f64 * dx;
                         let z = iz as f64 * dx;
                         let recon_point = [x, y, z];
                         
-                        // Accumulate contributions
+                        // Back-projection from all sensors
                         let mut sum = 0.0;
                         let mut weight_sum = 0.0;
                         
-                        for elem in 0..n_elements {
-                            let sensor_pos = self.config.sensor_positions.row(elem);
+                        for s_idx in 0..n_sensors {
+                            let sensor_pos = self.config.sensor_positions.row(s_idx);
                             
-                            // Calculate distance and delay
-                            let distance = ((recon_point[0] - sensor_pos[0]).powi(2) +
-                                          (recon_point[1] - sensor_pos[1]).powi(2) +
-                                          (recon_point[2] - sensor_pos[2]).powi(2)).sqrt();
+                            // Distance from sensor to reconstruction point
+                            let distance = ((x - sensor_pos[0]).powi(2) +
+                                          (y - sensor_pos[1]).powi(2) +
+                                          (z - sensor_pos[2]).powi(2)).sqrt();
                             
+                            // Time delay
                             let delay = distance / self.config.speed_of_sound;
-                            let time_idx = delay / dt;
+                            let sample_idx = delay * self.config.sampling_frequency;
                             
-                            if time_idx >= 0.0 && time_idx < (n_time - 1) as f64 {
-                                // Interpolate sensor data
-                                let value = self.interpolate(&filtered_data.column(elem), time_idx);
+                            // Interpolate sensor data
+                            if sample_idx >= 0.0 && sample_idx < n_time as f64 - 1.0 {
+                                let data_slice = filtered_data.column(s_idx);
+                                let value = self.interpolate(&data_slice.view(), sample_idx);
                                 
-                                // Calculate weight with directivity correction
-                                let weight = self.calculate_weight(
-                                    &recon_point,
-                                    sensor_pos.as_slice().unwrap(),
-                                    distance
-                                );
+                                // Calculate weight including directivity
+                                let weight = self.calculate_weight(&recon_point, sensor_pos.as_slice().unwrap(), distance);
                                 
                                 sum += value * weight;
                                 weight_sum += weight;
                             }
                         }
                         
-                        chunk[idx] = if weight_sum > 0.0 {
-                            sum / weight_sum
-                        } else {
-                            0.0
-                        };
+                        // Normalize
+                        chunk[idx] = if weight_sum > 0.0 { sum / weight_sum } else { 0.0 };
                     }
                 }
             }
         });
         
-        // Reshape to 3D
-        let image_3d = Array3::from_shape_vec((nx, ny, nz), image.as_slice().unwrap().to_vec())
-            .map_err(|e| KwaversError::Numerical(crate::error::NumericalError::Instability {
-                operation: "reshape".to_string(),
-                condition: format!("Failed to reshape image: {}", e),
-            }))?;
+        // Apply envelope detection if requested
+        if self.config.envelope_detection {
+            image = self.apply_envelope_detection(image)?;
+        }
         
-        Ok(image_3d)
+        // Apply log compression if requested
+        if self.config.log_compression {
+            image = self.apply_log_compression(image);
+        }
+        
+        Ok(image)
     }
     
     /// Calculate weight for back-projection including directivity
@@ -543,99 +611,6 @@ impl PlaneRecon {
         }
         
         weight
-    }
-    
-    /// Interpolate sensor data (reused from LineRecon)
-    fn interpolate(&self, data: &ndarray::ArrayView1<f64>, index: f64) -> f64 {
-        match self.config.interpolation {
-            InterpolationMethod::Nearest => {
-                let idx = index.round() as usize;
-                if idx < data.len() {
-                    data[idx]
-                } else {
-                    0.0
-                }
-            }
-            InterpolationMethod::Linear => {
-                let idx0 = index.floor() as usize;
-                let idx1 = idx0 + 1;
-                
-                if idx1 < data.len() {
-                    let t = index - idx0 as f64;
-                    data[idx0] * (1.0 - t) + data[idx1] * t
-                } else {
-                    0.0
-                }
-            }
-            InterpolationMethod::Cubic => {
-                let idx1 = index.floor() as usize;
-                let t = index - idx1 as f64;
-                
-                if idx1 > 0 && idx1 + 2 < data.len() {
-                    let v0 = data[idx1 - 1];
-                    let v1 = data[idx1];
-                    let v2 = data[idx1 + 1];
-                    let v3 = data[idx1 + 2];
-                    
-                    let t2 = t * t;
-                    let t3 = t2 * t;
-                    
-                    0.5 * ((2.0 * v1) +
-                           (-v0 + v2) * t +
-                           (2.0 * v0 - 5.0 * v1 + 4.0 * v2 - v3) * t2 +
-                           (-v0 + 3.0 * v1 - 3.0 * v2 + v3) * t3)
-                } else {
-                    // Fall back to linear
-                    let idx0 = index.floor() as usize;
-                    let idx1 = idx0 + 1;
-                    
-                    if idx1 < data.len() {
-                        let t = index - idx0 as f64;
-                        data[idx0] * (1.0 - t) + data[idx1] * t
-                    } else {
-                        0.0
-                    }
-                }
-            }
-        }
-    }
-    
-    /// Apply frequency filter (reused from LineRecon)
-    fn apply_frequency_filter(&mut self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_time, n_elements) = data.dim();
-        let mut filtered = Array2::zeros((n_time, n_elements));
-        
-        if let Some((f_min, f_max)) = self.config.filter_range {
-            let df = self.config.sampling_frequency / n_time as f64;
-            
-            for elem in 0..n_elements {
-                let mut complex_data: Vec<Complex<f64>> = data.column(elem)
-                    .iter()
-                    .map(|&x| Complex::new(x, 0.0))
-                    .collect();
-                
-                let fft = self.fft_planner.plan_fft_forward(n_time);
-                fft.process(&mut complex_data);
-                
-                for (i, value) in complex_data.iter_mut().enumerate() {
-                    let freq = i as f64 * df;
-                    if freq < f_min || freq > f_max {
-                        *value = Complex::new(0.0, 0.0);
-                    }
-                }
-                
-                let ifft = self.fft_planner.plan_fft_inverse(n_time);
-                ifft.process(&mut complex_data);
-                
-                for (i, &c) in complex_data.iter().enumerate() {
-                    filtered[[i, elem]] = c.re / n_time as f64;
-                }
-            }
-        } else {
-            filtered.assign(data);
-        }
-        
-        Ok(filtered)
     }
 }
 
@@ -900,6 +875,7 @@ mod tests {
             envelope_detection: false,
             log_compression: false,
             dynamic_range: 60.0,
+            apodization: None,
         };
         
         let mut recon = LineRecon::new(config);
@@ -942,6 +918,9 @@ mod tests {
             filter_range: None,
             directivity_correction: true,
             element_size: Some(0.0005),
+            envelope_detection: false,
+            log_compression: false,
+            dynamic_range: 60.0,
         };
         
         let mut recon = PlaneRecon::new(config);
@@ -1070,6 +1049,7 @@ mod tests {
             envelope_detection: false,
             log_compression: false,
             dynamic_range: 60.0,
+            apodization: None,
         };
         
         let recon_linear = LineRecon::new(config_linear);
@@ -1097,6 +1077,7 @@ mod tests {
             envelope_detection: false,
             log_compression: false,
             dynamic_range: 60.0,
+            apodization: None,
         };
         
         let recon_cubic = LineRecon::new(config_cubic);
