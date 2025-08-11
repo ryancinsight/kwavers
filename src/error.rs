@@ -832,107 +832,39 @@ pub enum RecoveryStrategy {
     },
 }
 
-/// Enhanced error with context and recovery information
-/// 
-/// Implements ACID principles for error handling
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnhancedError {
-    pub error: KwaversError,
-    pub context: ErrorContext,
-    pub recovery_strategy: Option<RecoveryStrategy>,
-    pub severity: ErrorSeverity,
+/// Validation success type for explicit success reporting
+#[derive(Debug, Clone)]
+pub struct ValidationSuccess {
+    pub message: String,
+    pub details: Option<HashMap<String, String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ErrorSeverity {
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Critical,
-}
-
-impl fmt::Display for ErrorSeverity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ErrorSeverity::Debug => write!(f, "DEBUG"),
-            ErrorSeverity::Info => write!(f, "INFO"),
-            ErrorSeverity::Warning => write!(f, "WARNING"),
-            ErrorSeverity::Error => write!(f, "ERROR"),
-            ErrorSeverity::Critical => write!(f, "CRITICAL"),
-        }
-    }
-}
-
-impl fmt::Display for EnhancedError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {} at {}: {}", 
-               self.severity, self.error, self.context.location, self.context.timestamp)
-    }
-}
-
-impl StdError for EnhancedError {
-    fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        Some(&self.error)
-    }
-}
-
-/// Error builder for fluent error construction
-/// 
-/// Implements Builder pattern for complex error creation
-pub struct ErrorBuilder {
-    error: Option<KwaversError>,
-    context: ErrorContext,
-    recovery_strategy: Option<RecoveryStrategy>,
-    severity: ErrorSeverity,
-}
-
-impl ErrorBuilder {
-    pub fn new(location: String) -> Self {
+impl ValidationSuccess {
+    pub fn new(message: impl Into<String>) -> Self {
         Self {
-            error: None,
-            context: ErrorContext::new(location),
-            recovery_strategy: None,
-            severity: ErrorSeverity::Error,
+            message: message.into(),
+            details: None,
         }
     }
     
-    pub fn with_error(mut self, error: KwaversError) -> Self {
-        self.error = Some(error);
+    pub fn with_details(mut self, details: HashMap<String, String>) -> Self {
+        self.details = Some(details);
         self
-    }
-    
-    pub fn with_info(mut self, key: String, value: String) -> Self {
-        self.context = self.context.with_info(key, value);
-        self
-    }
-    
-    pub fn with_recovery(mut self, strategy: RecoveryStrategy) -> Self {
-        self.recovery_strategy = Some(strategy);
-        self
-    }
-    
-    pub fn with_severity(mut self, severity: ErrorSeverity) -> Self {
-        self.severity = severity;
-        self
-    }
-    
-    pub fn build(self) -> Result<EnhancedError, String> {
-        let error = self.error.ok_or("No error specified")?;
-        Ok(EnhancedError {
-            error,
-            context: self.context,
-            recovery_strategy: self.recovery_strategy,
-            severity: self.severity,
-        })
     }
 }
+
+/// Validation result type
+pub type ValidationResult = Result<ValidationSuccess, ValidationError>;
+
+// Note: EnhancedError and related types removed as they were unused
+// and violated YAGNI principle. The standard KwaversError provides
+// sufficient error handling capabilities.
+
+// ErrorBuilder and related utilities removed as they depended on
+// the removed EnhancedError type. Use KwaversError directly instead.
 
 /// Result type alias for kwavers operations
 pub type KwaversResult<T> = Result<T, KwaversError>;
-
-/// Enhanced result type with context
-pub type EnhancedResult<T> = Result<T, EnhancedError>;
 
 // Automatic conversions for easier error handling
 impl From<GridError> for KwaversError {
@@ -995,54 +927,43 @@ impl From<CompositeError> for KwaversError {
 pub mod utils {
     use super::*;
     
-    /// Create a grid error with context
-    pub fn grid_error(location: &str, error: GridError) -> EnhancedError {
-        ErrorBuilder::new(location.to_string())
-            .with_error(KwaversError::Grid(error))
-            .build()
-            .unwrap_or_else(|_| panic!("Failed to build error"))
-    }
-    
-    /// Create a physics error with context
-    pub fn physics_error(location: &str, error: PhysicsError) -> EnhancedError {
-        ErrorBuilder::new(location.to_string())
-            .with_error(KwaversError::Physics(error))
-            .build()
-            .unwrap_or_else(|_| panic!("Failed to build error"))
-    }
-    
-    /// Create a validation error with context
-    pub fn validation_error(location: &str, error: ValidationError) -> EnhancedError {
-        ErrorBuilder::new(location.to_string())
-            .with_error(KwaversError::Validation(error))
-            .build()
-            .unwrap_or_else(|_| panic!("Failed to build error"))
-    }
+    // Note: Functions that referenced EnhancedError and ErrorSeverity have been removed
+    // as those types were removed for violating YAGNI principle.
+    // Use KwaversError directly for error handling.
     
     /// Check if an error is recoverable
     pub fn is_recoverable(error: &KwaversError) -> bool {
-        matches!(error,
-            KwaversError::Validation(_) |
+        matches!(error, 
             KwaversError::Config(_) |
+            KwaversError::Validation(_) |
             KwaversError::Data(_)
         )
     }
     
-    /// Get error severity
-    pub fn get_severity(error: &KwaversError) -> ErrorSeverity {
+    /// Check if an error is critical
+    pub fn is_critical(error: &KwaversError) -> bool {
+        matches!(error,
+            KwaversError::System(_) |
+            KwaversError::Gpu(GpuError::DeviceDetection { .. }) |
+            KwaversError::Gpu(GpuError::MemoryAllocation { .. })
+        )
+    }
+    
+    /// Get a human-readable error category
+    pub fn get_category(error: &KwaversError) -> &'static str {
         match error {
-            KwaversError::System(_) => ErrorSeverity::Critical,
-            KwaversError::Numerical(_) => ErrorSeverity::Error,
-            KwaversError::Physics(_) => ErrorSeverity::Error,
-            KwaversError::Grid(_) => ErrorSeverity::Error,
-            KwaversError::Medium(_) => ErrorSeverity::Error,
-            KwaversError::Data(_) => ErrorSeverity::Warning,
-            KwaversError::Config(_) => ErrorSeverity::Warning,
-            KwaversError::Validation(_) => ErrorSeverity::Info,
-            KwaversError::Gpu(_) => ErrorSeverity::Error,
-            KwaversError::Visualization(_) => ErrorSeverity::Warning,
-            KwaversError::Composite(_) => ErrorSeverity::Error,
-            KwaversError::NotImplemented(_) => ErrorSeverity::Warning,
+            KwaversError::System(_) => "System",
+            KwaversError::Numerical(_) => "Numerical",
+            KwaversError::Physics(_) => "Physics",
+            KwaversError::Grid(_) => "Grid",
+            KwaversError::Medium(_) => "Medium",
+            KwaversError::Data(_) => "Data",
+            KwaversError::Config(_) => "Configuration",
+            KwaversError::Validation(_) => "Validation",
+            KwaversError::Gpu(_) => "GPU",
+            KwaversError::Visualization(_) => "Visualization",
+            KwaversError::Composite(_) => "Composite",
+            KwaversError::NotImplemented(_) => "Not Implemented",
         }
     }
 }
@@ -1324,50 +1245,23 @@ mod tests {
         
         match kwavers_error {
             KwaversError::Grid(_) => (),
-            _ => panic!("Expected Grid error"),
+            _ => panic!("Unexpected error type"),
         }
     }
     
-    #[test]
-    fn test_error_builder() {
-        let enhanced_error = ErrorBuilder::new("test_location".to_string())
-            .with_error(KwaversError::Grid(GridError::NotInitialized))
-            .with_info("test_key".to_string(), "test_value".to_string())
-            .with_severity(ErrorSeverity::Warning)
-            .build()
-            .unwrap();
-        
-        assert_eq!(enhanced_error.severity, ErrorSeverity::Warning);
-        assert_eq!(enhanced_error.context.additional_info.get("test_key"), Some(&"test_value".to_string()));
-    }
+    // Tests for EnhancedError and ErrorBuilder removed as those types
+    // were removed for violating YAGNI principle
     
     #[test]
     fn test_error_utilities() {
-        let grid_error = GridError::NotInitialized;
-        let enhanced_error = utils::grid_error("test", grid_error);
-        
-        assert_eq!(enhanced_error.context.location, "test");
-        assert!(matches!(enhanced_error.error, KwaversError::Grid(_)));
-    }
-    
-    #[test]
-    fn test_error_severity() {
-        let system_error = KwaversError::System(SystemError::MemoryAllocation {
-            requested_bytes: 1024,
-            reason: "test".to_string(),
-        });
-        
-        assert_eq!(utils::get_severity(&system_error), ErrorSeverity::Critical);
-    }
-    
-    #[test]
-    fn test_recoverable_errors() {
         let validation_error = KwaversError::Validation(ValidationError::FieldValidation {
             field: "test".to_string(),
-            value: "test".to_string(),
-            constraint: "test".to_string(),
+            value: "invalid".to_string(),
+            constraint: "must be positive".to_string(),
         });
         
         assert!(utils::is_recoverable(&validation_error));
+        assert!(!utils::is_critical(&validation_error));
+        assert_eq!(utils::get_category(&validation_error), "Validation");
     }
 }
