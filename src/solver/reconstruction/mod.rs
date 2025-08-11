@@ -199,11 +199,7 @@ impl LineRecon {
         });
         
         // Reshape back to 3D
-        let mut image_3d = Array3::from_shape_vec((nx, ny, nz), image.as_slice().unwrap().to_vec())
-            .map_err(|e| KwaversError::Numerical(crate::error::NumericalError::Instability {
-                operation: "reshape".to_string(),
-                condition: format!("Failed to reshape image: {}", e),
-            }))?;
+        let mut image_3d = image;
         
         // Apply envelope detection if requested
         if self.config.envelope_detection {
