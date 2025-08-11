@@ -97,7 +97,7 @@ impl BowlTransducer {
         // Calculate element size if not provided
         let element_size = config.element_size.unwrap_or_else(|| {
             // Use lambda/4 as default element size
-            let speed_of_sound = DEFAULT_SOUND_SPEED_WATER; // Default for water
+            let speed_of_sound = 1500.0; // Default for water
             let wavelength = speed_of_sound / config.frequency;
             wavelength / 4.0
         });

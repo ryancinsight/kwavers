@@ -652,6 +652,10 @@ pub struct IterativeRecon {
     
     /// Sampling frequency
     pub sampling_frequency: f64,
+    
+    /// Number of time points for forward/adjoint operators
+    /// If None, will be inferred from input data dimensions
+    pub n_time_points: Option<usize>,
 }
 
 impl IterativeRecon {
@@ -671,6 +675,34 @@ impl IterativeRecon {
             sensor_positions,
             speed_of_sound,
             sampling_frequency,
+            n_time_points: None,
+        }
+    }
+    
+    /// Set the number of time points for forward/adjoint operators
+    pub fn with_time_points(mut self, n_time: usize) -> Self {
+        self.n_time_points = Some(n_time);
+        self
+    }
+    
+    /// Create a new instance with all parameters including time points
+    pub fn new_with_time(
+        max_iterations: usize, 
+        tolerance: f64, 
+        regularization: f64,
+        sensor_positions: Array2<f64>,
+        speed_of_sound: f64,
+        sampling_frequency: f64,
+        n_time_points: usize,
+    ) -> Self {
+        Self {
+            max_iterations,
+            tolerance,
+            regularization,
+            sensor_positions,
+            speed_of_sound,
+            sampling_frequency,
+            n_time_points: Some(n_time_points),
         }
     }
     
@@ -684,6 +716,9 @@ impl IterativeRecon {
         sensor_data: &Array2<f64>, 
         grid: &Grid
     ) -> KwaversResult<Array3<f64>> {
+        // Determine number of time points from input data or configuration
+        let n_time = self.n_time_points.unwrap_or_else(|| sensor_data.nrows());
+        
         let mut image = grid.zeros_array();
         let mut residual = sensor_data.clone();
         let mut direction = grid.zeros_array();
@@ -717,7 +752,7 @@ impl IterativeRecon {
             }
             
             // Apply forward operator to search direction
-            let forward_direction = self.apply_forward(&direction, grid)?;
+            let forward_direction = self.apply_forward(&direction, grid, n_time)?;
             
             // Compute step size alpha using line search
             // alpha = (g^T * g) / (A*d)^T * (A*d)
@@ -753,8 +788,12 @@ impl IterativeRecon {
     
     /// Apply forward operator (project image to sensor data)
     /// This simulates the measurement process
-    fn apply_forward(&self, image: &Array3<f64>, grid: &Grid) -> KwaversResult<Array2<f64>> {
-        let n_time = 1000; // This should be configurable
+    /// 
+    /// # Arguments
+    /// * `image` - The 3D image to project
+    /// * `grid` - The computational grid
+    /// * `n_time` - Number of time points for the projection
+    fn apply_forward(&self, image: &Array3<f64>, grid: &Grid, n_time: usize) -> KwaversResult<Array2<f64>> {
         let n_sensors = self.sensor_positions.nrows();
         let mut sensor_data = Array2::zeros((n_time, n_sensors));
         
@@ -1006,7 +1045,8 @@ mod tests {
         phantom[[4, 4, 4]] = 1.0; // Single point source
         
         // Generate synthetic measurements using forward operator
-        let measurements = recon.apply_forward(&phantom, &grid)?;
+        let n_time = 100; // Use a reasonable number of time points for testing
+        let measurements = recon.apply_forward(&phantom, &grid, n_time)?;
         
         // Reconstruct from measurements
         let reconstructed = recon.reconstruct(&measurements, &grid)?;

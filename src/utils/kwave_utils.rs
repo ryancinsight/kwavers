@@ -170,6 +170,14 @@ impl AngularSpectrum {
 pub struct WaterProperties;
 
 impl WaterProperties {
+    // Sound speed polynomial coefficients (Bilaniuk & Wong, 1993)
+    const SOUND_SPEED_C0: f64 = 1402.385;
+    const SOUND_SPEED_C1: f64 = 5.03830;
+    const SOUND_SPEED_C2: f64 = -5.81090e-2;
+    const SOUND_SPEED_C3: f64 = 3.34320e-4;
+    const SOUND_SPEED_C4: f64 = -1.48259e-6;
+    const SOUND_SPEED_C5: f64 = 3.16090e-9;
+    
     // ------------------------------------------------------------------------
     // Water density polynomial coefficients (Kell, 1975)
     // Reference: Kell, G. S. (1975). "Density, thermal expansivity, and compressibility of liquid water from 0° to 150°C: Correlations and tables for atmospheric pressure and saturation reviewed and expressed on 1968 temperature scale." J. Chem. Eng. Data, 20(1), 97–105.
