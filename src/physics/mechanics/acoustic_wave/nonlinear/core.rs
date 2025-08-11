@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::KwaversResult;
 
 use ndarray::{Array3, Zip, ShapeBuilder};
-use log::{debug, warn};
+use log::{debug, warn, info};
 use std::f64;
 
 /// Represents an improved nonlinear wave model solver.
@@ -56,22 +56,12 @@ pub struct NonlinearWave {
     use_chunked_processing: bool,
 
     // Multi-frequency simulation support
-    /// Configuration for multi-frequency simulation
+    /// Configuration for multi-frequency analysis
     pub(super) multi_freq_config: Option<MultiFrequencyConfig>,
-    
-    // Kuznetsov equation support
-    /// Enable full Kuznetsov equation terms
-    pub(super) use_kuznetsov_terms: bool,
-    /// Enable acoustic diffusivity (third-order time derivative)
-    pub(super) enable_diffusivity: bool,
-    /// Pressure history for higher-order time derivatives
-    pub(super) pressure_history: Vec<Array3<f64>>,
-    /// History size for time derivatives
-    pub(super) history_size: usize,
 }
 
 impl NonlinearWave {
-    /// Creates a new `NonlinearWave` solver instance.
+    /// Creates a new `NonlinearWave` solver instance for Westervelt equation.
     ///
     /// Initializes the solver with default parameters and precomputes necessary values
     /// based on the provided `grid`.
@@ -82,9 +72,9 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// A new `NonlinearWave` instance.
+    /// A new `NonlinearWave` instance implementing the Westervelt equation.
     pub fn new(grid: &Grid) -> Self {
-        debug!("Initializing NonlinearWave solver");
+        debug!("Initializing NonlinearWave solver (Westervelt equation)");
 
         // Precompute k-squared values to avoid recomputation in every step
         let k_squared = Some(grid.k_squared());
@@ -98,10 +88,6 @@ impl NonlinearWave {
         } else {
             4 * 1024   // Small grids: 4K chunks
         };
-        
-        // Initialize pressure history for Kuznetsov terms
-        let history_size = 3; // Need 3 time levels for third-order derivatives
-        let pressure_history = vec![Array3::zeros((grid.nx, grid.ny, grid.nz)); history_size];
 
         Self {
             nonlinear_time: 0.0,
@@ -116,14 +102,10 @@ impl NonlinearWave {
             max_pressure: 1e8,  // 100 MPa maximum pressure
             stability_threshold: 0.5, // CFL condition threshold
             cfl_safety_factor: 0.8,   // Safety factor for CFL condition
-            clamp_gradients: true,    // Enable gradient clamping
+            clamp_gradients: true,    // Enable gradient clamping (should be configurable)
             chunk_size,
             use_chunked_processing: total_points > 10_000,
             multi_freq_config: None, // Initialize as None
-            use_kuznetsov_terms: false, // Default to standard nonlinear model
-            enable_diffusivity: false,  // Default to no diffusivity
-            pressure_history,
-            history_size,
         }
     }
 
@@ -137,31 +119,125 @@ impl NonlinearWave {
         instance
     }
     
-    /// Enable full Kuznetsov equation terms
-    pub fn enable_kuznetsov_terms(&mut self, enable: bool) {
-        self.use_kuznetsov_terms = enable;
+    /// Set the nonlinearity scaling factor.
+    ///
+    /// Controls the strength of the nonlinear term in the wave equation.
+    /// A value of 0.0 disables nonlinearity, making the solver linear.
+    ///
+    /// # Arguments
+    ///
+    /// * `scaling` - The scaling factor for the nonlinear term (typically 0.0 to 2.0)
+    pub fn set_nonlinearity_scaling(&mut self, scaling: f64) {
+        self.nonlinearity_scaling = scaling;
+        debug!("Set nonlinearity scaling to {}", scaling);
+    }
+    
+    /// Set whether to use gradient clamping for stability
+    /// 
+    /// # Warning
+    /// 
+    /// Gradient clamping can suppress physical shock formation and introduce
+    /// non-physical artifacts. It should be used with caution and ideally replaced
+    /// with more sophisticated shock-capturing methods like:
+    /// - Artificial viscosity
+    /// - WENO limiters
+    /// - Hybrid spectral-DG methods
+    /// 
+    /// # Arguments
+    /// 
+    /// * `enable` - Whether to enable gradient clamping
+    pub fn set_gradient_clamping(&mut self, enable: bool) {
+        self.clamp_gradients = enable;
         if enable {
-            debug!("Enabled Kuznetsov equation terms for enhanced nonlinear modeling");
+            warn!("Gradient clamping enabled. This may suppress physical shock formation and introduce artifacts.");
+            warn!("Consider using more sophisticated shock-capturing methods for production use.");
+        } else {
+            info!("Gradient clamping disabled. Ensure numerical stability through other means.");
         }
     }
     
-    /// Enable acoustic diffusivity term (third-order time derivative)
-    pub fn enable_diffusivity(&mut self, enable: bool) {
-        self.enable_diffusivity = enable;
-        if enable && self.history_size < 3 {
-            warn!("Diffusivity term requires at least 3 time levels of history");
+    /// Detect potential shock regions based on local pressure gradients
+    /// 
+    /// Returns a mask indicating regions where shocks may be forming
+    fn detect_shock_regions(&self, pressure: &Array3<f64>, grid: &Grid) -> Array3<bool> {
+        let mut shock_mask = Array3::from_elem(pressure.dim(), false);
+        
+        // Shock detection based on normalized pressure gradient
+        let dx_inv = 1.0 / grid.dx;
+        let dy_inv = 1.0 / grid.dy;
+        let dz_inv = 1.0 / grid.dz;
+        
+        // Threshold for shock detection (normalized gradient)
+        let shock_threshold = 0.3; // Configurable parameter
+        
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                for k in 1..grid.nz-1 {
+                    // Compute local gradients
+                    let grad_x = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) * dx_inv * 0.5;
+                    let grad_y = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) * dy_inv * 0.5;
+                    let grad_z = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) * dz_inv * 0.5;
+                    
+                    // Compute normalized gradient magnitude
+                    let p_local = pressure[[i, j, k]].abs().max(1e-10);
+                    let grad_mag = (grad_x*grad_x + grad_y*grad_y + grad_z*grad_z).sqrt();
+                    let normalized_grad = grad_mag / p_local;
+                    
+                    // Mark as shock region if gradient is large
+                    if normalized_grad > shock_threshold {
+                        shock_mask[[i, j, k]] = true;
+                    }
+                }
+            }
         }
+        
+        shock_mask
     }
     
-    /// Update pressure history for Kuznetsov terms
-    pub(super) fn update_pressure_history(&mut self, pressure: &Array3<f64>) {
-        // Shift history
-        let n = self.pressure_history.len();
-        for i in (1..n).rev() {
-            let (left, right) = self.pressure_history.split_at_mut(i);
-            right[0].assign(&left[i-1]);
+    /// Apply artificial viscosity in shock regions for stability
+    /// 
+    /// This is a more physically motivated approach than gradient clamping
+    fn apply_artificial_viscosity(
+        &self,
+        pressure: &mut Array3<f64>,
+        shock_mask: &Array3<bool>,
+        grid: &Grid,
+        dt: f64,
+    ) {
+        // Von Neumann-Richtmyer artificial viscosity
+        let viscosity_coeff = 2.0; // Tunable parameter
+        let dx_min = grid.dx.min(grid.dy).min(grid.dz);
+        
+        // Apply smoothing only in shock regions
+        let mut pressure_smooth = pressure.clone();
+        
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                for k in 1..grid.nz-1 {
+                    if shock_mask[[i, j, k]] {
+                        // Apply local smoothing
+                        let laplacian = 
+                            (pressure[[i+1, j, k]] - 2.0*pressure[[i, j, k]] + pressure[[i-1, j, k]]) / (grid.dx * grid.dx) +
+                            (pressure[[i, j+1, k]] - 2.0*pressure[[i, j, k]] + pressure[[i, j-1, k]]) / (grid.dy * grid.dy) +
+                            (pressure[[i, j, k+1]] - 2.0*pressure[[i, j, k]] + pressure[[i, j, k-1]]) / (grid.dz * grid.dz);
+                        
+                        // Apply artificial viscosity
+                        let nu = viscosity_coeff * dx_min * dx_min / dt;
+                        pressure_smooth[[i, j, k]] += nu * dt * laplacian;
+                    }
+                }
+            }
         }
-        self.pressure_history[0].assign(pressure);
+        
+        // Update pressure in shock regions
+        Zip::from(pressure)
+            .and(&pressure_smooth)
+            .and(shock_mask)
+            .for_each(|p, &p_smooth, &is_shock| {
+                if is_shock {
+                    *p = p_smooth;
+                }
+            });
     }
     
     /// Apply multi-frequency source excitation
@@ -227,31 +303,6 @@ impl NonlinearWave {
         }
         base_attenuation
     }
-
-    /// Sets the scaling factor for the nonlinearity term.
-    ///
-    /// This allows adjustment for strong nonlinear effects. The scaling factor must be positive.
-    ///
-    /// # Arguments
-    ///
-    /// * `scaling` - The nonlinearity scaling factor. Must be greater than 0.0.
-    pub fn set_nonlinearity_scaling(&mut self, scaling: f64) {
-        assert!(scaling >= 0.0, "Nonlinearity scaling must be non-negative");
-        self.nonlinearity_scaling = scaling;
-    }
-
-    /// Enables or disables adaptive time-stepping.
-    ///
-    /// Adaptive time-stepping can help maintain stability in simulations with varying conditions.
-    ///
-    /// # Arguments
-    ///
-    /// * `enable` - `true` to enable adaptive time-stepping, `false` to disable it.
-    pub fn set_adaptive_timestep(&mut self, enable: bool) {
-        self.use_adaptive_timestep = enable;
-    }
-
-
 
     /// Sets the maximum allowed absolute pressure value in the simulation.
     ///
@@ -370,7 +421,7 @@ impl NonlinearWave {
         had_extreme_values
     }
     
-    /// Compute nonlinear terms for boundary points using iterator patterns
+    /// Compute boundary nonlinear terms for edge/corner points
     fn compute_boundary_nonlinear_terms(
         &self,
         nonlinear_term: &mut Array3<f64>,
@@ -415,107 +466,6 @@ impl NonlinearWave {
                 }
             }
         }
-    }
-    
-    /// Compute Kuznetsov equation nonlinear terms: -(β/ρ₀c₀⁴)∂²p²/∂t²
-    fn compute_kuznetsov_nonlinear_terms(
-        &self,
-        pressure_current: &Array3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-    ) -> Array3<f64> {
-        let mut kuznetsov_term = Array3::zeros(pressure_current.raw_dim());
-        
-        // Need at least 2 time levels for second derivative
-        if self.pressure_history.len() < 2 {
-            return kuznetsov_term;
-        }
-        
-        let p_prev = &self.pressure_history[0];
-        let p_prev2 = &self.pressure_history[1];
-        
-        // Compute p² at three time levels
-        let p2_curr = pressure_current * pressure_current;
-        let p2_prev = p_prev * p_prev;
-        let p2_prev2 = p_prev2 * p_prev2;
-        
-        // Second-order finite difference for ∂²p²/∂t²
-        let d2p2_dt2 = (&p2_curr - 2.0 * &p2_prev + &p2_prev2) / (dt * dt);
-        
-        // Apply nonlinearity coefficient
-        Zip::indexed(&mut kuznetsov_term)
-            .and(&d2p2_dt2)
-            .for_each(|(i, j, k), kuz, &d2p2| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                
-                let rho = medium.density(x, y, z, grid).max(1e-9);
-                let c0 = medium.sound_speed(x, y, z, grid).max(1e-9);
-                let beta = medium.nonlinearity_coefficient(x, y, z, grid);
-                
-                let coeff = -beta / (rho * c0.powi(4));
-                *kuz = coeff * d2p2 * self.nonlinearity_scaling;
-                
-                // Clamp for stability
-                if !kuz.is_finite() {
-                    *kuz = 0.0;
-                } else if kuz.abs() > self.max_pressure {
-                    *kuz = kuz.signum() * self.max_pressure;
-                }
-            });
-        
-        kuznetsov_term
-    }
-    
-    /// Compute acoustic diffusivity term: -(δ/c₀⁴)∂³p/∂t³
-    fn compute_diffusivity_term(
-        &self,
-        pressure_current: &Array3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-    ) -> Array3<f64> {
-        let mut diffusivity_term = Array3::zeros(pressure_current.raw_dim());
-        
-        // Need at least 3 time levels for third derivative
-        if !self.enable_diffusivity || self.pressure_history.len() < 3 {
-            return diffusivity_term;
-        }
-        
-        let p_prev = &self.pressure_history[0];
-        let p_prev2 = &self.pressure_history[1];
-        let p_prev3 = &self.pressure_history[2];
-        
-        // Third-order finite difference for ∂³p/∂t³
-        let d3p_dt3 = (pressure_current - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / (dt * dt * dt);
-        
-        // Apply diffusivity coefficient
-        Zip::indexed(&mut diffusivity_term)
-            .and(&d3p_dt3)
-            .for_each(|(i, j, k), diff, &d3p| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                
-                let c0 = medium.sound_speed(x, y, z, grid).max(1e-9);
-                
-                // Use the shared acoustic diffusivity function
-                let delta = super::super::compute_acoustic_diffusivity(medium, x, y, z, grid, 1e6);
-                
-                let coeff = -delta / c0.powi(4);
-                *diff = coeff * d3p;
-                
-                // Clamp for stability
-                if !diff.is_finite() {
-                    *diff = 0.0;
-                } else if diff.abs() > self.max_pressure {
-                    *diff = diff.signum() * self.max_pressure;
-                }
-            });
-        
-        diffusivity_term
     }
 }
 
@@ -644,94 +594,18 @@ impl AcousticWaveModel for NonlinearWave {
 
         let start_nonlinear = Instant::now();
         
-        if self.use_kuznetsov_terms {
-            // Use Kuznetsov nonlinear terms
-            let kuznetsov_nonlinear = self.compute_kuznetsov_nonlinear_terms(&pressure_at_start, grid, medium, dt);
-            let diffusivity = self.compute_diffusivity_term(&pressure_at_start, grid, medium, dt);
-            
-            // Combine Kuznetsov terms
-            nonlinear_term = kuznetsov_nonlinear + diffusivity;
-            
-            // Add standard gradient-based nonlinear term if desired
-            // This allows for a hybrid approach
-            if self.nonlinearity_scaling > 0.0 {
-                // Also compute standard nonlinear term for boundary conditions
-                self.compute_boundary_nonlinear_terms(&mut nonlinear_term, &pressure_at_start, prev_pressure, grid, medium, dt);
+        // Compute nonlinear term for Westervelt equation
+        let nonlinear_term = if self.nonlinearity_scaling.abs() > 1e-10 {
+            // Standard Westervelt nonlinear term
+            if self.use_chunked_processing {
+                self.compute_nonlinear_term_chunked(&pressure_at_start, grid, medium, dt)
+            } else {
+                self.compute_nonlinear_term(&pressure_at_start, grid, medium, dt)
             }
         } else {
-            // Use standard nonlinear term computation
-            let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
-            let max_gradient = if min_grid_spacing > 1e-9 { self.max_pressure / min_grid_spacing } else { self.max_pressure };
-
-            // Use iterator pattern for gradient computation on interior points
-            let dx_inv = 1.0 / (2.0 * grid.dx);
-            let dy_inv = 1.0 / (2.0 * grid.dy);
-            let dz_inv = 1.0 / (2.0 * grid.dz);
-            
-            // Process interior points with cache-friendly access pattern
-            for i in 1..grid.nx-1 {
-                for j in 1..grid.ny-1 {
-                    // Process k dimension with loop unrolling for better performance
-                    let mut k = 1;
-                    while k < grid.nz - 1 {
-                        // Unroll up to 4 iterations for instruction-level parallelism
-                        let batch_size = 4.min(grid.nz - 1 - k);
-                        
-                        for dk in 0..batch_size {
-                            let k_idx = k + dk;
-                            let x = i as f64 * grid.dx;
-                            let y = j as f64 * grid.dy;
-                            let z = k_idx as f64 * grid.dz;
-                            
-                            // Compute gradients using central differences
-                            let grad_x = (pressure_at_start[[i+1, j, k_idx]] - pressure_at_start[[i-1, j, k_idx]]) * dx_inv;
-                            let grad_y = (pressure_at_start[[i, j+1, k_idx]] - pressure_at_start[[i, j-1, k_idx]]) * dy_inv;
-                            let grad_z = (pressure_at_start[[i, j, k_idx+1]] - pressure_at_start[[i, j, k_idx-1]]) * dz_inv;
-                            
-                            // Get medium properties
-                            let rho = medium.density(x, y, z, grid).max(1e-9);
-                            let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                            let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                            
-                            // Compute nonlinear term coefficients
-                            let gradient_scale = dt / (2.0 * rho * c * c);
-                            let beta = b_a / (rho * c * c);
-                            
-                            // Apply gradient clamping if enabled
-                            let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
-                                (
-                                    grad_x.clamp(-max_gradient, max_gradient),
-                                    grad_y.clamp(-max_gradient, max_gradient),
-                                    grad_z.clamp(-max_gradient, max_gradient)
-                                )
-                            } else {
-                                (grad_x, grad_y, grad_z)
-                            };
-                            
-                            // Compute gradient magnitude
-                            let grad_magnitude = (grad_x_final * grad_x_final + 
-                                                 grad_y_final * grad_y_final + 
-                                                 grad_z_final * grad_z_final).sqrt();
-                            
-                            // Compute and store nonlinear term
-                            let p_limited = pressure_at_start[[i, j, k_idx]].clamp(-self.max_pressure, self.max_pressure);
-                            let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-                            
-                            nonlinear_term[[i, j, k_idx]] = if nl_term.is_finite() {
-                                nl_term.clamp(-self.max_pressure, self.max_pressure)
-                            } else {
-                                0.0
-                            };
-                        }
-                        
-                        k += batch_size;
-                    }
-                }
-            }
-            
-            // Handle boundary points using traditional approach
-            self.compute_boundary_nonlinear_terms(&mut nonlinear_term, &pressure_at_start, prev_pressure, grid, medium, dt);
-        }
+            // No nonlinearity - zero term
+            Array3::zeros(pressure_at_start.raw_dim())
+        };
         
         self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
 
