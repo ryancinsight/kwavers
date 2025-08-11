@@ -159,12 +159,11 @@ pub enum TimeIntegrationScheme {
 
 /// Performance metrics for the solver
 /// 
-/// Tracks time spent in different parts of the solver:
-/// - linear_time: Time for linear operations (velocity update, pressure update, filters)
+/// Tracks time spent in different solver components:
+/// - linear_time: Time computing linear wave terms
 /// - nonlinear_time: Time computing nonlinear terms
-/// - diffusion_time: Time computing diffusion/absorption terms
+/// - diffusivity_time: Time computing diffusivity/absorption terms
 /// - fft_time: Time in FFT operations
-/// - prev_other_ops_time: Used to calculate linear_time by subtraction
 #[derive(Debug, Clone, Default)]
 struct SolverMetrics {
     linear_time: f64,
@@ -443,14 +442,15 @@ impl KuznetsovWave {
         let mut result = Array3::zeros(pressure.dim());
         result.indexed_iter_mut()
             .zip(d3p_dt3.iter())
-            .for_each(|((i, j, k), val), &d3p| {
+            .for_each(|(((i, j, k), val), &d3p)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
                 
                 // Get local medium properties
                 let c0 = medium.sound_speed(x, y, z, grid);
-                let delta = medium.diffusivity(x, y, z, grid);
+                // Use thermal diffusivity as acoustic diffusivity approximation
+                let delta = medium.thermal_diffusivity(x, y, z, grid);
                 
                 // Compute diffusivity term: -(δ/c₀⁴)∂³p/∂t³
                 let c0_4 = c0 * c0 * c0 * c0;
@@ -610,40 +610,36 @@ impl KuznetsovWave {
     ) -> KwaversResult<()> {
         // Initialize RK4 workspace if needed
         if self.rk4_workspace.is_none() {
-            self.rk4_workspace = Some(RK4Workspace::new(pressure.dim()));
+            let (nx, ny, nz) = pressure.dim();
+            self.rk4_workspace = Some(RK4Workspace::new(nx, ny, nz));
         }
-        let workspace = self.rk4_workspace.as_mut().unwrap();
         
         // RK4 stages for pressure equation
         // dp/dt = F(p, t) where F includes all Kuznetsov terms
         
         // Stage 1: k1 = dt * F(p^n, t^n)
         let k1 = self.compute_pressure_derivative(pressure, velocity, source_term, grid, medium, t)?;
-        workspace.k1.assign(&(&k1 * dt));
         
         // Stage 2: k2 = dt * F(p^n + k1/2, t^n + dt/2)
-        workspace.pressure_temp.assign(pressure);
-        workspace.pressure_temp.scaled_add(0.5, &workspace.k1);
-        let k2 = self.compute_pressure_derivative(&workspace.pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
-        workspace.k2.assign(&(&k2 * dt));
+        let mut pressure_temp = pressure.clone();
+        pressure_temp.scaled_add(0.5 * dt, &k1);
+        let k2 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
         
         // Stage 3: k3 = dt * F(p^n + k2/2, t^n + dt/2)
-        workspace.pressure_temp.assign(pressure);
-        workspace.pressure_temp.scaled_add(0.5, &workspace.k2);
-        let k3 = self.compute_pressure_derivative(&workspace.pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
-        workspace.k3.assign(&(&k3 * dt));
+        pressure_temp.assign(pressure);
+        pressure_temp.scaled_add(0.5 * dt, &k2);
+        let k3 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
         
         // Stage 4: k4 = dt * F(p^n + k3, t^n + dt)
-        workspace.pressure_temp.assign(pressure);
-        workspace.pressure_temp.scaled_add(1.0, &workspace.k3);
-        let k4 = self.compute_pressure_derivative(&workspace.pressure_temp, velocity, source_term, grid, medium, t + dt)?;
-        workspace.k4.assign(&(&k4 * dt));
+        pressure_temp.assign(pressure);
+        pressure_temp.scaled_add(dt, &k3);
+        let k4 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + dt)?;
         
-        // Combine stages: p^{n+1} = p^n + (k1 + 2*k2 + 2*k3 + k4)/6
-        pressure.scaled_add(1.0/6.0, &workspace.k1);
-        pressure.scaled_add(2.0/6.0, &workspace.k2);
-        pressure.scaled_add(2.0/6.0, &workspace.k3);
-        pressure.scaled_add(1.0/6.0, &workspace.k4);
+        // Combine stages: p^{n+1} = p^n + dt*(k1 + 2*k2 + 2*k3 + k4)/6
+        pressure.scaled_add(dt/6.0, &k1);
+        pressure.scaled_add(dt*2.0/6.0, &k2);
+        pressure.scaled_add(dt*2.0/6.0, &k3);
+        pressure.scaled_add(dt/6.0, &k4);
         
         // Update velocity field
         update_velocity_field(velocity, pressure, medium, grid, dt)?;
@@ -846,7 +842,7 @@ impl AcousticWaveModel for KuznetsovWave {
     
     fn report_performance(&self) {
         let total_time = self.metrics.linear_time + self.metrics.nonlinear_time 
-            + self.metrics.diffusion_time + self.metrics.fft_time;
+            + self.metrics.diffusivity_time + self.metrics.fft_time;
         
         info!("Kuznetsov Wave Performance:");
         info!("  Total steps: {}", self.metrics.total_steps);
@@ -860,7 +856,7 @@ impl AcousticWaveModel for KuznetsovWave {
         info!("    Nonlinear term: {:.3}s ({:.1}%)", 
             self.metrics.nonlinear_time, 100.0 * self.metrics.nonlinear_time / total_time);
         info!("    Diffusion term: {:.3}s ({:.1}%)", 
-            self.metrics.diffusion_time, 100.0 * self.metrics.diffusion_time / total_time);
+            self.metrics.diffusivity_time, 100.0 * self.metrics.diffusivity_time / total_time);
         info!("    FFT operations: {:.3}s ({:.1}%)", 
             self.metrics.fft_time, 100.0 * self.metrics.fft_time / total_time);
     }

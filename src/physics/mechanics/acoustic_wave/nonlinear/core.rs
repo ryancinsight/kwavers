@@ -561,15 +561,11 @@ impl AcousticWaveModel for NonlinearWave {
         t: f64,
     ) {
         let start_total = Instant::now();
+        // Store timing metrics
         self.call_count += 1;
 
         let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
-        // Update pressure history for Kuznetsov terms
-        if self.use_kuznetsov_terms {
-            self.update_pressure_history(&pressure_at_start);
-        }
-
         if !self.check_stability(dt, grid, medium, &pressure_at_start) {
             debug!("Potential instability detected at t={}. Enhanced stability measures might be active.", t);
         }
@@ -597,11 +593,75 @@ impl AcousticWaveModel for NonlinearWave {
         // Compute nonlinear term for Westervelt equation
         let nonlinear_term = if self.nonlinearity_scaling.abs() > 1e-10 {
             // Standard Westervelt nonlinear term
-            if self.use_chunked_processing {
-                self.compute_nonlinear_term_chunked(&pressure_at_start, grid, medium, dt)
-            } else {
-                self.compute_nonlinear_term(&pressure_at_start, grid, medium, dt)
+            let mut nonlinear_term = Array3::zeros(pressure_at_start.raw_dim());
+            
+            let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
+            let max_gradient = if min_grid_spacing > 1e-9 { 
+                self.max_pressure / min_grid_spacing 
+            } else { 
+                self.max_pressure 
+            };
+            
+            // Use iterator pattern for gradient computation on interior points
+            let dx_inv = 1.0 / (2.0 * grid.dx);
+            let dy_inv = 1.0 / (2.0 * grid.dy);
+            let dz_inv = 1.0 / (2.0 * grid.dz);
+            
+            // Process interior points with cache-friendly access pattern
+            for i in 1..grid.nx-1 {
+                for j in 1..grid.ny-1 {
+                    for k in 1..grid.nz-1 {
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        
+                        // Compute gradients using central differences
+                        let grad_x = (pressure_at_start[[i+1, j, k]] - pressure_at_start[[i-1, j, k]]) * dx_inv;
+                        let grad_y = (pressure_at_start[[i, j+1, k]] - pressure_at_start[[i, j-1, k]]) * dy_inv;
+                        let grad_z = (pressure_at_start[[i, j, k+1]] - pressure_at_start[[i, j, k-1]]) * dz_inv;
+                        
+                        // Get medium properties
+                        let rho = medium.density(x, y, z, grid).max(1e-9);
+                        let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                        let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+                        
+                        // Compute nonlinear term coefficients
+                        let gradient_scale = dt / (2.0 * rho * c * c);
+                        let beta = b_a / (rho * c * c);
+                        
+                        // Apply gradient clamping if enabled
+                        let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
+                            (
+                                grad_x.clamp(-max_gradient, max_gradient),
+                                grad_y.clamp(-max_gradient, max_gradient),
+                                grad_z.clamp(-max_gradient, max_gradient)
+                            )
+                        } else {
+                            (grad_x, grad_y, grad_z)
+                        };
+                        
+                        // Compute gradient magnitude
+                        let grad_magnitude = (grad_x_final * grad_x_final + 
+                                             grad_y_final * grad_y_final + 
+                                             grad_z_final * grad_z_final).sqrt();
+                        
+                        // Compute and store nonlinear term
+                        let p_limited = pressure_at_start[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
+                        let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
+                        
+                        nonlinear_term[[i, j, k]] = if nl_term.is_finite() {
+                            nl_term.clamp(-self.max_pressure, self.max_pressure)
+                        } else {
+                            0.0
+                        };
+                    }
+                }
             }
+            
+            // Handle boundary points
+            self.compute_boundary_nonlinear_terms(&mut nonlinear_term, &pressure_at_start, prev_pressure, grid, medium, dt);
+            
+            nonlinear_term
         } else {
             // No nonlinearity - zero term
             Array3::zeros(pressure_at_start.raw_dim())

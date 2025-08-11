@@ -246,16 +246,62 @@ impl Octree {
             None => return Ok(false),
         };
         
-        // Check if has children
-        let children = match self.nodes[node_idx].children {
+        // Check if this node has children (is a parent)
+        let parent_idx = if self.nodes[node_idx].children.is_some() {
+            // This is already a parent
+            node_idx
+        } else {
+            // This is a child, find its parent
+            // Search for a node that has this node as a child
+            let mut found_parent = None;
+            for (idx, node) in self.nodes.iter().enumerate() {
+                if let Some(children) = node.children {
+                    if children.contains(&node_idx) {
+                        found_parent = Some(idx);
+                        break;
+                    }
+                }
+            }
+            match found_parent {
+                Some(idx) => idx,
+                None => return Ok(false), // No parent found
+            }
+        };
+        
+        // Get children array
+        let children = match self.nodes[parent_idx].children {
             Some(children) => children,
             None => return Ok(false),
         };
         
+        // Check that all children are leaves (cannot coarsen if grandchildren exist)
+        for &child_idx in &children {
+            if self.nodes[child_idx].children.is_some() {
+                return Ok(false); // Cannot coarsen - has grandchildren
+            }
+        }
+        
         // Remove children from coord mapping and mark as free
         for &child_idx in &children {
-            let child_bounds = self.nodes[child_idx].bounds_min;
-            self.coord_to_node.remove(&child_bounds);
+            // Get all coordinates that map to this child
+            let child_node = &self.nodes[child_idx];
+            let child_bounds_min = child_node.bounds_min;
+            let child_bounds_max = child_node.bounds_max;
+            
+            // Remove all coordinate mappings within child bounds
+            let coords_to_remove: Vec<_> = self.coord_to_node.keys()
+                .filter(|&&(ci, cj, ck)| {
+                    ci >= child_bounds_min.0 && ci <= child_bounds_max.0 &&
+                    cj >= child_bounds_min.1 && cj <= child_bounds_max.1 &&
+                    ck >= child_bounds_min.2 && ck <= child_bounds_max.2 &&
+                    self.coord_to_node[&(ci, cj, ck)] == child_idx
+                })
+                .cloned()
+                .collect();
+            
+            for coord in coords_to_remove {
+                self.coord_to_node.remove(&coord);
+            }
             
             // Mark child as inactive and add to free list
             self.nodes[child_idx].is_active = false;
@@ -264,8 +310,19 @@ impl Octree {
         }
         
         // Mark parent as leaf
-        self.nodes[node_idx].children = None;
-        self.nodes[node_idx].is_active = true;
+        self.nodes[parent_idx].children = None;
+        self.nodes[parent_idx].is_active = true;
+        
+        // Re-add parent coordinates to mapping
+        let parent_bounds_min = self.nodes[parent_idx].bounds_min;
+        let parent_bounds_max = self.nodes[parent_idx].bounds_max;
+        for ci in parent_bounds_min.0..=parent_bounds_max.0 {
+            for cj in parent_bounds_min.1..=parent_bounds_max.1 {
+                for ck in parent_bounds_min.2..=parent_bounds_max.2 {
+                    self.coord_to_node.insert((ci, cj, ck), parent_idx);
+                }
+            }
+        }
         
         Ok(true)
     }
@@ -465,38 +522,46 @@ mod tests {
     }
     
     #[test]
-    #[ignore = "Coarsening needs to be fixed to handle coordinate mapping correctly"]
     fn test_cell_coarsening() {
         let mut octree = Octree::new(8, 8, 8, 3);
         
-        // Refine then coarsen
-        octree.refine_cell(0, 0, 0).unwrap();
+        // Refine root cell
+        assert!(octree.refine_cell(0, 0, 0).unwrap());
+        
+        // After refinement, (0,0,0) maps to a child
+        // We can coarsen by using any coordinate that maps to one of the children
+        // The coarsen_cell function should work on any child coordinate
         assert!(octree.coarsen_cell(0, 0, 0).unwrap());
         
-        // Check children removed
-        let children = octree.get_children(0, 0, 0);
-        assert_eq!(children.len(), 0);
+        // After coarsening, (0,0,0) should map back to the parent
+        let node_at_origin = octree.coord_to_node.get(&(0, 0, 0)).unwrap();
+        
+        // Check that the node at (0,0,0) has no children
+        assert!(octree.nodes[*node_at_origin].children.is_none());
     }
     
     #[test]
-    #[ignore = "Max level test needs to be fixed for new coordinate mapping"]
     fn test_max_level_limit() {
         let mut octree = Octree::new(64, 64, 64, 2);
         
         // Refine to max level
-        octree.refine_cell(0, 0, 0).unwrap();
-        octree.refine_cell(0, 0, 0).unwrap(); // Now at level 1
+        assert!(octree.refine_cell(0, 0, 0).unwrap());
         
-        // Get a child at level 1
-        let children = octree.get_children(0, 0, 0);
-        let (ci, cj, ck) = children[0];
+        // After first refinement, (0,0,0) maps to a child
+        // Find a child coordinate to refine further
+        let child_idx = *octree.coord_to_node.get(&(0, 0, 0)).unwrap();
+        let child_node = &octree.nodes[child_idx];
+        assert_eq!(child_node.level, 1);
         
-        // Refine child to level 2
-        octree.refine_cell(ci, cj, ck).unwrap();
+        // Refine the child (now at level 1)
+        assert!(octree.refine_cell(0, 0, 0).unwrap());
         
-        // Try to refine beyond max level
-        let grandchildren = octree.get_children(ci, cj, ck);
-        let (gci, gcj, gck) = grandchildren[0];
-        assert!(!octree.refine_cell(gci, gcj, gck).unwrap());
+        // Now (0,0,0) maps to a grandchild at level 2
+        let grandchild_idx = *octree.coord_to_node.get(&(0, 0, 0)).unwrap();
+        let grandchild_node = &octree.nodes[grandchild_idx];
+        assert_eq!(grandchild_node.level, 2);
+        
+        // Try to refine beyond max level (should fail)
+        assert!(!octree.refine_cell(0, 0, 0).unwrap());
     }
 }
