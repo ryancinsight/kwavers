@@ -170,24 +170,39 @@ impl AngularSpectrum {
 pub struct WaterProperties;
 
 impl WaterProperties {
+    // ------------------------------------------------------------------------
+    // Water density polynomial coefficients (Kell, 1975)
+    // Reference: Kell, G. S. (1975). "Density, thermal expansivity, and compressibility of liquid water from 0° to 150°C: Correlations and tables for atmospheric pressure and saturation reviewed and expressed on 1968 temperature scale." J. Chem. Eng. Data, 20(1), 97–105.
+    // Units: All coefficients in kg/m³, temperature in °C
+    /// Constant term [kg/m³]
+    const KELL_A: f64 = 999.83952;
+    /// Linear coefficient [kg/m³·°C⁻¹]
+    const KELL_B: f64 = 16.945176;
+    /// Quadratic coefficient [kg/m³·°C⁻²]
+    const KELL_C: f64 = -7.9870401e-3;
+    /// Cubic coefficient [kg/m³·°C⁻³]
+    const KELL_D: f64 = -46.170461e-6;
+    /// Quartic coefficient [kg/m³·°C⁻⁴]
+    const KELL_E: f64 = 105.56302e-9;
+    /// Quintic coefficient [kg/m³·°C⁻⁵]
+    const KELL_F: f64 = -280.54253e-12;
+    /// Denominator linear coefficient [dimensionless]
+    const KELL_G: f64 = 16.879850e-3;
+
     /// Calculate water density as function of temperature
     /// Based on Kell (1975) formula
     pub fn density(temperature: f64) -> f64 {
         // Temperature in Celsius
         let t = temperature;
-        
+
         // Kell's formula for water density (kg/m³)
-        let a = 999.83952;
-        let b = 16.945176;
-        let c = -7.9870401e-3;
-        let d = -46.170461e-6;
-        let e = 105.56302e-9;
-        let f = -280.54253e-12;
-        let g = 16.879850e-3;
-        
-        let numerator = a + b * t + c * t.powi(2) + d * t.powi(3) + e * t.powi(4) + f * t.powi(5);
-        let denominator = 1.0 + g * t;
-        
+        let numerator = Self::KELL_A
+            + Self::KELL_B * t
+            + Self::KELL_C * t.powi(2)
+            + Self::KELL_D * t.powi(3)
+            + Self::KELL_E * t.powi(4)
+            + Self::KELL_F * t.powi(5);
+        let denominator = 1.0 + Self::KELL_G * t;
         numerator / denominator
     }
     
