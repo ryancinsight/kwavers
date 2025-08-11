@@ -17,9 +17,8 @@
 use crate::{
     error::{KwaversError, KwaversResult},
     grid::Grid,
-    sensor::SensorData,
 };
-use ndarray::{Array1, Array2, Array3, ArrayView1, Axis, Zip, s};
+use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
 use std::sync::{Arc, Mutex};

@@ -16,11 +16,8 @@
 //! - Goodman (2005): "Introduction to Fourier Optics" (angular spectrum)
 //! - Treeby & Cox (2010): "k-Wave: MATLAB toolbox"
 
-use crate::{
-    error::{KwaversError, KwaversResult},
-    grid::Grid,
-};
-use ndarray::{Array1, Array2, Array3, Zip, s, Axis};
+use crate::error::KwaversResult;
+use ndarray::{Array1, Array2, Axis};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
 use rayon::prelude::*;
@@ -301,7 +298,7 @@ impl HounsfieldUnits {
     /// Based on Mast (2000) empirical relationship
     pub fn to_sound_speed(hu: f64) -> f64 {
         // Empirical relationship for soft tissues
-        let density = Self::to_density(hu);
+        let _density = Self::to_density(hu);
         
         // Mast's formula
         if hu < -100.0 {
@@ -756,7 +753,7 @@ fn bessel_j1(x: f64) -> f64 {
         x * (0.5 - x2 / 8.0 + x2 * x2 / 192.0 - x2 * x2 * x2 / 9216.0)
     } else {
         // Asymptotic approximation for large x
-        let inv_x = 1.0 / x;
+        let _inv_x = 1.0 / x;
         let phase = x - 3.0 * PI / 4.0;
         (2.0 / (PI * x)).sqrt() * phase.cos() * 
         (1.0 - 3.0 / (8.0 * x * x) + 15.0 / (128.0 * x * x * x * x))

@@ -17,10 +17,8 @@
 use crate::{
     error::{KwaversError, KwaversResult},
     grid::Grid,
-    source::Source,
-    medium::Medium,
 };
-use ndarray::{Array1, Array2, Array3, Zip, s};
+use ndarray::{Array2, Array3, Zip, s};
 use std::f64::consts::PI;
 use rayon::prelude::*;
 
