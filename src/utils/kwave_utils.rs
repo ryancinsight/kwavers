@@ -212,15 +212,13 @@ impl WaterProperties {
         // Temperature in Celsius
         let t = temperature;
         
-        // 5th order polynomial fit
-        let c0 = 1402.385;
-        let c1 = 5.03830;
-        let c2 = -5.81090e-2;
-        let c3 = 3.3432e-4;
-        let c4 = -1.47797e-6;
-        let c5 = 3.1419e-9;
-        
-        c0 + c1 * t + c2 * t.powi(2) + c3 * t.powi(3) + c4 * t.powi(4) + c5 * t.powi(5)
+        // 5th order polynomial fit (Bilaniuk & Wong, 1993)
+        Self::SOUND_SPEED_C0
+            + Self::SOUND_SPEED_C1 * t
+            + Self::SOUND_SPEED_C2 * t.powi(2)
+            + Self::SOUND_SPEED_C3 * t.powi(3)
+            + Self::SOUND_SPEED_C4 * t.powi(4)
+            + Self::SOUND_SPEED_C5 * t.powi(5)
     }
     
     /// Calculate water absorption coefficient
