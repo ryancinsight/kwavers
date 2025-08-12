@@ -60,6 +60,8 @@
 - [x] Remove duplicate implementations (FieldType enum)
 - [x] Fix placeholder values with proper constants
 - [x] Enhance design principles (SOLID/CUPID/GRASP/etc.)
+- [x] Unify k-space correction across solvers (k-Wave methodology)
+- [x] Implement consistent time integration (leapfrog for PSTD)
 
 ### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths

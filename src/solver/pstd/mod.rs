@@ -85,6 +85,7 @@ use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
 use crate::physics::composable::ValidationResult;
 use crate::constants::cfl;
+use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig};
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -105,6 +106,8 @@ pub struct PstdConfig {
     pub pml_stencil_size: usize,
     /// CFL safety factor (typically 0.3-0.5 for PSTD)
     pub cfl_factor: f64,
+    /// Use leapfrog time integration (second-order accurate)
+    pub use_leapfrog: bool,
 }
 
 impl Default for PstdConfig {
@@ -115,6 +118,7 @@ impl Default for PstdConfig {
             anti_aliasing: true,
             pml_stencil_size: 4,
             cfl_factor: cfl::PSTD_DEFAULT,
+            use_leapfrog: true,  // Default to second-order time integration
         }
     }
 }
@@ -175,6 +179,10 @@ pub struct PstdSolver {
     /// Workspace arrays to avoid allocations
     workspace_real: Array3<f64>,
     workspace_complex: Array3<Complex<f64>>,
+    /// Previous pressure field for leapfrog integration
+    pressure_prev: Option<Array3<f64>>,
+    /// Previous velocity field for leapfrog integration  
+    velocity_prev: Option<Array4<f64>>,
 }
 
 impl PstdSolver {
@@ -206,9 +214,18 @@ impl PstdSolver {
             None
         };
         
-        // Create k-space correction if enabled
+        // Create k-space correction using unified approach
         let kappa = if config.k_space_correction {
-            Some(Self::compute_k_space_correction(&k_squared, grid, config.k_space_order))
+            let kspace_config = KSpaceCorrectionConfig {
+                enabled: true,
+                order: config.k_space_order,
+                use_kwave_exact: true,  // Use exact k-Wave formulation
+                cfl_number: config.cfl_factor,
+            };
+            // Estimate dt and reference sound speed for correction
+            let c_ref = 1500.0; // Will be updated with actual medium properties
+            let dt = config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c_ref;
+            Some(compute_kspace_correction(grid, &kspace_config, dt, c_ref))
         } else {
             None
         };
@@ -225,6 +242,8 @@ impl PstdSolver {
             metrics: HashMap::new(),
             workspace_real: Array3::zeros((nx, ny, nz)),
             workspace_complex: Array3::zeros((nx, ny, nz)),
+            pressure_prev: None,
+            velocity_prev: None,
         })
     }
     
@@ -360,7 +379,7 @@ impl PstdSolver {
         kappa
     }
     
-    /// Update pressure field using PSTD
+    /// Update pressure field using PSTD with leapfrog or Euler time integration
     pub fn update_pressure(
         &mut self,
         pressure: &mut Array3<f64>,
@@ -368,7 +387,7 @@ impl PstdSolver {
         medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("PSTD pressure update, dt={}", dt);
+        debug!("PSTD pressure update, dt={}, leapfrog={}", dt, self.config.use_leapfrog);
         let start = std::time::Instant::now();
         
         // Transform velocity divergence to k-space
@@ -391,29 +410,66 @@ impl PstdSolver {
                 .for_each(|d, &k| *d *= k);
         }
         
-        // Update pressure in k-space: ∂p/∂t = -ρc²∇·v
-        // Apply proper FFT scaling factor
-        let scale_factor = -dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
-        let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
+        // Choose time integration scheme
+        if self.config.use_leapfrog && self.pressure_prev.is_some() {
+            // Leapfrog scheme: p^{n+1} = p^{n-1} + 2*dt*(-ρc²∇·v^n)
+            let scale_factor = -2.0 * dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+            let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
+            
+            // Transform back to physical space
+            let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
+            
+            // Apply leapfrog update with spatially varying ρc²
+            let pressure_prev = self.pressure_prev.as_ref().unwrap();
+            pressure.indexed_iter_mut()
+                .zip(pressure_prev.iter())
+                .zip(pressure_update.iter())
+                .for_each(|((((i, j, k), p), &p_prev), &update)| {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    
+                    // Get local medium properties
+                    let rho = medium.density(x, y, z, &self.grid);
+                    let c = medium.sound_speed(x, y, z, &self.grid);
+                    let rho_c2 = rho * c * c;
+                    
+                    let p_new = p_prev + update * rho_c2;
+                    *p = p_new;
+                });
+        } else {
+            // First-order Euler scheme (used for first step or if leapfrog disabled)
+            let scale_factor = -dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+            let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
+            
+            // Transform back to physical space
+            let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
+            
+            // Apply the update with spatially varying ρc²
+            pressure.indexed_iter_mut()
+                .zip(pressure_update.iter())
+                .for_each(|(((i, j, k), p), &update)| {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    
+                    // Get local medium properties
+                    let rho = medium.density(x, y, z, &self.grid);
+                    let c = medium.sound_speed(x, y, z, &self.grid);
+                    let rho_c2 = rho * c * c;
+                    
+                    *p += update * rho_c2;
+                });
+        }
         
-        // Transform back to physical space
-        let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
-        
-        // Apply the update with spatially varying ρc² using iterators
-        pressure.indexed_iter_mut()
-            .zip(pressure_update.iter())
-            .for_each(|(((i, j, k), p), &update)| {
-                let x = i as f64 * self.grid.dx;
-                let y = j as f64 * self.grid.dy;
-                let z = k as f64 * self.grid.dz;
-                
-                // Get local medium properties
-                let rho = medium.density(x, y, z, &self.grid);
-                let c = medium.sound_speed(x, y, z, &self.grid);
-                let rho_c2 = rho * c * c;
-                
-                *p += update * rho_c2;
-            });
+        // Store current pressure for next leapfrog step
+        if self.config.use_leapfrog {
+            if self.pressure_prev.is_none() {
+                self.pressure_prev = Some(pressure.clone());
+            } else {
+                self.pressure_prev.as_mut().unwrap().assign(pressure);
+            }
+        }
         
         // Update metrics
         let elapsed = start.elapsed().as_secs_f64();

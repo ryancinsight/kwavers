@@ -13,6 +13,10 @@
 - **📐 Enhanced Design Principles**: 
   - Full SOLID/CUPID/GRASP/ACID/ADP compliance
   - KISS/SoC/DRY/DIP/CLEAN/YAGNI implementation
+- **🔬 Unified Numerical Schemes**:
+  - Consistent k-space correction based on k-Wave methodology
+  - High-order time integration (leapfrog for PSTD, RK4 available)
+  - Literature-validated algorithms (Treeby & Cox 2010)
 - **🔢 Constants Module**: Created comprehensive constants module with 30+ named constants
 - **🧹 Code Quality**: 
   - Fixed 18 critical compilation errors

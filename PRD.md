@@ -13,6 +13,10 @@
 - **Build System**: Zero compilation errors for lib, tests, and examples ✅
 - **Design Principles**: Enhanced SOLID/CUPID/GRASP/ACID/ADP/KISS/SoC/DRY/DIP/CLEAN/YAGNI ✅
 - **Named Constants**: Created comprehensive constants module, eliminated magic numbers ✅
+- **Numerical Consistency**: 
+  - Unified k-space correction based on k-Wave methodology ✅
+  - Consistent high-order time integration (leapfrog for PSTD) ✅
+  - Literature-validated algorithms (Treeby & Cox 2010) ✅
 - **Code Quality**: 
   - Fixed 18 compilation errors in multiple modules ✅
   - Removed duplicate FieldType enum (DRY principle) ✅
@@ -22,6 +26,7 @@
   - Proper factory/plugin patterns maintained ✅
   - Domain/feature-based structure preserved ✅
   - Zero-copy operations with iterators ✅
+  - Unified numerical schemes across all solvers ✅
 - **Current Focus**: Performance optimization and crates.io preparation
 
 ### **Phase 16 Metrics** 

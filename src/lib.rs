@@ -336,6 +336,7 @@ pub fn run_advanced_simulation(
         anti_aliasing: true,
         pml_stencil_size: 10,
         cfl_factor: 0.3,
+        use_leapfrog: true,
     };
     plugin_manager.register(Box::new(
         solver::pstd::PstdPlugin::new(pstd_config, &grid)?

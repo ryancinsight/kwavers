@@ -56,6 +56,7 @@ use crate::error::KwaversResult;
 use crate::physics::traits::AcousticWaveModel;
 use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
+use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig};
 use ndarray::{Array3, Array4, Zip, Axis};
 use std::f64::consts::PI;
 
@@ -251,9 +252,18 @@ impl KuznetsovWave {
         let k_squared = grid.k_squared();
         let k_magnitude = compute_k_magnitude(grid);
         
-        // Compute k-space correction factors for dispersion compensation
+        // Compute k-space correction factors using unified approach
         let phase_correction_factors = if config.enable_dispersion_compensation {
-            compute_k_space_correction_factors(grid, config.k_space_correction_order)
+            let kspace_config = KSpaceCorrectionConfig {
+                enabled: true,
+                order: config.k_space_correction_order,
+                use_kwave_exact: true,  // Use exact k-Wave formulation
+                cfl_number: 0.3,  // Conservative CFL for Kuznetsov equation
+            };
+            // Estimate dt and reference sound speed
+            let c_ref = 1500.0;  // Reference sound speed
+            let dt = 0.3 * grid.dx.min(grid.dy).min(grid.dz) / c_ref;
+            compute_kspace_correction(grid, &kspace_config, dt, c_ref)
         } else {
             Array3::ones((grid.nx, grid.ny, grid.nz))
         };

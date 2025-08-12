@@ -39,6 +39,7 @@ mod tests {
             anti_aliasing: false, // Disable for exact test
             pml_stencil_size: 4,
             cfl_factor: 0.3,
+            use_leapfrog: true,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
@@ -125,6 +126,7 @@ mod tests {
             anti_aliasing: true,
             pml_stencil_size: 4,
             cfl_factor: 0.3,
+            use_leapfrog: true,
         };
         
         let solver = PstdSolver::new(config, &grid).unwrap();
@@ -225,6 +227,7 @@ mod tests {
             anti_aliasing: true,
             pml_stencil_size: 4,
             cfl_factor: 0.3,
+            use_leapfrog: true,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
