@@ -51,6 +51,15 @@ pub enum KwaversError {
     NotImplemented(String),
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
+    
+    /// Field not registered in the field registry
+    FieldNotRegistered(String),
+    
+    /// Field is inactive and cannot be accessed
+    FieldInactive(String),
+    
+    /// Field data array not initialized
+    FieldDataNotInitialized,
 }
 
 impl fmt::Display for KwaversError {
@@ -68,6 +77,9 @@ impl fmt::Display for KwaversError {
             KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
             KwaversError::NotImplemented(e) => write!(f, "Feature not yet implemented: {}", e),
+            KwaversError::FieldNotRegistered(field) => write!(f, "Field '{}' not registered in the field registry", field),
+            KwaversError::FieldInactive(field) => write!(f, "Field '{}' is inactive and cannot be accessed", field),
+            KwaversError::FieldDataNotInitialized => write!(f, "Field data array not initialized"),
         }
     }
 }
@@ -87,6 +99,9 @@ impl StdError for KwaversError {
             KwaversError::Visualization(_) => None,
             KwaversError::Composite(e) => Some(e),
             KwaversError::NotImplemented(_) => None,
+            KwaversError::FieldNotRegistered(_) => None,
+            KwaversError::FieldInactive(_) => None,
+            KwaversError::FieldDataNotInitialized => None,
         }
     }
 }
@@ -972,6 +987,9 @@ pub mod utils {
             KwaversError::Visualization(_) => "Visualization",
             KwaversError::Composite(_) => "Composite",
             KwaversError::NotImplemented(_) => "Not Implemented",
+            KwaversError::FieldNotRegistered(_) => "Field Registry",
+            KwaversError::FieldInactive(_) => "Field State",
+            KwaversError::FieldDataNotInitialized => "Field Data",
         }
     }
 }

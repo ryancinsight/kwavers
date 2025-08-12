@@ -14,6 +14,7 @@ pub mod workspace;
 pub mod time_reversal;
 pub mod thermal_diffusion;
 pub mod reconstruction;
+pub mod plugin_based_solver; // New plugin-based architecture
 
 use crate::grid::Grid;
 use crate::KwaversResult;
