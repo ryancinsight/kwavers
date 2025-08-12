@@ -174,6 +174,7 @@ pub enum PhysicsModelType {
     AcousticWave,
     ThermalDiffusion,
     Cavitation,
+    KuznetsovWave,
     ElasticWave,
     LightDiffusion,
     Chemical,
@@ -1080,8 +1081,8 @@ impl SimulationSetup {
                 &self.grid,
                 self.medium.as_ref(),
                 self.time.dt,
-                t,
-                &mut context,
+                step,
+                self.time.num_steps(),
             )?;
             
             // Apply boundary conditions
@@ -1161,8 +1162,8 @@ impl SimulationSetup {
                 &self.grid,
                 self.medium.as_ref(),
                 self.time.dt,
-                t,
-                &mut context,
+                step,
+                self.time.num_steps(),
             )?;
             
             // Apply boundary conditions

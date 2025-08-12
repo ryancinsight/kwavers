@@ -157,7 +157,7 @@ impl PowerLawAbsorption {
 }
 
 /// Tissue types with known absorption properties
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum TissueType {
     Water,
     Blood,
@@ -169,6 +169,23 @@ pub enum TissueType {
     SoftTissue,
     Skin,
     Custom(f64, f64),  // (alpha_0, y)
+}
+
+// Manual implementation of Eq for TissueType
+impl Eq for TissueType {}
+
+// Manual implementation of Hash for TissueType
+impl std::hash::Hash for TissueType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        use std::mem::discriminant;
+        discriminant(self).hash(state);
+        
+        // For Custom variant, hash the bit representation of the floats
+        if let TissueType::Custom(a, b) = self {
+            a.to_bits().hash(state);
+            b.to_bits().hash(state);
+        }
+    }
 }
 
 /// Fractional Laplacian operator for power-law absorption

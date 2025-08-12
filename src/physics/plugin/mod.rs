@@ -185,6 +185,35 @@ impl PluginManager {
         }
     }
     
+    /// Get the number of registered plugins/components
+    pub fn component_count(&self) -> usize {
+        self.plugins.len()
+    }
+    
+    /// Execute all plugins in dependency order
+    pub fn execute(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        step: usize,
+        total_steps: usize,
+    ) -> KwaversResult<()> {
+        // Create plugin context
+        let context = PluginContext::new(step, total_steps, 1e6) // Default frequency
+            .with_parameter("dt".to_string(), dt);
+        
+        // Execute plugins in dependency order
+        for &idx in &self.execution_order {
+            if let Some(plugin) = self.plugins.get_mut(idx) {
+                plugin.execute(&context, fields, grid, medium)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
     /// Register a plugin
     pub fn register(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
         // Check for ID conflicts
