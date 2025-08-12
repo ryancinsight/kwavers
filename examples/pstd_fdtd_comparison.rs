@@ -91,6 +91,7 @@ fn run_pstd_simulation(
         anti_aliasing: true,
         pml_stencil_size: 4,
         cfl_factor: 0.3, // PSTD typically needs smaller CFL
+        use_leapfrog: true,
     };
     
     // Create plugin

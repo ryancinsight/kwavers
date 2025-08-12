@@ -62,6 +62,8 @@
 - [x] Enhance design principles (SOLID/CUPID/GRASP/etc.)
 - [x] Unify k-space correction across solvers (k-Wave methodology)
 - [x] Implement consistent time integration (leapfrog for PSTD)
+- [x] Replace placeholder DG solver with proper implementation
+- [x] Add shock-capturing capabilities (MinMod limiter)
 
 ### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths

@@ -86,6 +86,7 @@ fn test_pstd_solver_basic() {
         anti_aliasing: true,
         pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
         cfl_factor: PSTD_CFL_FACTOR,
+        use_leapfrog: true,
     };
     
     let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
@@ -181,6 +182,7 @@ fn test_wave_propagation() {
             anti_aliasing: true,
             pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
             cfl_factor: PSTD_CFL_FACTOR,
+            use_leapfrog: true,
         };
         
         let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");

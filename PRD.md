@@ -17,6 +17,7 @@
   - Unified k-space correction based on k-Wave methodology ✅
   - Consistent high-order time integration (leapfrog for PSTD) ✅
   - Literature-validated algorithms (Treeby & Cox 2010) ✅
+  - Proper DG solver with basis functions, projection, and shock capturing ✅
 - **Code Quality**: 
   - Fixed 18 compilation errors in multiple modules ✅
   - Removed duplicate FieldType enum (DRY principle) ✅
