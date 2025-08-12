@@ -633,17 +633,42 @@ pub struct PstdPlugin {
 impl PstdPlugin {
     /// Create a new PSTD plugin
     pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = PstdSolver::new(config, grid)?;
+        let solver = PstdSolver::new(config, &grid)?;
         let metadata = PluginMetadata {
             id: "pstd_solver".to_string(),
             name: "PSTD Solver".to_string(),
             version: "1.0.0".to_string(),
             author: "Kwavers Team".to_string(),
-            description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
+            description: "Pseudo-Spectral Time Domain solver with k-space methods".to_string(),
             license: "MIT".to_string(),
         };
-        
         Ok(Self { solver, metadata })
+    }
+    
+    /// Helper method to compute gradient using spectral derivatives
+    fn compute_gradient(&self, field: &Array3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
+        use rustfft::num_complex::Complex;
+        use ndarray::Axis;
+        
+        // Transform to k-space
+        let mut fields_4d = Array4::zeros((1, field.shape()[0], field.shape()[1], field.shape()[2]));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(field);
+        let field_hat = fft_3d(&fields_4d, 0, &self.solver.grid);
+        
+        // Apply derivative in k-space
+        let grad_hat = match direction {
+            0 => &field_hat * &self.solver.kx.mapv(|k| Complex::new(0.0, k)),
+            1 => &field_hat * &self.solver.ky.mapv(|k| Complex::new(0.0, k)),
+            2 => &field_hat * &self.solver.kz.mapv(|k| Complex::new(0.0, k)),
+            _ => return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "gradient_direction".to_string(),
+                value: direction.to_string(),
+                constraint: "must be 0 (x), 1 (y), or 2 (z)".to_string(),
+            })),
+        };
+        
+        // Transform back to physical space
+        Ok(ifft_3d(&grad_hat, &self.solver.grid))
     }
 }
 
@@ -670,13 +695,46 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::Axis;
+        use ndarray::{Axis, Zip};
+        use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
         
         // Extract fields from the Array4 as owned arrays
-        let pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
+        let pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        let mut velocity_x = fields.index_axis(Axis(0), VX_IDX).to_owned();
+        let mut velocity_y = fields.index_axis(Axis(0), VY_IDX).to_owned();
+        let mut velocity_z = fields.index_axis(Axis(0), VZ_IDX).to_owned();
+        
+        // Initialize velocities if they are all zero (first step)
+        let v_max = velocity_x.iter().chain(velocity_y.iter()).chain(velocity_z.iter())
+            .fold(0.0f64, |acc, &v| acc.max(v.abs()));
+        
+        if v_max < 1e-15 && context.step == 0 {
+            // Initialize velocities from pressure gradient for first step
+            // This ensures the wave starts propagating
+            let grad_x = self.compute_gradient(&pressure, 0)?;
+            let grad_y = self.compute_gradient(&pressure, 1)?;
+            let grad_z = self.compute_gradient(&pressure, 2)?;
+            
+            let rho_array = medium.density_array();
+            Zip::from(&mut velocity_x)
+                .and(&grad_x)
+                .and(&rho_array)
+                .for_each(|v, &grad, &rho| {
+                    *v = -dt * grad / rho;
+                });
+            Zip::from(&mut velocity_y)
+                .and(&grad_y)
+                .and(&rho_array)
+                .for_each(|v, &grad, &rho| {
+                    *v = -dt * grad / rho;
+                });
+            Zip::from(&mut velocity_z)
+                .and(&grad_z)
+                .and(&rho_array)
+                .for_each(|v, &grad, &rho| {
+                    *v = -dt * grad / rho;
+                });
+        }
         
         // Compute divergence of velocity
         let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
@@ -689,10 +747,10 @@ impl PhysicsPlugin for PstdPlugin {
         self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &updated_pressure, medium, dt)?;
         
         // Copy back to fields
-        fields.index_axis_mut(Axis(0), 0).assign(&updated_pressure);
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
+        fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&updated_pressure);
+        fields.index_axis_mut(Axis(0), VX_IDX).assign(&velocity_x);
+        fields.index_axis_mut(Axis(0), VY_IDX).assign(&velocity_y);
+        fields.index_axis_mut(Axis(0), VZ_IDX).assign(&velocity_z);
         
         Ok(())
     }

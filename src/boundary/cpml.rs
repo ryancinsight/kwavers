@@ -37,7 +37,7 @@
 
 use crate::boundary::Boundary;
 use crate::grid::Grid;
-use crate::error::{KwaversResult, ConfigError};
+use crate::error::{KwaversResult, KwaversError, ConfigError};
 use ndarray::{Array3, Array4, Axis, Zip};
 use rustfft::num_complex::Complex;
 use std::f64::consts::PI;
@@ -104,27 +104,27 @@ impl CPMLConfig {
     /// Validate configuration
     pub fn validate(&self) -> KwaversResult<()> {
         if self.thickness == 0 {
-            return Err(ConfigError::InvalidValue {
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "thickness".to_string(),
                 value: self.thickness.to_string(),
                 constraint: "C-PML thickness must be > 0".to_string(),
-            }.into());
+            }));
         }
         
         if self.polynomial_order < 0.0 {
-            return Err(ConfigError::InvalidValue {
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "polynomial_order".to_string(),
                 value: self.polynomial_order.to_string(),
                 constraint: "Polynomial order must be >= 0".to_string(),
-            }.into());
+            }));
         }
         
         if self.kappa_max < 1.0 {
-            return Err(ConfigError::InvalidValue {
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "kappa_max".to_string(),
                 value: self.kappa_max.to_string(),
                 constraint: "κ_max must be >= 1".to_string(),
-            }.into());
+            }));
         }
         
         Ok(())
@@ -132,7 +132,7 @@ impl CPMLConfig {
 }
 
 /// Convolutional PML boundary condition
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CPMLBoundary {
     config: CPMLConfig,
     
@@ -507,11 +507,11 @@ impl CPMLBoundary {
                         *psi = self.b_z[k] * *psi + self.c_z[k] * grad;
                     });
             }
-            _ => return Err(ConfigError::InvalidValue {
+            _ => return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "component".to_string(),
                 value: component.to_string(),
                 constraint: "Component must be 0, 1, or 2".to_string(),
-            }.into()),
+            })),
         }
         
         Ok(())
@@ -547,11 +547,11 @@ impl CPMLBoundary {
                         *grad = *grad / self.kappa_z[k] + psi_val;
                     });
             }
-            _ => return Err(ConfigError::InvalidValue {
+            _ => return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "component".to_string(),
                 value: component.to_string(),
                 constraint: "Component must be 0, 1, or 2".to_string(),
-            }.into()),
+            })),
         }
         
         Ok(())
@@ -600,42 +600,24 @@ impl CPMLBoundary {
 
 impl Boundary for CPMLBoundary {
     fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) -> KwaversResult<()> {
-        trace!("Applying C-PML to acoustic field");
+        // C-PML cannot be applied directly to the field as a post-processing step.
+        // It must be integrated into the solver's gradient computation.
+        // This method is deprecated and should not be used.
+        // 
+        // CORRECT USAGE:
+        // 1. In your solver, after computing pressure gradients:
+        //    cpml.update_acoustic_memory(&pressure_grad_x, 0)?;
+        //    cpml.apply_cpml_gradient(&mut pressure_grad_x, 0)?;
+        // 2. Repeat for y and z components
+        // 
+        // See CPMLBoundary::update_acoustic_memory() and apply_cpml_gradient()
         
-        // For C-PML, we need to modify the field update equations
-        // This is typically done in the solver, not directly on the field
-        // Here we apply direct absorption as a simplified approach
-        
-        let thickness = self.config.thickness;
-        
-        // Apply PML absorption in each direction
-        let dt_x = grid.dx / 1500.0; // Assume c=1500 m/s
-        let dt_y = grid.dy / 1500.0;
-        let dt_z = grid.dz / 1500.0;
-        
-        field.indexed_iter_mut()
-            .for_each(|((i, j, k), val)| {
-                let mut absorption = 1.0;
-                
-                // X-direction absorption
-                if i < thickness || i >= self.nx - thickness {
-                    absorption *= (-self.sigma_x[i] * dt_x).exp();
-                }
-                
-                // Y-direction absorption
-                if j < thickness || j >= self.ny - thickness {
-                    absorption *= (-self.sigma_y[j] * dt_y).exp();
-                }
-                
-                // Z-direction absorption
-                if k < thickness || k >= self.nz - thickness {
-                    absorption *= (-self.sigma_z[k] * dt_z).exp();
-                }
-                
-                *val *= absorption;
-            });
-        
-        Ok(())
+        Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
+            parameter: "apply_acoustic".to_string(),
+            value: "direct field application".to_string(),
+            constraint: "C-PML must be integrated into solver gradient computation. \
+                        Use update_acoustic_memory() and apply_cpml_gradient() methods instead.".to_string()
+        }))
     }
     
     fn apply_acoustic_freq(

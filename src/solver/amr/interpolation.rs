@@ -267,44 +267,129 @@ fn spectral_interpolation(
     octree: &Octree,
 ) -> KwaversResult<Array3<f64>> {
     use rustfft::{FftPlanner, num_complex::Complex};
+    use ndarray::Zip;
     
     let (nx, ny, nz) = coarse_field.dim();
     let mut planner = FftPlanner::<f64>::new();
     
     // Convert to complex for FFT
-    let complex_field: Vec<Complex<f64>> = coarse_field.iter()
-        .map(|&x| Complex::new(x, 0.0))
-        .collect();
+    let mut complex_field = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        Complex::new(coarse_field[[i, j, k]], 0.0)
+    });
     
-    // 3D FFT (implemented as series of 1D FFTs)
-    // This is a simplified version - production code would use proper 3D FFT
-    let fft = planner.plan_fft_forward(nx);
-    
-    // Pad spectrum with zeros for interpolation
-    let mut padded_spectrum = vec![Complex::new(0.0, 0.0); nx * ny * nz * 8];
-    
-    // Copy low frequencies to padded spectrum
-    for i in 0..nx/2 {
-        for j in 0..ny/2 {
-            for k in 0..nz/2 {
-                let src_idx = i * ny * nz + j * nz + k;
-                let dst_idx = i * (2*ny) * (2*nz) + j * (2*nz) + k;
-                padded_spectrum[dst_idx] = complex_field[src_idx];
-            }
+    // Perform 3D FFT using separable 1D FFTs
+    // Transform along x-axis
+    let fft_x = planner.plan_fft_forward(nx);
+    for j in 0..ny {
+        for k in 0..nz {
+            let mut x_slice: Vec<Complex<f64>> = (0..nx)
+                .map(|i| complex_field[[i, j, k]])
+                .collect();
+            fft_x.process(&mut x_slice);
+            x_slice.iter().enumerate()
+                .for_each(|(i, &val)| complex_field[[i, j, k]] = val);
         }
     }
     
-    // Inverse FFT to get interpolated field
-    let ifft = planner.plan_fft_inverse(2 * nx);
+    // Transform along y-axis
+    let fft_y = planner.plan_fft_forward(ny);
+    for i in 0..nx {
+        for k in 0..nz {
+            let mut y_slice: Vec<Complex<f64>> = (0..ny)
+                .map(|j| complex_field[[i, j, k]])
+                .collect();
+            fft_y.process(&mut y_slice);
+            y_slice.iter().enumerate()
+                .for_each(|(j, &val)| complex_field[[i, j, k]] = val);
+        }
+    }
     
-    // Convert back to real
-    let fine_field = Array3::from_shape_vec(
-        (2 * nx, 2 * ny, 2 * nz),
-        padded_spectrum.iter().map(|c| c.re).collect()
-    ).map_err(|e| crate::error::DataError::InvalidFormat {
-        format: "Array3<f64>".to_string(),
-        reason: format!("Failed to create array from padded spectrum: {}", e),
-    })?;
+    // Transform along z-axis
+    let fft_z = planner.plan_fft_forward(nz);
+    for i in 0..nx {
+        for j in 0..ny {
+            let mut z_slice: Vec<Complex<f64>> = (0..nz)
+                .map(|k| complex_field[[i, j, k]])
+                .collect();
+            fft_z.process(&mut z_slice);
+            z_slice.iter().enumerate()
+                .for_each(|(k, &val)| complex_field[[i, j, k]] = val);
+        }
+    }
+    
+    // Zero-pad in frequency domain for interpolation
+    let mut padded_spectrum = Array3::from_elem((2*nx, 2*ny, 2*nz), Complex::new(0.0, 0.0));
+    
+    // Copy low-frequency components with proper indexing for FFT shift
+    Zip::indexed(&complex_field)
+        .for_each(|(i, j, k), &val| {
+            // Map indices for proper frequency domain layout
+            let (new_i, new_j, new_k) = if i < nx/2 && j < ny/2 && k < nz/2 {
+                (i, j, k)  // Low positive frequencies
+            } else if i >= nx/2 && j < ny/2 && k < nz/2 {
+                (i + nx, j, k)  // High negative frequencies in x
+            } else if i < nx/2 && j >= ny/2 && k < nz/2 {
+                (i, j + ny, k)  // High negative frequencies in y
+            } else if i < nx/2 && j < ny/2 && k >= nz/2 {
+                (i, j, k + nz)  // High negative frequencies in z
+            } else if i >= nx/2 && j >= ny/2 && k < nz/2 {
+                (i + nx, j + ny, k)  // High negative frequencies in x,y
+            } else if i >= nx/2 && j < ny/2 && k >= nz/2 {
+                (i + nx, j, k + nz)  // High negative frequencies in x,z
+            } else if i < nx/2 && j >= ny/2 && k >= nz/2 {
+                (i, j + ny, k + nz)  // High negative frequencies in y,z
+            } else {
+                (i + nx, j + ny, k + nz)  // High negative frequencies in all
+            };
+            
+            padded_spectrum[[new_i, new_j, new_k]] = val;
+        });
+    
+    // Inverse 3D FFT
+    // Transform along z-axis
+    let ifft_z = planner.plan_fft_inverse(2*nz);
+    for i in 0..2*nx {
+        for j in 0..2*ny {
+            let mut z_slice: Vec<Complex<f64>> = (0..2*nz)
+                .map(|k| padded_spectrum[[i, j, k]])
+                .collect();
+            ifft_z.process(&mut z_slice);
+            z_slice.iter().enumerate()
+                .for_each(|(k, &val)| padded_spectrum[[i, j, k]] = val);
+        }
+    }
+    
+    // Transform along y-axis
+    let ifft_y = planner.plan_fft_inverse(2*ny);
+    for i in 0..2*nx {
+        for k in 0..2*nz {
+            let mut y_slice: Vec<Complex<f64>> = (0..2*ny)
+                .map(|j| padded_spectrum[[i, j, k]])
+                .collect();
+            ifft_y.process(&mut y_slice);
+            y_slice.iter().enumerate()
+                .for_each(|(j, &val)| padded_spectrum[[i, j, k]] = val);
+        }
+    }
+    
+    // Transform along x-axis
+    let ifft_x = planner.plan_fft_inverse(2*nx);
+    for j in 0..2*ny {
+        for k in 0..2*nz {
+            let mut x_slice: Vec<Complex<f64>> = (0..2*nx)
+                .map(|i| padded_spectrum[[i, j, k]])
+                .collect();
+            ifft_x.process(&mut x_slice);
+            x_slice.iter().enumerate()
+                .for_each(|(i, &val)| padded_spectrum[[i, j, k]] = val);
+        }
+    }
+    
+    // Normalize and convert back to real
+    let normalization = 8.0;  // Account for 2x interpolation in each dimension
+    let fine_field = Array3::from_shape_fn((2*nx, 2*ny, 2*nz), |(i, j, k)| {
+        padded_spectrum[[i, j, k]].re / normalization
+    });
     
     Ok(fine_field)
 }

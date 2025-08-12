@@ -158,6 +158,8 @@ pub struct FdtdSolver {
     metrics: HashMap<String, f64>,
     /// Subgrid regions (if enabled)
     subgrids: Vec<SubgridRegion>,
+    /// C-PML boundary (if enabled)
+    cpml_boundary: Option<crate::boundary::cpml::CPMLBoundary>,
 }
 
 /// Subgrid region for local refinement
@@ -202,7 +204,18 @@ impl FdtdSolver {
             fd_coeffs,
             metrics: HashMap::new(),
             subgrids: Vec::new(),
+            cpml_boundary: None,
         })
+    }
+    
+    /// Enable C-PML boundary conditions
+    pub fn enable_cpml(&mut self, config: crate::boundary::cpml::CPMLConfig) -> KwaversResult<()> {
+        info!("Enabling C-PML boundary conditions");
+        self.cpml_boundary = Some(crate::boundary::cpml::CPMLBoundary::new(
+            config,
+            &self.grid,
+        )?);
+        Ok(())
     }
     
     /// Compute spatial derivative using finite differences
@@ -391,93 +404,104 @@ impl FdtdSolver {
         }
     }
     
-    /// Update pressure field using FDTD
+    /// Update pressure field using velocity divergence
     pub fn update_pressure(
         &mut self,
         pressure: &mut Array3<f64>,
-        velocity_x: &Array3<f64>,
-        velocity_y: &Array3<f64>,
-        velocity_z: &Array3<f64>,
-        medium: &dyn Medium,
+        vx: &Array3<f64>,
+        vy: &Array3<f64>,
+        vz: &Array3<f64>,
+        medium: &dyn crate::medium::Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("FDTD pressure update, dt={}", dt);
-        let start = std::time::Instant::now();
-        
-        // Get medium properties
+        // Compute bulk modulus from density and sound speed
         let rho_array = medium.density_array();
         let c_array = medium.sound_speed_array();
+        let bulk_modulus = &rho_array * &c_array * &c_array;
         
         // Compute velocity divergence
-        let dvx_dx = self.compute_derivative(velocity_x, 0, self.staggered.vx_pos.0);
-        let dvy_dy = self.compute_derivative(velocity_y, 1, self.staggered.vy_pos.1);
-        let dvz_dz = self.compute_derivative(velocity_z, 2, self.staggered.vz_pos.2);
+        let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0);
+        let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1);
+        let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2);
         
-        // Update pressure: ∂p/∂t = -ρc²∇·v
+        // Apply C-PML if enabled
+        if let Some(ref mut cpml) = self.cpml_boundary {
+            // Update C-PML memory variables and apply to divergence components
+            cpml.update_acoustic_memory(&dvx_dx, 0)?;
+            cpml.apply_cpml_gradient(&mut dvx_dx, 0)?;
+            
+            cpml.update_acoustic_memory(&dvy_dy, 1)?;
+            cpml.apply_cpml_gradient(&mut dvy_dy, 1)?;
+            
+            cpml.update_acoustic_memory(&dvz_dz, 2)?;
+            cpml.apply_cpml_gradient(&mut dvz_dz, 2)?;
+        }
+        
+        // Compute divergence
+        let div_v = &dvx_dx + &dvy_dy + &dvz_dz;
+        
+        // Update pressure: ∂p/∂t = -K·∇·v
         Zip::from(pressure)
-            .and(&dvx_dx)
-            .and(&dvy_dy)
-            .and(&dvz_dz)
-            .and(&rho_array)
-            .and(&c_array)
-            .for_each(|p, &dx, &dy, &dz, &rho, &c| {
-                let divergence = dx + dy + dz;
-                *p -= dt * rho * c * c * divergence;
+            .and(&div_v)
+            .and(&bulk_modulus)
+            .for_each(|p, &div, &bulk| {
+                *p -= dt * bulk * div;
             });
-        
-        // Update metrics
-        let elapsed = start.elapsed().as_secs_f64();
-        self.metrics.insert("pressure_update_time".to_string(), elapsed);
         
         Ok(())
     }
     
-    /// Update velocity field using FDTD
+    /// Update velocity field using pressure gradient
     pub fn update_velocity(
         &mut self,
-        velocity_x: &mut Array3<f64>,
-        velocity_y: &mut Array3<f64>,
-        velocity_z: &mut Array3<f64>,
+        vx: &mut Array3<f64>,
+        vy: &mut Array3<f64>,
+        vz: &mut Array3<f64>,
         pressure: &Array3<f64>,
-        medium: &dyn Medium,
+        medium: &dyn crate::medium::Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("FDTD velocity update, dt={}", dt);
-        let start = std::time::Instant::now();
-        
-        // Get density array
         let rho_array = medium.density_array();
         
         // Compute pressure gradients
-        let dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0);
-        let dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1);
-        let dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2);
+        let mut dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0);
+        let mut dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1);
+        let mut dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2);
+        
+        // Apply C-PML if enabled
+        if let Some(ref mut cpml) = self.cpml_boundary {
+            // Update C-PML memory variables and apply to gradients
+            cpml.update_acoustic_memory(&dp_dx, 0)?;
+            cpml.apply_cpml_gradient(&mut dp_dx, 0)?;
+            
+            cpml.update_acoustic_memory(&dp_dy, 1)?;
+            cpml.apply_cpml_gradient(&mut dp_dy, 1)?;
+            
+            cpml.update_acoustic_memory(&dp_dz, 2)?;
+            cpml.apply_cpml_gradient(&mut dp_dz, 2)?;
+        }
         
         // Update velocities: ∂v/∂t = -∇p/ρ
-        Zip::from(velocity_x)
+        Zip::from(vx)
             .and(&dp_dx)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
-        
-        Zip::from(velocity_y)
+            
+        Zip::from(vy)
             .and(&dp_dy)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
-        
-        Zip::from(velocity_z)
+            
+        Zip::from(vz)
             .and(&dp_dz)
             .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
-        
-        // Update metrics
-        let elapsed = start.elapsed().as_secs_f64();
-        self.metrics.insert("velocity_update_time".to_string(), elapsed);
         
         Ok(())
     }

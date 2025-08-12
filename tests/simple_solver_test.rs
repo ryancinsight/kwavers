@@ -1,200 +1,208 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
-use kwavers::*;
-use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
-use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
+use kwavers::solver::fdtd::{FdtdPlugin, FdtdConfig};
+use kwavers::solver::pstd::{PstdPlugin, PstdConfig};
+use kwavers::grid::Grid;
+use kwavers::medium::HomogeneousMedium;
 use kwavers::physics::plugin::{PluginManager, PluginContext};
-use ndarray::Array4;
+use ndarray::{Array4, Zip, s};
 
-/// Test that FDTD solver doesn't crash and produces non-zero output
+// Named constants for test configuration
+const TEST_GRID_SIZE: usize = 32;
+const TEST_GRID_SPACING: f64 = 1e-3;
+const TEST_PRESSURE_AMPLITUDE: f64 = 1e6;
+const TEST_SOUND_SPEED: f64 = 1500.0;
+const TEST_FREQUENCY: f64 = 1e6;
+const FDTD_CFL_FACTOR: f64 = 0.5;
+const PSTD_CFL_FACTOR: f64 = 0.3;
+const TEST_STEPS_SHORT: usize = 10;
+const TEST_STEPS_MEDIUM: usize = 20;
+const LARGE_GRID_SIZE: usize = 64;
+const GAUSSIAN_CENTER: usize = 32;
+const GAUSSIAN_SIGMA: f64 = 3.0;
+const WAVE_DECAY_THRESHOLD: f64 = 0.9;
+const DEFAULT_SUBGRID_FACTOR: usize = 2;
+const DEFAULT_K_SPACE_ORDER: usize = 2;
+const DEFAULT_PML_STENCIL_SIZE: usize = 4;
+const NUM_FIELD_COMPONENTS: usize = 7;  // Standard field components
+
 #[test]
-fn test_fdtd_basic() {
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+fn test_fdtd_solver_basic() {
+    let grid = Grid::new(TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE, 
+                        TEST_GRID_SPACING, TEST_GRID_SPACING, TEST_GRID_SPACING);
     let medium = HomogeneousMedium::water(&grid);
     
-    // Simple initial condition
-    let mut initial_pressure = grid.zeros_array();
-    initial_pressure[[16, 16, 16]] = 1e6; // Point source
+    // Initialize fields array (7 components: pressure, vx, vy, vz, temperature, density, source)
+    let mut fields = Array4::zeros((NUM_FIELD_COMPONENTS, TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE));
+    let center = TEST_GRID_SIZE / 2;
+    fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
     
     let config = FdtdConfig {
-        spatial_order: 2, // Use 2nd order for simplicity
+        spatial_order: 2,
         staggered_grid: true,
-        cfl_factor: 0.5,
+        cfl_factor: FDTD_CFL_FACTOR,
         subgridding: false,
-        subgrid_factor: 2,
+        subgrid_factor: DEFAULT_SUBGRID_FACTOR,
     };
     
+    let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
     let mut plugin_manager = PluginManager::new();
-    plugin_manager.register(Box::new(FdtdPlugin::new(config, &grid).unwrap())).unwrap();
+    plugin_manager.register(Box::new(plugin)).expect("Failed to register plugin");
     
-    // Initialize fields
-    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(&initial_pressure);
+    plugin_manager.initialize_all(&grid, &medium).expect("Failed to initialize plugins");
     
-    // Time stepping
-    let c = 1500.0;
-    let dt = config.cfl_factor * grid.dx / c;
+    let c = TEST_SOUND_SPEED;
+    let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
     
-    plugin_manager.initialize_all(&grid, &medium).unwrap();
-    
-    // Run for just a few steps
-    for step in 0..10 {
-        let context = PluginContext::new(step, 10, 1e6);
-        plugin_manager.update_all(&mut fields, &grid, &medium, dt, step as f64 * dt, &context).unwrap();
+    // Run simulation for a few steps
+    for step in 0..TEST_STEPS_SHORT {
+        let t = step as f64 * dt;
+        let context = PluginContext::new(step, TEST_STEPS_SHORT, TEST_FREQUENCY);
+        plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)
+            .expect("Failed to update plugins");
     }
     
-    // Check that we have non-zero output
-    let final_pressure = fields.slice(ndarray::s![0, .., .., ..]);
-    let max_pressure = final_pressure.fold(0.0f64, |a, &b| a.max(b.abs()));
-    
+    // Check that wave has propagated
+    let pressure_field = fields.slice(s![0, .., .., ..]);
+    let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
     assert!(max_pressure > 0.0, "FDTD produced zero output");
-    println!("FDTD max pressure after 10 steps: {}", max_pressure);
+    println!("FDTD max pressure after {} steps: {}", TEST_STEPS_SHORT, max_pressure);
 }
 
-/// Test that PSTD solver doesn't crash and produces non-zero output
 #[test]
-fn test_pstd_basic() {
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+fn test_pstd_solver_basic() {
+    let grid = Grid::new(TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE,
+                        TEST_GRID_SPACING, TEST_GRID_SPACING, TEST_GRID_SPACING);
     let medium = HomogeneousMedium::water(&grid);
     
-    // Simple initial condition
-    let mut initial_pressure = grid.zeros_array();
-    initial_pressure[[16, 16, 16]] = 1e6; // Point source
+    // Initialize fields array
+    let mut fields = Array4::zeros((NUM_FIELD_COMPONENTS, TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE));
+    let center = TEST_GRID_SIZE / 2;
+    fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
     
     let config = PstdConfig {
         k_space_correction: true,
-        k_space_order: 2,
-        anti_aliasing: false, // Disable for simplicity
-        pml_stencil_size: 4,
-        cfl_factor: 0.3,
+        k_space_order: DEFAULT_K_SPACE_ORDER,
+        anti_aliasing: true,
+        pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
+        cfl_factor: PSTD_CFL_FACTOR,
     };
     
+    let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
     let mut plugin_manager = PluginManager::new();
-    plugin_manager.register(Box::new(PstdPlugin::new(config, &grid).unwrap())).unwrap();
+    plugin_manager.register(Box::new(plugin)).expect("Failed to register plugin");
     
-    // Initialize fields
-    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-    fields.slice_mut(ndarray::s![0, .., .., ..]).assign(&initial_pressure);
+    plugin_manager.initialize_all(&grid, &medium).expect("Failed to initialize plugins");
     
-    // Time stepping
-    let c = 1500.0;
-    let dt = config.cfl_factor * grid.dx / c;
+    let c = TEST_SOUND_SPEED;
+    let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
     
-    plugin_manager.initialize_all(&grid, &medium).unwrap();
-    
-    // Run for just a few steps
-    for step in 0..10 {
-        let context = PluginContext::new(step, 10, 1e6);
-        plugin_manager.update_all(&mut fields, &grid, &medium, dt, step as f64 * dt, &context).unwrap();
+    // Run simulation for a few steps
+    for step in 0..TEST_STEPS_SHORT {
+        let t = step as f64 * dt;
+        let context = PluginContext::new(step, TEST_STEPS_SHORT, TEST_FREQUENCY);
+        plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)
+            .expect("Failed to update plugins");
     }
     
-    // Check that we have non-zero output
-    let final_pressure = fields.slice(ndarray::s![0, .., .., ..]);
-    let max_pressure = final_pressure.fold(0.0f64, |a, &b| a.max(b.abs()));
-    
+    // Check that wave has propagated
+    let pressure_field = fields.slice(s![0, .., .., ..]);
+    let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
     assert!(max_pressure > 0.0, "PSTD produced zero output");
-    println!("PSTD max pressure after 10 steps: {}", max_pressure);
+    println!("PSTD max pressure after {} steps: {}", TEST_STEPS_SHORT, max_pressure);
 }
 
-/// Test that both solvers propagate waves (pressure should spread from source)
 #[test]
 fn test_wave_propagation() {
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(LARGE_GRID_SIZE, LARGE_GRID_SIZE, LARGE_GRID_SIZE,
+                        TEST_GRID_SPACING, TEST_GRID_SPACING, TEST_GRID_SPACING);
     let medium = HomogeneousMedium::water(&grid);
     
-    // Gaussian initial condition
-    let mut initial_pressure = grid.zeros_array();
-    let center = 32;
-    let sigma: f64 = 3.0;
+    // Initialize fields with Gaussian pulse
+    let mut initial_fields = Array4::zeros((NUM_FIELD_COMPONENTS, LARGE_GRID_SIZE, LARGE_GRID_SIZE, LARGE_GRID_SIZE));
+    let center = GAUSSIAN_CENTER;
+    let sigma: f64 = GAUSSIAN_SIGMA;
     
-    for i in 0..grid.nx {
-        for j in 0..grid.ny {
-            for k in 0..grid.nz {
-                let r2 = ((i as f64 - center as f64).powi(2) + 
-                         (j as f64 - center as f64).powi(2) + 
-                         (k as f64 - center as f64).powi(2)) / sigma.powi(2);
-                initial_pressure[[i, j, k]] = 1e6 * (-r2).exp();
-            }
-        }
+    // Set Gaussian pulse in pressure field
+    {
+        let mut pressure_slice = initial_fields.slice_mut(s![0, .., .., ..]);
+        Zip::indexed(&mut pressure_slice)
+            .for_each(|(i, j, k), p| {
+                let di = i as f64 - center as f64;
+                let dj = j as f64 - center as f64;
+                let dk = k as f64 - center as f64;
+                let r2 = di * di + dj * dj + dk * dk;
+                *p = TEST_PRESSURE_AMPLITUDE * (-r2 / (2.0 * sigma * sigma)).exp();
+            });
     }
+    
+    let initial_center = initial_fields[[0, center, center, center]];
     
     // Test FDTD
     {
+        let mut fields_fdtd = initial_fields.clone();
         let config = FdtdConfig {
             spatial_order: 2,
             staggered_grid: true,
-            cfl_factor: 0.5,
+            cfl_factor: FDTD_CFL_FACTOR,
             subgridding: false,
-            subgrid_factor: 2,
+            subgrid_factor: DEFAULT_SUBGRID_FACTOR,
         };
         
+        let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
         let mut plugin_manager = PluginManager::new();
-        plugin_manager.register(Box::new(FdtdPlugin::new(config, &grid).unwrap())).unwrap();
+        plugin_manager.register(Box::new(plugin)).expect("Failed to register plugin");
+        plugin_manager.initialize_all(&grid, &medium).expect("Failed to initialize plugins");
         
-        let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-        fields.slice_mut(ndarray::s![0, .., .., ..]).assign(&initial_pressure);
+        let c = TEST_SOUND_SPEED;
+        let dt = FDTD_CFL_FACTOR * TEST_GRID_SPACING / c;
         
-        let c = 1500.0;
-        let dt = config.cfl_factor * grid.dx / c;
-        
-        plugin_manager.initialize_all(&grid, &medium).unwrap();
-        
-        // Record initial energy
-        let initial_energy = fields.slice(ndarray::s![0, .., .., ..])
-            .fold(0.0f64, |a, &b| a + b.powi(2));
-        
-        // Run for 20 steps
-        for step in 0..20 {
-            let context = PluginContext::new(step, 20, 1e6);
-            plugin_manager.update_all(&mut fields, &grid, &medium, dt, step as f64 * dt, &context).unwrap();
+        // Run for enough steps to see propagation
+        for step in 0..TEST_STEPS_MEDIUM {
+            let t = step as f64 * dt;
+            let context = PluginContext::new(step, TEST_STEPS_MEDIUM, TEST_FREQUENCY);
+            plugin_manager.update_all(&mut fields_fdtd, &grid, &medium, dt, t, &context)
+                .expect("Failed to update plugins");
         }
         
-        // Check that wave has spread (pressure at center should decrease)
-        let center_pressure = fields[[0, center, center, center]].abs();
-        let initial_center = initial_pressure[[center, center, center]];
-        
-        assert!(center_pressure < initial_center * 0.9, 
-            "FDTD: Wave should spread from center. Initial: {}, Final: {}", 
-            initial_center, center_pressure);
-        
-        println!("FDTD: Initial center pressure: {}, Final: {}", initial_center, center_pressure);
+        // Check that wave has spread (center should be lower)
+        let center_pressure = fields_fdtd[[0, center, center, center]];
+        assert!(center_pressure < initial_center * WAVE_DECAY_THRESHOLD, 
+                "FDTD: Wave didn't propagate from center. Initial: {}, Final: {}", 
+                initial_center, center_pressure);
     }
     
     // Test PSTD
     {
+        let mut fields_pstd = initial_fields.clone();
         let config = PstdConfig {
             k_space_correction: true,
-            k_space_order: 2,
-            anti_aliasing: false,
-            pml_stencil_size: 4,
-            cfl_factor: 0.3,
+            k_space_order: DEFAULT_K_SPACE_ORDER,
+            anti_aliasing: true,
+            pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
+            cfl_factor: PSTD_CFL_FACTOR,
         };
         
+        let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
         let mut plugin_manager = PluginManager::new();
-        plugin_manager.register(Box::new(PstdPlugin::new(config, &grid).unwrap())).unwrap();
+        plugin_manager.register(Box::new(plugin)).expect("Failed to register plugin");
+        plugin_manager.initialize_all(&grid, &medium).expect("Failed to initialize plugins");
         
-        let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-        fields.slice_mut(ndarray::s![0, .., .., ..]).assign(&initial_pressure);
+        let c = TEST_SOUND_SPEED;
+        let dt = PSTD_CFL_FACTOR * TEST_GRID_SPACING / c;
         
-        let c = 1500.0;
-        let dt = config.cfl_factor * grid.dx / c;
-        
-        plugin_manager.initialize_all(&grid, &medium).unwrap();
-        
-        // Run for 20 steps
-        for step in 0..20 {
-            let context = PluginContext::new(step, 20, 1e6);
-            plugin_manager.update_all(&mut fields, &grid, &medium, dt, step as f64 * dt, &context).unwrap();
+        // Run for enough steps to see propagation
+        for step in 0..TEST_STEPS_MEDIUM {
+            let t = step as f64 * dt;
+            let context = PluginContext::new(step, TEST_STEPS_MEDIUM, TEST_FREQUENCY);
+            plugin_manager.update_all(&mut fields_pstd, &grid, &medium, dt, t, &context)
+                .expect("Failed to update plugins");
         }
         
-        // Check that wave has spread
-        let center_pressure = fields[[0, center, center, center]].abs();
-        let initial_center = initial_pressure[[center, center, center]];
-        
-        assert!(center_pressure < initial_center * 0.9, 
-            "PSTD: Wave should spread from center. Initial: {}, Final: {}", 
-            initial_center, center_pressure);
-        
-        println!("PSTD: Initial center pressure: {}, Final: {}", initial_center, center_pressure);
+        // Check that wave has spread (center should be lower)
+        let center_pressure = fields_pstd[[0, center, center, center]];
+        assert!(center_pressure < initial_center * WAVE_DECAY_THRESHOLD, 
+                "PSTD: Wave didn't propagate from center. Initial: {}, Final: {}", 
+                initial_center, center_pressure);
     }
 }

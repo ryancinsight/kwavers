@@ -19,7 +19,32 @@ Cargo.lock
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
 # Simulation output artifacts
 *.csv
 *.html
 *.log
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+fft_demo
+test_octree
+bench_*
+
+# Redundant documentation (only keep essential docs)
+*_SUMMARY.md
+*_REVIEW.md
+*_REPORT.md
+*_UPDATE.md
+*_PROGRESS.md
+*IMPROVEMENTS*.md
+*OPTIMIZATION*.md
+PULL_REQUEST.md
+CRITICAL_FIXES*.md
+CLEANUP*.md
+BUG_FIXES*.md
+ANALYTICAL_TEST*.md

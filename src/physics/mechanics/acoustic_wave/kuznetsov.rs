@@ -152,21 +152,23 @@ pub enum TimeIntegrationScheme {
     
     /// Adams-Bashforth 3rd order (for efficiency with history)
     AdamsBashforth3,
+    
+    /// Leap-Frog scheme (second-order, energy conserving)
+    LeapFrog,
 }
 
 /// Performance metrics for the solver
 /// 
-/// Tracks time spent in different parts of the solver:
-/// - linear_time: Time for linear operations (velocity update, pressure update, filters)
+/// Tracks time spent in different solver components:
+/// - linear_time: Time computing linear wave terms
 /// - nonlinear_time: Time computing nonlinear terms
-/// - diffusion_time: Time computing diffusion/absorption terms
+/// - diffusivity_time: Time computing diffusivity/absorption terms
 /// - fft_time: Time in FFT operations
-/// - prev_other_ops_time: Used to calculate linear_time by subtraction
 #[derive(Debug, Clone, Default)]
 struct SolverMetrics {
     linear_time: f64,
     nonlinear_time: f64,
-    diffusion_time: f64,
+    diffusivity_time: f64,  // Changed from diffusion_time to be more accurate
     fft_time: f64,
     total_steps: u64,
     k_space_correction_time: f64,
@@ -260,6 +262,7 @@ impl KuznetsovWave {
         let history_size = match config.time_scheme {
             TimeIntegrationScheme::Euler | TimeIntegrationScheme::RK2 | TimeIntegrationScheme::RK4 => 2,
             TimeIntegrationScheme::AdamsBashforth3 => 3,
+            TimeIntegrationScheme::LeapFrog => 2, // Leap-Frog needs 2 history levels
         };
         
         let pressure_history = vec![grid.zeros_array(); history_size];
@@ -396,7 +399,8 @@ impl KuznetsovWave {
     }
     
     /// Compute diffusivity term for thermal and viscous losses
-    /// α ∇²p where α is the diffusivity coefficient
+    /// Implements -(δ/c₀⁴)∂³p/∂t³ term of the Kuznetsov equation
+    /// This models thermoviscous losses with finite heat propagation speed
     fn compute_diffusivity_term(
         &mut self,
         pressure: &Array3<f64>,
@@ -406,29 +410,54 @@ impl KuznetsovWave {
     ) -> KwaversResult<Array3<f64>> {
         let start = Instant::now();
         
-        // For the Kuznetsov equation, the diffusivity term is α∇²p
-        // where α is the thermal diffusivity
-        let laplacian = self.compute_laplacian(pressure, grid)?;
+        // For the Kuznetsov equation, the diffusivity term is -(δ/c₀⁴)∂³p/∂t³
+        // where δ is the acoustic diffusivity coefficient
         
-        // Apply spatially varying diffusivity
+        // We need at least 4 time levels for third-order time derivative
+        if self.pressure_history.len() < 3 {
+            // Not enough history yet, return zero
+            return Ok(Array3::zeros(pressure.dim()));
+        }
+        
+        // Get pressure history
+        let p_prev = &self.pressure_history[0];  // p^{n-1}
+        let p_prev2 = if self.pressure_history.len() > 1 {
+            &self.pressure_history[1]  // p^{n-2}
+        } else {
+            p_prev  // Use p^{n-1} if not enough history
+        };
+        let p_prev3 = if self.pressure_history.len() > 2 {
+            &self.pressure_history[2]  // p^{n-3}
+        } else {
+            p_prev2  // Use p^{n-2} if not enough history
+        };
+        
+        // Compute third-order finite difference for ∂³p/∂t³
+        // Using backward difference formula:
+        // ∂³p/∂t³ ≈ (p^n - 3*p^{n-1} + 3*p^{n-2} - p^{n-3}) / dt³
+        let dt_cubed = dt * dt * dt;
+        let d3p_dt3 = (pressure - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / dt_cubed;
+        
+        // Apply spatially varying diffusivity coefficient
         let mut result = Array3::zeros(pressure.dim());
         result.indexed_iter_mut()
-            .zip(laplacian.iter())
-            .for_each(|(((i, j, k), res), &lap)| {
+            .zip(d3p_dt3.iter())
+            .for_each(|(((i, j, k), val), &d3p)| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
                 
-                // Get spatially varying diffusivity
-                let alpha = medium.thermal_diffusivity(x, y, z, grid);
+                // Get local medium properties
+                let c0 = medium.sound_speed(x, y, z, grid);
+                // Use thermal diffusivity as acoustic diffusivity approximation
+                let delta = medium.thermal_diffusivity(x, y, z, grid);
                 
-                // Apply diffusivity: α∇²p
-                *res = alpha * lap;
+                // Compute diffusivity term: -(δ/c₀⁴)∂³p/∂t³
+                let c0_4 = c0 * c0 * c0 * c0;
+                *val = -(delta / c0_4) * d3p;
             });
         
-        // Update metrics
-        self.metrics.diffusion_time += start.elapsed().as_secs_f64();
-        
+        self.metrics.diffusivity_time += start.elapsed().as_secs_f64();
         Ok(result)
     }
     
@@ -511,8 +540,8 @@ impl KuznetsovWave {
         }
     }
 
-    /// Internal wave update method with explicit pressure and velocity arrays
-    fn update_wave_internal(
+    /// Internal wave update with proper error handling and time integration
+    pub(crate) fn update_wave_internal(
         &mut self,
         pressure: &mut Array3<f64>,
         velocity: &mut Array4<f64>,
@@ -520,30 +549,118 @@ impl KuznetsovWave {
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
-        _t: f64,
+        t: f64,
     ) -> KwaversResult<()> {
-        let start = Instant::now();
-        
-        // Check stability
-        if !self.check_cfl_condition(grid, medium, dt) && !self.config.adaptive_timestep {
-            warn!("CFL condition violated, simulation may be unstable");
-        }
-        
-        // Initialize previous fields if not already done
+        // Update pressure history for time derivatives
         if self.pressure_prev.is_none() {
             self.pressure_prev = Some(pressure.clone());
-            self.velocity_prev = Some(velocity.clone());
         }
         
-        // Store current pressure for history
-        let pressure_current = pressure.clone();
+        // Store current pressure in history for diffusivity term
+        if self.pressure_history.len() >= 3 {
+            self.pressure_history.pop();
+        }
+        self.pressure_history.insert(0, pressure.clone());
         
-        // For second-order formulation, we need to update velocity first
-        // ∂v/∂t = -1/ρ ∇p
+        // Choose time integration method based on configuration
+        match self.config.time_scheme {
+            TimeIntegrationScheme::RK4 => {
+                self.update_with_rk4(pressure, velocity, source_term, grid, medium, dt, t)?;
+            }
+            TimeIntegrationScheme::RK2 => {
+                // For now, use RK4 with reduced stages (can implement dedicated RK2 later)
+                self.update_with_rk4(pressure, velocity, source_term, grid, medium, dt, t)?;
+            }
+            TimeIntegrationScheme::AdamsBashforth3 => {
+                self.update_with_adams_bashforth(pressure, velocity, source_term, grid, medium, dt, t)?;
+            }
+            TimeIntegrationScheme::Euler => {
+                self.update_with_euler(pressure, velocity, source_term, grid, medium, dt, t)?;
+            }
+            TimeIntegrationScheme::LeapFrog => {
+                self.update_with_leapfrog(pressure, velocity, source_term, grid, medium, dt, t)?;
+            }
+        }
+        
+        // Apply stability filter if enabled
+        if self.config.stability_filter {
+            self.apply_stability_filter(pressure, grid, dt);
+        }
+        
+        // Update previous pressure for next step
+        self.pressure_prev = Some(pressure.clone());
+        
+        // Update step count
+        self.step_count += 1;
+        self.metrics.total_steps += 1;
+        
+        Ok(())
+    }
+    
+    /// Update using RK4 time integration
+    fn update_with_rk4(
+        &mut self,
+        pressure: &mut Array3<f64>,
+        velocity: &mut Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) -> KwaversResult<()> {
+        // Initialize RK4 workspace if needed
+        if self.rk4_workspace.is_none() {
+            let (nx, ny, nz) = pressure.dim();
+            self.rk4_workspace = Some(RK4Workspace::new(nx, ny, nz));
+        }
+        
+        // RK4 stages for pressure equation
+        // dp/dt = F(p, t) where F includes all Kuznetsov terms
+        
+        // Stage 1: k1 = dt * F(p^n, t^n)
+        let k1 = self.compute_pressure_derivative(pressure, velocity, source_term, grid, medium, t)?;
+        
+        // Stage 2: k2 = dt * F(p^n + k1/2, t^n + dt/2)
+        let mut pressure_temp = pressure.clone();
+        pressure_temp.scaled_add(0.5 * dt, &k1);
+        let k2 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
+        
+        // Stage 3: k3 = dt * F(p^n + k2/2, t^n + dt/2)
+        pressure_temp.assign(pressure);
+        pressure_temp.scaled_add(0.5 * dt, &k2);
+        let k3 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + 0.5 * dt)?;
+        
+        // Stage 4: k4 = dt * F(p^n + k3, t^n + dt)
+        pressure_temp.assign(pressure);
+        pressure_temp.scaled_add(dt, &k3);
+        let k4 = self.compute_pressure_derivative(&pressure_temp, velocity, source_term, grid, medium, t + dt)?;
+        
+        // Combine stages: p^{n+1} = p^n + dt*(k1 + 2*k2 + 2*k3 + k4)/6
+        pressure.scaled_add(dt/6.0, &k1);
+        pressure.scaled_add(dt*2.0/6.0, &k2);
+        pressure.scaled_add(dt*2.0/6.0, &k3);
+        pressure.scaled_add(dt/6.0, &k4);
+        
+        // Update velocity field
         update_velocity_field(velocity, pressure, medium, grid, dt)?;
         
-        // Now update pressure using second-order time derivative
-        // ∂²p/∂t² = c²∇²p + nonlinear_terms + diffusivity_terms
+        Ok(())
+    }
+    
+    /// Update using Leap-Frog time integration (second-order accurate)
+    fn update_with_leapfrog(
+        &mut self,
+        pressure: &mut Array3<f64>,
+        velocity: &mut Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) -> KwaversResult<()> {
+        // For second-order formulation with leap-frog scheme
+        // Update velocity first (staggered in time)
+        update_velocity_field(velocity, pressure, medium, grid, dt)?;
         
         // Compute all terms of the Kuznetsov equation
         let laplacian = self.compute_laplacian(pressure, grid)?;
@@ -559,7 +676,7 @@ impl KuznetsovWave {
         // Total acceleration term (∂²p/∂t²)
         let acceleration = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
         
-        // Update pressure using second-order central difference
+        // Update pressure using leap-frog scheme
         // p^{n+1} = 2*p^n - p^{n-1} + dt²*acceleration
         let dt_squared = dt * dt;
         Zip::from(&mut *pressure)
@@ -569,35 +686,108 @@ impl KuznetsovWave {
                 let p_current = *p_next;
                 *p_next = 2.0 * p_current - p_prev + dt_squared * acc;
                 
-                // Clamp for stability
-                if p_next.abs() > self.config.max_pressure {
+                // Apply pressure limiting for stability
+                if self.config.max_pressure > 0.0 && p_next.abs() > self.config.max_pressure {
                     *p_next = p_next.signum() * self.config.max_pressure;
                 }
             });
         
-        // Apply stability filter if enabled
-        if self.config.stability_filter {
-            self.apply_stability_filter(pressure, grid, dt);
-        }
+        Ok(())
+    }
+    
+    /// Update using Forward Euler (first-order, for testing)
+    fn update_with_euler(
+        &mut self,
+        pressure: &mut Array3<f64>,
+        velocity: &mut Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) -> KwaversResult<()> {
+        // Simple forward Euler: p^{n+1} = p^n + dt * F(p^n)
+        let derivative = self.compute_pressure_derivative(pressure, velocity, source_term, grid, medium, t)?;
+        pressure.scaled_add(dt, &derivative);
         
-        // Update history buffers
-        self.pressure_prev = Some(pressure_current);
-        self.update_history(pressure);
-        
-        // Update metrics
-        self.metrics.total_steps += 1;
-        let elapsed = start.elapsed().as_secs_f64();
-        
-        // Calculate time spent on linear operations (total time minus other tracked operations)
-        // Note: We need to track the time spent in this specific call, not cumulative
-        let other_ops_time = (self.metrics.nonlinear_time + self.metrics.diffusion_time + self.metrics.fft_time) 
-            - self.metrics.prev_other_ops_time;
-        let linear_ops_time = elapsed - other_ops_time;
-        
-        self.metrics.linear_time += linear_ops_time.max(0.0); // Ensure non-negative
-        self.metrics.prev_other_ops_time = self.metrics.nonlinear_time + self.metrics.diffusion_time + self.metrics.fft_time;
+        // Update velocity
+        update_velocity_field(velocity, pressure, medium, grid, dt)?;
         
         Ok(())
+    }
+    
+    /// Update using Adams-Bashforth multi-step method
+    fn update_with_adams_bashforth(
+        &mut self,
+        pressure: &mut Array3<f64>,
+        velocity: &mut Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) -> KwaversResult<()> {
+        // Compute current derivative
+        let derivative = self.compute_pressure_derivative(pressure, velocity, source_term, grid, medium, t)?;
+        
+        // Adams-Bashforth formulas based on available history
+        match self.nonlinear_history.len() {
+            0 => {
+                // First step: use forward Euler
+                pressure.scaled_add(dt, &derivative);
+            }
+            1 => {
+                // Second step: use AB2
+                let f_prev = &self.nonlinear_history[0];
+                pressure.scaled_add(dt * 1.5, &derivative);
+                pressure.scaled_add(-dt * 0.5, f_prev);
+            }
+            _ => {
+                // Third step and beyond: use AB3
+                let f_prev = &self.nonlinear_history[0];
+                let f_prev2 = &self.nonlinear_history[1];
+                pressure.scaled_add(dt * 23.0/12.0, &derivative);
+                pressure.scaled_add(-dt * 16.0/12.0, f_prev);
+                pressure.scaled_add(dt * 5.0/12.0, f_prev2);
+            }
+        }
+        
+        // Store derivative in history
+        if self.nonlinear_history.len() >= 2 {
+            self.nonlinear_history.pop();
+        }
+        self.nonlinear_history.insert(0, derivative);
+        
+        // Update velocity
+        update_velocity_field(velocity, pressure, medium, grid, dt)?;
+        
+        Ok(())
+    }
+    
+    /// Compute the time derivative of pressure including all Kuznetsov terms
+    fn compute_pressure_derivative(
+        &mut self,
+        pressure: &Array3<f64>,
+        velocity: &Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        t: f64,
+    ) -> KwaversResult<Array3<f64>> {
+        // For first-order formulation: ∂p/∂t = F(p)
+        // where F includes linear, nonlinear, and diffusivity terms
+        
+        let laplacian = self.compute_laplacian(pressure, grid)?;
+        let nonlinear_term = self.compute_nonlinear_term(pressure, medium, grid, 1.0)?; // dt=1 for derivative
+        let diffusivity_term = self.compute_diffusivity_term(pressure, medium, grid, 1.0)?;
+        
+        // Linear wave term
+        let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
+        
+        // Combine all terms
+        let derivative = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
+        
+        Ok(derivative)
     }
 }
 
@@ -652,7 +842,7 @@ impl AcousticWaveModel for KuznetsovWave {
     
     fn report_performance(&self) {
         let total_time = self.metrics.linear_time + self.metrics.nonlinear_time 
-            + self.metrics.diffusion_time + self.metrics.fft_time;
+            + self.metrics.diffusivity_time + self.metrics.fft_time;
         
         info!("Kuznetsov Wave Performance:");
         info!("  Total steps: {}", self.metrics.total_steps);
@@ -666,7 +856,7 @@ impl AcousticWaveModel for KuznetsovWave {
         info!("    Nonlinear term: {:.3}s ({:.1}%)", 
             self.metrics.nonlinear_time, 100.0 * self.metrics.nonlinear_time / total_time);
         info!("    Diffusion term: {:.3}s ({:.1}%)", 
-            self.metrics.diffusion_time, 100.0 * self.metrics.diffusion_time / total_time);
+            self.metrics.diffusivity_time, 100.0 * self.metrics.diffusivity_time / total_time);
         info!("    FFT operations: {:.3}s ({:.1}%)", 
             self.metrics.fft_time, 100.0 * self.metrics.fft_time / total_time);
     }
