@@ -533,12 +533,15 @@ impl Solver {
         
         // 1. Wave propagation - work with field views
         let wave_start = Instant::now();
+        let t = step as f64 * dt;
         self.wave.update_wave(
             &mut self.fields.fields,
+            &self.prev_pressure,
+            self.source.as_ref(),
             &self.grid,
             self.medium.as_ref(),
             dt,
-            frequency,
+            t,
         )?;
         wave_time += wave_start.elapsed().as_secs_f64();
         
@@ -557,12 +560,12 @@ impl Solver {
         let cavitation_start = Instant::now();
         let current_time = step as f64 * dt;
         
-        // Get pressure view for cavitation
-        let pressure_view = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX);
+        // Get pressure as owned array for cavitation update
+        let mut pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
-        // Update cavitation and get the updated pressure directly
-        let updated_pressure = self.cavitation.update_cavitation_inplace(
-            pressure_view.view(),
+        // Update cavitation (modifies pressure in place according to trait)
+        self.cavitation.update_cavitation(
+            &pressure,
             &self.grid,
             self.medium.as_ref(),
             dt,
@@ -571,7 +574,7 @@ impl Solver {
         
         // Update pressure field with cavitation effects
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX)
-            .assign(&updated_pressure);
+            .assign(&pressure);
         
         cavitation_time += cavitation_start.elapsed().as_secs_f64();
         
@@ -667,15 +670,16 @@ impl Solver {
             let emission_spectrum = self.light.emission_spectrum();
             let bubble_radius = self.medium.bubble_radius();
             
-            self.chemical.update_chemical_with_views(
-                pressure_view.view(),
-                light_view.view(),
+            self.chemical.update_chemical(
+                &pressure_view.to_owned(),
+                &light_view.to_owned(),
                 emission_spectrum,
                 bubble_radius,
-                temperature_view.view(),
+                &temperature_view.to_owned(),
                 &self.grid,
-                self.medium.as_ref(),
                 dt,
+                self.medium.as_ref(),
+                frequency,
             )?;
         }
         chemical_time += chemical_start.elapsed().as_secs_f64();

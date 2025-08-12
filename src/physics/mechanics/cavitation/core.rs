@@ -70,26 +70,7 @@ impl CavitationModel {
     pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
         self.state.update_field(field_index, data)
     }
-    
-    /// Update cavitation in-place and return the modified pressure field
-    /// This avoids unnecessary cloning of the input pressure field
-    pub fn update_cavitation_inplace(
-        &mut self,
-        pressure: ArrayView3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        // Start with a copy of the pressure field that we'll modify
-        let mut modified_pressure = pressure.to_owned();
-        
-        // Call the existing update_cavitation with the owned copy
-        self.update_cavitation(&modified_pressure, grid, medium, dt, t)?;
-        
-        // Return the modified pressure
-        Ok(modified_pressure)
-    }
+
 }
 
 // FieldAccessor trait implementation removed - use PhysicsState methods directly

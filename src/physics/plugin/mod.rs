@@ -221,6 +221,9 @@ impl PluginManager {
         let context = PluginContext::new(step, total_steps, 1e6) // Default frequency
             .with_parameter("dt".to_string(), dt);
         
+        // Calculate current time
+        let t = step as f64 * dt;
+        
         // Execute plugins in dependency order
         for &idx in &self.execution_order {
             if let Some(plugin) = self.plugins.get_mut(idx) {
@@ -373,7 +376,7 @@ impl PluginManager {
             for required in plugin.required_fields() {
                 if !available.contains(&required) {
                     result.add_error(ValidationError::DependencyValidation {
-                        field: plugin.metadata().id.clone(),
+                        component: plugin.metadata().id.clone(),
                         missing_dependency: required.name().to_string(),
                     });
                 }

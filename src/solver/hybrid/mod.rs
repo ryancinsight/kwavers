@@ -1185,6 +1185,7 @@ impl PhysicsPlugin for HybridSolver {
         // Validate medium compatibility
         if !medium.is_homogeneous() {
             warnings.push(ValidationWarning {
+                field: "medium".to_string(),
                 message: "Heterogeneous media may require additional computational resources".to_string(),
                 severity: crate::validation::WarningSeverity::Medium,
                 suggestion: Some("Consider using adaptive mesh refinement".to_string()),

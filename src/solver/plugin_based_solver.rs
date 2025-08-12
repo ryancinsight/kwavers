@@ -309,8 +309,7 @@ impl PluginBasedSolver {
             self.medium.as_ref(),
             dt,
             step,
-            self.time.n_steps,
-            1e6  // Default frequency 1 MHz
+            self.time.n_steps
         )?;
         
         // Boundary conditions would be applied to specific fields
@@ -325,8 +324,7 @@ impl PluginBasedSolver {
     pub fn finalize(&mut self) -> KwaversResult<()> {
         info!("Finalizing simulation");
         
-        // Finalize all plugins
-        self.plugin_manager.finalize_all()?;
+        // Plugins handle their own cleanup via Drop trait
         
         // Finalize recorder
         if let Some(recorder) = &mut self.recorder {
