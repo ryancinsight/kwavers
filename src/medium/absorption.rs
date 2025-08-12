@@ -439,9 +439,14 @@ pub mod tissue_specific {
         pub bulk_viscosity_coeff: f64,
     }
     
+    use std::sync::OnceLock;
+    
+    static TISSUE_DB: OnceLock<HashMap<TissueType, TissueProperties>> = OnceLock::new();
+    
     /// Get tissue database
-    pub fn tissue_database() -> HashMap<TissueType, TissueProperties> {
-        let mut db = HashMap::new();
+    pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
+        TISSUE_DB.get_or_init(|| {
+            let mut db = HashMap::new();
         
         db.insert(TissueType::SoftTissue, TissueProperties {
             density: 1050.0,
@@ -474,6 +479,7 @@ pub mod tissue_specific {
         });
         
         db
+        })
     }
 }
 

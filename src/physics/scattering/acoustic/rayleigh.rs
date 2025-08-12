@@ -30,7 +30,7 @@ pub struct RayleighScattering {
 impl RayleighScattering {
     /// Create a new Rayleigh scattering model
     pub fn new(grid: &Grid, frequency: f64, particle_density: f64) -> Self {
-        let state = PhysicsState::new(grid);
+        let state = PhysicsState::new(grid.clone());
         let scattered_field = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         Self {
@@ -67,7 +67,7 @@ impl RayleighScattering {
         Zip::from(&mut self.scattered_field)
             .and(incident_field)
             .and(&bubble_radius)
-            .for_each(|s, &p_inc, &r| {
+            .apply(|s, &p_inc, &r| {
                 if r > 0.0 && r < wavelength / 10.0 {  // Rayleigh regime
                     // Rayleigh scattering cross-section
                     let kr = k * r;

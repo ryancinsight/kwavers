@@ -50,7 +50,7 @@ impl AcousticScattering {
     
     /// Create a new acoustic scattering model
     pub fn new(grid: &Grid, frequency: f64, scattering_strength: f64) -> Self {
-        let state = PhysicsState::new(grid);
+        let state = PhysicsState::new(grid.clone());
         let scattered_field = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         Self {

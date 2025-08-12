@@ -131,7 +131,11 @@ impl PluginConfig for FdtdConfig {
         
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
-            errors.push(format!("Invalid spatial order: {}. Must be 2, 4, or 6", self.spatial_order));
+            errors.push(ValidationError::FieldValidation {
+                field: "spatial_order".to_string(),
+                value: self.spatial_order.to_string(),
+                constraint: "Must be 2, 4, or 6".to_string(),
+            });
         }
         
         // Validate CFL factor
