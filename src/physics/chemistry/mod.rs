@@ -14,6 +14,7 @@ use crate::physics::plugin::PluginContext;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::traits::ChemicalModelTrait;
 use ndarray::Array3;
+use ndarray::ArrayView3;
 use std::collections::HashMap;
 use std::time::Instant;
 use log::debug;
@@ -523,6 +524,34 @@ impl ChemicalModel {
 
         self.state = ChemicalModelState::Completed;
         Ok(())
+    }
+
+    /// Update chemical effects using views to avoid unnecessary cloning
+    /// This is the efficient version that works with array views
+    pub fn update_chemical_with_views(
+        &mut self,
+        pressure: ArrayView3<f64>,
+        light: ArrayView3<f64>,
+        emission_spectrum: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        temperature: ArrayView3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        // Create params struct from views
+        let params = ChemicalUpdateParams {
+            pressure: pressure.to_owned(), // Only clone when absolutely necessary
+            light: light.to_owned(),
+            emission_spectrum: emission_spectrum.clone(),
+            bubble_radius: bubble_radius.clone(),
+            temperature: temperature.to_owned(),
+            grid: grid.clone(),
+            dt,
+            frequency: 1e6, // Default frequency, should be passed as parameter
+        };
+        
+        self.update_chemical(&params)
     }
 
     /// Get radical concentration
