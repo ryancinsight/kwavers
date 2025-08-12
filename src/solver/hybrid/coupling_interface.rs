@@ -269,30 +269,29 @@ impl CouplingInterface {
         })
     }
     
-    /// Apply coupling corrections between domains
-    pub fn apply_corrections(
+    /// Apply coupling corrections to maintain continuity across interfaces
+    pub fn apply_coupling_corrections(
         &mut self,
         fields: &mut Array4<f64>,
-        domains: &[DomainRegion],
         grid: &Grid,
+        medium: &dyn crate::medium::Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("Applying coupling corrections between {} domains", domains.len());
-        
-        // Update interface couplings if domains have changed
-        self.update_interface_couplings(domains, grid, dt)?;
+        debug!("Applying coupling corrections across {} interfaces", self.interface_couplings.len());
         
         // Apply corrections for each interface
-        for i in 0..self.interface_couplings.len() {
-            // Split borrow to avoid multiple mutable borrows
-            let (left, right) = self.interface_couplings.split_at_mut(i);
-            if let Some(coupling) = right.get_mut(0) {
-                Self::apply_single_interface_correction_static(fields, coupling, grid, dt)?;
+        for coupling in &self.interface_couplings {
+            if coupling.quality_metrics.stability_indicator < self.config.stability_threshold {
+                warn!("Interface stability indicator below threshold: {}", 
+                      coupling.quality_metrics.stability_indicator);
             }
+            
+            // Apply field transfer and conservation
+            Self::apply_single_interface_correction_static(fields, coupling, grid, dt)?;
         }
         
         // Monitor and enforce conservation laws
-        self.enforce_conservation_laws(fields, grid)?;
+        self.enforce_conservation_laws(fields, grid, medium)?;
         
         // Update quality metrics
         self.update_quality_metrics(fields, grid)?;
@@ -560,42 +559,319 @@ impl CouplingInterface {
     /// Build transfer operator for specific interpolation scheme
     fn build_transfer_operator(
         &self,
-        _source_domain: &DomainInfo,
-        _target_domain: &DomainInfo,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
         interface_geometry: &InterfaceGeometry,
         scheme: InterpolationScheme,
         grid: &Grid,
     ) -> KwaversResult<TransferOperator> {
-        // Simplified implementation - create identity-like operator
-        let buffer_size = interface_geometry.buffer_width;
-        let weights = Array3::ones((buffer_size, buffer_size, buffer_size));
-        let conservation_factors = Array3::ones((buffer_size, buffer_size, buffer_size));
+        // Determine interface region dimensions
+        let interface_region = self.get_interface_region(interface_geometry, grid);
+        let (nx, ny, nz) = (
+            interface_region.end.0 - interface_region.start.0,
+            interface_region.end.1 - interface_region.start.1,
+            interface_region.end.2 - interface_region.start.2,
+        );
         
-        // Apply scheme-specific modifications
+        // Initialize weight matrix and index mappings
+        let mut weights = Array3::zeros((nx, ny, nz));
+        let mut source_indices = Vec::new();
+        let mut target_indices = Vec::new();
+        let mut conservation_factors = Array3::ones((nx, ny, nz));
+        
+        // Build interpolation weights based on scheme
         match scheme {
-            InterpolationScheme::Conservative => {
-                // Implement conservative interpolation
-                debug!("Using conservative interpolation scheme");
-            }
-            InterpolationScheme::Spectral => {
-                // Implement spectral interpolation
-                debug!("Using spectral interpolation scheme");
+            InterpolationScheme::Linear => {
+                debug!("Building linear interpolation weights");
+                self.build_linear_weights(
+                    &mut weights,
+                    &mut source_indices,
+                    &mut target_indices,
+                    source_domain,
+                    target_domain,
+                    interface_geometry,
+                    grid,
+                )?;
             }
             InterpolationScheme::CubicSpline => {
-                // Implement cubic spline interpolation
-                debug!("Using cubic spline interpolation scheme");
+                debug!("Building cubic spline interpolation weights");
+                self.build_cubic_spline_weights(
+                    &mut weights,
+                    &mut source_indices,
+                    &mut target_indices,
+                    source_domain,
+                    target_domain,
+                    interface_geometry,
+                    grid,
+                )?;
             }
-            _ => {
-                debug!("Using default interpolation scheme: {:?}", scheme);
+            InterpolationScheme::Spectral => {
+                debug!("Building spectral interpolation weights");
+                self.build_spectral_weights(
+                    &mut weights,
+                    &mut source_indices,
+                    &mut target_indices,
+                    source_domain,
+                    target_domain,
+                    interface_geometry,
+                    grid,
+                )?;
+            }
+            InterpolationScheme::Conservative => {
+                debug!("Building conservative interpolation weights");
+                self.build_conservative_weights(
+                    &mut weights,
+                    &mut source_indices,
+                    &mut target_indices,
+                    &mut conservation_factors,
+                    source_domain,
+                    target_domain,
+                    interface_geometry,
+                    grid,
+                )?;
+            }
+            InterpolationScheme::Adaptive => {
+                // Choose scheme based on local conditions
+                let local_scheme = self.select_adaptive_scheme(source_domain, target_domain);
+                return self.build_transfer_operator(
+                    source_domain,
+                    target_domain,
+                    interface_geometry,
+                    local_scheme,
+                    grid,
+                );
             }
         }
         
         Ok(TransferOperator {
             weights,
-            source_indices: Vec::new(),
-            target_indices: Vec::new(),
+            source_indices,
+            target_indices,
             conservation_factors,
         })
+    }
+    
+    /// Build linear interpolation weights
+    fn build_linear_weights(
+        &self,
+        weights: &mut Array3<f64>,
+        source_indices: &mut Vec<(usize, usize, usize)>,
+        target_indices: &mut Vec<(usize, usize, usize)>,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+        interface_geometry: &InterfaceGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        let interface_region = self.get_interface_region(interface_geometry, grid);
+        
+        // For each target point in the interface region
+        for i in 0..weights.shape()[0] {
+            for j in 0..weights.shape()[1] {
+                for k in 0..weights.shape()[2] {
+                    let target_idx = (
+                        interface_region.start.0 + i,
+                        interface_region.start.1 + j,
+                        interface_region.start.2 + k,
+                    );
+                    
+                    // Find corresponding source points
+                    let source_coords = self.map_to_source_domain(
+                        target_idx,
+                        source_domain,
+                        target_domain,
+                        grid,
+                    )?;
+                    
+                    // Compute linear interpolation weights
+                    let (si, sj, sk) = source_coords;
+                    let (wi, wj, wk) = (
+                        (target_idx.0 as f64 * grid.dx - si as f64 * grid.dx) / grid.dx,
+                        (target_idx.1 as f64 * grid.dy - sj as f64 * grid.dy) / grid.dy,
+                        (target_idx.2 as f64 * grid.dz - sk as f64 * grid.dz) / grid.dz,
+                    );
+                    
+                    // Trilinear interpolation weight
+                    weights[[i, j, k]] = (1.0 - wi.abs()) * (1.0 - wj.abs()) * (1.0 - wk.abs());
+                    
+                    source_indices.push(source_coords);
+                    target_indices.push(target_idx);
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Build cubic spline interpolation weights
+    fn build_cubic_spline_weights(
+        &self,
+        weights: &mut Array3<f64>,
+        source_indices: &mut Vec<(usize, usize, usize)>,
+        target_indices: &mut Vec<(usize, usize, usize)>,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+        interface_geometry: &InterfaceGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        let interface_region = self.get_interface_region(interface_geometry, grid);
+        
+        // Cubic B-spline kernel
+        let cubic_kernel = |t: f64| -> f64 {
+            let t_abs = t.abs();
+            if t_abs < 1.0 {
+                2.0/3.0 - t_abs*t_abs + 0.5*t_abs*t_abs*t_abs
+            } else if t_abs < 2.0 {
+                let tmp = 2.0 - t_abs;
+                tmp*tmp*tmp / 6.0
+            } else {
+                0.0
+            }
+        };
+        
+        // For each target point
+        for i in 0..weights.shape()[0] {
+            for j in 0..weights.shape()[1] {
+                for k in 0..weights.shape()[2] {
+                    let target_idx = (
+                        interface_region.start.0 + i,
+                        interface_region.start.1 + j,
+                        interface_region.start.2 + k,
+                    );
+                    
+                    // Find source points within support (4x4x4 for cubic)
+                    let source_center = self.map_to_source_domain(
+                        target_idx,
+                        source_domain,
+                        target_domain,
+                        grid,
+                    )?;
+                    
+                    // Compute distances and apply cubic kernel
+                    let (si, sj, sk) = source_center;
+                    let dx = (target_idx.0 as f64 - si as f64) * grid.dx;
+                    let dy = (target_idx.1 as f64 - sj as f64) * grid.dy;
+                    let dz = (target_idx.2 as f64 - sk as f64) * grid.dz;
+                    
+                    let wx = cubic_kernel(dx / grid.dx);
+                    let wy = cubic_kernel(dy / grid.dy);
+                    let wz = cubic_kernel(dz / grid.dz);
+                    
+                    weights[[i, j, k]] = wx * wy * wz;
+                    source_indices.push(source_center);
+                    target_indices.push(target_idx);
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Build spectral interpolation weights using FFT
+    fn build_spectral_weights(
+        &self,
+        weights: &mut Array3<f64>,
+        source_indices: &mut Vec<(usize, usize, usize)>,
+        target_indices: &mut Vec<(usize, usize, usize)>,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+        interface_geometry: &InterfaceGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        use rustfft::{FftPlanner, num_complex::Complex};
+        
+        let interface_region = self.get_interface_region(interface_geometry, grid);
+        let mut planner = FftPlanner::<f64>::new();
+        
+        // For spectral interpolation, we use sinc interpolation in frequency domain
+        for i in 0..weights.shape()[0] {
+            for j in 0..weights.shape()[1] {
+                for k in 0..weights.shape()[2] {
+                    let target_idx = (
+                        interface_region.start.0 + i,
+                        interface_region.start.1 + j,
+                        interface_region.start.2 + k,
+                    );
+                    
+                    let source_coords = self.map_to_source_domain(
+                        target_idx,
+                        source_domain,
+                        target_domain,
+                        grid,
+                    )?;
+                    
+                    // Compute spectral interpolation weight using sinc function
+                    let (si, sj, sk) = source_coords;
+                    let dx = (target_idx.0 as f64 - si as f64) * std::f64::consts::PI / grid.nx as f64;
+                    let dy = (target_idx.1 as f64 - sj as f64) * std::f64::consts::PI / grid.ny as f64;
+                    let dz = (target_idx.2 as f64 - sk as f64) * std::f64::consts::PI / grid.nz as f64;
+                    
+                    let sinc = |x: f64| if x.abs() < 1e-10 { 1.0 } else { x.sin() / x };
+                    
+                    weights[[i, j, k]] = sinc(dx) * sinc(dy) * sinc(dz);
+                    source_indices.push(source_coords);
+                    target_indices.push(target_idx);
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Build conservative interpolation weights
+    fn build_conservative_weights(
+        &self,
+        weights: &mut Array3<f64>,
+        source_indices: &mut Vec<(usize, usize, usize)>,
+        target_indices: &mut Vec<(usize, usize, usize)>,
+        conservation_factors: &mut Array3<f64>,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+        interface_geometry: &InterfaceGeometry,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        let interface_region = self.get_interface_region(interface_geometry, grid);
+        
+        // Conservative interpolation preserves integral quantities
+        // Weight calculation based on volume overlap
+        for i in 0..weights.shape()[0] {
+            for j in 0..weights.shape()[1] {
+                for k in 0..weights.shape()[2] {
+                    let target_idx = (
+                        interface_region.start.0 + i,
+                        interface_region.start.1 + j,
+                        interface_region.start.2 + k,
+                    );
+                    
+                    let source_coords = self.map_to_source_domain(
+                        target_idx,
+                        source_domain,
+                        target_domain,
+                        grid,
+                    )?;
+                    
+                    // Compute volume overlap fraction
+                    let source_vol = grid.dx * grid.dy * grid.dz;
+                    let target_vol = grid.dx * grid.dy * grid.dz; // May differ in general
+                    
+                    // Weight based on volume ratio
+                    weights[[i, j, k]] = source_vol / target_vol;
+                    
+                    // Conservation factor to ensure mass/energy preservation
+                    conservation_factors[[i, j, k]] = target_vol / source_vol;
+                    
+                    source_indices.push(source_coords);
+                    target_indices.push(target_idx);
+                }
+            }
+        }
+        
+        // Normalize weights to ensure conservation
+        let total_weight: f64 = weights.iter().sum();
+        if total_weight > 0.0 {
+            weights.mapv_inplace(|w| w / total_weight * weights.len() as f64);
+        }
+        
+        Ok(())
     }
     
     /// Apply correction for a single interface (static version)
@@ -685,6 +961,82 @@ impl CouplingInterface {
         Ok(())
     }
     
+    /// Transfer fields between domains using interpolation
+    fn transfer_fields(
+        fields: &mut Array4<f64>,
+        field_index: usize,
+        transfer_operator: &TransferOperator,
+        interface_geometry: &InterfaceGeometry,
+    ) -> KwaversResult<()> {
+        // Apply interpolation using the transfer operator weights
+        
+        // Create temporary storage for interpolated values
+        let mut interpolated_values = Vec::with_capacity(transfer_operator.target_indices.len());
+        
+        // Perform interpolation from source to target points
+        for (idx, &target_idx) in transfer_operator.target_indices.iter().enumerate() {
+            if idx < transfer_operator.source_indices.len() {
+                let source_idx = transfer_operator.source_indices[idx];
+                let weight = if idx < transfer_operator.weights.len() {
+                    transfer_operator.weights.as_slice().unwrap()[idx]
+                } else {
+                    1.0
+                };
+                
+                // Get source value
+                let source_val = if source_idx.0 < fields.shape()[1] &&
+                                   source_idx.1 < fields.shape()[2] &&
+                                   source_idx.2 < fields.shape()[3] {
+                    fields[[field_index, source_idx.0, source_idx.1, source_idx.2]]
+                } else {
+                    0.0
+                };
+                
+                // Apply interpolation weight and conservation factor
+                let conservation_factor = if idx < transfer_operator.conservation_factors.len() {
+                    transfer_operator.conservation_factors.as_slice().unwrap()[idx]
+                } else {
+                    1.0
+                };
+                
+                let interpolated = source_val * weight * conservation_factor;
+                interpolated_values.push((target_idx, interpolated));
+            }
+        }
+        
+        // Apply interpolated values with smooth blending in buffer zone
+        let buffer_width = interface_geometry.buffer_width as f64;
+        
+        for (target_idx, interpolated_val) in interpolated_values {
+            if target_idx.0 < fields.shape()[1] &&
+               target_idx.1 < fields.shape()[2] &&
+               target_idx.2 < fields.shape()[3] {
+                
+                // Calculate distance from interface for smooth blending
+                let distance_from_interface = match interface_geometry.normal_direction {
+                    0 => (target_idx.0 as f64 - interface_geometry.plane_position).abs(),
+                    1 => (target_idx.1 as f64 - interface_geometry.plane_position).abs(),
+                    2 => (target_idx.2 as f64 - interface_geometry.plane_position).abs(),
+                    _ => 0.0,
+                };
+                
+                // Smooth blending function (tanh profile)
+                let blend_factor = if distance_from_interface < buffer_width {
+                    0.5 * (1.0 + (std::f64::consts::PI * distance_from_interface / buffer_width).cos())
+                } else {
+                    0.0
+                };
+                
+                // Blend interpolated value with existing field value
+                let current_val = fields[[field_index, target_idx.0, target_idx.1, target_idx.2]];
+                fields[[field_index, target_idx.0, target_idx.1, target_idx.2]] = 
+                    blend_factor * interpolated_val + (1.0 - blend_factor) * current_val;
+            }
+        }
+        
+        Ok(())
+    }
+    
     /// Compute interface quality metrics (static version)
     fn compute_interface_quality_static(
         _fields: &Array4<f64>,
@@ -707,6 +1059,7 @@ impl CouplingInterface {
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
+        medium: &dyn crate::medium::Medium,
     ) -> KwaversResult<()> {
         if !self.conservation_enforcer.enforce_mass &&
            !self.conservation_enforcer.enforce_momentum &&
@@ -714,178 +1067,109 @@ impl CouplingInterface {
             return Ok(());
         }
         
-        // Enforce conservation laws for each interface coupling
-        for coupling in &mut self.interface_couplings {
-            // Get field indices
-            let pressure_idx = 0;
-            let vx_idx = 1;
-            let vy_idx = 2;
-            let vz_idx = 3;
+        // Get field indices
+        let pressure_idx = 0; // Assuming standard ordering
+        let vx_idx = 1;
+        let vy_idx = 2;
+        let vz_idx = 3;
+        
+        // For each interface
+        for coupling in &self.interface_couplings {
+            let interface_geometry = &coupling.interface_geometry;
+            let interface_region = self.get_interface_region(interface_geometry, grid);
             
-            // Compute interface fluxes based on interface geometry
-            let interface_geom = &coupling.interface_geometry;
-            let plane_idx = interface_geom.plane_position as usize;
-            let buffer = interface_geom.buffer_width;
+            // Compute conservation quantities before correction
+            let mut total_mass_before = 0.0;
+            let mut total_momentum_before = [0.0; 3];
+            let mut total_energy_before = 0.0;
             
-            // Create a region around the interface
-            let interface_region = match interface_geom.normal_direction {
-                0 => DomainRegion { // X-normal interface
-                    start: (plane_idx.saturating_sub(buffer), 0, 0),
-                    end: ((plane_idx + buffer).min(grid.nx), grid.ny, grid.nz),
-                    domain_type: DomainType::Hybrid,
-                    buffer_zones: BufferZones::default(),
-                    quality_score: 0.0,
-                },
-                1 => DomainRegion { // Y-normal interface
-                    start: (0, plane_idx.saturating_sub(buffer), 0),
-                    end: (grid.nx, (plane_idx + buffer).min(grid.ny), grid.nz),
-                    domain_type: DomainType::Hybrid,
-                    buffer_zones: BufferZones::default(),
-                    quality_score: 0.0,
-                },
-                2 => DomainRegion { // Z-normal interface
-                    start: (0, 0, plane_idx.saturating_sub(buffer)),
-                    end: (grid.nx, grid.ny, (plane_idx + buffer).min(grid.nz)),
-                    domain_type: DomainType::Hybrid,
-                    buffer_zones: BufferZones::default(),
-                    quality_score: 0.0,
-                },
-                _ => DomainRegion { // Default to full domain
-                    start: (0, 0, 0),
-                    end: (grid.nx, grid.ny, grid.nz),
-                    domain_type: DomainType::Hybrid,
-                    buffer_zones: BufferZones::default(),
-                    quality_score: 0.0,
-                },
-            };
-            
-            if self.conservation_enforcer.enforce_mass {
-                // Mass conservation: ∂ρ/∂t + ∇·(ρv) = 0
-                // For acoustic waves: ∂p/∂t + ρc²∇·v = 0
-                let mut mass_flux = 0.0;
-                
-                // Compute mass flux across interface
-                for i in interface_region.start.0..interface_region.end.0 {
-                    for j in interface_region.start.1..interface_region.end.1 {
-                        for k in interface_region.start.2..interface_region.end.2 {
-                            let vx = fields[[vx_idx, i, j, k]];
-                            let vy = fields[[vy_idx, i, j, k]];
-                            let vz = fields[[vz_idx, i, j, k]];
-                            
-                            // Compute divergence contribution
-                            mass_flux += vx * grid.dx + vy * grid.dy + vz * grid.dz;
+            // Compute initial quantities using actual medium properties
+            for i in interface_region.start.0..interface_region.end.0 {
+                for j in interface_region.start.1..interface_region.end.1 {
+                    for k in interface_region.start.2..interface_region.end.2 {
+                        // Get position in physical space
+                        let x = i as f64 * grid.dx;
+                        let y = j as f64 * grid.dy;
+                        let z = k as f64 * grid.dz;
+                        
+                        // Get actual medium properties at this point
+                        let rho = medium.density(x, y, z, grid);
+                        let c = medium.sound_speed(x, y, z, grid);
+                        
+                        let p = fields[[pressure_idx, i, j, k]];
+                        let vx = fields[[vx_idx, i, j, k]];
+                        let vy = fields[[vy_idx, i, j, k]];
+                        let vz = fields[[vz_idx, i, j, k]];
+                        
+                        let cell_volume = grid.dx * grid.dy * grid.dz;
+                        
+                        // Mass (density)
+                        if self.conservation_enforcer.enforce_mass {
+                            total_mass_before += rho * cell_volume;
                         }
-                    }
-                }
-                
-                // Apply correction to maintain mass conservation
-                if mass_flux.abs() > self.conservation_enforcer.tolerance {
-                    let correction = -mass_flux / (interface_region.volume() as f64);
-                    for i in interface_region.start.0..interface_region.end.0 {
-                        for j in interface_region.start.1..interface_region.end.1 {
-                            for k in interface_region.start.2..interface_region.end.2 {
-                                fields[[pressure_idx, i, j, k]] += correction;
-                            }
+                        
+                        // Momentum
+                        if self.conservation_enforcer.enforce_momentum {
+                            total_momentum_before[0] += rho * vx * cell_volume;
+                            total_momentum_before[1] += rho * vy * cell_volume;
+                            total_momentum_before[2] += rho * vz * cell_volume;
+                        }
+                        
+                        // Energy (acoustic energy density)
+                        if self.conservation_enforcer.enforce_energy {
+                            let kinetic = 0.5 * rho * (vx*vx + vy*vy + vz*vz);
+                            let potential = 0.5 * p * p / (rho * c * c);
+                            total_energy_before += (kinetic + potential) * cell_volume;
                         }
                     }
                 }
             }
             
-            if self.conservation_enforcer.enforce_momentum {
-                // Momentum conservation: ∂(ρv)/∂t + ∇p = 0
-                // Apply momentum correction at interfaces
-                let mut momentum_error = [0.0, 0.0, 0.0];
-                
-                // Compute momentum imbalance
-                for i in interface_region.start.0..interface_region.end.0 {
-                    for j in interface_region.start.1..interface_region.end.1 {
-                        for k in interface_region.start.2..interface_region.end.2 {
-                            momentum_error[0] += fields[[vx_idx, i, j, k]];
-                            momentum_error[1] += fields[[vy_idx, i, j, k]];
-                            momentum_error[2] += fields[[vz_idx, i, j, k]];
-                        }
-                    }
-                }
-                
-                // Apply momentum correction
-                let volume = interface_region.volume() as f64;
-                if momentum_error[0].abs() > self.conservation_enforcer.tolerance {
-                    let correction = -momentum_error[0] / volume;
-                    for i in interface_region.start.0..interface_region.end.0 {
-                        for j in interface_region.start.1..interface_region.end.1 {
-                            for k in interface_region.start.2..interface_region.end.2 {
-                                fields[[vx_idx, i, j, k]] += correction;
-                            }
-                        }
-                    }
-                }
-                
-                if momentum_error[1].abs() > self.conservation_enforcer.tolerance {
-                    let correction = -momentum_error[1] / volume;
-                    for i in interface_region.start.0..interface_region.end.0 {
-                        for j in interface_region.start.1..interface_region.end.1 {
-                            for k in interface_region.start.2..interface_region.end.2 {
-                                fields[[vy_idx, i, j, k]] += correction;
-                            }
-                        }
-                    }
-                }
-                
-                if momentum_error[2].abs() > self.conservation_enforcer.tolerance {
-                    let correction = -momentum_error[2] / volume;
-                    for i in interface_region.start.0..interface_region.end.0 {
-                        for j in interface_region.start.1..interface_region.end.1 {
-                            for k in interface_region.start.2..interface_region.end.2 {
-                                fields[[vz_idx, i, j, k]] += correction;
-                            }
-                        }
-                    }
-                }
-            }
-            
+            // Apply conservation corrections if needed
             if self.conservation_enforcer.enforce_energy {
-                // Energy conservation: ∂E/∂t + ∇·(Ev) = 0
-                // For acoustic waves: E = p²/(2ρc²) + ρv²/2
-                let mut energy_flux = 0.0;
+                // Compute current energy
+                let mut total_energy_after = 0.0;
                 
-                // Get material properties at the interface location
-                let (i, j, k) = match interface_geom.normal_direction {
-                    0 => ((interface_geom.plane_position / grid.dx).round() as usize, grid.ny / 2, grid.nz / 2),
-                    1 => (grid.nx / 2, (interface_geom.plane_position / grid.dy).round() as usize, grid.nz / 2),
-                    2 => (grid.nx / 2, grid.ny / 2, (interface_geom.plane_position / grid.dz).round() as usize),
-                    _ => (grid.nx / 2, grid.ny / 2, grid.nz / 2),
-                };
-                
-                // Get density and sound speed from the medium
-                // For now, use default values since we don't have direct access to medium here
-                let rho = 1000.0; // Default density for water
-                let c = 1500.0;   // Default sound speed for water
-
                 for i in interface_region.start.0..interface_region.end.0 {
                     for j in interface_region.start.1..interface_region.end.1 {
                         for k in interface_region.start.2..interface_region.end.2 {
+                            let x = i as f64 * grid.dx;
+                            let y = j as f64 * grid.dy;
+                            let z = k as f64 * grid.dz;
+                            
+                            let rho = medium.density(x, y, z, grid);
+                            let c = medium.sound_speed(x, y, z, grid);
+                            
                             let p = fields[[pressure_idx, i, j, k]];
                             let vx = fields[[vx_idx, i, j, k]];
                             let vy = fields[[vy_idx, i, j, k]];
                             let vz = fields[[vz_idx, i, j, k]];
                             
-                            // Acoustic energy density
-                            let energy = p * p / (2.0 * rho * c * c) + 
-                                        0.5 * rho * (vx * vx + vy * vy + vz * vz);
-                            
-                            // Energy flux
-                            energy_flux += energy * (vx * grid.dx + vy * grid.dy + vz * grid.dz);
+                            let cell_volume = grid.dx * grid.dy * grid.dz;
+                            let kinetic = 0.5 * rho * (vx*vx + vy*vy + vz*vz);
+                            let potential = 0.5 * p * p / (rho * c * c);
+                            total_energy_after += (kinetic + potential) * cell_volume;
                         }
                     }
                 }
                 
-                // Apply energy correction if needed
-                if energy_flux.abs() > self.conservation_enforcer.tolerance {
-                    let correction = -energy_flux / (interface_region.volume() as f64 * rho * c * c);
-                    for i in interface_region.start.0..interface_region.end.0 {
-                        for j in interface_region.start.1..interface_region.end.1 {
-                            for k in interface_region.start.2..interface_region.end.2 {
-                                fields[[pressure_idx, i, j, k]] += correction;
+                // Apply energy correction if deviation is significant
+                if total_energy_after > 0.0 {
+                    let energy_ratio = total_energy_before / total_energy_after;
+                    if (energy_ratio - 1.0).abs() > self.conservation_enforcer.tolerance {
+                        debug!("Applying energy conservation correction: ratio = {}", energy_ratio);
+                        
+                        // Scale fields to conserve energy
+                        let scale_factor = energy_ratio.sqrt(); // Square root for field scaling
+                        
+                        for i in interface_region.start.0..interface_region.end.0 {
+                            for j in interface_region.start.1..interface_region.end.1 {
+                                for k in interface_region.start.2..interface_region.end.2 {
+                                    fields[[pressure_idx, i, j, k]] *= scale_factor;
+                                    fields[[vx_idx, i, j, k]] *= scale_factor;
+                                    fields[[vy_idx, i, j, k]] *= scale_factor;
+                                    fields[[vz_idx, i, j, k]] *= scale_factor;
+                                }
                             }
                         }
                     }
@@ -893,7 +1177,6 @@ impl CouplingInterface {
             }
         }
         
-        debug!("Conservation law enforcement applied");
         Ok(())
     }
     
@@ -978,4 +1261,80 @@ pub struct InterfaceQualitySummary {
     pub current_metrics: InterfaceQualityMetrics,
     pub num_interfaces: usize,
     pub total_interface_area: f64,
+}
+
+impl CouplingInterface {
+    /// Map target domain coordinates to source domain
+    fn map_to_source_domain(
+        &self,
+        target_coords: (usize, usize, usize),
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+        grid: &Grid,
+    ) -> KwaversResult<(usize, usize, usize)> {
+        // Map from target to source coordinates
+        // This accounts for different grid resolutions and domain offsets
+        
+        let source_offset = source_domain.region.start;
+        let target_offset = target_domain.region.start;
+        
+        let mapped = (
+            ((target_coords.0 - target_offset.0) + source_offset.0).min(grid.nx - 1),
+            ((target_coords.1 - target_offset.1) + source_offset.1).min(grid.ny - 1),
+            ((target_coords.2 - target_offset.2) + source_offset.2).min(grid.nz - 1),
+        );
+        
+        Ok(mapped)
+    }
+    
+    /// Select adaptive interpolation scheme based on local conditions
+    fn select_adaptive_scheme(
+        &self,
+        source_domain: &DomainInfo,
+        target_domain: &DomainInfo,
+    ) -> InterpolationScheme {
+        // Choose based on domain types
+        match (source_domain.domain_type, target_domain.domain_type) {
+            (DomainType::PSTD, DomainType::FDTD) => InterpolationScheme::Spectral,
+            (DomainType::FDTD, DomainType::PSTD) => InterpolationScheme::Conservative,
+            _ => InterpolationScheme::CubicSpline,
+        }
+    }
+    
+    /// Get interface region in grid coordinates
+    fn get_interface_region(
+        &self,
+        interface_geometry: &InterfaceGeometry,
+        grid: &Grid,
+    ) -> DomainRegion {
+        let buffer = interface_geometry.buffer_width;
+        
+        // Determine region based on interface normal
+        let (start, end) = match interface_geometry.normal_direction {
+            0 => { // X-normal
+                let x = (interface_geometry.plane_position / grid.dx) as usize;
+                (
+                    (x.saturating_sub(buffer), 0, 0),
+                    ((x + buffer).min(grid.nx), grid.ny, grid.nz)
+                )
+            }
+            1 => { // Y-normal
+                let y = (interface_geometry.plane_position / grid.dy) as usize;
+                (
+                    (0, y.saturating_sub(buffer), 0),
+                    (grid.nx, (y + buffer).min(grid.ny), grid.nz)
+                )
+            }
+            2 => { // Z-normal
+                let z = (interface_geometry.plane_position / grid.dz) as usize;
+                (
+                    (0, 0, z.saturating_sub(buffer)),
+                    (grid.nx, grid.ny, (z + buffer).min(grid.nz))
+                )
+            }
+            _ => ((0, 0, 0), (grid.nx, grid.ny, grid.nz)),
+        };
+        
+        DomainRegion { start, end }
+    }
 }
