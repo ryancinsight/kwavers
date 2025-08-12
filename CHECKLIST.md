@@ -64,6 +64,7 @@
 - [x] Implement consistent time integration (leapfrog for PSTD)
 - [x] Replace placeholder DG solver with proper implementation
 - [x] Add shock-capturing capabilities (MinMod limiter)
+- [x] Fix FFT scaling inconsistency in PSTD solver
 
 ### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths

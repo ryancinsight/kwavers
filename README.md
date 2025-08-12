@@ -18,6 +18,7 @@
   - High-order time integration (leapfrog for PSTD, RK4 available)
   - Literature-validated algorithms (Treeby & Cox 2010, Hesthaven & Warburton 2008)
   - Proper Discontinuous Galerkin solver with shock capturing
+  - Corrected FFT normalization for accurate wave physics
 - **🔢 Constants Module**: Created comprehensive constants module with 30+ named constants
 - **🧹 Code Quality**: 
   - Fixed 18 critical compilation errors

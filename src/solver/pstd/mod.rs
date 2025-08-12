@@ -413,7 +413,8 @@ impl PstdSolver {
         // Choose time integration scheme
         if self.config.use_leapfrog && self.pressure_prev.is_some() {
             // Leapfrog scheme: p^{n+1} = p^{n-1} + 2*dt*(-ρc²∇·v^n)
-            let scale_factor = -2.0 * dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+            // Note: ifft_3d already applies 1/(nx*ny*nz) normalization
+            let scale_factor = -2.0 * dt;
             let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
             
             // Transform back to physical space
@@ -439,7 +440,8 @@ impl PstdSolver {
                 });
         } else {
             // First-order Euler scheme (used for first step or if leapfrog disabled)
-            let scale_factor = -dt / (self.grid.nx * self.grid.ny * self.grid.nz) as f64;
+            // Note: ifft_3d already applies 1/(nx*ny*nz) normalization
+            let scale_factor = -dt;
             let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
             
             // Transform back to physical space
@@ -523,6 +525,7 @@ impl PstdSolver {
         };
         
         // Transform back to physical space
+        // Note: ifft_3d applies proper 1/(nx*ny*nz) normalization
         let grad_x = ifft_3d(&grad_x_hat, &self.grid);
         let grad_y = ifft_3d(&grad_y_hat, &self.grid);
         let grad_z = ifft_3d(&grad_z_hat, &self.grid);
@@ -592,6 +595,7 @@ impl PstdSolver {
         };
         
         // Transform back to physical space
+        // Note: ifft_3d applies proper 1/(nx*ny*nz) normalization
         let divergence = ifft_3d(&div_hat, &self.grid);
         Ok(divergence)
     }
@@ -712,6 +716,7 @@ mod tests {
 
 #[cfg(test)]
 mod validation_tests;
+mod fft_scaling_test;
 
 // Plugin implementation for PSTD solver
 
