@@ -1,6 +1,9 @@
 // src/physics/composable.rs
 //! Composable physics system following CUPID principles
 //! 
+//! **DEPRECATED**: This module is being phased out in favor of the plugin system
+//! in `physics::plugin`. New code should use `PhysicsPlugin` instead of `PhysicsComponent`.
+//! 
 //! This module provides a composable, predictable physics simulation system where:
 //! - Composable: Physics models can be combined in flexible ways
 //! - Unix-like: Each model does one thing well and can be piped together
@@ -32,6 +35,9 @@ use log::warn;
 
 
 /// Field identifiers for different physics quantities
+/// 
+/// **DEPRECATED**: Use `UnifiedFieldType` from `physics::field_mapping` instead
+#[deprecated(since = "1.6.0", note = "Use UnifiedFieldType from physics::field_mapping instead")]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldType {
     Pressure,
@@ -113,12 +119,9 @@ impl ValidationResult {
 
 /// Core trait for physics components
 /// 
-/// This trait follows SOLID principles:
-/// - Single Responsibility: Each component has one clear purpose
-/// - Open/Closed: New components can be added without modifying existing ones
-/// - Liskov Substitution: All components are substitutable
-/// - Interface Segregation: Minimal interface with focused methods
-/// - Dependency Inversion: Depends on abstractions, not concretions
+/// **DEPRECATED**: Use `PhysicsPlugin` from `physics::plugin` instead.
+/// This trait is being phased out to unify the architecture.
+#[deprecated(since = "1.6.0", note = "Use PhysicsPlugin from physics::plugin instead")]
 pub trait PhysicsComponent: Send + Sync + std::fmt::Debug {
     /// Unique identifier for this component
     fn component_id(&self) -> &str;
@@ -873,22 +876,31 @@ impl PhysicsComponent for AcousticWaveComponent {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
+        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
         self.state = ComponentState::Running;
         
         let start_time = Instant::now();
         
-        // Create temporary arrays to avoid borrowing conflicts
+        // Use the unified field mapping for correct indices
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        // Prepare update arrays
         let mut pressure_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         let mut velocity_x_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         let mut velocity_y_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         let mut velocity_z_updates = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         
-        // Get current field values
-        let pressure_field = fields.index_axis(ndarray::Axis(0), 0);
-        let velocity_x = fields.index_axis(ndarray::Axis(0), 3);
-        let velocity_y = fields.index_axis(ndarray::Axis(0), 4);
-        let velocity_z = fields.index_axis(ndarray::Axis(0), 5);
+        // Get current field values using correct indices
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let velocity_x_idx = UnifiedFieldType::VelocityX.index();
+        let velocity_y_idx = UnifiedFieldType::VelocityY.index();
+        let velocity_z_idx = UnifiedFieldType::VelocityZ.index();
+        
+        let pressure_field = fields.index_axis(ndarray::Axis(0), pressure_idx);
+        let velocity_x = fields.index_axis(ndarray::Axis(0), velocity_x_idx);
+        let velocity_y = fields.index_axis(ndarray::Axis(0), velocity_y_idx);
+        let velocity_z = fields.index_axis(ndarray::Axis(0), velocity_z_idx);
         
         // Get medium properties
         let rho_array = medium.density_array();
@@ -938,19 +950,19 @@ impl PhysicsComponent for AcousticWaveComponent {
         
         // Apply updates to the fields sequentially to avoid borrowing conflicts
         {
-            let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
+            let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
             pressure_field_mut += &pressure_updates;
         }
         {
-            let mut velocity_x_mut = fields.index_axis_mut(ndarray::Axis(0), 3);
+            let mut velocity_x_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_x_idx);
             velocity_x_mut += &velocity_x_updates;
         }
         {
-            let mut velocity_y_mut = fields.index_axis_mut(ndarray::Axis(0), 4);
+            let mut velocity_y_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_y_idx);
             velocity_y_mut += &velocity_y_updates;
         }
         {
-            let mut velocity_z_mut = fields.index_axis_mut(ndarray::Axis(0), 5);
+            let mut velocity_z_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_z_idx);
             velocity_z_mut += &velocity_z_updates;
         }
         
@@ -1052,21 +1064,20 @@ impl PhysicsComponent for ThermalDiffusionComponent {
         medium: &dyn Medium,
         dt: f64,
         _t: f64,
+        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
-        self.state = ComponentState::Running;
-        
-        let start_time = Instant::now();
-        
-        // Get the solver
+        // Get solver reference
         let solver = self.solver.as_mut()
-            .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidConfiguration {
-                component: "ThermalDiffusionComponent".to_string(),
+            .ok_or_else(|| PhysicsError::ModelNotInitialized {
+                model: "ThermalDiffusionSolver".to_string(),
                 reason: "Thermal diffusion solver not initialized".to_string()
-            }))?;
+            })?;
         
-        // Get field indices
-        let pressure_idx = 0;
-        let temperature_idx = 2;
+        // Use the unified field mapping for correct indices
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let temperature_idx = UnifiedFieldType::Temperature.index();
         
         // Calculate acoustic heating: Q = 2αI = 2α|p|²/(ρc)
         let pressure = fields.index_axis(ndarray::Axis(0), pressure_idx);
@@ -1226,8 +1237,16 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         self.state = ComponentState::Running;
         let start_time = Instant::now();
         
+        // Use the unified field mapping for correct indices
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let velocity_x_idx = UnifiedFieldType::VelocityX.index();
+        let velocity_y_idx = UnifiedFieldType::VelocityY.index();
+        let velocity_z_idx = UnifiedFieldType::VelocityZ.index();
+        
         // Get current pressure field
-        let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
         
         // Update history before computing derivatives
         self.update_history(&pressure_field);
@@ -1345,14 +1364,14 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         
         // Update pressure field
         {
-            let mut pressure_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
+            let mut pressure_mut = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
             pressure_mut += &(&pressure_update * dt);
         }
         
         // Update velocity field from pressure gradient
-        let velocity_x = fields.index_axis(ndarray::Axis(0), 3).to_owned();
-        let velocity_y = fields.index_axis(ndarray::Axis(0), 4).to_owned();
-        let velocity_z = fields.index_axis(ndarray::Axis(0), 5).to_owned();
+        let velocity_x = fields.index_axis(ndarray::Axis(0), velocity_x_idx).to_owned();
+        let velocity_y = fields.index_axis(ndarray::Axis(0), velocity_y_idx).to_owned();
+        let velocity_z = fields.index_axis(ndarray::Axis(0), velocity_z_idx).to_owned();
         
         let mut vx_update = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut vy_update = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -1399,15 +1418,15 @@ impl PhysicsComponent for KuznetsovWaveComponent {
         
         // Apply velocity updates
         {
-            let mut vx_mut = fields.index_axis_mut(ndarray::Axis(0), 3);
+            let mut vx_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_x_idx);
             vx_mut += &vx_update;
         }
         {
-            let mut vy_mut = fields.index_axis_mut(ndarray::Axis(0), 4);
+            let mut vy_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_y_idx);
             vy_mut += &vy_update;
         }
         {
-            let mut vz_mut = fields.index_axis_mut(ndarray::Axis(0), 5);
+            let mut vz_mut = fields.index_axis_mut(ndarray::Axis(0), velocity_z_idx);
             vz_mut += &vz_update;
         }
         
@@ -1497,12 +1516,20 @@ impl PhysicsComponent for CavitationComponent {
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
-        t: f64,
+        _t: f64,
+        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
+        self.state = ComponentState::Running;
+        
         let start_time = Instant::now();
         
-        // Extract pressure field (field type is on Axis(0), pressure is typically index 0)
-        let pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        // Use the unified field mapping for correct indices
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        
+        // Extract pressure field
+        let pressure = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
         
         // Create a mutable copy for cavitation processing
         let pressure_for_cavitation = pressure.clone();
@@ -1513,11 +1540,11 @@ impl PhysicsComponent for CavitationComponent {
             grid,
             medium,
             dt,
-            t,
+            _t,
         )?;
         
         // Write the updated pressure back to the main fields array
-        let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure_field_mut = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
         pressure_field_mut.assign(&pressure_for_cavitation);
         
         // Light emission is now handled separately by the cavitation model
@@ -1752,14 +1779,24 @@ impl PhysicsComponent for ChemicalComponent {
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
-        t: f64,
+        _t: f64,
+        _context: &PhysicsContext,
     ) -> KwaversResult<()> {
+        self.state = ComponentState::Running;
+        
         let start_time = Instant::now();
         
+        // Use the unified field mapping for correct indices
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let temperature_idx = UnifiedFieldType::Temperature.index();
+        let light_idx = UnifiedFieldType::LightFluence.index();
+        
         // Prepare chemical update parameters with proper physical data
-        let light_field = fields.index_axis(ndarray::Axis(0), 1).to_owned();
-        let temperature_field = fields.index_axis(ndarray::Axis(0), 2).to_owned();
-        let pressure_field = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let light_field = fields.index_axis(ndarray::Axis(0), light_idx).to_owned();
+        let temperature_field = fields.index_axis(ndarray::Axis(0), temperature_idx).to_owned();
+        let pressure_field = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
         
         // Get bubble radius from proper cavitation component integration
         // Note: ChemicalComponent doesn't have cavitation_model field, using fallback approach

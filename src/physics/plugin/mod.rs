@@ -943,27 +943,11 @@ impl ExecutionStrategy for ParallelStrategy {
 
 /// Helper function to convert field type to array index
 fn field_type_to_index(field_type: &FieldType) -> Option<usize> {
-    use crate::physics::composable::FieldType;
+    use crate::physics::field_mapping::{UnifiedFieldType, migrate_field_type};
     
-    match field_type {
-        FieldType::Pressure => Some(0),
-        FieldType::Velocity => Some(1), // Assuming velocity x is at index 1
-        FieldType::Temperature => Some(4),
-        FieldType::Density => Some(5),
-        FieldType::Light => Some(6),
-        FieldType::Cavitation => Some(7),
-        FieldType::Chemical => Some(8),
-        FieldType::Stress => Some(9),
-        FieldType::Custom(name) => {
-            // Map custom fields to indices
-            match name.as_str() {
-                "vx" => Some(1),
-                "vy" => Some(2),
-                "vz" => Some(3),
-                _ => None,
-            }
-        }
-    }
+    // Use the migration helper to convert old FieldType to UnifiedFieldType
+    // then get the correct index
+    migrate_field_type(field_type).map(|unified| unified.index())
 }
 
 /// Plugin visitor pattern for traversing plugin hierarchies
