@@ -7,6 +7,7 @@ pub mod spectral_dg;
 pub mod imex;
 pub mod amr;
 pub mod kspace_correction;
+pub mod heterogeneous_handler;
 pub mod cpml_integration;
 pub mod validation;
 pub mod workspace;
