@@ -7,7 +7,8 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
+use crate::physics::state::{PhysicsState, FieldAccessor};
+use crate::physics::field_indices;
 use crate::physics::traits::CavitationModelBehavior;
 use ndarray::{Array3, Zip, ArrayView3};
 

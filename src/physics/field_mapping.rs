@@ -4,7 +4,7 @@
 //! and their indices in the global fields array. This prevents data corruption
 //! from incorrect field indexing.
 
-use crate::physics::state::field_indices;
+use crate::physics::field_indices;
 use std::fmt;
 
 /// Unified field type enum that maps directly to field indices

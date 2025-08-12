@@ -371,15 +371,15 @@ impl PluginBasedSolver {
 // Error types for the field registry
 impl KwaversError {
     fn field_not_registered(field: String) -> Self {
-        Self::Configuration(format!("Field '{}' is not registered", field))
+        Self::FieldNotRegistered(field)
     }
     
     fn field_inactive(field: String) -> Self {
-        Self::Configuration(format!("Field '{}' is inactive", field))
+        Self::FieldInactive(field)
     }
     
     fn field_data_not_initialized() -> Self {
-        Self::Configuration("Field data array not initialized".to_string())
+        Self::FieldDataNotInitialized
     }
 }
 

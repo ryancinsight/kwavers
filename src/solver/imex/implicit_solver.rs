@@ -79,10 +79,9 @@ impl ImplicitSolver for LinearSolver {
         }
         
         Err(KwaversError::Physics(crate::error::PhysicsError::ConvergenceFailure {
-            iteration: self.max_iterations,
-            max_iterations: self.max_iterations,
+            solver: "LinearSolver".to_string(),
+            iterations: self.max_iterations,
             residual: last_norm,
-            tolerance: self.tolerance,
         }))
     }
     
@@ -258,10 +257,9 @@ impl ImplicitSolver for NewtonSolver {
         }
         
         Err(KwaversError::Physics(crate::error::PhysicsError::ConvergenceFailure {
-            iteration: self.max_iterations,
-            max_iterations: self.max_iterations,
+            solver: "NewtonSolver".to_string(),
+            iterations: self.max_iterations,
             residual: last_norm,
-            tolerance: self.tolerance,
         }))
     }
     

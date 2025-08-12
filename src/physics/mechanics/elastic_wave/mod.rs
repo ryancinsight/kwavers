@@ -458,6 +458,7 @@ impl ElasticWave {
         if self.kx.is_empty() || self.ky.is_empty() || self.kz.is_empty() {
             return Err(PhysicsError::ModelNotInitialized {
                 model: "ElasticWave".to_string(),
+                reason: "Wave vectors not initialized".to_string(),
             }.into());
         }
         Ok(())

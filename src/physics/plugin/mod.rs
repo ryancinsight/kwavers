@@ -6,12 +6,12 @@
 pub mod tests;
 pub mod field_access;  // NEW: Safe field access for plugins
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::validation::ValidationResult;
-use ndarray::Array4;
+use ndarray::{Array3, Array4};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
