@@ -527,6 +527,7 @@ impl Solver {
         for &field_idx in stress_indices.iter() {
             if field_idx < self.fields.fields.shape()[0] {
                 let mut component = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
+                // Apply stress-specific boundary conditions (currently uses elastic PML)
                 self.apply_elastic_pml(&mut component, field_idx, step)?;
                 self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&component);
             }
@@ -563,10 +564,11 @@ impl Solver {
         let cavitation_start = Instant::now();
         let current_time = step as f64 * dt;
         
-        // Get pressure as owned array for cavitation update
-        let mut pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        // Get pressure for cavitation update
+        let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
-        // Update cavitation (modifies pressure in place according to trait)
+        // Update cavitation model's internal bubble state based on pressure field
+        // This updates bubble radius and velocity, not the pressure itself
         self.cavitation.update_cavitation(
             &pressure,
             &self.grid,
@@ -574,10 +576,6 @@ impl Solver {
             dt,
             current_time,
         )?;
-        
-        // Update pressure field with cavitation effects
-        self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX)
-            .assign(&pressure);
         
         cavitation_time += cavitation_start.elapsed().as_secs_f64();
         

@@ -928,35 +928,10 @@ impl ExecutionStrategy for ParallelStrategy {
                     .map(|&idx| idx)
                     .collect();
                 
-                let results: Vec<_> = plugin_refs
-                    .par_iter()
-                    .map(|&idx| {
-                        let mut local_fields = fields.clone();
-                        // Note: This won't compile as we can't mutably borrow in parallel
-                        // This needs architectural change - plugins should be immutable
-                        // For now, return error
-                        let error: KwaversResult<()> = Err(PhysicsError::InvalidConfiguration {
-                            component: "ParallelStrategy".to_string(),
-                            reason: "Parallel plugin execution requires immutable plugins".to_string()
-                        }.into());
-                        (idx, local_fields, error)
-                    })
-                    .collect();
-                
-                // Merge results back
-                for (idx, local_fields, result) in results {
-                    result?;
-                    // Merge strategy: average overlapping regions
-                    // This is a simplified approach - real implementation would
-                    // need more sophisticated merging based on plugin semantics
-                    let provided_fields = plugins[idx].provided_fields();
-                    for field_type in provided_fields {
-                        let field_idx = field_type_to_index(&field_type);
-                        if let Some(idx) = field_idx {
-                            fields.index_axis_mut(ndarray::Axis(0), idx)
-                                .assign(&local_fields.index_axis(ndarray::Axis(0), idx));
-                        }
-                    }
+                // Sequential execution as fallback until plugins support immutability
+                // TODO: Implement proper parallel execution with immutable plugins
+                for &idx in group_indices.iter() {
+                    plugins[idx].update(fields, grid, medium, dt, t, context)?;
                 }
             } else {
                 // Multiple plugins with synchronized field access

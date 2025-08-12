@@ -72,13 +72,6 @@ impl BubbleField {
             
             // Note: This requires mutable access to solver but we have &self
             // For now, use the adaptive version which takes Arc<Mutex>
-            let _ = integrate_bubble_dynamics_adaptive(
-                Arc::new(Mutex::new(self.solver.clone())),
-                state,
-                p_acoustic,
-                dp_dt,
-                dt,
-                t,
             if let Err(e) = integrate_bubble_dynamics_adaptive(
                 Arc::new(Mutex::new(self.solver.clone())),
                 state,

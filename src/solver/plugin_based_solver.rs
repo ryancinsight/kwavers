@@ -367,19 +367,7 @@ impl PluginBasedSolver {
 }
 
 // Error types for the field registry
-impl KwaversError {
-    fn field_not_registered(field: String) -> Self {
-        Self::FieldNotRegistered(field)
-    }
-    
-    fn field_inactive(field: String) -> Self {
-        Self::FieldInactive(field)
-    }
-    
-    fn field_data_not_initialized() -> Self {
-        Self::FieldDataNotInitialized
-    }
-}
+// Error variants are already defined in error.rs
 
 #[cfg(test)]
 mod tests {
