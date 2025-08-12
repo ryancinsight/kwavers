@@ -101,6 +101,23 @@
   - Removed duplicate implementations
   - Consolidated similar code patterns
 
+### **Sprint 1.5: Critical Correctness & Stability Fixes** (COMPLETED ✅) - January 2025
+- [x] **ACID Compliance Violations Fixed**:
+  - Fixed `try_update_medium` to fail fast instead of silently continuing with stale data
+  - Added `ConcurrencyError` type for proper atomicity violation reporting
+  - Ensured all state updates are atomic and consistent
+  - Fixed GPU FFT kernel Arc::get_mut unwrap() calls to handle failures properly
+- [x] **Error Masking Removed (KISS/YAGNI)**:
+  - Replaced `check_field` with `validate_field` that fails fast on NaN/Inf
+  - Removed all numerical instability masking - now fails loudly
+  - Fixed bubble_radius/velocity unwrap_or_else patterns that masked errors
+  - Ensures root causes of instabilities are addressed, not hidden
+- [x] **Principle Adherence**:
+  - **ACID**: All state updates now atomic, consistent, isolated, and durable
+  - **KISS**: Simple validation that fails loudly instead of complex masking
+  - **YAGNI**: Removed unnecessary error-hiding mechanisms
+  - **Fail-Fast**: System now fails immediately on invalid states
+
 ### **Sprint 2: Performance Optimization** (Weeks 3-4) - NEXT
 - [ ] Profile and optimize critical paths
 - [ ] Implement SIMD optimizations

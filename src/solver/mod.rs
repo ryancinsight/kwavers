@@ -355,7 +355,7 @@ impl Solver {
     }
 
     /// Try to update the medium with pending changes, requires exclusive ownership
-    fn try_update_medium(&mut self) -> bool {
+    fn try_update_medium(&mut self) -> KwaversResult<()> {
         self.medium_update_attempts += 1;
         
         if let Some(exclusive_medium) = Arc::get_mut(&mut self.medium) {
@@ -373,11 +373,16 @@ impl Solver {
             self.pending_bubble_update = None;
             
             self.medium_update_successes += 1;
-            true
+            Ok(())
         } else {
             // Cannot get exclusive access
             log::warn!("Cannot update medium state (temperature, bubble dynamics) because it is shared");
-            false
+            Err(KwaversError::ConcurrencyError {
+                operation: "try_update_medium".to_string(),
+                resource: "medium".to_string(),
+                reason: "Cannot obtain exclusive access to medium for atomic update. \
+                        This would violate ACID guarantees by proceeding with stale data.".to_string(),
+            })
         }
     }
     
@@ -387,75 +392,64 @@ impl Solver {
         self.pending_bubble_update = Some((bubble_radius, bubble_velocity));
     }
 
-    // Helper function to check and stabilize field values
-    fn check_field(field: &mut Array3<f64>, field_name: &str, min_val: f64, max_val: f64) -> bool {
-        let mut unstable_found = false;
-        let total_elements = field.len();
+    // Helper function to validate field values - fail fast on numerical instabilities
+    // Following KISS principle: simple validation that fails loudly on problems
+    fn validate_field(field: &Array3<f64>, field_name: &str, min_val: f64, max_val: f64) -> KwaversResult<()> {
         let mut nan_count = 0;
         let mut inf_count = 0;
         let mut min_violations = 0;
         let mut max_violations = 0;
-        let mut min_value = f64::MAX;
-        let mut max_value = f64::MIN;
+        let mut first_nan_location = None;
+        let mut first_inf_location = None;
         
-        for val in field.iter_mut() {
-            // Track statistics
-            if !val.is_nan() && !val.is_infinite() {
-                min_value = min_value.min(*val);
-                max_value = max_value.max(*val);
-            }
-            
-            // Handle NaN values
+        // Check for numerical instabilities
+        for ((i, j, k), val) in field.indexed_iter() {
             if val.is_nan() {
                 nan_count += 1;
-                *val = 0.0;
-                unstable_found = true;
-                continue;
-            }
-            
-            // Handle infinite values
-            if val.is_infinite() {
+                if first_nan_location.is_none() {
+                    first_nan_location = Some((i, j, k));
+                }
+            } else if val.is_infinite() {
                 inf_count += 1;
-                *val = if *val > 0.0 { max_val } else { min_val };
-                unstable_found = true;
-                continue;
-            }
-            
-            // Clamp extreme values
-            if *val < min_val {
+                if first_inf_location.is_none() {
+                    first_inf_location = Some((i, j, k));
+                }
+            } else if *val < min_val {
                 min_violations += 1;
-                *val = min_val;
-                unstable_found = true;
             } else if *val > max_val {
                 max_violations += 1;
-                *val = max_val;
-                unstable_found = true;
             }
         }
         
-        // Log issues if any found
-        if unstable_found {
+        // Fail fast on any numerical instability - don't mask the problem
+        if nan_count > 0 {
+            let location = first_nan_location.unwrap();
+            return Err(PhysicsError::Instability {
+                field: field_name.to_string(),
+                location,
+                value: f64::NAN,
+            }.into());
+        }
+        
+        if inf_count > 0 {
+            let location = first_inf_location.unwrap();
+            return Err(PhysicsError::Instability {
+                field: field_name.to_string(),
+                location,
+                value: f64::INFINITY,
+            }.into());
+        }
+        
+        // Log warnings for bounds violations but don't fail
+        // These might be acceptable in some cases
+        if min_violations > 0 || max_violations > 0 {
             log::warn!(
-                "Field '{}' stabilized: {} NaN, {} Inf, {} < min, {} > max (range: {:.3e} to {:.3e})",
-                field_name, 
-                nan_count, 
-                inf_count, 
-                min_violations, 
-                max_violations,
-                min_value,
-                max_value
-            );
-        } else if total_elements > 0 {
-            // Log normal statistics periodically
-            log::debug!(
-                "Field '{}' stable: range {:.3e} to {:.3e}",
-                field_name,
-                min_value,
-                max_value
+                "Field '{}' has {} values below {:.3e} and {} values above {:.3e}",
+                field_name, min_violations, min_val, max_violations, max_val
             );
         }
         
-        unstable_found
+        Ok(())
     }
 
     pub fn step(&mut self, step: usize, dt: f64, frequency: f64) -> KwaversResult<()> {
@@ -622,7 +616,7 @@ impl Solver {
         // Check and stabilize after wave update
         {
             let mut pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-            Self::check_field(&mut pressure, "pressure", MIN_PRESSURE, MAX_PRESSURE);
+            Self::validate_field(&pressure, "pressure", MIN_PRESSURE, MAX_PRESSURE)?;
             self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&pressure);
         }
 
@@ -647,7 +641,7 @@ impl Solver {
         
         // Check and stabilize after cavitation update
         let mut p_update = p_update.clone();
-        Self::check_field(&mut p_update, "pressure_after_cavitation", MIN_PRESSURE, MAX_PRESSURE);
+        Self::validate_field(&p_update, "pressure_after_cavitation", MIN_PRESSURE, MAX_PRESSURE)?;
         
         // Update pressure field with cavitation effects
         self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&p_update);
@@ -669,7 +663,7 @@ impl Solver {
         // Check and stabilize light field after update
         {
             let mut light = self.fields.fields.index_axis(Axis(0), LIGHT_IDX).to_owned();
-            Self::check_field(&mut light, "light_after_update", 0.0, MAX_LIGHT);
+            Self::validate_field(&light, "light_after_update", 0.0, MAX_LIGHT)?;
             self.fields.fields.index_axis_mut(Axis(0), LIGHT_IDX).assign(&light);
         }
         
@@ -704,7 +698,7 @@ impl Solver {
         // Check and stabilize temperature field
         {
             let mut temp = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
-            Self::check_field(&mut temp, "temperature", MIN_TEMP, MAX_TEMP);
+            Self::validate_field(&temp, "temperature", MIN_TEMP, MAX_TEMP)?;
             self.fields.fields.index_axis_mut(Axis(0), TEMPERATURE_IDX).assign(&temp);
         }
         
@@ -749,14 +743,14 @@ impl Solver {
         // After all physics have been processed, we can now update the medium state
         // Store the current state to apply later
         let temperature = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
-                    let bubble_radius = self.cavitation.bubble_radius().unwrap_or_else(|_| Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)));
-                    let bubble_velocity = self.cavitation.bubble_velocity().unwrap_or_else(|_| Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)));
+        let bubble_radius = self.cavitation.bubble_radius()?;
+        let bubble_velocity = self.cavitation.bubble_velocity()?;
         
         // Queue the updates
         self.queue_medium_updates(temperature, bubble_radius, bubble_velocity);
         
         // Try to apply the updates (will succeed if we have exclusive ownership)
-        self.try_update_medium();
+        self.try_update_medium()?;
         
         postprocessing_time += postprocess_start.elapsed().as_secs_f64();
         

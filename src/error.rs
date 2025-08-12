@@ -60,6 +60,18 @@ pub enum KwaversError {
     
     /// Field data array not initialized
     FieldDataNotInitialized,
+
+    /// Concurrency errors - critical for ACID compliance
+    #[error("Concurrency error in {operation} on {resource}: {reason}")]
+    ConcurrencyError {
+        operation: String,
+        resource: String,
+        reason: String,
+    },
+    
+    /// IO errors
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl fmt::Display for KwaversError {
@@ -80,6 +92,10 @@ impl fmt::Display for KwaversError {
             KwaversError::FieldNotRegistered(field) => write!(f, "Field '{}' not registered in the field registry", field),
             KwaversError::FieldInactive(field) => write!(f, "Field '{}' is inactive and cannot be accessed", field),
             KwaversError::FieldDataNotInitialized => write!(f, "Field data array not initialized"),
+            KwaversError::ConcurrencyError { operation, resource, reason } => {
+                write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
+            },
+            KwaversError::Io(e) => write!(f, "IO error: {}", e),
         }
     }
 }
@@ -102,6 +118,8 @@ impl StdError for KwaversError {
             KwaversError::FieldNotRegistered(_) => None,
             KwaversError::FieldInactive(_) => None,
             KwaversError::FieldDataNotInitialized => None,
+            KwaversError::ConcurrencyError { .. } => None,
+            KwaversError::Io(e) => Some(e),
         }
     }
 }
@@ -968,7 +986,8 @@ pub mod utils {
         matches!(error,
             KwaversError::System(_) |
             KwaversError::Gpu(GpuError::DeviceDetection { .. }) |
-            KwaversError::Gpu(GpuError::MemoryAllocation { .. })
+            KwaversError::Gpu(GpuError::MemoryAllocation { .. }) |
+            KwaversError::ConcurrencyError { .. }
         )
     }
     
@@ -990,6 +1009,8 @@ pub mod utils {
             KwaversError::FieldNotRegistered(_) => "Field Registry",
             KwaversError::FieldInactive(_) => "Field State",
             KwaversError::FieldDataNotInitialized => "Field Data",
+            KwaversError::ConcurrencyError { .. } => "Concurrency",
+            KwaversError::Io(_) => "IO",
         }
     }
 }

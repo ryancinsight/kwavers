@@ -1595,9 +1595,23 @@ impl GpuFft {
         };
         
         // Execute FFT
-        Arc::get_mut(&mut plan.clone())
-            .unwrap()
-            .execute_r2c(&mut *Arc::get_mut(&mut self.context.clone()).unwrap(), input)
+        let mut plan_clone = plan.clone();
+        let plan_mut = Arc::get_mut(&mut plan_clone)
+            .ok_or_else(|| KwaversError::ConcurrencyError {
+                operation: "fft_3d".to_string(),
+                resource: "GpuFftPlan".to_string(),
+                reason: "Cannot obtain exclusive access to FFT plan".to_string(),
+            })?;
+        
+        let mut context_clone = self.context.clone();
+        let context_mut = Arc::get_mut(&mut context_clone)
+            .ok_or_else(|| KwaversError::ConcurrencyError {
+                operation: "fft_3d".to_string(),
+                resource: "GpuContext".to_string(),
+                reason: "Cannot obtain exclusive access to GPU context".to_string(),
+            })?;
+        
+        plan_mut.execute_r2c(context_mut, input)
     }
     
     /// Perform 3D inverse FFT
@@ -1615,9 +1629,23 @@ impl GpuFft {
         };
         
         // Execute inverse FFT
-        Arc::get_mut(&mut plan.clone())
-            .unwrap()
-            .execute_c2c(&mut *Arc::get_mut(&mut self.context.clone()).unwrap(), input)
+        let mut plan_clone = plan.clone();
+        let plan_mut = Arc::get_mut(&mut plan_clone)
+            .ok_or_else(|| KwaversError::ConcurrencyError {
+                operation: "ifft_3d".to_string(),
+                resource: "GpuFftPlan".to_string(),
+                reason: "Cannot obtain exclusive access to FFT plan".to_string(),
+            })?;
+        
+        let mut context_clone = self.context.clone();
+        let context_mut = Arc::get_mut(&mut context_clone)
+            .ok_or_else(|| KwaversError::ConcurrencyError {
+                operation: "ifft_3d".to_string(),
+                resource: "GpuContext".to_string(),
+                reason: "Cannot obtain exclusive access to GPU context".to_string(),
+            })?;
+        
+        plan_mut.execute_c2c(context_mut, input)
     }
 }
 
