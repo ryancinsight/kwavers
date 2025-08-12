@@ -19,6 +19,8 @@
   - Literature-validated algorithms (Treeby & Cox 2010) ✅
   - Proper DG solver with basis functions, projection, and shock capturing ✅
   - Fixed FFT scaling bug in PSTD solver for correct wave physics ✅
+  - Implemented power-law absorption model with fractional derivatives ✅
+  - Fixed acoustic diffusivity in Kuznetsov solver (proper physics) ✅
 - **Code Quality**: 
   - Fixed 18 compilation errors in multiple modules ✅
   - Removed duplicate FieldType enum (DRY principle) ✅

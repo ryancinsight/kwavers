@@ -80,6 +80,7 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::medium::absorption::{PowerLawAbsorption, TissueType, apply_power_law_absorption};
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
@@ -94,7 +95,7 @@ use serde::{Serialize, Deserialize};
 use log::{debug, info};
 
 /// PSTD solver configuration
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PstdConfig {
     /// Enable k-space correction for improved accuracy
     pub k_space_correction: bool,
@@ -108,6 +109,10 @@ pub struct PstdConfig {
     pub cfl_factor: f64,
     /// Use leapfrog time integration (second-order accurate)
     pub use_leapfrog: bool,
+    /// Enable power-law absorption
+    pub enable_absorption: bool,
+    /// Absorption model configuration
+    pub absorption_model: Option<PowerLawAbsorption>,
 }
 
 impl Default for PstdConfig {
@@ -119,6 +124,8 @@ impl Default for PstdConfig {
             pml_stencil_size: 4,
             cfl_factor: cfl::PSTD_DEFAULT,
             use_leapfrog: true,  // Default to second-order time integration
+            enable_absorption: false,  // Disabled by default for backward compatibility
+            absorption_model: None,
         }
     }
 }
@@ -408,6 +415,20 @@ impl PstdSolver {
             Zip::from(&mut div_v_hat)
                 .and(kappa)
                 .for_each(|d, &k| *d *= k);
+        }
+        
+        // Apply power-law absorption if enabled
+        if self.config.enable_absorption {
+            if let Some(ref absorption) = self.config.absorption_model {
+                // Get reference sound speed (use average for simplicity)
+                let c_ref = medium.sound_speed(
+                    self.grid.dx * self.grid.nx as f64 / 2.0,
+                    self.grid.dy * self.grid.ny as f64 / 2.0,
+                    self.grid.dz * self.grid.nz as f64 / 2.0,
+                    &self.grid
+                );
+                apply_power_law_absorption(&mut div_v_hat, &self.k_squared, absorption, c_ref, dt);
+            }
         }
         
         // Choose time integration scheme

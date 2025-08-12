@@ -174,7 +174,7 @@ mod tests {
     use super::*;
     use crate::grid::Grid;
     use crate::medium::Medium;
-    use crate::medium::tissue_specific; // For tissue_type Option
+    use crate::medium::absorption::TissueType; // For tissue_type Option
     use ndarray::{Array3, ShapeBuilder}; // Added ShapeBuilder for .f()
 
     fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {

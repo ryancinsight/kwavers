@@ -19,6 +19,8 @@
   - Literature-validated algorithms (Treeby & Cox 2010, Hesthaven & Warburton 2008)
   - Proper Discontinuous Galerkin solver with shock capturing
   - Corrected FFT normalization for accurate wave physics
+  - Power-law absorption model (α(f) = α₀f^y) with fractional derivatives
+  - Physically accurate acoustic diffusivity implementation
 - **🔢 Constants Module**: Created comprehensive constants module with 30+ named constants
 - **🧹 Code Quality**: 
   - Fixed 18 critical compilation errors
