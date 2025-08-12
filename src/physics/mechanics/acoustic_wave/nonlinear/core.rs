@@ -2,6 +2,7 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::KwaversResult;
+use crate::constants::{stability, performance, cfl};
 
 use ndarray::{Array3, Zip, ShapeBuilder};
 use log::{debug, warn, info};
@@ -58,6 +59,12 @@ pub struct NonlinearWave {
     // Multi-frequency simulation support
     /// Configuration for multi-frequency analysis
     pub(super) multi_freq_config: Option<MultiFrequencyConfig>,
+    
+    // Kuznetsov equation support
+    /// Enable Kuznetsov equation terms (includes diffusivity and nonlinearity)
+    pub(super) use_kuznetsov_terms: bool,
+    /// Enable diffusivity terms in the wave equation
+    pub(super) use_diffusivity: bool,
 }
 
 impl NonlinearWave {
@@ -81,12 +88,12 @@ impl NonlinearWave {
         
         // Determine optimal chunk size based on grid dimensions
         let total_points = grid.nx * grid.ny * grid.nz;
-        let chunk_size = if total_points > 1_000_000 {
-            64 * 1024  // Large grids: 64K chunks
-        } else if total_points > 100_000 {
-            16 * 1024  // Medium grids: 16K chunks
+        let chunk_size = if total_points > performance::LARGE_GRID_THRESHOLD {
+            performance::CHUNK_SIZE_LARGE
+        } else if total_points > performance::MEDIUM_GRID_THRESHOLD {
+            performance::CHUNK_SIZE_MEDIUM
         } else {
-            4 * 1024   // Small grids: 4K chunks
+            performance::CHUNK_SIZE_SMALL
         };
 
         Self {
@@ -99,13 +106,15 @@ impl NonlinearWave {
             use_adaptive_timestep: false,  // Default to fixed timestep
 
             k_squared,
-            max_pressure: 1e8,  // 100 MPa maximum pressure
-            stability_threshold: 0.5, // CFL condition threshold
-            cfl_safety_factor: 0.8,   // Safety factor for CFL condition
+            max_pressure: stability::MAX_PRESSURE,
+            stability_threshold: cfl::CONSERVATIVE,
+            cfl_safety_factor: cfl::AGGRESSIVE,
             clamp_gradients: true,    // Enable gradient clamping (should be configurable)
             chunk_size,
-            use_chunked_processing: total_points > 10_000,
+            use_chunked_processing: total_points > performance::CHUNKED_PROCESSING_THRESHOLD,
             multi_freq_config: None, // Initialize as None
+            use_kuznetsov_terms: false, // Default to Westervelt equation
+            use_diffusivity: false, // Default to no diffusivity
         }
     }
 
@@ -130,6 +139,34 @@ impl NonlinearWave {
     pub fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.nonlinearity_scaling = scaling;
         debug!("Set nonlinearity scaling to {}", scaling);
+    }
+    
+    /// Enable or disable Kuznetsov equation terms
+    ///
+    /// When enabled, includes additional terms for diffusivity and 
+    /// higher-order nonlinearities as per the Kuznetsov equation.
+    ///
+    /// # Arguments
+    ///
+    /// * `enable` - Whether to enable Kuznetsov terms
+    pub fn enable_kuznetsov_terms(&mut self, enable: bool) {
+        self.use_kuznetsov_terms = enable;
+        if enable {
+            self.use_diffusivity = true; // Kuznetsov equation includes diffusivity
+        }
+        debug!("Kuznetsov terms {}", if enable { "enabled" } else { "disabled" });
+    }
+    
+    /// Enable or disable diffusivity terms
+    ///
+    /// When enabled, includes acoustic absorption through diffusivity.
+    ///
+    /// # Arguments
+    ///
+    /// * `enable` - Whether to enable diffusivity
+    pub fn enable_diffusivity(&mut self, enable: bool) {
+        self.use_diffusivity = enable;
+        debug!("Diffusivity {}", if enable { "enabled" } else { "disabled" });
     }
     
     /// Set whether to use gradient clamping for stability

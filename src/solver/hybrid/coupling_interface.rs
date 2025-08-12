@@ -32,7 +32,8 @@
 
 use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
+use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType, BufferZones};
+use crate::constants::cfl;
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
@@ -280,7 +281,7 @@ impl CouplingInterface {
         debug!("Applying coupling corrections across {} interfaces", self.interface_couplings.len());
         
         // Apply corrections for each interface
-        for coupling in &self.interface_couplings {
+        for coupling in &mut self.interface_couplings {
             if coupling.quality_metrics.stability_indicator < self.config.stability_threshold {
                 warn!("Interface stability indicator below threshold: {}", 
                       coupling.quality_metrics.stability_indicator);
@@ -426,7 +427,11 @@ impl CouplingInterface {
                 spacing: (grid.dx, grid.dy, grid.dz),
                 staggered: domain_a.domain_type == DomainType::FiniteDifference,
                 dt,
-                cfl_number: 0.3, // Placeholder
+                cfl_number: if domain_a.domain_type == DomainType::Spectral { 
+                    cfl::PSTD_DEFAULT 
+                } else { 
+                    cfl::FDTD_DEFAULT 
+                },
             },
         };
         
@@ -437,7 +442,11 @@ impl CouplingInterface {
                 spacing: (grid.dx, grid.dy, grid.dz),
                 staggered: domain_b.domain_type == DomainType::FiniteDifference,
                 dt,
-                cfl_number: 0.3, // Placeholder
+                cfl_number: if domain_b.domain_type == DomainType::Spectral { 
+                    cfl::PSTD_DEFAULT 
+                } else { 
+                    cfl::FDTD_DEFAULT 
+                },
             },
         };
         
@@ -865,7 +874,8 @@ impl CouplingInterface {
         // Normalize weights to ensure conservation
         let total_weight: f64 = weights.iter().sum();
         if total_weight > 0.0 {
-            weights.mapv_inplace(|w| w / total_weight * weights.len() as f64);
+            let num_weights = weights.len() as f64;
+            weights.mapv_inplace(|w| w / total_weight * num_weights);
         }
         
         Ok(())
@@ -1292,8 +1302,8 @@ impl CouplingInterface {
     ) -> InterpolationScheme {
         // Choose based on domain types
         match (source_domain.domain_type, target_domain.domain_type) {
-            (DomainType::PSTD, DomainType::FDTD) => InterpolationScheme::Spectral,
-            (DomainType::FDTD, DomainType::PSTD) => InterpolationScheme::Conservative,
+            (DomainType::Spectral, DomainType::FiniteDifference) => InterpolationScheme::Spectral,
+            (DomainType::FiniteDifference, DomainType::Spectral) => InterpolationScheme::Conservative,
             _ => InterpolationScheme::CubicSpline,
         }
     }
@@ -1332,6 +1342,15 @@ impl CouplingInterface {
             _ => ((0, 0, 0), (grid.nx, grid.ny, grid.nz)),
         };
         
-        DomainRegion { start, end }
+        DomainRegion { 
+            start, 
+            end,
+            domain_type: DomainType::FiniteDifference, // Default to FDTD
+            quality_score: 1.0,
+            buffer_zones: BufferZones {
+                widths: [0; 6],
+                overlaps: Vec::new(),
+            },
+        }
     }
 }

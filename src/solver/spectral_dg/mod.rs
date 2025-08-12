@@ -116,7 +116,14 @@ impl HybridSpectralDGSolver {
     pub fn new(config: HybridSpectralDGConfig, grid: Arc<Grid>) -> Self {
         let detector = DiscontinuityDetector::new(config.discontinuity_threshold);
         let spectral_solver = SpectralSolver::new(config.spectral_order, grid.clone());
-        let dg_solver = DGSolver::new(config.dg_polynomial_order, grid.clone());
+        let dg_config = dg_solver::DGConfig {
+            polynomial_order: config.dg_polynomial_order,
+            basis_type: dg_solver::BasisType::Legendre,
+            flux_type: dg_solver::FluxType::LaxFriedrichs,
+            use_limiter: true,
+            limiter_type: dg_solver::LimiterType::MinMod,
+        };
+        let dg_solver = DGSolver::new(dg_config, grid.clone()).expect("Failed to create DG solver");
         let coupler = HybridCoupler::new(config.conservation_tolerance);
         
         Self {

@@ -1,5 +1,5 @@
 use crate::grid::Grid;
-use crate::medium::{Medium, tissue_specific};
+use crate::medium::{Medium, absorption::TissueType};
 use ndarray::{Array3, Axis, Zip}; // Restored Axis
 use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
@@ -660,7 +660,7 @@ impl Medium for HeterogeneousTissueMedium {
 mod tests {
     use super::*;
     use crate::grid::Grid;
-    use crate::medium::tissue_specific::TissueType;
+    use crate::medium::absorption::TissueType;
     // Removed: use ndarray::Axis; // Was unused in this test module
 
     fn create_test_grid_ht(nx: usize, ny: usize, nz: usize) -> Grid {

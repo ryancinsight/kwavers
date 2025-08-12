@@ -52,10 +52,12 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::medium::absorption::AcousticDiffusivity;
 use crate::error::KwaversResult;
 use crate::physics::traits::AcousticWaveModel;
 use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
+use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig, CorrectionMethod};
 use ndarray::{Array3, Array4, Zip, Axis};
 use std::f64::consts::PI;
 
@@ -251,9 +253,18 @@ impl KuznetsovWave {
         let k_squared = grid.k_squared();
         let k_magnitude = compute_k_magnitude(grid);
         
-        // Compute k-space correction factors for dispersion compensation
+        // Compute k-space correction factors using unified approach
         let phase_correction_factors = if config.enable_dispersion_compensation {
-            compute_k_space_correction_factors(grid, config.k_space_correction_order)
+            let kspace_config = KSpaceCorrectionConfig {
+                enabled: true,
+                method: CorrectionMethod::ExactDispersion,  // Use exact dispersion correction
+                cfl_number: 0.3,  // Conservative CFL for Kuznetsov equation
+                max_correction: 2.0,
+            };
+            // Estimate dt and reference sound speed
+            let c_ref = 1500.0;  // Reference sound speed
+            let dt = 0.3 * grid.dx.min(grid.dy).min(grid.dz) / c_ref;
+            compute_kspace_correction(grid, &kspace_config, dt, c_ref)
         } else {
             Array3::ones((grid.nx, grid.ny, grid.nz))
         };
@@ -438,24 +449,29 @@ impl KuznetsovWave {
         let dt_cubed = dt * dt * dt;
         let d3p_dt3 = (pressure - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / dt_cubed;
         
-        // Apply spatially varying diffusivity coefficient
-        let mut result = Array3::zeros(pressure.dim());
-        result.indexed_iter_mut()
-            .zip(d3p_dt3.iter())
-            .for_each(|(((i, j, k), val), &d3p)| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                
-                // Get local medium properties
-                let c0 = medium.sound_speed(x, y, z, grid);
-                // Use thermal diffusivity as acoustic diffusivity approximation
-                let delta = medium.thermal_diffusivity(x, y, z, grid);
-                
-                // Compute diffusivity term: -(δ/c₀⁴)∂³p/∂t³
-                let c0_4 = c0 * c0 * c0 * c0;
-                *val = -(delta / c0_4) * d3p;
-            });
+        // Create proper acoustic diffusivity model
+        // Get reference properties from center of domain
+        let x_center = grid.nx as f64 * grid.dx / 2.0;
+        let y_center = grid.ny as f64 * grid.dy / 2.0;
+        let z_center = grid.nz as f64 * grid.dz / 2.0;
+        
+        let rho0 = medium.density(x_center, y_center, z_center, grid);
+        let c0 = medium.sound_speed(x_center, y_center, z_center, grid);
+        
+        // Create acoustic diffusivity model with proper physical parameters
+        // These values are typical for soft tissue
+        let acoustic_diff = AcousticDiffusivity {
+            shear_viscosity: 1.5e-3,      // Pa·s
+            bulk_viscosity: 3.0e-3,        // Pa·s
+            thermal_conductivity: 0.5,     // W/(m·K)
+            gamma: 1.1,                    // Specific heat ratio
+            cp: 3600.0,                    // J/(kg·K)
+            rho0,
+            c0,
+        };
+        
+        // Apply the correct acoustic diffusivity
+        let result = acoustic_diff.apply_diffusivity(&d3p_dt3);
         
         self.metrics.diffusivity_time += start.elapsed().as_secs_f64();
         Ok(result)

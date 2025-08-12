@@ -594,7 +594,7 @@ impl PluginRegistry {
                 license: "MIT".to_string(),
             },
             |config: FdtdConfig| {
-                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?;
+                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
                 FdtdPlugin::new(config, &grid)
             },
         );
@@ -611,7 +611,7 @@ impl PluginRegistry {
                 license: "MIT".to_string(),
             },
             |config: PstdConfig| {
-                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?;
+                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
                 PstdPlugin::new(config, &grid)
             },
         );
@@ -878,22 +878,21 @@ impl ExecutionStrategy for ParallelStrategy {
                 plugins[idx].update(fields, grid, medium, dt, t, context)?;
             } else if self.use_field_cloning {
                 // Multiple plugins with field cloning for thread safety
-                let fields_clone = fields.clone();
-                let results: Vec<_> = group_indices
-                    .par_iter()
-                    .map(|&idx| {
-                        let mut local_fields = fields_clone.clone();
-                        let result = plugins[idx].update(
-                            &mut local_fields, 
-                            grid, 
-                            medium, 
-                            dt, 
-                            t, 
-                            context
-                        );
-                        (idx, local_fields, result)
-                    })
-                    .collect();
+                // Execute plugins sequentially for now to avoid borrow checker issues
+                // TODO: Implement proper parallel execution with thread-safe plugin access
+                let mut results = Vec::new();
+                for &idx in &group_indices {
+                    let mut local_fields = fields.clone();
+                    let result = plugins[idx].update(
+                        &mut local_fields, 
+                        grid, 
+                        medium, 
+                        dt, 
+                        t, 
+                        context
+                    );
+                    results.push((idx, local_fields, result));
+                }
                 
                 // Merge results back
                 for (idx, local_fields, result) in results {
@@ -922,17 +921,14 @@ impl ExecutionStrategy for ParallelStrategy {
                         }
                     ))?;
                 
-                // Execute plugins in parallel with field synchronization
-                let errors: Vec<_> = pool.install(|| {
-                    group_indices
-                        .par_iter()
-                        .filter_map(|&idx| {
-                            // Each plugin gets exclusive access to its required fields
-                            // This is safe because we've already verified no conflicts
-                            plugins[idx].update(fields, grid, medium, dt, t, context).err()
-                        })
-                        .collect()
-                });
+                // Execute plugins sequentially for now to avoid borrow checker issues
+                // TODO: Implement proper parallel execution with thread-safe plugin access
+                let mut errors = Vec::new();
+                for &idx in &group_indices {
+                    if let Err(e) = plugins[idx].update(fields, grid, medium, dt, t, context) {
+                        errors.push(e);
+                    }
+                }
                 
                 // Check for errors
                 if let Some(first_error) = errors.into_iter().next() {
@@ -954,6 +950,10 @@ fn field_type_to_index(field_type: &FieldType) -> Option<usize> {
         FieldType::Velocity => Some(1), // Assuming velocity x is at index 1
         FieldType::Temperature => Some(4),
         FieldType::Density => Some(5),
+        FieldType::Light => Some(6),
+        FieldType::Cavitation => Some(7),
+        FieldType::Chemical => Some(8),
+        FieldType::Stress => Some(9),
         FieldType::Custom(name) => {
             // Map custom fields to indices
             match name.as_str() {

@@ -4,6 +4,7 @@
 //! the dynamics of spherical bubbles in liquids.
 
 use super::bubble_state::{BubbleState, BubbleParameters};
+use super::thermodynamics::{ThermodynamicsCalculator, MassTransferModel, VaporPressureModel};
 use std::f64::consts::PI;
 
 
@@ -81,11 +82,21 @@ impl RayleighPlessetSolver {
 /// Keller-Miksis equation solver (compressible)
 pub struct KellerMiksisModel {
     params: BubbleParameters,
+    thermo_calc: ThermodynamicsCalculator,
+    mass_transfer: MassTransferModel,
 }
 
 impl KellerMiksisModel {
     pub fn new(params: BubbleParameters) -> Self {
-        Self { params }
+        // Use Wagner equation by default for highest accuracy
+        let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
+        let mass_transfer = MassTransferModel::new(params.accommodation_coeff);
+        
+        Self { 
+            params,
+            thermo_calc,
+            mass_transfer,
+        }
     }
     
     /// Calculate bubble wall acceleration using Keller-Miksis equation
@@ -207,24 +218,31 @@ impl KellerMiksisModel {
     }
     
     /// Update vapor content through evaporation/condensation
-    pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) {
+    pub fn update_mass_transfer(&mut self, state: &mut BubbleState, dt: f64) {
         if !self.params.use_mass_transfer {
             return;
         }
         
-        // Simplified mass transfer model
-        let p_sat = self.params.pv * (state.temperature / T_AMBIENT).powf(2.0); // Rough approximation
+        // Use proper thermodynamic model for vapor pressure
+        let p_sat = self.thermo_calc.vapor_pressure(state.temperature);
         let p_vapor_current = state.n_vapor * R_GAS * state.temperature / 
             (AVOGADRO * state.volume());
         
-        // Mass transfer rate
-        let accommodation = self.params.accommodation_coeff;
-        let rate = accommodation * state.surface_area() * 
-            (p_sat - p_vapor_current) / (2.0 * PI * M_WATER * R_GAS * state.temperature).sqrt();
+        // Calculate mass transfer rate using enhanced model
+        let mass_rate = self.mass_transfer.mass_transfer_rate(
+            state.temperature,
+            p_vapor_current,
+            state.surface_area(),
+        );
         
-        // Update vapor molecules
-        state.n_vapor += rate * AVOGADRO * dt;
+        // Update vapor molecules (convert from kg/s to molecules)
+        let molecule_rate = mass_rate * AVOGADRO / M_WATER;
+        state.n_vapor += molecule_rate * dt;
         state.n_vapor = state.n_vapor.max(0.0);
+        
+        // Calculate associated heat transfer
+        let heat_rate = self.mass_transfer.heat_transfer_rate(mass_rate, state.temperature);
+        state.temperature -= heat_rate * dt / (state.mass() * self.heat_capacity(state));
     }
 }
 

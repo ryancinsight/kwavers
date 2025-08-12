@@ -9,9 +9,7 @@ pub mod homogeneous;
 pub mod frequency_dependent;
 pub mod anisotropic;
 
-pub use absorption::power_law_absorption;
-pub use absorption::tissue_specific;
-pub use absorption::fractional_derivative;
+pub use absorption::{PowerLawAbsorption, TissueType, AcousticDiffusivity};
 pub use homogeneous::HomogeneousMedium;
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use anisotropic::{AnisotropicTissueProperties, StiffnessTensor, AnisotropyType};
@@ -58,7 +56,7 @@ pub trait Medium: Debug + Sync + Send {
     }
     
     /// Get the tissue type at a specific position (if medium supports tissue types)
-    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<tissue_specific::TissueType> { None }
+    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> { None }
 
     fn update_temperature(&mut self, temperature: &Array3<f64>);
     fn temperature(&self) -> &Array3<f64>;

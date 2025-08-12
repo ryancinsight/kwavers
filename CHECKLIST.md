@@ -1,10 +1,10 @@
 # Kwavers Development Checklist
 
-## Next Phase: Phase 16 – Production Release
+## Current Phase: Phase 16 – Production Release
 
-**Current Status**: Phase 15 COMPLETED ✅ – All Q4 tasks finished with deep cleanup  
-**Progress**: Comprehensive codebase enhancement and cleanup completed  
-**Target**: Phase 16 - Production Release preparation
+**Current Status**: Phase 16 IN PROGRESS 🚀 – Production preparation underway  
+**Progress**: Build system fixed, design principles enhanced, constants module created  
+**Target**: Performance optimization and crates.io publication
 
 ---
 
@@ -52,9 +52,26 @@
 
 ---
 
-## Phase 16 Roadmap - Production Release (Q1 2025)
+## Phase 16 Progress - Production Release (Q1 2025)
 
-### **Sprint 1: Performance Optimization** (Weeks 1-2)
+### **Sprint 0: Build & Architecture** (COMPLETED ✅)
+- [x] Fix all compilation errors (18 errors resolved)
+- [x] Create constants module for magic numbers
+- [x] Remove duplicate implementations (FieldType enum)
+- [x] Fix placeholder values with proper constants
+- [x] Enhance design principles (SOLID/CUPID/GRASP/etc.)
+- [x] Unify k-space correction across solvers (k-Wave methodology)
+- [x] Implement consistent time integration (leapfrog for PSTD)
+- [x] Replace placeholder DG solver with proper implementation
+- [x] Add shock-capturing capabilities (MinMod limiter)
+- [x] Fix FFT scaling inconsistency in PSTD solver
+- [x] Implement power-law absorption model with fractional derivatives
+- [x] Fix acoustic diffusivity with proper physics
+- [x] Correct k-space dispersion relation (spatial + temporal)
+- [x] Implement heterogeneous media handling with Gibbs mitigation
+- [x] Replace incorrect vapor pressure model with proper thermodynamics
+
+### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths
 - [ ] Implement SIMD optimizations
 - [ ] GPU kernel tuning

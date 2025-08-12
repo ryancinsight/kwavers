@@ -41,6 +41,7 @@ pub enum FieldType {
     Chemical,
     Velocity,
     Stress,
+    Density,
     Custom(String),
 }
 
@@ -54,6 +55,7 @@ impl FieldType {
             FieldType::Chemical => "chemical",
             FieldType::Velocity => "velocity",
             FieldType::Stress => "stress",
+            FieldType::Density => "density",
             FieldType::Custom(name) => name.as_str(),
         }
     }

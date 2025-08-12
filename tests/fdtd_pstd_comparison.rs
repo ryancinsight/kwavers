@@ -154,6 +154,9 @@ fn run_pstd_simulation_timed(
         anti_aliasing: true,
         pml_stencil_size: 4,
         cfl_factor: 0.3,
+        use_leapfrog: true,
+        enable_absorption: false,
+        absorption_model: None,
     };
     
     let mut plugin_manager = PluginManager::new();

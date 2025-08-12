@@ -17,6 +17,7 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod config;
+pub mod constants;
 pub mod error;
 pub mod factory;
 pub mod fft;
@@ -335,6 +336,9 @@ pub fn run_advanced_simulation(
         anti_aliasing: true,
         pml_stencil_size: 10,
         cfl_factor: 0.3,
+        use_leapfrog: true,
+        enable_absorption: false,
+        absorption_model: None,
     };
     plugin_manager.register(Box::new(
         solver::pstd::PstdPlugin::new(pstd_config, &grid)?

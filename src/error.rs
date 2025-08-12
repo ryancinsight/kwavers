@@ -594,6 +594,11 @@ pub enum SystemError {
         error_code: i32,
         reason: String,
     },
+    /// IO operation failed
+    Io {
+        operation: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for SystemError {
@@ -616,6 +621,9 @@ impl fmt::Display for SystemError {
             }
             SystemError::SystemCall { call, error_code, reason } => {
                 write!(f, "System call '{}' failed with error code {}: {}", call, error_code, reason)
+            }
+            SystemError::Io { operation, reason } => {
+                write!(f, "IO operation '{}' failed: {}", operation, reason)
             }
         }
     }
