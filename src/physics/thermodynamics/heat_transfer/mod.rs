@@ -7,14 +7,13 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError};
+use crate::physics::field_indices::TEMPERATURE_IDX;
 use crate::physics::traits::ThermalModelTrait;
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
 
 use std::time::Instant;
 
-// Temporary re-export of field indices for backward compatibility
-pub const TEMPERATURE_IDX: usize = 2;
 
 #[deprecated(since = "1.4.0", note = "Use crate::solver::thermal_diffusion::ThermalDiffusionSolver or create a thermal physics plugin")]
 #[derive(Debug)]

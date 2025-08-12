@@ -182,6 +182,8 @@ impl HeterogeneousHandler {
         let sound_speed = medium.sound_speed_array();
         
         // Apply smoothing based on selected method
+        // Note: For None case, we still need to clone as the smoothed arrays are stored
+        // This could be optimized with Cow (Clone-on-Write) in future iterations
         let (density_smooth, sound_speed_smooth) = match self.config.smoothing_method {
             SmoothingMethod::None => (density.clone(), sound_speed.clone()),
             SmoothingMethod::Gaussian => {

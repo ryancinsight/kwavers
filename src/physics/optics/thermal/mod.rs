@@ -1,11 +1,9 @@
 // physics/optics/thermal/mod.rs
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::field_indices::TEMPERATURE_IDX;
 use log::debug;
 use ndarray::{Array3, Array4, Axis, Zip};
-
-
-pub const TEMPERATURE_IDX: usize = 2;
 
 #[derive(Debug, Clone)]
 pub struct OpticalThermalModel {

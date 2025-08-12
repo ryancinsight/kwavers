@@ -34,10 +34,10 @@ impl CavitationModel {
         let state = PhysicsState::new(grid.clone());
         
         // Initialize bubble radius field
-        state.initialize_field(field_indices::BUBBLE_RADIUS, initial_radius).unwrap();
+        state.initialize_field(field_indices::BUBBLE_RADIUS_IDX, initial_radius).unwrap();
         
         // Initialize bubble velocity field to zero
-        state.initialize_field(field_indices::BUBBLE_VELOCITY, 0.0).unwrap();
+        state.initialize_field(field_indices::BUBBLE_VELOCITY_IDX, 0.0).unwrap();
         
         Self {
             state,
@@ -105,8 +105,8 @@ impl CavitationModelBehavior for CavitationModel {
         let start_time = std::time::Instant::now();
         
         // Get current bubble state
-        let radius = self.get_field(field_indices::BUBBLE_RADIUS)?;
-        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY)?;
+        let radius = self.get_field(field_indices::BUBBLE_RADIUS_IDX)?;
+        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY_IDX)?;
         
         // Create new arrays for updated values
         let mut new_radius = radius.clone();
@@ -153,8 +153,8 @@ impl CavitationModelBehavior for CavitationModel {
             });
         
         // Update state
-        self.update_field(field_indices::BUBBLE_RADIUS, &new_radius)?;
-        self.update_field(field_indices::BUBBLE_VELOCITY, &new_velocity)?;
+        self.update_field(field_indices::BUBBLE_RADIUS_IDX, &new_radius)?;
+        self.update_field(field_indices::BUBBLE_VELOCITY_IDX, &new_velocity)?;
         
         self.computation_time += start_time.elapsed();
         self.update_count += 1;
@@ -163,18 +163,18 @@ impl CavitationModelBehavior for CavitationModel {
     }
     
     fn bubble_radius(&self) -> KwaversResult<Array3<f64>> {
-        self.get_field(field_indices::BUBBLE_RADIUS)
+        self.get_field(field_indices::BUBBLE_RADIUS_IDX)
     }
     
     fn bubble_velocity(&self) -> KwaversResult<Array3<f64>> {
-        self.get_field(field_indices::BUBBLE_VELOCITY)
+        self.get_field(field_indices::BUBBLE_VELOCITY_IDX)
     }
     
     fn light_emission(&self) -> Array3<f64> {
         // Calculate light emission based on bubble dynamics
         // Light emission is proportional to the rate of bubble collapse
-        let radius = self.get_field(field_indices::BUBBLE_RADIUS).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
-        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        let radius = self.get_field(field_indices::BUBBLE_RADIUS_IDX).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY_IDX).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
         
         let mut emission = Array3::zeros(radius.dim());
         

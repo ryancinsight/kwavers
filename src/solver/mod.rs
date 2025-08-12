@@ -95,7 +95,21 @@ impl SimulationFields {
 }
 
 /// Monolithic solver struct that orchestrates the simulation
-/// NOTE: This violates SRP and should be refactored into a plugin-based architecture
+/// 
+/// DESIGN PRINCIPLE VIOLATIONS:
+/// - SRP: This class has too many responsibilities (physics, validation, timing, AMR, etc.)
+/// - DIP: Depends on concrete implementations rather than abstractions
+/// - OCP: Adding new physics requires modifying this class
+/// 
+/// REFACTORING NEEDED:
+/// - Use plugin_based_solver.rs as the foundation
+/// - Extract validation to ValidationManager
+/// - Extract timing/metrics to MetricsCollector
+/// - Extract field management to FieldManager
+/// - Use event-driven architecture for component communication
+/// 
+/// NOTE: This struct is kept for backward compatibility but should be deprecated
+/// in favor of the plugin-based architecture in plugin_based_solver.rs
 pub struct Solver {
     // Core components
     pub fields: SimulationFields,
