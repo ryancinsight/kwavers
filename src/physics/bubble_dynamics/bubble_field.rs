@@ -79,7 +79,19 @@ impl BubbleField {
                 dp_dt,
                 dt,
                 t,
-            ); // Ignore errors for now
+            if let Err(e) = integrate_bubble_dynamics_adaptive(
+                Arc::new(Mutex::new(self.solver.clone())),
+                state,
+                p_acoustic,
+                dp_dt,
+                dt,
+                t,
+            ) {
+                eprintln!(
+                    "Bubble dynamics integration failed at position ({}, {}, {}): {:?}",
+                    i, j, k, e
+                );
+            }
         }
         
         // Record history for tracking
