@@ -58,6 +58,7 @@ impl RayleighPlessetSolver {
 }
 
 /// Keller-Miksis equation solver (compressible)
+#[derive(Clone)]
 pub struct KellerMiksisModel {
     params: BubbleParameters,
     thermo_calc: ThermodynamicsCalculator,
@@ -237,6 +238,9 @@ impl KellerMiksisModel {
 }
 
 /// Integrate bubble dynamics for one time step
+/// 
+/// **DEPRECATED**: Use `integrate_bubble_dynamics_adaptive` for better stability
+#[deprecated(since = "1.6.0", note = "Use integrate_bubble_dynamics_adaptive for stiff ODE handling")]
 pub fn integrate_bubble_dynamics(
     solver: &KellerMiksisModel,
     state: &mut BubbleState,
@@ -245,8 +249,7 @@ pub fn integrate_bubble_dynamics(
     dt: f64,
     t: f64,
 ) {
-    // Store previous state
-    let r0 = solver.params.r0;
+    let r0 = state.params.r0;
     
     // Calculate acceleration
     let acceleration = solver.calculate_acceleration(state, p_acoustic, dp_dt, t);
@@ -255,9 +258,10 @@ pub fn integrate_bubble_dynamics(
     state.wall_velocity += acceleration * dt;
     state.radius += state.wall_velocity * dt + 0.5 * acceleration * dt * dt;
     
-    // Enforce physical limits
-    state.radius = state.radius.max(MIN_RADIUS).min(MAX_RADIUS);
-    state.wall_velocity = state.wall_velocity.max(-1000.0).min(1000.0);
+    // WARNING: Removed clamping - use adaptive integration for stability
+    // The following lines were removed as they violate conservation laws:
+    // state.radius = state.radius.max(MIN_RADIUS).min(MAX_RADIUS);
+    // state.wall_velocity = state.wall_velocity.max(-1000.0).min(1000.0);
     
     // Update derived quantities
     state.update_compression(r0);
@@ -266,6 +270,32 @@ pub fn integrate_bubble_dynamics(
     // Update temperature and mass transfer
     solver.update_temperature(state, dt);
     solver.update_mass_transfer(state, dt);
+}
+
+/// Integrate bubble dynamics with proper handling of stiff ODEs
+/// 
+/// This is the recommended integration method that uses adaptive time-stepping
+/// with sub-cycling to handle the stiff nature of bubble dynamics equations.
+pub fn integrate_bubble_dynamics_stable(
+    solver: &KellerMiksisModel,
+    state: &mut BubbleState,
+    p_acoustic: f64,
+    dp_dt: f64,
+    dt: f64,
+    t: f64,
+) -> KwaversResult<()> {
+    use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
+    use std::sync::Arc;
+    
+    // Use adaptive integration with sub-cycling
+    integrate_bubble_dynamics_adaptive(
+        Arc::new(solver.clone()),
+        state,
+        p_acoustic,
+        dp_dt,
+        dt,
+        t,
+    )
 }
 
 #[cfg(test)]

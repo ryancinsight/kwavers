@@ -200,6 +200,15 @@ impl Grid {
 
     /// Calculates the maximum stable time step based on the CFL condition.
     /// 
+    /// For 3D simulations, the CFL condition requires:
+    /// dt ≤ min(dx, dy, dz) / (c * sqrt(3))
+    /// 
+    /// Reference: Taflove & Hagness, "Computational Electrodynamics: The Finite-Difference
+    /// Time-Domain Method", 3rd Edition, Section 4.8 for 3D FDTD stability.
+    /// 
+    /// For k-space methods, the stability criteria can be different, but we use the
+    /// conservative 3D FDTD criterion to ensure stability across all methods.
+    /// 
     /// # Arguments
     /// * `sound_speed` - The maximum sound speed in the medium (m/s)
     /// * `cfl_factor` - Safety factor for CFL condition (default: 0.3 for k-space methods)
@@ -213,9 +222,11 @@ impl Grid {
         let (dx, dy, dz) = self.spacing();
         let min_spacing = dx.min(dy).min(dz);
         
-        // For k-space methods, we use a relaxed CFL condition
-        // The factor of 1.414 (sqrt(2)) accounts for the 3D nature of the problem
-        min_spacing / (sound_speed * 1.414) * cfl_factor
+        // For 3D simulations, the CFL stability factor is sqrt(3) ≈ 1.732
+        // This ensures stability for wave propagation in all diagonal directions
+        let stability_factor = 3.0_f64.sqrt();
+        
+        min_spacing / (sound_speed * stability_factor) * cfl_factor
     }
 
     /// Calculates the maximum stable time step based on the CFL condition with default CFL factor.

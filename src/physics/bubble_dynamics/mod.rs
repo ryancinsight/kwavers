@@ -13,6 +13,7 @@ pub mod bubble_field;
 pub mod interactions;
 pub mod thermodynamics;
 pub mod imex_integration;
+pub mod adaptive_integration;  // NEW: Adaptive time-stepping for stiff ODEs
 
 pub use bubble_state::{BubbleState, BubbleParameters, GasSpecies};
 pub use rayleigh_plesset::{RayleighPlessetSolver, KellerMiksisModel};
@@ -20,4 +21,8 @@ pub use bubble_field::{BubbleField, BubbleCloud, BubbleStateFields};
 pub use interactions::{BubbleInteractions, BjerknesForce, CollectiveEffects};
 pub use imex_integration::{
     BubbleIMEXIntegrator, BubbleIMEXConfig, integrate_bubble_dynamics_imex
+};
+pub use adaptive_integration::{
+    AdaptiveBubbleIntegrator, AdaptiveBubbleConfig, 
+    integrate_bubble_dynamics_adaptive, IntegrationStatistics
 };
