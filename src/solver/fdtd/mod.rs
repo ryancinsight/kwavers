@@ -136,10 +136,10 @@ impl PluginConfig for FdtdConfig {
         
         // Validate CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
-            errors.push(ValidationError::InvalidParameter {
+            errors.push(ValidationError::FieldValidation {
                 field: "cfl_factor".to_string(),
-                message: format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor),
-                expected_range: Some("(0, 1]".to_string()),
+                value: self.cfl_factor.to_string(),
+                constraint: "Must be in (0, 1]".to_string(),
             });
         } else if self.cfl_factor > 0.7 {
             warnings.push(ValidationWarning {

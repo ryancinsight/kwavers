@@ -328,7 +328,7 @@ impl RecorderTrait for Recorder {
     }
     
     fn finalize(&mut self) -> KwaversResult<()> {
-        self.save_to_file(&self.filename)?;
+        self.save()?;
         info!("Recorder finalized. Data saved to {}", self.filename);
         Ok(())
     }

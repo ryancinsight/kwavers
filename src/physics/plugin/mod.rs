@@ -207,7 +207,7 @@ impl PluginManager {
         // Execute plugins in dependency order
         for &idx in &self.execution_order {
             if let Some(plugin) = self.plugins.get_mut(idx) {
-                plugin.execute(&context, fields, grid, medium)?;
+                plugin.update(fields, grid, medium, dt, t, &context)?;
             }
         }
         
@@ -335,7 +335,7 @@ impl PluginManager {
         for plugin in &self.plugins {
             fields.extend(plugin.provided_fields());
         }
-        fields.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        fields.sort_by(|a, b| a.name().cmp(b.name()));
         fields.dedup();
         fields
     }
@@ -355,11 +355,10 @@ impl PluginManager {
         for plugin in &self.plugins {
             for required in plugin.required_fields() {
                 if !available.contains(&required) {
-                    result.add_error(format!(
-                        "Plugin '{}' requires field '{}' which is not provided by any plugin",
-                        plugin.metadata().id,
-                        required.as_str()
-                    ));
+                    result.add_error(ValidationError::DependencyValidation {
+                        field: plugin.metadata().id.clone(),
+                        missing_dependency: required.name().to_string(),
+                    });
                 }
             }
         }

@@ -141,19 +141,21 @@ impl PluginConfig for PstdConfig {
         
         // Validate k-space order
         if self.k_space_order < 2 || self.k_space_order > 8 {
-            errors.push(ValidationError::InvalidParameter {
+            errors.push(ValidationError::FieldValidation {
                 field: "k_space_order".to_string(),
-                message: format!("Invalid k-space order: {}. Must be between 2 and 8", self.k_space_order),
-                expected_range: Some("2..=8".to_string()),
+                value: self.k_space_order.to_string(),
+                constraint: "Must be between 2 and 8".to_string(),
+
             });
         }
         
         // Validate CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
-            errors.push(ValidationError::InvalidParameter {
+            errors.push(ValidationError::FieldValidation {
                 field: "cfl_factor".to_string(),
-                message: format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor),
-                expected_range: Some("(0, 1]".to_string()),
+                value: self.cfl_factor.to_string(),
+                constraint: "Must be in (0, 1]".to_string(),
+
             });
         } else if self.cfl_factor > 0.5 {
             warnings.push(ValidationWarning {
@@ -166,10 +168,11 @@ impl PluginConfig for PstdConfig {
         
         // Validate PML stencil size
         if self.pml_stencil_size < 2 || self.pml_stencil_size > 10 {
-            errors.push(ValidationError::InvalidParameter {
+            errors.push(ValidationError::FieldValidation {
                 field: "pml_stencil_size".to_string(),
-                message: format!("Invalid PML stencil size: {}. Must be between 2 and 10", self.pml_stencil_size),
-                expected_range: Some("2..=10".to_string()),
+                value: self.pml_stencil_size.to_string(),
+                constraint: "Must be between 2 and 10".to_string(),
+
             });
         }
         

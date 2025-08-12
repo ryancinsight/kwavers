@@ -37,6 +37,17 @@ pub struct AcousticScattering {
 }
 
 impl AcousticScattering {
+    /// Get field data
+    pub fn get_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
+        let guard = self.state.get_field(field_index)?;
+        Ok(guard.to_owned()) // Convert view to owned array
+    }
+    
+    /// Update field data
+    pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
+        self.state.update_field(field_index, data)
+    }
+    
     /// Create a new acoustic scattering model
     pub fn new(grid: &Grid, frequency: f64, scattering_strength: f64) -> Self {
         let state = PhysicsState::new(grid);

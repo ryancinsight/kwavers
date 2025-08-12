@@ -541,14 +541,18 @@ impl ChemicalModel {
         dt: f64,
     ) -> KwaversResult<()> {
         // Create params struct from views
+        let pressure_owned = pressure.to_owned();
+        let light_owned = light.to_owned();
+        let temperature_owned = temperature.to_owned();
         let params = ChemicalUpdateParams {
-            pressure: pressure.to_owned(), // Only clone when absolutely necessary
-            light: light.to_owned(),
-            emission_spectrum: emission_spectrum.clone(),
-            bubble_radius: bubble_radius.clone(),
-            temperature: temperature.to_owned(),
-            grid: grid.clone(),
+            pressure: &pressure_owned,
+            light: &light_owned,
+            emission_spectrum,
+            bubble_radius,
+            temperature: &temperature_owned,
+            grid,
             dt,
+            medium,
             frequency: 1e6, // Default frequency, should be passed as parameter
         };
         

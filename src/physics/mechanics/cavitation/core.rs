@@ -31,7 +31,7 @@ pub struct CavitationModel {
 impl CavitationModel {
     /// Create a new cavitation model
     pub fn new(grid: &Grid, initial_radius: f64) -> Self {
-        let state = PhysicsState::new(grid);
+        let state = PhysicsState::new(grid.clone());
         
         // Initialize bubble radius field
         state.initialize_field(field_indices::BUBBLE_RADIUS, initial_radius).unwrap();
@@ -62,7 +62,7 @@ impl CavitationModel {
     /// Get a field from the physics state
     pub fn get_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         let guard = self.state.get_field(field_index)?;
-        Ok(guard.clone())
+        Ok(guard.to_owned())  // Convert view to owned array
     }
     
     /// Update a field in the physics state
