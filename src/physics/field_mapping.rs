@@ -181,22 +181,22 @@ impl<'a> FieldAccessorMut<'a> {
     }
     
     /// Get a specific field mutably by type
-    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), field_type.index())
     }
     
     /// Get pressure field mutably
-    pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index())
     }
     
     /// Get temperature field mutably
-    pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Temperature.index())
     }
     
     /// Get density field mutably
-    pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Density.index())
     }
 }

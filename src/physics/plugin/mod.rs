@@ -935,10 +935,11 @@ impl ExecutionStrategy for ParallelStrategy {
                         // Note: This won't compile as we can't mutably borrow in parallel
                         // This needs architectural change - plugins should be immutable
                         // For now, return error
-                        (idx, local_fields, Err(PhysicsError::InvalidConfiguration {
+                        let error: KwaversResult<()> = Err(PhysicsError::InvalidConfiguration {
                             component: "ParallelStrategy".to_string(),
                             reason: "Parallel plugin execution requires immutable plugins".to_string()
-                        }.into()))
+                        }.into());
+                        (idx, local_fields, error)
                     })
                     .collect();
                 
