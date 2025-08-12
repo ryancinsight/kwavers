@@ -11,15 +11,16 @@ mod tests {
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
     use crate::medium::Medium;
-    use crate::physics::composable::{FieldType, ValidationResult};
+    use crate::physics::UnifiedFieldType;
+    use crate::validation::ValidationResult;
     use ndarray::Array4;
 
     /// Mock plugin for testing
     #[derive(Debug)]
     struct MockPlugin {
         id: String,
-        dependencies: Vec<FieldType>,
-        outputs: Vec<FieldType>,
+        dependencies: Vec<UnifiedFieldType>,
+        outputs: Vec<UnifiedFieldType>,
         apply_called: std::sync::Arc<std::sync::atomic::AtomicUsize>,
         metadata: PluginMetadata,
     }
@@ -43,12 +44,12 @@ mod tests {
             }
         }
 
-        fn with_dependencies(mut self, deps: Vec<FieldType>) -> Self {
+        fn with_dependencies(mut self, deps: Vec<UnifiedFieldType>) -> Self {
             self.dependencies = deps;
             self
         }
 
-        fn with_outputs(mut self, outputs: Vec<FieldType>) -> Self {
+        fn with_outputs(mut self, outputs: Vec<UnifiedFieldType>) -> Self {
             self.outputs = outputs;
             self
         }
@@ -71,11 +72,11 @@ mod tests {
             Ok(())
         }
 
-        fn required_fields(&self) -> Vec<FieldType> {
+        fn required_fields(&self) -> Vec<UnifiedFieldType> {
             self.dependencies.clone()
         }
 
-        fn provided_fields(&self) -> Vec<FieldType> {
+        fn provided_fields(&self) -> Vec<UnifiedFieldType> {
             self.outputs.clone()
         }
 
@@ -131,18 +132,18 @@ mod tests {
         // Create plugins with dependencies
         let plugin1 = Box::new(
             MockPlugin::new("plugin1")
-                .with_outputs(vec![FieldType::Pressure])
+                .with_outputs(vec![UnifiedFieldType::Pressure]
         );
         
         let plugin2 = Box::new(
             MockPlugin::new("plugin2")
-                .with_dependencies(vec![FieldType::Pressure])
-                .with_outputs(vec![FieldType::Velocity])
+                .with_dependencies(vec![UnifiedFieldType::Pressure]
+                .with_outputs(vec![UnifiedFieldType::VelocityX]
         );
         
         let plugin3 = Box::new(
             MockPlugin::new("plugin3")
-                .with_dependencies(vec![FieldType::Velocity])
+                .with_dependencies(vec![UnifiedFieldType::VelocityX]
         );
         
         // Register in arbitrary order
@@ -168,20 +169,20 @@ mod tests {
         // Create plugins with circular dependencies
         let plugin_a = Box::new(
             MockPlugin::new("plugin_a")
-                .with_dependencies(vec![FieldType::Custom("plugin_b".to_string())])
-                .with_outputs(vec![FieldType::Custom("plugin_a".to_string())])
+                .with_dependencies(vec![UnifiedFieldType::Pressure)])
+                .with_outputs(vec![UnifiedFieldType::Pressure)])
         );
         
         let plugin_b = Box::new(
             MockPlugin::new("plugin_b")
-                .with_dependencies(vec![FieldType::Custom("plugin_c".to_string())])
-                .with_outputs(vec![FieldType::Custom("plugin_b".to_string())])
+                .with_dependencies(vec![UnifiedFieldType::Pressure)])
+                .with_outputs(vec![UnifiedFieldType::Pressure)])
         );
         
         let plugin_c = Box::new(
             MockPlugin::new("plugin_c")
-                .with_dependencies(vec![FieldType::Custom("plugin_a".to_string())])
-                .with_outputs(vec![FieldType::Custom("plugin_c".to_string())])
+                .with_dependencies(vec![UnifiedFieldType::Pressure)])
+                .with_outputs(vec![UnifiedFieldType::Pressure)])
         );
         
         // Register plugins
@@ -310,15 +311,15 @@ mod tests {
     #[test]
     fn test_plugin_cloning() {
         let original = MockPlugin::new("clone_test")
-            .with_dependencies(vec![FieldType::Pressure])
-            .with_outputs(vec![FieldType::Temperature]);
+            .with_dependencies(vec![UnifiedFieldType::Pressure]
+            .with_outputs(vec![UnifiedFieldType::Temperature];
         
         let cloned = original.clone_plugin();
         
         // Verify the clone has the same properties
         assert_eq!(cloned.metadata().id, "clone_test");
-        assert_eq!(cloned.required_fields(), vec![FieldType::Pressure]);
-        assert_eq!(cloned.provided_fields(), vec![FieldType::Temperature]);
+        assert_eq!(cloned.required_fields(), vec![UnifiedFieldType::Pressure];
+        assert_eq!(cloned.provided_fields(), vec![UnifiedFieldType::Temperature];
     }
     
     #[test]
@@ -340,18 +341,18 @@ mod tests {
         // Create plugins with dependencies to test execution order
         let producer = Box::new(
             MockPlugin::new("producer")
-                .with_outputs(vec![FieldType::Pressure])
+                .with_outputs(vec![UnifiedFieldType::Pressure]
         );
         
         let consumer = Box::new(
             MockPlugin::new("consumer")
-                .with_dependencies(vec![FieldType::Pressure])
-                .with_outputs(vec![FieldType::Temperature])
+                .with_dependencies(vec![UnifiedFieldType::Pressure]
+                .with_outputs(vec![UnifiedFieldType::Temperature]
         );
         
         let final_consumer = Box::new(
             MockPlugin::new("final_consumer")
-                .with_dependencies(vec![FieldType::Temperature])
+                .with_dependencies(vec![UnifiedFieldType::Temperature]
         );
         
         // Register in wrong order to test dependency resolution

@@ -386,7 +386,7 @@ mod tests {
     use super::*;
     use crate::medium::HomogeneousMedium;
     use crate::boundary::PMLBoundary;
-    use crate::source::GaussianSource;
+
     
     #[test]
     fn test_field_registry() {

@@ -224,7 +224,7 @@ mod tests {
         fn absorption_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 0.1 }
         fn reduced_scattering_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { 1.0 }
         fn reference_frequency(&self) -> f64 { 1e6 }
-        fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<tissue_specific::TissueType> { None }
+        fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<crate::medium::absorption::TissueType> { None }
         fn update_temperature(&mut self, _temperature: &Array3<f64>) {}
         fn bubble_radius(&self) -> &Array3<f64> { &self.dummy_bubble_radius }
         fn bubble_velocity(&self) -> &Array3<f64> { &self.dummy_bubble_velocity }
