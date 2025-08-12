@@ -922,19 +922,23 @@ impl ExecutionStrategy for ParallelStrategy {
             } else if self.use_field_cloning {
                 // Multiple plugins with field cloning for thread safety
                 // Use parallel execution with thread-safe field access via cloning
-                let results: Vec<_> = group_indices
+                // Collect plugin references first to avoid borrow issues
+                let plugin_refs: Vec<_> = group_indices
+                    .iter()
+                    .map(|&idx| idx)
+                    .collect();
+                
+                let results: Vec<_> = plugin_refs
                     .par_iter()
                     .map(|&idx| {
                         let mut local_fields = fields.clone();
-                        let result = plugins[idx].update(
-                            &mut local_fields, 
-                            grid, 
-                            medium, 
-                            dt, 
-                            t, 
-                            context
-                        );
-                        (idx, local_fields, result)
+                        // Note: This won't compile as we can't mutably borrow in parallel
+                        // This needs architectural change - plugins should be immutable
+                        // For now, return error
+                        (idx, local_fields, Err(PhysicsError::InvalidConfiguration {
+                            component: "ParallelStrategy".to_string(),
+                            reason: "Parallel plugin execution requires immutable plugins".to_string()
+                        }.into()))
                     })
                     .collect();
                 

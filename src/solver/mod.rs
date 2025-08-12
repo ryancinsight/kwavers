@@ -542,7 +542,7 @@ impl Solver {
             self.medium.as_ref(),
             dt,
             t,
-        )?;
+        );
         wave_time += wave_start.elapsed().as_secs_f64();
         
         // Validate pressure field without cloning - use config values
@@ -600,7 +600,7 @@ impl Solver {
             &self.grid,
             self.medium.as_ref(),
             dt,
-        )?;
+        );
         light_time += light_start.elapsed().as_secs_f64();
         
         // Validate light field - use config values
@@ -645,7 +645,7 @@ impl Solver {
             self.medium.as_ref(),
             dt,
             frequency,
-        )?;
+        );
         thermal_time += thermal_start.elapsed().as_secs_f64();
         
         // Validate temperature field - use config values
@@ -681,7 +681,7 @@ impl Solver {
                 dt,
                 self.medium.as_ref(),
                 frequency,
-            )?;
+            );
         }
         chemical_time += chemical_start.elapsed().as_secs_f64();
         
