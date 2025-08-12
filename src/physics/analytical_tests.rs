@@ -13,6 +13,7 @@ use crate::source::NullSource;
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::f64::consts::PI;
 use log::info;
+use crate::constants::optics::{GAUSSIAN_PULSE_WIDTH_FACTOR, GAUSSIAN_PULSE_CENTER_FACTOR, WINDOW_WIDTH_FACTOR};
 
 // Physical constants for dispersion correction
 /// Second-order dispersion correction coefficient for k-space methods
@@ -392,8 +393,8 @@ mod tests {
         let mut prev_pressure = grid.zeros_array();
         
         // Set initial condition: Gaussian pulse
-        let pulse_width = 10.0 * dx;
-        let pulse_center = 20.0 * dx;
+        let pulse_width = GAUSSIAN_PULSE_WIDTH_FACTOR * dx;
+        let pulse_center = GAUSSIAN_PULSE_CENTER_FACTOR * dx;
         for i in 0..nx {
             let x = i as f64 * dx;
             let envelope = amplitude * (-(x - pulse_center).powi(2) / (2.0 * pulse_width.powi(2))).exp();
@@ -608,7 +609,7 @@ mod tests {
         let mut pressure = grid.zeros_array();
         
         // Add window function to reduce edge effects
-        let window_width = 10.0 * dx;
+        let window_width = WINDOW_WIDTH_FACTOR * dx;
         
         for i in 0..nx {
             let x = i as f64 * dx;

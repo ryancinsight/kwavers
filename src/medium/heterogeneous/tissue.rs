@@ -1,10 +1,9 @@
 use crate::grid::Grid;
-use crate::medium::{Medium, absorption::TissueType};
+use crate::medium::{Medium, absorption::{TissueType, tissue_specific}};
 use ndarray::{Array3, Axis, Zip}; // Restored Axis
 use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
 // Removed std::sync::Arc
-use tissue_specific::TissueType; // Removed TissueProperties
 use crate::error::{KwaversResult, ConfigError};
 
 /// Configuration for setting tissue in a specific region
@@ -495,19 +494,15 @@ impl Medium for HeterogeneousTissueMedium {
             let pressure = self.pressure_amplitude.as_ref().map(|p| p[indices]);
             
             // Use the tissue-specific absorption model
-            tissue_specific::tissue_absorption_coefficient(
+            crate::medium::absorption::tissue_specific_absorption(
                 tissue,
-                frequency,
-                temperature,
-                pressure
+                frequency
             )
         } else {
             // Default to soft tissue if out of bounds
-            tissue_specific::tissue_absorption_coefficient(
+            crate::medium::absorption::tissue_specific_absorption(
                 TissueType::SoftTissue,
-                frequency,
-                310.15, // Body temperature
-                None
+                frequency
             )
         }
     }

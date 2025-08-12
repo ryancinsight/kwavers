@@ -112,12 +112,6 @@ impl AcousticScattering {
     }
 }
 
-impl FieldAccessor for AcousticScattering {
-    fn physics_state(&self) -> &PhysicsState {
-        &self.state
-    }
-}
-
 impl AcousticScatteringModelTrait for AcousticScattering {
     fn compute_scattering(
         &mut self,

@@ -16,7 +16,7 @@
 //! `new()` and a convenience constructor `water()` for water-like properties.
 
 use crate::grid::Grid;
-use crate::medium::{absorption, power_law_absorption, Medium};
+use crate::medium::{absorption, absorption::power_law_absorption, Medium};
 use log::debug;
 use ndarray::Array3; // Zip might not be used directly in this file anymore
 use std::sync::{Mutex, OnceLock};

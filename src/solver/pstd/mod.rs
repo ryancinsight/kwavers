@@ -84,7 +84,7 @@ use crate::medium::absorption::{PowerLawAbsorption, TissueType, apply_power_law_
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
-use crate::physics::composable::ValidationResult;
+use crate::validation::ValidationResult;
 use crate::constants::cfl;
 use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig, CorrectionMethod};
 use ndarray::{Array3, Array4, Axis, Zip, s};
@@ -873,17 +873,26 @@ impl PhysicsPlugin for PstdPlugin {
         Ok(())
     }
     
-    fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
-        use crate::physics::composable::FieldType;
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        use crate::physics::field_mapping::UnifiedFieldType;
         vec![
-            FieldType::Pressure,
-            FieldType::Velocity,
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+            UnifiedFieldType::Density,
+            UnifiedFieldType::SoundSpeed,
         ]
     }
     
-    fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
-        // PSTD updates the same fields it requires
-        self.required_fields()
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        vec![
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+        ]
     }
     
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {

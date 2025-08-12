@@ -1066,7 +1066,7 @@ impl HybridSolver {
 }
 
 use crate::physics::plugin::{PhysicsPlugin, PluginState, PluginContext};
-use crate::physics::composable::FieldType;
+use crate::physics::field_mapping::UnifiedFieldType;
 use std::any::Any;
 
 impl PhysicsPlugin for HybridSolver {
@@ -1075,20 +1075,27 @@ impl PhysicsPlugin for HybridSolver {
     }
     
     fn state(&self) -> PluginState {
-        match self.state {
-            SolverState::Initialized => PluginState::Initialized,
-            SolverState::Running => PluginState::Running,
-            SolverState::Error(_) => PluginState::Error,
-            SolverState::Finalized => PluginState::Finalized,
-        }
+        self.state.clone()
     }
     
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure, FieldType::Velocity]
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+            UnifiedFieldType::Density,
+            UnifiedFieldType::SoundSpeed,
+        ]
     }
     
-    fn provided_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure, FieldType::Velocity]
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+        ]
     }
     
     fn initialize(
@@ -1144,7 +1151,7 @@ impl PhysicsPlugin for HybridSolver {
         Ok(())
     }
     
-    fn can_execute(&self, available_fields: &[FieldType]) -> bool {
+    fn can_execute(&self, available_fields: &[UnifiedFieldType]) -> bool {
         // Check if required fields are available
         self.required_fields()
             .iter()
@@ -1155,24 +1162,38 @@ impl PhysicsPlugin for HybridSolver {
         self.metrics.get_summary()
     }
     
-    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> crate::physics::composable::ValidationResult {
-        let mut result = crate::physics::composable::ValidationResult::new();
+    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> crate::validation::ValidationResult {
+        use crate::validation::{ValidationResult, ValidationError, ValidationWarning, ValidationContext, ValidationMetadata};
+        
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
         
         // Validate grid compatibility
         if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
-            result.add_error("Grid dimensions must be at least 16x16x16 for hybrid solver".to_string());
+            errors.push(ValidationError::InvalidConfiguration {
+                parameter: "grid_dimensions".to_string(),
+                value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
+                reason: "Grid dimensions must be at least 16x16x16 for hybrid solver".to_string(),
+            });
         }
         
-        // Validate configuration
-        if self.config.coupling_interface.buffer_width == 0 {
-            result.add_error("Buffer width must be greater than 0".to_string());
+        // Validate medium compatibility
+        if medium.is_heterogeneous() {
+            warnings.push(ValidationWarning {
+                message: "Heterogeneous media may require additional computational resources".to_string(),
+                severity: crate::validation::WarningSeverity::Medium,
+                suggestion: Some("Consider using adaptive mesh refinement".to_string()),
+            });
         }
         
-        if self.config.coupling_interface.smoothing_factor < 0.0 || self.config.coupling_interface.smoothing_factor > 1.0 {
-            result.add_error("Smoothing factor must be between 0 and 1".to_string());
+        // Create validation result
+        ValidationResult {
+            is_valid: errors.is_empty(),
+            errors,
+            warnings,
+            context: ValidationContext::default(),
+            metadata: ValidationMetadata::default(),
         }
-        
-        result
     }
     
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
@@ -1225,10 +1246,14 @@ mod tests {
         // Test required and provided fields
         let required = solver.required_fields();
         let provided = solver.provided_fields();
-        assert!(required.contains(&FieldType::Pressure));
-        assert!(required.contains(&FieldType::Velocity));
-        assert!(provided.contains(&FieldType::Pressure));
-        assert!(provided.contains(&FieldType::Velocity));
+        assert!(required.contains(&UnifiedFieldType::Pressure));
+        assert!(required.contains(&UnifiedFieldType::VelocityX));
+        assert!(required.contains(&UnifiedFieldType::VelocityY));
+        assert!(required.contains(&UnifiedFieldType::VelocityZ));
+        assert!(provided.contains(&UnifiedFieldType::Pressure));
+        assert!(provided.contains(&UnifiedFieldType::VelocityX));
+        assert!(provided.contains(&UnifiedFieldType::VelocityY));
+        assert!(provided.contains(&UnifiedFieldType::VelocityZ));
         
         // Test state
         assert_eq!(solver.state(), PluginState::Initialized);

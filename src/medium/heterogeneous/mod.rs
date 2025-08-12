@@ -1,6 +1,6 @@
 // src/medium/heterogeneous/mod.rs
 use crate::grid::Grid;
-use crate::medium::{absorption, power_law_absorption, Medium};
+use crate::medium::{absorption, absorption::power_law_absorption, Medium};
 use log::debug;
 use ndarray::{Array3, Zip};
 

@@ -1,29 +1,24 @@
 // src/physics/plugin/mod.rs
-//! Plugin Architecture for Extensible Physics Modules
+//! Plugin architecture for extensible physics
 //! 
-//! This module implements a plugin system that follows key design principles:
-//! - **SOLID**: Single responsibility plugins with clear interfaces
-//! - **CUPID**: Composable, Unix-like, Predictable, Idiomatic, Domain-focused
-//! - **GRASP**: Information expert pattern with proper encapsulation
-//! - **DRY**: Shared utilities and common interfaces
-//! - **KISS**: Simple, intuitive plugin API
-//! - **YAGNI**: Only essential features implemented
-//! - **Clean**: Clear abstractions and comprehensive documentation
+//! This module provides a flexible plugin system for physics simulations
 
-pub mod adapters;
-pub use adapters::{ComponentPluginAdapter, factories::{acoustic_wave_plugin, thermal_diffusion_plugin}};
+pub mod tests;
+pub mod field_access;  // NEW: Safe field access for plugins
 
-#[cfg(test)]
-mod tests;
-
-use crate::error::KwaversResult;
+use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::composable::{FieldType, ValidationResult};
+use crate::physics::field_mapping::UnifiedFieldType;
+use crate::validation::ValidationResult;
 use ndarray::Array4;
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex, RwLock};
+use log::{debug, info, warn};
+
+pub use field_access::{PluginFieldAccess, DirectPluginFieldAccess};
 
 /// Metadata about a physics plugin
 #[derive(Debug, Clone)]
@@ -75,10 +70,10 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     fn state(&self) -> PluginState;
     
     /// Get the list of field types this plugin requires as input
-    fn required_fields(&self) -> Vec<FieldType>;
+    fn required_fields(&self) -> Vec<UnifiedFieldType>;
     
     /// Get the list of field types this plugin provides as output
-    fn provided_fields(&self) -> Vec<FieldType>;
+    fn provided_fields(&self) -> Vec<UnifiedFieldType>;
     
     /// Initialize the plugin
     /// 
@@ -113,7 +108,7 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     }
     
     /// Check if the plugin can execute with the given available fields
-    fn can_execute(&self, available_fields: &[FieldType]) -> bool {
+    fn can_execute(&self, available_fields: &[UnifiedFieldType]) -> bool {
         self.required_fields()
             .iter()
             .all(|req| available_fields.contains(req))
@@ -175,7 +170,7 @@ pub struct PluginManager {
     /// Registered plugins
     plugins: Vec<Box<dyn PhysicsPlugin>>,
     /// Field dependency graph
-    field_dependencies: HashMap<FieldType, Vec<String>>,
+    field_dependencies: HashMap<UnifiedFieldType, Vec<String>>,
     /// Execution order based on dependencies
     execution_order: Vec<usize>,
 }
@@ -188,6 +183,35 @@ impl PluginManager {
             field_dependencies: HashMap::new(),
             execution_order: Vec::new(),
         }
+    }
+    
+    /// Get the number of registered plugins/components
+    pub fn component_count(&self) -> usize {
+        self.plugins.len()
+    }
+    
+    /// Execute all plugins in dependency order
+    pub fn execute(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        step: usize,
+        total_steps: usize,
+    ) -> KwaversResult<()> {
+        // Create plugin context
+        let context = PluginContext::new(step, total_steps, 1e6) // Default frequency
+            .with_parameter("dt".to_string(), dt);
+        
+        // Execute plugins in dependency order
+        for &idx in &self.execution_order {
+            if let Some(plugin) = self.plugins.get_mut(idx) {
+                plugin.execute(&context, fields, grid, medium)?;
+            }
+        }
+        
+        Ok(())
     }
     
     /// Register a plugin
@@ -227,7 +251,7 @@ impl PluginManager {
             plugins: &[Box<dyn PhysicsPlugin>],
             visited: &mut [bool],
             order: &mut Vec<usize>,
-            field_providers: &HashMap<FieldType, Vec<String>>,
+            field_providers: &HashMap<UnifiedFieldType, Vec<String>>,
         ) -> Result<(), String> {
             if visited[idx] {
                 return Ok(());
@@ -306,7 +330,7 @@ impl PluginManager {
     }
     
     /// Get all available fields from registered plugins
-    pub fn available_fields(&self) -> Vec<FieldType> {
+    pub fn available_fields(&self) -> Vec<UnifiedFieldType> {
         let mut fields = Vec::new();
         for plugin in &self.plugins {
             fields.extend(plugin.provided_fields());
@@ -667,7 +691,7 @@ impl PhysicsPlugin for CompositePlugin {
         self.state
     }
     
-    fn required_fields(&self) -> Vec<FieldType> {
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
         self.plugins.iter()
             .flat_map(|p| p.required_fields())
             .collect::<std::collections::HashSet<_>>()
@@ -675,7 +699,7 @@ impl PhysicsPlugin for CompositePlugin {
             .collect()
     }
     
-    fn provided_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         self.plugins.iter()
             .flat_map(|p| p.provided_fields())
             .collect::<std::collections::HashSet<_>>()
@@ -942,28 +966,9 @@ impl ExecutionStrategy for ParallelStrategy {
 }
 
 /// Helper function to convert field type to array index
-fn field_type_to_index(field_type: &FieldType) -> Option<usize> {
-    use crate::physics::composable::FieldType;
-    
-    match field_type {
-        FieldType::Pressure => Some(0),
-        FieldType::Velocity => Some(1), // Assuming velocity x is at index 1
-        FieldType::Temperature => Some(4),
-        FieldType::Density => Some(5),
-        FieldType::Light => Some(6),
-        FieldType::Cavitation => Some(7),
-        FieldType::Chemical => Some(8),
-        FieldType::Stress => Some(9),
-        FieldType::Custom(name) => {
-            // Map custom fields to indices
-            match name.as_str() {
-                "vx" => Some(1),
-                "vy" => Some(2),
-                "vz" => Some(3),
-                _ => None,
-            }
-        }
-    }
+fn field_type_to_index(field_type: &UnifiedFieldType) -> Option<usize> {
+    // Simply return the index from the UnifiedFieldType
+    Some(field_type.index())
 }
 
 /// Plugin visitor pattern for traversing plugin hierarchies
@@ -1011,8 +1016,8 @@ mod plugin_internal_tests {
     #[derive(Debug, Clone)]
     struct TestPlugin {
         metadata: PluginMetadata,
-        required: Vec<FieldType>,
-        provided: Vec<FieldType>,
+        required: Vec<UnifiedFieldType>,
+        provided: Vec<UnifiedFieldType>,
     }
     
     impl PhysicsPlugin for TestPlugin {
@@ -1024,11 +1029,11 @@ mod plugin_internal_tests {
             PluginState::Created
         }
         
-        fn required_fields(&self) -> Vec<FieldType> {
+        fn required_fields(&self) -> Vec<UnifiedFieldType> {
             self.required.clone()
         }
         
-        fn provided_fields(&self) -> Vec<FieldType> {
+        fn provided_fields(&self) -> Vec<UnifiedFieldType> {
             self.provided.clone()
         }
         
@@ -1082,13 +1087,13 @@ mod plugin_internal_tests {
                 author: "Test Author".to_string(),
                 license: "MIT".to_string(),
             },
-            required: vec![FieldType::Pressure],
-            provided: vec![FieldType::Temperature],
+            required: vec![UnifiedFieldType::Pressure],
+            provided: vec![UnifiedFieldType::Temperature],
         });
         
         assert!(manager.register(plugin).is_ok());
         assert_eq!(manager.plugins.len(), 1);
-        assert_eq!(manager.available_fields(), vec![FieldType::Temperature]);
+        assert_eq!(manager.available_fields(), vec![UnifiedFieldType::Temperature]);
     }
     
     #[test]
@@ -1105,8 +1110,8 @@ mod plugin_internal_tests {
                 author: "Test".to_string(),
                 license: "MIT".to_string(),
             },
-            required: vec![FieldType::Pressure],
-            provided: vec![FieldType::Temperature],
+            required: vec![UnifiedFieldType::Pressure],
+            provided: vec![UnifiedFieldType::Temperature],
         });
         
         // Plugin B: Temperature -> Light
@@ -1119,8 +1124,8 @@ mod plugin_internal_tests {
                 author: "Test".to_string(),
                 license: "MIT".to_string(),
             },
-            required: vec![FieldType::Temperature],
-            provided: vec![FieldType::Light],
+            required: vec![UnifiedFieldType::Temperature],
+            provided: vec![UnifiedFieldType::Light],
         });
         
         // Register in reverse order

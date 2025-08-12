@@ -35,7 +35,7 @@ pub use conservation::{ConservationMonitor, ConservedQuantities, ConservationErr
 use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::error::{KwaversError, ValidationError};
-use crate::physics::PhysicsComponent;
+use crate::physics::plugin::PhysicsPlugin;
 use ndarray::Array3;
 use std::collections::HashMap;
 
@@ -88,7 +88,7 @@ impl MultiRateTimeIntegrator {
     pub fn advance(
         &mut self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         global_time: f64,
         target_time: f64,
         grid: &Grid,
@@ -148,7 +148,7 @@ impl MultiRateTimeIntegrator {
     fn compute_component_time_steps(
         &self,
         fields: &HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
         physics_components.iter()

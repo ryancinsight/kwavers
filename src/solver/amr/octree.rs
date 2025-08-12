@@ -39,10 +39,23 @@ impl OctreeNode {
         self.level
     }
     
-    /// Get children if they exist
-    pub fn children(&self) -> Vec<Option<&OctreeNode>> {
-        // This is a placeholder - in real implementation would need access to octree
-        vec![]
+    /// Get iterator over child indices if they exist
+    pub fn children_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        self.children
+            .as_ref()
+            .map(|c| c.iter().copied())
+            .into_iter()
+            .flatten()
+    }
+    
+    /// Check if node has children
+    pub fn has_children(&self) -> bool {
+        self.children.is_some()
+    }
+    
+    /// Get child count
+    pub fn child_count(&self) -> usize {
+        self.children.as_ref().map_or(0, |c| c.len())
     }
 }
 
@@ -142,29 +155,68 @@ impl Octree {
         }
     }
     
-    /// Get children cell coordinates
-    pub fn get_children(&self, i: usize, j: usize, k: usize) -> Vec<(usize, usize, usize)> {
-        if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
-            if node_idx < self.nodes.len() {
-                if let Some(children) = &self.nodes[node_idx].children {
-                    children.iter()
-                        .filter_map(|&child_idx| {
-                            if child_idx < self.nodes.len() {
-                                Some(self.nodes[child_idx].bounds_min)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                } else {
-                    Vec::new()
-                }
+    /// Get child nodes of a given node
+    pub fn get_children(&self, node_idx: usize) -> impl Iterator<Item = &OctreeNode> + '_ {
+        self.nodes.get(node_idx)
+            .and_then(|node| node.children.as_ref())
+            .map(|children| children.iter())
+            .into_iter()
+            .flatten()
+            .filter_map(move |&child_idx| self.nodes.get(child_idx))
+    }
+    
+    /// Get mutable child nodes of a given node
+    pub fn get_children_mut(&mut self, node_idx: usize) -> Vec<&mut OctreeNode> {
+        if let Some(node) = self.nodes.get(node_idx) {
+            if let Some(children) = &node.children {
+                let child_indices: Vec<usize> = children.to_vec();
+                child_indices.into_iter()
+                    .filter_map(|idx| {
+                        // Safe because indices are unique
+                        self.nodes.get_mut(idx)
+                    })
+                    .collect()
             } else {
                 Vec::new()
             }
         } else {
             Vec::new()
         }
+    }
+    
+    /// Iterate over all leaf nodes
+    pub fn leaf_nodes(&self) -> impl Iterator<Item = &OctreeNode> + '_ {
+        self.nodes.iter()
+            .filter(|node| node.is_leaf() && node.is_active)
+    }
+    
+    /// Iterate over all active nodes at a given level
+    pub fn nodes_at_level(&self, level: usize) -> impl Iterator<Item = &OctreeNode> + '_ {
+        self.nodes.iter()
+            .filter(move |node| node.level as usize == level && node.is_active)
+    }
+    
+    /// Count active nodes
+    pub fn active_node_count(&self) -> usize {
+        self.nodes.iter()
+            .filter(|node| node.is_active)
+            .count()
+    }
+    
+    /// Get children cell coordinates
+    pub fn get_children_coords(&self, i: usize, j: usize, k: usize) -> Vec<(usize, usize, usize)> {
+        self.coord_to_node.get(&(i, j, k))
+            .and_then(|&node_idx| self.nodes.get(node_idx))
+            .and_then(|node| node.children.as_ref())
+            .map(|children| {
+                children.iter()
+                    .filter_map(|&child_idx| {
+                        self.nodes.get(child_idx)
+                            .map(|child| child.bounds_min)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
     }
     
     /// Refine a cell by creating 8 children

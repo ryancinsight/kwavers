@@ -228,7 +228,8 @@ impl StdError for MediumError {}
 pub enum PhysicsError {
     /// Model not initialized
     ModelNotInitialized {
-        model_name: String,
+        model: String,
+        reason: String,
     },
     /// Incompatible models
     IncompatibleModels {
@@ -246,43 +247,37 @@ pub enum PhysicsError {
         field: String,
         location: (usize, usize, usize),
         value: f64,
-        threshold: f64,
+    },
+    /// Conservation violation
+    ConservationViolation {
+        quantity: String,
+        error: f64,
+        tolerance: f64,
     },
     /// Convergence failure
     ConvergenceFailure {
-        iteration: usize,
-        max_iterations: usize,
+        solver: String,
+        iterations: usize,
         residual: f64,
-        tolerance: f64,
     },
-    /// Invalid state
-    InvalidState {
-        expected: String,
-        actual: String,
-    },
-    /// Time step too large
-    TimeStepTooLarge {
-        dt: f64,
-        max_dt: f64,
-        reason: String,
-    },
-    /// State management error
-    StateError(String),
     /// Invalid field index
     InvalidFieldIndex(usize),
+    /// State error
+    StateError(String),
     /// Dimension mismatch
     DimensionMismatch,
-    /// General simulation error
-    SimulationError {
-        message: String,
+    /// Unauthorized field access
+    UnauthorizedFieldAccess {
+        field: String,
+        operation: String,
     },
 }
 
 impl fmt::Display for PhysicsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PhysicsError::ModelNotInitialized { model_name } => {
-                write!(f, "Model '{}' not initialized", model_name)
+            PhysicsError::ModelNotInitialized { model, reason } => {
+                write!(f, "Model '{}' not initialized: {}", model, reason)
             }
             PhysicsError::IncompatibleModels { model1, model2, reason } => {
                 write!(f, "Incompatible models '{}' and '{}': {}", model1, model2, reason)
@@ -290,30 +285,26 @@ impl fmt::Display for PhysicsError {
             PhysicsError::InvalidConfiguration { component, reason } => {
                 write!(f, "Invalid configuration for component '{}': {}", component, reason)
             }
-            PhysicsError::Instability { field, location, value, threshold } => {
-                write!(f, "Instability in field '{}' at {:?}: {} > {}", field, location, value, threshold)
+            PhysicsError::Instability { field, location, value } => {
+                write!(f, "Instability in field '{}' at {:?}: {}", field, location, value)
             }
-            PhysicsError::ConvergenceFailure { iteration, max_iterations, residual, tolerance } => {
-                write!(f, "Convergence failed after {} iterations (max {}): residual {} > tolerance {}", 
-                       iteration, max_iterations, residual, tolerance)
+            PhysicsError::ConservationViolation { quantity, error, tolerance } => {
+                write!(f, "Conservation violation for '{}': error {} > tolerance {}", quantity, error, tolerance)
             }
-            PhysicsError::InvalidState { expected, actual } => {
-                write!(f, "Invalid state: expected {}, got {}", expected, actual)
-            }
-            PhysicsError::TimeStepTooLarge { dt, max_dt, reason } => {
-                write!(f, "Time step {} too large (max {}): {}", dt, max_dt, reason)
-            }
-            PhysicsError::StateError(reason) => {
-                write!(f, "State management error: {}", reason)
+            PhysicsError::ConvergenceFailure { solver, iterations, residual } => {
+                write!(f, "Convergence failed for solver '{}' after {} iterations: residual {}", solver, iterations, residual)
             }
             PhysicsError::InvalidFieldIndex(index) => {
                 write!(f, "Invalid field index: {}", index)
             }
+            PhysicsError::StateError(reason) => {
+                write!(f, "State management error: {}", reason)
+            }
             PhysicsError::DimensionMismatch => {
                 write!(f, "Dimension mismatch in physics simulation")
             }
-            PhysicsError::SimulationError { message } => {
-                write!(f, "Simulation error: {}", message)
+            PhysicsError::UnauthorizedFieldAccess { field, operation } => {
+                write!(f, "Unauthorized access to field '{}' during '{}' operation", field, operation)
             }
         }
     }

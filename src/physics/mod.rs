@@ -1,9 +1,11 @@
 // src/physics/mod.rs
 pub mod bubble_dynamics;
 pub mod chemistry;
-pub mod composable;
+// composable module removed - use plugin system instead
+pub mod field_mapping;  // NEW: Unified field mapping system
 pub mod heterogeneity;
 pub mod mechanics;
+// migration module removed - composable has been fully removed
 pub mod optics;
 pub mod plugin; // NEW: Plugin architecture for extensible physics
 pub mod scattering;
@@ -19,8 +21,9 @@ pub mod validation_tests;
 
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleState, BubbleParameters};
-pub use composable::{PhysicsComponent, PhysicsContext, PhysicsPipeline, ThermalDiffusionComponent, KuznetsovWaveComponent};
-pub use state::{PhysicsState, FieldAccessor, field_indices};
+// Removed composable exports - use plugin system instead
+pub use field_mapping::{UnifiedFieldType, FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut};
+pub use state::{PhysicsState, field_indices};
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
