@@ -27,6 +27,8 @@ pub enum UnifiedFieldType {
     StressYZ,
     LightFluence,
     ChemicalConcentration,
+    Light,       // For light/optical field
+    Cavitation,  // For cavitation field
 }
 
 impl UnifiedFieldType {
@@ -51,6 +53,8 @@ impl UnifiedFieldType {
             Self::StressYZ => field_indices::STRESS_YZ,
             Self::LightFluence => field_indices::LIGHT_FLUENCE,
             Self::ChemicalConcentration => field_indices::CHEMICAL_CONCENTRATION,
+            Self::Light => field_indices::LIGHT_FLUENCE,  // Map to same as LightFluence
+            Self::Cavitation => field_indices::BUBBLE_RADIUS,  // Map to bubble radius field
         }
     }
     
@@ -74,6 +78,8 @@ impl UnifiedFieldType {
             Self::StressYZ => "Stress YZ",
             Self::LightFluence => "Light Fluence",
             Self::ChemicalConcentration => "Chemical Concentration",
+            Self::Light => "Light",
+            Self::Cavitation => "Cavitation",
         }
     }
     
@@ -91,6 +97,8 @@ impl UnifiedFieldType {
             Self::StressXY | Self::StressXZ | Self::StressYZ => "Pa",
             Self::LightFluence => "J/m²",
             Self::ChemicalConcentration => "mol/m³",
+            Self::Light => "W/m²",
+            Self::Cavitation => "m",
         }
     }
     
@@ -114,6 +122,8 @@ impl UnifiedFieldType {
             Self::StressYZ,
             Self::LightFluence,
             Self::ChemicalConcentration,
+            Self::Light,
+            Self::Cavitation,
         ]
     }
     

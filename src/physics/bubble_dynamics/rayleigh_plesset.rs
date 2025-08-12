@@ -81,6 +81,24 @@ impl KellerMiksisModel {
         }
     }
     
+    /// Get the bubble parameters
+    pub fn params(&self) -> &BubbleParameters {
+        &self.params
+    }
+    
+    /// Calculate heat capacity for the bubble contents
+    pub fn heat_capacity(&self, state: &BubbleState) -> f64 {
+        // Heat capacity depends on gas species and conditions
+        // Using constant pressure heat capacity for ideal gas
+        const R_GAS: f64 = 8.314; // J/(mol·K)
+        let gamma = state.gas_species.gamma();
+        let cv = R_GAS / (gamma - 1.0); // Molar heat capacity at constant volume
+        let cp = gamma * cv; // Molar heat capacity at constant pressure
+        
+        // For bubble dynamics, use cv as the bubble volume changes
+        cv
+    }
+    
     /// Calculate bubble wall acceleration using Keller-Miksis equation
     /// 
     /// The Keller-Miksis equation accounts for liquid compressibility effects
@@ -252,7 +270,7 @@ pub fn integrate_bubble_dynamics(
     dt: f64,
     t: f64,
 ) {
-    let r0 = state.params.r0;
+    let r0 = solver.params().r0;
     
     // Calculate acceleration
     let acceleration = solver.calculate_acceleration(state, p_acoustic, dp_dt, t);

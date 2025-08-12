@@ -176,6 +176,10 @@ impl ROSConcentrations {
                 ROSSpecies::SingletOxygen => SINGLET_OXYGEN_WEIGHT,
                 ROSSpecies::Peroxynitrite => PEROXYNITRITE_WEIGHT,
                 ROSSpecies::NitricOxide => NITRIC_OXIDE_WEIGHT,
+                ROSSpecies::Ozone => 0.3,  // Moderate oxidative stress
+                ROSSpecies::HydroperoxylRadical => 0.4,  // Moderate stress
+                ROSSpecies::AtomicOxygen => 0.5,  // High reactivity
+                ROSSpecies::NitrogenDioxide => 0.3,  // Moderate stress
             };
             
             total_stress += weight * conc.sum();

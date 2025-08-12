@@ -198,6 +198,16 @@ impl BubbleState {
             self.collapse_count += 1;
         }
     }
+    
+    /// Calculate total mass of gas and vapor in the bubble
+    pub fn mass(&self) -> f64 {
+        const AVOGADRO: f64 = 6.022e23;
+        let molecular_weight = self.gas_species.molecular_weight();
+        let water_molecular_weight = 0.018; // kg/mol for water vapor
+        
+        // Mass of gas + mass of vapor
+        (self.n_gas * molecular_weight + self.n_vapor * water_molecular_weight) / AVOGADRO
+    }
 }
 
 /// Estimate number of molecules from ideal gas law

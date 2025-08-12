@@ -56,7 +56,8 @@ pub enum VaporPressureModel {
     IAPWS,
 }
 
-/// Thermodynamic properties calculator
+/// Thermodynamics calculator for bubble dynamics
+#[derive(Debug, Clone)]
 pub struct ThermodynamicsCalculator {
     model: VaporPressureModel,
     /// Enthalpy of vaporization [J/mol]
@@ -320,6 +321,7 @@ impl ThermodynamicsCalculator {
 }
 
 /// Enhanced mass transfer model for bubble dynamics
+#[derive(Debug, Clone)]
 pub struct MassTransferModel {
     thermo: ThermodynamicsCalculator,
     /// Accommodation coefficient (typically 0.04-1.0)

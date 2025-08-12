@@ -35,13 +35,15 @@ impl CavitationModel {
         
         // Initialize bubble radius field
         state.initialize_field(field_indices::BUBBLE_RADIUS, initial_radius).unwrap();
+        
+        // Initialize bubble velocity field to zero
         state.initialize_field(field_indices::BUBBLE_VELOCITY, 0.0).unwrap();
         
         Self {
             state,
             initial_radius,
             equilibrium_radius: initial_radius,
-            damping_coefficient: 0.0,
+            damping_coefficient: 0.01,
             computation_time: std::time::Duration::ZERO,
             update_count: 0,
         }
@@ -55,6 +57,17 @@ impl CavitationModel {
     /// Set the damping coefficient
     pub fn set_damping_coefficient(&mut self, damping: f64) {
         self.damping_coefficient = damping;
+    }
+
+    /// Get a field from the physics state
+    pub fn get_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
+        let guard = self.state.get_field(field_index)?;
+        Ok(guard.clone())
+    }
+    
+    /// Update a field in the physics state
+    pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
+        self.state.update_field(field_index, data)
     }
 }
 

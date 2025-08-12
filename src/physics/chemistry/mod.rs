@@ -650,7 +650,7 @@ impl ChemicalModelTrait for ChemicalModel {
         fields.insert(UnifiedFieldType::Cavitation, bubble_radius.clone());
         
         // Create context with proper structure
-        let mut context = PluginContext::new(frequency);
+        let mut context = PluginContext::new(0, 1000, frequency);
         context.parameters.insert("dt".to_string(), dt);
         context.parameters.insert("time".to_string(), 0.0);
         

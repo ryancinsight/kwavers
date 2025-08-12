@@ -242,6 +242,12 @@ pub enum PhysicsError {
         component: String,
         reason: String,
     },
+    /// Invalid state
+    InvalidState {
+        field: String,
+        value: String,
+        reason: String,
+    },
     /// Simulation instability
     Instability {
         field: String,
@@ -284,6 +290,9 @@ impl fmt::Display for PhysicsError {
             }
             PhysicsError::InvalidConfiguration { component, reason } => {
                 write!(f, "Invalid configuration for component '{}': {}", component, reason)
+            }
+            PhysicsError::InvalidState { field, value, reason } => {
+                write!(f, "Invalid state for field '{}': value '{}' violates {}", field, value, reason)
             }
             PhysicsError::Instability { field, location, value } => {
                 write!(f, "Instability in field '{}' at {:?}: {}", field, location, value)

@@ -596,6 +596,10 @@ impl SimulationFactory {
                     // Would register a ChemicalPlugin here
                     log::warn!("Chemical plugin not yet implemented");
                 }
+                PhysicsModelType::LightDiffusion => {
+                    // Would register a LightDiffusionPlugin here
+                    log::warn!("LightDiffusion plugin not yet implemented");
+                }
             }
         }
         
@@ -1063,7 +1067,7 @@ impl SimulationSetup {
         let mut boundary = PMLBoundary::new(pml_config)?;
         
         // Initialize physics context
-        let mut context = PluginContext::new(1e6); // Default frequency
+        let mut context = PluginContext::new(0, 1000, 1e6); // Default: step 0, 1000 total steps, 1MHz frequency
         
         // Initialize results tracking
         let mut results = SimulationResults::new();
@@ -1144,7 +1148,7 @@ impl SimulationSetup {
         let mut boundary = PMLBoundary::new(pml_config)?;
         
         // Initialize physics context
-        let mut context = PluginContext::new(1e6);
+        let mut context = PluginContext::new(0, 1000, 1e6);
         
         // Initialize results tracking
         let mut results = SimulationResults::new();

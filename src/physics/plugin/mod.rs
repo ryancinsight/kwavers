@@ -121,7 +121,7 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     
     /// Validate plugin configuration and state
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        ValidationResult::new()
+        ValidationResult::valid("Plugin".to_string())
     }
     
     /// Clone the plugin as a boxed trait object
@@ -342,7 +342,7 @@ impl PluginManager {
     
     /// Validate all plugins
     pub fn validate_all(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut result = ValidationResult::new();
+        let mut result = ValidationResult::valid("PluginManager".to_string());
         
         // Check each plugin
         for plugin in &self.plugins {
