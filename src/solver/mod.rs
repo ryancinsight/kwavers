@@ -102,6 +102,8 @@ pub struct Solver {
     pub grid: Grid,
     pub medium: Arc<dyn Medium + Send + Sync>,
     pub boundary: Box<dyn Boundary>,
+    pub source: Box<dyn Source>,
+    pub time: Time,
     
     // Physics models
     pub wave: Box<dyn AcousticWaveModel>,
@@ -109,12 +111,15 @@ pub struct Solver {
     pub light: Box<dyn LightDiffusionModelTrait>,
     pub thermal: Box<dyn ThermalModelTrait>,
     pub chemical: Box<dyn ChemicalModelTrait>,
+    pub streaming: Box<dyn StreamingModelTrait>,
     pub scattering: Box<dyn AcousticScatteringModelTrait>,
+    pub heterogeneity: Box<dyn HeterogeneityModelTrait>,
     
     // Validation configuration - SSOT for all limits
     pub validation_config: ValidationConfig,
     
     // State tracking
+    pub prev_pressure: Array3<f64>,
     pub step_times: Vec<f64>,
     pub physics_times: [Vec<f64>; 9], // Timing for different physics components (including AMR)
     
@@ -123,6 +128,7 @@ pub struct Solver {
     pending_bubble_update: Option<(Array3<f64>, Array3<f64>)>, // (radius, velocity)
     medium_update_attempts: usize,
     medium_update_successes: usize,
+    
     // Adaptive Mesh Refinement
     pub amr_manager: Option<AMRManager>,
     amr_adapt_interval: usize,

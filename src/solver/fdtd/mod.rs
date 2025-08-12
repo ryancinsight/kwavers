@@ -156,7 +156,11 @@ impl PluginConfig for FdtdConfig {
         
         // Validate subgridding
         if self.subgridding && self.subgrid_factor < 2 {
-            errors.push(format!("Invalid subgrid factor: {}. Must be >= 2", self.subgrid_factor));
+            errors.push(ValidationError::FieldValidation {
+                field: "subgrid_factor".to_string(),
+                value: self.subgrid_factor.to_string(),
+                constraint: "Must be >= 2".to_string(),
+            });
         }
         
         ValidationResult {

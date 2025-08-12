@@ -1075,7 +1075,12 @@ impl PhysicsPlugin for HybridSolver {
     }
     
     fn state(&self) -> PluginState {
-        self.state.clone()
+        match self.state {
+            SolverState::Initialized => PluginState::Initialized,
+            SolverState::Running => PluginState::Running,
+            SolverState::Error(_) => PluginState::Error,
+            SolverState::Finalized => PluginState::Finalized,
+        }
     }
     
     fn required_fields(&self) -> Vec<UnifiedFieldType> {

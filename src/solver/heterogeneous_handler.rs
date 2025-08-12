@@ -357,8 +357,13 @@ impl HeterogeneousHandler {
         use crate::utils::{fft_3d, ifft_3d};
         
         // Transform to spectral domain
-        let density_k = fft_3d(density, &self.grid);
-        let sound_speed_k = fft_3d(sound_speed, &self.grid);
+        // Need to create a temporary Array4 for FFT
+        let mut temp_fields = Array4::zeros((2, self.grid.nx, self.grid.ny, self.grid.nz));
+        temp_fields.index_axis_mut(Axis(0), 0).assign(density);
+        temp_fields.index_axis_mut(Axis(0), 1).assign(sound_speed);
+        
+        let density_k = fft_3d(&temp_fields, 0, &self.grid);
+        let sound_speed_k = fft_3d(&temp_fields, 1, &self.grid);
         
         // Apply low-pass filter to remove high frequencies
         let mut density_k_filtered = density_k.clone();
