@@ -1170,15 +1170,15 @@ impl PhysicsPlugin for HybridSolver {
         
         // Validate grid compatibility
         if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
-            errors.push(ValidationError::InvalidConfiguration {
-                parameter: "grid_dimensions".to_string(),
+            errors.push(ValidationError::FieldValidation {
+                field: "grid_dimensions".to_string(),
                 value: format!("{}x{}x{}", grid.nx, grid.ny, grid.nz),
-                reason: "Grid dimensions must be at least 16x16x16 for hybrid solver".to_string(),
+                constraint: "Minimum 16x16x16 required for hybrid solver".to_string(),
             });
         }
         
         // Validate medium compatibility
-        if medium.is_heterogeneous() {
+        if !medium.is_homogeneous() {
             warnings.push(ValidationWarning {
                 message: "Heterogeneous media may require additional computational resources".to_string(),
                 severity: crate::validation::WarningSeverity::Medium,

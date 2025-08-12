@@ -126,6 +126,23 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     
     /// Clone the plugin as a boxed trait object
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin>;
+    
+    /// Get maximum wave speed for stability calculations
+    fn max_wave_speed(&self, _field: &Array3<f64>, _grid: &Grid) -> f64 {
+        1500.0 // Default sound speed in water
+    }
+    
+    /// Evaluate the physics equations (for time integration)
+    fn evaluate(&self, _field: &Array3<f64>, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Err(KwaversError::NotImplemented("evaluate method not implemented for this plugin".to_string()))
+    }
+    
+    /// Get stability constraints for time stepping
+    fn stability_constraints(&self) -> HashMap<String, f64> {
+        let mut constraints = HashMap::new();
+        constraints.insert("max_wave_speed".to_string(), 1500.0);
+        constraints
+    }
 
     /// Get a reference to the underlying Any object
     fn as_any(&self) -> &dyn Any;

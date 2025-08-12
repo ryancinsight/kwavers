@@ -236,7 +236,7 @@ impl SonochemistryModel {
     pub fn oxidative_stress(&self) -> Array3<f64> {
         // Create a uniform field with the oxidative stress index value
         let stress_value = self.ros_concentrations.oxidative_stress_index();
-        Array3::from_elem((self.grid.nx, self.grid.ny, self.grid.nz), stress_value)
+        Array3::from_elem(self.shape, stress_value)
     }
     
     /// Update pH based on chemical reactions

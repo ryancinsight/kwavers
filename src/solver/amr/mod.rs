@@ -488,8 +488,9 @@ impl AMRManager {
                 
                 // Mark children as active
                 for child in self.octree.get_children(i, j, k) {
-                    self.cell_status.insert(child, CellStatus {
-                        level: self.octree.get_level(child.0, child.1, child.2),
+                    let center = child.center();
+                    self.cell_status.insert(center, CellStatus {
+                        level: child.level(),
                         is_active: true,
                         needs_refinement: false,
                         can_coarsen: false,
