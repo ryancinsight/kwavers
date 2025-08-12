@@ -1,13 +1,15 @@
 // recorder/mod.rs
+use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX, BUBBLE_RADIUS_IDX};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::KwaversResult;
 use crate::sensor::Sensor;
 use crate::time::Time;
 use log::{debug, error, info};
 use ndarray::{Array2, Array4, Axis};
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::io::{self, Write};
 use serde::{Serialize, Deserialize};
+use std::path::{Path, PathBuf};
 
 /// Trait for data recording (Dependency Inversion Principle)
 pub trait RecorderTrait: Send + Sync {
@@ -63,10 +65,10 @@ impl Default for RecorderConfig {
 }
 
 // Field indices
-const PRESSURE_IDX: usize = 0;
-const LIGHT_IDX: usize = 1;
-const TEMPERATURE_IDX: usize = 2;
-const BUBBLE_RADIUS_IDX: usize = 3;
+// const PRESSURE_IDX: usize = 0;
+// const LIGHT_IDX: usize = 1;
+// const TEMPERATURE_IDX: usize = 2;
+// const BUBBLE_RADIUS_IDX: usize = 3;
 
 #[derive(Debug)]
 pub struct Recorder {

@@ -16,14 +16,23 @@ pub mod thermal_diffusion;
 pub mod reconstruction;
 pub mod plugin_based_solver; // New plugin-based architecture
 
+use crate::boundary::{Boundary, PMLBoundary, CPMLBoundary};
+use crate::config::ValidationConfig;
+use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::grid::Grid;
-use crate::KwaversResult;
-use crate::boundary::Boundary;
 use crate::medium::Medium;
-use crate::physics::{
-    traits::{AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, StreamingModelTrait, AcousticScatteringModelTrait, HeterogeneityModelTrait},
+use crate::physics::field_indices::*;  // Import all field indices from unified source
+use crate::physics::traits::{
+    AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait,
+    ThermalModelTrait, ChemicalModelTrait, AcousticScatteringModelTrait,
+    StreamingModelTrait, HeterogeneityModelTrait
 };
 use crate::recorder::Recorder;
+use crate::physics::mechanics::cavitation::CavitationModel;
+use crate::physics::optics::diffusion::LightDiffusion;
+use crate::physics::thermodynamics::heat_transfer::ThermalModel;
+use crate::physics::chemistry::ChemicalModel;
+use crate::physics::scattering::acoustic::RayleighScattering;
 use crate::source::Source;
 use crate::time::Time;
 use crate::utils::{fft_3d, ifft_3d, array_utils}; // Removed warm_fft_cache, report_fft_statistics
@@ -33,8 +42,6 @@ use ndarray::{Array3, Array4, Axis, ArrayView3, ArrayViewMut3};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
 
-use crate::config::ValidationConfig;
-
 // Physical validation constants - should be in configuration
 const MAX_PRESSURE: f64 = 1e9;   // 1 GPa max pressure
 const MIN_PRESSURE: f64 = -1e9;  // -1 GPa min pressure  
@@ -42,27 +49,8 @@ const MAX_TEMP: f64 = 1000.0;    // 1000K max temperature
 const MIN_TEMP: f64 = 273.0;     // 0°C min temperature
 const MAX_LIGHT: f64 = 1e10;     // Max light intensity
 
-// Field indices - these should come from a unified field system
-const PRESSURE_IDX: usize = 0;
-const TEMPERATURE_IDX: usize = 1;
-const LIGHT_IDX: usize = 2;
-const VX_IDX: usize = 3;
-const VY_IDX: usize = 4;
-const VZ_IDX: usize = 5;
-const STRESS_XX_IDX: usize = 6;
-const STRESS_YY_IDX: usize = 7;
-const STRESS_ZZ_IDX: usize = 8;
-const STRESS_XY_IDX: usize = 9;
-const STRESS_XZ_IDX: usize = 10;
-const STRESS_YZ_IDX: usize = 11;
-
-// Aliases for stress indices
-const SXX_IDX: usize = STRESS_XX_IDX;
-const SYY_IDX: usize = STRESS_YY_IDX;
-const SZZ_IDX: usize = STRESS_ZZ_IDX;
-const SXY_IDX: usize = STRESS_XY_IDX;
-const SXZ_IDX: usize = STRESS_XZ_IDX;
-const SYZ_IDX: usize = STRESS_YZ_IDX;
+// Note: Field indices are now imported from physics::field_indices
+// This ensures SSOT - Single Source of Truth
 use log::warn; // Added warn import
 
 // Import AMR types
@@ -70,27 +58,14 @@ use self::amr::{AMRManager, AMRConfig};
 // Removed std::sync::atomic::{AtomicBool, Ordering}
 // Removed rayon::prelude::*;
 
-// Field indices for Array4 in SimulationFields
-// Acoustic + Optical + Thermal fields
-pub const PRESSURE_IDX: usize = 0;      // Acoustic pressure
-pub const LIGHT_IDX: usize = 1;         // Light intensity (e.g., for sonoluminescence)
-pub const TEMPERATURE_IDX: usize = 2;   // Temperature
-pub const BUBBLE_RADIUS_IDX: usize = 3; // Bubble radius (for cavitation)
-// Elastic wave fields (particle velocities)
-pub const VX_IDX: usize = 4;            // Particle velocity in x
-pub const VY_IDX: usize = 5;            // Particle velocity in y
-pub const VZ_IDX: usize = 6;            // Particle velocity in z
-// Elastic wave fields (stress components)
-pub const SXX_IDX: usize = 7;           // Normal stress in x
-pub const SYY_IDX: usize = 8;           // Normal stress in y
-pub const SZZ_IDX: usize = 9;           // Normal stress in z
-pub const SXY_IDX: usize = 10;          // Shear stress in xy plane
-pub const SXZ_IDX: usize = 11;          // Shear stress in xz plane
-pub const SYZ_IDX: usize = 12;          // Shear stress in yz plane
-
-// Total number of fields by default (acoustic + optical + thermal + elastic)
-// This might need to be dynamic if not all models are active.
-pub const TOTAL_FIELDS: usize = 13;
+// Field indices are now imported from physics::field_indices for SSOT
+// Re-export them for backward compatibility
+pub use crate::physics::field_indices::{
+    PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX, BUBBLE_RADIUS_IDX, BUBBLE_VELOCITY_IDX,
+    VX_IDX, VY_IDX, VZ_IDX,
+    SXX_IDX, SYY_IDX, SZZ_IDX, SXY_IDX, SXZ_IDX, SYZ_IDX,
+    TOTAL_FIELDS
+};
 
 
 #[derive(Debug)]

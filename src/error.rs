@@ -62,7 +62,6 @@ pub enum KwaversError {
     FieldDataNotInitialized,
 
     /// Concurrency errors - critical for ACID compliance
-    #[error("Concurrency error in {operation} on {resource}: {reason}")]
     ConcurrencyError {
         operation: String,
         resource: String,
@@ -70,8 +69,7 @@ pub enum KwaversError {
     },
     
     /// IO errors
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(String),  // Store error message as String since std::io::Error doesn't impl Clone/Serialize
 }
 
 impl fmt::Display for KwaversError {
@@ -95,7 +93,7 @@ impl fmt::Display for KwaversError {
             KwaversError::ConcurrencyError { operation, resource, reason } => {
                 write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
             },
-            KwaversError::Io(e) => write!(f, "IO error: {}", e),
+            KwaversError::Io(msg) => write!(f, "IO error: {}", msg),
         }
     }
 }
@@ -119,7 +117,7 @@ impl StdError for KwaversError {
             KwaversError::FieldInactive(_) => None,
             KwaversError::FieldDataNotInitialized => None,
             KwaversError::ConcurrencyError { .. } => None,
-            KwaversError::Io(e) => Some(e),
+            KwaversError::Io(_) => None,
         }
     }
 }
@@ -666,10 +664,7 @@ impl StdError for SystemError {}
 
 impl From<std::io::Error> for KwaversError {
     fn from(err: std::io::Error) -> Self {
-        KwaversError::System(SystemError::Io {
-            operation: "file".to_string(),
-            reason: err.to_string(),
-        })
+        KwaversError::Io(err.to_string())
     }
 }
 

@@ -464,8 +464,9 @@ impl ChemicalModel {
         // Validate model state
         if self.state != ChemicalModelState::Ready && self.state != ChemicalModelState::Running {
             return Err(PhysicsError::InvalidState {
-                expected: "Ready or Running".to_string(),
-                actual: format!("{:?}", self.state),
+                field: "state".to_string(),
+                value: format!("{:?}", self.state),
+                reason: "Expected Ready or Running state".to_string(),
             }.into());
         }
 
