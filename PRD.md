@@ -23,6 +23,7 @@
   - Fixed acoustic diffusivity in Kuznetsov solver (proper physics) ✅
   - Corrected k-space dispersion relation (spatial + temporal errors) ✅
   - Advanced heterogeneous media handling with Gibbs mitigation ✅
+  - Accurate thermodynamic vapor pressure models (Antoine, Clausius-Clapeyron, Wagner) ✅
 - **Code Quality**: 
   - Fixed 18 compilation errors in multiple modules ✅
   - Removed duplicate FieldType enum (DRY principle) ✅

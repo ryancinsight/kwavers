@@ -69,6 +69,7 @@
 - [x] Fix acoustic diffusivity with proper physics
 - [x] Correct k-space dispersion relation (spatial + temporal)
 - [x] Implement heterogeneous media handling with Gibbs mitigation
+- [x] Replace incorrect vapor pressure model with proper thermodynamics
 
 ### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths

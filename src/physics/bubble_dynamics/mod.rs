@@ -11,6 +11,7 @@ pub mod bubble_state;
 pub mod rayleigh_plesset;
 pub mod bubble_field;
 pub mod interactions;
+pub mod thermodynamics;
 
 pub use bubble_state::{BubbleState, BubbleParameters, GasSpecies};
 pub use rayleigh_plesset::{RayleighPlessetSolver, KellerMiksisModel};
