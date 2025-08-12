@@ -1,10 +1,27 @@
 // recorder/mod.rs
+use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX, BUBBLE_RADIUS_IDX};
+use crate::error::KwaversResult;
+use crate::grid::Grid;
 use crate::sensor::Sensor;
 use crate::time::Time;
 use log::{debug, error, info};
 use ndarray::{Array2, Array4, Axis};
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::io::{self, Write};
+use serde::{Serialize, Deserialize};
+use std::path::{Path, PathBuf};
+
+/// Trait for data recording (Dependency Inversion Principle)
+pub trait RecorderTrait: Send + Sync {
+    /// Initialize the recorder
+    fn initialize(&mut self, grid: &Grid) -> KwaversResult<()>;
+    
+    /// Record data at a specific time step
+    fn record(&mut self, fields: &Array4<f64>, step: usize) -> KwaversResult<()>;
+    
+    /// Finalize recording and save data
+    fn finalize(&mut self) -> KwaversResult<()>;
+}
 
 /// Configuration for recorder setup
 #[derive(Debug, Clone)]
@@ -48,10 +65,10 @@ impl Default for RecorderConfig {
 }
 
 // Field indices
-const PRESSURE_IDX: usize = 0;
-const LIGHT_IDX: usize = 1;
-const TEMPERATURE_IDX: usize = 2;
-const BUBBLE_RADIUS_IDX: usize = 3;
+// const PRESSURE_IDX: usize = 0;
+// const LIGHT_IDX: usize = 1;
+// const TEMPERATURE_IDX: usize = 2;
+// const BUBBLE_RADIUS_IDX: usize = 3;
 
 #[derive(Debug)]
 pub struct Recorder {
@@ -289,5 +306,30 @@ impl Recorder {
         } else {
             None
         }
+    }
+}
+
+impl RecorderTrait for Recorder {
+    fn initialize(&mut self, _grid: &Grid) -> KwaversResult<()> {
+        info!("Initializing recorder with filename: {}", self.filename);
+        Ok(())
+    }
+    
+    fn record(&mut self, fields: &Array4<f64>, step: usize) -> KwaversResult<()> {
+        // Record at specified intervals
+        if step % self.snapshot_interval == 0 {
+            self.fields_snapshots.push((step, fields.clone()));
+        }
+        
+        // Record sensor data
+        self.sensor.record(fields, step);
+        
+        Ok(())
+    }
+    
+    fn finalize(&mut self) -> KwaversResult<()> {
+        self.save()?;
+        info!("Recorder finalized. Data saved to {}", self.filename);
+        Ok(())
     }
 }

@@ -88,9 +88,9 @@
 use crate::boundary::{Boundary, PMLBoundary, CPMLBoundary};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
+use crate::error::{KwaversResult, KwaversError, ConfigError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
-use crate::validation::ValidationResult;
+use crate::validation::{ValidationResult, ValidationError, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
 use crate::constants::cfl;
 use ndarray::{Array3, Array4, ArrayView3, Axis, Zip, s};
 use std::collections::HashMap;
@@ -131,25 +131,53 @@ impl PluginConfig for FdtdConfig {
         
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
-            errors.push(format!("Invalid spatial order: {}. Must be 2, 4, or 6", self.spatial_order));
+            errors.push(ValidationError::FieldValidation {
+                field: "spatial_order".to_string(),
+                value: self.spatial_order.to_string(),
+                constraint: "Must be 2, 4, or 6".to_string(),
+            });
         }
         
         // Validate CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
-            errors.push(format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor));
-        } else if self.cfl_factor > 0.95 {
-            warnings.push(format!("CFL factor {} may cause instability", self.cfl_factor));
+            errors.push(ValidationError::FieldValidation {
+                field: "cfl_factor".to_string(),
+                value: self.cfl_factor.to_string(),
+                constraint: "Must be in (0, 1]".to_string(),
+            });
+        } else if self.cfl_factor > 0.7 {
+            warnings.push(ValidationWarning {
+                field: "cfl_factor".to_string(),
+                message: format!("CFL factor {} may cause instability", self.cfl_factor),
+                severity: WarningSeverity::Medium,
+                suggestion: Some("Consider using a CFL factor <= 0.7 for better stability".to_string()),
+            });
         }
         
         // Validate subgridding
         if self.subgridding && self.subgrid_factor < 2 {
-            errors.push(format!("Invalid subgrid factor: {}. Must be >= 2", self.subgrid_factor));
+            errors.push(ValidationError::FieldValidation {
+                field: "subgrid_factor".to_string(),
+                value: self.subgrid_factor.to_string(),
+                constraint: "Must be >= 2".to_string(),
+            });
         }
         
         ValidationResult {
             is_valid: errors.is_empty(),
             errors,
             warnings,
+            context: ValidationContext {
+                validator_name: "FDTDConfig".to_string(),
+                field_path: vec!["fdtd_config".to_string()],
+                timestamp: chrono::Utc::now(),
+                additional_info: HashMap::new(),
+            },
+            metadata: ValidationMetadata {
+                validation_time_ms: 0,
+                rules_applied: vec!["cfl_factor".to_string(), "pml_thickness".to_string()],
+                performance_metrics: HashMap::new(),
+            },
         }
     }
     

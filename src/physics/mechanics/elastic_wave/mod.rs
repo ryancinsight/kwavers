@@ -457,7 +457,7 @@ impl ElasticWave {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.kx.is_empty() || self.ky.is_empty() || self.kz.is_empty() {
             return Err(PhysicsError::ModelNotInitialized {
-                model_name: "ElasticWave".to_string(),
+                model: "ElasticWave".to_string(),
             }.into());
         }
         Ok(())

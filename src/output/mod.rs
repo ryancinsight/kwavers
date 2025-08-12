@@ -5,10 +5,13 @@ use log::info;
 use ndarray::Axis;
 use std::fs::File;
 use std::io::{self, Write};
+use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
+use crate::error::KwaversResult;
+use crate::grid::Grid;
+use ndarray::Array3;
+use std::path::Path;
 
-const PRESSURE_IDX: usize = 0;
-const LIGHT_IDX: usize = 1;
-// const TEMPERATURE_IDX: usize = 2; // Removed unused constant
+// Note: Field indices imported from physics::field_indices for SSOT
 
 pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving pressure data to {}", filename);

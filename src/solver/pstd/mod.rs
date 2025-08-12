@@ -93,6 +93,10 @@ use std::f64::consts::PI;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{debug, info};
+use crate::validation::ValidationWarning;
+use crate::validation::WarningSeverity;
+use crate::validation::ValidationContext;
+use crate::validation::ValidationMetadata;
 
 /// PSTD solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,26 +140,57 @@ impl PluginConfig for PstdConfig {
         let mut warnings = Vec::new();
         
         // Validate k-space order
-        if self.k_space_correction && (self.k_space_order < 2 || self.k_space_order > 8) {
-            errors.push(format!("Invalid k-space order: {}. Must be between 2 and 8", self.k_space_order));
+        if self.k_space_order < 2 || self.k_space_order > 8 {
+            errors.push(ValidationError::FieldValidation {
+                field: "k_space_order".to_string(),
+                value: self.k_space_order.to_string(),
+                constraint: "Must be between 2 and 8".to_string(),
+
+            });
         }
         
         // Validate CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
-            errors.push(format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor));
+            errors.push(ValidationError::FieldValidation {
+                field: "cfl_factor".to_string(),
+                value: self.cfl_factor.to_string(),
+                constraint: "Must be in (0, 1]".to_string(),
+
+            });
         } else if self.cfl_factor > 0.5 {
-            warnings.push(format!("CFL factor {} may cause instability in PSTD", self.cfl_factor));
+            warnings.push(ValidationWarning {
+                field: "cfl_factor".to_string(),
+                message: format!("CFL factor {} may cause instability in PSTD", self.cfl_factor),
+                severity: WarningSeverity::Medium,
+                suggestion: Some("Consider using a CFL factor <= 0.5 for better stability".to_string()),
+            });
         }
         
         // Validate PML stencil size
         if self.pml_stencil_size < 2 || self.pml_stencil_size > 10 {
-            errors.push(format!("Invalid PML stencil size: {}. Must be between 2 and 10", self.pml_stencil_size));
+            errors.push(ValidationError::FieldValidation {
+                field: "pml_stencil_size".to_string(),
+                value: self.pml_stencil_size.to_string(),
+                constraint: "Must be between 2 and 10".to_string(),
+
+            });
         }
         
         ValidationResult {
             is_valid: errors.is_empty(),
             errors,
             warnings,
+            context: ValidationContext {
+                validator_name: "PSTDConfig".to_string(),
+                field_path: vec!["pstd_config".to_string()],
+                timestamp: chrono::Utc::now(),
+                additional_info: HashMap::new(),
+            },
+            metadata: ValidationMetadata {
+                validation_time_ms: 0,
+                rules_applied: vec!["k_space_order".to_string(), "cfl_factor".to_string(), "pml_stencil_size".to_string()],
+                performance_metrics: HashMap::new(),
+            },
         }
     }
     

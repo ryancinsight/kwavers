@@ -3,23 +3,26 @@
 //! This module provides visualization capabilities for Kwavers simulation results.
 //! It supports 2D/3D plotting of acoustic fields, pressure distributions, and temporal evolution.
 
+use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
+use crate::error::KwaversResult;
+use ndarray::Array3;
+
+// Note: Field indices imported from physics::field_indices for SSOT
+
+#[cfg(feature = "plotly")]
+use plotly::{Plot, Scatter, Surface, HeatMap, Layout};
+
 #[cfg(feature = "plotly")]
 mod plotting_impl {
     use crate::grid::Grid;
     use crate::recorder::Recorder;
+    use crate::time::Time;
+    use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
+    use ndarray::{Array3, Axis};
+    use plotly::{Plot, Scatter, Surface, HeatMap, Layout, common::Title};
     use log::info;
-    use ndarray::{Array2, Array3};
-    use plotly::{
-        common::{ColorBar, Mode, Title},
-        HeatMap, Layout, Plot, Scatter, Scatter3D,
-    };
     use std::fs::File;
     use std::io::Write;
-
-    const PRESSURE_IDX: usize = 0;
-    const LIGHT_IDX: usize = 1;
-    const TEMPERATURE_IDX: usize = 2;
-    const BUBBLE_RADIUS_IDX: usize = 3;
 
     pub fn plot_positions(positions: &[(f64, f64, f64)], title: &str, filename: &str) {
         info!("Generating 3D scatter plot: {}", filename);
@@ -295,4 +298,3 @@ pub fn plot_recorder_data(_recorder: &crate::recorder::Recorder, _filename: &str
 // Re-export types for compatibility
 pub use crate::grid::Grid;
 pub use crate::recorder::Recorder;
-pub use ndarray::Array3;

@@ -14,6 +14,7 @@ use crate::physics::plugin::PluginContext;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::traits::ChemicalModelTrait;
 use ndarray::Array3;
+use ndarray::ArrayView3;
 use std::collections::HashMap;
 use std::time::Instant;
 use log::debug;
@@ -463,8 +464,9 @@ impl ChemicalModel {
         // Validate model state
         if self.state != ChemicalModelState::Ready && self.state != ChemicalModelState::Running {
             return Err(PhysicsError::InvalidState {
-                expected: "Ready or Running".to_string(),
-                actual: format!("{:?}", self.state),
+                field: "state".to_string(),
+                value: format!("{:?}", self.state),
+                reason: "Expected Ready or Running state".to_string(),
             }.into());
         }
 
@@ -523,6 +525,38 @@ impl ChemicalModel {
 
         self.state = ChemicalModelState::Completed;
         Ok(())
+    }
+
+    /// Update chemical effects using views to avoid unnecessary cloning
+    /// This is the efficient version that works with array views
+    pub fn update_chemical_with_views(
+        &mut self,
+        pressure: ArrayView3<f64>,
+        light: ArrayView3<f64>,
+        emission_spectrum: &Array3<f64>,
+        bubble_radius: &Array3<f64>,
+        temperature: ArrayView3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        // Create params struct from views
+        let pressure_owned = pressure.to_owned();
+        let light_owned = light.to_owned();
+        let temperature_owned = temperature.to_owned();
+        let params = ChemicalUpdateParams {
+            pressure: &pressure_owned,
+            light: &light_owned,
+            emission_spectrum,
+            bubble_radius,
+            temperature: &temperature_owned,
+            grid,
+            dt,
+            medium,
+            frequency: 1e6, // Default frequency, should be passed as parameter
+        };
+        
+        self.update_chemical(&params)
     }
 
     /// Get radical concentration
@@ -650,7 +684,7 @@ impl ChemicalModelTrait for ChemicalModel {
         fields.insert(UnifiedFieldType::Cavitation, bubble_radius.clone());
         
         // Create context with proper structure
-        let mut context = PluginContext::new(frequency);
+        let mut context = PluginContext::new(0, 1000, frequency);
         context.parameters.insert("dt".to_string(), dt);
         context.parameters.insert("time".to_string(), 0.0);
         

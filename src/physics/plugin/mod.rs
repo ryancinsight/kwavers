@@ -121,11 +121,28 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     
     /// Validate plugin configuration and state
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        ValidationResult::new()
+        ValidationResult::valid("Plugin".to_string())
     }
     
     /// Clone the plugin as a boxed trait object
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin>;
+    
+    /// Get maximum wave speed for stability calculations
+    fn max_wave_speed(&self, _field: &Array3<f64>, _grid: &Grid) -> f64 {
+        1500.0 // Default sound speed in water
+    }
+    
+    /// Evaluate the physics equations (for time integration)
+    fn evaluate(&self, _field: &Array3<f64>, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Err(KwaversError::NotImplemented("evaluate method not implemented for this plugin".to_string()))
+    }
+    
+    /// Get stability constraints for time stepping
+    fn stability_constraints(&self) -> HashMap<String, f64> {
+        let mut constraints = HashMap::new();
+        constraints.insert("max_wave_speed".to_string(), 1500.0);
+        constraints
+    }
 
     /// Get a reference to the underlying Any object
     fn as_any(&self) -> &dyn Any;
@@ -207,7 +224,7 @@ impl PluginManager {
         // Execute plugins in dependency order
         for &idx in &self.execution_order {
             if let Some(plugin) = self.plugins.get_mut(idx) {
-                plugin.execute(&context, fields, grid, medium)?;
+                plugin.update(fields, grid, medium, dt, t, &context)?;
             }
         }
         
@@ -335,14 +352,14 @@ impl PluginManager {
         for plugin in &self.plugins {
             fields.extend(plugin.provided_fields());
         }
-        fields.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        fields.sort_by(|a, b| a.name().cmp(b.name()));
         fields.dedup();
         fields
     }
     
     /// Validate all plugins
     pub fn validate_all(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut result = ValidationResult::new();
+        let mut result = ValidationResult::valid("PluginManager".to_string());
         
         // Check each plugin
         for plugin in &self.plugins {
@@ -355,11 +372,10 @@ impl PluginManager {
         for plugin in &self.plugins {
             for required in plugin.required_fields() {
                 if !available.contains(&required) {
-                    result.add_error(format!(
-                        "Plugin '{}' requires field '{}' which is not provided by any plugin",
-                        plugin.metadata().id,
-                        required.as_str()
-                    ));
+                    result.add_error(ValidationError::DependencyValidation {
+                        field: plugin.metadata().id.clone(),
+                        missing_dependency: required.name().to_string(),
+                    });
                 }
             }
         }

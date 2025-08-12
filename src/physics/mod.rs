@@ -2,6 +2,7 @@
 pub mod bubble_dynamics;
 pub mod chemistry;
 // composable module removed - use plugin system instead
+pub mod field_indices;  // Unified field indices (SSOT)
 pub mod field_mapping;  // NEW: Unified field mapping system
 pub mod heterogeneity;
 pub mod mechanics;
@@ -23,7 +24,7 @@ pub mod validation_tests;
 pub use bubble_dynamics::{BubbleField, BubbleState, BubbleParameters};
 // Removed composable exports - use plugin system instead
 pub use field_mapping::{UnifiedFieldType, FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut};
-pub use state::{PhysicsState, field_indices};
+pub use state::PhysicsState;
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};

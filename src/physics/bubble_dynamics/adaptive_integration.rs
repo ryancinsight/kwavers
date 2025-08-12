@@ -202,7 +202,7 @@ impl AdaptiveBubbleIntegrator {
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
-        let r0 = state.params.r0;
+        let r0 = self.solver.params().r0;
         
         // RK4 integration
         let state0 = state.clone();
@@ -261,7 +261,7 @@ impl AdaptiveBubbleIntegrator {
         }
         
         // Check for extreme velocities (approaching speed of sound)
-        if state.wall_velocity.abs() > state.params.c_liquid * 0.9 {
+        if state.wall_velocity.abs() > self.solver.params().c_liquid * 0.9 {
             return false;
         }
         

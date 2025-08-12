@@ -431,11 +431,22 @@ pub mod tissue_specific {
         pub delta: f64,
         pub lame_lambda: f64,
         pub lame_mu: f64,
+        pub specific_heat: f64,
+        pub thermal_conductivity: f64,
+        pub b_a: f64,  // nonlinearity coefficient
+        pub shear_sound_speed: f64,
+        pub shear_viscosity_coeff: f64,
+        pub bulk_viscosity_coeff: f64,
     }
     
+    use std::sync::OnceLock;
+    
+    static TISSUE_DB: OnceLock<HashMap<TissueType, TissueProperties>> = OnceLock::new();
+    
     /// Get tissue database
-    pub fn tissue_database() -> HashMap<TissueType, TissueProperties> {
-        let mut db = HashMap::new();
+    pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
+        TISSUE_DB.get_or_init(|| {
+            let mut db = HashMap::new();
         
         db.insert(TissueType::SoftTissue, TissueProperties {
             density: 1050.0,
@@ -444,6 +455,12 @@ pub mod tissue_specific {
             delta: 1.05,
             lame_lambda: 2.28e9,
             lame_mu: 1.0e4,
+            specific_heat: 3600.0,  // J/kg·K
+            thermal_conductivity: 0.52,  // W/m·K
+            b_a: 6.0,  // typical for soft tissue
+            shear_sound_speed: 3.08,  // m/s (calculated from lame_mu/density)
+            shear_viscosity_coeff: 0.0,  // Pa·s
+            bulk_viscosity_coeff: 0.0,  // Pa·s
         });
         
         db.insert(TissueType::Skin, TissueProperties {
@@ -453,9 +470,16 @@ pub mod tissue_specific {
             delta: 1.75,
             lame_lambda: 2.5e9,
             lame_mu: 2.0e4,
+            specific_heat: 3700.0,  // J/kg·K
+            thermal_conductivity: 0.5,  // W/m·K
+            b_a: 1.0,  // typical for skin
+            shear_sound_speed: 1.5,  // m/s (calculated from lame_mu/density)
+            shear_viscosity_coeff: 1.0e-3,  // Pa·s
+            bulk_viscosity_coeff: 1.0e-3,  // Pa·s
         });
         
         db
+        })
     }
 }
 

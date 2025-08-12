@@ -167,7 +167,7 @@ impl BubbleIMEXIntegrator {
         *state = self.vector_to_state(&y_final, state)?;
         
         // Update derived quantities
-        state.update_compression(state.params.r0);
+        state.update_compression(self.solver.params().r0);
         state.update_collapse_state();
         
         Ok(dt)  // Return actual time step taken
@@ -206,19 +206,21 @@ impl BubbleIMEXIntegrator {
         let n_gas = state.n_gas;
         
         // Calculate thermal rate of change (dT/dt)
-        let dT_dt = if state.params.use_thermal_effects {
+        let params = self.solver.params();
+        let dT_dt = if params.use_thermal_effects {
             // Polytropic/adiabatic model with heat transfer
             let gamma = self.calculate_effective_polytropic_index(state);
             
             // Heat transfer coefficient (simplified Nusselt number approach)
-            let thermal_diffusivity = state.params.thermal_diffusivity;
+            let thermal_diffusivity = params.thermal_conductivity / 
+                (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
             let nusselt = 2.0 + 0.6 * peclet.powf(0.5);
-            let h = nusselt * state.params.k_thermal / (2.0 * r);
+            let h = nusselt * params.thermal_conductivity / (2.0 * r);
             
             // Temperature rate from compression and heat transfer
             let compression_heating = -(gamma - 1.0) * T * v / r;
-            let heat_transfer = -h * (T - state.params.t_ambient) / (n_gas + n_vapor);
+            let heat_transfer = -h * (T - 293.15) / (n_gas + n_vapor); // Using ambient temp
             
             compression_heating + heat_transfer
         } else {
@@ -226,14 +228,15 @@ impl BubbleIMEXIntegrator {
         };
         
         // Calculate mass transfer rate (dn_vapor/dt)
-        let dn_vapor_dt = if state.params.use_mass_transfer {
+        let dn_vapor_dt = if params.use_mass_transfer {
             // Evaporation/condensation based on temperature-dependent vapor pressure
             let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(T);
             let p_vapor_actual = n_vapor * crate::constants::thermodynamics::R_GAS * T / state.volume();
             
             // Mass transfer coefficient (simplified approach)
             let D_vapor = 2.5e-5; // Vapor diffusion coefficient in air [m²/s]
-            let thermal_diffusivity = state.params.thermal_diffusivity;
+            let thermal_diffusivity = params.thermal_conductivity / 
+                (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
             let sherwood = 2.0 + 0.6 * peclet.powf(0.33); // Mass transfer Sherwood number
             let k_mass = sherwood * D_vapor / (2.0 * r);
@@ -252,11 +255,14 @@ impl BubbleIMEXIntegrator {
     fn calculate_effective_polytropic_index(&self, state: &BubbleState) -> f64 {
         use crate::constants::bubble_dynamics::{PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER};
         
-        let peclet = (2.0 * state.radius * state.wall_velocity.abs()) / state.params.thermal_diffusivity;
+        let params = self.solver.params();
+        let thermal_diffusivity = params.thermal_conductivity / 
+            (params.rho_liquid * params.specific_heat_liquid);
+        let peclet = (2.0 * state.radius * state.wall_velocity.abs()) / thermal_diffusivity;
         let peclet_eff = peclet.max(MIN_PECLET_NUMBER);
         
         // Effective polytropic index varies from isothermal (1.0) to adiabatic (gamma)
-        let gamma_gas = state.params.gamma;
+        let gamma_gas = state.gas_species.gamma();
         1.0 + (gamma_gas - 1.0) / (1.0 + PECLET_SCALING_FACTOR / peclet_eff)
     }
     
@@ -305,9 +311,13 @@ impl BubbleIMEXIntegrator {
     
     /// Estimate stiffness of the system
     pub fn estimate_stiffness(&self, state: &BubbleState) -> f64 {
+        let params = self.solver.params();
+        let thermal_diffusivity = params.thermal_conductivity / 
+            (params.rho_liquid * params.specific_heat_liquid);
+        
         // Estimate based on time scales
         let mechanical_timescale = state.radius / state.wall_velocity.abs().max(1e-10);
-        let thermal_timescale = state.radius.powi(2) / state.params.thermal_diffusivity;
+        let thermal_timescale = state.radius.powi(2) / thermal_diffusivity;
         
         mechanical_timescale / thermal_timescale.min(mechanical_timescale)
     }

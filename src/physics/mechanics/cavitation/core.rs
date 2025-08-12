@@ -9,7 +9,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
 use crate::physics::traits::CavitationModelBehavior;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, Zip, ArrayView3};
 
 
 /// Core cavitation model implementing the Rayleigh-Plesset equation
@@ -31,17 +31,19 @@ pub struct CavitationModel {
 impl CavitationModel {
     /// Create a new cavitation model
     pub fn new(grid: &Grid, initial_radius: f64) -> Self {
-        let state = PhysicsState::new(grid);
+        let state = PhysicsState::new(grid.clone());
         
         // Initialize bubble radius field
         state.initialize_field(field_indices::BUBBLE_RADIUS, initial_radius).unwrap();
+        
+        // Initialize bubble velocity field to zero
         state.initialize_field(field_indices::BUBBLE_VELOCITY, 0.0).unwrap();
         
         Self {
             state,
             initial_radius,
             equilibrium_radius: initial_radius,
-            damping_coefficient: 0.0,
+            damping_coefficient: 0.01,
             computation_time: std::time::Duration::ZERO,
             update_count: 0,
         }
@@ -55,6 +57,37 @@ impl CavitationModel {
     /// Set the damping coefficient
     pub fn set_damping_coefficient(&mut self, damping: f64) {
         self.damping_coefficient = damping;
+    }
+
+    /// Get a field from the physics state
+    pub fn get_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
+        let guard = self.state.get_field(field_index)?;
+        Ok(guard.to_owned())  // Convert view to owned array
+    }
+    
+    /// Update a field in the physics state
+    pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
+        self.state.update_field(field_index, data)
+    }
+    
+    /// Update cavitation in-place and return the modified pressure field
+    /// This avoids unnecessary cloning of the input pressure field
+    pub fn update_cavitation_inplace(
+        &mut self,
+        pressure: ArrayView3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+    ) -> KwaversResult<Array3<f64>> {
+        // Start with a copy of the pressure field that we'll modify
+        let mut modified_pressure = pressure.to_owned();
+        
+        // Call the existing update_cavitation with the owned copy
+        self.update_cavitation(&modified_pressure, grid, medium, dt, t)?;
+        
+        // Return the modified pressure
+        Ok(modified_pressure)
     }
 }
 

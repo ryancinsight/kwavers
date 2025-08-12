@@ -93,7 +93,7 @@ mod tests {
         }
 
         fn validate(&self, _grid: &Grid, _medium: &dyn Medium) -> ValidationResult {
-            ValidationResult::new()
+            ValidationResult::valid("TestPlugin".to_string())
         }
         
         fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {

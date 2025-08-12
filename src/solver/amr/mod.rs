@@ -487,9 +487,12 @@ impl AMRManager {
                 });
                 
                 // Mark children as active
-                for child in self.octree.get_children(i, j, k) {
-                    self.cell_status.insert(child, CellStatus {
-                        level: self.octree.get_level(child.0, child.1, child.2),
+                // Get children of the refined cell
+                let children_coords = self.octree.get_children_coords(i, j, k);
+                for child_coord in children_coords {
+                    let child_level = self.octree.get_level(child_coord.0, child_coord.1, child_coord.2);
+                    self.cell_status.insert(child_coord, CellStatus {
+                        level: child_level,
                         is_active: true,
                         needs_refinement: false,
                         can_coarsen: false,

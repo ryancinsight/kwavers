@@ -51,6 +51,25 @@ pub enum KwaversError {
     NotImplemented(String),
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
+    
+    /// Field not registered in the field registry
+    FieldNotRegistered(String),
+    
+    /// Field is inactive and cannot be accessed
+    FieldInactive(String),
+    
+    /// Field data array not initialized
+    FieldDataNotInitialized,
+
+    /// Concurrency errors - critical for ACID compliance
+    ConcurrencyError {
+        operation: String,
+        resource: String,
+        reason: String,
+    },
+    
+    /// IO errors
+    Io(String),  // Store error message as String since std::io::Error doesn't impl Clone/Serialize
 }
 
 impl fmt::Display for KwaversError {
@@ -68,6 +87,13 @@ impl fmt::Display for KwaversError {
             KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
             KwaversError::NotImplemented(e) => write!(f, "Feature not yet implemented: {}", e),
+            KwaversError::FieldNotRegistered(field) => write!(f, "Field '{}' not registered in the field registry", field),
+            KwaversError::FieldInactive(field) => write!(f, "Field '{}' is inactive and cannot be accessed", field),
+            KwaversError::FieldDataNotInitialized => write!(f, "Field data array not initialized"),
+            KwaversError::ConcurrencyError { operation, resource, reason } => {
+                write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
+            },
+            KwaversError::Io(msg) => write!(f, "IO error: {}", msg),
         }
     }
 }
@@ -87,6 +113,11 @@ impl StdError for KwaversError {
             KwaversError::Visualization(_) => None,
             KwaversError::Composite(e) => Some(e),
             KwaversError::NotImplemented(_) => None,
+            KwaversError::FieldNotRegistered(_) => None,
+            KwaversError::FieldInactive(_) => None,
+            KwaversError::FieldDataNotInitialized => None,
+            KwaversError::ConcurrencyError { .. } => None,
+            KwaversError::Io(_) => None,
         }
     }
 }
@@ -242,6 +273,12 @@ pub enum PhysicsError {
         component: String,
         reason: String,
     },
+    /// Invalid state
+    InvalidState {
+        field: String,
+        value: String,
+        reason: String,
+    },
     /// Simulation instability
     Instability {
         field: String,
@@ -284,6 +321,9 @@ impl fmt::Display for PhysicsError {
             }
             PhysicsError::InvalidConfiguration { component, reason } => {
                 write!(f, "Invalid configuration for component '{}': {}", component, reason)
+            }
+            PhysicsError::InvalidState { field, value, reason } => {
+                write!(f, "Invalid state for field '{}': value '{}' violates {}", field, value, reason)
             }
             PhysicsError::Instability { field, location, value } => {
                 write!(f, "Instability in field '{}' at {:?}: {}", field, location, value)
@@ -624,10 +664,7 @@ impl StdError for SystemError {}
 
 impl From<std::io::Error> for KwaversError {
     fn from(err: std::io::Error) -> Self {
-        KwaversError::System(SystemError::Io {
-            operation: "file".to_string(),
-            reason: err.to_string(),
-        })
+        KwaversError::Io(err.to_string())
     }
 }
 
@@ -944,7 +981,8 @@ pub mod utils {
         matches!(error,
             KwaversError::System(_) |
             KwaversError::Gpu(GpuError::DeviceDetection { .. }) |
-            KwaversError::Gpu(GpuError::MemoryAllocation { .. })
+            KwaversError::Gpu(GpuError::MemoryAllocation { .. }) |
+            KwaversError::ConcurrencyError { .. }
         )
     }
     
@@ -963,6 +1001,11 @@ pub mod utils {
             KwaversError::Visualization(_) => "Visualization",
             KwaversError::Composite(_) => "Composite",
             KwaversError::NotImplemented(_) => "Not Implemented",
+            KwaversError::FieldNotRegistered(_) => "Field Registry",
+            KwaversError::FieldInactive(_) => "Field State",
+            KwaversError::FieldDataNotInitialized => "Field Data",
+            KwaversError::ConcurrencyError { .. } => "Concurrency",
+            KwaversError::Io(_) => "IO",
         }
     }
 }

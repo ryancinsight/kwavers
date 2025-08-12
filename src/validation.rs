@@ -60,11 +60,32 @@ pub struct ValidationContext {
     pub additional_info: HashMap<String, String>,
 }
 
+impl Default for ValidationContext {
+    fn default() -> Self {
+        Self {
+            validator_name: String::new(),
+            field_path: Vec::new(),
+            timestamp: chrono::Utc::now(),
+            additional_info: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationMetadata {
     pub validation_time_ms: u64,
     pub rules_applied: Vec<String>,
     pub performance_metrics: HashMap<String, f64>,
+}
+
+impl Default for ValidationMetadata {
+    fn default() -> Self {
+        Self {
+            validation_time_ms: 0,
+            rules_applied: Vec::new(),
+            performance_metrics: HashMap::new(),
+        }
+    }
 }
 
 impl ValidationResult {

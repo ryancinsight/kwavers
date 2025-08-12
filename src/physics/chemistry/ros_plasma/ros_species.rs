@@ -38,6 +38,8 @@ pub enum ROSSpecies {
     Peroxynitrite,
     /// Nitric oxide (NO)
     NitricOxide,
+    /// Nitrogen dioxide (NO₂)
+    NitrogenDioxide,
 }
 
 impl ROSSpecies {
@@ -54,6 +56,7 @@ impl ROSSpecies {
             Self::AtomicHydrogen => "H",
             Self::Peroxynitrite => "ONOO⁻",
             Self::NitricOxide => "NO",
+            Self::NitrogenDioxide => "NO₂",
         }
     }
     
@@ -70,6 +73,7 @@ impl ROSSpecies {
             Self::AtomicHydrogen => 7.0e-9,
             Self::Peroxynitrite => 1.0e-9, // Approximate
             Self::NitricOxide => 1.0e-9,  // Approximate
+            Self::NitrogenDioxide => 1.2e-9,  // Approximate
         }
     }
     
@@ -86,6 +90,7 @@ impl ROSSpecies {
             Self::AtomicHydrogen => 1e-12,      // 1 ps
             Self::Peroxynitrite => 1e-6,       // 1 μs
             Self::NitricOxide => 1e-6,         // 1 μs
+            Self::NitrogenDioxide => 1e-6,     // 1 μs
         }
     }
     
@@ -102,6 +107,7 @@ impl ROSSpecies {
             Self::AtomicHydrogen => -2.30,      // Strong reductant
             Self::Peroxynitrite => 0.80,       // Reductant
             Self::NitricOxide => 0.90,         // Reductant
+            Self::NitrogenDioxide => 1.05,     // Oxidant
         }
     }
 }
@@ -176,6 +182,10 @@ impl ROSConcentrations {
                 ROSSpecies::SingletOxygen => SINGLET_OXYGEN_WEIGHT,
                 ROSSpecies::Peroxynitrite => PEROXYNITRITE_WEIGHT,
                 ROSSpecies::NitricOxide => NITRIC_OXIDE_WEIGHT,
+                ROSSpecies::Ozone => 0.3,  // Moderate oxidative stress
+                ROSSpecies::HydroperoxylRadical => 0.4,  // Moderate stress
+                ROSSpecies::AtomicOxygen => 0.5,  // High reactivity
+                ROSSpecies::NitrogenDioxide => 0.3,  // Moderate stress
             };
             
             total_stress += weight * conc.sum();

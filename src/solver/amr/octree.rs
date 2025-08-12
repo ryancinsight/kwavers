@@ -39,6 +39,25 @@ impl OctreeNode {
         self.level
     }
     
+    /// Get node bounds
+    pub fn bounds(&self) -> ((usize, usize, usize), (usize, usize, usize)) {
+        (self.bounds_min, self.bounds_max)
+    }
+    
+    /// Get node center coordinates
+    pub fn center(&self) -> (usize, usize, usize) {
+        (
+            (self.bounds_min.0 + self.bounds_max.0) / 2,
+            (self.bounds_min.1 + self.bounds_max.1) / 2,
+            (self.bounds_min.2 + self.bounds_max.2) / 2,
+        )
+    }
+    
+    /// Get children array if they exist
+    pub fn children(&self) -> Option<&[usize; 8]> {
+        self.children.as_ref()
+    }
+    
     /// Get iterator over child indices if they exist
     pub fn children_indices(&self) -> impl Iterator<Item = usize> + '_ {
         self.children

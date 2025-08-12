@@ -89,11 +89,18 @@ pub struct HeterogeneousHandler {
     sound_speed_smooth: Option<Array3<f64>>,
     /// Interface sharpness map
     sharpness_map: Option<Array3<f64>>,
+    /// Default density array (for fallback)
+    default_density: Array3<f64>,
+    /// Default sound speed array (for fallback)
+    default_sound_speed: Array3<f64>,
 }
 
 impl HeterogeneousHandler {
     /// Create a new heterogeneous media handler
     pub fn new(config: HeterogeneousConfig, grid: Grid) -> Self {
+        let default_density = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let default_sound_speed = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
         Self {
             config,
             grid,
@@ -101,6 +108,8 @@ impl HeterogeneousHandler {
             density_smooth: None,
             sound_speed_smooth: None,
             sharpness_map: None,
+            default_density,
+            default_sound_speed,
         }
     }
     
@@ -348,8 +357,13 @@ impl HeterogeneousHandler {
         use crate::utils::{fft_3d, ifft_3d};
         
         // Transform to spectral domain
-        let density_k = fft_3d(density, &self.grid);
-        let sound_speed_k = fft_3d(sound_speed, &self.grid);
+        // Need to create a temporary Array4 for FFT
+        let mut temp_fields = Array4::zeros((2, self.grid.nx, self.grid.ny, self.grid.nz));
+        temp_fields.index_axis_mut(Axis(0), 0).assign(density);
+        temp_fields.index_axis_mut(Axis(0), 1).assign(sound_speed);
+        
+        let density_k = fft_3d(&temp_fields, 0, &self.grid);
+        let sound_speed_k = fft_3d(&temp_fields, 1, &self.grid);
         
         // Apply low-pass filter to remove high frequencies
         let mut density_k_filtered = density_k.clone();
@@ -472,13 +486,13 @@ impl HeterogeneousHandler {
     /// Get smoothed density (or original if not smoothed)
     pub fn get_density(&self) -> &Array3<f64> {
         self.density_smooth.as_ref()
-            .unwrap_or(&Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)))
+            .unwrap_or(&self.default_density)
     }
     
     /// Get smoothed sound speed (or original if not smoothed)
     pub fn get_sound_speed(&self) -> &Array3<f64> {
         self.sound_speed_smooth.as_ref()
-            .unwrap_or(&Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz)))
+            .unwrap_or(&self.default_sound_speed)
     }
     
     /// Get interface mask
