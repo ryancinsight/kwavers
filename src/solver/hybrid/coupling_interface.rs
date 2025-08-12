@@ -32,7 +32,7 @@
 
 use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType, BufferZones};
+use crate::solver::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
@@ -777,10 +777,7 @@ impl CouplingInterface {
         interface_geometry: &InterfaceGeometry,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        use rustfft::{FftPlanner, num_complex::Complex};
-        
         let interface_region = self.get_interface_region(interface_geometry, grid);
-        let mut planner = FftPlanner::<f64>::new();
         
         // For spectral interpolation, we use sinc interpolation in frequency domain
         for i in 0..weights.shape()[0] {

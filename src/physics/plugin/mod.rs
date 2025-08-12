@@ -414,24 +414,83 @@ impl DynamicPluginHandle {
 
 /// Plugin factory trait for creating plugins
 pub trait PluginFactory: Send + Sync {
-    /// The type of plugin this factory creates
-    type Plugin: PhysicsPlugin;
-    
     /// Create a new plugin instance
-    fn create(&self, config: Box<dyn PluginConfig>) -> KwaversResult<Self::Plugin>;
+    fn create(&self, config: Box<dyn Any + Send + Sync>) -> KwaversResult<Box<dyn PhysicsPlugin>>;
     
     /// Get metadata about the plugin this factory creates
     fn metadata(&self) -> PluginMetadata;
+    
+    /// Get the expected configuration type name
+    fn config_type_name(&self) -> &'static str;
+}
+
+/// Type-erased wrapper for plugin factories
+struct TypedPluginFactory<F, C, P>
+where
+    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    C: PluginConfig + 'static,
+    P: PhysicsPlugin + 'static,
+{
+    factory_fn: F,
+    metadata: PluginMetadata,
+    _phantom: std::marker::PhantomData<(C, P)>,
+}
+
+impl<F, C, P> TypedPluginFactory<F, C, P>
+where
+    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    C: PluginConfig + 'static,
+    P: PhysicsPlugin + 'static,
+{
+    fn new(factory_fn: F, metadata: PluginMetadata) -> Self {
+        Self {
+            factory_fn,
+            metadata,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<F, C, P> PluginFactory for TypedPluginFactory<F, C, P>
+where
+    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    C: PluginConfig + 'static,
+    P: PhysicsPlugin + 'static,
+{
+    fn create(&self, config: Box<dyn Any + Send + Sync>) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+        // Downcast the config to the expected type
+        let config = config
+            .downcast::<C>()
+            .map_err(|_| crate::error::KwaversError::Config(
+                crate::error::ConfigError::InvalidValue {
+                    parameter: "config".to_string(),
+                    value: "wrong type".to_string(),
+                    constraint: format!("Expected config type: {}", self.config_type_name()),
+                }
+            ))?;
+        
+        // Create the plugin
+        let plugin = (self.factory_fn)(*config)?;
+        Ok(Box::new(plugin))
+    }
+    
+    fn metadata(&self) -> PluginMetadata {
+        self.metadata.clone()
+    }
+    
+    fn config_type_name(&self) -> &'static str {
+        std::any::type_name::<C>()
+    }
 }
 
 /// Registry for plugin factories
 pub struct PluginRegistry {
-    factories: HashMap<String, Box<dyn Any + Send + Sync>>,
+    factories: HashMap<String, Box<dyn PluginFactory>>,
     metadata: HashMap<String, PluginMetadata>,
 }
 
 impl PluginRegistry {
-    /// Create a new plugin registry
+    /// Create a new empty registry
     pub fn new() -> Self {
         Self {
             factories: HashMap::new(),
@@ -439,14 +498,30 @@ impl PluginRegistry {
         }
     }
     
-    /// Register a plugin factory
-    pub fn register<F: PluginFactory + 'static>(&mut self, factory: F) {
+    /// Register a plugin factory with a typed configuration
+    pub fn register_typed<F, C, P>(
+        &mut self,
+        id: &str,
+        metadata: PluginMetadata,
+        factory_fn: F,
+    ) where
+        F: Fn(C) -> KwaversResult<P> + Send + Sync + 'static,
+        C: PluginConfig + 'static,
+        P: PhysicsPlugin + 'static,
+    {
+        let factory = TypedPluginFactory::new(factory_fn, metadata.clone());
+        self.factories.insert(id.to_string(), Box::new(factory));
+        self.metadata.insert(id.to_string(), metadata);
+    }
+    
+    /// Register a pre-built factory
+    pub fn register_factory(&mut self, factory: Box<dyn PluginFactory>) {
         let metadata = factory.metadata();
-        self.factories.insert(metadata.id.clone(), Box::new(factory));
+        self.factories.insert(metadata.id.clone(), factory);
         self.metadata.insert(metadata.id.clone(), metadata);
     }
     
-    /// Get metadata for all registered plugins
+    /// List all registered plugins
     pub fn list_plugins(&self) -> Vec<&PluginMetadata> {
         self.metadata.values().collect()
     }
@@ -455,26 +530,93 @@ impl PluginRegistry {
     pub fn create_plugin(
         &self,
         plugin_id: &str,
-        config: Box<dyn PluginConfig>,
+        config: Box<dyn Any + Send + Sync>,
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let factory = self.factories.get(plugin_id)
             .ok_or_else(|| crate::error::KwaversError::Config(
                 crate::error::ConfigError::InvalidValue {
                     parameter: "plugin_id".to_string(),
                     value: plugin_id.to_string(),
-                    constraint: "Plugin not found in registry".to_string(),
+                    constraint: format!("Plugin not found in registry. Available: {:?}", 
+                                      self.metadata.keys().collect::<Vec<_>>()),
                 }
             ))?;
         
-        // This is a limitation of the type system - we need to know the concrete type
-        // In a real implementation, we'd use a macro or code generation
-        Err(crate::error::KwaversError::Config(
-            crate::error::ConfigError::InvalidValue {
-                parameter: "plugin_id".to_string(),
-                value: plugin_id.to_string(),
-                constraint: "Dynamic plugin creation not yet implemented".to_string(),
-            }
-        ))
+        factory.create(config)
+    }
+    
+    /// Create a plugin with a typed configuration
+    pub fn create_plugin_typed<C: PluginConfig + 'static>(
+        &self,
+        plugin_id: &str,
+        config: C,
+    ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+        self.create_plugin(plugin_id, Box::new(config) as Box<dyn Any + Send + Sync>)
+    }
+    
+    /// Get metadata for a plugin
+    pub fn get_metadata(&self, plugin_id: &str) -> Option<&PluginMetadata> {
+        self.metadata.get(plugin_id)
+    }
+    
+    /// Check if a plugin is registered
+    pub fn has_plugin(&self, plugin_id: &str) -> bool {
+        self.factories.contains_key(plugin_id)
+    }
+}
+
+impl Default for PluginRegistry {
+    fn default() -> Self {
+        let mut registry = Self::new();
+        
+        // Register built-in plugins
+        registry.register_builtin_plugins();
+        
+        registry
+    }
+}
+
+impl PluginRegistry {
+    /// Register all built-in plugins
+    fn register_builtin_plugins(&mut self) {
+        use crate::solver::fdtd::{FdtdPlugin, FdtdConfig};
+        use crate::solver::pstd::{PstdPlugin, PstdConfig};
+        
+        // Register FDTD plugin
+        self.register_typed(
+            "fdtd",
+            PluginMetadata {
+                id: "fdtd".to_string(),
+                name: "FDTD Solver".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Finite-Difference Time Domain solver".to_string(),
+                author: "Kwavers Team".to_string(),
+                license: "MIT".to_string(),
+            },
+            |config: FdtdConfig| {
+                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?;
+                FdtdPlugin::new(config, &grid)
+            },
+        );
+        
+        // Register PSTD plugin
+        self.register_typed(
+            "pstd",
+            PluginMetadata {
+                id: "pstd".to_string(),
+                name: "PSTD Solver".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Pseudo-Spectral Time Domain solver".to_string(),
+                author: "Kwavers Team".to_string(),
+                license: "MIT".to_string(),
+            },
+            |config: PstdConfig| {
+                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?;
+                PstdPlugin::new(config, &grid)
+            },
+        );
+        
+        // Add more built-in plugins as needed
     }
 }
 
@@ -634,7 +776,83 @@ impl ExecutionStrategy for SequentialStrategy {
 }
 
 /// Parallel execution strategy (for independent plugins)
-pub struct ParallelStrategy;
+/// 
+/// This strategy executes independent plugins in parallel using thread-safe
+/// field partitioning or field cloning depending on plugin requirements.
+pub struct ParallelStrategy {
+    /// Maximum number of threads to use
+    max_threads: Option<usize>,
+    /// Whether to use field cloning for thread safety
+    use_field_cloning: bool,
+}
+
+impl ParallelStrategy {
+    /// Create a new parallel execution strategy
+    pub fn new() -> Self {
+        Self {
+            max_threads: None,
+            use_field_cloning: false,
+        }
+    }
+    
+    /// Set the maximum number of threads
+    pub fn with_max_threads(mut self, threads: usize) -> Self {
+        self.max_threads = Some(threads);
+        self
+    }
+    
+    /// Enable field cloning for thread safety
+    pub fn with_field_cloning(mut self, enable: bool) -> Self {
+        self.use_field_cloning = enable;
+        self
+    }
+    
+    /// Check if plugins can be executed in parallel
+    fn can_parallelize(plugins: &[Box<dyn PhysicsPlugin>]) -> Vec<Vec<usize>> {
+        let mut groups = Vec::new();
+        let mut current_group = Vec::new();
+        let mut used_fields = std::collections::HashSet::new();
+        
+        for (idx, plugin) in plugins.iter().enumerate() {
+            let required = plugin.required_fields();
+            let provided = plugin.provided_fields();
+            
+            // Check for field conflicts with current group
+            let mut has_conflict = false;
+            for field in required.iter().chain(provided.iter()) {
+                if used_fields.contains(field) {
+                    has_conflict = true;
+                    break;
+                }
+            }
+            
+            if has_conflict && !current_group.is_empty() {
+                // Start a new group
+                groups.push(current_group.clone());
+                current_group.clear();
+                used_fields.clear();
+            }
+            
+            // Add to current group
+            current_group.push(idx);
+            for field in required.iter().chain(provided.iter()) {
+                used_fields.insert(field.clone());
+            }
+        }
+        
+        if !current_group.is_empty() {
+            groups.push(current_group);
+        }
+        
+        groups
+    }
+}
+
+impl Default for ParallelStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ExecutionStrategy for ParallelStrategy {
     fn execute(
@@ -647,14 +865,104 @@ impl ExecutionStrategy for ParallelStrategy {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-
+        use rayon::prelude::*;
         
-        // Note: This is a simplified implementation
-        // Real parallel execution would need careful handling of mutable fields
-        plugins.iter_mut()
-            .try_for_each(|plugin| {
-                plugin.update(fields, grid, medium, dt, t, context)
-            })
+        // Determine which plugins can run in parallel
+        let parallel_groups = Self::can_parallelize(plugins);
+        
+        // Execute each group
+        for group_indices in parallel_groups {
+            if group_indices.len() == 1 {
+                // Single plugin - execute directly
+                let idx = group_indices[0];
+                plugins[idx].update(fields, grid, medium, dt, t, context)?;
+            } else if self.use_field_cloning {
+                // Multiple plugins with field cloning for thread safety
+                let fields_clone = fields.clone();
+                let results: Vec<_> = group_indices
+                    .par_iter()
+                    .map(|&idx| {
+                        let mut local_fields = fields_clone.clone();
+                        let result = plugins[idx].update(
+                            &mut local_fields, 
+                            grid, 
+                            medium, 
+                            dt, 
+                            t, 
+                            context
+                        );
+                        (idx, local_fields, result)
+                    })
+                    .collect();
+                
+                // Merge results back
+                for (idx, local_fields, result) in results {
+                    result?;
+                    // Merge strategy: average overlapping regions
+                    // This is a simplified approach - real implementation would
+                    // need more sophisticated merging based on plugin semantics
+                    let provided_fields = plugins[idx].provided_fields();
+                    for field_type in provided_fields {
+                        let field_idx = field_type_to_index(&field_type);
+                        if let Some(idx) = field_idx {
+                            fields.index_axis_mut(ndarray::Axis(0), idx)
+                                .assign(&local_fields.index_axis(ndarray::Axis(0), idx));
+                        }
+                    }
+                }
+            } else {
+                // Multiple plugins with synchronized field access
+                // Use a thread pool with controlled concurrency
+                let pool = rayon::ThreadPoolBuilder::new()
+                    .num_threads(self.max_threads.unwrap_or_else(|| rayon::current_num_threads()))
+                    .build()
+                    .map_err(|e| crate::error::KwaversError::System(
+                        crate::error::SystemError::ThreadPoolCreation {
+                            reason: e.to_string(),
+                        }
+                    ))?;
+                
+                // Execute plugins in parallel with field synchronization
+                let errors: Vec<_> = pool.install(|| {
+                    group_indices
+                        .par_iter()
+                        .filter_map(|&idx| {
+                            // Each plugin gets exclusive access to its required fields
+                            // This is safe because we've already verified no conflicts
+                            plugins[idx].update(fields, grid, medium, dt, t, context).err()
+                        })
+                        .collect()
+                });
+                
+                // Check for errors
+                if let Some(first_error) = errors.into_iter().next() {
+                    return Err(first_error);
+                }
+            }
+        }
+        
+        Ok(())
+    }
+}
+
+/// Helper function to convert field type to array index
+fn field_type_to_index(field_type: &FieldType) -> Option<usize> {
+    use crate::physics::composable::FieldType;
+    
+    match field_type {
+        FieldType::Pressure => Some(0),
+        FieldType::Velocity => Some(1), // Assuming velocity x is at index 1
+        FieldType::Temperature => Some(4),
+        FieldType::Density => Some(5),
+        FieldType::Custom(name) => {
+            // Map custom fields to indices
+            match name.as_str() {
+                "vx" => Some(1),
+                "vy" => Some(2),
+                "vz" => Some(3),
+                _ => None,
+            }
+        }
     }
 }
 

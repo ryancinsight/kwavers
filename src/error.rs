@@ -574,6 +574,10 @@ pub enum SystemError {
     ThreadCreation {
         reason: String,
     },
+    /// Thread pool creation failed
+    ThreadPoolCreation {
+        reason: String,
+    },
     /// Thread synchronization failed
     ThreadSync {
         operation: String,
@@ -587,11 +591,7 @@ pub enum SystemError {
     /// System call failed
     SystemCall {
         call: String,
-        reason: String,
-    },
-    /// IO error
-    Io {
-        operation: String,
+        error_code: i32,
         reason: String,
     },
 }
@@ -605,17 +605,17 @@ impl fmt::Display for SystemError {
             SystemError::ThreadCreation { reason } => {
                 write!(f, "Thread creation failed: {}", reason)
             }
+            SystemError::ThreadPoolCreation { reason } => {
+                write!(f, "Thread pool creation failed: {}", reason)
+            }
             SystemError::ThreadSync { operation, reason } => {
                 write!(f, "Thread synchronization failed in {}: {}", operation, reason)
             }
             SystemError::ResourceExhausted { resource, reason } => {
                 write!(f, "System resource '{}' exhausted: {}", resource, reason)
             }
-            SystemError::SystemCall { call, reason } => {
-                write!(f, "System call '{}' failed: {}", call, reason)
-            }
-            SystemError::Io { operation, reason } => {
-                write!(f, "IO operation '{}' failed: {}", operation, reason)
+            SystemError::SystemCall { call, error_code, reason } => {
+                write!(f, "System call '{}' failed with error code {}: {}", call, error_code, reason)
             }
         }
     }
