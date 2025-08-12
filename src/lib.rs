@@ -61,9 +61,10 @@ pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
 pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue};
 pub use error::{ValidationError, ConfigError};
 
-// Re-export physics components
-pub use physics::composable::{PhysicsPipeline, PhysicsContext, PhysicsComponent, ThermalDiffusionComponent, KuznetsovWaveComponent, ComponentState, FieldType};
+// Re-export physics plugin system (the new unified architecture)
 pub use physics::plugin::{PhysicsPlugin, PluginManager, PluginContext, PluginMetadata};
+pub use physics::field_mapping::{UnifiedFieldType, FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut};
+pub use physics::state::{PhysicsState, field_indices};
 
 // Re-export spectral-DG components
 pub use solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
@@ -323,6 +324,8 @@ pub fn create_validated_simulation(
 pub fn run_advanced_simulation(
     config: Config,
 ) -> KwaversResult<()> {
+    use crate::physics::plugin::PluginContext;
+    
     // Create validated simulation components
     let (grid, time, medium, source, mut recorder) = create_validated_simulation(config)?;
     
@@ -345,9 +348,10 @@ pub fn run_advanced_simulation(
     ))?;
     
     // Add thermal diffusion component using adapter
-    plugin_manager.register(Box::new(
-        physics::plugin::thermal_diffusion_plugin("thermal".to_string())
-    ))?;
+    // Note: Specific physics plugins need to be implemented
+    // plugin_manager.register(Box::new(
+    //     physics::plugin::thermal_diffusion_plugin("thermal".to_string())
+    // ))?;
     
     // Create boundary conditions
     let mut boundary = PMLBoundary::new(
@@ -368,7 +372,7 @@ pub fn run_advanced_simulation(
     fields.index_axis_mut(ndarray::Axis(0), 1).fill(310.0); // 37°C
     
     // Create physics context
-    let mut context = PhysicsContext::new(1e6);
+    let mut context = PluginContext::new(1e6);
     
     // Main simulation loop
     for step in 0..time.num_steps() {

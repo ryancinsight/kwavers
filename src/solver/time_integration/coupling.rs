@@ -5,7 +5,7 @@
 
 use crate::grid::Grid;
 use crate::KwaversResult;
-use crate::physics::PhysicsComponent;
+use crate::physics::plugin::PhysicsPlugin;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -16,7 +16,7 @@ pub trait TimeCoupling: Send + Sync + Debug {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -41,7 +41,7 @@ impl TimeCoupling for SubcyclingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -100,7 +100,7 @@ impl TimeCoupling for AveragingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -171,7 +171,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsComponent>>,
+        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,

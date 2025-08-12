@@ -53,7 +53,7 @@ impl RayleighScattering {
         let start_time = std::time::Instant::now();
         
         // Get bubble radius from state
-        let bubble_radius = self.get_field(field_indices::BUBBLE_RADIUS)?;
+        let bubble_radius = self.state.get_field(field_indices::BUBBLE_RADIUS)?;
         
         // Medium properties
         let sound_speed = medium.sound_speed(0.0, 0.0, 0.0, grid);
@@ -109,11 +109,7 @@ impl RayleighScattering {
     }
 }
 
-impl FieldAccessor for RayleighScattering {
-    fn physics_state(&self) -> &PhysicsState {
-        &self.state
-    }
-}
+// FieldAccessor trait implementation removed - use PhysicsState methods directly
 
 #[cfg(test)]
 mod tests {

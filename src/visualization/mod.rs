@@ -59,8 +59,8 @@ pub use controls::*;
 #[cfg(feature = "advanced-visualization")]
 pub use data_pipeline::*;
 
-// Re-export FieldType from composable module to avoid duplication
-pub use crate::physics::composable::FieldType;
+// Re-export UnifiedFieldType from field_mapping module
+pub use crate::physics::field_mapping::UnifiedFieldType as FieldType;
 
 /// Color mapping schemes for scientific visualization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

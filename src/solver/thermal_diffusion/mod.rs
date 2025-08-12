@@ -622,12 +622,13 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
         PluginState::Initialized
     }
     
-    fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
         vec![] // Thermal diffusion doesn't require specific fields, but uses pressure for heating
     }
     
-    fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
-        vec![crate::physics::composable::FieldType::Temperature]
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        vec![UnifiedFieldType::Temperature]
     }
     
     fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {

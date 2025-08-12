@@ -494,19 +494,15 @@ impl Medium for HeterogeneousTissueMedium {
             let pressure = self.pressure_amplitude.as_ref().map(|p| p[indices]);
             
             // Use the tissue-specific absorption model
-            tissue_specific::tissue_absorption_coefficient(
+            crate::medium::absorption::tissue_specific_absorption(
                 tissue,
-                frequency,
-                temperature,
-                pressure
+                frequency
             )
         } else {
             // Default to soft tissue if out of bounds
-            tissue_specific::tissue_absorption_coefficient(
+            crate::medium::absorption::tissue_specific_absorption(
                 TissueType::SoftTissue,
-                frequency,
-                310.15, // Body temperature
-                None
+                frequency
             )
         }
     }

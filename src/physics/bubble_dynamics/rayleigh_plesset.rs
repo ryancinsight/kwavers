@@ -1,15 +1,18 @@
-//! Rayleigh-Plesset equation for bubble dynamics
+//! Rayleigh-Plesset Equation for Bubble Dynamics
 //!
 //! This module implements the Rayleigh-Plesset equation for modeling
 //! the dynamics of spherical bubbles in liquids.
 
-use super::bubble_state::{BubbleState, BubbleParameters, GasSpecies};
-use super::thermodynamics::{ThermodynamicsCalculator, VaporPressureModel, MassTransferModel};
-use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
+use super::bubble_state::{BubbleState, BubbleParameters};
+use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPressureModel};
+use crate::error::KwaversResult;
 use crate::constants::bubble_dynamics::{
-    PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER, 
-    NUSSELT_BASE, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT
+    MIN_RADIUS, MAX_RADIUS, PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER, 
+    NUSSELT_BASE, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT,
+    N2_FRACTION, O2_FRACTION, VDW_A_N2, VDW_A_O2, VDW_B_N2, VDW_B_O2,
+    BAR_L2_TO_PA_M6, L_TO_M3
 };
+use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
 use std::f64::consts::PI;
 
 // Remove duplicate constant definitions - they're now imported from constants module

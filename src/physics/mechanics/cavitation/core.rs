@@ -58,11 +58,7 @@ impl CavitationModel {
     }
 }
 
-impl FieldAccessor for CavitationModel {
-    fn physics_state(&self) -> &PhysicsState {
-        &self.state
-    }
-}
+// FieldAccessor trait implementation removed - use PhysicsState methods directly
 
 impl CavitationModelBehavior for CavitationModel {
     fn update_cavitation(

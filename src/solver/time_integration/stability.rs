@@ -24,7 +24,7 @@ impl StabilityAnalyzer {
     /// Compute stable time step based on CFL condition
     pub fn compute_stable_dt(
         &self,
-        physics: &dyn crate::physics::PhysicsComponent,
+        physics: &dyn crate::physics::plugin::PhysicsPlugin,
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {

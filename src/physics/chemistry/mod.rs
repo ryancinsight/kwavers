@@ -10,7 +10,8 @@
 use crate::error::{KwaversResult, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::composable::{PhysicsContext, FieldType};
+use crate::physics::plugin::PluginContext;
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::traits::ChemicalModelTrait;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -643,13 +644,13 @@ impl ChemicalModelTrait for ChemicalModel {
         
         // Create fields map for update
         let mut fields = HashMap::new();
-        fields.insert(FieldType::Pressure, p.clone());
-        fields.insert(FieldType::Light, light.clone());
-        fields.insert(FieldType::Temperature, temperature.clone());
-        fields.insert(FieldType::Cavitation, bubble_radius.clone());
+        fields.insert(UnifiedFieldType::Pressure, p.clone());
+        fields.insert(UnifiedFieldType::Light, light.clone());
+        fields.insert(UnifiedFieldType::Temperature, temperature.clone());
+        fields.insert(UnifiedFieldType::Cavitation, bubble_radius.clone());
         
         // Create context with proper structure
-        let mut context = PhysicsContext::new(frequency);
+        let mut context = PluginContext::new(frequency);
         context.parameters.insert("dt".to_string(), dt);
         context.parameters.insert("time".to_string(), 0.0);
         

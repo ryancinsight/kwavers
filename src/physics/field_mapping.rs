@@ -191,22 +191,7 @@ impl<'a> FieldAccessorMut<'a> {
     }
 }
 
-/// Migration helper to convert old FieldType to UnifiedFieldType
-pub fn migrate_field_type(old: &crate::physics::composable::FieldType) -> Option<UnifiedFieldType> {
-    use crate::physics::composable::FieldType;
-    
-    match old {
-        FieldType::Pressure => Some(UnifiedFieldType::Pressure),
-        FieldType::Temperature => Some(UnifiedFieldType::Temperature),
-        FieldType::Density => Some(UnifiedFieldType::Density),
-        FieldType::Velocity => Some(UnifiedFieldType::VelocityX), // Default to X component
-        FieldType::Light => Some(UnifiedFieldType::LightFluence),
-        FieldType::Chemical => Some(UnifiedFieldType::ChemicalConcentration),
-        FieldType::Cavitation => Some(UnifiedFieldType::BubbleRadius), // Cavitation uses bubble radius
-        FieldType::Stress => Some(UnifiedFieldType::StressXX), // Default to XX component
-        FieldType::Custom(_) => None, // Custom fields need special handling
-    }
-}
+// Migration helper removed - composable module has been deprecated and removed
 
 #[cfg(test)]
 mod tests {

@@ -85,13 +85,14 @@
 //! - DRY: Reuses grid utilities and boundary conditions
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
+use crate::boundary::{Boundary, PMLBoundary, CPMLBoundary};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
-use crate::physics::composable::ValidationResult;
+use crate::validation::ValidationResult;
 use crate::constants::cfl;
-use ndarray::{Array3, Array4, Zip};
+use ndarray::{Array3, Array4, ArrayView3, Axis, Zip, s};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{debug, info};
@@ -856,17 +857,26 @@ impl PhysicsPlugin for FdtdPlugin {
         Ok(())
     }
     
-    fn required_fields(&self) -> Vec<crate::physics::composable::FieldType> {
-        use crate::physics::composable::FieldType;
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        use crate::physics::field_mapping::UnifiedFieldType;
         vec![
-            FieldType::Pressure,
-            FieldType::Velocity,
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+            UnifiedFieldType::Density,
+            UnifiedFieldType::SoundSpeed,
         ]
     }
     
-    fn provided_fields(&self) -> Vec<crate::physics::composable::FieldType> {
-        // FDTD updates the same fields it requires
-        self.required_fields()
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        vec![
+            UnifiedFieldType::Pressure,
+            UnifiedFieldType::VelocityX,
+            UnifiedFieldType::VelocityY,
+            UnifiedFieldType::VelocityZ,
+        ]
     }
     
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
