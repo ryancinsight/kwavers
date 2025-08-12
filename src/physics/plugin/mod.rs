@@ -1,29 +1,24 @@
 // src/physics/plugin/mod.rs
-//! Plugin Architecture for Extensible Physics Modules
+//! Plugin architecture for extensible physics
 //! 
-//! This module implements a plugin system that follows key design principles:
-//! - **SOLID**: Single responsibility plugins with clear interfaces
-//! - **CUPID**: Composable, Unix-like, Predictable, Idiomatic, Domain-focused
-//! - **GRASP**: Information expert pattern with proper encapsulation
-//! - **DRY**: Shared utilities and common interfaces
-//! - **KISS**: Simple, intuitive plugin API
-//! - **YAGNI**: Only essential features implemented
-//! - **Clean**: Clear abstractions and comprehensive documentation
+//! This module provides a flexible plugin system for physics simulations
 
-pub mod adapters;
-pub use adapters::{ComponentPluginAdapter, factories::{acoustic_wave_plugin, thermal_diffusion_plugin}};
+pub mod factory;
+pub mod registry;
+pub mod tests;
+pub mod field_access;  // NEW: Safe field access for plugins
 
-#[cfg(test)]
-mod tests;
-
-use crate::error::KwaversResult;
+use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::composable::{FieldType, ValidationResult};
+use crate::physics::composable::FieldType;
+use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::Array4;
 use std::any::Any;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::sync::{Arc, Mutex, RwLock};
+use log::{debug, info, warn};
 
 /// Metadata about a physics plugin
 #[derive(Debug, Clone)]
