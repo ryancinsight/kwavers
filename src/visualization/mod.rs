@@ -59,22 +59,8 @@ pub use controls::*;
 #[cfg(feature = "advanced-visualization")]
 pub use data_pipeline::*;
 
-/// Visualization field types supported by the engine
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum FieldType {
-    /// Acoustic pressure field (Pa)
-    Pressure,
-    /// Temperature field (K)
-    Temperature,
-    /// Optical field intensity (W/m²)
-    OpticalIntensity,
-    /// Cavitation bubble radius (m)
-    BubbleRadius,
-    /// Velocity field magnitude (m/s)
-    VelocityMagnitude,
-    /// Custom field (user-defined)
-    Custom(usize),
-}
+// Re-export FieldType from composable module to avoid duplication
+pub use crate::physics::composable::FieldType;
 
 /// Color mapping schemes for scientific visualization
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

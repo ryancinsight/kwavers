@@ -17,6 +17,7 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod config;
+pub mod constants;
 pub mod error;
 pub mod factory;
 pub mod fft;

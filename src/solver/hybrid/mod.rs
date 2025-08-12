@@ -64,6 +64,7 @@ pub mod validation;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError};
+use crate::constants::{tolerance, stability, grid as grid_constants};
 use crate::solver::pstd::{PstdSolver, PstdConfig};
 use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
@@ -141,15 +142,18 @@ pub struct CouplingInterfaceConfig {
     pub smoothing_factor: f64,
     /// Enable conservative interpolation
     pub conservative_transfer: bool,
+    /// Minimum stability indicator threshold
+    pub stability_threshold: f64,
 }
 
 impl Default for CouplingInterfaceConfig {
     fn default() -> Self {
         Self {
             interpolation_scheme: InterpolationScheme::CubicSpline,
-            buffer_width: 4,
-            smoothing_factor: 0.1,
+            buffer_width: grid_constants::DEFAULT_BUFFER_WIDTH,
+            smoothing_factor: stability::SMOOTHING_FACTOR,
             conservative_transfer: true,
+            stability_threshold: stability::INTERFACE_THRESHOLD,
         }
     }
 }
@@ -211,7 +215,7 @@ impl Default for ValidationConfig {
             enable_conservation_checks: true,
             enable_continuity_checks: true,
             validation_frequency: 10,
-            tolerance: 1e-6,
+            tolerance: tolerance::CONSERVATION,
         }
     }
 }
@@ -434,7 +438,7 @@ impl HybridSolver {
         self.process_domains(fields, medium, dt, time)?;
         
         // Apply coupling interface corrections
-        self.apply_coupling_corrections(fields, dt)?;
+        self.apply_coupling_corrections(fields, medium, dt)?;
         
         // Validate results (if enabled)
         if self.should_validate()? {
@@ -944,15 +948,16 @@ impl HybridSolver {
     fn apply_coupling_corrections(
         &mut self,
         fields: &mut Array4<f64>,
+        medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
         // Apply interface corrections between domains
-        self.coupling_interface.apply_corrections(
+        self.coupling_interface.apply_coupling_corrections(
             fields,
-            &self.current_domains,
             &self.grid,
+            medium,
             dt,
         )?;
         

@@ -88,7 +88,9 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError, ConfigError};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
+use crate::physics::composable::ValidationResult;
+use crate::constants::cfl;
 use ndarray::{Array3, Array4, Zip};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
@@ -114,10 +116,44 @@ impl Default for FdtdConfig {
         Self {
             spatial_order: 4,
             staggered_grid: true,
-            cfl_factor: 0.95,
+            cfl_factor: cfl::FDTD_DEFAULT,
             subgridding: false,
             subgrid_factor: 2,
         }
+    }
+}
+
+impl PluginConfig for FdtdConfig {
+    fn validate(&self) -> ValidationResult {
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
+        
+        // Validate spatial order
+        if ![2, 4, 6].contains(&self.spatial_order) {
+            errors.push(format!("Invalid spatial order: {}. Must be 2, 4, or 6", self.spatial_order));
+        }
+        
+        // Validate CFL factor
+        if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
+            errors.push(format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor));
+        } else if self.cfl_factor > 0.95 {
+            warnings.push(format!("CFL factor {} may cause instability", self.cfl_factor));
+        }
+        
+        // Validate subgridding
+        if self.subgridding && self.subgrid_factor < 2 {
+            errors.push(format!("Invalid subgrid factor: {}. Must be >= 2", self.subgrid_factor));
+        }
+        
+        ValidationResult {
+            is_valid: errors.is_empty(),
+            errors,
+            warnings,
+        }
+    }
+    
+    fn clone_boxed(&self) -> Box<dyn std::any::Any + Send + Sync> {
+        Box::new(self.clone())
     }
 }
 

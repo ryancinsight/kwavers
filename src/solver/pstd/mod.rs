@@ -82,7 +82,9 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
+use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
+use crate::physics::composable::ValidationResult;
+use crate::constants::cfl;
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -112,8 +114,42 @@ impl Default for PstdConfig {
             k_space_order: 4,
             anti_aliasing: true,
             pml_stencil_size: 4,
-            cfl_factor: 0.3,
+            cfl_factor: cfl::PSTD_DEFAULT,
         }
+    }
+}
+
+impl PluginConfig for PstdConfig {
+    fn validate(&self) -> ValidationResult {
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
+        
+        // Validate k-space order
+        if self.k_space_correction && (self.k_space_order < 2 || self.k_space_order > 8) {
+            errors.push(format!("Invalid k-space order: {}. Must be between 2 and 8", self.k_space_order));
+        }
+        
+        // Validate CFL factor
+        if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
+            errors.push(format!("Invalid CFL factor: {}. Must be in (0, 1]", self.cfl_factor));
+        } else if self.cfl_factor > 0.5 {
+            warnings.push(format!("CFL factor {} may cause instability in PSTD", self.cfl_factor));
+        }
+        
+        // Validate PML stencil size
+        if self.pml_stencil_size < 2 || self.pml_stencil_size > 10 {
+            errors.push(format!("Invalid PML stencil size: {}. Must be between 2 and 10", self.pml_stencil_size));
+        }
+        
+        ValidationResult {
+            is_valid: errors.is_empty(),
+            errors,
+            warnings,
+        }
+    }
+    
+    fn clone_boxed(&self) -> Box<dyn std::any::Any + Send + Sync> {
+        Box::new(self.clone())
     }
 }
 
