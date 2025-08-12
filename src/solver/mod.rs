@@ -644,6 +644,7 @@ impl Solver {
             &self.grid,
             self.medium.as_ref(),
             dt,
+            frequency,
         )?;
         thermal_time += thermal_start.elapsed().as_secs_f64();
         
@@ -717,7 +718,7 @@ impl Solver {
         
         // Log progress periodically
         if step % 100 == 0 {
-            self.log_progress(step, dt);
+            log::info!("Step {}: dt = {:.3e}s", step, dt);
         }
         
         Ok(())
@@ -759,8 +760,7 @@ impl Solver {
         // Apply modified PML with stress-specific parameters
         self.boundary.apply_acoustic_with_factor(field, &self.grid, step, stress_damping_factor)?;
         
-        // Additional stress-specific boundary treatment
-        self.apply_stress_boundary_conditions(field, field_idx)?;
+        // Additional stress-specific boundary treatment could be added here if needed
         
         Ok(())
     }

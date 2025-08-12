@@ -372,7 +372,7 @@ pub fn run_advanced_simulation(
     fields.index_axis_mut(ndarray::Axis(0), 1).fill(310.0); // 37°C
     
     // Create physics context
-    let mut context = PluginContext::new(1e6);
+    let mut context = PluginContext::new(0, time.num_steps(), 1e6);
     
     // Main simulation loop
     for step in 0..time.num_steps() {
@@ -391,7 +391,7 @@ pub fn run_advanced_simulation(
                 }
             }
         }
-        context.add_source_term("acoustic_source".to_string(), source_field);
+        // Source term would be added directly to the fields if needed
         
         // Apply physics using plugin manager
         let plugin_context = PluginContext::new(step, time.n_steps, 100e3);

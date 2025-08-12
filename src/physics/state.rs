@@ -220,13 +220,20 @@ impl PhysicsState {
     
     /// Update a specific field with new data
     pub fn update_field(&self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
-        self.with_field_mut(field_index, |mut field| {
-            if data.shape() != field.shape() {
-                return Err(PhysicsError::DimensionMismatch);
-            }
-            field.assign(data);
-            Ok(())
-        })?
+        if field_index >= field_indices::TOTAL_FIELDS {
+            return Err(PhysicsError::InvalidFieldIndex(field_index).into());
+        }
+        
+        let mut fields = self.fields.write().map_err(|e| 
+            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
+        )?;
+        
+        let mut field = fields.index_axis_mut(Axis(0), field_index);
+        if data.shape() != field.shape() {
+            return Err(PhysicsError::DimensionMismatch.into());
+        }
+        field.assign(data);
+        Ok(())
     }
     
     /// Get direct access to all fields (for plugin system)
