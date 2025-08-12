@@ -151,7 +151,7 @@ mod tests {
         assert_eq!(octree.total_cells(), 9); // 1 root + 8 children
         
         // Test further refinement
-        let children = octree.get_children(0, 0, 0);
+        let children = octree.get_children_coords(0, 0, 0);
         assert_eq!(children.len(), 8);
         
         let (ci, cj, ck) = children[0];

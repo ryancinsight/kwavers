@@ -58,7 +58,7 @@ pub use solver::Solver;
 pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, enhanced::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
-pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue};
+pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics plugin system (the new unified architecture)
