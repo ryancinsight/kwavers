@@ -21,6 +21,7 @@
   - Corrected FFT normalization for accurate wave physics
   - Power-law absorption model (α(f) = α₀f^y) with fractional derivatives
   - Physically accurate acoustic diffusivity implementation
+  - Exact dispersion correction accounting for spatial and temporal discretization
 - **🔢 Constants Module**: Created comprehensive constants module with 30+ named constants
 - **🧹 Code Quality**: 
   - Fixed 18 critical compilation errors

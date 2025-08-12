@@ -21,6 +21,7 @@
   - Fixed FFT scaling bug in PSTD solver for correct wave physics ✅
   - Implemented power-law absorption model with fractional derivatives ✅
   - Fixed acoustic diffusivity in Kuznetsov solver (proper physics) ✅
+  - Corrected k-space dispersion relation (spatial + temporal errors) ✅
 - **Code Quality**: 
   - Fixed 18 compilation errors in multiple modules ✅
   - Removed duplicate FieldType enum (DRY principle) ✅

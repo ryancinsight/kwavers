@@ -86,7 +86,7 @@ use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
 use crate::physics::composable::ValidationResult;
 use crate::constants::cfl;
-use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig};
+use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig, CorrectionMethod};
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -225,9 +225,9 @@ impl PstdSolver {
         let kappa = if config.k_space_correction {
             let kspace_config = KSpaceCorrectionConfig {
                 enabled: true,
-                order: config.k_space_order,
-                use_kwave_exact: true,  // Use exact k-Wave formulation
+                method: CorrectionMethod::ExactDispersion,  // Use most accurate method
                 cfl_number: config.cfl_factor,
+                max_correction: 2.0,
             };
             // Estimate dt and reference sound speed for correction
             let c_ref = 1500.0; // Will be updated with actual medium properties

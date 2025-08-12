@@ -65,6 +65,9 @@
 - [x] Replace placeholder DG solver with proper implementation
 - [x] Add shock-capturing capabilities (MinMod limiter)
 - [x] Fix FFT scaling inconsistency in PSTD solver
+- [x] Implement power-law absorption model with fractional derivatives
+- [x] Fix acoustic diffusivity with proper physics
+- [x] Correct k-space dispersion relation (spatial + temporal)
 
 ### **Sprint 1: Performance Optimization** (Weeks 1-2) - CURRENT
 - [ ] Profile and optimize critical paths
