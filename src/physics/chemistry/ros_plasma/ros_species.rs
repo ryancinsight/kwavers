@@ -10,6 +10,11 @@
 use ndarray::{Array3};
 use std::collections::HashMap;
 
+use crate::constants::chemistry::{
+    HYDROXYL_RADICAL_WEIGHT, HYDROGEN_PEROXIDE_WEIGHT, SUPEROXIDE_WEIGHT,
+    SINGLET_OXYGEN_WEIGHT, PEROXYNITRITE_WEIGHT, NITRIC_OXIDE_WEIGHT
+};
+
 /// Enumeration of reactive oxygen species
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ROSSpecies {
@@ -29,6 +34,10 @@ pub enum ROSSpecies {
     AtomicOxygen,
     /// Atomic hydrogen (H)
     AtomicHydrogen,
+    /// Peroxynitrite (ONOO⁻)
+    Peroxynitrite,
+    /// Nitric oxide (NO)
+    NitricOxide,
 }
 
 impl ROSSpecies {
@@ -43,6 +52,8 @@ impl ROSSpecies {
             Self::HydroperoxylRadical => "HO₂•",
             Self::AtomicOxygen => "O",
             Self::AtomicHydrogen => "H",
+            Self::Peroxynitrite => "ONOO⁻",
+            Self::NitricOxide => "NO",
         }
     }
     
@@ -57,6 +68,8 @@ impl ROSSpecies {
             Self::HydroperoxylRadical => 2.0e-9,
             Self::AtomicOxygen => 2.5e-9,
             Self::AtomicHydrogen => 7.0e-9,
+            Self::Peroxynitrite => 1.0e-9, // Approximate
+            Self::NitricOxide => 1.0e-9,  // Approximate
         }
     }
     
@@ -71,6 +84,8 @@ impl ROSSpecies {
             Self::HydroperoxylRadical => 1e-6,  // 1 μs
             Self::AtomicOxygen => 1e-12,        // 1 ps
             Self::AtomicHydrogen => 1e-12,      // 1 ps
+            Self::Peroxynitrite => 1e-6,       // 1 μs
+            Self::NitricOxide => 1e-6,         // 1 μs
         }
     }
     
@@ -85,6 +100,8 @@ impl ROSSpecies {
             Self::HydroperoxylRadical => 1.50,
             Self::AtomicOxygen => 2.42,
             Self::AtomicHydrogen => -2.30,      // Strong reductant
+            Self::Peroxynitrite => 0.80,       // Reductant
+            Self::NitricOxide => 0.90,         // Reductant
         }
     }
 }
@@ -116,6 +133,8 @@ impl ROSConcentrations {
             ROSSpecies::HydroperoxylRadical,
             ROSSpecies::AtomicOxygen,
             ROSSpecies::AtomicHydrogen,
+            ROSSpecies::Peroxynitrite,
+            ROSSpecies::NitricOxide,
         ] {
             fields.insert(species, Array3::zeros(shape));
         }
@@ -145,26 +164,24 @@ impl ROSConcentrations {
         }
     }
     
-    /// Calculate oxidative stress index based on ROS concentrations
-    pub fn oxidative_stress_index(&self) -> Array3<f64> {
-        let mut stress = Array3::zeros(self.shape);
+    /// Calculate oxidative stress index
+    pub fn oxidative_stress_index(&self) -> f64 {
+        let mut total_stress = 0.0;
         
-        // Weight each ROS by its oxidative potential
         for (species, conc) in &self.fields {
             let weight = match species {
-                ROSSpecies::HydroxylRadical => 10.0,     // Most damaging
-                ROSSpecies::HydrogenPeroxide => 1.0,
-                ROSSpecies::Superoxide => 2.0,
-                ROSSpecies::SingletOxygen => 3.0,
-                ROSSpecies::Ozone => 5.0,
-                ROSSpecies::HydroperoxylRadical => 4.0,
-                ROSSpecies::AtomicOxygen => 8.0,
-                ROSSpecies::AtomicHydrogen => 0.1,       // Reductant
+                ROSSpecies::HydroxylRadical => HYDROXYL_RADICAL_WEIGHT,     // Most damaging
+                ROSSpecies::HydrogenPeroxide => HYDROGEN_PEROXIDE_WEIGHT,
+                ROSSpecies::Superoxide => SUPEROXIDE_WEIGHT,
+                ROSSpecies::SingletOxygen => SINGLET_OXYGEN_WEIGHT,
+                ROSSpecies::Peroxynitrite => PEROXYNITRITE_WEIGHT,
+                ROSSpecies::NitricOxide => NITRIC_OXIDE_WEIGHT,
             };
-            stress = stress + weight * conc;
+            
+            total_stress += weight * conc.sum();
         }
         
-        stress
+        total_stress / self.fields.values().next().map_or(1.0, |f| f.len() as f64)
     }
     
     /// Apply decay based on species lifetime

@@ -1,40 +1,18 @@
-//! Rayleigh-Plesset equation solver for bubble dynamics
-//! 
+//! Rayleigh-Plesset equation for bubble dynamics
+//!
 //! This module implements the Rayleigh-Plesset equation for modeling
 //! the dynamics of spherical bubbles in liquids.
 
-use super::bubble_state::{BubbleState, BubbleParameters};
-use super::thermodynamics::{ThermodynamicsCalculator, MassTransferModel, VaporPressureModel};
+use super::bubble_state::{BubbleState, BubbleParameters, GasSpecies};
+use super::thermodynamics::{ThermodynamicsCalculator, VaporPressureModel, MassTransferModel};
+use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
+use crate::constants::bubble_dynamics::{
+    PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER, 
+    NUSSELT_BASE, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT
+};
 use std::f64::consts::PI;
 
-
-// Physical constants for bubble dynamics
-const MIN_RADIUS: f64 = 1e-9;  // Minimum bubble radius (1 nm)
-const MAX_RADIUS: f64 = 1e-2;  // Maximum bubble radius (1 cm)
-
-// Air composition constants
-const N2_FRACTION: f64 = 0.79;  // Nitrogen fraction in air
-const O2_FRACTION: f64 = 0.21;  // Oxygen fraction in air
-
-// Unit conversion constants
-const BAR_L2_TO_PA_M6: f64 = 0.1;   // Convert bar·L²/mol² to Pa·m⁶/mol²
-const L_TO_M3: f64 = 1e-3;          // Convert L/mol to m³/mol
-
-// Physical constants
-const AVOGADRO: f64 = 6.022e23;     // Avogadro's number (molecules/mol)
-const R_GAS: f64 = 8.314;           // Universal gas constant (J/(mol·K))
-
-// Van der Waals constants for gases (from NIST Chemistry WebBook)
-const VDW_A_N2: f64 = 1.370;        // bar·L²/mol² for N2
-const VDW_B_N2: f64 = 0.0387;       // L/mol for N2
-const VDW_A_O2: f64 = 1.382;        // bar·L²/mol² for O2
-const VDW_B_O2: f64 = 0.0319;       // L/mol for O2
-
-// Molecular properties
-const M_WATER: f64 = 0.018;         // Molecular weight of water (kg/mol)
-
-// Reference conditions
-const T_AMBIENT: f64 = 293.15;       // Ambient temperature (K)
+// Remove duplicate constant definitions - they're now imported from constants module
 
 /// Rayleigh-Plesset equation solver (incompressible)
 pub struct RayleighPlessetSolver {
@@ -100,6 +78,12 @@ impl KellerMiksisModel {
     }
     
     /// Calculate bubble wall acceleration using Keller-Miksis equation
+    /// 
+    /// The Keller-Miksis equation accounts for liquid compressibility effects
+    /// and is more accurate than Rayleigh-Plesset for high-speed bubble dynamics.
+    /// 
+    /// Reference: Keller & Miksis (1980), "Bubble oscillations of large amplitude"
+    /// Journal of the Acoustical Society of America, 68(2), 628-633
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
@@ -122,25 +106,30 @@ impl KellerMiksisModel {
         let p_internal = self.calculate_internal_pressure(state);
         state.pressure_internal = p_internal;
         
-        // Pressure difference
+        // Pressure difference across interface
         let p_diff = p_internal - p_l;
         
-        // Viscous term
+        // Viscous stress term
         let viscous = 4.0 * self.params.mu_liquid * v / r;
         
         // Surface tension term
         let surface = 2.0 * self.params.sigma / r;
         
-        // Compressibility factor
+        // Liquid compressibility factor (1 - Mach number)
         let comp_factor = 1.0 - v / c;
         
-        // Keller-Miksis equation
-        let numerator = (p_diff - viscous - surface) / self.params.rho_liquid
+        // Keller-Miksis equation (corrected formulation)
+        // The numerator includes pressure terms and their time derivatives
+        let numerator = (p_diff - viscous - surface) * comp_factor / self.params.rho_liquid
+            + r * (p_internal - p_l) / (self.params.rho_liquid * c)
             + r * dp_dt / (self.params.rho_liquid * c);
         
-        let denominator = r * comp_factor + r * r * v / c;
+        // The denominator accounts for compressibility and kinetic effects
+        // Corrected according to Keller & Miksis (1980)
+        let denominator = r * comp_factor + 4.0 * self.params.mu_liquid / (self.params.rho_liquid * c);
         
-        let acceleration = numerator / denominator - 1.5 * v * v * (1.0 - v / (3.0 * c)) / r;
+        // The acceleration term includes nonlinear velocity effects
+        let acceleration = numerator / denominator - 1.5 * v * v * comp_factor / r;
         
         state.wall_acceleration = acceleration;
         acceleration
@@ -193,15 +182,16 @@ impl KellerMiksisModel {
         let peclet = r * v.abs() / thermal_diffusivity;
         
         // Effective polytropic index
+        // Based on Prosperetti & Lezzi (1986) heat transfer model
         let gamma = state.gas_species.gamma();
-        let gamma_eff = 1.0 + (gamma - 1.0) / (1.0 + 10.0 / peclet.max(0.1));
+        let gamma_eff = 1.0 + (gamma - 1.0) / (1.0 + PECLET_SCALING_FACTOR / peclet.max(MIN_PECLET_NUMBER));
         
         // Temperature change from compression
         let compression_rate = -v / r;
         let dt_compression = state.temperature * (gamma_eff - 1.0) * compression_rate * dt;
         
-        // Heat transfer to liquid
-        let nusselt = 2.0 + 0.6 * peclet.powf(0.5); // Simplified Nusselt number
+        // Heat transfer to liquid using Nusselt correlation
+        let nusselt = NUSSELT_BASE + NUSSELT_PECLET_COEFF * peclet.powf(NUSSELT_PECLET_EXPONENT);
         let h = nusselt * self.params.thermal_conductivity / r;
         let area = state.surface_area();
         let mass = state.total_molecules() * state.gas_species.molecular_weight() / AVOGADRO;

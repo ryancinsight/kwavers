@@ -3,6 +3,12 @@
 //! Core data structures for bubble dynamics
 
 use std::f64::consts::PI;
+use crate::constants::thermodynamics::{R_GAS, AVOGADRO, T_AMBIENT};
+use crate::constants::bubble_dynamics::{
+    MIN_RADIUS, MAX_RADIUS, N2_FRACTION, O2_FRACTION,
+    VDW_A_N2, VDW_B_N2, VDW_A_O2, VDW_B_O2,
+    BAR_L2_TO_PA_M6, L_TO_M3
+};
 
 /// Complete state of a single bubble
 #[derive(Debug, Clone)]

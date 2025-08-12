@@ -1,10 +1,9 @@
 use crate::grid::Grid;
-use crate::medium::{Medium, absorption::TissueType};
+use crate::medium::{Medium, absorption::{TissueType, tissue_specific}};
 use ndarray::{Array3, Axis, Zip}; // Restored Axis
 use log::{debug, info}; // Removed trace
 use std::sync::OnceLock;
 // Removed std::sync::Arc
-use tissue_specific::TissueType; // Removed TissueProperties
 use crate::error::{KwaversResult, ConfigError};
 
 /// Configuration for setting tissue in a specific region

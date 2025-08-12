@@ -124,3 +124,154 @@ pub mod interpolation {
     /// Default WENO epsilon for avoiding division by zero
     pub const WENO_EPSILON: f64 = 1e-6;
 }
+
+/// Bubble dynamics constants
+pub mod bubble_dynamics {
+    /// Peclet number scaling factor for effective polytropic index
+    /// Based on heat transfer considerations in bubble dynamics
+    /// Reference: Prosperetti & Lezzi (1986), "Bubble dynamics in a compressible liquid"
+    pub const PECLET_SCALING_FACTOR: f64 = 10.0;
+    
+    /// Minimum Peclet number to avoid division by zero
+    pub const MIN_PECLET_NUMBER: f64 = 0.1;
+    
+    /// Default accommodation coefficient for mass transfer
+    pub const DEFAULT_ACCOMMODATION_COEFF: f64 = 0.04;
+    
+    /// Nusselt number base value for spherical heat transfer
+    pub const NUSSELT_BASE: f64 = 2.0;
+    
+    /// Nusselt number Peclet coefficient
+    pub const NUSSELT_PECLET_COEFF: f64 = 0.6;
+    
+    /// Nusselt number Peclet exponent
+    pub const NUSSELT_PECLET_EXPONENT: f64 = 0.5;
+    
+    /// Minimum bubble radius ratio for Rayleigh regime
+    pub const RAYLEIGH_REGIME_RATIO: f64 = 0.1;
+    
+    /// Default initial bubble radius (microns converted to meters)
+    pub const DEFAULT_R0: f64 = 5e-6;
+    
+    /// Typical cavitation threshold pressure (Pa)
+    pub const CAVITATION_THRESHOLD: f64 = -1e5;
+    
+    /// Minimum bubble radius (1 nm)
+    pub const MIN_RADIUS: f64 = 1e-9;
+    
+    /// Maximum bubble radius (1 cm)
+    pub const MAX_RADIUS: f64 = 1e-2;
+    
+    /// Air composition - Nitrogen fraction
+    pub const N2_FRACTION: f64 = 0.79;
+    
+    /// Air composition - Oxygen fraction
+    pub const O2_FRACTION: f64 = 0.21;
+    
+    /// Van der Waals constant a for N2 (bar·L²/mol²)
+    pub const VDW_A_N2: f64 = 1.370;
+    
+    /// Van der Waals constant b for N2 (L/mol)
+    pub const VDW_B_N2: f64 = 0.0387;
+    
+    /// Van der Waals constant a for O2 (bar·L²/mol²)
+    pub const VDW_A_O2: f64 = 1.382;
+    
+    /// Van der Waals constant b for O2 (L/mol)
+    pub const VDW_B_O2: f64 = 0.0319;
+    
+    /// Unit conversion: bar·L²/mol² to Pa·m⁶/mol²
+    pub const BAR_L2_TO_PA_M6: f64 = 0.1;
+    
+    /// Unit conversion: L/mol to m³/mol
+    pub const L_TO_M3: f64 = 1e-3;
+}
+
+/// Thermodynamics constants
+pub mod thermodynamics {
+    /// Universal gas constant (J/(mol·K))
+    pub const R_GAS: f64 = 8.314462618;
+    
+    /// Avogadro's number (molecules/mol)
+    pub const AVOGADRO: f64 = 6.02214076e23;
+    
+    /// Molecular weight of water (kg/mol)
+    pub const M_WATER: f64 = 0.018015;
+    
+    /// Ambient temperature (K)
+    pub const T_AMBIENT: f64 = 293.15;
+    
+    /// Standard atmospheric pressure (Pa)
+    pub const P_ATMOSPHERIC: f64 = 101325.0;
+    
+    /// Surface tension of water at 20°C (N/m)
+    pub const SIGMA_WATER: f64 = 0.0728;
+    
+    /// Dynamic viscosity of water at 20°C (Pa·s)
+    pub const MU_WATER: f64 = 1.002e-3;
+    
+    /// Thermal conductivity of water at 20°C (W/(m·K))
+    pub const K_THERMAL_WATER: f64 = 0.598;
+    
+    /// Specific heat capacity of water at constant pressure (J/(kg·K))
+    pub const CP_WATER: f64 = 4182.0;
+    
+    /// Specific heat capacity of water at constant volume (J/(kg·K))
+    pub const CV_WATER: f64 = 4150.0;
+}
+
+/// Optical and visualization constants
+pub mod optics {
+    /// Wavelength ranges for visible spectrum (nm)
+    pub const VIOLET_WAVELENGTH: f64 = 440.0;
+    pub const CYAN_WAVELENGTH: f64 = 490.0;
+    pub const GREEN_WAVELENGTH: f64 = 510.0;
+    pub const YELLOW_WAVELENGTH: f64 = 580.0;
+    pub const RED_WAVELENGTH: f64 = 645.0;
+    
+    /// Default pulse width factor for Gaussian pulses
+    pub const GAUSSIAN_PULSE_WIDTH_FACTOR: f64 = 10.0;
+    
+    /// Default pulse center factor
+    pub const GAUSSIAN_PULSE_CENTER_FACTOR: f64 = 20.0;
+    
+    /// Window width factor for edge effect reduction
+    pub const WINDOW_WIDTH_FACTOR: f64 = 10.0;
+}
+
+/// Chemistry and ROS constants
+pub mod chemistry {
+    /// Relative damage weights for ROS species
+    pub const HYDROXYL_RADICAL_WEIGHT: f64 = 10.0;  // Most damaging
+    pub const HYDROGEN_PEROXIDE_WEIGHT: f64 = 1.0;
+    pub const SUPEROXIDE_WEIGHT: f64 = 2.0;
+    pub const SINGLET_OXYGEN_WEIGHT: f64 = 5.0;
+    pub const PEROXYNITRITE_WEIGHT: f64 = 8.0;
+    pub const NITRIC_OXIDE_WEIGHT: f64 = 0.5;
+}
+
+/// Test and validation constants
+pub mod validation {
+    /// Default temperature rise for thermal tests (K)
+    pub const DEFAULT_TEMP_RISE: f64 = 10.0;
+    
+    /// Measurement radius factors for validation
+    pub const MEASUREMENT_RADIUS_FACTOR_1: f64 = 5.0;
+    pub const MEASUREMENT_RADIUS_FACTOR_2: f64 = 10.0;
+    
+    /// Minimum time scale separation ratio for multi-rate methods
+    pub const MIN_TIMESCALE_SEPARATION: f64 = 10.0;
+    
+    /// Smooth background sigma factor
+    pub const SMOOTH_BACKGROUND_SIGMA_FACTOR: f64 = 10.0;
+    
+    /// Wavelet coefficient ratio threshold for sharp feature detection
+    pub const WAVELET_SHARP_FEATURE_RATIO: f64 = 10.0;
+    
+    /// Default compression ratio for bubble tests
+    pub const DEFAULT_COMPRESSION_RATIO: f64 = 10.0;
+    
+    /// Default bubble wall velocities for interaction tests (m/s)
+    pub const DEFAULT_EXPANSION_VELOCITY_1: f64 = 10.0;
+    pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
+}
