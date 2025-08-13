@@ -404,7 +404,7 @@ impl ParameterOptimizer {
         let action = self.neural_network.forward(&state_vec)?;
         
         // Convert action to parameter updates
-        let mut optimized_params = HashMap::new();
+        let mut updated_params = HashMap::new();
         let param_keys: Vec<_> = current.keys().cloned().collect();
         
         for (i, key) in param_keys.iter().enumerate().take(action.len()) {
@@ -419,10 +419,10 @@ impl ParameterOptimizer {
             let update = self.learning_rate * action_magnitude + exploration;
             let new_val = current_val + update * (target_val - current_val).abs().max(0.1);
             
-            optimized_params.insert(key.clone(), new_val);
+            updated_params.insert(key.clone(), new_val);
         }
         
-        Ok(optimized_params)
+        Ok(updated_params)
     }
     
     /// Store experience for learning

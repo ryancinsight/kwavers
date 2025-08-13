@@ -318,10 +318,10 @@ pub fn create_validated_simulation(
     Ok((grid, time, medium, source, recorder))
 }
 
-/// Run a complete simulation with advanced physics
+/// Run a complete simulation with physics
 /// 
 /// Implements ACID principles for simulation execution
-pub fn run_advanced_simulation(
+pub fn run_physics_simulation(
     config: Config,
 ) -> KwaversResult<()> {
     use crate::physics::plugin::PluginContext;
@@ -423,7 +423,7 @@ pub fn run_advanced_simulation(
     }
     
     // Generate visualizations if enabled
-    println!("Advanced simulation completed successfully!");
+    println!("Physics simulation completed successfully!");
     println!("Results saved to: {}", recorder.filename);
     
     Ok(())

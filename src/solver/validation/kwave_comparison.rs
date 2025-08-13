@@ -528,8 +528,8 @@ impl KWaveValidator {
         
         // Time reversal
         // Note: Time reversal solver not yet implemented
-        // For now, we'll simulate a simple reconstruction
-        let reconstructed = self.simple_time_reversal(&boundary_data, &medium, dt)?;
+        // For now, we'll simulate a reconstruction
+        let reconstructed = self.time_reversal(&boundary_data, &medium, dt)?;
         
         // Check focusing quality
         let focus_value = reconstructed[source_pos].abs();
@@ -615,9 +615,9 @@ impl KWaveValidator {
         boundary
     }
 
-    /// Simple time reversal reconstruction (placeholder)
-    fn simple_time_reversal(&self, boundary_data: &[Array3<f64>], _medium: &HomogeneousMedium, _dt: f64) -> KwaversResult<Array3<f64>> {
-        // This is a simplified placeholder for time reversal
+    /// Time reversal reconstruction (placeholder)
+    fn time_reversal(&self, boundary_data: &[Array3<f64>], _medium: &HomogeneousMedium, _dt: f64) -> KwaversResult<Array3<f64>> {
+        // This is a placeholder for time reversal
         // A proper implementation would solve the wave equation backwards in time
         // For now, we'll just return the last boundary data as a simple test
         

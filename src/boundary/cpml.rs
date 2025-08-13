@@ -64,8 +64,8 @@ pub struct CPMLConfig {
     /// Target reflection coefficient (e.g., 1e-6)
     pub target_reflection: f64,
     
-    /// Enable enhanced grazing angle absorption
-    pub enhanced_grazing: bool,
+    /// Enable grazing angle absorption
+    pub grazing_angle_absorption: bool,
     
     /// CFL number for stability
     pub cfl_number: f64,
@@ -80,7 +80,7 @@ impl Default for CPMLConfig {
             kappa_max: 15.0,    // Higher values improve grazing angle absorption
             alpha_max: 0.24,    // Optimal for low-frequency absorption
             target_reflection: 1e-6,
-            enhanced_grazing: true,
+            grazing_angle_absorption: true,
             cfl_number: 0.5,
         }
     }
@@ -96,7 +96,7 @@ impl CPMLConfig {
             kappa_max: 25.0,    // Very high for grazing angles
             alpha_max: 0.3,
             target_reflection: 1e-8,
-            enhanced_grazing: true,
+            grazing_angle_absorption: true,
             cfl_number: 0.5,
         }
     }
@@ -301,8 +301,8 @@ impl CPMLBoundary {
                 self.sigma_x[i] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
+                if self.config.grazing_angle_absorption {
+                    // Profile for grazing angles
                     let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
                     self.kappa_x[i] = 1.0 + kappa_grad;
                 } else {
@@ -371,8 +371,8 @@ impl CPMLBoundary {
                 self.sigma_y[j] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
+                if self.config.grazing_angle_absorption {
+                    // Profile for grazing angles
                     let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
                     self.kappa_y[j] = 1.0 + kappa_grad;
                 } else {
@@ -441,8 +441,8 @@ impl CPMLBoundary {
                 self.sigma_z[k] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
+                if self.config.grazing_angle_absorption {
+                    // Profile for grazing angles
                     let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
                     self.kappa_z[k] = 1.0 + kappa_grad;
                 } else {
@@ -579,8 +579,8 @@ impl CPMLBoundary {
         // Theoretical reflection coefficient for C-PML
         let r_normal = self.config.target_reflection;
         
-        // Enhanced model for grazing angles
-        if self.config.enhanced_grazing {
+        // Model for grazing angles
+        if self.config.grazing_angle_absorption {
             // For grazing angles, reflection should increase
             let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt(); // sin(theta)
             // Increase reflection for larger angles (smaller cos_theta)

@@ -212,13 +212,13 @@ impl DomainDecomposer {
             }
         };
         
-        // Optimize buffer zones and overlaps
-        let optimized_regions = self.optimize_buffer_zones(regions, grid)?;
+        // Configure buffer zones and overlaps
+        let configured_regions = self.configure_buffer_zones(regions, grid)?;
         
-        info!("Domain decomposition completed: {} regions", optimized_regions.len());
-        self.log_decomposition_summary(&optimized_regions);
+        info!("Domain decomposition completed: {} regions", configured_regions.len());
+        self.log_decomposition_summary(&configured_regions);
         
-        Ok(optimized_regions)
+        Ok(configured_regions)
     }
     
     /// Analyze domain properties for decomposition
@@ -1077,12 +1077,12 @@ impl DomainDecomposer {
             }
         }
         
-        // Optimize buffer zones
-        self.optimize_buffer_zones(regions, grid)
+        // Configure buffer zones
+        self.configure_buffer_zones(regions, grid)
     }
     
-    /// Optimize buffer zones and overlaps between regions
-    fn optimize_buffer_zones(
+    /// Configure buffer zones and overlaps between regions
+    fn configure_buffer_zones(
         &self,
         mut regions: Vec<DomainRegion>,
         grid: &Grid,

@@ -80,9 +80,9 @@ fn cs_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Apply enhancement based on gradient magnitude
     let gradient = compute_gradient_3d(tex_coords);
     let gradient_magnitude = length(gradient);
-    let enhanced_value = filtered_value * (1.0 + gradient_magnitude * 0.5);
+    let gradient_weighted_value = filtered_value * (1.0 + gradient_magnitude * 0.5);
     
-    textureStore(output_volume, coords, vec4<f32>(enhanced_value, 0.0, 0.0, 0.0));
+    textureStore(output_volume, coords, vec4<f32>(gradient_weighted_value, 0.0, 0.0, 0.0));
 }
 
 // Isosurface extraction using marching cubes

@@ -738,14 +738,14 @@ mod tests {
     }
 
     #[test]
-    fn test_advanced_memory_manager_creation() {
+    fn test_memory_manager_creation() {
         let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
         assert_eq!(manager.backend, GpuBackend::Cuda);
         assert_eq!(manager.memory_pools.len(), 7); // 7 buffer types
     }
 
     #[test]
-    fn test_advanced_manager_allocation() {
+    fn test_manager_allocation() {
         let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
         
         let buffer_id = manager.allocate_buffer(1024, BufferType::Pressure).unwrap();

@@ -31,9 +31,6 @@ pub struct SolverWorkspace {
     /// Additional real workspace for in-place operations
     pub temp_buffer: Array3<f64>,
     
-    /// Complex workspace for multi-stage operations
-    pub complex_temp: Array3<Complex<f64>>,
-    
     /// Grid dimensions for validation
     grid_shape: (usize, usize, usize),
 }
@@ -48,7 +45,6 @@ impl SolverWorkspace {
             real_buffer: Array3::zeros(shape),
             k_space_buffer: Array3::zeros(shape),
             temp_buffer: Array3::zeros(shape),
-            complex_temp: Array3::zeros(shape),
             grid_shape: shape,
         }
     }
@@ -64,7 +60,6 @@ impl SolverWorkspace {
         self.real_buffer.fill(0.0);
         self.k_space_buffer.fill(0.0);
         self.temp_buffer.fill(0.0);
-        self.complex_temp.fill(Complex::new(0.0, 0.0));
     }
     
     /// Get the memory usage of this workspace in bytes
