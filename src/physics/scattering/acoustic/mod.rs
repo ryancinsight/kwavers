@@ -73,8 +73,8 @@ impl AcousticScattering {
         let start_time = std::time::Instant::now();
         
         // Get bubble properties from state
-        let bubble_radius = self.get_field(field_indices::BUBBLE_RADIUS)?;
-        let bubble_velocity = self.get_field(field_indices::BUBBLE_VELOCITY)?;
+        let bubble_radius = self.get_field(field_indices::BUBBLE_RADIUS_IDX)?;
+        let bubble_velocity = self.get_field(field_indices::BUBBLE_VELOCITY_IDX)?;
         
         // Reset scattered field
         self.scattered_field.fill(0.0);
@@ -159,7 +159,7 @@ mod tests {
         let mut scattering = AcousticScattering::new(&grid, 1e6, 0.1);
         
         // Initialize bubble field
-        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS, 1e-6).unwrap();
+        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS_IDX, 1e-6).unwrap();
         
         // Create incident field
         let incident = Array3::from_elem((10, 10, 10), 1000.0);

@@ -63,7 +63,8 @@ impl CavitationModel {
     /// Get a field from the physics state
     pub fn get_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         let guard = self.state.get_field(field_index)?;
-        Ok(guard.to_owned())  // Convert view to owned array
+        let result = guard.to_owned();
+        Ok(result)
     }
     
     /// Update a field in the physics state
