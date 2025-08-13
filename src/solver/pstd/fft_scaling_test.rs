@@ -85,7 +85,7 @@ mod tests {
         // Apply pressure update
         let mut pressure = Array3::zeros((nx, ny, nz));
         let dt = 1e-6;
-        solver.update_pressure(&mut pressure, &divergence, &medium, dt).unwrap();
+        solver.update_pressure(&mut pressure.view_mut(), &divergence, &medium, dt).unwrap();
         
         // Check that pressure has reasonable values (not scaled incorrectly)
         let max_pressure = pressure.iter().map(|p| p.abs()).fold(0.0, f64::max);
@@ -136,10 +136,10 @@ mod tests {
         let mut vz = Array3::zeros((nx, ny, nz));
         let dt = 1e-6;
         
-        solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt).unwrap();
+        solver.update_velocity(&mut vx.view_mut(), &mut vy.view_mut(), &mut vz.view_mut(), &pressure.view(), &medium, dt).unwrap();
         
         // Check that velocity gradients are reasonable
-        let max_vx = vx.iter().map(|v| v.abs()).fold(0.0, f64::max);
+        let max_vx = vx.iter().map(|v: &f64| v.abs()).fold(0.0, f64::max);
         let density = medium.density(0.0, 0.0, 0.0, &grid);
         let expected_order = amplitude * dt / (density * grid.dx);  // dp/dx ~ amplitude * k, k ~ 2π/L
         
@@ -205,13 +205,13 @@ mod tests {
         // Evolve for several time steps
         for _ in 0..10 {
             // Compute divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz).unwrap();
+            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view()).unwrap();
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt).unwrap();
+            solver.update_pressure(&mut pressure.view_mut(), &divergence, &medium, dt).unwrap();
             
             // Update velocity
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt).unwrap();
+            solver.update_velocity(&mut vx.view_mut(), &mut vy.view_mut(), &mut vz.view_mut(), &pressure.view(), &medium, dt).unwrap();
         }
         
         // Compute final energy

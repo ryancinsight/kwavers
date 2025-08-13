@@ -679,7 +679,11 @@ mod tests {
         let vy = Array3::zeros((32, 32, 32));
         let vz = Array3::zeros((32, 32, 32));
         
-        let divergence = solver.compute_divergence(&vx, &vy, &vz).unwrap();
+        let divergence = solver.compute_divergence(
+            &vx.view(),
+            &vy.view(),
+            &vz.view()
+        ).unwrap();
         
         // Check that divergence is approximately zero
         let max_div = divergence.iter().map(|&x| x.abs()).fold(0.0, f64::max);

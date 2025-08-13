@@ -777,11 +777,11 @@ mod tests {
             }
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &div_v, &medium, dt)?;
+            solver.update_pressure(&mut pressure.view_mut(), &div_v, &medium, dt)?;
             
             // Update velocity
-            solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z,
-                                 &pressure, &medium, dt)?;
+            solver.update_velocity(&mut velocity_x.view_mut(), &mut velocity_y.view_mut(), 
+                                 &mut velocity_z.view_mut(), &pressure.view(), &medium, dt)?;
         }
         
         // Compare with analytical solution

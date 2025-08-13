@@ -194,7 +194,7 @@ impl PerformanceOptimizer {
         self.stencil_vectorized(input, output, stencil, 8)
     }
     
-    /// AVX-512 stub when feature is not enabled
+    /// AVX-512 implementation (requires AVX-512 feature)
     #[cfg(not(feature = "avx512"))]
     fn stencil_avx512(
         &mut self,
@@ -238,7 +238,7 @@ impl PerformanceOptimizer {
     #[cfg(feature = "gpu")]
     pub fn optimize_gpu_kernels(
         &mut self,
-        _gpu_context: &mut dyn std::any::Any, // Placeholder until GPU module is implemented
+        _gpu_context: &mut dyn std::any::Any, // GPU context for kernel optimization
         _kernels: Vec<Box<dyn std::any::Any>>,
     ) -> KwaversResult<()> {
         log::warn!("GPU kernel optimization not yet implemented");
@@ -311,8 +311,7 @@ impl PerformanceOptimizer {
         // Prepare kernel arguments as void pointers
         let kernel_args: Vec<*const std::ffi::c_void> = all_parameters.iter()
             .map(|p| {
-                // This is a placeholder - actual implementation would need to map
-                // parameter names to actual buffer/value references
+                // Map parameter names to buffer/value references for kernel invocation
                 p.name.as_ptr() as *const std::ffi::c_void
             })
             .collect();

@@ -35,9 +35,9 @@ mod tests {
         // This test now demonstrates the memory variable update process
         for _ in 0..10 {
             // Simulate gradient computation (would come from solver)
-            let mut grad_x = Array3::zeros((64, 64, 64));
-            let mut grad_y = Array3::zeros((64, 64, 64));
-            let mut grad_z = Array3::zeros((64, 64, 64));
+            let mut grad_x = Array3::<f64>::zeros((64, 64, 64));
+            let mut grad_y = Array3::<f64>::zeros((64, 64, 64));
+            let mut grad_z = Array3::<f64>::zeros((64, 64, 64));
             
             // Update memory variables and apply C-PML to gradients
             cpml.update_acoustic_memory(&grad_x, 0).unwrap();
