@@ -361,6 +361,31 @@ impl KuznetsovWave {
         Ok(result)
     }
     
+    /// Compute gradient using spectral method for consistency with PSTD solver
+    /// Returns (∂f/∂x, ∂f/∂y, ∂f/∂z)
+    /// NOTE: Currently uses finite differences for simplicity. 
+    /// TODO: Implement spectral gradients when kx, ky, kz arrays are added to KuznetsovWave
+    pub fn compute_spectral_gradient(&mut self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
+        // For now, return finite difference gradients
+        // This is a placeholder until we add kx, ky, kz to KuznetsovWave
+        let mut grad_x = Array3::zeros(field.dim());
+        let mut grad_y = Array3::zeros(field.dim());
+        let mut grad_z = Array3::zeros(field.dim());
+        
+        // Central differences for interior points
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                for k in 1..grid.nz-1 {
+                    grad_x[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * grid.dx);
+                    grad_y[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * grid.dy);
+                    grad_z[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * grid.dz);
+                }
+            }
+        }
+        
+        Ok((grad_x, grad_y, grad_z))
+    }
+    
     /// Compute the nonlinear term: -(β/ρ₀c₀⁴)∂²p²/∂t²
     fn compute_nonlinear_term(
         &mut self,
@@ -458,14 +483,20 @@ impl KuznetsovWave {
         let rho0 = medium.density(x_center, y_center, z_center, grid);
         let c0 = medium.sound_speed(x_center, y_center, z_center, grid);
         
-        // Create acoustic diffusivity model with proper physical parameters
-        // These values are typical for soft tissue
+        // Get acoustic diffusivity parameters from the medium
+        let shear_visc = medium.shear_viscosity(x_center, y_center, z_center, grid);
+        let bulk_visc = medium.bulk_viscosity(x_center, y_center, z_center, grid);
+        let thermal_cond = medium.thermal_conductivity(x_center, y_center, z_center, grid);
+        let gamma = medium.specific_heat_ratio(x_center, y_center, z_center, grid);
+        let cp = medium.specific_heat_capacity(x_center, y_center, z_center, grid);
+        
+        // Create acoustic diffusivity model with medium-specific parameters
         let acoustic_diff = AcousticDiffusivity {
-            shear_viscosity: 1.5e-3,      // Pa·s
-            bulk_viscosity: 3.0e-3,        // Pa·s
-            thermal_conductivity: 0.5,     // W/(m·K)
-            gamma: 1.1,                    // Specific heat ratio
-            cp: 3600.0,                    // J/(kg·K)
+            shear_viscosity: shear_visc,
+            bulk_viscosity: bulk_visc,
+            thermal_conductivity: thermal_cond,
+            gamma,
+            cp,
             rho0,
             c0,
         };
@@ -1150,7 +1181,11 @@ fn update_velocity_field(
     grid: &Grid,
     dt: f64,
 ) -> KwaversResult<()> {
-    // Compute pressure gradients
+    // Note: This currently uses finite differences for simplicity.
+    // TODO: Replace with spectral gradient computation for consistency with PSTD solver.
+    // This would require passing the FFT planner and wavenumbers to this function.
+    
+    // Compute pressure gradients using central differences
     let mut dp_dx = Array3::zeros(pressure.raw_dim());
     let mut dp_dy = Array3::zeros(pressure.raw_dim());
     let mut dp_dz = Array3::zeros(pressure.raw_dim());

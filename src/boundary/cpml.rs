@@ -266,16 +266,22 @@ impl CPMLBoundary {
         sigma_opt * self.config.sigma_factor
     }
     
-    /// Compute 1D profile for X direction
-    fn compute_profile_1d(
-        &mut self,
+    /// Generic function to compute 1D profile for any direction
+    fn compute_profile_for_dimension(
         n: usize,
         thickness: f64,
         m: f64,
         sigma_max: f64,
         dx: f64,
-    ) {
-        let dt = dx * self.config.cfl_number; // Approximate time step
+        config: &CPMLConfig,
+    ) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
+        let dt = dx * config.cfl_number; // Approximate time step
+        
+        let mut sigma = vec![0.0; n];
+        let mut kappa = vec![1.0; n];
+        let mut alpha = vec![0.0; n];
+        let mut b = vec![0.0; n];
+        let mut c = vec![0.0; n];
         
         for i in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
@@ -298,53 +304,60 @@ impl CPMLBoundary {
                 let d_m = d.powf(m);
                 
                 // Conductivity profile
-                self.sigma_x[i] = sigma_max * d_m;
+                sigma[i] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
-                if self.config.grazing_angle_absorption {
+                if config.grazing_angle_absorption {
                     // Profile for grazing angles
-                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
-                    self.kappa_x[i] = 1.0 + kappa_grad;
+                    let kappa_grad = (config.kappa_max - 1.0) * d.powf(m + 1.0);
+                    kappa[i] = 1.0 + kappa_grad;
                 } else {
-                    self.kappa_x[i] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
+                    kappa[i] = 1.0 + (config.kappa_max - 1.0) * d_m;
                 }
                 
                 // Frequency shifting profile (quadratic for stability)
-                self.alpha_x[i] = self.config.alpha_max * (1.0 - d).powi(2);
+                alpha[i] = config.alpha_max * (1.0 - d).powi(2);
                 
                 // Compute update coefficients
-                let sigma_i = self.sigma_x[i];
-                let kappa_i = self.kappa_x[i];
-                let alpha_i = self.alpha_x[i];
+                let sigma_i = sigma[i];
+                let kappa_i = kappa[i];
+                let alpha_i = alpha[i];
                 
                 // Time integration coefficients
-                self.b_x[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
+                b[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
                 
                 if (sigma_i + kappa_i * alpha_i).abs() > 1e-10 {
-                    self.c_x[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (self.b_x[i] - 1.0);
+                    c[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (b[i] - 1.0);
                 } else {
-                    self.c_x[i] = 0.0;
+                    c[i] = 0.0;
                 }
             } else {
                 // Outside PML region
-                self.sigma_x[i] = 0.0;
-                self.kappa_x[i] = 1.0;
-                self.alpha_x[i] = 0.0;
-                self.b_x[i] = 0.0;
-                self.c_x[i] = 0.0;
+                sigma[i] = 0.0;
+                kappa[i] = 1.0;
+                alpha[i] = 0.0;
+                b[i] = 0.0;
+                c[i] = 0.0;
             }
         }
+        
+        (sigma, kappa, alpha, b, c)
+    }
+    
+    /// Compute 1D profile for X direction
+    fn compute_profile_1d(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dx: f64) {
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            n, thickness, m, sigma_max, dx, &self.config
+        );
+        self.sigma_x = sigma;
+        self.kappa_x = kappa;
+        self.alpha_x = alpha;
+        self.b_x = b;
+        self.c_x = c;
     }
     
     /// Compute 1D profile for Y direction
-    fn compute_profile_1d_y(
-        &mut self,
-        n: usize,
-        thickness: f64,
-        m: f64,
-        sigma_max: f64,
-        dy: f64,
-    ) {
+    fn compute_profile_1d_y(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dy: f64) {
         let dt = dy * self.config.cfl_number; // Approximate time step
         
         for j in 0..n {
@@ -690,9 +703,21 @@ impl Boundary for CPMLBoundary {
     }
     
     fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) {
-        trace!("Applying C-PML to light field");
+        // WARNING: This implements a simple exponential sponge layer, not a true C-PML.
+        // For proper C-PML implementation for electromagnetic fields, the memory variables
+        // and convolutional approach similar to acoustic fields would be needed.
+        self.apply_sponge_layer_light(field, grid);
+    }
+}
+
+impl CPMLBoundary {
+    /// Apply simple exponential sponge layer absorption to light field
+    /// This is NOT a true C-PML implementation but a simpler absorption layer
+    /// that provides basic absorption at boundaries but with inferior performance
+    /// especially for grazing angles of incidence.
+    fn apply_sponge_layer_light(&self, field: &mut Array3<f64>, grid: &Grid) {
+        trace!("Applying exponential sponge layer to light field (not true C-PML)");
         
-        // Similar to acoustic, but with potentially different parameters
         let thickness = self.config.thickness;
         
         for i in 0..self.nx {
@@ -700,7 +725,7 @@ impl Boundary for CPMLBoundary {
                 for k in 0..self.nz {
                     let mut absorption = 1.0;
                     
-                    // Apply absorption with light-specific parameters
+                    // Apply exponential absorption profile (simple sponge layer)
                     if i < thickness || i >= self.nx - thickness {
                         absorption *= (-0.5 * self.sigma_x[i] * grid.dx).exp();
                     }
