@@ -326,6 +326,15 @@ pub mod numerical {
     pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
 }
 
+/// Solver and numerical methods constants
+pub mod solver {
+    /// Stress-specific damping factor for PML boundary conditions
+    pub const STRESS_PML_DAMPING_FACTOR: f64 = 1.2;
+    
+    /// Test field damping factor for validation
+    pub const TEST_FIELD_DAMPING: f64 = 0.99;
+}
+
 /// Chemistry and ROS constants
 pub mod chemistry {
     /// Relative damage weights for ROS species
@@ -335,6 +344,12 @@ pub mod chemistry {
     pub const SINGLET_OXYGEN_WEIGHT: f64 = 5.0;
     pub const PEROXYNITRITE_WEIGHT: f64 = 8.0;
     pub const NITRIC_OXIDE_WEIGHT: f64 = 0.5;
+    
+    /// Base photochemical initiation rate coefficient (1/s per unit light intensity)
+    pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-7;
+    
+    /// Default thermal diffusion coefficient (mm²/ns)
+    pub const DEFAULT_THERMAL_DIFFUSION: f64 = 2.0;
 }
 
 /// Cavitation damage constants
