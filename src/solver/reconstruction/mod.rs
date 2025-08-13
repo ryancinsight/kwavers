@@ -892,6 +892,8 @@ impl IterativeRecon {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{Array1, Array3, ArrayView1, ArrayView3, Axis};
+    use crate::grid::Grid;
     use approx::assert_relative_eq;
     
     #[test]

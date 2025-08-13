@@ -356,6 +356,8 @@ pub fn integrate_bubble_dynamics_imex(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
+    use std::sync::Arc;
     
     #[test]
     fn test_imex_integration() {

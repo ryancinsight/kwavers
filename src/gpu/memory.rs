@@ -4,12 +4,12 @@
 //! transfer, and caching strategies. Implements Phase 10 performance targets
 //! with memory pool management and asynchronous operations.
 
-use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
-use crate::gpu::GpuBackend;
+use crate::error::{KwaversError, KwaversResult};
+use crate::gpu::{GpuBackend, BufferType};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::any::Any;
 
 /// GPU memory allocation strategy
@@ -157,17 +157,25 @@ impl MemoryPool {
 
     /// Allocate device memory based on backend
     fn allocate_device_memory(&self, size_bytes: usize) -> KwaversResult<u64> {
+        // Since we don't have actual GPU backend, we track allocations
+        // with unique IDs instead of actual pointers
+        static ALLOCATION_COUNTER: AtomicUsize = AtomicUsize::new(1);
+        
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => {
                 // Would use CUDA memory allocation here
-                // For now, return a mock pointer
-                Ok(0x1000_0000 + size_bytes as u64)
+                // Track allocation with unique ID
+                let allocation_id = ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                // self.current_usage.fetch_add(size_bytes, std::sync::atomic::Ordering::Relaxed); // This line was removed from the new_code, so it's removed here.
+                Ok(allocation_id as u64)
             }
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
                 // Would use WebGPU buffer allocation here
-                Ok(0x2000_0000 + size_bytes as u64)
+                let allocation_id = ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                // self.current_usage.fetch_add(size_bytes, std::sync::atomic::Ordering::Relaxed); // This line was removed from the new_code, so it's removed here.
+                Ok(allocation_id as u64)
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
@@ -273,6 +281,11 @@ pub struct MemoryPerformanceMetrics {
     pub total_bytes_deallocated: u64,
     pub current_usage_bytes: u64,
     pub peak_usage_bytes: u64,
+    pub total_transfers: u64,
+    pub total_bytes_transferred: u64,
+    pub total_transfer_time_seconds: f64,
+    pub average_transfer_bandwidth_gb_s: f64,
+    pub peak_transfer_bandwidth_gb_s: f64,
 }
 
 /// GPU memory manager with multiple pools and optimization
@@ -395,22 +408,27 @@ impl GpuMemoryManager {
         let bandwidth_gb_s = (size_bytes as f64 / 1e9) / transfer_time;
         
         // Update performance metrics
-        // self.performance_metrics.total_transfers += 1; // Not implemented yet
-        // self.performance_metrics.total_bytes_transferred += size_bytes as u64; // Not implemented yet
-        // self.performance_metrics.total_transfer_time_seconds += transfer_time; // Not implemented yet
-        
-        // if bandwidth_gb_s > self.performance_metrics.peak_transfer_bandwidth_gb_s { // Not implemented yet
-        //     self.performance_metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s; // Not implemented yet
-        // }
-        
-        // Update average bandwidth using actual cumulative time // Not implemented yet
-        // let total_gb = self.performance_metrics.total_bytes_transferred as f64 / 1e9; // Not implemented yet
-        // if self.performance_metrics.total_transfer_time_seconds > 0.0 { // Not implemented yet
-        //     self.performance_metrics.average_transfer_bandwidth_gb_s =  // Not implemented yet
-        //         total_gb / self.performance_metrics.total_transfer_time_seconds; // Not implemented yet
-        // }
+        if let Ok(mut metrics) = self.performance_metrics.lock() {
+            metrics.total_transfers += 1;
+            metrics.total_bytes_transferred += size_bytes as u64;
+            metrics.total_transfer_time_seconds += transfer_time;
+            
+            if bandwidth_gb_s > metrics.peak_transfer_bandwidth_gb_s {
+                metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;
+            }
+            
+            // Update average bandwidth
+            let total_gb = metrics.total_bytes_transferred as f64 / 1e9;
+            if metrics.total_transfer_time_seconds > 0.0 {
+                metrics.average_transfer_bandwidth_gb_s = 
+                    total_gb / metrics.total_transfer_time_seconds;
+            }
+        }
 
-        Ok(0) // Return transfer ID - placeholder
+        // Generate unique transfer ID
+        static TRANSFER_COUNTER: AtomicUsize = AtomicUsize::new(1);
+        let transfer_id = TRANSFER_COUNTER.fetch_add(1, Ordering::SeqCst);
+        Ok(transfer_id)
     }
 
     /// Transfer data from device to host asynchronously  
@@ -431,15 +449,27 @@ impl GpuMemoryManager {
         let bandwidth_gb_s = (size_bytes as f64 / 1e9) / transfer_time;
         
         // Update performance metrics
-        // self.performance_metrics.total_transfers += 1; // Not implemented yet
-        // self.performance_metrics.total_bytes_transferred += size_bytes as u64; // Not implemented yet
-        // self.performance_metrics.total_transfer_time_seconds += transfer_time; // Not implemented yet
-        
-        // if bandwidth_gb_s > self.performance_metrics.peak_transfer_bandwidth_gb_s { // Not implemented yet
-        //     self.performance_metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s; // Not implemented yet
-        // }
+        if let Ok(mut metrics) = self.performance_metrics.lock() {
+            metrics.total_transfers += 1;
+            metrics.total_bytes_transferred += size_bytes as u64;
+            metrics.total_transfer_time_seconds += transfer_time;
+            
+            if bandwidth_gb_s > metrics.peak_transfer_bandwidth_gb_s {
+                metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;
+            }
+            
+            // Update average bandwidth
+            let total_gb = metrics.total_bytes_transferred as f64 / 1e9;
+            if metrics.total_transfer_time_seconds > 0.0 {
+                metrics.average_transfer_bandwidth_gb_s = 
+                    total_gb / metrics.total_transfer_time_seconds;
+            }
+        }
 
-        Ok(0) // Return transfer ID - placeholder
+        // Generate unique transfer ID
+        static TRANSFER_COUNTER: AtomicUsize = AtomicUsize::new(1);
+        let transfer_id = TRANSFER_COUNTER.fetch_add(1, Ordering::SeqCst);
+        Ok(transfer_id)
     }
 
     /// Perform actual host to device transfer
@@ -464,13 +494,13 @@ impl GpuMemoryManager {
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                direction: MemoryTransferDirection::HostToDevice,
+                direction: crate::error::MemoryTransferDirection::HostToDevice,
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "No GPU backend available".to_string(),
             })),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                direction: MemoryTransferDirection::HostToDevice,
+                direction: crate::error::MemoryTransferDirection::HostToDevice,
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "Backend not available with current features".to_string(),
             })),
@@ -499,13 +529,13 @@ impl GpuMemoryManager {
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                direction: MemoryTransferDirection::DeviceToHost,
+                direction: crate::error::MemoryTransferDirection::DeviceToHost,
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "No GPU backend available".to_string(),
             })),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                direction: MemoryTransferDirection::DeviceToHost,
+                direction: crate::error::MemoryTransferDirection::DeviceToHost,
                 size_bytes: host_data.len() * std::mem::size_of::<f64>(),
                 reason: "Backend not available with current features".to_string(),
             })),
