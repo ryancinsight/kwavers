@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_memory_manager_creation() {
-        let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
+        let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8 * 1024 * 1024 * 1024).unwrap();
         assert_eq!(manager.backend, GpuBackend::Cuda);
         assert_eq!(manager.memory_pools.len(), 7); // 7 buffer types
     }
