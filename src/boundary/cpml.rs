@@ -537,76 +537,13 @@ impl CPMLBoundary {
     // absorption coefficients for proper integration into your solver.
 }
 
-impl Boundary for CPMLBoundary {
-    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) -> KwaversResult<()> {
-        // C-PML cannot be applied directly to the field as a post-processing step.
-        // It must be integrated into the solver's gradient computation.
-        // This method is deprecated and should not be used.
-        // 
-        // CORRECT USAGE:
-        // 1. In your solver, after computing pressure gradients:
-        //    cpml.update_acoustic_memory(&pressure_grad_x, 0)?;
-        //    cpml.apply_cpml_gradient(&mut pressure_grad_x, 0)?;
-        // 2. Repeat for y and z components
-        // 
-        // See CPMLBoundary::update_acoustic_memory() and apply_cpml_gradient()
-        
-        Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
-            parameter: "apply_acoustic".to_string(),
-            value: "direct field application".to_string(),
-            constraint: "C-PML must be integrated into solver gradient computation. \
-                        Use update_acoustic_memory() and apply_cpml_gradient() methods instead.".to_string()
-        }))
-    }
-    
-    fn apply_acoustic_freq(
-        &mut self,
-        field: &mut Array3<Complex<f64>>,
-        grid: &Grid,
-        _time_step: usize,
-    ) -> KwaversResult<()> {
-        trace!("Applying C-PML to acoustic field in frequency domain");
-        
-        // In frequency domain, apply stretched coordinate transformation
-        let thickness = self.config.thickness;
-        
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    let mut s_x = Complex::new(self.kappa_x[i], 0.0);
-                    let mut s_y = Complex::new(self.kappa_y[j], 0.0);
-                    let mut s_z = Complex::new(self.kappa_z[k], 0.0);
-                    
-                    // Apply frequency-dependent stretching
-                    // Note: In full implementation, this would depend on frequency
-                    if i < thickness || i >= self.nx - thickness {
-                        s_x = Complex::new(self.kappa_x[i], -self.sigma_x[i]);
-                    }
-                    
-                    if j < thickness || j >= self.ny - thickness {
-                        s_y = Complex::new(self.kappa_y[j], -self.sigma_y[j]);
-                    }
-                    
-                    if k < thickness || k >= self.nz - thickness {
-                        s_z = Complex::new(self.kappa_z[k], -self.sigma_z[k]);
-                    }
-                    
-                    // Apply stretched coordinate transformation
-                    field[[i, j, k]] /= s_x * s_y * s_z;
-                }
-            }
-        }
-        
-        Ok(())
-    }
-    
-    fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) {
-        // WARNING: This implements a simple exponential sponge layer, not a true C-PML.
-        // For proper C-PML implementation for electromagnetic fields, the memory variables
-        // and convolutional approach similar to acoustic fields would be needed.
-        self.apply_sponge_layer_light(field, grid);
-    }
-}
+// Note: CPMLBoundary intentionally does NOT implement the Boundary trait.
+// C-PML is not a simple boundary condition that can be applied to a field;
+// it must be integrated into the solver's update equations.
+// Solvers that support C-PML should take a CPMLBoundary object directly
+// and call its methods (update_acoustic_memory, apply_cpml_gradient) during
+// the field update step.
+
 
 impl CPMLBoundary {
     /// Apply exponential sponge layer absorption to light field

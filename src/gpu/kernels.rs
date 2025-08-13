@@ -201,8 +201,13 @@ impl KernelManager {
         match kernel_type {
             KernelType::AcousticWave => Ok(self.generate_cuda_acoustic_kernel(config)),
             KernelType::ThermalDiffusion => Ok(self.generate_cuda_thermal_kernel(config)),
-            KernelType::FFTForward => Ok(self.generate_cuda_fft_kernel(config, true)),
-            KernelType::FFTInverse => Ok(self.generate_cuda_fft_kernel(config, false)),
+            KernelType::FFTForward | KernelType::FFTInverse => {
+                // For CUDA, use cuFFT library instead of custom kernels
+                Err(KwaversError::NotImplemented {
+                    feature: "GPU FFT kernels".to_string(),
+                    reason: "Use cuFFT library for CUDA FFT operations".to_string(),
+                })
+            }
             KernelType::MemoryCopy => Ok(self.generate_cuda_memcpy_kernel(config)),
             KernelType::BoundaryCondition => Ok(self.generate_cuda_boundary_kernel(config)),
         }
@@ -213,8 +218,13 @@ impl KernelManager {
         match kernel_type {
             KernelType::AcousticWave => Ok(self.generate_wgsl_acoustic_kernel(config)),
             KernelType::ThermalDiffusion => Ok(self.generate_wgsl_thermal_kernel(config)),
-            KernelType::FFTForward => Ok(self.generate_wgsl_fft_kernel(config, true)),
-            KernelType::FFTInverse => Ok(self.generate_wgsl_fft_kernel(config, false)),
+            KernelType::FFTForward | KernelType::FFTInverse => {
+                // WebGPU doesn't have a standard FFT library
+                Err(KwaversError::NotImplemented {
+                    feature: "WebGPU FFT kernels".to_string(),
+                    reason: "FFT not yet implemented for WebGPU backend".to_string(),
+                })
+            }
             KernelType::MemoryCopy => Ok(self.generate_wgsl_memcpy_kernel(config)),
             KernelType::BoundaryCondition => Ok(self.generate_wgsl_boundary_kernel(config)),
         }
@@ -222,6 +232,19 @@ impl KernelManager {
 
     /// Generate optimized CUDA acoustic wave kernel
     fn generate_cuda_acoustic_kernel(&self, config: &KernelConfig) -> String {
+        // Load kernel from file and apply template substitutions
+        let kernel_template = include_str!("kernels/acoustic.cu");
+        let float_type = if cfg!(feature = "gpu-f64") { "double" } else { "float" };
+        
+        kernel_template
+            .replace("{{float_type}}", float_type)
+            .replace("{{block_size_x}}", &config.block_size.0.to_string())
+            .replace("{{block_size_y}}", &config.block_size.1.to_string())
+            .replace("{{block_size_z}}", &config.block_size.2.to_string())
+    }
+    
+    /// Generate CUDA acoustic kernel (old implementation for reference)
+    fn generate_cuda_acoustic_kernel_old(&self, config: &KernelConfig) -> String {
         let shared_memory = match config.optimization_level {
             OptimizationLevel::Aggressive => "extern __shared__ double shared_data[];",
             _ => "",
@@ -434,26 +457,7 @@ extern "C" __global__ void thermal_diffusion_kernel(
     }
 
     /// Generate CUDA FFT kernel
-    fn generate_cuda_fft_kernel(&self, _config: &KernelConfig, forward: bool) -> String {
-        let direction = if forward { "1" } else { "-1" };
-        
-        format!(r#"
-extern "C" __global__ void fft_kernel(
-    double* input_real,
-    double* input_imag,
-    double* output_real,
-    double* output_imag,
-    int n, int direction
-) {{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= n) return;
-    
-    // Placeholder for FFT implementation - would use cuFFT in practice
-    output_real[idx] = input_real[idx];
-    output_imag[idx] = input_imag[idx] * {direction};
-}}
-"#, direction = direction)
-    }
+
 
     /// Generate CUDA memory copy kernel
     fn generate_cuda_memcpy_kernel(&self, _config: &KernelConfig) -> String {
@@ -603,23 +607,7 @@ fn thermal_diffusion(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Generate WGSL FFT kernel
-    fn generate_wgsl_fft_kernel(&self, _config: &KernelConfig, _forward: bool) -> String {
-        r#"
-@group(0) @binding(0) var<storage, read> input_real: array<f32>;
-@group(0) @binding(1) var<storage, read> input_imag: array<f32>;
-@group(0) @binding(2) var<storage, read_write> output_real: array<f32>;
-@group(0) @binding(3) var<storage, read_write> output_imag: array<f32>;
 
-@compute @workgroup_size(64)
-fn fft(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-    
-    // Placeholder FFT implementation
-    output_real[idx] = input_real[idx];
-    output_imag[idx] = input_imag[idx];
-}
-"#.to_string()
-    }
 
     /// Generate WGSL memory copy kernel
     fn generate_wgsl_memcpy_kernel(&self, _config: &KernelConfig) -> String {
