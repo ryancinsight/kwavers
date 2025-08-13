@@ -294,11 +294,11 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
             let (idx, max_p) = row
                 .iter()
                 .enumerate()
-                .fold((0usize, f32::MIN), |(best_i, best_p), (i, &p)| {
-                    if p > best_p {
+                .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {
+                    if p > max_p {
                         (i, p)
                     } else {
-                        (best_i, best_p)
+                        (max_i, max_p)
                     }
                 });
             classes_vec.push(idx as u8);

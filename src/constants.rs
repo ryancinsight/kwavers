@@ -65,6 +65,18 @@ pub mod physics {
     
     /// Nonlinearity parameter B/A for soft tissue
     pub const NONLINEARITY_TISSUE: f64 = 6.5;
+    
+    /// Standard test pressure amplitude (Pa)
+    pub const STANDARD_PRESSURE_AMPLITUDE: f64 = 1e5;
+    
+    /// Standard spatial resolution for tests (m)
+    pub const STANDARD_SPATIAL_RESOLUTION: f64 = 1e-4;
+    
+    /// Standard Gaussian beam width (m)
+    pub const STANDARD_BEAM_WIDTH: f64 = 2e-3;
+    
+    /// Near-linear nonlinearity coefficient for testing
+    pub const NEAR_LINEAR_NONLINEARITY: f64 = 1e-10;
 }
 
 /// Grid and discretization constants

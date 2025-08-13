@@ -721,28 +721,22 @@ impl PstdPlugin {
     
     /// Helper method to compute gradient using spectral derivatives
     fn compute_gradient(&self, field: &ndarray::ArrayView3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
-        use rustfft::num_complex::Complex;
-        use ndarray::Axis;
+        use crate::utils::spectral;
         
-        // Transform to k-space
-        let mut fields_4d = Array4::zeros((1, field.shape()[0], field.shape()[1], field.shape()[2]));
-        fields_4d.index_axis_mut(Axis(0), 0).assign(field);
-        let field_hat = fft_3d(&fields_4d, 0, &self.solver.grid);
+        // Convert ArrayView to Array3 for spectral gradient functions
+        let field_owned = field.to_owned();
         
-        // Apply derivative in k-space
-        let grad_hat = match direction {
-            0 => &field_hat * &self.solver.kx.mapv(|k| Complex::new(0.0, k)),
-            1 => &field_hat * &self.solver.ky.mapv(|k| Complex::new(0.0, k)),
-            2 => &field_hat * &self.solver.kz.mapv(|k| Complex::new(0.0, k)),
-            _ => return Err(KwaversError::Validation(ValidationError::FieldValidation {
+        // Use centralized spectral gradient functions
+        match direction {
+            0 => spectral::gradient_x(&field_owned, &self.solver.grid),
+            1 => spectral::gradient_y(&field_owned, &self.solver.grid),
+            2 => spectral::gradient_z(&field_owned, &self.solver.grid),
+            _ => Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "gradient_direction".to_string(),
                 value: direction.to_string(),
                 constraint: "must be 0 (x), 1 (y), or 2 (z)".to_string(),
             })),
-        };
-        
-        // Transform back to physical space
-        Ok(ifft_3d(&grad_hat, &self.solver.grid))
+        }
     }
 }
 

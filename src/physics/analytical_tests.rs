@@ -110,7 +110,7 @@ impl PhysicsTestUtils {
         
         // Calculate cross-correlation to find actual shift
         let mut max_correlation = 0.0;
-        let mut best_shift = 0.0;
+        let mut peak_shift = 0.0;
         
         // Search in sub-grid increments
         let search_range = (expected_shift_cells * 2.0) as i32;
@@ -123,12 +123,12 @@ impl PhysicsTestUtils {
                 
                 if correlation > max_correlation {
                     max_correlation = correlation;
-                    best_shift = total_shift;
+                    peak_shift = total_shift;
                 }
             }
         }
         
-        let actual_speed = (best_shift * grid.dx) / time_elapsed;
+        let actual_speed = (peak_shift * grid.dx) / time_elapsed;
         (actual_speed, max_correlation)
     }
     
@@ -197,8 +197,9 @@ mod tests {
         let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         
         // Initialize with plane wave using dispersion-corrected analytical solution
-        let frequency = 1e6; // 1 MHz
-        let amplitude = 1e5;  // 100 kPa
+        use crate::constants::physics::{DEFAULT_ULTRASOUND_FREQUENCY, STANDARD_PRESSURE_AMPLITUDE};
+        let frequency = DEFAULT_ULTRASOUND_FREQUENCY; // 1 MHz
+        let amplitude = STANDARD_PRESSURE_AMPLITUDE;  // 100 kPa
         let initial_pressure = PhysicsTestUtils::analytical_plane_wave_with_dispersion(
             &grid, frequency, amplitude, medium.sound_speed(0.0, 0.0, 0.0, &grid), 0.0, true
         );
@@ -273,7 +274,8 @@ mod tests {
         let _ = env_logger::builder().is_test(true).try_init();
         
         // Setup for amplitude preservation test
-        let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+        use crate::constants::physics::STANDARD_SPATIAL_RESOLUTION;
+        let grid = Grid::new(64, 64, 64, STANDARD_SPATIAL_RESOLUTION, STANDARD_SPATIAL_RESOLUTION, STANDARD_SPATIAL_RESOLUTION);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let mut config = KuznetsovConfig::default();
