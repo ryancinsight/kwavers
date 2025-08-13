@@ -861,7 +861,8 @@ impl PhysicsPlugin for FdtdPlugin {
     ) -> KwaversResult<()> {
         use ndarray::Axis;
         
-        // Extract fields from the Array4 as owned arrays
+        // Extract fields from the Array4 as owned arrays for now
+        // TODO: Optimize to use views directly when solver methods are updated
         let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
         let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
         let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();

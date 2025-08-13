@@ -1,39 +1,46 @@
-//! Convolutional Perfectly Matched Layer (C-PML) Implementation
+//! Convolutional Perfectly Matched Layer (C-PML) boundary conditions
 //! 
-//! This module implements the Convolutional PML, which provides superior absorption
-//! characteristics compared to standard PML, especially for grazing angle incidence
-//! and evanescent waves.
+//! This module implements absorbing boundary conditions for acoustic wave simulations
+//! using the Convolutional PML formulation.
 //! 
-//! # Theory
+//! # Current Implementation Status
 //! 
-//! The C-PML is based on the stretched coordinate PML with frequency-dependent
-//! parameters. The key innovation is the use of convolutional variables that
-//! allow for better absorption across a wider range of angles and frequencies.
+//! ## Full C-PML Implementation
+//! The main `ConvolutionalPML` struct provides a complete C-PML implementation with:
+//! - Auxiliary memory variables for field history
+//! - Recursive convolution updates
+//! - Support for acoustic, elastic, and thermal fields
+//! - Configurable absorption profiles (polynomial, exponential)
 //! 
-//! The stretched coordinate transformation is:
-//! ```text
-//! s_x = κ_x + σ_x/(α_x + iω)
-//! ```
+//! ## Simplified Sponge Layer
+//! The `apply_light` method provides a simplified exponential damping layer:
+//! - **NOT** a true C-PML implementation
+//! - Simple exponential decay without memory variables
+//! - Suitable for basic absorption when full C-PML overhead is not needed
+//! - Should be renamed in future API redesign to avoid confusion
 //! 
-//! Where:
-//! - κ_x: Coordinate stretching factor (≥1)
-//! - σ_x: Conductivity profile
-//! - α_x: Frequency shifting parameter (improves low-frequency absorption)
-//! - ω: Angular frequency
+//! # Design Considerations
 //! 
-//! # Features
+//! The current `Boundary` trait interface doesn't fully capture the C-PML 
+//! operational model, which requires:
+//! 1. Auxiliary memory variables per field component
+//! 2. Recursive convolution updates at each time step
+//! 3. Different update equations for different field types
 //! 
-//! - **Enhanced Grazing Angle Absorption**: >60dB reduction at angles up to 89°
-//! - **Frequency-Independent Performance**: Works well from DC to high frequencies
-//! - **Dispersive Media Support**: Handles frequency-dependent material properties
-//! - **Memory Efficiency**: Optimized memory variable storage
+//! Future API redesign should consider:
+//! - Separate traits for simple boundaries vs. complex PML boundaries
+//! - Explicit memory variable management in the trait interface
+//! - Field-specific update methods
 //! 
-//! # Design Principles
+//! # References
 //! 
-//! - **SOLID**: Single responsibility for boundary absorption
-//! - **DRY**: Reuses profile computation across dimensions
-//! - **KISS**: Clear separation of initialization and update phases
-//! - **YAGNI**: Only implements necessary C-PML features
+//! 1. Roden, J. A., & Gedney, S. D. (2000). "Convolutional PML (CPML): An efficient 
+//!    FDTD implementation of the CFS-PML for arbitrary media." Microwave and Optical 
+//!    Technology Letters, 27(5), 334-339.
+//! 
+//! 2. Komatitsch, D., & Martin, R. (2007). "An unsplit convolutional perfectly 
+//!    matched layer improved at grazing incidence for the seismic wave equation." 
+//!    Geophysics, 72(5), SM155-SM167.
 
 use crate::boundary::Boundary;
 use crate::grid::Grid;

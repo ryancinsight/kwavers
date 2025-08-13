@@ -810,7 +810,7 @@ impl PhysicsPlugin for PstdPlugin {
         use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
         
         // Extract fields from the Array4 as owned arrays
-        let pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        let mut pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         let mut velocity_x = fields.index_axis(Axis(0), VX_IDX).to_owned();
         let mut velocity_y = fields.index_axis(Axis(0), VY_IDX).to_owned();
         let mut velocity_z = fields.index_axis(Axis(0), VZ_IDX).to_owned();
@@ -851,14 +851,13 @@ impl PhysicsPlugin for PstdPlugin {
         let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
         
         // Update pressure using divergence
-        let mut updated_pressure = pressure.clone();
-        self.solver.update_pressure(&mut updated_pressure, &divergence, medium, dt)?;
+        self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
         
         // Update velocities using new pressure
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &updated_pressure, medium, dt)?;
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
         
         // Copy back to fields
-        fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&updated_pressure);
+        fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&pressure);
         fields.index_axis_mut(Axis(0), VX_IDX).assign(&velocity_x);
         fields.index_axis_mut(Axis(0), VY_IDX).assign(&velocity_y);
         fields.index_axis_mut(Axis(0), VZ_IDX).assign(&velocity_z);
