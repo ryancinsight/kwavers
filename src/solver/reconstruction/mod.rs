@@ -18,7 +18,7 @@ use crate::{
     error::{KwaversError, KwaversResult},
     grid::Grid,
 };
-use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
+use ndarray::{Array2, Array3, ArrayView1, Zip};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
 use std::sync::{Arc, Mutex};

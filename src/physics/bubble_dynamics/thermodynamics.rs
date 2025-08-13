@@ -17,7 +17,7 @@
 //! - Antoine, C. (1888). "Tensions des vapeurs; nouvelle relation entre les 
 //!   tensions et les températures." Comptes Rendus, 107, 681-684.
 
-use std::f64::consts::{E, PI};
+use std::f64::consts::PI;
 
 /// Physical constants
 pub mod constants {

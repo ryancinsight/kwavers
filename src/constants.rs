@@ -3,7 +3,6 @@
 //! This module defines named constants to avoid magic numbers and ensure
 //! consistency across the codebase, following SSOT and DRY principles.
 
-use std::f64::consts::PI;
 
 // Re-export standard mathematical constants for convenience
 pub use std::f64::consts::{E, PI as PI_CONST, TAU};
@@ -248,6 +247,30 @@ pub mod chemistry {
     pub const SINGLET_OXYGEN_WEIGHT: f64 = 5.0;
     pub const PEROXYNITRITE_WEIGHT: f64 = 8.0;
     pub const NITRIC_OXIDE_WEIGHT: f64 = 0.5;
+}
+
+/// Cavitation damage constants
+pub mod cavitation {
+    /// Default damage threshold pressure (Pa)
+    pub const DEFAULT_THRESHOLD_PRESSURE: f64 = 100e6;  // 100 MPa
+    
+    /// Default pit formation efficiency (fraction of impacts that cause pits)
+    pub const DEFAULT_PIT_EFFICIENCY: f64 = 0.01;  // 1%
+    
+    /// Default fatigue damage rate per cycle
+    pub const DEFAULT_FATIGUE_RATE: f64 = 1e-6;
+    
+    /// Default stress concentration factor
+    pub const DEFAULT_CONCENTRATION_FACTOR: f64 = 2.0;
+    
+    /// Material removal efficiency coefficient (empirical)
+    pub const MATERIAL_REMOVAL_EFFICIENCY: f64 = 1e-9;
+    
+    /// Impact energy coefficient for erosion model
+    pub const IMPACT_ENERGY_COEFFICIENT: f64 = 0.5;
+    
+    /// Compression factor exponent for cavitation intensity
+    pub const COMPRESSION_FACTOR_EXPONENT: f64 = 1.5;
 }
 
 /// Test and validation constants

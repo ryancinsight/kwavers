@@ -33,7 +33,6 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 use std::f64::consts::PI;
 use serde::{Serialize, Deserialize};
-use crate::grid::Grid;
 
 /// Power-law absorption model configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

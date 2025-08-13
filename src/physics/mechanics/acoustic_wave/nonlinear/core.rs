@@ -612,7 +612,7 @@ impl AcousticWaveModel for NonlinearWave {
             trace!("Wave update skipped for empty grid at t={}", t);
             return;
         }
-        let mut nonlinear_term = Array3::<f64>::zeros((nx, ny, nz).f());
+        let nonlinear_term = Array3::<f64>::zeros((nx, ny, nz).f());
         let mut src_term_array = Array3::<f64>::zeros((nx, ny, nz).f());
 
         let start_source = Instant::now();

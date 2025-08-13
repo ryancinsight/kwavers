@@ -6,7 +6,6 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError};
 use crate::physics::field_indices::TEMPERATURE_IDX;
 use crate::physics::traits::ThermalModelTrait;
 use log::debug;

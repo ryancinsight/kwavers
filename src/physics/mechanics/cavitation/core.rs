@@ -7,10 +7,10 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::state::{PhysicsState, FieldAccessor};
+use crate::physics::state::PhysicsState;
 use crate::physics::field_indices;
 use crate::physics::traits::CavitationModelBehavior;
-use ndarray::{Array3, Zip, ArrayView3};
+use ndarray::{Array3, Zip};
 
 
 /// Core cavitation model implementing the Rayleigh-Plesset equation

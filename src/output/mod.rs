@@ -5,11 +5,7 @@ use log::info;
 use ndarray::Axis;
 use std::fs::File;
 use std::io::{self, Write};
-use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
-use crate::error::KwaversResult;
-use crate::grid::Grid;
-use ndarray::Array3;
-use std::path::Path;
+use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX};
 
 // Note: Field indices imported from physics::field_indices for SSOT
 

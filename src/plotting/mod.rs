@@ -3,8 +3,6 @@
 //! This module provides visualization capabilities for Kwavers simulation results.
 //! It supports 2D/3D plotting of acoustic fields, pressure distributions, and temporal evolution.
 
-use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
-use crate::error::KwaversResult;
 use ndarray::Array3;
 
 // Note: Field indices imported from physics::field_indices for SSOT

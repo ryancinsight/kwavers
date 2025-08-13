@@ -3,7 +3,12 @@
 //! This module calculates mechanical damage from cavitation bubble collapse
 //! including erosion, pitting, and material fatigue
 
-use crate::physics::bubble_dynamics::BubbleStateFields;
+use crate::physics::bubble_dynamics::bubble_field::BubbleStateFields;
+use crate::constants::cavitation::{
+    DEFAULT_THRESHOLD_PRESSURE, DEFAULT_PIT_EFFICIENCY, DEFAULT_FATIGUE_RATE,
+    DEFAULT_CONCENTRATION_FACTOR, MATERIAL_REMOVAL_EFFICIENCY, IMPACT_ENERGY_COEFFICIENT,
+    COMPRESSION_FACTOR_EXPONENT
+};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
@@ -71,10 +76,10 @@ pub struct DamageParameters {
 impl Default for DamageParameters {
     fn default() -> Self {
         Self {
-            threshold_pressure: 100e6,  // 100 MPa
-            pit_efficiency: 0.01,       // 1% of impacts cause pits
-            fatigue_rate: 1e-6,        // Fatigue damage per cycle
-            concentration_factor: 2.0,  // Stress concentration
+            threshold_pressure: DEFAULT_THRESHOLD_PRESSURE,  // 100 MPa
+            pit_efficiency: DEFAULT_PIT_EFFICIENCY,       // 1% of impacts cause pits
+            fatigue_rate: DEFAULT_FATIGUE_RATE,        // Fatigue damage per cycle
+            concentration_factor: DEFAULT_CONCENTRATION_FACTOR,  // Stress concentration
         }
     }
 }
@@ -191,10 +196,10 @@ impl CavitationDamage {
         }
         
         // Erosion model based on impact energy
-        let impact_energy = 0.5 * impact_pressure * bubble_radius.powi(3);
+        let impact_energy = IMPACT_ENERGY_COEFFICIENT * impact_pressure * bubble_radius.powi(3);
         
         // Material removal rate (empirical)
-        let removal_efficiency = 1e-9 * self.material.erosion_resistance;
+        let removal_efficiency = MATERIAL_REMOVAL_EFFICIENCY * self.material.erosion_resistance;
         let volume_removed = removal_efficiency * impact_energy / self.material.hardness;
         
         // Mass erosion rate
@@ -260,8 +265,8 @@ pub fn cavitation_intensity(
         let compression = bubble_states.compression_ratio[[i, j, k]];
         
         // Cavitation intensity based on collapse energy
-        let collapse_energy = 0.5 * liquid_density * v.powi(2) * r.powi(3);
-        let compression_factor = compression.powf(1.5);
+        let collapse_energy = IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3);
+        let compression_factor = compression.powf(COMPRESSION_FACTOR_EXPONENT);
         
         intensity[[i, j, k]] = collapse_energy * compression_factor;
     }

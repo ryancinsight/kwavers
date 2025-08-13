@@ -18,9 +18,9 @@
 //! 3. **Prosperetti & Lezzi (1986)**. "Bubble dynamics in a compressible liquid"
 //!    - Thermal effects in bubble dynamics
 
-use super::{BubbleState, BubbleParameters, KellerMiksisModel};
+use super::{BubbleState, KellerMiksisModel};
 use crate::error::{KwaversResult, PhysicsError};
-use ndarray::{Array1, Array2};
+use ndarray::Array1;
 use std::sync::Arc;
 
 /// Configuration for IMEX bubble integration

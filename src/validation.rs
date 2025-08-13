@@ -17,7 +17,7 @@
 //! - CRP: Common reuse of validation utilities
 //! - ADP: Acyclic dependency in validation hierarchy
 
-use crate::error::{KwaversResult, ValidationError as ErrorValidationError};
+use crate::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

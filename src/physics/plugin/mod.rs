@@ -6,17 +6,15 @@
 // pub mod tests; // Temporarily disabled due to syntax errors
 pub mod field_access;  // NEW: Safe field access for plugins
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError};
+use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::validation::ValidationResult;
 use ndarray::{Array3, Array4};
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex, RwLock};
-use log::{debug, info, warn};
 
 pub use field_access::{PluginFieldAccess, DirectPluginFieldAccess};
 

@@ -15,7 +15,7 @@
 //! - SSOT: Single source of truth for configuration and creation
 //! - ADP: Acyclic dependency principle
 
-use crate::error::{KwaversResult, ConfigError, PhysicsError, ValidationError};
+use crate::error::{KwaversResult, ConfigError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
@@ -561,7 +561,7 @@ impl SimulationFactory {
     fn create_physics_pipeline(config: PhysicsConfig, grid: &Grid) -> KwaversResult<PluginManager> {
         config.validate()?;
         
-        let mut manager = PluginManager::new();
+        let manager = PluginManager::new();
         
         for model_config in config.models {
             if !model_config.enabled {
