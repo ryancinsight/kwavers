@@ -1,50 +1,50 @@
-//! Enhanced shock handling for spectral DG methods
-//! 
-//! Implements advanced techniques for handling discontinuities:
-//! - WENO5 limiting for smooth shock capturing
-//! - Artificial viscosity with adaptive strength
-//! - Sub-cell resolution via h-p adaptation
-//! - Entropy-stable flux corrections
-//! 
-//! Design principles:
-//! - SOLID: Separate concerns for detection, limiting, and adaptation
-//! - DRY: Reusable shock detection metrics
-//! - KISS: Clear interfaces despite complex algorithms
+//! Shock Capturing for Spectral Discontinuous Galerkin Methods
+//!
+//! This module implements shock-capturing techniques for handling
+//! discontinuities in spectral DG simulations, including:
+//! - Artificial viscosity methods
+//! - Sub-cell resolution techniques
+//! - Hybrid spectral/finite-volume approaches
+//!
+//! # Theory
+//!
+//! When discontinuities (shocks) are present, spectral methods suffer from
+//! Gibbs oscillations. This module provides several approaches to handle these:
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 use log::warn;
 
-/// Enhanced shock detector with multiple indicators
+/// Shock detector with multiple indicators
 #[derive(Debug, Clone)]
-pub struct EnhancedShockDetector {
+pub struct ShockDetector {
     /// Base threshold for shock detection
     threshold: f64,
-    /// Entropy-based indicator weight
-    entropy_weight: f64,
-    /// Pressure-based indicator weight
-    pressure_weight: f64,
-    /// Velocity divergence weight
-    divergence_weight: f64,
-    /// Sub-cell resolution factor
-    subcell_resolution: usize,
+    /// Use modal decay indicator
+    use_modal_decay: bool,
+    /// Use jump indicator
+    use_jump_indicator: bool,
+    /// Use entropy residual
+    use_entropy_residual: bool,
+    /// Smoothness exponent for modal decay
+    smoothness_exponent: f64,
 }
 
-impl Default for EnhancedShockDetector {
+impl Default for ShockDetector {
     fn default() -> Self {
         Self {
             threshold: 0.01,
-            entropy_weight: 0.4,
-            pressure_weight: 0.4,
-            divergence_weight: 0.2,
-            subcell_resolution: 4,
+            use_modal_decay: true,
+            use_jump_indicator: true,
+            use_entropy_residual: false,
+            smoothness_exponent: 2.0,
         }
     }
 }
 
-impl EnhancedShockDetector {
-    /// Create a new enhanced shock detector
+impl ShockDetector {
+    /// Create a new shock detector
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -52,39 +52,55 @@ impl EnhancedShockDetector {
         }
     }
     
-    /// Detect shocks using multiple physical indicators
-    pub fn detect_shocks(
-        &self,
-        pressure: &Array3<f64>,
-        velocity: &Array4<f64>, // (3, nx, ny, nz) for vx, vy, vz
-        density: &Array3<f64>,
-        grid: &Grid,
-    ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = pressure.dim();
-        let mut shock_indicator = Array3::zeros((nx, ny, nz));
+    /// Detect shocks in the field using multiple indicators
+    pub fn detect_shocks(&self, field: &Array3<f64>, grid: &Grid) -> Array3<bool> {
+        let (nx, ny, nz) = field.dim();
+        let mut shock_mask = Array3::from_elem((nx, ny, nz), false);
         
-        // Compute individual indicators
-        let entropy_indicator = self.compute_entropy_indicator(pressure, density)?;
-        let pressure_indicator = self.compute_pressure_indicator(pressure, grid)?;
-        let divergence_indicator = self.compute_divergence_indicator(velocity, grid)?;
-        
-        // Combine indicators with weights
-        ndarray::Zip::from(&mut shock_indicator)
-            .and(&entropy_indicator)
-            .and(&pressure_indicator)
-            .and(&divergence_indicator)
-            .for_each(|s, &e, &p, &d| {
-                *s = self.entropy_weight * e + 
-                     self.pressure_weight * p + 
-                     self.divergence_weight * d;
-            });
-        
-        // Apply sub-cell resolution if needed
-        if self.subcell_resolution > 1 {
-            shock_indicator = self.apply_subcell_resolution(shock_indicator)?;
+        // Modal decay indicator
+        if self.use_modal_decay {
+            // Compute modal coefficients and check decay rate
+            // For now, use gradient-based detection as proxy
+            for i in 1..nx-1 {
+                for j in 1..ny-1 {
+                    for k in 1..nz-1 {
+                        let grad_x = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * grid.dx);
+                        let grad_y = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * grid.dy);
+                        let grad_z = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * grid.dz);
+                        
+                        let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
+                        let field_mag = field[[i, j, k]].abs() + 1e-10;
+                        
+                        if grad_mag / field_mag > self.threshold {
+                            shock_mask[[i, j, k]] = true;
+                        }
+                    }
+                }
+            }
         }
         
-        Ok(shock_indicator)
+        // Jump indicator
+        if self.use_jump_indicator {
+            for i in 1..nx-1 {
+                for j in 1..ny-1 {
+                    for k in 1..nz-1 {
+                        // Check jumps across cell interfaces
+                        let jump_x = (field[[i+1, j, k]] - field[[i, j, k]]).abs();
+                        let jump_y = (field[[i, j+1, k]] - field[[i, j, k]]).abs();
+                        let jump_z = (field[[i, j, k+1]] - field[[i, j, k]]).abs();
+                        
+                        let max_jump = jump_x.max(jump_y).max(jump_z);
+                        let field_scale = field[[i, j, k]].abs() + 1e-10;
+                        
+                        if max_jump / field_scale > self.threshold * 10.0 {
+                            shock_mask[[i, j, k]] = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        shock_mask
     }
     
     /// Compute entropy-based shock indicator
@@ -175,57 +191,29 @@ impl EnhancedShockDetector {
         let (_, nx, ny, nz) = velocity.dim();
         let mut indicator = Array3::zeros((nx, ny, nz));
         
-        // Extract velocity components
-        let vx = velocity.index_axis(Axis(0), 0);
-        let vy = velocity.index_axis(Axis(0), 1);
-        let vz = velocity.index_axis(Axis(0), 2);
-        
-        // Compute divergence
+        // Compute velocity divergence
         for i in 1..nx-1 {
             for j in 1..ny-1 {
                 for k in 1..nz-1 {
-                    let div_v = (vx[[i+1, j, k]] - vx[[i-1, j, k]]) / (2.0 * grid.dx) +
-                               (vy[[i, j+1, k]] - vy[[i, j-1, k]]) / (2.0 * grid.dy) +
-                               (vz[[i, j, k+1]] - vz[[i, j, k-1]]) / (2.0 * grid.dz);
+                    let dvx_dx = (velocity[[0, i+1, j, k]] - velocity[[0, i-1, j, k]]) / (2.0 * grid.dx);
+                    let dvy_dy = (velocity[[1, i, j+1, k]] - velocity[[1, i, j-1, k]]) / (2.0 * grid.dy);
+                    let dvz_dz = (velocity[[2, i, j, k+1]] - velocity[[2, i, j, k-1]]) / (2.0 * grid.dz);
+                    
+                    let divergence = dvx_dx + dvy_dy + dvz_dz;
                     
                     // Strong compression indicates shock
-                    if div_v < 0.0 {
-                        let sound_speed = 340.0; // Approximate, should be computed from state
-                        let mach_indicator = (-div_v * grid.dx.min(grid.dy).min(grid.dz) / sound_speed).abs();
-                        indicator[[i, j, k]] = mach_indicator.min(1.0);
-                    }
+                    indicator[[i, j, k]] = (-divergence).max(0.0);
                 }
             }
+        }
+        
+        // Normalize
+        let max_div = indicator.iter().cloned().fold(0.0_f64, f64::max);
+        if max_div > 0.0 {
+            indicator /= max_div;
         }
         
         Ok(indicator)
-    }
-    
-    /// Apply sub-cell resolution for better shock tracking
-    fn apply_subcell_resolution(&self, indicator: Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // For now, apply smoothing to spread indicator to neighboring cells
-        let (nx, ny, nz) = indicator.dim();
-        let mut refined = indicator.clone();
-        
-        // Simple diffusion to spread shock indicator
-        for _ in 0..self.subcell_resolution {
-            let mut temp = refined.clone();
-            for i in 1..nx-1 {
-                for j in 1..ny-1 {
-                    for k in 1..nz-1 {
-                        let neighbors_sum = 
-                            refined[[i+1, j, k]] + refined[[i-1, j, k]] +
-                            refined[[i, j+1, k]] + refined[[i, j-1, k]] +
-                            refined[[i, j, k+1]] + refined[[i, j, k-1]];
-                        
-                        temp[[i, j, k]] = 0.7 * refined[[i, j, k]] + 0.05 * neighbors_sum;
-                    }
-                }
-            }
-            refined = temp;
-        }
-        
-        Ok(refined)
     }
 }
 
@@ -608,7 +596,7 @@ mod tests {
     
     #[test]
     fn test_shock_detector() {
-        let detector = EnhancedShockDetector::new(0.1);
+        let detector = ShockDetector::new(0.1);
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
         
         // Create test data with a shock
@@ -626,10 +614,10 @@ mod tests {
             }
         }
         
-        let indicator = detector.detect_shocks(&pressure, &velocity, &density, &grid).unwrap();
+        let indicator = detector.detect_shocks(&pressure, &grid);
         
         // Should detect shock around x=5
-        assert!(indicator[[5, 5, 5]] > 0.5);
-        assert!(indicator[[0, 5, 5]] < 0.1);
+        assert!(indicator[[5, 5, 5]]);
+        assert!(!indicator[[0, 5, 5]]);
     }
 }

@@ -275,7 +275,7 @@ impl RefinementStrategy {
     
     /// Apply buffer cells around marked regions
     fn apply_buffer(&self, indicator: &mut Array3<f64>) {
-        let shape = indicator.shape();
+        let (nx, ny, nz) = indicator.dim();
         let mut buffer_indicator = indicator.clone();
         
         for _ in 0..self.buffer_cells {
@@ -294,7 +294,7 @@ impl RefinementStrategy {
                                     let nj = (j as i32 + dj) as usize;
                                     let nk = (k as i32 + dk) as usize;
                                     
-                                    if ni < shape[0] && nj < shape[1] && nk < shape[2] {
+                                    if ni < nx && nj < ny && nk < nz {
                                         if indicator[[ni, nj, nk]] > 0.5 {
                                             has_marked_neighbor = true;
                                             break;

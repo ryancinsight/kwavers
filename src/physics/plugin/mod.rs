@@ -223,6 +223,10 @@ impl PluginManager {
         let t = step as f64 * dt;
         
         // Execute plugins in dependency order
+        // Plugins within the same dependency group can theoretically run in parallel,
+        // but current plugin trait requires mutable access to fields.
+        // This is a design constraint that would require significant refactoring
+        // to change (splitting read and write phases, using transactional updates, etc.)
         for &idx in &self.execution_order {
             if let Some(plugin) = self.plugins.get_mut(idx) {
                 plugin.update(fields, grid, medium, dt, t, &context)?;
@@ -926,8 +930,11 @@ impl ExecutionStrategy for ParallelStrategy {
                     .map(|&idx| idx)
                     .collect();
                 
-                // Sequential execution as fallback until plugins support immutability
-                // TODO: Implement proper parallel execution with immutable plugins
+                // Execute plugins in dependency order
+                // Plugins within the same dependency group can theoretically run in parallel,
+                // but current plugin trait requires mutable access to fields.
+                // This is a design constraint that would require significant refactoring
+                // to change (splitting read and write phases, using transactional updates, etc.)
                 for &idx in group_indices.iter() {
                     plugins[idx].update(fields, grid, medium, dt, t, context)?;
                 }

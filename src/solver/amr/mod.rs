@@ -49,12 +49,13 @@
 //! - **YAGNI**: Only essential AMR features implemented
 //! - **Clean**: Clear abstractions for refinement criteria
 
-pub mod octree;
+pub mod error_estimator;
 pub mod interpolation;
 pub mod local_operations;
+pub mod octree;
+pub mod refinement;
 pub mod wavelet;
-pub mod enhanced;
-pub mod error_estimator;
+pub mod feature_refinement;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -149,11 +150,11 @@ pub struct AMRManager {
     /// Refinement history for adaptation
     refinement_history: Vec<RefinementEvent>,
     /// Dynamic refinement criteria
-    criteria: Vec<Box<dyn enhanced::RefinementCriterion>>,
+    criteria: Vec<Box<dyn feature_refinement::RefinementCriterion>>,
     /// Criterion weights
     criterion_weights: Vec<f64>,
     /// Load balancer for parallel execution
-    load_balancer: Option<enhanced::LoadBalancer>,
+    load_balancer: Option<feature_refinement::LoadBalancer>,
     /// Memory limit (bytes)
     memory_limit: Option<usize>,
     /// Current memory usage estimate
@@ -204,7 +205,7 @@ impl AMRManager {
     }
     
     /// Add a refinement criterion with weight
-    pub fn add_criterion(&mut self, criterion: Box<dyn enhanced::RefinementCriterion>, weight: f64) {
+    pub fn add_criterion(&mut self, criterion: Box<dyn feature_refinement::RefinementCriterion>, weight: f64) {
         self.criteria.push(criterion);
         self.criterion_weights.push(weight);
     }
@@ -215,8 +216,8 @@ impl AMRManager {
     }
     
     /// Set load balancing strategy
-    pub fn set_load_balancing(&mut self, strategy: enhanced::LoadBalancingStrategy) {
-        self.load_balancer = Some(enhanced::LoadBalancer::new(strategy));
+    pub fn set_load_balancing(&mut self, strategy: feature_refinement::LoadBalancingStrategy) {
+        self.load_balancer = Some(feature_refinement::LoadBalancer::new(strategy));
     }
     
     /// Get reference to the octree

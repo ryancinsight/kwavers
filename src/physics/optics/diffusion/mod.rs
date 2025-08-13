@@ -2,7 +2,8 @@
 use ndarray::{Array3, Array4, Axis};
 use crate::grid::Grid;
 use crate::physics::field_indices::LIGHT_IDX;
-use crate::physics::optics::{PolarizationModel, polarization::SimplePolarizationModel};
+use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
+use crate::physics::optics::polarization::LinearPolarization;
 use crate::physics::optics::thermal::OpticalThermalModel;
 use crate::medium::Medium;
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
@@ -15,7 +16,7 @@ use crate::physics::traits::LightDiffusionModelTrait;
 pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     pub emission_spectrum: Array3<f64>,
-    polarization: Option<Box<dyn PolarizationModel>>,
+    polarization: Option<Box<dyn PolarizationModelTrait>>,
     scattering: Option<Box<dyn OpticalScatteringModel>>,
     thermal: Option<OpticalThermalModel>,
     enable_polarization: bool,
@@ -44,7 +45,7 @@ impl LightDiffusion {
             fluence_rate: Array4::zeros((1, nx, ny, nz)),
             emission_spectrum: Array3::zeros((nx, ny, nz)),
             polarization: if enable_polarization {
-                Some(Box::new(SimplePolarizationModel::new()))
+                Some(Box::new(LinearPolarization::new(0.5)))
             } else {
                 None
             },

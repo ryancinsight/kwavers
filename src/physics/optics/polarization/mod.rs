@@ -17,26 +17,25 @@ pub trait PolarizationModel: Debug + Send + Sync {
 }
 
 #[derive(Debug)]
-pub struct SimplePolarizationModel {
-    polarization_factor: f64, // Simplified polarization strength (0 to 1)
+pub struct LinearPolarization {
+    polarization_factor: f64, // Polarization strength (0 to 1)
 }
 
-impl Default for SimplePolarizationModel {
+impl Default for LinearPolarization {
     fn default() -> Self {
-        Self::new()
+        Self::new(0.5)
     }
 }
 
-impl SimplePolarizationModel {
-    pub fn new() -> Self {
-        debug!("Initializing SimplePolarizationModel");
+impl LinearPolarization {
+    pub fn new(polarization_factor: f64) -> Self {
         Self {
-            polarization_factor: 0.5, // Default: moderate polarization
+            polarization_factor: polarization_factor.clamp(0.0, 1.0),
         }
     }
 }
 
-impl PolarizationModel for SimplePolarizationModel {
+impl PolarizationModel for LinearPolarization {
     fn apply_polarization(
         &mut self,
         fluence: &mut Array3<f64>,
@@ -47,10 +46,8 @@ impl PolarizationModel for SimplePolarizationModel {
         debug!("Applying polarization effects to light fluence");
         Zip::from(fluence)
             .and(emission_spectrum)
-            .for_each(|f, &spec| {
-                let x = (spec / 1e-9).cos(); // Simple polarization modulation based on wavelength
-                *f *= 1.0 + self.polarization_factor * x; // Adjust fluence by polarization
-                *f = f.max(0.0);
+            .for_each(|f, &e| {
+                *f *= 1.0 + self.polarization_factor * e.abs();
             });
     }
 }

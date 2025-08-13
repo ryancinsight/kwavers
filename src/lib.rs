@@ -55,7 +55,7 @@ pub use sensor::{Sensor, SensorData};
 pub use recorder::Recorder;
 pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
 pub use solver::Solver;
-pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, enhanced::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
+pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
 pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
@@ -68,7 +68,7 @@ pub use physics::state::{PhysicsState, field_indices};
 
 // Re-export spectral-DG components
 pub use solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
-pub use solver::spectral_dg::enhanced_shock_handling::{EnhancedShockDetector, WENOLimiter, ArtificialViscosity};
+pub use solver::spectral_dg::shock_capturing::{ShockDetector, WENOLimiter, ArtificialViscosity};
 
 // Re-export PSTD and FDTD plugins
 pub use solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
@@ -83,7 +83,7 @@ pub use gpu::memory::AdvancedGpuMemoryManager;
 pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
 pub use physics::chemistry::ChemicalModel;
-pub use physics::mechanics::elastic_wave::{ElasticWave, enhanced::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
+pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  

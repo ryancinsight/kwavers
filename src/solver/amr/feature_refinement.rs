@@ -1,10 +1,10 @@
-//! Enhanced AMR features for advanced applications
+//! Feature-based AMR refinement and load balancing
 //! 
 //! Provides:
 //! - Feature-based refinement criteria
 //! - Load balancing for parallel execution
-//! - Advanced interpolation schemes
-//! - Refinement prediction
+//! - Interpolation schemes for refinement
+//! - Refinement prediction capabilities
 
 
 use ndarray::Array3;

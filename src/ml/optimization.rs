@@ -16,7 +16,7 @@ pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,
     experience_buffer: VecDeque<OptimizationExperience>,
-    neural_network: SimpleNeuralNetwork,
+    neural_network: NeuralNetwork,
     convergence_predictor: ConvergencePredictor,
 }
 
@@ -30,41 +30,32 @@ pub struct OptimizationExperience {
     done: bool,
 }
 
-/// Simple neural network for parameter optimization
+/// Neural network for parameter optimization
 #[derive(Clone, Debug)]
-pub struct SimpleNeuralNetwork {
+pub struct NeuralNetwork {
     weights1: Array2<f64>,
     bias1: Array1<f64>,
     weights2: Array2<f64>,
     bias2: Array1<f64>,
-    hidden_size: usize,
+    learning_rate: f64,
 }
 
-impl SimpleNeuralNetwork {
-    /// Create a new neural network with random weights
-    pub fn new(input_size: usize, hidden_size: usize, output_size: usize) -> Self {
+impl NeuralNetwork {
+    /// Create a new neural network with specified dimensions
+    pub fn new(input_dim: usize, hidden_dim: usize, output_dim: usize, learning_rate: f64) -> Self {
+        use rand::Rng;
         let mut rng = rand::thread_rng();
         
         // Xavier initialization
-        let xavier_w1 = (6.0 / (input_size + hidden_size) as f64).sqrt();
-        let xavier_w2 = (6.0 / (hidden_size + output_size) as f64).sqrt();
-        
-        let weights1 = Array2::from_shape_fn((input_size, hidden_size), |_| {
-            rng.gen_range(-xavier_w1..xavier_w1)
-        });
-        let bias1 = Array1::zeros(hidden_size);
-        
-        let weights2 = Array2::from_shape_fn((hidden_size, output_size), |_| {
-            rng.gen_range(-xavier_w2..xavier_w2)
-        });
-        let bias2 = Array1::zeros(output_size);
+        let scale1 = (2.0 / input_dim as f64).sqrt();
+        let scale2 = (2.0 / hidden_dim as f64).sqrt();
         
         Self {
-            weights1,
-            bias1,
-            weights2,
-            bias2,
-            hidden_size,
+            weights1: Array2::from_shape_fn((hidden_dim, input_dim), |_| rng.gen::<f64>() * scale1 - scale1/2.0),
+            bias1: Array1::zeros(hidden_dim),
+            weights2: Array2::from_shape_fn((output_dim, hidden_dim), |_| rng.gen::<f64>() * scale2 - scale2/2.0),
+            bias2: Array1::zeros(output_dim),
+            learning_rate,
         }
     }
     
@@ -385,7 +376,7 @@ impl ParameterOptimizer {
             learning_rate,
             exploration_rate,
             experience_buffer: VecDeque::new(),
-            neural_network: SimpleNeuralNetwork::new(10, 64, 5), // Example sizes
+            neural_network: NeuralNetwork::new(10, 64, 5, 0.001), // Example sizes
             convergence_predictor: ConvergencePredictor::new(20, 1e-6),
         }
     }
@@ -656,7 +647,7 @@ mod tests {
     
     #[test]
     fn test_neural_network_forward_pass() {
-        let nn = SimpleNeuralNetwork::new(3, 5, 2);
+        let nn = NeuralNetwork::new(3, 5, 2, 0.001);
         let input = Array1::from_vec(vec![1.0, 2.0, 3.0]);
         
         let result = nn.forward(&input);
