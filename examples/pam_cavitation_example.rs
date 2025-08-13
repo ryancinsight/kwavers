@@ -30,7 +30,7 @@ fn main() -> KwaversResult<()> {
     );
     
     // Create time discretization
-    let time = Time::from_duration(1e-3, 1e-7); // 1ms simulation, 100ns time step
+    let time = Time::new(1e-7, 10000); // 100ns time step, 10000 steps = 1ms
     
     // Create medium (water)
     let medium = HomogeneousMedium::new(
@@ -269,9 +269,9 @@ fn simulate_hifu_induced_cavitation(
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                let x = grid.x_min + i as f64 * grid.dx;
-                let y = grid.y_min + j as f64 * grid.dy;
-                let z = grid.z_min + k as f64 * grid.dz;
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
                 
                 // Distance from focus
                 let r = ((x - focus[0]).powi(2) + 
@@ -317,7 +317,7 @@ fn demonstrate_reconstruction_algorithms(grid: &Grid) -> KwaversResult<()> {
     // Create dummy sensor data for demonstration
     let n_sensors = 64;
     let n_time = 1000;
-    let sensor_data = ndarray::Array2::zeros((n_sensors, n_time));
+    let sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, n_time));
     
     // Linear array reconstruction
     println!("\n1. Linear Array Reconstruction (lineRecon):");

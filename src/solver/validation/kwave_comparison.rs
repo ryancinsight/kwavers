@@ -627,7 +627,7 @@ impl KWaveValidator {
         
         let mut field = self.grid.zeros_array();
         let mut field_prev = self.grid.zeros_array();
-        let c = medium.sound_speed[[0, 0, 0]];
+        let c = medium.sound_speed(0.0, 0.0, 0.0, &self.grid);
         let courant = c * dt / self.grid.dx.min(self.grid.dy).min(self.grid.dz);
         
         // Reverse time stepping through boundary data

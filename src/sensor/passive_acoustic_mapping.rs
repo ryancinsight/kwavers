@@ -18,8 +18,8 @@ use crate::grid::Grid;
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
 use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{Array1, Array2, Array3, Array4, Axis};
-use std::collections::HashMap;
 use std::f64::consts::PI;
+use std::any::Any;
 
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]
@@ -198,6 +198,7 @@ pub enum BeamformingMethod {
 }
 
 /// PAM plugin for real-time cavitation field mapping
+#[derive(Debug)]
 pub struct PassiveAcousticMappingPlugin {
     metadata: PluginMetadata,
     config: PAMConfig,
@@ -216,15 +217,15 @@ impl PassiveAcousticMappingPlugin {
         
         // Convert physical positions to grid indices
         for pos in &sensor_positions {
-            let i = ((pos[0] - grid.x_min) / grid.dx).round() as usize;
-            let j = ((pos[1] - grid.y_min) / grid.dy).round() as usize;
-            let k = ((pos[2] - grid.z_min) / grid.dz).round() as usize;
+            let i = (pos[0] / grid.dx).round() as usize;
+            let j = (pos[1] / grid.dy).round() as usize;
+            let k = (pos[2] / grid.dz).round() as usize;
             
             if i >= grid.nx || j >= grid.ny || k >= grid.nz {
                 return Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
-                    field: "sensor_position".to_string(),
+                    parameter: "sensor_position".to_string(),
                     value: format!("{:?}", pos),
-                    reason: "Sensor position outside grid".to_string(),
+                    constraint: "Sensor position must be within grid bounds".to_string(),
                 }));
             }
             
@@ -286,9 +287,9 @@ impl PassiveAcousticMappingPlugin {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k_idx in 0..grid.nz {
-                    let x = grid.x_min + i as f64 * grid.dx;
-                    let y = grid.y_min + j as f64 * grid.dy;
-                    let z = grid.z_min + k_idx as f64 * grid.dz;
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k_idx as f64 * grid.dz;
                     
                     let mut sum = 0.0;
                     for (sensor_idx, sensor_pos) in self.sensor_positions.iter().enumerate() {
@@ -333,9 +334,9 @@ impl PassiveAcousticMappingPlugin {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k_idx in 0..grid.nz {
-                    let x = grid.x_min + i as f64 * grid.dx;
-                    let y = grid.y_min + j as f64 * grid.dy;
-                    let z = grid.z_min + k_idx as f64 * grid.dz;
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k_idx as f64 * grid.dz;
                     
                     // Compute steering vector
                     let mut steering = Array1::<f64>::zeros(num_sensors);
@@ -493,8 +494,25 @@ impl PhysicsPlugin for PassiveAcousticMappingPlugin {
         Ok(())
     }
     
-    fn validate_configuration(&self, _grid: &Grid) -> crate::validation::ValidationResult {
-        crate::validation::ValidationResult::valid("pam_configuration".to_string())
+    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
+        Box::new(PassiveAcousticMappingPlugin {
+            metadata: self.metadata.clone(),
+            config: self.config.clone(),
+            sensor_positions: self.sensor_positions.clone(),
+            sensor_indices: self.sensor_indices.clone(),
+            recorded_signals: self.recorded_signals.clone(),
+            cavitation_map: self.cavitation_map.clone(),
+            sonoluminescence_map: self.sonoluminescence_map.clone(),
+            frequency_domain_data: self.frequency_domain_data.clone(),
+        })
+    }
+    
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

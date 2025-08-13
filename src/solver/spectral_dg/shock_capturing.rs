@@ -687,14 +687,14 @@ mod tests {
     fn test_weno3_reconstruction() {
         let limiter = WENOLimiter::new(3).unwrap();
         
-        // Test smooth data
-        let smooth_stencil = [1.0, 2.0, 3.0];
+        // Test smooth data - WENO3 needs 5 points for reconstruction
+        let smooth_stencil = [1.0, 1.5, 2.0, 2.5, 3.0];
         let result = limiter.weno3_stencil(&smooth_stencil);
         println!("WENO3 smooth result: {}", result);
         assert!((result - 2.0).abs() < 0.5); // Should be close to central value
         
         // Test discontinuous data
-        let discontinuous_stencil = [1.0, 1.0, 10.0];
+        let discontinuous_stencil = [1.0, 1.0, 1.0, 5.0, 10.0];
         let result = limiter.weno3_stencil(&discontinuous_stencil);
         println!("WENO3 discontinuous result: {}", result);
         assert!(result < 5.0); // Should limit the jump
@@ -708,7 +708,7 @@ mod tests {
         // Create test data with a shock
         let mut pressure = Array3::from_elem((10, 10, 10), 1.0);
         let mut density = Array3::from_elem((10, 10, 10), 1.0);
-        let velocity = Array4::zeros((3, 10, 10, 10));
+        let velocity = Array4::<f64>::zeros((3, 10, 10, 10));
         
         // Add pressure jump
         for i in 5..10 {

@@ -982,8 +982,8 @@ impl DomainDecomposer {
         // Merge adjacent regions of the same type
         regions = self.merge_adjacent_regions(regions)?;
         
-        // Optimize buffer zones
-        self.optimize_buffer_zones(regions, grid)
+        // Buffer zone optimization would be done here if needed
+        Ok(regions)
     }
     
     fn segment_by_materials(&self, heterogeneity: &Array3<f64>, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {

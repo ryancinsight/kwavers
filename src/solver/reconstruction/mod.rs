@@ -176,9 +176,9 @@ impl Reconstructor for UniversalBackProjection {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    let x = grid.x_min + i as f64 * grid.dx;
-                    let y = grid.y_min + j as f64 * grid.dy;
-                    let z = grid.z_min + k as f64 * grid.dz;
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
                     
                     reconstructed[[i, j, k]] = self.compute_voxel_value(
                         [x, y, z],
@@ -309,9 +309,9 @@ pub fn interpolate_3d(
     grid: &Grid,
     method: &InterpolationMethod,
 ) -> f64 {
-    let i = ((position[0] - grid.x_min) / grid.dx).clamp(0.0, (grid.nx - 1) as f64);
-    let j = ((position[1] - grid.y_min) / grid.dy).clamp(0.0, (grid.ny - 1) as f64);
-    let k = ((position[2] - grid.z_min) / grid.dz).clamp(0.0, (grid.nz - 1) as f64);
+    let i = (position[0] / grid.dx).clamp(0.0, (grid.nx - 1) as f64);
+    let j = (position[1] / grid.dy).clamp(0.0, (grid.ny - 1) as f64);
+    let k = (position[2] / grid.dz).clamp(0.0, (grid.nz - 1) as f64);
     
     match method {
         InterpolationMethod::NearestNeighbor => {
