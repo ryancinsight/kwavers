@@ -262,7 +262,7 @@ impl PassiveAcousticMappingPlugin {
                 self.delay_and_sum_beamforming(&mut reconstructed, grid, frequency);
             },
             BeamformingMethod::RobustCapon { diagonal_loading } => {
-                self.robust_capon_beamforming(&mut reconstructed, grid, frequency, *diagonal_loading);
+                self.capon_beamforming_with_diagonal_loading(&mut reconstructed, grid, frequency, *diagonal_loading);
             },
             BeamformingMethod::MUSIC { signal_subspace_dim } => {
                 self.music_beamforming(&mut reconstructed, grid, frequency, *signal_subspace_dim);
@@ -312,9 +312,9 @@ impl PassiveAcousticMappingPlugin {
         }
     }
     
-    /// Robust Capon beamforming with diagonal loading
-    fn robust_capon_beamforming(&self, output: &mut Array3<f64>, grid: &Grid, frequency: f64, diagonal_loading: f64) {
-        // Implementation of Robust Capon beamformer
+    /// Capon beamforming with diagonal loading for regularization
+    fn capon_beamforming_with_diagonal_loading(&self, output: &mut Array3<f64>, grid: &Grid, frequency: f64, diagonal_loading: f64) {
+        // Implementation of Capon beamformer with diagonal loading
         // Reference: Li et al. (2003) "Robust Capon beamforming"
         
         let c = 1500.0;

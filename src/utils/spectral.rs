@@ -6,6 +6,8 @@
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::f64::consts::PI;
+use crate::error::KwaversResult;
+use num_complex::Complex;
 
 /// Compute wavenumber arrays for spectral operations
 /// Returns (kx, ky, kz) arrays with proper Nyquist handling
@@ -217,6 +219,93 @@ pub enum FilterType {
     Smooth,
     /// Sharp cutoff at Nyquist
     Sharp,
+}
+
+/// Compute spectral gradient in x direction
+/// 
+/// Uses FFT to compute the gradient with spectral accuracy
+pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+    let (nx, ny, nz) = field.dim();
+    
+    // Convert to Array4 for FFT
+    let mut fields = Array4::zeros((1, nx, ny, nz));
+    fields.index_axis_mut(Axis(0), 0).assign(field);
+    
+    // Perform FFT using utils function
+    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    
+    // Get wavenumbers
+    let (kx, _, _) = compute_wavenumbers(grid);
+    
+    // Multiply by i*kx in Fourier space
+    let mut grad_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+    Zip::from(&mut grad_fft)
+        .and(&field_fft)
+        .and(&kx)
+        .for_each(|g, &f, &k| {
+            *g = Complex::new(0.0, k) * f;
+        });
+    
+    // Perform inverse FFT
+    Ok(crate::utils::ifft_3d(&grad_fft, grid))
+}
+
+/// Compute spectral gradient in y direction
+/// 
+/// Uses FFT to compute the gradient with spectral accuracy
+pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+    let (nx, ny, nz) = field.dim();
+    
+    // Convert to Array4 for FFT
+    let mut fields = Array4::zeros((1, nx, ny, nz));
+    fields.index_axis_mut(Axis(0), 0).assign(field);
+    
+    // Perform FFT using utils function
+    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    
+    // Get wavenumbers
+    let (_, ky, _) = compute_wavenumbers(grid);
+    
+    // Multiply by i*ky in Fourier space
+    let mut grad_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+    Zip::from(&mut grad_fft)
+        .and(&field_fft)
+        .and(&ky)
+        .for_each(|g, &f, &k| {
+            *g = Complex::new(0.0, k) * f;
+        });
+    
+    // Perform inverse FFT
+    Ok(crate::utils::ifft_3d(&grad_fft, grid))
+}
+
+/// Compute spectral gradient in z direction
+/// 
+/// Uses FFT to compute the gradient with spectral accuracy
+pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+    let (nx, ny, nz) = field.dim();
+    
+    // Convert to Array4 for FFT
+    let mut fields = Array4::zeros((1, nx, ny, nz));
+    fields.index_axis_mut(Axis(0), 0).assign(field);
+    
+    // Perform FFT using utils function
+    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    
+    // Get wavenumbers
+    let (_, _, kz) = compute_wavenumbers(grid);
+    
+    // Multiply by i*kz in Fourier space
+    let mut grad_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+    Zip::from(&mut grad_fft)
+        .and(&field_fft)
+        .and(&kz)
+        .for_each(|g, &f, &k| {
+            *g = Complex::new(0.0, k) * f;
+        });
+    
+    // Perform inverse FFT
+    Ok(crate::utils::ifft_3d(&grad_fft, grid))
 }
 
 #[cfg(test)]

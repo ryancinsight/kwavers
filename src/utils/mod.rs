@@ -5,6 +5,9 @@ pub mod array_utils;
 pub mod kwave_utils;
 pub mod spectral;
 
+#[cfg(test)]
+pub mod test_helpers;
+
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
 use log::{debug, trace, info};

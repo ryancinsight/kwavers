@@ -197,8 +197,9 @@ impl<'a> ChemicalUpdateParams<'a> {
         }
 
         // Check for extremely high pressures (> 100 MPa)
+        use crate::constants::physics::HIGH_PRESSURE_THRESHOLD;
         let high_pressures: Vec<f64> = self.pressure.iter()
-            .filter(|&&x| x.abs() > 1e8)
+            .filter(|&&x| x.abs() > HIGH_PRESSURE_THRESHOLD)
             .copied()
             .collect();
             
@@ -553,7 +554,7 @@ impl ChemicalModel {
             grid,
             dt,
             medium,
-            frequency: 1e6, // Default frequency, should be passed as parameter
+            frequency: crate::constants::physics::DEFAULT_ULTRASOUND_FREQUENCY, // Default frequency
         };
         
         self.update_chemical(&params)

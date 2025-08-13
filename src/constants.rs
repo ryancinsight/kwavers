@@ -48,6 +48,12 @@ pub mod physics {
     /// Speed of sound in soft tissue (m/s)
     pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
     
+    /// Default ultrasound frequency (Hz)
+    pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;
+    
+    /// High pressure threshold for cavitation (Pa)
+    pub const HIGH_PRESSURE_THRESHOLD: f64 = 1e8;
+    
     /// Density of water at 20°C (kg/m³)
     pub const DENSITY_WATER: f64 = 998.0;
     
@@ -241,6 +247,15 @@ pub mod thermodynamics {
     
     /// Nusselt number Peclet exponent for heat transfer
     pub const NUSSELT_PECLET_EXPONENT: f64 = 0.5;
+    
+    /// Reference temperature for reaction rates (K)
+    pub const REACTION_REFERENCE_TEMPERATURE: f64 = 298.15;
+    
+    /// Base reaction rate constant for sonochemistry (1/s)
+    pub const SONOCHEMISTRY_BASE_RATE: f64 = 1e-4;
+    
+    /// Secondary reaction rate constant (1/s)
+    pub const SECONDARY_REACTION_RATE: f64 = 5e-5;
     
     /// Sherwood number Peclet exponent for mass transfer
     pub const SHERWOOD_PECLET_EXPONENT: f64 = 0.33;
