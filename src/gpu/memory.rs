@@ -15,8 +15,8 @@ use std::any::Any;
 /// GPU memory allocation strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllocationStrategy {
-    /// Simple allocation (allocate on demand)
-    Simple,
+    /// On-demand allocation (allocate on demand)
+    OnDemand,
     /// Pool-based allocation (pre-allocate memory pools)
     Pool,
     /// Streaming allocation (optimize for streaming data)
@@ -769,7 +769,7 @@ mod tests {
     #[test]
     fn test_allocation_strategies() {
         let strategies = vec![
-            AllocationStrategy::Simple,
+            AllocationStrategy::OnDemand,
             AllocationStrategy::Pool,
             AllocationStrategy::Streaming,
             AllocationStrategy::Unified,

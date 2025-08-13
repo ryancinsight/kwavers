@@ -48,7 +48,7 @@ pub struct DomainRegion {
     pub end: (usize, usize, usize),
     /// Optimal solver type for this region
     pub domain_type: DomainType,
-    /// Quality score for this assignment (0-1, higher is better)
+    /// Quality score for this assignment (0-1, higher score indicates more suitable)
     pub quality_score: f64,
     /// Buffer zones for coupling with adjacent regions
     pub buffer_zones: BufferZones,
@@ -135,10 +135,11 @@ struct AnalysisParameters {
 
 impl Default for AnalysisParameters {
     fn default() -> Self {
+        use crate::constants::domain_decomposition::*;
         Self {
-            smoothness_threshold: 0.1,
-            heterogeneity_threshold: 0.2,
-            frequency_cutoff: 0.3, // Fraction of Nyquist frequency
+            smoothness_threshold: SMOOTHNESS_THRESHOLD,
+            heterogeneity_threshold: HETEROGENEITY_THRESHOLD,
+            frequency_cutoff: FREQUENCY_CUTOFF_FRACTION, // Fraction of Nyquist frequency
             min_region_size: 8,     // Minimum 8x8x8 regions
             overlap_factor: 0.2,    // 20% overlap
         }
@@ -808,7 +809,7 @@ impl DomainDecomposer {
         let (nx, ny, nz) = field.dim();
         let mut gradient_mag = Array3::zeros((nx, ny, nz));
         
-        // Use ndarray's windows for efficient gradient computation
+        // Use ndarray's windows for gradient computation
         // Process interior points with central differences
         gradient_mag
             .slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1])

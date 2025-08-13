@@ -16,7 +16,7 @@
 //!
 //! ## Design Principles
 //! - **Scientific Rigor**: Exact replication of k-Wave test cases
-//! - **Zero-Copy**: Efficient data handling with slices
+//! - **Zero-Copy**: Data handling with slices
 //! - **Comprehensive**: Tests all major features
 
 use crate::{KwaversResult, KwaversError, ConfigError};
@@ -262,7 +262,7 @@ impl KWaveValidator {
         
         Ok(TestResult {
             test_name: test_case.name.clone(),
-            passed: reflection_db < -60.0, // Better than -60 dB
+            passed: reflection_db < -60.0, // Less than -60 dB
             error: reflection_coefficient,
             tolerance: test_case.tolerance,
             details: format!("Reflection: {:.1} dB", reflection_db),
@@ -615,19 +615,53 @@ impl KWaveValidator {
         boundary
     }
 
-    /// Time reversal reconstruction (placeholder)
-    fn time_reversal(&self, boundary_data: &[Array3<f64>], _medium: &HomogeneousMedium, _dt: f64) -> KwaversResult<Array3<f64>> {
-        // This is a placeholder for time reversal
-        // A proper implementation would solve the wave equation backwards in time
-        // For now, we'll just return the last boundary data as a simple test
+    /// Time reversal reconstruction
+    fn time_reversal(&self, boundary_data: &[Array3<f64>], medium: &HomogeneousMedium, dt: f64) -> KwaversResult<Array3<f64>> {
+        // Time reversal reconstruction using the acoustic wave equation
+        // Based on: Fink, M. (1992). "Time reversal of ultrasonic fields"
+        // IEEE Transactions on Ultrasonics, Ferroelectrics, and Frequency Control
         
         if boundary_data.is_empty() {
             return Ok(self.grid.zeros_array());
         }
         
-        // Use the middle time step as the "reconstructed" field
-        let mid_idx = boundary_data.len() / 2;
-        Ok(boundary_data[mid_idx].clone())
+        let mut field = self.grid.zeros_array();
+        let mut field_prev = self.grid.zeros_array();
+        let c = medium.sound_speed[[0, 0, 0]];
+        let courant = c * dt / self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+        
+        // Reverse time stepping through boundary data
+        for boundary in boundary_data.iter().rev() {
+            // Apply boundary conditions from recorded data
+            let (nx, ny, nz) = field.dim();
+            
+            // Apply recorded boundary values
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[0, j, k]] = boundary[[0, j, k]];
+                    field[[nx-1, j, k]] = boundary[[nx-1, j, k]];
+                }
+            }
+            
+            // Wave equation time stepping (backward in time)
+            let field_next = field.clone();
+            for i in 1..nx-1 {
+                for j in 1..ny-1 {
+                    for k in 1..nz-1 {
+                        let laplacian = (field[[i+1, j, k]] - 2.0 * field[[i, j, k]] + field[[i-1, j, k]]) / (self.grid.dx * self.grid.dx)
+                                      + (field[[i, j+1, k]] - 2.0 * field[[i, j, k]] + field[[i, j-1, k]]) / (self.grid.dy * self.grid.dy)
+                                      + (field[[i, j, k+1]] - 2.0 * field[[i, j, k]] + field[[i, j, k-1]]) / (self.grid.dz * self.grid.dz);
+                        
+                        field[[i, j, k]] = 2.0 * field[[i, j, k]] - field_prev[[i, j, k]] 
+                                         + courant * courant * laplacian;
+                    }
+                }
+            }
+            
+            field_prev = field_next;
+        }
+        
+        Ok(field)
     }
 }
 

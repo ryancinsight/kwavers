@@ -360,6 +360,18 @@ pub mod validation {
     pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
 }
 
+/// Domain decomposition constants
+pub mod domain_decomposition {
+    /// Smoothness threshold for domain analysis
+    pub const SMOOTHNESS_THRESHOLD: f64 = 0.1;
+    
+    /// Heterogeneity threshold for medium analysis
+    pub const HETEROGENEITY_THRESHOLD: f64 = 0.2;
+    
+    /// Frequency cutoff as fraction of Nyquist frequency
+    pub const FREQUENCY_CUTOFF_FRACTION: f64 = 0.3;
+}
+
 /// Adaptive integration constants
 pub mod adaptive_integration {
     /// Maximum time step for bubble dynamics (100 ns - limited by acoustic frequency)
