@@ -15,8 +15,8 @@ use std::any::Any;
 /// GPU memory allocation strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllocationStrategy {
-    /// Simple allocation (allocate on demand)
-    Simple,
+    /// On-demand allocation (allocate on demand)
+    OnDemand,
     /// Pool-based allocation (pre-allocate memory pools)
     Pool,
     /// Streaming allocation (optimize for streaming data)
@@ -738,15 +738,15 @@ mod tests {
     }
 
     #[test]
-    fn test_advanced_memory_manager_creation() {
-        let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
+    fn test_memory_manager_creation() {
+        let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8 * 1024 * 1024 * 1024).unwrap();
         assert_eq!(manager.backend, GpuBackend::Cuda);
         assert_eq!(manager.memory_pools.len(), 7); // 7 buffer types
     }
 
     #[test]
-    fn test_advanced_manager_allocation() {
-        let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
+    fn test_manager_allocation() {
+        let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8 * 1024 * 1024 * 1024).unwrap();
         
         let buffer_id = manager.allocate_buffer(1024, BufferType::Pressure).unwrap();
         assert_eq!(buffer_id, 0);
@@ -769,7 +769,7 @@ mod tests {
     #[test]
     fn test_allocation_strategies() {
         let strategies = vec![
-            AllocationStrategy::Simple,
+            AllocationStrategy::OnDemand,
             AllocationStrategy::Pool,
             AllocationStrategy::Streaming,
             AllocationStrategy::Unified,

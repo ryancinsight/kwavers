@@ -16,6 +16,23 @@ use crate::grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
 
+/// GPU floating-point precision type
+/// Use feature flag "gpu-f64" for double precision, otherwise single precision
+#[cfg(feature = "gpu-f64")]
+pub type GpuFloat = f64;
+
+#[cfg(not(feature = "gpu-f64"))]
+pub type GpuFloat = f32;
+
+/// String representation of GPU float type for kernel generation
+pub fn gpu_float_type_str() -> &'static str {
+    if cfg!(feature = "gpu-f64") {
+        "double"
+    } else {
+        "float"
+    }
+}
+
 pub mod cuda;
 pub mod opencl;
 pub mod memory;

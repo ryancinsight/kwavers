@@ -836,16 +836,20 @@ impl HybridSolver {
         let velocity_z = domain_fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
         
         // Compute velocity divergence
-        let div_v = pstd_solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
+        let div_v = pstd_solver.compute_divergence(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
         
         // Update pressure using PSTD
-        pstd_solver.update_pressure(&mut pressure, &div_v, medium, dt)?;
+        let mut pressure_view = pressure.view_mut();
+        pstd_solver.update_pressure(&mut pressure_view, &div_v, medium, dt)?;
         
         // Update velocities using PSTD
         let mut vx_mut = velocity_x.clone();
         let mut vy_mut = velocity_y.clone();
         let mut vz_mut = velocity_z.clone();
-        pstd_solver.update_velocity(&mut vx_mut, &mut vy_mut, &mut vz_mut, &pressure, medium, dt)?;
+        let mut vx_view = vx_mut.view_mut();
+        let mut vy_view = vy_mut.view_mut();
+        let mut vz_view = vz_mut.view_mut();
+        pstd_solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), medium, dt)?;
         
         // Copy results back
         domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).assign(&pressure);

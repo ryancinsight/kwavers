@@ -51,7 +51,7 @@ pub use grid::Grid;
 pub use time::Time;
 pub use medium::{Medium, homogeneous::HomogeneousMedium};
 pub use source::Source;
-pub use sensor::{Sensor, SensorData};
+pub use sensor::{Sensor, SensorData, PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod};
 pub use recorder::Recorder;
 pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
 pub use solver::Solver;
@@ -113,6 +113,14 @@ pub use benchmarks::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFor
 
 // Re-export solver validation
 pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
+
+// Re-export reconstruction algorithms
+pub use solver::reconstruction::{
+    ReconstructionConfig, ReconstructionAlgorithm, FilterType, InterpolationMethod,
+    Reconstructor, UniversalBackProjection, WeightFunction,
+    plane_recon::PlaneRecon, line_recon::LineRecon, 
+    arc_recon::ArcRecon, bowl_recon::BowlRecon
+};
 
 /// Initialize logging for the kwavers library
 /// 
@@ -318,10 +326,10 @@ pub fn create_validated_simulation(
     Ok((grid, time, medium, source, recorder))
 }
 
-/// Run a complete simulation with advanced physics
+/// Run a complete simulation with physics
 /// 
 /// Implements ACID principles for simulation execution
-pub fn run_advanced_simulation(
+pub fn run_physics_simulation(
     config: Config,
 ) -> KwaversResult<()> {
     use crate::physics::plugin::PluginContext;
@@ -423,7 +431,7 @@ pub fn run_advanced_simulation(
     }
     
     // Generate visualizations if enabled
-    println!("Advanced simulation completed successfully!");
+    println!("Physics simulation completed successfully!");
     println!("Results saved to: {}", recorder.filename);
     
     Ok(())
@@ -457,7 +465,12 @@ pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
         .build();
     
     // Get actual system information
-    let system_values = get_system_information();
+    let (cpu_cores, memory_gb, disk_space_gb) = get_system_information();
+    let system_values = vec![
+        ("memory_available_gb", ValidationValue::Float(memory_gb)),
+        ("cpu_cores", ValidationValue::Float(cpu_cores as f64)),
+        ("disk_space_gb", ValidationValue::Float(disk_space_gb)),
+    ];
     
     let results = validation::utils::validate_multiple(&pipeline, &system_values);
     
@@ -470,92 +483,45 @@ pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
     Ok(final_result)
 }
 
-/// Get actual system information for validation
-/// This provides real system metrics instead of placeholder values
-fn get_system_information() -> Vec<(&'static str, ValidationValue)> {
-    // Get available memory (attempt to read from /proc/meminfo on Linux)
-    let memory_gb = get_available_memory_gb();
+/// Get system information using the sysinfo crate for cross-platform compatibility
+fn get_system_information() -> (usize, f64, f64) {
+    use sysinfo::{System, SystemExt, DiskExt};
     
-    // Get CPU core count (simplified approach without num_cpus dependency)
-    let cpu_cores = get_cpu_cores();
+    let mut sys = System::new_all();
+    sys.refresh_all();
     
-    // Get available disk space in current directory
-    let disk_space_gb = get_available_disk_space_gb();
+    // Get CPU cores
+    let cpu_cores = sys.physical_core_count()
+        .unwrap_or_else(|| sys.cpus().len())
+        .max(1);
     
-    vec![
-        ("memory_available_gb", ValidationValue::Float(memory_gb)),
-        ("cpu_cores", ValidationValue::Float(cpu_cores as f64)),
-        ("disk_space_gb", ValidationValue::Float(disk_space_gb)),
-    ]
+    // Get available memory in GB
+    let memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+    
+    // Get available disk space for the current directory
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
+    let disk_space_gb = sys.disks()
+        .iter()
+        .find(|disk| current_dir.starts_with(disk.mount_point()))
+        .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
+        .unwrap_or(20.0); // Conservative default
+    
+    (cpu_cores, memory_gb, disk_space_gb)
 }
 
 /// Get CPU core count
 fn get_cpu_cores() -> usize {
-    std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(4) // Default to 4 cores if detection fails
+    get_system_information().0
 }
 
 /// Get available memory in GB
 fn get_available_memory_gb() -> f64 {
-    #[cfg(target_os = "linux")]
-    {
-        // Read from /proc/meminfo on Linux
-        if let Ok(contents) = std::fs::read_to_string("/proc/meminfo") {
-            for line in contents.lines() {
-                if line.starts_with("MemAvailable:") {
-                    if let Some(kb_str) = line.split_whitespace().nth(1) {
-                        if let Ok(kb) = kb_str.parse::<f64>() {
-                            return kb / 1_048_576.0; // Convert KB to GB
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    #[cfg(not(target_os = "linux"))]
-    {
-        // Use sysinfo crate or platform-specific APIs if available
-        // For now, return a conservative estimate
-        8.0 // 8 GB default
-    }
-    
-    8.0 // Fallback to 8 GB
+    get_system_information().1
 }
 
 /// Get available disk space in GB for current directory
 fn get_available_disk_space_gb() -> f64 {
-    #[cfg(target_os = "linux")]
-    {
-        // Use statfs on Linux
-        use std::process::Command;
-        if let Ok(output) = Command::new("df")
-            .arg("-BG")  // Output in GB
-            .arg(".")    // Current directory
-            .output() 
-        {
-            if let Ok(text) = String::from_utf8(output.stdout) {
-                // Parse df output (second line, fourth column)
-                if let Some(line) = text.lines().nth(1) {
-                    if let Some(avail_str) = line.split_whitespace().nth(3) {
-                        // Remove 'G' suffix and parse
-                        if let Ok(gb) = avail_str.trim_end_matches('G').parse::<f64>() {
-                            return gb;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    #[cfg(not(target_os = "linux"))]
-    {
-        // Platform-specific implementation would go here
-        100.0 // 100 GB default
-    }
-    
-    100.0 // Fallback to 100 GB
+    get_system_information().2
 }
 
 #[cfg(test)]

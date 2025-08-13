@@ -40,6 +40,27 @@ pub trait Medium: Debug + Sync + Send {
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    
+    // Additional properties for acoustic diffusivity calculation
+    fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default value for water-like media
+        1.0e-3 // Pa·s
+    }
+    
+    fn bulk_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default: 2.5 times shear viscosity (Stokes' hypothesis)
+        2.5 * self.shear_viscosity(x, y, z, grid)
+    }
+    
+    fn specific_heat_ratio(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default gamma for liquids
+        1.1
+    }
+    
+    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default Cp for water
+        4180.0 // J/(kg·K)
+    }
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;

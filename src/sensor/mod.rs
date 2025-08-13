@@ -1,5 +1,11 @@
 // sensor/mod.rs
 
+pub mod passive_acoustic_mapping;
+
+pub use passive_acoustic_mapping::{
+    PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod
+};
+
 use crate::grid::Grid;
 use crate::time::Time;
 use log::{debug, error, info};

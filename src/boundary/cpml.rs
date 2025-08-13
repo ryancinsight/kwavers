@@ -1,39 +1,46 @@
-//! Convolutional Perfectly Matched Layer (C-PML) Implementation
+//! Convolutional Perfectly Matched Layer (C-PML) boundary conditions
 //! 
-//! This module implements the Convolutional PML, which provides superior absorption
-//! characteristics compared to standard PML, especially for grazing angle incidence
-//! and evanescent waves.
+//! This module implements absorbing boundary conditions for acoustic wave simulations
+//! using the Convolutional PML formulation.
 //! 
-//! # Theory
+//! # Current Implementation Status
 //! 
-//! The C-PML is based on the stretched coordinate PML with frequency-dependent
-//! parameters. The key innovation is the use of convolutional variables that
-//! allow for better absorption across a wider range of angles and frequencies.
+//! ## Full C-PML Implementation
+//! The main `ConvolutionalPML` struct provides a complete C-PML implementation with:
+//! - Auxiliary memory variables for field history
+//! - Recursive convolution updates
+//! - Support for acoustic, elastic, and thermal fields
+//! - Configurable absorption profiles (polynomial, exponential)
 //! 
-//! The stretched coordinate transformation is:
-//! ```text
-//! s_x = κ_x + σ_x/(α_x + iω)
-//! ```
+//! ## Simplified Sponge Layer
+//! The `apply_light` method provides a simplified exponential damping layer:
+//! - **NOT** a true C-PML implementation
+//! - Simple exponential decay without memory variables
+//! - Suitable for basic absorption when full C-PML overhead is not needed
+//! - Should be renamed in future API redesign to avoid confusion
 //! 
-//! Where:
-//! - κ_x: Coordinate stretching factor (≥1)
-//! - σ_x: Conductivity profile
-//! - α_x: Frequency shifting parameter (improves low-frequency absorption)
-//! - ω: Angular frequency
+//! # Design Considerations
 //! 
-//! # Features
+//! The current `Boundary` trait interface doesn't fully capture the C-PML 
+//! operational model, which requires:
+//! 1. Auxiliary memory variables per field component
+//! 2. Recursive convolution updates at each time step
+//! 3. Different update equations for different field types
 //! 
-//! - **Enhanced Grazing Angle Absorption**: >60dB reduction at angles up to 89°
-//! - **Frequency-Independent Performance**: Works well from DC to high frequencies
-//! - **Dispersive Media Support**: Handles frequency-dependent material properties
-//! - **Memory Efficiency**: Optimized memory variable storage
+//! Future API redesign should consider:
+//! - Separate traits for simple boundaries vs. complex PML boundaries
+//! - Explicit memory variable management in the trait interface
+//! - Field-specific update methods
 //! 
-//! # Design Principles
+//! # References
 //! 
-//! - **SOLID**: Single responsibility for boundary absorption
-//! - **DRY**: Reuses profile computation across dimensions
-//! - **KISS**: Clear separation of initialization and update phases
-//! - **YAGNI**: Only implements necessary C-PML features
+//! 1. Roden, J. A., & Gedney, S. D. (2000). "Convolutional PML (CPML): An efficient 
+//!    FDTD implementation of the CFS-PML for arbitrary media." Microwave and Optical 
+//!    Technology Letters, 27(5), 334-339.
+//! 
+//! 2. Komatitsch, D., & Martin, R. (2007). "An unsplit convolutional perfectly 
+//!    matched layer improved at grazing incidence for the seismic wave equation." 
+//!    Geophysics, 72(5), SM155-SM167.
 
 use crate::boundary::Boundary;
 use crate::grid::Grid;
@@ -64,8 +71,8 @@ pub struct CPMLConfig {
     /// Target reflection coefficient (e.g., 1e-6)
     pub target_reflection: f64,
     
-    /// Enable enhanced grazing angle absorption
-    pub enhanced_grazing: bool,
+    /// Enable grazing angle absorption
+    pub grazing_angle_absorption: bool,
     
     /// CFL number for stability
     pub cfl_number: f64,
@@ -80,14 +87,14 @@ impl Default for CPMLConfig {
             kappa_max: 15.0,    // Higher values improve grazing angle absorption
             alpha_max: 0.24,    // Optimal for low-frequency absorption
             target_reflection: 1e-6,
-            enhanced_grazing: true,
+            grazing_angle_absorption: true,
             cfl_number: 0.5,
         }
     }
 }
 
 impl CPMLConfig {
-    /// Create config optimized for grazing angles
+    /// Create config for grazing angles
     pub fn for_grazing_angles() -> Self {
         Self {
             thickness: 20,
@@ -96,7 +103,7 @@ impl CPMLConfig {
             kappa_max: 25.0,    // Very high for grazing angles
             alpha_max: 0.3,
             target_reflection: 1e-8,
-            enhanced_grazing: true,
+            grazing_angle_absorption: true,
             cfl_number: 0.5,
         }
     }
@@ -266,16 +273,22 @@ impl CPMLBoundary {
         sigma_opt * self.config.sigma_factor
     }
     
-    /// Compute 1D profile for X direction
-    fn compute_profile_1d(
-        &mut self,
+    /// Generic function to compute 1D profile for any direction
+    fn compute_profile_for_dimension(
         n: usize,
         thickness: f64,
         m: f64,
         sigma_max: f64,
         dx: f64,
-    ) {
-        let dt = dx * self.config.cfl_number; // Approximate time step
+        config: &CPMLConfig,
+    ) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
+        let dt = dx * config.cfl_number; // Approximate time step
+        
+        let mut sigma = vec![0.0; n];
+        let mut kappa = vec![1.0; n];
+        let mut alpha = vec![0.0; n];
+        let mut b = vec![0.0; n];
+        let mut c = vec![0.0; n];
         
         for i in 0..n {
             // Distance from PML interface (0 at interface, 1 at boundary)
@@ -298,182 +311,80 @@ impl CPMLBoundary {
                 let d_m = d.powf(m);
                 
                 // Conductivity profile
-                self.sigma_x[i] = sigma_max * d_m;
+                sigma[i] = sigma_max * d_m;
                 
                 // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
-                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
-                    self.kappa_x[i] = 1.0 + kappa_grad;
+                if config.grazing_angle_absorption {
+                    // Profile for grazing angles
+                    let kappa_grad = (config.kappa_max - 1.0) * d.powf(m + 1.0);
+                    kappa[i] = 1.0 + kappa_grad;
                 } else {
-                    self.kappa_x[i] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
+                    kappa[i] = 1.0 + (config.kappa_max - 1.0) * d_m;
                 }
                 
                 // Frequency shifting profile (quadratic for stability)
-                self.alpha_x[i] = self.config.alpha_max * (1.0 - d).powi(2);
+                alpha[i] = config.alpha_max * (1.0 - d).powi(2);
                 
                 // Compute update coefficients
-                let sigma_i = self.sigma_x[i];
-                let kappa_i = self.kappa_x[i];
-                let alpha_i = self.alpha_x[i];
+                let sigma_i = sigma[i];
+                let kappa_i = kappa[i];
+                let alpha_i = alpha[i];
                 
                 // Time integration coefficients
-                self.b_x[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
+                b[i] = (-(sigma_i / kappa_i + alpha_i) * dt).exp();
                 
                 if (sigma_i + kappa_i * alpha_i).abs() > 1e-10 {
-                    self.c_x[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (self.b_x[i] - 1.0);
+                    c[i] = sigma_i / (sigma_i + kappa_i * alpha_i) * (b[i] - 1.0);
                 } else {
-                    self.c_x[i] = 0.0;
+                    c[i] = 0.0;
                 }
             } else {
                 // Outside PML region
-                self.sigma_x[i] = 0.0;
-                self.kappa_x[i] = 1.0;
-                self.alpha_x[i] = 0.0;
-                self.b_x[i] = 0.0;
-                self.c_x[i] = 0.0;
+                sigma[i] = 0.0;
+                kappa[i] = 1.0;
+                alpha[i] = 0.0;
+                b[i] = 0.0;
+                c[i] = 0.0;
             }
         }
+        
+        (sigma, kappa, alpha, b, c)
+    }
+    
+    /// Compute 1D profile for X direction
+    fn compute_profile_1d(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dx: f64) {
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            n, thickness, m, sigma_max, dx, &self.config
+        );
+        self.sigma_x = sigma;
+        self.kappa_x = kappa;
+        self.alpha_x = alpha;
+        self.b_x = b;
+        self.c_x = c;
     }
     
     /// Compute 1D profile for Y direction
-    fn compute_profile_1d_y(
-        &mut self,
-        n: usize,
-        thickness: f64,
-        m: f64,
-        sigma_max: f64,
-        dy: f64,
-    ) {
-        let dt = dy * self.config.cfl_number; // Approximate time step
-        
-        for j in 0..n {
-            // Distance from PML interface (0 at interface, 1 at boundary)
-            let d_left = if j < thickness as usize {
-                (thickness - j as f64 - 0.5) / thickness
-            } else {
-                0.0
-            };
-            
-            let d_right = if j >= n - thickness as usize {
-                (j as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
-            } else {
-                0.0
-            };
-            
-            let d = d_left.max(d_right);
-            
-            if d > 0.0 {
-                // Polynomial grading
-                let d_m = d.powf(m);
-                
-                // Conductivity profile
-                self.sigma_y[j] = sigma_max * d_m;
-                
-                // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
-                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
-                    self.kappa_y[j] = 1.0 + kappa_grad;
-                } else {
-                    self.kappa_y[j] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
-                }
-                
-                // Frequency shifting profile (quadratic for stability)
-                self.alpha_y[j] = self.config.alpha_max * (1.0 - d).powi(2);
-                
-                // Compute update coefficients
-                let sigma_j = self.sigma_y[j];
-                let kappa_j = self.kappa_y[j];
-                let alpha_j = self.alpha_y[j];
-                
-                // Time integration coefficients
-                self.b_y[j] = (-(sigma_j / kappa_j + alpha_j) * dt).exp();
-                
-                if (sigma_j + kappa_j * alpha_j).abs() > 1e-10 {
-                    self.c_y[j] = sigma_j / (sigma_j + kappa_j * alpha_j) * (self.b_y[j] - 1.0);
-                } else {
-                    self.c_y[j] = 0.0;
-                }
-            } else {
-                // Outside PML region
-                self.sigma_y[j] = 0.0;
-                self.kappa_y[j] = 1.0;
-                self.alpha_y[j] = 0.0;
-                self.b_y[j] = 0.0;
-                self.c_y[j] = 0.0;
-            }
-        }
+    fn compute_profile_1d_y(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dy: f64) {
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            n, thickness, m, sigma_max, dy, &self.config
+        );
+        self.sigma_y = sigma;
+        self.kappa_y = kappa;
+        self.alpha_y = alpha;
+        self.b_y = b;
+        self.c_y = c;
     }
     
     /// Compute 1D profile for Z direction
-    fn compute_profile_1d_z(
-        &mut self,
-        n: usize,
-        thickness: f64,
-        m: f64,
-        sigma_max: f64,
-        dz: f64,
-    ) {
-        let dt = dz * self.config.cfl_number; // Approximate time step
-        
-        for k in 0..n {
-            // Distance from PML interface (0 at interface, 1 at boundary)
-            let d_left = if k < thickness as usize {
-                (thickness - k as f64 - 0.5) / thickness
-            } else {
-                0.0
-            };
-            
-            let d_right = if k >= n - thickness as usize {
-                (k as f64 - (n as f64 - thickness - 1.0) + 0.5) / thickness
-            } else {
-                0.0
-            };
-            
-            let d = d_left.max(d_right);
-            
-            if d > 0.0 {
-                // Polynomial grading
-                let d_m = d.powf(m);
-                
-                // Conductivity profile
-                self.sigma_z[k] = sigma_max * d_m;
-                
-                // Coordinate stretching profile
-                if self.config.enhanced_grazing {
-                    // Enhanced profile for grazing angles
-                    let kappa_grad = (self.config.kappa_max - 1.0) * d.powf(m + 1.0);
-                    self.kappa_z[k] = 1.0 + kappa_grad;
-                } else {
-                    self.kappa_z[k] = 1.0 + (self.config.kappa_max - 1.0) * d_m;
-                }
-                
-                // Frequency shifting profile (quadratic for stability)
-                self.alpha_z[k] = self.config.alpha_max * (1.0 - d).powi(2);
-                
-                // Compute update coefficients
-                let sigma_k = self.sigma_z[k];
-                let kappa_k = self.kappa_z[k];
-                let alpha_k = self.alpha_z[k];
-                
-                // Time integration coefficients
-                self.b_z[k] = (-(sigma_k / kappa_k + alpha_k) * dt).exp();
-                
-                if (sigma_k + kappa_k * alpha_k).abs() > 1e-10 {
-                    self.c_z[k] = sigma_k / (sigma_k + kappa_k * alpha_k) * (self.b_z[k] - 1.0);
-                } else {
-                    self.c_z[k] = 0.0;
-                }
-            } else {
-                // Outside PML region
-                self.sigma_z[k] = 0.0;
-                self.kappa_z[k] = 1.0;
-                self.alpha_z[k] = 0.0;
-                self.b_z[k] = 0.0;
-                self.c_z[k] = 0.0;
-            }
-        }
+    fn compute_profile_1d_z(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dz: f64) {
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            n, thickness, m, sigma_max, dz, &self.config
+        );
+        self.sigma_z = sigma;
+        self.kappa_z = kappa;
+        self.alpha_z = alpha;
+        self.b_z = b;
+        self.c_z = c;
     }
     
     /// Update memory variables for acoustic field
@@ -579,8 +490,8 @@ impl CPMLBoundary {
         // Theoretical reflection coefficient for C-PML
         let r_normal = self.config.target_reflection;
         
-        // Enhanced model for grazing angles
-        if self.config.enhanced_grazing {
+        // Model for grazing angles
+        if self.config.grazing_angle_absorption {
             // For grazing angles, reflection should increase
             let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt(); // sin(theta)
             // Increase reflection for larger angles (smaller cos_theta)
@@ -626,73 +537,22 @@ impl CPMLBoundary {
     // absorption coefficients for proper integration into your solver.
 }
 
-impl Boundary for CPMLBoundary {
-    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) -> KwaversResult<()> {
-        // C-PML cannot be applied directly to the field as a post-processing step.
-        // It must be integrated into the solver's gradient computation.
-        // This method is deprecated and should not be used.
-        // 
-        // CORRECT USAGE:
-        // 1. In your solver, after computing pressure gradients:
-        //    cpml.update_acoustic_memory(&pressure_grad_x, 0)?;
-        //    cpml.apply_cpml_gradient(&mut pressure_grad_x, 0)?;
-        // 2. Repeat for y and z components
-        // 
-        // See CPMLBoundary::update_acoustic_memory() and apply_cpml_gradient()
+// Note: CPMLBoundary intentionally does NOT implement the Boundary trait.
+// C-PML is not a simple boundary condition that can be applied to a field;
+// it must be integrated into the solver's update equations.
+// Solvers that support C-PML should take a CPMLBoundary object directly
+// and call its methods (update_acoustic_memory, apply_cpml_gradient) during
+// the field update step.
+
+
+impl CPMLBoundary {
+    /// Apply exponential sponge layer absorption to light field
+    /// This is NOT a true C-PML implementation but a sponge layer
+    /// that provides basic absorption at boundaries but with inferior performance
+    /// especially for grazing angles of incidence.
+    fn apply_sponge_layer_light(&self, field: &mut Array3<f64>, grid: &Grid) {
+        trace!("Applying exponential sponge layer to light field (not true C-PML)");
         
-        Err(crate::error::KwaversError::Config(crate::error::ConfigError::InvalidValue {
-            parameter: "apply_acoustic".to_string(),
-            value: "direct field application".to_string(),
-            constraint: "C-PML must be integrated into solver gradient computation. \
-                        Use update_acoustic_memory() and apply_cpml_gradient() methods instead.".to_string()
-        }))
-    }
-    
-    fn apply_acoustic_freq(
-        &mut self,
-        field: &mut Array3<Complex<f64>>,
-        grid: &Grid,
-        _time_step: usize,
-    ) -> KwaversResult<()> {
-        trace!("Applying C-PML to acoustic field in frequency domain");
-        
-        // In frequency domain, apply stretched coordinate transformation
-        let thickness = self.config.thickness;
-        
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    let mut s_x = Complex::new(self.kappa_x[i], 0.0);
-                    let mut s_y = Complex::new(self.kappa_y[j], 0.0);
-                    let mut s_z = Complex::new(self.kappa_z[k], 0.0);
-                    
-                    // Apply frequency-dependent stretching
-                    // Note: In full implementation, this would depend on frequency
-                    if i < thickness || i >= self.nx - thickness {
-                        s_x = Complex::new(self.kappa_x[i], -self.sigma_x[i]);
-                    }
-                    
-                    if j < thickness || j >= self.ny - thickness {
-                        s_y = Complex::new(self.kappa_y[j], -self.sigma_y[j]);
-                    }
-                    
-                    if k < thickness || k >= self.nz - thickness {
-                        s_z = Complex::new(self.kappa_z[k], -self.sigma_z[k]);
-                    }
-                    
-                    // Apply stretched coordinate transformation
-                    field[[i, j, k]] /= s_x * s_y * s_z;
-                }
-            }
-        }
-        
-        Ok(())
-    }
-    
-    fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, _time_step: usize) {
-        trace!("Applying C-PML to light field");
-        
-        // Similar to acoustic, but with potentially different parameters
         let thickness = self.config.thickness;
         
         for i in 0..self.nx {
@@ -700,7 +560,7 @@ impl Boundary for CPMLBoundary {
                 for k in 0..self.nz {
                     let mut absorption = 1.0;
                     
-                    // Apply absorption with light-specific parameters
+                    // Apply exponential absorption profile (simple sponge layer)
                     if i < thickness || i >= self.nx - thickness {
                         absorption *= (-0.5 * self.sigma_x[i] * grid.dx).exp();
                     }
