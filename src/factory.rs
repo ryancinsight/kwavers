@@ -561,44 +561,47 @@ impl SimulationFactory {
     fn create_physics_pipeline(config: PhysicsConfig, grid: &Grid) -> KwaversResult<PluginManager> {
         config.validate()?;
         
-        let manager = PluginManager::new();
+        let mut manager = PluginManager::new();
         
         for model_config in config.models {
             if !model_config.enabled {
                 continue;
             }
 
-            // Note: The specific physics plugins need to be implemented
-            // For now, we'll skip the actual plugin creation
-            // This would typically involve creating instances of plugins that implement PhysicsPlugin
+            // Create and register the appropriate physics plugin
             match model_config.model_type {
                 PhysicsModelType::AcousticWave => {
-                    // Would register an AcousticWavePlugin here
-                    log::warn!("AcousticWave plugin not yet implemented");
+                    use crate::physics::plugin::acoustic_wave_plugin::AcousticWavePlugin;
+                    let plugin = AcousticWavePlugin::new(0.3); // Default CFL number
+                    manager.register(Box::new(plugin))?;
+                    log::info!("Registered AcousticWave plugin");
                 }
                 PhysicsModelType::ThermalDiffusion => {
-                    // Would register a ThermalDiffusionPlugin here  
-                    log::warn!("ThermalDiffusion plugin not yet implemented");
+                    use crate::solver::thermal_diffusion::ThermalDiffusionPlugin;
+                    let config = crate::solver::thermal_diffusion::ThermalDiffusionConfig::default();
+                    let plugin = ThermalDiffusionPlugin::new(config, grid)?;
+                    manager.register(Box::new(plugin))?;
+                    log::info!("Registered ThermalDiffusion plugin");
                 }
                 PhysicsModelType::Cavitation => {
-                    // Would register a CavitationPlugin here
-                    log::warn!("Cavitation plugin not yet implemented");
+                    // Cavitation doesn't have a plugin wrapper yet, skip for now
+                    log::warn!("Cavitation plugin wrapper not yet implemented");
                 }
                 PhysicsModelType::KuznetsovWave => {
-                    // Would register a KuznetsovWavePlugin here
-                    log::warn!("KuznetsovWave plugin not yet implemented");
+                    // KuznetsovWave doesn't have a plugin wrapper yet, skip for now
+                    log::warn!("KuznetsovWave plugin wrapper not yet implemented");
                 }
                 PhysicsModelType::ElasticWave => {
-                    // Would register an ElasticWavePlugin here
-                    log::warn!("ElasticWave plugin not yet implemented");
+                    // ElasticWave doesn't have a plugin wrapper yet, skip for now
+                    log::warn!("ElasticWave plugin wrapper not yet implemented");
                 }
                 PhysicsModelType::Chemical => {
-                    // Would register a ChemicalPlugin here
-                    log::warn!("Chemical plugin not yet implemented");
+                    // Chemical doesn't have a plugin wrapper yet, skip for now
+                    log::warn!("Chemical plugin wrapper not yet implemented");
                 }
                 PhysicsModelType::LightDiffusion => {
-                    // Would register a LightDiffusionPlugin here
-                    log::warn!("LightDiffusion plugin not yet implemented");
+                    // LightDiffusion doesn't have a plugin wrapper yet, skip for now
+                    log::warn!("LightDiffusion plugin wrapper not yet implemented");
                 }
             }
         }

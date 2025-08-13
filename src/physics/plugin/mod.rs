@@ -4,7 +4,8 @@
 //! This module provides a flexible plugin system for physics simulations
 
 // pub mod tests; // Temporarily disabled due to syntax errors
-pub mod field_access;  // NEW: Safe field access for plugins
+pub mod field_access;
+pub mod acoustic_wave_plugin;  // NEW: Safe field access for plugins
 
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;

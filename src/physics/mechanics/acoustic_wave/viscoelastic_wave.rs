@@ -156,7 +156,6 @@ impl ViscoelasticWave {
         let c_max = medium.sound_speed_array().iter().fold(0.0f64, |acc, &x| acc.max(x));
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = c_max * dt / dx_min;
-        
         if cfl > 0.5 {
             debug!("CFL condition may be violated: CFL = {}", cfl);
             return false;
@@ -170,14 +169,19 @@ impl ViscoelasticWave {
         true
     }
 
-    // Modified clamping function to work in-place
-    fn clamp_pressure_inplace(&self, pressure_field: &mut ArrayViewMut3<f64>) -> bool {
+    // Consolidated pressure clamping function that works in-place
+    fn clamp_pressure(&self, pressure_field: &mut ArrayViewMut3<f64>) -> bool {
         let mut clamped = false;
-        const MAX_PRESSURE: f64 = 1e9; // Pa
         
         for p in pressure_field.iter_mut() {
-            if p.abs() > MAX_PRESSURE {
-                *p = p.signum() * MAX_PRESSURE;
+            // First check for non-finite values (NaN or Inf)
+            if !p.is_finite() {
+                *p = 0.0;
+                clamped = true;
+            } 
+            // Then check against maximum pressure threshold
+            else if p.abs() > self.max_pressure {
+                *p = p.signum() * self.max_pressure;
                 clamped = true;
             }
         }
@@ -190,25 +194,7 @@ impl ViscoelasticWave {
     }
 
     // Placeholder for gradient clamping logic if used from NonlinearWave
-    fn clamp_pressure(&self, pressure_field: &mut Array3<f64>) -> bool {
-        let mut clamped = false;
-        for val in pressure_field.iter_mut() {
-            if !val.is_finite() {
-                *val = 0.0;
-                clamped = true;
-            } else if val.abs() > self.max_pressure {
-                *val = val.signum() * self.max_pressure;
-                clamped = true;
-            }
-        }
-        if clamped {
-            debug!("ViscoelasticWave: Pressure values were clamped to prevent numerical overflow.");
-        }
-        clamped
-    }
-
-    // Placeholder for phase factor calculation from NonlinearWave
-    //  fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
+    // fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
     //     // This is a simplified phase factor; k-Wave uses a k-space correction (sinc term)
     //     // which is often applied differently. For a simple linear acoustic solver:
     //     -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
@@ -470,7 +456,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         // --- Final clamping ---
         // Apply clamping directly to the field without cloning
         let mut pressure_field = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
-        if self.clamp_pressure_inplace(&mut pressure_field) {
+        if self.clamp_pressure(&mut pressure_field) {
              debug!("ViscoelasticWave: Pressure clamping was applied to prevent instability.");
         }
 

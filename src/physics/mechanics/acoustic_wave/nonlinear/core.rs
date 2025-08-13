@@ -630,7 +630,7 @@ impl AcousticWaveModel for NonlinearWave {
         // Compute nonlinear term for Westervelt equation
         let nonlinear_term = if self.nonlinearity_scaling.abs() > 1e-10 {
             // Standard Westervelt nonlinear term
-            let mut nonlinear_term = Array3::zeros(pressure_at_start.raw_dim());
+            let mut result = Array3::zeros(pressure_at_start.raw_dim());
             
             let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
             let max_gradient = if min_grid_spacing > 1e-9 { 
@@ -686,7 +686,7 @@ impl AcousticWaveModel for NonlinearWave {
                         let p_limited = pressure_at_start[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
                         let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
                         
-                        nonlinear_term[[i, j, k]] = if nl_term.is_finite() {
+                        result[[i, j, k]] = if nl_term.is_finite() {
                             nl_term.clamp(-self.max_pressure, self.max_pressure)
                         } else {
                             0.0
@@ -696,9 +696,9 @@ impl AcousticWaveModel for NonlinearWave {
             }
             
             // Handle boundary points
-            self.compute_boundary_nonlinear_terms(&mut nonlinear_term, &pressure_at_start, prev_pressure, grid, medium, dt);
+            self.compute_boundary_nonlinear_terms(&mut result, &pressure_at_start, prev_pressure, grid, medium, dt);
             
-            nonlinear_term
+            result
         } else {
             // No nonlinearity - zero term
             Array3::zeros(pressure_at_start.raw_dim())
