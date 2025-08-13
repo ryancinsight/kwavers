@@ -12,7 +12,7 @@ use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
     physics::{
-        composable::{ThermalDiffusionComponent, AcousticWaveComponent, PhysicsComponent},
+        // composable::{ThermalDiffusionComponent, AcousticWaveComponent, PhysicsComponent},
         plugin::{PluginManager, PluginContext},
     },
     solver::thermal_diffusion::{ThermalDiffusionConfig, ThermalDiffusionPlugin},
@@ -64,9 +64,10 @@ fn main() -> KwaversResult<()> {
     plugin_based_simulation(&grid, &medium)?;
     
     // Example 5: Using composable component
-    println!("\n5. Composable Component Usage");
-    println!("-----------------------------");
-    composable_component_usage(&grid, &medium)?;
+    // TODO: Enable when composable module is implemented
+    // println!("\n5. Composable Component Usage");
+    // println!("-----------------------------");
+    // composable_component_usage(&grid, &medium)?;
     
     Ok(())
 }
@@ -287,7 +288,10 @@ fn plugin_based_simulation(grid: &Grid, medium: &dyn kwavers::medium::Medium) ->
 }
 
 /// Example 5: Using the composable component system
-fn composable_component_usage(grid: &Grid, medium: &dyn kwavers::medium::Medium) -> KwaversResult<()> {
+#[allow(dead_code)]
+fn composable_component_usage(_grid: &Grid, _medium: &dyn kwavers::medium::Medium) -> KwaversResult<()> {
+    // TODO: Implement when composable module is ready
+    /*
     use kwavers::physics::composable::PhysicsPipeline;
     
     // Create physics pipeline
@@ -332,6 +336,7 @@ fn composable_component_usage(grid: &Grid, medium: &dyn kwavers::medium::Medium)
                 (step + 1) as f64 * dt * 1000.0);
         }
     }
+    */
     
     Ok(())
 }

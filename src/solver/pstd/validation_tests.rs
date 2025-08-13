@@ -40,6 +40,8 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: true,
+            enable_absorption: false,
+            absorption_model: None,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
@@ -127,6 +129,8 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: true,
+            enable_absorption: false,
+            absorption_model: None,
         };
         
         let solver = PstdSolver::new(config, &grid).unwrap();
@@ -228,6 +232,8 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: true,
+            enable_absorption: false,
+            absorption_model: None,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();

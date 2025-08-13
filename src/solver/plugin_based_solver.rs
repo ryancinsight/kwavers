@@ -397,14 +397,17 @@ mod tests {
     #[test]
     fn test_plugin_based_solver_creation() {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
-        let time = Time::new(0.001, 100, 1e6);
+        let time = Time::new(0.001, 100);
         let medium = Arc::new(HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.0, 0.0));
         let boundary = Box::new(PMLBoundary::new(Default::default()).unwrap());
-        let source = Box::new(GaussianSource::new(
-            [grid.nx / 2, grid.ny / 2, grid.nz / 2],
-            1.0,
-            1e6,
-            0.0,
+        use crate::source::PointSource;
+        use crate::signal::SineWave;
+        use std::sync::Arc;
+        
+        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0));
+        let source = Box::new(PointSource::new(
+            (grid.nx as f64 / 2.0, grid.ny as f64 / 2.0, grid.nz as f64 / 2.0),
+            signal,
         ));
         
         let solver = PluginBasedSolver::new(grid, time, medium, boundary, source);

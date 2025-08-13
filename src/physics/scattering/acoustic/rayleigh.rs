@@ -54,6 +54,7 @@ impl RayleighScattering {
         
         // Get bubble radius from state
         let bubble_radius = self.state.get_field(field_indices::BUBBLE_RADIUS)?;
+        let bubble_radius_view = bubble_radius.view();
         
         // Medium properties
         let sound_speed = medium.sound_speed(0.0, 0.0, 0.0, grid);
@@ -66,7 +67,7 @@ impl RayleighScattering {
         // Compute Rayleigh scattering
         Zip::from(&mut self.scattered_field)
             .and(incident_field)
-            .and(bubble_radius)
+            .and(&bubble_radius_view)
             .apply(|s, &p_inc, &r| {
                 if r > 0.0 && r < wavelength / 10.0 {  // Rayleigh regime
                     // Rayleigh scattering cross-section

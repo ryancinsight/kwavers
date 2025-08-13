@@ -18,6 +18,7 @@
 use super::{BubbleState, BubbleParameters, KellerMiksisModel};
 use crate::error::{KwaversResult, PhysicsError};
 use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
+use crate::constants::adaptive_integration::*;
 use std::sync::{Arc, Mutex};
 
 /// Configuration for adaptive bubble integration
@@ -262,17 +263,18 @@ impl AdaptiveBubbleIntegrator {
         }
         
         // Check physical bounds (but don't clamp!)
-        if state.radius < MIN_RADIUS * 0.1 || state.radius > MAX_RADIUS * 10.0 {
+        if state.radius < MIN_RADIUS * MIN_RADIUS_SAFETY_FACTOR || 
+           state.radius > MAX_RADIUS * MAX_RADIUS_SAFETY_FACTOR {
             return false;
         }
         
         // Check for extreme velocities (approaching speed of sound)
-        if state.wall_velocity.abs() > self.solver.lock().unwrap().params().c_liquid * 0.9 {
+        if state.wall_velocity.abs() > self.solver.lock().unwrap().params().c_liquid * MAX_VELOCITY_FRACTION {
             return false;
         }
         
         // Check temperature bounds
-        if state.temperature < 100.0 || state.temperature > 100000.0 {
+        if state.temperature < MIN_TEMPERATURE || state.temperature > MAX_TEMPERATURE {
             return false;
         }
         
@@ -330,7 +332,7 @@ mod tests {
     #[test]
     fn test_adaptive_integration() {
         let params = BubbleParameters::default();
-        let solver = Arc::new(KellerMiksisModel::new(params.clone()));
+        let solver = Arc::new(Mutex::new(KellerMiksisModel::new(params.clone())));
         let mut state = BubbleState::new(&params);
         
         let config = AdaptiveBubbleConfig::default();
@@ -357,7 +359,7 @@ mod tests {
     #[test]
     fn test_stability_check() {
         let params = BubbleParameters::default();
-        let solver = Arc::new(KellerMiksisModel::new(params.clone()));
+        let solver = Arc::new(Mutex::new(KellerMiksisModel::new(params.clone())));
         let config = AdaptiveBubbleConfig::default();
         let integrator = AdaptiveBubbleIntegrator::new(solver, config);
         

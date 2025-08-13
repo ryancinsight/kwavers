@@ -255,7 +255,7 @@ fn main() -> KwaversResult<()> {
     // Show available fields
     println!("\nAvailable fields from all plugins:");
     for field in plugin_manager.available_fields() {
-        println!("  - {}", field.as_str());
+        println!("  - {}", field);
     }
     
     // Validate plugin configuration

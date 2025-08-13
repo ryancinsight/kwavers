@@ -165,6 +165,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         scattering,
         heterogeneity,
         4, // num_simulation_fields for acoustic + light + temp + bubble_radius
+        None, // validation_config
     );
     
     // Run the simulation

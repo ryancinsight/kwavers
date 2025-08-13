@@ -6,7 +6,7 @@
 
 use kwavers::*;
 use kwavers::physics::mechanics::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme, NonlinearWave};
-use kwavers::physics::{KuznetsovWaveComponent, PhysicsPipeline, PhysicsContext};
+// use kwavers::physics::{KuznetsovWaveComponent, PhysicsPipeline, PhysicsContext};
 use kwavers::medium::HomogeneousMedium;
 use kwavers::source::{Source, NullSource};
 use ndarray::{Array3, Array4, ArrayView3, Axis};
@@ -52,8 +52,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("1. Direct KuznetsovWave solver:");
     demonstrate_direct_solver(&grid, &medium)?;
     
-    println!("\n2. KuznetsovWaveComponent in physics pipeline:");
-    demonstrate_component(&grid, &medium)?;
+    // TODO: Enable when component module is ready
+    // println!("\n2. KuznetsovWaveComponent in physics pipeline:");
+    // demonstrate_component(&grid, &medium)?;
     
     println!("\n3. Enhanced NonlinearWave with Kuznetsov terms:");
     demonstrate_nonlinear(&grid, &medium)?;
@@ -120,7 +121,9 @@ fn demonstrate_direct_solver(grid: &Grid, medium: &HomogeneousMedium) -> Result<
 }
 
 /// Demonstrate KuznetsovWaveComponent in physics pipeline
-fn demonstrate_component(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
+#[allow(dead_code)]
+fn demonstrate_component(_grid: &Grid, _medium: &HomogeneousMedium) -> Result<(), Box<dyn Error>> {
+    /*
     println!("Using KuznetsovWaveComponent in physics pipeline:");
     
     // Create physics pipeline
@@ -164,6 +167,7 @@ fn demonstrate_component(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), 
     }
     
     println!("\n  Pipeline execution complete.");
+    */
     
     Ok(())
 }
