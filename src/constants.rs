@@ -236,6 +236,40 @@ pub mod optics {
     
     /// Window width factor for edge effect reduction
     pub const WINDOW_WIDTH_FACTOR: f64 = 10.0;
+    
+    /// Typical tissue diffusion coefficient (mm²/ns)
+    pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 1e-3;
+    
+    /// Typical tissue absorption coefficient (mm⁻¹)
+    pub const TISSUE_ABSORPTION_COEFFICIENT: f64 = 0.1;
+    
+    /// Default polarization factor
+    pub const DEFAULT_POLARIZATION_FACTOR: f64 = 0.5;
+    
+    /// Laplacian stencil center coefficient
+    pub const LAPLACIAN_CENTER_COEFF: f64 = -2.0;
+}
+
+/// Shock capturing and numerical methods constants
+pub mod numerical {
+    /// WENO scheme optimal weights
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    
+    /// Artificial viscosity coefficients
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
+    
+    /// WENO smoothness indicator epsilon
+    pub const WENO_EPSILON: f64 = 1e-6;
+    
+    /// Stencil coefficients for numerical differentiation
+    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
+    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
 }
 
 /// Chemistry and ROS constants

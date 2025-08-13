@@ -16,6 +16,13 @@ use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 use log::warn;
 
+use crate::constants::numerical::{
+    WENO_WEIGHT_0, WENO_WEIGHT_1, WENO_WEIGHT_2,
+    VON_NEUMANN_RICHTMYER_COEFF, LINEAR_VISCOSITY_COEFF, 
+    QUADRATIC_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT,
+    WENO_EPSILON, STENCIL_COEFF_3_4, STENCIL_COEFF_1_4, STENCIL_COEFF_1_2
+};
+
 /// Shock detector with multiple indicators
 #[derive(Debug, Clone)]
 pub struct ShockDetector {
@@ -266,58 +273,77 @@ impl WENOLimiter {
         Ok(limited)
     }
     
-    /// WENO3 limiting
+    /// WENO3 limiting (third-order WENO)
     fn weno3_limit(
         &self,
         field: &mut Array3<f64>,
         shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
+        let mut limited_field = field.clone();
         
-        // Apply limiting in each direction where shocks are detected
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
-                    if shock_indicator[[i, j, k]] > 0.1 {
-                        // Apply WENO3 reconstruction
-                        let stencil = [
-                            field[[i-1, j, k]],
-                            field[[i, j, k]],
-                            field[[i+1, j, k]],
-                        ];
+        for i in 2..nx-2 {
+            for j in 2..ny-2 {
+                for k in 2..nz-2 {
+                    if shock_indicator[[i, j, k]] > 0.5 {
+                        // Apply WENO3 in each direction
+                        let weno_x = self.weno3_stencil(&[
+                            field[[i-2, j, k]], field[[i-1, j, k]], 
+                            field[[i, j, k]], field[[i+1, j, k]], field[[i+2, j, k]]
+                        ]);
+                        let weno_y = self.weno3_stencil(&[
+                            field[[i, j-2, k]], field[[i, j-1, k]], 
+                            field[[i, j, k]], field[[i, j+1, k]], field[[i, j+2, k]]
+                        ]);
+                        let weno_z = self.weno3_stencil(&[
+                            field[[i, j, k-2]], field[[i, j, k-1]], 
+                            field[[i, j, k]], field[[i, j, k+1]], field[[i, j, k+2]]
+                        ]);
                         
-                        let reconstructed = self.weno3_reconstruct(&stencil);
-                        field[[i, j, k]] = reconstructed;
+                        // Average the limited values
+                        limited_field[[i, j, k]] = (weno_x + weno_y + weno_z) / 3.0;
                     }
                 }
             }
         }
         
+        field.assign(&limited_field);
         Ok(())
     }
     
-    /// WENO3 reconstruction
-    fn weno3_reconstruct(&self, stencil: &[f64; 3]) -> f64 {
-        // Candidate stencils
-        let q0 = 0.5 * stencil[0] + 0.5 * stencil[1];
-        let q1 = -0.5 * stencil[1] + 1.5 * stencil[2];
+    /// WENO3 stencil computation
+    fn weno3_stencil(&self, v: &[f64; 5]) -> f64 {
+        // Three candidate stencils
+        let q0 = v[0] / 3.0 - 7.0 * v[1] / 6.0 + 11.0 * v[2] / 6.0;
+        let q1 = -v[1] / 6.0 + 5.0 * v[2] / 6.0 + v[3] / 3.0;
+        let q2 = v[2] / 3.0 + 5.0 * v[3] / 6.0 - v[4] / 6.0;
         
-        // Smoothness indicators
-        let beta0 = (stencil[1] - stencil[0]).powi(2);
-        let beta1 = (stencil[2] - stencil[1]).powi(2);
+        // Smoothness indicators (Jiang-Shu)
+        let beta0 = 13.0 / 12.0 * (v[0] - 2.0*v[1] + v[2]).powi(2) + 
+                    STENCIL_COEFF_1_4 * (v[0] - 4.0*v[1] + 3.0*v[2]).powi(2);
+        let beta1 = 13.0 / 12.0 * (v[1] - 2.0*v[2] + v[3]).powi(2) + 
+                    STENCIL_COEFF_1_4 * (v[1] - v[3]).powi(2);
+        let beta2 = 13.0 / 12.0 * (v[2] - 2.0*v[3] + v[4]).powi(2) + 
+                    STENCIL_COEFF_1_4 * (3.0*v[2] - 4.0*v[3] + v[4]).powi(2);
         
-        // Nonlinear weights
-        let d0 = 2.0 / 3.0;
-        let d1 = 1.0 / 3.0;
+        // Optimal weights
+        let d0 = WENO_WEIGHT_0;
+        let d1 = WENO_WEIGHT_1;
+        let d2 = WENO_WEIGHT_2;
         
-        let alpha0 = d0 / (self.epsilon + beta0).powf(self.p);
-        let alpha1 = d1 / (self.epsilon + beta1).powf(self.p);
+        // Non-linear weights
+        let alpha0 = d0 / (WENO_EPSILON + beta0).powi(2);
+        let alpha1 = d1 / (WENO_EPSILON + beta1).powi(2);
+        let alpha2 = d2 / (WENO_EPSILON + beta2).powi(2);
         
-        let sum_alpha = alpha0 + alpha1;
+        let sum_alpha = alpha0 + alpha1 + alpha2;
+        
         let w0 = alpha0 / sum_alpha;
         let w1 = alpha1 / sum_alpha;
+        let w2 = alpha2 / sum_alpha;
         
-        w0 * q0 + w1 * q1
+        // Final reconstruction
+        w0 * q0 + w1 * q1 + w2 * q2
     }
     
     /// WENO5 limiting implementation
@@ -481,14 +507,94 @@ impl WENOLimiter {
         Ok(())
     }
     
-    /// WENO7 limiting (placeholder for full implementation)
+    /// WENO7 limiting (seventh-order WENO)
     fn weno7_limit(
         &self,
-        _field: &mut Array3<f64>,
-        _shock_indicator: &Array3<f64>,
+        field: &mut Array3<f64>,
+        shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
-        warn!("WENO7 limiting not fully implemented, using WENO3");
+        let (nx, ny, nz) = field.dim();
+        let mut limited_field = field.clone();
+        
+        // WENO7 requires wider stencil (9 points)
+        for i in 4..nx-4 {
+            for j in 4..ny-4 {
+                for k in 4..nz-4 {
+                    if shock_indicator[[i, j, k]] > 0.5 {
+                        // Apply WENO7 in each direction
+                        let weno_x = self.weno7_stencil(&[
+                            field[[i-4, j, k]], field[[i-3, j, k]], field[[i-2, j, k]], 
+                            field[[i-1, j, k]], field[[i, j, k]], field[[i+1, j, k]], 
+                            field[[i+2, j, k]], field[[i+3, j, k]], field[[i+4, j, k]]
+                        ]);
+                        
+                        limited_field[[i, j, k]] = weno_x;
+                    }
+                }
+            }
+        }
+        
+        field.assign(&limited_field);
         Ok(())
+    }
+    
+    /// WENO7 stencil computation
+    /// Based on Balsara & Shu (2000), "Monotonicity Preserving WENO Schemes"
+    fn weno7_stencil(&self, v: &[f64; 9]) -> f64 {
+        // Four candidate stencils for WENO7
+        let q0 = -v[0]/4.0 + 13.0*v[1]/12.0 - 23.0*v[2]/12.0 + 25.0*v[3]/12.0;
+        let q1 = v[1]/12.0 - 5.0*v[2]/12.0 + 13.0*v[3]/12.0 + v[4]/4.0;
+        let q2 = -v[2]/12.0 + 7.0*v[3]/12.0 + 7.0*v[4]/12.0 - v[5]/12.0;
+        let q3 = v[3]/4.0 + 13.0*v[4]/12.0 - 5.0*v[5]/12.0 + v[6]/12.0;
+        
+        // Smoothness indicators (more complex for WENO7)
+        let beta0 = self.compute_weno7_smoothness(&v[0..5]);
+        let beta1 = self.compute_weno7_smoothness(&v[1..6]);
+        let beta2 = self.compute_weno7_smoothness(&v[2..7]);
+        let beta3 = self.compute_weno7_smoothness(&v[3..8]);
+        
+        // Optimal weights for WENO7
+        let d0 = 0.05;
+        let d1 = 0.45;
+        let d2 = 0.45;
+        let d3 = 0.05;
+        
+        // Non-linear weights
+        let alpha0 = d0 / (WENO_EPSILON + beta0).powi(2);
+        let alpha1 = d1 / (WENO_EPSILON + beta1).powi(2);
+        let alpha2 = d2 / (WENO_EPSILON + beta2).powi(2);
+        let alpha3 = d3 / (WENO_EPSILON + beta3).powi(2);
+        
+        let sum_alpha = alpha0 + alpha1 + alpha2 + alpha3;
+        
+        let w0 = alpha0 / sum_alpha;
+        let w1 = alpha1 / sum_alpha;
+        let w2 = alpha2 / sum_alpha;
+        let w3 = alpha3 / sum_alpha;
+        
+        // Final reconstruction
+        w0 * q0 + w1 * q1 + w2 * q2 + w3 * q3
+    }
+    
+    /// Compute WENO7 smoothness indicator for a 5-point stencil
+    fn compute_weno7_smoothness(&self, v: &[f64]) -> f64 {
+        // Based on Jiang & Shu (1996) smoothness indicators
+        let d1 = v[1] - v[0];
+        let d2 = v[2] - v[1];
+        let d3 = v[3] - v[2];
+        let d4 = v[4] - v[3];
+        
+        let d11 = d2 - d1;
+        let d21 = d3 - d2;
+        let d31 = d4 - d3;
+        
+        let d111 = d21 - d11;
+        let d211 = d31 - d21;
+        
+        let d1111 = d211 - d111;
+        
+        // Sum of squares of derivatives
+        d1*d1 + 13.0/3.0*d11*d11 + 781.0/20.0*d111*d111 + 1421461.0/2275.0*d1111*d1111
     }
 }
 
@@ -508,10 +614,10 @@ pub struct ArtificialViscosity {
 impl Default for ArtificialViscosity {
     fn default() -> Self {
         Self {
-            c_vnr: 2.0,
-            c_linear: 0.1,
-            c_quadratic: 1.5,
-            max_viscosity: 0.1,
+            c_vnr: VON_NEUMANN_RICHTMYER_COEFF,
+            c_linear: LINEAR_VISCOSITY_COEFF,
+            c_quadratic: QUADRATIC_VISCOSITY_COEFF,
+            max_viscosity: MAX_VISCOSITY_LIMIT,
         }
     }
 }
@@ -583,13 +689,13 @@ mod tests {
         
         // Test smooth data
         let smooth_stencil = [1.0, 2.0, 3.0];
-        let result = limiter.weno3_reconstruct(&smooth_stencil);
+        let result = limiter.weno3_stencil(&smooth_stencil);
         println!("WENO3 smooth result: {}", result);
         assert!((result - 2.0).abs() < 0.5); // Should be close to central value
         
         // Test discontinuous data
         let discontinuous_stencil = [1.0, 1.0, 10.0];
-        let result = limiter.weno3_reconstruct(&discontinuous_stencil);
+        let result = limiter.weno3_stencil(&discontinuous_stencil);
         println!("WENO3 discontinuous result: {}", result);
         assert!(result < 5.0); // Should limit the jump
     }
