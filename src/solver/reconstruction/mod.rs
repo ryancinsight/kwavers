@@ -18,7 +18,7 @@ use crate::{
     error::{KwaversError, KwaversResult},
     grid::Grid,
 };
-use ndarray::{Array1, Array2, Array3, ArrayView1, Zip};
+use ndarray::{Array2, Array3, ArrayView1, Zip};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
 use std::sync::{Arc, Mutex};
@@ -892,6 +892,8 @@ impl IterativeRecon {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::{Array1, Array3, ArrayView1, ArrayView3, Axis};
+    use crate::grid::Grid;
     use approx::assert_relative_eq;
     
     #[test]

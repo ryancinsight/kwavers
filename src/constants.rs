@@ -3,7 +3,6 @@
 //! This module defines named constants to avoid magic numbers and ensure
 //! consistency across the codebase, following SSOT and DRY principles.
 
-use std::f64::consts::PI;
 
 // Re-export standard mathematical constants for convenience
 pub use std::f64::consts::{E, PI as PI_CONST, TAU};
@@ -189,10 +188,10 @@ pub mod bubble_dynamics {
 
 /// Thermodynamics constants
 pub mod thermodynamics {
-    /// Universal gas constant (J/(mol·K))
+    /// Universal gas constant (J/mol·K)
     pub const R_GAS: f64 = 8.314462618;
     
-    /// Avogadro's number (molecules/mol)
+    /// Avogadro's number
     pub const AVOGADRO: f64 = 6.02214076e23;
     
     /// Molecular weight of water (kg/mol)
@@ -201,23 +200,50 @@ pub mod thermodynamics {
     /// Ambient temperature (K)
     pub const T_AMBIENT: f64 = 293.15;
     
-    /// Standard atmospheric pressure (Pa)
-    pub const P_ATMOSPHERIC: f64 = 101325.0;
+    /// Van der Waals constant a for N2 (bar·L²/mol²)
+    pub const VDW_A_N2: f64 = 1.370;
     
-    /// Surface tension of water at 20°C (N/m)
-    pub const SIGMA_WATER: f64 = 0.0728;
+    /// Van der Waals constant b for N2 (L/mol)
+    pub const VDW_B_N2: f64 = 0.0387;
     
-    /// Dynamic viscosity of water at 20°C (Pa·s)
-    pub const MU_WATER: f64 = 1.002e-3;
+    /// Van der Waals constant a for O2 (bar·L²/mol²)
+    pub const VDW_A_O2: f64 = 1.382;
     
-    /// Thermal conductivity of water at 20°C (W/(m·K))
-    pub const K_THERMAL_WATER: f64 = 0.598;
+    /// Van der Waals constant b for O2 (L/mol)
+    pub const VDW_B_O2: f64 = 0.0319;
     
-    /// Specific heat capacity of water at constant pressure (J/(kg·K))
-    pub const CP_WATER: f64 = 4182.0;
+    /// Van der Waals constant a for H2O (bar·L²/mol²)
+    pub const VDW_A_H2O: f64 = 5.537;
     
-    /// Specific heat capacity of water at constant volume (J/(kg·K))
-    pub const CV_WATER: f64 = 4150.0;
+    /// Van der Waals constant b for H2O (L/mol)
+    pub const VDW_B_H2O: f64 = 0.0305;
+    
+    /// Conversion factor from bar·L² to Pa·m⁶
+    pub const BAR_L2_TO_PA_M6: f64 = 0.1;
+    
+    /// Conversion factor from L to m³
+    pub const L_TO_M3: f64 = 1e-3;
+    
+    /// Fraction of N2 in air
+    pub const N2_FRACTION: f64 = 0.79;
+    
+    /// Fraction of O2 in air
+    pub const O2_FRACTION: f64 = 0.21;
+    
+    /// Vapor diffusion coefficient in air at standard conditions (m²/s)
+    pub const VAPOR_DIFFUSION_COEFFICIENT: f64 = 2.5e-5;
+    
+    /// Nusselt number constant term
+    pub const NUSSELT_CONSTANT: f64 = 2.0;
+    
+    /// Nusselt number Peclet coefficient
+    pub const NUSSELT_PECLET_COEFF: f64 = 0.6;
+    
+    /// Nusselt number Peclet exponent for heat transfer
+    pub const NUSSELT_PECLET_EXPONENT: f64 = 0.5;
+    
+    /// Sherwood number Peclet exponent for mass transfer
+    pub const SHERWOOD_PECLET_EXPONENT: f64 = 0.33;
 }
 
 /// Optical and visualization constants
@@ -237,6 +263,40 @@ pub mod optics {
     
     /// Window width factor for edge effect reduction
     pub const WINDOW_WIDTH_FACTOR: f64 = 10.0;
+    
+    /// Typical tissue diffusion coefficient (mm²/ns)
+    pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 1e-3;
+    
+    /// Typical tissue absorption coefficient (mm⁻¹)
+    pub const TISSUE_ABSORPTION_COEFFICIENT: f64 = 0.1;
+    
+    /// Default polarization factor
+    pub const DEFAULT_POLARIZATION_FACTOR: f64 = 0.5;
+    
+    /// Laplacian stencil center coefficient
+    pub const LAPLACIAN_CENTER_COEFF: f64 = -2.0;
+}
+
+/// Shock capturing and numerical methods constants
+pub mod numerical {
+    /// WENO scheme optimal weights
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    
+    /// Artificial viscosity coefficients
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
+    
+    /// WENO smoothness indicator epsilon
+    pub const WENO_EPSILON: f64 = 1e-6;
+    
+    /// Stencil coefficients for numerical differentiation
+    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
+    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
 }
 
 /// Chemistry and ROS constants
@@ -248,6 +308,30 @@ pub mod chemistry {
     pub const SINGLET_OXYGEN_WEIGHT: f64 = 5.0;
     pub const PEROXYNITRITE_WEIGHT: f64 = 8.0;
     pub const NITRIC_OXIDE_WEIGHT: f64 = 0.5;
+}
+
+/// Cavitation damage constants
+pub mod cavitation {
+    /// Default damage threshold pressure (Pa)
+    pub const DEFAULT_THRESHOLD_PRESSURE: f64 = 100e6;  // 100 MPa
+    
+    /// Default pit formation efficiency (fraction of impacts that cause pits)
+    pub const DEFAULT_PIT_EFFICIENCY: f64 = 0.01;  // 1%
+    
+    /// Default fatigue damage rate per cycle
+    pub const DEFAULT_FATIGUE_RATE: f64 = 1e-6;
+    
+    /// Default stress concentration factor
+    pub const DEFAULT_CONCENTRATION_FACTOR: f64 = 2.0;
+    
+    /// Material removal efficiency coefficient (empirical)
+    pub const MATERIAL_REMOVAL_EFFICIENCY: f64 = 1e-9;
+    
+    /// Impact energy coefficient for erosion model
+    pub const IMPACT_ENERGY_COEFFICIENT: f64 = 0.5;
+    
+    /// Compression factor exponent for cavitation intensity
+    pub const COMPRESSION_FACTOR_EXPONENT: f64 = 1.5;
 }
 
 /// Test and validation constants
@@ -276,8 +360,47 @@ pub mod validation {
     pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
 }
 
-/// Adaptive integration stability constants
+/// Adaptive integration constants
 pub mod adaptive_integration {
+    /// Maximum time step for bubble dynamics (100 ns - limited by acoustic frequency)
+    pub const MAX_TIME_STEP: f64 = 1e-7;
+    
+    /// Minimum time step for bubble dynamics (1 ps - for extreme collapse)
+    pub const MIN_TIME_STEP: f64 = 1e-12;
+    
+    /// Default relative tolerance for adaptive stepping
+    pub const DEFAULT_RELATIVE_TOLERANCE: f64 = 1e-6;
+    
+    /// Default absolute tolerance for adaptive stepping
+    pub const DEFAULT_ABSOLUTE_TOLERANCE: f64 = 1e-9;
+    
+    /// Safety factor for time step adjustment (standard value)
+    pub const SAFETY_FACTOR: f64 = 0.9;
+    
+    /// Maximum time step increase factor
+    pub const MAX_TIME_STEP_INCREASE: f64 = 1.5;
+    
+    /// Maximum time step decrease factor
+    pub const MAX_TIME_STEP_DECREASE: f64 = 0.1;
+    
+    /// Maximum number of substeps
+    pub const MAX_SUBSTEPS: usize = 1000;
+    
+    /// Initial time step fraction (start conservatively)
+    pub const INITIAL_TIME_STEP_FRACTION: f64 = 0.1;
+    
+    /// Error control exponent for 4th order method (1/5 = 0.2)
+    pub const ERROR_CONTROL_EXPONENT: f64 = 0.2;
+    
+    /// Half step factor for Richardson extrapolation
+    pub const HALF_STEP_FACTOR: f64 = 0.5;
+    
+    /// Minimum temperature for bubble dynamics (K)
+    pub const MIN_TEMPERATURE: f64 = 100.0;
+    
+    /// Maximum temperature for bubble dynamics (K)
+    pub const MAX_TEMPERATURE: f64 = 10000.0;
+    
     /// Minimum radius safety factor (fraction of MIN_RADIUS)
     pub const MIN_RADIUS_SAFETY_FACTOR: f64 = 0.1;
     
@@ -286,10 +409,4 @@ pub mod adaptive_integration {
     
     /// Maximum velocity fraction of sound speed
     pub const MAX_VELOCITY_FRACTION: f64 = 0.9;
-    
-    /// Minimum temperature for stability (K)
-    pub const MIN_TEMPERATURE: f64 = 100.0;
-    
-    /// Maximum temperature for stability (K)
-    pub const MAX_TEMPERATURE: f64 = 100000.0;
 }

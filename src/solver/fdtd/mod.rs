@@ -85,17 +85,16 @@
 //! - DRY: Reuses grid utilities and boundary conditions
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
-use crate::boundary::{Boundary, PMLBoundary, CPMLBoundary};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
 use crate::validation::{ValidationResult, ValidationError, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
 use crate::constants::cfl;
-use ndarray::{Array3, Array4, ArrayView3, Axis, Zip, s};
+use ndarray::{Array3, Array4, Zip};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use log::{debug, info};
+use log::info;
 
 /// FDTD solver configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

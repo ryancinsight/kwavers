@@ -1,6 +1,6 @@
-//! Enhanced Elastic Wave Propagation Module
+//! Elastic Wave Mode Conversion Module
 //!
-//! This module provides advanced elastic wave propagation with:
+//! This module provides elastic wave propagation with:
 //! - Full stress tensor formulation (all 6 independent components)
 //! - Mode conversion at interfaces (P-wave to S-wave and vice versa)
 //! - Anisotropic material support with full stiffness tensor
@@ -11,7 +11,7 @@
 //! - **SOLID**: Each component has a single responsibility
 //! - **CUPID**: Clear interfaces and composable components
 //! - **DRY**: Reusable tensor operations
-//! - **KISS**: Simple API despite complex physics
+//! - **KISS**: Focused API for wave mode conversion
 
 use crate::{
     error::{KwaversResult, PhysicsError},

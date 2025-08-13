@@ -80,7 +80,7 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::medium::absorption::{PowerLawAbsorption, TissueType, apply_power_law_absorption};
+use crate::medium::absorption::{PowerLawAbsorption, apply_power_law_absorption};
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};

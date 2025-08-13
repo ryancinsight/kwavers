@@ -19,9 +19,8 @@ use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::error::{KwaversError, ValidationError};
 use super::traits::{NumericalSolver, DGOperations};
-use ndarray::{Array1, Array2, Array3, Array4, Axis};
+use ndarray::{Array1, Array2, Array3};
 use std::sync::Arc;
-use std::f64::consts::PI;
 
 /// Basis function type for DG
 #[derive(Debug, Clone, Copy)]

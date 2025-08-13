@@ -1,11 +1,11 @@
-//! # Kwavers - Advanced Ultrasound Simulation Toolbox
+//! # Kwavers - Ultrasound Simulation Toolbox
 //!
 //! A modern, high-performance, open-source computational toolbox for simulating
-//! ultrasound wave propagation and its interactions with complex biological media.
+//! ultrasound wave propagation in complex heterogeneous media.
 //!
 //! ## Features
 //!
-//! - **Advanced Physics**: Nonlinear acoustics, thermal effects, cavitation dynamics
+//! - **Physics Modeling**: Nonlinear acoustics, thermal effects, cavitation dynamics
 //! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
 //! - **Memory Safety**: Zero unsafe code with comprehensive error handling
 //! - **Performance**: Optimized algorithms with SIMD and parallel processing
@@ -41,7 +41,7 @@ pub mod utils;
 pub mod validation;
 pub mod benchmarks;
 
-// Phase 11: Advanced Visualization & Real-Time Interaction
+// Phase 11: Visualization & Real-Time Interaction
 #[cfg(all(feature = "gpu", any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support")))]
 pub mod visualization;
 
@@ -55,7 +55,7 @@ pub use sensor::{Sensor, SensorData};
 pub use recorder::Recorder;
 pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
 pub use solver::Solver;
-pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, enhanced::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
+pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
 pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
@@ -68,7 +68,7 @@ pub use physics::state::{PhysicsState, field_indices};
 
 // Re-export spectral-DG components
 pub use solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
-pub use solver::spectral_dg::enhanced_shock_handling::{EnhancedShockDetector, WENOLimiter, ArtificialViscosity};
+pub use solver::spectral_dg::shock_capturing::{ShockDetector, WENOLimiter, ArtificialViscosity};
 
 // Re-export PSTD and FDTD plugins
 pub use solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
@@ -78,12 +78,12 @@ pub use solver::fdtd::{FdtdSolver, FdtdConfig, FdtdPlugin};
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuContext, GpuBackend};
 #[cfg(feature = "gpu")]
-pub use gpu::memory::AdvancedGpuMemoryManager;
+pub use gpu::memory::GpuMemoryManager;
 #[cfg(feature = "gpu")]
 pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
 pub use physics::chemistry::ChemicalModel;
-pub use physics::mechanics::elastic_wave::{ElasticWave, enhanced::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
+pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  
@@ -484,55 +484,29 @@ fn get_system_information() -> Vec<(&'static str, ValidationValue)> {
     
     vec![
         ("memory_available_gb", ValidationValue::Float(memory_gb)),
-        ("cpu_cores", ValidationValue::Float(cpu_cores)),
+        ("cpu_cores", ValidationValue::Float(cpu_cores as f64)),
         ("disk_space_gb", ValidationValue::Float(disk_space_gb)),
     ]
 }
 
-/// Get CPU core count without external dependencies
-fn get_cpu_cores() -> f64 {
-    // Try to get CPU count using built-in methods
-    #[cfg(target_os = "linux")]
-    {
-        // Try to read from /proc/cpuinfo
-        if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
-            let core_count = cpuinfo.lines()
-                .filter(|line| line.starts_with("processor"))
-                .count();
-            if core_count > 0 {
-                return core_count as f64;
-            }
-        }
-    }
-    
-    #[cfg(target_os = "macos")]
-    {
-        // Use sysctl on macOS
-        use std::process::Command;
-        if let Ok(output) = Command::new("sysctl").args(&["-n", "hw.ncpu"]).output() {
-            if let Ok(cpu_str) = String::from_utf8(output.stdout) {
-                if let Ok(cpu_count) = cpu_str.trim().parse::<f64>() {
-                    return cpu_count;
-                }
-            }
-        }
-    }
-    
-    // Fallback: reasonable default
-    4.0 // 4 cores default
+/// Get CPU core count
+fn get_cpu_cores() -> usize {
+    std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4) // Default to 4 cores if detection fails
 }
 
 /// Get available memory in GB
 fn get_available_memory_gb() -> f64 {
     #[cfg(target_os = "linux")]
     {
-        // Try to read from /proc/meminfo
-        if let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") {
-            for line in meminfo.lines() {
+        // Read from /proc/meminfo on Linux
+        if let Ok(contents) = std::fs::read_to_string("/proc/meminfo") {
+            for line in contents.lines() {
                 if line.starts_with("MemAvailable:") {
                     if let Some(kb_str) = line.split_whitespace().nth(1) {
                         if let Ok(kb) = kb_str.parse::<f64>() {
-                            return kb / 1024.0 / 1024.0; // Convert KB to GB
+                            return kb / 1_048_576.0; // Convert KB to GB
                         }
                     }
                 }
@@ -540,39 +514,48 @@ fn get_available_memory_gb() -> f64 {
         }
     }
     
-    #[cfg(target_os = "macos")]
+    #[cfg(not(target_os = "linux"))]
     {
-        // Use sysctl on macOS - NOTE: This returns total physical memory, not available
-        // Getting true available memory on macOS requires parsing vm_stat output
-        // which is complex and beyond the scope of this implementation
+        // Use sysinfo crate or platform-specific APIs if available
+        // For now, return a conservative estimate
+        8.0 // 8 GB default
+    }
+    
+    8.0 // Fallback to 8 GB
+}
+
+/// Get available disk space in GB for current directory
+fn get_available_disk_space_gb() -> f64 {
+    #[cfg(target_os = "linux")]
+    {
+        // Use statfs on Linux
         use std::process::Command;
-        if let Ok(output) = Command::new("sysctl").args(&["-n", "hw.memsize"]).output() {
-            if let Ok(mem_str) = String::from_utf8(output.stdout) {
-                if let Ok(mem_bytes) = mem_str.trim().parse::<f64>() {
-                    let total_gb = mem_bytes / 1024.0 / 1024.0 / 1024.0; // Convert bytes to GB
-                    log::warn!("macOS memory detection: returning total physical memory ({:.1} GB), not available memory. For accurate available memory, vm_stat parsing would be required.", total_gb);
-                    return total_gb;
+        if let Ok(output) = Command::new("df")
+            .arg("-BG")  // Output in GB
+            .arg(".")    // Current directory
+            .output() 
+        {
+            if let Ok(text) = String::from_utf8(output.stdout) {
+                // Parse df output (second line, fourth column)
+                if let Some(line) = text.lines().nth(1) {
+                    if let Some(avail_str) = line.split_whitespace().nth(3) {
+                        // Remove 'G' suffix and parse
+                        if let Ok(gb) = avail_str.trim_end_matches('G').parse::<f64>() {
+                            return gb;
+                        }
+                    }
                 }
             }
         }
     }
     
-    #[cfg(target_os = "windows")]
+    #[cfg(not(target_os = "linux"))]
     {
-        // Windows implementation would use GetPhysicallyInstalledSystemMemory
-        // For now, provide a reasonable default
-        log::warn!("Windows memory detection not implemented, using default");
+        // Platform-specific implementation would go here
+        100.0 // 100 GB default
     }
     
-    // Fallback: reasonable default for development systems
-    8.0 // 8 GB default
-}
-
-/// Get available disk space in GB for current directory
-fn get_available_disk_space_gb() -> f64 {
-    // Simplified approach: return reasonable default
-    // Full implementation would use platform-specific APIs
-    100.0 // 100 GB reasonable default
+    100.0 // Fallback to 100 GB
 }
 
 #[cfg(test)]

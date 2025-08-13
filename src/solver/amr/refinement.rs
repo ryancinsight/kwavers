@@ -1,12 +1,12 @@
 // src/solver/amr/refinement.rs
 //! Refinement strategies and criteria for AMR
 //! 
-//! This module implements advanced refinement strategies for Adaptive Mesh Refinement,
+//! This module implements refinement strategies for Adaptive Mesh Refinement,
 //! including gradient-based, wavelet-based, and physics-aware refinement criteria.
 //! 
-//! # References
-//! - Berger, M. J., & Oliger, J. (1984). "Adaptive mesh refinement for hyperbolic partial differential equations"
-//! - Harten, A. (1995). "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
+//! Based on:
+//! - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
+//! - Harten (1995): "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
 
 use ndarray::{Array3, Zip};
 
@@ -157,7 +157,7 @@ impl RefinementStrategy {
         let shape = field.shape();
         let mut indicator = Array3::zeros((shape[0], shape[1], shape[2]));
         
-        // Simple Haar wavelet coefficients
+        // Haar wavelet coefficients computation
         Zip::indexed(&mut indicator)
             .for_each(|(i, j, k), ind| {
                 if i > 0 && j > 0 && k > 0 && 
@@ -166,7 +166,7 @@ impl RefinementStrategy {
                     let avg = (field[[i-1, j-1, k-1]] + field[[i-1, j-1, k]] +
                                field[[i-1, j, k-1]] + field[[i-1, j, k]] +
                                field[[i, j-1, k-1]] + field[[i, j-1, k]] +
-                               field[[i, j, k-1]] + field[[i, j, k]]) * 0.125;
+                               field[[i, j, k-1]] + field[[i, j, k]]) / 8.0;
                     
                     let detail = (field[[i, j, k]] - avg).abs();
                     *ind = if detail > threshold { 1.0 } else { 0.0 };
@@ -275,7 +275,7 @@ impl RefinementStrategy {
     
     /// Apply buffer cells around marked regions
     fn apply_buffer(&self, indicator: &mut Array3<f64>) {
-        let shape = indicator.shape();
+        let (nx, ny, nz) = indicator.dim();
         let mut buffer_indicator = indicator.clone();
         
         for _ in 0..self.buffer_cells {
@@ -294,7 +294,7 @@ impl RefinementStrategy {
                                     let nj = (j as i32 + dj) as usize;
                                     let nk = (k as i32 + dk) as usize;
                                     
-                                    if ni < shape[0] && nj < shape[1] && nk < shape[2] {
+                                    if ni < nx && nj < ny && nk < nz {
                                         if indicator[[ni, nj, nk]] > 0.5 {
                                             has_marked_neighbor = true;
                                             break;

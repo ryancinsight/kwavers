@@ -596,6 +596,34 @@ impl CPMLBoundary {
     pub fn config(&self) -> &CPMLConfig {
         &self.config
     }
+
+    /// Get absorption coefficients for a specific position
+    pub fn get_coefficients(&self, x: usize, y: usize, z: usize) -> (f64, f64, f64) {
+        let ax = if x < self.config.thickness || x >= self.nx - self.config.thickness {
+            self.sigma_x[x]
+        } else {
+            0.0
+        };
+        
+        let ay = if y < self.config.thickness || y >= self.ny - self.config.thickness {
+            self.sigma_y[y]
+        } else {
+            0.0
+        };
+        
+        let az = if z < self.config.thickness || z >= self.nz - self.config.thickness {
+            self.sigma_z[z]
+        } else {
+            0.0
+        };
+        
+        (ax, ay, az)
+    }
+    
+    // Note: The apply_to_field method has been removed as it was deprecated.
+    // C-PML must be integrated into the solver's gradient computation, not applied
+    // as a post-processing step. Use the get_coefficients method to retrieve
+    // absorption coefficients for proper integration into your solver.
 }
 
 impl Boundary for CPMLBoundary {

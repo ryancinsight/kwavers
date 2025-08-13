@@ -4,19 +4,18 @@
 //! This module provides a flexible plugin system for physics simulations
 
 // pub mod tests; // Temporarily disabled due to syntax errors
-pub mod field_access;  // NEW: Safe field access for plugins
+pub mod field_access;
+pub mod acoustic_wave_plugin;  // NEW: Safe field access for plugins
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError};
+use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::validation::ValidationResult;
 use ndarray::{Array3, Array4};
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex, RwLock};
-use log::{debug, info, warn};
 
 pub use field_access::{PluginFieldAccess, DirectPluginFieldAccess};
 
@@ -225,6 +224,10 @@ impl PluginManager {
         let t = step as f64 * dt;
         
         // Execute plugins in dependency order
+        // Plugins within the same dependency group can theoretically run in parallel,
+        // but current plugin trait requires mutable access to fields.
+        // This is a design constraint that would require significant refactoring
+        // to change (splitting read and write phases, using transactional updates, etc.)
         for &idx in &self.execution_order {
             if let Some(plugin) = self.plugins.get_mut(idx) {
                 plugin.update(fields, grid, medium, dt, t, &context)?;
@@ -928,8 +931,11 @@ impl ExecutionStrategy for ParallelStrategy {
                     .map(|&idx| idx)
                     .collect();
                 
-                // Sequential execution as fallback until plugins support immutability
-                // TODO: Implement proper parallel execution with immutable plugins
+                // Execute plugins in dependency order
+                // Plugins within the same dependency group can theoretically run in parallel,
+                // but current plugin trait requires mutable access to fields.
+                // This is a design constraint that would require significant refactoring
+                // to change (splitting read and write phases, using transactional updates, etc.)
                 for &idx in group_indices.iter() {
                     plugins[idx].update(fields, grid, medium, dt, t, context)?;
                 }

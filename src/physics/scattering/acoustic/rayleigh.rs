@@ -5,7 +5,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
+use crate::physics::state::{PhysicsState, field_indices};
 use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 

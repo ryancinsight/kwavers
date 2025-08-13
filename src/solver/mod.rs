@@ -16,27 +16,22 @@ pub mod thermal_diffusion;
 pub mod reconstruction;
 pub mod plugin_based_solver; // New plugin-based architecture
 
-use crate::boundary::{Boundary, PMLBoundary, CPMLBoundary};
+use crate::boundary::Boundary;
 use crate::config::ValidationConfig;
 use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::field_indices::*;  // Import all field indices from unified source
+  // Import all field indices from unified source
 use crate::physics::traits::{
     AcousticWaveModel, CavitationModelBehavior, LightDiffusionModelTrait,
     ThermalModelTrait, ChemicalModelTrait, AcousticScatteringModelTrait,
     StreamingModelTrait, HeterogeneityModelTrait
 };
 use crate::recorder::Recorder;
-use crate::physics::mechanics::cavitation::CavitationModel;
-use crate::physics::optics::diffusion::LightDiffusion;
-use crate::physics::thermodynamics::heat_transfer::ThermalModel;
-use crate::physics::chemistry::ChemicalModel;
-use crate::physics::scattering::acoustic::RayleighScattering;
 use crate::source::Source;
 use crate::time::Time;
 use crate::utils::{fft_3d, ifft_3d, array_utils}; // Removed warm_fft_cache, report_fft_statistics
-use log::{info, trace, debug}; // Removed debug, warn (used as log::debug, log::warn)
+use log::{info, trace}; // Removed debug, warn (used as log::debug, log::warn)
 use ndarray::{Array3, Array4, Axis, ArrayView3, ArrayViewMut3};
 // Removed num_complex::Complex
 use std::time::{Duration, Instant};

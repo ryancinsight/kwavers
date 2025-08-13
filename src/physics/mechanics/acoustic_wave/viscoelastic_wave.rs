@@ -6,8 +6,8 @@ use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
 use crate::solver::PRESSURE_IDX; // Assuming pressure is still the primary field
 use crate::utils::{fft_3d, ifft_3d};
-use log::{debug, trace, warn};
-use ndarray::{Array3, Array4, Axis, Zip}; // Removed parallel prelude
+use log::{debug, trace};
+use ndarray::{Array3, Array4, Axis, Zip, ArrayView3, ArrayViewMut3}; // Removed parallel prelude
 use num_complex::Complex;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -152,40 +152,49 @@ impl ViscoelasticWave {
 
     // Helper for stability checks, similar to NonlinearWave
     // This is a simplified version for now.
-    fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, _current_pressure: &Array3<f64>) -> bool {
+    fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, current_pressure: &ArrayView3<f64>) -> bool {
         let c_max = medium.sound_speed_array().iter().fold(0.0f64, |acc, &x| acc.max(x));
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let cfl = c_max * dt / dx_min;
-        if cfl > 1.0 { // Courant number condition for simple FDTD, k-space methods have different criteria
-            warn!(
-                "CFL condition potentially violated: c_max={}, dt={}, dx_min={}, CFL={}",
-                c_max, dt, dx_min, cfl
-            );
+        if cfl > 0.5 {
+            debug!("CFL condition may be violated: CFL = {}", cfl);
             return false;
         }
+        
+        // Check for NaN or Inf
+        if current_pressure.iter().any(|&x| !x.is_finite()) {
+            return false;
+        }
+        
         true
     }
 
-    // Placeholder for gradient clamping logic if used from NonlinearWave
-    fn clamp_pressure(&self, pressure_field: &mut Array3<f64>) -> bool {
+    // Consolidated pressure clamping function that works in-place
+    fn clamp_pressure(&self, pressure_field: &mut ArrayViewMut3<f64>) -> bool {
         let mut clamped = false;
-        for val in pressure_field.iter_mut() {
-            if !val.is_finite() {
-                *val = 0.0;
+        
+        for p in pressure_field.iter_mut() {
+            // First check for non-finite values (NaN or Inf)
+            if !p.is_finite() {
+                *p = 0.0;
                 clamped = true;
-            } else if val.abs() > self.max_pressure {
-                *val = val.signum() * self.max_pressure;
+            } 
+            // Then check against maximum pressure threshold
+            else if p.abs() > self.max_pressure {
+                *p = p.signum() * self.max_pressure;
                 clamped = true;
             }
         }
+        
         if clamped {
-            debug!("Pressure field clamped due to non-finite values or exceeding max_pressure.");
+            debug!("ViscoelasticWave: Pressure values were clamped to prevent numerical overflow.");
         }
+        
         clamped
     }
 
-    // Placeholder for phase factor calculation from NonlinearWave
-    //  fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
+    // Placeholder for gradient clamping logic if used from NonlinearWave
+    // fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
     //     // This is a simplified phase factor; k-Wave uses a k-space correction (sinc term)
     //     // which is often applied differently. For a simple linear acoustic solver:
     //     -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
@@ -252,9 +261,10 @@ impl AcousticWaveModel for ViscoelasticWave {
         let start_total = Instant::now();
         metrics.call_count += 1;
 
-        let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        // Use a view instead of cloning for stability check
+        let pressure_view = fields.index_axis(Axis(0), PRESSURE_IDX);
 
-        if !self.check_stability(dt, grid, medium, &pressure_at_start) {
+        if !self.check_stability(dt, grid, medium, &pressure_view.view()) {
             debug!("ViscoelasticWave: Potential instability detected at t={}.", t);
         }
 
@@ -292,7 +302,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         let _b_a_arr = medium.nonlinearity_coefficient(0.0,0.0,0.0,grid); // Assuming B/A is homogeneous for simplicity here or get array
 
         Zip::indexed(&mut nonlinear_term)
-            .and(&pressure_at_start)
+            .and(&pressure_view)
             .for_each(|(i, j, k), nl_val, &_p_curr| {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
                     let _rho = rho_arr[[i,j,k]].max(1e-9);
@@ -304,7 +314,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                      let c = _c;
                      
                      // Get current and previous pressure values
-                     let p_curr = pressure_at_start[[i,j,k]];
+                     let p_curr = pressure_view[[i,j,k]];
                      let p_prev = prev_pressure[[i,j,k]];
                      
                      // Calculate proper second-order time derivative of p²
@@ -444,9 +454,10 @@ impl AcousticWaveModel for ViscoelasticWave {
         metrics.combination_time += start_combine.elapsed().as_secs_f64();
 
         // --- Final clamping ---
-        let mut temp_pressure_to_clamp = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        if self.clamp_pressure(&mut temp_pressure_to_clamp) {
-             fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&temp_pressure_to_clamp);
+        // Apply clamping directly to the field without cloning
+        let mut pressure_field = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        if self.clamp_pressure(&mut pressure_field) {
+             debug!("ViscoelasticWave: Pressure clamping was applied to prevent instability.");
         }
 
         // Ensure prev_pressure for next step is based on the state *before* adding sources for this step.

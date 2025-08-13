@@ -3,7 +3,7 @@
 //! Manages collections of bubbles in the simulation domain
 
 use super::bubble_state::{BubbleState, BubbleParameters};
-use super::rayleigh_plesset::{KellerMiksisModel, integrate_bubble_dynamics};
+use super::rayleigh_plesset::KellerMiksisModel;
 use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use std::sync::{Arc, Mutex};
 use ndarray::Array3;

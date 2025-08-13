@@ -10,16 +10,16 @@ use crate::grid::Grid;
 use crate::KwaversResult;
 use crate::boundary::Boundary;
 use crate::medium::Medium;
-use crate::physics::plugin::{PhysicsPlugin, PluginManager, PluginContext};
-use crate::physics::field_mapping::{UnifiedFieldType, FieldAccessor, FieldAccessorMut};
+use crate::physics::plugin::{PhysicsPlugin, PluginManager};
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::recorder::RecorderTrait;
 use crate::source::Source;
 use crate::time::Time;
 use crate::error::KwaversError;
-use log::{info, debug, trace};
+use log::{info, debug};
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Dynamic field registry for type-safe field management
 pub struct FieldRegistry {

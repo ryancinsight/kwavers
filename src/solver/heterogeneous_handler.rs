@@ -25,7 +25,7 @@
 //! - Pinton, G. F., et al. (2009). "A heterogeneous nonlinear attenuating 
 //!   full-wave model of ultrasound." IEEE UFFC, 56(3), 474-488.
 
-use ndarray::{Array3, Array4, Array1, Zip, s, Axis};
+use ndarray::{Array3, Array4, Array1, Zip, Axis};
 use std::f64::consts::PI;
 use crate::grid::Grid;
 use crate::medium::Medium;
