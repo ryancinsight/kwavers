@@ -94,7 +94,7 @@ impl Default for CPMLConfig {
 }
 
 impl CPMLConfig {
-    /// Create config optimized for grazing angles
+    /// Create config for grazing angles
     pub fn for_grazing_angles() -> Self {
         Self {
             thickness: 20,
@@ -609,8 +609,8 @@ impl Boundary for CPMLBoundary {
 }
 
 impl CPMLBoundary {
-    /// Apply simple exponential sponge layer absorption to light field
-    /// This is NOT a true C-PML implementation but a simpler absorption layer
+    /// Apply exponential sponge layer absorption to light field
+    /// This is NOT a true C-PML implementation but a sponge layer
     /// that provides basic absorption at boundaries but with inferior performance
     /// especially for grazing angles of incidence.
     fn apply_sponge_layer_light(&self, field: &mut Array3<f64>, grid: &Grid) {

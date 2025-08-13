@@ -101,7 +101,7 @@ use crate::validation::ValidationMetadata;
 /// PSTD solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PstdConfig {
-    /// Enable k-space correction for improved accuracy
+    /// Enable k-space correction
     pub k_space_correction: bool,
     /// Order of k-space correction (typically 2-8)
     pub k_space_order: usize,
