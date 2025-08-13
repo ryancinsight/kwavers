@@ -51,7 +51,7 @@ pub use grid::Grid;
 pub use time::Time;
 pub use medium::{Medium, homogeneous::HomogeneousMedium};
 pub use source::Source;
-pub use sensor::{Sensor, SensorData};
+pub use sensor::{Sensor, SensorData, PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod};
 pub use recorder::Recorder;
 pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
 pub use solver::Solver;
@@ -113,6 +113,14 @@ pub use benchmarks::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFor
 
 // Re-export solver validation
 pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
+
+// Re-export reconstruction algorithms
+pub use solver::reconstruction::{
+    ReconstructionConfig, ReconstructionAlgorithm, FilterType, InterpolationMethod,
+    Reconstructor, UniversalBackProjection, WeightFunction,
+    plane_recon::PlaneRecon, line_recon::LineRecon, 
+    arc_recon::ArcRecon, bowl_recon::BowlRecon
+};
 
 /// Initialize logging for the kwavers library
 /// 
