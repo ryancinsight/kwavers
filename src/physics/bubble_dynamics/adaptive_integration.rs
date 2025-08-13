@@ -17,8 +17,14 @@
 
 use super::{BubbleState, KellerMiksisModel};
 use crate::error::{KwaversResult, PhysicsError};
+use crate::constants::adaptive_integration::{
+    MAX_TIME_STEP, MIN_TIME_STEP, DEFAULT_RELATIVE_TOLERANCE, DEFAULT_ABSOLUTE_TOLERANCE,
+    SAFETY_FACTOR, MAX_TIME_STEP_INCREASE, MAX_TIME_STEP_DECREASE, MAX_SUBSTEPS,
+    INITIAL_TIME_STEP_FRACTION, ERROR_CONTROL_EXPONENT, HALF_STEP_FACTOR,
+    MIN_TEMPERATURE, MAX_TEMPERATURE, MIN_RADIUS_SAFETY_FACTOR, MAX_RADIUS_SAFETY_FACTOR,
+    MAX_VELOCITY_FRACTION
+};
 use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
-use crate::constants::adaptive_integration::*;
 use std::sync::{Arc, Mutex};
 
 /// Configuration for adaptive bubble integration
@@ -47,14 +53,14 @@ pub struct AdaptiveBubbleConfig {
 impl Default for AdaptiveBubbleConfig {
     fn default() -> Self {
         Self {
-            dt_max: 1e-7,        // 100 ns (limited by acoustic frequency)
-            dt_min: 1e-12,       // 1 ps (for extreme collapse)
-            rtol: 1e-6,
-            atol: 1e-9,
-            safety_factor: 0.9,
-            dt_increase_max: 1.5,
-            dt_decrease_max: 0.1,
-            max_substeps: 1000,
+            dt_max: MAX_TIME_STEP,
+            dt_min: MIN_TIME_STEP,
+            rtol: DEFAULT_RELATIVE_TOLERANCE,
+            atol: DEFAULT_ABSOLUTE_TOLERANCE,
+            safety_factor: SAFETY_FACTOR,
+            dt_increase_max: MAX_TIME_STEP_INCREASE,
+            dt_decrease_max: MAX_TIME_STEP_DECREASE,
+            max_substeps: MAX_SUBSTEPS,
             monitor_stability: true,
         }
     }
@@ -76,7 +82,7 @@ pub struct AdaptiveBubbleIntegrator {
 impl AdaptiveBubbleIntegrator {
     /// Create new adaptive integrator
     pub fn new(solver: Arc<Mutex<KellerMiksisModel>>, config: AdaptiveBubbleConfig) -> Self {
-        let dt_adaptive = config.dt_max * 0.1; // Start conservatively
+        let dt_adaptive = config.dt_max * INITIAL_TIME_STEP_FRACTION; // Start conservatively
         
         Self {
             solver,
@@ -160,7 +166,7 @@ impl AdaptiveBubbleIntegrator {
         
         // Take two half steps for error estimation
         let mut state_half = state_orig.clone();
-        let dt_half = dt * 0.5;
+        let dt_half = dt * HALF_STEP_FACTOR;
         self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t)?;
         self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t + dt_half)?;
         
@@ -176,7 +182,7 @@ impl AdaptiveBubbleIntegrator {
         
         // Compute new time step based on error
         let dt_new = if error_norm > 0.0 {
-            let factor = self.config.safety_factor * (1.0 / error_norm).powf(0.2); // 4th order method
+            let factor = self.config.safety_factor * (1.0 / error_norm).powf(ERROR_CONTROL_EXPONENT); // 4th order method
             let factor = factor.min(self.config.dt_increase_max).max(self.config.dt_decrease_max);
             dt * factor
         } else {

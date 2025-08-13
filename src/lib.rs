@@ -1,11 +1,11 @@
-//! # Kwavers - Advanced Ultrasound Simulation Toolbox
+//! # Kwavers - Ultrasound Simulation Toolbox
 //!
 //! A modern, high-performance, open-source computational toolbox for simulating
-//! ultrasound wave propagation and its interactions with complex biological media.
+//! ultrasound wave propagation in complex heterogeneous media.
 //!
 //! ## Features
 //!
-//! - **Advanced Physics**: Nonlinear acoustics, thermal effects, cavitation dynamics
+//! - **Physics Modeling**: Nonlinear acoustics, thermal effects, cavitation dynamics
 //! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
 //! - **Memory Safety**: Zero unsafe code with comprehensive error handling
 //! - **Performance**: Optimized algorithms with SIMD and parallel processing
@@ -41,7 +41,7 @@ pub mod utils;
 pub mod validation;
 pub mod benchmarks;
 
-// Phase 11: Advanced Visualization & Real-Time Interaction
+// Phase 11: Visualization & Real-Time Interaction
 #[cfg(all(feature = "gpu", any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support")))]
 pub mod visualization;
 
@@ -78,7 +78,7 @@ pub use solver::fdtd::{FdtdSolver, FdtdConfig, FdtdPlugin};
 #[cfg(feature = "gpu")]
 pub use gpu::{GpuContext, GpuBackend};
 #[cfg(feature = "gpu")]
-pub use gpu::memory::AdvancedGpuMemoryManager;
+pub use gpu::memory::GpuMemoryManager;
 #[cfg(feature = "gpu")]
 pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
 pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};

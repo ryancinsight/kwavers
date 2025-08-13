@@ -23,6 +23,12 @@ use crate::error::{KwaversResult, PhysicsError};
 use ndarray::Array1;
 use std::sync::Arc;
 
+use crate::constants::thermodynamics::{
+    R_GAS, T_AMBIENT, VAPOR_DIFFUSION_COEFFICIENT,
+    NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT,
+    SHERWOOD_PECLET_EXPONENT
+};
+
 /// Configuration for IMEX bubble integration
 #[derive(Debug, Clone)]
 pub struct BubbleIMEXConfig {
@@ -215,12 +221,12 @@ impl BubbleIMEXIntegrator {
             let thermal_diffusivity = params.thermal_conductivity / 
                 (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
-            let nusselt = 2.0 + 0.6 * peclet.powf(0.5);
+            let nusselt = NUSSELT_CONSTANT + NUSSELT_PECLET_COEFF * peclet.powf(NUSSELT_PECLET_EXPONENT);
             let h = nusselt * params.thermal_conductivity / (2.0 * r);
             
             // Temperature rate from compression and heat transfer
             let compression_heating = -(gamma - 1.0) * T * v / r;
-            let heat_transfer = -h * (T - 293.15) / (n_gas + n_vapor); // Using ambient temp
+            let heat_transfer = -h * (T - T_AMBIENT) / (n_gas + n_vapor); // Using ambient temp
             
             compression_heating + heat_transfer
         } else {
@@ -231,19 +237,19 @@ impl BubbleIMEXIntegrator {
         let dn_vapor_dt = if params.use_mass_transfer {
             // Evaporation/condensation based on temperature-dependent vapor pressure
             let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(T);
-            let p_vapor_actual = n_vapor * crate::constants::thermodynamics::R_GAS * T / state.volume();
+            let p_vapor_actual = n_vapor * R_GAS * T / state.volume();
             
             // Mass transfer coefficient (simplified approach)
-            let D_vapor = 2.5e-5; // Vapor diffusion coefficient in air [m²/s]
+            let D_vapor = VAPOR_DIFFUSION_COEFFICIENT; // Vapor diffusion coefficient in air [m²/s]
             let thermal_diffusivity = params.thermal_conductivity / 
                 (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
-            let sherwood = 2.0 + 0.6 * peclet.powf(0.33); // Mass transfer Sherwood number
+            let sherwood = NUSSELT_CONSTANT + NUSSELT_PECLET_COEFF * peclet.powf(SHERWOOD_PECLET_EXPONENT); // Mass transfer Sherwood number
             let k_mass = sherwood * D_vapor / (2.0 * r);
             
             // Rate of vapor moles change
             let driving_force = p_vapor_eq - p_vapor_actual;
-            k_mass * driving_force * state.surface_area() / (crate::constants::thermodynamics::R_GAS * T)
+            k_mass * driving_force * state.surface_area() / (R_GAS * T)
         } else {
             0.0
         };
