@@ -81,7 +81,7 @@ pub mod physics {
 
 /// Grid and discretization constants
 pub mod grid {
-    /// Minimum grid points per wavelength for accurate simulation
+    /// Minimum grid points per wavelength for numerical stability
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 6;
     
     /// Optimal grid points per wavelength
@@ -178,6 +178,15 @@ pub mod bubble_dynamics {
     
     /// Maximum bubble radius (1 cm)
     pub const MAX_RADIUS: f64 = 1e-2;
+    
+    /// Surface tension coefficient (factor of 2) from Young-Laplace equation
+    pub const SURFACE_TENSION_COEFF: f64 = 2.0;
+    
+    /// Viscous stress coefficient (factor of 4) from Navier-Stokes
+    pub const VISCOUS_STRESS_COEFF: f64 = 4.0;
+    
+    /// Kinetic energy coefficient (factor of 1.5) in Rayleigh-Plesset equation  
+    pub const KINETIC_ENERGY_COEFF: f64 = 1.5;
     
     /// Air composition - Nitrogen fraction
     pub const N2_FRACTION: f64 = 0.79;

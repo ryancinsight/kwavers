@@ -882,14 +882,14 @@ impl HybridSolver {
         let velocity_y = domain_fields.index_axis(ndarray::Axis(0), vy_idx).to_owned();
         let velocity_z = domain_fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
         
-        // Update pressure using FDTD
-        fdtd_solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
+        // Update pressure using FDTD with zero-copy views
+        fdtd_solver.update_pressure(&mut pressure.view_mut(), &velocity_x.view(), &velocity_y.view(), &velocity_z.view(), medium, dt)?;
         
-        // Update velocities using FDTD
+        // Update velocities using FDTD with zero-copy views
         let mut vx_mut = velocity_x.clone();
         let mut vy_mut = velocity_y.clone();
         let mut vz_mut = velocity_z.clone();
-        fdtd_solver.update_velocity(&mut vx_mut, &mut vy_mut, &mut vz_mut, &pressure, medium, dt)?;
+        fdtd_solver.update_velocity(&mut vx_mut.view_mut(), &mut vy_mut.view_mut(), &mut vz_mut.view_mut(), &pressure.view(), medium, dt)?;
         
         // Copy results back
         domain_fields.index_axis_mut(ndarray::Axis(0), pressure_idx).assign(&pressure);

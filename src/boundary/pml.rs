@@ -141,7 +141,7 @@ impl PMLBoundary {
     fn damping_profile(thickness: usize, length: usize, dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
         let mut profile = vec![0.0; length];
         
-        // Fix: Improved PML profile with better absorption characteristics
+        // PML profile with exponential absorption characteristics
         // Theoretical optimal sigma for reflection coefficient R
         let target_reflection: f64 = 1e-6; // -120 dB reflection
         let optimal_sigma = -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);

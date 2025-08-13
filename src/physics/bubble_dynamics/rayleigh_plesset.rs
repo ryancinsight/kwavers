@@ -40,23 +40,23 @@ impl RayleighPlessetSolver {
         
         // Internal pressure (polytropic relation)
         let gamma = state.gas_species.gamma();
-        let p_gas = (self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv)
+        let p_gas = (self.params.p0 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / self.params.r0 - self.params.pv)
             * (self.params.r0 / r).powf(3.0 * gamma);
         
         // Pressure difference
         let p_diff = p_gas + self.params.pv - p_l;
         
         // Viscous term
-        let viscous = 4.0 * self.params.mu_liquid * v / r;
+        let viscous = crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid * v / r;
         
         // Surface tension term
-        let surface = 2.0 * self.params.sigma / r;
+        let surface = crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / r;
         
         // Rayleigh-Plesset equation
         let numerator = p_diff - viscous - surface;
         let denominator = self.params.rho_liquid * r;
         
-        numerator / denominator - 1.5 * v * v / r
+        numerator / denominator - crate::constants::bubble_dynamics::KINETIC_ENERGY_COEFF * v * v / r
     }
 }
 
@@ -132,10 +132,10 @@ impl KellerMiksisModel {
         let p_diff = p_internal - p_l;
         
         // Viscous stress term
-        let viscous = 4.0 * self.params.mu_liquid * v / r;
+        let viscous = crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid * v / r;
         
         // Surface tension term
-        let surface = 2.0 * self.params.sigma / r;
+        let surface = crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / r;
         
         // Liquid compressibility factor (1 - Mach number)
         let comp_factor = 1.0 - v / c;
@@ -148,10 +148,10 @@ impl KellerMiksisModel {
         
         // The denominator accounts for compressibility and kinetic effects
         // Corrected according to Keller & Miksis (1980)
-        let denominator = r * comp_factor + 4.0 * self.params.mu_liquid / (self.params.rho_liquid * c);
+        let denominator = r * comp_factor + crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid / (self.params.rho_liquid * c);
         
         // The acceleration term includes nonlinear velocity effects
-        let acceleration = numerator / denominator - 1.5 * v * v * comp_factor / r;
+        let acceleration = numerator / denominator - crate::constants::bubble_dynamics::KINETIC_ENERGY_COEFF * v * v * comp_factor / r;
         
         state.wall_acceleration = acceleration;
         acceleration
@@ -162,7 +162,7 @@ impl KellerMiksisModel {
         if !self.params.use_thermal_effects {
             // Simple polytropic relation
             let gamma = state.gas_species.gamma();
-            return (self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv)
+            return (self.params.p0 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / self.params.r0 - self.params.pv)
                 * (self.params.r0 / state.radius).powf(3.0 * gamma) + self.params.pv;
         }
         
@@ -258,40 +258,7 @@ impl KellerMiksisModel {
     }
 }
 
-/// Integrate bubble dynamics for one time step
-/// 
-/// **DEPRECATED**: Use `integrate_bubble_dynamics_adaptive` for better stability
-#[deprecated(since = "1.6.0", note = "Use integrate_bubble_dynamics_adaptive for stiff ODE handling")]
-pub fn integrate_bubble_dynamics(
-    solver: &mut KellerMiksisModel,
-    state: &mut BubbleState,
-    p_acoustic: f64,
-    dp_dt: f64,
-    dt: f64,
-    t: f64,
-) {
-    let r0 = solver.params().r0;
-    
-    // Calculate acceleration
-    let acceleration = solver.calculate_acceleration(state, p_acoustic, dp_dt, t);
-    
-    // Update velocity and position (Velocity Verlet)
-    state.wall_velocity += acceleration * dt;
-    state.radius += state.wall_velocity * dt + 0.5 * acceleration * dt * dt;
-    
-    // WARNING: Removed clamping - use adaptive integration for stability
-    // The following lines were removed as they violate conservation laws:
-    // state.radius = state.radius.max(MIN_RADIUS).min(MAX_RADIUS);
-    // state.wall_velocity = state.wall_velocity.max(-1000.0).min(1000.0);
-    
-    // Update derived quantities
-    state.update_compression(r0);
-    state.update_collapse_state();
-    
-    // Update temperature and mass transfer
-    solver.update_temperature(state, dt);
-    solver.update_mass_transfer(state, dt);
-}
+
 
 /// Integrate bubble dynamics with proper handling of stiff ODEs
 /// 
