@@ -275,3 +275,21 @@ pub mod validation {
     pub const DEFAULT_EXPANSION_VELOCITY_1: f64 = 10.0;
     pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
 }
+
+/// Adaptive integration stability constants
+pub mod adaptive_integration {
+    /// Minimum radius safety factor (fraction of MIN_RADIUS)
+    pub const MIN_RADIUS_SAFETY_FACTOR: f64 = 0.1;
+    
+    /// Maximum radius safety factor (multiple of MAX_RADIUS)
+    pub const MAX_RADIUS_SAFETY_FACTOR: f64 = 10.0;
+    
+    /// Maximum velocity fraction of sound speed
+    pub const MAX_VELOCITY_FRACTION: f64 = 0.9;
+    
+    /// Minimum temperature for stability (K)
+    pub const MIN_TEMPERATURE: f64 = 100.0;
+    
+    /// Maximum temperature for stability (K)
+    pub const MAX_TEMPERATURE: f64 = 100000.0;
+}

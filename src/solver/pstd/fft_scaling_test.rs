@@ -20,18 +20,14 @@ mod tests {
         let nz = 32;
         let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3);
         
-        // Create a test field with known values
+        // Create a test field with known values using iterators
         let mut field = Array3::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let x = i as f64 / nx as f64;
-                    let y = j as f64 / ny as f64;
-                    let z = k as f64 / nz as f64;
-                    field[[i, j, k]] = (2.0 * PI * x).sin() * (2.0 * PI * y).cos() * (2.0 * PI * z).sin();
-                }
-            }
-        }
+        ndarray::Zip::indexed(&mut field).for_each(|(i, j, k), val| {
+            let x = i as f64 / nx as f64;
+            let y = j as f64 / ny as f64;
+            let z = k as f64 / nz as f64;
+            *val = (2.0 * PI * x).sin() * (2.0 * PI * y).cos() * (2.0 * PI * z).sin();
+        });
         
         // Store original for comparison
         let original = field.clone();
@@ -69,24 +65,22 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: false,  // Use Euler for simplicity
+            enable_absorption: false,
+            absorption_model: None,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
         
-        // Create a simple divergence field
+        // Create a simple divergence field using iterators
         let mut divergence = Array3::zeros((nx, ny, nz));
         let amplitude = 1.0;
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let x = i as f64 / nx as f64 - 0.5;
-                    let y = j as f64 / ny as f64 - 0.5;
-                    let z = k as f64 / nz as f64 - 0.5;
-                    let r = (x*x + y*y + z*z).sqrt();
-                    divergence[[i, j, k]] = amplitude * (-r * r).exp();
-                }
-            }
-        }
+        ndarray::Zip::indexed(&mut divergence).for_each(|(i, j, k), val| {
+            let x = i as f64 / nx as f64 - 0.5;
+            let y = j as f64 / ny as f64 - 0.5;
+            let z = k as f64 / nz as f64 - 0.5;
+            let r = (x*x + y*y + z*z).sqrt();
+            *val = amplitude * (-r * r).exp();
+        });
         
         // Apply pressure update
         let mut pressure = Array3::zeros((nx, ny, nz));
@@ -118,6 +112,8 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: false,
+            enable_absorption: false,
+            absorption_model: None,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
@@ -168,8 +164,11 @@ mod tests {
             pml_stencil_size: 4,
             cfl_factor: 0.3,
             use_leapfrog: true,
+            enable_absorption: false,
+            absorption_model: None,
         };
         
+        let cfl_factor = config.cfl_factor;
         let mut solver = PstdSolver::new(config, &grid).unwrap();
         
         // Initialize with a Gaussian pulse
@@ -201,7 +200,7 @@ mod tests {
         let initial_energy = compute_total_energy(&pressure, &vx, &vy, &vz, rho, c, &grid);
         
         // Time step
-        let dt = 0.5 * config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
+        let dt = 0.5 * cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
         
         // Evolve for several time steps
         for _ in 0..10 {

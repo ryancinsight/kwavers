@@ -12,12 +12,12 @@ use kwavers::{
     Solver, Recorder,
     save_pressure_data, save_light_data, generate_summary,
     KwaversResult, KwaversError,
-    physics::{
-        composable::{
-            PhysicsPipeline, 
-            ThermalDiffusionComponent
-        },
-    },
+    // physics::{
+    //     composable::{
+    //         PhysicsPipeline, 
+    //         ThermalDiffusionComponent
+    //     },
+    // },
     boundary::{CPMLBoundary, CPMLConfig},
     medium::Medium,
 };
@@ -52,11 +52,12 @@ fn main() -> KwaversResult<()> {
     let _boundary = Arc::new(CPMLBoundary::new(cpml_config, &grid)?);
     
     // Create physics pipeline
-    let mut pipeline = PhysicsPipeline::new();
+    // TODO: Implement physics pipeline when composable module is ready
+    // let mut pipeline = PhysicsPipeline::new();
     
     // Add thermal diffusion
-    let thermal = ThermalDiffusionComponent::new("thermal".to_string());
-    pipeline.add_component(Box::new(thermal))?;
+    // let thermal = ThermalDiffusionComponent::new("thermal".to_string());
+    // pipeline.add_component(Box::new(thermal))?;
     
     // Initialize fields
     let mut fields = Array4::<f64>::zeros((10, grid.nx, grid.ny, grid.nz));

@@ -115,6 +115,7 @@ fn run_fdtd_simulation_timed(
         subgrid_factor: 2,
     };
     
+    let cfl_factor = config.cfl_factor;
     let mut plugin_manager = PluginManager::new();
     plugin_manager.register(Box::new(FdtdPlugin::new(config, grid).unwrap())).unwrap();
     
@@ -124,7 +125,7 @@ fn run_fdtd_simulation_timed(
     
     // Time stepping
     let c = 1500.0; // sound speed
-    let dt = config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
+    let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
     let n_steps = (t_end / dt).ceil() as usize;
     
     plugin_manager.initialize_all(grid, medium).unwrap();
@@ -159,6 +160,7 @@ fn run_pstd_simulation_timed(
         absorption_model: None,
     };
     
+    let cfl_factor = config.cfl_factor;
     let mut plugin_manager = PluginManager::new();
     plugin_manager.register(Box::new(PstdPlugin::new(config, grid).unwrap())).unwrap();
     
@@ -168,7 +170,7 @@ fn run_pstd_simulation_timed(
     
     // Time stepping
     let c = 1500.0; // sound speed
-    let dt = config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
+    let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
     let n_steps = (t_end / dt).ceil() as usize;
     
     plugin_manager.initialize_all(grid, medium).unwrap();
