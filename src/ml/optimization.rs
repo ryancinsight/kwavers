@@ -405,7 +405,8 @@ impl ParameterOptimizer {
         
         // Convert action to parameter updates
         let mut updated_params = HashMap::new();
-        let param_keys: Vec<_> = current.keys().cloned().collect();
+        let mut param_keys: Vec<_> = current.keys().cloned().collect();
+        param_keys.sort();
         
         for (i, key) in param_keys.iter().enumerate().take(action.len()) {
             let current_val = current[key];
