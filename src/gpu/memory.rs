@@ -746,7 +746,7 @@ mod tests {
 
     #[test]
     fn test_manager_allocation() {
-        let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
+        let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8 * 1024 * 1024 * 1024).unwrap();
         
         let buffer_id = manager.allocate_buffer(1024, BufferType::Pressure).unwrap();
         assert_eq!(buffer_id, 0);
