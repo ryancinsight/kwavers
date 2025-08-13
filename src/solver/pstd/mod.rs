@@ -322,67 +322,12 @@ impl PstdSolver {
         
         filter
     }
-    
-    /// Compute k-space correction factors
-    fn compute_k_space_correction(
-        k_squared: &Array3<f64>,
-        grid: &Grid,
-        order: usize,
-    ) -> Array3<f64> {
-        let mut kappa = Array3::ones(k_squared.raw_dim());
-        
-        // Fix: Properly compute wavenumber components for k-space correction
-        // The current implementation incorrectly uses average spacing
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        
-        // Use Zip for better performance and more idiomatic code
-        Zip::indexed(&mut kappa)
-            .for_each(|(i, j, k), kappa_val| {
-                // Compute individual wavenumber components correctly
-                let kx = if i <= nx / 2 {
-                    2.0 * PI * i as f64 / (nx as f64 * grid.dx)
-                } else {
-                    2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-                };
-                
-                let ky = if j <= ny / 2 {
-                    2.0 * PI * j as f64 / (ny as f64 * grid.dy)
-                } else {
-                    2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-                };
-                
-                let kz = if k <= nz / 2 {
-                    2.0 * PI * k as f64 / (nz as f64 * grid.dz)
-                } else {
-                    2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
-                };
-                
-                // Apply proper k-space correction for each direction
-                let arg_x = kx * grid.dx / 2.0;
-                let arg_y = ky * grid.dy / 2.0;
-                let arg_z = kz * grid.dz / 2.0;
-                
-                let sinc_x = if arg_x.abs() < 1e-12 { 1.0 } else { arg_x.sin() / arg_x };
-                let sinc_y = if arg_y.abs() < 1e-12 { 1.0 } else { arg_y.sin() / arg_y };
-                let sinc_z = if arg_z.abs() < 1e-12 { 1.0 } else { arg_z.sin() / arg_z };
-                
-                // Combine corrections with proper order handling
-                *kappa_val = match order {
-                    2 => sinc_x * sinc_y * sinc_z,
-                    4 => (sinc_x * sinc_y * sinc_z).powi(2),
-                    6 => (sinc_x * sinc_y * sinc_z).powi(3),
-                    8 => (sinc_x * sinc_y * sinc_z).powi(4),
-                    _ => sinc_x * sinc_y * sinc_z,
-                };
-            });
-        
-        kappa
-    }
+    // Note: k-space correction is handled by compute_kspace_correction from solver::kspace_correction module
     
     /// Update pressure field using PSTD with leapfrog or Euler time integration
     pub fn update_pressure(
         &mut self,
-        pressure: &mut Array3<f64>,
+        pressure: &mut ndarray::ArrayViewMut3<f64>,
         velocity_divergence: &Array3<f64>,
         medium: &dyn Medium,
         dt: f64,
@@ -423,6 +368,13 @@ impl PstdSolver {
                 apply_power_law_absorption(&mut div_v_hat, &self.k_squared, absorption, c_ref, dt);
             }
         }
+        
+        // Save current pressure before update for leapfrog scheme
+        let pressure_current_copy = if self.config.use_leapfrog {
+            Some(pressure.to_owned())
+        } else {
+            None
+        };
         
         // Choose time integration scheme
         if self.config.use_leapfrog && self.pressure_prev.is_some() {
@@ -478,13 +430,12 @@ impl PstdSolver {
                 });
         }
         
-        // Store current pressure for next leapfrog step
-        if self.config.use_leapfrog {
-            if self.pressure_prev.is_none() {
-                self.pressure_prev = Some(pressure.clone());
-            } else {
-                self.pressure_prev.as_mut().unwrap().assign(pressure);
-            }
+        // Update stored pressure for next leapfrog step
+        if let Some(current) = pressure_current_copy {
+            self.pressure_prev = Some(current);
+        } else if self.config.use_leapfrog && self.pressure_prev.is_none() {
+            // First step: store the result as previous for next iteration
+            self.pressure_prev = Some(pressure.to_owned());
         }
         
         // Update metrics
@@ -497,10 +448,10 @@ impl PstdSolver {
     /// Update velocity field using PSTD
     pub fn update_velocity(
         &mut self,
-        velocity_x: &mut Array3<f64>,
-        velocity_y: &mut Array3<f64>,
-        velocity_z: &mut Array3<f64>,
-        pressure: &Array3<f64>,
+        velocity_x: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_y: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_z: &mut ndarray::ArrayViewMut3<f64>,
+        pressure: &ndarray::ArrayView3<f64>,
         medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
@@ -576,9 +527,9 @@ impl PstdSolver {
     /// Compute velocity divergence using spectral derivatives
     pub fn compute_divergence(
         &self,
-        velocity_x: &Array3<f64>,
-        velocity_y: &Array3<f64>,
-        velocity_z: &Array3<f64>,
+        velocity_x: &ndarray::ArrayView3<f64>,
+        velocity_y: &ndarray::ArrayView3<f64>,
+        velocity_z: &ndarray::ArrayView3<f64>,
     ) -> KwaversResult<Array3<f64>> {
         // Transform velocities to k-space
         let mut fields_x = Array4::zeros((1, velocity_x.shape()[0], velocity_x.shape()[1], velocity_x.shape()[2]));
@@ -757,7 +708,7 @@ impl PstdPlugin {
     }
     
     /// Helper method to compute gradient using spectral derivatives
-    fn compute_gradient(&self, field: &Array3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
+    fn compute_gradient(&self, field: &ndarray::ArrayView3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
         use rustfft::num_complex::Complex;
         use ndarray::Axis;
         
@@ -806,14 +757,18 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Axis, Zip};
+        use ndarray::{Axis, Zip, s};
         use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
         
-        // Extract fields from the Array4 as owned arrays
-        let mut pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        let mut velocity_x = fields.index_axis(Axis(0), VX_IDX).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), VY_IDX).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), VZ_IDX).to_owned();
+        // Work directly with mutable views - no copying!
+        let mut fields_view = fields.view_mut();
+        let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
+            fields_view.multi_slice_mut((
+                s![PRESSURE_IDX, .., .., ..],
+                s![VX_IDX, .., .., ..],
+                s![VY_IDX, .., .., ..],
+                s![VZ_IDX, .., .., ..]
+            ));
         
         // Initialize velocities if they are all zero (first step)
         let v_max = velocity_x.iter().chain(velocity_y.iter()).chain(velocity_z.iter())
@@ -822,9 +777,9 @@ impl PhysicsPlugin for PstdPlugin {
         if v_max < 1e-15 && context.step == 0 {
             // Initialize velocities from pressure gradient for first step
             // This ensures the wave starts propagating
-            let grad_x = self.compute_gradient(&pressure, 0)?;
-            let grad_y = self.compute_gradient(&pressure, 1)?;
-            let grad_z = self.compute_gradient(&pressure, 2)?;
+            let grad_x = self.compute_gradient(&pressure.view(), 0)?;
+            let grad_y = self.compute_gradient(&pressure.view(), 1)?;
+            let grad_z = self.compute_gradient(&pressure.view(), 2)?;
             
             let rho_array = medium.density_array();
             Zip::from(&mut velocity_x)
@@ -847,20 +802,16 @@ impl PhysicsPlugin for PstdPlugin {
                 });
         }
         
-        // Compute divergence of velocity
-        let divergence = self.solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z)?;
+        // Compute divergence of velocity using views
+        let divergence = self.solver.compute_divergence(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
         
-        // Update pressure using divergence
+        // Update pressure using divergence - modifies view in place
         self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
         
-        // Update velocities using new pressure
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        // Update velocities using new pressure - modifies views in place
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;
         
-        // Copy back to fields
-        fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&pressure);
-        fields.index_axis_mut(Axis(0), VX_IDX).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), VY_IDX).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), VZ_IDX).assign(&velocity_z);
+        // No copy back needed - we modified the views directly!
         
         Ok(())
     }
