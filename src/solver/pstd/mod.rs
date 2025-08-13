@@ -82,7 +82,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::medium::absorption::{PowerLawAbsorption, apply_power_law_absorption};
 use crate::error::{KwaversResult, KwaversError, ValidationError};
-use crate::utils::{fft_3d, ifft_3d};
+use crate::utils::{fft_3d, ifft_3d, spectral};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
 use crate::validation::ValidationResult;
 use crate::constants::cfl;
@@ -291,48 +291,8 @@ impl PstdSolver {
     
     /// Compute wavenumber arrays for FFT
     fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let mut kx = grid.zeros_array();
-        let mut ky = grid.zeros_array();
-        let mut kz = grid.zeros_array();
-        
-        // Compute 1D wavenumbers
-        let kx_1d: Vec<f64> = (0..nx).map(|i| {
-            if i <= nx / 2 {
-                2.0 * PI * i as f64 / (nx as f64 * grid.dx)
-            } else {
-                2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-            }
-        }).collect();
-        
-        let ky_1d: Vec<f64> = (0..ny).map(|j| {
-            if j <= ny / 2 {
-                2.0 * PI * j as f64 / (ny as f64 * grid.dy)
-            } else {
-                2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-            }
-        }).collect();
-        
-        let kz_1d: Vec<f64> = (0..nz).map(|k| {
-            if k <= nz / 2 {
-                2.0 * PI * k as f64 / (nz as f64 * grid.dz)
-            } else {
-                2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
-            }
-        }).collect();
-        
-        // Fill 3D arrays using slices for better performance
-        for i in 0..nx {
-            kx.slice_mut(s![i, .., ..]).fill(kx_1d[i]);
-        }
-        for j in 0..ny {
-            ky.slice_mut(s![.., j, ..]).fill(ky_1d[j]);
-        }
-        for k in 0..nz {
-            kz.slice_mut(s![.., .., k]).fill(kz_1d[k]);
-        }
-        
-        (kx, ky, kz)
+        // Use centralized spectral utilities
+        spectral::compute_wavenumbers(grid)
     }
     
     /// Create anti-aliasing filter (2/3 rule)
@@ -375,48 +335,46 @@ impl PstdSolver {
         // The current implementation incorrectly uses average spacing
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    // Compute individual wavenumber components correctly
-                    let kx = if i <= nx / 2 {
-                        2.0 * PI * i as f64 / (nx as f64 * grid.dx)
-                    } else {
-                        2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
-                    };
-                    
-                    let ky = if j <= ny / 2 {
-                        2.0 * PI * j as f64 / (ny as f64 * grid.dy)
-                    } else {
-                        2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
-                    };
-                    
-                    let kz = if k <= nz / 2 {
-                        2.0 * PI * k as f64 / (nz as f64 * grid.dz)
-                    } else {
-                        2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
-                    };
-                    
-                    // Apply proper k-space correction for each direction
-                    let arg_x = kx * grid.dx / 2.0;
-                    let arg_y = ky * grid.dy / 2.0;
-                    let arg_z = kz * grid.dz / 2.0;
-                    
-                    let sinc_x = if arg_x.abs() < 1e-12 { 1.0 } else { arg_x.sin() / arg_x };
-                    let sinc_y = if arg_y.abs() < 1e-12 { 1.0 } else { arg_y.sin() / arg_y };
-                    let sinc_z = if arg_z.abs() < 1e-12 { 1.0 } else { arg_z.sin() / arg_z };
-                    
-                    // Combine corrections with proper order handling
-                    kappa[[i, j, k]] = match order {
-                        2 => sinc_x * sinc_y * sinc_z,
-                        4 => (sinc_x * sinc_y * sinc_z).powi(2),
-                        6 => (sinc_x * sinc_y * sinc_z).powi(3),
-                        8 => (sinc_x * sinc_y * sinc_z).powi(4),
-                        _ => sinc_x * sinc_y * sinc_z,
-                    };
-                }
-            }
-        }
+        // Use Zip for better performance and more idiomatic code
+        Zip::indexed(&mut kappa)
+            .for_each(|(i, j, k), kappa_val| {
+                // Compute individual wavenumber components correctly
+                let kx = if i <= nx / 2 {
+                    2.0 * PI * i as f64 / (nx as f64 * grid.dx)
+                } else {
+                    2.0 * PI * (i as f64 - nx as f64) / (nx as f64 * grid.dx)
+                };
+                
+                let ky = if j <= ny / 2 {
+                    2.0 * PI * j as f64 / (ny as f64 * grid.dy)
+                } else {
+                    2.0 * PI * (j as f64 - ny as f64) / (ny as f64 * grid.dy)
+                };
+                
+                let kz = if k <= nz / 2 {
+                    2.0 * PI * k as f64 / (nz as f64 * grid.dz)
+                } else {
+                    2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
+                };
+                
+                // Apply proper k-space correction for each direction
+                let arg_x = kx * grid.dx / 2.0;
+                let arg_y = ky * grid.dy / 2.0;
+                let arg_z = kz * grid.dz / 2.0;
+                
+                let sinc_x = if arg_x.abs() < 1e-12 { 1.0 } else { arg_x.sin() / arg_x };
+                let sinc_y = if arg_y.abs() < 1e-12 { 1.0 } else { arg_y.sin() / arg_y };
+                let sinc_z = if arg_z.abs() < 1e-12 { 1.0 } else { arg_z.sin() / arg_z };
+                
+                // Combine corrections with proper order handling
+                *kappa_val = match order {
+                    2 => sinc_x * sinc_y * sinc_z,
+                    4 => (sinc_x * sinc_y * sinc_z).powi(2),
+                    6 => (sinc_x * sinc_y * sinc_z).powi(3),
+                    8 => (sinc_x * sinc_y * sinc_z).powi(4),
+                    _ => sinc_x * sinc_y * sinc_z,
+                };
+            });
         
         kappa
     }
