@@ -66,7 +66,7 @@ impl RayleighScattering {
         // Compute Rayleigh scattering
         Zip::from(&mut self.scattered_field)
             .and(incident_field)
-            .and(&bubble_radius)
+            .and(bubble_radius)
             .apply(|s, &p_inc, &r| {
                 if r > 0.0 && r < wavelength / 10.0 {  // Rayleigh regime
                     // Rayleigh scattering cross-section

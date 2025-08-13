@@ -14,6 +14,7 @@ use crate::constants::bubble_dynamics::{
 };
 use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
 use std::f64::consts::PI;
+use std::sync::{Arc, Mutex};
 
 // Remove duplicate constant definitions - they're now imported from constants module
 
@@ -263,7 +264,7 @@ impl KellerMiksisModel {
 /// **DEPRECATED**: Use `integrate_bubble_dynamics_adaptive` for better stability
 #[deprecated(since = "1.6.0", note = "Use integrate_bubble_dynamics_adaptive for stiff ODE handling")]
 pub fn integrate_bubble_dynamics(
-    solver: &KellerMiksisModel,
+    solver: &mut KellerMiksisModel,
     state: &mut BubbleState,
     p_acoustic: f64,
     dp_dt: f64,
@@ -310,7 +311,7 @@ pub fn integrate_bubble_dynamics_stable(
     
     // Use adaptive integration with sub-cycling
     integrate_bubble_dynamics_adaptive(
-        Arc::new(solver.clone()),
+        Arc::new(Mutex::new(solver.clone())),
         state,
         p_acoustic,
         dp_dt,

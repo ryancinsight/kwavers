@@ -511,17 +511,17 @@ impl HybridSolver {
         for (idx, domain) in self.current_domains.iter().enumerate() {
             match domain.domain_type {
                 DomainType::Spectral => {
-                    let pstd_solver = PstdSolver::new(self.config.pstd_config, &self.grid)?;
+                    let pstd_solver = PstdSolver::new(self.config.pstd_config.clone(), &self.grid)?;
                     self.pstd_solvers.insert(idx, pstd_solver);
                 }
                 DomainType::FiniteDifference => {
-                    let fdtd_solver = FdtdSolver::new(self.config.fdtd_config, &self.grid)?;
+                    let fdtd_solver = FdtdSolver::new(self.config.fdtd_config.clone(), &self.grid)?;
                     self.fdtd_solvers.insert(idx, fdtd_solver);
                 }
                 DomainType::Hybrid => {
                     // Create both for hybrid domains
-                    let pstd_solver = PstdSolver::new(self.config.pstd_config, &self.grid)?;
-                    let fdtd_solver = FdtdSolver::new(self.config.fdtd_config, &self.grid)?;
+                    let pstd_solver = PstdSolver::new(self.config.pstd_config.clone(), &self.grid)?;
+                    let fdtd_solver = FdtdSolver::new(self.config.fdtd_config.clone(), &self.grid)?;
                     self.pstd_solvers.insert(idx, pstd_solver);
                     self.fdtd_solvers.insert(idx, fdtd_solver);
                 }
@@ -1185,6 +1185,7 @@ impl PhysicsPlugin for HybridSolver {
         // Validate medium compatibility
         if !medium.is_homogeneous() {
             warnings.push(ValidationWarning {
+                field: "medium".to_string(),
                 message: "Heterogeneous media may require additional computational resources".to_string(),
                 severity: crate::validation::WarningSeverity::Medium,
                 suggestion: Some("Consider using adaptive mesh refinement".to_string()),

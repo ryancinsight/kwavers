@@ -95,7 +95,21 @@ impl SimulationFields {
 }
 
 /// Monolithic solver struct that orchestrates the simulation
-/// NOTE: This violates SRP and should be refactored into a plugin-based architecture
+/// 
+/// DESIGN PRINCIPLE VIOLATIONS:
+/// - SRP: This class has too many responsibilities (physics, validation, timing, AMR, etc.)
+/// - DIP: Depends on concrete implementations rather than abstractions
+/// - OCP: Adding new physics requires modifying this class
+/// 
+/// REFACTORING NEEDED:
+/// - Use plugin_based_solver.rs as the foundation
+/// - Extract validation to ValidationManager
+/// - Extract timing/metrics to MetricsCollector
+/// - Extract field management to FieldManager
+/// - Use event-driven architecture for component communication
+/// 
+/// NOTE: This struct is kept for backward compatibility but should be deprecated
+/// in favor of the plugin-based architecture in plugin_based_solver.rs
 pub struct Solver {
     // Core components
     pub fields: SimulationFields,
@@ -492,26 +506,30 @@ impl Solver {
         
         // Apply acoustic boundary conditions in-place
         {
-            let mut pressure_view = self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX);
-            self.boundary.apply_acoustic(&mut pressure_view, &self.grid, step)?;
+            let mut pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+            self.boundary.apply_acoustic(&mut pressure, &self.grid, step)?;
+            self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&pressure);
         }
 
         // Apply elastic wave PML boundary conditions in-place
         let elastic_velocity_indices = [VX_IDX, VY_IDX, VZ_IDX];
         for &field_idx in elastic_velocity_indices.iter() {
             if field_idx < self.fields.fields.shape()[0] {
-                let mut component_view = self.fields.fields.index_axis_mut(Axis(0), field_idx);
-                self.apply_elastic_pml(&mut component_view, field_idx, step)?;
+                let mut component = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
+                self.apply_elastic_pml(&mut component, field_idx, step)?;
+                self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&component);
             }
         }
         
-        // Apply stress component boundary conditions in-place
+        // Apply stress component boundary conditions
         let stress_indices = [SXX_IDX, SYY_IDX, SZZ_IDX, 
                             SXY_IDX, SXZ_IDX, SYZ_IDX];
         for &field_idx in stress_indices.iter() {
             if field_idx < self.fields.fields.shape()[0] {
-                let mut component_view = self.fields.fields.index_axis_mut(Axis(0), field_idx);
-                self.apply_stress_boundary(&mut component_view, field_idx, step)?;
+                let mut component = self.fields.fields.index_axis(Axis(0), field_idx).to_owned();
+                // Apply stress-specific boundary conditions (currently uses elastic PML)
+                self.apply_elastic_pml(&mut component, field_idx, step)?;
+                self.fields.fields.index_axis_mut(Axis(0), field_idx).assign(&component);
             }
         }
         
@@ -519,20 +537,23 @@ impl Solver {
         
         // 1. Wave propagation - work with field views
         let wave_start = Instant::now();
+        let t = step as f64 * dt;
         self.wave.update_wave(
             &mut self.fields.fields,
+            &self.prev_pressure,
+            self.source.as_ref(),
             &self.grid,
             self.medium.as_ref(),
             dt,
-            frequency,
-        )?;
+            t,
+        );
         wave_time += wave_start.elapsed().as_secs_f64();
         
-        // Validate pressure field without cloning - use config values
+        // Validate pressure field - use config values
         {
-            let pressure_view = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX);
+            let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
             Self::validate_field(
-                &pressure_view, 
+                &pressure, 
                 "pressure", 
                 self.validation_config.pressure.min,
                 self.validation_config.pressure.max
@@ -543,29 +564,26 @@ impl Solver {
         let cavitation_start = Instant::now();
         let current_time = step as f64 * dt;
         
-        // Get pressure view for cavitation
-        let pressure_view = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX);
+        // Get pressure for cavitation update
+        let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
-        // Update cavitation and get the updated pressure directly
-        let updated_pressure = self.cavitation.update_cavitation_inplace(
-            pressure_view.view(),
+        // Update cavitation model's internal bubble state based on pressure field
+        // This updates bubble radius and velocity, not the pressure itself
+        self.cavitation.update_cavitation(
+            &pressure,
             &self.grid,
             self.medium.as_ref(),
             dt,
             current_time,
         )?;
         
-        // Update pressure field with cavitation effects
-        self.fields.fields.index_axis_mut(Axis(0), PRESSURE_IDX)
-            .assign(&updated_pressure);
-        
         cavitation_time += cavitation_start.elapsed().as_secs_f64();
         
         // Validate after cavitation - use config values
         {
-            let pressure_view = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX);
+            let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
             Self::validate_field(
-                &pressure_view, 
+                &pressure, 
                 "pressure_after_cavitation",
                 self.validation_config.pressure.min,
                 self.validation_config.pressure.max
@@ -583,14 +601,14 @@ impl Solver {
             &self.grid,
             self.medium.as_ref(),
             dt,
-        )?;
+        );
         light_time += light_start.elapsed().as_secs_f64();
         
         // Validate light field - use config values
         {
-            let light_view = self.fields.fields.index_axis(Axis(0), LIGHT_IDX);
+            let light = self.fields.fields.index_axis(Axis(0), LIGHT_IDX).to_owned();
             Self::validate_field(
-                &light_view, 
+                &light, 
                 "light_after_update",
                 self.validation_config.light.min,
                 self.validation_config.light.max
@@ -605,18 +623,18 @@ impl Solver {
         // 5. Scattering effects - use views
         let scattering_start = Instant::now();
         {
-            let pressure_view = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX);
+            let pressure = self.fields.fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
             let bubble_radius = self.medium.bubble_radius();
             let bubble_velocity = self.medium.bubble_velocity();
             
             self.scattering.compute_scattering(
-                &pressure_view,
+                &pressure,
                 bubble_radius,
                 bubble_velocity,
                 &self.grid,
                 self.medium.as_ref(),
-                dt,
-            )?;
+                frequency,
+            );
         }
         _scattering_time += scattering_start.elapsed().as_secs_f64();
         
@@ -627,14 +645,15 @@ impl Solver {
             &self.grid,
             self.medium.as_ref(),
             dt,
-        )?;
+            frequency,
+        );
         thermal_time += thermal_start.elapsed().as_secs_f64();
         
         // Validate temperature field - use config values
         {
-            let temp_view = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX);
+            let temp = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
             Self::validate_field(
-                &temp_view, 
+                &temp, 
                 "temperature",
                 self.validation_config.temperature.min,
                 self.validation_config.temperature.max
@@ -653,33 +672,36 @@ impl Solver {
             let emission_spectrum = self.light.emission_spectrum();
             let bubble_radius = self.medium.bubble_radius();
             
-            self.chemical.update_chemical_with_views(
-                pressure_view.view(),
-                light_view.view(),
+            self.chemical.update_chemical(
+                &pressure_view.to_owned(),
+                &light_view.to_owned(),
                 emission_spectrum,
                 bubble_radius,
-                temperature_view.view(),
+                &temperature_view.to_owned(),
                 &self.grid,
-                self.medium.as_ref(),
                 dt,
-            )?;
+                self.medium.as_ref(),
+                frequency,
+            );
         }
         chemical_time += chemical_start.elapsed().as_secs_f64();
         
         // Postprocessing - update medium state
         let postprocess_start = Instant::now();
         
-        // Get views for medium update
-        let temperature_view = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX);
-        let bubble_radius = self.cavitation.bubble_radius()?;
-        let bubble_velocity = self.cavitation.bubble_velocity()?;
-        
-        // Queue updates without cloning
-        self.queue_medium_updates_from_views(
-            temperature_view.view(),
-            &bubble_radius,
-            &bubble_velocity
-        );
+        // Get data for medium update
+        {
+            let temperature = self.fields.fields.index_axis(Axis(0), TEMPERATURE_IDX).to_owned();
+            let bubble_radius = self.cavitation.bubble_radius()?;
+            let bubble_velocity = self.cavitation.bubble_velocity()?;
+            
+            // Queue updates
+            self.queue_medium_updates_from_views(
+                temperature.view(),
+                &bubble_radius,
+                &bubble_velocity
+            );
+        }
         
         // Apply the updates atomically
         self.try_update_medium()?;
@@ -699,7 +721,7 @@ impl Solver {
         
         // Log progress periodically
         if step % 100 == 0 {
-            self.log_progress(step, dt);
+            log::info!("Step {}: dt = {:.3e}s", step, dt);
         }
         
         Ok(())
@@ -741,8 +763,7 @@ impl Solver {
         // Apply modified PML with stress-specific parameters
         self.boundary.apply_acoustic_with_factor(field, &self.grid, step, stress_damping_factor)?;
         
-        // Additional stress-specific boundary treatment
-        self.apply_stress_boundary_conditions(field, field_idx)?;
+        // Additional stress-specific boundary treatment could be added here if needed
         
         Ok(())
     }
@@ -781,9 +802,11 @@ impl Solver {
     /// Apply stress-specific boundary conditions
     /// Follows Single Responsibility: Handles stress tensor boundaries
     fn apply_stress_boundary(&mut self, field: &mut ArrayViewMut3<f64>, field_idx: usize, step: usize) -> KwaversResult<()> {
-        // For now, just apply the same PML as elastic
-        // In a full implementation, this would have stress-specific handling
-        self.apply_elastic_pml(field, field_idx, step)
+        // Convert view to owned array for elastic PML
+        let mut owned_field = field.to_owned();
+        self.apply_elastic_pml(&mut owned_field, field_idx, step)?;
+        field.assign(&owned_field);
+        Ok(())
     }
 }
 

@@ -682,10 +682,10 @@ mod tests {
         let mut medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 
         // Set a region to BoneCortical
-        let bone_region = TissueRegion::new(TissueType::BoneCortical, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001);
+        let bone_region = TissueRegion::new(TissueType::Bone, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001);
         let _ = medium.set_tissue_in_region(&bone_region, &grid);
 
-        let bone_props = tissue_specific::tissue_database().get(&TissueType::BoneCortical).unwrap();
+        let bone_props = tissue_specific::tissue_database().get(&TissueType::Bone).unwrap();
         let soft_tissue_props = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
 
         // Check point in bone region

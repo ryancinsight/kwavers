@@ -117,6 +117,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         scattering,
         heterogeneity,
         4, // num_simulation_fields for acoustic + light + temp + bubble_radius
+        None, // validation_config
     );
     let _ = solver.run(&mut recorder, config.simulation.frequency);
 

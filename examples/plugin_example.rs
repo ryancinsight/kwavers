@@ -9,8 +9,7 @@ use kwavers::{
     KwaversResult,
     physics::{
         PhysicsPlugin, PluginManager, PluginMetadata, PluginContext,
-        composable::FieldType,
-        plugin::adapters::factories,
+        UnifiedFieldType,
     },
     Grid, HomogeneousMedium,
 };
@@ -55,11 +54,11 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         kwavers::physics::plugin::PluginState::Created
     }
     
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure]
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![UnifiedFieldType::Pressure]
     }
     
-    fn provided_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![] // This plugin modifies pressure in-place
     }
     
@@ -154,11 +153,11 @@ impl PhysicsPlugin for StatisticsPlugin {
         kwavers::physics::plugin::PluginState::Created
     }
     
-    fn required_fields(&self) -> Vec<FieldType> {
-        vec![FieldType::Pressure]
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![UnifiedFieldType::Pressure]
     }
     
-    fn provided_fields(&self) -> Vec<FieldType> {
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![]
     }
     
@@ -235,14 +234,12 @@ fn main() -> KwaversResult<()> {
     
     // Register existing components as plugins using adapters
     println!("Registering adapted components:");
-    let acoustic_plugin = Box::new(factories::acoustic_wave_plugin("acoustic".to_string()));
-    let thermal_plugin = Box::new(factories::thermal_diffusion_plugin("thermal".to_string()));
-    
-    plugin_manager.register(acoustic_plugin)?;
-    println!("  ✓ Acoustic wave plugin registered");
-    
-    plugin_manager.register(thermal_plugin)?;
-    println!("  ✓ Thermal diffusion plugin registered");
+    // Note: The factories module is not yet implemented
+    // Example of how to register plugins when factories are available:
+    // let acoustic_plugin = Box::new(factories::acoustic_wave_plugin("acoustic".to_string()));
+    // let thermal_plugin = Box::new(factories::thermal_diffusion_plugin("thermal".to_string()));
+    // plugin_manager.register(acoustic_plugin)?;
+    // plugin_manager.register(thermal_plugin)?;
     
     // Register custom plugins
     println!("\nRegistering custom plugins:");
@@ -330,7 +327,7 @@ mod tests {
     fn test_custom_plugin_creation() {
         let plugin = FrequencyAbsorptionPlugin::new();
         assert_eq!(plugin.metadata().id, "frequency_absorption");
-        assert_eq!(plugin.required_fields(), vec![FieldType::Pressure]);
+        assert_eq!(plugin.required_fields(), vec![UnifiedFieldType::Pressure]);
         assert!(plugin.provided_fields().is_empty());
     }
     

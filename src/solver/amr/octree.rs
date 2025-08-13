@@ -184,16 +184,13 @@ impl Octree {
             .filter_map(move |&child_idx| self.nodes.get(child_idx))
     }
     
-    /// Get mutable child nodes of a given node
-    pub fn get_children_mut(&mut self, node_idx: usize) -> Vec<&mut OctreeNode> {
+    /// Get child node indices of a given node
+    pub fn get_children_indices(&self, node_idx: usize) -> Vec<usize> {
         if let Some(node) = self.nodes.get(node_idx) {
             if let Some(children) = &node.children {
-                let child_indices: Vec<usize> = children.to_vec();
-                child_indices.into_iter()
-                    .filter_map(|idx| {
-                        // Safe because indices are unique
-                        self.nodes.get_mut(idx)
-                    })
+                children.iter()
+                    .copied()
+                    .filter(|&idx| idx < self.nodes.len())
                     .collect()
             } else {
                 Vec::new()

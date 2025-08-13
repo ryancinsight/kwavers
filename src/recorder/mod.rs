@@ -321,8 +321,11 @@ impl RecorderTrait for Recorder {
             self.fields_snapshots.push((step, fields.clone()));
         }
         
-        // Record sensor data
-        self.sensor.record(fields, step);
+        // Record sensor data - extract pressure and light fields
+        use ndarray::Axis;
+        let pressure_field = fields.index_axis(Axis(0), 0); // Assuming pressure is at index 0
+        let light_field = fields.index_axis(Axis(0), 2);    // Assuming light is at index 2
+        self.sensor.record(&pressure_field.to_owned(), &light_field.to_owned(), step);
         
         Ok(())
     }

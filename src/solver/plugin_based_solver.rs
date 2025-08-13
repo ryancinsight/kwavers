@@ -309,8 +309,7 @@ impl PluginBasedSolver {
             self.medium.as_ref(),
             dt,
             step,
-            self.time.n_steps,
-            1e6  // Default frequency 1 MHz
+            self.time.n_steps
         )?;
         
         // Boundary conditions would be applied to specific fields
@@ -325,8 +324,7 @@ impl PluginBasedSolver {
     pub fn finalize(&mut self) -> KwaversResult<()> {
         info!("Finalizing simulation");
         
-        // Finalize all plugins
-        self.plugin_manager.finalize_all()?;
+        // Plugins handle their own cleanup via Drop trait
         
         // Finalize recorder
         if let Some(recorder) = &mut self.recorder {
@@ -369,26 +367,14 @@ impl PluginBasedSolver {
 }
 
 // Error types for the field registry
-impl KwaversError {
-    fn field_not_registered(field: String) -> Self {
-        Self::Configuration(format!("Field '{}' is not registered", field))
-    }
-    
-    fn field_inactive(field: String) -> Self {
-        Self::Configuration(format!("Field '{}' is inactive", field))
-    }
-    
-    fn field_data_not_initialized() -> Self {
-        Self::Configuration("Field data array not initialized".to_string())
-    }
-}
+// Error variants are already defined in error.rs
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::medium::HomogeneousMedium;
     use crate::boundary::PMLBoundary;
-    use crate::source::GaussianSource;
+
     
     #[test]
     fn test_field_registry() {

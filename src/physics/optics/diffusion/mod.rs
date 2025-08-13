@@ -1,6 +1,7 @@
 // physics/optics/diffusion/mod.rs
 use ndarray::{Array3, Array4, Axis};
 use crate::grid::Grid;
+use crate::physics::field_indices::LIGHT_IDX;
 use crate::physics::optics::{PolarizationModel, polarization::SimplePolarizationModel};
 use crate::physics::optics::thermal::OpticalThermalModel;
 use crate::medium::Medium;
@@ -9,8 +10,6 @@ use log::debug;
 
 use std::time::Instant;
 use crate::physics::traits::LightDiffusionModelTrait;
-
-pub const LIGHT_IDX: usize = 1;
 
 #[derive(Debug)]
 pub struct LightDiffusion {

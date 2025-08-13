@@ -25,7 +25,7 @@
 //! - Pinton, G. F., et al. (2009). "A heterogeneous nonlinear attenuating 
 //!   full-wave model of ultrasound." IEEE UFFC, 56(3), 474-488.
 
-use ndarray::{Array3, Array1, Zip, s};
+use ndarray::{Array3, Array4, Array1, Zip, s, Axis};
 use std::f64::consts::PI;
 use crate::grid::Grid;
 use crate::medium::Medium;
@@ -182,6 +182,8 @@ impl HeterogeneousHandler {
         let sound_speed = medium.sound_speed_array();
         
         // Apply smoothing based on selected method
+        // Note: For None case, we still need to clone as the smoothed arrays are stored
+        // This could be optimized with Cow (Clone-on-Write) in future iterations
         let (density_smooth, sound_speed_smooth) = match self.config.smoothing_method {
             SmoothingMethod::None => (density.clone(), sound_speed.clone()),
             SmoothingMethod::Gaussian => {

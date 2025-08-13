@@ -4,7 +4,7 @@
 //! and their indices in the global fields array. This prevents data corruption
 //! from incorrect field indexing.
 
-use crate::physics::state::field_indices;
+use crate::physics::field_indices;
 use std::fmt;
 
 /// Unified field type enum that maps directly to field indices
@@ -36,25 +36,25 @@ impl UnifiedFieldType {
     /// This is the ONLY place where field indices should be defined
     pub fn index(&self) -> usize {
         match self {
-            Self::Pressure => field_indices::PRESSURE,
-            Self::Temperature => field_indices::TEMPERATURE,
-            Self::BubbleRadius => field_indices::BUBBLE_RADIUS,
-            Self::BubbleVelocity => field_indices::BUBBLE_VELOCITY,
-            Self::Density => field_indices::DENSITY,
-            Self::SoundSpeed => field_indices::SOUND_SPEED,
-            Self::VelocityX => field_indices::VELOCITY_X,
-            Self::VelocityY => field_indices::VELOCITY_Y,
-            Self::VelocityZ => field_indices::VELOCITY_Z,
-            Self::StressXX => field_indices::STRESS_XX,
-            Self::StressYY => field_indices::STRESS_YY,
-            Self::StressZZ => field_indices::STRESS_ZZ,
-            Self::StressXY => field_indices::STRESS_XY,
-            Self::StressXZ => field_indices::STRESS_XZ,
-            Self::StressYZ => field_indices::STRESS_YZ,
-            Self::LightFluence => field_indices::LIGHT_FLUENCE,
-            Self::ChemicalConcentration => field_indices::CHEMICAL_CONCENTRATION,
-            Self::Light => field_indices::LIGHT_FLUENCE,  // Map to same as LightFluence
-            Self::Cavitation => field_indices::BUBBLE_RADIUS,  // Map to bubble radius field
+            Self::Pressure => field_indices::PRESSURE_IDX,
+            Self::Temperature => field_indices::TEMPERATURE_IDX,
+            Self::BubbleRadius => field_indices::BUBBLE_RADIUS_IDX,
+            Self::BubbleVelocity => field_indices::BUBBLE_VELOCITY_IDX,
+            Self::Density => field_indices::DENSITY_IDX,
+            Self::SoundSpeed => field_indices::SOUND_SPEED_IDX,
+            Self::VelocityX => field_indices::VX_IDX,
+            Self::VelocityY => field_indices::VY_IDX,
+            Self::VelocityZ => field_indices::VZ_IDX,
+            Self::StressXX => field_indices::STRESS_XX_IDX,
+            Self::StressYY => field_indices::STRESS_YY_IDX,
+            Self::StressZZ => field_indices::STRESS_ZZ_IDX,
+            Self::StressXY => field_indices::STRESS_XY_IDX,
+            Self::StressXZ => field_indices::STRESS_XZ_IDX,
+            Self::StressYZ => field_indices::STRESS_YZ_IDX,
+            Self::LightFluence => field_indices::LIGHT_IDX,
+            Self::ChemicalConcentration => field_indices::CHEMICAL_IDX,
+            Self::Light => field_indices::LIGHT_IDX,  // Map to same as LightFluence
+            Self::Cavitation => field_indices::BUBBLE_RADIUS_IDX,  // Map to bubble radius field
         }
     }
     
@@ -181,22 +181,22 @@ impl<'a> FieldAccessorMut<'a> {
     }
     
     /// Get a specific field mutably by type
-    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), field_type.index())
     }
     
     /// Get pressure field mutably
-    pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index())
     }
     
     /// Get temperature field mutably
-    pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Temperature.index())
     }
     
     /// Get density field mutably
-    pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<'a, f64> {
+    pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Density.index())
     }
 }

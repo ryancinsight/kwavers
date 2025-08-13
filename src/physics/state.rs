@@ -220,13 +220,20 @@ impl PhysicsState {
     
     /// Update a specific field with new data
     pub fn update_field(&self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
-        self.with_field_mut(field_index, |mut field| {
-            if data.shape() != field.shape() {
-                return Err(PhysicsError::DimensionMismatch);
-            }
-            field.assign(data);
-            Ok(())
-        })?
+        if field_index >= field_indices::TOTAL_FIELDS {
+            return Err(PhysicsError::InvalidFieldIndex(field_index).into());
+        }
+        
+        let mut fields = self.fields.write().map_err(|e| 
+            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
+        )?;
+        
+        let mut field = fields.index_axis_mut(Axis(0), field_index);
+        if data.shape() != field.shape() {
+            return Err(PhysicsError::DimensionMismatch.into());
+        }
+        field.assign(data);
+        Ok(())
     }
     
     /// Get direct access to all fields (for plugin system)
@@ -274,10 +281,11 @@ impl PhysicsState {
         F: Fn(usize, usize, usize) -> f64,
     {
         self.with_field_mut(field_index, |mut field| {
-            let shape = field.shape();
-            for i in 0..shape[0] {
-                for j in 0..shape[1] {
-                    for k in 0..shape[2] {
+            let (nx, ny, nz) = (field.shape()[0], field.shape()[1], field.shape()[2]);
+            // Use iterator combinators for better performance (CUPID: Composable)
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
                         field[[i, j, k]] = init_fn(i, j, k);
                     }
                 }

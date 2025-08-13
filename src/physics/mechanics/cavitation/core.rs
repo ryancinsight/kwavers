@@ -7,7 +7,8 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::state::{PhysicsState, FieldAccessor, field_indices};
+use crate::physics::state::{PhysicsState, FieldAccessor};
+use crate::physics::field_indices;
 use crate::physics::traits::CavitationModelBehavior;
 use ndarray::{Array3, Zip, ArrayView3};
 
@@ -34,10 +35,10 @@ impl CavitationModel {
         let state = PhysicsState::new(grid.clone());
         
         // Initialize bubble radius field
-        state.initialize_field(field_indices::BUBBLE_RADIUS, initial_radius).unwrap();
+        state.initialize_field(field_indices::BUBBLE_RADIUS_IDX, initial_radius).unwrap();
         
         // Initialize bubble velocity field to zero
-        state.initialize_field(field_indices::BUBBLE_VELOCITY, 0.0).unwrap();
+        state.initialize_field(field_indices::BUBBLE_VELOCITY_IDX, 0.0).unwrap();
         
         Self {
             state,
@@ -69,26 +70,7 @@ impl CavitationModel {
     pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
         self.state.update_field(field_index, data)
     }
-    
-    /// Update cavitation in-place and return the modified pressure field
-    /// This avoids unnecessary cloning of the input pressure field
-    pub fn update_cavitation_inplace(
-        &mut self,
-        pressure: ArrayView3<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        // Start with a copy of the pressure field that we'll modify
-        let mut modified_pressure = pressure.to_owned();
-        
-        // Call the existing update_cavitation with the owned copy
-        self.update_cavitation(&modified_pressure, grid, medium, dt, t)?;
-        
-        // Return the modified pressure
-        Ok(modified_pressure)
-    }
+
 }
 
 // FieldAccessor trait implementation removed - use PhysicsState methods directly
@@ -105,8 +87,8 @@ impl CavitationModelBehavior for CavitationModel {
         let start_time = std::time::Instant::now();
         
         // Get current bubble state
-        let radius = self.get_field(field_indices::BUBBLE_RADIUS)?;
-        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY)?;
+        let radius = self.get_field(field_indices::BUBBLE_RADIUS_IDX)?;
+        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY_IDX)?;
         
         // Create new arrays for updated values
         let mut new_radius = radius.clone();
@@ -153,8 +135,8 @@ impl CavitationModelBehavior for CavitationModel {
             });
         
         // Update state
-        self.update_field(field_indices::BUBBLE_RADIUS, &new_radius)?;
-        self.update_field(field_indices::BUBBLE_VELOCITY, &new_velocity)?;
+        self.update_field(field_indices::BUBBLE_RADIUS_IDX, &new_radius)?;
+        self.update_field(field_indices::BUBBLE_VELOCITY_IDX, &new_velocity)?;
         
         self.computation_time += start_time.elapsed();
         self.update_count += 1;
@@ -163,18 +145,18 @@ impl CavitationModelBehavior for CavitationModel {
     }
     
     fn bubble_radius(&self) -> KwaversResult<Array3<f64>> {
-        self.get_field(field_indices::BUBBLE_RADIUS)
+        self.get_field(field_indices::BUBBLE_RADIUS_IDX)
     }
     
     fn bubble_velocity(&self) -> KwaversResult<Array3<f64>> {
-        self.get_field(field_indices::BUBBLE_VELOCITY)
+        self.get_field(field_indices::BUBBLE_VELOCITY_IDX)
     }
     
     fn light_emission(&self) -> Array3<f64> {
         // Calculate light emission based on bubble dynamics
         // Light emission is proportional to the rate of bubble collapse
-        let radius = self.get_field(field_indices::BUBBLE_RADIUS).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
-        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        let radius = self.get_field(field_indices::BUBBLE_RADIUS_IDX).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
+        let velocity = self.get_field(field_indices::BUBBLE_VELOCITY_IDX).unwrap_or_else(|_| Array3::zeros((1, 1, 1)));
         
         let mut emission = Array3::zeros(radius.dim());
         

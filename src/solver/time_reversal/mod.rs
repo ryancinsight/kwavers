@@ -206,7 +206,7 @@ impl TimeReversalReconstructor {
     }
     
     /// Prepare time-reversed signals
-    fn prepare_reversed_signals(&mut self, sensor_data: &SensorData, grid: &Grid, dt: f64, medium: &Arc<dyn Medium>, frequency: f64) -> KwaversResult<HashMap<usize, Vec<f64>>> {
+    fn prepare_reversed_signals(&mut self, sensor_data: &SensorData, grid: &Grid, dt: f64, medium: &Arc<dyn Medium + Send + Sync>, frequency: f64) -> KwaversResult<HashMap<usize, Vec<f64>>> {
         let mut reversed_signals = HashMap::new();
         
         for (sensor_id, data) in sensor_data.data_iter() {
@@ -293,7 +293,7 @@ impl TimeReversalReconstructor {
     }
     
     /// Apply amplitude correction
-    fn apply_amplitude_correction(&self, signal: Vec<f64>, dt: f64, medium: &Arc<dyn Medium>, grid: &Grid, frequency: f64) -> KwaversResult<Vec<f64>> {
+    fn apply_amplitude_correction(&self, signal: Vec<f64>, dt: f64, medium: &Arc<dyn Medium + Send + Sync>, grid: &Grid, frequency: f64) -> KwaversResult<Vec<f64>> {
         // Apply geometric spreading correction and absorption compensation
         let n = signal.len();
         
