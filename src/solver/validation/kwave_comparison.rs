@@ -174,13 +174,17 @@ impl KWaveValidator {
         let n_steps = (t_end / dt) as usize;
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt)?;
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, &medium, dt)?;
             
             // Update velocity
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt)?;
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, dt)?;
         }
         
         // Compare with analytical solution
@@ -317,13 +321,17 @@ impl KWaveValidator {
         let n_steps = 500;
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt)?;
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, &medium, dt)?;
             
             // Update velocity
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt)?;
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, dt)?;
         }
         
         // Check for proper transmission and reflection
@@ -515,13 +523,17 @@ impl KWaveValidator {
         let mut boundary_data = Vec::new();
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
+            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt)?;
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, &medium, dt)?;
             
             // Update velocity
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, dt)?;
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, dt)?;
             
             boundary_data.push(self.extract_boundary(&pressure));
         }

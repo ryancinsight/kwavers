@@ -147,9 +147,13 @@ impl BenchmarkSuite {
         
         // Warmup
         for _ in 0..10 {
-            let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
-            solver.update_pressure(&mut pressure, &divergence, &medium, 1e-6)?;
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, 1e-6)?;
+            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, &medium, 1e-6)?;
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, 1e-6)?;
         }
         
         // Benchmark
@@ -160,9 +164,13 @@ impl BenchmarkSuite {
             let _scope = profiler.time_scope("pstd_step");
             
             for _ in 0..self.config.time_steps {
-                let divergence = solver.compute_divergence(&vx, &vy, &vz)?;
-                solver.update_pressure(&mut pressure, &divergence, &medium, 1e-6)?;
-                solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &medium, 1e-6)?;
+                let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
+                let mut pressure_view = pressure.view_mut();
+                solver.update_pressure(&mut pressure_view, &divergence, &medium, 1e-6)?;
+                let mut vx_view = vx.view_mut();
+                let mut vy_view = vy.view_mut();
+                let mut vz_view = vz.view_mut();
+                solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, 1e-6)?;
             }
             
             // Estimate memory usage
