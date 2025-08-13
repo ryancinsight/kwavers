@@ -53,7 +53,7 @@ impl RayleighScattering {
         let start_time = std::time::Instant::now();
         
         // Get bubble radius from state
-        let bubble_radius = self.state.get_field(field_indices::BUBBLE_RADIUS)?;
+        let bubble_radius = self.state.get_field(field_indices::BUBBLE_RADIUS_IDX)?;
         let bubble_radius_view = bubble_radius.view();
         
         // Medium properties
@@ -123,7 +123,7 @@ mod tests {
         let mut scattering = RayleighScattering::new(&grid, 1e6, 2000.0);
         
         // Initialize small bubbles (Rayleigh regime)
-        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS, 1e-7).unwrap();
+        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS_IDX, 1e-7).unwrap();
         
         // Create incident field
         let incident = Array3::from_elem((5, 5, 5), 1000.0);
@@ -145,7 +145,7 @@ mod tests {
         let mut scattering = RayleighScattering::new(&grid, 1e6, 2000.0);
         
         // Initialize with large bubbles (outside Rayleigh regime)
-        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS, 1e-3).unwrap();
+        scattering.state.initialize_field(field_indices::BUBBLE_RADIUS_IDX, 1e-3).unwrap();
         
         let incident = Array3::from_elem((3, 3, 3), 1000.0);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
@@ -173,7 +173,7 @@ pub fn compute_rayleigh_scattering(
     let mut model = RayleighScattering::new(grid, frequency, 2000.0); // Default particle density
     
     // Set the bubble radius field
-    model.state.update_field(field_indices::BUBBLE_RADIUS, radius).unwrap_or_else(|e| {
+    model.state.update_field(field_indices::BUBBLE_RADIUS_IDX, radius).unwrap_or_else(|e| {
         log::error!("Failed to update bubble radius: {}", e);
     });
     

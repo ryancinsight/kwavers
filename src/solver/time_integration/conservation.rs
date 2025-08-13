@@ -346,8 +346,8 @@ pub trait ConservativeCoupling {
     /// Apply conservative coupling between fast and slow components
     fn apply_conservative_coupling(
         &self,
-        fast_fields: &mut HashMap<String, Array3<f64>>,
-        slow_fields: &mut HashMap<String, Array3<f64>>,
+        high_frequency_fields: &mut HashMap<String, Array3<f64>>,
+        low_frequency_fields: &mut HashMap<String, Array3<f64>>,
         dt: f64,
         grid: &Grid,
     ) -> KwaversResult<()>;

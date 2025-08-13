@@ -80,13 +80,29 @@ mod tests {
         
         for _ in 0..n_steps {
             // Compute divergence
-            let divergence = solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z).unwrap();
+            let divergence = solver.compute_divergence(
+                &velocity_x.view(),
+                &velocity_y.view(),
+                &velocity_z.view()
+            ).unwrap();
             
             // Update pressure
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt).unwrap();
+            solver.update_pressure(
+                &mut pressure.view_mut(),
+                &divergence,
+                &medium,
+                dt
+            ).unwrap();
             
             // Update velocity
-            solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, &medium, dt).unwrap();
+            solver.update_velocity(
+                &mut velocity_x.view_mut(),
+                &mut velocity_y.view_mut(),
+                &mut velocity_z.view_mut(),
+                &pressure.view(),
+                &medium,
+                dt
+            ).unwrap();
         }
         
         // After quarter period, check wave propagation
@@ -279,9 +295,25 @@ mod tests {
         
         // Propagate for several steps
         for _ in 0..100 {
-            let divergence = solver.compute_divergence(&velocity_x, &velocity_y, &velocity_z).unwrap();
-            solver.update_pressure(&mut pressure, &divergence, &medium, dt).unwrap();
-            solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, &medium, dt).unwrap();
+            let divergence = solver.compute_divergence(
+                &velocity_x.view(),
+                &velocity_y.view(),
+                &velocity_z.view()
+            ).unwrap();
+            solver.update_pressure(
+                &mut pressure.view_mut(),
+                &divergence,
+                &medium,
+                dt
+            ).unwrap();
+            solver.update_velocity(
+                &mut velocity_x.view_mut(),
+                &mut velocity_y.view_mut(),
+                &mut velocity_z.view_mut(),
+                &pressure.view(),
+                &medium,
+                dt
+            ).unwrap();
         }
         
         // Calculate final energy

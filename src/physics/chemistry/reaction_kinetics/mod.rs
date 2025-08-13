@@ -39,8 +39,9 @@ impl ReactionKinetics {
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;
 
-                let k1 = 1e-4 * (t / 298.15).exp();
-                let k2 = 5e-5 * (t / 298.15);
+                use crate::constants::thermodynamics::{REACTION_REFERENCE_TEMPERATURE, SONOCHEMISTRY_BASE_RATE, SECONDARY_REACTION_RATE};
+                let k1 = SONOCHEMISTRY_BASE_RATE * (t / REACTION_REFERENCE_TEMPERATURE).exp();
+                let k2 = SECONDARY_REACTION_RATE * (t / REACTION_REFERENCE_TEMPERATURE);
 
                 *oh += k1 * r_init * dt;
                 *oh = oh.max(0.0);

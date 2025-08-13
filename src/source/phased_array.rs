@@ -500,17 +500,11 @@ mod tests {
     use crate::medium::homogeneous::HomogeneousMedium;
     use crate::signal::SineWave;
     
-    fn create_test_grid() -> Grid {
-        Grid::new(32, 32, 32, 1e-4, 1e-4, 1e-4)
-    }
-    
-    fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
-        HomogeneousMedium::new(1000.0, 1500.0, grid, 0.1, 1.0)
-    }
+    use crate::utils::test_helpers::{create_default_test_grid, create_test_medium};
     
     #[test]
     fn test_phased_array_creation() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
@@ -525,7 +519,7 @@ mod tests {
     
     #[test]
     fn test_focus_beamforming() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
@@ -552,7 +546,7 @@ mod tests {
     
     #[test]
     fn test_steering_beamforming() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
@@ -574,7 +568,7 @@ mod tests {
     
     #[test]
     fn test_custom_delays() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
@@ -594,7 +588,7 @@ mod tests {
     
     #[test]
     fn test_source_term_calculation() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
@@ -647,7 +641,7 @@ mod tests {
     
     #[test]
     fn test_element_positions() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig {
             num_elements: 4,
@@ -671,7 +665,7 @@ mod tests {
     
     #[test]
     fn test_plane_wave_beamforming() {
-        let grid = create_test_grid();
+        let grid = create_default_test_grid();
         let medium = create_test_medium(&grid);
         let config = PhasedArrayConfig::default();
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));

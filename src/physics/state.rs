@@ -9,28 +9,8 @@ use ndarray::{Array3, Array4, Axis, ArrayView3, ArrayViewMut3};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-/// Field indices for the 4D field array
-pub mod field_indices {
-    pub const PRESSURE: usize = 0;
-    pub const TEMPERATURE: usize = 1;
-    pub const BUBBLE_RADIUS: usize = 2;
-    pub const BUBBLE_VELOCITY: usize = 3;
-    pub const DENSITY: usize = 4;
-    pub const SOUND_SPEED: usize = 5;
-    pub const VELOCITY_X: usize = 6;
-    pub const VELOCITY_Y: usize = 7;
-    pub const VELOCITY_Z: usize = 8;
-    pub const STRESS_XX: usize = 9;
-    pub const STRESS_YY: usize = 10;
-    pub const STRESS_ZZ: usize = 11;
-    pub const STRESS_XY: usize = 12;
-    pub const STRESS_XZ: usize = 13;
-    pub const STRESS_YZ: usize = 14;
-    pub const LIGHT_FLUENCE: usize = 15;
-    pub const CHEMICAL_CONCENTRATION: usize = 16;
-    
-    pub const TOTAL_FIELDS: usize = 17;
-}
+// Use the global field_indices module for consistency
+pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
 #[derive(Clone, Debug)]
@@ -47,30 +27,38 @@ pub struct PhysicsState {
 }
 
 /// RAII guard for read-only field access
+/// This struct owns the data it needs to avoid unsafe transmutes
 pub struct FieldReadGuard<'a> {
-    guard: RwLockReadGuard<'a, Array4<f64>>,
-    field_index: usize,
+    data: Array3<f64>,
+    _guard: RwLockReadGuard<'a, Array4<f64>>,
 }
 
 impl<'a> FieldReadGuard<'a> {
-    /// Get the field view
-    pub fn view(&self) -> ArrayView3<'a, f64> {
-        // SAFETY: We transmute the lifetime because we know the guard keeps the data alive
-        // This is the same pattern used in parking_lot and other lock implementations
-        unsafe {
-            std::mem::transmute(self.guard.index_axis(Axis(0), self.field_index))
+    /// Create a new FieldReadGuard
+    fn new(guard: RwLockReadGuard<'a, Array4<f64>>, field_index: usize) -> Self {
+        let data = guard.index_axis(Axis(0), field_index).to_owned();
+        Self {
+            data,
+            _guard: guard,
         }
+    }
+    
+    /// Get the field view
+    pub fn view(&self) -> ArrayView3<f64> {
+        self.data.view()
+    }
+    
+    /// Convert to owned array
+    pub fn to_owned(&self) -> Array3<f64> {
+        self.data.clone()
     }
 }
 
 impl<'a> std::ops::Deref for FieldReadGuard<'a> {
-    type Target = ArrayView3<'a, f64>;
+    type Target = Array3<f64>;
     
     fn deref(&self) -> &Self::Target {
-        // SAFETY: Same as above - the guard ensures the data remains valid
-        unsafe {
-            std::mem::transmute(&self.guard.index_axis(Axis(0), self.field_index))
-        }
+        &self.data
     }
 }
 
@@ -115,30 +103,30 @@ impl PhysicsState {
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
         let fields = Arc::new(RwLock::new(
-            Array4::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz))
+            Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz))
         ));
         
         let mut field_names = HashMap::new();
-        field_names.insert(field_indices::PRESSURE, "Pressure".to_string());
-        field_names.insert(field_indices::TEMPERATURE, "Temperature".to_string());
-        field_names.insert(field_indices::BUBBLE_RADIUS, "Bubble Radius".to_string());
-        field_names.insert(field_indices::BUBBLE_VELOCITY, "Bubble Velocity".to_string());
-        field_names.insert(field_indices::DENSITY, "Density".to_string());
-        field_names.insert(field_indices::SOUND_SPEED, "Sound Speed".to_string());
-        field_names.insert(field_indices::VELOCITY_X, "Velocity X".to_string());
-        field_names.insert(field_indices::VELOCITY_Y, "Velocity Y".to_string());
-        field_names.insert(field_indices::VELOCITY_Z, "Velocity Z".to_string());
+        field_names.insert(field_indices::PRESSURE_IDX, "Pressure".to_string());
+        field_names.insert(field_indices::TEMPERATURE_IDX, "Temperature".to_string());
+        field_names.insert(field_indices::BUBBLE_RADIUS_IDX, "Bubble Radius".to_string());
+        field_names.insert(field_indices::BUBBLE_VELOCITY_IDX, "Bubble Velocity".to_string());
+        field_names.insert(field_indices::DENSITY_IDX, "Density".to_string());
+        field_names.insert(field_indices::SOUND_SPEED_IDX, "Sound Speed".to_string());
+        field_names.insert(field_indices::VX_IDX, "Velocity X".to_string());
+        field_names.insert(field_indices::VY_IDX, "Velocity Y".to_string());
+        field_names.insert(field_indices::VZ_IDX, "Velocity Z".to_string());
         
         let mut field_units = HashMap::new();
-        field_units.insert(field_indices::PRESSURE, "Pa".to_string());
-        field_units.insert(field_indices::TEMPERATURE, "K".to_string());
-        field_units.insert(field_indices::BUBBLE_RADIUS, "m".to_string());
-        field_units.insert(field_indices::BUBBLE_VELOCITY, "m/s".to_string());
-        field_units.insert(field_indices::DENSITY, "kg/m³".to_string());
-        field_units.insert(field_indices::SOUND_SPEED, "m/s".to_string());
-        field_units.insert(field_indices::VELOCITY_X, "m/s".to_string());
-        field_units.insert(field_indices::VELOCITY_Y, "m/s".to_string());
-        field_units.insert(field_indices::VELOCITY_Z, "m/s".to_string());
+        field_units.insert(field_indices::PRESSURE_IDX, "Pa".to_string());
+        field_units.insert(field_indices::TEMPERATURE_IDX, "K".to_string());
+        field_units.insert(field_indices::BUBBLE_RADIUS_IDX, "m".to_string());
+        field_units.insert(field_indices::BUBBLE_VELOCITY_IDX, "m/s".to_string());
+        field_units.insert(field_indices::DENSITY_IDX, "kg/m³".to_string());
+        field_units.insert(field_indices::SOUND_SPEED_IDX, "m/s".to_string());
+        field_units.insert(field_indices::VX_IDX, "m/s".to_string());
+        field_units.insert(field_indices::VY_IDX, "m/s".to_string());
+        field_units.insert(field_indices::VZ_IDX, "m/s".to_string());
         
         Self {
             fields,
@@ -158,10 +146,7 @@ impl PhysicsState {
             PhysicsError::StateError(format!("Failed to acquire read lock: {}", e))
         )?;
         
-        Ok(FieldReadGuard {
-            guard,
-            field_index,
-        })
+        Ok(FieldReadGuard::new(guard, field_index))
     }
     
     /// Get a mutable view of a specific field (zero-copy)
@@ -314,15 +299,15 @@ impl<'a> FieldAccessor<'a> {
     }
     
     pub fn pressure(&self) -> KwaversResult<FieldReadGuard> {
-        self.state.get_field(field_indices::PRESSURE)
+        self.state.get_field(field_indices::PRESSURE_IDX)
     }
     
     pub fn temperature(&self) -> KwaversResult<FieldReadGuard> {
-        self.state.get_field(field_indices::TEMPERATURE)
+        self.state.get_field(field_indices::TEMPERATURE_IDX)
     }
     
     pub fn density(&self) -> KwaversResult<FieldReadGuard> {
-        self.state.get_field(field_indices::DENSITY)
+        self.state.get_field(field_indices::DENSITY_IDX)
     }
 }
 
@@ -352,12 +337,12 @@ mod tests {
         let state = PhysicsState::new(grid);
         
         // Test field retrieval
-        let pressure = state.get_field(field_indices::PRESSURE).unwrap();
+        let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
         assert_eq!(pressure.view().shape(), &[10, 10, 10]);
         
         // Test field initialization
-        state.initialize_field(field_indices::TEMPERATURE, 293.15).unwrap();
-        let temp = state.get_field(field_indices::TEMPERATURE).unwrap();
+        state.initialize_field(field_indices::TEMPERATURE_IDX, 293.15).unwrap();
+        let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
         assert!((temp.view()[[5, 5, 5]] - 293.15).abs() < 1e-10);
     }
     
@@ -371,10 +356,10 @@ mod tests {
         test_data[[2, 2, 2]] = 100.0;
         
         // Update field
-        state.update_field(field_indices::PRESSURE, &test_data).unwrap();
+        state.update_field(field_indices::PRESSURE_IDX, &test_data).unwrap();
         
         // Verify update
-        let pressure = state.get_field(field_indices::PRESSURE).unwrap();
+        let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
         assert_eq!(pressure.view()[[2, 2, 2]], 100.0);
     }
     
@@ -384,18 +369,18 @@ mod tests {
         let state = PhysicsState::new(grid);
         
         // Test zero-copy read
-        state.with_field(field_indices::PRESSURE, |field| {
+        state.with_field(field_indices::PRESSURE_IDX, |field| {
             // This should not allocate
             assert_eq!(field.shape(), &[10, 10, 10]);
         }).unwrap();
         
         // Test zero-copy write
-        state.with_field_mut(field_indices::TEMPERATURE, |mut field| {
+        state.with_field_mut(field_indices::TEMPERATURE_IDX, |mut field| {
             field[[5, 5, 5]] = 300.0;
         }).unwrap();
         
         // Verify the write
-        state.with_field(field_indices::TEMPERATURE, |field| {
+        state.with_field(field_indices::TEMPERATURE_IDX, |field| {
             assert_eq!(field[[5, 5, 5]], 300.0);
         }).unwrap();
     }
@@ -406,21 +391,21 @@ mod tests {
         let state = PhysicsState::new(grid);
         
         // Initialize field
-        state.initialize_field(field_indices::PRESSURE, 101325.0).unwrap();
+        state.initialize_field(field_indices::PRESSURE_IDX, 101325.0).unwrap();
         
         // Test read guard deref
-        let guard = state.get_field(field_indices::PRESSURE).unwrap();
+        let guard = state.get_field(field_indices::PRESSURE_IDX).unwrap();
         assert_eq!(guard[[0, 0, 0]], 101325.0);
         
         // Test write guard deref
-        let mut guard = state.get_field_mut(field_indices::TEMPERATURE).unwrap();
+        let mut guard = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
         let mut view = guard.view_mut();
         view[[0, 0, 0]] = 273.15;
         drop(view);
         drop(guard);
         
         // Verify write
-        let guard = state.get_field(field_indices::TEMPERATURE).unwrap();
+        let guard = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
         assert_eq!(guard[[0, 0, 0]], 273.15);
     }
 }

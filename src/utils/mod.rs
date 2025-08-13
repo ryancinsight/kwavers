@@ -5,6 +5,9 @@ pub mod array_utils;
 pub mod kwave_utils;
 pub mod spectral;
 
+#[cfg(test)]
+pub mod test_helpers;
+
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
 use log::{debug, trace, info};
@@ -131,7 +134,7 @@ pub fn report_fft_statistics() {
     );
 }
 
-/// Optimized 3D FFT for simulation fields with proper normalization
+/// 3D FFT for simulation fields with proper normalization
 /// 
 /// This function performs a 3D FFT on the specified field component from a 4D array.
 /// It uses a cached FFT instance for better performance when called multiple times
@@ -208,7 +211,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
     result
 }
 
-/// Optimized 3D inverse FFT for simulation fields with proper normalization
+/// 3D inverse FFT for simulation fields with proper normalization
 pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     let start_time = Instant::now();
     trace!("Performing optimized 3D inverse FFT");

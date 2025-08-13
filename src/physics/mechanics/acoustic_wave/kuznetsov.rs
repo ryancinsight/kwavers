@@ -1306,70 +1306,56 @@ fn update_velocity_field(
     grid: &Grid,
     dt: f64,
 ) -> KwaversResult<()> {
-    // Note: This currently uses finite differences for simplicity.
-    // TODO: Replace with spectral gradient computation for consistency with PSTD solver.
-    // This would require passing the FFT planner and wavenumbers to this function.
+    use crate::utils::spectral;
+    use ndarray::{Axis, Zip};
     
-    // Compute pressure gradients using central differences
-    let mut dp_dx = Array3::zeros(pressure.raw_dim());
-    let mut dp_dy = Array3::zeros(pressure.raw_dim());
-    let mut dp_dz = Array3::zeros(pressure.raw_dim());
+    // Use spectral gradients for consistency with PSTD solver
+    // This provides spectral accuracy and eliminates numerical dispersion
     
-    // Central differences for interior points
-    for i in 1..grid.nx-1 {
-        for j in 1..grid.ny-1 {
-            for k in 1..grid.nz-1 {
-                dp_dx[[i, j, k]] = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) / (2.0 * grid.dx);
-                dp_dy[[i, j, k]] = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) / (2.0 * grid.dy);
-                dp_dz[[i, j, k]] = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) / (2.0 * grid.dz);
-            }
-        }
-    }
+    // Compute spectral gradients of pressure
+    let dp_dx = spectral::gradient_x(pressure, grid)?;
+    let dp_dy = spectral::gradient_y(pressure, grid)?;
+    let dp_dz = spectral::gradient_z(pressure, grid)?;
     
-    // Update velocity components separately to avoid borrow checker issues
+    // Update velocity components using spectral gradients
+    // For heterogeneous media, we need density at each point
     {
         let mut vx = velocity.index_axis_mut(Axis(0), 0);
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    let rho = medium.density(x, y, z, grid);
-                    vx[[i, j, k]] -= dt * dp_dx[[i, j, k]] / rho;
-                }
-            }
-        }
+        Zip::indexed(&mut vx)
+            .and(&dp_dx)
+            .for_each(|(i, j, k), vx, &dpx| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *vx -= dt * dpx / rho;
+            });
     }
     
     {
         let mut vy = velocity.index_axis_mut(Axis(0), 1);
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    let rho = medium.density(x, y, z, grid);
-                    vy[[i, j, k]] -= dt * dp_dy[[i, j, k]] / rho;
-                }
-            }
-        }
+        Zip::indexed(&mut vy)
+            .and(&dp_dy)
+            .for_each(|(i, j, k), vy, &dpy| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *vy -= dt * dpy / rho;
+            });
     }
     
     {
         let mut vz = velocity.index_axis_mut(Axis(0), 2);
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    let rho = medium.density(x, y, z, grid);
-                    vz[[i, j, k]] -= dt * dp_dz[[i, j, k]] / rho;
-                }
-            }
-        }
+        Zip::indexed(&mut vz)
+            .and(&dp_dz)
+            .for_each(|(i, j, k), vz, &dpz| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *vz -= dt * dpz / rho;
+            });
     }
     
     Ok(())

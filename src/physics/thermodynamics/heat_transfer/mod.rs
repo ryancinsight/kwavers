@@ -103,7 +103,7 @@ impl ThermalModel {
         }
     }
 
-    pub fn update_thermal(
+    pub fn update_thermal_impl(
         &mut self,
         fields: &mut Array4<f64>,
         grid: &Grid,
@@ -406,7 +406,8 @@ impl ThermalModelTrait for ThermalModel {
         dt: f64,
         frequency: f64,
     ) {
-        self.update_thermal(fields, grid, medium, dt, frequency);
+        // Call the struct's implementation method
+        self.update_thermal_impl(fields, grid, medium, dt, frequency);
     }
 
     fn temperature(&self) -> &Array3<f64> {

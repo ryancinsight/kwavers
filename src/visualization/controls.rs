@@ -113,7 +113,7 @@ struct UiState {
     selected_group: String,
     parameter_groups: Vec<String>,
     search_filter: String,
-    show_advanced: bool,
+    show_extended_options: bool,
 }
 
 impl InteractiveControls {
@@ -141,7 +141,7 @@ impl InteractiveControls {
                     "Advanced".to_string(),
                 ],
                 search_filter: String::new(),
-                show_advanced: false,
+                show_extended_options: false,
             },
         };
         
@@ -352,7 +352,7 @@ impl InteractiveControls {
                 let _ = self.undo_last_change();
             }
             
-            ui.checkbox(&mut self.ui_state.show_advanced, "Show Advanced");
+            ui.checkbox(&mut self.ui_state.show_extended_options, "Show Extended Options");
         });
     }
     

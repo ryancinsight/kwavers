@@ -266,7 +266,7 @@ impl WaterProperties {
         alpha_db_per_km * 0.1151 / 1000.0 // Convert to Np/m
     }
     
-    /// Simple Pinkerton model for quick calculations
+    /// Pinkerton model for absorption calculations
     pub fn pinkerton_absorption(frequency: f64, temperature: f64) -> f64 {
         // Pinkerton (1949) model: α = A * f²
         // where A depends on temperature

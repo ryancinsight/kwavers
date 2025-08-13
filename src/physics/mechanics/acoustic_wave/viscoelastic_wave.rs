@@ -193,12 +193,7 @@ impl ViscoelasticWave {
         clamped
     }
 
-    // Placeholder for gradient clamping logic if used from NonlinearWave
-    // fn calculate_phase_factor(&self, k_val: f64, c_val: f64, dt: f64) -> f64 {
-    //     // This is a simplified phase factor; k-Wave uses a k-space correction (sinc term)
-    //     // which is often applied differently. For a simple linear acoustic solver:
-    //     -c_val * k_val * dt // This results in exp(-j*c*k*dt) for forward time
-    // }
+
 
     /// Returns true if the solver has sufficient pressure history for full second-order accuracy.
     /// 
