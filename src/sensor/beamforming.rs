@@ -889,37 +889,97 @@ impl BeamformingProcessor {
         Ok(dictionary)
     }
 
-    /// Solve sparse reconstruction problem (simplified LASSO)
+    /// Solve sparse reconstruction using ISTA (Iterative Soft-Thresholding Algorithm)
+    /// Based on Beck & Teboulle (2009): "A Fast Iterative Shrinkage-Thresholding Algorithm"
     fn solve_sparse_reconstruction(
         &self,
         dictionary: &Array2<f64>,
         measurement: ndarray::ArrayView1<f64>,
         sparsity_parameter: f64,
     ) -> KwaversResult<Array1<f64>> {
-        // Simplified sparse reconstruction using iterative soft thresholding
-        let max_iterations = 100;
-        let step_size = 0.01;
-        let mut solution = Array1::zeros(dictionary.ncols());
+        use crate::constants::tolerance::CONVERGENCE;
         
-        for _iteration in 0..max_iterations {
-            // Gradient step
-            let residual = &measurement.to_owned() - &dictionary.dot(&solution);
-            let gradient = dictionary.t().dot(&residual);
-            solution = &solution + &(&gradient * step_size);
+        // ISTA algorithm parameters based on literature
+        let max_iterations = 1000;
+        let tolerance = CONVERGENCE;
+        
+        // Compute Lipschitz constant L = ||A^T A||_2 for step size
+        let ata = dictionary.t().dot(dictionary);
+        let lipschitz_constant = self.estimate_spectral_norm(&ata);
+        let step_size = 0.99 / lipschitz_constant; // Conservative step size
+        
+        let mut solution = Array1::zeros(dictionary.ncols());
+        let mut prev_solution = solution.clone();
+        
+        for iteration in 0..max_iterations {
+            prev_solution.assign(&solution);
             
-            // Soft thresholding
-            solution.mapv_inplace(|x| {
-                if x > sparsity_parameter {
-                    x - sparsity_parameter
-                } else if x < -sparsity_parameter {
-                    x + sparsity_parameter
-                } else {
-                    0.0
-                }
-            });
+            // Gradient descent step: x = x - t * A^T(Ax - b)
+            let residual = &dictionary.dot(&solution) - &measurement.to_owned();
+            let gradient = dictionary.t().dot(&residual);
+            solution = &solution - &(&gradient * step_size);
+            
+            // Proximal operator: soft thresholding
+            let threshold = sparsity_parameter * step_size;
+            solution.mapv_inplace(|x| self.soft_threshold(x, threshold));
+            
+            // Check convergence
+            let change = (&solution - &prev_solution).mapv(|x| x.abs()).sum();
+            if change < tolerance {
+                break;
+            }
+            
+            // Progress logging for long runs
+            if iteration % 100 == 0 && iteration > 0 {
+                let objective = self.compute_lasso_objective(dictionary, &measurement.to_owned(), &solution, sparsity_parameter);
+                log::debug!("ISTA iteration {}: objective = {:.6e}, change = {:.6e}", iteration, objective, change);
+            }
         }
         
         Ok(solution)
+    }
+    
+    /// Soft thresholding operator for LASSO
+    fn soft_threshold(&self, x: f64, threshold: f64) -> f64 {
+        if x > threshold {
+            x - threshold
+        } else if x < -threshold {
+            x + threshold
+        } else {
+            0.0
+        }
+    }
+    
+    /// Estimate spectral norm using power iteration
+    fn estimate_spectral_norm(&self, matrix: &Array2<f64>) -> f64 {
+        let n = matrix.ncols();
+        let mut v = Array1::ones(n) / (n as f64).sqrt();
+        let max_iter = 50;
+        let tolerance = 1e-6;
+        
+        for _ in 0..max_iter {
+            let av = matrix.dot(&v);
+            let norm = av.dot(&av).sqrt();
+            let new_v = &av / norm;
+            
+            let change = (&new_v - &v).mapv(|x| x.abs()).sum();
+            v = new_v;
+            
+            if change < tolerance {
+                break;
+            }
+        }
+        
+        let av = matrix.dot(&v);
+        av.dot(&av).sqrt()
+    }
+    
+    /// Compute LASSO objective: ||Ax - b||^2 / 2 + λ||x||_1
+    fn compute_lasso_objective(&self, a: &Array2<f64>, b: &Array1<f64>, x: &Array1<f64>, lambda: f64) -> f64 {
+        let residual = &a.dot(x) - b;
+        let data_term = residual.dot(&residual) / 2.0;
+        let regularization_term = lambda * x.mapv(|xi| xi.abs()).sum();
+        data_term + regularization_term
     }
 
     /// Calculate Euclidean distance between two points

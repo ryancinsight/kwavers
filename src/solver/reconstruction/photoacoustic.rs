@@ -287,8 +287,47 @@ impl PhotoacousticReconstructor {
             }
         }
         
-        // Apply filter (simplified - would use FFT in practice)
-        signal.to_owned() // Placeholder implementation
+        // Apply filter using FFT-based convolution
+        use rustfft::{FftPlanner, num_complex::Complex};
+        
+        let n = signal.len();
+        if n == 0 {
+            return signal.to_owned();
+        }
+        
+        // Convert signal to complex
+        let mut signal_fft: Vec<Complex<f64>> = signal.iter()
+            .map(|&x| Complex::new(x, 0.0))
+            .collect();
+        
+        // Pad to power of 2
+        let padded_len = n.next_power_of_two();
+        signal_fft.resize(padded_len, Complex::new(0.0, 0.0));
+        
+        // Forward FFT
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(padded_len);
+        fft.process(&mut signal_fft);
+        
+        // Apply frequency domain filter
+        for (i, sample) in signal_fft.iter_mut().enumerate() {
+            if i < filter.len() {
+                *sample *= Complex::new(filter[i], 0.0);
+            } else {
+                *sample = Complex::new(0.0, 0.0);
+            }
+        }
+        
+        // Inverse FFT
+        let ifft = planner.plan_fft_inverse(padded_len);
+        ifft.process(&mut signal_fft);
+        
+        // Extract real part and original length
+        let scale = 1.0 / padded_len as f64;
+        signal_fft.into_iter()
+            .take(n)
+            .map(|c| c.re * scale)
+            .collect()
     }
 
     fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
@@ -311,9 +350,49 @@ impl PhotoacousticReconstructor {
     }
 
     fn hilbert_transform_1d(&self, signal: ndarray::ArrayView1<f64>) -> Array1<num_complex::Complex<f64>> {
-        // Simplified Hilbert transform implementation
-        // In practice, would use FFT-based implementation
-        signal.iter().map(|&x| num_complex::Complex::new(x, 0.0)).collect()
+        use rustfft::{FftPlanner, num_complex::Complex};
+        
+        let n = signal.len();
+        if n == 0 {
+            return Array1::from_vec(vec![]);
+        }
+        
+        // Convert to complex signal
+        let mut buffer: Vec<Complex<f64>> = signal.iter()
+            .map(|&x| Complex::new(x, 0.0))
+            .collect();
+        
+        // Pad to power of 2 for efficiency
+        let padded_len = n.next_power_of_two();
+        buffer.resize(padded_len, Complex::new(0.0, 0.0));
+        
+        // Forward FFT
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(padded_len);
+        fft.process(&mut buffer);
+        
+        // Apply Hilbert transform in frequency domain
+        // H(f) = -i * sign(f) for f > 0, +i * sign(f) for f < 0, 0 for f = 0
+        for k in 1..padded_len/2 {
+            buffer[k] *= Complex::new(0.0, -1.0); // Multiply by -i
+        }
+        for k in (padded_len/2 + 1)..padded_len {
+            buffer[k] *= Complex::new(0.0, 1.0);  // Multiply by +i
+        }
+        // DC and Nyquist components remain unchanged
+        
+        // Inverse FFT
+        let ifft = planner.plan_fft_inverse(padded_len);
+        ifft.process(&mut buffer);
+        
+        // Normalize and extract original length
+        let scale = 1.0 / padded_len as f64;
+        let result: Vec<Complex<f64>> = buffer.into_iter()
+            .take(n)
+            .map(|c| c * scale)
+            .collect();
+        
+        Array1::from_vec(result)
     }
 
     fn apply_hilbert_transform(&self, data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
