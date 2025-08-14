@@ -822,7 +822,7 @@ pub mod utils {
     
     /// Create a validation pipeline for common scenarios
     pub fn create_validation_pipeline(field_name: String) -> ValidationPipeline {
-        ValidationBuilder::new("basic_validation".to_string())
+        ValidationBuilder::new("default_validation".to_string())
             .with_required(field_name.clone())
             .with_string_length(field_name.clone(), Some(1), Some(100))
             .build()
