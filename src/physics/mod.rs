@@ -13,6 +13,7 @@ pub mod scattering;
 pub mod state;
 pub mod thermodynamics;
 pub mod traits;
+pub mod sonoluminescence_detector;
 
 #[cfg(test)]
 pub mod analytical_tests;

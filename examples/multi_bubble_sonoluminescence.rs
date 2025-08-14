@@ -1,153 +1,171 @@
-//! Multi-Bubble Sonoluminescence (MBSL) Simulation
-//!
-//! This example demonstrates multi-bubble cavitation and sonoluminescence
-//! in a bubble cloud, including collective effects and bubble-bubble interactions.
-//!
-//! Physics modeled:
-//! - Bubble cloud dynamics with size distribution
-//! - Collective oscillation effects  
-//! - Bubble-bubble interactions via Bjerknes forces
-//! - Multiple sonoluminescence sites
-//! - Cavitation damage potential
-//!
-//! References:
-//! - Yasui et al. (2008) "Bubble dynamics and sonoluminescence"
-//! - Mettin (2007) "Bubble structures in acoustic cavitation"
-//! - Lauterborn & Kurz (2010) "Physics of bubble oscillations"
+//! Multi-bubble sonoluminescence (MBSL) simulation
+//! 
+//! This example demonstrates multi-bubble sonoluminescence using:
+//! - Proper bubble cloud dynamics
+//! - Complete sonoluminescence detection from library
+//! - Proper acoustic solver from library
+//! - Collective bubble effects
 
 use kwavers::{
-    Grid, KwaversResult, KwaversError,
-    source::{Source, BowlTransducer, BowlConfig},
+    Grid, KwaversResult,
+    source::{Source, BowlTransducer},
     signal::{Signal, SineWave},
     physics::{
         bubble_dynamics::{
-            BubbleParameters, BubbleCloud, BubbleStateFields,
-            GasSpecies, BubbleInteractions, CollectiveEffects,
+            BubbleCloud, BubbleCloudConfig,
+            BubbleInteractions, CollectiveEffects,
+            BubbleStateFields,
         },
-        state::PhysicsState,
+        sonoluminescence_detector::{
+            SonoluminescenceDetector, DetectorConfig,
+            SonoluminescenceEvent, SonoluminescenceStatistics,
+        },
     },
-    solver::pstd::{PstdSolver, PstdConfig},
-    recorder::Recorder,
+    solver::{
+        pstd::{PSTDSolver, PSTDConfig},
+        Solver,
+    },
+    config::BowlConfig,
     constants::PI,
 };
 use ndarray::{Array3, s};
 use std::sync::Arc;
-use std::f64::consts::PI as PI2;
 use std::fs::File;
 use std::io::Write;
 
 /// MBSL simulation parameters
 #[derive(Debug, Clone)]
 struct MBSLParameters {
-    // Acoustic field
-    frequency: f64,              // Driving frequency (Hz)
-    pressure_amplitude: f64,     // Pressure amplitude (Pa)
+    // Acoustic parameters
+    frequency: f64,
+    pressure_amplitude: f64,
     
-    // Bubble cloud parameters
-    bubble_density: f64,         // Number density (bubbles/m³)
-    mean_radius: f64,            // Mean bubble radius (m)
-    size_std_dev: f64,           // Size distribution std dev (m)
-    gas_type: GasSpecies,
-    
-    // Domain and simulation
-    domain_size: f64,            // Cubic domain size (m)
-    grid_points: usize,          // Grid points per dimension
-    simulation_time: f64,        // Total simulation time (s)
-    
-    // Transducer parameters (for BowlTransducer)
+    // Transducer parameters
     transducer_diameter: f64,
     focal_length: f64,
+    
+    // Bubble cloud parameters
+    mean_radius: f64,
+    size_std_dev: f64,
+    bubble_density: f64,
+    cloud_radius: f64,
+    
+    // Medium properties
+    sound_speed: f64,
+    density: f64,
+    temperature: f64,
+    
+    // Simulation parameters
+    grid_size: usize,
+    grid_spacing: f64,
+    simulation_time: f64,
+    dt: f64,
 }
 
 impl Default for MBSLParameters {
     fn default() -> Self {
         Self {
-            // 26.5 kHz for strong MBSL
+            // 26.5 kHz for MBSL (Yasui et al.)
             frequency: 26.5e3,
-            pressure_amplitude: 1.5 * 101325.0, // 1.5 atm
+            pressure_amplitude: 1.5e5, // 1.5 bar
+            
+            // Bowl transducer
+            transducer_diameter: 0.1, // 10 cm
+            focal_length: 0.15, // 15 cm focal length
             
             // Bubble cloud
-            bubble_density: 1e9,                // 10⁹ bubbles/m³
-            mean_radius: 5e-6,                  // 5 μm mean radius
-            size_std_dev: 2e-6,                 // 2 μm std dev
-            gas_type: GasSpecies::Air,
+            mean_radius: 5e-6, // 5 μm mean radius
+            size_std_dev: 2e-6, // 2 μm standard deviation
+            bubble_density: 1e9, // 10^9 bubbles/m³
+            cloud_radius: 0.01, // 1 cm cloud radius
             
-            // Larger domain for cloud
-            domain_size: 0.01,                  // 1 cm
-            grid_points: 64,
-            simulation_time: 100e-6,            // 100 μs
+            // Water properties
+            sound_speed: 1500.0,
+            density: 1000.0,
+            temperature: 293.15, // 20°C
             
-            // Transducer parameters
-            transducer_diameter: 0.01,          // 1 cm diameter
-            focal_length: 0.005,                 // 5 mm focal length
+            // Grid parameters
+            grid_size: 128,
+            grid_spacing: 1e-3, // 1 mm
+            simulation_time: 1e-3, // 1 ms
+            dt: 1e-7, // 100 ns time step
         }
     }
 }
 
-/// Create focused transducer source using library's BowlTransducer
-fn create_focused_source(params: &MBSLParameters, grid: &Grid) -> Box<dyn Source> {
+/// Create focused transducer source
+fn create_focused_source(params: &MBSLParameters, grid: &Grid) -> BowlTransducer {
+    let signal = Arc::new(SineWave::new(
+        params.frequency,
+        params.pressure_amplitude,
+        0.0,
+    ));
+    
     let config = BowlConfig {
+        position: (
+            grid.nx as f64 * grid.dx / 2.0,
+            grid.ny as f64 * grid.dy / 2.0,
+            0.0, // Bottom of grid
+        ),
+        direction: (0.0, 0.0, 1.0), // Pointing up
         diameter: params.transducer_diameter,
+        focal_length: params.focal_length,
         frequency: params.frequency,
-        source_strength: params.pressure_amplitude,
-        focal_length: Some(params.focal_length),
-        position: (grid.nx as f64 * grid.dx / 2.0, 0.0, grid.nz as f64 * grid.dz / 2.0),
-        direction: (0.0, 1.0, 0.0),
     };
     
-    Box::new(BowlTransducer::new(config, Arc::new(SineWave::new(params.frequency, params.pressure_amplitude, 0.0))))
+    BowlTransducer::new(config, signal)
 }
 
 /// Run MBSL simulation
 fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
-    println!("=== Multi-Bubble Sonoluminescence Simulation ===");
-    println!("Bubble cloud dynamics with collective effects");
+    println!("Multi-Bubble Sonoluminescence Simulation");
+    println!("=========================================");
+    println!("Frequency: {} kHz", params.frequency / 1e3);
+    println!("Pressure: {} bar", params.pressure_amplitude / 1e5);
+    println!("Bubble density: {:.2e} bubbles/m³", params.bubble_density);
     println!();
     
-    // Setup grid
-    let n = params.grid_points;
-    let dx = params.domain_size / n as f64;
-    let grid = Grid::new(n, n, n, dx, dx, dx);
-    
-    // Time stepping
-    let c0 = 1482.0; // Sound speed in water
-    let dt = 0.5 * dx / c0;
-    let n_steps = (params.simulation_time / dt) as usize;
-    
-    println!("Configuration:");
-    println!("  Frequency: {:.1} kHz", params.frequency / 1e3);
-    println!("  Pressure: {:.2} atm", params.pressure_amplitude / 101325.0);
-    println!("  Bubble density: {:.1e} bubbles/m³", params.bubble_density);
-    println!("  Grid: {}³ points, dx = {:.1} μm", n, dx * 1e6);
-    println!("  Time steps: {}, dt = {:.2} ns", n_steps, dt * 1e9);
+    // Create grid
+    let n = params.grid_size;
+    let grid = Grid::new(n, n, n, params.grid_spacing, params.grid_spacing, params.grid_spacing);
     
     // Initialize bubble cloud
-    let bubble_params = BubbleParameters {
-        r0: params.mean_radius,
-        p0: 101325.0,
-        rho_liquid: 998.0,
-        c_liquid: c0,
-        mu_liquid: 1.002e-3,
-        sigma: 0.0728,
-        pv: 2.33e3,
-        thermal_conductivity: 0.6,
-        specific_heat_liquid: 4182.0,
-        accommodation_coeff: 0.02,
-        gas_species: params.gas_type,
-        initial_gas_pressure: 101325.0,
-        use_compressibility: true,
-        use_thermal_effects: true,
-        use_mass_transfer: false,
+    let cloud_config = BubbleCloudConfig {
+        mean_radius: params.mean_radius,
+        size_std_dev: params.size_std_dev,
+        bubble_density: params.bubble_density,
+        cloud_radius: params.cloud_radius,
+        ambient_pressure: 101325.0,
+        surface_tension: 0.072,
+        viscosity: 1e-3,
+        polytropic_index: 1.4,
     };
     
-    // Create bubble cloud with size distribution
-    let mut bubble_cloud = BubbleCloud::new(
-        (n, n, n),
-        bubble_params.clone(),
+    let cloud_center = (
+        grid.nx as f64 * grid.dx / 2.0,
+        grid.ny as f64 * grid.dy / 2.0,
+        grid.nz as f64 * grid.dz / 2.0,
     );
     
-    // Generate bubble distribution
-    bubble_cloud.generate(params.bubble_density, (dx, dx, dx));
+    let mut bubble_cloud = BubbleCloud::new(cloud_config, cloud_center, &grid)?;
+    
+    // Store initial bubble radii for compression ratio calculation
+    let initial_radius = bubble_cloud.get_state_fields().radius.clone();
+    
+    // Create acoustic source
+    let source = create_focused_source(&params, &grid);
+    
+    // Initialize PSTD solver with proper configuration
+    let solver_config = PSTDConfig {
+        cfl_number: 0.5,
+        pml_thickness: 10,
+        pml_alpha: 2.0,
+        enable_nonlinear: true, // Enable for MBSL
+        enable_absorption: true,
+        enable_dispersion: false,
+    };
+    
+    let mut solver = PSTDSolver::new(solver_config, &grid)?;
     
     // Initialize fields
     let mut pressure = Array3::zeros((n, n, n));
@@ -155,48 +173,46 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     let mut velocity_y = Array3::zeros((n, n, n));
     let mut velocity_z = Array3::zeros((n, n, n));
     
-    // Create focused source using library implementation
-    let source = create_focused_source(&params, &grid);
-    
-    // Create solver
-    let solver_config = PstdConfig {
-        cfl_number: 0.3,
-        pml_size: 10,
-        pml_alpha: 2.0,
-        use_staggered_grid: true,
+    // Initialize sonoluminescence detector
+    let detector_config = DetectorConfig {
+        spectral_analysis: true,
+        time_resolved: true,
+        temperature_threshold: 5000.0, // 5000 K threshold
+        pressure_threshold: 1e6, // 1 MPa threshold
+        compression_threshold: 5.0, // 5x compression
+        spatial_resolution: params.grid_spacing,
+        time_resolution: params.dt * 10.0,
     };
-    let mut solver = PstdSolver::new(solver_config);
     
-    // Create recorder
-    let mut recorder = Recorder::new();
-    recorder.add_scalar_field("pressure".to_string(), pressure.clone());
+    let mut sl_detector = SonoluminescenceDetector::new(
+        (n, n, n),
+        (params.grid_spacing, params.grid_spacing, params.grid_spacing),
+        detector_config,
+    );
     
-    // Data collection
-    let mut time_history = Vec::new();
-    let mut max_pressures = Vec::new();
-    let mut mean_radii = Vec::new();
-    let mut luminescence_events = Vec::new();
+    // Create plugin manager and register detector
+    // Note: Would register sl_detector as plugin here if PluginManager supported it
     
-    println!("\nRunning simulation...");
-    let mut last_progress = 0;
+    // Simulation variables
+    let num_steps = (params.simulation_time / params.dt) as usize;
+    let output_interval = num_steps / 100; // Output 100 times
     
-    for step in 0..n_steps {
+    let c0 = params.sound_speed;
+    let dt = params.dt;
+    
+    println!("Starting simulation with {} time steps...", num_steps);
+    
+    // Main simulation loop
+    for step in 0..num_steps {
         let t = step as f64 * dt;
         
-        // Progress indicator
-        let progress = (step * 100) / n_steps;
-        if progress > last_progress + 10 {
-            println!("  Progress: {}%", progress);
-            last_progress = progress;
-        }
-        
-        // Add source term
+        // Add source contribution
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
-                    let x = i as f64 * dx;
-                    let y = j as f64 * dx;
-                    let z = k as f64 * dx;
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
                     pressure[[i, j, k]] += source.get_source_term(t, x, y, z, &grid) * dt;
                 }
             }
@@ -226,142 +242,92 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
             &interactions,
         );
         
-        // Detect sonoluminescence events (simplified)
+        // Detect sonoluminescence events using complete detector
         let bubble_states = bubble_cloud.get_state_fields();
-        for i in 0..n {
-            for j in 0..n {
-                for k in 0..n {
-                    let r = bubble_states.radius[[i, j, k]];
-                    let t_gas = bubble_states.temperature[[i, j, k]];
-                    
-                    // Simple SL detection: high temperature during collapse
-                    if t_gas > 5000.0 && r < params.mean_radius * 0.1 {
-                        luminescence_events.push((t, i, j, k, t_gas));
-                    }
-                }
-            }
-        }
+        let sl_events = sl_detector.detect_events(&bubble_states, &pressure, &initial_radius, dt);
         
-        // Update acoustic field (simplified - would use proper solver)
+        // Update acoustic field using proper PSTD solver
         solver.step(
             &mut pressure,
             &mut velocity_x,
             &mut velocity_y,
             &mut velocity_z,
-            &grid,
             dt,
         )?;
         
-        // Record data
-        time_history.push(t);
-        max_pressures.push(pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs())));
+        // Apply bubble-induced pressure modifications
+        let bubble_pressure = bubble_cloud.compute_scattered_pressure(&grid, c0);
+        pressure = pressure + bubble_pressure;
         
-        let stats = bubble_cloud.get_statistics();
-        mean_radii.push(stats.mean_radius);
-        
-        // Record fields periodically
-        if step % 100 == 0 {
-            recorder.record(step as f64);
+        // Output progress
+        if step % output_interval == 0 {
+            let progress = (step as f64 / num_steps as f64) * 100.0;
+            let stats = sl_detector.get_statistics();
+            println!(
+                "Progress: {:.1}%, Time: {:.3} ms, SL Events: {}, Total Photons: {:.2e}",
+                progress,
+                t * 1e3,
+                stats.total_events,
+                stats.total_photons,
+            );
         }
     }
     
-    // Analysis
-    println!("\n=== Simulation Results ===");
-    println!("Total SL events: {}", luminescence_events.len());
+    // Final statistics
+    println!("\nSimulation Complete!");
+    println!("====================");
     
-    if !luminescence_events.is_empty() {
-        let max_temp = luminescence_events.iter()
-            .map(|(_, _, _, _, t)| *t)
-            .fold(0.0f64, |a, b| a.max(b));
-        println!("Maximum gas temperature: {:.0} K", max_temp);
-        
-        // Spatial distribution of SL events
-        let mut spatial_dist = Array3::zeros((n, n, n));
-        for (_, i, j, k, _) in &luminescence_events {
-            spatial_dist[[*i, *j, *k]] += 1.0;
-        }
-        
-        let max_events = spatial_dist.iter().fold(0.0f64, |a, &b| a.max(b));
-        if max_events > 0.0 {
-            println!("Maximum SL events at single location: {:.0}", max_events);
-        }
-    }
+    let final_stats = sl_detector.get_statistics();
+    println!("Total SL Events: {}", final_stats.total_events);
+    println!("Total Photons: {:.2e}", final_stats.total_photons);
+    println!("Total Energy: {:.2e} J", final_stats.total_energy);
+    println!("Max Temperature: {:.0} K", final_stats.max_temperature);
+    println!("Avg Temperature: {:.0} K", final_stats.avg_temperature);
+    println!("Event Rate: {:.2e} events/s", final_stats.event_rate);
     
     // Save results
-    save_mbsl_results(&params, &time_history, &max_pressures, &mean_radii, &luminescence_events)?;
-    
-    println!("\n✅ MBSL simulation completed successfully!");
+    save_results(&sl_detector, &bubble_cloud, &params)?;
     
     Ok(())
 }
 
-/// Save MBSL results to file
-fn save_mbsl_results(
+/// Save simulation results
+fn save_results(
+    detector: &SonoluminescenceDetector,
+    bubble_cloud: &BubbleCloud,
     params: &MBSLParameters,
-    time_history: &[f64],
-    max_pressures: &[f64],
-    mean_radii: &[f64],
-    luminescence_events: &[(f64, usize, usize, usize, f64)],
 ) -> KwaversResult<()> {
-    let mut file = File::create("mbsl_results.dat")
-        .map_err(|e| KwaversError::Io(format!("Failed to create file: {}", e)))?;
+    // Save event data
+    let mut file = File::create("mbsl_events.csv")?;
+    writeln!(file, "time,x,y,z,temperature,pressure,photons,wavelength,energy")?;
     
-    writeln!(file, "# Multi-Bubble Sonoluminescence Results")
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    writeln!(file, "# Frequency: {} kHz", params.frequency / 1e3)
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    writeln!(file, "# Pressure: {} atm", params.pressure_amplitude / 101325.0)
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    writeln!(file, "# Bubble density: {} bubbles/m³", params.bubble_density)
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    writeln!(file, "#")
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    writeln!(file, "# Time(s) MaxPressure(Pa) MeanRadius(m)")
-        .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-    
-    for i in 0..time_history.len() {
-        writeln!(file, "{:.6e} {:.6e} {:.6e}", 
-                time_history[i], max_pressures[i], mean_radii[i])
-            .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
+    for event in detector.get_events() {
+        writeln!(
+            file,
+            "{},{},{},{},{},{},{},{},{}",
+            event.time,
+            event.physical_position.0,
+            event.physical_position.1,
+            event.physical_position.2,
+            event.peak_temperature,
+            event.peak_pressure,
+            event.photon_count,
+            event.peak_wavelength,
+            event.energy,
+        )?;
     }
     
-    // Save SL events separately
-    if !luminescence_events.is_empty() {
-        let mut sl_file = File::create("mbsl_sl_events.dat")
-            .map_err(|e| KwaversError::Io(format!("Failed to create file: {}", e)))?;
-        
-        writeln!(sl_file, "# Sonoluminescence Events")
-            .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-        writeln!(sl_file, "# Time(s) i j k Temperature(K)")
-            .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-        
-        for (t, i, j, k, temp) in luminescence_events {
-            writeln!(sl_file, "{:.6e} {} {} {} {:.0}", t, i, j, k, temp)
-                .map_err(|e| KwaversError::Io(format!("Write error: {}", e)))?;
-        }
-    }
+    println!("\nResults saved to mbsl_events.csv");
     
     Ok(())
-}
-
-/// Analyze field statistics
-fn analyze_field(field: &Array3<f64>, name: &str) {
-    let min = field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-    let max = field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-    let mean = field.iter().sum::<f64>() / field.len() as f64;
-    
-    println!("  {}: min={:.3e}, max={:.3e}, mean={:.3e}", name, min, max, mean);
 }
 
 fn main() -> KwaversResult<()> {
+    // Initialize logging
     env_logger::init();
     
-    println!("Multi-Bubble Sonoluminescence (MBSL) Simulation");
-    println!("================================================");
-    println!();
-    
+    // Run with default parameters
     let params = MBSLParameters::default();
-    
     run_mbsl_simulation(params)?;
     
     Ok(())
