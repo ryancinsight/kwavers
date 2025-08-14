@@ -5,9 +5,13 @@
 //! - Complete sonoluminescence detection from library
 //! - Proper acoustic solver from library
 //! - Collective bubble effects
+//! - Full data acquisition with cavitation and thermal monitoring
 
 use kwavers::{
     Grid, KwaversResult,
+    recorder::{Recorder, RecorderConfig},
+    sensor::Sensor,
+    time::Time,
     source::{Source, BowlTransducer},
     signal::{Signal, SineWave},
     physics::{
@@ -28,7 +32,7 @@ use kwavers::{
     config::BowlConfig,
     constants::PI,
 };
-use ndarray::{Array3, s};
+use ndarray::{Array3, Array4, Axis, s};
 use std::sync::Arc;
 use std::fs::File;
 use std::io::Write;
@@ -60,6 +64,9 @@ struct MBSLParameters {
     grid_spacing: f64,
     simulation_time: f64,
     dt: f64,
+    
+    // Data acquisition
+    enable_full_monitoring: bool,
 }
 
 impl Default for MBSLParameters {
@@ -89,6 +96,9 @@ impl Default for MBSLParameters {
             grid_spacing: 1e-3, // 1 mm
             simulation_time: 1e-3, // 1 ms
             dt: 1e-7, // 100 ns time step
+            
+            // Enable comprehensive monitoring
+            enable_full_monitoring: true,
         }
     }
 }
@@ -116,18 +126,58 @@ fn create_focused_source(params: &MBSLParameters, grid: &Grid) -> BowlTransducer
     BowlTransducer::new(config, signal)
 }
 
-/// Run MBSL simulation
+/// Run MBSL simulation with full data acquisition
 fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     println!("Multi-Bubble Sonoluminescence Simulation");
     println!("=========================================");
     println!("Frequency: {} kHz", params.frequency / 1e3);
     println!("Pressure: {} bar", params.pressure_amplitude / 1e5);
     println!("Bubble density: {:.2e} bubbles/m³", params.bubble_density);
+    println!("Full monitoring: {}", if params.enable_full_monitoring { "✓" } else { "✗" });
     println!();
     
     // Create grid
     let n = params.grid_size;
     let grid = Grid::new(n, n, n, params.grid_spacing, params.grid_spacing, params.grid_spacing);
+    
+    // Create time configuration
+    let time = Time::new(0.0, params.simulation_time, params.dt);
+    
+    // Setup sensors for data acquisition
+    let sensor_positions = vec![
+        // Focus region monitoring
+        (n/2, n/2, n/2),       // Center
+        (n/2, n/2, 3*n/4),     // Above center
+        (n/2, n/2, n/4),       // Below center
+        // Cloud boundary monitoring
+        (n/2 + n/8, n/2, n/2),
+        (n/2 - n/8, n/2, n/2),
+        (n/2, n/2 + n/8, n/2),
+        (n/2, n/2 - n/8, n/2),
+    ];
+    
+    let sensor = Sensor::new(&grid, &time, sensor_positions);
+    
+    // Configure comprehensive data acquisition
+    let sl_detector_config = DetectorConfig {
+        spectral_analysis: true,
+        time_resolved: true,
+        temperature_threshold: 5000.0, // 5000 K for SL
+        pressure_threshold: 1e6, // 1 MPa
+        compression_threshold: 5.0, // 5x compression
+        spatial_resolution: params.grid_spacing,
+        time_resolution: params.dt * 10.0,
+    };
+    
+    let recorder_config = RecorderConfig::new("mbsl_output")
+        .with_pressure_recording(true)
+        .with_light_recording(true)  // Records general light field
+        .with_temperature_recording(params.enable_full_monitoring)
+        .with_cavitation_detection(params.enable_full_monitoring, -0.5e5) // -0.5 bar threshold
+        .with_sonoluminescence_detection(true, Some(sl_detector_config)) // Specific SL events
+        .with_snapshot_interval(100);
+    
+    let mut recorder = Recorder::from_config(sensor, &time, &recorder_config);
     
     // Initialize bubble cloud
     let cloud_config = BubbleCloudConfig {
@@ -167,31 +217,14 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     
     let mut solver = PSTDSolver::new(solver_config, &grid)?;
     
-    // Initialize fields
-    let mut pressure = Array3::zeros((n, n, n));
+    // Initialize fields (4D array: [field_type, nx, ny, nz])
+    // Field indices: 0=pressure, 1=light, 2=temperature, 3=bubble_radius
+    let mut fields = Array4::zeros((4, n, n, n));
+    
+    // Initialize velocity fields for solver
     let mut velocity_x = Array3::zeros((n, n, n));
     let mut velocity_y = Array3::zeros((n, n, n));
     let mut velocity_z = Array3::zeros((n, n, n));
-    
-    // Initialize sonoluminescence detector
-    let detector_config = DetectorConfig {
-        spectral_analysis: true,
-        time_resolved: true,
-        temperature_threshold: 5000.0, // 5000 K threshold
-        pressure_threshold: 1e6, // 1 MPa threshold
-        compression_threshold: 5.0, // 5x compression
-        spatial_resolution: params.grid_spacing,
-        time_resolution: params.dt * 10.0,
-    };
-    
-    let mut sl_detector = SonoluminescenceDetector::new(
-        (n, n, n),
-        (params.grid_spacing, params.grid_spacing, params.grid_spacing),
-        detector_config,
-    );
-    
-    // Create plugin manager and register detector
-    // Note: Would register sl_detector as plugin here if PluginManager supported it
     
     // Simulation variables
     let num_steps = (params.simulation_time / params.dt) as usize;
@@ -201,10 +234,23 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     let dt = params.dt;
     
     println!("Starting simulation with {} time steps...", num_steps);
+    println!("Data acquisition:");
+    println!("  - Pressure: ✓");
+    println!("  - Light field: ✓ (continuous optical field)");
+    println!("  - SL detection: ✓ (discrete bubble collapse events)");
+    if params.enable_full_monitoring {
+        println!("  - Cavitation: ✓");
+        println!("  - Temperature: ✓");
+        println!("  - Thermal dose: ✓");
+    }
+    println!();
     
     // Main simulation loop
     for step in 0..num_steps {
         let t = step as f64 * dt;
+        
+        // Extract current pressure field
+        let mut pressure = fields.index_axis_mut(Axis(0), 0);
         
         // Add source contribution
         for i in 0..n {
@@ -217,10 +263,14 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
                 }
             }
         }
+        drop(pressure);
         
         // Update bubble cloud with acoustic pressure
         let interactions = BubbleInteractions::default();
         let collective = CollectiveEffects::new(params.bubble_density);
+        
+        // Get current pressure for bubble dynamics
+        let pressure = fields.index_axis(Axis(0), 0).to_owned();
         
         // Get bubble state fields for collective effects
         let state_fields = bubble_cloud.get_state_fields();
@@ -242,11 +292,42 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
             &interactions,
         );
         
-        // Detect sonoluminescence events using complete detector
+        // Get updated bubble states
         let bubble_states = bubble_cloud.get_state_fields();
-        let sl_events = sl_detector.detect_events(&bubble_states, &pressure, &initial_radius, dt);
+        
+        // Update temperature and bubble radius fields
+        fields.index_axis_mut(Axis(0), 2).assign(&bubble_states.temperature);
+        fields.index_axis_mut(Axis(0), 3).assign(&bubble_states.radius);
+        
+        // Calculate light emission from sonoluminescence
+        // This is the CONTINUOUS light field that results from SL events
+        let mut light_field = fields.index_axis_mut(Axis(0), 1);
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    let temp = bubble_states.temperature[[i, j, k]];
+                    let radius = bubble_states.radius[[i, j, k]];
+                    
+                    // If conditions for SL are met, add light to the field
+                    if temp > 5000.0 && radius > 0.0 {
+                        // Stefan-Boltzmann radiation for total power
+                        let sigma = 5.67e-8;
+                        let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
+                        let power = sigma * surface_area * temp.powi(4);
+                        
+                        // Add to light field (this accumulates over time)
+                        light_field[[i, j, k]] += power * dt;
+                    }
+                }
+            }
+        }
+        drop(light_field);
+        
+        // Record all data (includes both light field AND SL event detection)
+        recorder.record(&fields, step, t);
         
         // Update acoustic field using proper PSTD solver
+        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
         solver.step(
             &mut pressure,
             &mut velocity_x,
@@ -259,67 +340,184 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         let bubble_pressure = bubble_cloud.compute_scattered_pressure(&grid, c0);
         pressure = pressure + bubble_pressure;
         
+        // Store updated pressure back
+        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
+        
         // Output progress
         if step % output_interval == 0 {
             let progress = (step as f64 / num_steps as f64) * 100.0;
-            let stats = sl_detector.get_statistics();
+            let stats = &recorder.statistics;
             println!(
-                "Progress: {:.1}%, Time: {:.3} ms, SL Events: {}, Total Photons: {:.2e}",
+                "Progress: {:.1}%, Time: {:.3} ms",
                 progress,
                 t * 1e3,
-                stats.total_events,
-                stats.total_photons,
             );
+            println!(
+                "  SL Events: {} (discrete collapse events)",
+                stats.total_sl_events,
+            );
+            println!(
+                "  Total Photons: {:.2e}",
+                stats.total_sl_photons,
+            );
+            println!(
+                "  Max Light Intensity: {:.2e} W/m² (continuous field)",
+                stats.max_light_intensity,
+            );
+            if params.enable_full_monitoring {
+                println!(
+                    "  Cavitation Events: {}",
+                    stats.total_cavitation_events,
+                );
+                println!(
+                    "  Max Temperature: {:.0} K",
+                    stats.max_temperature,
+                );
+            }
+            println!();
         }
     }
     
     // Final statistics
-    println!("\nSimulation Complete!");
+    println!("Simulation Complete!");
     println!("====================");
     
-    let final_stats = sl_detector.get_statistics();
-    println!("Total SL Events: {}", final_stats.total_events);
-    println!("Total Photons: {:.2e}", final_stats.total_photons);
-    println!("Total Energy: {:.2e} J", final_stats.total_energy);
-    println!("Max Temperature: {:.0} K", final_stats.max_temperature);
-    println!("Avg Temperature: {:.0} K", final_stats.avg_temperature);
-    println!("Event Rate: {:.2e} events/s", final_stats.event_rate);
+    let final_stats = &recorder.statistics;
+    println!("Sonoluminescence Statistics:");
+    println!("  Total SL Events: {} (discrete bubble collapses)", final_stats.total_sl_events);
+    println!("  Total Photons: {:.2e}", final_stats.total_sl_photons);
+    println!("  Total Energy: {:.2e} J", final_stats.total_sl_energy);
+    println!();
     
-    // Save results
-    save_results(&sl_detector, &bubble_cloud, &params)?;
+    println!("Light Field Statistics:");
+    println!("  Max Light Intensity: {:.2e} W/m² (continuous field)", final_stats.max_light_intensity);
+    println!();
+    
+    println!("Acoustic Statistics:");
+    println!("  Max Pressure: {:.2e} Pa", final_stats.max_pressure);
+    println!("  Min Pressure: {:.2e} Pa", final_stats.min_pressure);
+    
+    if params.enable_full_monitoring {
+        println!();
+        println!("Additional Monitoring:");
+        println!("  Total Cavitation Events: {}", final_stats.total_cavitation_events);
+        println!("  Max Temperature: {:.0} K", final_stats.max_temperature);
+    }
+    
+    // Save all recorded data
+    recorder.save()?;
+    println!("\nData saved to mbsl_output files:");
+    println!("  - mbsl_output.csv: Sensor time series");
+    println!("  - mbsl_output_sonoluminescence.csv: SL events");
+    if params.enable_full_monitoring {
+        println!("  - mbsl_output_cavitation.csv: Cavitation events");
+        println!("  - mbsl_output_thermal.csv: Thermal events");
+    }
+    
+    // Export specialized maps
+    if let Some(sl_map) = recorder.sonoluminescence_intensity_map() {
+        let max_intensity = sl_map.iter().fold(0.0, |a, &b| a.max(b));
+        println!("\nSL Intensity Map:");
+        println!("  Max cumulative photons at single location: {:.2e}", max_intensity);
+        
+        // Find hotspots
+        let mut hotspots = Vec::new();
+        for i in 0..n {
+            for j in 0..n {
+                for k in 0..n {
+                    if sl_map[[i, j, k]] > max_intensity * 0.5 {
+                        hotspots.push((i, j, k, sl_map[[i, j, k]]));
+                    }
+                }
+            }
+        }
+        println!("  Number of SL hotspots (>50% max): {}", hotspots.len());
+    }
+    
+    if params.enable_full_monitoring {
+        if let Some(cavitation_map) = recorder.cavitation_map() {
+            let max_events = cavitation_map.iter().fold(0.0, |a, &b| a.max(b));
+            println!("\nCavitation Map:");
+            println!("  Max events at single location: {:.0}", max_events);
+        }
+        
+        if let Some(thermal_dose) = recorder.thermal_dose_map() {
+            let max_dose = thermal_dose.iter().fold(0.0, |a, &b| a.max(b));
+            println!("\nThermal Dose Map:");
+            println!("  Max CEM43: {:.2e} min", max_dose);
+        }
+    }
+    
+    // Analyze spatial distribution of SL
+    analyze_sl_distribution(&recorder, &grid);
     
     Ok(())
 }
 
-/// Save simulation results
-fn save_results(
-    detector: &SonoluminescenceDetector,
-    bubble_cloud: &BubbleCloud,
-    params: &MBSLParameters,
-) -> KwaversResult<()> {
-    // Save event data
-    let mut file = File::create("mbsl_events.csv")?;
-    writeln!(file, "time,x,y,z,temperature,pressure,photons,wavelength,energy")?;
+/// Analyze spatial distribution of sonoluminescence events
+fn analyze_sl_distribution(recorder: &Recorder, grid: &Grid) {
+    println!("\nSpatial Analysis of Sonoluminescence:");
+    println!("=====================================");
     
-    for event in detector.get_events() {
-        writeln!(
-            file,
-            "{},{},{},{},{},{},{},{},{}",
-            event.time,
-            event.physical_position.0,
-            event.physical_position.1,
-            event.physical_position.2,
-            event.peak_temperature,
-            event.peak_pressure,
-            event.photon_count,
-            event.peak_wavelength,
-            event.energy,
-        )?;
+    if recorder.sl_events.is_empty() {
+        println!("No SL events detected.");
+        return;
     }
     
-    println!("\nResults saved to mbsl_events.csv");
+    // Calculate center of mass of SL events
+    let mut x_sum = 0.0;
+    let mut y_sum = 0.0;
+    let mut z_sum = 0.0;
+    let mut total_photons = 0.0;
     
-    Ok(())
+    for event in &recorder.sl_events {
+        let weight = event.photon_count;
+        x_sum += event.physical_position.0 * weight;
+        y_sum += event.physical_position.1 * weight;
+        z_sum += event.physical_position.2 * weight;
+        total_photons += weight;
+    }
+    
+    if total_photons > 0.0 {
+        let x_center = x_sum / total_photons;
+        let y_center = y_sum / total_photons;
+        let z_center = z_sum / total_photons;
+        
+        println!("  SL emission center of mass (weighted by photons):");
+        println!("    X: {:.3} mm", x_center * 1e3);
+        println!("    Y: {:.3} mm", y_center * 1e3);
+        println!("    Z: {:.3} mm", z_center * 1e3);
+        
+        // Calculate spread
+        let mut r_sum = 0.0;
+        for event in &recorder.sl_events {
+            let dx = event.physical_position.0 - x_center;
+            let dy = event.physical_position.1 - y_center;
+            let dz = event.physical_position.2 - z_center;
+            let r = (dx*dx + dy*dy + dz*dz).sqrt();
+            r_sum += r * event.photon_count;
+        }
+        
+        let r_avg = r_sum / total_photons;
+        println!("  Average distance from center: {:.3} mm", r_avg * 1e3);
+    }
+    
+    // Temporal distribution
+    if !recorder.sl_events.is_empty() {
+        let first_event = recorder.sl_events.iter().map(|e| e.time).fold(f64::INFINITY, f64::min);
+        let last_event = recorder.sl_events.iter().map(|e| e.time).fold(0.0, f64::max);
+        let duration = last_event - first_event;
+        
+        println!("\n  Temporal distribution:");
+        println!("    First event: {:.3} μs", first_event * 1e6);
+        println!("    Last event: {:.3} μs", last_event * 1e6);
+        println!("    Active duration: {:.3} μs", duration * 1e6);
+        
+        if duration > 0.0 {
+            let event_rate = recorder.sl_events.len() as f64 / duration;
+            println!("    Event rate: {:.2e} events/s", event_rate);
+        }
+    }
 }
 
 fn main() -> KwaversResult<()> {
@@ -329,6 +527,8 @@ fn main() -> KwaversResult<()> {
     // Run with default parameters
     let params = MBSLParameters::default();
     run_mbsl_simulation(params)?;
+    
+    println!("\n✓ MBSL simulation with full data acquisition complete!");
     
     Ok(())
 }
