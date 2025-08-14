@@ -43,8 +43,8 @@ mod tests {
             cpml.update_acoustic_memory(&grad_x, 0).unwrap();
             cpml.apply_cpml_gradient(&mut grad_x, 0).unwrap();
             
-            // Apply damping to field as a simple test
-            field *= 0.99;
+            // Apply damping to field for test validation
+            field *= crate::constants::solver::TEST_FIELD_DAMPING;
         }
         
         let final_max = field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));

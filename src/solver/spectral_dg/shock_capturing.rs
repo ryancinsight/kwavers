@@ -14,13 +14,13 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
-use log::warn;
+
 
 use crate::constants::numerical::{
     WENO_WEIGHT_0, WENO_WEIGHT_1, WENO_WEIGHT_2,
     VON_NEUMANN_RICHTMYER_COEFF, LINEAR_VISCOSITY_COEFF, 
     QUADRATIC_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT,
-    WENO_EPSILON, STENCIL_COEFF_3_4, STENCIL_COEFF_1_4, STENCIL_COEFF_1_2
+    WENO_EPSILON, STENCIL_COEFF_1_4
 };
 
 /// Shock detector with multiple indicators

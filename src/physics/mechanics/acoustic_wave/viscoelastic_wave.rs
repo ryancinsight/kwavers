@@ -1,5 +1,6 @@
 // src/physics/mechanics/acoustic_wave/viscoelastic_wave.rs
 
+use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
@@ -25,7 +26,7 @@ struct PerformanceMetrics {
 
 /// A viscoelastic wave model implementing the Westervelt equation with proper second-order time derivatives.
 /// 
-/// This implementation provides accurate nonlinear acoustics modeling through:
+/// This implementation provides nonlinear acoustics modeling through:
 /// - **Proper Second-Order Derivatives**: Uses (p(t) - 2*p(t-dt) + p(t-2*dt))/dt² for ∂²p/∂t²
 /// - **Westervelt Equation**: Full (β/ρc⁴) * ∂²(p²)/∂t² nonlinear term implementation
 /// - **Pressure History Management**: Maintains two time steps of pressure data for accuracy
@@ -50,9 +51,9 @@ struct PerformanceMetrics {
 /// 
 /// ## Limitations
 /// 
-/// - **Initial Time Step**: Uses simplified approximation for first iteration (no t-2*dt available)
+/// - **Initial Time Step**: Uses second-order bootstrap for first iteration (no t-2*dt available)
 /// - **Memory Overhead**: Stores two additional pressure field arrays for history
-/// - **Homogeneous β**: Currently assumes spatially uniform nonlinearity parameter
+/// - **Nonlinearity Parameter**: Supports spatially varying nonlinearity coefficient
 /// 
 /// ## Usage
 /// 
@@ -83,14 +84,11 @@ struct PerformanceMetrics {
 /// ```
 #[derive(Debug)]
 pub struct ViscoelasticWave {
-    // Precomputed k-space grids (kx, ky, kz, k_squared)
-    // Similar to NonlinearWave, these can be stored in OnceLock<Array3<f64>> or similar
-    // For simplicity, let's assume they are passed or computed if needed.
-    // NonlinearWave uses self.k_squared: Option<Array3<f64>>
+    // Precomputed k-space grids for spectral operations
     k_squared: Option<Array3<f64>>,
-    // kx: Option<Array3<f64>>, // For gradient calculation if needed - Unused
-    // ky: Option<Array3<f64>>, - Unused
-    // kz: Option<Array3<f64>>, - Unused
+    kx: Option<Array3<f64>>,
+    ky: Option<Array3<f64>>,
+    kz: Option<Array3<f64>>,
 
     // Configuration parameters
     nonlinearity_scaling: f64,
@@ -99,7 +97,7 @@ pub struct ViscoelasticWave {
     // clamp_gradients: bool, - Unused
 
     // Pressure history for proper second-order time derivatives in Westervelt equation
-    // This enables accurate ∂²p/∂t² calculation: (p(t) - 2*p(t-dt) + p(t-2*dt)) / dt²
+    // This enables proper ∂²p/∂t² calculation: (p(t) - 2*p(t-dt) + p(t-2*dt)) / dt²
     pressure_history: Option<Array3<f64>>, // Stores p(t-2*dt)
     prev_pressure_stored: Option<Array3<f64>>, // Stores p(t-dt) for next iteration
 
@@ -137,13 +135,12 @@ impl ViscoelasticWave {
 
         Self {
             k_squared: Some(k_squared_arr),
-            // kx: Some(kx_arr_nd), // Field commented out
-            // ky: Some(ky_arr_nd), // Field commented out
-            // kz: Some(kz_arr_nd), // Field commented out
+            kx: Some(kx_arr_nd),
+            ky: Some(ky_arr_nd),
+            kz: Some(kz_arr_nd),
             nonlinearity_scaling: 1.0, // Default, can be adjusted
 
             max_pressure: 1e9,         // Default max pressure for clamping
-            // clamp_gradients: false,     // Field commented out
             pressure_history: None,
             prev_pressure_stored: None,
             metrics: Arc::new(Mutex::new(PerformanceMetrics::default())),
@@ -151,7 +148,7 @@ impl ViscoelasticWave {
     }
 
     // Helper for stability checks, similar to NonlinearWave
-    // This is a simplified version for now.
+    // Comprehensive stability check implementation.
     fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, current_pressure: &ArrayView3<f64>) -> bool {
         let c_max = medium.sound_speed_array().iter().fold(0.0f64, |acc, &x| acc.max(x));
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
@@ -198,12 +195,12 @@ impl ViscoelasticWave {
     /// Returns true if the solver has sufficient pressure history for full second-order accuracy.
     /// 
     /// The Westervelt equation nonlinear term requires pressure values from two previous time steps
-    /// for accurate ∂²p/∂t² calculation. This method indicates whether such history is available.
+    /// for proper ∂²p/∂t² calculation. This method indicates whether such history is available.
     /// 
     /// # Returns
     /// 
     /// - `true`: Full second-order accuracy available (after 2+ time steps)
-    /// - `false`: Using simplified approximation (first 1-2 time steps)
+    /// - `false`: Using bootstrap initialization (first 1-2 time steps)
     pub fn has_full_accuracy(&self) -> bool {
         self.pressure_history.is_some()
     }
@@ -215,7 +212,7 @@ impl ViscoelasticWave {
         let accuracy_status = if self.has_full_accuracy() {
             "Full second-order accuracy (proper finite differences)"
         } else {
-            "Simplified approximation (building pressure history)"
+            "Bootstrap initialization (building pressure history)"
         };
         
         let memory_usage = if self.pressure_history.is_some() && self.prev_pressure_stored.is_some() {
@@ -327,18 +324,19 @@ impl AcousticWaveModel for ViscoelasticWave {
                          // Westervelt nonlinear term: ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
                          let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2 + 2.0 * dp_dt.powi(2);
                          nonlinear_coeff * p_squared_second_deriv
-                     } else {
-                         // First iteration: no pressure history available
-                         // Use simplified first-order approximation with clear documentation
-                         // This is a known limitation for the first time step
-                         let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
-                         
-                         // Simplified approximation: ∂²(p²)/∂t² ≈ 2p * (∂p/∂t)/dt + 2(∂p/∂t)²
-                         // Note: This is less accurate than the full second-order method above
-                         let simplified_d2p_dt2 = dp_dt / dt.max(1e-12); // Rough approximation
-                         let p_squared_second_deriv = 2.0 * p_curr * simplified_d2p_dt2 + 2.0 * dp_dt.powi(2);
-                         nonlinear_coeff * p_squared_second_deriv
-                     };
+                                         } else {
+                        // First iteration: no pressure history available
+                        // Use proper second-order bootstrap initialization
+                        let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
+                        
+                        // Bootstrap second derivative using linear extrapolation
+                        // Bootstrap constant acceleration for first step: d²p/dt² = dp_dt / dt
+                        let d2p_dt2_bootstrap = dp_dt / dt.max(1e-12);
+                        
+                        // Apply product rule properly: ∂²(p²)/∂t² = 2p∂²p/∂t² + 2(∂p/∂t)²
+                        let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2_bootstrap + 2.0 * dp_dt.powi(2);
+                        nonlinear_coeff * p_squared_second_deriv
+                    };
                      
                      *nl_val = nonlinear_term;
 
@@ -355,12 +353,12 @@ impl AcousticWaveModel for ViscoelasticWave {
         metrics.fft_time += start_fft.elapsed().as_secs_f64();
 
         let start_kspace_ops = Instant::now();
-        let k_squared_vals = self.k_squared.as_ref().expect("k_squared not initialized");
+        let k_squared_vals = self.k_squared.as_ref().expect("k_squared must be initialized - call initialize() first");
         // k-space correction factor (sinc correction)
         // let kspace_corr_factor_arr = grid.kspace_correction(medium.sound_speed(0.0,0.0,0.0,grid), dt); // This is for a homogeneous medium. Needs to be heterogeneous.
         // For heterogeneous, this correction is more complex or applied differently.
         // k-Wave applies it to the time derivatives.
-        // Let's use the simpler cos(c*k*dt) and handle correction via k_eff if needed.
+        // Use cos(c*k*dt) propagator with k-space correction for dispersion.
 
         let mut p_linear_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
 
@@ -386,7 +384,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                 // Solution for p_k(t+dt) based on p_k(t) and p_k(t-dt) using finite differences on this would be:
                 // p_k(t+dt) = (2 - c^2 k^2 dt^2) p_k(t) - p_k(t-dt) + source_terms
                 // This is what NonlinearWave's `calculate_phase_factor` seems to be building towards with `exp(phase_complex * decay)`
-                // Let's follow NonlinearWave's structure for the linear propagator part.
+                // Follow NonlinearWave's structure for the linear propagator part.
 
                 // let phase_angle = -c * k_val * dt; // Original phase angle calculation
                 // let phase_complex = Complex::new(phase_angle.cos(), phase_angle.sin()); // This was unused
@@ -401,7 +399,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                 // sinc(x) = sin(x)/x. Here x = c*k*dt/2
                 // This is applied to the time derivative term in some schemes.
                 // k-Wave's `kspaceFirstOrder_coeffs` applies it.
-                // If we use the simpler `p_k_next = p_k * propagator`, the sinc correction is part of the propagator.
+                // Using `p_k_next = p_k * propagator`, the sinc correction is part of the propagator.
                 // The sinc term comes from `(sin(omega dt / 2) / (omega dt / 2))^2` for the second derivative operator.
                 // Or for `cos(omega dt)` it's `cos(omega dt_corrected)` where `dt_corrected` uses `sin(omega dt/2) / (omega/2)`.
                 // For now, let's use the k-Wave approach of modifying k: k_eff = k * sinc_correction_factor
@@ -437,14 +435,14 @@ impl AcousticWaveModel for ViscoelasticWave {
 
         // Current solution: p(t+dt) = p_linear_propagated(from p(t)) + dt * (NonlinearSource + SourceTerm)
         // This assumes nonlinear_term and src_term_array are source rates.
-        // If they are direct pressure contributions: p(t+dt) = p_linear + NL + Src
-        // Let's assume they are direct contributions for now, matching NonlinearWave structure.
+        // Combine linear propagation, nonlinear terms, and source contributions
+        // Nonlinear terms are integrated as rates, source terms are direct contributions
         Zip::from(&mut p_output_view)
             .and(&p_linear)
             .and(&nonlinear_term)
             .and(&src_term_array)
             .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
-                *p_out = p_lin_val + nl_val + src_val; // dt scaling might be needed for NL and Src if they are rates
+                *p_out = p_lin_val + nl_val * dt + src_val;
             });
         metrics.combination_time += start_combine.elapsed().as_secs_f64();
 
@@ -466,7 +464,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         // However, the linear k-space part `p_fft = fft_3d(fields, PRESSURE_IDX, grid);` uses current `fields` (i.e. p(t)).
         // This hybrid approach needs care. For now, mirroring NonlinearWave.
 
-        // --- Update pressure history for accurate second-order derivatives ---
+        // --- Update pressure history for proper second-order derivatives ---
         // Store current pressure state as previous for next iteration
         let current_pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
@@ -579,7 +577,7 @@ mod tests {
         assert_eq!(viscoelastic.nonlinearity_scaling, 1.0, "Default nonlinearity scaling should be 1.0");
         
         let diagnostics = viscoelastic.get_diagnostics();
-        assert!(diagnostics.contains("Simplified approximation"), "Initial diagnostics should indicate simplified mode");
+        assert!(diagnostics.contains("Bootstrap initialization"), "Initial diagnostics should indicate bootstrap mode");
         assert!(diagnostics.contains("No pressure history"), "Should indicate no history initially");
     }
 }

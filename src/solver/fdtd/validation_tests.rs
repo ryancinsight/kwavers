@@ -74,8 +74,8 @@ mod tests {
         let n_steps = (propagation_time / dt).ceil() as usize;
         
         for _ in 0..n_steps {
-            solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, &medium, dt).unwrap();
-            solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, &medium, dt).unwrap();
+            solver.update_velocity(&mut velocity_x.view_mut(), &mut velocity_y.view_mut(), &mut velocity_z.view_mut(), &pressure.view(), &medium, dt).unwrap();
+            solver.update_pressure(&mut pressure.view_mut(), &velocity_x.view(), &velocity_y.view(), &velocity_z.view(), &medium, dt).unwrap();
         }
         
         // Check phase velocity (should be close to c)
@@ -156,7 +156,7 @@ mod tests {
         }
         
         // Test interpolation to staggered positions
-        let interpolated = solver.interpolate_to_staggered(&field, 0, 0.5);
+        let interpolated = solver.interpolate_to_staggered(&field.view(), 0, 0.5);
         
         // Check that values are averaged correctly
         for i in 0..9 {
@@ -197,7 +197,7 @@ mod tests {
             }
             
             // Compute derivative
-            let deriv = solver.compute_derivative(&field, 0, 0.0);
+            let deriv = solver.compute_derivative(&field.view(), 0, 0.0);
             
             // Check accuracy in the interior, away from boundaries
             let margin = order / 2 + 3; // Extra margin for boundary effects

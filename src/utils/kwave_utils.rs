@@ -20,7 +20,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2, Axis};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f64::consts::PI;
-use rayon::prelude::*;
+
 
 /// Angular spectrum propagation method for forward/backward propagation
 pub struct AngularSpectrum {

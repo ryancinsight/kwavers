@@ -13,7 +13,7 @@
 use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::Grid;
 use ndarray::{Array2, Array3, Array4};
-use rayon::prelude::*;
+
 
 /// Anisotropic material types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -351,9 +351,9 @@ impl AnisotropicTissueProperties {
         
         // Extract wave velocities (sqrt of eigenvalues)
         // Eigenvalues are sorted in ascending order
-        let vs1 = eigenvalues[0].sqrt(); // Slowest shear wave
-        let vs2 = eigenvalues[1].sqrt(); // Faster shear wave  
-        let vp = eigenvalues[2].sqrt();  // Compressional wave
+        let vs1 = eigenvalues[0].sqrt(); // First shear wave velocity
+        let vs2 = eigenvalues[1].sqrt(); // Second shear wave velocity  
+        let vp = eigenvalues[2].sqrt();  // Compressional wave velocity
         
         Ok((vp, vs1, vs2))
     }

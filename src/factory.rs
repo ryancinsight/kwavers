@@ -19,7 +19,7 @@ use crate::error::{KwaversResult, ConfigError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use ndarray::Array4;
-use crate::physics::plugin::{PhysicsPlugin, PluginManager};
+use crate::physics::plugin::PluginManager;
 use crate::time::Time;
 use crate::validation::{ValidationResult};
 use crate::solver::amr::{AMRConfig, WaveletType, InterpolationScheme};

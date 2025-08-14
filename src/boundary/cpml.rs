@@ -42,11 +42,11 @@
 //!    matched layer improved at grazing incidence for the seismic wave equation." 
 //!    Geophysics, 72(5), SM155-SM167.
 
-use crate::boundary::Boundary;
+
 use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ConfigError};
 use ndarray::{Array3, Array4, Axis, Zip};
-use rustfft::num_complex::Complex;
+
 use std::f64::consts::PI;
 use log::{debug, trace};
 

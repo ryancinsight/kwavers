@@ -753,7 +753,7 @@ impl Solver {
     /// Follows Single Responsibility: Handles only stress tensor boundary conditions
     fn apply_stress_pml(&mut self, field: &mut Array3<f64>, field_idx: usize, step: usize) -> KwaversResult<()> {
         // Stress components require different treatment than velocity
-        let stress_damping_factor = 1.2; // Enhanced damping for stress components
+        let stress_damping_factor = crate::constants::solver::STRESS_PML_DAMPING_FACTOR;
         
         // Apply modified PML with stress-specific parameters
         self.boundary.apply_acoustic_with_factor(field, &self.grid, step, stress_damping_factor)?;

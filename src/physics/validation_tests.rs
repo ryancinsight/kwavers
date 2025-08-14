@@ -891,8 +891,8 @@ mod tests {
         // Verify time scale separation
         // Acoustic time scale should be much faster than thermal
         assert!(time_scales.len() >= 2, "Should detect at least 2 time scales");
-        let acoustic_scale = time_scales[0]; // Fastest scale
-        let thermal_scale = time_scales[1];  // Slower scale
+        let acoustic_scale = time_scales[0]; // Primary acoustic time scale
+        let thermal_scale = time_scales[1];  // Secondary thermal time scale
         let separation_ratio = thermal_scale / acoustic_scale;
         
         println!("Time scale separation ratio: {:.2e}", separation_ratio);

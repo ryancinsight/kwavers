@@ -81,7 +81,7 @@ pub mod physics {
 
 /// Grid and discretization constants
 pub mod grid {
-    /// Minimum grid points per wavelength for accurate simulation
+    /// Minimum grid points per wavelength for numerical stability
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 6;
     
     /// Optimal grid points per wavelength
@@ -107,6 +107,12 @@ pub mod stability {
     
     /// Smoothing factor for interface transitions
     pub const SMOOTHING_FACTOR: f64 = 0.1;
+    
+    /// Default PSTD weight in hybrid solver blending (favors accuracy)
+    pub const DEFAULT_PSTD_WEIGHT: f64 = 0.6;
+    
+    /// Default FDTD weight in hybrid solver blending (complements PSTD)
+    pub const DEFAULT_FDTD_WEIGHT: f64 = 0.4;
 }
 
 /// Performance and optimization constants
@@ -178,6 +184,18 @@ pub mod bubble_dynamics {
     
     /// Maximum bubble radius (1 cm)
     pub const MAX_RADIUS: f64 = 1e-2;
+    
+    /// Surface tension coefficient (factor of 2) from Young-Laplace equation
+    pub const SURFACE_TENSION_COEFF: f64 = 2.0;
+    
+    /// Viscous stress coefficient (factor of 4) from Navier-Stokes
+    pub const VISCOUS_STRESS_COEFF: f64 = 4.0;
+    
+    /// Kinetic energy coefficient (factor of 1.5) in Rayleigh-Plesset equation  
+    pub const KINETIC_ENERGY_COEFF: f64 = 1.5;
+    
+    /// Latent heat of vaporization for water at standard conditions [J/kg]
+    pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.26e6;
     
     /// Air composition - Nitrogen fraction
     pub const N2_FRACTION: f64 = 0.79;
@@ -326,6 +344,15 @@ pub mod numerical {
     pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
 }
 
+/// Solver and numerical methods constants
+pub mod solver {
+    /// Stress-specific damping factor for PML boundary conditions
+    pub const STRESS_PML_DAMPING_FACTOR: f64 = 1.2;
+    
+    /// Test field damping factor for validation
+    pub const TEST_FIELD_DAMPING: f64 = 0.99;
+}
+
 /// Chemistry and ROS constants
 pub mod chemistry {
     /// Relative damage weights for ROS species
@@ -335,6 +362,12 @@ pub mod chemistry {
     pub const SINGLET_OXYGEN_WEIGHT: f64 = 5.0;
     pub const PEROXYNITRITE_WEIGHT: f64 = 8.0;
     pub const NITRIC_OXIDE_WEIGHT: f64 = 0.5;
+    
+    /// Base photochemical initiation rate coefficient (1/s per unit light intensity)
+    pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-7;
+    
+    /// Default thermal diffusion coefficient (mm²/ns)
+    pub const DEFAULT_THERMAL_DIFFUSION: f64 = 2.0;
 }
 
 /// Cavitation damage constants

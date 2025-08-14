@@ -285,7 +285,7 @@ impl FdtdSolver {
     /// Compute spatial derivative using finite differences
     fn compute_derivative(
         &self,
-        field: &Array3<f64>,
+        field: &ndarray::ArrayView3<f64>,
         axis: usize,
         stagger_offset: f64,
     ) -> Array3<f64> {
@@ -341,7 +341,7 @@ impl FdtdSolver {
         // Apply stagger offset if using staggered grid
         if self.config.staggered_grid && stagger_offset != 0.0 {
             // Interpolate to staggered positions
-            self.interpolate_to_staggered(&deriv, axis, stagger_offset)
+            self.interpolate_to_staggered(&deriv.view(), axis, stagger_offset)
         } else {
             deriv
         }
@@ -351,7 +351,7 @@ impl FdtdSolver {
     fn apply_boundary_derivatives(
         &self,
         deriv: &mut Array3<f64>,
-        field: &Array3<f64>,
+        field: &ndarray::ArrayView3<f64>,
         axis: usize,
         dx: f64,
     ) {
@@ -421,7 +421,7 @@ impl FdtdSolver {
     /// Interpolate field to staggered grid positions
     fn interpolate_to_staggered(
         &self,
-        field: &Array3<f64>,
+        field: &ndarray::ArrayView3<f64>,
         axis: usize,
         offset: f64,
     ) -> Array3<f64> {
@@ -471,10 +471,10 @@ impl FdtdSolver {
     /// Update pressure field using velocity divergence
     pub fn update_pressure(
         &mut self,
-        pressure: &mut Array3<f64>,
-        vx: &Array3<f64>,
-        vy: &Array3<f64>,
-        vz: &Array3<f64>,
+        pressure: &mut ndarray::ArrayViewMut3<f64>,
+        vx: &ndarray::ArrayView3<f64>,
+        vy: &ndarray::ArrayView3<f64>,
+        vz: &ndarray::ArrayView3<f64>,
         medium: &dyn crate::medium::Medium,
         dt: f64,
     ) -> KwaversResult<()> {
@@ -518,10 +518,10 @@ impl FdtdSolver {
     /// Update velocity field using pressure gradient
     pub fn update_velocity(
         &mut self,
-        vx: &mut Array3<f64>,
-        vy: &mut Array3<f64>,
-        vz: &mut Array3<f64>,
-        pressure: &Array3<f64>,
+        vx: &mut ndarray::ArrayViewMut3<f64>,
+        vy: &mut ndarray::ArrayViewMut3<f64>,
+        vz: &mut ndarray::ArrayViewMut3<f64>,
+        pressure: &ndarray::ArrayView3<f64>,
         medium: &dyn crate::medium::Medium,
         dt: f64,
     ) -> KwaversResult<()> {
@@ -763,7 +763,7 @@ mod tests {
             }
         }
         
-        let deriv = solver.compute_derivative(&field, 0, 0.0);
+        let deriv = solver.compute_derivative(&field.view(), 0, 0.0);
         
         // Check that derivative is approximately 1.0 in the interior
         for i in 1..9 {
@@ -859,28 +859,25 @@ impl PhysicsPlugin for FdtdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::Axis;
+        use ndarray::s;
         
-        // Extract fields from the Array4 as owned arrays for now
-        // TODO: Optimize to use views directly when solver methods are updated
-        let mut pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let mut velocity_x = fields.index_axis(Axis(0), 4).to_owned();
-        let mut velocity_y = fields.index_axis(Axis(0), 5).to_owned();
-        let mut velocity_z = fields.index_axis(Axis(0), 6).to_owned();
+        // Use zero-copy views for optimal performance
+        let mut fields_view = fields.view_mut();
+        let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
+            fields_view.multi_slice_mut((
+                s![0, .., .., ..],
+                s![4, .., .., ..],
+                s![5, .., .., ..],
+                s![6, .., .., ..]
+            ));
         
         // FDTD uses leapfrog scheme: update velocity first, then pressure
         
-        // Update velocities using current pressure
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure, medium, dt)?;
+        // Update velocities using current pressure - zero-copy operation
+        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;
         
-        // Update pressure using new velocities
-        self.solver.update_pressure(&mut pressure, &velocity_x, &velocity_y, &velocity_z, medium, dt)?;
-        
-        // Copy back to fields
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
-        fields.index_axis_mut(Axis(0), 4).assign(&velocity_x);
-        fields.index_axis_mut(Axis(0), 5).assign(&velocity_y);
-        fields.index_axis_mut(Axis(0), 6).assign(&velocity_z);
+        // Update pressure using new velocities - zero-copy operation
+        self.solver.update_pressure(&mut pressure, &velocity_x.view(), &velocity_y.view(), &velocity_z.view(), medium, dt)?;
         
         Ok(())
     }
