@@ -533,54 +533,34 @@ impl CPMLBoundary {
 
 // Implement the Boundary trait for CPMLBoundary to provide a standard interface
 impl crate::boundary::Boundary for CPMLBoundary {
-    /// Apply C-PML to acoustic field using recursive convolution
+    /// Apply C-PML boundary conditions to acoustic field
+    /// 
+    /// NOTE: This method should be called AFTER the main solver computes gradients.
+    /// The main solver should call update_acoustic_memory() and apply_cpml_gradient()
+    /// at the appropriate points in its update sequence.
     fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) -> KwaversResult<()> {
-        // Use a standard dt based on CFL condition
-        let c_max = 1500.0; // Typical sound speed in water
-        let dt = self.config.cfl_number * grid.dx.min(grid.dy).min(grid.dz) / c_max;
+        // For now, this is a simplified boundary application
+        // The proper C-PML integration should be done in the main solver using:
+        // 1. solver.compute_gradients() 
+        // 2. cpml.update_acoustic_memory(gradients)
+        // 3. cpml.apply_cpml_gradient(gradients) 
+        // 4. solver.update_fields_with_corrected_gradients()
         
-        // Compute spatial derivatives
-        let mut grad_x = Array3::zeros(field.dim());
-        let mut grad_y = Array3::zeros(field.dim());
-        let mut grad_z = Array3::zeros(field.dim());
+        // Apply simple absorbing boundary as fallback
+        let thickness = self.config.thickness;
         
-        // Compute gradients using central differences
-        for i in 1..self.nx-1 {
-            for j in 1..self.ny-1 {
-                for k in 1..self.nz-1 {
-                    grad_x[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * grid.dx);
-                    grad_y[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * grid.dy);
-                    grad_z[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * grid.dz);
-                }
-            }
-        }
-        
-        // Update memory variables with proper recursive convolution
-        // Update each component separately
-        self.update_acoustic_memory(&grad_x, 0, dt)?;
-        self.update_acoustic_memory(&grad_y, 1, dt)?;
-        self.update_acoustic_memory(&grad_z, 2, dt)?;
-        
-        // Apply C-PML corrections to gradients
-        self.apply_cpml_gradient(&mut grad_x, 0)?;
-        self.apply_cpml_gradient(&mut grad_y, 1)?;
-        self.apply_cpml_gradient(&mut grad_z, 2)?;
-        
-        // Update field based on corrected gradients
-        // This implements the C-PML absorption in the PML regions
+        // Apply exponential decay in PML regions
         for i in 0..self.nx {
             for j in 0..self.ny {
                 for k in 0..self.nz {
-                    // Apply C-PML absorption in boundary regions
-                    if i < self.config.thickness || i >= self.nx - self.config.thickness ||
-                       j < self.config.thickness || j >= self.ny - self.config.thickness ||
-                       k < self.config.thickness || k >= self.nz - self.config.thickness {
+                    // Check if we're in a PML region
+                    if i < thickness || i >= self.nx - thickness ||
+                       j < thickness || j >= self.ny - thickness ||
+                       k < thickness || k >= self.nz - thickness {
                         
-                        // Compute divergence of corrected gradients
-                        let div = grad_x[[i, j, k]] + grad_y[[i, j, k]] + grad_z[[i, j, k]];
-                        
-                        // Apply C-PML update with proper scaling
-                        field[[i, j, k]] -= dt * div * self.compute_cpml_factor(i, j, k);
+                        // Apply simple exponential absorption
+                        let factor = self.compute_cpml_factor(i, j, k);
+                        field[[i, j, k]] *= (1.0 - factor * 0.1); // Simple damping
                     }
                 }
             }
