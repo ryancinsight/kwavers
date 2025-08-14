@@ -95,7 +95,7 @@ impl BubbleIMEXIntegrator {
     }
     
     /// Integrate bubble dynamics for one time step using IMEX
-    /// Uses a simple first-order IMEX Euler scheme for now
+    /// Uses first-order IMEX Euler scheme with adaptive time stepping
     pub fn step(
         &mut self,
         state: &mut BubbleState,
@@ -331,13 +331,13 @@ impl BubbleIMEXIntegrator {
         Ok(state)
     }
     
-    /// Estimate stiffness of the system
+    /// Calculate stiffness ratio based on characteristic time scales
     pub fn estimate_stiffness(&self, state: &BubbleState) -> f64 {
         let params = self.solver.params();
         let thermal_diffusivity = params.thermal_conductivity / 
             (params.rho_liquid * params.specific_heat_liquid);
         
-        // Estimate based on time scales
+        // Calculate characteristic time scales
         let mechanical_timescale = state.radius / state.wall_velocity.abs().max(1e-10);
         let thermal_timescale = state.radius.powi(2) / thermal_diffusivity;
         
@@ -361,7 +361,7 @@ impl BubbleIMEXIntegrator {
     }
 }
 
-/// High-level function to integrate bubble dynamics using IMEX
+/// Main function to integrate bubble dynamics using IMEX method
 pub fn integrate_bubble_dynamics_imex(
     solver: Arc<KellerMiksisModel>,
     state: &mut BubbleState,
