@@ -22,6 +22,29 @@ use std::fmt;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+/// Field registry error types for granular error handling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FieldError {
+    /// Field not registered in the registry
+    NotRegistered(String),
+    /// Field is registered but inactive/disabled
+    Inactive(String),
+    /// Field data array not initialized
+    DataNotInitialized,
+    /// Invalid field index or dimension mismatch
+    DimensionMismatch {
+        field: String,
+        expected: (usize, usize, usize),
+        actual: (usize, usize, usize),
+    },
+    /// Field type conversion error
+    TypeMismatch {
+        field: String,
+        expected: String,
+        actual: String,
+    },
+}
+
 /// Validation error types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ValidationError {
@@ -61,6 +84,8 @@ pub enum KwaversError {
     Numerical(NumericalError),
     /// Validation errors
     Validation(ValidationError),
+    /// Field registry errors
+    Field(FieldError),
     /// System errors (memory, threading, etc.)
     System(SystemError),
     /// GPU acceleration errors
@@ -72,13 +97,19 @@ pub enum KwaversError {
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
     
-    /// Field not registered in the field registry
+    /// DEPRECATED: Field not registered in the field registry
+    /// Use Field(FieldError::NotRegistered) instead
+    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::NotRegistered) instead")]
     FieldNotRegistered(String),
     
-    /// Field is inactive and cannot be accessed
+    /// DEPRECATED: Field is inactive and cannot be accessed
+    /// Use Field(FieldError::Inactive) instead
+    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::Inactive) instead")]
     FieldInactive(String),
     
-    /// Field data array not initialized
+    /// DEPRECATED: Field data array not initialized
+    /// Use Field(FieldError::DataNotInitialized) instead
+    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::DataNotInitialized) instead")]
     FieldDataNotInitialized,
 
     /// Concurrency errors - critical for ACID compliance
@@ -92,6 +123,24 @@ pub enum KwaversError {
     Io(String),  // Store error message as String since std::io::Error doesn't impl Clone/Serialize
 }
 
+impl fmt::Display for FieldError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FieldError::NotRegistered(field) => write!(f, "Field not registered: {}", field),
+            FieldError::Inactive(field) => write!(f, "Field is inactive: {}", field),
+            FieldError::DataNotInitialized => write!(f, "Field data not initialized"),
+            FieldError::DimensionMismatch { field, expected, actual } => {
+                write!(f, "Field '{}' dimension mismatch: expected {:?}, got {:?}", field, expected, actual)
+            }
+            FieldError::TypeMismatch { field, expected, actual } => {
+                write!(f, "Field '{}' type mismatch: expected {}, got {}", field, expected, actual)
+            }
+        }
+    }
+}
+
+impl StdError for FieldError {}
+
 impl fmt::Display for KwaversError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -102,6 +151,7 @@ impl fmt::Display for KwaversError {
             KwaversError::Config(e) => write!(f, "Configuration error: {}", e),
             KwaversError::Numerical(e) => write!(f, "Numerical error: {}", e),
             KwaversError::Validation(e) => write!(f, "Validation error: {}", e),
+            KwaversError::Field(e) => write!(f, "Field error: {}", e),
             KwaversError::System(e) => write!(f, "System error: {}", e),
             KwaversError::Gpu(e) => write!(f, "GPU error: {}", e),
             KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
@@ -128,6 +178,7 @@ impl StdError for KwaversError {
             KwaversError::Config(e) => Some(e),
             KwaversError::Numerical(e) => Some(e),
             KwaversError::Validation(e) => Some(e),
+            KwaversError::Field(e) => Some(e),
             KwaversError::System(e) => Some(e),
             KwaversError::Gpu(e) => Some(e),
             KwaversError::Visualization(_) => None,
@@ -1266,6 +1317,13 @@ pub mod advanced {
                 Err(errors)
             }
         }
+    }
+}
+
+// From implementations for automatic error conversion
+impl From<FieldError> for KwaversError {
+    fn from(error: FieldError) -> Self {
+        KwaversError::Field(error)
     }
 }
 
