@@ -429,7 +429,6 @@ impl Source for PhasedArrayTransducer {
         self.signal.amplitude(t)
     }
     
-    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
         let mut total_source = 0.0;
         
