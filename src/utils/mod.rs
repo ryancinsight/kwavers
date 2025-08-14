@@ -3,6 +3,7 @@ pub mod array_utils;
 pub mod field_analysis;
 pub mod iterators;
 pub mod kwave_utils;
+pub mod linear_algebra;
 pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;

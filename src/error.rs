@@ -523,6 +523,22 @@ pub enum NumericalError {
         operation: String,
         condition: String,
     },
+    /// Matrix dimension mismatch
+    MatrixDimension {
+        operation: String,
+        expected: String,
+        actual: String,
+    },
+    /// Singular matrix (non-invertible)
+    SingularMatrix {
+        operation: String,
+        condition_number: Option<f64>,
+    },
+    /// Unsupported operation
+    UnsupportedOperation {
+        operation: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for NumericalError {
@@ -545,6 +561,18 @@ impl fmt::Display for NumericalError {
             }
             NumericalError::Instability { operation, condition } => {
                 write!(f, "Numerical instability in {}: {}", operation, condition)
+            }
+            NumericalError::MatrixDimension { operation, expected, actual } => {
+                write!(f, "Matrix dimension mismatch in {}: expected {}, got {}", operation, expected, actual)
+            }
+            NumericalError::SingularMatrix { operation, condition_number } => {
+                match condition_number {
+                    Some(cond) => write!(f, "Singular matrix in {} (condition number: {})", operation, cond),
+                    None => write!(f, "Singular matrix in {}", operation),
+                }
+            }
+            NumericalError::UnsupportedOperation { operation, reason } => {
+                write!(f, "Unsupported operation {}: {}", operation, reason)
             }
         }
     }
