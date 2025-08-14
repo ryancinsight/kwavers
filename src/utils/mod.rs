@@ -1,9 +1,10 @@
 // src/utils/mod.rs
-pub mod iterators;
-pub mod stencil;
 pub mod array_utils;
+pub mod field_analysis;
+pub mod iterators;
 pub mod kwave_utils;
 pub mod spectral;
+pub mod stencil;
 
 #[cfg(test)]
 pub mod test_helpers;

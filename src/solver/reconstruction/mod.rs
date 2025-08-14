@@ -17,10 +17,11 @@ use crate::grid::Grid;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 
-pub mod plane_recon;
-pub mod line_recon;
 pub mod arc_recon;
 pub mod bowl_recon;
+pub mod line_recon;
+pub mod photoacoustic;
+pub mod plane_recon;
 
 /// Reconstruction configuration
 #[derive(Debug, Clone)]
