@@ -84,8 +84,8 @@ pub mod grid {
     /// Minimum grid points per wavelength for numerical stability
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 6;
     
-    /// Optimal grid points per wavelength
-    pub const OPTIMAL_POINTS_PER_WAVELENGTH: usize = 10;
+    /// Recommended grid points per wavelength
+    pub const RECOMMENDED_POINTS_PER_WAVELENGTH: usize = 10;
     
     /// Default PML thickness in grid points
     pub const DEFAULT_PML_THICKNESS: usize = 10;

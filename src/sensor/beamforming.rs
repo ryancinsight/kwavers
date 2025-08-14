@@ -101,6 +101,7 @@ pub enum SteeringVectorMethod {
 }
 
 /// Beamforming processor for advanced algorithms
+#[derive(Debug)]
 pub struct BeamformingProcessor {
     pub config: BeamformingConfig,
     sensor_positions: Vec<[f64; 3]>,
@@ -290,7 +291,7 @@ impl BeamformingProcessor {
             let steering_vector = self.calculate_steering_vector(&scan_point, SteeringVectorMethod::PlaneWave)?;
             
             // Robust Capon formulation with uncertainty set
-            let identity = Array2::eye(self.num_sensors);
+            let identity = Array2::<f64>::eye(self.num_sensors);
             let uncertainty_matrix = &identity * uncertainty_set_size;
             
             // Modified covariance: R + ε * I + δ * (I - aa^H/||a||^2)
@@ -347,8 +348,8 @@ impl BeamformingProcessor {
         let covariance = self.estimate_covariance_matrix(sensor_data, false)?;
         
         // LCMV solution: w = R^-1 * C * (C^H * R^-1 * C)^-1 * f
-        let r_inv_c = self.matrix_multiply(&self.matrix_inverse(&covariance)?, &constraint_matrix)?;
-        let c_h_r_inv_c = constraint_matrix.t().dot(&r_inv_c);
+        let r_inv_c = self.matrix_multiply(&self.matrix_inverse(&covariance)?, &constraint_matrix.to_owned())?;
+        let c_h_r_inv_c = constraint_matrix.t().to_owned().dot(&r_inv_c);
         let c_h_r_inv_c_inv = self.matrix_inverse(&c_h_r_inv_c)?;
         
         let mut beamformed_output = Array1::zeros(scan_points.len());
@@ -394,8 +395,11 @@ impl BeamformingProcessor {
             // Blocking matrix (orthogonal to steering vector)
             let blocking_matrix = self.construct_blocking_matrix(&steering_vector)?;
             
-            // Adaptive weights (simplified LMS adaptation)
-            let mut adaptive_weights = Array1::zeros(self.num_sensors - 1);
+            // Adaptive weights using Normalized LMS (NLMS) algorithm
+            // Based on Haykin (2002): "Adaptive Filter Theory"
+            let mut adaptive_weights = Array1::<f64>::zeros(self.num_sensors - 1);
+            let step_size = 0.01; // NLMS step size
+            let regularization = 1e-6; // Regularization parameter
             
             let mut output = 0.0;
             for t in 0..sensor_data.ncols() {
@@ -415,11 +419,14 @@ impl BeamformingProcessor {
                 
                 // Adaptive cancellation
                 let adaptive_output = adaptive_weights.dot(&blocked_signals);
-                let gsc_output = fixed_output - adaptive_output;
+                let gsc_output: f64 = fixed_output - adaptive_output;
                 
-                // LMS adaptation
+                // NLMS adaptation with normalization
+                let signal_power = blocked_signals.dot(&blocked_signals) + regularization;
+                let normalized_step = step_size / signal_power;
+                
                 for i in 0..(self.num_sensors - 1) {
-                    adaptive_weights[i] += adaptation_step_size * gsc_output * blocked_signals[i];
+                    adaptive_weights[i] += normalized_step * gsc_output * blocked_signals[i];
                 }
                 
                 output += gsc_output.powi(2);
@@ -573,7 +580,7 @@ impl BeamformingProcessor {
     }
 
     /// Eigendecomposition using power iteration method for dominant eigenvalues
-    fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
+    pub fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         let n = matrix.nrows();
         let mut eigenvalues = Array1::zeros(n);
         let mut eigenvectors = Array2::zeros((n, n));
@@ -665,8 +672,11 @@ impl BeamformingProcessor {
     fn solve_linear_system(&self, a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = a.nrows();
         if n != a.ncols() || n != b.len() {
-            return Err(crate::error::KwaversError::InvalidInput(
-                "Matrix dimensions mismatch for linear system".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "linear_system_solve".to_string(),
+                    condition: "Matrix dimensions mismatch".to_string(),
+                }
             ));
         }
         
@@ -700,8 +710,11 @@ impl BeamformingProcessor {
             
             // Check for singular matrix
             if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::ComputationError(
-                    "Singular matrix in linear system".to_string()
+                return Err(crate::error::KwaversError::Numerical(
+                    crate::error::NumericalError::DivisionByZero {
+                        operation: "linear_system_solve".to_string(),
+                        location: "matrix_pivot".to_string(),
+                    }
                 ));
             }
             
@@ -728,11 +741,14 @@ impl BeamformingProcessor {
     }
 
     /// Matrix inverse using Gauss-Jordan elimination
-    fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let n = matrix.nrows();
         if n != matrix.ncols() {
-            return Err(crate::error::KwaversError::InvalidInput(
-                "Matrix must be square for inversion".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "matrix_inverse".to_string(),
+                    condition: "Matrix must be square".to_string(),
+                }
             ));
         }
         
@@ -766,8 +782,11 @@ impl BeamformingProcessor {
             
             // Check for singular matrix
             if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::ComputationError(
-                    "Singular matrix cannot be inverted".to_string()
+                return Err(crate::error::KwaversError::Numerical(
+                    crate::error::NumericalError::DivisionByZero {
+                        operation: "matrix_inverse".to_string(),
+                        location: "pivot_element".to_string(),
+                    }
                 ));
             }
             
@@ -800,7 +819,7 @@ impl BeamformingProcessor {
     }
 
     /// Matrix multiplication helper
-    fn matrix_multiply(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    pub fn matrix_multiply(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         Ok(a.dot(b))
     }
 
@@ -812,8 +831,11 @@ impl BeamformingProcessor {
         // Normalize steering vector
         let norm = steering_vector.dot(steering_vector).sqrt();
         if norm < 1e-12 {
-            return Err(crate::error::KwaversError::ComputationError(
-                "Steering vector has zero norm".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::DivisionByZero {
+                    operation: "construct_blocking_matrix".to_string(),
+                    location: "steering_vector_normalization".to_string(),
+                }
             ));
         }
         let normalized_steering = steering_vector / norm;
@@ -873,37 +895,97 @@ impl BeamformingProcessor {
         Ok(dictionary)
     }
 
-    /// Solve sparse reconstruction problem (simplified LASSO)
+    /// Solve sparse reconstruction using ISTA (Iterative Soft-Thresholding Algorithm)
+    /// Based on Beck & Teboulle (2009): "A Fast Iterative Shrinkage-Thresholding Algorithm"
     fn solve_sparse_reconstruction(
         &self,
         dictionary: &Array2<f64>,
         measurement: ndarray::ArrayView1<f64>,
         sparsity_parameter: f64,
     ) -> KwaversResult<Array1<f64>> {
-        // Simplified sparse reconstruction using iterative soft thresholding
-        let max_iterations = 100;
-        let step_size = 0.01;
-        let mut solution = Array1::zeros(dictionary.ncols());
+        use crate::constants::tolerance::CONVERGENCE;
         
-        for _iteration in 0..max_iterations {
-            // Gradient step
-            let residual = &measurement.to_owned() - &dictionary.dot(&solution);
-            let gradient = dictionary.t().dot(&residual);
-            solution = &solution + &(&gradient * step_size);
+        // ISTA algorithm parameters based on literature
+        let max_iterations = 1000;
+        let tolerance = CONVERGENCE;
+        
+        // Compute Lipschitz constant L = ||A^T A||_2 for step size
+        let ata = dictionary.t().dot(dictionary);
+        let lipschitz_constant = self.estimate_spectral_norm(&ata);
+        let step_size = 0.99 / lipschitz_constant; // Conservative step size
+        
+        let mut solution = Array1::zeros(dictionary.ncols());
+        let mut prev_solution = solution.clone();
+        
+        for iteration in 0..max_iterations {
+            prev_solution.assign(&solution);
             
-            // Soft thresholding
-            solution.mapv_inplace(|x| {
-                if x > sparsity_parameter {
-                    x - sparsity_parameter
-                } else if x < -sparsity_parameter {
-                    x + sparsity_parameter
-                } else {
-                    0.0
-                }
-            });
+            // Gradient descent step: x = x - t * A^T(Ax - b)
+            let residual = &dictionary.dot(&solution) - &measurement.to_owned();
+            let gradient = dictionary.t().dot(&residual);
+            solution = &solution - &(&gradient * step_size);
+            
+            // Proximal operator: soft thresholding
+            let threshold = sparsity_parameter * step_size;
+            solution.mapv_inplace(|x| self.soft_threshold(x, threshold));
+            
+            // Check convergence
+            let change = (&solution - &prev_solution).mapv(|x| x.abs()).sum();
+            if change < tolerance {
+                break;
+            }
+            
+            // Progress logging for long runs
+            if iteration % 100 == 0 && iteration > 0 {
+                let objective = self.compute_lasso_objective(dictionary, &measurement.to_owned(), &solution, sparsity_parameter);
+                log::debug!("ISTA iteration {}: objective = {:.6e}, change = {:.6e}", iteration, objective, change);
+            }
         }
         
         Ok(solution)
+    }
+    
+    /// Soft thresholding operator for LASSO
+    fn soft_threshold(&self, x: f64, threshold: f64) -> f64 {
+        if x > threshold {
+            x - threshold
+        } else if x < -threshold {
+            x + threshold
+        } else {
+            0.0
+        }
+    }
+    
+    /// Estimate spectral norm using power iteration
+    fn estimate_spectral_norm(&self, matrix: &Array2<f64>) -> f64 {
+        let n = matrix.ncols();
+        let mut v = Array1::ones(n) / (n as f64).sqrt();
+        let max_iter = 50;
+        let tolerance = 1e-6;
+        
+        for _ in 0..max_iter {
+            let av = matrix.dot(&v);
+            let norm = av.dot(&av).sqrt();
+            let new_v = &av / norm;
+            
+            let change = (&new_v - &v).mapv(|x| x.abs()).sum();
+            v = new_v;
+            
+            if change < tolerance {
+                break;
+            }
+        }
+        
+        let av = matrix.dot(&v);
+        av.dot(&av).sqrt()
+    }
+    
+    /// Compute LASSO objective: ||Ax - b||^2 / 2 + λ||x||_1
+    fn compute_lasso_objective(&self, a: &Array2<f64>, b: &Array1<f64>, x: &Array1<f64>, lambda: f64) -> f64 {
+        let residual = &a.dot(x) - b;
+        let data_term = residual.dot(&residual) / 2.0;
+        let regularization_term = lambda * x.mapv(|xi| xi.abs()).sum();
+        data_term + regularization_term
     }
 
     /// Calculate Euclidean distance between two points

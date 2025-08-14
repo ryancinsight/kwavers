@@ -377,7 +377,7 @@ impl AdaptiveBeamformingProcessor {
         let num_samples = sensor_data.ncols();
         
         // Update covariance matrix estimate
-        let mut new_covariance = Array2::zeros((num_sensors, num_sensors));
+        let mut new_covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
         for t in 0..num_samples {
             let x = sensor_data.column(t);
             for i in 0..num_sensors {
@@ -434,7 +434,7 @@ impl AdaptiveBeamformingProcessor {
                              (self.adaptive_state.weights.len() as f64).sqrt();
         
         // Project steering vector onto signal subspace
-        let mut projected_steering = Array1::zeros(steering_vector.len());
+        let mut projected_steering = Array1::<f64>::zeros(steering_vector.len());
         for i in 0..signal_subspace_rank {
             let eigenvec = signal_subspace.column(i);
             let projection = steering_vector.dot(&eigenvec);
@@ -478,7 +478,7 @@ impl AdaptiveBeamformingProcessor {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
         
-        let mut sample_covariance = Array2::zeros((num_sensors, num_sensors));
+        let mut sample_covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
         for t in 0..num_samples {
             let x = sensor_data.column(t);
             for i in 0..num_sensors {

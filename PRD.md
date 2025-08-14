@@ -2,7 +2,7 @@
 
 ## **Product Vision & Status**
 
-**Version**: 2.9.3 **ENHANCED**  
+**Version**: 2.9.3  
 **Status**: **Phase 30 COMPLETE** - k-Wave Capability Parity & Expert Enhancement  
 **Next Phase**: **Phase 31 PLANNING** - Advanced Simulation Package Integration & Modern Techniques  
 **Performance**: >17M grid updates/second with GPU acceleration  
@@ -108,7 +108,7 @@ Kwavers has successfully achieved comprehensive capability parity with k-Wave wh
 | **MSOUND Methods** | ❌ Not implemented | ✅ **COMPLETE** mixed-domain | **HIGH** | **HIGH** |
 | **Full-Wave FEM** | ❌ Not implemented | ✅ **COMPLETE** solver | **MEDIUM** | **HIGH** |
 | **KZK Equation** | ⚠️ Basic nonlinear | ✅ **COMPLETE** KZK solver | **HIGH** | **MEDIUM** |
-| **Advanced Angular Spectrum** | ✅ Basic implementation | ✅ **ENHANCED** capabilities | **MEDIUM** | **MEDIUM** |
+| **Angular Spectrum Methods** | ✅ Basic implementation | ✅ **COMPLETE** capabilities | **MEDIUM** | **MEDIUM** |
 | **Phase Correction** | ❌ Not implemented | ✅ **COMPLETE** adaptive | **HIGH** | **MEDIUM** |
 | **Seismic Imaging** | ❌ Not implemented | ✅ **COMPLETE** FWI/RTM | **MEDIUM** | **HIGH** |
 | **Plugin System** | ⚠️ Basic plugin support | ✅ **COMPLETE** ecosystem | **HIGH** | **MEDIUM** |
@@ -213,7 +213,7 @@ Kwavers has successfully achieved comprehensive capability parity with k-Wave wh
 | **Core Acoustics** | ✅ k-space pseudospectral | ✅ Multiple methods (PSTD, FDTD, Spectral DG) | **EXCEEDS** |
 | **Beamforming** | ❌ Limited support | ✅ **INDUSTRY-LEADING** suite (MVDR, MUSIC, Adaptive) | **EXCEEDS** |
 | **Flexible Transducers** | ❌ Not supported | ✅ **REAL-TIME** geometry tracking & calibration | **EXCEEDS** |
-| **Sparse Arrays** | ❌ Limited | ✅ **OPTIMIZED** CSR operations for large arrays | **EXCEEDS** |
+| **Sparse Arrays** | ❌ Limited | ✅ CSR operations for large arrays | **EXCEEDS** |
 | **Nonlinear Effects** | ✅ Basic nonlinearity | ✅ Full Kuznetsov equation implementation | **EXCEEDS** |
 | **Absorption Models** | ✅ Power law absorption | ✅ Multiple physics-based models | **EXCEEDS** |
 | **Beam Analysis** | ✅ Basic field tools | ✅ Comprehensive metrics & analysis | **PARITY+** |
