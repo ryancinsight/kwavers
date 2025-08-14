@@ -21,19 +21,19 @@ use kwavers::boundary::pml::PMLConfig;
 
 // --- Simple PointSource (if not existing) ---
 #[derive(Debug)]
-struct SimplePointSource {
+struct PointSource {
     position: (f64, f64, f64),
     signal: Box<dyn Signal>,
     magnitude: f64,
 }
 
-impl SimplePointSource {
+impl PointSource {
     pub fn new(position: (f64, f64, f64), signal: Box<dyn Signal>, magnitude: f64) -> Self {
         Self { position, signal, magnitude }
     }
 }
 
-impl Source for SimplePointSource {
+impl Source for PointSource {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let dx = (x - self.position.0).abs();
         let dy = (y - self.position.1).abs();
@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let source_pos_z = dz * 10.0;
     let source_pos = (source_pos_x, source_pos_y, source_pos_z);
     let sine_signal = SineWave::new(source_freq, source_mag, 0.0); // Corrected
-    let source: Box<dyn Source> = Box::new(SimplePointSource::new(source_pos, Box::new(sine_signal), 1.0));
+    let source: Box<dyn Source> = Box::new(PointSource::new(source_pos, Box::new(sine_signal), 1.0));
     info!("Source: Freq={} Hz, Pos=({:.3}, {:.3}, {:.3}) m", source_freq, source_pos.0, source_pos.1, source_pos.2);
 
     // --- 5. Define Boundary Conditions ---

@@ -1,4 +1,4 @@
-// examples/advanced_hifu_with_sonoluminescence.rs
+// examples/hifu_sonoluminescence.rs
 use kwavers::{
     init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave, // NonlinearWave for concrete type
     // Config removed as it's manually constructed now

@@ -670,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuznetsov_basic_functionality() {
+    fn test_kuznetsov_functionality() {
         let _ = env_logger::builder().is_test(true).try_init();
         
         // Small grid for quick test

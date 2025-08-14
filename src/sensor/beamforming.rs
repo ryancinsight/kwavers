@@ -1,13 +1,13 @@
-//! Advanced Beamforming Algorithms for Ultrasound Arrays
+//! Beamforming Algorithms for Ultrasound Arrays
 //!
 //! This module implements state-of-the-art beamforming algorithms for ultrasound
 //! imaging and passive acoustic mapping, following established literature and
-//! optimized for large-scale array processing.
+//! designed for large-scale array processing.
 //!
 //! # Design Principles
 //! - **Literature-Based**: All algorithms follow established papers
 //! - **Zero-Copy**: Efficient ArrayView usage throughout
-//! - **Sparse Operations**: Optimized for large arrays with sparse matrices
+//! - **Sparse Operations**: Designed for large arrays with sparse matrices
 //! - **Modular Design**: Plugin-compatible architecture
 //!
 //! # Literature References
@@ -67,7 +67,7 @@ pub enum BeamformingAlgorithm {
         signal_subspace_dimension: usize,
         spatial_smoothing: bool,
     },
-    /// Robust Capon Beamforming (RCB)
+    /// Capon Beamforming with Regularization
     RobustCapon {
         diagonal_loading: f64,
         uncertainty_set_size: f64,
@@ -100,7 +100,7 @@ pub enum SteeringVectorMethod {
     Focused { focal_point: [f64; 3] },
 }
 
-/// Beamforming processor for advanced algorithms
+/// Beamforming processor for array algorithms
 #[derive(Debug)]
 pub struct BeamformingProcessor {
     pub config: BeamformingConfig,
@@ -137,7 +137,7 @@ impl BeamformingProcessor {
                 self.music_beamforming(sensor_data, scan_points, *signal_subspace_dimension, *spatial_smoothing)
             }
             BeamformingAlgorithm::RobustCapon { diagonal_loading, uncertainty_set_size } => {
-                self.robust_capon_beamforming(sensor_data, scan_points, *diagonal_loading, *uncertainty_set_size)
+                self.capon_beamforming(sensor_data, scan_points, *diagonal_loading, *uncertainty_set_size)
             }
             BeamformingAlgorithm::LCMV { constraint_matrix, response_vector } => {
                 self.lcmv_beamforming(sensor_data, scan_points, constraint_matrix.view(), response_vector.view())
@@ -274,8 +274,8 @@ impl BeamformingProcessor {
         Ok(music_spectrum)
     }
 
-    /// Robust Capon Beamforming (Li et al., 2003)
-    pub fn robust_capon_beamforming(
+    /// Capon Beamforming with Regularization (Li et al., 2003)
+    pub fn capon_beamforming(
         &self,
         sensor_data: ArrayView2<f64>,
         scan_points: &[[f64; 3]],
@@ -290,14 +290,14 @@ impl BeamformingProcessor {
         for (point_idx, &scan_point) in scan_points.iter().enumerate() {
             let steering_vector = self.calculate_steering_vector(&scan_point, SteeringVectorMethod::PlaneWave)?;
             
-            // Robust Capon formulation with uncertainty set
+            // Capon formulation with uncertainty set
             let identity = Array2::<f64>::eye(self.num_sensors);
             let uncertainty_matrix = &identity * uncertainty_set_size;
             
             // Modified covariance: R + ε * I + δ * (I - aa^H/||a||^2)
-            let mut robust_cov = covariance.clone();
+            let mut regularized_cov = covariance.clone();
             for i in 0..self.num_sensors {
-                robust_cov[[i, i]] += diagonal_loading;
+                                  regularized_cov[[i, i]] += diagonal_loading;
             }
             
             // Add uncertainty constraint
@@ -306,13 +306,13 @@ impl BeamformingProcessor {
                 for i in 0..self.num_sensors {
                     for j in 0..self.num_sensors {
                         let projection_term = steering_vector[i] * steering_vector[j] / norm_sq;
-                        robust_cov[[i, j]] += uncertainty_set_size * (if i == j { 1.0 } else { 0.0 } - projection_term);
+                        regularized_cov[[i, j]] += uncertainty_set_size * (if i == j { 1.0 } else { 0.0 } - projection_term);
                     }
                 }
             }
             
-            // Solve for robust weights
-            let weights = self.solve_linear_system(&robust_cov, &steering_vector)?;
+            // Solve for regularized weights
+            let weights = self.solve_linear_system(&regularized_cov, &steering_vector)?;
             let denominator = steering_vector.dot(&weights);
             let normalized_weights = if denominator.abs() > 1e-12 {
                 &weights / denominator
@@ -543,7 +543,7 @@ impl BeamformingProcessor {
         let mut covariance = Array2::zeros((self.num_sensors, self.num_sensors));
         
         if spatial_smoothing {
-            // Forward-backward spatial smoothing for improved estimation
+            // Forward-backward spatial smoothing for estimation
             let smoothing_factor = self.config.spatial_smoothing.unwrap_or(1);
             let effective_sensors = self.num_sensors - smoothing_factor + 1;
             
@@ -896,7 +896,7 @@ impl BeamformingProcessor {
     }
 
     /// Solve sparse reconstruction using ISTA (Iterative Soft-Thresholding Algorithm)
-    /// Based on Beck & Teboulle (2009): "A Fast Iterative Shrinkage-Thresholding Algorithm"
+    /// Based on Beck & Teboulle (2009): "Iterative Shrinkage-Thresholding Algorithm"
     fn solve_sparse_reconstruction(
         &self,
         dictionary: &Array2<f64>,

@@ -6,7 +6,7 @@
 // pub mod tests; // Temporarily disabled due to syntax errors
 pub mod field_access;
 pub mod acoustic_wave_plugin;  // NEW: Safe field access for plugins
-pub mod phase31_plugins;       // NEW: Phase 31 advanced plugin capabilities
+pub mod acoustic_simulation_plugins; // Acoustic simulation plugin implementations
 
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;

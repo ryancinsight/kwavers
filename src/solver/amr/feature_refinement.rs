@@ -414,8 +414,8 @@ fn morton_encode_3d(x: usize, y: usize, z: usize) -> u64 {
     morton
 }
 
-// EnhancedAMRManager functionality has been integrated into the main AMRManager
-// The enhanced features are now available through the standard AMRManager API
+// Extended AMRManager functionality has been integrated into the main AMRManager
+// The additional features are now available through the standard AMRManager API
 
 #[cfg(test)]
 mod tests {

@@ -821,7 +821,7 @@ pub mod utils {
     use super::*;
     
     /// Create a validation pipeline for common scenarios
-    pub fn create_basic_validation_pipeline(field_name: String) -> ValidationPipeline {
+    pub fn create_validation_pipeline(field_name: String) -> ValidationPipeline {
         ValidationBuilder::new("basic_validation".to_string())
             .with_required(field_name.clone())
             .with_string_length(field_name.clone(), Some(1), Some(100))
@@ -970,7 +970,7 @@ mod tests {
     
     #[test]
     fn test_validation_utilities() {
-        let pipeline = utils::create_basic_validation_pipeline("test_field".to_string());
+        let pipeline = utils::create_validation_pipeline("test_field".to_string());
         let value = ValidationValue::String("test".to_string());
         let result = pipeline.validate(&value);
         assert!(result.is_valid);

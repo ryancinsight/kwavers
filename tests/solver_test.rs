@@ -27,7 +27,7 @@ const DEFAULT_PML_STENCIL_SIZE: usize = 4;
 const NUM_FIELD_COMPONENTS: usize = 7;  // Standard field components
 
 #[test]
-fn test_fdtd_solver_basic() {
+fn test_fdtd_solver() {
     let grid = Grid::new(TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE, 
                         TEST_GRID_SPACING, TEST_GRID_SPACING, TEST_GRID_SPACING);
     let medium = HomogeneousMedium::water(&grid);
@@ -70,7 +70,7 @@ fn test_fdtd_solver_basic() {
 }
 
 #[test]
-fn test_pstd_solver_basic() {
+fn test_pstd_solver() {
     let grid = Grid::new(TEST_GRID_SIZE, TEST_GRID_SIZE, TEST_GRID_SIZE,
                         TEST_GRID_SPACING, TEST_GRID_SPACING, TEST_GRID_SPACING);
     let medium = HomogeneousMedium::water(&grid);

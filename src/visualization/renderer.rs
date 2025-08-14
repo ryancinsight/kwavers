@@ -90,7 +90,7 @@ impl Renderer3D {
         {
             // For Phase 11, we'll create a mock implementation since the GPU context
             // doesn't yet have direct device/queue access for visualization
-            warn!("Advanced visualization feature is enabled, creating basic implementation.");
+            warn!("GPU visualization feature is enabled, creating basic implementation.");
             
             // Create mock WebGPU resources
             
@@ -320,7 +320,7 @@ impl Renderer3D {
         
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled for volume rendering");
+            warn!("GPU visualization not enabled for volume rendering");
         }
         
         Ok(())
@@ -346,7 +346,7 @@ impl Renderer3D {
         
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled for multi-volume rendering");
+            warn!("GPU visualization not enabled for multi-volume rendering");
         }
         
         Ok(())

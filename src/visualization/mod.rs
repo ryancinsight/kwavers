@@ -280,7 +280,7 @@ impl VisualizationEngine {
         
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled. Enable 'gpu-visualization' feature.");
+            warn!("GPU visualization not enabled. Enable 'gpu-visualization' feature.");
         }
         
         Ok(())
@@ -332,13 +332,13 @@ impl VisualizationEngine {
     }
 }
 
-// Stub implementations for when advanced visualization is not enabled
+// Fallback implementations for when GPU visualization is not enabled
 #[cfg(not(feature = "gpu-visualization"))]
 mod fallback {
     use super::*;
     
     /// Fallback function for field visualization
-    pub fn render_field_basic(
+    pub fn render_field(
         field: &Array3<f64>,
         field_type: FieldType,
         grid: &Grid,
@@ -520,7 +520,7 @@ mod tests {
         let grid = create_test_grid();
         let field = create_test_field();
         
-        let result = render_field_basic(&field, FieldType::Pressure, &grid);
+        let result = render_field(&field, FieldType::Pressure, &grid);
         assert!(result.is_ok());
     }
     

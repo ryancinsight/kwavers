@@ -148,7 +148,7 @@ impl DataPipeline {
         
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled for field upload");
+            warn!("GPU visualization not enabled for field upload");
         }
         
         Ok(())

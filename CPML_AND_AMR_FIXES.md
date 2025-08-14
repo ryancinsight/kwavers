@@ -97,7 +97,7 @@ let cpml_config = CPMLConfig {
     thickness: 20,
     polynomial_order: 4.0,
     kappa_max: 25.0,
-    enhanced_grazing: true,
+    grazing_incidence: true,
     ..Default::default()
 };
 fdtd_solver.enable_cpml(cpml_config)?;

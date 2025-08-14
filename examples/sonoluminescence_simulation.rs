@@ -1,5 +1,5 @@
-// examples/advanced_sonoluminescence_simulation.rs
-//! Advanced Sonoluminescence Simulation
+// examples/sonoluminescence_simulation.rs
+//! Sonoluminescence Simulation
 //! 
 //! This example demonstrates the complete physics of sonoluminescence including:
 //! - Acoustic cavitation and bubble dynamics

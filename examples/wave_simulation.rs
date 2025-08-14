@@ -1,5 +1,5 @@
-// examples/simple_wave_simulation.rs
-//! Simple Wave Simulation Example - The RIGHT Way with Source Configuration
+// examples/wave_simulation.rs
+//! Wave Simulation Example - The RIGHT Way with Source Configuration
 //! 
 //! This example demonstrates how users should actually use the kwavers library:
 //! 1. Create a configuration using the factory pattern WITH source configuration
@@ -22,7 +22,7 @@ fn main() -> KwaversResult<()> {
     // Initialize logging
     let _ = init_logging();
     
-    println!("=== Simple Wave Simulation - The RIGHT Way with Source Config ===");
+    println!("=== Wave Simulation - The RIGHT Way with Source Config ===");
     println!("This example shows how to use kwavers properly with source configuration.\n");
     
     // Step 1: Create configuration using the factory pattern WITH source config
@@ -56,7 +56,7 @@ fn main() -> KwaversResult<()> {
     // Step 6: Analyze results
     analyze_results(&results);
     
-    println!("\n✅ Simple wave simulation completed successfully!");
+    println!("\n✅ Wave simulation completed successfully!");
     println!("This demonstrates the proper way to use kwavers with source configuration.");
     
     Ok(())
