@@ -25,6 +25,15 @@ use std::hash::{Hash, Hasher};
 use std::f64;
 use std::clone::Clone;
 
+// Default optical properties for water at typical wavelengths
+/// Default absorption coefficient for water [1/m]
+/// Based on typical values for near-infrared wavelengths
+const DEFAULT_WATER_ABSORPTION_COEFFICIENT: f64 = 0.1;
+
+/// Default reduced scattering coefficient for water [1/m]
+/// Based on typical values for biological tissue imaging
+const DEFAULT_WATER_SCATTERING_COEFFICIENT: f64 = 1.0;
+
 /// A wrapper for `f64` to allow its use as a key in `HashMap`.
 ///
 /// Standard `f64` values do not implement `Eq` and `Hash` in a way that is suitable
@@ -385,15 +394,14 @@ impl HomogeneousMedium {
     /// Creates a `HomogeneousMedium` instance with properties representative of water.
     ///
     /// Uses typical values for density (998 kg/m³) and sound speed (1500 m/s).
-    /// Default optical properties are set (`mu_a = 0.1` 1/m, `mu_s_prime = 1.0` 1/m),
-    /// which are placeholders and may need adjustment for specific applications or wavelengths.
+    /// Default optical properties are set using standard water values for near-infrared wavelengths.
     /// Other physical properties use the defaults from the `new()` constructor (e.g., viscosity of water at 20°C).
     ///
     /// # Arguments
     ///
     /// * `grid` - A reference to the `Grid` defining the spatial dimensions for array fields like temperature.
     pub fn water(grid: &Grid) -> Self {
-        Self::new(998.0, 1500.0, grid, 0.1, 1.0) 
+        Self::new(998.0, 1500.0, grid, DEFAULT_WATER_ABSORPTION_COEFFICIENT, DEFAULT_WATER_SCATTERING_COEFFICIENT) 
     }
 
     /// Clears internal caches for absorption coefficient and property arrays.

@@ -676,8 +676,8 @@ impl ArtificialViscosity {
     }
 }
 
-// EnhancedShockCapturingSolver functionality has been integrated into HybridSpectralDGSolver
-// The enhanced shock handling features are now available through the standard solver API
+// Shock capturing functionality has been integrated into HybridSpectralDGSolver
+// Advanced shock handling features are now available through the standard solver API
 
 #[cfg(test)]
 mod tests {

@@ -274,7 +274,7 @@ impl CPMLSolver {
     
     /// Estimate reflection coefficient at given angle
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
-        self.cpml.estimate_reflection(angle_degrees)
+        self.cpml.estimate_reflection(angle_degrees).unwrap_or(0.0)
     }
 }
 

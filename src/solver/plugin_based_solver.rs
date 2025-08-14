@@ -490,11 +490,14 @@ impl PluginBasedSolver {
     /// Get a reference to a specific field
     pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
         self.field_registry.get_field(field_type)
+            .ok()
+            .map(|view| view.to_owned())
     }
     
     /// Set a specific field
     pub fn set_field(&mut self, field_type: UnifiedFieldType, values: &Array3<f64>) -> KwaversResult<()> {
         self.field_registry.set_field(field_type, values)
+            .map_err(|e| KwaversError::Field(e))
     }
     
     /// Get the grid
