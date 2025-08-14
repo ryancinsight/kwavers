@@ -16,6 +16,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
+use serde::{Serialize, Deserialize};
 
 pub mod arc_recon;
 pub mod bowl_recon;
@@ -25,7 +26,7 @@ pub mod plane_recon;
 pub mod seismic;
 
 /// Reconstruction configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconstructionConfig {
     /// Speed of sound in medium (m/s)
     pub sound_speed: f64,
@@ -40,7 +41,7 @@ pub struct ReconstructionConfig {
 }
 
 /// Reconstruction algorithms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReconstructionAlgorithm {
     /// Back-projection algorithm
     BackProjection,
@@ -59,7 +60,7 @@ pub enum ReconstructionAlgorithm {
 }
 
 /// Filter types for reconstruction
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FilterType {
     /// No filtering
     None,
@@ -76,7 +77,7 @@ pub enum FilterType {
 }
 
 /// Interpolation methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InterpolationMethod {
     /// Nearest neighbor
     NearestNeighbor,

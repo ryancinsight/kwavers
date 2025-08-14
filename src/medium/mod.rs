@@ -70,6 +70,22 @@ pub trait Medium: Debug + Sync + Send {
     fn reduced_scattering_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn reference_frequency(&self) -> f64; // Added for absorption calculations
     
+    /// Get the nonlinearity parameter (beta or B/A) for the medium
+    /// This parameter characterizes the degree of nonlinear wave distortion
+    fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default B/A parameter for water-like media
+        5.0
+    }
+    
+    /// Get the acoustic diffusivity for the medium
+    /// Represents the ratio of thermal diffusivity to acoustic velocity
+    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        // Default acoustic diffusivity for water-like media
+        let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
+        let sound_speed = self.sound_speed(x, y, z, grid);
+        thermal_diff / sound_speed
+    }
+    
     /// Get the adiabatic index (gamma) for the medium
     /// Default is 1.4 for air, but different media have different values
     fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

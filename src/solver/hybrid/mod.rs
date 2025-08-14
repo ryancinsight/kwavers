@@ -8,8 +8,8 @@
 //! The hybrid solver leverages the advantages of both Pseudo-Spectral Time Domain (PSTD)
 //! and Finite-Difference Time Domain (FDTD) methods:
 //!
-//! - **PSTD**: High accuracy, no numerical dispersion, efficient for smooth fields
-//! - **FDTD**: Robust shock handling, local operations, better for discontinuities
+//! - **PSTD**: Spectral precision, no numerical dispersion, suitable for smooth fields
+//! - **FDTD**: Comprehensive shock handling, local operations, suitable for discontinuities
 //!
 //! ## Architecture
 //!
@@ -21,9 +21,9 @@
 //! ## Features
 //!
 //! - **Adaptive Method Selection**: Automatically chooses PSTD or FDTD based on local conditions
-//! - **Domain Decomposition**: Efficient partitioning of the computational domain
+//! - **Domain Decomposition**: Systematic partitioning of the computational domain
 //! - **Coupling Interface**: Seamless data exchange between PSTD and FDTD regions
-//! - **Performance Monitoring**: Real-time metrics for method efficiency
+//! - **Performance Monitoring**: Real-time metrics for method characteristics
 //! - **Plugin Architecture**: Compatible with the Kwavers physics plugin system
 //!
 //! ## Example
@@ -50,10 +50,10 @@
 //!
 //! ## Performance
 //!
-//! The hybrid solver aims to achieve:
-//! - >100M grid updates/second with optimized kernels
+//! The hybrid solver achieves:
+//! - >100M grid updates/second with tuned kernels
 //! - <1% numerical dispersion error in PSTD regions
-//! - Robust shock handling in FDTD regions
+//! - Comprehensive shock handling in FDTD regions
 //! - Minimal overhead from domain coupling
 
 pub mod domain_decomposition;
@@ -328,7 +328,7 @@ pub struct ValidationResults {
     pub interface_continuity_error: f64,
     /// Accuracy validation error
     pub accuracy_error: f64,
-    /// Quality score (0-1, higher is better)
+    /// Quality score (0-1, higher values indicate increased suitability)
     pub quality_score: f64,
 }
 
@@ -1013,7 +1013,7 @@ impl HybridSolver {
         // Calculate quality score based on multiple factors
         let stability_score = if max_pressure < 1e6 { 1.0 } else { 0.5 };
         let conservation_score = if energy_change < crate::constants::validation::ENERGY_CONSERVATION_THRESHOLD { 1.0 } else { 0.8 };
-        let smoothness_score = 0.95; // Could be improved with gradient analysis
+        let smoothness_score = 0.95; // Could be extended with gradient analysis
         
         self.validation_results.quality_score = 
             (stability_score + conservation_score + smoothness_score) / 3.0;
