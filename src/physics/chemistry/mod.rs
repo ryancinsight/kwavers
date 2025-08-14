@@ -545,17 +545,13 @@ impl ChemicalModel {
         let pressure_owned = pressure.to_owned();
         let light_owned = light.to_owned();
         let temperature_owned = temperature.to_owned();
-        let params = ChemicalUpdateParams {
-            pressure: &pressure_owned,
-            light: &light_owned,
-            emission_spectrum,
-            bubble_radius,
-            temperature: &temperature_owned,
-            grid,
-            dt,
-            medium,
-            frequency: crate::constants::physics::DEFAULT_ULTRASOUND_FREQUENCY, // Default frequency
-        };
+        let params = ChemicalUpdateParams::new(
+            &pressure_owned, &light_owned, emission_spectrum, bubble_radius, &temperature_owned,
+            grid, dt, medium, crate::constants::physics::DEFAULT_ULTRASOUND_FREQUENCY // Default frequency
+        ).unwrap_or_else(|e| {
+            log::error!("Failed to create chemical update params: {}", e);
+            panic!("Chemical update params creation failed");
+        });
         
         self.update_chemical(&params)
     }
@@ -680,9 +676,9 @@ impl ChemicalModelTrait for ChemicalModel {
         // Create fields map for update
         let mut fields = HashMap::new();
         fields.insert(UnifiedFieldType::Pressure, p.clone());
-        fields.insert(UnifiedFieldType::Light, light.clone());
+        fields.insert(UnifiedFieldType::LightFluence, light.clone());
         fields.insert(UnifiedFieldType::Temperature, temperature.clone());
-        fields.insert(UnifiedFieldType::Cavitation, bubble_radius.clone());
+        fields.insert(UnifiedFieldType::BubbleRadius, bubble_radius.clone());
         
         // Create context with proper structure
         let mut context = PluginContext::new(0, 1000, frequency);

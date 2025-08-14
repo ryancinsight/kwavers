@@ -1,18 +1,42 @@
-//! # Kwavers - Ultrasound Simulation Toolbox
+//! # Kwavers: Advanced Acoustic Simulation Library
 //!
-//! A modern, high-performance, open-source computational toolbox for simulating
-//! ultrasound wave propagation in complex heterogeneous media.
-//!
-//! ## Features
-//!
-//! - **Physics Modeling**: Nonlinear acoustics, thermal effects, cavitation dynamics
-//! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
-//! - **Memory Safety**: Zero unsafe code with comprehensive error handling
-//! - **Performance**: High-performance algorithms with SIMD and parallel processing
-//! - **Extensibility**: Modular architecture following SOLID principles
+//! A comprehensive acoustic wave simulation library with support for:
+//! - Linear and nonlinear wave propagation
+//! - Multi-physics simulations (acoustic, thermal, optical)
+//! - Advanced numerical methods (FDTD, PSTD, spectral methods)
+//! - Real-time processing and visualization
 
-use ndarray::Array3;
 use std::collections::HashMap;
+
+use ndarray::{Array4, Axis};
+
+// Validation constants to replace magic numbers
+mod validation_constants {
+    /// Minimum frequency for source validation [Hz]
+    pub const MIN_SOURCE_FREQUENCY: f64 = 1e3;
+    /// Maximum frequency for source validation [Hz]  
+    pub const MAX_SOURCE_FREQUENCY: f64 = 100e6;
+    /// Minimum amplitude for source validation [Pa]
+    pub const MIN_SOURCE_AMPLITUDE: f64 = 1e3;
+    /// Maximum amplitude for source validation [Pa]
+    pub const MAX_SOURCE_AMPLITUDE: f64 = 100e6;
+    /// Progress reporting interval [steps]
+    pub const PROGRESS_REPORT_INTERVAL: usize = 100;
+    /// Default plugin context frequency [Hz]
+    pub const DEFAULT_PLUGIN_FREQUENCY: f64 = 100e3;
+}
+
+// Default medium properties constants
+mod medium_constants {
+    /// Default water density [kg/m³]
+    pub const WATER_DENSITY: f64 = 998.0;
+    /// Default water sound speed [m/s]
+    pub const WATER_SOUND_SPEED: f64 = 1482.0;
+    /// Default absorption coefficient
+    pub const DEFAULT_ABSORPTION: f64 = 0.5;
+    /// Default dispersion coefficient
+    pub const DEFAULT_DISPERSION: f64 = 10.0;
+}
 
 // Core modules
 pub mod boundary;
@@ -124,20 +148,13 @@ pub use solver::reconstruction::{
 };
 
 /// Initialize logging for the kwavers library
-/// 
-/// Implements KISS principle with simple, clear initialization
 pub fn init_logging() -> KwaversResult<()> {
     env_logger::init();
     Ok(())
 }
 
-/// Plot simulation outputs using the built-in visualization system
-/// 
-/// Implements YAGNI principle by providing only necessary visualization features
-pub fn plot_simulation_outputs(
-    output_dir: &str,
-    files: &[&str],
-) -> KwaversResult<()> {
+/// Create default visualization plots for simulation outputs
+pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResult<()> {
     use std::path::Path;
     
     for file in files {
@@ -243,23 +260,23 @@ pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationRe
     }
     
     if let Some(freq) = config.source.frequency {
-        if !(1e3..=100e6).contains(&freq) {
+        if !(validation_constants::MIN_SOURCE_FREQUENCY..=validation_constants::MAX_SOURCE_FREQUENCY).contains(&freq) {
             validation_result.add_error(ValidationError::RangeValidation {
                 field: "source_frequency".to_string(),
                 value: freq,
-                min: 1e3,
-                max: 100e6,
+                min: validation_constants::MIN_SOURCE_FREQUENCY,
+                max: validation_constants::MAX_SOURCE_FREQUENCY,
             });
         }
     }
     
     if let Some(amp) = config.source.amplitude {
-        if !(1e3..=100e6).contains(&amp) {
+        if !(validation_constants::MIN_SOURCE_AMPLITUDE..=validation_constants::MAX_SOURCE_AMPLITUDE).contains(&amp) {
             validation_result.add_error(ValidationError::RangeValidation {
                 field: "source_amplitude".to_string(),
                 value: amp,
-                min: 1e3,
-                max: 100e6,
+                min: validation_constants::MIN_SOURCE_AMPLITUDE,
+                max: validation_constants::MAX_SOURCE_AMPLITUDE,
             });
         }
     }
@@ -268,8 +285,6 @@ pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationRe
 }
 
 /// Create a complete simulation setup with validation
-/// 
-/// Implements Controller pattern from GRASP principles
 pub fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
@@ -297,7 +312,13 @@ pub fn create_validated_simulation(
         }))?;
     
     // Create medium
-    let medium = HomogeneousMedium::new(998.0, 1482.0, &grid, 0.5, 10.0);
+    let medium = HomogeneousMedium::new(
+        medium_constants::WATER_DENSITY, 
+        medium_constants::WATER_SOUND_SPEED, 
+        &grid, 
+        medium_constants::DEFAULT_ABSORPTION, 
+        medium_constants::DEFAULT_DISPERSION
+    );
     
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)
@@ -391,7 +412,7 @@ pub fn run_physics_simulation(
         // Apply source
         // Create source field array
         let (nx, ny, nz) = grid.dimensions();
-        let mut source_field = Array3::zeros((nx, ny, nz));
+        let mut source_field = ndarray::Array3::zeros((nx, ny, nz));
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -403,7 +424,7 @@ pub fn run_physics_simulation(
         // Source term would be added directly to the fields if needed
         
         // Apply physics using plugin manager
-        let plugin_context = PluginContext::new(step, time.n_steps, 100e3);
+        let plugin_context = PluginContext::new(step, time.n_steps, validation_constants::DEFAULT_PLUGIN_FREQUENCY);
         plugin_manager.update_all(
             &mut fields,
             &grid,
@@ -425,7 +446,7 @@ pub fn run_physics_simulation(
         recorder.record(&fields, step, t);
         
         // Progress reporting
-        if step % 100 == 0 {
+        if step % validation_constants::PROGRESS_REPORT_INTERVAL == 0 {
             println!("Step {}/{} ({}%)", step, time.num_steps(), 
                 (step * 100) / time.num_steps());
         }
