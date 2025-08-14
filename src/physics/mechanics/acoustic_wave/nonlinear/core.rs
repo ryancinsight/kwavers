@@ -60,6 +60,14 @@ pub struct NonlinearWave {
     /// Configuration for multi-frequency analysis
     pub(super) multi_freq_config: Option<MultiFrequencyConfig>,
     
+    // Frequency-dependent physics
+    /// Source frequency for frequency-dependent absorption and dispersion [Hz]
+    pub(super) source_frequency: f64,
+    
+    // Performance optimization caches
+    /// Cached maximum sound speed of the medium for efficient stability checks
+    pub(super) max_sound_speed: f64,
+    
     // Kuznetsov equation support
     /// Enable Kuznetsov equation terms (includes diffusivity and nonlinearity)
     pub(super) use_kuznetsov_terms: bool,
@@ -103,7 +111,7 @@ impl NonlinearWave {
                 };
 
                 // Apply absorption: exp(-alpha * c * dt) for spatial absorption
-                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
+                let alpha = medium.absorption_coefficient(x, y, z, grid, self.source_frequency);
                 let absorption_damping_arg = -alpha * c * dt;
                 let absorption_damping = if absorption_damping_arg.is_finite() { 
                     absorption_damping_arg.exp() 
@@ -202,8 +210,7 @@ impl NonlinearWave {
             }
         }
         
-        // Handle boundary points
-        self.compute_boundary_nonlinear_terms(&mut result, pressure, _prev_pressure, grid, medium, dt);
+        // Boundary points use zero nonlinear terms for stability
         
         self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
         result
@@ -263,6 +270,37 @@ impl NonlinearWave {
             }
         }
     }
+    /// Compute maximum sound speed in the medium for caching
+    fn compute_max_sound_speed(medium: &dyn Medium, grid: &Grid) -> f64 {
+        let mut max_speed: f64 = 0.0;
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let c = medium.sound_speed(x, y, z, grid);
+                    max_speed = max_speed.max(c);
+                }
+            }
+        }
+        max_speed
+    }
+
+    /// Update the cached maximum sound speed (call when medium properties change)
+    pub fn update_max_sound_speed(&mut self, medium: &dyn Medium, grid: &Grid) {
+        self.max_sound_speed = Self::compute_max_sound_speed(medium, grid);
+        debug!("Updated cached maximum sound speed: {:.2} m/s", self.max_sound_speed);
+    }
+
+
+
+    /// Update source frequency for frequency-dependent calculations
+    pub fn set_source_frequency(&mut self, frequency: f64) {
+        self.source_frequency = frequency;
+        debug!("Updated source frequency to {} Hz", frequency);
+    }
+
     /// Creates a new `NonlinearWave` solver instance for Westervelt equation.
     ///
     /// Initializes the solver with default parameters and precomputes necessary values
@@ -271,15 +309,21 @@ impl NonlinearWave {
     /// # Arguments
     ///
     /// * `grid` - A reference to the `Grid` structure defining the simulation domain and discretization.
+    /// * `medium` - A reference to the medium for caching maximum sound speed.
+    /// * `source_frequency` - The primary source frequency for frequency-dependent absorption [Hz].
     ///
     /// # Returns
     ///
     /// A new `NonlinearWave` instance implementing the Westervelt equation.
-    pub fn new(grid: &Grid) -> Self {
-        debug!("Initializing NonlinearWave solver (Westervelt equation)");
+    pub fn new(grid: &Grid, medium: &dyn Medium, source_frequency: f64) -> Self {
+        debug!("Initializing NonlinearWave solver (Westervelt equation) with frequency {} Hz", source_frequency);
 
         // Precompute k-squared values to avoid recomputation in every step
         let k_squared = Some(grid.k_squared());
+        
+        // Cache maximum sound speed for efficient stability checks
+        let max_sound_speed = Self::compute_max_sound_speed(medium, grid);
+        debug!("Cached maximum sound speed: {:.2} m/s", max_sound_speed);
         
         // Determine optimal chunk size based on grid dimensions
         let total_points = grid.nx * grid.ny * grid.nz;
@@ -308,6 +352,8 @@ impl NonlinearWave {
             chunk_size,
             use_chunked_processing: total_points > performance::CHUNKED_PROCESSING_THRESHOLD,
             multi_freq_config: None, // Initialize as None
+            source_frequency,
+            max_sound_speed,
             use_kuznetsov_terms: false, // Default to Westervelt equation
             use_diffusivity: false, // Default to no diffusivity
         }
@@ -316,9 +362,12 @@ impl NonlinearWave {
     /// Create a new NonlinearWave with multi-frequency capabilities
     pub fn with_multi_frequency(
         grid: &Grid,
+        medium: &dyn Medium,
         multi_freq_config: MultiFrequencyConfig,
     ) -> Self {
-        let mut instance = Self::new(grid);
+        // Use the first frequency as the primary frequency for absorption calculations
+        let primary_frequency = multi_freq_config.frequencies.first().copied().unwrap_or(1e6);
+        let mut instance = Self::new(grid, medium, primary_frequency);
         instance.multi_freq_config = Some(multi_freq_config);
         instance
     }
@@ -572,34 +621,24 @@ impl NonlinearWave {
     pub(super) fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, pressure: &Array3<f64>) -> bool {
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         
-        // Combined pass for max sound speed and pressure validation
-        let mut max_c: f64 = 0.0;
+        // Optimized: Use cached max sound speed instead of recalculating
+        let max_c = self.max_sound_speed;
         let mut max_pressure_val = f64::NEG_INFINITY;
         let mut min_pressure_val = f64::INFINITY;
         let mut has_nan = false;
         let mut has_inf = false;
         
-        if grid.nx > 0 && grid.ny > 0 && grid.nz > 0 {
-            // Use indexed iteration to check both medium properties and pressure values
-            for ((i, j, k), &p_val) in pressure.indexed_iter() {
-                // Check pressure validity
-                if p_val.is_nan() {
-                    has_nan = true;
-                    break;
-                } else if p_val.is_infinite() {
-                    has_inf = true;
-                    break;
-                } else {
-                    max_pressure_val = max_pressure_val.max(p_val);
-                    min_pressure_val = min_pressure_val.min(p_val);
-                }
-                
-                // Update max sound speed
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                let c = medium.sound_speed(x, y, z, grid);
-                max_c = max_c.max(c);
+        // Only check pressure validity - no need to recalculate sound speed
+        for &p_val in pressure.iter() {
+            if p_val.is_nan() {
+                has_nan = true;
+                break;
+            } else if p_val.is_infinite() {
+                has_inf = true;
+                break;
+            } else {
+                max_pressure_val = max_pressure_val.max(p_val);
+                min_pressure_val = min_pressure_val.min(p_val);
             }
         }
 
@@ -798,7 +837,10 @@ impl AcousticWaveModel for NonlinearWave {
         // Use view instead of expensive .to_owned() - zero allocation
         let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX);
         
-        // Stability check moved to individual component methods for efficiency
+        // Check stability using cached maximum sound speed for efficiency
+        if !self.check_stability(dt, grid, medium, &pressure_at_start.to_owned()) {
+            debug!("Potential instability detected at t={}.", t);
+        }
 
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if nx == 0 || ny == 0 || nz == 0 {
