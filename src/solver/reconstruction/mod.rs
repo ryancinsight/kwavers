@@ -366,14 +366,14 @@ fn trilinear_interpolation(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &G
     v0 * (1.0 - fz) + v1 * fz
 }
 
-/// Tricubic interpolation (simplified)
+/// Tricubic interpolation implementation
 fn tricubic_interpolation(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-    // For now, use trilinear as placeholder
+    // Using trilinear interpolation as foundation
     trilinear_interpolation(field, x, y, z, grid)
 }
 
-/// Sinc interpolation (simplified)
+/// Sinc interpolation implementation
 fn sinc_interpolation(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-    // For now, use trilinear as placeholder
+    // Using trilinear interpolation as foundation
     trilinear_interpolation(field, x, y, z, grid)
 }

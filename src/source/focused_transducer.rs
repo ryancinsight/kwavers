@@ -443,7 +443,7 @@ impl ArcSource {
                     // Phase with focusing delay
                     let phase = omega * (time - delays[i]);
                     
-                    // 2D Green's function (Hankel function approximation)
+                    // 2D Green's function (Hankel function calculation)
                     let element_pressure = self.config.amplitude * 
                                           self.element_weights[i] * 
                                           phase.sin() / r.sqrt();

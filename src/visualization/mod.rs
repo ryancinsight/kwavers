@@ -33,16 +33,16 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 // Conditional imports based on features
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub mod renderer;
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub mod controls;
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub mod data_pipeline;
 // Additional modules will be implemented in future phases
-// #[cfg(feature = "advanced-visualization")]
+// #[cfg(feature = "gpu-visualization")]
 // pub mod volume_rendering;
-// #[cfg(feature = "advanced-visualization")]
+// #[cfg(feature = "gpu-visualization")]
 // pub mod isosurface;
 
 // #[cfg(feature = "web-visualization")]
@@ -52,11 +52,11 @@ pub mod data_pipeline;
 // pub mod vr;
 
 // Re-exports for convenience
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub use renderer::*;
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub use controls::*;
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 pub use data_pipeline::*;
 
 // Re-export UnifiedFieldType from field_mapping module
@@ -144,13 +144,13 @@ pub struct VisualizationEngine {
     metrics: Arc<Mutex<VisualizationMetrics>>,
     last_frame_time: Instant,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     renderer: Option<renderer::Renderer3D>,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     controls: Option<controls::InteractiveControls>,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     data_pipeline: Option<data_pipeline::DataPipeline>,
 }
 
@@ -173,13 +173,13 @@ impl VisualizationEngine {
             metrics,
             last_frame_time: Instant::now(),
             
-            #[cfg(feature = "advanced-visualization")]
+            #[cfg(feature = "gpu-visualization")]
             renderer: None,
             
-            #[cfg(feature = "advanced-visualization")]
+            #[cfg(feature = "gpu-visualization")]
             controls: None,
             
-            #[cfg(feature = "advanced-visualization")]
+            #[cfg(feature = "gpu-visualization")]
             data_pipeline: None,
         })
     }
@@ -189,7 +189,7 @@ impl VisualizationEngine {
         info!("Initializing GPU acceleration for visualization");
         self.gpu_context = Some(gpu_context.clone());
         
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             // Initialize renderer with GPU context
             self.renderer = Some(renderer::Renderer3D::new(&self.config, gpu_context.clone()).await?);
@@ -214,7 +214,7 @@ impl VisualizationEngine {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline) {
                 // Transfer field data to GPU
@@ -235,9 +235,9 @@ impl VisualizationEngine {
             }
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled. Enable 'advanced-visualization' feature.");
+            warn!("Advanced visualization not enabled. Enable 'gpu-visualization' feature.");
         }
         
         Ok(())
@@ -252,7 +252,7 @@ impl VisualizationEngine {
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
         
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             if let (Some(renderer), Some(pipeline)) = (&mut self.renderer, &mut self.data_pipeline) {
                 // Upload all fields to GPU
@@ -260,7 +260,7 @@ impl VisualizationEngine {
                 for (i, &field_type) in field_types.iter().enumerate() {
                     if i < fields.shape()[3] {
                         let field = fields.slice(ndarray::s![.., .., .., i]);
-                        pipeline.upload_field(&field.to_owned(), field_type).await?;
+                        pipeline.upload_field(&field, field_type).await?;
                     }
                 }
                 let transfer_time = transfer_start.elapsed().as_secs_f32() * 1000.0;
@@ -278,9 +278,9 @@ impl VisualizationEngine {
             }
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled. Enable 'advanced-visualization' feature.");
+            warn!("Advanced visualization not enabled. Enable 'gpu-visualization' feature.");
         }
         
         Ok(())
@@ -288,7 +288,7 @@ impl VisualizationEngine {
     
     /// Update real-time parameter during simulation
     pub fn update_parameter(&mut self, parameter: &str, value: f64) -> KwaversResult<()> {
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             if let Some(controls) = &mut self.controls {
                 controls.update_parameter(parameter, crate::visualization::controls::ParameterValue::Float(value))?;
@@ -321,7 +321,7 @@ impl VisualizationEngine {
             metrics.render_time_ms = render_time;
             metrics.transfer_time_ms = transfer_time;
             
-            #[cfg(feature = "advanced-visualization")]
+            #[cfg(feature = "gpu-visualization")]
             {
                 if let Some(renderer) = &self.renderer {
                     metrics.gpu_memory_usage = renderer.get_memory_usage();
@@ -333,11 +333,11 @@ impl VisualizationEngine {
 }
 
 // Stub implementations for when advanced visualization is not enabled
-#[cfg(not(feature = "advanced-visualization"))]
-mod stubs {
+#[cfg(not(feature = "gpu-visualization"))]
+mod fallback {
     use super::*;
     
-    /// Fallback function for basic field visualization
+    /// Fallback function for field visualization
     pub fn render_field_basic(
         field: &Array3<f64>,
         field_type: FieldType,
@@ -512,10 +512,10 @@ mod tests {
         assert!(result.is_ok());
     }
     
-    #[cfg(not(feature = "advanced-visualization"))]
+    #[cfg(not(feature = "gpu-visualization"))]
     #[test]
-    fn test_stub_implementation() {
-        use super::stubs::*;
+    fn test_fallback_implementation() {
+        use super::fallback::*;
         
         let grid = create_test_grid();
         let field = create_test_field();

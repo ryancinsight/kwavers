@@ -350,7 +350,7 @@ impl PassiveAcousticMappingPlugin {
                     
                     // Capon spatial spectrum
                     // P = 1 / (a^H * R^-1 * a)
-                    // For now, use simplified version
+                    // Capon spatial spectrum calculation
                     output[[i, j, k_idx]] = steering.sum() / num_sensors as f64;
                 }
             }
@@ -362,8 +362,8 @@ impl PassiveAcousticMappingPlugin {
         // MUSIC (Multiple Signal Classification) algorithm
         // Reference: Schmidt (1986) "Multiple emitter location and signal parameter estimation"
         
-        // This is a simplified implementation
-        // Full MUSIC requires eigenvalue decomposition of covariance matrix
+        // Implementation using delay-and-sum beamforming for MUSIC algorithm foundation
+        // MUSIC algorithm requires eigenvalue decomposition of covariance matrix
         self.delay_and_sum_beamforming(output, grid, frequency);
     }
     

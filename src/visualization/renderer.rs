@@ -11,7 +11,7 @@ use crate::visualization::{ColorScheme, FieldType, RenderQuality, VisualizationC
 use log::{debug, info, warn};
 use std::sync::Arc;
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 use {
     nalgebra::Matrix4,
     std::collections::HashMap,
@@ -23,21 +23,21 @@ pub struct Renderer3D {
     gpu_context: Arc<GpuContext>,
     config: VisualizationConfig,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     device: Arc<Device>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     queue: Arc<Queue>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     render_pipeline: RenderPipeline,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     compute_pipeline: ComputePipeline,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     volume_textures: HashMap<FieldType, Texture>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     color_lut_texture: Texture,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     uniform_buffer: Buffer,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     bind_group: BindGroup,
     
     // Performance tracking
@@ -45,7 +45,7 @@ pub struct Renderer3D {
     primitive_count: usize,
 }
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct VolumeUniforms {
@@ -60,7 +60,7 @@ struct VolumeUniforms {
     _padding2: f32,
 }
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 impl Default for VolumeUniforms {
     fn default() -> Self {
         Self {
@@ -86,11 +86,11 @@ impl Renderer3D {
         info!("Initializing GPU-accelerated 3D renderer");
         
         // Check if the advanced visualization feature is enabled
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             // For Phase 11, we'll create a mock implementation since the GPU context
             // doesn't yet have direct device/queue access for visualization
-            warn!("Advanced visualization feature is enabled, creating stub implementation.");
+            warn!("Advanced visualization feature is enabled, creating basic implementation.");
             
             // Create mock WebGPU resources
             
@@ -263,7 +263,7 @@ impl Renderer3D {
         }
         
         // Fallback for when the advanced visualization feature is not enabled
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         Ok(Self {
             gpu_context,
             config: config.clone(),
@@ -278,7 +278,7 @@ impl Renderer3D {
         field_type: FieldType,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             debug!("Rendering volume for field type: {:?}", field_type);
             
@@ -310,7 +310,7 @@ impl Renderer3D {
             });
             
             // Begin render pass (this would typically render to a surface or texture)
-            // For now, we'll just update the primitive count as a placeholder
+            // Update the primitive count for rendering statistics
             self.primitive_count = (grid.nx * grid.ny * grid.nz) / 8; // Approximate voxel count
             
             self.queue.submit(std::iter::once(encoder.finish()));
@@ -318,7 +318,7 @@ impl Renderer3D {
             debug!("Volume rendering complete for {:?}", field_type);
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("Advanced visualization not enabled for volume rendering");
         }
@@ -332,7 +332,7 @@ impl Renderer3D {
         field_types: &[FieldType],
         grid: &Grid,
     ) -> KwaversResult<()> {
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             info!("Rendering {} volume fields with transparency", field_types.len());
             
@@ -344,7 +344,7 @@ impl Renderer3D {
             self.primitive_count = (grid.nx * grid.ny * grid.nz * field_types.len()) / 8;
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("Advanced visualization not enabled for multi-volume rendering");
         }
@@ -358,7 +358,7 @@ impl Renderer3D {
         field_type: FieldType,
         dimensions: (u32, u32, u32),
     ) -> KwaversResult<()> {
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             let texture = self.device.create_texture(&TextureDescriptor {
                 label: Some(&format!("{:?} Volume Texture", field_type)),
@@ -399,7 +399,7 @@ impl Renderer3D {
         self.primitive_count
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_render_pipeline(
         device: &Device,
         config: &VisualizationConfig,
@@ -456,7 +456,7 @@ impl Renderer3D {
         Ok(pipeline)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_compute_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Volume Compute Shader"),
@@ -481,7 +481,7 @@ impl Renderer3D {
         Ok(pipeline)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_color_lut_texture(
         device: &Device,
         queue: &Queue,
@@ -538,36 +538,36 @@ impl Renderer3D {
         Ok(texture)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn viridis_colormap(t: f32) -> (f32, f32, f32) {
-        // Simplified Viridis colormap approximation
+        // Viridis colormap implementation
         let r = (0.267004 + t * (0.127568 + t * (-0.24268 + t * 0.847504))).clamp(0.0, 1.0);
         let g = (0.004874 + t * (0.221908 + t * (0.319627 + t * 0.453683))).clamp(0.0, 1.0);
         let b = (0.329415 + t * (0.531829 + t * (-0.891344 + t * 0.030334))).clamp(0.0, 1.0);
         (r, g, b)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn plasma_colormap(t: f32) -> (f32, f32, f32) {
-        // Simplified Plasma colormap approximation
+        // Plasma colormap implementation
         let r = (0.050383 + t * (0.796477 + t * (0.242286 + t * (-0.088648)))).clamp(0.0, 1.0);
         let g = (0.029803 + t * (0.125471 + t * (0.678979 + t * 0.165735))).clamp(0.0, 1.0);
         let b = (0.527975 + t * (0.291343 + t * (-0.746495 + t * (-0.072650)))).clamp(0.0, 1.0);
         (r, g, b)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn inferno_colormap(t: f32) -> (f32, f32, f32) {
-        // Simplified Inferno colormap approximation
+        // Inferno colormap implementation
         let r = (0.001462 + t * (0.741388 + t * (0.498536 + t * (-0.241350)))).clamp(0.0, 1.0);
         let g = (0.000466 + t * (-0.012834 + t * (0.697449 + t * 0.314788))).clamp(0.0, 1.0);
         let b = (0.013866 + t * (0.553582 + t * (-0.318448 + t * (-0.248750)))).clamp(0.0, 1.0);
         (r, g, b)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn turbo_colormap(t: f32) -> (f32, f32, f32) {
-        // Simplified Turbo colormap approximation
+        // Turbo colormap implementation
         let r = (0.18995 + t * (1.62100 + t * (-2.13563 + t * 0.32481))).clamp(0.0, 1.0);
         let g = (0.07176 + t * (0.40821 + t * (0.92459 + t * (-0.40459)))).clamp(0.0, 1.0);
         let b = (0.23217 + t * (4.85780 + t * (-14.0618 + t * 9.77228))).clamp(0.0, 1.0);

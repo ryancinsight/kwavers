@@ -341,7 +341,7 @@ mod tests {
         
         // IMPROVED: More realistic tolerances for k-space method with finite precision
         assert!(
-            amplitude_ratio > 0.85, // 15% loss tolerance (improved from 40%)
+            amplitude_ratio > crate::constants::validation::AMPLITUDE_TOLERANCE, // 15% loss tolerance
             "Amplitude decayed too much: initial={:.3e}, final={:.3e}, ratio={:.3}",
             initial_max, final_max, amplitude_ratio
         );

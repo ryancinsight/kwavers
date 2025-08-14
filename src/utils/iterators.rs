@@ -77,7 +77,7 @@ where
         Self { array, nx, ny, nz }
     }
     
-    /// Process interior points with chunked iteration for better cache performance
+    /// Process interior points with chunked iteration for cache performance
     pub fn process_interior<F>(&mut self, dx: f64, dy: f64, dz: f64, processor: F)
     where
         F: Fn(usize, usize, usize, f64, f64, f64) + Sync + Send,

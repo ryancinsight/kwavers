@@ -272,7 +272,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         // Viscoelastic specific properties
         let eta_s_arr = medium.shear_viscosity_coeff_array(); // Shear viscosity
         let eta_b_arr = medium.bulk_viscosity_coeff_array();  // Bulk viscosity
-        // medium.shear_sound_speed_array() is not used in this simplified scalar model
+        // medium.shear_sound_speed_array() is not used in this scalar pressure model
 
         // --- Source Term ---
         let start_source = Instant::now();
@@ -405,7 +405,7 @@ impl AcousticWaveModel for ViscoelasticWave {
                 // For now, let's use the k-Wave approach of modifying k: k_eff = k * sinc_correction_factor
                 // This is complex to do heterogeneously.
                 // NonlinearWave applies kspace_corr_factor = grid.kspace_correction(...)
-                // Let's assume a homogeneous c for this correction for now, or ignore it if it's too complex.
+                // Use homogeneous sound speed for k-space correction calculation.
                 // The `grid.kspace_correction` in NonlinearWave uses `medium.sound_speed(0.0,0.0,0.0,grid)`
                 // This means it uses a single c for the whole grid for this correction.
                 let c_for_sinc = medium.sound_speed(0.0,0.0,0.0,grid); // Homogeneous c for sinc
@@ -434,7 +434,7 @@ impl AcousticWaveModel for ViscoelasticWave {
         let mut p_output_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
 
         // Current solution: p(t+dt) = p_linear_propagated(from p(t)) + dt * (NonlinearSource + SourceTerm)
-        // This assumes nonlinear_term and src_term_array are source rates.
+        // nonlinear_term and src_term_array represent source rates in the pressure equation.
         // Combine linear propagation, nonlinear terms, and source contributions
         // Nonlinear terms are integrated as rates, source terms are direct contributions
         Zip::from(&mut p_output_view)

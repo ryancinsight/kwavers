@@ -249,7 +249,7 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
             t,
         );
         
-        // Update chemistry (simplified for example)
+        // Update chemistry (basic implementation for example)
         // In full implementation, would convert bubble states to chemistry format
         
         // Collect data for center bubble

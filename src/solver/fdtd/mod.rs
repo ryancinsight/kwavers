@@ -149,7 +149,7 @@ impl PluginConfig for FdtdConfig {
                 field: "cfl_factor".to_string(),
                 message: format!("CFL factor {} may cause instability", self.cfl_factor),
                 severity: WarningSeverity::Medium,
-                suggestion: Some("Consider using a CFL factor <= 0.7 for better stability".to_string()),
+                suggestion: Some("Consider using a CFL factor <= 0.7 for numerical stability".to_string()),
             });
         }
         

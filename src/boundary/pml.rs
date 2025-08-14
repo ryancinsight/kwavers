@@ -142,10 +142,10 @@ impl PMLBoundary {
         let mut profile = vec![0.0; length];
         
         // PML profile with exponential absorption characteristics
-        // Theoretical optimal sigma for reflection coefficient R
+        // Theoretical reference sigma for reflection coefficient R
         let target_reflection: f64 = 1e-6; // -120 dB reflection
-        let optimal_sigma = -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
-        let sigma_eff = sigma_max.min(optimal_sigma * 2.0); // Don't exceed theoretical optimum
+        let reference_sigma = -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
+        let sigma_eff = sigma_max.min(reference_sigma * 2.0); // Don't exceed theoretical reference
         
         // Apply PML at both domain boundaries (left/right or top/bottom)
         // Left/bottom boundary - polynomial grading
@@ -153,7 +153,7 @@ impl PMLBoundary {
             let normalized_distance = (thickness - i) as f64 / thickness as f64;
             let polynomial_factor = normalized_distance.powi(order as i32);
             
-            // Add exponential component for better absorption at grazing angles
+            // Add exponential component for grazing angle absorption
             let exponential_factor = (-2.0 * normalized_distance).exp();
             
             *profile_val = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_ENHANCEMENT_FACTOR * exponential_factor);
@@ -165,7 +165,7 @@ impl PMLBoundary {
             let normalized_distance = i as f64 / thickness as f64;
             let polynomial_factor = normalized_distance.powi(order as i32);
             
-            // Add exponential component for better absorption at grazing angles  
+            // Add exponential component for grazing angle absorption  
             let exponential_factor = (-2.0 * normalized_distance).exp();
             
             profile[idx] = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_ENHANCEMENT_FACTOR * exponential_factor);

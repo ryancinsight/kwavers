@@ -43,7 +43,7 @@ thread_local! {
 // 2. The inner mutex protects the Fft3d instance which has mutable temp buffers
 // 
 // FFT planner instances are thread-safe and can be reused.
-// For better performance in production, consider using a global planner pool.
+// For production performance, consider using a global planner pool.
 lazy_static! {
     static ref FFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Mutex<Fft3d>>>> = Mutex::new(HashMap::new());
     static ref IFFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Ifft3d>>> = Mutex::new(HashMap::new());
@@ -137,7 +137,7 @@ pub fn report_fft_statistics() {
 /// 3D FFT for simulation fields with proper normalization
 /// 
 /// This function performs a 3D FFT on the specified field component from a 4D array.
-/// It uses a cached FFT instance for better performance when called multiple times
+/// It uses a cached FFT instance for improved performance when called multiple times
 /// with the same grid dimensions, and employs thread-local storage to reduce allocations.
 /// 
 /// # Arguments
@@ -151,7 +151,7 @@ pub fn report_fft_statistics() {
 /// A 3D complex array containing the FFT of the specified field component
 pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<Complex<f64>> {
     let start_time = Instant::now();
-    trace!("Performing optimized 3D FFT on field index {}", field_index);
+    trace!("Performing 3D FFT on field index {}", field_index);
     
     // Get the field slice to transform
     let field = fields.index_axis(Axis(0), field_index);
@@ -214,7 +214,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
 /// 3D inverse FFT for simulation fields with proper normalization
 pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64> {
     let start_time = Instant::now();
-    trace!("Performing optimized 3D inverse FFT");
+    trace!("Performing 3D inverse FFT");
     
     // Create a copy for processing
     let mut result = field_complex.clone();

@@ -820,7 +820,7 @@ impl ValidationBuilder {
 pub mod utils {
     use super::*;
     
-    /// Create a basic validation pipeline for common scenarios
+    /// Create a validation pipeline for common scenarios
     pub fn create_basic_validation_pipeline(field_name: String) -> ValidationPipeline {
         ValidationBuilder::new("basic_validation".to_string())
             .with_required(field_name.clone())

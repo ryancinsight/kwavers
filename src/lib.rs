@@ -42,7 +42,7 @@ pub mod validation;
 pub mod benchmarks;
 
 // Phase 11: Visualization & Real-Time Interaction
-#[cfg(all(feature = "gpu", any(feature = "advanced-visualization", feature = "web-visualization", feature = "vr-support")))]
+#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web-visualization", feature = "vr-support")))]
 pub mod visualization;
 
 // Re-export commonly used types for convenience

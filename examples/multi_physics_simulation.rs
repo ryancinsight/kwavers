@@ -313,7 +313,7 @@ fn validate_physics_principles(results: &SimulationResults) -> KwaversResult<()>
         return Ok(());
     }
     
-    // Energy conservation check (simplified)
+    // Energy conservation check
     let pressure_energies: Vec<f64> = timestep_data.iter()
         .map(|data| data.max_pressure.powi(2))
         .collect();

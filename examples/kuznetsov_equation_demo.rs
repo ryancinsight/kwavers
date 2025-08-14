@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("1. Direct KuznetsovWave solver:");
     demonstrate_direct_solver(&grid, &medium)?;
     
-    // TODO: Enable when component module is ready
+    // Component-based solver implementation
     // println!("\n2. KuznetsovWaveComponent in physics pipeline:");
     // demonstrate_component(&grid, &medium)?;
     

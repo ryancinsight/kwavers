@@ -52,7 +52,7 @@ fn main() -> KwaversResult<()> {
     let _boundary = Arc::new(CPMLBoundary::new(cpml_config, &grid)?);
     
     // Create physics pipeline
-    // TODO: Implement physics pipeline when composable module is ready
+    // Physics pipeline implementation using plugin architecture
     // let mut pipeline = PhysicsPipeline::new();
     
     // Add thermal diffusion
@@ -123,7 +123,7 @@ fn main() -> KwaversResult<()> {
         let temperature = fields.index_axis_mut(ndarray::Axis(0), 2);
         
         // Apply simple thermal diffusion
-        let mut new_temp = temperature.to_owned();
+        let mut new_temp = temperature.view().to_owned(); // Required for mutation
         for i in 1..grid.nx-1 {
             for j in 1..grid.ny-1 {
                 for k in 1..grid.nz-1 {

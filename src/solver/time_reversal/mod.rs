@@ -325,7 +325,7 @@ impl TimeReversalReconstructor {
                 };
                 
                 // Absorption compensation: exp(alpha * distance)
-                // Note: alpha is typically frequency-dependent, but we use a simplified model
+                // Note: alpha is typically frequency-dependent, using frequency-averaged model
                 let absorption_correction = (alpha * distance).exp();
                 
                 // Apply both corrections

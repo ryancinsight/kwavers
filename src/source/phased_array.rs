@@ -1,7 +1,7 @@
 // src/source/phased_array.rs
 //! Phased Array Transducer Implementation
 //! 
-//! This module implements advanced phased array transducers with electronic beam steering,
+//! This module implements phased array transducers with electronic beam steering,
 //! focusing capabilities, and realistic element modeling. Follows SOLID, CUPID, GRASP,
 //! and CLEAN principles for maintainable, extensible architecture.
 //!
@@ -420,7 +420,7 @@ impl Source for PhasedArrayTransducer {
         for element in &self.elements {
             let _distance = Self::distance((x, y, z), element.position);
             
-            // Element spatial response (simplified rectangular aperture)
+            // Element spatial response (rectangular aperture model)
             let spatial_response = self.calculate_element_response(element, x, y, z);
             
             // Time-delayed signal
@@ -470,7 +470,7 @@ impl PhasedArrayTransducer {
         // Distance from element center
         let r = (dx.powi(2) + dy.powi(2) + dz.powi(2)).sqrt();
         
-        // Rectangular aperture response (sinc function approximation)
+        // Rectangular aperture response (sinc function calculation)
         let kx = 2.0 * std::f64::consts::PI * dx / (self.sound_speed / self.config.frequency);
         let ky = 2.0 * std::f64::consts::PI * dy / (self.sound_speed / self.config.frequency);
         

@@ -72,7 +72,7 @@ pub fn gradient_3d<T: StencilValue>(
     }
 }
 
-/// Stencil order for finite difference approximations
+/// Stencil order for finite difference schemes
 #[derive(Debug, Clone, Copy)]
 pub enum StencilOrder {
     Second,

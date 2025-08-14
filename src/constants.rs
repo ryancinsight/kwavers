@@ -115,6 +115,54 @@ pub mod stability {
     pub const DEFAULT_FDTD_WEIGHT: f64 = 0.4;
 }
 
+/// Boundary condition constants
+pub mod boundary {
+    /// Default PML exponential enhancement factor
+    pub const PML_EXPONENTIAL_ENHANCEMENT_FACTOR: f64 = 0.1;
+    
+    /// Standard damping factor for boundary tests
+    pub const BOUNDARY_TEST_DAMPING: f64 = 0.98;
+    
+    /// C-PML damping factor for validation
+    pub const CPML_TEST_DAMPING: f64 = 0.99;
+    
+    /// Grazing angle boundary effectiveness threshold
+    pub const GRAZING_EFFECTIVENESS_THRESHOLD: f64 = 0.95;
+    
+    /// Standard reflection coefficient target
+    pub const DEFAULT_REFLECTION_TARGET: f64 = 1e-6;
+}
+
+/// Solver and integration constants
+pub mod solver {
+    /// Standard Runge-Kutta timestep coefficient
+    pub const RK_TIMESTEP_COEFFICIENT: f64 = 0.5;
+    
+    /// Default time integration safety factor  
+    pub const TIME_INTEGRATION_SAFETY: f64 = 0.9;
+    
+    /// Field damping factor for tests
+    pub const TEST_FIELD_DAMPING: f64 = 0.999;
+    
+    /// Energy conservation threshold for validation
+    pub const ENERGY_CONSERVATION_THRESHOLD: f64 = 0.1;
+    
+    /// Default smoothing factor for interfaces
+    pub const INTERFACE_SMOOTHING_FACTOR: f64 = 0.1;
+    
+    /// Stress PML damping factor
+    pub const STRESS_PML_DAMPING_FACTOR: f64 = 1.2;
+    
+    /// Adaptive mesh refinement threshold
+    pub const AMR_REFINEMENT_THRESHOLD: f64 = 0.1;
+    
+    /// Grid scaling factor
+    pub const GRID_SCALING_FACTOR: f64 = 1.0;
+    
+    /// Boundary damping strength
+    pub const BOUNDARY_DAMPING_STRENGTH: f64 = 1.2;
+}
+
 /// Performance and optimization constants
 pub mod performance {
     /// Chunk size for small grids
@@ -344,14 +392,7 @@ pub mod numerical {
     pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
 }
 
-/// Solver and numerical methods constants
-pub mod solver {
-    /// Stress-specific damping factor for PML boundary conditions
-    pub const STRESS_PML_DAMPING_FACTOR: f64 = 1.2;
-    
-    /// Test field damping factor for validation
-    pub const TEST_FIELD_DAMPING: f64 = 0.99;
-}
+
 
 /// Chemistry and ROS constants
 pub mod chemistry {
@@ -418,6 +459,18 @@ pub mod validation {
     /// Default bubble wall velocities for interaction tests (m/s)
     pub const DEFAULT_EXPANSION_VELOCITY_1: f64 = 10.0;
     pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
+    
+    /// Field growth tolerance for stability checks
+    pub const FIELD_GROWTH_TOLERANCE: f64 = 1.1;
+    
+    /// Amplitude conservation tolerance
+    pub const AMPLITUDE_TOLERANCE: f64 = 0.85;
+    
+    /// Energy conservation threshold
+    pub const ENERGY_CONSERVATION_THRESHOLD: f64 = 0.01;
+    
+    /// Phase error tolerance (radians)
+    pub const PHASE_ERROR_TOLERANCE: f64 = 0.1;
 }
 
 /// Domain decomposition constants
