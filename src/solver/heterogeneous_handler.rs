@@ -639,7 +639,16 @@ impl PressureVelocitySplit {
                         - pressure[[i-1, j, k]] * self.alpha_p[[i-1, j, k]])
                         / (2.0 * self.grid.dx);
                     
-                    grad[[i, j, k]] = dp_dx;  // Simplified for 1D, extend for 3D
+                    let dp_dy = (pressure[[i, j+1, k]] * self.alpha_p[[i, j+1, k]]
+                        - pressure[[i, j-1, k]] * self.alpha_p[[i, j-1, k]])
+                        / (2.0 * self.grid.dy);
+                    
+                    let dp_dz = (pressure[[i, j, k+1]] * self.alpha_p[[i, j, k+1]]
+                        - pressure[[i, j, k-1]] * self.alpha_p[[i, j, k-1]])
+                        / (2.0 * self.grid.dz);
+                    
+                    // Full 3D gradient magnitude
+                    grad[[i, j, k]] = (dp_dx * dp_dx + dp_dy * dp_dy + dp_dz * dp_dz).sqrt();
                 }
             }
         }

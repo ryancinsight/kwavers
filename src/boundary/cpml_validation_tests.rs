@@ -40,7 +40,8 @@ mod tests {
             let mut grad_z = Array3::<f64>::zeros((64, 64, 64));
             
             // Update memory variables and apply C-PML to gradients
-            cpml.update_acoustic_memory(&grad_x, 0)?;
+            let dt = 1e-6; // Test time step
+            cpml.update_acoustic_memory(&grad_x, 0, dt)?;
             cpml.apply_cpml_gradient(&mut grad_x, 0)?;
             
             // Apply damping to field for test validation
@@ -145,7 +146,8 @@ mod tests {
         
         // Update memory variables multiple times
         for _ in 0..10 {
-            cpml.update_acoustic_memory(&gradient, 0).unwrap();
+            let dt = 1e-6; // Test time step
+            cpml.update_acoustic_memory(&gradient, 0, dt).unwrap();
         }
         
         // Memory variables should converge to steady state

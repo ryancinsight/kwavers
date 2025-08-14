@@ -170,8 +170,9 @@ impl NewtonSolver {
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
-        // Simplified conjugate gradient for the Newton system
-        // J * delta = -residual
+        // Conjugate gradient solver for the Newton system
+        // Solves: J * delta = -residual
+        // where J is the Jacobian matrix
         let mut delta = Array3::zeros(y.dim());
         let mut r = -residual;
         let mut p = r.clone();
