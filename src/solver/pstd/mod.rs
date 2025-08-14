@@ -763,17 +763,23 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Zip, s};
-        use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
+        use ndarray::{Axis, s};
+        use crate::physics::field_mapping::UnifiedFieldType;
         
-        // Work directly with mutable views - no copying!
+        // Get field indices using the unified system
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
+        
+        // Work directly with mutable views using correct indices
         let mut fields_view = fields.view_mut();
         let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
             fields_view.multi_slice_mut((
-                s![PRESSURE_IDX, .., .., ..],
-                s![VX_IDX, .., .., ..],
-                s![VY_IDX, .., .., ..],
-                s![VZ_IDX, .., .., ..]
+                s![pressure_idx, .., .., ..],
+                s![vx_idx, .., .., ..],
+                s![vy_idx, .., .., ..],
+                s![vz_idx, .., .., ..]
             ));
         
         // Initialize velocities if they are all zero (first step)
