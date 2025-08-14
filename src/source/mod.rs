@@ -5,10 +5,11 @@ use crate::signal::Signal;
 use std::fmt::Debug;
 
 pub mod apodization;
+pub mod flexible_transducer;
+pub mod focused_transducer;
 pub mod linear_array;
 pub mod matrix_array;
 pub mod phased_array;
-pub mod focused_transducer;
 
 pub trait Source: Debug + Sync + Send {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
