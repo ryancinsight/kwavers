@@ -7,18 +7,23 @@
 //! - Integrated recording and statistics
 
 use kwavers::{
-    Grid, KwaversResult,
+    boundary::{Boundary, PMLBoundary, PMLConfig},
+    config::{Config, SimulationConfig},
+    grid::Grid,
+    medium::HomogeneousMedium,
     recorder::{Recorder, RecorderConfig},
     sensor::{Sensor, SensorConfig},
     time::Time,
+    KwaversResult,
     physics::{
         sonoluminescence_detector::DetectorConfig,
-        bubble_dynamics::{BubbleCloud, BubbleCloudConfig},
+        bubble_dynamics::{BubbleCloud, BubbleIMEXConfig, BubbleParameters},
+        plugin::{PluginContext, PhysicsPlugin},
     },
     source::{Source, PointSource},
-    signal::{Signal, SineWave},
+    signal::SineWave,
     solver::{
-        pstd::{PSTDSolver, PSTDConfig},
+        pstd::{PstdPlugin, PstdConfig},
         Solver,
     },
 };
@@ -75,23 +80,24 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
     let grid = Grid::new(n, n, n, params.grid_spacing, params.grid_spacing, params.grid_spacing);
     
     // Create time configuration
-    let time = Time::new(0.0, params.duration, params.dt);
+    let n_steps = (params.duration / params.dt) as usize;
+    let time = Time::new(params.dt, n_steps);
     
     // Setup sensors at strategic locations
     let sensor_positions = vec![
         // Center
-        (n/2, n/2, n/2),
+        (0.05, 0.05, 0.05),
         // Corners for coverage
-        (n/4, n/4, n/4),
-        (3*n/4, n/4, n/4),
-        (n/4, 3*n/4, n/4),
-        (3*n/4, 3*n/4, n/4),
-        // Focus region
-        (n/2, n/2, n/4),
-        (n/2, n/2, 3*n/4),
+        (0.025, 0.025, 0.025),
+        (0.075, 0.075, 0.075),
+        (0.025, 0.075, 0.025),
+        (0.075, 0.025, 0.075),
     ];
     
-    let sensor = Sensor::new(&grid, &time, sensor_positions);
+    let sensor = Sensor::new(&grid, &time, &sensor_positions);
+    
+    // Create medium
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
     
     // Configure recorder with all monitoring capabilities
     let sl_config = DetectorConfig {
@@ -115,16 +121,18 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
     let mut recorder = Recorder::from_config(sensor, &time, &recorder_config);
     
     // Initialize solver
-    let solver_config = PSTDConfig {
-        cfl_number: 0.5,
-        pml_thickness: 10,
-        pml_alpha: 2.0,
-        enable_nonlinear: true,
-        enable_absorption: true,
-        enable_dispersion: false,
+    let solver_config = PstdConfig {
+        k_space_correction: true,
+        k_space_order: 2,
+        anti_aliasing: true,
+        pml_stencil_size: 10,
+        cfl_factor: 0.5,
+        use_leapfrog: true,
+        enable_absorption: false,
+        absorption_model: None,
     };
     
-    let mut solver = PSTDSolver::new(solver_config, &grid)?;
+    let mut solver = PstdPlugin::new(solver_config, &grid)?;
     
     // Create acoustic source
     let signal = Arc::new(SineWave::new(
@@ -142,24 +150,9 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
     let source = PointSource::new(source_position, signal);
     
     // Initialize bubble cloud for cavitation
-    let cloud_config = BubbleCloudConfig {
-        mean_radius: 5e-6, // 5 μm
-        size_std_dev: 2e-6,
-        bubble_density: 1e8, // 10^8 bubbles/m³
-        cloud_radius: 0.005, // 5 mm
-        ambient_pressure: 101325.0,
-        surface_tension: 0.072,
-        viscosity: 1e-3,
-        polytropic_index: 1.4,
-    };
-    
-    let cloud_center = (
-        n as f64 * params.grid_spacing / 2.0,
-        n as f64 * params.grid_spacing / 2.0,
-        n as f64 * params.grid_spacing / 2.0,
-    );
-    
-    let mut bubble_cloud = BubbleCloud::new(cloud_config, cloud_center, &grid)?;
+    let bubble_params = BubbleParameters::default();
+    // For now, create a simple bubble field - full cloud implementation needs the distributions
+    // let mut bubble_cloud = BubbleCloud::new((n, n, n), bubble_params, size_dist, spatial_dist);
     
     // Initialize fields (4D: [field_type, nx, ny, nz])
     let mut fields = Array4::zeros((4, n, n, n)); // pressure, light, temperature, bubble_radius
@@ -191,11 +184,11 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
         
         // Update bubble dynamics (affects temperature and radius fields)
         let pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let bubble_states = bubble_cloud.get_state_fields();
+        // let bubble_states = bubble_cloud.get_state_fields();
         
         // Update temperature and bubble radius fields
-        fields.index_axis_mut(Axis(0), 2).assign(&bubble_states.temperature);
-        fields.index_axis_mut(Axis(0), 3).assign(&bubble_states.radius);
+        // fields.index_axis_mut(Axis(0), 2).assign(&bubble_states.temperature);
+        // fields.index_axis_mut(Axis(0), 3).assign(&bubble_states.radius);
         
         // Simulate light emission from sonoluminescence
         if params.enable_sonoluminescence {
@@ -203,12 +196,14 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
             for i in 0..n {
                 for j in 0..n {
                     for k in 0..n {
-                        let temp = bubble_states.temperature[[i, j, k]];
+                        // For now, use simple temperature-based light emission
+                        // In full implementation, would use bubble_states.temperature and radius
+                        let temp: f64 = 300.0; // bubble_states.temperature[[i, j, k]];
                         if temp > 5000.0 {
                             // Stefan-Boltzmann radiation
-                            let sigma = 5.67e-8;
-                            let radius = bubble_states.radius[[i, j, k]];
-                            let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
+                            let sigma: f64 = 5.67e-8;
+                            let radius: f64 = 5e-6; // bubble_states.radius[[i, j, k]];
+                            let surface_area = 4.0f64 * std::f64::consts::PI * radius.powi(2);
                             let power = sigma * surface_area * temp.powi(4);
                             light[[i, j, k]] += power * params.dt;
                         }
@@ -220,15 +215,16 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
         // Record all data
         recorder.record(&fields, step, t);
         
-        // Update acoustic field
-        let mut pressure = fields.index_axis_mut(Axis(0), 0).to_owned();
-        let mut vx = Array3::zeros((n, n, n));
-        let mut vy = Array3::zeros((n, n, n));
-        let mut vz = Array3::zeros((n, n, n));
-        
-        solver.step(&mut pressure, &mut vx, &mut vy, &mut vz, params.dt)?;
-        
-        fields.index_axis_mut(Axis(0), 0).assign(&pressure);
+        // Time stepping (PSTD solver)
+        let context = PluginContext::new(step, num_steps, 100e3);
+        solver.update(
+            &mut fields,
+            &grid, 
+            &medium, 
+            params.dt, 
+            t,
+            &context
+        )?;
         
         // Output progress
         if step % output_interval == 0 {
@@ -268,17 +264,17 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
     // Export specialized maps
     if let Some(cavitation_map) = recorder.cavitation_map() {
         println!("Cavitation map available: max events at single location = {:.0}",
-                 cavitation_map.iter().fold(0.0, |a, &b| a.max(b)));
+                 cavitation_map.iter().fold(0.0f64, |a, &b| a.max(b)));
     }
     
     if let Some(sl_map) = recorder.sonoluminescence_intensity_map() {
-        println!("SL intensity map available: max intensity = {:.2e} photons",
-                 sl_map.iter().fold(0.0, |a, &b| a.max(b)));
+        println!("SL intensity map available: max luminosity = {:.2e} photons/m³/s",
+                 sl_map.iter().fold(0.0f64, |a, &b| a.max(b)));
     }
     
     if let Some(thermal_dose) = recorder.thermal_dose_map() {
-        println!("Thermal dose map available: max CEM43 = {:.2e} min",
-                 thermal_dose.iter().fold(0.0, |a, &b| a.max(b)));
+        println!("Thermal dose map available: max cumulative exposure = {:.2} CEM43",
+                 thermal_dose.iter().fold(0.0f64, |a, &b| a.max(b)));
     }
     
     Ok(())

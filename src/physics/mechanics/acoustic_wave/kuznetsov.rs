@@ -1659,7 +1659,8 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn Signal {
-            panic!("Not implemented for test source")
+            // Return a reference to the signal, implementation for testing only
+            &self.signal
         }
     }
     

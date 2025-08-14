@@ -87,7 +87,7 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError, ConfigError};
+use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
 use crate::validation::{ValidationResult, ValidationError, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
 use crate::constants::cfl;
@@ -288,18 +288,22 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         stagger_offset: f64,
-    ) -> Array3<f64> {
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut deriv = Array3::zeros((nx, ny, nz));
         let coeffs = &self.fd_coeffs[&self.config.spatial_order];
         let n_coeffs = coeffs.len();
         
         // Determine grid spacing
-        let dx = match axis {
+        let spacing = match axis {
             0 => self.grid.dx,
             1 => self.grid.dy,
             2 => self.grid.dz,
-            _ => panic!("Invalid axis"),
+            _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                field: "axis".to_string(),
+                value: axis.to_string(),
+                constraint: "must be 0, 1, or 2".to_string(),
+            })),
         };
         
         // Determine bounds based on stencil size
@@ -330,21 +334,21 @@ impl FdtdSolver {
                         }
                     }
                     
-                    deriv[[i, j, k]] = val / dx;
+                    deriv[[i, j, k]] = val / spacing;
                 }
             }
         }
         
         // Handle boundaries with lower-order schemes
-        self.apply_boundary_derivatives(&mut deriv, field, axis, dx);
+        self.apply_boundary_derivatives(&mut deriv, field, axis, spacing)?;
         
         // Apply stagger offset if using staggered grid
         if self.config.staggered_grid && stagger_offset != 0.0 {
             // Interpolate to staggered positions
-            self.interpolate_to_staggered(&deriv.view(), axis, stagger_offset)
-        } else {
-            deriv
+            deriv = self.interpolate_to_staggered(&deriv.view(), axis, stagger_offset)?;
         }
+        
+        Ok(deriv)
     }
     
     /// Apply lower-order derivatives at boundaries
@@ -354,7 +358,7 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         dx: f64,
-    ) {
+    ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         let half_stencil = self.fd_coeffs[&self.config.spatial_order].len();
         
@@ -416,6 +420,8 @@ impl FdtdSolver {
             }
             _ => {}
         }
+        
+        Ok(())
     }
     
     /// Interpolate field to staggered grid positions
@@ -424,7 +430,7 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         offset: f64,
-    ) -> Array3<f64> {
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         
         // Simple linear interpolation for staggered grid
@@ -432,39 +438,43 @@ impl FdtdSolver {
             match axis {
                 0 => {
                     // Interpolate to x-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if i < nx - 1 {
                             0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
                 1 => {
                     // Interpolate to y-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if j < ny - 1 {
                             0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
                 2 => {
                     // Interpolate to z-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if k < nz - 1 {
                             0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
-                _ => panic!("Invalid axis"),
+                _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                    field: "axis".to_string(),
+                    value: axis.to_string(),
+                    constraint: "must be 0, 1, or 2".to_string(),
+                })),
             }
         } else {
             // For non-0.5 offsets, just copy (could implement higher-order interpolation)
-            field.to_owned()
+            Ok(field.to_owned())
         }
     }
     
@@ -484,9 +494,9 @@ impl FdtdSolver {
         let bulk_modulus = &rho_array * &c_array * &c_array;
         
         // Compute velocity divergence
-        let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0);
-        let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1);
-        let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2);
+        let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0)?;
+        let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1)?;
+        let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2)?;
         
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
@@ -528,9 +538,9 @@ impl FdtdSolver {
         let rho_array = medium.density_array();
         
         // Compute pressure gradients
-        let mut dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0);
-        let mut dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1);
-        let mut dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2);
+        let mut dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0)?;
+        let mut dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1)?;
+        let mut dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2)?;
         
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
@@ -763,7 +773,7 @@ mod tests {
             }
         }
         
-        let deriv = solver.compute_derivative(&field.view(), 0, 0.0);
+        let deriv = solver.compute_derivative(&field.view(), 0, 0.0).unwrap();
         
         // Check that derivative is approximately 1.0 in the interior
         for i in 1..9 {

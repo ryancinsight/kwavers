@@ -1,6 +1,6 @@
 //! Thermodynamic models for bubble dynamics
 //!
-//! This module provides accurate thermodynamic models for calculating
+//! This module provides comprehensive thermodynamic models for calculating
 //! vapor pressure, phase equilibria, and thermal properties in bubble dynamics.
 //!
 //! # Models Implemented
@@ -71,7 +71,7 @@ pub struct ThermodynamicsCalculator {
 impl Default for ThermodynamicsCalculator {
     fn default() -> Self {
         Self {
-            model: VaporPressureModel::Wagner,  // Most accurate for water
+            model: VaporPressureModel::Wagner,  // Reference model for water
             h_vap: 40660.0,  // Water at 100°C [J/mol]
             t_ref: 373.15,   // 100°C
             p_ref: P_ATM,    // 1 atm
