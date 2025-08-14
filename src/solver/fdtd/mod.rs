@@ -8,10 +8,10 @@
 //! The FDTD method discretizes both space and time using finite differences.
 //! Key features include:
 //! 
-//! - **Explicit time stepping**: Simple, efficient updates
-//! - **Staggered grid (Yee cell)**: Natural enforcement of divergence conditions
-//! - **Second-order accuracy**: In both space and time
-//! - **Conditional stability**: CFL condition limits time step
+//! - **Explicit time stepping**: Direct temporal updates
+//! - **Staggered grid (Yee cell)**: Enforces divergence conditions
+//! - **Second-order precision**: In both space and time
+//! - **CFL-limited stability**: Time step constrained by CFL condition
 //! 
 //! # Algorithm
 //! 
@@ -81,7 +81,7 @@
 //! # Design Principles
 //! - SOLID: Single responsibility for finite-difference wave propagation
 //! - CUPID: Composable with other solvers via plugin architecture
-//! - KISS: Simple, explicit time-stepping algorithm
+//! - KISS: Explicit time-stepping algorithm
 //! - DRY: Reuses grid utilities and boundary conditions
 //! - YAGNI: Implements only necessary features for acoustic simulation
 

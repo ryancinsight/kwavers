@@ -133,7 +133,7 @@ mod tests {
     
     /// Test staggered grid interpolation
     #[test]
-    fn test_staggered_grid_interpolation() {
+    fn test_staggered_grid_interpolation() -> crate::KwaversResult<()> {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
         let config = FdtdConfig {
             spatial_order: 2,
@@ -156,18 +156,19 @@ mod tests {
         }
         
         // Test interpolation to staggered positions
-        let interpolated = solver.interpolate_to_staggered(&field.view(), 0, 0.5);
+        let interpolated = solver.interpolate_to_staggered(&field.view(), 0, 0.5)?;
         
         // Check that values are averaged correctly
         for i in 0..9 {
             let expected = 0.5 * (field[[i, 5, 5]] + field[[i+1, 5, 5]]);
             assert_relative_eq!(interpolated[[i, 5, 5]], expected, epsilon = 1e-10);
         }
+        Ok(())
     }
     
     /// Test finite difference accuracy
     #[test]
-    fn test_finite_difference_accuracy() {
+    fn test_finite_difference_accuracy() -> crate::KwaversResult<()> {
         let nx = 128; // Finer grid for better accuracy
         let grid = Grid::new(nx, nx, nx, 0.01, 0.01, 0.01);
         
@@ -197,7 +198,7 @@ mod tests {
             }
             
             // Compute derivative
-            let deriv = solver.compute_derivative(&field.view(), 0, 0.0);
+            let deriv = solver.compute_derivative(&field.view(), 0, 0.0)?;
             
             // Check accuracy in the interior, away from boundaries
             let margin = order / 2 + 3; // Extra margin for boundary effects
@@ -220,6 +221,7 @@ mod tests {
                     order, error, max_error, x);
             }
         }
+        Ok(())
     }
     
     /// Test subgridding functionality

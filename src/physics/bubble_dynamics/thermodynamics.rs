@@ -37,6 +37,10 @@ pub mod constants {
     pub const P_TRIPLE_WATER: f64 = 611.657;
     /// Standard atmospheric pressure [Pa]
     pub const P_ATM: f64 = 101325.0;
+    /// Enthalpy of vaporization for water at 100°C [J/mol]
+    pub const H_VAP_WATER_100C: f64 = 40660.0;
+    /// Boiling point of water at 1 atm [K]
+    pub const T_BOILING_WATER: f64 = 373.15;
 }
 
 use constants::*;
@@ -72,8 +76,8 @@ impl Default for ThermodynamicsCalculator {
     fn default() -> Self {
         Self {
             model: VaporPressureModel::Wagner,  // Reference model for water
-            h_vap: 40660.0,  // Water at 100°C [J/mol]
-            t_ref: 373.15,   // 100°C
+            h_vap: H_VAP_WATER_100C,  // Water at 100°C [J/mol]
+            t_ref: T_BOILING_WATER,   // 100°C
             p_ref: P_ATM,    // 1 atm
         }
     }

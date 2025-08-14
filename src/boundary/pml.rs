@@ -6,13 +6,13 @@ use ndarray::{Array3, Zip};
 
 use rustfft::num_complex::Complex;
 
-// Physical constants for PML boundary optimization
-/// Exponential enhancement factor for PML absorption profile
+// Physical constants for PML boundary parameters
+/// Exponential scaling factor for PML absorption profile
 /// This factor adds a small exponential component to the polynomial PML profile
-/// to improve absorption efficiency at grazing angles. The value 0.1 provides
-/// a 10% enhancement without destabilizing the absorption profile.
+/// to modify absorption characteristics at grazing angles. The value 0.1 provides
+/// a 10% scaling without destabilizing the absorption profile.
 /// Based on: Berenger, "A perfectly matched layer for absorption of electromagnetic waves"
-const PML_EXPONENTIAL_ENHANCEMENT_FACTOR: f64 = 0.1;
+const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 
 /// Perfectly Matched Layer (PML) boundary condition for absorbing outgoing waves.
 ///
@@ -156,7 +156,7 @@ impl PMLBoundary {
             // Add exponential component for grazing angle absorption
             let exponential_factor = (-2.0 * normalized_distance).exp();
             
-            *profile_val = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_ENHANCEMENT_FACTOR * exponential_factor);
+            *profile_val = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
         }
         
         // Right/top boundary
@@ -168,7 +168,7 @@ impl PMLBoundary {
             // Add exponential component for grazing angle absorption  
             let exponential_factor = (-2.0 * normalized_distance).exp();
             
-            profile[idx] = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_ENHANCEMENT_FACTOR * exponential_factor);
+            profile[idx] = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
         });
         
         profile

@@ -1659,8 +1659,9 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn Signal {
-            // Return a reference to the signal, implementation for testing only
-            &self.signal
+            // Simple test implementation - return a dummy signal reference
+            // In real usage, this would reference an actual signal
+            unimplemented!("Test source signal access not needed for these tests")
         }
     }
     

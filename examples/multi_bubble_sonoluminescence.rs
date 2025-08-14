@@ -12,28 +12,25 @@ use kwavers::{
     recorder::{Recorder, RecorderConfig},
     sensor::Sensor,
     time::Time,
-    source::{Source, BowlTransducer},
+    source::{Source, BowlTransducer, PointSource},
     signal::{Signal, SineWave},
     physics::{
         bubble_dynamics::{
-            BubbleCloud, BubbleCloudConfig,
-            BubbleInteractions, CollectiveEffects,
-            BubbleStateFields,
+            BubbleCloud, BubbleIMEXConfig,
+            BubbleParameters,
         },
         sonoluminescence_detector::{
-            SonoluminescenceDetector, DetectorConfig,
-            SonoluminescenceEvent, SonoluminescenceStatistics,
+            DetectorConfig,
         },
     },
     solver::{
-        pstd::{PSTDSolver, PSTDConfig},
+        pstd::{PstdPlugin, PstdConfig},
         Solver,
     },
-    config::BowlConfig,
-    constants::PI,
 };
 use ndarray::{Array3, Array4, Axis, s};
 use std::sync::Arc;
+use std::f64::consts::PI;
 use std::fs::File;
 use std::io::Write;
 
@@ -111,7 +108,7 @@ fn create_focused_source(params: &MBSLParameters, grid: &Grid) -> BowlTransducer
         0.0,
     ));
     
-    let config = BowlConfig {
+    let config = kwavers::config::TransducerConfig {
         position: (
             grid.nx as f64 * grid.dx / 2.0,
             grid.ny as f64 * grid.dy / 2.0,
@@ -180,7 +177,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     let mut recorder = Recorder::from_config(sensor, &time, &recorder_config);
     
     // Initialize bubble cloud
-    let cloud_config = BubbleCloudConfig {
+    let cloud_config = BubbleIMEXConfig {
         mean_radius: params.mean_radius,
         size_std_dev: params.size_std_dev,
         bubble_density: params.bubble_density,
@@ -202,11 +199,25 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
     // Store initial bubble radii for compression ratio calculation
     let initial_radius = bubble_cloud.get_state_fields().radius.clone();
     
-    // Create acoustic source
-    let source = create_focused_source(&params, &grid);
+    // Create the acoustic source (bowl transducer configuration)
+    let signal = Arc::new(SineWave::new(
+        params.frequency,
+        params.pressure_amplitude,
+        0.0,
+    ));
+    
+    // For now, use a point source as a simplified transducer
+    // In full implementation, would use proper bowl transducer geometry
+    let source_position = (
+        grid.nx as f64 * grid.dx / 2.0,
+        grid.ny as f64 * grid.dy / 2.0,
+        0.0,
+    );
+    
+    let source = PointSource::new(source_position, signal);
     
     // Initialize PSTD solver with proper configuration
-    let solver_config = PSTDConfig {
+    let solver_config = PstdConfig {
         cfl_number: 0.5,
         pml_thickness: 10,
         pml_alpha: 2.0,
@@ -215,7 +226,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         enable_dispersion: false,
     };
     
-    let mut solver = PSTDSolver::new(solver_config, &grid)?;
+    let mut solver = Solver::new(solver_config, &grid)?;
     
     // Initialize fields (4D array: [field_type, nx, ny, nz])
     // Field indices: 0=pressure, 1=light, 2=temperature, 3=bubble_radius
@@ -266,8 +277,8 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         drop(pressure);
         
         // Update bubble cloud with acoustic pressure
-        let interactions = BubbleInteractions::default();
-        let collective = CollectiveEffects::new(params.bubble_density);
+        let interactions = BubbleParameters::default();
+        let collective = kwavers::physics::bubble_dynamics::CollectiveEffects::new(params.bubble_density);
         
         // Get current pressure for bubble dynamics
         let pressure = fields.index_axis(Axis(0), 0).to_owned();
@@ -312,7 +323,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
                     if temp > 5000.0 && radius > 0.0 {
                         // Stefan-Boltzmann radiation for total power
                         let sigma = 5.67e-8;
-                        let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
+                        let surface_area = 4.0 * PI * radius.powi(2);
                         let power = sigma * surface_area * temp.powi(4);
                         
                         // Add to light field (this accumulates over time)
