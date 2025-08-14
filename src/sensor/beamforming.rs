@@ -137,7 +137,7 @@ impl BeamformingProcessor {
                 self.music_beamforming(sensor_data, scan_points, *signal_subspace_dimension, *spatial_smoothing)
             }
             BeamformingAlgorithm::RobustCapon { diagonal_loading, uncertainty_set_size } => {
-                self.robust_capon_beamforming(sensor_data, scan_points, *diagonal_loading, *uncertainty_set_size)
+                self.capon_beamforming(sensor_data, scan_points, *diagonal_loading, *uncertainty_set_size)
             }
             BeamformingAlgorithm::LCMV { constraint_matrix, response_vector } => {
                 self.lcmv_beamforming(sensor_data, scan_points, constraint_matrix.view(), response_vector.view())
@@ -275,7 +275,7 @@ impl BeamformingProcessor {
     }
 
     /// Robust Capon Beamforming (Li et al., 2003)
-    pub fn robust_capon_beamforming(
+    pub fn capon_beamforming(
         &self,
         sensor_data: ArrayView2<f64>,
         scan_points: &[[f64; 3]],
@@ -295,9 +295,9 @@ impl BeamformingProcessor {
             let uncertainty_matrix = &identity * uncertainty_set_size;
             
             // Modified covariance: R + ε * I + δ * (I - aa^H/||a||^2)
-            let mut robust_cov = covariance.clone();
+            let mut regularized_cov = covariance.clone();
             for i in 0..self.num_sensors {
-                robust_cov[[i, i]] += diagonal_loading;
+                                  regularized_cov[[i, i]] += diagonal_loading;
             }
             
             // Add uncertainty constraint
@@ -306,13 +306,13 @@ impl BeamformingProcessor {
                 for i in 0..self.num_sensors {
                     for j in 0..self.num_sensors {
                         let projection_term = steering_vector[i] * steering_vector[j] / norm_sq;
-                        robust_cov[[i, j]] += uncertainty_set_size * (if i == j { 1.0 } else { 0.0 } - projection_term);
+                        regularized_cov[[i, j]] += uncertainty_set_size * (if i == j { 1.0 } else { 0.0 } - projection_term);
                     }
                 }
             }
             
             // Solve for robust weights
-            let weights = self.solve_linear_system(&robust_cov, &steering_vector)?;
+            let weights = self.solve_linear_system(&regularized_cov, &steering_vector)?;
             let denominator = steering_vector.dot(&weights);
             let normalized_weights = if denominator.abs() > 1e-12 {
                 &weights / denominator

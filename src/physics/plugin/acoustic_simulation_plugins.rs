@@ -1,14 +1,14 @@
-//! Phase 31 Advanced Plugin Capabilities
+//! Acoustic Simulation Plugin Implementations
 //!
-//! This module provides the foundation for Phase 31 advanced features:
+//! This module provides specialized plugins for acoustic simulation:
 //! - FOCUS Package Integration
 //! - KZK Equation Solver
 //! - MSOUND Mixed-Domain Methods
-//! - Advanced Phase Correction
+//! - Adaptive Phase Correction
 //! - Seismic Imaging Capabilities
 //!
 //! # Design Principles
-//! - **Plugin-Based**: All advanced features implemented as plugins
+//! - **Plugin-Based**: All features implemented as composable plugins
 //! - **Literature-Based**: Algorithms based on established research
 //! - **Composable**: Components can be combined and extended
 //! - **Performance**: Zero-copy techniques and efficient algorithms
