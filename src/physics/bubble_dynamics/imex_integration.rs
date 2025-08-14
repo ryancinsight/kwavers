@@ -135,13 +135,13 @@ impl BubbleIMEXIntegrator {
                 let state_current = self.vector_to_state(&y_final, state)?;
                 
                 // Calculate thermal and mass transfer rates
-                let (dT_dt, dn_vapor_dt) = self.calculate_thermal_mass_transfer_rates(&state_current)?;
+                let (dt_dt, dn_vapor_dt) = self.calculate_thermal_mass_transfer_rates(&state_current)?;
                 
                 // Residual: y_final - y_explicit - dt * f_implicit(y_final) = 0
                 let residual = Array1::from_vec(vec![
                     0.0,  // No implicit contribution to radius
                     0.0,  // No implicit contribution to velocity
-                    y_final[2] - y_explicit[2] - dt * dT_dt,
+                    y_final[2] - y_explicit[2] - dt * dt_dt,
                     y_final[3] - y_explicit[3] - dt * dn_vapor_dt,
                 ]);
                 
@@ -223,13 +223,13 @@ impl BubbleIMEXIntegrator {
         // Get current state values
         let r = state.radius;
         let v = state.wall_velocity;
-        let T = state.temperature;
+        let temperature = state.temperature;
         let n_vapor = state.n_vapor;
         let n_gas = state.n_gas;
         
         // Calculate thermal rate of change (dT/dt)
         let params = self.solver.params();
-        let dT_dt = if params.use_thermal_effects {
+        let dt_dt = if params.use_thermal_effects {
             // Polytropic/adiabatic model with heat transfer
             let gamma = self.calculate_effective_polytropic_index(state);
             
@@ -241,8 +241,8 @@ impl BubbleIMEXIntegrator {
             let h = nusselt * params.thermal_conductivity / (2.0 * r);
             
             // Temperature rate from compression and heat transfer
-            let compression_heating = -(gamma - 1.0) * T * v / r;
-            let heat_transfer = -h * (T - T_AMBIENT) / (n_gas + n_vapor); // Using ambient temp
+            let compression_heating = -(gamma - 1.0) * temperature * v / r;
+            let heat_transfer = -h * (temperature - T_AMBIENT) / (n_gas + n_vapor); // Using ambient temp
             
             compression_heating + heat_transfer
         } else {
@@ -252,25 +252,25 @@ impl BubbleIMEXIntegrator {
         // Calculate mass transfer rate (dn_vapor/dt)
         let dn_vapor_dt = if params.use_mass_transfer {
             // Evaporation/condensation based on temperature-dependent vapor pressure
-            let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(T);
-            let p_vapor_actual = n_vapor * R_GAS * T / state.volume();
+            let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(temperature);
+            let p_vapor_actual = n_vapor * R_GAS * temperature / state.volume();
             
             // Mass transfer coefficient using diffusion correlation
-            let D_vapor = VAPOR_DIFFUSION_COEFFICIENT; // Vapor diffusion coefficient in air [m²/s]
+            let d_vapor = VAPOR_DIFFUSION_COEFFICIENT; // Vapor diffusion coefficient in air [m²/s]
             let thermal_diffusivity = params.thermal_conductivity / 
                 (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
             let sherwood = NUSSELT_CONSTANT + NUSSELT_PECLET_COEFF * peclet.powf(SHERWOOD_PECLET_EXPONENT); // Mass transfer Sherwood number
-            let k_mass = sherwood * D_vapor / (2.0 * r);
+            let k_mass = sherwood * d_vapor / (2.0 * r);
             
             // Rate of vapor moles change
             let driving_force = p_vapor_eq - p_vapor_actual;
-            k_mass * driving_force * state.surface_area() / (R_GAS * T)
+            k_mass * driving_force * state.surface_area() / (R_GAS * temperature)
         } else {
             0.0
         };
         
-        Ok((dT_dt, dn_vapor_dt))
+        Ok((dt_dt, dn_vapor_dt))
     }
     
     /// Calculate effective polytropic index for thermal model
@@ -291,12 +291,12 @@ impl BubbleIMEXIntegrator {
     /// Calculate equilibrium vapor pressure at given temperature
     fn calculate_equilibrium_vapor_pressure(&self, temperature: f64) -> f64 {
         // Antoine equation for water vapor pressure
-        let A = 8.07131;
-        let B = 1730.63;
-        let C = 233.426;
+        let a = 8.07131;
+        let b = 1730.63;
+        let c = 233.426;
         
         let t_celsius = temperature - 273.15;
-        let log10_p = A - B / (C + t_celsius);
+        let log10_p = a - b / (c + t_celsius);
         
         // Convert from mmHg to Pa
         10.0_f64.powf(log10_p) * 133.322
@@ -432,10 +432,10 @@ mod tests {
         let integrator = BubbleIMEXIntegrator::with_defaults(solver);
         
         // Test that rates are calculated without modifying state
-        let (dT_dt, dn_vapor_dt) = integrator.calculate_thermal_mass_transfer_rates(&state).unwrap();
+        let (dt_dt, dn_vapor_dt) = integrator.calculate_thermal_mass_transfer_rates(&state).unwrap();
         
         // Rates should be non-zero when effects are enabled
-        assert!(dT_dt.abs() > 0.0 || dn_vapor_dt.abs() > 0.0);
+        assert!(dt_dt.abs() > 0.0 || dn_vapor_dt.abs() > 0.0);
     }
     
     #[test]
