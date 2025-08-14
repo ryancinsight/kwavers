@@ -96,9 +96,9 @@ impl TimeReversalReconstructor {
         if config.tolerance <= 0.0 || config.tolerance >= 1.0 {
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "tolerance".to_string(),
-                value: config.tolerance,
-                min: 0.0,
-                max: 1.0,
+                value: config.tolerance.to_string(),
+                min: "0.0".to_string(),
+                max: "1.0".to_string(),
             }));
         }
         

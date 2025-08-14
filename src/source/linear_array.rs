@@ -61,8 +61,7 @@ impl LinearArray {
 
         let apodization_weights: Vec<f64> = (0..num_elements)
             .map(|i| {
-                let normalized_position = i as f64 / (num_elements - 1) as f64;
-                apodization.weight(normalized_position)
+                apodization.weight(i, num_elements)
             })
             .collect();
 

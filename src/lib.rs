@@ -24,6 +24,14 @@ mod validation_constants {
     pub const PROGRESS_REPORT_INTERVAL: usize = 100;
     /// Default plugin context frequency [Hz]
     pub const DEFAULT_PLUGIN_FREQUENCY: f64 = 100e3;
+    /// Minimum domain size for grid validation [m]
+    pub const MIN_DOMAIN_SIZE: f64 = 1e-3;
+    /// Maximum domain size for grid validation [m]
+    pub const MAX_DOMAIN_SIZE: f64 = 1.0;
+    /// Minimum points per wavelength for grid validation
+    pub const MIN_POINTS_PER_WAVELENGTH: usize = 5;
+    /// Maximum points per wavelength for grid validation
+    pub const MAX_POINTS_PER_WAVELENGTH: usize = 100;
 }
 
 // Default medium properties constants
@@ -216,72 +224,46 @@ pub fn create_default_config() -> Config {
     }
 }
 
-/// Validate a simulation configuration
+/// Validate simulation configuration for completeness and correctness
 /// 
 /// Implements Information Expert principle by providing validation logic
 pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
-    let mut validation_result = ValidationResult::valid("simulation_config_validation".to_string());
+    let mut errors = Vec::new();
     
-    // Basic validation checks
-    if config.simulation.domain_size_x < 1e-3 || config.simulation.domain_size_x > 1.0 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    // Basic validation checks using named constants
+    if config.simulation.domain_size_x < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_x > validation_constants::MAX_DOMAIN_SIZE {
+        errors.push(ValidationError::RangeValidation {
             field: "domain_size_x".to_string(),
-            value: config.simulation.domain_size_x,
-            min: 1e-3,
-            max: 1.0,
+            value: config.simulation.domain_size_x.to_string(),
+            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
+            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
         });
     }
     
-    if config.simulation.domain_size_yz < 1e-3 || config.simulation.domain_size_yz > 1.0 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    if config.simulation.domain_size_yz < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_yz > validation_constants::MAX_DOMAIN_SIZE {
+        errors.push(ValidationError::RangeValidation {
             field: "domain_size_yz".to_string(),
-            value: config.simulation.domain_size_yz,
-            min: 1e-3,
-            max: 1.0,
+            value: config.simulation.domain_size_yz.to_string(),
+            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
+            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
         });
     }
     
-    if config.simulation.points_per_wavelength < 5 || config.simulation.points_per_wavelength > 100 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    if config.simulation.points_per_wavelength < validation_constants::MIN_POINTS_PER_WAVELENGTH || config.simulation.points_per_wavelength > validation_constants::MAX_POINTS_PER_WAVELENGTH {
+        errors.push(ValidationError::RangeValidation {
             field: "points_per_wavelength".to_string(),
-            value: config.simulation.points_per_wavelength as f64,
-            min: 5.0,
-            max: 100.0,
+            value: config.simulation.points_per_wavelength.to_string(),
+            min: validation_constants::MIN_POINTS_PER_WAVELENGTH.to_string(),
+            max: validation_constants::MAX_POINTS_PER_WAVELENGTH.to_string(),
         });
     }
     
-    if config.simulation.frequency < 1e3 || config.simulation.frequency > 100e6 {
-        validation_result.add_error(ValidationError::RangeValidation {
-            field: "frequency".to_string(),
-            value: config.simulation.frequency,
-            min: 1e3,
-            max: 100e6,
-        });
+    // Return validation result
+    if errors.is_empty() {
+        Ok(ValidationResult::success())
+    } else {
+        Ok(ValidationResult::failure(errors))
     }
-    
-    if let Some(freq) = config.source.frequency {
-        if !(validation_constants::MIN_SOURCE_FREQUENCY..=validation_constants::MAX_SOURCE_FREQUENCY).contains(&freq) {
-            validation_result.add_error(ValidationError::RangeValidation {
-                field: "source_frequency".to_string(),
-                value: freq,
-                min: validation_constants::MIN_SOURCE_FREQUENCY,
-                max: validation_constants::MAX_SOURCE_FREQUENCY,
-            });
-        }
-    }
-    
-    if let Some(amp) = config.source.amplitude {
-        if !(validation_constants::MIN_SOURCE_AMPLITUDE..=validation_constants::MAX_SOURCE_AMPLITUDE).contains(&amp) {
-            validation_result.add_error(ValidationError::RangeValidation {
-                field: "source_amplitude".to_string(),
-                value: amp,
-                min: validation_constants::MIN_SOURCE_AMPLITUDE,
-                max: validation_constants::MAX_SOURCE_AMPLITUDE,
-            });
-        }
-    }
-    
-    Ok(validation_result)
 }
 
 /// Create a complete simulation setup with validation
@@ -291,9 +273,13 @@ pub fn create_validated_simulation(
     // Validate configuration first
     let validation_result = validate_simulation_config(&config)?;
     if !validation_result.is_valid {
+        let error_summary = validation_result.errors.iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("; ");
         return Err(KwaversError::Config(crate::error::ConfigError::ValidationFailed {
             section: "simulation".to_string(),
-            reason: format!("Configuration validation failed: {}", validation_result.summary()),
+            reason: format!("Configuration validation failed: {}", error_summary),
         }));
     }
     

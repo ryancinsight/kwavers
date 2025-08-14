@@ -27,6 +27,15 @@ mod tests {
     }
     
     impl crate::source::Source for TestSource {
+        fn create_mask(&self, grid: &crate::grid::Grid) -> ndarray::Array3<f64> {
+            ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz))
+        }
+        
+        fn amplitude(&self, _t: f64) -> f64 {
+            0.0 // No amplitude for test source
+        }
+        
+        #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
         fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &crate::grid::Grid) -> f64 {
             0.0 // No source for these tests
         }
@@ -36,7 +45,7 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn crate::signal::Signal {
-            panic!("Not implemented for test source")
+            unimplemented!("Test source signal access not needed for these tests")
         }
     }
     

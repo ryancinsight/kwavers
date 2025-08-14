@@ -729,9 +729,9 @@ impl FullWaveformInversion {
             self.velocity_model = previous_model;
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "velocity_model".to_string(),
-                value: if min_vel < MIN_VELOCITY { min_vel } else { max_vel },
-                min: MIN_VELOCITY,
-                max: MAX_VELOCITY,
+                value: if min_vel < MIN_VELOCITY { min_vel.to_string() } else { max_vel.to_string() },
+                min: MIN_VELOCITY.to_string(),
+                max: MAX_VELOCITY.to_string(),
             }));
         }
         
@@ -873,9 +873,9 @@ impl ReverseTimeMigration {
         if min_vel < MIN_VELOCITY || max_vel > MAX_VELOCITY {
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "velocity_model".to_string(),
-                value: if min_vel < MIN_VELOCITY { min_vel } else { max_vel },
-                min: MIN_VELOCITY,
-                max: MAX_VELOCITY,
+                value: if min_vel < MIN_VELOCITY { min_vel.to_string() } else { max_vel.to_string() },
+                min: MIN_VELOCITY.to_string(),
+                max: MAX_VELOCITY.to_string(),
             }));
         }
         

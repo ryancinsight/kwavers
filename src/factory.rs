@@ -461,9 +461,12 @@ impl SimulationFactory {
         
         // Validate each component - simplified validation
         // In the new system, we just check if validation passes
-        let grid_result = config.grid.validate();
-        if !grid_result.is_valid {
-            errors.extend(grid_result.errors);
+        if let Err(e) = config.grid.validate() {
+            errors.push(crate::error::ValidationError::FieldValidation {
+                field: "grid".to_string(),
+                value: "grid_config".to_string(),
+                constraint: e.to_string(),
+            });
         }
         
         if errors.is_empty() {

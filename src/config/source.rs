@@ -64,7 +64,7 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                self.frequency,
+                self.frequency.unwrap_or(1e6), // Default to 1 MHz if not specified
                 crate::source::RectangularApodization,
             );
             array.adjust_focus(
@@ -84,8 +84,8 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                signal_frequency, // Use signal's frequency
-                HanningApodization, // Added default apodization
+                self.frequency.unwrap_or(1e6), // Use configured frequency or default
+                crate::source::RectangularApodization, // Use correct apodization
             )) as Box<dyn Source>
         };
 
