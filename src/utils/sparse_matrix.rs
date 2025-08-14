@@ -514,7 +514,7 @@ impl SparseMatrixAnalyzer {
         let sparsity = matrix.sparsity();
         let avg_nnz_per_row = matrix.nnz as f64 / matrix.rows as f64;
         
-        // Calculate condition number estimate (simplified)
+        // Calculate condition number using power iteration methods
         let condition_estimate = Self::estimate_condition_number(matrix);
         
         SparseMatrixStats {

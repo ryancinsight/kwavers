@@ -395,8 +395,11 @@ impl BeamformingProcessor {
             // Blocking matrix (orthogonal to steering vector)
             let blocking_matrix = self.construct_blocking_matrix(&steering_vector)?;
             
-            // Adaptive weights (simplified LMS adaptation)
+            // Adaptive weights using Normalized LMS (NLMS) algorithm
+            // Based on Haykin (2002): "Adaptive Filter Theory"
             let mut adaptive_weights = Array1::<f64>::zeros(self.num_sensors - 1);
+            let step_size = 0.01; // NLMS step size
+            let regularization = 1e-6; // Regularization parameter
             
             let mut output = 0.0;
             for t in 0..sensor_data.ncols() {
@@ -418,9 +421,12 @@ impl BeamformingProcessor {
                 let adaptive_output = adaptive_weights.dot(&blocked_signals);
                 let gsc_output: f64 = fixed_output - adaptive_output;
                 
-                // LMS adaptation
+                // NLMS adaptation with normalization
+                let signal_power = blocked_signals.dot(&blocked_signals) + regularization;
+                let normalized_step = step_size / signal_power;
+                
                 for i in 0..(self.num_sensors - 1) {
-                    adaptive_weights[i] += adaptation_step_size * gsc_output * blocked_signals[i];
+                    adaptive_weights[i] += normalized_step * gsc_output * blocked_signals[i];
                 }
                 
                 output += gsc_output.powi(2);

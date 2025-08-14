@@ -20,9 +20,10 @@ use crate::medium::Medium;
 use ndarray::{Array3, Array4};
 use std::sync::Arc;
 
-/// FOCUS Package Integration Plugin
+/// Multi-Element Transducer Field Calculator Plugin
 /// Based on Jensen & Svendsen (1992): "Calculation of pressure fields from arbitrarily shaped transducers"
-pub struct FocusIntegrationPlugin {
+/// Provides similar functionality to FOCUS package with native Rust implementation
+pub struct TransducerFieldCalculatorPlugin {
     metadata: PluginMetadata,
     state: PluginState,
     /// Transducer geometry definitions
@@ -44,9 +45,10 @@ pub struct KzkSolverPlugin {
     shock_handler: ShockHandlingMethod,
 }
 
-/// MSOUND Mixed-Domain Methods Plugin
+/// Mixed-Domain Acoustic Propagation Plugin
 /// Based on Tabei et al. (2002): "A k-space method for coupled first-order acoustic propagation equations"
-pub struct MsoundPlugin {
+/// Implements mixed time-frequency domain methods with similar capabilities to MSOUND
+pub struct MixedDomainPropagationPlugin {
     metadata: PluginMetadata,
     state: PluginState,
     /// Time-frequency domain mixing ratio
@@ -258,14 +260,14 @@ pub enum TaperFunction {
 pub struct Phase31PluginFactory;
 
 impl Phase31PluginFactory {
-    /// Create FOCUS integration plugin
-    pub fn create_focus_plugin() -> KwaversResult<FocusIntegrationPlugin> {
-        Ok(FocusIntegrationPlugin {
+    /// Create multi-element transducer field calculator plugin
+    pub fn create_transducer_field_calculator_plugin() -> KwaversResult<TransducerFieldCalculatorPlugin> {
+        Ok(TransducerFieldCalculatorPlugin {
             metadata: PluginMetadata {
-                id: "focus_integration".to_string(),
-                name: "FOCUS Package Integration".to_string(),
+                id: "transducer_field_calculator".to_string(),
+                name: "Multi-Element Transducer Field Calculator".to_string(),
                 version: "1.0.0".to_string(),
-                description: "Industry-standard FOCUS package compatibility".to_string(),
+                description: "Multi-element transducer field calculation with spatial impulse response".to_string(),
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
@@ -293,14 +295,14 @@ impl Phase31PluginFactory {
         })
     }
     
-    /// Create MSOUND mixed-domain plugin
-    pub fn create_msound_plugin() -> KwaversResult<MsoundPlugin> {
-        Ok(MsoundPlugin {
+    /// Create mixed-domain acoustic propagation plugin
+    pub fn create_mixed_domain_propagation_plugin() -> KwaversResult<MixedDomainPropagationPlugin> {
+        Ok(MixedDomainPropagationPlugin {
             metadata: PluginMetadata {
-                id: "msound_mixed_domain".to_string(),
-                name: "MSOUND Mixed-Domain Methods".to_string(),
+                id: "mixed_domain_propagation".to_string(),
+                name: "Mixed-Domain Acoustic Propagation".to_string(),
                 version: "1.0.0".to_string(),
-                description: "Mixed time-frequency domain acoustic propagation".to_string(),
+                description: "Mixed time-frequency domain acoustic propagation methods".to_string(),
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
