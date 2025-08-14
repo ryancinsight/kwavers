@@ -413,6 +413,23 @@ impl PhasedArrayTransducer {
 }
 
 impl Source for PhasedArrayTransducer {
+    fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
+        let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
+        for element in &self.elements {
+            if let Some((ix, iy, iz)) = grid.to_grid_indices(element.position.0, element.position.1, element.position.2) {
+                mask[(ix, iy, iz)] = element.amplitude_weight;
+            }
+        }
+        
+        mask
+    }
+    
+    fn amplitude(&self, t: f64) -> f64 {
+        self.signal.amplitude(t)
+    }
+    
+    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
         let mut total_source = 0.0;
         

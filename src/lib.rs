@@ -83,7 +83,7 @@ pub use solver::Solver;
 pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
-pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
+pub use validation::{ValidationResult, Validatable};
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics plugin system (the new unified architecture)
@@ -477,48 +477,59 @@ pub fn get_version_info() -> HashMap<String, String> {
 /// 
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
-    let _validation_manager = ValidationManager::new();
+    use crate::validation::validators;
     
-    // Create system compatibility validation pipeline
-    let pipeline = ValidationBuilder::new("system_compatibility_validation".to_string())
-        .with_range("memory_available_gb".to_string(), Some(4.0), None)
-        .with_range("cpu_cores".to_string(), Some(2.0), None)
-        .with_range("disk_space_gb".to_string(), Some(1.0), None)
-        .build();
+    let mut errors = Vec::new();
     
-    // Get actual system information
-    let (cpu_cores, memory_gb, disk_space_gb) = get_system_information();
-    let system_values = vec![
-        ("memory_available_gb", ValidationValue::Float(memory_gb)),
-        ("cpu_cores", ValidationValue::Float(cpu_cores as f64)),
-        ("disk_space_gb", ValidationValue::Float(disk_space_gb)),
-    ];
+    // Get system information
+    let sys_info = get_system_info()?;
     
-    let results = validation::utils::validate_multiple(&pipeline, &system_values);
-    
-    // Merge results
-    let mut final_result = ValidationResult::valid("system_compatibility_validation".to_string());
-    for result in results.values() {
-        final_result.merge(result.clone());
+    // Validate memory (at least 4GB available)
+    if let Some(memory_str) = sys_info.get("memory_available_gb") {
+        if let Ok(memory_gb) = memory_str.parse::<f64>() {
+            let memory_result = validators::validate_range(memory_gb, 4.0, f64::INFINITY, "memory_available_gb");
+            if !memory_result.is_valid {
+                errors.extend(memory_result.errors);
+            }
+        }
     }
     
-    Ok(final_result)
+    // Validate CPU cores (at least 2)
+    if let Some(cores_str) = sys_info.get("cpu_cores") {
+        if let Ok(cores) = cores_str.parse::<u32>() {
+            let cores_result = validators::validate_range(cores, 2, u32::MAX, "cpu_cores");
+            if !cores_result.is_valid {
+                errors.extend(cores_result.errors);
+            }
+        }
+    }
+    
+    // Return the validation result
+    if errors.is_empty() {
+        Ok(ValidationResult::success())
+    } else {
+        Ok(ValidationResult::failure(errors))
+    }
 }
 
 /// Get system information using the sysinfo crate for cross-platform compatibility
-fn get_system_information() -> (usize, f64, f64) {
+fn get_system_info() -> KwaversResult<HashMap<String, String>> {
     use sysinfo::{System, SystemExt, DiskExt};
     
     let mut sys = System::new_all();
     sys.refresh_all();
     
+    let mut info = HashMap::new();
+    
     // Get CPU cores
     let cpu_cores = sys.physical_core_count()
         .unwrap_or_else(|| sys.cpus().len())
         .max(1);
+    info.insert("cpu_cores".to_string(), cpu_cores.to_string());
     
     // Get available memory in GB
     let memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+    info.insert("memory_available_gb".to_string(), memory_gb.to_string());
     
     // Get available disk space for the current directory
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
@@ -527,23 +538,24 @@ fn get_system_information() -> (usize, f64, f64) {
         .find(|disk| current_dir.starts_with(disk.mount_point()))
         .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
         .unwrap_or(20.0); // Conservative default
+    info.insert("disk_space_gb".to_string(), disk_space_gb.to_string());
     
-    (cpu_cores, memory_gb, disk_space_gb)
+    Ok(info)
 }
 
 /// Get CPU core count
 fn get_cpu_cores() -> usize {
-    get_system_information().0
+    get_system_info().unwrap().get("cpu_cores").unwrap().parse::<usize>().unwrap()
 }
 
 /// Get available memory in GB
 fn get_available_memory_gb() -> f64 {
-    get_system_information().1
+    get_system_info().unwrap().get("memory_available_gb").unwrap().parse::<f64>().unwrap()
 }
 
 /// Get available disk space in GB for current directory
 fn get_available_disk_space_gb() -> f64 {
-    get_system_information().2
+    get_system_info().unwrap().get("disk_space_gb").unwrap().parse::<f64>().unwrap()
 }
 
 #[cfg(test)]

@@ -89,7 +89,8 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
-use crate::validation::{ValidationResult, ValidationError, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
+use crate::validation::ValidationResult;
+use crate::error::ValidationError;
 use crate::constants::cfl;
 use ndarray::{Array3, Array4, Zip};
 use std::collections::HashMap;
@@ -126,7 +127,6 @@ impl Default for FdtdConfig {
 impl PluginConfig for FdtdConfig {
     fn validate(&self) -> ValidationResult {
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
         
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
@@ -145,12 +145,7 @@ impl PluginConfig for FdtdConfig {
                 constraint: "Must be in (0, 1]".to_string(),
             });
         } else if self.cfl_factor > 0.7 {
-            warnings.push(ValidationWarning {
-                field: "cfl_factor".to_string(),
-                message: format!("CFL factor {} may cause instability", self.cfl_factor),
-                severity: WarningSeverity::Medium,
-                suggestion: Some("Consider using a CFL factor <= 0.7 for numerical stability".to_string()),
-            });
+            // Note: Warning removed for simplicity in new validation system
         }
         
         // Validate subgridding
@@ -162,21 +157,10 @@ impl PluginConfig for FdtdConfig {
             });
         }
         
-        ValidationResult {
-            is_valid: errors.is_empty(),
-            errors,
-            warnings,
-            context: ValidationContext {
-                validator_name: "FDTDConfig".to_string(),
-                field_path: vec!["fdtd_config".to_string()],
-                timestamp: chrono::Utc::now(),
-                additional_info: HashMap::new(),
-            },
-            metadata: ValidationMetadata {
-                validation_time_ms: 0,
-                rules_applied: vec!["cfl_factor".to_string(), "pml_thickness".to_string()],
-                performance_metrics: HashMap::new(),
-            },
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
         }
     }
     

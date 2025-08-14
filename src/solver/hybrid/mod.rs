@@ -1172,10 +1172,10 @@ impl PhysicsPlugin for HybridSolver {
     }
     
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> crate::validation::ValidationResult {
-        use crate::validation::{ValidationResult, ValidationError, ValidationWarning, ValidationContext, ValidationMetadata};
+        use crate::validation::ValidationResult;
+        use crate::error::ValidationError;
         
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
         
         // Validate grid compatibility
         if grid.nx < 16 || grid.ny < 16 || grid.nz < 16 {
@@ -1188,21 +1188,18 @@ impl PhysicsPlugin for HybridSolver {
         
         // Validate medium compatibility
         if !medium.is_homogeneous() {
-            warnings.push(ValidationWarning {
+            errors.push(ValidationError::FieldValidation {
                 field: "medium".to_string(),
-                message: "Heterogeneous media may require additional computational resources".to_string(),
-                severity: crate::validation::WarningSeverity::Medium,
-                suggestion: Some("Consider using adaptive mesh refinement".to_string()),
+                value: "Heterogeneous medium not supported by hybrid solver".to_string(),
+                constraint: "Homogeneous medium required".to_string(),
             });
         }
         
         // Create validation result
-        ValidationResult {
-            is_valid: errors.is_empty(),
-            errors,
-            warnings,
-            context: ValidationContext::default(),
-            metadata: ValidationMetadata::default(),
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
         }
     }
     

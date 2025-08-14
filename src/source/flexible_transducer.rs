@@ -875,6 +875,44 @@ impl FlexibleTransducerArray {
 }
 
 impl Source for FlexibleTransducerArray {
+    fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
+        let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
+        for &element_pos in &self.geometry_state.element_positions {
+            if let Some((ix, iy, iz)) = grid.to_grid_indices(element_pos[0], element_pos[1], element_pos[2]) {
+                let element_size = (self.config.element_size[0] * self.config.element_size[1]).sqrt();
+                
+                // Apply Gaussian weighting around element position
+                let sigma = element_size / 2.0;
+                for di in -2..=2 {
+                    for dj in -2..=2 {
+                        for dk in -2..=2 {
+                            let ni = (ix as i32 + di) as usize;
+                            let nj = (iy as i32 + dj) as usize;
+                            let nk = (iz as i32 + dk) as usize;
+                            
+                            if ni < grid.nx && nj < grid.ny && nk < grid.nz {
+                                let dx = di as f64 * grid.dx;
+                                let dy = dj as f64 * grid.dy;
+                                let dz = dk as f64 * grid.dz;
+                                let distance = (dx*dx + dy*dy + dz*dz).sqrt();
+                                let weight = (-distance.powi(2) / (2.0 * sigma.powi(2))).exp();
+                                mask[(ni, nj, nk)] += weight / self.config.num_elements as f64;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        mask
+    }
+    
+    fn amplitude(&self, t: f64) -> f64 {
+        self.signal.amplitude(t)
+    }
+    
+    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let mut source_value = 0.0;
         let signal_value = self.signal.amplitude(t) * 

@@ -1488,21 +1488,13 @@ impl KuznetsovWave {
         let d2_dx2_hat = if let Some(ref kx_array) = self.kx {
             &pressure_hat * &kx_array.mapv(|k| Complex::new(-k*k, 0.0))
         } else {
-            return Err(KwaversError::Validation(ValidationError::StateValidation { 
-                component: "KuznetsovWave".to_string(),
-                expected_state: "initialized KX array".to_string(),
-                actual_state: "uninitialized KX array".to_string(),
-            }));
+            return Err(KwaversError::Validation(ValidationError::StateValidation));
         };
         
         let d2_dy2_hat = if let Some(ref ky_array) = self.ky {
             &pressure_hat * &ky_array.mapv(|k| Complex::new(-k*k, 0.0))
         } else {
-            return Err(KwaversError::Validation(ValidationError::StateValidation { 
-                component: "KuznetsovWave".to_string(),
-                expected_state: "initialized KY array".to_string(),
-                actual_state: "uninitialized KY array".to_string(),
-            }));
+            return Err(KwaversError::Validation(ValidationError::StateValidation));
         };
         
         // Sum transverse derivatives

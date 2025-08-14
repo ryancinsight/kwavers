@@ -521,9 +521,9 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
             return Err(KwaversError::Validation(
                 crate::error::ValidationError::RangeValidation {
                     field: "convergence_metric".to_string(),
-                    value: current_state.convergence_metric,
-                    min: 0.0,
-                    max: f64::INFINITY,
+                    value: current_state.convergence_metric.to_string(),
+                    min: "0.0".to_string(),
+                    max: "∞".to_string(),
                 },
             ));
         }

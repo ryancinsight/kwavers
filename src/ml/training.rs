@@ -43,9 +43,9 @@ impl TrainingPipeline {
             return Err(KwaversError::Validation(
                 crate::error::ValidationError::RangeValidation {
                     field: "labels.samples".to_string(),
-                    value: label_samples as f64,
-                    min: samples as f64,
-                    max: samples as f64,
+                    value: label_samples.to_string(),
+                    min: samples.to_string(),
+                    max: samples.to_string(),
                 },
             ));
         }
