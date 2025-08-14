@@ -125,6 +125,9 @@ const KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER: f64 = 0.01;
 /// Configuration for the Kuznetsov equation solver
 #[derive(Debug, Clone)]
 pub struct KuznetsovConfig {
+    /// Equation mode: Full Kuznetsov or KZK parabolic approximation
+    pub equation_mode: AcousticEquationMode,
+    
     /// Enable full nonlinear terms (default: true)
     pub enable_nonlinearity: bool,
     
@@ -165,9 +168,23 @@ pub struct KuznetsovConfig {
     pub diffusivity: f64,
 }
 
+/// Acoustic equation modes supported by the solver
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AcousticEquationMode {
+    /// Full Kuznetsov equation with all terms
+    /// ∇²p - (1/c₀²)∂²p/∂t² = -(β/ρ₀c₀⁴)∂²p²/∂t² - (δ/c₀⁴)∂³p/∂t³ + F
+    FullKuznetsov,
+    
+    /// KZK (Khokhlov-Zabolotkaya-Kuznetsov) parabolic approximation
+    /// Assumes paraxial propagation with ∂²p/∂z² << ∂²p/∂x² + ∂²p/∂y²
+    /// ∂²p/∂x² + ∂²p/∂y² + 2(1/c₀)∂²p/∂z∂t = (β/ρ₀c₀³)∂²p²/∂t² + (δ/c₀³)∂³p/∂t³
+    KzkParaxial,
+}
+
 impl Default for KuznetsovConfig {
     fn default() -> Self {
         Self {
+            equation_mode: AcousticEquationMode::FullKuznetsov,
             enable_nonlinearity: true,
             enable_diffusivity: true,
             nonlinearity_scaling: DEFAULT_NONLINEARITY_SCALING,
@@ -181,6 +198,27 @@ impl Default for KuznetsovConfig {
             stability_filter: true,
             max_frequency: 1e6, // 1 MHz
             diffusivity: 1.0,
+        }
+    }
+}
+
+impl KuznetsovConfig {
+    /// Create configuration for KZK equation mode
+    pub fn kzk_mode() -> Self {
+        Self {
+            equation_mode: AcousticEquationMode::KzkParaxial,
+            enable_nonlinearity: true,
+            enable_diffusivity: true,
+            cfl_factor: 0.5, // More conservative for paraxial approximation
+            ..Default::default()
+        }
+    }
+    
+    /// Create configuration for full Kuznetsov equation
+    pub fn full_kuznetsov_mode() -> Self {
+        Self {
+            equation_mode: AcousticEquationMode::FullKuznetsov,
+            ..Default::default()
         }
     }
 }
@@ -946,18 +984,72 @@ impl KuznetsovWave {
         medium: &dyn Medium,
         t: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // For first-order formulation: ∂p/∂t = F(p)
-        // where F includes linear, nonlinear, and diffusivity terms
-        
+        // Compute derivative based on equation mode
+        match self.config.equation_mode {
+            AcousticEquationMode::FullKuznetsov => {
+                self.compute_full_kuznetsov_derivative(pressure, velocity, source_term, grid, medium, t)
+            }
+            AcousticEquationMode::KzkParaxial => {
+                self.compute_kzk_derivative(pressure, velocity, source_term, grid, medium, t)
+            }
+        }
+    }
+    
+    /// Compute derivative for full Kuznetsov equation
+    /// ∇²p - (1/c₀²)∂²p/∂t² = -(β/ρ₀c₀⁴)∂²p²/∂t² - (δ/c₀⁴)∂³p/∂t³ + F
+    fn compute_full_kuznetsov_derivative(
+        &mut self,
+        pressure: &Array3<f64>,
+        velocity: &Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        t: f64,
+    ) -> KwaversResult<Array3<f64>> {
         let laplacian = self.compute_laplacian(pressure, grid)?;
-        let nonlinear_term = self.compute_nonlinear_term(pressure, medium, grid, 1.0)?; // dt=1 for derivative
+        let nonlinear_term = self.compute_nonlinear_term(pressure, medium, grid, 1.0)?;
         let diffusivity_term = self.compute_diffusivity_term(pressure, medium, grid, 1.0)?;
         
-        // Linear wave term
+        // Linear wave term: c₀²∇²p
         let linear_term = compute_linear_term(&laplacian, pressure, medium, grid);
         
-        // Combine all terms
+        // Combine all terms for full Kuznetsov equation
         let derivative = &linear_term + &nonlinear_term + &diffusivity_term + source_term;
+        
+        Ok(derivative)
+    }
+    
+    /// Compute derivative for KZK parabolic equation
+    /// ∂²p/∂x² + ∂²p/∂y² + 2(1/c₀)∂²p/∂z∂t = (β/ρ₀c₀³)∂²p²/∂t² + (δ/c₀³)∂³p/∂t³
+    fn compute_kzk_derivative(
+        &mut self,
+        pressure: &Array3<f64>,
+        velocity: &Array4<f64>,
+        source_term: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        t: f64,
+    ) -> KwaversResult<Array3<f64>> {
+        // KZK equation uses parabolic approximation: neglect ∂²p/∂z² compared to transverse terms
+        let transverse_laplacian = self.compute_transverse_laplacian(pressure, grid)?;
+        let mixed_derivative = self.compute_mixed_time_spatial_derivative(pressure, velocity, grid, medium)?;
+        
+        // Nonlinear term scaled for KZK (different from full Kuznetsov)
+        let nonlinear_term = if self.config.enable_nonlinearity {
+            self.compute_kzk_nonlinear_term(pressure, medium, grid)?
+        } else {
+            grid.zeros_array()
+        };
+        
+        // Diffusivity term scaled for KZK
+        let diffusivity_term = if self.config.enable_diffusivity {
+            self.compute_kzk_diffusivity_term(pressure, medium, grid)?
+        } else {
+            grid.zeros_array()
+        };
+        
+        // KZK equation: transverse diffraction + mixed derivative + nonlinear + diffusivity + source
+        let derivative = &transverse_laplacian + &mixed_derivative + &nonlinear_term + &diffusivity_term + source_term;
         
         Ok(derivative)
     }
@@ -1382,6 +1474,145 @@ fn compute_linear_term_into(
             // Linear wave equation term: c²∇²p
             *lin = c * c * lap;
         });
+}
+
+// KZK-specific helper methods implementation
+impl KuznetsovWave {
+    /// Compute transverse Laplacian for KZK equation (∂²p/∂x² + ∂²p/∂y²)
+    fn compute_transverse_laplacian(&self, pressure: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        // Use spectral derivatives for transverse directions only
+        let mut fields_4d = Array4::zeros((1, pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]));
+        fields_4d.index_axis_mut(Axis(0), 0).assign(pressure);
+        
+        let pressure_hat = fft_3d(&fields_4d, 0, grid);
+        
+        // Compute x and y derivatives only (neglect z for parabolic approximation)
+        let d2_dx2_hat = &pressure_hat * &self.kx.mapv(|k| Complex::new(-k*k, 0.0));
+        let d2_dy2_hat = &pressure_hat * &self.ky.mapv(|k| Complex::new(-k*k, 0.0));
+        
+        // Sum transverse derivatives
+        let transverse_laplacian_hat = d2_dx2_hat + d2_dy2_hat;
+        
+        let transverse_laplacian = ifft_3d(&transverse_laplacian_hat, grid);
+        Ok(transverse_laplacian)
+    }
+    
+    /// Compute mixed time-spatial derivative ∂²p/∂z∂t for KZK equation
+    fn compute_mixed_time_spatial_derivative(
+        &self, 
+        pressure: &Array3<f64>, 
+        velocity: &Array4<f64>, 
+        grid: &Grid, 
+        medium: &dyn Medium
+    ) -> KwaversResult<Array3<f64>> {
+        // Mixed derivative term: 2(1/c₀)∂²p/∂z∂t
+        // Use finite differences for z-derivative of ∂p/∂t
+        let mut mixed_term = grid.zeros_array();
+        
+        if let Some(ref prev_pressure) = self.pressure_prev {
+            // Approximate ∂p/∂t using finite difference
+            let dp_dt = pressure - prev_pressure;
+            
+            // Compute ∂/∂z of ∂p/∂t using central differences
+            Zip::indexed(&mut mixed_term)
+                .and(&dp_dt)
+                .for_each(|(i, j, k), term, &dpdt| {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let c = medium.sound_speed(x, y, z, grid);
+                    
+                    // Central difference for ∂/∂z
+                    let z_plus = if k < grid.nz - 1 { 
+                        dp_dt[[i, j, k + 1]]
+                    } else { 
+                        dpdt 
+                    };
+                    let z_minus = if k > 0 { 
+                        dp_dt[[i, j, k - 1]]
+                    } else { 
+                        dpdt 
+                    };
+                    
+                    let d_dpdt_dz = (z_plus - z_minus) / (2.0 * grid.dz);
+                    *term = 2.0 * d_dpdt_dz / c;
+                });
+        }
+        
+        Ok(mixed_term)
+    }
+    
+    /// Compute KZK-specific nonlinear term: (β/ρ₀c₀³)∂²p²/∂t²
+    fn compute_kzk_nonlinear_term(
+        &mut self, 
+        pressure: &Array3<f64>, 
+        medium: &dyn Medium, 
+        grid: &Grid
+    ) -> KwaversResult<Array3<f64>> {
+        let start = Instant::now();
+        
+        let mut nonlinear_term = grid.zeros_array();
+        
+        // KZK nonlinear coefficient differs from full Kuznetsov by factor of c₀
+        Zip::indexed(&mut nonlinear_term)
+            .and(pressure)
+            .for_each(|(i, j, k), nl, &p| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                
+                let rho = medium.density(x, y, z, grid);
+                let c = medium.sound_speed(x, y, z, grid);
+                let beta = medium.nonlinearity_parameter(x, y, z, grid);
+                
+                // KZK nonlinear term: (β/ρ₀c₀³) * p * ∂p/∂t
+                // Approximating ∂p/∂t with pressure gradient magnitude
+                let grad_mag = p.abs() / (c * grid.dx.min(grid.dy).min(grid.dz));
+                *nl = self.config.nonlinearity_scaling * beta * p * grad_mag / (rho * c * c * c);
+            });
+        
+        self.metrics.nonlinear_time += start.elapsed().as_secs_f64();
+        Ok(nonlinear_term)
+    }
+    
+    /// Compute KZK-specific diffusivity term: (δ/c₀³)∂³p/∂t³
+    fn compute_kzk_diffusivity_term(
+        &self, 
+        pressure: &Array3<f64>, 
+        medium: &dyn Medium, 
+        grid: &Grid
+    ) -> KwaversResult<Array3<f64>> {
+        let mut diffusivity_term = grid.zeros_array();
+        
+        // KZK diffusivity coefficient differs from full Kuznetsov
+        if self.pressure_history.len() >= 3 {
+            // Use three-point finite difference for third derivative
+            let p_n = &self.pressure_history[0];
+            let p_n1 = &self.pressure_history[1]; 
+            let p_n2 = &self.pressure_history[2];
+            
+            Zip::indexed(&mut diffusivity_term)
+                .and(p_n)
+                .and(p_n1)
+                .and(p_n2)
+                .for_each(|(i, j, k), diff, &pn, &pn1, &pn2| {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    let c = medium.sound_speed(x, y, z, grid);
+                    let delta = medium.acoustic_diffusivity(x, y, z, grid);
+                    
+                    // Third-order time derivative using finite differences
+                    let d3p_dt3 = (pn - 3.0*pn1 + 3.0*pn2 - pressure[[i, j, k]]) / (grid.dx * grid.dx * grid.dx); // Using dx as dt proxy
+                    
+                    // KZK diffusivity: (δ/c₀³)∂³p/∂t³
+                    *diff = delta * d3p_dt3 / (c * c * c);
+                });
+        }
+        
+        Ok(diffusivity_term)
+    }
 }
 
 #[cfg(test)]

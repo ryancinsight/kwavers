@@ -32,6 +32,107 @@ pub struct TransducerFieldCalculatorPlugin {
     sir_cache: std::collections::HashMap<String, Array3<f64>>,
 }
 
+impl TransducerFieldCalculatorPlugin {
+    /// Create new FOCUS-compatible transducer field calculator
+    pub fn new(transducer_geometries: Vec<TransducerGeometry>) -> Self {
+        Self {
+            metadata: PluginMetadata {
+                id: "focus_transducer_calculator".to_string(),
+                name: "FOCUS Transducer Field Calculator".to_string(),
+                version: "1.0.0".to_string(),
+                author: "Kwavers Team".to_string(),
+                description: "Multi-element transducer field calculation with FOCUS compatibility".to_string(),
+                license: "MIT".to_string(),
+            },
+            state: PluginState::Initialized,
+            transducer_geometries,
+            sir_cache: std::collections::HashMap::new(),
+        }
+    }
+    
+    /// Calculate spatial impulse response for given geometry
+    fn calculate_spatial_impulse_response(
+        &mut self,
+        geometry: &TransducerGeometry,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<Array3<f64>> {
+        let mut sir = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
+        // Rayleigh-Sommerfeld integral approach
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let field_point = [i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz];
+                    let mut total_response = 0.0;
+                    
+                    // Sum contributions from all elements
+                    for (elem_idx, elem_pos) in geometry.element_positions.iter().enumerate() {
+                        let distance = ((field_point[0] - elem_pos[0]).powi(2) +
+                                       (field_point[1] - elem_pos[1]).powi(2) +
+                                       (field_point[2] - elem_pos[2]).powi(2)).sqrt();
+                        
+                        // Element dimensions
+                        let elem_dims = &geometry.element_dimensions[elem_idx];
+                        let elem_area = elem_dims[0] * elem_dims[1];
+                        
+                        // Directivity factor based on element orientation
+                        let elem_normal = &geometry.element_orientations[elem_idx];
+                        let direction = [
+                            (field_point[0] - elem_pos[0]) / distance,
+                            (field_point[1] - elem_pos[1]) / distance,
+                            (field_point[2] - elem_pos[2]) / distance,
+                        ];
+                        let directivity = elem_normal[0] * direction[0] +
+                                         elem_normal[1] * direction[1] +
+                                         elem_normal[2] * direction[2];
+                        
+                        // Spatial impulse response contribution
+                        let c = medium.sound_speed(field_point[0], field_point[1], field_point[2], grid);
+                        let response = directivity * elem_area / (2.0 * std::f64::consts::PI * distance * c);
+                        
+                        total_response += response;
+                    }
+                    
+                    sir[[i, j, k]] = total_response;
+                }
+            }
+        }
+        
+        Ok(sir)
+    }
+    
+    /// Compute pressure field using Rayleigh integral
+    fn compute_pressure_field(
+        &self,
+        sir: &Array3<f64>,
+        frequency: f64,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<Array3<f64>> {
+        let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        
+        // Temporal frequency response
+        let omega = 2.0 * std::f64::consts::PI * frequency;
+        
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let field_point = [i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz];
+                    let c = medium.sound_speed(field_point[0], field_point[1], field_point[2], grid);
+                    
+                    // Convert spatial impulse response to pressure
+                    // P(ω) = jωρc * h(r) where h(r) is spatial impulse response
+                    let rho = medium.density(field_point[0], field_point[1], field_point[2], grid);
+                    pressure[[i, j, k]] = omega * rho * c * sir[[i, j, k]];
+                }
+            }
+        }
+        
+        Ok(pressure)
+    }
+}
+
 /// KZK Equation Solver Plugin  
 /// Based on Hamilton & Blackstock (1998): "Nonlinear Acoustics"
 pub struct KzkSolverPlugin {

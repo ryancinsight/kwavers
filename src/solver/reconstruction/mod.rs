@@ -22,6 +22,7 @@ pub mod bowl_recon;
 pub mod line_recon;
 pub mod photoacoustic;
 pub mod plane_recon;
+pub mod seismic;
 
 /// Reconstruction configuration
 #[derive(Debug, Clone)]
@@ -51,6 +52,10 @@ pub enum ReconstructionAlgorithm {
     FourierDomain,
     /// Iterative reconstruction
     Iterative { iterations: usize },
+    /// Full Waveform Inversion for seismic imaging
+    FullWaveformInversion,
+    /// Reverse Time Migration for seismic imaging
+    ReverseTimeMigration,
 }
 
 /// Filter types for reconstruction
