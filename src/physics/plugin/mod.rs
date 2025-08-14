@@ -1135,7 +1135,7 @@ mod plugin_internal_tests {
                 license: "MIT".to_string(),
             },
             required: vec![UnifiedFieldType::Temperature],
-            provided: vec![UnifiedFieldType::Light],
+            provided: vec![UnifiedFieldType::LightFluence],
         });
         
         // Register in reverse order

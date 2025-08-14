@@ -870,15 +870,22 @@ impl PhysicsPlugin for FdtdPlugin {
         context: &PluginContext,
     ) -> KwaversResult<()> {
         use ndarray::s;
+        use crate::physics::field_mapping::UnifiedFieldType;
         
-        // Use zero-copy views for optimal performance
+        // Get field indices using type-safe approach
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
+        
+        // Use zero-copy views for optimal performance with type-safe indices
         let mut fields_view = fields.view_mut();
         let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
             fields_view.multi_slice_mut((
-                s![0, .., .., ..],
-                s![4, .., .., ..],
-                s![5, .., .., ..],
-                s![6, .., .., ..]
+                s![pressure_idx, .., .., ..],
+                s![vx_idx, .., .., ..],
+                s![vy_idx, .., .., ..],
+                s![vz_idx, .., .., ..]
             ));
         
         // FDTD uses leapfrog scheme: update velocity first, then pressure

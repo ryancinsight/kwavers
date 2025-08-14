@@ -744,13 +744,13 @@ mod tests {
 
     #[test]
     fn test_outcome_predictor() {
-        use crate::ml::models::OutcomePredictorModel;
+        use crate::ml::models::ConvergencePredictorModel;
         use ndarray::{array, Array2};
 
         // Simple predictor: if feature > 0 produces success
-        let weights = array![10.0_f32];
-        let bias = -5.0_f32; // threshold at 0.5 approx
-        let model = OutcomePredictorModel::from_weights(weights, bias);
+        let weights = array![[10.0_f32]];
+        let bias = Some(array![-5.0_f32]); // threshold at 0.5 approx
+        let model = models::ConvergencePredictorModel::from_weights(weights, bias);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
         engine.models.insert(ModelType::ConvergencePredictor, Model::ConvergencePredictor(model));

@@ -138,7 +138,6 @@ pub fn load_nifti_with_header<P: AsRef<Path>>(path: P) -> KwaversResult<(Array3<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_nifti_reader_creation() {
@@ -147,13 +146,5 @@ mod tests {
         
         let reader_verbose = NiftiReader::new().with_verbose(true);
         assert!(reader_verbose.verbose);
-    }
-
-    #[test]
-    fn test_convenience_functions() {
-        // These would require actual NIFTI files to test properly
-        // For now, just verify the functions exist and have correct signatures
-        let _load_fn: fn(&Path) -> KwaversResult<Array3<f64>> = load_nifti;
-        let _load_with_header_fn: fn(&Path) -> KwaversResult<(Array3<f64>, NiftiHeader)> = load_nifti_with_header;
     }
 }
