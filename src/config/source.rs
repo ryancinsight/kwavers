@@ -56,7 +56,7 @@ impl SourceConfig {
         };
 
         let source = if self.focus_x.is_some() && self.focus_y.is_some() && self.focus_z.is_some() {
-            Box::new(LinearArray::with_focus(
+            let mut array = LinearArray::new(
                 0.1, // Default length
                 self.num_elements,
                 0.0,
@@ -64,12 +64,17 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                signal_frequency, // Use signal's frequency for focusing
+                self.frequency.unwrap_or(1e6), // Default to 1 MHz if not specified
+                crate::source::RectangularApodization,
+            );
+            array.adjust_focus(
                 self.focus_x.unwrap(),
                 self.focus_y.unwrap(),
                 self.focus_z.unwrap(),
-                HanningApodization, // Added default apodization
-            )) as Box<dyn Source>
+                medium,
+                grid,
+            );
+            Box::new(array) as Box<dyn Source>
         } else {
             Box::new(LinearArray::new(
                 0.1,
@@ -79,8 +84,8 @@ impl SourceConfig {
                 signal,
                 medium,
                 grid,
-                signal_frequency, // Use signal's frequency
-                HanningApodization, // Added default apodization
+                self.frequency.unwrap_or(1e6), // Use configured frequency or default
+                crate::source::RectangularApodization, // Use correct apodization
             )) as Box<dyn Source>
         };
 

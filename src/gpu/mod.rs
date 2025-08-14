@@ -1,12 +1,12 @@
 //! # GPU Acceleration Module
 //!
-//! This module provides GPU acceleration capabilities for Kwavers using CUDA and OpenCL backends.
+//! This module provides GPU acceleration capabilities for Kwavers using CUDA and wgpu backends.
 //! It implements Phase 9 requirements for massive performance scaling (>17M grid updates/second).
 //!
 //! ## Architecture
 //!
 //! - **CUDA Backend**: NVIDIA GPU acceleration with cudarc
-//! - **OpenCL Backend**: Cross-platform GPU acceleration with wgpu
+//! - **Wgpu Backend**: Cross-platform GPU acceleration (Vulkan, Metal, DX12) with wgpu
 //! - **Memory Management**: Efficient GPU memory allocation and transfer
 //! - **Kernel Optimization**: Highly optimized compute kernels
 //! - **Multi-GPU Support**: Distributed computation across multiple devices
@@ -34,21 +34,19 @@ pub fn gpu_float_type_str() -> &'static str {
 }
 
 pub mod cuda;
-pub mod opencl;
+pub mod wgpu_backend;
 pub mod memory;
 pub mod kernels;
 pub mod benchmarks;
 pub mod fft_kernels;
 
-/// GPU backend types
+/// GPU backend types - simplified and clarified
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GpuBackend {
     /// NVIDIA CUDA backend
     Cuda,
-    /// Cross-platform OpenCL backend
-    OpenCL,
-    /// WebGPU backend for broader compatibility
-    WebGPU,
+    /// Cross-platform wgpu backend (supports Vulkan, Metal, DX12, WebGPU)
+    Wgpu,
 }
 
 /// GPU device information
@@ -93,27 +91,10 @@ impl GpuContext {
         })
     }
 
-    /// Create new GPU context synchronously (for compatibility)
+    /// Create new GPU context synchronously using pollster runtime
+    /// This is a thin wrapper around the async constructor for compatibility
     pub fn new_sync() -> KwaversResult<Self> {
-        let devices = Self::detect_devices_sync()?;
-        
-        if devices.is_empty() {
-            return Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound));
-        }
-
-        // Select best device (highest memory and compute units)
-        let active_device = devices.iter()
-            .enumerate()
-            .max_by_key(|(_, device)| (device.memory_size, device.compute_units))
-            .map(|(idx, _)| idx);
-
-        let backend = devices[active_device.unwrap()].backend;
-
-        Ok(Self {
-            devices,
-            active_device,
-            backend,
-        })
+        pollster::block_on(Self::new())
     }
 
     /// Detect available GPU devices (async version)
@@ -128,10 +109,10 @@ impl GpuContext {
             }
         }
 
-        // Try OpenCL/WebGPU devices
+        // Try Wgpu devices
         #[cfg(feature = "wgpu")]
         {
-            if let Ok(wgpu_devices) = opencl::detect_wgpu_devices().await {
+            if let Ok(wgpu_devices) = wgpu_backend::detect_wgpu_devices().await {
                 devices.extend(wgpu_devices);
             }
         }
@@ -151,10 +132,10 @@ impl GpuContext {
             }
         }
 
-        // Try OpenCL/WebGPU devices (using sync wrapper)
+        // Try Wgpu devices (using sync wrapper)
         #[cfg(feature = "wgpu")]
         {
-            if let Ok(wgpu_devices) = opencl::detect_wgpu_devices_sync() {
+            if let Ok(wgpu_devices) = wgpu_backend::detect_wgpu_devices_sync() {
                 devices.extend(wgpu_devices);
             }
         }
@@ -198,7 +179,7 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::allocate_cuda_memory(size_bytes)? as u64,
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::allocate_wgpu_memory(size_bytes)? as u64,
+            GpuBackend::Wgpu => wgpu_backend::allocate_wgpu_memory(size_bytes)? as u64,
             #[allow(unreachable_patterns)]
             _ => return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -235,7 +216,7 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_bytes(byte_slice, device_ptr as usize),
+            GpuBackend::Wgpu => wgpu_backend::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -260,7 +241,7 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_bytes(device_ptr as usize, byte_slice),
+            GpuBackend::Wgpu => wgpu_backend::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -275,7 +256,7 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::launch_cuda_kernel(kernel_name, grid_size, block_size, args),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::launch_webgpu_kernel(kernel_name, grid_size, block_size, args),
+            GpuBackend::Wgpu => wgpu_backend::launch_webgpu_kernel(kernel_name, grid_size, block_size, args),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -290,8 +271,8 @@ impl GpuContext {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::enable_peer_access(0, peer_device_id),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => {
-                // WebGPU doesn't have direct peer access
+            GpuBackend::Wgpu => {
+                // Wgpu doesn't have direct peer access
                 Ok(())
             }
             #[allow(unreachable_patterns)]
@@ -359,7 +340,7 @@ impl GpuMemoryManager {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::allocate_cuda_memory(size),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::allocate_wgpu_memory(size),
+            GpuBackend::Wgpu => wgpu_backend::allocate_wgpu_memory(size),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -379,7 +360,7 @@ impl GpuMemoryManager {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::host_to_device_cuda(host_data, device_buffer),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::host_to_device_wgpu(host_data, device_buffer),
+            GpuBackend::Wgpu => wgpu_backend::host_to_device_wgpu(host_data, device_buffer),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -399,7 +380,7 @@ impl GpuMemoryManager {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::device_to_host_cuda(device_buffer, host_data),
             #[cfg(feature = "wgpu")]
-            GpuBackend::OpenCL | GpuBackend::WebGPU => opencl::device_to_host_wgpu(device_buffer, host_data),
+            GpuBackend::Wgpu => wgpu_backend::device_to_host_wgpu(device_buffer, host_data),
             #[allow(unreachable_patterns)]
             _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
                 backend: "Any".to_string(),
@@ -466,8 +447,7 @@ mod tests {
     #[test]
     fn test_gpu_backend_enum() {
         assert_eq!(GpuBackend::Cuda, GpuBackend::Cuda);
-        assert_ne!(GpuBackend::Cuda, GpuBackend::OpenCL);
-        assert_ne!(GpuBackend::OpenCL, GpuBackend::WebGPU);
+        assert_ne!(GpuBackend::Cuda, GpuBackend::Wgpu);
     }
 
     #[test]
@@ -632,7 +612,7 @@ mod tests {
         let empty_context = GpuContext {
             devices: vec![],
             active_device: None,
-            backend: GpuBackend::OpenCL, // Use a valid backend even with no devices
+            backend: GpuBackend::Wgpu, // Use a valid backend even with no devices
         };
         
         assert!(empty_context.devices.is_empty());

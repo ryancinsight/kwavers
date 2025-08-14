@@ -5,4 +5,4 @@
 
 pub mod nifti;
 
-pub use nifti::{NiftiLoader, NiftiHeader, BrainTissueLabel};
+pub use nifti::{NiftiReader, NiftiHeader, NiftiInfo, load_nifti, load_nifti_with_header};

@@ -27,8 +27,6 @@ pub enum UnifiedFieldType {
     StressYZ,
     LightFluence,
     ChemicalConcentration,
-    Light,       // For light/optical field
-    Cavitation,  // For cavitation field
 }
 
 impl UnifiedFieldType {
@@ -53,8 +51,6 @@ impl UnifiedFieldType {
             Self::StressYZ => field_indices::STRESS_YZ_IDX,
             Self::LightFluence => field_indices::LIGHT_IDX,
             Self::ChemicalConcentration => field_indices::CHEMICAL_IDX,
-            Self::Light => field_indices::LIGHT_IDX,  // Map to same as LightFluence
-            Self::Cavitation => field_indices::BUBBLE_RADIUS_IDX,  // Map to bubble radius field
         }
     }
     
@@ -78,8 +74,6 @@ impl UnifiedFieldType {
             Self::StressYZ => "Stress YZ",
             Self::LightFluence => "Light Fluence",
             Self::ChemicalConcentration => "Chemical Concentration",
-            Self::Light => "Light",
-            Self::Cavitation => "Cavitation",
         }
     }
     
@@ -97,8 +91,6 @@ impl UnifiedFieldType {
             Self::StressXY | Self::StressXZ | Self::StressYZ => "Pa",
             Self::LightFluence => "J/m²",
             Self::ChemicalConcentration => "mol/m³",
-            Self::Light => "W/m²",
-            Self::Cavitation => "m",
         }
     }
     
@@ -122,14 +114,31 @@ impl UnifiedFieldType {
             Self::StressYZ,
             Self::LightFluence,
             Self::ChemicalConcentration,
-            Self::Light,
-            Self::Cavitation,
         ]
     }
     
-    /// Create from index (for backward compatibility)
+    /// Create from index (efficient constant-time lookup)
     pub fn from_index(index: usize) -> Option<Self> {
-        Self::all().into_iter().find(|f| f.index() == index)
+        match index {
+            field_indices::PRESSURE_IDX => Some(Self::Pressure),
+            field_indices::TEMPERATURE_IDX => Some(Self::Temperature),
+            field_indices::BUBBLE_RADIUS_IDX => Some(Self::BubbleRadius),
+            field_indices::BUBBLE_VELOCITY_IDX => Some(Self::BubbleVelocity),
+            field_indices::DENSITY_IDX => Some(Self::Density),
+            field_indices::SOUND_SPEED_IDX => Some(Self::SoundSpeed),
+            field_indices::VX_IDX => Some(Self::VelocityX),
+            field_indices::VY_IDX => Some(Self::VelocityY),
+            field_indices::VZ_IDX => Some(Self::VelocityZ),
+            field_indices::STRESS_XX_IDX => Some(Self::StressXX),
+            field_indices::STRESS_YY_IDX => Some(Self::StressYY),
+            field_indices::STRESS_ZZ_IDX => Some(Self::StressZZ),
+            field_indices::STRESS_XY_IDX => Some(Self::StressXY),
+            field_indices::STRESS_XZ_IDX => Some(Self::StressXZ),
+            field_indices::STRESS_YZ_IDX => Some(Self::StressYZ),
+            field_indices::LIGHT_IDX => Some(Self::LightFluence),
+            field_indices::CHEMICAL_IDX => Some(Self::ChemicalConcentration),
+            _ => None,
+        }
     }
 }
 
@@ -187,17 +196,17 @@ impl<'a> FieldAccessorMut<'a> {
     
     /// Get pressure field mutably
     pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
-        self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index())
+        self.get_mut(UnifiedFieldType::Pressure)
     }
     
     /// Get temperature field mutably
     pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
-        self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Temperature.index())
+        self.get_mut(UnifiedFieldType::Temperature)
     }
     
     /// Get density field mutably
     pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
-        self.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Density.index())
+        self.get_mut(UnifiedFieldType::Density)
     }
 }
 
@@ -234,5 +243,19 @@ mod tests {
         assert_eq!(UnifiedFieldType::from_index(0), Some(UnifiedFieldType::Pressure));
         assert_eq!(UnifiedFieldType::from_index(1), Some(UnifiedFieldType::Temperature));
         assert_eq!(UnifiedFieldType::from_index(100), None);
+    }
+
+    #[test]
+    fn test_display() {
+        let test_cases = vec![
+            (UnifiedFieldType::Pressure, "Pressure (Pa)"),
+            (UnifiedFieldType::Temperature, "Temperature (K)"),
+            (UnifiedFieldType::LightFluence, "Light Fluence (J/m²)"),
+            (UnifiedFieldType::BubbleRadius, "Bubble Radius (m)"),
+        ];
+
+        for (field_type, expected_display) in test_cases {
+            assert_eq!(field_type.to_string(), expected_display);
+        }
     }
 }

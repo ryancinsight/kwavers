@@ -162,6 +162,31 @@ impl MatrixArray {
 }
 
 impl Source for MatrixArray {
+    fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
+        let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let dx = self.element_spacing_x();
+        let dy = self.element_spacing_y();
+        
+        for iy in 0..self.num_y {
+            for ix in 0..self.num_x {
+                let x_elem = ix as f64 * dx - self.width / 2.0;
+                let y_elem = iy as f64 * dy - self.height / 2.0;
+                let idx = iy * self.num_x + ix;
+                
+                if let Some((gx, gy, gz)) = grid.to_grid_indices(x_elem, y_elem, self.z_pos) {
+                    mask[(gx, gy, gz)] = self.apodization_weights[idx];
+                }
+            }
+        }
+        
+        mask
+    }
+    
+    fn amplitude(&self, t: f64) -> f64 {
+        self.signal.amplitude(t)
+    }
+    
+    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();

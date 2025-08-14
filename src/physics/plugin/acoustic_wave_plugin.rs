@@ -220,7 +220,7 @@ impl PhysicsPlugin for AcousticWavePlugin {
     }
     
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut result = ValidationResult::valid("AcousticWavePlugin".to_string());
+        let mut errors = Vec::new();
         
         // Check CFL condition
         let max_speed = medium.sound_speed_array().iter()
@@ -228,13 +228,12 @@ impl PhysicsPlugin for AcousticWavePlugin {
         
         let dt_max = self.cfl_number * grid.dx.min(grid.dy).min(grid.dz) / max_speed;
         
-        // Add validation info
-        result.context.additional_info.insert(
-            "max_dt".to_string(),
-            dt_max.to_string()
-        );
-        
-        result
+        // For now, just return success - could add CFL validation here if needed
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
+        }
     }
     
     fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {

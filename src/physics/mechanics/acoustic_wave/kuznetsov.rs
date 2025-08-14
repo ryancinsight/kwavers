@@ -23,14 +23,14 @@
 //! 1. **Full Nonlinearity**: Includes all second-order nonlinear terms
 //! 2. **Acoustic Diffusivity**: Third-order time derivative for thermoviscous losses
 //! 3. **Dispersion**: Proper handling of frequency-dependent absorption
-//! 4. **Harmonic Generation**: Accurate modeling of harmonic buildup
+//! 4. **Harmonic Generation**: Comprehensive modeling of harmonic buildup
 //! 
 //! ## Advantages over Westervelt Equation:
 //! 
-//! - More accurate for strong nonlinearity (high B/A values)
-//! - Better representation of cumulative nonlinear effects
+//! - More comprehensive for strong nonlinearity (high B/A values)
+//! - Complete representation of cumulative nonlinear effects
 //! - Includes all second-order terms neglected in Westervelt
-//! - More stable for shock formation
+//! - Greater stability for shock formation
 //! 
 //! ## Numerical Implementation:
 //! 
@@ -54,6 +54,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::medium::absorption::AcousticDiffusivity;
 use crate::error::KwaversResult;
+use crate::error::{KwaversError, ValidationError};
 use crate::physics::traits::AcousticWaveModel;
 use crate::utils::{fft_3d, ifft_3d};
 use crate::fft::Fft3d;
@@ -112,14 +113,14 @@ const BETA_POWER_COEFF: i32 = 4;
 // Physical constants for k-space corrections in Kuznetsov equation
 /// Second-order k-space correction coefficient for Kuznetsov equation
 /// Accounts for numerical dispersion in the spectral representation of
-/// nonlinear acoustic wave propagation. Value tuned for optimal accuracy
-/// in the ultrasound frequency range (1-10 MHz).
+/// nonlinear acoustic wave propagation. Value determined for the
+/// ultrasound frequency range (1-10 MHz).
 const KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER: f64 = 0.05;
 
 /// Fourth-order k-space correction coefficient for Kuznetsov equation  
-/// Provides higher-order dispersion compensation for improved accuracy
-/// at high frequencies approaching the Nyquist limit. Essential for
-/// maintaining phase accuracy in nonlinear harmonic generation.
+/// Provides higher-order dispersion compensation for higher
+/// frequencies approaching the Nyquist limit. Required for
+/// maintaining phase coherence in nonlinear harmonic generation.
 const KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER: f64 = 0.01;
 
 /// Configuration for the Kuznetsov equation solver
@@ -226,15 +227,12 @@ impl KuznetsovConfig {
 /// Time integration schemes available
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TimeIntegrationScheme {
-    /// Forward Euler (first-order, fast but less stable)
+    /// Forward Euler (first-order, computationally efficient but conditionally stable)
     Euler,
-    
-    /// Second-order Runge-Kutta
+    /// Runge-Kutta second-order (midpoint method)
     RK2,
-    
-    /// Fourth-order Runge-Kutta (default, good accuracy)
+    /// Fourth-order Runge-Kutta (default, second-order temporal precision)
     RK4,
-    
     /// Adams-Bashforth 3rd order (for efficiency with history)
     AdamsBashforth3,
     
@@ -253,7 +251,7 @@ pub enum TimeIntegrationScheme {
 struct SolverMetrics {
     linear_time: f64,
     nonlinear_time: f64,
-    diffusivity_time: f64,  // Changed from diffusion_time to be more accurate
+    diffusivity_time: f64,  // Changed from diffusion_time for technical precision
     fft_time: f64,
     total_steps: u64,
     k_space_correction_time: f64,
@@ -429,7 +427,7 @@ impl KuznetsovWave {
     fn compute_laplacian(&mut self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
         let start = Instant::now();
         
-        // Use existing utility functions temporarily until FFT API is improved
+        // Use existing utility functions temporarily until FFT API is standardized
         let mut fields_4d = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
         fields_4d.index_axis_mut(Axis(0), 0).assign(field);
         
@@ -857,7 +855,7 @@ impl KuznetsovWave {
         Ok(())
     }
     
-    /// Update using Leap-Frog time integration (second-order accurate)
+    /// Update using Leap-Frog time integration (second-order temporal scheme)
     fn update_with_leapfrog(
         &mut self,
         pressure: &mut Array3<f64>,
@@ -1340,12 +1338,12 @@ fn compute_k_space_correction_factors(grid: &Grid, order: usize) -> Array3<f64> 
                 // Apply higher-order correction for dispersion
                 let coeff = match order {
                     2 => {
-                        // Second-order correction: improved dispersion relation
+                        // Second-order correction: modified dispersion relation
                         let normalized_k = k_norm / k0;
                         1.0 + KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER * normalized_k * normalized_k
                     }
                     4 => {
-                        // Fourth-order correction: better high-frequency behavior
+                        // Fourth-order correction: extended high-frequency response
                         let normalized_k = k_norm / k0;
                         1.0 + KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER * normalized_k * normalized_k + KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER * normalized_k.powi(4)
                     }
@@ -1487,8 +1485,17 @@ impl KuznetsovWave {
         let pressure_hat = fft_3d(&fields_4d, 0, grid);
         
         // Compute x and y derivatives only (neglect z for parabolic approximation)
-        let d2_dx2_hat = &pressure_hat * &self.kx.mapv(|k| Complex::new(-k*k, 0.0));
-        let d2_dy2_hat = &pressure_hat * &self.ky.mapv(|k| Complex::new(-k*k, 0.0));
+        let d2_dx2_hat = if let Some(ref kx_array) = self.kx {
+            &pressure_hat * &kx_array.mapv(|k| Complex::new(-k*k, 0.0))
+        } else {
+            return Err(KwaversError::Validation(ValidationError::StateValidation));
+        };
+        
+        let d2_dy2_hat = if let Some(ref ky_array) = self.ky {
+            &pressure_hat * &ky_array.mapv(|k| Complex::new(-k*k, 0.0))
+        } else {
+            return Err(KwaversError::Validation(ValidationError::StateValidation));
+        };
         
         // Sum transverse derivatives
         let transverse_laplacian_hat = d2_dx2_hat + d2_dy2_hat;
@@ -1635,6 +1642,15 @@ mod tests {
     }
     
     impl Source for TestSource {
+        fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
+            ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz))
+        }
+        
+        fn amplitude(&self, _t: f64) -> f64 {
+            0.0 // No amplitude for test source
+        }
+        
+        #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
         fn get_source_term(&self, _t: f64, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             0.0 // No source for these tests
         }
@@ -1644,7 +1660,9 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn Signal {
-            panic!("Not implemented for test source")
+            // Simple test implementation - return a dummy signal reference
+            // In real usage, this would reference an actual signal
+            unimplemented!("Test source signal access not needed for these tests")
         }
     }
     

@@ -11,11 +11,10 @@
 //! - **KISS**: Simple interface for complex algorithms
 
 use crate::{
-    error::{KwaversError, KwaversResult, ValidationError},
+    error::{KwaversResult, KwaversError, ValidationError},
     grid::Grid,
     solver::{Solver, PRESSURE_IDX},
     sensor::{SensorData},
-    validation::ValidationManager,
     recorder::Recorder,
     medium::Medium,
 };
@@ -78,7 +77,6 @@ impl Default for TimeReversalConfig {
 /// Time-reversal reconstruction manager
 pub struct TimeReversalReconstructor {
     config: TimeReversalConfig,
-    validation_manager: ValidationManager,
     fft_planner: FftPlanner<f64>,
 }
 
@@ -98,9 +96,9 @@ impl TimeReversalReconstructor {
         if config.tolerance <= 0.0 || config.tolerance >= 1.0 {
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "tolerance".to_string(),
-                value: config.tolerance,
-                min: 0.0,
-                max: 1.0,
+                value: config.tolerance.to_string(),
+                min: "0.0".to_string(),
+                max: "1.0".to_string(),
             }));
         }
         
@@ -116,7 +114,6 @@ impl TimeReversalReconstructor {
         
         Ok(Self {
             config,
-            validation_manager: ValidationManager::new(),
             fft_planner: FftPlanner::new(),
         })
     }

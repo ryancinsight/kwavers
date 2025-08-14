@@ -153,9 +153,9 @@ impl DGSolver {
         if n < 2 {
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "n_nodes".to_string(),
-                value: n as f64,
-                min: 2.0,
-                max: f64::INFINITY,
+                value: n.to_string(),
+                min: "2".to_string(),
+                max: "∞".to_string(),
             }));
         }
         

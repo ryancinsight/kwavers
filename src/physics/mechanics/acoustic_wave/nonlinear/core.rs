@@ -106,7 +106,7 @@ impl NonlinearWave {
             use_adaptive_timestep: false,  // Default to fixed timestep
 
             k_squared,
-            max_pressure: stability::MAX_PRESSURE,
+            max_pressure: stability::PRESSURE_LIMIT,
             stability_threshold: cfl::CONSERVATIVE,
             cfl_safety_factor: cfl::AGGRESSIVE,
             clamp_gradients: true,    // Enable gradient clamping (should be configurable)

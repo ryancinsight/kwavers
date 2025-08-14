@@ -12,10 +12,11 @@ pub mod test_helpers;
 
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
-use log::{debug, trace, info};
-use ndarray::{Array3, Array4, Axis, Zip};
-
+use crate::error::{KwaversResult, KwaversError, GridError};
+use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
 use num_complex::Complex;
+use rayon::prelude::*;
+use log::{debug, trace, info};
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -355,7 +356,7 @@ pub fn derivative(fields: &Array4<f64>, field_idx: usize, grid: &Grid, axis: usi
         0 => grid.kx(),
         1 => grid.ky(),
         2 => grid.kz(),
-        _ => unreachable!(),
+        _ => return Err("Invalid axis dimension"),
     };
 
     field_fft

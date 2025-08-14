@@ -3,8 +3,44 @@
 //! This example demonstrates loading brain model data using the proper
 //! NIFTI loader implementation from the kwavers library.
 
-use kwavers::{KwaversResult, io::{NiftiLoader, BrainTissueLabel}};
+use kwavers::{KwaversResult, io::NiftiReader};
 use ndarray::Array3;
+
+/// Tissue segmentation labels commonly used in brain imaging
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BrainTissueLabel {
+    Background = 0,
+    CSF = 1,
+    GreyMatter = 2,
+    WhiteMatter = 3,
+    Fat = 4,
+    Muscle = 5,
+    Skin = 6,
+    Skull = 7,
+    Vessels = 8,
+    Connective = 9,
+    Dura = 10,
+    BoneMarrow = 11,
+}
+
+impl From<u16> for BrainTissueLabel {
+    fn from(value: u16) -> Self {
+        match value {
+            1 => BrainTissueLabel::CSF,
+            2 => BrainTissueLabel::GreyMatter,
+            3 => BrainTissueLabel::WhiteMatter,
+            4 => BrainTissueLabel::Fat,
+            5 => BrainTissueLabel::Muscle,
+            6 => BrainTissueLabel::Skin,
+            7 => BrainTissueLabel::Skull,
+            8 => BrainTissueLabel::Vessels,
+            9 => BrainTissueLabel::Connective,
+            10 => BrainTissueLabel::Dura,
+            11 => BrainTissueLabel::BoneMarrow,
+            _ => BrainTissueLabel::Background,
+        }
+    }
+}
 
 /// Example of loading brain data using the library's NIFTI loader
 fn load_brain_data_example() -> KwaversResult<()> {
@@ -13,12 +49,12 @@ fn load_brain_data_example() -> KwaversResult<()> {
     
     // Example 1: Load brain model from NIFTI file
     let brain_model_path = "BrainUltrasoundSimulation/brain_model.nii";
-    let loader = NiftiLoader::new(brain_model_path);
+    let reader = NiftiReader::new().with_verbose(true);
     
     println!("Attempting to load brain model from: {}", brain_model_path);
     
     // Try to load the actual file, or create synthetic data for demonstration
-    match loader.load() {
+    match reader.load_with_header(brain_model_path) {
         Ok((data, header)) => {
             println!("Successfully loaded NIFTI file!");
             println!("  Dimensions: {}x{}x{}", 
@@ -39,12 +75,14 @@ fn load_brain_data_example() -> KwaversResult<()> {
     
     // Example 2: Load segmentation mask
     let skull_model_path = "BrainUltrasoundSimulation/brain_model_skull.nii";
-    let skull_loader = NiftiLoader::new(skull_model_path);
+    let skull_reader = NiftiReader::new().with_verbose(true);
     
     println!("\nAttempting to load skull segmentation from: {}", skull_model_path);
     
-    match skull_loader.load_segmentation() {
-        Ok((segmentation, header)) => {
+    match skull_reader.load_with_header(skull_model_path) {
+        Ok((segmentation_f64, header)) => {
+            // Convert f64 data to u16 for segmentation
+            let segmentation = segmentation_f64.mapv(|x| x as u16);
             println!("Successfully loaded segmentation!");
             println!("  Unique labels: {:?}", get_unique_labels(&segmentation));
         },
@@ -186,10 +224,11 @@ mod tests {
     #[test]
     fn test_segmentation_loading() {
         let skull_model_path = "BrainUltrasoundSimulation/brain_model_skull.nii";
-        let skull_loader = NiftiLoader::new(skull_model_path);
+        let skull_reader = NiftiReader::new().with_verbose(true);
         
-        match skull_loader.load_segmentation() {
-            Ok((segmentation, _)) => {
+        match skull_reader.load_with_header(skull_model_path) {
+            Ok((segmentation_f64, _)) => {
+                let segmentation = segmentation_f64.mapv(|x| x as u16);
                 let unique_labels = get_unique_labels(&segmentation);
                 assert!(unique_labels.contains(&BrainTissueLabel::Skull as u16));
                 assert!(unique_labels.contains(&BrainTissueLabel::CSF as u16));

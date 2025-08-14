@@ -121,7 +121,7 @@ pub trait PhysicsPlugin: Debug + Send + Sync {
     
     /// Validate plugin configuration and state
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        ValidationResult::valid("Plugin".to_string())
+        ValidationResult::success()
     }
     
     /// Clone the plugin as a boxed trait object
@@ -366,28 +366,39 @@ impl PluginManager {
     
     /// Validate all plugins
     pub fn validate_all(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut result = ValidationResult::valid("PluginManager".to_string());
+        let mut errors = Vec::new();
         
         // Check each plugin
         for plugin in &self.plugins {
             let plugin_result = plugin.validate(grid, medium);
-            result.merge(plugin_result);
+            if !plugin_result.is_valid {
+                errors.extend(plugin_result.errors);
+            }
         }
         
-        // Check for missing dependencies
-        let available = self.available_fields();
+        // Check dependencies
+        let available: std::collections::HashSet<_> = self.plugins
+            .iter()
+            .flat_map(|p| p.provided_fields())
+            .collect();
+            
         for plugin in &self.plugins {
             for required in plugin.required_fields() {
                 if !available.contains(&required) {
-                    result.add_error(ValidationError::DependencyValidation {
-                        component: plugin.metadata().id.clone(),
-                        missing_dependency: required.name().to_string(),
+                    errors.push(ValidationError::FieldValidation {
+                        field: format!("plugin_{}_dependency", plugin.metadata().id),
+                        value: required.name().to_string(),
+                        constraint: "Required field not provided by any plugin".to_string(),
                     });
                 }
             }
         }
         
-        result
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
+        }
     }
     
     /// Get combined metrics from all plugins
@@ -1135,7 +1146,7 @@ mod plugin_internal_tests {
                 license: "MIT".to_string(),
             },
             required: vec![UnifiedFieldType::Temperature],
-            provided: vec![UnifiedFieldType::Light],
+            provided: vec![UnifiedFieldType::LightFluence],
         });
         
         // Register in reverse order

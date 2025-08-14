@@ -418,54 +418,56 @@ impl AMRManager {
         Ok((refine_cells, coarsen_cells))
     }
     
-    /// Apply buffer zone around cells marked for refinement
+    /// Apply buffer zone around cells marked for refinement using efficient BFS algorithm
     fn apply_buffer_zone(
         &self,
-        mut refine_cells: Vec<(usize, usize, usize)>,
+        refine_cells: Vec<(usize, usize, usize)>,
     ) -> Vec<(usize, usize, usize)> {
+        use std::collections::{HashSet, VecDeque};
+
         let buffer = self.config.buffer_cells;
-        let mut buffer_cells = Vec::new();
+        if buffer == 0 {
+            return refine_cells;
+        }
+
+        // Initialize BFS queue with initial cells and their distance (0)
+        let mut queue: VecDeque<((usize, usize, usize), usize)> = 
+            refine_cells.into_iter().map(|cell| (cell, 0)).collect();
         
-        for &(i, j, k) in &refine_cells {
-            // Add neighboring cells within buffer distance
-            for di in 0..=buffer {
-                for dj in 0..=buffer {
-                    for dk in 0..=buffer {
-                        if di == 0 && dj == 0 && dk == 0 {
-                            continue;
-                        }
-                        
-                        // Add cells in all directions
-                        for &(si, sj, sk) in &[
-                            (1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1),
-                            (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1),
-                        ] {
-                            let ni_i32 = i as i32 + si * di as i32;
-                            let nj_i32 = j as i32 + sj * dj as i32;
-                            let nk_i32 = k as i32 + sk * dk as i32;
-                            
-                            // Ensure indices are non-negative before casting to usize
-                            if ni_i32 < 0 || nj_i32 < 0 || nk_i32 < 0 {
-                                continue;
-                            }
-                            
-                            let ni = ni_i32 as usize;
-                            let nj = nj_i32 as usize;
-                            let nk = nk_i32 as usize;
-                            
-                            if self.octree.is_valid_cell(ni, nj, nk) {
-                                buffer_cells.push((ni, nj, nk));
-                            }
-                        }
+        // Track visited cells to avoid duplicates
+        let mut visited: HashSet<(usize, usize, usize)> = 
+            queue.iter().map(|(cell, _)| *cell).collect();
+
+        // BFS to expand buffer zone level by level
+        while let Some(((i, j, k), level)) = queue.pop_front() {
+            if level >= buffer {
+                continue;
+            }
+
+            // Add 6-connected neighbors (face-adjacent cells)
+            for (di, dj, dk) in [
+                (1, 0, 0), (-1, 0, 0), (0, 1, 0),
+                (0, -1, 0), (0, 0, 1), (0, 0, -1),
+            ] {
+                let ni_i32 = i as i32 + di;
+                let nj_i32 = j as i32 + dj;
+                let nk_i32 = k as i32 + dk;
+
+                // Check bounds
+                if ni_i32 >= 0 && nj_i32 >= 0 && nk_i32 >= 0 {
+                    let next_cell = (ni_i32 as usize, nj_i32 as usize, nk_i32 as usize);
+                    
+                    // Check if cell is valid and not already visited
+                    if self.octree.is_valid_cell(next_cell.0, next_cell.1, next_cell.2) 
+                        && visited.insert(next_cell) {
+                        queue.push_back((next_cell, level + 1));
                     }
                 }
             }
         }
-        
-        refine_cells.extend(buffer_cells);
-        refine_cells.sort_unstable();
-        refine_cells.dedup();
-        refine_cells
+
+        // Convert HashSet back to Vec
+        visited.into_iter().collect()
     }
     
     /// Refine specified cells

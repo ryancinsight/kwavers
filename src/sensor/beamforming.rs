@@ -20,6 +20,7 @@
 use crate::error::KwaversResult;
 use crate::utils::sparse_matrix::{CompressedSparseRowMatrix, BeamformingMatrixOperations};
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
+use ndarray_linalg::{Solve, Inverse, Eig};
 use std::f64::consts::PI;
 
 /// Configuration for beamforming operations
@@ -579,241 +580,80 @@ impl BeamformingProcessor {
         Ok(covariance)
     }
 
-    /// Eigendecomposition using power iteration method for dominant eigenvalues
+    /// Eigendecomposition using robust LAPACK-based algorithms
+    /// Replaces the naive power iteration method for better numerical stability
     pub fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
-        let n = matrix.nrows();
-        let mut eigenvalues = Array1::zeros(n);
-        let mut eigenvectors = Array2::zeros((n, n));
+        // Use ndarray-linalg for robust eigendecomposition
+        let (eigenvalues, eigenvectors) = matrix.eig()
+            .map_err(|e| crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "eigendecomposition".to_string(),
+                    condition: format!("LAPACK eigendecomposition failed: {}", e),
+                }
+            ))?;
         
-        // Power iteration for dominant eigenvalues
-        let max_iterations = 1000;
-        let tolerance = 1e-10;
+        // Convert complex eigenvalues to real (assuming real symmetric matrix)
+        let real_eigenvalues = Array1::from_vec(
+            eigenvalues.iter()
+                .map(|&c| c.re) // Take real part
+                .collect()
+        );
         
-        for k in 0..n {
-            // Initialize random vector
-            let mut v = Array1::from_vec((0..n).map(|i| ((i + k + 1) as f64 * 0.7).sin()).collect());
-            
-            // Orthogonalize against previous eigenvectors
-            for j in 0..k {
-                let prev_eigenvector = eigenvectors.column(j);
-                let projection = v.dot(&prev_eigenvector);
-                for i in 0..n {
-                    v[i] -= projection * prev_eigenvector[i];
-                }
+        // Convert complex eigenvectors to real
+        let real_eigenvectors = Array2::from_shape_vec(
+            eigenvectors.dim(),
+            eigenvectors.iter()
+                .map(|&c| c.re) // Take real part
+                .collect()
+        ).map_err(|e| crate::error::KwaversError::Numerical(
+            crate::error::NumericalError::Instability {
+                operation: "eigendecomposition".to_string(),
+                condition: format!("Eigenvector conversion failed: {}", e),
             }
-            
-            // Normalize
-            let norm = v.dot(&v).sqrt();
-            if norm > 1e-12 {
-                v.mapv_inplace(|x| x / norm);
-            }
-            
-            // Power iteration
-            for _iter in 0..max_iterations {
-                let old_v = v.clone();
-                
-                // Matrix-vector multiplication
-                for i in 0..n {
-                    let mut sum = 0.0;
-                    for j in 0..n {
-                        sum += matrix[[i, j]] * v[j];
-                    }
-                    v[i] = sum;
-                }
-                
-                // Orthogonalize against previous eigenvectors
-                for j in 0..k {
-                    let prev_eigenvector = eigenvectors.column(j);
-                    let projection = v.dot(&prev_eigenvector);
-                    for i in 0..n {
-                        v[i] -= projection * prev_eigenvector[i];
-                    }
-                }
-                
-                // Normalize and compute eigenvalue
-                let norm = v.dot(&v).sqrt();
-                if norm > 1e-12 {
-                    v.mapv_inplace(|x| x / norm);
-                    eigenvalues[k] = old_v.dot(&matrix.dot(&v));
-                    
-                    // Check convergence
-                    let diff = (&v - &old_v).mapv(|x| x.abs()).sum();
-                    if diff < tolerance {
-                        break;
-                    }
-                } else {
-                    eigenvalues[k] = 0.0;
-                    break;
-                }
-            }
-            
-            // Store eigenvector
-            for i in 0..n {
-                eigenvectors[[i, k]] = v[i];
-            }
-        }
+        ))?;
         
         // Sort eigenvalues and eigenvectors in descending order
+        let n = real_eigenvalues.len();
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&a, &b| eigenvalues[b].partial_cmp(&eigenvalues[a]).unwrap());
+        indices.sort_by(|&a, &b| real_eigenvalues[b].partial_cmp(&real_eigenvalues[a]).unwrap());
         
-        let sorted_eigenvalues = Array1::from_vec(indices.iter().map(|&i| eigenvalues[i]).collect());
+        let sorted_eigenvalues = Array1::from_vec(indices.iter().map(|&i| real_eigenvalues[i]).collect());
         let mut sorted_eigenvectors = Array2::zeros((n, n));
         for (j, &i) in indices.iter().enumerate() {
             for row in 0..n {
-                sorted_eigenvectors[[row, j]] = eigenvectors[[row, i]];
+                sorted_eigenvectors[[row, j]] = real_eigenvectors[[row, i]];
             }
         }
         
         Ok((sorted_eigenvalues, sorted_eigenvectors))
     }
 
-    /// Solve linear system Ax = b using Gaussian elimination with partial pivoting
+    /// Solve linear system Ax = b using robust LAPACK-based algorithms
+    /// Replaces naive Gaussian elimination for better numerical stability
     fn solve_linear_system(&self, a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
-        let n = a.nrows();
-        if n != a.ncols() || n != b.len() {
-            return Err(crate::error::KwaversError::Numerical(
+        // Use ndarray-linalg for robust linear system solving
+        let x = a.solve_into(b.clone())
+            .map_err(|e| crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "linear_system_solve".to_string(),
-                    condition: "Matrix dimensions mismatch".to_string(),
+                    condition: format!("LAPACK solver failed: {}", e),
                 }
-            ));
-        }
-        
-        // Create augmented matrix [A|b]
-        let mut augmented = Array2::zeros((n, n + 1));
-        for i in 0..n {
-            for j in 0..n {
-                augmented[[i, j]] = a[[i, j]];
-            }
-            augmented[[i, n]] = b[i];
-        }
-        
-        // Gaussian elimination with partial pivoting
-        for k in 0..n {
-            // Find pivot
-            let mut max_row = k;
-            for i in (k + 1)..n {
-                if augmented[[i, k]].abs() > augmented[[max_row, k]].abs() {
-                    max_row = i;
-                }
-            }
-            
-            // Swap rows if needed
-            if max_row != k {
-                for j in 0..=n {
-                    let temp = augmented[[k, j]];
-                    augmented[[k, j]] = augmented[[max_row, j]];
-                    augmented[[max_row, j]] = temp;
-                }
-            }
-            
-            // Check for singular matrix
-            if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::Numerical(
-                    crate::error::NumericalError::DivisionByZero {
-                        operation: "linear_system_solve".to_string(),
-                        location: "matrix_pivot".to_string(),
-                    }
-                ));
-            }
-            
-            // Eliminate column
-            for i in (k + 1)..n {
-                let factor = augmented[[i, k]] / augmented[[k, k]];
-                for j in k..=n {
-                    augmented[[i, j]] -= factor * augmented[[k, j]];
-                }
-            }
-        }
-        
-        // Back substitution
-        let mut x = Array1::zeros(n);
-        for i in (0..n).rev() {
-            let mut sum = augmented[[i, n]];
-            for j in (i + 1)..n {
-                sum -= augmented[[i, j]] * x[j];
-            }
-            x[i] = sum / augmented[[i, i]];
-        }
+            ))?;
         
         Ok(x)
     }
 
-    /// Matrix inverse using Gauss-Jordan elimination
+    /// Matrix inverse using robust LAPACK-based algorithms
+    /// Replaces naive Gauss-Jordan elimination for better numerical stability
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let n = matrix.nrows();
-        if n != matrix.ncols() {
-            return Err(crate::error::KwaversError::Numerical(
+        // Use ndarray-linalg for robust matrix inversion
+        let inverse = matrix.inv()
+            .map_err(|e| crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "matrix_inverse".to_string(),
-                    condition: "Matrix must be square".to_string(),
+                    condition: format!("LAPACK matrix inversion failed: {}", e),
                 }
-            ));
-        }
-        
-        // Create augmented matrix [A|I]
-        let mut augmented = Array2::zeros((n, 2 * n));
-        for i in 0..n {
-            for j in 0..n {
-                augmented[[i, j]] = matrix[[i, j]];
-                augmented[[i, j + n]] = if i == j { 1.0 } else { 0.0 };
-            }
-        }
-        
-        // Gauss-Jordan elimination
-        for k in 0..n {
-            // Find pivot
-            let mut max_row = k;
-            for i in (k + 1)..n {
-                if augmented[[i, k]].abs() > augmented[[max_row, k]].abs() {
-                    max_row = i;
-                }
-            }
-            
-            // Swap rows if needed
-            if max_row != k {
-                for j in 0..(2 * n) {
-                    let temp = augmented[[k, j]];
-                    augmented[[k, j]] = augmented[[max_row, j]];
-                    augmented[[max_row, j]] = temp;
-                }
-            }
-            
-            // Check for singular matrix
-            if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::Numerical(
-                    crate::error::NumericalError::DivisionByZero {
-                        operation: "matrix_inverse".to_string(),
-                        location: "pivot_element".to_string(),
-                    }
-                ));
-            }
-            
-            // Scale pivot row
-            let pivot = augmented[[k, k]];
-            for j in 0..(2 * n) {
-                augmented[[k, j]] /= pivot;
-            }
-            
-            // Eliminate column
-            for i in 0..n {
-                if i != k {
-                    let factor = augmented[[i, k]];
-                    for j in 0..(2 * n) {
-                        augmented[[i, j]] -= factor * augmented[[k, j]];
-                    }
-                }
-            }
-        }
-        
-        // Extract inverse matrix
-        let mut inverse = Array2::zeros((n, n));
-        for i in 0..n {
-            for j in 0..n {
-                inverse[[i, j]] = augmented[[i, j + n]];
-            }
-        }
+            ))?;
         
         Ok(inverse)
     }

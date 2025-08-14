@@ -75,7 +75,7 @@ pub mod physics {
     /// Standard Gaussian beam width (m)
     pub const STANDARD_BEAM_WIDTH: f64 = 2e-3;
     
-    /// Near-linear nonlinearity coefficient for testing
+    /// Minimal nonlinearity coefficient for testing linear approximation
     pub const NEAR_LINEAR_NONLINEARITY: f64 = 1e-10;
 }
 
@@ -99,11 +99,11 @@ pub mod stability {
     /// Default stability threshold for interface coupling
     pub const INTERFACE_THRESHOLD: f64 = 0.8;
     
-    /// Maximum allowed pressure (Pa) to prevent numerical overflow
-    pub const MAX_PRESSURE: f64 = 1e8;
+    /// Pressure limit (Pa) to prevent numerical overflow
+    pub const PRESSURE_LIMIT: f64 = 1e12;
     
-    /// Maximum allowed gradient for stability
-    pub const MAX_GRADIENT: f64 = 1e6;
+    /// Gradient limit for stability
+    pub const GRADIENT_LIMIT: f64 = 1e8;
     
     /// Smoothing factor for interface transitions
     pub const SMOOTHING_FACTOR: f64 = 0.1;

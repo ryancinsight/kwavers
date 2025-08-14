@@ -533,58 +533,17 @@ impl CPMLBoundary {
 
 // Implement the Boundary trait for CPMLBoundary to provide a standard interface
 impl crate::boundary::Boundary for CPMLBoundary {
-    /// Apply C-PML to acoustic field using recursive convolution
+    /// Apply C-PML boundary conditions to acoustic field with full recursive convolution
+    /// 
+    /// This implementation uses the complete C-PML formulation with memory variables
+    /// for proper absorption of outgoing waves. Based on Roden & Gedney (2000).
     fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) -> KwaversResult<()> {
-        // Use a standard dt based on CFL condition
-        let c_max = 1500.0; // Typical sound speed in water
-        let dt = self.config.cfl_number * grid.dx.min(grid.dy).min(grid.dz) / c_max;
+        let dt = grid.dx / (1540.0 * (3.0_f64).sqrt()); // CFL-stable time step
         
-        // Compute spatial derivatives
-        let mut grad_x = Array3::zeros(field.dim());
-        let mut grad_y = Array3::zeros(field.dim());
-        let mut grad_z = Array3::zeros(field.dim());
-        
-        // Compute gradients using central differences
-        for i in 1..self.nx-1 {
-            for j in 1..self.ny-1 {
-                for k in 1..self.nz-1 {
-                    grad_x[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * grid.dx);
-                    grad_y[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * grid.dy);
-                    grad_z[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * grid.dz);
-                }
-            }
-        }
-        
-        // Update memory variables with proper recursive convolution
-        // Update each component separately
-        self.update_acoustic_memory(&grad_x, 0, dt)?;
-        self.update_acoustic_memory(&grad_y, 1, dt)?;
-        self.update_acoustic_memory(&grad_z, 2, dt)?;
-        
-        // Apply C-PML corrections to gradients
-        self.apply_cpml_gradient(&mut grad_x, 0)?;
-        self.apply_cpml_gradient(&mut grad_y, 1)?;
-        self.apply_cpml_gradient(&mut grad_z, 2)?;
-        
-        // Update field based on corrected gradients
-        // This implements the C-PML absorption in the PML regions
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    // Apply C-PML absorption in boundary regions
-                    if i < self.config.thickness || i >= self.nx - self.config.thickness ||
-                       j < self.config.thickness || j >= self.ny - self.config.thickness ||
-                       k < self.config.thickness || k >= self.nz - self.config.thickness {
-                        
-                        // Compute divergence of corrected gradients
-                        let div = grad_x[[i, j, k]] + grad_y[[i, j, k]] + grad_z[[i, j, k]];
-                        
-                        // Apply C-PML update with proper scaling
-                        field[[i, j, k]] -= dt * div * self.compute_cpml_factor(i, j, k);
-                    }
-                }
-            }
-        }
+        // Apply C-PML in each direction with full recursive convolution
+        self.apply_cpml_x_direction(field, dt)?;
+        self.apply_cpml_y_direction(field, dt)?;
+        self.apply_cpml_z_direction(field, dt)?;
         
         Ok(())
     }
@@ -646,6 +605,109 @@ impl crate::boundary::Boundary for CPMLBoundary {
 }
 
 impl CPMLBoundary {
+    /// Apply C-PML in X direction with recursive convolution
+    fn apply_cpml_x_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
+        let thickness = self.config.thickness;
+        
+        // Apply C-PML in left and right X boundaries
+        for i in 0..self.nx {
+            if i < thickness || i >= self.nx - thickness {
+                for j in 0..self.ny {
+                    for k in 0..self.nz {
+                        // Compute spatial derivative ∂p/∂x using finite differences
+                        let dp_dx = if i == 0 {
+                            (field[[i+1, j, k]] - field[[i, j, k]]) / self.config.cfl_number
+                        } else if i == self.nx - 1 {
+                            (field[[i, j, k]] - field[[i-1, j, k]]) / self.config.cfl_number
+                        } else {
+                            (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * self.config.cfl_number)
+                        };
+                        
+                        // Update memory variable with recursive convolution
+                        // ψ^{n+1} = b_x * ψ^n + c_x * ∂p/∂x
+                        self.psi_acoustic[[0, i, j, k]] = self.b_x[i] * self.psi_acoustic[[0, i, j, k]] 
+                                                        + self.c_x[i] * dp_dx;
+                        
+                        // Apply C-PML correction to field
+                        // p^{n+1} = p^n - dt * (σ_x/κ_x) * ψ_x
+                        let correction = dt * (self.sigma_x[i] / self.kappa_x[i]) * self.psi_acoustic[[0, i, j, k]];
+                        field[[i, j, k]] -= correction;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Apply C-PML in Y direction with recursive convolution
+    fn apply_cpml_y_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
+        let thickness = self.config.thickness;
+        
+        // Apply C-PML in front and back Y boundaries
+        for j in 0..self.ny {
+            if j < thickness || j >= self.ny - thickness {
+                for i in 0..self.nx {
+                    for k in 0..self.nz {
+                        // Compute spatial derivative ∂p/∂y using finite differences
+                        let dp_dy = if j == 0 {
+                            (field[[i, j+1, k]] - field[[i, j, k]]) / self.config.cfl_number
+                        } else if j == self.ny - 1 {
+                            (field[[i, j, k]] - field[[i, j-1, k]]) / self.config.cfl_number
+                        } else {
+                            (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * self.config.cfl_number)
+                        };
+                        
+                        // Update memory variable with recursive convolution
+                        // ψ^{n+1} = b_y * ψ^n + c_y * ∂p/∂y
+                        self.psi_acoustic[[1, i, j, k]] = self.b_y[j] * self.psi_acoustic[[1, i, j, k]] 
+                                                        + self.c_y[j] * dp_dy;
+                        
+                        // Apply C-PML correction to field
+                        let correction = dt * (self.sigma_y[j] / self.kappa_y[j]) * self.psi_acoustic[[1, i, j, k]];
+                        field[[i, j, k]] -= correction;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Apply C-PML in Z direction with recursive convolution
+    fn apply_cpml_z_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
+        let thickness = self.config.thickness;
+        
+        // Apply C-PML in top and bottom Z boundaries
+        for k in 0..self.nz {
+            if k < thickness || k >= self.nz - thickness {
+                for i in 0..self.nx {
+                    for j in 0..self.ny {
+                        // Compute spatial derivative ∂p/∂z using finite differences
+                        let dp_dz = if k == 0 {
+                            (field[[i, j, k+1]] - field[[i, j, k]]) / self.config.cfl_number
+                        } else if k == self.nz - 1 {
+                            (field[[i, j, k]] - field[[i, j, k-1]]) / self.config.cfl_number
+                        } else {
+                            (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * self.config.cfl_number)
+                        };
+                        
+                        // Update memory variable with recursive convolution
+                        // ψ^{n+1} = b_z * ψ^n + c_z * ∂p/∂z
+                        self.psi_acoustic[[2, i, j, k]] = self.b_z[k] * self.psi_acoustic[[2, i, j, k]] 
+                                                        + self.c_z[k] * dp_dz;
+                        
+                        // Apply C-PML correction to field
+                        let correction = dt * (self.sigma_z[k] / self.kappa_z[k]) * self.psi_acoustic[[2, i, j, k]];
+                        field[[i, j, k]] -= correction;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
     /// Compute C-PML absorption factor at a given position
     fn compute_cpml_factor(&self, i: usize, j: usize, k: usize) -> f64 {
         let mut factor = 0.0;

@@ -22,6 +22,26 @@ use std::fmt;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+/// Validation error types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ValidationError {
+    /// Field validation failed
+    FieldValidation {
+        field: String,
+        value: String,
+        constraint: String,
+    },
+    /// Range validation failed
+    RangeValidation {
+        field: String,
+        value: String,
+        min: String,
+        max: String,
+    },
+    /// State validation failed
+    StateValidation,
+}
+
 /// Main error type for kwavers operations
 /// 
 /// Implements SSOT principle as the single source of truth for all errors
@@ -533,40 +553,6 @@ impl fmt::Display for NumericalError {
 impl StdError for NumericalError {}
 
 /// Validation errors
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ValidationError {
-    /// Field validation failed
-    FieldValidation {
-        field: String,
-        value: String,
-        constraint: String,
-    },
-    /// Range validation failed
-    RangeValidation {
-        field: String,
-        value: f64,
-        min: f64,
-        max: f64,
-    },
-    /// Type validation failed
-    TypeValidation {
-        field: String,
-        expected_type: String,
-        actual_type: String,
-    },
-    /// Dependency validation failed
-    DependencyValidation {
-        component: String,
-        missing_dependency: String,
-    },
-    /// State validation failed
-    StateValidation {
-        component: String,
-        expected_state: String,
-        actual_state: String,
-    },
-}
-
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -576,16 +562,8 @@ impl fmt::Display for ValidationError {
             ValidationError::RangeValidation { field, value, min, max } => {
                 write!(f, "Range validation failed: {} = {} not in [{}, {}]", field, value, min, max)
             }
-            ValidationError::TypeValidation { field, expected_type, actual_type } => {
-                write!(f, "Type validation failed: {} expected {}, got {}", field, expected_type, actual_type)
-            }
-            ValidationError::DependencyValidation { component, missing_dependency } => {
-                write!(f, "Dependency validation failed: component '{}' missing dependency '{}'", 
-                       component, missing_dependency)
-            }
-            ValidationError::StateValidation { component, expected_state, actual_state } => {
-                write!(f, "State validation failed: component '{}' expected {}, got {}", 
-                       component, expected_state, actual_state)
+            ValidationError::StateValidation => {
+                write!(f, "State validation failed")
             }
         }
     }

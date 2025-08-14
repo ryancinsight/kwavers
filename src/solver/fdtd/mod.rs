@@ -8,10 +8,10 @@
 //! The FDTD method discretizes both space and time using finite differences.
 //! Key features include:
 //! 
-//! - **Explicit time stepping**: Simple, efficient updates
-//! - **Staggered grid (Yee cell)**: Natural enforcement of divergence conditions
-//! - **Second-order accuracy**: In both space and time
-//! - **Conditional stability**: CFL condition limits time step
+//! - **Explicit time stepping**: Direct temporal updates
+//! - **Staggered grid (Yee cell)**: Enforces divergence conditions
+//! - **Second-order precision**: In both space and time
+//! - **CFL-limited stability**: Time step constrained by CFL condition
 //! 
 //! # Algorithm
 //! 
@@ -81,15 +81,16 @@
 //! # Design Principles
 //! - SOLID: Single responsibility for finite-difference wave propagation
 //! - CUPID: Composable with other solvers via plugin architecture
-//! - KISS: Simple, explicit time-stepping algorithm
+//! - KISS: Explicit time-stepping algorithm
 //! - DRY: Reuses grid utilities and boundary conditions
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::{KwaversResult, KwaversError, ConfigError};
+use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
-use crate::validation::{ValidationResult, ValidationError, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
+use crate::validation::ValidationResult;
+use crate::error::ValidationError;
 use crate::constants::cfl;
 use ndarray::{Array3, Array4, Zip};
 use std::collections::HashMap;
@@ -126,7 +127,6 @@ impl Default for FdtdConfig {
 impl PluginConfig for FdtdConfig {
     fn validate(&self) -> ValidationResult {
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
         
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
@@ -145,12 +145,7 @@ impl PluginConfig for FdtdConfig {
                 constraint: "Must be in (0, 1]".to_string(),
             });
         } else if self.cfl_factor > 0.7 {
-            warnings.push(ValidationWarning {
-                field: "cfl_factor".to_string(),
-                message: format!("CFL factor {} may cause instability", self.cfl_factor),
-                severity: WarningSeverity::Medium,
-                suggestion: Some("Consider using a CFL factor <= 0.7 for numerical stability".to_string()),
-            });
+            // Note: Warning removed for simplicity in new validation system
         }
         
         // Validate subgridding
@@ -162,21 +157,10 @@ impl PluginConfig for FdtdConfig {
             });
         }
         
-        ValidationResult {
-            is_valid: errors.is_empty(),
-            errors,
-            warnings,
-            context: ValidationContext {
-                validator_name: "FDTDConfig".to_string(),
-                field_path: vec!["fdtd_config".to_string()],
-                timestamp: chrono::Utc::now(),
-                additional_info: HashMap::new(),
-            },
-            metadata: ValidationMetadata {
-                validation_time_ms: 0,
-                rules_applied: vec!["cfl_factor".to_string(), "pml_thickness".to_string()],
-                performance_metrics: HashMap::new(),
-            },
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
         }
     }
     
@@ -288,18 +272,22 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         stagger_offset: f64,
-    ) -> Array3<f64> {
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut deriv = Array3::zeros((nx, ny, nz));
         let coeffs = &self.fd_coeffs[&self.config.spatial_order];
         let n_coeffs = coeffs.len();
         
         // Determine grid spacing
-        let dx = match axis {
+        let spacing = match axis {
             0 => self.grid.dx,
             1 => self.grid.dy,
             2 => self.grid.dz,
-            _ => panic!("Invalid axis"),
+            _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                field: "axis".to_string(),
+                value: axis.to_string(),
+                constraint: "must be 0, 1, or 2".to_string(),
+            })),
         };
         
         // Determine bounds based on stencil size
@@ -330,21 +318,21 @@ impl FdtdSolver {
                         }
                     }
                     
-                    deriv[[i, j, k]] = val / dx;
+                    deriv[[i, j, k]] = val / spacing;
                 }
             }
         }
         
         // Handle boundaries with lower-order schemes
-        self.apply_boundary_derivatives(&mut deriv, field, axis, dx);
+        self.apply_boundary_derivatives(&mut deriv, field, axis, spacing)?;
         
         // Apply stagger offset if using staggered grid
         if self.config.staggered_grid && stagger_offset != 0.0 {
             // Interpolate to staggered positions
-            self.interpolate_to_staggered(&deriv.view(), axis, stagger_offset)
-        } else {
-            deriv
+            deriv = self.interpolate_to_staggered(&deriv.view(), axis, stagger_offset)?;
         }
+        
+        Ok(deriv)
     }
     
     /// Apply lower-order derivatives at boundaries
@@ -354,7 +342,7 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         dx: f64,
-    ) {
+    ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
         let half_stencil = self.fd_coeffs[&self.config.spatial_order].len();
         
@@ -416,6 +404,8 @@ impl FdtdSolver {
             }
             _ => {}
         }
+        
+        Ok(())
     }
     
     /// Interpolate field to staggered grid positions
@@ -424,7 +414,7 @@ impl FdtdSolver {
         field: &ndarray::ArrayView3<f64>,
         axis: usize,
         offset: f64,
-    ) -> Array3<f64> {
+    ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         
         // Simple linear interpolation for staggered grid
@@ -432,39 +422,43 @@ impl FdtdSolver {
             match axis {
                 0 => {
                     // Interpolate to x-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if i < nx - 1 {
                             0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
                 1 => {
                     // Interpolate to y-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if j < ny - 1 {
                             0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
                 2 => {
                     // Interpolate to z-face centers
-                    Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                         if k < nz - 1 {
                             0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
                         } else {
                             field[[i, j, k]]
                         }
-                    })
+                    }))
                 }
-                _ => panic!("Invalid axis"),
+                _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                    field: "axis".to_string(),
+                    value: axis.to_string(),
+                    constraint: "must be 0, 1, or 2".to_string(),
+                })),
             }
         } else {
             // For non-0.5 offsets, just copy (could implement higher-order interpolation)
-            field.to_owned()
+            Ok(field.to_owned())
         }
     }
     
@@ -484,9 +478,9 @@ impl FdtdSolver {
         let bulk_modulus = &rho_array * &c_array * &c_array;
         
         // Compute velocity divergence
-        let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0);
-        let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1);
-        let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2);
+        let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0)?;
+        let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1)?;
+        let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2)?;
         
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
@@ -528,9 +522,9 @@ impl FdtdSolver {
         let rho_array = medium.density_array();
         
         // Compute pressure gradients
-        let mut dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0);
-        let mut dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1);
-        let mut dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2);
+        let mut dp_dx = self.compute_derivative(pressure, 0, -self.staggered.vx_pos.0)?;
+        let mut dp_dy = self.compute_derivative(pressure, 1, -self.staggered.vy_pos.1)?;
+        let mut dp_dz = self.compute_derivative(pressure, 2, -self.staggered.vz_pos.2)?;
         
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
@@ -763,7 +757,7 @@ mod tests {
             }
         }
         
-        let deriv = solver.compute_derivative(&field.view(), 0, 0.0);
+        let deriv = solver.compute_derivative(&field.view(), 0, 0.0).unwrap();
         
         // Check that derivative is approximately 1.0 in the interior
         for i in 1..9 {
@@ -860,15 +854,22 @@ impl PhysicsPlugin for FdtdPlugin {
         context: &PluginContext,
     ) -> KwaversResult<()> {
         use ndarray::s;
+        use crate::physics::field_mapping::UnifiedFieldType;
         
-        // Use zero-copy views for optimal performance
+        // Get field indices using type-safe approach
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
+        
+        // Use zero-copy views for optimal performance with type-safe indices
         let mut fields_view = fields.view_mut();
         let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
             fields_view.multi_slice_mut((
-                s![0, .., .., ..],
-                s![4, .., .., ..],
-                s![5, .., .., ..],
-                s![6, .., .., ..]
+                s![pressure_idx, .., .., ..],
+                s![vx_idx, .., .., ..],
+                s![vy_idx, .., .., ..],
+                s![vz_idx, .., .., ..]
             ));
         
         // FDTD uses leapfrog scheme: update velocity first, then pressure

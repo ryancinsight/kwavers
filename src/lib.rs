@@ -1,18 +1,50 @@
-//! # Kwavers - Ultrasound Simulation Toolbox
+//! # Kwavers: Advanced Acoustic Simulation Library
 //!
-//! A modern, high-performance, open-source computational toolbox for simulating
-//! ultrasound wave propagation in complex heterogeneous media.
-//!
-//! ## Features
-//!
-//! - **Physics Modeling**: Nonlinear acoustics, thermal effects, cavitation dynamics
-//! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
-//! - **Memory Safety**: Zero unsafe code with comprehensive error handling
-//! - **Performance**: High-performance algorithms with SIMD and parallel processing
-//! - **Extensibility**: Modular architecture following SOLID principles
+//! A comprehensive acoustic wave simulation library with support for:
+//! - Linear and nonlinear wave propagation
+//! - Multi-physics simulations (acoustic, thermal, optical)
+//! - Advanced numerical methods (FDTD, PSTD, spectral methods)
+//! - Real-time processing and visualization
 
-use ndarray::Array3;
 use std::collections::HashMap;
+
+use ndarray::{Array4, Axis};
+
+// Validation constants to replace magic numbers
+mod validation_constants {
+    /// Minimum frequency for source validation [Hz]
+    pub const MIN_SOURCE_FREQUENCY: f64 = 1e3;
+    /// Maximum frequency for source validation [Hz]  
+    pub const MAX_SOURCE_FREQUENCY: f64 = 100e6;
+    /// Minimum amplitude for source validation [Pa]
+    pub const MIN_SOURCE_AMPLITUDE: f64 = 1e3;
+    /// Maximum amplitude for source validation [Pa]
+    pub const MAX_SOURCE_AMPLITUDE: f64 = 100e6;
+    /// Progress reporting interval [steps]
+    pub const PROGRESS_REPORT_INTERVAL: usize = 100;
+    /// Default plugin context frequency [Hz]
+    pub const DEFAULT_PLUGIN_FREQUENCY: f64 = 100e3;
+    /// Minimum domain size for grid validation [m]
+    pub const MIN_DOMAIN_SIZE: f64 = 1e-3;
+    /// Maximum domain size for grid validation [m]
+    pub const MAX_DOMAIN_SIZE: f64 = 1.0;
+    /// Minimum points per wavelength for grid validation
+    pub const MIN_POINTS_PER_WAVELENGTH: usize = 5;
+    /// Maximum points per wavelength for grid validation
+    pub const MAX_POINTS_PER_WAVELENGTH: usize = 100;
+}
+
+// Default medium properties constants
+mod medium_constants {
+    /// Default water density [kg/m³]
+    pub const WATER_DENSITY: f64 = 998.0;
+    /// Default water sound speed [m/s]
+    pub const WATER_SOUND_SPEED: f64 = 1482.0;
+    /// Default absorption coefficient
+    pub const DEFAULT_ABSORPTION: f64 = 0.5;
+    /// Default dispersion coefficient
+    pub const DEFAULT_DISPERSION: f64 = 10.0;
+}
 
 // Core modules
 pub mod boundary;
@@ -59,7 +91,7 @@ pub use solver::Solver;
 pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
-pub use validation::{ValidationResult, ValidationManager, ValidationBuilder, ValidationValue, ValidationWarning, WarningSeverity, ValidationContext, ValidationMetadata};
+pub use validation::{ValidationResult, Validatable};
 pub use error::{ValidationError, ConfigError};
 
 // Re-export physics plugin system (the new unified architecture)
@@ -124,20 +156,13 @@ pub use solver::reconstruction::{
 };
 
 /// Initialize logging for the kwavers library
-/// 
-/// Implements KISS principle with simple, clear initialization
 pub fn init_logging() -> KwaversResult<()> {
     env_logger::init();
     Ok(())
 }
 
-/// Plot simulation outputs using the built-in visualization system
-/// 
-/// Implements YAGNI principle by providing only necessary visualization features
-pub fn plot_simulation_outputs(
-    output_dir: &str,
-    files: &[&str],
-) -> KwaversResult<()> {
+/// Create default visualization plots for simulation outputs
+pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResult<()> {
     use std::path::Path;
     
     for file in files {
@@ -199,86 +224,62 @@ pub fn create_default_config() -> Config {
     }
 }
 
-/// Validate a simulation configuration
+/// Validate simulation configuration for completeness and correctness
 /// 
 /// Implements Information Expert principle by providing validation logic
 pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
-    let mut validation_result = ValidationResult::valid("simulation_config_validation".to_string());
+    let mut errors = Vec::new();
     
-    // Basic validation checks
-    if config.simulation.domain_size_x < 1e-3 || config.simulation.domain_size_x > 1.0 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    // Basic validation checks using named constants
+    if config.simulation.domain_size_x < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_x > validation_constants::MAX_DOMAIN_SIZE {
+        errors.push(ValidationError::RangeValidation {
             field: "domain_size_x".to_string(),
-            value: config.simulation.domain_size_x,
-            min: 1e-3,
-            max: 1.0,
+            value: config.simulation.domain_size_x.to_string(),
+            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
+            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
         });
     }
     
-    if config.simulation.domain_size_yz < 1e-3 || config.simulation.domain_size_yz > 1.0 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    if config.simulation.domain_size_yz < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_yz > validation_constants::MAX_DOMAIN_SIZE {
+        errors.push(ValidationError::RangeValidation {
             field: "domain_size_yz".to_string(),
-            value: config.simulation.domain_size_yz,
-            min: 1e-3,
-            max: 1.0,
+            value: config.simulation.domain_size_yz.to_string(),
+            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
+            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
         });
     }
     
-    if config.simulation.points_per_wavelength < 5 || config.simulation.points_per_wavelength > 100 {
-        validation_result.add_error(ValidationError::RangeValidation {
+    if config.simulation.points_per_wavelength < validation_constants::MIN_POINTS_PER_WAVELENGTH || config.simulation.points_per_wavelength > validation_constants::MAX_POINTS_PER_WAVELENGTH {
+        errors.push(ValidationError::RangeValidation {
             field: "points_per_wavelength".to_string(),
-            value: config.simulation.points_per_wavelength as f64,
-            min: 5.0,
-            max: 100.0,
+            value: config.simulation.points_per_wavelength.to_string(),
+            min: validation_constants::MIN_POINTS_PER_WAVELENGTH.to_string(),
+            max: validation_constants::MAX_POINTS_PER_WAVELENGTH.to_string(),
         });
     }
     
-    if config.simulation.frequency < 1e3 || config.simulation.frequency > 100e6 {
-        validation_result.add_error(ValidationError::RangeValidation {
-            field: "frequency".to_string(),
-            value: config.simulation.frequency,
-            min: 1e3,
-            max: 100e6,
-        });
+    // Return validation result
+    if errors.is_empty() {
+        Ok(ValidationResult::success())
+    } else {
+        Ok(ValidationResult::failure(errors))
     }
-    
-    if let Some(freq) = config.source.frequency {
-        if !(1e3..=100e6).contains(&freq) {
-            validation_result.add_error(ValidationError::RangeValidation {
-                field: "source_frequency".to_string(),
-                value: freq,
-                min: 1e3,
-                max: 100e6,
-            });
-        }
-    }
-    
-    if let Some(amp) = config.source.amplitude {
-        if !(1e3..=100e6).contains(&amp) {
-            validation_result.add_error(ValidationError::RangeValidation {
-                field: "source_amplitude".to_string(),
-                value: amp,
-                min: 1e3,
-                max: 100e6,
-            });
-        }
-    }
-    
-    Ok(validation_result)
 }
 
 /// Create a complete simulation setup with validation
-/// 
-/// Implements Controller pattern from GRASP principles
 pub fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
     // Validate configuration first
     let validation_result = validate_simulation_config(&config)?;
     if !validation_result.is_valid {
+        let error_summary = validation_result.errors.iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("; ");
         return Err(KwaversError::Config(crate::error::ConfigError::ValidationFailed {
             section: "simulation".to_string(),
-            reason: format!("Configuration validation failed: {}", validation_result.summary()),
+            reason: format!("Configuration validation failed: {}", error_summary),
         }));
     }
     
@@ -297,7 +298,13 @@ pub fn create_validated_simulation(
         }))?;
     
     // Create medium
-    let medium = HomogeneousMedium::new(998.0, 1482.0, &grid, 0.5, 10.0);
+    let medium = HomogeneousMedium::new(
+        medium_constants::WATER_DENSITY, 
+        medium_constants::WATER_SOUND_SPEED, 
+        &grid, 
+        medium_constants::DEFAULT_ABSORPTION, 
+        medium_constants::DEFAULT_DISPERSION
+    );
     
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)
@@ -391,7 +398,7 @@ pub fn run_physics_simulation(
         // Apply source
         // Create source field array
         let (nx, ny, nz) = grid.dimensions();
-        let mut source_field = Array3::zeros((nx, ny, nz));
+        let mut source_field = ndarray::Array3::zeros((nx, ny, nz));
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -403,7 +410,7 @@ pub fn run_physics_simulation(
         // Source term would be added directly to the fields if needed
         
         // Apply physics using plugin manager
-        let plugin_context = PluginContext::new(step, time.n_steps, 100e3);
+        let plugin_context = PluginContext::new(step, time.n_steps, validation_constants::DEFAULT_PLUGIN_FREQUENCY);
         plugin_manager.update_all(
             &mut fields,
             &grid,
@@ -425,7 +432,7 @@ pub fn run_physics_simulation(
         recorder.record(&fields, step, t);
         
         // Progress reporting
-        if step % 100 == 0 {
+        if step % validation_constants::PROGRESS_REPORT_INTERVAL == 0 {
             println!("Step {}/{} ({}%)", step, time.num_steps(), 
                 (step * 100) / time.num_steps());
         }
@@ -456,48 +463,59 @@ pub fn get_version_info() -> HashMap<String, String> {
 /// 
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
-    let _validation_manager = ValidationManager::new();
+    use crate::validation::validators;
     
-    // Create system compatibility validation pipeline
-    let pipeline = ValidationBuilder::new("system_compatibility_validation".to_string())
-        .with_range("memory_available_gb".to_string(), Some(4.0), None)
-        .with_range("cpu_cores".to_string(), Some(2.0), None)
-        .with_range("disk_space_gb".to_string(), Some(1.0), None)
-        .build();
+    let mut errors = Vec::new();
     
-    // Get actual system information
-    let (cpu_cores, memory_gb, disk_space_gb) = get_system_information();
-    let system_values = vec![
-        ("memory_available_gb", ValidationValue::Float(memory_gb)),
-        ("cpu_cores", ValidationValue::Float(cpu_cores as f64)),
-        ("disk_space_gb", ValidationValue::Float(disk_space_gb)),
-    ];
+    // Get system information
+    let sys_info = get_system_info()?;
     
-    let results = validation::utils::validate_multiple(&pipeline, &system_values);
-    
-    // Merge results
-    let mut final_result = ValidationResult::valid("system_compatibility_validation".to_string());
-    for result in results.values() {
-        final_result.merge(result.clone());
+    // Validate memory (at least 4GB available)
+    if let Some(memory_str) = sys_info.get("memory_available_gb") {
+        if let Ok(memory_gb) = memory_str.parse::<f64>() {
+            let memory_result = validators::validate_range(memory_gb, 4.0, f64::INFINITY, "memory_available_gb");
+            if !memory_result.is_valid {
+                errors.extend(memory_result.errors);
+            }
+        }
     }
     
-    Ok(final_result)
+    // Validate CPU cores (at least 2)
+    if let Some(cores_str) = sys_info.get("cpu_cores") {
+        if let Ok(cores) = cores_str.parse::<u32>() {
+            let cores_result = validators::validate_range(cores, 2, u32::MAX, "cpu_cores");
+            if !cores_result.is_valid {
+                errors.extend(cores_result.errors);
+            }
+        }
+    }
+    
+    // Return the validation result
+    if errors.is_empty() {
+        Ok(ValidationResult::success())
+    } else {
+        Ok(ValidationResult::failure(errors))
+    }
 }
 
 /// Get system information using the sysinfo crate for cross-platform compatibility
-fn get_system_information() -> (usize, f64, f64) {
+fn get_system_info() -> KwaversResult<HashMap<String, String>> {
     use sysinfo::{System, SystemExt, DiskExt};
     
     let mut sys = System::new_all();
     sys.refresh_all();
     
+    let mut info = HashMap::new();
+    
     // Get CPU cores
     let cpu_cores = sys.physical_core_count()
         .unwrap_or_else(|| sys.cpus().len())
         .max(1);
+    info.insert("cpu_cores".to_string(), cpu_cores.to_string());
     
     // Get available memory in GB
     let memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+    info.insert("memory_available_gb".to_string(), memory_gb.to_string());
     
     // Get available disk space for the current directory
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
@@ -506,23 +524,24 @@ fn get_system_information() -> (usize, f64, f64) {
         .find(|disk| current_dir.starts_with(disk.mount_point()))
         .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
         .unwrap_or(20.0); // Conservative default
+    info.insert("disk_space_gb".to_string(), disk_space_gb.to_string());
     
-    (cpu_cores, memory_gb, disk_space_gb)
+    Ok(info)
 }
 
 /// Get CPU core count
 fn get_cpu_cores() -> usize {
-    get_system_information().0
+    get_system_info().unwrap().get("cpu_cores").unwrap().parse::<usize>().unwrap()
 }
 
 /// Get available memory in GB
 fn get_available_memory_gb() -> f64 {
-    get_system_information().1
+    get_system_info().unwrap().get("memory_available_gb").unwrap().parse::<f64>().unwrap()
 }
 
 /// Get available disk space in GB for current directory
 fn get_available_disk_space_gb() -> f64 {
-    get_system_information().2
+    get_system_info().unwrap().get("disk_space_gb").unwrap().parse::<f64>().unwrap()
 }
 
 #[cfg(test)]

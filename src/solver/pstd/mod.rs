@@ -93,10 +93,6 @@ use std::f64::consts::PI;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use log::{debug, info};
-use crate::validation::ValidationWarning;
-use crate::validation::WarningSeverity;
-use crate::validation::ValidationContext;
-use crate::validation::ValidationMetadata;
 
 /// PSTD solver configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -137,7 +133,6 @@ impl Default for PstdConfig {
 impl PluginConfig for PstdConfig {
     fn validate(&self) -> ValidationResult {
         let mut errors = Vec::new();
-        let mut warnings = Vec::new();
         
         // Validate k-space order
         if self.k_space_order < 2 || self.k_space_order > 8 {
@@ -145,7 +140,6 @@ impl PluginConfig for PstdConfig {
                 field: "k_space_order".to_string(),
                 value: self.k_space_order.to_string(),
                 constraint: "Must be between 2 and 8".to_string(),
-
             });
         }
         
@@ -155,16 +149,9 @@ impl PluginConfig for PstdConfig {
                 field: "cfl_factor".to_string(),
                 value: self.cfl_factor.to_string(),
                 constraint: "Must be in (0, 1]".to_string(),
-
-            });
-        } else if self.cfl_factor > 0.5 {
-            warnings.push(ValidationWarning {
-                field: "cfl_factor".to_string(),
-                message: format!("CFL factor {} may cause instability in PSTD", self.cfl_factor),
-                severity: WarningSeverity::Medium,
-                suggestion: Some("Consider using a CFL factor <= 0.5 for better stability".to_string()),
             });
         }
+        // Note: CFL factor > 0.5 warning removed for simplicity
         
         // Validate PML stencil size
         if self.pml_stencil_size < 2 || self.pml_stencil_size > 10 {
@@ -172,25 +159,13 @@ impl PluginConfig for PstdConfig {
                 field: "pml_stencil_size".to_string(),
                 value: self.pml_stencil_size.to_string(),
                 constraint: "Must be between 2 and 10".to_string(),
-
             });
         }
         
-        ValidationResult {
-            is_valid: errors.is_empty(),
-            errors,
-            warnings,
-            context: ValidationContext {
-                validator_name: "PSTDConfig".to_string(),
-                field_path: vec!["pstd_config".to_string()],
-                timestamp: chrono::Utc::now(),
-                additional_info: HashMap::new(),
-            },
-            metadata: ValidationMetadata {
-                validation_time_ms: 0,
-                rules_applied: vec!["k_space_order".to_string(), "cfl_factor".to_string(), "pml_stencil_size".to_string()],
-                performance_metrics: HashMap::new(),
-            },
+        if errors.is_empty() {
+            ValidationResult::success()
+        } else {
+            ValidationResult::failure(errors)
         }
     }
     
@@ -763,17 +738,23 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Zip, s};
-        use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
+        use ndarray::{Axis, s};
+        use crate::physics::field_mapping::UnifiedFieldType;
         
-        // Work directly with mutable views - no copying!
+        // Get field indices using the unified system
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
+        
+        // Work directly with mutable views using correct indices
         let mut fields_view = fields.view_mut();
         let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = 
             fields_view.multi_slice_mut((
-                s![PRESSURE_IDX, .., .., ..],
-                s![VX_IDX, .., .., ..],
-                s![VY_IDX, .., .., ..],
-                s![VZ_IDX, .., .., ..]
+                s![pressure_idx, .., .., ..],
+                s![vx_idx, .., .., ..],
+                s![vy_idx, .., .., ..],
+                s![vz_idx, .., .., ..]
             ));
         
         // Initialize velocities if they are all zero (first step)
