@@ -163,6 +163,7 @@ pub struct DeformationState {
 }
 
 /// Flexible transducer array with adaptive geometry
+#[derive(Debug)]
 pub struct FlexibleTransducerArray {
     config: FlexibleTransducerConfig,
     geometry_state: GeometryState,
@@ -555,7 +556,7 @@ impl FlexibleTransducerArray {
                 self.image_based_calibration(measurement_data, *feature_detection_threshold, *correlation_window_size, timestamp)
             }
             CalibrationMethod::Hybrid { .. } => {
-                Err(crate::error::KwaversError::InvalidInput("Recursive hybrid method not supported".to_string()))
+                Err(crate::error::KwaversError::NotImplemented("Recursive hybrid method not supported".to_string()))
             }
         }
     }
@@ -669,7 +670,8 @@ impl FlexibleTransducerArray {
 impl Source for FlexibleTransducerArray {
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let mut source_value = 0.0;
-        let signal_value = self.signal.sample(t);
+        let signal_value = self.signal.amplitude(t) * 
+                         (2.0 * std::f64::consts::PI * self.signal.frequency(t) * t + self.signal.phase(t)).sin();
         
         // Find contribution from nearest elements
         for &element_pos in &self.geometry_state.element_positions {

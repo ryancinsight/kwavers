@@ -294,13 +294,16 @@ impl PhotoacousticReconstructor {
     fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let mut envelope_data = Array2::zeros(data.dim());
         
-        for (mut env_row, data_row) in envelope_data.rows_mut().zip(data.rows()) {
+        for i in 0..data.nrows() {
+            let data_row = data.row(i);
+            let mut env_row = envelope_data.row_mut(i);
+            
             // Apply Hilbert transform to get analytic signal
-            let analytic_signal = self.hilbert_transform_1d(data_row.view());
+            let analytic_signal = self.hilbert_transform_1d(data_row);
             
             // Calculate envelope as magnitude of analytic signal
-            for (i, &complex_val) in analytic_signal.iter().enumerate() {
-                env_row[i] = complex_val.norm();
+            for (j, &complex_val) in analytic_signal.iter().enumerate() {
+                env_row[j] = complex_val.norm();
             }
         }
         
@@ -316,12 +319,15 @@ impl PhotoacousticReconstructor {
     fn apply_hilbert_transform(&self, data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
         let mut hilbert_data = Array2::zeros(data.dim());
         
-        for (mut hilbert_row, data_row) in hilbert_data.rows_mut().zip(data.rows()) {
-            let analytic_signal = self.hilbert_transform_1d(data_row.view());
+        for i in 0..data.nrows() {
+            let data_row = data.row(i);
+            let mut hilbert_row = hilbert_data.row_mut(i);
+            
+            let analytic_signal = self.hilbert_transform_1d(data_row);
             
             // Use imaginary part of analytic signal
-            for (i, &complex_val) in analytic_signal.iter().enumerate() {
-                hilbert_row[i] = complex_val.im;
+            for (j, &complex_val) in analytic_signal.iter().enumerate() {
+                hilbert_row[j] = complex_val.im;
             }
         }
         
@@ -477,7 +483,7 @@ impl PhotoacousticReconstructor {
         system_matrix: &[Vec<(usize, f64)>],
     ) -> KwaversResult<()> {
         // Simultaneous Iterative Reconstruction Technique
-        let mut correction = Array3::zeros(reconstruction.dim());
+        let mut correction = Array3::<f64>::zeros(reconstruction.dim());
         
         // Calculate correction for each measurement
         for (sensor_idx, sensor_weights) in system_matrix.iter().enumerate() {

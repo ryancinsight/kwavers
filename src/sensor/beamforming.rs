@@ -101,6 +101,7 @@ pub enum SteeringVectorMethod {
 }
 
 /// Beamforming processor for advanced algorithms
+#[derive(Debug)]
 pub struct BeamformingProcessor {
     pub config: BeamformingConfig,
     sensor_positions: Vec<[f64; 3]>,
@@ -290,7 +291,7 @@ impl BeamformingProcessor {
             let steering_vector = self.calculate_steering_vector(&scan_point, SteeringVectorMethod::PlaneWave)?;
             
             // Robust Capon formulation with uncertainty set
-            let identity = Array2::eye(self.num_sensors);
+            let identity = Array2::<f64>::eye(self.num_sensors);
             let uncertainty_matrix = &identity * uncertainty_set_size;
             
             // Modified covariance: R + ε * I + δ * (I - aa^H/||a||^2)
@@ -347,8 +348,8 @@ impl BeamformingProcessor {
         let covariance = self.estimate_covariance_matrix(sensor_data, false)?;
         
         // LCMV solution: w = R^-1 * C * (C^H * R^-1 * C)^-1 * f
-        let r_inv_c = self.matrix_multiply(&self.matrix_inverse(&covariance)?, &constraint_matrix)?;
-        let c_h_r_inv_c = constraint_matrix.t().dot(&r_inv_c);
+        let r_inv_c = self.matrix_multiply(&self.matrix_inverse(&covariance)?, &constraint_matrix.to_owned())?;
+        let c_h_r_inv_c = constraint_matrix.t().to_owned().dot(&r_inv_c);
         let c_h_r_inv_c_inv = self.matrix_inverse(&c_h_r_inv_c)?;
         
         let mut beamformed_output = Array1::zeros(scan_points.len());
@@ -395,7 +396,7 @@ impl BeamformingProcessor {
             let blocking_matrix = self.construct_blocking_matrix(&steering_vector)?;
             
             // Adaptive weights (simplified LMS adaptation)
-            let mut adaptive_weights = Array1::zeros(self.num_sensors - 1);
+            let mut adaptive_weights = Array1::<f64>::zeros(self.num_sensors - 1);
             
             let mut output = 0.0;
             for t in 0..sensor_data.ncols() {
@@ -415,7 +416,7 @@ impl BeamformingProcessor {
                 
                 // Adaptive cancellation
                 let adaptive_output = adaptive_weights.dot(&blocked_signals);
-                let gsc_output = fixed_output - adaptive_output;
+                let gsc_output: f64 = fixed_output - adaptive_output;
                 
                 // LMS adaptation
                 for i in 0..(self.num_sensors - 1) {
@@ -573,7 +574,7 @@ impl BeamformingProcessor {
     }
 
     /// Eigendecomposition using power iteration method for dominant eigenvalues
-    fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
+    pub fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         let n = matrix.nrows();
         let mut eigenvalues = Array1::zeros(n);
         let mut eigenvectors = Array2::zeros((n, n));
@@ -665,8 +666,11 @@ impl BeamformingProcessor {
     fn solve_linear_system(&self, a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = a.nrows();
         if n != a.ncols() || n != b.len() {
-            return Err(crate::error::KwaversError::InvalidInput(
-                "Matrix dimensions mismatch for linear system".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "linear_system_solve".to_string(),
+                    condition: "Matrix dimensions mismatch".to_string(),
+                }
             ));
         }
         
@@ -700,8 +704,11 @@ impl BeamformingProcessor {
             
             // Check for singular matrix
             if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::ComputationError(
-                    "Singular matrix in linear system".to_string()
+                return Err(crate::error::KwaversError::Numerical(
+                    crate::error::NumericalError::DivisionByZero {
+                        operation: "linear_system_solve".to_string(),
+                        location: "matrix_pivot".to_string(),
+                    }
                 ));
             }
             
@@ -728,11 +735,14 @@ impl BeamformingProcessor {
     }
 
     /// Matrix inverse using Gauss-Jordan elimination
-    fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let n = matrix.nrows();
         if n != matrix.ncols() {
-            return Err(crate::error::KwaversError::InvalidInput(
-                "Matrix must be square for inversion".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "matrix_inverse".to_string(),
+                    condition: "Matrix must be square".to_string(),
+                }
             ));
         }
         
@@ -766,8 +776,11 @@ impl BeamformingProcessor {
             
             // Check for singular matrix
             if augmented[[k, k]].abs() < 1e-14 {
-                return Err(crate::error::KwaversError::ComputationError(
-                    "Singular matrix cannot be inverted".to_string()
+                return Err(crate::error::KwaversError::Numerical(
+                    crate::error::NumericalError::DivisionByZero {
+                        operation: "matrix_inverse".to_string(),
+                        location: "pivot_element".to_string(),
+                    }
                 ));
             }
             
@@ -800,7 +813,7 @@ impl BeamformingProcessor {
     }
 
     /// Matrix multiplication helper
-    fn matrix_multiply(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    pub fn matrix_multiply(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         Ok(a.dot(b))
     }
 
@@ -812,8 +825,11 @@ impl BeamformingProcessor {
         // Normalize steering vector
         let norm = steering_vector.dot(steering_vector).sqrt();
         if norm < 1e-12 {
-            return Err(crate::error::KwaversError::ComputationError(
-                "Steering vector has zero norm".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::DivisionByZero {
+                    operation: "construct_blocking_matrix".to_string(),
+                    location: "steering_vector_normalization".to_string(),
+                }
             ));
         }
         let normalized_steering = steering_vector / norm;

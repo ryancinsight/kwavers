@@ -82,8 +82,11 @@ impl CompressedSparseRowMatrix {
     /// Add element at (row, col) position
     pub fn add_element(&mut self, row: usize, col: usize, value: f64) -> KwaversResult<()> {
         if row >= self.rows || col >= self.cols {
-            return Err(crate::error::KwaversError::InvalidInput(
-                format!("Index ({}, {}) out of bounds for {}x{} matrix", row, col, self.rows, self.cols)
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "sparse_matrix_add_element".to_string(),
+                    condition: format!("Index ({}, {}) out of bounds for {}x{} matrix", row, col, self.rows, self.cols),
+                }
             ));
         }
 
@@ -180,8 +183,11 @@ impl CompressedSparseRowMatrix {
     /// Sparse matrix-vector multiplication: y = A * x
     pub fn multiply_vector(&self, x: ArrayView1<f64>) -> KwaversResult<Array1<f64>> {
         if x.len() != self.cols {
-            return Err(crate::error::KwaversError::InvalidInput(
-                format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols)
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "csr_matrix_vector_multiply".to_string(),
+                    condition: format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols),
+                }
             ));
         }
         
@@ -201,8 +207,11 @@ impl CompressedSparseRowMatrix {
     /// Transpose multiplication: y = A^T * x
     pub fn multiply_transpose_vector(&self, x: ArrayView1<f64>) -> KwaversResult<Array1<f64>> {
         if x.len() != self.rows {
-            return Err(crate::error::KwaversError::InvalidInput(
-                format!("Vector length {} doesn't match matrix rows {}", x.len(), self.rows)
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "sparse_matrix_transpose_vector_multiply".to_string(),
+                    condition: format!("Vector length {} doesn't match matrix rows {}", x.len(), self.rows),
+                }
             ));
         }
         
@@ -332,8 +341,11 @@ impl CompressedSparseColumnMatrix {
     /// Sparse matrix-vector multiplication: y = A * x
     pub fn multiply_vector(&self, x: ArrayView1<f64>) -> KwaversResult<Array1<f64>> {
         if x.len() != self.cols {
-            return Err(crate::error::KwaversError::InvalidInput(
-                format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols)
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "csc_matrix_vector_multiply".to_string(),
+                    condition: format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols),
+                }
             ));
         }
         
@@ -453,8 +465,11 @@ impl BeamformingMatrixOperations {
     ) -> KwaversResult<Array1<f64>> {
         let n = matrix.cols;
         if matrix.rows != matrix.cols {
-            return Err(crate::error::KwaversError::InvalidInput(
-                "Matrix must be square for CG solver".to_string()
+            return Err(crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::Instability {
+                    operation: "conjugate_gradient_solve".to_string(),
+                    condition: "Matrix must be square for CG solver".to_string(),
+                }
             ));
         }
         
@@ -516,7 +531,7 @@ impl SparseMatrixAnalyzer {
     fn estimate_condition_number(matrix: &CompressedSparseRowMatrix) -> f64 {
         // Simplified condition number estimation
         // In practice, would use iterative methods like power iteration
-        let mut max_row_sum = 0.0;
+        let mut max_row_sum: f64 = 0.0;
         let mut min_row_sum = f64::INFINITY;
         
         for i in 0..matrix.rows {
