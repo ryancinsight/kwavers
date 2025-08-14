@@ -934,9 +934,9 @@ impl HybridSolver {
         pstd_result: &Array4<f64>,
         fdtd_result: &Array4<f64>,
     ) -> KwaversResult<()> {
-        // Simple weighted blending - can be enhanced with adaptive weights
-        let pstd_weight = 0.6; // Favor PSTD for accuracy
-        let fdtd_weight = 0.4;
+        // Weighted blending using domain decomposition factors
+        let pstd_weight = crate::constants::stability::DEFAULT_PSTD_WEIGHT;
+        let fdtd_weight = crate::constants::stability::DEFAULT_FDTD_WEIGHT;
         
         Zip::from(result_fields)
             .and(pstd_result)

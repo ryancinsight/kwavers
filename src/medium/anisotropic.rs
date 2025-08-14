@@ -13,7 +13,7 @@
 use crate::{KwaversResult, KwaversError, ValidationError, ConfigError};
 use crate::Grid;
 use ndarray::{Array2, Array3, Array4};
-use rayon::prelude::*;
+
 
 /// Anisotropic material types
 #[derive(Debug, Clone, Copy, PartialEq)]

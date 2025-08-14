@@ -12,9 +12,9 @@
 //! 3. **Burgholzer et al. (2007)**: "Exact and approximate imaging methods for
 //!    photoacoustic tomography using an arbitrary detection surface", Phys. Rev. E
 
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array1, Array2, Array3, s, Axis};
+use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 
 pub mod plane_recon;

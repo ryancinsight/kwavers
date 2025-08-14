@@ -9,7 +9,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::KwaversResult;
 use crate::validation::ValidationResult;
-use ndarray::{Array3, Array4, Zip};
+use ndarray::{Array3, Array4};
 use std::collections::HashMap;
 use std::any::Any;
 

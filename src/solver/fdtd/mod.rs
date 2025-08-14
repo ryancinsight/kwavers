@@ -859,7 +859,7 @@ impl PhysicsPlugin for FdtdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Axis, s};
+        use ndarray::s;
         
         // Use zero-copy views for optimal performance
         let mut fields_view = fields.view_mut();

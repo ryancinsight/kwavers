@@ -107,6 +107,12 @@ pub mod stability {
     
     /// Smoothing factor for interface transitions
     pub const SMOOTHING_FACTOR: f64 = 0.1;
+    
+    /// Default PSTD weight in hybrid solver blending (favors accuracy)
+    pub const DEFAULT_PSTD_WEIGHT: f64 = 0.6;
+    
+    /// Default FDTD weight in hybrid solver blending (complements PSTD)
+    pub const DEFAULT_FDTD_WEIGHT: f64 = 0.4;
 }
 
 /// Performance and optimization constants

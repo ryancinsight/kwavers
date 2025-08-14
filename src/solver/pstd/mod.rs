@@ -763,7 +763,7 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Axis, Zip, s};
+        use ndarray::{Zip, s};
         use crate::solver::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
         
         // Work directly with mutable views - no copying!
