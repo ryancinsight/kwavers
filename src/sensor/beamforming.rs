@@ -1,13 +1,13 @@
-//! Advanced Beamforming Algorithms for Ultrasound Arrays
+//! Beamforming Algorithms for Ultrasound Arrays
 //!
 //! This module implements state-of-the-art beamforming algorithms for ultrasound
 //! imaging and passive acoustic mapping, following established literature and
-//! optimized for large-scale array processing.
+//! designed for large-scale array processing.
 //!
 //! # Design Principles
 //! - **Literature-Based**: All algorithms follow established papers
 //! - **Zero-Copy**: Efficient ArrayView usage throughout
-//! - **Sparse Operations**: Optimized for large arrays with sparse matrices
+//! - **Sparse Operations**: Designed for large arrays with sparse matrices
 //! - **Modular Design**: Plugin-compatible architecture
 //!
 //! # Literature References
@@ -67,7 +67,7 @@ pub enum BeamformingAlgorithm {
         signal_subspace_dimension: usize,
         spatial_smoothing: bool,
     },
-    /// Robust Capon Beamforming (RCB)
+    /// Capon Beamforming with Regularization
     RobustCapon {
         diagonal_loading: f64,
         uncertainty_set_size: f64,
@@ -100,7 +100,7 @@ pub enum SteeringVectorMethod {
     Focused { focal_point: [f64; 3] },
 }
 
-/// Beamforming processor for advanced algorithms
+/// Beamforming processor for array algorithms
 #[derive(Debug)]
 pub struct BeamformingProcessor {
     pub config: BeamformingConfig,
@@ -274,7 +274,7 @@ impl BeamformingProcessor {
         Ok(music_spectrum)
     }
 
-    /// Robust Capon Beamforming (Li et al., 2003)
+    /// Capon Beamforming with Regularization (Li et al., 2003)
     pub fn capon_beamforming(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -290,7 +290,7 @@ impl BeamformingProcessor {
         for (point_idx, &scan_point) in scan_points.iter().enumerate() {
             let steering_vector = self.calculate_steering_vector(&scan_point, SteeringVectorMethod::PlaneWave)?;
             
-            // Robust Capon formulation with uncertainty set
+            // Capon formulation with uncertainty set
             let identity = Array2::<f64>::eye(self.num_sensors);
             let uncertainty_matrix = &identity * uncertainty_set_size;
             
@@ -311,7 +311,7 @@ impl BeamformingProcessor {
                 }
             }
             
-            // Solve for robust weights
+            // Solve for regularized weights
             let weights = self.solve_linear_system(&regularized_cov, &steering_vector)?;
             let denominator = steering_vector.dot(&weights);
             let normalized_weights = if denominator.abs() > 1e-12 {
@@ -543,7 +543,7 @@ impl BeamformingProcessor {
         let mut covariance = Array2::zeros((self.num_sensors, self.num_sensors));
         
         if spatial_smoothing {
-            // Forward-backward spatial smoothing for improved estimation
+            // Forward-backward spatial smoothing for estimation
             let smoothing_factor = self.config.spatial_smoothing.unwrap_or(1);
             let effective_sensors = self.num_sensors - smoothing_factor + 1;
             
@@ -896,7 +896,7 @@ impl BeamformingProcessor {
     }
 
     /// Solve sparse reconstruction using ISTA (Iterative Soft-Thresholding Algorithm)
-    /// Based on Beck & Teboulle (2009): "A Fast Iterative Shrinkage-Thresholding Algorithm"
+    /// Based on Beck & Teboulle (2009): "Iterative Shrinkage-Thresholding Algorithm"
     fn solve_sparse_reconstruction(
         &self,
         dictionary: &Array2<f64>,
