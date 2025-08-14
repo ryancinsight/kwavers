@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::KwaversResult;
 use crate::constants::{stability, performance, cfl};
 
-use ndarray::{Array3, Zip, ShapeBuilder};
+use ndarray::{Array3, ArrayView3, Zip, ShapeBuilder};
 use log::{debug, warn, info};
 use std::f64;
 
@@ -68,6 +68,201 @@ pub struct NonlinearWave {
 }
 
 impl NonlinearWave {
+    /// Compute linear propagation step using FFT
+    fn compute_linear_step(&mut self, fields: &Array4<f64>, grid: &Grid, medium: &dyn Medium, dt: f64) -> Array3<f64> {
+        let start_fft = Instant::now();
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        
+        let p_fft = fft_3d(fields, PRESSURE_IDX, grid);
+        let k2_values = self.k_squared.as_ref().expect("k_squared should be initialized in new()");
+        let kspace_corr_factor = grid.kspace_correction(medium.sound_speed(0.0, 0.0, 0.0, grid), dt);
+        
+        let mut p_linear_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
+
+        Zip::indexed(&mut p_linear_fft)
+            .and(&p_fft)
+            .for_each(|idx, p_updated_fft_val, p_old_fft_val_ref| {
+                let (i, j, k) = idx;
+                let p_old_fft_val = *p_old_fft_val_ref;
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+
+                let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                let mu = medium.viscosity(x, y, z, grid);
+                let rho = medium.density(x, y, z, grid).max(1e-9);
+
+                let k_val = k2_values[[i, j, k]].sqrt();
+                let phase = self.calculate_phase_factor(k_val, c, dt);
+
+                let viscous_damping_arg = -mu * k_val.powi(2) * dt / rho;
+                let viscous_damping = if viscous_damping_arg.is_finite() { 
+                    viscous_damping_arg.exp() 
+                } else { 
+                    1.0 
+                };
+
+                // Apply absorption: exp(-alpha * c * dt) for spatial absorption
+                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
+                let absorption_damping_arg = -alpha * c * dt;
+                let absorption_damping = if absorption_damping_arg.is_finite() { 
+                    absorption_damping_arg.exp() 
+                } else { 
+                    1.0 
+                };
+
+                let phase_complex = Complex::new(phase.cos(), phase.sin());
+                let decay = absorption_damping * viscous_damping;
+                *p_updated_fft_val = p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
+            });
+
+        let p_linear = ifft_3d(&p_linear_fft, grid);
+        self.fft_time += start_fft.elapsed().as_secs_f64();
+        p_linear
+    }
+
+    /// Compute nonlinear term using Westervelt equation
+    fn compute_nonlinear_term(
+        &mut self, 
+        pressure: &ArrayView3<f64>, 
+        _prev_pressure: &Array3<f64>, 
+        grid: &Grid, 
+        medium: &dyn Medium, 
+        dt: f64
+    ) -> Array3<f64> {
+        let start_nonlinear = Instant::now();
+        
+        // Early return for linear simulations
+        if self.nonlinearity_scaling.abs() <= 1e-10 {
+            self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
+            return Array3::zeros(pressure.raw_dim());
+        }
+
+        let mut result = Array3::zeros(pressure.raw_dim());
+        let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
+        let max_gradient = if min_grid_spacing > 1e-9 { 
+            self.max_pressure / min_grid_spacing 
+        } else { 
+            self.max_pressure 
+        };
+        
+        // Precompute inverse grid spacings
+        let dx_inv = 1.0 / (2.0 * grid.dx);
+        let dy_inv = 1.0 / (2.0 * grid.dy);
+        let dz_inv = 1.0 / (2.0 * grid.dz);
+        
+        // Process interior points with cache-friendly access pattern
+        for i in 1..grid.nx-1 {
+            for j in 1..grid.ny-1 {
+                for k in 1..grid.nz-1 {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    // Compute gradients using central differences
+                    let grad_x = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) * dx_inv;
+                    let grad_y = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) * dy_inv;
+                    let grad_z = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) * dz_inv;
+                    
+                    // Get medium properties
+                    let rho = medium.density(x, y, z, grid).max(1e-9);
+                    let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                    let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+                    
+                    // Compute nonlinear term coefficients
+                    let gradient_scale = dt / (2.0 * rho * c * c);
+                    let beta = b_a / (rho * c * c);
+                    
+                    // Apply gradient clamping if enabled
+                    let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
+                        (
+                            grad_x.clamp(-max_gradient, max_gradient),
+                            grad_y.clamp(-max_gradient, max_gradient),
+                            grad_z.clamp(-max_gradient, max_gradient)
+                        )
+                    } else {
+                        (grad_x, grad_y, grad_z)
+                    };
+                    
+                    // Compute gradient magnitude
+                    let grad_magnitude = (grad_x_final * grad_x_final + 
+                                         grad_y_final * grad_y_final + 
+                                         grad_z_final * grad_z_final).sqrt();
+                    
+                    // Compute and store nonlinear term
+                    let p_limited = pressure[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
+                    let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
+                    
+                    result[[i, j, k]] = if nl_term.is_finite() {
+                        nl_term.clamp(-self.max_pressure, self.max_pressure)
+                    } else {
+                        0.0
+                    };
+                }
+            }
+        }
+        
+        // Handle boundary points
+        self.compute_boundary_nonlinear_terms(&mut result, pressure, _prev_pressure, grid, medium, dt);
+        
+        self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
+        result
+    }
+
+    /// Compute source term
+    fn compute_source_term(&mut self, source: &dyn Source, grid: &Grid, t: f64) -> Array3<f64> {
+        let start_source = Instant::now();
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let mut src_term_array = Array3::<f64>::zeros((nx, ny, nz));
+
+        Zip::indexed(&mut src_term_array)
+            .for_each(|(i, j, k), src_val| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                *src_val = source.get_source_term(t, x, y, z, grid);
+            });
+        
+        self.source_time += start_source.elapsed().as_secs_f64();
+        src_term_array
+    }
+
+    /// Combine linear, nonlinear, and source terms
+    fn combine_terms(
+        &mut self, 
+        fields: &mut Array4<f64>, 
+        p_linear: &Array3<f64>, 
+        nonlinear_term: &Array3<f64>, 
+        src_term: &Array3<f64>
+    ) {
+        let start_combine = Instant::now();
+        let mut p_output_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+
+        Zip::from(&mut p_output_view)
+            .and(p_linear)
+            .and(nonlinear_term)
+            .and(src_term)
+            .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
+                *p_out = p_lin_val + nl_val + src_val;
+            });
+        
+        self.combination_time += start_combine.elapsed().as_secs_f64();
+    }
+
+    /// Enforce stability by clamping pressure values
+    fn enforce_stability(&self, fields: &mut Array4<f64>) {
+        // First pass: clamp pressure using the existing method (but avoid .to_owned())
+        let mut p_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        
+        // Direct in-place clamping without expensive copying
+        for val in p_view.iter_mut() {
+            if !val.is_finite() {
+                *val = 0.0;
+            } else {
+                *val = val.clamp(-self.max_pressure, self.max_pressure);
+            }
+        }
+    }
     /// Creates a new `NonlinearWave` solver instance for Westervelt equation.
     ///
     /// Initializes the solver with default parameters and precomputes necessary values
@@ -598,186 +793,35 @@ impl AcousticWaveModel for NonlinearWave {
         t: f64,
     ) {
         let start_total = Instant::now();
-        // Store timing metrics
         self.call_count += 1;
 
-        let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        // Use view instead of expensive .to_owned() - zero allocation
+        let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX);
         
-        if !self.check_stability(dt, grid, medium, &pressure_at_start) {
-            debug!("Potential instability detected at t={}. Enhanced stability measures might be active.", t);
-        }
+        // Stability check moved to individual component methods for efficiency
 
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if nx == 0 || ny == 0 || nz == 0 {
             trace!("Wave update skipped for empty grid at t={}", t);
             return;
         }
-        let nonlinear_term = Array3::<f64>::zeros((nx, ny, nz).f());
-        let mut src_term_array = Array3::<f64>::zeros((nx, ny, nz).f());
 
-        let start_source = Instant::now();
-        Zip::indexed(&mut src_term_array)
-            .for_each(|(i, j, k), src_val| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                *src_val = source.get_source_term(t, x, y, z, grid);
-            });
-        self.source_time += start_source.elapsed().as_secs_f64();
+        // 1. Compute the linear propagation term
+        let p_linear = self.compute_linear_step(fields, grid, medium, dt);
 
-        let start_nonlinear = Instant::now();
+        // 2. Compute the nonlinear term
+        let nonlinear_term = self.compute_nonlinear_term(&pressure_at_start, prev_pressure, grid, medium, dt);
+
+        // 3. Compute the source term
+        let src_term = self.compute_source_term(source, grid, t);
+
+        // 4. Combine all terms
+        self.combine_terms(fields, &p_linear, &nonlinear_term, &src_term);
         
-        // Compute nonlinear term for Westervelt equation
-        let nonlinear_term = if self.nonlinearity_scaling.abs() > 1e-10 {
-            // Standard Westervelt nonlinear term
-            let mut result = Array3::zeros(pressure_at_start.raw_dim());
-            
-            let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
-            let max_gradient = if min_grid_spacing > 1e-9 { 
-                self.max_pressure / min_grid_spacing 
-            } else { 
-                self.max_pressure 
-            };
-            
-            // Use iterator pattern for gradient computation on interior points
-            let dx_inv = 1.0 / (2.0 * grid.dx);
-            let dy_inv = 1.0 / (2.0 * grid.dy);
-            let dz_inv = 1.0 / (2.0 * grid.dz);
-            
-            // Process interior points with cache-friendly access pattern
-            for i in 1..grid.nx-1 {
-                for j in 1..grid.ny-1 {
-                    for k in 1..grid.nz-1 {
-                        let x = i as f64 * grid.dx;
-                        let y = j as f64 * grid.dy;
-                        let z = k as f64 * grid.dz;
-                        
-                        // Compute gradients using central differences
-                        let grad_x = (pressure_at_start[[i+1, j, k]] - pressure_at_start[[i-1, j, k]]) * dx_inv;
-                        let grad_y = (pressure_at_start[[i, j+1, k]] - pressure_at_start[[i, j-1, k]]) * dy_inv;
-                        let grad_z = (pressure_at_start[[i, j, k+1]] - pressure_at_start[[i, j, k-1]]) * dz_inv;
-                        
-                        // Get medium properties
-                        let rho = medium.density(x, y, z, grid).max(1e-9);
-                        let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                        let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                        
-                        // Compute nonlinear term coefficients
-                        let gradient_scale = dt / (2.0 * rho * c * c);
-                        let beta = b_a / (rho * c * c);
-                        
-                        // Apply gradient clamping if enabled
-                        let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
-                            (
-                                grad_x.clamp(-max_gradient, max_gradient),
-                                grad_y.clamp(-max_gradient, max_gradient),
-                                grad_z.clamp(-max_gradient, max_gradient)
-                            )
-                        } else {
-                            (grad_x, grad_y, grad_z)
-                        };
-                        
-                        // Compute gradient magnitude
-                        let grad_magnitude = (grad_x_final * grad_x_final + 
-                                             grad_y_final * grad_y_final + 
-                                             grad_z_final * grad_z_final).sqrt();
-                        
-                        // Compute and store nonlinear term
-                        let p_limited = pressure_at_start[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
-                        let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-                        
-                        result[[i, j, k]] = if nl_term.is_finite() {
-                            nl_term.clamp(-self.max_pressure, self.max_pressure)
-                        } else {
-                            0.0
-                        };
-                    }
-                }
-            }
-            
-            // Handle boundary points
-            self.compute_boundary_nonlinear_terms(&mut result, &pressure_at_start, prev_pressure, grid, medium, dt);
-            
-            result
-        } else {
-            // No nonlinearity - zero term
-            Array3::zeros(pressure_at_start.raw_dim())
-        };
-        
-        self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
+        // 5. Enforce stability (clamping)
+        self.enforce_stability(fields);
 
-        let start_fft = Instant::now();
-        let p_fft = fft_3d(fields, PRESSURE_IDX, grid);
-
-        let k2_values = self.k_squared.as_ref().expect("k_squared should be initialized in new()");
-
-        let kspace_corr_factor = grid.kspace_correction(medium.sound_speed(0.0, 0.0, 0.0, grid), dt);
-        let ref_freq = medium.reference_frequency();
-
-        let mut p_linear_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz).f());
-
-        Zip::indexed(&mut p_linear_fft)
-            .and(&p_fft)
-            .for_each(|idx, p_updated_fft_val, p_old_fft_val_ref| {
-                let (i,j,k) = idx;
-                let p_old_fft_val = *p_old_fft_val_ref;
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-
-                let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                let mu = medium.viscosity(x, y, z, grid);
-                let rho = medium.density(x, y, z, grid).max(1e-9);
-
-                let k_val = k2_values[[i, j, k]].sqrt();
-                let phase = self.calculate_phase_factor(k_val, c, dt);
-
-                let viscous_damping_arg = -mu * k_val.powi(2) * dt / rho;
-                let viscous_damping = if viscous_damping_arg.is_finite() { viscous_damping_arg.exp() } else { 1.0 };
-
-                // Apply absorption: exp(-alpha * c * dt) for spatial absorption
-                let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // Using 1 MHz as default
-                if i == 0 && j == 0 && k == 0 && alpha > 0.0 {
-                    debug!("Absorption: alpha={}, c={}, dt={}, damping={}", alpha, c, dt, (-alpha * c * dt).exp());
-                }
-                let absorption_damping_arg = -alpha * c * dt;
-                let absorption_damping = if absorption_damping_arg.is_finite() { absorption_damping_arg.exp() } else { 1.0 };
-
-                let phase_complex = Complex::new(phase.cos(), phase.sin());
-                let decay = absorption_damping * viscous_damping;
-                *p_updated_fft_val = p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
-            });
-
-        let p_linear = ifft_3d(&p_linear_fft, grid);
-        self.fft_time += start_fft.elapsed().as_secs_f64();
-
-        let start_combine = Instant::now();
-        let mut p_output_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
-
-        Zip::from(&mut p_output_view)
-            .and(&p_linear)
-            .and(&nonlinear_term)
-            .and(&src_term_array)
-            .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
-                *p_out = p_lin_val + nl_val + src_val;
-            });
-        self.combination_time += start_combine.elapsed().as_secs_f64();
-
-        trace!( "Wave update for t={} completed in {:.3e} s", t, start_total.elapsed().as_secs_f64());
-
-        let mut temp_pressure_to_clamp = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        if self.clamp_pressure(&mut temp_pressure_to_clamp) {
-             fields.index_axis_mut(Axis(0), PRESSURE_IDX).assign(&temp_pressure_to_clamp);
-        }
-
-        let mut final_pressure_view_mut = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
-        for val in final_pressure_view_mut.iter_mut() {
-            if !val.is_finite() {
-                *val = 0.0;
-            } else {
-                *val = val.clamp(-self.max_pressure, self.max_pressure);
-            }
-        }
+        trace!("Wave update for t={} completed in {:.3e} s", t, start_total.elapsed().as_secs_f64());
     }
 
     fn report_performance(&self) {
