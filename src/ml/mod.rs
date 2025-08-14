@@ -50,11 +50,67 @@ pub enum MLBackend {
 
 /// Main ML engine for simulation intelligence
 pub struct MLEngine {
-    models: HashMap<ModelType, Box<dyn MLModel>>,
+    models: HashMap<ModelType, Model>,
     performance_metrics: PerformanceMetrics,
+    backend: MLBackend,
 }
 
-/// Trait for ML models
+/// Type-safe model enum to avoid unsafe downcasts
+#[derive(Debug)]
+pub enum Model {
+    /// Tissue classification model
+    TissueClassifier(models::TissueClassifierModel),
+    /// Parameter optimization model
+    ParameterOptimizer(models::ParameterOptimizerModel),
+    /// Anomaly detection model
+    AnomalyDetector(models::AnomalyDetectorModel),
+    /// Convergence prediction model
+    ConvergencePredictor(models::ConvergencePredictorModel),
+}
+
+impl Model {
+    /// Get model type
+    pub fn model_type(&self) -> ModelType {
+        match self {
+            Model::TissueClassifier(_) => ModelType::TissueClassifier,
+            Model::ParameterOptimizer(_) => ModelType::ParameterOptimizer,
+            Model::AnomalyDetector(_) => ModelType::AnomalyDetector,
+            Model::ConvergencePredictor(_) => ModelType::ConvergencePredictor,
+        }
+    }
+    
+    /// Run inference on input data
+    pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        match self {
+            Model::TissueClassifier(m) => m.infer(input),
+            Model::ParameterOptimizer(m) => m.infer(input),
+            Model::AnomalyDetector(m) => m.infer(input),
+            Model::ConvergencePredictor(m) => m.infer(input),
+        }
+    }
+    
+    /// Get model metadata
+    pub fn metadata(&self) -> &ModelMetadata {
+        match self {
+            Model::TissueClassifier(m) => m.metadata(),
+            Model::ParameterOptimizer(m) => m.metadata(),
+            Model::AnomalyDetector(m) => m.metadata(),
+            Model::ConvergencePredictor(m) => m.metadata(),
+        }
+    }
+    
+    /// Update model weights (for online learning)
+    pub fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
+        match self {
+            Model::TissueClassifier(m) => m.update(gradients),
+            Model::ParameterOptimizer(m) => m.update(gradients),
+            Model::AnomalyDetector(m) => m.update(gradients),
+            Model::ConvergencePredictor(m) => m.update(gradients),
+        }
+    }
+}
+
+/// Trait for ML models (now used by concrete model types)
 pub trait MLModel: Send + Sync {
     /// Get model type
     fn model_type(&self) -> ModelType;
@@ -95,6 +151,7 @@ impl MLEngine {
         let mut engine = Self {
             models: HashMap::new(),
             performance_metrics: PerformanceMetrics::default(),
+            backend: _backend,
         };
         
         // Initialize default models for Phase 12
@@ -109,16 +166,97 @@ impl MLEngine {
         
         // Initialize tissue classifier with enhanced features
         let tissue_classifier = TissueClassifierModel::new_random(10, 5); // 10 features, 5 tissue types
-        self.models.insert(ModelType::TissueClassifier, Box::new(tissue_classifier));
+        self.models.insert(ModelType::TissueClassifier, Model::TissueClassifier(tissue_classifier));
         
         Ok(())
     }
     
     /// Load a pre-trained model
+    /// 
+    /// Supports both ONNX models (recommended) and legacy JSON format for testing.
+    /// ONNX models provide much better performance and are the standard format.
     pub fn load_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
-        // For the moment we support JSON-encoded weight matrices to avoid a
-        // heavyweight ONNX dependency in unit tests.  The expected format is
-        // `{ "weights": [[..],[..]], "bias": [..] }`.
+        use std::path::Path;
+        
+        let path_obj = Path::new(path);
+        let extension = path_obj.extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        match extension {
+            "onnx" => self.load_onnx_model(model_type, path),
+            "json" => self.load_json_model_legacy(model_type, path),
+            _ => Err(KwaversError::Data(crate::error::DataError::InvalidFormat {
+                format: extension.to_string(),
+                reason: "Unsupported model format. Use .onnx (recommended) or .json (legacy)".to_string(),
+            }))
+        }
+    }
+
+    /// Load ONNX model (recommended format)
+    #[cfg(feature = "ml")]
+    fn load_onnx_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
+        use ort::{Environment, SessionBuilder};
+        
+        // Create ONNX Runtime environment
+        let environment = Environment::builder()
+            .with_name("kwavers_ml")
+            .build()
+            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalLibrary {
+                library: "onnx_runtime".to_string(),
+                error: e.to_string(),
+            }))?;
+
+        // Create session from ONNX model file
+        let session = SessionBuilder::new(&environment)
+            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalLibrary {
+                library: "onnx_runtime".to_string(), 
+                error: e.to_string(),
+            }))?
+            .with_model_from_file(path)
+            .map_err(|e| KwaversError::Data(crate::error::DataError::InvalidFormat {
+                format: "onnx".to_string(),
+                reason: e.to_string(),
+            }))?;
+
+        // Create model wrapper based on type
+        let model = match model_type {
+            ModelType::TissueClassifier => {
+                let onnx_model = models::OnnxTissueClassifierModel::new(session)?;
+                Model::TissueClassifier(models::TissueClassifierModel::Onnx(onnx_model))
+            },
+            ModelType::ParameterOptimizer => {
+                let onnx_model = models::OnnxParameterOptimizerModel::new(session)?;
+                Model::ParameterOptimizer(models::ParameterOptimizerModel::Onnx(onnx_model))
+            },
+            _ => {
+                return Err(KwaversError::NotImplemented(format!(
+                    "ONNX loading not yet implemented for {:?}", model_type
+                )));
+            }
+        };
+
+        self.models.insert(model_type, model);
+        log::info!("Loaded ONNX model: {} for {:?}", path, model_type);
+        Ok(())
+    }
+
+    /// Load ONNX model (fallback when ml feature is disabled)
+    #[cfg(not(feature = "ml"))]
+    fn load_onnx_model(&mut self, _model_type: ModelType, _path: &str) -> KwaversResult<()> {
+        Err(KwaversError::NotImplemented(
+            "ONNX model loading requires the 'ml' feature to be enabled".to_string()
+        ))
+    }
+
+    /// Load JSON model (legacy format, inefficient but useful for testing)
+    /// 
+    /// **DEPRECATED**: Use ONNX format for production. JSON loading is slow
+    /// and memory-inefficient for large models.
+    fn load_json_model_legacy(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
+        log::warn!("Loading JSON model format is deprecated and inefficient. Consider converting to ONNX format.");
+        
+        // Legacy JSON loading implementation (kept for backward compatibility)
         use std::fs;
 
         let content = fs::read_to_string(path).map_err(|_| {
@@ -182,11 +320,11 @@ impl MLEngine {
                 };
 
                 let model = crate::ml::models::TissueClassifierModel::from_weights(weights, bias);
-                self.models.insert(model_type, Box::new(model));
+                self.models.insert(model_type, Model::TissueClassifier(model));
             }
             _ => {
                 return Err(KwaversError::NotImplemented(format!(
-                    "Loading not supported for {:?}", model_type
+                    "JSON loading not supported for {:?}", model_type
                 )));
             }
         }
@@ -218,8 +356,7 @@ impl MLEngine {
             })
         })?;
 
-        // SAFETY: Downcast is safe because we only store TissueClassifierModel
-        // under ModelType::TissueClassifier.
+        // Type-safe inference using the Model enum - no unsafe downcasting needed
         let probs = model.infer(&input)?;
         let classes = probs
             .map_axis(Axis(1), |row| {
@@ -584,7 +721,7 @@ mod tests {
 
         // Create engine and register model
         let mut engine = super::MLEngine::new(super::MLBackend::Native).unwrap();
-        engine.models.insert(super::ModelType::TissueClassifier, Box::new(model));
+        engine.models.insert(super::ModelType::TissueClassifier, Model::TissueClassifier(model));
 
         // Run classification with uncertainty quantification
         let (classes, entropy) = engine.classify_tissue_with_uncertainty(&field).unwrap();
@@ -616,7 +753,7 @@ mod tests {
         let model = OutcomePredictorModel::from_weights(weights, bias);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
-        engine.models.insert(ModelType::ConvergencePredictor, Box::new(model));
+        engine.models.insert(ModelType::ConvergencePredictor, Model::ConvergencePredictor(model));
 
         let features: Array2<f32> = array![[0.0], [1.0]];
         let probs = engine.predict_outcome(&features).unwrap();

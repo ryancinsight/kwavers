@@ -23,6 +23,9 @@ toml = "0.8"
 thiserror = "1.0"
 anyhow = "1.0"
 
+# Medical imaging formats
+nifti = "0.17.0"
+
 # Logging and error handling
 log = "0.4"
 env_logger = "0.10"
