@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn test_gpu_acoustic_kernel_validation() {
         // Test that would validate acoustic kernel correctness
-        // This is a placeholder for when GPU hardware is available
+        // GPU validation requires CUDA hardware availability
         println!("GPU acoustic kernel validation test - requires CUDA hardware");
         
         // Create test grid

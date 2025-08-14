@@ -1,6 +1,6 @@
 //! Performance Optimization Module
 //!
-//! This module provides advanced performance optimization techniques
+//! This module provides performance optimization techniques
 //! to achieve 100M+ grid updates per second.
 //!
 //! ## Literature References

@@ -10,7 +10,7 @@ use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::time::Instant;
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 use egui::{Context, Ui, Vec2, Window};
 
 /// Parameter types supported by the interactive control system
@@ -102,11 +102,11 @@ pub struct InteractiveControls {
     change_callbacks: HashMap<String, Box<dyn Fn(&ParameterChangeEvent) -> KwaversResult<()> + Send + Sync>>,
     last_update_time: Instant,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     ui_state: UiState,
 }
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 #[derive(Debug)]
 struct UiState {
     show_controls: bool,
@@ -130,7 +130,7 @@ impl InteractiveControls {
             change_callbacks: HashMap::new(),
             last_update_time: Instant::now(),
             
-            #[cfg(feature = "advanced-visualization")]
+            #[cfg(feature = "gpu-visualization")]
             ui_state: UiState {
                 show_controls: true,
                 selected_group: "Simulation".to_string(),
@@ -285,7 +285,7 @@ impl InteractiveControls {
     }
     
     /// Render interactive controls UI
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     pub fn render_ui(&mut self, ctx: &Context) -> KwaversResult<()> {
         let mut show_controls = self.ui_state.show_controls;
         Window::new("Simulation Controls")
@@ -299,7 +299,7 @@ impl InteractiveControls {
         Ok(())
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn render_control_panel(&mut self, ui: &mut Ui) {
         // Group selection
         ui.horizontal(|ui| {
@@ -356,7 +356,7 @@ impl InteractiveControls {
         });
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn render_parameter_control(&mut self, ui: &mut Ui, name: &str, definition: &ParameterDefinition) {
         ui.group(|ui| {
             ui.label(&definition.display_name);

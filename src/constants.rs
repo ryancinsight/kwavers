@@ -459,6 +459,18 @@ pub mod validation {
     /// Default bubble wall velocities for interaction tests (m/s)
     pub const DEFAULT_EXPANSION_VELOCITY_1: f64 = 10.0;
     pub const DEFAULT_EXPANSION_VELOCITY_2: f64 = 5.0;
+    
+    /// Field growth tolerance for stability checks
+    pub const FIELD_GROWTH_TOLERANCE: f64 = 1.1;
+    
+    /// Amplitude conservation tolerance
+    pub const AMPLITUDE_TOLERANCE: f64 = 0.85;
+    
+    /// Energy conservation threshold
+    pub const ENERGY_CONSERVATION_THRESHOLD: f64 = 0.01;
+    
+    /// Phase error tolerance (radians)
+    pub const PHASE_ERROR_TOLERANCE: f64 = 0.1;
 }
 
 /// Domain decomposition constants

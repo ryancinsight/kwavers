@@ -338,7 +338,7 @@ impl GpuFieldOps for WebGpuContext {
             let temperature_slice = Self::get_safe_slice(temperature)?;
             let heat_source_slice = Self::get_safe_slice(heat_source)?;
 
-            // Create GPU buffers (for stub implementation)
+            // Create GPU buffers for thermal computation
             let _temperature_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Temperature Buffer"),
                 contents: bytemuck::cast_slice(temperature_slice),

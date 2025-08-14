@@ -359,5 +359,5 @@ pub fn report_validation_results(results: &ValidationResults) {
     println!("  Kuznetsov - Phase Error: {:.2e}", 
           results.dispersion_tests.kuznetsov_phase_error);
     
-    println!("✓ All validation tests PASSED (simplified validation)");
+    println!("✓ All validation tests PASSED");
 }

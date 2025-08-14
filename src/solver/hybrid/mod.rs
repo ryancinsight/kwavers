@@ -1012,7 +1012,7 @@ impl HybridSolver {
         
         // Calculate quality score based on multiple factors
         let stability_score = if max_pressure < 1e6 { 1.0 } else { 0.5 };
-        let conservation_score = if energy_change < 0.01 { 1.0 } else { 0.8 };
+        let conservation_score = if energy_change < crate::constants::validation::ENERGY_CONSERVATION_THRESHOLD { 1.0 } else { 0.8 };
         let smoothness_score = 0.95; // Could be improved with gradient analysis
         
         self.validation_results.quality_score = 

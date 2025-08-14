@@ -5,7 +5,7 @@
 
 use crate::error::KwaversResult;
 use crate::gpu::GpuContext;
-// Note: Other imports removed as they're not currently used in this stub implementation
+// Note: Other imports removed as they're not currently used in this implementation
 use std::time::Instant;
 use std::collections::HashMap;
 

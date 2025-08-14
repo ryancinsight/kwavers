@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-#[cfg(feature = "advanced-visualization")]
+#[cfg(feature = "gpu-visualization")]
 use {
     std::sync::Mutex,
     wgpu::*,
@@ -62,17 +62,17 @@ impl Default for TransferStatistics {
 pub struct DataPipeline {
     gpu_context: Arc<GpuContext>,
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     device: Arc<Device>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     queue: Arc<Queue>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     staging_buffers: HashMap<FieldType, Buffer>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     volume_textures: HashMap<FieldType, Texture>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     processing_pipelines: HashMap<ProcessingOperation, ComputePipeline>,
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     transfer_stats: Arc<Mutex<TransferStatistics>>,
     
     // Field metadata cache
@@ -86,7 +86,7 @@ impl DataPipeline {
     pub async fn new(gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
         
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             // For Phase 11, we'll create a mock implementation since the GPU context
             // doesn't yet have direct device/queue access for visualization
@@ -95,7 +95,7 @@ impl DataPipeline {
             ));
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {
                 gpu_context,
@@ -119,7 +119,7 @@ impl DataPipeline {
         debug!("Uploading {} field: {}x{}x{}", 
                format!("{:?}", field_type), nx, ny, nz);
         
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             // Create or update volume texture if needed
             if !self.volume_textures.contains_key(&field_type) || 
@@ -146,7 +146,7 @@ impl DataPipeline {
             debug!("Field upload transfer complete: {:.2}ms", transfer_time);
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("Advanced visualization not enabled for field upload");
         }
@@ -199,24 +199,24 @@ impl DataPipeline {
     
     /// Get transfer statistics
     pub fn get_transfer_statistics(&self) -> TransferStatistics {
-        #[cfg(feature = "advanced-visualization")]
+        #[cfg(feature = "gpu-visualization")]
         {
             self.transfer_stats.lock().unwrap().clone()
         }
         
-        #[cfg(not(feature = "advanced-visualization"))]
+        #[cfg(not(feature = "gpu-visualization"))]
         {
             TransferStatistics::default()
         }
     }
     
     /// Get volume texture for a field type
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     pub fn get_volume_texture(&self, field_type: FieldType) -> Option<&Texture> {
         self.volume_textures.get(&field_type)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_volume_texture(
         &mut self,
         field_type: FieldType,
@@ -246,7 +246,7 @@ impl DataPipeline {
         Ok(())
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn get_or_create_staging_buffer(
         &mut self,
         field_type: FieldType,
@@ -266,7 +266,7 @@ impl DataPipeline {
         Ok(self.staging_buffers.get(&field_type).unwrap())
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn apply_processing(
         &mut self,
         field_type: FieldType,
@@ -310,7 +310,7 @@ impl DataPipeline {
         Ok(())
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_normalize_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Normalize Shader"),
@@ -353,7 +353,7 @@ impl DataPipeline {
         Ok(pipeline)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_gaussian_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Gaussian Smooth Shader"),
@@ -422,7 +422,7 @@ impl DataPipeline {
         Ok(pipeline)
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     async fn create_gradient_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Gradient Magnitude Shader"),
@@ -494,7 +494,7 @@ impl DataPipeline {
         }
     }
     
-    #[cfg(feature = "advanced-visualization")]
+    #[cfg(feature = "gpu-visualization")]
     fn update_transfer_stats(&self, bytes_transferred: usize, transfer_time_ms: f32) {
         if let Ok(mut stats) = self.transfer_stats.lock() {
             stats.total_bytes_transferred += bytes_transferred;

@@ -1,7 +1,7 @@
 // src/source/phased_array.rs
 //! Phased Array Transducer Implementation
 //! 
-//! This module implements advanced phased array transducers with electronic beam steering,
+//! This module implements phased array transducers with electronic beam steering,
 //! focusing capabilities, and realistic element modeling. Follows SOLID, CUPID, GRASP,
 //! and CLEAN principles for maintainable, extensible architecture.
 //!

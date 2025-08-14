@@ -230,7 +230,7 @@ impl ROSConcentrations {
             
             // For high stability factors, use implicit scheme (ADI method)
             if d * dt / dx.min(dy).min(dz).powi(2) > 0.25 {
-                // Use semi-implicit scheme for better stability
+                // Use semi-implicit scheme for numerical stability
                 let mut updated_conc = conc.clone();
                 Self::apply_semi_implicit_diffusion_static(
                     &mut updated_conc, d, dx, dy, dz, dt, self.shape
@@ -240,7 +240,7 @@ impl ROSConcentrations {
                 // Use explicit scheme for small stability factors
                 let mut new_conc = conc.clone();
                 
-                // Use optimized 3D diffusion computation
+                // Use efficient 3D diffusion computation
                 let dx2_inv = 1.0 / (dx * dx);
                 let dy2_inv = 1.0 / (dy * dy);
                 let dz2_inv = 1.0 / (dz * dz);
@@ -272,7 +272,7 @@ impl ROSConcentrations {
         }
     }
     
-    /// Apply semi-implicit diffusion for better stability (static version)
+    /// Apply semi-implicit diffusion for numerical stability (static version)
     fn apply_semi_implicit_diffusion_static(
         conc: &mut Array3<f64>,
         d: f64,

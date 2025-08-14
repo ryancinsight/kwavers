@@ -51,8 +51,8 @@ mod tests {
         
         println!("Initial max: {:.2e}, Final max: {:.2e}", initial_max, final_max);
         
-        // Check that the field hasn't grown (basic stability check)
-        assert!(final_max <= initial_max * 1.1, 
+        // Check that the field hasn't grown (stability verification)
+        assert!(final_max <= initial_max * crate::constants::validation::FIELD_GROWTH_TOLERANCE, 
             "Field amplitude grew too much: initial={:.2e}, final={:.2e}", 
             initial_max, final_max);
         

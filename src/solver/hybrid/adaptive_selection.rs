@@ -78,7 +78,7 @@ pub struct QualityMetrics {
     pub composite_score: f64,
     /// Confidence in the assessment (0-1)
     pub confidence: f64,
-    /// Detailed metrics for advanced analysis
+    /// Detailed metrics for computational analysis
     pub detailed_metrics: DetailedMetrics,
 }
 

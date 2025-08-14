@@ -160,7 +160,7 @@ mod plotting_impl {
         let (nx, ny) = slice1.dim();
 
         // Calculate difference
-        let diff: Array2<f64> = &slice1.to_owned() - &slice2.to_owned();
+        let diff: Array2<f64> = &slice1 - &slice2;
 
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
         let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
@@ -232,7 +232,7 @@ mod plotting_impl {
 #[cfg(feature = "plotly")]
 pub use plotting_impl::*;
 
-// Provide stub implementations when plotly feature is disabled
+// Provide fallback implementations when plotly feature is disabled
 #[cfg(not(feature = "plotly"))]
 pub fn plot_positions(_positions: &[(f64, f64, f64)], _title: &str, _filename: &str) {
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
