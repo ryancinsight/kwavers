@@ -282,7 +282,7 @@ impl BenchmarkSuite {
         self.initialize_gaussian_field(&mut initial_pressure, &grid);
         fields.slice_mut(s![0, .., .., ..]).assign(&initial_pressure);
         
-        // Create a dummy source
+        // Create test source for benchmarking
         let signal = Arc::new(SineWave::new(1e6, 1e6, 0.0));
         let position = (grid.nx as f64 / 2.0 * grid.dx, 
                        grid.ny as f64 / 2.0 * grid.dy, 

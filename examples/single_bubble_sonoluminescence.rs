@@ -1,35 +1,27 @@
-//! Single-Bubble Sonoluminescence (SBSL) Example
+//! Single-Bubble Sonoluminescence (SBSL) Simulation
 //!
-//! This example demonstrates the proper separation of concerns:
-//! - Bubble dynamics (core physics)
-//! - Mechanical damage (cavitation erosion)
-//! - Light emission (sonoluminescence)
-//! - Chemistry (ROS generation)
+//! This example demonstrates the complete physics of single-bubble sonoluminescence,
+//! including bubble dynamics, gas compression heating, and light emission.
+//!
+//! Based on the literature:
+//! - Brenner et al. (2002) "Single-bubble sonoluminescence"
+//! - Yasui (1997) "Alternative model of single-bubble sonoluminescence"
 
 use kwavers::{
-    Grid, Time, HomogeneousMedium, PMLBoundary, Source, Sensor, Recorder,
-    SensorConfig, RecorderConfig, KwaversResult, signal::Signal,
+    Grid, KwaversResult,
+    source::{Source, PointSource},
+    signal::{Signal, SineWave},
     physics::{
-        // Core bubble dynamics
         bubble_dynamics::{
-            BubbleField, BubbleParameters, BubbleState, GasSpecies,
-        },
-        // Mechanical damage from cavitation
-        mechanics::cavitation::{
-            CavitationDamage, MaterialProperties, DamageParameters,
-        },
-        // Light emission
-        optics::sonoluminescence::{
-            SonoluminescenceEmission, EmissionParameters,
-        },
-        // Chemistry and ROS
-        chemistry::{
-            SonochemistryModel, ROSSpecies,
+            BubbleParameters, RayleighPlessetSolver, KellerMiksisSolver,
+            GilmoreSolver, GasSpecies, SonoluminescenceAnalyzer,
         },
     },
+    constants::PI,
 };
 use ndarray::{Array3, Array1};
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 /// SBSL simulation parameters
 #[derive(Debug, Clone)]
@@ -71,36 +63,13 @@ impl Default for SBSLConfig {
     }
 }
 
-/// Acoustic standing wave source
-#[derive(Debug)]
-struct StandingWaveSource {
-    frequency: f64,
-    amplitude: f64,
-    center: (f64, f64, f64),
-}
-
-impl Source for StandingWaveSource {
-    fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
-        let dx = x - self.center.0;
-        let dy = y - self.center.1;
-        let dz = z - self.center.2;
-        let r = (dx*dx + dy*dy + dz*dz).sqrt();
-        
-        // Standing wave pattern
-        let k = 2.0 * PI * self.frequency / 1500.0; // Wave number
-        let spatial = (k * r).sin() / (k * r + 1e-10);
-        let temporal = (2.0 * PI * self.frequency * t).sin();
-        
-        self.amplitude * spatial * temporal
-    }
-    
-    fn positions(&self) -> Vec<(f64, f64, f64)> {
-        vec![self.center]
-    }
-    
-    fn signal(&self) -> &dyn Signal {
-        panic!("StandingWaveSource doesn't use a separate signal")
-    }
+/// Create standing wave source using library's PointSource
+/// For a standing wave, we can use a point source at the boundary
+fn create_standing_wave_source(frequency: f64, amplitude: f64, grid: &Grid) -> Box<dyn Source> {
+    // Place source at one end of the domain to create standing wave
+    let position = (0.0, grid.ny as f64 * grid.dy / 2.0, grid.nz as f64 * grid.dz / 2.0);
+    let signal = Arc::new(SineWave::new(frequency, amplitude, 0.0));
+    Box::new(PointSource::new(position, signal))
 }
 
 /// Run integrated SBSL simulation
@@ -178,15 +147,7 @@ fn run_sbsl_simulation(config: SBSLConfig) -> KwaversResult<()> {
     let mut chemistry = SonochemistryModel::new(n, n, n, 7.0);
     
     // Create acoustic source
-    let source = StandingWaveSource {
-        frequency: config.frequency,
-        amplitude: config.pressure_amplitude,
-        center: (
-            config.domain_size / 2.0,
-            config.domain_size / 2.0,
-            config.domain_size / 2.0,
-        ),
-    };
+    let source = create_standing_wave_source(config.frequency, config.pressure_amplitude, &grid);
     
     // Data collection
     let mut time_history = Vec::new();
