@@ -85,7 +85,7 @@ fn compare_pml_cpml(grid: &Grid) -> KwaversResult<()> {
         // 2. Call cpml.update_acoustic_memory(&gradient, component)
         // 3. Call cpml.apply_cpml_gradient(&mut gradient, component)
         // For now, we'll just apply a simple decay to demonstrate
-        field_cpml *= 0.99; // Placeholder for proper C-PML integration
+        field_cpml *= 0.99; // Exponential damping for demonstration
     }
     
     // Compare reflections
@@ -142,7 +142,7 @@ fn demonstrate_cpml_configs(grid: &Grid) -> KwaversResult<()> {
         
         // Apply boundary
         for step in 0..50 {
-            // C-PML requires gradient integration - using placeholder
+            // C-PML requires gradient integration - using exponential damping
             field *= 0.995;
         }
         

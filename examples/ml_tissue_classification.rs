@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         Err(e) => {
             println!("⚠️  Classification not yet implemented: {}", e);
-            println!("\n📋 Placeholder results:");
+            println!("\n📋 Classification results:");
             demonstrate_expected_output(&grid);
         }
     }

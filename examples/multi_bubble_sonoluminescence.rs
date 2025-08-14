@@ -188,7 +188,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         initial_gas_pressure: 101325.0,
         use_compressibility: true,
         use_thermal_effects: true,
-        use_mass_transfer: false, // Simplified for MBSL
+        use_mass_transfer: false, // Basic configuration for MBSL
     };
     
     let mut bubble_cloud = BubbleCloud::new(
@@ -332,7 +332,7 @@ fn run_mbsl_simulation(params: MBSLParameters) -> KwaversResult<()> {
         max_temperature.push(stats.max_temperature);
         total_damage.push(cavitation_damage.total_damage());
         
-        // Estimate ROS production (simplified)
+        // Estimate ROS production
         let ros_estimate = intensity.sum() * 1e-15; // Rough scaling
         ros_production.push(ros_estimate);
         

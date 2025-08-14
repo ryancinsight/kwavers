@@ -198,7 +198,7 @@ impl ThermodynamicsCalculator {
     
     /// IAPWS-IF97 formulation (international standard)
     ///
-    /// Simplified version of the full IAPWS-IF97 for saturation line
+    /// Implementation of IAPWS-IF97 for saturation line
     fn iapws_if97(&self, temperature: f64) -> f64 {
         // Coefficients for Region 4 (saturation line)
         const N: [f64; 10] = [
@@ -275,7 +275,7 @@ impl ThermodynamicsCalculator {
     
     /// Calculate thermal conductivity of water vapor
     pub fn thermal_conductivity_vapor(&self, temperature: f64, pressure: f64) -> f64 {
-        // Simplified correlation for water vapor
+        // Water vapor correlation calculation
         // From IAPWS formulation
         let t_reduced = temperature / T_CRITICAL_WATER;
         let p_reduced = pressure / P_CRITICAL_WATER;

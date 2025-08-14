@@ -336,7 +336,7 @@ impl PerformanceProfiler {
         let total_misses = stats.l1_misses + stats.l2_misses + stats.l3_misses;
         let bytes_transferred = total_misses * cache_line_size;
         
-        // Assume 1 second runtime for bandwidth calculation (will be adjusted with actual timing)
+        // Default 1 second runtime for bandwidth calculation (adjusted with actual timing)
         let bandwidth_gbs = bytes_transferred as f64 / 1e9;
 
         Ok(CacheProfile {

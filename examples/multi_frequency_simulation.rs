@@ -195,7 +195,7 @@ fn analyze_multi_frequency_results(results: &SimulationResults) -> KwaversResult
                 total_time, total_time * 1e6);
         println!("      • Total timesteps: {}", timestep_data.len());
         
-        // Frequency domain characteristics (simplified analysis)
+        // Frequency domain characteristics analysis
         let pressure_range = max_pressure;
         println!("    Dynamic range: {:.2e} Pa ({:.1} MPa)", pressure_range, pressure_range / 1e6);
         

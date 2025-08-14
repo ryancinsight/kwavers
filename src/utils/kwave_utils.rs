@@ -537,14 +537,14 @@ impl NumericalUtils {
     /// - Edges: Uses one-sided difference normal to edge, central difference along edge
     /// - Interior: Uses standard 5-point stencil with central differences
     /// 
-    /// For very small grids (< 3x3), uses simplified differencing schemes.
+    /// For very small grids (< 3x3), uses first-order differencing schemes.
     pub fn laplacian_2d(field: &Array2<f64>, dx: f64, dy: f64) -> Array2<f64> {
         let (nx, ny) = field.dim();
         let mut laplacian = Array2::zeros((nx, ny));
         
         // Handle edge cases for very small grids
         if nx < 3 || ny < 3 {
-            // For very small grids, use simplified first-order approximations
+            // For very small grids, use first-order finite differences
             if nx >= 2 && ny >= 2 {
                 for i in 0..nx {
                     for j in 0..ny {
@@ -721,13 +721,13 @@ impl NumericalUtils {
     }
 }
 
-/// Bessel function J1 approximation
+/// Bessel function J1 calculation
 ///
 /// Approximates the Bessel function of the first kind, order one (J₁(x)), using:
 /// - A polynomial expansion for |x| < 3.0
 /// - An asymptotic expansion for |x| >= 3.0
 ///
-/// # Approximation Accuracy
+/// # Numerical Accuracy
 /// - For |x| < 3.0, the polynomial expansion provides reasonable accuracy for small arguments,
 ///   but may deviate from the true value as |x| approaches 3.0.
 /// - For |x| >= 3.0, the asymptotic expansion is accurate for large arguments, but may lose
@@ -747,12 +747,12 @@ impl NumericalUtils {
 /// - Abramowitz & Stegun, "Handbook of Mathematical Functions", 9.1.21, 9.2.1
 /// - Numerical Recipes, 6.5
 fn bessel_j1(x: f64) -> f64 {
-    // Polynomial approximation for small x
+    // Polynomial expansion for small x
     if x.abs() < 3.0 {
         let x2 = x * x;
         x * (0.5 - x2 / 8.0 + x2 * x2 / 192.0 - x2 * x2 * x2 / 9216.0)
     } else {
-        // Asymptotic approximation for large x
+        // Asymptotic expansion for large x
         let _inv_x = 1.0 / x;
         let phase = x - 3.0 * PI / 4.0;
         (2.0 / (PI * x)).sqrt() * phase.cos() * 

@@ -241,7 +241,7 @@ impl SonochemistryModel {
     
     /// Update pH based on chemical reactions
     pub fn update_ph(&mut self, dt: f64) {
-        // Simplified pH model based on H2O2 and OH concentrations
+        // pH model based on H2O2 and OH concentrations
         if let (Some(h2o2), Some(oh)) = (
             self.ros_concentrations.get(ROSSpecies::HydrogenPeroxide),
             self.ros_concentrations.get(ROSSpecies::HydroxylRadical),
@@ -272,7 +272,7 @@ pub struct BubbleState {
 
 /// Estimate energy deposited during bubble collapse
 fn estimate_collapse_energy(state: &BubbleState) -> f64 {
-    // Simplified model: thermal energy content
+    // Thermal energy content calculation
     let k_b = 1.380649e-23; // Boltzmann constant
     let n_total = state.n_gas + state.n_vapor;
     

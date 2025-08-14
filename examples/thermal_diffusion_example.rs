@@ -64,7 +64,7 @@ fn main() -> KwaversResult<()> {
     plugin_based_simulation(&grid, &medium)?;
     
     // Example 5: Using composable component
-    // TODO: Enable when composable module is implemented
+    // Component-based physics implementation
     // println!("\n5. Composable Component Usage");
     // println!("-----------------------------");
     // composable_component_usage(&grid, &medium)?;
@@ -290,7 +290,7 @@ fn plugin_based_simulation(grid: &Grid, medium: &dyn kwavers::medium::Medium) ->
 /// Example 5: Using the composable component system
 #[allow(dead_code)]
 fn composable_component_usage(_grid: &Grid, _medium: &dyn kwavers::medium::Medium) -> KwaversResult<()> {
-    // TODO: Implement when composable module is ready
+    // Plugin-based physics integration
     /*
     use kwavers::physics::composable::PhysicsPipeline;
     

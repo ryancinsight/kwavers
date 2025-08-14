@@ -12,8 +12,8 @@
 //! - Support for acoustic, elastic, and thermal fields
 //! - Configurable absorption profiles (polynomial, exponential)
 //! 
-//! ## Simplified Sponge Layer
-//! The `apply_light` method provides a simplified exponential damping layer:
+//! ## Exponential Sponge Layer
+//! The `apply_light` method provides an exponential damping layer:
 //! - **NOT** a true C-PML implementation
 //! - Simple exponential decay without memory variables
 //! - Suitable for basic absorption when full C-PML overhead is not needed
@@ -83,9 +83,9 @@ impl Default for CPMLConfig {
         Self {
             thickness: 10,
             polynomial_order: 3.0,
-            sigma_factor: 0.8,  // σ_max = σ_factor * σ_optimal
-            kappa_max: 15.0,    // Higher values improve grazing angle absorption
-            alpha_max: 0.24,    // Optimal for low-frequency absorption
+            sigma_factor: 0.8,  // σ_max = σ_factor * σ_theoretical
+            kappa_max: 15.0,    // Higher values for grazing angle absorption
+            alpha_max: 0.24,    // Standard for low-frequency absorption
             target_reflection: 1e-6,
             grazing_angle_absorption: true,
             cfl_number: 0.5,
@@ -213,7 +213,7 @@ impl CPMLBoundary {
             nz,
         };
         
-        // Compute optimal profiles
+        // Compute standard profiles
         cpml.compute_profiles(grid)?;
         
         Ok(cpml)
@@ -224,17 +224,17 @@ impl CPMLBoundary {
         let thickness = self.config.thickness as f64;
         let m = self.config.polynomial_order;
         
-        // Compute optimal sigma_max based on theoretical formula
-        let sigma_opt_x = self.compute_optimal_sigma(grid.dx);
-        let sigma_opt_y = self.compute_optimal_sigma(grid.dy);
-        let sigma_opt_z = self.compute_optimal_sigma(grid.dz);
+        // Compute theoretical sigma_max based on analytical formula
+        let sigma_theoretical_x = self.compute_theoretical_sigma(grid.dx);
+        let sigma_theoretical_y = self.compute_theoretical_sigma(grid.dy);
+        let sigma_theoretical_z = self.compute_theoretical_sigma(grid.dz);
         
         // X-direction profiles
         self.compute_profile_1d(
             self.nx,
             thickness,
             m,
-            sigma_opt_x,
+            sigma_theoretical_x,
             grid.dx,
         );
         
@@ -243,7 +243,7 @@ impl CPMLBoundary {
             self.ny,
             thickness,
             m,
-            sigma_opt_y,
+            sigma_theoretical_y,
             grid.dy,
         );
         
@@ -252,22 +252,22 @@ impl CPMLBoundary {
             self.nz,
             thickness,
             m,
-            sigma_opt_z,
+            sigma_theoretical_z,
             grid.dz,
         );
         
-        debug!("C-PML profiles computed with σ_opt = ({:.2e}, {:.2e}, {:.2e})",
-               sigma_opt_x, sigma_opt_y, sigma_opt_z);
+        debug!("C-PML profiles computed with σ_theoretical = ({:.2e}, {:.2e}, {:.2e})",
+               sigma_theoretical_x, sigma_theoretical_y, sigma_theoretical_z);
         
         Ok(())
     }
     
-    /// Compute optimal sigma value based on grid spacing
-    fn compute_optimal_sigma(&self, dx: f64) -> f64 {
+    /// Compute theoretical sigma value based on grid spacing
+    fn compute_theoretical_sigma(&self, dx: f64) -> f64 {
         let m = self.config.polynomial_order;
         let r_coeff = self.config.target_reflection;
         
-        // Theoretical optimal value for C-PML
+        // Theoretical reference value for C-PML
         let sigma_opt = -(m + 1.0) * r_coeff.ln() / (2.0 * self.config.thickness as f64 * dx);
         
         sigma_opt * self.config.sigma_factor

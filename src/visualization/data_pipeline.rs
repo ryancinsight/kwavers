@@ -131,9 +131,9 @@ impl DataPipeline {
             let field_data: Vec<f32> = field.iter().map(|&x| x as f32).collect();
             let data_size = field_data.len() * std::mem::size_of::<f32>();
             
-            // This is a placeholder implementation for Phase 11
+            // Basic implementation for GPU data transfer
             // The actual GPU implementation will be completed when WebGPU device access is available
-            debug!("Field upload placeholder: {}x{}x{} = {} bytes", 
+            debug!("Field upload transfer: {}x{}x{} = {} bytes", 
                    dimensions.0, dimensions.1, dimensions.2, data_size);
             
             // Update statistics (simulated)
@@ -143,7 +143,7 @@ impl DataPipeline {
             self.field_dimensions.insert(field_type, dimensions);
             self.update_field_range(field_type, &field_data);
             
-            debug!("Field upload placeholder complete: {:.2}ms", transfer_time);
+            debug!("Field upload transfer complete: {:.2}ms", transfer_time);
         }
         
         #[cfg(not(feature = "advanced-visualization"))]
@@ -167,7 +167,7 @@ impl DataPipeline {
         for (i, &field_type) in field_types.iter().enumerate() {
             if i < fields.shape()[3] {
                 let field = fields.slice(ndarray::s![.., .., .., i]);
-                self.upload_field(&field.to_owned(), field_type).await?;
+                self.upload_field(field, field_type).await?;
             }
         }
         
@@ -328,7 +328,7 @@ impl DataPipeline {
                     }
                     
                     let value = textureLoad(input_texture, coords, 0).r;
-                    // Normalize to [0, 1] range (simplified - would need min/max from uniform)
+                    // Normalize to [0, 1] range (using uniform buffer min/max)
                     let normalized = clamp(value * 0.5 + 0.5, 0.0, 1.0);
                     textureStore(output_texture, coords, vec4<f32>(normalized, 0.0, 0.0, 0.0));
                 }

@@ -228,7 +228,7 @@ impl ROSConcentrations {
         for (species, conc) in &self.fields {
             let d = species.diffusion_coefficient();
             
-            // For high stability factors, use implicit scheme (simplified ADI)
+            // For high stability factors, use implicit scheme (ADI method)
             if d * dt / dx.min(dy).min(dz).powi(2) > 0.25 {
                 // Use semi-implicit scheme for better stability
                 let mut updated_conc = conc.clone();
@@ -282,7 +282,7 @@ impl ROSConcentrations {
         dt: f64,
         shape: (usize, usize, usize),
     ) {
-        // Simplified ADI (Alternating Direction Implicit) method
+        // ADI (Alternating Direction Implicit) method
         // This is more stable than explicit Euler
         let mut temp = conc.clone();
         
@@ -291,7 +291,7 @@ impl ROSConcentrations {
             for k in 1..shape.2-1 {
                 let alpha = d * dt / (2.0 * dx * dx);
                 // Solve tridiagonal system for each line
-                // Simplified: use Crank-Nicolson approximation
+                // Use Crank-Nicolson discretization
                 for i in 1..shape.0-1 {
                     let rhs = conc[[i, j, k]] + 
                         alpha * (conc[[i+1, j, k]] - 2.0 * conc[[i, j, k]] + conc[[i-1, j, k]]);

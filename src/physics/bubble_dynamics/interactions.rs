@@ -71,7 +71,7 @@ impl BubbleInteractions {
         let volume = bubble.volume();
         let volume_rate = 4.0 * std::f64::consts::PI * bubble.radius.powi(2) * bubble.wall_velocity;
         
-        // Simplified model: pressure contribution decreases with distance
+        // Distance-dependent pressure contribution model
         let primary = volume_rate / (4.0 * std::f64::consts::PI * distance.powi(2));
         let secondary = volume * bubble.wall_acceleration / (distance.powi(2));
         

@@ -278,7 +278,7 @@ fn simulate_hifu_induced_cavitation(
                         (y - focus[1]).powi(2) + 
                         (z - focus[2]).powi(2)).sqrt();
                 
-                // Focused beam profile (simplified)
+                // Focused beam profile calculation
                 let beam_profile = (-r * r / (0.01 * 0.01)).exp();
                 
                 // Initial pressure with focusing
