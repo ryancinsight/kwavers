@@ -138,7 +138,7 @@ impl InteractiveControls {
                     "Simulation".to_string(),
                     "Visualization".to_string(),
                     "Physics".to_string(),
-                    "Advanced".to_string(),
+                    "Configuration".to_string(),
                 ],
                 search_filter: String::new(),
                 show_extended_options: false,
@@ -465,7 +465,7 @@ impl InteractiveControls {
             description: "Enable GPU-accelerated rendering".to_string(),
             parameter_type: ParameterType::Boolean,
             default_value: ParameterValue::Boolean(true),
-            group: "Advanced".to_string(),
+            group: "Configuration".to_string(),
             is_realtime: false,
         })?;
         

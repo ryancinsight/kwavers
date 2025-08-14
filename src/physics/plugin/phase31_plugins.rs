@@ -317,7 +317,7 @@ impl Phase31PluginFactory {
         Ok(PhaseCorrectionPlugin {
             metadata: PluginMetadata {
                 id: "phase_correction".to_string(),
-                name: "Advanced Phase Correction".to_string(),
+                name: "Adaptive Phase Correction".to_string(),
                 version: "1.0.0".to_string(),
                 description: "Adaptive phase correction with sound speed estimation".to_string(),
                 author: "Kwavers Team".to_string(),

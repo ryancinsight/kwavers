@@ -242,7 +242,7 @@ impl StiffnessTensor {
     }
 }
 
-// EnhancedElasticWave functionality has been integrated into the main ElasticWave struct
+// Extended ElasticWave functionality has been integrated into the main ElasticWave struct
 // The enhanced features are now available through the standard ElasticWave API
 
 // Note: EnhancedElasticWaveHelper removed as it was unused (YAGNI principle)

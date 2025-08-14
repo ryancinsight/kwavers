@@ -1,4 +1,4 @@
-// examples/enhanced_simulation.rs
+// examples/multi_physics_simulation.rs
 //! Enhanced Kwavers Simulation Example
 //! 
 //! This example demonstrates advanced kwavers features using the proper factory pattern:

@@ -280,7 +280,7 @@ impl VisualizationEngine {
         
         #[cfg(not(feature = "gpu-visualization"))]
         {
-            warn!("Advanced visualization not enabled. Enable 'gpu-visualization' feature.");
+            warn!("GPU visualization not enabled. Enable 'gpu-visualization' feature.");
         }
         
         Ok(())

@@ -339,7 +339,7 @@ use kwavers::source::NullSource;
 use kwavers::medium::HomogeneousMedium;
 use ndarray::{Array3, Array4, Axis};
 
-fn advanced_simulation() -> KwaversResult<()> {
+fn multi_physics_simulation() -> KwaversResult<()> {
     // Setup
     let grid = Grid::new(256, 256, 256, 1e-3, 1e-3, 1e-3);
     let profiler = PerformanceProfiler::new(&grid);

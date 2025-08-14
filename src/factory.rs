@@ -933,7 +933,7 @@ impl SimulationSetup {
             }
         }
 
-        // Enhanced time validation with CFL condition checking
+        // Time validation with CFL condition checking
         if self.time.dt <= 0.0 {
             return Err(ConfigError::InvalidValue {
                 parameter: "dt".to_string(),
