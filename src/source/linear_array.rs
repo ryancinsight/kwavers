@@ -131,7 +131,6 @@ impl Source for LinearArray {
     
     /// Legacy method - DEPRECATED for performance reasons
     /// Use create_mask() and amplitude() for better performance
-    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let spacing = self.element_spacing();
         let tolerance = grid.dx * 0.5;

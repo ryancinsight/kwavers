@@ -48,6 +48,9 @@ pub struct CPMLConfig {
     
     /// CFL number for stability
     pub cfl_number: f64,
+    
+    /// Sound speed for time step calculation [m/s]
+    pub sound_speed: f64,
 }
 
 impl Default for CPMLConfig {
@@ -61,6 +64,7 @@ impl Default for CPMLConfig {
             target_reflection: 1e-6,
             grazing_angle_absorption: true,
             cfl_number: 0.5,
+            sound_speed: 1540.0, // Default water sound speed [m/s]
         }
     }
 }
@@ -77,6 +81,7 @@ impl CPMLConfig {
             target_reflection: 1e-8,
             grazing_angle_absorption: true,
             cfl_number: 0.5,
+            sound_speed: 1540.0, // Default water sound speed [m/s]
         }
     }
     
@@ -114,6 +119,13 @@ impl CPMLConfig {
 #[derive(Debug, Clone)]
 pub struct CPMLBoundary {
     config: CPMLConfig,
+    
+    /// Cached time step for performance optimization
+    /// Computed once during initialization to avoid redundant calculations
+    dt: f64,
+    
+    /// Sound speed used for dt calculation
+    sound_speed: f64,
     
     /// Profile arrays for each dimension
     sigma_x: Vec<f64>,
@@ -160,9 +172,19 @@ impl CPMLBoundary {
         
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
+        // Calculate dt once during initialization for performance optimization
+        // dt = CFL * dx / (c * sqrt(3)) where sqrt(3) accounts for 3D Courant condition
+        let min_dx = grid.dx.min(grid.dy).min(grid.dz);
+        let dt = config.cfl_number * min_dx / (config.sound_speed * (3.0_f64).sqrt());
+        
+        debug!("C-PML cached dt: {:.3e} s (CFL: {}, sound speed: {} m/s)", 
+               dt, config.cfl_number, config.sound_speed);
+        
         // Initialize profile arrays
         let mut cpml = Self {
             config: config.clone(),
+            dt,
+            sound_speed: config.sound_speed,
             sigma_x: vec![0.0; nx],
             sigma_y: vec![0.0; ny],
             sigma_z: vec![0.0; nz],
@@ -471,11 +493,11 @@ impl CPMLBoundary {
     }
     
     /// Get reflection coefficient estimate at given angle
-    pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
+    /// Returns None if angle is out of valid range [0, 90] degrees
+    pub fn estimate_reflection(&self, angle_degrees: f64) -> Option<f64> {
         // Validate input angle range
         if !(0.0..=90.0).contains(&angle_degrees) {
-            debug!("Invalid angle: {}. Angle must be between 0 and 90 degrees.", angle_degrees);
-            return 0.0; // Return a default value for invalid input
+            return None; // Return None for invalid input instead of silent failure
         }
         
         let angle_rad = angle_degrees * PI / 180.0;
@@ -485,7 +507,7 @@ impl CPMLBoundary {
         let r_normal = self.config.target_reflection;
         
         // Model for grazing angles
-        if self.config.grazing_angle_absorption {
+        let reflection = if self.config.grazing_angle_absorption {
             // For grazing angles, reflection should increase
             let grazing_factor = (1.0 - cos_theta.powi(2)).sqrt(); // sin(theta)
             // Increase reflection for larger angles (smaller cos_theta)
@@ -494,7 +516,9 @@ impl CPMLBoundary {
         } else {
             // Standard model - reflection increases as angle increases (cos_theta decreases)
             r_normal / cos_theta.max(0.1)
-        }
+        };
+        
+        Some(reflection)
     }
     
     /// Get the C-PML configuration
@@ -781,9 +805,13 @@ mod tests {
         let cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Test reflection estimates at various angles
-        let r_normal = cpml.estimate_reflection(0.0);    // Normal incidence
-        let r_45 = cpml.estimate_reflection(45.0);       // 45 degrees
-        let r_grazing = cpml.estimate_reflection(85.0);  // Near grazing
+        let r_normal = cpml.estimate_reflection(0.0).unwrap();    // Normal incidence
+        let r_45 = cpml.estimate_reflection(45.0).unwrap();       // 45 degrees
+        let r_grazing = cpml.estimate_reflection(85.0).unwrap();  // Near grazing
+        
+        // Test invalid angles return None
+        assert!(cpml.estimate_reflection(-10.0).is_none());
+        assert!(cpml.estimate_reflection(95.0).is_none());
         
         // Reflection should increase with angle
         assert!(r_45 > r_normal);

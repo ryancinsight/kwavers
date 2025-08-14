@@ -1,5 +1,11 @@
 // config/mod.rs
 
+// Enhanced validation configuration system
+pub mod validation;
+
+// Re-export the new validation system
+pub use validation::ValidationConfig as NewValidationConfig;
+
 // No longer directly used here: Medium, Arc
 use log::debug;
 use std::fs;

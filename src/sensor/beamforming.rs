@@ -20,7 +20,7 @@
 use crate::error::KwaversResult;
 use crate::utils::sparse_matrix::{CompressedSparseRowMatrix, BeamformingMatrixOperations};
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
-use ndarray_linalg::{Solve, Inverse, Eig};
+use crate::utils::linear_algebra::{LinearAlgebra, LinearAlgebraExt};
 use std::f64::consts::PI;
 
 /// Configuration for beamforming operations
@@ -580,37 +580,14 @@ impl BeamformingProcessor {
         Ok(covariance)
     }
 
-    /// Eigendecomposition using robust LAPACK-based algorithms
-    /// Replaces the naive power iteration method for better numerical stability
+    /// Eigendecomposition using pure Rust implementation
     pub fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
-        // Use ndarray-linalg for robust eigendecomposition
-        let (eigenvalues, eigenvectors) = matrix.eig()
-            .map_err(|e| crate::error::KwaversError::Numerical(
-                crate::error::NumericalError::Instability {
-                    operation: "eigendecomposition".to_string(),
-                    condition: format!("LAPACK eigendecomposition failed: {}", e),
-                }
-            ))?;
+        // Use pure Rust eigendecomposition
+        let (eigenvalues, eigenvectors) = matrix.eig()?;
         
-        // Convert complex eigenvalues to real (assuming real symmetric matrix)
-        let real_eigenvalues = Array1::from_vec(
-            eigenvalues.iter()
-                .map(|&c| c.re) // Take real part
-                .collect()
-        );
-        
-        // Convert complex eigenvectors to real
-        let real_eigenvectors = Array2::from_shape_vec(
-            eigenvectors.dim(),
-            eigenvectors.iter()
-                .map(|&c| c.re) // Take real part
-                .collect()
-        ).map_err(|e| crate::error::KwaversError::Numerical(
-            crate::error::NumericalError::Instability {
-                operation: "eigendecomposition".to_string(),
-                condition: format!("Eigenvector conversion failed: {}", e),
-            }
-        ))?;
+        // Pure Rust implementation already returns real values
+        let real_eigenvalues = eigenvalues;
+        let real_eigenvectors = eigenvectors;
         
         // Sort eigenvalues and eigenvectors in descending order
         let n = real_eigenvalues.len();
@@ -628,32 +605,15 @@ impl BeamformingProcessor {
         Ok((sorted_eigenvalues, sorted_eigenvectors))
     }
 
-    /// Solve linear system Ax = b using robust LAPACK-based algorithms
-    /// Replaces naive Gaussian elimination for better numerical stability
+    /// Solve linear system Ax = b using pure Rust implementation
     fn solve_linear_system(&self, a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
-        // Use ndarray-linalg for robust linear system solving
-        let x = a.solve_into(b.clone())
-            .map_err(|e| crate::error::KwaversError::Numerical(
-                crate::error::NumericalError::Instability {
-                    operation: "linear_system_solve".to_string(),
-                    condition: format!("LAPACK solver failed: {}", e),
-                }
-            ))?;
-        
-        Ok(x)
+        a.solve_into(b.clone())
     }
 
-    /// Matrix inverse using robust LAPACK-based algorithms
-    /// Replaces naive Gauss-Jordan elimination for better numerical stability
+    /// Matrix inverse using pure Rust implementation
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        // Use ndarray-linalg for robust matrix inversion
-        let inverse = matrix.inv()
-            .map_err(|e| crate::error::KwaversError::Numerical(
-                crate::error::NumericalError::Instability {
-                    operation: "matrix_inverse".to_string(),
-                    condition: format!("LAPACK matrix inversion failed: {}", e),
-                }
-            ))?;
+        // Use pure Rust matrix inversion
+        let inverse = matrix.inv()?;
         
         Ok(inverse)
     }

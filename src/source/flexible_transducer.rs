@@ -912,7 +912,6 @@ impl Source for FlexibleTransducerArray {
         self.signal.amplitude(t)
     }
     
-    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let mut source_value = 0.0;
         let signal_value = self.signal.amplitude(t) * 

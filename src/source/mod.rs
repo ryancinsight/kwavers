@@ -30,7 +30,6 @@ pub trait Source: Debug + Sync + Send {
     
     /// Legacy method for backward compatibility - DEPRECATED
     /// Use create_mask() and amplitude() for better performance
-    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Fallback implementation - inefficient but maintains compatibility
         if let Some((i, j, k)) = grid.to_grid_indices(x, y, z) {

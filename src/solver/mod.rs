@@ -37,11 +37,16 @@ use ndarray::{Array3, Array4, Axis, ArrayView3, ArrayViewMut3};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
 
-// Physical validation constants - should be in configuration
+// DEPRECATED: Magic number constants - moved to ValidationConfig
+#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
 const MAX_PRESSURE: f64 = 1e9;   // 1 GPa max pressure
+#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
 const MIN_PRESSURE: f64 = -1e9;  // -1 GPa min pressure  
+#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
 const MAX_TEMP: f64 = 1000.0;    // 1000K max temperature
+#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
 const MIN_TEMP: f64 = 273.0;     // 0°C min temperature
+#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
 const MAX_LIGHT: f64 = 1e10;     // Max light intensity
 
 // Note: Field indices are now imported from physics::field_indices
@@ -105,6 +110,10 @@ impl SimulationFields {
 /// 
 /// NOTE: This struct is kept for backward compatibility but should be deprecated
 /// in favor of the plugin-based architecture in plugin_based_solver.rs
+#[deprecated(
+    since = "0.2.0", 
+    note = "Use `PluginBasedSolver` instead. This monolithic solver violates SRP and is being replaced with a modular plugin architecture."
+)]
 pub struct Solver {
     // Core components
     pub fields: SimulationFields,

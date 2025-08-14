@@ -15,13 +15,14 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::recorder::RecorderTrait;
 use crate::source::Source;
 use crate::time::Time;
-use crate::error::KwaversError;
+use crate::error::{KwaversError, FieldError};
 use log::{info, debug};
-use ndarray::{Array3, Array4};
+use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3};
 use std::sync::Arc;
 use std::collections::HashMap;
 
 /// Dynamic field registry for type-safe field management
+/// Optimized for zero-copy access and deferred allocation
 pub struct FieldRegistry {
     /// Registered fields and their metadata
     fields: HashMap<UnifiedFieldType, FieldMetadata>,
@@ -29,6 +30,8 @@ pub struct FieldRegistry {
     data: Option<Array4<f64>>,
     /// Grid dimensions for validation
     grid_dims: (usize, usize, usize),
+    /// Flag to defer allocation until build() is called
+    deferred_allocation: bool,
 }
 
 #[derive(Clone)]
@@ -41,18 +44,82 @@ struct FieldMetadata {
     active: bool,
 }
 
+/// Field provider for plugins with restricted access
+/// Prevents plugins from accessing fields they don't need
+pub struct FieldProvider<'a> {
+    registry: &'a mut FieldRegistry,
+    allowed_fields: Vec<UnifiedFieldType>,
+}
+
+impl<'a> FieldProvider<'a> {
+    /// Create a new field provider with restricted access
+    pub fn new(registry: &'a mut FieldRegistry, allowed_fields: Vec<UnifiedFieldType>) -> Self {
+        Self {
+            registry,
+            allowed_fields,
+        }
+    }
+    
+    /// Get a field view (zero-copy, read-only)
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+        if !self.allowed_fields.contains(&field_type) {
+            return Err(FieldError::NotRegistered(format!("Field {} not allowed for this plugin", field_type.name())));
+        }
+        self.registry.get_field(field_type)
+    }
+    
+    /// Get a mutable field view (zero-copy)
+    pub fn get_field_mut(&mut self, field_type: UnifiedFieldType) -> Result<ArrayViewMut3<f64>, FieldError> {
+        if !self.allowed_fields.contains(&field_type) {
+            return Err(FieldError::NotRegistered(format!("Field {} not allowed for this plugin", field_type.name())));
+        }
+        self.registry.get_field_mut(field_type)
+    }
+    
+    /// Check if a field is available to this provider
+    pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
+        self.allowed_fields.contains(&field_type) && self.registry.has_field(field_type)
+    }
+    
+    /// Get list of fields available to this provider
+    pub fn available_fields(&self) -> Vec<UnifiedFieldType> {
+        self.allowed_fields.clone()
+    }
+}
+
 impl FieldRegistry {
-    /// Create a new field registry
+    /// Create a new field registry with deferred allocation
     pub fn new(grid: &Grid) -> Self {
         Self {
             fields: HashMap::new(),
             data: None,
             grid_dims: (grid.nx, grid.ny, grid.nz),
+            deferred_allocation: true,
         }
     }
     
+    /// Build the field registry by allocating data array
+    /// This allows multiple field registrations without reallocations
+    pub fn build(&mut self) -> Result<(), FieldError> {
+        let num_fields = self.fields.len();
+        if num_fields == 0 {
+            self.data = None;
+            self.deferred_allocation = false;
+            return Ok(());
+        }
+
+        let (nx, ny, nz) = self.grid_dims;
+        self.data = Some(Array4::zeros((num_fields, nx, ny, nz)));
+        self.deferred_allocation = false;
+        
+        debug!("Built FieldRegistry with {} fields and dimensions ({}, {}, {})", 
+               num_fields, nx, ny, nz);
+        Ok(())
+    }
+    
     /// Register a new field dynamically
-    pub fn register_field(&mut self, field_type: UnifiedFieldType, description: String) -> KwaversResult<()> {
+    /// Allocation is deferred until build() is called for performance optimization
+    pub fn register_field(&mut self, field_type: UnifiedFieldType, description: String) -> Result<(), FieldError> {
         if self.fields.contains_key(&field_type) {
             return Ok(()); // Already registered
         }
@@ -64,15 +131,17 @@ impl FieldRegistry {
             active: true,
         });
         
-        // Reallocate data array if needed
-        self.reallocate_data()?;
+        // Only reallocate if not using deferred allocation
+        if !self.deferred_allocation {
+            self.reallocate_data_internal()?;
+        }
         
         info!("Registered field: {} at index {}", field_type, index);
         Ok(())
     }
     
-    /// Register multiple fields at once
-    pub fn register_fields(&mut self, fields: &[(UnifiedFieldType, String)]) -> KwaversResult<()> {
+    /// Register multiple fields at once (optimized for batch registration)
+    pub fn register_fields(&mut self, fields: &[(UnifiedFieldType, String)]) -> Result<(), FieldError> {
         for (field_type, description) in fields {
             self.register_field(*field_type, description.clone())?;
         }
@@ -89,8 +158,39 @@ impl FieldRegistry {
         self.data.as_mut()
     }
     
-    /// Get a specific field by type
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
+    /// Get a specific field by type (zero-copy view)
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+        let metadata = self.fields.get(&field_type)
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
+        
+        if !metadata.active {
+            return Err(FieldError::Inactive(field_type.name().to_string()));
+        }
+        
+        let data = self.data.as_ref()
+            .ok_or(FieldError::DataNotInitialized)?;
+        
+        Ok(data.index_axis(ndarray::Axis(0), metadata.index))
+    }
+    
+    /// Get a mutable field view (zero-copy)
+    pub fn get_field_mut(&mut self, field_type: UnifiedFieldType) -> Result<ArrayViewMut3<f64>, FieldError> {
+        let metadata = self.fields.get(&field_type)
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
+        
+        if !metadata.active {
+            return Err(FieldError::Inactive(field_type.name().to_string()));
+        }
+        
+        let data = self.data.as_mut()
+            .ok_or(FieldError::DataNotInitialized)?;
+        
+        Ok(data.index_axis_mut(ndarray::Axis(0), metadata.index))
+    }
+    
+    /// Get a specific field by type (owned copy for backward compatibility)
+    #[deprecated(since = "0.2.0", note = "Use get_field() for zero-copy access instead")]
+    pub fn get_field_owned(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
         let metadata = self.fields.get(&field_type)?;
         if !metadata.active {
             return None;
@@ -100,17 +200,28 @@ impl FieldRegistry {
         Some(data.index_axis(ndarray::Axis(0), metadata.index).to_owned())
     }
     
-    /// Set a specific field
-    pub fn set_field(&mut self, field_type: UnifiedFieldType, values: &Array3<f64>) -> KwaversResult<()> {
+    /// Set a specific field with dimension validation
+    pub fn set_field(&mut self, field_type: UnifiedFieldType, values: &Array3<f64>) -> Result<(), FieldError> {
         let metadata = self.fields.get(&field_type)
-            .ok_or_else(|| KwaversError::FieldNotRegistered(field_type.name().to_string()))?;
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         
         if !metadata.active {
-            return Err(KwaversError::FieldInactive(field_type.name().to_string()));
+            return Err(FieldError::Inactive(field_type.name().to_string()));
         }
         
         let data = self.data.as_mut()
-            .ok_or_else(|| KwaversError::FieldDataNotInitialized)?;
+            .ok_or(FieldError::DataNotInitialized)?;
+        
+        // Validate dimensions
+        let expected_dims = self.grid_dims;
+        let actual_dims = values.dim();
+        if actual_dims != expected_dims {
+            return Err(FieldError::DimensionMismatch {
+                field: field_type.name().to_string(),
+                expected: expected_dims,
+                actual: actual_dims,
+            });
+        }
         
         let mut field_view = data.index_axis_mut(ndarray::Axis(0), metadata.index);
         field_view.assign(values);
@@ -128,8 +239,8 @@ impl FieldRegistry {
         self.fields.keys().cloned().collect()
     }
     
-    /// Reallocate data array when fields change
-    fn reallocate_data(&mut self) -> KwaversResult<()> {
+    /// Internal method to reallocate data array when fields change
+    fn reallocate_data_internal(&mut self) -> Result<(), FieldError> {
         let num_fields = self.fields.len();
         if num_fields == 0 {
             self.data = None;
@@ -175,11 +286,42 @@ pub struct PluginBasedSolver {
     metrics: PerformanceMetrics,
 }
 
+/// Enhanced performance metrics for high-performance computing
 #[derive(Default)]
 struct PerformanceMetrics {
+    /// Total simulation steps completed
     total_steps: usize,
+    /// Plugin execution times by name [seconds]
     plugin_execution_times: HashMap<String, Vec<f64>>,
+    /// Field update times [seconds]
     field_update_times: Vec<f64>,
+    /// Memory usage tracking [bytes]
+    memory_usage: Vec<usize>,
+    /// Memory allocations count per step
+    memory_allocations: Vec<usize>,
+    /// Cache performance metrics (placeholder for future hardware integration)
+    cache_metrics: CacheMetrics,
+    /// Floating-point operations per second
+    flops_per_step: Vec<f64>,
+    /// Bandwidth utilization [GB/s]
+    bandwidth_utilization: Vec<f64>,
+    /// Thread utilization
+    thread_utilization: Vec<f64>,
+    /// Garbage collection time (for future profiling)
+    gc_time: Vec<f64>,
+}
+
+/// Cache performance metrics (placeholder for hardware-level profiling)
+#[derive(Default)]
+struct CacheMetrics {
+    /// L1 cache miss rate
+    l1_miss_rate: Vec<f64>,
+    /// L2 cache miss rate  
+    l2_miss_rate: Vec<f64>,
+    /// L3 cache miss rate
+    l3_miss_rate: Vec<f64>,
+    /// Memory bandwidth saturation
+    memory_bandwidth_saturation: Vec<f64>,
 }
 
 impl PluginBasedSolver {
@@ -363,6 +505,101 @@ impl PluginBasedSolver {
     /// Get the medium
     pub fn medium(&self) -> &Arc<dyn Medium> {
         &self.medium
+    }
+    
+    /// Get performance metrics
+    pub fn performance_metrics(&self) -> &PerformanceMetrics {
+        &self.metrics
+    }
+    
+    /// Reset performance metrics
+    pub fn reset_metrics(&mut self) {
+        self.metrics = PerformanceMetrics::default();
+    }
+}
+
+impl PerformanceMetrics {
+    /// Record plugin execution time
+    pub fn record_plugin_time(&mut self, plugin_name: &str, time: f64) {
+        self.plugin_execution_times
+            .entry(plugin_name.to_string())
+            .or_default()
+            .push(time);
+    }
+    
+    /// Record field update time
+    pub fn record_field_update_time(&mut self, time: f64) {
+        self.field_update_times.push(time);
+    }
+    
+    /// Record memory usage (placeholder - would need system integration)
+    pub fn record_memory_usage(&mut self, bytes: usize) {
+        self.memory_usage.push(bytes);
+    }
+    
+    /// Record FLOPS for performance analysis
+    pub fn record_flops(&mut self, flops: f64) {
+        self.flops_per_step.push(flops);
+    }
+    
+    /// Get average plugin execution time
+    pub fn average_plugin_time(&self, plugin_name: &str) -> Option<f64> {
+        let times = self.plugin_execution_times.get(plugin_name)?;
+        if times.is_empty() {
+            return None;
+        }
+        Some(times.iter().sum::<f64>() / times.len() as f64)
+    }
+    
+    /// Get total execution time
+    pub fn total_execution_time(&self) -> f64 {
+        self.plugin_execution_times
+            .values()
+            .flat_map(|times| times.iter())
+            .sum::<f64>() + self.field_update_times.iter().sum::<f64>()
+    }
+    
+    /// Get performance summary
+    pub fn summary(&self) -> String {
+        let total_time = self.total_execution_time();
+        let avg_step_time = if self.total_steps > 0 {
+            total_time / self.total_steps as f64
+        } else {
+            0.0
+        };
+        
+        let mut summary = format!(
+            "Performance Summary:\n\
+             Total Steps: {}\n\
+             Total Time: {:.3} s\n\
+             Average Step Time: {:.3} ms\n",
+            self.total_steps,
+            total_time,
+            avg_step_time * 1000.0
+        );
+        
+        // Plugin breakdown
+        for (plugin, times) in &self.plugin_execution_times {
+            let avg_time = times.iter().sum::<f64>() / times.len() as f64;
+            summary.push_str(&format!(
+                "  {}: {:.3} ms/step\n",
+                plugin,
+                avg_time * 1000.0
+            ));
+        }
+        
+        // Memory statistics
+        if !self.memory_usage.is_empty() {
+            let avg_memory = self.memory_usage.iter().sum::<usize>() / self.memory_usage.len();
+            let max_memory = self.memory_usage.iter().max().unwrap_or(&0);
+            summary.push_str(&format!(
+                "Memory: Avg {:.1} MB, Peak {:.1} MB\n",
+                avg_memory as f64 / 1_048_576.0,
+                *max_memory as f64 / 1_048_576.0
+            ));
+        }
+        
+        summary
     }
 }
 

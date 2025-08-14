@@ -186,7 +186,6 @@ impl Source for MatrixArray {
         self.signal.amplitude(t)
     }
     
-    #[deprecated(note = "Use create_mask() and amplitude() for better performance")]
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
