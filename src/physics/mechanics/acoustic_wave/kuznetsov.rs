@@ -499,9 +499,9 @@ impl KuznetsovWave {
             });
         
         // Drop the borrows before calling mutable methods
-        drop(kx);
-        drop(ky);
-        drop(kz);
+        let _ = kx;
+        let _ = ky;
+        let _ = kz;
         
         // Transform back to real space
         let grad_x = self.fft_inverse(&grad_x_k)?;

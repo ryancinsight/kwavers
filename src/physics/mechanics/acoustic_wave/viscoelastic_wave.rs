@@ -1,6 +1,5 @@
 // src/physics/mechanics/acoustic_wave/viscoelastic_wave.rs
 
-use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;

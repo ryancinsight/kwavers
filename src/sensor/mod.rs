@@ -1,5 +1,7 @@
 // sensor/mod.rs
 
+pub mod adaptive_beamforming;
+pub mod beamforming;
 pub mod passive_acoustic_mapping;
 
 pub use passive_acoustic_mapping::{
