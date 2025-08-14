@@ -166,39 +166,39 @@
 | Elastic waves | ElasticWave | ⚠️ Partial | Lacks full pstdElastic compatibility |
 | Reconstruction | ReconstructionModule | ✅ Complete | Plane/line/arc/bowl support |
 
-### ❌ **Missing Features (Gaps to Address)**
+### ❌ **Missing Features (Functional Gaps to Address)**
 
-| k-Wave Feature | Priority | Complexity | Target Phase |
-|---------------|----------|------------|--------------|
-| kspaceFirstOrder API compatibility | High | Medium | Phase 29 |
-| acousticFieldPropagator | High | Medium | Phase 29 |
-| k-Wave data format I/O | Medium | Low | Phase 29 |
-| Photoacoustic imaging suite | Medium | High | Phase 30 |
-| Beam pattern calculation | Medium | Medium | Phase 30 |
-| Numerical validation vs k-Wave | High | High | Phase 31 |
+| Capability Needed | Priority | Complexity | Target Phase |
+|------------------|----------|------------|--------------|
+| Beam propagation utilities | High | Medium | Phase 29 |
+| Enhanced field calculation tools | High | Medium | Phase 29 |
+| k-Wave data format I/O (migration) | Medium | Low | Phase 29 |
+| Advanced photoacoustic algorithms | Medium | High | Phase 30 |
+| Comprehensive beam pattern tools | Medium | Medium | Phase 30 |
+| Cross-validation framework | High | High | Phase 31 |
 
 ### 🎯 **Development Priorities**
 
-#### Phase 29: k-Wave API Compatibility Layer
-- [ ] Implement kspaceFirstOrder2D/3D wrapper functions
-- [ ] Add k-Wave-compatible parameter structures  
-- [ ] Create sensor mask compatibility layer
-- [ ] Implement acousticFieldPropagator equivalent
-- [ ] Add k-Wave data format import/export
+#### Phase 29: Enhanced Simulation Capabilities
+- [ ] Expand beam propagation and field calculation utilities
+- [ ] Add k-Wave data format import/export (for migration support)
+- [ ] Enhance sensor handling and data collection methods
+- [ ] Create comprehensive task equivalency documentation
+- [ ] Improve user experience for common acoustic simulation workflows
 
-#### Phase 30: Enhanced Reconstruction & Imaging
+#### Phase 30: Advanced Reconstruction & Imaging
 - [ ] Expand photoacoustic reconstruction algorithms
-- [ ] Add k-Wave-specific filter implementations  
+- [ ] Add specialized filter implementations for various imaging modes
 - [ ] Implement additional array geometry support
-- [ ] Add beam pattern calculation utilities
-- [ ] Create migration tools from k-Wave
+- [ ] Add comprehensive beam pattern calculation utilities
+- [ ] Create migration tools and documentation from k-Wave
 
-#### Phase 31: Validation & Ecosystem
-- [ ] One-to-one numerical validation against k-Wave
-- [ ] Performance benchmarking comparison
-- [ ] Cross-validation with k-wave-python
-- [ ] Documentation and migration guides
-- [ ] Community adoption and feedback
+#### Phase 31: Validation & Ecosystem Development
+- [ ] Cross-validation against k-Wave results for accuracy verification
+- [ ] Performance benchmarking and optimization
+- [ ] Comprehensive migration guides and examples
+- [ ] Community adoption, feedback, and ecosystem growth
+- [ ] Educational materials and workshops
 
 ## Summary
 
@@ -209,4 +209,4 @@
 - Memory safety and modern software engineering
 - Comprehensive passive acoustic mapping
 
-**Gap Assessment**: Kwavers has equivalent or superior core capabilities but needs API compatibility layer and ecosystem development for broader adoption. 🚀 
+**Gap Assessment**: Kwavers has equivalent or superior core capabilities but needs enhanced utilities and migration support for broader adoption. Focus on functional completeness rather than API compatibility. 🚀 
