@@ -406,4 +406,9 @@ impl Sensor {
     pub fn grid_dz(&self) -> f64 {
         self.grid.dz
     }
+
+    /// Get the grid shape (nx, ny, nz)
+    pub fn grid_shape(&self) -> (usize, usize, usize) {
+        (self.grid.nx, self.grid.ny, self.grid.nz)
+    }
 }
