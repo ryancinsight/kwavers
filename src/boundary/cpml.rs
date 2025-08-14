@@ -1,46 +1,12 @@
-//! Convolutional Perfectly Matched Layer (C-PML) boundary conditions
+//! Convolutional Perfectly Matched Layer (C-PML) implementation
 //! 
-//! This module implements absorbing boundary conditions for acoustic wave simulations
-//! using the Convolutional PML formulation.
-//! 
-//! # Current Implementation Status
-//! 
-//! ## Full C-PML Implementation
-//! The main `ConvolutionalPML` struct provides a complete C-PML implementation with:
-//! - Auxiliary memory variables for field history
-//! - Recursive convolution updates
-//! - Support for acoustic, elastic, and thermal fields
-//! - Configurable absorption profiles (polynomial, exponential)
-//! 
-//! ## Exponential Sponge Layer
-//! The `apply_light` method provides an exponential damping layer:
+//! This module provides a PML boundary condition implementation for absorbing
+//! outgoing waves at domain boundaries. Based on the formulation by Roden & Gedney (2000).
+//!
+//! ## Current Implementation Status
 //! - **NOT** a true C-PML implementation
-//! - Simple exponential decay without memory variables
-//! - Suitable for basic absorption when full C-PML overhead is not needed
-//! - Should be renamed in future API redesign to avoid confusion
-//! 
-//! # Design Considerations
-//! 
-//! The current `Boundary` trait interface doesn't fully capture the C-PML 
-//! operational model, which requires:
-//! 1. Auxiliary memory variables per field component
-//! 2. Recursive convolution updates at each time step
-//! 3. Different update equations for different field types
-//! 
-//! Future API redesign should consider:
-//! - Separate traits for simple boundaries vs. complex PML boundaries
-//! - Explicit memory variable management in the trait interface
-//! - Field-specific update methods
-//! 
-//! # References
-//! 
-//! 1. Roden, J. A., & Gedney, S. D. (2000). "Convolutional PML (CPML): An efficient 
-//!    FDTD implementation of the CFS-PML for arbitrary media." Microwave and Optical 
-//!    Technology Letters, 27(5), 334-339.
-//! 
-//! 2. Komatitsch, D., & Martin, R. (2007). "An unsplit convolutional perfectly 
-//!    matched layer improved at grazing incidence for the seismic wave equation." 
-//!    Geophysics, 72(5), SM155-SM167.
+//! - Exponential decay absorption without memory variables
+//! - Suitable for standard absorption when full C-PML overhead is not needed
 
 
 use crate::grid::Grid;

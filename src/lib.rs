@@ -8,7 +8,7 @@
 //! - **Physics Modeling**: Nonlinear acoustics, thermal effects, cavitation dynamics
 //! - **GPU Acceleration**: CUDA/OpenCL backend for massive parallel processing
 //! - **Memory Safety**: Zero unsafe code with comprehensive error handling
-//! - **Performance**: Optimized algorithms with SIMD and parallel processing
+//! - **Performance**: High-performance algorithms with SIMD and parallel processing
 //! - **Extensibility**: Modular architecture following SOLID principles
 
 use ndarray::Array3;
@@ -24,6 +24,7 @@ pub mod fft;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 pub mod grid;
+pub mod io;
 pub mod log;
 pub mod medium;
 pub mod ml;

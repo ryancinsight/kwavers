@@ -375,7 +375,7 @@ mod tests {
         let (nx, ny, nz) = field.dim();
         let mut laplacian = Array3::zeros((nx, ny, nz));
         
-        // Simple 2nd order central difference
+        // Standard 2nd order central difference
         for i in 1..nx-1 {
             for j in 1..ny-1 {
                 for k in 1..nz-1 {
