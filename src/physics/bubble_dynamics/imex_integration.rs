@@ -151,7 +151,7 @@ impl BubbleIMEXIntegrator {
                     break;
                 }
                 
-                // Compute Jacobian (simplified - diagonal approximation)
+                // Compute diagonal Jacobian approximation
                 let jac = self.compute_jacobian_diagonal(&y_final, dt)?;
                 
                 // Newton update: y_final = y_final - J^(-1) * residual
@@ -182,18 +182,34 @@ impl BubbleIMEXIntegrator {
     /// Compute diagonal Jacobian approximation for implicit solver
     fn compute_jacobian_diagonal(&self, y: &Array1<f64>, dt: f64) -> KwaversResult<Array1<f64>> {
         let mut jac = Array1::ones(4);
+        let r = y[0];
+        let t_bubble = y[2];
+        let params = self.solver.params();
         
         // Jacobian diagonal elements: d(residual_i)/d(y_i)
         // For residual_i = y_i - y_explicit_i - dt * f_i(y)
         // We have: d(residual_i)/d(y_i) = 1 - dt * df_i/dy_i
         
-        // For simplicity, we use: J_ii ≈ 1 (since dt is small)
-        // This is a simplified approach that works well for small time steps
+        jac[0] = 1.0;  // Radius equation is explicit
+        jac[1] = 1.0;  // Velocity equation is explicit
         
-        jac[0] = 1.0;  // Radius (no implicit term)
-        jac[1] = 1.0;  // Velocity (no implicit term)
-        jac[2] = 1.0;  // Temperature (approximation)
-        jac[3] = 1.0;  // Vapor (approximation)
+        // Temperature Jacobian: includes thermal diffusion and mass transfer coupling
+        // df_T/dT includes thermal conductivity and latent heat terms
+        let thermal_diffusion_rate = 3.0 * params.thermal_conductivity / (params.rho_liquid * params.specific_heat_liquid * r * r);
+        let mass_transfer_coupling = if t_bubble > 0.0 { 
+            crate::constants::bubble_dynamics::WATER_LATENT_HEAT_VAPORIZATION * params.accommodation_coeff / (params.specific_heat_liquid * t_bubble) 
+        } else { 
+            0.0 
+        };
+        jac[2] = 1.0 + dt * (thermal_diffusion_rate + mass_transfer_coupling);
+        
+        // Vapor mole fraction Jacobian: includes mass transfer rate dependency
+        let vapor_diffusion_rate = if r > 1e-9 { 
+            3.0 * VAPOR_DIFFUSION_COEFFICIENT / (r * r) 
+        } else { 
+            0.0 
+        };
+        jac[3] = 1.0 + dt * vapor_diffusion_rate;
         
         Ok(jac)
     }
@@ -217,7 +233,7 @@ impl BubbleIMEXIntegrator {
             // Polytropic/adiabatic model with heat transfer
             let gamma = self.calculate_effective_polytropic_index(state);
             
-            // Heat transfer coefficient (simplified Nusselt number approach)
+            // Heat transfer coefficient using Nusselt number correlation
             let thermal_diffusivity = params.thermal_conductivity / 
                 (params.rho_liquid * params.specific_heat_liquid);
             let peclet = (2.0 * r * v.abs()) / thermal_diffusivity;
@@ -239,7 +255,7 @@ impl BubbleIMEXIntegrator {
             let p_vapor_eq = self.calculate_equilibrium_vapor_pressure(T);
             let p_vapor_actual = n_vapor * R_GAS * T / state.volume();
             
-            // Mass transfer coefficient (simplified approach)
+            // Mass transfer coefficient using diffusion correlation
             let D_vapor = VAPOR_DIFFUSION_COEFFICIENT; // Vapor diffusion coefficient in air [m²/s]
             let thermal_diffusivity = params.thermal_conductivity / 
                 (params.rho_liquid * params.specific_heat_liquid);

@@ -194,6 +194,9 @@ pub mod bubble_dynamics {
     /// Kinetic energy coefficient (factor of 1.5) in Rayleigh-Plesset equation  
     pub const KINETIC_ENERGY_COEFF: f64 = 1.5;
     
+    /// Latent heat of vaporization for water at standard conditions [J/kg]
+    pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.26e6;
+    
     /// Air composition - Nitrogen fraction
     pub const N2_FRACTION: f64 = 0.79;
     

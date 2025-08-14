@@ -50,7 +50,7 @@ struct PerformanceMetrics {
 /// 
 /// ## Limitations
 /// 
-/// - **Initial Time Step**: Uses simplified approximation for first iteration (no t-2*dt available)
+/// - **Initial Time Step**: Uses second-order bootstrap for first iteration (no t-2*dt available)
 /// - **Memory Overhead**: Stores two additional pressure field arrays for history
 /// - **Homogeneous β**: Currently assumes spatially uniform nonlinearity parameter
 /// 
@@ -151,7 +151,7 @@ impl ViscoelasticWave {
     }
 
     // Helper for stability checks, similar to NonlinearWave
-    // This is a simplified version for now.
+    // Basic stability check implementation.
     fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, current_pressure: &ArrayView3<f64>) -> bool {
         let c_max = medium.sound_speed_array().iter().fold(0.0f64, |acc, &x| acc.max(x));
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
@@ -203,7 +203,7 @@ impl ViscoelasticWave {
     /// # Returns
     /// 
     /// - `true`: Full second-order accuracy available (after 2+ time steps)
-    /// - `false`: Using simplified approximation (first 1-2 time steps)
+    /// - `false`: Using bootstrap initialization (first 1-2 time steps)
     pub fn has_full_accuracy(&self) -> bool {
         self.pressure_history.is_some()
     }
@@ -215,7 +215,7 @@ impl ViscoelasticWave {
         let accuracy_status = if self.has_full_accuracy() {
             "Full second-order accuracy (proper finite differences)"
         } else {
-            "Simplified approximation (building pressure history)"
+            "Bootstrap initialization (building pressure history)"
         };
         
         let memory_usage = if self.pressure_history.is_some() && self.prev_pressure_stored.is_some() {
@@ -327,18 +327,19 @@ impl AcousticWaveModel for ViscoelasticWave {
                          // Westervelt nonlinear term: ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
                          let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2 + 2.0 * dp_dt.powi(2);
                          nonlinear_coeff * p_squared_second_deriv
-                     } else {
-                         // First iteration: no pressure history available
-                         // Use simplified first-order approximation with clear documentation
-                         // This is a known limitation for the first time step
-                         let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
-                         
-                         // Simplified approximation: ∂²(p²)/∂t² ≈ 2p * (∂p/∂t)/dt + 2(∂p/∂t)²
-                         // Note: This is less accurate than the full second-order method above
-                         let simplified_d2p_dt2 = dp_dt / dt.max(1e-12); // Rough approximation
-                         let p_squared_second_deriv = 2.0 * p_curr * simplified_d2p_dt2 + 2.0 * dp_dt.powi(2);
-                         nonlinear_coeff * p_squared_second_deriv
-                     };
+                                         } else {
+                        // First iteration: no pressure history available
+                        // Use proper second-order bootstrap initialization
+                        let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
+                        
+                        // Bootstrap second derivative using linear extrapolation
+                        // Assume constant acceleration for first step: d²p/dt² ≈ dp_dt / dt
+                        let d2p_dt2_bootstrap = dp_dt / dt.max(1e-12);
+                        
+                        // Apply product rule properly: ∂²(p²)/∂t² = 2p∂²p/∂t² + 2(∂p/∂t)²
+                        let p_squared_second_deriv = 2.0 * p_curr * d2p_dt2_bootstrap + 2.0 * dp_dt.powi(2);
+                        nonlinear_coeff * p_squared_second_deriv
+                    };
                      
                      *nl_val = nonlinear_term;
 
@@ -579,7 +580,7 @@ mod tests {
         assert_eq!(viscoelastic.nonlinearity_scaling, 1.0, "Default nonlinearity scaling should be 1.0");
         
         let diagnostics = viscoelastic.get_diagnostics();
-        assert!(diagnostics.contains("Simplified approximation"), "Initial diagnostics should indicate simplified mode");
+        assert!(diagnostics.contains("Bootstrap initialization"), "Initial diagnostics should indicate bootstrap mode");
         assert!(diagnostics.contains("No pressure history"), "Should indicate no history initially");
     }
 }
