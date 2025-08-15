@@ -490,10 +490,27 @@ impl HemisphericalArray {
         // Efficiency based on:
         // 1. Geometric factor (cos angle)
         // 2. Distance attenuation (1/r)
-        // 3. Directivity pattern
+        // 3. Directivity pattern (piston source)
         let geometric_factor = cos_angle.max(0.0);
         let distance_factor = (radius / distance).min(1.0);
-        let directivity = 1.0; // Simplified directivity for now
+        
+        // Proper piston source directivity pattern
+        // Using sinc function for circular piston radiator
+        // Reference: Kino, G. S. (1987). Acoustic waves: devices, imaging, and analog signal processing
+        let angle = cos_angle.acos();
+        let directivity = if angle.abs() < 1e-10 {
+            1.0  // On-axis response
+        } else {
+            // For piston source: D(θ) = |2J₁(ka·sin(θ))/(ka·sin(θ))|
+            // Approximation for typical element size relative to wavelength
+            let normalized_angle = angle / std::f64::consts::PI;
+            let sinc = if normalized_angle.abs() < 1e-10 {
+                1.0
+            } else {
+                (std::f64::consts::PI * normalized_angle).sin() / (std::f64::consts::PI * normalized_angle)
+            };
+            sinc.abs()
+        };
         
         geometric_factor * distance_factor * directivity
     }

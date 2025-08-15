@@ -28,7 +28,7 @@ use kwavers::{
     medium::{
         heterogeneous::HeterogeneousMedium,
     },
-    validation::ValidationManager,
+
     error::PhysicsError,
 };
 
@@ -167,7 +167,7 @@ pub struct BrainUltrasoundSimulation {
     medium: HeterogeneousMedium,
     grid: Grid,
     solver: PstdSolver,
-    validation: ValidationManager,
+
 }
 
 impl BrainUltrasoundSimulation {
@@ -196,7 +196,7 @@ impl BrainUltrasoundSimulation {
         let pstd_config = PstdConfig::default();
         
         let solver = PstdSolver::new(pstd_config, &grid)?;
-        let validation = ValidationManager::new();
+
         
         Ok(Self {
             config,
@@ -204,7 +204,6 @@ impl BrainUltrasoundSimulation {
             medium,
             grid,
             solver,
-            validation,
         })
     }
     

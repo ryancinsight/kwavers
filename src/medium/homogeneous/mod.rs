@@ -860,8 +860,8 @@ mod tests {
         assert_eq!(medium.gas_diffusion_coefficient(0.0,0.0,0.0, &grid), medium.gas_diffusion_coeff);
         assert_eq!(medium.thermal_diffusivity(0.0,0.0,0.0, &grid), medium.thermal_diffusivity);
         assert_eq!(medium.nonlinearity_coefficient(0.0,0.0,0.0, &grid), medium.b_a);
-        assert_eq!(medium.absorption_coefficient_light(0.0,0.0,0.0, &grid), medium.mu_a);
-        assert_eq!(medium.reduced_scattering_coefficient_light(0.0,0.0,0.0, &grid), medium.mu_s_prime);
+        assert_eq!(medium.optical_absorption_coefficient(0.0,0.0,0.0, &grid), medium.mu_a);
+        assert_eq!(medium.optical_scattering_coefficient(0.0,0.0,0.0, &grid), medium.mu_s_prime);
         assert_eq!(medium.reference_frequency(), medium.reference_frequency);
     }
 
