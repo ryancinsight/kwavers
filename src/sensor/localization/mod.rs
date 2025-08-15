@@ -550,6 +550,8 @@ pub struct PhantomMeasurement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::physics::SOUND_SPEED_WATER;
+    use approx::assert_abs_diff_eq;
     
     #[test]
     fn test_sensor_array_geometry_detection() {

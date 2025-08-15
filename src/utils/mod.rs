@@ -7,7 +7,6 @@ pub mod linear_algebra;
 pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;
-pub mod test_helpers;
 pub mod differential_operators;
 
 // Re-export commonly used utilities

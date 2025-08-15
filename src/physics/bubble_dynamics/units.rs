@@ -16,6 +16,7 @@ use uom::si::acceleration::meter_per_second_squared;
 use uom::si::volume::cubic_meter;
 use uom::si::area::square_meter;
 use uom::si::mass::kilogram;
+use uom::si::power::watt;
 
 use std::collections::HashMap;
 use super::bubble_state::GasType;
@@ -235,6 +236,8 @@ pub fn calculate_work_rate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::power::watt;
     
     #[test]
     fn test_unit_safe_parameters() {
