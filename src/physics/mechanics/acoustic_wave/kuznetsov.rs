@@ -334,7 +334,7 @@ impl KuznetsovWave {
         Self::validate_config(&config, grid)?;
         
         // Precompute k-space arrays
-        let k_squared = grid.k_squared();
+        let k_squared = grid.k_squared().clone();
         let k_magnitude = compute_k_magnitude(grid);
         
         // Compute k-space correction factors using unified approach

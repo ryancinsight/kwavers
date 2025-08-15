@@ -319,7 +319,7 @@ impl NonlinearWave {
         debug!("Initializing NonlinearWave solver (Westervelt equation) with frequency {} Hz", source_frequency);
 
         // Precompute k-squared values to avoid recomputation in every step
-        let k_squared = Some(grid.k_squared());
+        let k_squared = Some(grid.k_squared().clone());
         
         // Cache maximum sound speed for efficient stability checks
         let max_sound_speed = Self::compute_max_sound_speed(medium, grid);

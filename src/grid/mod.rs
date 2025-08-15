@@ -3,6 +3,7 @@
 use log::debug;
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
+use std::sync::OnceLock;
 
 /// Defines a 3D Cartesian grid for the simulation domain, optimized for k-space pseudospectral methods.
 #[derive(Debug, Clone)]
@@ -13,6 +14,9 @@ pub struct Grid {
     pub dx: f64,   // Spacing in x-direction (meters)
     pub dy: f64,   // Spacing in y-direction (meters)
     pub dz: f64,   // Spacing in z-direction (meters)
+    
+    // Cache for k_squared computation
+    k_squared_cache: OnceLock<Array3<f64>>,
 }
 
 impl Grid {
@@ -34,6 +38,7 @@ impl Grid {
             dx,
             dy,
             dz,
+            k_squared_cache: OnceLock::new(),
         };
         debug!(
             "Grid created: {}x{}x{}, dx = {}, dy = {}, dz = {}",
@@ -49,12 +54,35 @@ impl Grid {
     /// Create a zero-initialized 3D array with the grid dimensions
     /// This follows DRY principle by centralizing array creation
     #[inline]
+    #[deprecated(since = "2.24.0", note = "Use create_field() instead - it's more semantically descriptive")]
     pub fn zeros_array(&self) -> Array3<f64> {
-        Array3::zeros((self.nx, self.ny, self.nz))
+        self.create_field()
     }
 
-    /// Convert physical position (meters) to grid indices
-    pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
+    /// Converts physical position (meters) to grid indices, returning None if out of bounds.
+    /// Uses floor() to determine the grid cell containing the position.
+    pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
+        // Check bounds first
+        if x < 0.0 || y < 0.0 || z < 0.0 {
+            return None;
+        }
+        
+        // Use floor for correct cell assignment
+        let i = (x / self.dx).floor() as usize;
+        let j = (y / self.dy).floor() as usize;
+        let k = (z / self.dz).floor() as usize;
+        
+        // Check upper bounds
+        if i >= self.nx || j >= self.ny || k >= self.nz {
+            return None;
+        }
+        
+        Some((i, j, k))
+    }
+    
+    /// Legacy method for backward compatibility - use position_to_indices instead
+    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
+    pub fn position_to_indices_unsafe(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
         (
             (x / self.dx).round() as usize,
             (y / self.dy).round() as usize,
@@ -85,12 +113,27 @@ impl Grid {
         (x, y, z)
     }
 
-    /// Calculates the physical domain size in each dimension (meters), excluding padding.
-    pub fn domain_size(&self) -> (f64, f64, f64) {
+    /// Calculates the physical distance between the first and last grid points in each dimension.
+    /// This represents the span of the grid points, not the total volume.
+    pub fn grid_span(&self) -> (f64, f64, f64) {
         let lx = self.dx * (self.nx - 1) as f64;
         let ly = self.dy * (self.ny - 1) as f64;
         let lz = self.dz * (self.nz - 1) as f64;
         (lx, ly, lz)
+    }
+    
+    /// Calculates the total physical dimensions of the domain volume.
+    /// This represents the full extent of the computational domain.
+    pub fn physical_dimensions(&self) -> (f64, f64, f64) {
+        (self.dx * self.nx as f64, 
+         self.dy * self.ny as f64, 
+         self.dz * self.nz as f64)
+    }
+    
+    /// Legacy method - use grid_span() or physical_dimensions() for clarity
+    #[deprecated(since = "2.24.0", note = "Use grid_span() or physical_dimensions() for clarity")]
+    pub fn domain_size(&self) -> (f64, f64, f64) {
+        self.grid_span()
     }
 
     /// Generates 1D arrays of coordinates (meters).
@@ -113,26 +156,33 @@ impl Grid {
 
     /// Checks if a point (x, y, z) is within grid bounds (meters).
     pub fn contains_point(&self, x: f64, y: f64, z: f64) -> bool {
-        let (lx, ly, lz) = self.domain_size();
-        x >= 0.0 && x <= lx && y >= 0.0 && y <= ly && z >= 0.0 && z <= lz
+        let (lx, ly, lz) = self.physical_dimensions();
+        x >= 0.0 && x < lx && y >= 0.0 && y < ly && z >= 0.0 && z < lz
     }
 
     /// Converts coordinates to grid indices, clamping to bounds.
+    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
     pub fn x_idx(&self, x: f64) -> usize {
         (x / self.dx).floor().clamp(0.0, (self.nx - 1) as f64) as usize
     }
+    
+    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
     pub fn y_idx(&self, y: f64) -> usize {
         (y / self.dy).floor().clamp(0.0, (self.ny - 1) as f64) as usize
     }
+    
+    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
     pub fn z_idx(&self, z: f64) -> usize {
         (z / self.dz).floor().clamp(0.0, (self.nz - 1) as f64) as usize
     }
 
     /// Converts physical coordinates to grid indices, returning None if out of bounds.
+    #[deprecated(since = "2.24.0", note = "Use position_to_indices instead")]
     pub fn to_grid_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
         if !self.contains_point(x, y, z) {
             return None;
         }
+        #[allow(deprecated)]
         Some((self.x_idx(x), self.y_idx(y), self.z_idx(z)))
     }
 
@@ -170,17 +220,20 @@ impl Grid {
         })
     }
 
-    /// Computes the squared wavenumber magnitude (k^2) for k-space operations (rad^2/m^2).
-    pub fn k_squared(&self) -> Array3<f64> {
-        debug!(
-            "Computing k^2 for k-space: {}x{}x{}",
-            self.nx, self.ny, self.nz
-        );
-        let kx = self.kx();
-        let ky = self.ky();
-        let kz = self.kz();
-        Array3::from_shape_fn((self.nx, self.ny, self.nz), |(i, j, k)| {
-            kx[i] * kx[i] + ky[j] * ky[j] + kz[k] * kz[k]
+    /// Returns the squared wavenumber magnitude (k^2) for k-space operations (rad^2/m^2).
+    /// This value is cached after first computation for efficiency.
+    pub fn k_squared(&self) -> &Array3<f64> {
+        self.k_squared_cache.get_or_init(|| {
+            debug!(
+                "Computing and caching k^2 for k-space: {}x{}x{}",
+                self.nx, self.ny, self.nz
+            );
+            let kx = self.kx();
+            let ky = self.ky();
+            let kz = self.kz();
+            Array3::from_shape_fn((self.nx, self.ny, self.nz), |(i, j, k)| {
+                kx[i] * kx[i] + ky[j] * ky[j] + kz[k] * kz[k]
+            })
         })
     }
 
@@ -259,29 +312,40 @@ impl Grid {
 /// Iterator over grid points with their physical coordinates
 pub struct GridPointIterator<'a> {
     grid: &'a Grid,
-    current: usize,
+    i: usize,
+    j: usize,
+    k: usize,
 }
 
 impl<'a> Iterator for GridPointIterator<'a> {
     type Item = ((usize, usize, usize), (f64, f64, f64));
     
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current >= self.grid.total_points() {
+        if self.i >= self.grid.nx {
             return None;
         }
         
-        let k = self.current % self.grid.nz;
-        let j = (self.current / self.grid.nz) % self.grid.ny;
-        let i = self.current / (self.grid.ny * self.grid.nz);
+        let coords = self.grid.coordinates(self.i, self.j, self.k);
+        let indices = (self.i, self.j, self.k);
         
-        let coords = self.grid.coordinates(i, j, k);
-        self.current += 1;
+        // Increment indices - iterate in memory-friendly order (k fastest)
+        self.k += 1;
+        if self.k >= self.grid.nz {
+            self.k = 0;
+            self.j += 1;
+            if self.j >= self.grid.ny {
+                self.j = 0;
+                self.i += 1;
+            }
+        }
         
-        Some(((i, j, k), coords))
+        Some((indices, coords))
     }
     
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.grid.total_points() - self.current;
+        let current = self.i * self.grid.ny * self.grid.nz + 
+                     self.j * self.grid.nz + self.k;
+        let remaining = self.grid.total_points().saturating_sub(current);
         (remaining, Some(remaining))
     }
 }
@@ -364,7 +428,9 @@ impl Grid {
     pub fn iter_points(&self) -> GridPointIterator<'_> {
         GridPointIterator {
             grid: self,
-            current: 0,
+            i: 0,
+            j: 0,
+            k: 0,
         }
     }
     
