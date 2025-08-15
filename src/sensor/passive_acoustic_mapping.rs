@@ -187,8 +187,8 @@ pub struct PAMConfig {
 pub enum BeamformingMethod {
     /// Delay-and-sum beamforming
     DelayAndSum,
-    /// Robust Capon beamforming
-    RobustCapon { diagonal_loading: f64 },
+    /// Capon beamforming with regularization
+    CaponRegularized { diagonal_loading: f64 },
     /// MUSIC algorithm
     MUSIC { signal_subspace_dim: usize },
     /// Time exposure acoustics
@@ -261,7 +261,7 @@ impl PassiveAcousticMappingPlugin {
             BeamformingMethod::DelayAndSum => {
                 self.delay_and_sum_beamforming(&mut reconstructed, grid, frequency);
             },
-            BeamformingMethod::RobustCapon { diagonal_loading } => {
+            BeamformingMethod::CaponRegularized { diagonal_loading } => {
                 self.capon_beamforming_with_diagonal_loading(&mut reconstructed, grid, frequency, *diagonal_loading);
             },
             BeamformingMethod::MUSIC { signal_subspace_dim } => {

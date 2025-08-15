@@ -69,7 +69,7 @@ pub enum BeamformingAlgorithm {
         spatial_smoothing: bool,
     },
     /// Capon Beamforming with Regularization
-    RobustCapon {
+    CaponRegularized {
         diagonal_loading: f64,
         uncertainty_set_size: f64,
     },
@@ -137,7 +137,7 @@ impl BeamformingProcessor {
             BeamformingAlgorithm::MUSIC { signal_subspace_dimension, spatial_smoothing } => {
                 self.music_beamforming(sensor_data, scan_points, *signal_subspace_dimension, *spatial_smoothing)
             }
-            BeamformingAlgorithm::RobustCapon { diagonal_loading, uncertainty_set_size } => {
+            BeamformingAlgorithm::CaponRegularized { diagonal_loading, uncertainty_set_size } => {
                 self.capon_beamforming(sensor_data, scan_points, *diagonal_loading, *uncertainty_set_size)
             }
             BeamformingAlgorithm::LCMV { constraint_matrix, response_vector } => {

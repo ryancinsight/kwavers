@@ -949,13 +949,6 @@ impl ValidationSuccess {
 /// Validation result type
 pub type ValidationResult = Result<ValidationSuccess, ValidationError>;
 
-// Note: EnhancedError and related types removed as they were unused
-// and violated YAGNI principle. The standard KwaversError provides
-// sufficient error handling capabilities.
-
-// ErrorBuilder and related utilities removed as they depended on
-// the removed EnhancedError type. Use KwaversError directly instead.
-
 /// Result type alias for kwavers operations
 pub type KwaversResult<T> = Result<T, KwaversError>;
 
@@ -1020,10 +1013,6 @@ impl From<CompositeError> for KwaversError {
 pub mod utils {
     use super::*;
     
-    // Note: Functions that referenced EnhancedError and ErrorSeverity have been removed
-    // as those types were removed for violating YAGNI principle.
-    // Use KwaversError directly for error handling.
-    
     /// Check if an error is recoverable
     pub fn is_recoverable(error: &KwaversError) -> bool {
         matches!(error, 
@@ -1058,6 +1047,7 @@ pub mod utils {
             KwaversError::Visualization(_) => "Visualization",
             KwaversError::Composite(_) => "Composite",
             KwaversError::NotImplemented(_) => "Not Implemented",
+            KwaversError::Field(_) => "Field",
             KwaversError::FieldNotRegistered(_) => "Field Registry",
             KwaversError::FieldInactive(_) => "Field State",
             KwaversError::FieldDataNotInitialized => "Field Data",

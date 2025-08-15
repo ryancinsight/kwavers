@@ -3,8 +3,8 @@
 // Enhanced validation configuration system
 pub mod validation;
 
-// Re-export the new validation system
-pub use validation::ValidationConfig as NewValidationConfig;
+// Re-export the validation system
+pub use validation::ValidationConfig;
 
 // No longer directly used here: Medium, Arc
 use log::debug;
@@ -13,10 +13,10 @@ use std::fs;
 
 use serde::{Deserialize, Serialize};
 
-/// Validation configuration - single source of truth for all validation limits
+/// Field validation configuration - single source of truth for all field limits
 /// Follows SSOT and DRY principles
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationConfig {
+pub struct FieldValidationConfig {
     /// Pressure field limits
     pub pressure: FieldLimits,
     /// Temperature field limits  
@@ -38,7 +38,7 @@ pub struct FieldLimits {
     pub warn_max: Option<f64>,
 }
 
-impl Default for ValidationConfig {
+impl Default for FieldValidationConfig {
     fn default() -> Self {
         Self {
             pressure: FieldLimits {
@@ -75,7 +75,7 @@ impl Default for ValidationConfig {
     }
 }
 
-impl ValidationConfig {
+impl FieldValidationConfig {
     /// Load from file
     pub fn from_file(path: &str) -> Result<Self, std::io::Error> {
         let contents = std::fs::read_to_string(path)?;
