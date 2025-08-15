@@ -59,7 +59,6 @@ pub mod io;
 pub mod log;
 pub mod medium;
 pub mod ml;
-pub mod output;
 pub mod performance;
 pub mod physics;
 pub mod plotting;
@@ -71,7 +70,6 @@ pub mod source;
 pub mod time;
 pub mod utils;
 pub mod validation;
-pub mod benchmarks;
 
 // Phase 11: Visualization & Real-Time Interaction
 #[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web-visualization", feature = "vr-support")))]
@@ -131,8 +129,8 @@ pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalMo
 // Re-export factory components  
 pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, SimulationBuilder, SimulationSetup, SimulationResults};
 
-// Re-export utility functions
-pub use output::{save_pressure_data, save_light_data, generate_summary};
+// Re-export I/O functions
+pub use io::{save_pressure_data, save_light_data, generate_summary};
 
 // Re-export performance optimization
 pub use performance::{
@@ -150,8 +148,8 @@ pub use source::{LinearArray, HanningApodization};
 pub use sensor::SensorConfig;
 pub use recorder::RecorderConfig;
 
-// Re-export benchmarks
-pub use benchmarks::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFormat};
+// Re-export benchmarks from performance module
+pub use performance::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFormat};
 
 // Re-export solver validation
 pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
