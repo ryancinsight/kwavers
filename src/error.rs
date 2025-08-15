@@ -97,20 +97,7 @@ pub enum KwaversError {
     /// Composite error with multiple underlying errors
     Composite(CompositeError),
     
-    /// DEPRECATED: Field not registered in the field registry
-    /// Use Field(FieldError::NotRegistered) instead
-    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::NotRegistered) instead")]
-    FieldNotRegistered(String),
-    
-    /// DEPRECATED: Field is inactive and cannot be accessed
-    /// Use Field(FieldError::Inactive) instead
-    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::Inactive) instead")]
-    FieldInactive(String),
-    
-    /// DEPRECATED: Field data array not initialized
-    /// Use Field(FieldError::DataNotInitialized) instead
-    #[deprecated(since = "0.2.0", note = "Use Field(FieldError::DataNotInitialized) instead")]
-    FieldDataNotInitialized,
+
 
     /// Concurrency errors - critical for ACID compliance
     ConcurrencyError {
@@ -157,9 +144,7 @@ impl fmt::Display for KwaversError {
             KwaversError::Visualization(e) => write!(f, "Visualization error: {}", e),
             KwaversError::Composite(e) => write!(f, "Composite error: {}", e),
             KwaversError::NotImplemented(e) => write!(f, "Feature not yet implemented: {}", e),
-            KwaversError::FieldNotRegistered(field) => write!(f, "Field '{}' not registered in the field registry", field),
-            KwaversError::FieldInactive(field) => write!(f, "Field '{}' is inactive and cannot be accessed", field),
-            KwaversError::FieldDataNotInitialized => write!(f, "Field data array not initialized"),
+
             KwaversError::ConcurrencyError { operation, resource, reason } => {
                 write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
             },
@@ -184,9 +169,7 @@ impl StdError for KwaversError {
             KwaversError::Visualization(_) => None,
             KwaversError::Composite(e) => Some(e),
             KwaversError::NotImplemented(_) => None,
-            KwaversError::FieldNotRegistered(_) => None,
-            KwaversError::FieldInactive(_) => None,
-            KwaversError::FieldDataNotInitialized => None,
+
             KwaversError::ConcurrencyError { .. } => None,
             KwaversError::Io(_) => None,
         }
@@ -1048,9 +1031,7 @@ pub mod utils {
             KwaversError::Composite(_) => "Composite",
             KwaversError::NotImplemented(_) => "Not Implemented",
             KwaversError::Field(_) => "Field",
-            KwaversError::FieldNotRegistered(_) => "Field Registry",
-            KwaversError::FieldInactive(_) => "Field State",
-            KwaversError::FieldDataNotInitialized => "Field Data",
+
             KwaversError::ConcurrencyError { .. } => "Concurrency",
             KwaversError::Io(_) => "IO",
         }

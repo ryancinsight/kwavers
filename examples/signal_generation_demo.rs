@@ -248,7 +248,7 @@ fn analyze_signal(signal: &dyn Signal, name: &str, dt: f64, duration: f64) {
     println!("------------------------");
     
     let num_samples = (duration / dt) as usize;
-    let mut max_amplitude = 0.0;
+    let mut max_amplitude: f64 = 0.0;
     let mut total_energy = 0.0;
     let mut freq_sum = 0.0;
     let mut freq_count = 0;

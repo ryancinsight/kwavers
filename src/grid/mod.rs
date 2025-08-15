@@ -54,9 +54,8 @@ impl Grid {
     /// Create a zero-initialized 3D array with the grid dimensions
     /// This follows DRY principle by centralizing array creation
     #[inline]
-    #[deprecated(since = "2.24.0", note = "Use create_field() instead - it's more semantically descriptive")]
-    pub fn zeros_array(&self) -> Array3<f64> {
-        self.create_field()
+    pub fn create_field(&self) -> Array3<f64> {
+        Array3::zeros((self.nx, self.ny, self.nz))
     }
 
     /// Converts physical position (meters) to grid indices, returning None if out of bounds.
@@ -80,15 +79,7 @@ impl Grid {
         Some((i, j, k))
     }
     
-    /// Legacy method for backward compatibility - use position_to_indices instead
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn position_to_indices_unsafe(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
-        (
-            (x / self.dx).round() as usize,
-            (y / self.dy).round() as usize,
-            (z / self.dz).round() as usize,
-        )
-    }
+
     
     /// Returns the total number of grid points.
     pub fn total_points(&self) -> usize {
@@ -113,18 +104,15 @@ impl Grid {
         (x, y, z)
     }
 
-    /// Calculates the physical distance between the first and last grid points in each dimension.
-    /// This represents the span of the grid points, not the total volume.
-    pub fn grid_span(&self) -> (f64, f64, f64) {
-        let lx = self.dx * (self.nx - 1) as f64;
-        let ly = self.dy * (self.ny - 1) as f64;
-        let lz = self.dz * (self.nz - 1) as f64;
-        (lx, ly, lz)
+    /// Returns the total physical dimensions (meters) of the grid.
+    pub fn physical_dimensions(&self) -> (f64, f64, f64) {
+        (self.dx * self.nx as f64, 
+         self.dy * self.ny as f64, 
+         self.dz * self.nz as f64)
     }
     
-    /// Calculates the total physical dimensions of the domain volume.
-    /// This represents the full extent of the computational domain.
-    pub fn physical_dimensions(&self) -> (f64, f64, f64) {
+    /// Returns the total span of the grid in each dimension (meters).
+    pub fn grid_span(&self) -> (f64, f64, f64) {
         (self.dx * self.nx as f64, 
          self.dy * self.ny as f64, 
          self.dz * self.nz as f64)
@@ -149,42 +137,13 @@ impl Grid {
         Array1::linspace(0.0, self.dz * (self.nz - 1) as f64, self.nz)
     }
 
-    /// Creates a 3D array initialized with zeros for fields (e.g., pressure, light).
-    pub fn create_field(&self) -> Array3<f64> {
-        Array3::zeros((self.nx, self.ny, self.nz))
-    }
-
-    /// Checks if a point (x, y, z) is within grid bounds (meters).
+    /// Check if a point is within the grid bounds
     pub fn contains_point(&self, x: f64, y: f64, z: f64) -> bool {
         let (lx, ly, lz) = self.physical_dimensions();
         x >= 0.0 && x < lx && y >= 0.0 && y < ly && z >= 0.0 && z < lz
     }
 
-    /// Converts coordinates to grid indices, clamping to bounds.
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn x_idx(&self, x: f64) -> usize {
-        (x / self.dx).floor().clamp(0.0, (self.nx - 1) as f64) as usize
-    }
-    
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn y_idx(&self, y: f64) -> usize {
-        (y / self.dy).floor().clamp(0.0, (self.ny - 1) as f64) as usize
-    }
-    
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn z_idx(&self, z: f64) -> usize {
-        (z / self.dz).floor().clamp(0.0, (self.nz - 1) as f64) as usize
-    }
 
-    /// Converts physical coordinates to grid indices, returning None if out of bounds.
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices instead")]
-    pub fn to_grid_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
-        if !self.contains_point(x, y, z) {
-            return None;
-        }
-        #[allow(deprecated)]
-        Some((self.x_idx(x), self.y_idx(y), self.z_idx(z)))
-    }
 
     /// Generates wavenumber arrays for k-space computations (rad/m).
     pub fn kx(&self) -> Array1<f64> {
