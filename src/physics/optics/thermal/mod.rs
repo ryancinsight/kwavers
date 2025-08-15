@@ -1,4 +1,13 @@
-// physics/optics/thermal/mod.rs
+//! Legacy optical thermal module - DEPRECATED
+//!
+//! **DEPRECATION NOTICE**: This module is deprecated as of v2.18.0.
+//! Please use `physics::thermal` instead, which provides a unified
+//! interface for all thermal phenomena including optical heating.
+//!
+//! Migration guide:
+//! - `OpticalThermalModel` → `thermal::ThermalCalculator` with `HeatSource::Optical`
+
+#[deprecated(since = "2.18.0", note = "Use physics::thermal::ThermalCalculator with HeatSource::Optical")]
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_indices::TEMPERATURE_IDX;

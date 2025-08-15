@@ -13,6 +13,8 @@ pub mod optics;
 pub mod plugin; // NEW: Plugin architecture for extensible physics
 pub mod scattering;
 pub mod state;
+pub mod thermal; // NEW: Unified thermal physics module
+#[deprecated(since = "2.18.0", note = "Use physics::thermal instead")]
 pub mod thermodynamics;
 pub mod traits;
 pub mod sonoluminescence_detector;

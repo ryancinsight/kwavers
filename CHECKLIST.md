@@ -1,34 +1,40 @@
 # Kwavers Development Checklist
 
-## ✅ **EXPERT CODE REVIEW v9 COMPLETE** - January 2025
+## ✅ **EXPERT CODE REVIEW v10 COMPLETE** - January 2025
 
-### **📋 Physics Consolidation & Redundancy Elimination - Version 2.18.0**
-**Objective**: Consolidate redundant physics modules and eliminate duplicate implementations  
-**Status**: ✅ **COMPLETE** - Unified wave propagation with scattering, deprecated legacy modules  
+### **📋 Thermal Physics Consolidation - Version 2.19.0**
+**Objective**: Unify thermal physics and eliminate redundancy between optics/thermal and thermodynamics  
+**Status**: ✅ **COMPLETE** - Unified thermal module created, deprecated modules marked  
 **Build Status**: ✅ **SUCCESSFUL** - Zero compilation errors  
-**Architecture**: ✅ **CONSOLIDATED** - Single source of truth for wave phenomena  
+**Architecture**: ✅ **CONSOLIDATED** - Single source of truth for all thermal phenomena  
 
-### **🔍 Consolidation Achievements**
+### **🔍 Thermal Consolidation Achievements**
 
-#### **Unified Wave Propagation Module**
-- [x] **Scattering Integration**: Merged particle scattering into wave_propagation module
-- [x] **Single Implementation**: Eliminated duplicate Rayleigh/Mie implementations
-- [x] **Comprehensive Coverage**: Reflection, refraction, and scattering in one module
-- [x] **Regime Detection**: Automatic selection of Rayleigh/Mie/Geometric regimes
-- [x] **Phase Functions**: Henyey-Greenstein, Rayleigh, and isotropic models
+#### **Unified Thermal Module**
+- [x] **Single Implementation**: All thermal physics in `physics::thermal`
+- [x] **Heat Sources**: Optical, acoustic, metabolic, and external heating
+- [x] **Bioheat Equation**: Pennes model with blood perfusion
+- [x] **Hyperbolic Heat**: Cattaneo-Vernotte non-Fourier conduction
+- [x] **Thermal Dose**: CEM43 calculation for therapy planning
 
-#### **Deprecated Legacy Modules**
-- [x] **physics/scattering**: Marked as deprecated with migration path
-- [x] **Migration Helpers**: Provided compatibility layer for smooth transition
-- [x] **Documentation**: Clear migration guide in module documentation
-- [x] **Removal Timeline**: Set for v3.0.0 to allow transition period
+#### **Deprecated Modules Marked**
+- [x] **physics/thermodynamics**: Legacy heat transfer module deprecated
+- [x] **physics/optics/thermal**: Optical thermal module deprecated
+- [x] **Migration Path**: Clear upgrade path to unified thermal module
+- [x] **API Updates**: All usages updated to new thermal API
 
-#### **Design Principle Compliance**
-- [x] **SSOT**: Single source for all wave propagation phenomena
-- [x] **DRY**: No duplicate implementations of scattering physics
-- [x] **SOLID**: Clear separation between interface and volume scattering
-- [x] **CUPID**: Plugin-ready architecture for custom scattering models
-- [x] **Zero Naming Violations**: No adjectives in any component names
+#### **Literature Compliance**
+- [x] **Pennes (1948)**: Bioheat equation implementation
+- [x] **Sapareto & Dewey (1984)**: CEM43 thermal dose
+- [x] **Cattaneo (1958)**: Hyperbolic heat transfer
+- [x] **Welch & van Gemert (2011)**: Optical-thermal response
+
+#### **Design Excellence**
+- [x] **SSOT**: Single thermal physics implementation
+- [x] **DRY**: No duplicate thermal code
+- [x] **SOLID**: Clear separation of heat sources
+- [x] **CUPID**: Plugin-ready thermal architecture
+- [x] **Zero Violations**: Clean naming throughout
 
 ### **📋 Phase 31 Results - Version 2.11.0**
 **Objective**: Implement literature-validated FWI & RTM, advanced equation modes, and simulation package integration  

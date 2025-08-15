@@ -4,7 +4,7 @@ use crate::grid::Grid;
 use crate::physics::field_indices::LIGHT_IDX;
 use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
 use crate::physics::optics::polarization::LinearPolarization;
-use crate::physics::optics::thermal::OpticalThermalModel;
+use crate::physics::thermal::{ThermalCalculator, HeatSource, ThermalConfig};
 use crate::medium::Medium;
 use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
 use log::debug;
@@ -22,7 +22,7 @@ pub struct LightDiffusion {
     pub emission_spectrum: Array3<f64>,
     polarization: Option<Box<dyn PolarizationModelTrait>>,
     scattering: Option<Box<dyn OpticalScatteringModel>>,
-    thermal: Option<OpticalThermalModel>,
+    thermal: Option<ThermalCalculator>,
     enable_polarization: bool,
     enable_scattering: bool,
     enable_thermal: bool,
@@ -59,7 +59,7 @@ impl LightDiffusion {
                 None
             },
             thermal: if enable_thermal {
-                Some(OpticalThermalModel::new(grid))
+                Some(ThermalCalculator::new(grid, 310.15)) // 37°C initial temperature
             } else {
                 None
             },
