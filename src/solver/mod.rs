@@ -559,8 +559,8 @@ impl Solver {
             Self::validate_field(
                 &pressure, 
                 "pressure", 
-                self.validation_config.pressure.min,
-                self.validation_config.pressure.max
+                self.validation_config.pressure.min_pressure,
+                self.validation_config.pressure.max_pressure
             )?;
         }
 
@@ -589,8 +589,8 @@ impl Solver {
             Self::validate_field(
                 &pressure, 
                 "pressure_after_cavitation",
-                self.validation_config.pressure.min,
-                self.validation_config.pressure.max
+                self.validation_config.pressure.min_pressure,
+                self.validation_config.pressure.max_pressure
             )?;
         }
         
@@ -614,8 +614,8 @@ impl Solver {
             Self::validate_field(
                 &light, 
                 "light_after_update",
-                self.validation_config.light.min,
-                self.validation_config.light.max
+                self.validation_config.light.min_intensity,
+                self.validation_config.light.max_intensity
             )?;
         }
         
@@ -659,8 +659,8 @@ impl Solver {
             Self::validate_field(
                 &temp, 
                 "temperature",
-                self.validation_config.temperature.min,
-                self.validation_config.temperature.max
+                self.validation_config.temperature.min_temperature,
+                self.validation_config.temperature.max_temperature
             )?;
         }
         

@@ -1632,8 +1632,38 @@ mod tests {
     use crate::source::Source;
     use crate::signal::Signal;
     
+    // Null signal implementation for tests
+    #[derive(Debug)]
+    struct NullSignal;
+    
+    impl Signal for NullSignal {
+        fn amplitude(&self, _t: f64) -> f64 {
+            0.0
+        }
+        
+        fn frequency(&self, _t: f64) -> f64 {
+            1e6 // 1 MHz default
+        }
+        
+        fn phase(&self, _t: f64) -> f64 {
+            0.0
+        }
+        
+        fn clone_box(&self) -> Box<dyn Signal> {
+            Box::new(NullSignal)
+        }
+    }
+    
     // Test source implementation
-    struct TestSource;
+    struct TestSource {
+        signal: NullSignal,
+    }
+    
+    impl TestSource {
+        fn new() -> Self {
+            Self { signal: NullSignal }
+        }
+    }
     
     impl std::fmt::Debug for TestSource {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1660,9 +1690,7 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn Signal {
-            // Simple test implementation - return a dummy signal reference
-            // In real usage, this would reference an actual signal
-            unimplemented!("Test source signal access not needed for these tests")
+            &self.signal
         }
     }
     
@@ -1709,7 +1737,7 @@ mod tests {
         let initial_energy = pressure.iter().map(|&p| p * p).sum::<f64>();
         
         // Create test source
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Create fields array
         let mut fields = Array4::zeros((13, 128, 128, 128)); // Standard field indices

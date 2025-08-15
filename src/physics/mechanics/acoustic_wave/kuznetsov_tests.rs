@@ -17,8 +17,38 @@ mod tests {
     use std::f64::consts::PI;
     
     
+    // Null signal implementation for tests
+    #[derive(Debug)]
+    struct NullSignal;
+    
+    impl crate::signal::Signal for NullSignal {
+        fn amplitude(&self, _t: f64) -> f64 {
+            0.0
+        }
+        
+        fn frequency(&self, _t: f64) -> f64 {
+            1e6 // 1 MHz default
+        }
+        
+        fn phase(&self, _t: f64) -> f64 {
+            0.0
+        }
+        
+        fn clone_box(&self) -> Box<dyn crate::signal::Signal> {
+            Box::new(NullSignal)
+        }
+    }
+    
     // Test source implementation
-    struct TestSource;
+    struct TestSource {
+        signal: NullSignal,
+    }
+    
+    impl TestSource {
+        fn new() -> Self {
+            Self { signal: NullSignal }
+        }
+    }
     
     impl std::fmt::Debug for TestSource {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -45,7 +75,7 @@ mod tests {
         }
         
         fn signal(&self) -> &dyn crate::signal::Signal {
-            unimplemented!("Test source signal access not needed for these tests")
+            &self.signal
         }
     }
     
@@ -75,7 +105,7 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create test source
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Create fields array
         let mut fields = Array4::zeros((13, 32, 32, 32)); // Standard field indices
@@ -132,7 +162,7 @@ mod tests {
         }
         
         let prev_pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Propagate to observe steepening
         let dt = 5e-8;
@@ -187,7 +217,7 @@ mod tests {
             .fold(0.0_f64, |a, &b| a.max(b.abs()));
         println!("Initial max amplitude: {}", initial_max);
         let prev_pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Propagate - use very small time step for stability
         let dt = 1e-9; // Much smaller time step
@@ -242,7 +272,7 @@ mod tests {
         }
         
         let prev_pressure = fields.index_axis(Axis(0), 0).to_owned();
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Run simulation
         // Use smaller time step for stability with full Kuznetsov equation
@@ -365,7 +395,7 @@ mod tests {
         }
         
         let prev_pressure = fields_k.index_axis(Axis(0), 0).to_owned();
-        let source = TestSource;
+        let source = TestSource::new();
         
         // Run one step
         let dt = 1e-7;
