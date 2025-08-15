@@ -485,13 +485,13 @@ impl FdtdSolver {
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
             // Update C-PML memory variables and apply to divergence components
-            cpml.update_acoustic_memory(&dvx_dx, 0, dt)?;
+            cpml.update_acoustic_memory(&dvx_dx, 0)?;
             cpml.apply_cpml_gradient(&mut dvx_dx, 0)?;
             
-            cpml.update_acoustic_memory(&dvy_dy, 1, dt)?;
+            cpml.update_acoustic_memory(&dvy_dy, 1)?;
             cpml.apply_cpml_gradient(&mut dvy_dy, 1)?;
             
-            cpml.update_acoustic_memory(&dvz_dz, 2, dt)?;
+            cpml.update_acoustic_memory(&dvz_dz, 2)?;
             cpml.apply_cpml_gradient(&mut dvz_dz, 2)?;
         }
         
@@ -529,13 +529,13 @@ impl FdtdSolver {
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
             // Update C-PML memory variables and apply to gradients
-            cpml.update_acoustic_memory(&dp_dx, 0, dt)?;
+            cpml.update_acoustic_memory(&dp_dx, 0)?;
             cpml.apply_cpml_gradient(&mut dp_dx, 0)?;
             
-            cpml.update_acoustic_memory(&dp_dy, 1, dt)?;
+            cpml.update_acoustic_memory(&dp_dy, 1)?;
             cpml.apply_cpml_gradient(&mut dp_dy, 1)?;
             
-            cpml.update_acoustic_memory(&dp_dz, 2, dt)?;
+            cpml.update_acoustic_memory(&dp_dz, 2)?;
             cpml.apply_cpml_gradient(&mut dp_dz, 2)?;
         }
         
