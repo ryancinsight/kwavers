@@ -12,6 +12,7 @@ pub mod hemispherical_array;
 pub mod linear_array;
 pub mod matrix_array;
 pub mod phased_array;
+pub mod transducer_design;
 
 /// Efficient source trait using mask-based approach
 pub trait Source: Debug + Sync + Send {

@@ -11,7 +11,7 @@
 //! - Hertzberg et al. (2010): "Ultrasound focusing using magnetic resonance acoustic radiation force imaging"
 //! - Jones et al. (2019): "Transcranial MR-guided focused ultrasound: A review of the technology"
 
-use crate::error::{KwaversError, KwaversResult};
+use crate::error::{KwaversError, KwaversResult, ConfigError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::signal::Signal;
@@ -144,14 +144,18 @@ impl HemisphericalArray {
     ) -> KwaversResult<Self> {
         // Validate parameters
         if radius <= 0.0 {
-            return Err(KwaversError::Configuration(
-                "Radius must be positive".to_string()
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "radius".to_string(),
+                value: radius.to_string(),
+                constraint: "Must be positive".to_string(),
+            }));
         }
         if frequency <= 0.0 {
-            return Err(KwaversError::Configuration(
-                "Frequency must be positive".to_string()
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "frequency".to_string(),
+                value: frequency.to_string(),
+                constraint: "Must be positive".to_string(),
+            }));
         }
         
         // Calculate wavelength (assuming water/tissue)
@@ -720,10 +724,11 @@ impl HemisphericalArray {
         let steering_angle = (lateral_distance / dz).atan().to_degrees();
         
         if steering_angle.abs() > MAX_STEERING_ANGLE {
-            return Err(KwaversError::Configuration(
-                format!("Steering angle {:.1}° exceeds maximum {:.1}°", 
-                       steering_angle, MAX_STEERING_ANGLE)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "steering_angle".to_string(),
+                value: format!("{:.1}°", steering_angle),
+                constraint: format!("Must be <= {:.1}°", MAX_STEERING_ANGLE),
+            }));
         }
         
         self.steering_target = target;
@@ -788,10 +793,10 @@ impl Source for HemisphericalArray {
         for &idx in &self.active_elements {
             let element = &self.elements[idx];
             
-            // Find nearest grid point to element position
-            let i = ((element.position[0] - grid.x_min) / grid.dx).round() as usize;
-            let j = ((element.position[1] - grid.y_min) / grid.dy).round() as usize;
-            let k = ((element.position[2] - grid.z_min) / grid.dz).round() as usize;
+            // Find nearest grid point to element position (assuming grid starts at origin)
+            let i = ((element.position[0] + grid.nx as f64 * grid.dx / 2.0) / grid.dx).round() as usize;
+            let j = ((element.position[1] + grid.ny as f64 * grid.dy / 2.0) / grid.dy).round() as usize;
+            let k = ((element.position[2] + grid.nz as f64 * grid.dz / 2.0) / grid.dz).round() as usize;
             
             if i < grid.nx && j < grid.ny && k < grid.nz {
                 mask[(i, j, k)] = element.amplitude;

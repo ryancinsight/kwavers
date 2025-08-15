@@ -1,46 +1,57 @@
 # Kwavers - Ultrasound Simulation Toolbox
 
-**Version**: 2.13.0  
-**Status**: 🚀 **Hemispherical Sparse Arrays Complete** – Insightec-style sparse element control  
+**Version**: 2.14.0  
+**Status**: 🚀 **Transducer Design Complete** – Comprehensive element design with kerf, bandwidth, and impedance  
 **Next Phase**: **Phase 32 READY** – ML/AI Integration & Real-Time Processing  
 **Performance**: >17M grid updates/second with GPU acceleration  
 **Build Status**: ✅ **LIBRARY BUILDS** – Production-ready codebase  
-**Code Quality**: ✅ **SPARSE ARRAYS COMPLETE** – Hemispherical transducer with treatment envelope optimization  
+**Code Quality**: ✅ **TRANSDUCER DESIGN COMPLETE** – Full piezoelectric transducer modeling  
 **FWI & RTM Validation**: ✅ **COMPREHENSIVE** – Literature-validated with extensive test suites  
 **New Capabilities**: 🔥 **KZK Equation**, **Seismic FWI/RTM**, **FOCUS Integration**
 
-## 🚀 Latest Achievement - Hemispherical Sparse Arrays
+## 🚀 Latest Achievement - Comprehensive Transducer Design
 
-**Version 2.13.0 Summary**: Complete hemispherical sparse array implementation with treatment envelope optimization:
+**Version 2.14.0 Summary**: Complete transducer design module with element geometry, bandwidth, and impedance matching:
 
-### **Hemispherical Array Capabilities**
-- ✅ **Sparse Element Control**: Multiple selection strategies for efficiency
-- ✅ **Half-Wavelength Spacing**: λ/2 element spacing for improved steering
-- ✅ **Treatment Envelope**: 1.5x expansion factor with sparse arrays
-- ✅ **Grating Lobe Suppression**: Intelligent element selection algorithms
-- ✅ **150mm Radius**: Clinical-scale arrays (Insightec ExAblate compatible)
+### **Element Design Features**
+- ✅ **Element Geometry**: Width, height, thickness with aspect ratio validation
+- ✅ **Kerf Specifications**: 5-30% kerf ratio for optimal element isolation
+- ✅ **Lateral Mode Suppression**: Aspect ratio limits (0.5-20) to prevent spurious modes
+- ✅ **Capacitance Calculation**: Element electrical properties
+- ✅ **Pitch Optimization**: Element spacing for grating lobe control
 
-### **Sparse Selection Strategies**
-- **Random Sampling**: Configurable density for grating lobe reduction
-- **Spiral Patterns**: Fermat spiral for uniform coverage
-- **Efficiency-Based**: Power delivery optimization (>70% threshold)
-- **Aperture-Based**: Geometric selection within steering angles
-- **Adaptive**: Combined strategy with obstacle avoidance
-- **Grating Lobe Suppression**: Strategic element placement
+### **Frequency Response & Bandwidth**
+- **KLM Model**: Complete transmission line model implementation
+- **Fractional Bandwidth**: >20% minimum for imaging applications
+- **Quality Factor**: Mechanical and electrical Q optimization
+- **-6dB Points**: Automatic bandwidth calculation
+- **Phase Response**: Full complex transfer function
 
-### **Treatment Envelope Features**
-- **Steering Range**: ±30° from geometric focus
-- **Focal Zone**: 2×2×8mm typical HIFU dimensions
-- **Accessible Volume**: 50% increase with sparse arrays
-- **Efficiency Mapping**: 3D power delivery visualization
-- **Element Count**: >1000 elements with configurable sparsity
+### **Material Properties**
+- **PZT-5H**: High sensitivity (k33=0.75, εr=3400)
+- **PZT-4**: High power (k33=0.70, Q=500)
+- **PMN-PT**: Single crystal (k33=0.90, wide bandwidth)
+- **PVDF**: Polymer flexibility (k33=0.15, broadband)
+- **Backing Materials**: Air, epoxy, tungsten-loaded composites
+
+### **Impedance Matching**
+- **Quarter-Wave Layers**: Optimal single layer design
+- **Dual Layer Matching**: Z1=Z_piezo^0.67×Z_load^0.33
+- **Acoustic Lens**: Focusing/defocusing with polystyrene/silicone
+- **Insertion Loss**: Transmission coefficient optimization
+
+### **Coupling & Crosstalk**
+- **Element Coupling Matrix**: Exponential decay with distance
+- **Cross-Coupling**: 5% typical between adjacent elements
+- **Directivity Pattern**: Sinc function for rectangular elements
+- **Sidelobe Levels**: -13dB to -20dB typical
 
 ### **Literature Validation**
-- **Clement & Hynynen (2002)**: Non-invasive focusing through skull
-- **Pernot et al. (2003)**: High power transcranial beam steering
-- **Aubry et al. (2003)**: Transskull adaptive focusing demonstration
-- **Hertzberg et al. (2010)**: MR-ARFI guided focusing
-- **Jones et al. (2019)**: Transcranial MRgFUS technology review
+- **Szabo (2014)**: "Diagnostic Ultrasound Imaging: Inside Out"
+- **Shung (2015)**: "Diagnostic Ultrasound: Imaging and Blood Flow Measurements"
+- **Cobbold (2007)**: "Foundations of Biomedical Ultrasound"
+- **Kino (1987)**: "Acoustic Waves: Devices, Imaging, and Analog Signal Processing"
+- **Hunt et al. (1983)**: "Ultrasound transducers for pulse-echo medical imaging"
 
 ### **Design Compliance**
 - ✅ **Zero naming violations**: No adjective-based names
