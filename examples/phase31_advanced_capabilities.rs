@@ -9,15 +9,16 @@
 
 use kwavers::{
     Grid, KwaversResult,
-    physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig, AcousticEquationMode},
-    solver::reconstruction::seismic::{
-        FullWaveformInversion, ReverseTimeMigration, SeismicImagingConfig
+    medium::homogeneous::HomogeneousMedium,
+    solver::{
+        reconstruction::seismic::{FullWaveformInversion, ReverseTimeMigration, SeismicImagingConfig},
+        Solver,
     },
+    physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig, kuznetsov::AcousticEquationMode},
+    source::{Source, gaussian::GaussianSource},
     physics::plugin::acoustic_simulation_plugins::{
         TransducerFieldCalculatorPlugin, TransducerGeometry
     },
-    medium::HomogeneousMedium,
-    source::gaussian::GaussianBeamSource,
     sensor::SensorData,
 };
 use ndarray::{Array2, Array3, Array4};
@@ -31,7 +32,7 @@ fn main() -> KwaversResult<()> {
     
     // Create simulation grid
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.5);
+    let medium = HomogeneousMedium::new(1500.0, 1000.0, grid, 0.5, 1.0);
     
     // Demo 1: KZK Equation Mode
     println!("\n📐 Demo 1: KZK Equation Mode (Parabolic Approximation)");
@@ -61,10 +62,11 @@ fn demo_kzk_equation(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<(
     
     // Configure KZK mode (parabolic approximation)
     let kzk_config = KuznetsovConfig::kzk_mode();
-    let mut kzk_solver = KuznetsovWave::new(kzk_config, grid)?;
+    // Create KZK solver with parabolic approximation
+    let mut kzk_solver = KuznetsovWave::new(grid, kzk_config)?;
     
     // Create focused source
-    let source = GaussianBeamSource::new(
+    let source = GaussianSource::new(
         [grid.nx as f64 * grid.dx / 2.0, grid.ny as f64 * grid.dy / 2.0, 0.0],
         2e-3, // 2mm beam width
         1e6,  // 1 MHz frequency
@@ -194,7 +196,7 @@ fn demo_seismic_imaging(grid: &Grid) -> KwaversResult<()> {
     
     // Run FWI (simplified for demo)
     let mut fwi = FullWaveformInversion::new(seismic_config.clone(), initial_velocity);
-    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3);
+    let medium = HomogeneousMedium::new(2500.0, 2000.0, grid, 0.3, 0.5);
     
     let velocity_model = fwi.reconstruct_fwi(
         &observed_data,
@@ -288,7 +290,7 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
     println!("  🔬 Comparing Full Kuznetsov vs KZK parabolic approximation...");
     
     // Create identical initial conditions
-    let source = GaussianBeamSource::new(
+    let source = GaussianSource::new(
         [grid.nx as f64 * grid.dx / 2.0, grid.ny as f64 * grid.dy / 2.0, 0.0],
         1e-3, // 1mm beam width
         2e6,  // 2 MHz frequency
@@ -297,11 +299,12 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
     
     // Full Kuznetsov configuration
     let full_config = KuznetsovConfig::full_kuznetsov_mode();
-    let mut full_solver = KuznetsovWave::new(full_config, grid)?;
+    // Create solvers
+    let mut full_solver = KuznetsovWave::new(grid, full_config)?;
     
     // KZK configuration
     let kzk_config = KuznetsovConfig::kzk_mode();
-    let mut kzk_solver = KuznetsovWave::new(kzk_config, grid)?;
+    let mut kzk_solver = KuznetsovWave::new(grid, kzk_config)?;
     
     // Initialize fields for both solvers
     let mut full_fields = Array4::zeros((8, grid.nx, grid.ny, grid.nz));

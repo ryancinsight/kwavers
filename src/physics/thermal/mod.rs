@@ -386,10 +386,25 @@ mod tests {
         
         let source = HeatSource::Optical { fluence, absorption };
         
-        // Mock medium
+        // Test fixture for thermal calculations
         #[derive(Debug)]
-        struct MockMedium;
-        impl Medium for MockMedium {
+        struct TestMedium {
+            temperature_field: Array3<f64>,
+            bubble_radius_field: Array3<f64>,
+            bubble_velocity_field: Array3<f64>,
+        }
+        
+        impl TestMedium {
+            fn new() -> Self {
+                Self {
+                    temperature_field: Array3::from_elem((10, 10, 10), 310.15),
+                    bubble_radius_field: Array3::from_elem((10, 10, 10), 1e-6),
+                    bubble_velocity_field: Array3::zeros((10, 10, 10)),
+                }
+            }
+        }
+        
+        impl Medium for TestMedium {
             fn density(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1000.0 }
             fn sound_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1500.0 }
             fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 { 0.1 }
@@ -407,20 +422,33 @@ mod tests {
             fn thermal_expansion(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 2e-4 }
             fn gas_diffusion_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 2e-5 }
             fn reference_frequency(&self) -> f64 { 1e6 }
-            fn update_temperature(&mut self, _: &Array3<f64>) {}
-            fn temperature(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 310.15 }
-            fn bubble_radius(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e-6 }
-            fn bubble_velocity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 0.0 }
-            fn update_bubble_state(&mut self, _: &Array3<f64>, _: &Array3<f64>) {}
-            fn density_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1000.0) }
-            fn sound_speed_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1500.0) }
+            fn update_temperature(&mut self, temperature: &Array3<f64>) {
+                self.temperature_field = temperature.clone();
+            }
+            fn temperature(&self) -> &Array3<f64> { &self.temperature_field }
+            fn bubble_radius(&self) -> &Array3<f64> { &self.bubble_radius_field }
+            fn bubble_velocity(&self) -> &Array3<f64> { &self.bubble_velocity_field }
+            fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>) {
+                self.bubble_radius_field = radius.clone();
+                self.bubble_velocity_field = velocity.clone();
+            }
+            fn density_array(&self, grid: &Grid) -> Array3<f64> { 
+                Array3::from_elem(grid.get_dimensions(), 1000.0)
+            }
+            fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> { 
+                Array3::from_elem(grid.get_dimensions(), 1500.0) 
+            }
             fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
             fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
-            fn lame_lambda_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1e9) }
-            fn lame_mu_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1e9) }
+            fn lame_lambda_array(&self, grid: &Grid) -> Array3<f64> { 
+                Array3::from_elem(grid.get_dimensions(), 1e9) 
+            }
+            fn lame_mu_array(&self, grid: &Grid) -> Array3<f64> { 
+                Array3::from_elem(grid.get_dimensions(), 1e9) 
+            }
         }
         
-        let medium = MockMedium;
+        let medium = TestMedium::new();
         let heat_source = calc.calculate_heat_source(&source, &grid, &medium);
         
         // Check heat source calculation
