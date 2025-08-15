@@ -33,7 +33,7 @@ pub use state::PhysicsState;
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
-pub use wave_propagation::{WavePropagationCalculator, WaveMode, Polarization, PropagationCoefficients};
+pub use wave_propagation::{WavePropagationCalculator, AttenuationCalculator, WaveMode, Polarization, PropagationCoefficients};
 
 /// Enhanced functional programming utilities for physics calculations
 /// 
