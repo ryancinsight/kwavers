@@ -370,7 +370,7 @@ mod tests {
         
         // Standard nonlinear solver
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
-        let mut standard_solver = NonlinearWave::new(&grid);
+        let mut standard_solver = NonlinearWave::new(&grid, &medium, 1e6);
         
         // Same medium
         // let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0); // This line is removed as medium is now passed to NonlinearWave

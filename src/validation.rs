@@ -3,7 +3,7 @@
 //! This module provides a straightforward validation framework using
 //! struct methods and the validator crate for complex validations.
 
-use crate::error::{KwaversResult, ValidationError};
+use crate::error::ValidationError;
 
 /// Simple validation result
 #[derive(Debug, Clone)]

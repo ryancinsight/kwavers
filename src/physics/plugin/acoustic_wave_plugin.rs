@@ -220,7 +220,7 @@ impl PhysicsPlugin for AcousticWavePlugin {
     }
     
     fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let mut errors = Vec::new();
+        let errors = Vec::new();
         
         // Check CFL condition
         let max_speed = medium.sound_speed_array().iter()

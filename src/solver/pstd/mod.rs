@@ -782,7 +782,7 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Axis, s};
+        use ndarray::s;
         use crate::physics::field_mapping::UnifiedFieldType;
         
         // Get field indices using the unified system

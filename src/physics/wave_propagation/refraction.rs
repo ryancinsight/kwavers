@@ -1,6 +1,5 @@
 //! Refraction calculations for wave propagation
 
-use crate::error::KwaversResult;
 
 /// Refraction calculator
 pub struct RefractionCalculator {

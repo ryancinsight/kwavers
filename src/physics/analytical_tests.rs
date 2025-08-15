@@ -379,7 +379,7 @@ mod tests {
             .with_acoustic_absorption(alpha, 0.0); // delta=0 for frequency-independent
         
         // Initialize wave
-        let mut wave = NonlinearWave::new(&grid);
+        let mut wave = NonlinearWave::new(&grid, &medium, 1e6);
         wave.set_nonlinearity_scaling(1e-10); // Nearly linear case (avoid zero)
         
         // Wave parameters

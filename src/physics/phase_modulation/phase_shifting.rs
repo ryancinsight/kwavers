@@ -8,7 +8,7 @@
 //! - Ebbini & Cain (1989): "Multiple-focus ultrasound phased-array pattern synthesis"
 //! - Pernot et al. (2003): "3D real-time motion correction in high-intensity focused ultrasound"
 
-use ndarray::{Array1, Array2, Array3, ArrayView1, ArrayView2};
+use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 // Phase shifting constants

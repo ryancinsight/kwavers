@@ -11,9 +11,8 @@
 use crate::{
     physics::bubble_dynamics::BubbleStateFields,
     physics::optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters},
-    KwaversResult,
 };
-use ndarray::{Array3, Array4, Axis};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Physical constants for sonoluminescence

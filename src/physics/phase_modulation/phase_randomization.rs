@@ -10,7 +10,7 @@
 
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
 use rand::{Rng, SeedableRng};
-use rand::distributions::{Distribution, Uniform};
+use rand::distributions::Distribution;
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
 
@@ -66,7 +66,7 @@ impl PhaseRandomizer {
         distribution: PhaseDistribution,
         num_elements: usize,
     ) -> Self {
-        let mut rng = ChaCha8Rng::seed_from_u64(42); // Reproducible randomness
+        let rng = ChaCha8Rng::seed_from_u64(42); // Reproducible randomness
         let phase_states = Self::generate_phase_states(&distribution);
         let current_phases = Array1::zeros(num_elements);
         

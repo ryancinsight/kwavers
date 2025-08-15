@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::KwaversResult;
 use crate::constants::{stability, performance, cfl};
 
-use ndarray::{Array3, ArrayView3, Zip, ShapeBuilder};
+use ndarray::{Array3, ArrayView3, Zip};
 use log::{debug, warn, info};
 use std::f64;
 

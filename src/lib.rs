@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 
-use ndarray::{Array4, Axis};
 
 // Validation constants to replace magic numbers
 mod validation_constants {

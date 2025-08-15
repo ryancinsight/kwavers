@@ -1,6 +1,5 @@
 //! Reflection calculations for wave propagation
 
-use crate::error::KwaversResult;
 
 /// Reflection calculator
 pub struct ReflectionCalculator {

@@ -18,7 +18,6 @@
 
 use crate::error::KwaversResult;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
-use std::collections::HashMap;
 
 /// Compressed Sparse Row (CSR) matrix format optimized for beamforming
 #[derive(Debug, Clone)]

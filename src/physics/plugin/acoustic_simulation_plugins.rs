@@ -14,11 +14,10 @@
 //! - **Performance**: Zero-copy techniques and efficient algorithms
 
 use crate::error::KwaversResult;
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginMetadata, PluginState};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Array4};
-use std::sync::Arc;
+use ndarray::Array3;
 
 /// Multi-Element Transducer Field Calculator Plugin
 /// Based on Jensen & Svendsen (1992): "Calculation of pressure fields from arbitrarily shaped transducers"

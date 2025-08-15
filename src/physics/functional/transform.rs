@@ -241,8 +241,8 @@ mod tests {
     fn test_generic_transform() {
         let field = Array3::ones((4, 4, 4));
         let transform = Array3Transform::new()
-            .then(|f| f.mapv(|x| x * 2.0))
-            .then(|f| f.mapv(|x| x + 1.0));
+            .then(|f| f.mapv(|x: f64| x * 2.0))
+            .then(|f| f.mapv(|x: f64| x + 1.0));
         
         let result = transform.apply(field);
         assert_abs_diff_eq!(result[[2, 2, 2]], 3.0);
@@ -252,7 +252,7 @@ mod tests {
     fn test_lazy_transform() {
         let source = LazyField::new(|| Array3::ones((2, 2, 2)));
         let lazy_transform = LazyFieldTransform::new(source)
-            .then(|f| f.mapv(|x| x * 2.0));
+            .then(|f| f.mapv(|x: f64| x * 2.0));
         
         let result = lazy_transform.evaluate();
         assert_abs_diff_eq!(result[[1, 1, 1]], 2.0);
@@ -262,7 +262,7 @@ mod tests {
     fn test_cached_transform() {
         let source = LazyField::new(|| Array3::ones((2, 2, 2)));
         let cached = LazyFieldTransform::new(source)
-            .then(|f| f.mapv(|x| x * 3.0))
+            .then(|f| f.mapv(|x: f64| x * 3.0))
             .cached();
         
         let result1 = cached.get();
@@ -276,8 +276,8 @@ mod tests {
     fn test_reversible_transform() {
         let field = Array3::ones((2, 2, 2)) * 5.0;
         let transform = Array3Transform::new()
-            .then(|f| f.mapv(|x| x * 2.0))
-            .reversible(|f| f.mapv(|x| x / 2.0));
+            .then(|f| f.mapv(|x: f64| x * 2.0))
+            .reversible(|f| f.mapv(|x: f64| x / 2.0));
         
         let forward = transform.forward(field.clone());
         let backward = transform.inverse(forward);

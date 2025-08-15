@@ -17,7 +17,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array1, Array2, Array3, ArrayView2, ArrayView3, Zip};
+use ndarray::{Array1, Array2, ArrayView2, ArrayView3, Zip};
 use std::f64::consts::PI;
 
 /// Beam pattern analysis configuration

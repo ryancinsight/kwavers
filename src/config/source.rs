@@ -2,7 +2,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::signal::{chirp::ChirpSignal, sine_wave::SineWave, sweep::SweepSignal, Signal};
 use crate::source::Source;
-use crate::source::{apodization::HanningApodization, linear_array::LinearArray};
+use crate::source::linear_array::LinearArray;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

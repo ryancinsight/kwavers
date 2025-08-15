@@ -710,7 +710,7 @@ impl PhotoacousticReconstructor {
 
     fn apply_reconstruction_filter(&self, image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         // Apply post-reconstruction filtering
-        let mut filtered_image = image.clone();
+        let filtered_image = image.clone();
         
         // Apply 3D Gaussian smoothing if specified
         // Implementation would depend on specific filter requirements

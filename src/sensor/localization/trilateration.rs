@@ -1,6 +1,5 @@
 //! Trilateration solver for 3D localization
 
-use crate::error::KwaversResult;
 use super::SensorArray;
 
 /// Trilateration solver

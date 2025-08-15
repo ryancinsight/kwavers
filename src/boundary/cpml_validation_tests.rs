@@ -199,11 +199,11 @@ mod tests {
         let cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Test reflection estimates
-        let r_0 = cpml.estimate_reflection(0.0);
-        let r_45 = cpml.estimate_reflection(45.0);
-        let r_60 = cpml.estimate_reflection(60.0);
-        let r_80 = cpml.estimate_reflection(80.0);
-        let r_89 = cpml.estimate_reflection(89.0);
+        let r_0 = cpml.estimate_reflection(0.0).expect("Valid angle");
+        let r_45 = cpml.estimate_reflection(45.0).expect("Valid angle");
+        let r_60 = cpml.estimate_reflection(60.0).expect("Valid angle");
+        let r_80 = cpml.estimate_reflection(80.0).expect("Valid angle");
+        let r_89 = cpml.estimate_reflection(89.0).expect("Valid angle");
         
         // Verify monotonic increase with angle
         assert!(r_45 > r_0, "Reflection should increase with angle");

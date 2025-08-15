@@ -9,16 +9,18 @@ use kwavers::{
     init_logging,
     medium::heterogeneous::tissue::HeterogeneousTissueMedium,
     physics::{
-        mechanics::{NonlinearWave, CavitationModel, StreamingModel},
+        mechanics::acoustic_wave::NonlinearWave,
+        mechanics::cavitation::CavitationModel,
+        mechanics::streaming::StreamingModel,
         chemistry::ChemicalModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
-        scattering::acoustic::AcousticScattering,
-        thermodynamics::heat_transfer::ThermalModel,
+        wave_propagation::scattering::ScatteringCalculator,
+        thermal::ThermalCalculator,
         heterogeneity::HeterogeneityModel,
         traits::*, // Import all traits
     },
     save_pressure_data, save_light_data, generate_summary,
-    source::{LinearArray, HanningApodization},
+    source::{LinearArray, apodization::HanningApodization},
     solver::Solver,
     time::Time,
     signal::SineWave,
@@ -69,19 +71,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signal = SineWave::new(frequency, amplitude, 0.0);
     
     let num_elements = 16;
-    let source = LinearArray::with_focus(
+    let source = LinearArray::new(
         aperture_radius * 2.0, // length
         num_elements,
         source_position.1,
         source_position.2,
         Box::new(signal),
-        &medium,
-        &grid,
-        frequency,
-        focus_position.0,
-        focus_position.1,
-        focus_position.2,
-        HanningApodization,
+        Box::new(HanningApodization),
     );
     
     info!("Created linear array at position ({:.3}, {:.3}, {:.3}) m focusing at ({:.3}, {:.3}, {:.3}) m", 
@@ -89,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
           focus_position.0, focus_position.1, focus_position.2);
     
     // Create nonlinear wave solver with enhanced physics
-    let mut nonlinear_wave = NonlinearWave::new(&grid);
+    let mut nonlinear_wave = NonlinearWave::new(&grid, &medium, frequency);
     nonlinear_wave.set_nonlinearity_scaling(2.0); // Enhance nonlinearity
 
     info!("Configured nonlinear wave solver with enhanced physics");
@@ -140,10 +136,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wave_model: Box<dyn AcousticWaveModel> = Box::new(nonlinear_wave); // Use the configured one
     let cavitation_model: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid, 10e-6));
     let light_model: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid, true, true, true));
-    let thermal_model: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid, 293.15, 1e-6, 1e-6));
+    let thermal_model: Box<dyn ThermalModelTrait> = Box::new(ThermalCalculator::new(&grid, 293.15, 1e-6, 1e-6));
     let chemical_model: Box<dyn kwavers::ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid, true, true)?);
     let streaming_model: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid));
-    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid, 1e6, 0.1));
+    let scattering: Box<dyn ScatteringCalculatorTrait> = Box::new(ScatteringCalculator::new(&grid, 1e6, 0.1));
     let heterogeneity_model: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid, 1500.0, 0.05));
 
     // Create solver

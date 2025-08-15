@@ -19,10 +19,8 @@
 use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::solver::Solver;
-use crate::sensor::SensorData;
 use super::{Reconstructor, ReconstructionConfig, InterpolationMethod};
-use ndarray::{Array2, Array3, Array4, Zip, s};
+use ndarray::{Array2, Array3, Array4, Zip};
 use std::f64::consts::PI;
 use serde::{Serialize, Deserialize};
 

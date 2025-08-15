@@ -23,12 +23,11 @@
 //!    Laser-Irradiated Tissue" (2nd ed.). Springer. ISBN: 978-90-481-8830-7
 
 use crate::{
-    error::{KwaversResult, KwaversError, PhysicsError},
+    error::KwaversResult,
     grid::Grid,
     medium::Medium,
 };
 use ndarray::{Array3, Zip};
-use std::f64::consts::PI;
 
 /// Heat source types
 #[derive(Debug, Clone)]
@@ -432,19 +431,19 @@ mod tests {
                 self.bubble_radius_field = radius.clone();
                 self.bubble_velocity_field = velocity.clone();
             }
-            fn density_array(&self, grid: &Grid) -> Array3<f64> { 
-                Array3::from_elem(grid.get_dimensions(), 1000.0)
+            fn density_array(&self) -> Array3<f64> { 
+                Array3::from_elem((10, 10, 10), 1000.0)
             }
-            fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> { 
-                Array3::from_elem(grid.get_dimensions(), 1500.0) 
+            fn sound_speed_array(&self) -> Array3<f64> { 
+                Array3::from_elem((10, 10, 10), 1500.0) 
             }
             fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
             fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
-            fn lame_lambda_array(&self, grid: &Grid) -> Array3<f64> { 
-                Array3::from_elem(grid.get_dimensions(), 1e9) 
+            fn lame_lambda_array(&self) -> Array3<f64> { 
+                Array3::from_elem((10, 10, 10), 1e9) 
             }
-            fn lame_mu_array(&self, grid: &Grid) -> Array3<f64> { 
-                Array3::from_elem(grid.get_dimensions(), 1e9) 
+            fn lame_mu_array(&self) -> Array3<f64> { 
+                Array3::from_elem((10, 10, 10), 1e9) 
             }
         }
         

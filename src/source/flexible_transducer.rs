@@ -23,8 +23,7 @@ use crate::medium::Medium;
 use crate::signal::Signal;
 use crate::source::Source;
 use crate::sensor::beamforming::{BeamformingProcessor, BeamformingConfig, BeamformingAlgorithm};
-use ndarray::{Array1, Array2, Array3, ArrayView1, ArrayView2};
-use std::f64::consts::PI;
+use ndarray::{Array1, Array2, ArrayView2};
 use std::sync::Arc;
 
 /// Configuration for flexible transducer arrays

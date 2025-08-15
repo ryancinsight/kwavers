@@ -8,7 +8,7 @@
 //! - Chen et al. (2003): "Inertial cavitation dose and hemolysis produced in vitro"
 //! - Mast et al. (2008): "Acoustic emissions during 3.1 MHz ultrasound bulk ablation"
 
-use ndarray::{Array1, Array2, ArrayView1, Axis};
+use ndarray::{Array1, ArrayView1};
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::collections::VecDeque;
 

@@ -21,10 +21,10 @@
 //!    Dover Publications. ISBN: 978-0486642284
 //!    - Classical scattering theory
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Scattering regime based on size parameter

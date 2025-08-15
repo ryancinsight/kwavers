@@ -2,7 +2,6 @@
 //! 
 //! Implements phase encoding schemes for improved SNR and resolution.
 
-use ndarray::Array1;
 
 pub struct PhaseEncoder;
 pub enum EncodingScheme { Hadamard, Golay, Barker }
