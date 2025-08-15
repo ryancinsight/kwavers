@@ -23,6 +23,7 @@
 //!    Kluwer Academic Publishers. ISBN: 978-0792379690
 
 use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::constants::physics::SOUND_SPEED_WATER;
 use nalgebra::{DMatrix, DVector};
 use std::collections::HashMap;
 

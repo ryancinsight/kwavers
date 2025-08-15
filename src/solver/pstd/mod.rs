@@ -724,7 +724,7 @@ mod tests {
     fn test_divergence_computation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
         let config = PstdConfig::default();
-        let solver = PstdSolver::new(config, &grid).unwrap();
+        let mut solver = PstdSolver::new(config, &grid).unwrap();
         
         // Create uniform velocity field (should have zero divergence)
         let vx = Array3::ones((32, 32, 32));

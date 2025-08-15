@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_collect_results() {
-        let results = vec![Ok(1), Ok(2), Ok(3)];
+        let results: Vec<Result<i32, String>> = vec![Ok(1), Ok(2), Ok(3)];
         let collected = collect_results(results);
         assert_eq!(collected, Ok(vec![1, 2, 3]));
 

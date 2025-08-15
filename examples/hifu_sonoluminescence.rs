@@ -1,17 +1,19 @@
 // examples/hifu_sonoluminescence.rs
 use kwavers::{
-    init_logging, plot_simulation_outputs, HomogeneousMedium, PMLBoundary, Recorder, Sensor, Solver, NonlinearWave, // NonlinearWave for concrete type
-    // Config removed as it's manually constructed now
-    physics::{ // Import physics models and traits
-        mechanics::cavitation::CavitationModel,
-        mechanics::streaming::StreamingModel,
-        chemistry::ChemicalModel,
-        optics::diffusion::LightDiffusion as LightDiffusionModel,
-        scattering::acoustic::AcousticScattering,
-        thermodynamics::heat_transfer::ThermalModel,
-        heterogeneity::HeterogeneityModel,
-        traits::*, // Import all traits
+    boundary::PMLBoundary, config::SimulationConfig, grid::Grid, init_logging, medium::HomogeneousMedium,
+    physics::{
+        bubble_dynamics::CavitationModel, bubble_dynamics::CavitationModelBehavior,
+        chemistry::ChemicalModel, chemistry::ChemicalModelTrait,
+        heterogeneity::HeterogeneityModel, heterogeneity::HeterogeneityModelTrait,
+        mechanics::acoustic_wave::nonlinear::NonlinearWave,
+        mechanics::streaming::StreamingModel, mechanics::streaming::StreamingModelTrait,
+        optics::light_diffusion::LightDiffusionModel, optics::light_diffusion::LightDiffusionModelTrait,
+        thermal::ThermalModel, thermal::ThermalModelTrait,
+        traits::AcousticWaveModel,
+        wave_propagation::scattering::AcousticScattering, wave_propagation::scattering::AcousticScatteringModelTrait,
     },
+    recorder::Recorder, sensor::Sensor, solver::plugin_based_solver::PluginBasedSolver,
+    source::PointSource, time::Time, visualization::plot_simulation_outputs,
 };
 use kwavers::boundary::pml::PMLConfig;
 use std::error::Error;
@@ -135,7 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Instantiate physics models
     let grid_clone = grid.clone(); // Clone grid for model instantiation
 
-    let mut acoustic_wave_model = NonlinearWave::new(&grid_clone);
+    let mut acoustic_wave_model = NonlinearWave::new(&grid_clone, custom_medium.as_ref(), 1e6); // 1 MHz frequency
     // Configure the nonlinear wave solver for better HIFU physics
     acoustic_wave_model.set_nonlinearity_scaling(2.0);
 
@@ -149,31 +151,37 @@ fn main() -> Result<(), Box<dyn Error>> {
     let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
     let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
 
-    // Create the solver with our optimized medium and injected physics models
-    let mut solver = Solver::new(
-        grid.clone(), // or just grid
+    // Create the plugin-based solver instead of deprecated Solver
+    let mut solver = PluginBasedSolver::new(
+        grid.clone(),
         time.clone(),
-        custom_medium, // Use the custom_medium initialized above
-        source,
+        custom_medium,
         boundary,
-        wave,
-        cavitation,
-        light,
-        thermal,
-        chemical,
-        streaming,
-        scattering,
-        heterogeneity,
-        4, // num_simulation_fields for acoustic + light + temp + bubble_radius
-        None, // validation_config
+        source,
     );
     
+    // Register physics plugins
+    solver.register_plugin(Box::new(wave))?;
+    solver.register_plugin(Box::new(cavitation))?;
+    solver.register_plugin(Box::new(light))?;
+    solver.register_plugin(Box::new(thermal))?;
+    solver.register_plugin(Box::new(chemical))?;
+    solver.register_plugin(Box::new(streaming))?;
+    solver.register_plugin(Box::new(scattering))?;
+    solver.register_plugin(Box::new(heterogeneity))?;
+    
+    // Set recorder if needed  
+    solver.set_recorder(Box::new(recorder));
+    
     // Run the simulation
-    let _ = solver.run(&mut recorder, config.simulation.frequency);
-    recorder.save()?;
+    solver.run()?;
+    
+    // Note: The recorder saves data internally during the simulation
+    // The solver manages the recorder lifecycle
     
     // Create visualizations
-    plot_simulation_outputs("output", &[&config.output.pressure_file, &config.output.light_file])?;
+    println!("Simulation complete. Creating visualizations...");
+    plot_simulation_outputs(&config)?;
 
     Ok(())
 }

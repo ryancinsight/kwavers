@@ -25,6 +25,7 @@ use crate::constants::adaptive_integration::{
     MAX_VELOCITY_FRACTION
 };
 use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
+use std::sync::{Arc, Mutex};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]
@@ -361,9 +362,9 @@ mod tests {
     #[test]
     fn test_stability_check() {
         let params = BubbleParameters::default();
-        let solver = Arc::new(Mutex::new(KellerMiksisModel::new(params.clone())));
+        let solver = KellerMiksisModel::new(params.clone());
         let config = AdaptiveBubbleConfig::default();
-        let integrator = AdaptiveBubbleIntegrator::new(solver, config);
+        let integrator = AdaptiveBubbleIntegrator::new(&solver, config);
         
         // Test with stable state
         let mut state = BubbleState::new(&params);
