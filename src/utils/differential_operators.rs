@@ -10,10 +10,9 @@
 //! - **Configurable accuracy**: Support for 2nd, 4th, and 6th order schemes
 //! - **Domain-agnostic**: Works with any Grid configuration
 
-use ndarray::{Array3, ArrayView3, Zip, Axis};
+use ndarray::{Array3, ArrayView3};
 use crate::grid::Grid;
-use crate::error::{KwaversResult, KwaversError, ValidationError};
-use std::f64::consts::PI;
+use crate::error::KwaversResult;
 
 /// Spatial accuracy order for finite difference schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -246,31 +245,51 @@ pub fn spectral_laplacian(
     field: ArrayView3<f64>,
     grid: &Grid,
 ) -> KwaversResult<Array3<f64>> {
-    use crate::fft::Fft3d;
+    use num_complex::Complex;
     
     let (nx, ny, nz) = field.dim();
     
-    // Create FFT processor
-    let mut fft = Fft3d::new(nx, ny, nz)?;
+    // Convert to complex for FFT
+    let mut field_complex = Array3::zeros((nx, ny, nz));
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field_complex[[i, j, k]] = Complex::new(field[[i, j, k]], 0.0);
+            }
+        }
+    }
     
-    // Transform to k-space
-    let field_fft = fft.forward(field.to_owned())?;
+    // Use the existing FFT infrastructure
+    let mut fft = crate::fft::Fft3d::new(nx, ny, nz);
+    fft.process(&mut field_complex, grid);
     
     // Get k-space grid
     let k_squared = grid.k_squared();
     
     // Apply Laplacian in k-space: ∇²f = -k²F
-    let mut lap_fft = field_fft.clone();
-    Zip::from(&mut lap_fft)
-        .and(&k_squared)
-        .for_each(|l, &k2| {
-            *l *= -k2;
-        });
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field_complex[[i, j, k]] *= -k_squared[[i, j, k]];
+            }
+        }
+    }
     
-    // Transform back to real space with proper normalization
-    let lap = fft.inverse_orthonormal(lap_fft)?;
+    // Transform back using IFFT
+    let mut ifft = crate::fft::Ifft3d::new(nx, ny, nz);
+    ifft.process(&mut field_complex, grid);
     
-    Ok(lap.mapv(|c| c.re))
+    // Extract real part
+    let mut result = Array3::zeros((nx, ny, nz));
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                result[[i, j, k]] = field_complex[[i, j, k]].re;
+            }
+        }
+    }
+    
+    Ok(result)
 }
 
 /// Compute transverse Laplacian (for KZK equation)

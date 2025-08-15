@@ -25,7 +25,6 @@ use crate::constants::adaptive_integration::{
     MAX_VELOCITY_FRACTION
 };
 use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
-use std::sync::{Arc, Mutex};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]

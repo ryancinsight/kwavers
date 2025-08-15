@@ -11,10 +11,8 @@ pub mod test_helpers;
 pub mod differential_operators;
 
 // Re-export commonly used utilities
-pub use self::kwave_utils::{fft_3d as fft_3d_util, ifft_3d as ifft_3d_util};
 pub use self::field_analysis::FieldAnalyzer;
-pub use self::sparse_matrix::{CompressedSparseRowMatrix, SparseMatrixBuilder};
-pub use self::spectral::{SpectralDerivatives, SpectralFilter};
+pub use self::sparse_matrix::CompressedSparseRowMatrix;
 pub use self::stencil::{Stencil, StencilValue};
 
 // Export differential operators with unique names to avoid conflicts
@@ -116,8 +114,8 @@ pub fn warm_fft_cache(grid: &Grid) {
     
     // Create a dummy field and perform a warm-up transform
     let dummy_field = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-    let dummy_fft = fft_3d_util(&dummy_field, 0, grid);
-    let _dummy_ifft = ifft_3d_util(&dummy_fft, grid);
+    let dummy_fft = fft_3d(&dummy_field, 0, grid);
+    let _dummy_ifft = ifft_3d(&dummy_fft, grid);
     
     debug!("FFT/IFFT cache warm-up complete");
 }

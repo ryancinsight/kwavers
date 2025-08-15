@@ -51,6 +51,7 @@ impl NiftiReader {
         // Get header for dimensions
         let header = nifti_object.header();
         let dims = header.dim;
+        let datatype = header.datatype;
         
         // Validate dimensions (NIFTI dim[0] is number of dimensions)
         if dims[0] < 3 {
@@ -72,7 +73,6 @@ impl NiftiReader {
         let mut array_3d = Array3::zeros((nx, ny, nz));
         
         // Convert data based on header data type
-        let datatype = header.datatype;
         match datatype {
             16 => { // FLOAT32
                 // Interpret raw data as f32

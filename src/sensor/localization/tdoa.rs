@@ -1,8 +1,7 @@
 //! Time-difference-of-arrival (TDOA) solver
 
-use crate::sensor::ArrayGeometry;
+use crate::sensor::localization::{SensorArray, TDOAMeasurement, LocalizationResult};
 use crate::error::KwaversResult;
-use crate::sensor::localization::{TDOAMeasurement, LocalizationResult};
 use nalgebra::{DMatrix, DVector};
 
 /// Time Difference of Arrival (TDOA) solver using Chan-Ho algorithm
@@ -11,18 +10,18 @@ use nalgebra::{DMatrix, DVector};
 /// hyperbolic location," IEEE Trans. Signal Process., vol. 42, no. 8, 
 /// pp. 1905-1915, Aug. 1994.
 pub struct TDOASolver<'a> {
-    /// Array geometry
-    array: &'a ArrayGeometry,
+    /// Sensor array
+    array: &'a SensorArray,
     /// Speed of sound
     sound_speed: f64,
 }
 
 impl<'a> TDOASolver<'a> {
     /// Create new TDOA solver
-    pub fn new(array: &'a ArrayGeometry) -> Self {
+    pub fn new(array: &'a SensorArray) -> Self {
         Self {
             array,
-            sound_speed: 1500.0, // Default water sound speed
+            sound_speed: array.sound_speed(),
         }
     }
     
@@ -40,14 +39,15 @@ impl<'a> TDOASolver<'a> {
         
         if num_sensors < 4 {
             return Err(crate::error::KwaversError::Physics(
-                crate::error::PhysicsError::InvalidInput(
-                    "TDOA requires at least 4 sensors for 3D localization".to_string()
-                )
+                crate::error::PhysicsError::InvalidConfiguration {
+                    component: "TDOA".to_string(),
+                    reason: "TDOA requires at least 4 sensors for 3D localization".to_string()
+                }
             ));
         }
         
         // Get sensor positions
-        let positions = self.array.element_positions();
+        let positions = self.array.get_sensor_positions();
         
         // Reference sensor is at index 0
         let ref_pos = &positions[0];
@@ -94,8 +94,19 @@ impl<'a> TDOASolver<'a> {
             Some(chol) => chol.solve(&atb),
             None => {
                 // Fall back to SVD if matrix is not positive definite
-                let svd = a_matrix.svd(true, true);
-                svd.solve(&b_vector, 1e-10)?
+                let svd = a_matrix.clone().svd(true, true);
+                match svd.solve(&b_vector, 1e-10) {
+                    Ok(sol) => sol,
+                    Err(_) => {
+                        return Err(crate::error::KwaversError::Physics(
+                            crate::error::PhysicsError::ConvergenceFailure {
+                                solver: "SVD".to_string(),
+                                iterations: 0,
+                                residual: f64::INFINITY,
+                            }
+                        ));
+                    }
+                }
             }
         };
         

@@ -8,12 +8,9 @@ use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPr
 use super::energy_balance::{EnergyBalanceCalculator, update_temperature_energy_balance};
 use crate::error::KwaversResult;
 use crate::constants::bubble_dynamics::{
-    PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER, 
-    NUSSELT_BASE, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT,
-    N2_FRACTION, O2_FRACTION, VDW_A_N2, VDW_A_O2, VDW_B_N2, VDW_B_O2,
     BAR_L2_TO_PA_M6, L_TO_M3
 };
-use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
+use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER};
 
 
 // Remove duplicate constant definitions - they're now imported from constants module
