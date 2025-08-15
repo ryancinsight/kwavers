@@ -496,9 +496,14 @@ impl Medium for HomogeneousMedium {
         }
         
         // Ensure indices are within bounds for temperature and bubble_radius arrays.
-        let ix = grid.x_idx(x).min(self.temperature.shape()[0].saturating_sub(1));
-        let iy = grid.y_idx(y).min(self.temperature.shape()[1].saturating_sub(1));
-        let iz = grid.z_idx(z).min(self.temperature.shape()[2].saturating_sub(1));
+        // Use position_to_indices with fallback to clamped values
+        let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or_else(|| {
+            // If out of bounds, clamp to nearest valid index
+            let ix = ((x / grid.dx).floor() as usize).min(self.temperature.shape()[0].saturating_sub(1));
+            let iy = ((y / grid.dy).floor() as usize).min(self.temperature.shape()[1].saturating_sub(1));
+            let iz = ((z / grid.dz).floor() as usize).min(self.temperature.shape()[2].saturating_sub(1));
+            (ix, iy, iz)
+        });
         let t = self.temperature[[ix, iy, iz]];
         
         // Use the same clamped indices for bubble_radius for consistency.

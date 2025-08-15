@@ -14,6 +14,8 @@ pub mod interactions;
 pub mod thermodynamics;
 pub mod imex_integration;
 pub mod adaptive_integration;  // NEW: Adaptive time-stepping for stiff ODEs
+pub mod energy_balance;  // NEW: Comprehensive energy balance model
+pub mod units;  // NEW: Unit-safe types using uom crate
 
 pub use bubble_state::{BubbleState, BubbleParameters, GasSpecies};
 pub use rayleigh_plesset::{RayleighPlessetSolver, KellerMiksisModel};
@@ -25,4 +27,8 @@ pub use imex_integration::{
 pub use adaptive_integration::{
     AdaptiveBubbleIntegrator, AdaptiveBubbleConfig, 
     integrate_bubble_dynamics_adaptive, IntegrationStatistics
+};
+pub use units::{
+    SafeBubbleParameters, SafeBubbleState,
+    calculate_rp_acceleration_safe, calculate_work_rate
 };

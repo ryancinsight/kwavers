@@ -5,6 +5,7 @@
 
 use super::bubble_state::{BubbleState, BubbleParameters};
 use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPressureModel};
+use super::energy_balance::{EnergyBalanceCalculator, update_temperature_energy_balance};
 use crate::error::KwaversResult;
 use crate::constants::bubble_dynamics::{
     PECLET_SCALING_FACTOR, MIN_PECLET_NUMBER, 
@@ -99,6 +100,7 @@ pub struct KellerMiksisModel {
     params: BubbleParameters,
     thermo_calc: ThermodynamicsCalculator,
     mass_transfer: MassTransferModel,
+    energy_calculator: EnergyBalanceCalculator,
 }
 
 impl KellerMiksisModel {
@@ -106,11 +108,13 @@ impl KellerMiksisModel {
         // Use Wagner equation by default for highest accuracy
         let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
         let mass_transfer = MassTransferModel::new(params.accommodation_coeff);
+        let energy_calculator = EnergyBalanceCalculator::new(&params);
         
         Self { 
-            params,
+            params: params.clone(),
             thermo_calc,
             mass_transfer,
+            energy_calculator,
         }
     }
     
@@ -220,44 +224,34 @@ impl KellerMiksisModel {
         pressure
     }
     
-    /// Update bubble temperature
+    /// Update bubble temperature using comprehensive energy balance
     pub fn update_temperature(&self, state: &mut BubbleState, dt: f64) {
         if !self.params.use_thermal_effects {
             return;
         }
         
-        let r = state.radius;
-        let v = state.wall_velocity;
+        // Calculate internal pressure for work term
+        let internal_pressure = self.calculate_internal_pressure(state);
         
-        // Peclet number
-        let thermal_diffusivity = self.params.thermal_conductivity / 
-            (self.params.rho_liquid * self.params.specific_heat_liquid);
-        let peclet = r * v.abs() / thermal_diffusivity;
+        // Calculate mass transfer rate for latent heat
+        let p_sat = self.thermo_calc.vapor_pressure(state.temperature);
+        let p_vapor_current = state.n_vapor * R_GAS * state.temperature / 
+            (AVOGADRO * state.volume());
+        let mass_rate = self.mass_transfer.mass_transfer_rate(
+            state.temperature,
+            p_vapor_current,
+            state.surface_area(),
+        );
         
-        // Effective polytropic index
-        // Based on Prosperetti & Lezzi (1986) heat transfer model
-        let gamma = state.gas_species.gamma();
-        let gamma_eff = 1.0 + (gamma - 1.0) / (1.0 + PECLET_SCALING_FACTOR / peclet.max(MIN_PECLET_NUMBER));
-        
-        // Temperature change from compression
-        let compression_rate = -v / r;
-        let dt_compression = state.temperature * (gamma_eff - 1.0) * compression_rate * dt;
-        
-        // Heat transfer to liquid using Nusselt correlation
-        let nusselt = NUSSELT_BASE + NUSSELT_PECLET_COEFF * peclet.powf(NUSSELT_PECLET_EXPONENT);
-        let h = nusselt * self.params.thermal_conductivity / r;
-        let area = state.surface_area();
-        let mass = state.total_molecules() * state.gas_species.molecular_weight() / AVOGADRO;
-        let cv = R_GAS / state.gas_species.molecular_weight() / (gamma - 1.0);
-        
-        let dt_transfer = -h * area * (state.temperature - T_AMBIENT) / (mass * cv) * dt;
-        
-        // Update temperature
-        state.temperature += dt_compression + dt_transfer;
-        state.temperature = state.temperature.max(T_AMBIENT); // Don't go below ambient
-        
-        // Track maximum
-        state.update_max_temperature();
+        // Use the comprehensive energy balance model
+        update_temperature_energy_balance(
+            &self.energy_calculator,
+            state,
+            &self.params,
+            internal_pressure,
+            mass_rate,
+            dt,
+        );
     }
     
     /// Update vapor content through evaporation/condensation

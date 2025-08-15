@@ -16,6 +16,9 @@ rayon = { version = "1.5" }
 rustfft = "6.0"
 num-complex = "0.4"
 
+# Unit safety
+uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
+
 # Serialization and configuration
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
