@@ -52,10 +52,9 @@ fn compute_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
         }
     }
     
-    // Handle Nyquist frequency
-    if n % 2 == 0 {
-        k[n / 2] = 0.0; // Set Nyquist to zero to avoid aliasing
-    }
+    // Note: Nyquist frequency should NOT be set to zero
+    // It represents the highest resolvable frequency
+    // Setting it to zero would lose information
     
     k
 }

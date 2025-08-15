@@ -20,7 +20,7 @@ use crate::error::{KwaversResult, KwaversError, ConfigError, ValidationError};
 use ndarray::{Array3, Array4, Axis, Zip};
 
 use std::f64::consts::PI;
-use log::{debug, trace};
+use log::debug;
 
 /// Configuration for Convolutional PML
 #[derive(Debug, Clone)]

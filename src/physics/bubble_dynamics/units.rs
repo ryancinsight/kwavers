@@ -9,17 +9,14 @@ use uom::si::length::meter;
 use uom::si::mass_density::kilogram_per_cubic_meter;
 use uom::si::velocity::meter_per_second;
 use uom::si::dynamic_viscosity::pascal_second;
-use uom::si::force::newton;
 use uom::si::thermal_conductivity::watt_per_meter_kelvin;
 use uom::si::specific_heat_capacity::joule_per_kilogram_kelvin;
 use uom::si::thermodynamic_temperature::kelvin;
-use uom::si::time::second;
 use uom::si::acceleration::meter_per_second_squared;
 use uom::si::volume::cubic_meter;
 use uom::si::area::square_meter;
-use uom::si::power::watt;
-use uom::si::energy::joule;
 use uom::si::mass::kilogram;
+use uom::si::power::watt;
 
 use std::collections::HashMap;
 use super::bubble_state::GasType;
@@ -172,7 +169,7 @@ impl SafeBubbleState {
 
 /// Estimate number of molecules from ideal gas law (unit-safe)
 fn estimate_molecules(pressure: Pressure, volume: Volume, temperature: ThermodynamicTemperature) -> f64 {
-    use uom::si::molar_energy::joule_per_mole;
+    
     const R_GAS: f64 = 8.314; // J/(mol·K)
     const AVOGADRO: f64 = 6.022e23;
     
@@ -239,6 +236,8 @@ pub fn calculate_work_rate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
+    use uom::si::power::watt;
     
     #[test]
     fn test_unit_safe_parameters() {

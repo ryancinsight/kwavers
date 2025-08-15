@@ -36,27 +36,99 @@ impl NiftiReader {
         self
     }
 
-    /// Load a NIFTI file and return the 3D volume data
-    /// 
-    /// This method uses the mature `nifti` crate which correctly handles:
-    /// - Endianness detection and byte swapping
-    /// - All NIFTI data types
-    /// - Proper file offset handling
-    /// - Header validation
-    pub fn load_volume<P: AsRef<Path>>(&self, path: P) -> KwaversResult<Array3<f64>> {
+    /// Load NIFTI file as 3D array
+    pub fn load<P: AsRef<Path>>(&self, path: P) -> KwaversResult<Array3<f64>> {
         let path = path.as_ref();
         
         if self.verbose {
             log::info!("Loading NIFTI file: {}", path.display());
         }
 
-        // For now, return a placeholder implementation
-        // The nifti crate API may vary between versions
-        // In production, this would use the correct API for the specific version
-        log::warn!("NIFTI loading is using placeholder implementation. Full implementation requires matching nifti crate API version.");
+        // Load the NIFTI file
+        let nifti_object = InMemNiftiObject::from_file(path)
+            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
         
-        // Create a simple 3D array as placeholder
-        Ok(Array3::zeros((64, 64, 64)))
+        // Get header for dimensions
+        let header = nifti_object.header();
+        let dims = header.dim;
+        let datatype = header.datatype;
+        
+        // Validate dimensions (NIFTI dim[0] is number of dimensions)
+        if dims[0] < 3 {
+            return Err(KwaversError::Io(format!(
+                "NIFTI file must have at least 3 dimensions, got {}",
+                dims[0]
+            )));
+        }
+        
+        // Extract dimensions (dim[1], dim[2], dim[3] are x, y, z)
+        let nx = dims[1] as usize;
+        let ny = dims[2] as usize;
+        let nz = dims[3] as usize;
+        
+        // Get the raw volume data
+        let volume = nifti_object.into_volume();
+        
+        // Create output array
+        let mut array_3d = Array3::zeros((nx, ny, nz));
+        
+        // Convert data based on header data type
+        match datatype {
+            16 => { // FLOAT32
+                // Interpret raw data as f32
+                let raw_data = volume.into_raw_data();
+                let float_data: Vec<f32> = raw_data.chunks_exact(4)
+                    .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect();
+                
+                // Copy data into array
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            let idx = i + j * nx + k * nx * ny;
+                            if idx < float_data.len() {
+                                array_3d[[i, j, k]] = float_data[idx] as f64;
+                            }
+                        }
+                    }
+                }
+            },
+            64 => { // FLOAT64
+                // Interpret raw data as f64
+                let raw_data = volume.into_raw_data();
+                let float_data: Vec<f64> = raw_data.chunks_exact(8)
+                    .map(|chunk| {
+                        let bytes = [chunk[0], chunk[1], chunk[2], chunk[3],
+                                   chunk[4], chunk[5], chunk[6], chunk[7]];
+                        f64::from_ne_bytes(bytes)
+                    })
+                    .collect();
+                
+                // Copy data into array
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            let idx = i + j * nx + k * nx * ny;
+                            if idx < float_data.len() {
+                                array_3d[[i, j, k]] = float_data[idx];
+                            }
+                        }
+                    }
+                }
+            },
+            _ => {
+                return Err(KwaversError::Io(format!(
+                    "Unsupported NIFTI data type: {}. Only FLOAT32 (16) and FLOAT64 (64) are supported.",
+                    datatype
+                )));
+            }
+        }
+        
+        if self.verbose {
+            log::info!("Successfully loaded NIFTI file with dimensions: {}x{}x{}", nx, ny, nz);
+        }
+        
+        Ok(array_3d)
     }
 
     /// Load NIFTI file with header information
@@ -67,16 +139,15 @@ impl NiftiReader {
             log::info!("Loading NIFTI file with header: {}", path.display());
         }
 
-        // Load the NIFTI object to get the header
+        // Load the NIFTI object
         let nifti_object = InMemNiftiObject::from_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         // Get header
         let header = nifti_object.header().clone();
         
-        // For now, return placeholder data
-        log::warn!("NIFTI loading is using placeholder implementation. Full implementation requires matching nifti crate API version.");
-        let array_3d = Array3::zeros((64, 64, 64));
+        // Load the data using the same method
+        let array_3d = self.load(path)?;
         
         Ok((array_3d, header))
     }
@@ -127,7 +198,7 @@ pub struct NiftiInfo {
 
 /// Convenience function to load a NIFTI file
 pub fn load_nifti<P: AsRef<Path>>(path: P) -> KwaversResult<Array3<f64>> {
-    NiftiReader::new().load_volume(path)
+    NiftiReader::new().load(path)
 }
 
 /// Convenience function to load a NIFTI file with header

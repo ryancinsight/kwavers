@@ -313,28 +313,30 @@ mod tests {
     
     #[test]
     fn test_phase_function_normalization() {
+        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
         let vol = VolumeScattering {
-            scattering_coefficient: Array3::zeros((1, 1, 1)),
-            anisotropy: Array3::zeros((1, 1, 1)),
+            scattering_coefficient: Array3::ones((10, 10, 10)),
+            anisotropy: Array3::ones((10, 10, 10)) * 0.9,
             phase_function: PhaseFunction::HenyeyGreenstein,
         };
         
-        // Integrate phase function over solid angle (should equal 1)
-        let n_samples = 100;
-        let mut integral = 0.0;
-        
-        for i in 0..n_samples {
-            let cos_theta = -1.0 + 2.0 * (i as f64) / (n_samples as f64);
-            let d_cos_theta = 2.0 / (n_samples as f64);
+        // Test for various anisotropy values
+        for g in [0.0, 0.5, 0.9] {
+            // Integrate phase function over solid angle (should equal 1)
+            let n_samples = 1000; // Increase samples for better accuracy
+            let mut integral = 0.0;
             
-            // For various anisotropy values
-            for g in [0.0, 0.5, 0.9] {
+            for i in 0..n_samples {
+                let cos_theta = -1.0 + 2.0 * (i as f64 + 0.5) / (n_samples as f64);
+                let d_cos_theta = 2.0 / (n_samples as f64);
+                
                 let p = vol.phase_function_value(cos_theta, g);
                 integral += p * 2.0 * PI * d_cos_theta;
             }
+            
+            // Each should integrate to approximately 1
+            assert!((integral - 1.0).abs() < 0.01, 
+                    "Phase function normalization failed for g={}: integral={}", g, integral);
         }
-        
-        // Should integrate to approximately 3 (for 3 g values)
-        assert!((integral - 3.0).abs() < 0.1);
     }
 }

@@ -86,7 +86,17 @@ pub use source::Source;
 pub use sensor::{Sensor, SensorData, PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod};
 pub use recorder::Recorder;
 pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
-pub use solver::Solver;
+// Solver exports
+pub use solver::plugin_based_solver::PluginBasedSolver;
+pub use solver::reconstruction::{
+    Reconstructor, ReconstructionAlgorithm, ReconstructionConfig,
+    FilterType, InterpolationMethod, UniversalBackProjection, WeightFunction
+};
+pub use solver::reconstruction::photoacoustic::PhotoacousticReconstructor;
+pub use solver::reconstruction::seismic::{
+    FullWaveformInversion, ReverseTimeMigration,
+    SeismicImagingConfig, RtmImagingCondition
+};
 pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
 pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
@@ -146,10 +156,8 @@ pub use benchmarks::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFor
 // Re-export solver validation
 pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
 
-// Re-export reconstruction algorithms
+// Additional reconstruction exports for specific recon types
 pub use solver::reconstruction::{
-    ReconstructionConfig, ReconstructionAlgorithm, FilterType, InterpolationMethod,
-    Reconstructor, UniversalBackProjection, WeightFunction,
     plane_recon::PlaneRecon, line_recon::LineRecon, 
     arc_recon::ArcRecon, bowl_recon::BowlRecon
 };

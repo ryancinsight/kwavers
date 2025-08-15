@@ -518,6 +518,8 @@ impl FieldAnalyzer {
 mod tests {
     use super::*;
     use crate::grid::Grid;
+    use ndarray::Array3;
+    use approx::assert_abs_diff_eq;
     
     #[test]
     fn test_field_analyzer_creation() {

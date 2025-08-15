@@ -372,7 +372,7 @@ mod tests {
         let mut kernel = Array3::zeros((3, 3, 3));
         kernel[[1, 1, 1]] = 2.0; // Only center element is non-zero
         
-        let result = apply_kernel(&field, &kernel, |f, k| f * k);
+        let result = apply_kernel(&field, &kernel, |f: &f64, k: &f64| f * k);
         assert_abs_diff_eq!(result[[2, 2, 2]], 2.0);
     }
 
@@ -389,8 +389,10 @@ mod tests {
         let field = Array3::from_shape_fn((2, 2, 2), |_| 3.0);
         
         assert_abs_diff_eq!(field.sum(), 24.0);
-        assert_abs_diff_eq!(field.mean(), 3.0);
-        assert_abs_diff_eq!(*field.max().unwrap(), 3.0);
+        assert_abs_diff_eq!(field.mean().unwrap(), 3.0);
+        // Use fold to find max for f64 since it doesn't implement Ord
+        let max_val = field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        assert_abs_diff_eq!(max_val, 3.0);
     }
 
     #[test]

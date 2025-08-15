@@ -47,8 +47,9 @@ impl<'a> SnellLawCalculator<'a> {
         }
         
         // Apply Snell's law: n₁sin(θ₁) = n₂sin(θ₂)
-        // For acoustic: c₂/c₁ * sin(θ₁) = sin(θ₂)
-        let sin_transmitted = self.speed_ratio * incident_angle.sin();
+        let n1 = self.interface.medium1.refractive_index;
+        let n2 = self.interface.medium2.refractive_index;
+        let sin_transmitted = (n1 / n2) * incident_angle.sin();
         
         // Check for total internal reflection
         if sin_transmitted > 1.0 {
@@ -62,10 +63,12 @@ impl<'a> SnellLawCalculator<'a> {
     
     /// Calculate critical angle for total internal reflection
     pub fn critical_angle(&self) -> Option<f64> {
-        // Critical angle exists only when going from slower to faster medium
-        if self.speed_ratio > 1.0 {
-            // sin(θc) = n₂/n₁ or c₁/c₂
-            Some((1.0 / self.speed_ratio).asin())
+        let n1 = self.interface.medium1.refractive_index;
+        let n2 = self.interface.medium2.refractive_index;
+        
+        // Critical angle exists only when n1 > n2
+        if n1 > n2 {
+            Some((n2 / n1).asin())
         } else {
             None
         }

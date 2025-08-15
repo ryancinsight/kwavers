@@ -7,6 +7,24 @@ pub mod linear_algebra;
 pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;
+pub mod differential_operators;
+
+// Re-export commonly used utilities
+pub use self::field_analysis::FieldAnalyzer;
+pub use self::sparse_matrix::CompressedSparseRowMatrix;
+pub use self::stencil::{Stencil, StencilValue};
+
+// Export differential operators with unique names to avoid conflicts
+pub use self::differential_operators::{
+    gradient as gradient_op, 
+    divergence as divergence_op, 
+    laplacian as laplacian_op, 
+    curl as curl_op,
+    spectral_laplacian, 
+    transverse_laplacian,
+    SpatialOrder, 
+    FDCoefficients
+};
 
 #[cfg(test)]
 pub mod test_helpers;
@@ -325,28 +343,15 @@ pub fn log2_ceil(n: usize) -> usize {
     log
 }
 
-/// Compute the Laplacian of a field (second spatial derivatives)
-/// 
-/// Uses the centralized stencil implementation for consistency and performance
-pub fn laplacian(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<Array3<f64>, &'static str> {
-    debug!("Computing Laplacian for field {}", field_idx);
-    
-    if field_idx >= fields.shape()[0] {
-        return Err("Field index out of bounds");
+
+/// Compute k-space correction factor for a given frequency
+pub fn k_space_correction(k: f64, dt: f64) -> f64 {
+    let kdt = k * dt;
+    if kdt.abs() < 1e-10 {
+        1.0
+    } else {
+        kdt.sin() / kdt
     }
-    
-    let field = fields.index_axis(Axis(0), field_idx);
-    let mut result = Array3::zeros(field.raw_dim());
-    
-    // Use the centralized stencil implementation
-    use crate::utils::stencil::laplacian_3d;
-    let dx_inv2 = 1.0 / (grid.dx * grid.dx);
-    let dy_inv2 = 1.0 / (grid.dy * grid.dy);
-    let dz_inv2 = 1.0 / (grid.dz * grid.dz);
-    
-    laplacian_3d(field.view(), result.view_mut(), dx_inv2, dy_inv2, dz_inv2);
-    
-    Ok(result)
 }
 
 pub fn derivative(fields: &Array4<f64>, field_idx: usize, grid: &Grid, axis: usize) -> Result<Array3<f64>, &'static str> {
@@ -367,4 +372,41 @@ pub fn derivative(fields: &Array4<f64>, field_idx: usize, grid: &Grid, axis: usi
         });
 
     Ok(ifft_3d(&field_fft, grid))
+}
+
+/// Compute gradient of a field (DEPRECATED - use differential_operators::gradient)
+#[deprecated(since = "2.26.0", note = "Use differential_operators::gradient for SSOT")]
+pub fn gradient(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<(Array3<f64>, Array3<f64>, Array3<f64>), &'static str> {
+    use self::differential_operators::{gradient as grad_op, SpatialOrder};
+    
+    if field_idx >= fields.shape()[3] {
+        return Err("Field index out of bounds");
+    }
+    
+    let field = fields.index_axis(Axis(3), field_idx);
+    grad_op(field, grid, SpatialOrder::Second)
+        .map_err(|_| "Failed to compute gradient")
+}
+
+/// Compute divergence of velocity fields (DEPRECATED - use differential_operators::divergence)
+#[deprecated(since = "2.26.0", note = "Use differential_operators::divergence for SSOT")]
+pub fn divergence(vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>, grid: &Grid) -> Result<Array3<f64>, &'static str> {
+    use self::differential_operators::{divergence as div_op, SpatialOrder};
+    
+    div_op(vx.view(), vy.view(), vz.view(), grid, SpatialOrder::Second)
+        .map_err(|_| "Failed to compute divergence")
+}
+
+/// Compute Laplacian of a field (DEPRECATED - use differential_operators::laplacian)
+#[deprecated(since = "2.26.0", note = "Use differential_operators::laplacian for SSOT")]
+pub fn laplacian(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<Array3<f64>, &'static str> {
+    use self::differential_operators::{laplacian as lap_op, SpatialOrder};
+    
+    if field_idx >= fields.shape()[3] {
+        return Err("Field index out of bounds");
+    }
+    
+    let field = fields.index_axis(Axis(3), field_idx);
+    lap_op(field, grid, SpatialOrder::Second)
+        .map_err(|_| "Failed to compute Laplacian")
 }

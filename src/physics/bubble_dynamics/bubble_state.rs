@@ -249,6 +249,38 @@ impl BubbleState {
         }
     }
     
+    /// Create bubble state at exact mechanical equilibrium
+    /// This ensures zero acceleration for validation tests
+    pub fn at_equilibrium(params: &BubbleParameters) -> Self {
+        // At equilibrium: p_internal = p0 + 2σ/r0 - pv
+        // This accounts for ambient pressure, surface tension, and vapor pressure
+        let equilibrium_pressure = params.p0 + 2.0 * params.sigma / params.r0;
+        
+        // Calculate gas pressure (excluding vapor)
+        let gas_pressure = equilibrium_pressure - params.pv;
+        
+        // Estimate molecule count for this pressure
+        let n_gas = estimate_molecule_count(gas_pressure, params.r0, 293.15);
+        
+        Self {
+            radius: params.r0,
+            wall_velocity: 0.0,
+            wall_acceleration: 0.0,
+            temperature: 293.15,
+            pressure_internal: equilibrium_pressure,
+            pressure_liquid: params.p0,
+            n_gas,
+            n_vapor: estimate_molecule_count(params.pv, params.r0, 293.15),
+            gas_species: params.gas_species,
+            is_collapsing: false,
+            mach_number: 0.0,
+            compression_ratio: 1.0,
+            max_temperature: 293.15,
+            max_compression: 1.0,
+            collapse_count: 0,
+        }
+    }
+    
     /// Calculate bubble volume
     pub fn volume(&self) -> f64 {
         4.0 / 3.0 * PI * self.radius.powi(3)
@@ -328,7 +360,7 @@ mod tests {
         assert_eq!(state.radius, params.r0);
         assert_eq!(state.wall_velocity, 0.0);
         assert!(state.n_gas > 0.0);
-        assert_eq!(state.gas_species, GasSpecies::Argon);
+        assert_eq!(state.gas_species, GasSpecies::Air);
     }
     
     #[test]

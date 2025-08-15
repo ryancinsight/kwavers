@@ -32,9 +32,20 @@ pub mod calibration;
 pub mod phantom;
 
 pub use trilateration::{TrilaterationSolver, TrilaterationResult};
-pub use tdoa::{TDOASolver, TDOAMeasurement};
+pub use tdoa::TDOASolver;
 pub use calibration::{SensorCalibration, CalibrationPhantom};
 pub use phantom::{CentroidPhantom, PhantomTarget};
+
+/// Time Difference of Arrival measurement
+#[derive(Debug, Clone)]
+pub struct TDOAMeasurement {
+    /// Sensor pair (reference sensor, measurement sensor)
+    pub sensor_pair: (usize, usize),
+    /// Time difference (t_measurement - t_reference) in seconds
+    pub time_difference: f64,
+    /// Measurement uncertainty in seconds
+    pub uncertainty: f64,
+}
 
 /// Sensor configuration for localization
 #[derive(Debug, Clone)]
@@ -105,13 +116,32 @@ pub enum ArrayGeometry {
 
 impl SensorArray {
     /// Create a new sensor array
-    pub fn new(sensors: Vec<Sensor>, sound_speed: f64) -> Self {
-        let geometry = Self::detect_geometry(&sensors);
+    pub fn new(sensors: Vec<Sensor>, sound_speed: f64, geometry: ArrayGeometry) -> Self {
         Self {
             sensors,
             sound_speed,
             geometry,
         }
+    }
+    
+    /// Get the sound speed
+    pub fn sound_speed(&self) -> f64 {
+        self.sound_speed
+    }
+    
+    /// Get sensor positions
+    pub fn get_sensor_positions(&self) -> Vec<[f64; 3]> {
+        self.sensors.iter().map(|s| s.position).collect()
+    }
+    
+    /// Get number of sensors
+    pub fn num_sensors(&self) -> usize {
+        self.sensors.len()
+    }
+    
+    /// Get a specific sensor
+    pub fn get_sensor(&self, index: usize) -> Option<&Sensor> {
+        self.sensors.get(index)
     }
     
     /// Detect array geometry from sensor positions
@@ -520,6 +550,8 @@ pub struct PhantomMeasurement {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::physics::SOUND_SPEED_WATER;
+    use approx::assert_abs_diff_eq;
     
     #[test]
     fn test_sensor_array_geometry_detection() {
@@ -530,7 +562,7 @@ mod tests {
             Sensor::new(2, [0.2, 0.0, 0.0]),
             Sensor::new(3, [0.3, 0.0, 0.0]),
         ];
-        let linear_array = SensorArray::new(linear_sensors, SOUND_SPEED_WATER);
+        let linear_array = SensorArray::new(linear_sensors, SOUND_SPEED_WATER, ArrayGeometry::Linear);
         assert_eq!(linear_array.geometry, ArrayGeometry::Linear);
         
         // Planar array
@@ -540,7 +572,7 @@ mod tests {
             Sensor::new(2, [0.0, 0.1, 0.0]),
             Sensor::new(3, [0.1, 0.1, 0.0]),
         ];
-        let planar_array = SensorArray::new(planar_sensors, SOUND_SPEED_WATER);
+        let planar_array = SensorArray::new(planar_sensors, SOUND_SPEED_WATER, ArrayGeometry::Planar);
         assert_eq!(planar_array.geometry, ArrayGeometry::Planar);
         
         // Volumetric array
@@ -550,7 +582,7 @@ mod tests {
             Sensor::new(2, [0.0, 0.1, 0.0]),
             Sensor::new(3, [0.0, 0.0, 0.1]),
         ];
-        let volume_array = SensorArray::new(volume_sensors, SOUND_SPEED_WATER);
+        let volume_array = SensorArray::new(volume_sensors, SOUND_SPEED_WATER, ArrayGeometry::Volumetric);
         assert_eq!(volume_array.geometry, ArrayGeometry::Volumetric);
     }
     
@@ -563,7 +595,7 @@ mod tests {
             Sensor::new(2, [0.0, 0.1, 0.0]),
             Sensor::new(3, [0.0, 0.0, 0.1]),
         ];
-        let array = SensorArray::new(sensors, SOUND_SPEED_WATER);
+        let array = SensorArray::new(sensors, SOUND_SPEED_WATER, ArrayGeometry::Arbitrary);
         
         // Create solver
         let solver = MultiLaterationSolver::new(array);

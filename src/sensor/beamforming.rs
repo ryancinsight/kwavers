@@ -390,7 +390,7 @@ impl BeamformingProcessor {
             let steering_vector = self.calculate_steering_vector(&scan_point, SteeringVectorMethod::PlaneWave)?;
             
             // Fixed beamformer (main beam)
-            let fixed_weights = &steering_vector * main_beam_weight;
+            let steering_weights = &steering_vector * main_beam_weight;
             
             // Blocking matrix (orthogonal to steering vector)
             let blocking_matrix = self.construct_blocking_matrix(&steering_vector)?;
@@ -404,9 +404,9 @@ impl BeamformingProcessor {
             let mut output = 0.0;
             for t in 0..sensor_data.ncols() {
                 // Fixed beamformer output
-                let mut fixed_output = 0.0;
+                let mut steering_output = 0.0;
                 for s in 0..self.num_sensors {
-                    fixed_output += fixed_weights[s] * sensor_data[[s, t]];
+                    steering_output += steering_weights[s] * sensor_data[[s, t]];
                 }
                 
                 // Blocked signals
@@ -419,7 +419,7 @@ impl BeamformingProcessor {
                 
                 // Adaptive cancellation
                 let adaptive_output = adaptive_weights.dot(&blocked_signals);
-                let gsc_output: f64 = fixed_output - adaptive_output;
+                let gsc_output: f64 = steering_output - adaptive_output;
                 
                 // NLMS adaptation with normalization
                 let signal_power = blocked_signals.dot(&blocked_signals) + regularization;
