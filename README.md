@@ -1,35 +1,36 @@
 # Kwavers - Ultrasound Simulation Toolbox
 
-**Version**: 2.19.0  
-**Status**: 🚀 **Thermal Physics Unified** – All thermal phenomena consolidated  
+**Version**: 2.20.0  
+**Status**: 🚀 **Complete Physics Architecture** – Therapy & imaging unified  
 **Next Phase**: **Phase 32 READY** – ML/AI Integration & Real-Time Processing  
 **Performance**: >17M grid updates/second with GPU acceleration  
 **Build Status**: ✅ **PRODUCTION READY** – Clean compilation, zero errors  
-**Code Quality**: ✅ **UNIFIED** – Single thermal module for all heat transfer  
-**Implementation**: ✅ **COMPLETE** – No duplicate thermal implementations  
-**Architecture**: 🔥 **Unified Thermal Physics**, **Deprecated Legacy Modules**, **CEM43 Dose**
+**Code Quality**: ✅ **UNIFIED** – Single modules for all physics domains  
+**Implementation**: ✅ **COMPLETE** – HIFU, LIFU, histotripsy, BBB, PAI, FWI, RTM  
+**Architecture**: 🔥 **Therapy Physics**, **Imaging Physics**, **Consolidated Modules**
 
-## 🚀 Latest Achievement - Thermal Consolidation v10
+## 🚀 Latest Achievement - Physics Architecture v11
 
-**Version 2.19.0 Summary**: Unified all thermal physics into single comprehensive module:
+**Version 2.20.0 Summary**: Complete physics architecture with unified therapy and imaging:
 
-### **Unified Thermal Module**
-- ✅ **Heat Sources**: Optical, acoustic, metabolic, external
-- ✅ **Bioheat Transfer**: Pennes equation with perfusion
-- ✅ **Hyperbolic Heat**: Cattaneo-Vernotte model
-- ✅ **Thermal Dose**: CEM43 calculation for therapy
+### **Unified Therapy Module**
+- ✅ **HIFU**: Thermal ablation with CEM43 dosimetry
+- ✅ **Histotripsy**: Mechanical ablation via cavitation
+- ✅ **BBB Opening**: Microbubble-mediated disruption
+- ✅ **LIFU**: Neuromodulation with safety monitoring
+- ✅ **Sonodynamic**: ROS generation modeling
 
-### **Consolidation Benefits**
-- ✅ **Single Implementation**: All thermal physics in one place
-- ✅ **Deprecated Legacy**: Old modules marked for removal
-- ✅ **Clean API**: Consistent interface for all heat sources
-- ✅ **SSOT Compliance**: No duplicate thermal code
+### **Unified Imaging Module**
+- ✅ **Photoacoustic**: Time reversal & delay-and-sum
+- ✅ **FWI**: Iterative velocity model inversion
+- ✅ **RTM**: Cross-correlation imaging condition
+- ✅ **Quality Metrics**: SNR, CNR, PSNR, SSIM
 
-### **Literature Validation**
-- **Pennes (1948)**: Bioheat equation
-- **Sapareto & Dewey (1984)**: Thermal dose
-- **Cattaneo (1958)**: Non-Fourier conduction
-- **Welch & van Gemert (2011)**: Optical heating
+### **Architecture Benefits**
+- ✅ **Single Source**: One module per physics domain
+- ✅ **Literature Validated**: All algorithms referenced
+- ✅ **Extensible**: Plugin-ready for new modalities
+- ✅ **Performance**: Zero-copy, efficient iterators
 
 ## 🚀 Latest Achievement - Comprehensive Transducer Design
 

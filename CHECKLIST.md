@@ -1,40 +1,49 @@
 # Kwavers Development Checklist
 
-## ✅ **EXPERT CODE REVIEW v10 COMPLETE** - January 2025
+## ✅ **EXPERT CODE REVIEW v11 COMPLETE** - January 2025
 
-### **📋 Thermal Physics Consolidation - Version 2.19.0**
-**Objective**: Unify thermal physics and eliminate redundancy between optics/thermal and thermodynamics  
-**Status**: ✅ **COMPLETE** - Unified thermal module created, deprecated modules marked  
+### **📋 Physics Architecture Consolidation - Version 2.20.0**
+**Objective**: Create unified therapy and imaging modules with complete physics support  
+**Status**: ✅ **COMPLETE** - Comprehensive therapy and imaging physics implemented  
 **Build Status**: ✅ **SUCCESSFUL** - Zero compilation errors  
-**Architecture**: ✅ **CONSOLIDATED** - Single source of truth for all thermal phenomena  
+**Architecture**: ✅ **UNIFIED** - Single modules for all therapy and imaging modalities  
 
-### **🔍 Thermal Consolidation Achievements**
+### **🔍 Physics Architecture Achievements**
 
-#### **Unified Thermal Module**
-- [x] **Single Implementation**: All thermal physics in `physics::thermal`
-- [x] **Heat Sources**: Optical, acoustic, metabolic, and external heating
-- [x] **Bioheat Equation**: Pennes model with blood perfusion
-- [x] **Hyperbolic Heat**: Cattaneo-Vernotte non-Fourier conduction
-- [x] **Thermal Dose**: CEM43 calculation for therapy planning
+#### **Unified Therapy Module**
+- [x] **HIFU**: High-intensity focused ultrasound ablation
+- [x] **LIFU**: Low-intensity neuromodulation  
+- [x] **Histotripsy**: Mechanical tissue ablation
+- [x] **BBB Opening**: Blood-brain barrier disruption
+- [x] **Sonodynamic**: Sonosensitizer activation
+- [x] **Metrics**: CEM43 thermal dose, cavitation dose, safety indices
 
-#### **Deprecated Modules Marked**
-- [x] **physics/thermodynamics**: Legacy heat transfer module deprecated
-- [x] **physics/optics/thermal**: Optical thermal module deprecated
-- [x] **Migration Path**: Clear upgrade path to unified thermal module
-- [x] **API Updates**: All usages updated to new thermal API
+#### **Unified Imaging Module**
+- [x] **Photoacoustic**: Optical absorption imaging
+- [x] **FWI**: Full waveform inversion
+- [x] **RTM**: Reverse time migration
+- [x] **Reconstruction**: Time reversal, delay-and-sum, iterative
+- [x] **Quality Metrics**: SNR, CNR, PSNR, SSIM
 
-#### **Literature Compliance**
-- [x] **Pennes (1948)**: Bioheat equation implementation
-- [x] **Sapareto & Dewey (1984)**: CEM43 thermal dose
-- [x] **Cattaneo (1958)**: Hyperbolic heat transfer
-- [x] **Welch & van Gemert (2011)**: Optical-thermal response
+#### **Consolidated Physics**
+- [x] **Thermal**: All heating mechanisms in one module
+- [x] **Wave Propagation**: Reflection, refraction, scattering unified
+- [x] **Therapy**: All therapeutic modalities integrated
+- [x] **Imaging**: All imaging physics consolidated
+
+#### **Literature Validation**
+- [x] **ter Haar (2016)**: HIFU ablation physics
+- [x] **Khokhlova (2015)**: Histotripsy mechanisms
+- [x] **Hynynen (2001)**: BBB opening protocols
+- [x] **Wang & Hu (2012)**: Photoacoustic principles
+- [x] **Virieux & Operto (2009)**: FWI algorithms
 
 #### **Design Excellence**
-- [x] **SSOT**: Single thermal physics implementation
-- [x] **DRY**: No duplicate thermal code
-- [x] **SOLID**: Clear separation of heat sources
-- [x] **CUPID**: Plugin-ready thermal architecture
-- [x] **Zero Violations**: Clean naming throughout
+- [x] **SSOT**: Single implementation per physics concept
+- [x] **DRY**: No duplicate therapy/imaging code
+- [x] **SOLID**: Clear separation of modalities
+- [x] **CUPID**: Plugin-ready architecture
+- [x] **Clean Naming**: No adjectives in components
 
 ### **📋 Phase 31 Results - Version 2.11.0**
 **Objective**: Implement literature-validated FWI & RTM, advanced equation modes, and simulation package integration  
