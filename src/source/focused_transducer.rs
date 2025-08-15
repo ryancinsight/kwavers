@@ -182,7 +182,7 @@ impl BowlTransducer {
     
     /// Generate source distribution on grid
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut source = grid.zeros_array();
+        let mut source = grid.create_field();
         let omega = 2.0 * PI * self.config.frequency;
         
         // Calculate phase delays for focusing
@@ -461,7 +461,7 @@ impl ArcSource {
     /// Extend 2D source to 3D (uniform in z-direction)
     pub fn generate_source_3d(&self, grid: &Grid, time: f64) -> Array3<f64> {
         let source_2d = self.generate_source_2d(grid.nx, grid.ny, grid.dx, time);
-        let mut source_3d = grid.zeros_array();
+        let mut source_3d = grid.create_field();
         
         // Copy 2D pattern to all z-slices
         for iz in 0..grid.nz {
@@ -509,7 +509,7 @@ impl MultiBowlArray {
     /// applying both amplitude scaling and phase shifts. The phase shifts
     /// are crucial for beam steering and complex field synthesis.
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut combined_source = grid.zeros_array();
+        let mut combined_source = grid.create_field();
         
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {

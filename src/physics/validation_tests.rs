@@ -95,8 +95,8 @@ mod tests {
         println!("Period: {:.9}s, dt: {:.9}s, n_steps: {}", period, dt, n_steps);
         
         // Initialize pressure field with sine wave
-        let mut pressure_prev = grid.zeros_array();
-        let mut pressure_curr = grid.zeros_array();
+        let mut pressure_prev = grid.create_field();
+        let mut pressure_curr = grid.create_field();
         
         // Set initial conditions: p(x,0) = A*sin(kx), dp/dt(x,0) = -A*ω*sin(kx)
         grid.iter_points()
@@ -110,7 +110,7 @@ mod tests {
         let c2_dt2_dx2 = (c * dt / dx).powi(2);
         
         for _step in 0..n_steps {
-            let mut pressure_next = grid.zeros_array();
+            let mut pressure_next = grid.create_field();
             
             // Update interior points using wave equation
             for i in 1..nx-1 {
@@ -179,7 +179,7 @@ mod tests {
         let T0 = 10.0; // Initial temperature rise
         
         // Initialize temperature field
-        let mut temperature = grid.zeros_array();
+        let mut temperature = grid.create_field();
         grid.iter_points()
             .for_each(|((i, j, _), (x, y, _))| {
                 let r2 = (x - x0).powi(2) + (y - y0).powi(2);
@@ -281,7 +281,7 @@ mod tests {
         let k = 2.0 * PI * frequency / c;
         let I0 = 1e5f64; // Initial intensity
         
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         grid.iter_points()
             .for_each(|((i, _, _), (x, _, _))| {
                 pressure[[i, 0, 0]] = I0.sqrt() * (k * x).sin();
@@ -358,8 +358,8 @@ mod tests {
         
         // Initialize with standing wave pattern
         let amplitude = 1e5;
-        let mut pressure = grid.zeros_array();
-        let mut velocity = grid.zeros_array();
+        let mut pressure = grid.create_field();
+        let mut velocity = grid.create_field();
         
         grid.iter_points()
             .for_each(|((i, _, _), (x, _, _))| {
@@ -428,8 +428,8 @@ mod tests {
         let source_radius = 5.0 * dx;
         
         // Initialize pressure fields
-        let mut pressure_prev = grid.zeros_array();
-        let mut pressure_curr = grid.zeros_array();
+        let mut pressure_prev = grid.create_field();
+        let mut pressure_curr = grid.create_field();
         
         // Initialize with Gaussian pulse instead of point source
         // This provides smoother initial conditions
@@ -457,7 +457,7 @@ mod tests {
         
         for step in 0..n_steps {
             // Simple wave propagation using second-order finite difference
-            let mut pressure_next = grid.zeros_array();
+            let mut pressure_next = grid.create_field();
             
             for i in 1..n-1 {
                 for j in 1..n-1 {
@@ -531,8 +531,8 @@ mod tests {
             let omega_exact = c * k;
             
             // Initialize with sine wave
-            let mut p_prev = grid.zeros_array();
-            let mut p_curr = grid.zeros_array();
+            let mut p_prev = grid.create_field();
+            let mut p_curr = grid.create_field();
             
             grid.iter_points()
                 .for_each(|((i, _, _), (x, _, _))| {
@@ -545,7 +545,7 @@ mod tests {
             let n_steps = (period / dt) as usize;
             
             for _ in 0..n_steps {
-                let mut p_next = grid.zeros_array();
+                let mut p_next = grid.create_field();
                 
                 // Standard wave equation update
                 for i in 1..nx-1 {
@@ -619,7 +619,7 @@ mod tests {
         let k = 2.0 * PI * frequency / medium.sound_speed(0.0, 0.0, 0.0, &grid);
         let amplitude = 1e6; // 1 MPa for strong nonlinearity
         
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         grid.iter_points()
             .for_each(|((i, _, _), (x, _, _))| {
                 pressure[[i, 0, 0]] = amplitude * (k * x).sin();
@@ -765,10 +765,10 @@ mod tests {
         let amplitude = 1e5;
         
         // Create separate arrays for pressure and velocity
-        let mut pressure = grid.zeros_array();
-        let mut velocity_x = grid.zeros_array();
-        let mut velocity_y = grid.zeros_array();
-        let mut velocity_z = grid.zeros_array();
+        let mut pressure = grid.create_field();
+        let mut velocity_x = grid.create_field();
+        let mut velocity_y = grid.create_field();
+        let mut velocity_z = grid.create_field();
         
         // Initial plane wave propagating in x-direction
         grid.iter_points()
@@ -785,7 +785,7 @@ mod tests {
         
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let mut div_v = grid.zeros_array();
+            let mut div_v = grid.create_field();
             for i in 1..grid.nx-1 {
                 for j in 1..grid.ny-1 {
                     div_v[[i, j, 0]] = (velocity_x[[i+1, j, 0]] - velocity_x[[i-1, j, 0]]) / (2.0 * grid.dx) +
@@ -831,7 +831,7 @@ mod tests {
         let monitor = ConservationMonitor::new(&grid);
         
         // Initialize with Gaussian pulse
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
         let sigma = 5.0 * grid.dx;
         let amplitude = 1e5;
@@ -845,9 +845,9 @@ mod tests {
             });
         
         // Calculate initial energy
-        let velocity_x = grid.zeros_array();
-        let velocity_y = grid.zeros_array();
-        let velocity_z = grid.zeros_array();
+        let velocity_x = grid.create_field();
+        let velocity_y = grid.create_field();
+        let velocity_z = grid.create_field();
         
         let initial_energy = monitor.compute_total_energy(
             &pressure, &velocity_x, &velocity_y, &velocity_z, &medium
@@ -878,8 +878,8 @@ mod tests {
         
         // Create a system with multiple time scales
         // Fast acoustic waves and slow thermal diffusion
-        let mut pressure = grid.zeros_array();
-        let mut temperature = grid.zeros_array();
+        let mut pressure = grid.create_field();
+        let mut temperature = grid.create_field();
         
         // Initialize with coupled acoustic-thermal pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -919,7 +919,7 @@ mod tests {
         // Test conservation with multi-rate integration
         let monitor = ConservationMonitor::new(&grid);
         let initial_energy = monitor.compute_total_energy(
-            &pressure, &grid.zeros_array(), &grid.zeros_array(), &grid.zeros_array(), &medium
+            &pressure, &grid.create_field(), &grid.create_field(), &grid.create_field(), &medium
         );
         
         // Multi-rate integration would proceed here
@@ -940,7 +940,7 @@ mod tests {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         
         // Create a field with sharp features that need refinement
-        let mut field = grid.zeros_array();
+        let mut field = grid.create_field();
         
         // Add a sharp Gaussian (needs refinement)
         let sharp_center = (16, 16, 16);
@@ -999,7 +999,7 @@ mod tests {
         let grid = Grid::new(128, 1, 1, 1e-3, 1e-3, 1e-3);
         
         // Create a field with a shock wave
-        let mut field = grid.zeros_array();
+        let mut field = grid.create_field();
         let shock_position = grid.nx / 2;
         
         for i in 0..grid.nx {

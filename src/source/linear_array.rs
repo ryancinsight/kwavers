@@ -116,7 +116,7 @@ impl Source for LinearArray {
         
         for i in 0..self.num_elements {
             let x_elem = i as f64 * spacing;
-            if let Some((ix, iy, iz)) = grid.to_grid_indices(x_elem, self.y_pos, self.z_pos) {
+            if let Some((ix, iy, iz)) = grid.position_to_indices(x_elem, self.y_pos, self.z_pos) {
                 mask[(ix, iy, iz)] = self.apodization_weights[i];
             }
         }

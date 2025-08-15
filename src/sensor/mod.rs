@@ -319,7 +319,7 @@ impl Sensor {
     pub fn new(grid: &Grid, time: &Time, positions_meters: &[(f64, f64, f64)]) -> Self {
         let positions: Vec<(usize, usize, usize)> = positions_meters
             .iter()
-            .filter_map(|&(x, y, z)| grid.to_grid_indices(x, y, z))
+            .filter_map(|&(x, y, z)| grid.position_to_indices(x, y, z))
             .collect();
 
         if positions.is_empty() {

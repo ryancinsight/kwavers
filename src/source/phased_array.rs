@@ -417,7 +417,7 @@ impl Source for PhasedArrayTransducer {
         let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         for element in &self.elements {
-            if let Some((ix, iy, iz)) = grid.to_grid_indices(element.position.0, element.position.1, element.position.2) {
+            if let Some((ix, iy, iz)) = grid.position_to_indices(element.position.0, element.position.1, element.position.2) {
                 mask[(ix, iy, iz)] = element.amplitude_weight;
             }
         }

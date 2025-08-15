@@ -30,11 +30,11 @@ pub trait Source: Debug + Sync + Send {
     /// Get the underlying signal
     fn signal(&self) -> &dyn Signal;
     
-    /// Legacy method for backward compatibility - DEPRECATED
-    /// Use create_mask() and amplitude() for better performance
+    /// Get source term at a specific position and time
+    /// Uses create_mask() and amplitude() internally for compatibility
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Fallback implementation - inefficient but maintains compatibility
-        if let Some((i, j, k)) = grid.to_grid_indices(x, y, z) {
+        if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {
             let mask = self.create_mask(grid);
             mask.get((i, j, k)).copied().unwrap_or(0.0) * self.amplitude(t)
         } else {
@@ -77,7 +77,7 @@ impl PointSource {
 impl Source for PointSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        if let Some((ix, iy, iz)) = grid.to_grid_indices(self.position.0, self.position.1, self.position.2) {
+        if let Some((ix, iy, iz)) = grid.position_to_indices(self.position.0, self.position.1, self.position.2) {
             mask[(ix, iy, iz)] = 1.0;
         }
         mask

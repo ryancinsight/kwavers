@@ -360,8 +360,8 @@ impl KuznetsovWave {
             TimeIntegrationScheme::LeapFrog => 2, // Leap-Frog needs 2 history levels
         };
         
-        let pressure_history = vec![grid.zeros_array(); history_size];
-        let nonlinear_history = vec![grid.zeros_array(); 3];
+        let pressure_history = vec![grid.create_field(); history_size];
+        let nonlinear_history = vec![grid.create_field(); 3];
         
         // Create FFT planner
         let fft_planner = Fft3d::new(grid.nx, grid.ny, grid.nz);
@@ -1036,14 +1036,14 @@ impl KuznetsovWave {
         let nonlinear_term = if self.config.enable_nonlinearity {
             self.compute_kzk_nonlinear_term(pressure, medium, grid)?
         } else {
-            grid.zeros_array()
+            grid.create_field()
         };
         
         // Diffusivity term scaled for KZK
         let diffusivity_term = if self.config.enable_diffusivity {
             self.compute_kzk_diffusivity_term(pressure, medium, grid)?
         } else {
-            grid.zeros_array()
+            grid.create_field()
         };
         
         // KZK equation: transverse diffraction + mixed derivative + nonlinear + diffusivity + source
@@ -1082,7 +1082,7 @@ impl AcousticWaveModel for KuznetsovWave {
         velocity.index_axis_mut(Axis(0), 2).assign(&fields.index_axis(Axis(0), vz_idx));
         
         // Get source term
-        let mut source_term = grid.zeros_array();
+        let mut source_term = grid.create_field();
         source_term.indexed_iter_mut().for_each(|((i, j, k), val)| {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
@@ -1514,7 +1514,7 @@ impl KuznetsovWave {
     ) -> KwaversResult<Array3<f64>> {
         // Mixed derivative term: 2(1/c₀)∂²p/∂z∂t
         // Use finite differences for z-derivative of ∂p/∂t
-        let mut mixed_term = grid.zeros_array();
+        let mut mixed_term = grid.create_field();
         
         if let Some(ref prev_pressure) = self.pressure_prev {
             // Approximate ∂p/∂t using finite difference
@@ -1558,7 +1558,7 @@ impl KuznetsovWave {
     ) -> KwaversResult<Array3<f64>> {
         let start = Instant::now();
         
-        let mut nonlinear_term = grid.zeros_array();
+        let mut nonlinear_term = grid.create_field();
         
         // KZK nonlinear coefficient differs from full Kuznetsov by factor of c₀
         Zip::indexed(&mut nonlinear_term)
@@ -1589,7 +1589,7 @@ impl KuznetsovWave {
         medium: &dyn Medium, 
         grid: &Grid
     ) -> KwaversResult<Array3<f64>> {
-        let mut diffusivity_term = grid.zeros_array();
+        let mut diffusivity_term = grid.create_field();
         
         // KZK diffusivity coefficient differs from full Kuznetsov
         if self.pressure_history.len() >= 3 {

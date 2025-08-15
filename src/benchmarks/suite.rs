@@ -275,7 +275,7 @@ impl BenchmarkSuite {
         
         // Create fields array (7 fields typical for acoustic simulation)
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
-        let mut prev_pressure = grid.zeros_array();
+        let mut prev_pressure = grid.create_field();
         
         // Initialize pressure field
         let mut initial_pressure = fields.index_axis(Axis(0), 0).to_owned();
@@ -344,7 +344,7 @@ impl BenchmarkSuite {
         };
         
         let mut amr_manager = AMRManager::new(amr_config, &grid);
-        let mut field = grid.zeros_array();
+        let mut field = grid.create_field();
         
         // Create sharp feature for refinement
         self.initialize_sharp_feature(&mut field, &grid);

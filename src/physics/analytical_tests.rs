@@ -48,7 +48,7 @@ impl PhysicsTestUtils {
         time: f64,
         dispersion_correction: bool
     ) -> Array3<f64> {
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         let wavelength = sound_speed / frequency;
         let k_analytical = 2.0 * PI / wavelength;
         
@@ -286,7 +286,7 @@ mod tests {
         let mut solver = KuznetsovWave::new(&grid, config).unwrap();
         
         // Initialize with Gaussian pulse for better amplitude tracking
-        let mut initial_pressure = grid.zeros_array();
+        let mut initial_pressure = grid.create_field();
         let center_x = grid.nx as f64 * grid.dx * 0.5;
         let center_y = grid.ny as f64 * grid.dy * 0.5;
         let center_z = grid.nz as f64 * grid.dz * 0.5;
@@ -394,7 +394,7 @@ mod tests {
         
         // Initialize fields
         let mut fields = Array4::zeros((crate::solver::TOTAL_FIELDS, nx, ny, nz));
-        let mut prev_pressure = grid.zeros_array();
+        let mut prev_pressure = grid.create_field();
         
         // Set initial condition: Gaussian pulse
         let pulse_width = GAUSSIAN_PULSE_WIDTH_FACTOR * dx;
@@ -512,7 +512,7 @@ mod tests {
         let reference_distance = 3.0 * dx; // 3 grid points to avoid singularity
         
         // Initialize spherical wave
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         
         Zip::indexed(&mut pressure).for_each(|(i, j, k), p| {
             let r = (((i as i32 - center as i32).pow(2) + 
@@ -562,7 +562,7 @@ mod tests {
         let beam_waist = 2e-3; // 2 mm
         
         // Initialize Gaussian beam
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         let center = n / 2;
         
         use ndarray::s;
@@ -610,7 +610,7 @@ mod tests {
         let amplitude = 1e5; // 100 kPa
         
         // Initialize standing wave pattern with smoother profile
-        let mut pressure = grid.zeros_array();
+        let mut pressure = grid.create_field();
         
         // Add window function to reduce edge effects
         let window_width = WINDOW_WIDTH_FACTOR * dx;
