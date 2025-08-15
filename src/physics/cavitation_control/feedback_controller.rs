@@ -123,7 +123,7 @@ impl FeedbackController {
             pid_controller,
             amplitude_controller: AmplitudeController::new(config.max_amplitude),
             duty_cycle_controller: DutyCycleController::new(config.max_duty_cycle),
-            power_modulator: PowerModulator::new(ModulationScheme::Combined, sample_rate),
+            power_modulator: PowerModulator::new(ModulationScheme::DutyCycleControl, sample_rate),
             cavitation_detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
             control_history: VecDeque::with_capacity(MAX_HISTORY_LENGTH),
             time_since_update: 0.0,

@@ -2,6 +2,7 @@
 pub mod bubble_dynamics;
 pub mod cavitation_control;
 pub mod chemistry;
+pub mod phase_modulation;
 // composable module removed - use plugin system instead
 pub mod field_indices;  // Unified field indices (SSOT)
 pub mod field_mapping;  // NEW: Unified field mapping system

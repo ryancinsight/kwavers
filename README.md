@@ -1,36 +1,42 @@
 # Kwavers - Ultrasound Simulation Toolbox
 
-**Version**: 2.11.0  
-**Status**: 🚀 **Cavitation Control Complete** – Negative feedback control with power modulation  
+**Version**: 2.12.0  
+**Status**: 🚀 **Phase Modulation Complete** – Phase randomization, shifting, and beam control  
 **Next Phase**: **Phase 32 READY** – ML/AI Integration & Real-Time Processing  
 **Performance**: >17M grid updates/second with GPU acceleration  
-**Build Status**: ✅ **LIBRARY COMPILES CLEANLY** – Production-ready codebase  
-**Code Quality**: ✅ **CAVITATION CONTROL COMPLETE** – Full feedback control system implemented  
+**Build Status**: ✅ **LIBRARY BUILDS** – Production-ready codebase  
+**Code Quality**: ✅ **PHASE MODULATION COMPLETE** – Full phase control system implemented  
 **FWI & RTM Validation**: ✅ **COMPREHENSIVE** – Literature-validated with extensive test suites  
 **New Capabilities**: 🔥 **KZK Equation**, **Seismic FWI/RTM**, **FOCUS Integration**
 
-## 🚀 Latest Achievement - Cavitation Control System
+## 🚀 Latest Achievement - Phase Modulation System
 
-**Version 2.11.0 Summary**: Complete cavitation control with negative feedback loops:
+**Version 2.12.0 Summary**: Complete phase modulation with randomization and beam control:
 
-### **Cavitation Control Capabilities**
-- ✅ **PID Controller**: Full PID with anti-windup and derivative filtering
-- ✅ **Power Modulation**: Amplitude, duty cycle, pulsed, burst, and ramped modes
-- ✅ **Cavitation Detection**: Spectral analysis with subharmonic/ultraharmonic detection
-- ✅ **Feedback Strategies**: AmplitudeOnly, DutyCycleOnly, Combined, Cascaded, Predictive
-- ✅ **Safety Features**: Emergency shutdown, mechanical index limiting, power limiting
+### **Phase Modulation Capabilities**
+- ✅ **Phase Randomization**: Temporal, spatial, and spatiotemporal randomization
+- ✅ **Phase Distributions**: Uniform, Gaussian, Binary, Ternary, Quadrature, Discrete
+- ✅ **Beam Steering**: Electronic steering with linear, spiral, circular scan patterns
+- ✅ **Dynamic Focusing**: Multi-focus patterns, trajectory tracking, interpolation
+- ✅ **Complex Beams**: Vortex beams, Bessel beams, holographic patterns
 
-### **Detection Methods**
-- **Spectral Analysis**: FFT-based detection of cavitation signatures
-- **Subharmonic Detection**: f0/2, f0/3 detection for inertial cavitation
-- **Broadband Emissions**: Noise floor analysis for violent collapse
-- **State Classification**: None, Stable, Inertial, Transient states
+### **Standing Wave Suppression**
+- **Phase Shift Keying**: Gray code sequences for smooth transitions
+- **Correlation Control**: Spatial correlation for coherent randomization
+- **Temporal Coherence**: Phase history tracking and analysis
+- **Suppression Metrics**: Variance reduction quantification
+
+### **Beam Control Features**
+- **Steering Range**: ±45° electronic steering capability
+- **Phase Quantization**: 256-level digital phase control
+- **Multi-focus**: Up to 10 simultaneous focal points
+- **Apodization**: Gaussian, Hann, Tukey windowing
 
 ### **Literature Validation**
-- **Control Systems**: Hockham et al. (2010, 2013) real-time cavitation control
-- **Detection**: Gyöngy & Coussios (2010) passive cavitation mapping
-- **Safety**: Arvanitis et al. (2012, 2013) controlled BBB disruption
-- **PID Control**: Åström & Hägglund (2006), Franklin et al. (2015)
+- **Standing Waves**: Tang & Clement (2010) transcranial suppression
+- **Beam Steering**: Wooh & Shi (1999) phased array characteristics
+- **Multi-focus**: Ebbini & Cain (1989) pattern synthesis
+- **Phase Encoding**: Liu et al. (2018) peak pressure reduction
 
 ### **Design Compliance**
 - ✅ **Zero naming violations**: No adjective-based names
