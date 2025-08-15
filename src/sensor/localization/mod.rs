@@ -33,9 +33,20 @@ pub mod calibration;
 pub mod phantom;
 
 pub use trilateration::{TrilaterationSolver, TrilaterationResult};
-pub use tdoa::{TDOASolver, TDOAMeasurement};
+pub use tdoa::TDOASolver;
 pub use calibration::{SensorCalibration, CalibrationPhantom};
 pub use phantom::{CentroidPhantom, PhantomTarget};
+
+/// Time Difference of Arrival measurement
+#[derive(Debug, Clone)]
+pub struct TDOAMeasurement {
+    /// Sensor pair (reference sensor, measurement sensor)
+    pub sensor_pair: (usize, usize),
+    /// Time difference (t_measurement - t_reference) in seconds
+    pub time_difference: f64,
+    /// Measurement uncertainty in seconds
+    pub uncertainty: f64,
+}
 
 /// Sensor configuration for localization
 #[derive(Debug, Clone)]
