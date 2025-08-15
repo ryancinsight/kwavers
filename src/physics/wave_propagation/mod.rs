@@ -34,12 +34,14 @@ pub mod refraction;
 pub mod interface;
 pub mod fresnel;
 pub mod snell;
+pub mod scattering; // Unified scattering module
 
 pub use reflection::{ReflectionCalculator, ReflectionCoefficients};
 pub use refraction::{RefractionCalculator, RefractionAngles};
 pub use interface::{InterfaceProperties, InterfaceType};
 pub use fresnel::{FresnelCoefficients, FresnelCalculator};
 pub use snell::{SnellLawCalculator, CriticalAngles};
+pub use scattering::{ScatteringCalculator, ScatteringRegime, VolumeScattering, PhaseFunction};
 
 /// Wave propagation mode
 #[derive(Debug, Clone, Copy, PartialEq)]

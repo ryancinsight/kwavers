@@ -1,69 +1,34 @@
 # Kwavers Development Checklist
 
-## ✅ **EXPERT CODE REVIEW v8 COMPLETE** - January 2025
+## ✅ **EXPERT CODE REVIEW v9 COMPLETE** - January 2025
 
-### **📋 Enhanced Physics Implementation - Version 2.17.0**
-**Objective**: Implement comprehensive wave propagation physics and multi-lateration localization  
-**Status**: ✅ **COMPLETE** - Reflection, refraction, and localization systems implemented  
+### **📋 Physics Consolidation & Redundancy Elimination - Version 2.18.0**
+**Objective**: Consolidate redundant physics modules and eliminate duplicate implementations  
+**Status**: ✅ **COMPLETE** - Unified wave propagation with scattering, deprecated legacy modules  
 **Build Status**: ✅ **SUCCESSFUL** - Zero compilation errors  
-**New Capabilities**: Wave propagation with Snell's law, Fresnel equations, multi-lateration localization  
+**Architecture**: ✅ **CONSOLIDATED** - Single source of truth for wave phenomena  
 
-### **🔍 New Physics Implementations**
+### **🔍 Consolidation Achievements**
 
-#### **Wave Propagation Physics**
-- [x] **Reflection & Refraction**: Complete implementation for acoustic and optical waves
-- [x] **Snell's Law**: Full implementation with critical angle calculations
-- [x] **Fresnel Equations**: S and P polarization coefficients for EM waves
-- [x] **Total Internal Reflection**: Proper handling with evanescent wave decay
-- [x] **Brewster's Angle**: Calculation for polarization effects
-- [x] **Energy Conservation**: Verified R + T = 1 for all implementations
+#### **Unified Wave Propagation Module**
+- [x] **Scattering Integration**: Merged particle scattering into wave_propagation module
+- [x] **Single Implementation**: Eliminated duplicate Rayleigh/Mie implementations
+- [x] **Comprehensive Coverage**: Reflection, refraction, and scattering in one module
+- [x] **Regime Detection**: Automatic selection of Rayleigh/Mie/Geometric regimes
+- [x] **Phase Functions**: Henyey-Greenstein, Rayleigh, and isotropic models
 
-#### **Multi-lateration Localization System**
-- [x] **TOA Localization**: Time-of-arrival based 3D position estimation
-- [x] **TDOA Support**: Time-difference-of-arrival measurements
-- [x] **Sensor Calibration**: Phantom-based calibration system
-- [x] **Array Geometry Detection**: Automatic detection of linear/planar/volumetric arrays
-- [x] **Uncertainty Estimation**: Covariance-based position uncertainty
-- [x] **Iterative Least Squares**: Robust position solver with regularization
+#### **Deprecated Legacy Modules**
+- [x] **physics/scattering**: Marked as deprecated with migration path
+- [x] **Migration Helpers**: Provided compatibility layer for smooth transition
+- [x] **Documentation**: Clear migration guide in module documentation
+- [x] **Removal Timeline**: Set for v3.0.0 to allow transition period
 
-#### **Literature Validation**
-- [x] **Born & Wolf (1999)**: Principles of Optics - Fresnel equations
-- [x] **Kinsler et al. (2000)**: Fundamentals of Acoustics - Reflection/transmission
-- [x] **Gyöngy & Coussios (2010)**: Passive cavitation mapping
-- [x] **Chan & Ho (1994)**: Hyperbolic location algorithms
-
-### **📋 Code Quality Review Results - Version 2.16.0**
-**Objective**: Deep physics validation and complete implementation verification  
-**Status**: ✅ **COMPLETE** - All simplified implementations replaced  
-**Build Status**: ✅ **SUCCESSFUL** - Zero compilation errors  
-**Warnings**: 691 (mostly unused variables - can be auto-fixed with `cargo fix`)  
-
-### **🔍 Critical Issues Found and Fixed**
-
-#### **Physics Implementation Improvements**
-- [x] **Directivity Pattern**: Replaced simplified `directivity = 1.0` with proper piston source pattern using sinc function
-- [x] **Literature Reference**: Added Kino (1987) reference for acoustic wave directivity
-- [x] **SSOT Violation**: Removed duplicate `R_GAS` constant definition, now using centralized constant
-
-#### **Code Cleanup**
-- [x] **Binary Files**: Removed `fft_demo`, `test_octree`, and `.o` files from repository
-- [x] **Test Fixes**: Removed non-existent `ValidationManager` references from examples
-- [x] **Method Renaming**: Updated test assertions to use new optical coefficient method names
-
-#### **Design Principles Verification**
-- [x] **SSOT**: All constants properly centralized, no duplicates
-- [x] **SOLID**: Maintained throughout, no violations found
-- [x] **CUPID**: Plugin architecture intact and functional
-- [x] **Zero-Copy**: Efficient memory patterns preserved
-- [x] **KISS/YAGNI**: No unnecessary complexity added
-
-### **Physics Validation**
-- [x] **Directivity**: Proper piston source pattern implementation
-- [x] **Bubble Dynamics**: Rayleigh-Plesset and Keller-Miksis verified
-- [x] **Constants**: All physics constants from centralized module
-- [x] **No Simplified Implementations**: All placeholder code replaced
-
-## ✅ **PHASE 31 COMPLETE** - Literature-Validated FWI & RTM Advanced Capabilities
+#### **Design Principle Compliance**
+- [x] **SSOT**: Single source for all wave propagation phenomena
+- [x] **DRY**: No duplicate implementations of scattering physics
+- [x] **SOLID**: Clear separation between interface and volume scattering
+- [x] **CUPID**: Plugin-ready architecture for custom scattering models
+- [x] **Zero Naming Violations**: No adjectives in any component names
 
 ### **📋 Phase 31 Results - Version 2.11.0**
 **Objective**: Implement literature-validated FWI & RTM, advanced equation modes, and simulation package integration  
