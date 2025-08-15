@@ -13,18 +13,24 @@ use crate::constants::bubble_dynamics::{
     BAR_L2_TO_PA_M6, L_TO_M3
 };
 use crate::constants::thermodynamics::{R_GAS, AVOGADRO, M_WATER, T_AMBIENT};
-use std::sync::Mutex;
+
 
 // Remove duplicate constant definitions - they're now imported from constants module
 
 /// Rayleigh-Plesset equation solver (incompressible)
 pub struct RayleighPlessetSolver {
     params: BubbleParameters,
+    thermo_calc: ThermodynamicsCalculator,
 }
 
 impl RayleighPlessetSolver {
     pub fn new(params: BubbleParameters) -> Self {
-        Self { params }
+        // Use same thermodynamics engine as KellerMiksisModel for consistency
+        let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
+        Self { 
+            params,
+            thermo_calc,
+        }
     }
     
     /// Calculate bubble wall acceleration using Rayleigh-Plesset equation
@@ -38,13 +44,11 @@ impl RayleighPlessetSolver {
         let v = state.wall_velocity;
         let p_l = self.params.p0 + p_acoustic;
         
-        // Internal pressure (polytropic relation)
-        let gamma = state.gas_species.gamma();
-        let p_gas = (self.params.p0 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / self.params.r0 - self.params.pv)
-            * (self.params.r0 / r).powf(3.0 * gamma);
+        // Use consistent internal pressure calculation
+        let p_internal = self.calculate_internal_pressure(state);
         
         // Pressure difference
-        let p_diff = p_gas + self.params.pv - p_l;
+        let p_diff = p_internal - p_l;
         
         // Viscous term
         let viscous = crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid * v / r;
@@ -57,6 +61,35 @@ impl RayleighPlessetSolver {
         let denominator = self.params.rho_liquid * r;
         
         numerator / denominator - crate::constants::bubble_dynamics::KINETIC_ENERGY_COEFF * v * v / r
+    }
+    
+    /// Calculate internal pressure using consistent thermodynamics
+    /// This ensures both RP and KM models use the same gas physics
+    fn calculate_internal_pressure(&self, state: &BubbleState) -> f64 {
+        if !self.params.use_thermal_effects {
+            // Simple polytropic relation for fast calculations
+            let gamma = state.gas_species.gamma();
+            return (self.params.p0 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / self.params.r0 - self.params.pv)
+                * (self.params.r0 / state.radius).powf(3.0 * gamma) + self.params.pv;
+        }
+        
+        // For thermal effects, use the same Van der Waals equation as KellerMiksisModel
+        let n_total = state.n_gas + state.n_vapor;
+        let volume = state.volume();
+        
+        // Get effective Van der Waals constants from gas composition
+        let (a_mix, b_mix) = self.params.effective_vdw_constants();
+        
+        // Convert units to SI
+        let a = a_mix * BAR_L2_TO_PA_M6;
+        let b = b_mix * L_TO_M3;
+        
+        // Van der Waals equation
+        let n_moles = n_total / AVOGADRO;
+        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b) 
+                     - a * n_moles * n_moles / (volume * volume);
+        
+        pressure
     }
 }
 
@@ -171,13 +204,12 @@ impl KellerMiksisModel {
         let n_total = state.n_gas + state.n_vapor;
         let volume = state.volume();
         
-        // Van der Waals constants for air (weighted average of N2 and O2)
-        let a_air = N2_FRACTION * VDW_A_N2 + O2_FRACTION * VDW_A_O2; // bar·L²/mol²
-        let b_air = N2_FRACTION * VDW_B_N2 + O2_FRACTION * VDW_B_O2; // L/mol
+        // Get effective Van der Waals constants from gas composition
+        let (a_mix, b_mix) = self.params.effective_vdw_constants();
         
         // Convert units to SI
-        let a = a_air * BAR_L2_TO_PA_M6; // Pa·m⁶/mol²
-        let b = b_air * L_TO_M3; // m³/mol
+        let a = a_mix * BAR_L2_TO_PA_M6; // Pa·m⁶/mol²
+        let b = b_mix * L_TO_M3; // m³/mol
         
         // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
         // Solving for P: P = nRT/(V - nb) - a*n²/V²
@@ -229,7 +261,7 @@ impl KellerMiksisModel {
     }
     
     /// Update vapor content through evaporation/condensation
-    pub fn update_mass_transfer(&mut self, state: &mut BubbleState, dt: f64) {
+    pub fn update_mass_transfer(&self, state: &mut BubbleState, dt: f64) {
         if !self.params.use_mass_transfer {
             return;
         }
@@ -272,11 +304,10 @@ pub fn integrate_bubble_dynamics_stable(
     t: f64,
 ) -> KwaversResult<()> {
     use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
-    use std::sync::Arc;
     
-    // Use adaptive integration with sub-cycling
+    // Use adaptive integration with sub-cycling (no Mutex needed anymore)
     integrate_bubble_dynamics_adaptive(
-        Arc::new(Mutex::new(solver.clone())),
+        solver,
         state,
         p_acoustic,
         dp_dt,
