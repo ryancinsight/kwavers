@@ -10,12 +10,14 @@ pub mod heterogeneity;
 pub mod mechanics;
 // migration module removed - composable has been fully removed
 pub mod optics;
-pub mod plugin; // NEW: Plugin architecture for extensible physics
-pub mod scattering;
+pub mod plugin; // Plugin architecture for extensible physics
 pub mod state;
-pub mod thermodynamics;
+pub mod thermal; // Unified thermal physics module
+pub mod therapy; // Unified therapy physics module
+pub mod imaging; // Unified imaging physics module
 pub mod traits;
 pub mod sonoluminescence_detector;
+pub mod wave_propagation; // NEW: Wave propagation with reflection and refraction
 
 #[cfg(test)]
 pub mod analytical_tests;
@@ -31,6 +33,7 @@ pub use state::PhysicsState;
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
+pub use wave_propagation::{WavePropagationCalculator, AttenuationCalculator, WaveMode, Polarization, PropagationCoefficients};
 
 /// Enhanced functional programming utilities for physics calculations
 /// 

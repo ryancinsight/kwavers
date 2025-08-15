@@ -248,13 +248,13 @@ impl Medium for HeterogeneousMedium {
         let iz = grid.z_idx(z);
         self.b_a[[ix, iy, iz]].max(0.0)
     }
-    fn absorption_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let ix = grid.x_idx(x);
         let iy = grid.y_idx(y);
         let iz = grid.z_idx(z);
         self.mu_a[[ix, iy, iz]].max(0.1)
     }
-    fn reduced_scattering_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let ix = grid.x_idx(x);
         let iy = grid.y_idx(y);
         let iz = grid.z_idx(z);

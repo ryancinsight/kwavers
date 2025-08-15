@@ -90,7 +90,6 @@ impl KellerMiksisModel {
     pub fn heat_capacity(&self, state: &BubbleState) -> f64 {
         // Heat capacity depends on gas species and conditions
         // Using constant pressure heat capacity for ideal gas
-        const R_GAS: f64 = 8.314; // J/(mol·K)
         let gamma = state.gas_species.gamma();
         let cv = R_GAS / (gamma - 1.0); // Molar heat capacity at constant volume
         let cp = gamma * cv; // Molar heat capacity at constant pressure

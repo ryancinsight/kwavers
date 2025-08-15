@@ -378,11 +378,12 @@ impl SubharmonicDetector {
             sample_rate
         );
         
+        let filter_len = filter_coeffs.len();
         Self {
             fundamental_freq,
             sample_rate,
             filter_coeffs,
-            state: VecDeque::with_capacity(filter_coeffs.len()),
+            state: VecDeque::with_capacity(filter_len),
         }
     }
     

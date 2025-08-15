@@ -523,9 +523,9 @@ impl Medium for HomogeneousMedium {
     /// Returns the uniform acoustic nonlinearity parameter (B/A) of the medium.
     fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.b_a }
     /// Returns the uniform optical absorption coefficient (1/m) of the medium.
-    fn absorption_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.mu_a }
+    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.mu_a }
     /// Returns the uniform reduced optical scattering coefficient (1/m) of the medium.
-    fn reduced_scattering_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.mu_s_prime }
+    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 { self.mu_s_prime }
     /// Returns the reference frequency (Hz) used for power-law absorption calculations.
     fn reference_frequency(&self) -> f64 { self.reference_frequency }
 
@@ -860,8 +860,8 @@ mod tests {
         assert_eq!(medium.gas_diffusion_coefficient(0.0,0.0,0.0, &grid), medium.gas_diffusion_coeff);
         assert_eq!(medium.thermal_diffusivity(0.0,0.0,0.0, &grid), medium.thermal_diffusivity);
         assert_eq!(medium.nonlinearity_coefficient(0.0,0.0,0.0, &grid), medium.b_a);
-        assert_eq!(medium.absorption_coefficient_light(0.0,0.0,0.0, &grid), medium.mu_a);
-        assert_eq!(medium.reduced_scattering_coefficient_light(0.0,0.0,0.0, &grid), medium.mu_s_prime);
+        assert_eq!(medium.optical_absorption_coefficient(0.0,0.0,0.0, &grid), medium.mu_a);
+        assert_eq!(medium.optical_scattering_coefficient(0.0,0.0,0.0, &grid), medium.mu_s_prime);
         assert_eq!(medium.reference_frequency(), medium.reference_frequency);
     }
 

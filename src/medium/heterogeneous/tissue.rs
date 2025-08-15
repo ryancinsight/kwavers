@@ -533,12 +533,12 @@ impl Medium for HeterogeneousTissueMedium {
         }
     }
 
-    fn absorption_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // Default light absorption - would vary by tissue type in a full implementation
+    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        // Default optical absorption - would vary by tissue type in a full implementation
         1.0 // Generic absorption value
     }
 
-    fn reduced_scattering_coefficient_light(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // Default light scattering - would vary by tissue type in a full implementation
         10.0 // Generic scattering value
     }

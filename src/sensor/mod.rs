@@ -3,9 +3,14 @@
 pub mod adaptive_beamforming;
 pub mod beamforming;
 pub mod passive_acoustic_mapping;
+pub mod localization; // NEW: Multi-lateration localization system
 
 pub use passive_acoustic_mapping::{
     PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod
+};
+pub use localization::{
+    MultiLaterationSolver, SensorArray, LocalizationResult,
+    Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry
 };
 
 use crate::grid::Grid;

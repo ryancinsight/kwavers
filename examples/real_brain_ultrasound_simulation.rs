@@ -25,7 +25,7 @@ use kwavers::{
     Grid, KwaversResult, KwaversError, error::PhysicsError,
     solver::pstd::{PstdSolver, PstdConfig},
     medium::heterogeneous::HeterogeneousMedium,
-    validation::ValidationManager,
+
 };
 
 use ndarray::Array3;
@@ -419,7 +419,7 @@ pub struct RealBrainUltrasoundSimulation {
     medium: HeterogeneousMedium,
     grid: Grid,
     solver: PstdSolver,
-    validation: ValidationManager,
+
 }
 
 impl RealBrainUltrasoundSimulation {
@@ -463,7 +463,7 @@ impl RealBrainUltrasoundSimulation {
         // Create PSTD solver
         let pstd_config = PstdConfig::default();
         let solver = PstdSolver::new(pstd_config, &grid)?;
-        let validation = ValidationManager::new();
+
         
         Ok(Self {
             config,
@@ -472,7 +472,6 @@ impl RealBrainUltrasoundSimulation {
             medium,
             grid,
             solver,
-            validation,
         })
     }
     

@@ -197,7 +197,7 @@ impl DomainDecomposer {
         // Apply decomposition strategy
         let regions = match self.strategy {
             DecompositionStrategy::Fixed => {
-                self.fixed_decomposition(grid)?
+                self.static_decomposition(grid)?
             }
             DecompositionStrategy::Adaptive => {
                 self.adaptive_decomposition(&analysis, quality_metrics, grid)?
@@ -545,7 +545,7 @@ impl DomainDecomposer {
     }
     
     /// Fixed decomposition strategy
-    fn fixed_decomposition(&self, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
+    fn static_decomposition(&self, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
         // Simple fixed decomposition: PSTD in center, FDTD near boundaries
         let mut regions = Vec::new();
         
