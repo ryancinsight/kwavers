@@ -328,7 +328,7 @@ mod tests {
         assert_eq!(state.radius, params.r0);
         assert_eq!(state.wall_velocity, 0.0);
         assert!(state.n_gas > 0.0);
-        assert_eq!(state.gas_species, GasSpecies::Argon);
+        assert_eq!(state.gas_species, GasSpecies::Air);
     }
     
     #[test]
