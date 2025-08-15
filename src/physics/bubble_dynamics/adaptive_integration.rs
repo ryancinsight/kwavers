@@ -25,7 +25,6 @@ use crate::constants::adaptive_integration::{
     MAX_VELOCITY_FRACTION
 };
 use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
-use std::sync::{Arc, Mutex};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]
@@ -67,8 +66,8 @@ impl Default for AdaptiveBubbleConfig {
 }
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
-pub struct AdaptiveBubbleIntegrator {
-    solver: Arc<Mutex<KellerMiksisModel>>,
+pub struct AdaptiveBubbleIntegrator<'a> {
+    solver: &'a KellerMiksisModel,
     config: AdaptiveBubbleConfig,
     /// Current adaptive time step
     dt_adaptive: f64,
@@ -79,9 +78,9 @@ pub struct AdaptiveBubbleIntegrator {
     max_dt_used: f64,
 }
 
-impl AdaptiveBubbleIntegrator {
+impl<'a> AdaptiveBubbleIntegrator<'a> {
     /// Create new adaptive integrator
-    pub fn new(solver: Arc<Mutex<KellerMiksisModel>>, config: AdaptiveBubbleConfig) -> Self {
+    pub fn new(solver: &'a KellerMiksisModel, config: AdaptiveBubbleConfig) -> Self {
         let dt_adaptive = config.dt_max * INITIAL_TIME_STEP_FRACTION; // Start conservatively
         
         Self {
@@ -209,31 +208,32 @@ impl AdaptiveBubbleIntegrator {
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
-        let r0 = self.solver.lock().unwrap().params().r0;
+        let r0 = self.solver.params().r0;
         
         // RK4 integration
         let state0 = state.clone();
         
         // k1
-        let k1_a = self.solver.lock().unwrap().calculate_acceleration(state, p_acoustic, dp_dt, t);
+        // Note: calculate_acceleration requires mutable state, but doesn't mutate solver
+        let k1_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t);
         let k1_v = state.wall_velocity;
         
         // k2
         state.radius = state0.radius + 0.5 * dt * k1_v;
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k1_a;
-        let k2_a = self.solver.lock().unwrap().calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+        let k2_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
         let k2_v = state.wall_velocity;
         
         // k3
         state.radius = state0.radius + 0.5 * dt * k2_v;
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k2_a;
-        let k3_a = self.solver.lock().unwrap().calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+        let k3_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
         let k3_v = state.wall_velocity;
         
         // k4
         state.radius = state0.radius + dt * k3_v;
         state.wall_velocity = state0.wall_velocity + dt * k3_a;
-        let k4_a = self.solver.lock().unwrap().calculate_acceleration(state, p_acoustic, dp_dt, t + dt);
+        let k4_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + dt);
         let k4_v = state.wall_velocity;
         
         // Combine
@@ -245,14 +245,8 @@ impl AdaptiveBubbleIntegrator {
         state.update_collapse_state();
         
         // Update temperature and mass transfer with smaller time step
-        {
-            let solver = self.solver.lock().unwrap();
-            solver.update_temperature(state, dt);
-        }
-        {
-            let mut solver = self.solver.lock().unwrap();
-            solver.update_mass_transfer(state, dt);
-        }
+        self.solver.update_temperature(state, dt);
+        self.solver.update_mass_transfer(state, dt);
         
         Ok(())
     }
@@ -275,7 +269,7 @@ impl AdaptiveBubbleIntegrator {
         }
         
         // Check for extreme velocities (approaching speed of sound)
-        if state.wall_velocity.abs() > self.solver.lock().unwrap().params().c_liquid * MAX_VELOCITY_FRACTION {
+        if state.wall_velocity.abs() > self.solver.params().c_liquid * MAX_VELOCITY_FRACTION {
             return false;
         }
         
@@ -319,7 +313,7 @@ pub struct IntegrationStatistics {
 
 /// Replace the old fixed-timestep integration with adaptive version
 pub fn integrate_bubble_dynamics_adaptive(
-    solver: Arc<Mutex<KellerMiksisModel>>,
+    solver: &KellerMiksisModel,
     state: &mut BubbleState,
     p_acoustic: f64,
     dp_dt: f64,
@@ -335,16 +329,16 @@ pub fn integrate_bubble_dynamics_adaptive(
 mod tests {
     use super::*;
     use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
-    use std::sync::{Arc, Mutex};
+
     
     #[test]
     fn test_adaptive_integration() {
         let params = BubbleParameters::default();
-        let solver = Arc::new(Mutex::new(KellerMiksisModel::new(params.clone())));
+        let solver = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
         
         let config = AdaptiveBubbleConfig::default();
-        let mut integrator = AdaptiveBubbleIntegrator::new(solver.clone(), config);
+        let mut integrator = AdaptiveBubbleIntegrator::new(&solver, config);
         
         // Test integration with acoustic forcing
         let result = integrator.integrate_adaptive(

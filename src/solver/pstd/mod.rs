@@ -196,6 +196,9 @@ pub struct PstdSolver {
     /// Workspace arrays to avoid allocations
     workspace_real: Array3<f64>,
     workspace_complex: Array3<Complex<f64>>,
+    /// 4D workspace arrays for FFT operations (Issue #5)
+    workspace_real_4d: Array4<f64>,
+    workspace_complex_4d: Array4<Complex<f64>>,
     /// Previous pressure field for leapfrog integration
     pressure_prev: Option<Array3<f64>>,
     /// Previous velocity field for leapfrog integration  
@@ -259,6 +262,8 @@ impl PstdSolver {
             metrics: HashMap::new(),
             workspace_real: Array3::zeros((nx, ny, nz)),
             workspace_complex: Array3::zeros((nx, ny, nz)),
+            workspace_real_4d: Array4::zeros((1, nx, ny, nz)),
+            workspace_complex_4d: Array4::zeros((1, nx, ny, nz)),
             pressure_prev: None,
             velocity_prev: None,
         })
@@ -299,22 +304,19 @@ impl PstdSolver {
     }
     // Note: k-space correction is handled by compute_kspace_correction from solver::kspace_correction module
     
-    /// Update pressure field using PSTD with leapfrog or Euler time integration
-    pub fn update_pressure(
+    /// Update pressure field using k-space divergence (more efficient)
+    pub fn update_pressure_kspace(
         &mut self,
         pressure: &mut ndarray::ArrayViewMut3<f64>,
-        velocity_divergence: &Array3<f64>,
+        div_v_hat: &Array3<Complex<f64>>,  // Already in k-space
         medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("PSTD pressure update, dt={}, leapfrog={}", dt, self.config.use_leapfrog);
+        debug!("PSTD pressure update (k-space), dt={}, leapfrog={}", dt, self.config.use_leapfrog);
         let start = std::time::Instant::now();
         
-        // Transform velocity divergence to k-space
-        let mut fields_4d = Array4::zeros((1, velocity_divergence.shape()[0], velocity_divergence.shape()[1], velocity_divergence.shape()[2]));
-        fields_4d.index_axis_mut(Axis(0), 0).assign(velocity_divergence);
-        
-        let mut div_v_hat = fft_3d(&fields_4d, 0, &self.grid);
+        // Clone the input to avoid modifying it
+        let mut div_v_hat = div_v_hat.clone();
         
         // Apply anti-aliasing filter if enabled
         if let Some(ref filter) = self.anti_alias_filter {
@@ -323,12 +325,8 @@ impl PstdSolver {
                 .for_each(|d, &f| *d *= f);
         }
         
-        // Apply k-space correction if enabled
-        if let Some(ref kappa) = self.kappa {
-            Zip::from(&mut div_v_hat)
-                .and(kappa)
-                .for_each(|d, &k| *d *= k);
-        }
+        // Apply k-space correction if enabled (already applied in compute_divergence_kspace)
+        // Skip this step since kappa was already applied
         
         // Apply power-law absorption if enabled
         if self.config.enable_absorption {
@@ -344,6 +342,9 @@ impl PstdSolver {
             }
         }
         
+        // Pre-compute rho_c2 array for efficiency (Issue #2)
+        let rho_c2_array = medium.density_array() * &medium.sound_speed_array().mapv(|c| c.powi(2));
+        
         // Save current pressure before update for leapfrog scheme
         let pressure_current_copy = if self.config.use_leapfrog {
             Some(pressure.to_owned())
@@ -354,114 +355,89 @@ impl PstdSolver {
         // Choose time integration scheme
         if self.config.use_leapfrog && self.pressure_prev.is_some() {
             // Leapfrog scheme: p^{n+1} = p^{n-1} + 2*dt*(-ρc²∇·v^n)
-            // Note: ifft_3d already applies 1/(nx*ny*nz) normalization
             let scale_factor = -2.0 * dt;
             let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
             
             // Transform back to physical space
             let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
             
-            // Apply leapfrog update with spatially varying ρc²
+            // Apply leapfrog update with pre-computed ρc²
             let pressure_prev = self.pressure_prev.as_ref().unwrap();
-            pressure.indexed_iter_mut()
-                .zip(pressure_prev.iter())
-                .zip(pressure_update.iter())
-                .for_each(|((((i, j, k), p), &p_prev), &update)| {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
-                    
-                    // Get local medium properties
-                    let rho = medium.density(x, y, z, &self.grid);
-                    let c = medium.sound_speed(x, y, z, &self.grid);
-                    let rho_c2 = rho * c * c;
-                    
-                    let p_new = p_prev + update * rho_c2;
-                    *p = p_new;
+            Zip::from(pressure)
+                .and(pressure_prev)
+                .and(&pressure_update)
+                .and(&rho_c2_array)
+                .for_each(|p, &p_prev, &update, &rho_c2| {
+                    *p = p_prev + update * rho_c2;
                 });
         } else if self.config.use_leapfrog && self.pressure_prev.is_none() {
-            // Second-order accurate initialization for leapfrog using RK2 (midpoint method)
-            // This ensures the overall scheme maintains second-order accuracy
+            // Second-order accurate initialization for leapfrog using RK2
+            // Issue #3: Eliminate redundant inverse FFT
             
-            // Step 1: Compute half-step pressure using Euler method
-            let scale_factor_half = -dt / 2.0;
-            let pressure_update_hat_half = div_v_hat.mapv(|d| d * Complex::new(scale_factor_half, 0.0));
-            let pressure_update_half = ifft_3d(&pressure_update_hat_half, &self.grid);
+            // Perform iFFT once to get the pressure update kernel
+            let pressure_update_kernel_hat = div_v_hat.mapv(|d| d * Complex::new(-1.0, 0.0));
+            let pressure_update_kernel = ifft_3d(&pressure_update_kernel_hat, &self.grid);
             
-            // Create intermediate pressure field for half-step
+            // Step 1: Compute half-step pressure using scaled kernel
+            let scale_factor_half = dt / 2.0;
             let mut pressure_half = pressure.to_owned();
-            pressure_half.indexed_iter_mut()
-                .zip(pressure_update_half.iter())
-                .for_each(|(((i, j, k), p), &update)| {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
-                    
-                    let rho = medium.density(x, y, z, &self.grid);
-                    let c = medium.sound_speed(x, y, z, &self.grid);
-                    let rho_c2 = rho * c * c;
-                    
-                    *p += update * rho_c2;
+            Zip::from(&mut pressure_half)
+                .and(&pressure_update_kernel)
+                .and(&rho_c2_array)
+                .for_each(|p, &kernel, &rho_c2| {
+                    *p += kernel * scale_factor_half * rho_c2;
                 });
             
-            // Step 2: Re-compute velocity divergence at half-step (approximation: use same divergence)
-            // For higher accuracy, we would need to recompute velocities at t+dt/2
-            // but this simplified approach still gives second-order accuracy for initialization
-            
-            // Step 3: Use the same divergence for full step update  
-            let scale_factor_full = -dt;
-            let pressure_update_hat_full = div_v_hat.mapv(|d| d * Complex::new(scale_factor_full, 0.0));
-            let pressure_update_full = ifft_3d(&pressure_update_hat_full, &self.grid);
-            
-            // Apply full update to original pressure field
-            pressure.indexed_iter_mut()
-                .zip(pressure_update_full.iter())
-                .for_each(|(((i, j, k), p), &update)| {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
-                    
-                    let rho = medium.density(x, y, z, &self.grid);
-                    let c = medium.sound_speed(x, y, z, &self.grid);
-                    let rho_c2 = rho * c * c;
-                    
-                    *p += update * rho_c2;
+            // Step 2: Apply full step update using scaled kernel
+            let scale_factor_full = dt;
+            Zip::from(pressure)
+                .and(&pressure_update_kernel)
+                .and(&rho_c2_array)
+                .for_each(|p, &kernel, &rho_c2| {
+                    *p += kernel * scale_factor_full * rho_c2;
                 });
         } else {
-            // Standard first-order Euler scheme (when leapfrog is disabled)
+            // Standard first-order Euler scheme
             let scale_factor = -dt;
             let pressure_update_hat = div_v_hat.mapv(|d| d * Complex::new(scale_factor, 0.0));
             
             let pressure_update = ifft_3d(&pressure_update_hat, &self.grid);
             
-            pressure.indexed_iter_mut()
-                .zip(pressure_update.iter())
-                .for_each(|(((i, j, k), p), &update)| {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
-                    
-                    let rho = medium.density(x, y, z, &self.grid);
-                    let c = medium.sound_speed(x, y, z, &self.grid);
-                    let rho_c2 = rho * c * c;
-                    
+            // Apply update with pre-computed ρc²
+            Zip::from(pressure)
+                .and(&pressure_update)
+                .and(&rho_c2_array)
+                .for_each(|p, &update, &rho_c2| {
                     *p += update * rho_c2;
                 });
         }
         
-        // Update stored pressure for next leapfrog step
-        if let Some(current) = pressure_current_copy {
-            self.pressure_prev = Some(current);
-        } else if self.config.use_leapfrog && self.pressure_prev.is_none() {
-            // First step: store the result as previous for next iteration
-            self.pressure_prev = Some(pressure.to_owned());
+        // Store current pressure for next leapfrog step
+        if self.config.use_leapfrog {
+            self.pressure_prev = pressure_current_copy;
         }
         
-        // Update metrics
-        let elapsed = start.elapsed().as_secs_f64();
-        self.metrics.insert("pressure_update_time".to_string(), elapsed);
+        // Update performance metrics
+        self.metrics.insert("pressure_update_time".to_string(), start.elapsed().as_secs_f64());
         
         Ok(())
+    }
+    
+    /// Update pressure field (wrapper for backward compatibility)
+    pub fn update_pressure(
+        &mut self,
+        pressure: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_divergence: &Array3<f64>,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        // Transform velocity divergence to k-space using workspace
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(velocity_divergence);
+        
+        let div_v_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
+        
+        // Delegate to the k-space version
+        self.update_pressure_kspace(pressure, &div_v_hat, medium, dt)
     }
     
     /// Update velocity field using PSTD
@@ -480,11 +456,10 @@ impl PstdSolver {
         // Get density array
         let rho_array = medium.density_array();
         
-        // Transform pressure to k-space
-        let mut fields_4d = Array4::zeros((1, pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]));
-        fields_4d.index_axis_mut(Axis(0), 0).assign(pressure);
+        // Transform pressure to k-space using workspace
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(pressure);
         
-        let mut pressure_hat = fft_3d(&fields_4d, 0, &self.grid);
+        let mut pressure_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
         
         // Apply anti-aliasing filter if enabled
         if let Some(ref filter) = self.anti_alias_filter {
@@ -543,25 +518,72 @@ impl PstdSolver {
         Ok(())
     }
     
-    /// Compute velocity divergence using spectral derivatives
-    pub fn compute_divergence(
-        &self,
+    /// Update velocity field using pre-computed pressure gradients (more efficient when gradients are already available)
+    pub fn update_velocity_with_gradient(
+        &mut self,
+        velocity_x: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_y: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_z: &mut ndarray::ArrayViewMut3<f64>,
+        grad_x: &Array3<f64>,
+        grad_y: &Array3<f64>,
+        grad_z: &Array3<f64>,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        debug!("PSTD velocity update with gradients, dt={}", dt);
+        let start = std::time::Instant::now();
+        
+        // Get density array
+        let rho_array = medium.density_array();
+        
+        // Update velocity components using pre-computed gradients
+        Zip::from(velocity_x)
+            .and(grad_x)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+            
+        Zip::from(velocity_y)
+            .and(grad_y)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+            
+        Zip::from(velocity_z)
+            .and(grad_z)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+        
+        // Update metrics
+        let elapsed = start.elapsed().as_secs_f64();
+        self.metrics.insert("velocity_update_time".to_string(), elapsed);
+        
+        Ok(())
+    }
+    
+    /// Compute velocity divergence in k-space (avoids redundant FFT/iFFT)
+    /// Returns the k-space representation of the divergence
+    /// Uses workspace arrays to avoid repeated allocations (Issue #5)
+    pub fn compute_divergence_kspace(
+        &mut self,
         velocity_x: &ndarray::ArrayView3<f64>,
         velocity_y: &ndarray::ArrayView3<f64>,
         velocity_z: &ndarray::ArrayView3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
-        // Transform velocities to k-space
-        let mut fields_x = Array4::zeros((1, velocity_x.shape()[0], velocity_x.shape()[1], velocity_x.shape()[2]));
-        let mut fields_y = Array4::zeros((1, velocity_y.shape()[0], velocity_y.shape()[1], velocity_y.shape()[2]));
-        let mut fields_z = Array4::zeros((1, velocity_z.shape()[0], velocity_z.shape()[1], velocity_z.shape()[2]));
+    ) -> KwaversResult<Array3<Complex<f64>>> {
+        // Transform velocities to k-space using workspace
+        // Note: we reuse workspace_real_4d for each component sequentially
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(velocity_x);
+        let vx_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
         
-        fields_x.index_axis_mut(Axis(0), 0).assign(velocity_x);
-        fields_y.index_axis_mut(Axis(0), 0).assign(velocity_y);
-        fields_z.index_axis_mut(Axis(0), 0).assign(velocity_z);
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(velocity_y);
+        let vy_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
         
-        let vx_hat = fft_3d(&fields_x, 0, &self.grid);
-        let vy_hat = fft_3d(&fields_y, 0, &self.grid);
-        let vz_hat = fft_3d(&fields_z, 0, &self.grid);
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(velocity_z);
+        let vz_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
         
         // Compute derivatives in k-space
         let dvx_dx_hat = &vx_hat * &self.kx.mapv(|k| Complex::new(0.0, k));
@@ -569,14 +591,25 @@ impl PstdSolver {
         let dvz_dz_hat = &vz_hat * &self.kz.mapv(|k| Complex::new(0.0, k));
         
         // Sum to get divergence
-        let div_hat = dvx_dx_hat + dvy_dy_hat + dvz_dz_hat;
+        let mut div_hat = dvx_dx_hat + dvy_dy_hat + dvz_dz_hat;
         
         // Apply k-space correction if enabled
-        let div_hat = if let Some(ref kappa) = self.kappa {
-            div_hat * &kappa.mapv(|k| Complex::new(k, 0.0))
-        } else {
-            div_hat
-        };
+        if let Some(ref kappa) = self.kappa {
+            div_hat = div_hat * &kappa.mapv(|k| Complex::new(k, 0.0));
+        }
+        
+        Ok(div_hat)
+    }
+    
+    /// Compute velocity divergence in real space (wrapper for backward compatibility)
+    pub fn compute_divergence(
+        &mut self,
+        velocity_x: &ndarray::ArrayView3<f64>,
+        velocity_y: &ndarray::ArrayView3<f64>,
+        velocity_z: &ndarray::ArrayView3<f64>,
+    ) -> KwaversResult<Array3<f64>> {
+        // Get k-space divergence
+        let div_hat = self.compute_divergence_kspace(velocity_x, velocity_y, velocity_z)?;
         
         // Transform back to physical space
         // Note: ifft_3d applies proper 1/(nx*ny*nz) normalization
@@ -782,7 +815,7 @@ impl PhysicsPlugin for PstdPlugin {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use ndarray::{Axis, s};
+        use ndarray::s;
         use crate::physics::field_mapping::UnifiedFieldType;
         
         // Get field indices using the unified system
@@ -833,11 +866,11 @@ impl PhysicsPlugin for PstdPlugin {
                 });
         }
         
-        // Compute divergence of velocity using views
-        let divergence = self.solver.compute_divergence(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
+        // Compute divergence of velocity in k-space (more efficient)
+        let divergence_kspace = self.solver.compute_divergence_kspace(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
         
-        // Update pressure using divergence - modifies view in place
-        self.solver.update_pressure(&mut pressure, &divergence, medium, dt)?;
+        // Update pressure using k-space divergence - modifies view in place
+        self.solver.update_pressure_kspace(&mut pressure, &divergence_kspace, medium, dt)?;
         
         // Update velocities using new pressure - modifies views in place
         self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;

@@ -5,7 +5,6 @@
 use super::bubble_state::{BubbleState, BubbleParameters};
 use super::rayleigh_plesset::KellerMiksisModel;
 use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
-use std::sync::{Arc, Mutex};
 use ndarray::Array3;
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -70,10 +69,9 @@ impl BubbleField {
             let p_acoustic = pressure_field[[*i, *j, *k]];
             let dp_dt = dp_dt_field[[*i, *j, *k]];
             
-            // Note: This requires mutable access to solver but we have &self
-            // For now, use the adaptive version which takes Arc<Mutex>
+            // Use adaptive integration (no Mutex needed anymore)
             if let Err(e) = integrate_bubble_dynamics_adaptive(
-                Arc::new(Mutex::new(self.solver.clone())),
+                &self.solver,
                 state,
                 p_acoustic,
                 dp_dt,

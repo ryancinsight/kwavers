@@ -31,20 +31,20 @@ pub trait TimeStepper: Send + Sync + Debug {
     /// Create a new time stepper with given configuration
     fn new(config: Self::Config) -> Self;
     
-    /// Advance the solution by one time step
+    /// Advance the solution by one time step (in-place)
     /// 
     /// # Arguments
-    /// * `field` - Current field values
+    /// * `field` - Current field values (will be updated in-place)
     /// * `rhs_fn` - Function that computes the right-hand side (time derivative)
     /// * `dt` - Time step size
     /// * `grid` - Computational grid
     fn step<F>(
         &mut self,
-        field: &Array3<f64>,
+        field: &mut Array3<f64>,
         rhs_fn: F,
         dt: f64,
         grid: &Grid,
-    ) -> KwaversResult<Array3<f64>>
+    ) -> KwaversResult<()>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>;
     

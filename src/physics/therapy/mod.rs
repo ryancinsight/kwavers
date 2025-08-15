@@ -31,16 +31,12 @@
 //!    58(1), 127-144.
 
 use crate::{
-    error::{KwaversResult, KwaversError, PhysicsError},
+    error::KwaversResult,
     grid::Grid,
     medium::Medium,
-    physics::{
-        bubble_dynamics::{BubbleState, BubbleParameters},
-        thermal::{ThermalCalculator, HeatSource, ThermalConfig},
-    },
+    physics::thermal::{ThermalCalculator, HeatSource, ThermalConfig},
 };
 use ndarray::{Array3, Zip};
-use std::f64::consts::PI;
 
 // Sub-modules are integrated directly in this file for now
 // Future expansion can create separate files for each modality

@@ -40,6 +40,8 @@ pub struct RungeKutta4 {
     k2: Option<Array3<f64>>,
     k3: Option<Array3<f64>>,
     k4: Option<Array3<f64>>,
+    /// Workspace for intermediate field values (avoids allocations)
+    y_temp: Option<Array3<f64>>,
 }
 
 impl TimeStepper for RungeKutta4 {
@@ -52,61 +54,66 @@ impl TimeStepper for RungeKutta4 {
             k2: None,
             k3: None,
             k4: None,
+            y_temp: None,
         }
     }
     
     fn step<F>(
         &mut self,
-        field: &Array3<f64>,
+        field: &mut Array3<f64>,
         rhs_fn: F,
         dt: f64,
         _grid: &Grid,
-    ) -> KwaversResult<Array3<f64>>
+    ) -> KwaversResult<()>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         let shape = field.dim();
         
-        // Initialize storage if needed
+        // Initialize storage if needed (lazy initialization)
         if self.k1.is_none() {
             self.k1 = Some(Array3::zeros(shape));
             self.k2 = Some(Array3::zeros(shape));
             self.k3 = Some(Array3::zeros(shape));
             self.k4 = Some(Array3::zeros(shape));
+            self.y_temp = Some(Array3::zeros(shape));
         }
         
         let k1 = self.k1.as_mut().unwrap();
         let k2 = self.k2.as_mut().unwrap();
         let k3 = self.k3.as_mut().unwrap();
         let k4 = self.k4.as_mut().unwrap();
+        let y_temp = self.y_temp.as_mut().unwrap();
         
         // Stage 1: k1 = f(t, y)
         *k1 = rhs_fn(field)?;
         
         // Stage 2: k2 = f(t + dt/2, y + dt/2 * k1)
-        let mut temp = field.clone();
-        Zip::from(&mut temp)
-            .and(&mut *k1)
+        // Use pre-allocated workspace instead of cloning
+        y_temp.assign(field);
+        Zip::from(&mut *y_temp)
+            .and(&*k1)
             .for_each(|t, k| *t += 0.5 * dt * *k);
-        *k2 = rhs_fn(&temp)?;
+        *k2 = rhs_fn(y_temp)?;
         
         // Stage 3: k3 = f(t + dt/2, y + dt/2 * k2)
-        temp.assign(field);
-        Zip::from(&mut temp)
-            .and(&mut *k2)
+        // Reuse the same workspace
+        y_temp.assign(field);
+        Zip::from(&mut *y_temp)
+            .and(&*k2)
             .for_each(|t, k| *t += 0.5 * dt * *k);
-        *k3 = rhs_fn(&temp)?;
+        *k3 = rhs_fn(y_temp)?;
         
         // Stage 4: k4 = f(t + dt, y + dt * k3)
-        temp.assign(field);
-        Zip::from(&mut temp)
-            .and(&mut *k3)
+        y_temp.assign(field);
+        Zip::from(&mut *y_temp)
+            .and(&*k3)
             .for_each(|t, k| *t += dt * *k);
-        *k4 = rhs_fn(&temp)?;
+        *k4 = rhs_fn(y_temp)?;
         
         // Combine stages: y_new = y + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
-        let mut result = field.clone();
-        Zip::from(&mut result)
+        // Update field in-place
+        Zip::from(field)
             .and(&*k1)
             .and(&*k2)
             .and(&*k3)
@@ -115,7 +122,7 @@ impl TimeStepper for RungeKutta4 {
                 *r += dt / 6.0 * (*k1 + 2.0 * *k2 + 2.0 * *k3 + *k4);
             });
         
-        Ok(result)
+        Ok(())
     }
     
     fn stability_factor(&self) -> f64 {
@@ -134,9 +141,11 @@ pub struct AdamsBashforthConfig {
 
 impl Default for AdamsBashforthConfig {
     fn default() -> Self {
+        let order = 2;
         Self {
-            order: 2,
-            startup_steps: 2,
+            order,
+            // The number of startup steps should be order - 1
+            startup_steps: order.saturating_sub(1),
         }
     }
 }
@@ -161,6 +170,16 @@ impl TimeStepperConfig for AdamsBashforthConfig {
 }
 
 /// Adams-Bashforth multi-step time stepper
+///
+/// # Memory Usage
+///
+/// This is a multi-step method that stores the results of previous RHS
+/// evaluations. The number of historical fields stored is equal to the
+/// order of the method. For large grids, this can result in significant
+/// memory consumption. For example, a 3rd-order scheme will store 3
+/// historical fields, which can consume several gigabytes of RAM for a
+/// high-resolution 3D grid (e.g., 512^3). Consider using a single-step
+/// method like `RungeKutta4` if memory is a concern.
 #[derive(Debug)]
 pub struct AdamsBashforth {
     config: AdamsBashforthConfig,
@@ -176,6 +195,15 @@ impl TimeStepper for AdamsBashforth {
     type Config = AdamsBashforthConfig;
     
     fn new(config: Self::Config) -> Self {
+        // Validate that we have enough startup steps
+        assert!(
+            config.startup_steps >= config.order.saturating_sub(1),
+            "Not enough startup steps for the requested Adams-Bashforth order. \
+             Need at least {} startup steps for order {}",
+            config.order - 1,
+            config.order
+        );
+        
         let history_size = config.order;
         Self {
             config,
@@ -187,35 +215,37 @@ impl TimeStepper for AdamsBashforth {
     
     fn step<F>(
         &mut self,
-        field: &Array3<f64>,
+        field: &mut Array3<f64>,
         rhs_fn: F,
         dt: f64,
         grid: &Grid,
-    ) -> KwaversResult<Array3<f64>>
+    ) -> KwaversResult<()>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         // Use RK4 for startup
         if self.step_count < self.config.startup_steps {
             self.step_count += 1;
-            let result = self.startup_stepper.step(field, &rhs_fn, dt, grid)?;
             
-            // Store RHS evaluation
+            // Store RHS evaluation before updating field
             let rhs = rhs_fn(field)?;
+            
+            // Update field in-place using RK4
+            self.startup_stepper.step(field, &rhs_fn, dt, grid)?;
+            
+            // Store RHS in history
             self.rhs_history.push_back(rhs);
             if self.rhs_history.len() > self.config.order {
                 self.rhs_history.pop_front();
             }
             
-            return Ok(result);
+            return Ok(());
         }
         
         // Evaluate RHS at current state
         let current_rhs = rhs_fn(field)?;
         
-        // Apply Adams-Bashforth formula
-        let mut result = field.clone();
-        
+        // Apply Adams-Bashforth formula in-place
         match self.config.order {
             2 => {
                 // AB2: y_{n+1} = y_n + dt * (3/2 * f_n - 1/2 * f_{n-1})
@@ -223,7 +253,7 @@ impl TimeStepper for AdamsBashforth {
                     let f_n = &current_rhs;
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     
-                    Zip::from(&mut result)
+                    Zip::from(field)
                         .and(f_n)
                         .and(f_nm1)
                         .for_each(|r, fn_val, fnm1_val| {
@@ -238,7 +268,7 @@ impl TimeStepper for AdamsBashforth {
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
                     
-                    Zip::from(&mut result)
+                    Zip::from(field)
                         .and(f_n)
                         .and(f_nm1)
                         .and(f_nm2)
@@ -257,7 +287,7 @@ impl TimeStepper for AdamsBashforth {
         }
         
         self.step_count += 1;
-        Ok(result)
+        Ok(())
     }
     
     fn stability_factor(&self) -> f64 {

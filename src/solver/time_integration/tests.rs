@@ -67,17 +67,17 @@ mod tests {
         
         // Test on simple exponential decay
         let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0);
-        let field = Array3::ones((8, 8, 8));
+        let mut field = Array3::ones((8, 8, 8));
         let dt = 0.01;
         
         let rhs_fn = |f: &Array3<f64>| -> KwaversResult<Array3<f64>> {
             Ok(f.mapv(|v| -v)) // du/dt = -u
         };
         
-        let result = stepper.step(&field, rhs_fn, dt, &grid).unwrap();
+        stepper.step(&mut field, rhs_fn, dt, &grid).unwrap();
         
         // Check that values decreased (exponential decay)
-        for &val in result.iter() {
+        for &val in field.iter() {
             assert!(val < 1.0);
             assert!(val > 0.0);
         }
@@ -87,7 +87,7 @@ mod tests {
     fn test_adams_bashforth() {
         let config = AdamsBashforthConfig {
             order: 2,
-            startup_steps: 2,
+            startup_steps: 1, // order - 1 = 2 - 1 = 1
         };
         let mut stepper = AdamsBashforth::new(config);
         
@@ -101,7 +101,7 @@ mod tests {
         
         // Take multiple steps to test multi-step behavior
         for _ in 0..5 {
-            field = stepper.step(&field, rhs_fn, dt, &grid).unwrap();
+            stepper.step(&mut field, rhs_fn, dt, &grid).unwrap();
         }
         
         // Check that values decreased

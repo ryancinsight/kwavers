@@ -1,6 +1,6 @@
 //! Time-difference-of-arrival (TDOA) solver
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::error::KwaversResult;
 use super::{SensorArray, LocalizationResult};
 
 /// TDOA measurement between two sensors

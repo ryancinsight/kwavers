@@ -3,7 +3,7 @@
 //! Implements the Fresnel equations for calculating reflection and transmission
 //! coefficients at dielectric interfaces.
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::error::KwaversResult;
 use super::Polarization;
 use std::f64::consts::PI;
 
@@ -184,7 +184,7 @@ mod tests {
         let coeffs = calc.calculate(0.0, 0.0, Polarization::Unpolarized).unwrap();
         
         // Expected reflection coefficient: (n2-n1)/(n2+n1) = 0.5/2.5 = 0.2
-        let expected_r = ((1.5 - 1.0) / (1.5 + 1.0)).abs();
+        let expected_r = ((1.5_f64 - 1.0) / (1.5 + 1.0)).abs();
         assert!((coeffs.reflection_amplitude - expected_r).abs() < 1e-10);
         
         // Reflectance should be R = r² = 0.04
@@ -215,7 +215,7 @@ mod tests {
         
         // Critical angle should be arcsin(1/1.5) ≈ 41.8°
         let critical = calc.critical_angle().unwrap();
-        let expected = (1.0 / 1.5).asin();
+        let expected = (1.0_f64 / 1.5).asin();
         assert!((critical - expected).abs() < 1e-10);
         
         // Above critical angle, reflectance should be 1

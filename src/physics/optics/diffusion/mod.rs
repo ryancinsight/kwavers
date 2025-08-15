@@ -4,9 +4,9 @@ use crate::grid::Grid;
 use crate::physics::field_indices::LIGHT_IDX;
 use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
 use crate::physics::optics::polarization::LinearPolarization;
-use crate::physics::thermal::{ThermalCalculator, HeatSource, ThermalConfig};
+use crate::physics::thermal::ThermalCalculator;
 use crate::medium::Medium;
-use crate::physics::wave_propagation::scattering::{ScatteringCalculator, ScatteringRegime};
+use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 
 use std::time::Instant;

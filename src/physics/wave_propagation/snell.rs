@@ -3,7 +3,7 @@
 //! Implements Snell's law of refraction: n₁sin(θ₁) = n₂sin(θ₂)
 
 use crate::error::{KwaversResult, KwaversError, PhysicsError};
-use super::{Interface, WaveMode};
+use super::Interface;
 use std::f64::consts::PI;
 
 /// Critical angles for wave propagation
@@ -182,7 +182,7 @@ mod tests {
         
         // Critical angle should be arcsin(1/1.5) ≈ 41.8°
         let critical = calc.critical_angle().unwrap();
-        let expected = (1.0 / 1.5).asin();
+        let expected = (1.0_f64 / 1.5).asin();
         assert!((critical - expected).abs() < 1e-10);
         
         // Test total internal reflection above critical angle

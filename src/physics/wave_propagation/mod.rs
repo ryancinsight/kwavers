@@ -26,7 +26,7 @@
 
 use crate::error::{KwaversResult, KwaversError, PhysicsError};
 use crate::constants::physics::{SOUND_SPEED_WATER, DENSITY_WATER};
-use ndarray::{Array1, Array2, Array3, Axis, Zip};
+use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 
 pub mod reflection;

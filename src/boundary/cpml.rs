@@ -16,7 +16,7 @@
 
 
 use crate::grid::Grid;
-use crate::error::{KwaversResult, KwaversError, ConfigError};
+use crate::error::{KwaversResult, KwaversError, ConfigError, ValidationError};
 use ndarray::{Array3, Array4, Axis, Zip};
 
 use std::f64::consts::PI;
@@ -224,31 +224,34 @@ impl CPMLBoundary {
         let sigma_theoretical_z = self.compute_theoretical_sigma(grid.dz);
         
         // X-direction profiles
-        self.compute_profile_1d(
-            self.nx,
-            thickness,
-            m,
-            sigma_theoretical_x,
-            grid.dx,
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            self.nx, thickness, m, sigma_theoretical_x, grid.dx, &self.config, self.dt
         );
+        self.sigma_x = sigma;
+        self.kappa_x = kappa;
+        self.alpha_x = alpha;
+        self.b_x = b;
+        self.c_x = c;
         
-        // Y-direction profiles
-        self.compute_profile_1d_y(
-            self.ny,
-            thickness,
-            m,
-            sigma_theoretical_y,
-            grid.dy,
+        // Y-direction profiles  
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            self.ny, thickness, m, sigma_theoretical_y, grid.dy, &self.config, self.dt
         );
+        self.sigma_y = sigma;
+        self.kappa_y = kappa;
+        self.alpha_y = alpha;
+        self.b_y = b;
+        self.c_y = c;
         
         // Z-direction profiles
-        self.compute_profile_1d_z(
-            self.nz,
-            thickness,
-            m,
-            sigma_theoretical_z,
-            grid.dz,
+        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
+            self.nz, thickness, m, sigma_theoretical_z, grid.dz, &self.config, self.dt
         );
+        self.sigma_z = sigma;
+        self.kappa_z = kappa;
+        self.alpha_z = alpha;
+        self.b_z = b;
+        self.c_z = c;
         
         debug!("C-PML profiles computed with σ_theoretical = ({:.2e}, {:.2e}, {:.2e})",
                sigma_theoretical_x, sigma_theoretical_y, sigma_theoretical_z);
@@ -275,9 +278,8 @@ impl CPMLBoundary {
         sigma_max: f64,
         dx: f64,
         config: &CPMLConfig,
+        dt: f64, // Use the actual dt from the struct
     ) -> (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) {
-        let dt = dx * config.cfl_number; // Approximate time step
-        
         let mut sigma = vec![0.0; n];
         let mut kappa = vec![1.0; n];
         let mut alpha = vec![0.0; n];
@@ -324,7 +326,7 @@ impl CPMLBoundary {
                 let kappa_i = kappa[i];
                 let alpha_i = alpha[i];
                 
-                // Time integration coefficients
+                // Time integration coefficients - use the passed dt
                 b[i] = (-(sigma_i + kappa_i * alpha_i) * dt).exp();
                 
                 if (sigma_i + kappa_i * alpha_i).abs() > 1e-10 {
@@ -345,102 +347,61 @@ impl CPMLBoundary {
         (sigma, kappa, alpha, b, c)
     }
     
-    /// Compute 1D profile for X direction
-    fn compute_profile_1d(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dx: f64) {
-        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
-            n, thickness, m, sigma_max, dx, &self.config
-        );
-        self.sigma_x = sigma;
-        self.kappa_x = kappa;
-        self.alpha_x = alpha;
-        self.b_x = b;
-        self.c_x = c;
-    }
-    
-    /// Compute 1D profile for Y direction
-    fn compute_profile_1d_y(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dy: f64) {
-        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
-            n, thickness, m, sigma_max, dy, &self.config
-        );
-        self.sigma_y = sigma;
-        self.kappa_y = kappa;
-        self.alpha_y = alpha;
-        self.b_y = b;
-        self.c_y = c;
-    }
-    
-    /// Compute 1D profile for Z direction
-    fn compute_profile_1d_z(&mut self, n: usize, thickness: f64, m: f64, sigma_max: f64, dz: f64) {
-        let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
-            n, thickness, m, sigma_max, dz, &self.config
-        );
-        self.sigma_z = sigma;
-        self.kappa_z = kappa;
-        self.alpha_z = alpha;
-        self.b_z = b;
-        self.c_z = c;
-    }
-    
     /// Update acoustic memory variables with recursive convolution
+    /// Uses pre-computed coefficients for efficiency
     pub fn update_acoustic_memory(
         &mut self,
         pressure_grad: &Array3<f64>,
         component: usize,
-        dt: f64,
     ) -> KwaversResult<()> {
         let mut psi = self.psi_acoustic.index_axis_mut(Axis(0), component);
         
         match component {
             0 => { // X-component
-                // Use indexed iteration for SIMD-friendly access patterns
+                // Use pre-computed coefficients for efficiency
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(i, _j, _k), psi, &grad| {
-                        // Compute coefficients with dt
-                        let b = (-(self.sigma_x[i] + self.alpha_x[i]) * dt).exp();
-                        let c = if self.sigma_x[i] > 0.0 {
-                            self.sigma_x[i] * (b - 1.0) / (self.sigma_x[i] + self.alpha_x[i])
-                        } else {
-                            0.0
-                        };
-                        *psi = b * *psi + c * grad;
+                    .for_each(|(i, _j, _k), psi_val, &grad| {
+                        *psi_val = self.b_x[i] * *psi_val + self.c_x[i] * grad;
                     });
             }
             1 => { // Y-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(_i, j, _k), psi, &grad| {
-                        // Compute coefficients with dt
-                        let b = (-(self.sigma_y[j] + self.alpha_y[j]) * dt).exp();
-                        let c = if self.sigma_y[j] > 0.0 {
-                            self.sigma_y[j] * (b - 1.0) / (self.sigma_y[j] + self.alpha_y[j])
-                        } else {
-                            0.0
-                        };
-                        *psi = b * *psi + c * grad;
+                    .for_each(|(_i, j, _k), psi_val, &grad| {
+                        *psi_val = self.b_y[j] * *psi_val + self.c_y[j] * grad;
                     });
             }
             2 => { // Z-component
                 Zip::indexed(&mut psi)
                     .and(pressure_grad)
-                    .for_each(|(_i, _j, k), psi, &grad| {
-                        // Compute coefficients with dt
-                        let b = (-(self.sigma_z[k] + self.alpha_z[k]) * dt).exp();
-                        let c = if self.sigma_z[k] > 0.0 {
-                            self.sigma_z[k] * (b - 1.0) / (self.sigma_z[k] + self.alpha_z[k])
-                        } else {
-                            0.0
-                        };
-                        *psi = b * *psi + c * grad;
+                    .for_each(|(_i, _j, k), psi_val, &grad| {
+                        *psi_val = self.b_z[k] * *psi_val + self.c_z[k] * grad;
                     });
             }
-            _ => return Err(KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "component".to_string(),
-                value: component.to_string(),
-                constraint: "Component must be 0, 1, or 2".to_string(),
-            })),
+            _ => {
+                return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "component".to_string(),
+                    value: component.to_string(),
+                    constraint: "Must be 0, 1, or 2 for x, y, z components".to_string(),
+                }));
+            }
         }
         
+        Ok(())
+    }
+    
+    /// Update the time step and recompute coefficients if needed
+    /// This should be called if the simulation time step changes
+    pub fn update_dt(&mut self, new_dt: f64, grid: &Grid) -> KwaversResult<()> {
+        const DT_TOLERANCE: f64 = 1e-12;
+        
+        if (self.dt - new_dt).abs() > DT_TOLERANCE {
+            debug!("Updating CPML coefficients for new dt: {} -> {}", self.dt, new_dt);
+            self.dt = new_dt;
+            // Recompute profiles with the new dt
+            self.compute_profiles(grid)?;
+        }
         Ok(())
     }
     
@@ -555,211 +516,32 @@ impl CPMLBoundary {
     // absorption coefficients for proper integration into your solver.
 }
 
-// Implement the Boundary trait for CPMLBoundary to provide a standard interface
-impl crate::boundary::Boundary for CPMLBoundary {
-    /// Apply C-PML boundary conditions to acoustic field with full recursive convolution
-    /// 
-    /// This implementation uses the complete C-PML formulation with memory variables
-    /// for proper absorption of outgoing waves. Based on Roden & Gedney (2000).
-    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) -> KwaversResult<()> {
-        let dt = grid.dx / (1540.0 * (3.0_f64).sqrt()); // CFL-stable time step
-        
-        // Apply C-PML in each direction with full recursive convolution
-        self.apply_cpml_x_direction(field, dt)?;
-        self.apply_cpml_y_direction(field, dt)?;
-        self.apply_cpml_z_direction(field, dt)?;
-        
-        Ok(())
-    }
-    
-    /// Apply C-PML to acoustic field in frequency domain
-    fn apply_acoustic_freq(
-        &mut self,
-        field: &mut Array3<rustfft::num_complex::Complex<f64>>,
-        grid: &Grid,
-        _time_step: usize,
-    ) -> KwaversResult<()> {
-        use rustfft::num_complex::Complex;
-        
-        // In frequency domain, C-PML becomes a complex coordinate stretching
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    // Compute complex stretching factors
-                    let sx = Complex::new(self.kappa_x[i], self.sigma_x[i] / (2.0 * PI));
-                    let sy = Complex::new(self.kappa_y[j], self.sigma_y[j] / (2.0 * PI));
-                    let sz = Complex::new(self.kappa_z[k], self.sigma_z[k] / (2.0 * PI));
-                    
-                    // Apply complex coordinate stretching
-                    field[[i, j, k]] *= sx * sy * sz;
-                }
-            }
-        }
-        
-        Ok(())
-    }
-    
-    /// Apply C-PML to light field using proper absorption
-    fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) {
-        trace!("Applying C-PML to light field with proper absorption");
-        
-        // Use a standard dt for light diffusion
-        let dt = 1e-6; // Standard time step for light diffusion
-        
-        // For light diffusion, apply C-PML absorption based on the diffusion equation
-        // ∂φ/∂t = D∇²φ - μₐφ + S
-        // In PML region: add absorption term
-        
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                for k in 0..self.nz {
-                    // Check if in PML region
-                    if i < self.config.thickness || i >= self.nx - self.config.thickness ||
-                       j < self.config.thickness || j >= self.ny - self.config.thickness ||
-                       k < self.config.thickness || k >= self.nz - self.config.thickness {
-                        
-                        // Apply C-PML absorption with proper profile
-                        let absorption = self.compute_cpml_factor(i, j, k);
-                        field[[i, j, k]] *= (-absorption * dt).exp();
-                    }
-                }
-            }
-        }
-    }
-}
+// NOTE: The Boundary trait implementation has been removed as it was incorrect.
+// The CPMLBoundary MUST be integrated directly into the solver's update equations.
+//
+// # Correct Usage
+//
+// The CPMLBoundary is not applied as a post-processing step. Instead, it must be
+// integrated into the main solver's update loop:
+//
+// 1. After computing the spatial gradient (e.g., of pressure), call `update_acoustic_memory`.
+// 2. Then, call `apply_cpml_gradient` to modify the gradient before using it to update the field (e.g., velocity).
+//
+// Example:
+// ```rust
+// // In your solver's update loop:
+// let pressure_grad = compute_gradient(&pressure);
+// cpml.update_acoustic_memory(&pressure_grad, component)?;
+// cpml.apply_cpml_gradient(&mut pressure_grad, component)?;
+// // Now use the modified gradient to update velocity
+// ```
 
-impl CPMLBoundary {
-    /// Apply C-PML in X direction with recursive convolution
-    fn apply_cpml_x_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
-        let thickness = self.config.thickness;
-        
-        // Apply C-PML in left and right X boundaries
-        for i in 0..self.nx {
-            if i < thickness || i >= self.nx - thickness {
-                for j in 0..self.ny {
-                    for k in 0..self.nz {
-                        // Compute spatial derivative ∂p/∂x using finite differences
-                        let dp_dx = if i == 0 {
-                            (field[[i+1, j, k]] - field[[i, j, k]]) / self.config.cfl_number
-                        } else if i == self.nx - 1 {
-                            (field[[i, j, k]] - field[[i-1, j, k]]) / self.config.cfl_number
-                        } else {
-                            (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * self.config.cfl_number)
-                        };
-                        
-                        // Update memory variable with recursive convolution
-                        // ψ^{n+1} = b_x * ψ^n + c_x * ∂p/∂x
-                        self.psi_acoustic[[0, i, j, k]] = self.b_x[i] * self.psi_acoustic[[0, i, j, k]] 
-                                                        + self.c_x[i] * dp_dx;
-                        
-                        // Apply C-PML correction to field
-                        // p^{n+1} = p^n - dt * (σ_x/κ_x) * ψ_x
-                        let correction = dt * (self.sigma_x[i] / self.kappa_x[i]) * self.psi_acoustic[[0, i, j, k]];
-                        field[[i, j, k]] -= correction;
-                    }
-                }
-            }
-        }
-        
-        Ok(())
-    }
-    
-    /// Apply C-PML in Y direction with recursive convolution
-    fn apply_cpml_y_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
-        let thickness = self.config.thickness;
-        
-        // Apply C-PML in front and back Y boundaries
-        for j in 0..self.ny {
-            if j < thickness || j >= self.ny - thickness {
-                for i in 0..self.nx {
-                    for k in 0..self.nz {
-                        // Compute spatial derivative ∂p/∂y using finite differences
-                        let dp_dy = if j == 0 {
-                            (field[[i, j+1, k]] - field[[i, j, k]]) / self.config.cfl_number
-                        } else if j == self.ny - 1 {
-                            (field[[i, j, k]] - field[[i, j-1, k]]) / self.config.cfl_number
-                        } else {
-                            (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * self.config.cfl_number)
-                        };
-                        
-                        // Update memory variable with recursive convolution
-                        // ψ^{n+1} = b_y * ψ^n + c_y * ∂p/∂y
-                        self.psi_acoustic[[1, i, j, k]] = self.b_y[j] * self.psi_acoustic[[1, i, j, k]] 
-                                                        + self.c_y[j] * dp_dy;
-                        
-                        // Apply C-PML correction to field
-                        let correction = dt * (self.sigma_y[j] / self.kappa_y[j]) * self.psi_acoustic[[1, i, j, k]];
-                        field[[i, j, k]] -= correction;
-                    }
-                }
-            }
-        }
-        
-        Ok(())
-    }
-    
-    /// Apply C-PML in Z direction with recursive convolution
-    fn apply_cpml_z_direction(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
-        let thickness = self.config.thickness;
-        
-        // Apply C-PML in top and bottom Z boundaries
-        for k in 0..self.nz {
-            if k < thickness || k >= self.nz - thickness {
-                for i in 0..self.nx {
-                    for j in 0..self.ny {
-                        // Compute spatial derivative ∂p/∂z using finite differences
-                        let dp_dz = if k == 0 {
-                            (field[[i, j, k+1]] - field[[i, j, k]]) / self.config.cfl_number
-                        } else if k == self.nz - 1 {
-                            (field[[i, j, k]] - field[[i, j, k-1]]) / self.config.cfl_number
-                        } else {
-                            (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * self.config.cfl_number)
-                        };
-                        
-                        // Update memory variable with recursive convolution
-                        // ψ^{n+1} = b_z * ψ^n + c_z * ∂p/∂z
-                        self.psi_acoustic[[2, i, j, k]] = self.b_z[k] * self.psi_acoustic[[2, i, j, k]] 
-                                                        + self.c_z[k] * dp_dz;
-                        
-                        // Apply C-PML correction to field
-                        let correction = dt * (self.sigma_z[k] / self.kappa_z[k]) * self.psi_acoustic[[2, i, j, k]];
-                        field[[i, j, k]] -= correction;
-                    }
-                }
-            }
-        }
-        
-        Ok(())
-    }
+// The incorrect Boundary trait implementation has been removed.
+// CPMLBoundary must be integrated into the solver's update equations, not used as a post-processing step.
 
-    /// Compute C-PML absorption factor at a given position
-    fn compute_cpml_factor(&self, i: usize, j: usize, k: usize) -> f64 {
-        let mut factor = 0.0;
-        
-        // X-direction contribution
-        if i < self.config.thickness {
-            factor += self.sigma_x[i] / self.kappa_x[i];
-        } else if i >= self.nx - self.config.thickness {
-            factor += self.sigma_x[i] / self.kappa_x[i];
-        }
-        
-        // Y-direction contribution
-        if j < self.config.thickness {
-            factor += self.sigma_y[j] / self.kappa_y[j];
-        } else if j >= self.ny - self.config.thickness {
-            factor += self.sigma_y[j] / self.kappa_y[j];
-        }
-        
-        // Z-direction contribution
-        if k < self.config.thickness {
-            factor += self.sigma_z[k] / self.kappa_z[k];
-        } else if k >= self.nz - self.config.thickness {
-            factor += self.sigma_z[k] / self.kappa_z[k];
-        }
-        
-        factor
-    }
-}
+// The helper methods for applying CPML as post-processing have been removed.
+// These were incorrect implementations that violated the physics of PML.
+// CPML must be integrated into the solver's update equations.
 
 #[cfg(test)]
 mod tests {

@@ -3,7 +3,7 @@
 //! This module provides essential linear algebra operations without external dependencies,
 //! following SOLID principles and zero-copy techniques where possible.
 
-use ndarray::{Array1, Array2, ArrayView2, ArrayViewMut2, Axis};
+use ndarray::{Array1, Array2};
 use num_complex::Complex;
 use crate::error::{KwaversResult, KwaversError, NumericalError};
 

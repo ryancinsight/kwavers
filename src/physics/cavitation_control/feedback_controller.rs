@@ -9,11 +9,11 @@
 //! - Sun et al. (2017): "Closed-loop control of targeted ultrasound drug delivery"
 
 use crate::physics::cavitation_control::{
-    pid_controller::{PIDController, PIDConfig, PIDGains, ControllerOutput},
+    pid_controller::{PIDController, PIDConfig, PIDGains},
     power_modulation::{PowerModulator, ModulationScheme, PowerControl, AmplitudeController, DutyCycleController},
     cavitation_detector::{CavitationDetector, SpectralDetector, CavitationState},
 };
-use ndarray::{Array1, ArrayView1};
+use ndarray::ArrayView1;
 use std::collections::VecDeque;
 
 // Feedback control constants

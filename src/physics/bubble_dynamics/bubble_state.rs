@@ -3,6 +3,73 @@
 //! Core data structures for bubble dynamics
 
 use std::f64::consts::PI;
+use std::collections::HashMap;
+
+/// Gas type enumeration for composition specification
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GasType {
+    N2,      // Nitrogen
+    O2,      // Oxygen
+    Ar,      // Argon
+    He,      // Helium
+    Xe,      // Xenon
+    CO2,     // Carbon dioxide
+    H2O,     // Water vapor (handled separately in most cases)
+}
+
+impl GasType {
+    /// Get Van der Waals constant a [bar·L²/mol²]
+    pub fn vdw_a(&self) -> f64 {
+        match self {
+            Self::N2 => 1.370,  // From literature
+            Self::O2 => 1.382,
+            Self::Ar => 1.355,
+            Self::He => 0.0346,
+            Self::Xe => 4.250,
+            Self::CO2 => 3.658,
+            Self::H2O => 5.537,
+        }
+    }
+    
+    /// Get Van der Waals constant b [L/mol]
+    pub fn vdw_b(&self) -> f64 {
+        match self {
+            Self::N2 => 0.0387,  // From literature
+            Self::O2 => 0.0319,
+            Self::Ar => 0.0320,
+            Self::He => 0.0238,
+            Self::Xe => 0.0510,
+            Self::CO2 => 0.0427,
+            Self::H2O => 0.0305,
+        }
+    }
+    
+    /// Get molecular weight [kg/mol]
+    pub fn molecular_weight(&self) -> f64 {
+        match self {
+            Self::N2 => 0.028014,
+            Self::O2 => 0.031998,
+            Self::Ar => 0.039948,
+            Self::He => 0.004003,
+            Self::Xe => 0.131293,
+            Self::CO2 => 0.044009,
+            Self::H2O => 0.018015,
+        }
+    }
+    
+    /// Get heat capacity ratio (gamma)
+    pub fn gamma(&self) -> f64 {
+        match self {
+            Self::N2 => 1.4,      // Diatomic
+            Self::O2 => 1.4,      // Diatomic
+            Self::Ar => 5.0/3.0,  // Monatomic
+            Self::He => 5.0/3.0,  // Monatomic
+            Self::Xe => 5.0/3.0,  // Monatomic
+            Self::CO2 => 1.289,   // Triatomic
+            Self::H2O => 1.33,    // Triatomic
+        }
+    }
+}
 
 /// Complete state of a single bubble
 #[derive(Debug, Clone)]
@@ -92,6 +159,9 @@ pub struct BubbleParameters {
     // Gas properties
     pub gas_species: GasSpecies,
     pub initial_gas_pressure: f64,     // Initial gas pressure [Pa]
+    /// Gas composition: maps gas type to mole fraction
+    /// Default is air (79% N2, 21% O2)
+    pub gas_composition: HashMap<GasType, f64>,
     
     // Numerical parameters
     pub use_compressibility: bool,     // Use Keller-Miksis
@@ -101,8 +171,13 @@ pub struct BubbleParameters {
 
 impl Default for BubbleParameters {
     fn default() -> Self {
+        // Default air composition
+        let mut gas_composition = HashMap::new();
+        gas_composition.insert(GasType::N2, 0.79);
+        gas_composition.insert(GasType::O2, 0.21);
+        
         Self {
-            // Water at 20°C with 5 μm argon bubble
+            // Water at 20°C with 5 μm air bubble
             r0: 5e-6,
             p0: 101325.0,
             rho_liquid: 998.0,
@@ -113,12 +188,39 @@ impl Default for BubbleParameters {
             thermal_conductivity: 0.6,
             specific_heat_liquid: 4182.0,
             accommodation_coeff: 0.04,
-            gas_species: GasSpecies::Argon,
+            gas_species: GasSpecies::Air,
             initial_gas_pressure: 101325.0,
+            gas_composition,
             use_compressibility: true,
             use_thermal_effects: true,
             use_mass_transfer: true,
         }
+    }
+}
+
+impl BubbleParameters {
+    /// Create parameters for pure gas bubble
+    pub fn with_pure_gas(mut self, gas_type: GasType) -> Self {
+        self.gas_composition.clear();
+        self.gas_composition.insert(gas_type, 1.0);
+        self
+    }
+    
+    /// Calculate effective Van der Waals constants for gas mixture
+    pub fn effective_vdw_constants(&self) -> (f64, f64) {
+        let mut a_mix = 0.0;
+        let mut b_mix = 0.0;
+        
+        // Use mixing rules for Van der Waals constants
+        // a_mix = (Σ x_i * sqrt(a_i))^2 (geometric mean for a)
+        // b_mix = Σ x_i * b_i (arithmetic mean for b)
+        for (gas, &fraction) in &self.gas_composition {
+            a_mix += fraction * gas.vdw_a().sqrt();
+            b_mix += fraction * gas.vdw_b();
+        }
+        a_mix = a_mix.powi(2);
+        
+        (a_mix, b_mix)
     }
 }
 

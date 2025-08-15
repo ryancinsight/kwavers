@@ -25,10 +25,9 @@
 //!    heterogeneous media." *JASA*, 121(6), 3453-3464.
 
 use crate::{
-    error::{KwaversResult, KwaversError, PhysicsError},
+    error::KwaversResult,
     grid::Grid,
     medium::Medium,
-    physics::wave_propagation::{WavePropagationCalculator, WaveMode},
 };
 use ndarray::{Array3, Array4, Axis, Zip};
 use std::f64::consts::PI;

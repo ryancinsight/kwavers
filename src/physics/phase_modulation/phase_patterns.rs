@@ -2,7 +2,6 @@
 //! 
 //! Implements various phase patterns for specialized beam profiles.
 
-use ndarray::Array2;
 
 pub struct PhasePattern;
 pub struct SpiralPhase;

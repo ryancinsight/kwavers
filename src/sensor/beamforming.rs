@@ -18,9 +18,8 @@
 //! - Frost (1972): "An algorithm for linearly constrained adaptive array processing"
 
 use crate::error::KwaversResult;
-use crate::utils::sparse_matrix::{CompressedSparseRowMatrix, BeamformingMatrixOperations};
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
-use crate::utils::linear_algebra::{LinearAlgebra, LinearAlgebraExt};
+use crate::utils::linear_algebra::LinearAlgebraExt;
 use std::f64::consts::PI;
 
 /// Configuration for beamforming operations

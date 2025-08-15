@@ -61,9 +61,9 @@ impl CPMLSolver {
         self.compute_pressure_gradients(pressure, grid);
         
         // Step 2: Update C-PML memory variables
-        self.cpml.update_acoustic_memory(&self.grad_x, 0, dt)?;
-        self.cpml.update_acoustic_memory(&self.grad_y, 1, dt)?;
-        self.cpml.update_acoustic_memory(&self.grad_z, 2, dt)?;
+        self.cpml.update_acoustic_memory(&self.grad_x, 0)?;
+        self.cpml.update_acoustic_memory(&self.grad_y, 1)?;
+        self.cpml.update_acoustic_memory(&self.grad_z, 2)?;
         
         // Step 3: Apply C-PML to gradients
         self.cpml.apply_cpml_gradient(&mut self.grad_x, 0)?;

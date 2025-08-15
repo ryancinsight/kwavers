@@ -40,8 +40,7 @@ mod tests {
             let mut grad_z = Array3::<f64>::zeros((64, 64, 64));
             
             // Update memory variables and apply C-PML to gradients
-            let dt = 1e-6; // Test time step
-            cpml.update_acoustic_memory(&grad_x, 0, dt)?;
+            cpml.update_acoustic_memory(&grad_x, 0)?;
             cpml.apply_cpml_gradient(&mut grad_x, 0)?;
             
             // Apply damping to field for test validation
@@ -146,8 +145,7 @@ mod tests {
         
         // Update memory variables multiple times
         for _ in 0..10 {
-            let dt = 1e-6; // Test time step
-            cpml.update_acoustic_memory(&gradient, 0, dt).unwrap();
+            cpml.update_acoustic_memory(&gradient, 0).unwrap();
         }
         
         // Memory variables should converge to steady state
@@ -199,11 +197,11 @@ mod tests {
         let cpml = CPMLBoundary::new(config, &grid).unwrap();
         
         // Test reflection estimates
-        let r_0 = cpml.estimate_reflection(0.0);
-        let r_45 = cpml.estimate_reflection(45.0);
-        let r_60 = cpml.estimate_reflection(60.0);
-        let r_80 = cpml.estimate_reflection(80.0);
-        let r_89 = cpml.estimate_reflection(89.0);
+        let r_0 = cpml.estimate_reflection(0.0).expect("Valid angle");
+        let r_45 = cpml.estimate_reflection(45.0).expect("Valid angle");
+        let r_60 = cpml.estimate_reflection(60.0).expect("Valid angle");
+        let r_80 = cpml.estimate_reflection(80.0).expect("Valid angle");
+        let r_89 = cpml.estimate_reflection(89.0).expect("Valid angle");
         
         // Verify monotonic increase with angle
         assert!(r_45 > r_0, "Reflection should increase with angle");

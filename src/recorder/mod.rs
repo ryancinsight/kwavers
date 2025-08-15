@@ -8,11 +8,10 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::sensor::Sensor;
 use crate::time::Time;
-use log::{debug, error, info};
+use log::{debug, info};
 use ndarray::{Array2, Array3, Array4, Axis};
 use std::fs::File;
 use std::io::{self, Write};
-use std::collections::HashMap;
 
 /// Trait for data recording (Dependency Inversion Principle)
 pub trait RecorderTrait: Send + Sync {

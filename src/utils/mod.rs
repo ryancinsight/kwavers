@@ -13,8 +13,7 @@ pub mod test_helpers;
 
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
-use crate::error::{KwaversResult, KwaversError, GridError};
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
+use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
 use rayon::prelude::*;
 use log::{debug, trace, info};

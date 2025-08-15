@@ -13,11 +13,10 @@
 
 use crate::error::{KwaversError, KwaversResult, ConfigError};
 use crate::grid::Grid;
-use crate::medium::Medium;
 use crate::signal::Signal;
 use crate::source::Source;
-use ndarray::{Array1, Array2, Array3, ArrayView1, ArrayView2, Axis};
-use std::collections::{HashMap, HashSet};
+use ndarray::{Array1, Array3};
+use std::collections::HashSet;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::sync::Arc;

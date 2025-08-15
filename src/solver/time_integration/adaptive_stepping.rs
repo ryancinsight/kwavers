@@ -74,11 +74,13 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
                 ));
             }
             
-            // Compute high-order solution
-            let high_order = self.base_stepper.step(field, rhs_fn.clone(), dt, grid)?;
+            // Compute high-order solution (in-place update on a copy)
+            let mut high_order = field.clone();
+            self.base_stepper.step(&mut high_order, rhs_fn.clone(), dt, grid)?;
             
-            // Compute low-order solution for error estimation
-            let low_order = self.low_order_stepper.step(field, rhs_fn.clone(), dt, grid)?;
+            // Compute low-order solution for error estimation (on another copy)
+            let mut low_order = field.clone();
+            self.low_order_stepper.step(&mut low_order, rhs_fn.clone(), dt, grid)?;
             
             // Estimate error
             let error = self.error_estimator.estimate_local_error(&low_order, &high_order, dt);

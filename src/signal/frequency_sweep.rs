@@ -17,7 +17,20 @@ use crate::signal::Signal;
 use std::f64::consts::{E, PI};
 use std::fmt::Debug;
 
-// Physical constants for frequency sweeps
+// Numerical constants for frequency sweep calculations
+/// Small value threshold for avoiding division by zero
+const EPSILON: f64 = 1e-10;
+
+/// Singularity avoidance factor for hyperbolic sweep
+const SINGULARITY_AVOIDANCE_FACTOR: f64 = 0.999;
+
+/// Tolerance for frequency comparison in tests
+const FREQUENCY_TOLERANCE: f64 = 1e-6;
+
+/// Relative tolerance for frequency comparison
+const RELATIVE_FREQUENCY_TOLERANCE: f64 = 0.01;
+
+/// Physical constants for frequency sweeps
 /// Minimum frequency to avoid numerical issues [Hz]
 const MIN_FREQUENCY: f64 = 1.0;
 
@@ -183,7 +196,7 @@ impl LogarithmicFrequencySweep {
         } else {
             // Integral from 0 to t
             let k = (self.end_frequency / self.start_frequency).ln() / self.duration;
-            if k.abs() < 1e-10 {
+            if k.abs() < EPSILON {
                 // Linear case (avoid division by zero)
                 2.0 * PI * self.start_frequency * t
             } else {
@@ -264,10 +277,10 @@ impl HyperbolicFrequencySweep {
         } else {
             let f0 = self.start_frequency;
             let f1 = self.end_frequency;
-            let T = self.duration;
+            let duration = self.duration;
             
             // Hyperbolic sweep formula
-            (f0 * f1 * T) / (f1 * T - (f1 - f0) * t)
+            (f0 * f1 * duration) / (f1 * duration - (f1 - f0) * t)
         }
     }
     
@@ -277,13 +290,13 @@ impl HyperbolicFrequencySweep {
         } else {
             let f0 = self.start_frequency;
             let f1 = self.end_frequency;
-            let T = self.duration;
+            let duration = self.duration;
             
-            let t_clamped = t.min(self.duration * 0.999); // Avoid singularity
+            let t_clamped = t.min(self.duration * SINGULARITY_AVOIDANCE_FACTOR); // Avoid singularity
             
             // Integral of hyperbolic function
-            let arg = (f1 * T - (f1 - f0) * t_clamped) / (f1 * T);
-            -2.0 * PI * f0 * f1 * T / (f1 - f0) * arg.ln()
+            let arg = (f1 * duration - (f1 - f0) * t_clamped) / (f1 * duration);
+            -2.0 * PI * f0 * f1 * duration / (f1 - f0) * arg.ln()
         }
     }
 }
@@ -598,13 +611,13 @@ mod tests {
         let sweep = LinearFrequencySweep::new(1000.0, 2000.0, 0.001, 1.0);
         
         // Check frequency at start
-        assert!((sweep.frequency(0.0) - 1000.0).abs() < 1e-6);
+        assert!((sweep.frequency(0.0) - 1000.0).abs() < FREQUENCY_TOLERANCE);
         
         // Check frequency at middle
-        assert!((sweep.frequency(0.0005) - 1500.0).abs() < 1e-6);
+        assert!((sweep.frequency(0.0005) - 1500.0).abs() < FREQUENCY_TOLERANCE);
         
         // Check frequency at end
-        assert!((sweep.frequency(0.001) - 2000.0).abs() < 1e-6);
+        assert!((sweep.frequency(0.001) - 2000.0).abs() < FREQUENCY_TOLERANCE);
     }
     
     #[test]
@@ -612,15 +625,15 @@ mod tests {
         let sweep = LogarithmicFrequencySweep::new(100.0, 10000.0, 0.01, 1.0);
         
         // Check frequency at start
-        assert!((sweep.frequency(0.0) - 100.0).abs() < 1e-6);
+        assert!((sweep.frequency(0.0) - 100.0).abs() < FREQUENCY_TOLERANCE);
         
         // Check frequency at end
-        assert!((sweep.frequency(0.01) - 10000.0).abs() < 1e-6);
+        assert!((sweep.frequency(0.01) - 10000.0).abs() < FREQUENCY_TOLERANCE);
         
         // Check logarithmic progression
         let mid_freq = sweep.frequency(0.005);
-        let expected = 100.0 * (10000.0 / 100.0).sqrt(); // Geometric mean
-        assert!((mid_freq - expected).abs() / expected < 0.01);
+        let expected = 100.0 * (10000.0_f64 / 100.0).sqrt(); // Geometric mean
+        assert!((mid_freq - expected).abs() / expected < RELATIVE_FREQUENCY_TOLERANCE);
     }
     
     #[test]
@@ -628,9 +641,9 @@ mod tests {
         let sweep = SteppedFrequencySweep::new(1000.0, 3000.0, 3, 0.003, 1.0);
         
         // Check frequencies at each step
-        assert!((sweep.frequency(0.0) - 1000.0).abs() < 1e-6);
-        assert!((sweep.frequency(0.001) - 1000.0).abs() < 1e-6); // Still in first step
-        assert!((sweep.frequency(0.0015) - 2000.0).abs() < 1e-6); // Second step
-        assert!((sweep.frequency(0.0025) - 3000.0).abs() < 1e-6); // Third step
+        assert!((sweep.frequency(0.0) - 1000.0).abs() < FREQUENCY_TOLERANCE);
+        assert!((sweep.frequency(0.001) - 1000.0).abs() < FREQUENCY_TOLERANCE); // Still in first step
+        assert!((sweep.frequency(0.0015) - 2000.0).abs() < FREQUENCY_TOLERANCE); // Second step
+        assert!((sweep.frequency(0.0025) - 3000.0).abs() < FREQUENCY_TOLERANCE); // Third step
     }
 }
