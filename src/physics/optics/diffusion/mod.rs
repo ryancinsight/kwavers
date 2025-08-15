@@ -6,7 +6,7 @@ use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
 use crate::physics::optics::polarization::LinearPolarization;
 use crate::physics::thermal::{ThermalCalculator, HeatSource, ThermalConfig};
 use crate::medium::Medium;
-use crate::physics::scattering::optic::{OpticalScatteringModel, rayleigh::RayleighOpticalScatteringModel};
+use crate::physics::wave_propagation::scattering::{ScatteringCalculator, ScatteringRegime};
 use log::debug;
 
 use std::time::Instant;
@@ -21,7 +21,7 @@ pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     pub emission_spectrum: Array3<f64>,
     polarization: Option<Box<dyn PolarizationModelTrait>>,
-    scattering: Option<Box<dyn OpticalScatteringModel>>,
+    scattering: Option<ScatteringCalculator>,
     thermal: Option<ThermalCalculator>,
     enable_polarization: bool,
     enable_scattering: bool,
@@ -54,7 +54,10 @@ impl LightDiffusion {
                 None
             },
             scattering: if enable_scattering {
-                Some(Box::new(RayleighOpticalScatteringModel::new()))
+                // Default optical frequency for scattering
+                let frequency = 5e14; // ~600nm wavelength
+                let wave_speed = 3e8; // Speed of light
+                Some(ScatteringCalculator::new(frequency, wave_speed))
             } else {
                 None
             },

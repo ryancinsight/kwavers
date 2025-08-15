@@ -18,6 +18,7 @@ use std::error::Error;
 use std::io::Write; // For manual CSV writing
 use log::info;
 use kwavers::boundary::pml::PMLConfig;
+use ndarray::Array3;
 
 // --- Simple PointSource (if not existing) ---
 #[derive(Debug)]
@@ -43,6 +44,30 @@ impl Source for PointSource {
         } else {
             0.0
         }
+    }
+    
+    fn create_mask(&self, grid: &Grid) -> Array3<f64> {
+        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let dx = (x - self.position.0).abs();
+                    let dy = (y - self.position.1).abs();
+                    let dz = (z - self.position.2).abs();
+                    if dx < grid.dx / 2.0 && dy < grid.dy / 2.0 && dz < grid.dz / 2.0 {
+                        mask[(i, j, k)] = 1.0;
+                    }
+                }
+            }
+        }
+        mask
+    }
+    
+    fn amplitude(&self, t: f64) -> f64 {
+        self.signal.amplitude(t) * self.magnitude
     }
     fn positions(&self) -> Vec<(f64, f64, f64)> { vec![self.position] }
     fn signal(&self) -> &dyn Signal { self.signal.as_ref() }

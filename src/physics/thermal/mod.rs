@@ -387,17 +387,37 @@ mod tests {
         let source = HeatSource::Optical { fluence, absorption };
         
         // Mock medium
+        #[derive(Debug)]
         struct MockMedium;
         impl Medium for MockMedium {
             fn density(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1000.0 }
             fn sound_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1500.0 }
-            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 0.1 }
+            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 { 0.1 }
             fn nonlinearity_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 3.5 }
             fn thermal_conductivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 0.5 }
             fn specific_heat(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 4000.0 }
             fn thermal_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1.25e-7 }
             fn optical_absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 100.0 }
             fn optical_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1000.0 }
+            fn viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e-3 }
+            fn surface_tension(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 0.073 }
+            fn ambient_pressure(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 101325.0 }
+            fn vapor_pressure(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 2330.0 }
+            fn polytropic_index(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1.4 }
+            fn thermal_expansion(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 2e-4 }
+            fn gas_diffusion_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 2e-5 }
+            fn reference_frequency(&self) -> f64 { 1e6 }
+            fn update_temperature(&mut self, _: &Array3<f64>) {}
+            fn temperature(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 310.15 }
+            fn bubble_radius(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e-6 }
+            fn bubble_velocity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 0.0 }
+            fn update_bubble_state(&mut self, _: &Array3<f64>, _: &Array3<f64>) {}
+            fn density_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1000.0) }
+            fn sound_speed_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1500.0) }
+            fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
+            fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 { 1e9 }
+            fn lame_lambda_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1e9) }
+            fn lame_mu_array(&self, _: &Grid) -> Array3<f64> { Array3::from_elem((10, 10, 10), 1e9) }
         }
         
         let medium = MockMedium;
