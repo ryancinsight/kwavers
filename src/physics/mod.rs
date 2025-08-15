@@ -16,6 +16,7 @@ pub mod state;
 pub mod thermodynamics;
 pub mod traits;
 pub mod sonoluminescence_detector;
+pub mod wave_propagation; // NEW: Wave propagation with reflection and refraction
 
 #[cfg(test)]
 pub mod analytical_tests;
@@ -31,6 +32,7 @@ pub use state::PhysicsState;
 pub use traits::*;
 pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; // NEW: Plugin exports
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
+pub use wave_propagation::{WavePropagationCalculator, WaveMode, Polarization, PropagationCoefficients};
 
 /// Enhanced functional programming utilities for physics calculations
 /// 

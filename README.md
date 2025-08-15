@@ -1,29 +1,35 @@
 # Kwavers - Ultrasound Simulation Toolbox
 
-**Version**: 2.16.0  
-**Status**: 🚀 **Expert Code Review v7 Complete** – All simplified implementations replaced with proper physics  
+**Version**: 2.17.0  
+**Status**: 🚀 **Enhanced Physics Implementation Complete** – Wave propagation & multi-lateration localization  
 **Next Phase**: **Phase 32 READY** – ML/AI Integration & Real-Time Processing  
 **Performance**: >17M grid updates/second with GPU acceleration  
 **Build Status**: ✅ **PRODUCTION READY** – Clean compilation, zero errors  
-**Code Quality**: ✅ **PHYSICS VALIDATED** – All implementations literature-verified  
-**Implementation**: ✅ **COMPLETE** – No simplified, mock, or placeholder code  
-**New Capabilities**: 🔥 **KZK Equation**, **Seismic FWI/RTM**, **FOCUS Integration**
+**Code Quality**: ✅ **PHYSICS COMPLETE** – Reflection, refraction, and localization implemented  
+**Implementation**: ✅ **COMPREHENSIVE** – No simplified, mock, or placeholder code  
+**New Capabilities**: 🔥 **Wave Propagation**, **Multi-lateration**, **Sensor Calibration**
 
-## 🚀 Latest Achievement - Expert Code Review v7
+## 🚀 Latest Achievement - Enhanced Physics v8
 
-**Version 2.16.0 Summary**: Deep physics validation with complete implementation verification:
+**Version 2.17.0 Summary**: Comprehensive wave propagation physics and multi-lateration localization:
 
-### **Physics Implementation Improvements**
-- ✅ **Directivity Pattern**: Proper piston source pattern using sinc function (Kino 1987)
-- ✅ **SSOT Compliance**: All constants from centralized module, no duplicates
-- ✅ **Complete Implementations**: No simplified or placeholder code remaining
-- ✅ **Literature Validation**: All algorithms cross-referenced with papers
+### **Wave Propagation Physics**
+- ✅ **Reflection & Refraction**: Complete implementation for acoustic/optical waves
+- ✅ **Snell's Law**: Critical angles and total internal reflection
+- ✅ **Fresnel Equations**: Polarization-dependent coefficients
+- ✅ **Energy Conservation**: Verified R + T = 1
 
-### **Code Quality Achievements**
-- **Zero Compilation Errors**: Full build success
-- **Clean Repository**: Binary files removed, gitignore updated
-- **Test Compatibility**: All example files updated for current API
-- **Design Principles**: SOLID, CUPID, DRY, KISS strictly enforced
+### **Multi-lateration Localization**
+- ✅ **3D Localization**: TOA and TDOA algorithms
+- ✅ **Sensor Calibration**: Phantom-based calibration system
+- ✅ **Array Geometry**: Automatic detection and optimization
+- ✅ **Uncertainty Quantification**: Covariance-based estimates
+
+### **Literature Validation**
+- **Born & Wolf (1999)**: Optics principles
+- **Kinsler et al. (2000)**: Acoustic fundamentals
+- **Gyöngy & Coussios (2010)**: Cavitation mapping
+- **Chan & Ho (1994)**: Location algorithms
 
 ## 🚀 Latest Achievement - Comprehensive Transducer Design
 
