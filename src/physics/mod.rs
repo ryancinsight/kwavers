@@ -1,5 +1,6 @@
 // src/physics/mod.rs
 pub mod bubble_dynamics;
+pub mod cavitation_control;
 pub mod chemistry;
 // composable module removed - use plugin system instead
 pub mod field_indices;  // Unified field indices (SSOT)

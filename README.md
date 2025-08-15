@@ -1,36 +1,42 @@
 # Kwavers - Ultrasound Simulation Toolbox
 
-**Version**: 2.10.0  
-**Status**: 🚀 **Signal Generation Complete** – Comprehensive signal & source implementations  
+**Version**: 2.11.0  
+**Status**: 🚀 **Cavitation Control Complete** – Negative feedback control with power modulation  
 **Next Phase**: **Phase 32 READY** – ML/AI Integration & Real-Time Processing  
 **Performance**: >17M grid updates/second with GPU acceleration  
 **Build Status**: ✅ **LIBRARY COMPILES CLEANLY** – Production-ready codebase  
-**Code Quality**: ✅ **SIGNAL MODULE COMPLETE** – Full sweep, pulse, and modulation capabilities  
+**Code Quality**: ✅ **CAVITATION CONTROL COMPLETE** – Full feedback control system implemented  
 **FWI & RTM Validation**: ✅ **COMPREHENSIVE** – Literature-validated with extensive test suites  
 **New Capabilities**: 🔥 **KZK Equation**, **Seismic FWI/RTM**, **FOCUS Integration**
 
-## 🚀 Latest Achievement - Comprehensive Signal Generation Module
+## 🚀 Latest Achievement - Cavitation Control System
 
-**Version 2.10.0 Summary**: Complete signal generation and source implementation:
+**Version 2.11.0 Summary**: Complete cavitation control with negative feedback loops:
 
-### **Signal Generation Capabilities**
-- ✅ **Pulse Signals**: Gaussian, Rectangular, Tone Burst, Ricker Wavelet, Pulse Train
-- ✅ **Frequency Sweeps**: Linear, Logarithmic, Hyperbolic, Stepped, Polynomial
-- ✅ **Modulation**: AM, FM, PM, QAM, PWM with full parameter control
-- ✅ **Windowing**: Hann, Hamming, Blackman, Gaussian, Tukey windows
-- ✅ **Ultrasound Signals**: Medical pulses, coded excitation, Doppler simulation
+### **Cavitation Control Capabilities**
+- ✅ **PID Controller**: Full PID with anti-windup and derivative filtering
+- ✅ **Power Modulation**: Amplitude, duty cycle, pulsed, burst, and ramped modes
+- ✅ **Cavitation Detection**: Spectral analysis with subharmonic/ultraharmonic detection
+- ✅ **Feedback Strategies**: AmplitudeOnly, DutyCycleOnly, Combined, Cascaded, Predictive
+- ✅ **Safety Features**: Emergency shutdown, mechanical index limiting, power limiting
+
+### **Detection Methods**
+- **Spectral Analysis**: FFT-based detection of cavitation signatures
+- **Subharmonic Detection**: f0/2, f0/3 detection for inertial cavitation
+- **Broadband Emissions**: Noise floor analysis for violent collapse
+- **State Classification**: None, Stable, Inertial, Transient states
 
 ### **Literature Validation**
-- **Pulse Signals**: Ricker (1953), Harris (1978) windowing functions
-- **Frequency Sweeps**: Klauder et al. (1960) chirp theory, Stankovic (1994)
-- **Modulation**: Proakis & Salehi (2008), Carlson (2002), Haykin (2001)
-- **Ultrasound**: Misaridis & Jensen (2005) modulated excitation
+- **Control Systems**: Hockham et al. (2010, 2013) real-time cavitation control
+- **Detection**: Gyöngy & Coussios (2010) passive cavitation mapping
+- **Safety**: Arvanitis et al. (2012, 2013) controlled BBB disruption
+- **PID Control**: Åström & Hägglund (2006), Franklin et al. (2015)
 
 ### **Design Compliance**
 - ✅ **Zero naming violations**: No adjective-based names
-- ✅ **SSOT**: All physical constants properly defined
-- ✅ **Composability**: Signal trait enables plugin-based composition
-- ✅ **Zero-copy**: Efficient signal generation without unnecessary allocations
+- ✅ **SSOT**: All control constants properly defined
+- ✅ **Composability**: Plugin-based detector and controller interfaces
+- ✅ **Safety-First**: Multiple safety mechanisms and limits
 
 **Phase 31 Summary**: Revolutionary expansion beyond k-Wave capabilities with **LITERATURE-VALIDATED** FWI & RTM implementations, advanced equation modes, and simulation package integration achieving **INDUSTRY-LEADING** functionality.
 
