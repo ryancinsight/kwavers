@@ -15,6 +15,7 @@ use kwavers::{
         // Removed Solver import as it doesn't exist
     },
     physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig, kuznetsov::AcousticEquationMode},
+    physics::traits::AcousticWaveModel, // Added trait import
     source::Source,  // Removed gaussian::GaussianSource as it doesn't exist
     physics::plugin::acoustic_simulation_plugins::{
         TransducerFieldCalculatorPlugin, TransducerGeometry
@@ -67,13 +68,14 @@ fn demo_kzk_equation(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<(
     
     // Create focused source using PointSource
     use kwavers::source::PointSource;
-    use kwavers::signal::SineSignal;
-    let signal = SineSignal::new(1e6, 1e5); // 1 MHz, 100 kPa
+    use kwavers::signal::SineWave;
+    use std::sync::Arc;
+    let signal = SineWave::new(1e6, 1e5, 0.0); // 1 MHz, 100 kPa, 0 phase
     let source = PointSource::new(
-        grid.nx as f64 * grid.dx / 2.0,
-        grid.ny as f64 * grid.dy / 2.0,
-        0.0,
-        Box::new(signal)
+        (grid.nx as f64 * grid.dx / 2.0,
+         grid.ny as f64 * grid.dy / 2.0,
+         0.0),
+        Arc::new(signal)
     );
     
     // Initialize fields
@@ -102,16 +104,19 @@ fn demo_kzk_equation(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<(
     println!("  📊 Propagating KZK equation for {} time steps...", num_steps);
     
     for step in 0..num_steps {
-        // TODO: KuznetsovWave needs update_wave method implementation
-        // kzk_solver.update_wave(
-        //     &mut fields.view_mut(),
-        //     &fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-        //     &*source,
-        //     grid,
-        //     medium,
-        //     dt,
-        //     step as f64 * dt,
-        // );
+        // Clone pressure field before mutable borrow
+        let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Use the AcousticWaveModel trait method
+        kzk_solver.update_wave(
+            &mut fields,
+            &prev_pressure,
+            &source as &dyn Source,
+            grid,
+            medium,
+            dt,
+            step as f64 * dt,
+        );
         
         if step % 10 == 0 {
             println!("    Step {}: max pressure = {:.2e} Pa", 
@@ -292,13 +297,18 @@ fn demo_focus_transducers(grid: &Grid, medium: &HomogeneousMedium) -> KwaversRes
 fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<()> {
     println!("  🔬 Comparing Full Kuznetsov vs KZK parabolic approximation...");
     
+    // Import necessary types
+    use kwavers::source::PointSource;
+    use kwavers::signal::SineWave;
+    use std::sync::Arc;
+    
     // Create identical initial conditions using PointSource
-    let signal = SineSignal::new(2e6, 5e5); // 2 MHz, 500 kPa
+    let signal = SineWave::new(2e6, 5e5, 0.0); // 2 MHz, 500 kPa, 0 phase
     let source = PointSource::new(
-        grid.nx as f64 * grid.dx / 2.0,
-        grid.ny as f64 * grid.dy / 2.0,
-        0.0,
-        Box::new(signal)
+        (grid.nx as f64 * grid.dx / 2.0,
+         grid.ny as f64 * grid.dy / 2.0,
+         0.0),
+        Arc::new(signal)
     );
     
     // Full Kuznetsov configuration
@@ -338,28 +348,32 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
     
     // Run both solvers
     for step in 0..num_steps {
-        // TODO: KuznetsovWave needs update_wave method implementation
+        // Clone pressure fields before mutable borrows
+        let full_prev_pressure = full_fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let kzk_prev_pressure = kzk_fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Use the AcousticWaveModel trait method
         // Full Kuznetsov
-        // full_solver.update_wave(
-        //     &mut full_fields.view_mut(),
-        //     &full_fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-        //     &*source,
-        //     grid,
-        //     medium,
-        //     dt,
-        //     step as f64 * dt,
-        // );
+        full_solver.update_wave(
+            &mut full_fields,
+            &full_prev_pressure,
+            &source as &dyn Source,
+            grid,
+            medium,
+            dt,
+            step as f64 * dt,
+        );
         
         // KZK paraxial
-        // kzk_solver.update_wave(
-        //     &mut kzk_fields.view_mut(),
-        //     &kzk_fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-        //     &*source,
-        //     grid,
-        //     medium,
-        //     dt,
-        //     step as f64 * dt,
-        // );
+        kzk_solver.update_wave(
+            &mut kzk_fields,
+            &kzk_prev_pressure,
+            &source as &dyn Source,
+            grid,
+            medium,
+            dt,
+            step as f64 * dt,
+        );
     }
     
     // Compare results
