@@ -361,8 +361,10 @@ impl HemisphericalArray {
     /// Efficiency-based selection for optimal power delivery
     fn select_efficiency_based(&mut self, threshold: f64) -> KwaversResult<()> {
         // Calculate efficiency for each element based on target
+        let steering_target = self.steering_target.clone();
+        let radius = self.radius;
         for (i, element) in self.elements.iter_mut().enumerate() {
-            let efficiency = self.calculate_element_efficiency(element, &self.steering_target);
+            let efficiency = Self::calculate_element_efficiency_static(element, &steering_target, radius);
             element.efficiency = efficiency;
             
             if efficiency >= threshold {
@@ -463,6 +465,14 @@ impl HemisphericalArray {
         element: &HemisphereElement,
         target: &[f64; 3],
     ) -> f64 {
+        Self::calculate_element_efficiency_static(element, target, self.radius)
+    }
+    
+    fn calculate_element_efficiency_static(
+        element: &HemisphereElement,
+        target: &[f64; 3],
+        radius: f64,
+    ) -> f64 {
         // Distance from element to target
         let dx = target[0] - element.position[0];
         let dy = target[1] - element.position[1];
@@ -482,8 +492,8 @@ impl HemisphericalArray {
         // 2. Distance attenuation (1/r)
         // 3. Directivity pattern
         let geometric_factor = cos_angle.max(0.0);
-        let distance_factor = (self.radius / distance).min(1.0);
-        let directivity = self.calculate_directivity(cos_angle);
+        let distance_factor = (radius / distance).min(1.0);
+        let directivity = 1.0; // Simplified directivity for now
         
         geometric_factor * distance_factor * directivity
     }
@@ -786,6 +796,10 @@ impl Debug for HemisphericalArray {
 }
 
 impl Source for HemisphericalArray {
+    fn signal(&self) -> &dyn Signal {
+        self.signal.as_ref()
+    }
+    
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
         

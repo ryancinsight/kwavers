@@ -66,8 +66,8 @@ pub trait Medium: Debug + Sync + Send {
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn absorption_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn reduced_scattering_coefficient_light(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn reference_frequency(&self) -> f64; // Added for absorption calculations
     
     /// Get the nonlinearity parameter (beta or B/A) for the medium

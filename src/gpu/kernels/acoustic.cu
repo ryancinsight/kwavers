@@ -146,8 +146,8 @@ extern "C" __global__ void update_velocity_z_kernel(
     velocity_z[idx] -= (dt / rho) * dp_dz;
 }
 
-// Optimized pressure update kernel with shared memory
-extern "C" __global__ void update_pressure_kernel_optimized(
+// Shared memory pressure update kernel
+extern "C" __global__ void update_pressure_kernel_shared(
     {{float_type}}* pressure,
     const {{float_type}}* velocity_x,
     const {{float_type}}* velocity_y,

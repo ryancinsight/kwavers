@@ -103,7 +103,7 @@ impl super::OpticalScatteringModel for RayleighOpticalScatteringModel {
             
             // Get tissue optical properties
             // For Beer-Lambert attenuation, we need the full scattering coefficient μs, not μs'
-            let tissue_mu_s_prime = medium.reduced_scattering_coefficient_light(x, y, z, grid);
+            let tissue_mu_s_prime = medium.optical_scattering_coefficient(x, y, z, grid);
             
             // Convert reduced scattering coefficient back to full scattering coefficient
             // μs' = μs * (1 - g), so μs = μs' / (1 - g)

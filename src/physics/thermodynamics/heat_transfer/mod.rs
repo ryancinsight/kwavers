@@ -133,7 +133,7 @@ impl ThermalModel {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
                 let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
-                let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
+                let mu_a = medium.optical_absorption_coefficient(x, y, z, grid);
                 let rho = medium.density(x, y, z, grid);
                 let c = medium.sound_speed(x, y, z, grid);
                 let acoustic_heating = 2.0 * alpha * p_val * p_val / (rho * c);

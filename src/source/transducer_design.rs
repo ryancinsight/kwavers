@@ -110,19 +110,22 @@ impl ElementGeometry {
         }
         
         if kerf_ratio > MAX_KERF_RATIO {
-            return Err(KwaversError::Configuration(
-                format!("Kerf ratio {:.3} exceeds maximum {:.3}", kerf_ratio, MAX_KERF_RATIO)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "kerf_ratio".to_string(),
+                value: format!("{:.3}", kerf_ratio),
+                constraint: format!("must be <= {:.3}", MAX_KERF_RATIO),
+            }));
         }
         
         let aspect_ratio = width / thickness;
         
         // Check aspect ratio for lateral mode suppression
         if aspect_ratio < MIN_ASPECT_RATIO || aspect_ratio > MAX_ASPECT_RATIO {
-            return Err(KwaversError::Configuration(
-                format!("Aspect ratio {:.1} outside valid range [{:.1}, {:.1}]",
-                       aspect_ratio, MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "aspect_ratio".to_string(),
+                value: format!("{:.1}", aspect_ratio),
+                constraint: format!("must be in range [{:.1}, {:.1}]", MIN_ASPECT_RATIO, MAX_ASPECT_RATIO),
+            }));
         }
         
         Ok(Self {
@@ -540,9 +543,11 @@ impl AcousticLens {
         let radius_of_curvature = focal_length * (n - 1.0);
         
         if radius_of_curvature <= 0.0 {
-            return Err(KwaversError::Configuration(
-                "Invalid lens parameters for focusing".to_string()
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "radius_of_curvature".to_string(),
+                value: format!("{:.3}", radius_of_curvature),
+                constraint: "must be > 0.0 for valid focusing".to_string(),
+            }));
         }
         
         // Calculate center thickness
@@ -890,26 +895,29 @@ impl TransducerDesign {
     pub fn validate(&self) -> KwaversResult<()> {
         // Check bandwidth
         if self.frequency_response.fractional_bandwidth < 20.0 {
-            return Err(KwaversError::Configuration(
-                format!("Bandwidth {:.1}% below minimum 20%", 
-                       self.frequency_response.fractional_bandwidth)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "fractional_bandwidth".to_string(),
+                value: format!("{:.1}%", self.frequency_response.fractional_bandwidth),
+                constraint: "must be >= 20%".to_string(),
+            }));
         }
         
         // Check efficiency
         if self.sensitivity.efficiency < 30.0 {
-            return Err(KwaversError::Configuration(
-                format!("Efficiency {:.1}% below minimum 30%", 
-                       self.sensitivity.efficiency)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "efficiency".to_string(),
+                value: format!("{:.1}%", self.sensitivity.efficiency),
+                constraint: "must be >= 30%".to_string(),
+            }));
         }
         
         // Check aspect ratio
         if self.geometry.aspect_ratio > MAX_ASPECT_RATIO {
-            return Err(KwaversError::Configuration(
-                format!("Aspect ratio {:.1} exceeds maximum {:.1}", 
-                       self.geometry.aspect_ratio, MAX_ASPECT_RATIO)
-            ));
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "aspect_ratio".to_string(),
+                value: format!("{:.1}", self.geometry.aspect_ratio),
+                constraint: format!("must be <= {:.1}", MAX_ASPECT_RATIO),
+            }));
         }
         
         Ok(())

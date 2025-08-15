@@ -35,7 +35,7 @@ impl OpticalThermalModel {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let mu_a = medium.absorption_coefficient_light(x, y, z, grid);
+                let mu_a = medium.optical_absorption_coefficient(x, y, z, grid);
                 let rho = medium.density(x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
                 *t_contrib = mu_a * f_val.max(0.0) * dt / (rho * cp); // Heat from light absorption

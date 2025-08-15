@@ -77,10 +77,13 @@ impl PhaseShifter {
         if !self.quantization_enabled {
             return phase;
         }
-        
+        Self::quantize_phase_static(phase, PHASE_QUANTIZATION_LEVELS)
+    }
+    
+    fn quantize_phase_static(phase: f64, quantization_levels: usize) -> f64 {
         let normalized = phase.rem_euclid(2.0 * PI) / (2.0 * PI);
-        let quantized = (normalized * PHASE_QUANTIZATION_LEVELS as f64).round() 
-            / PHASE_QUANTIZATION_LEVELS as f64;
+        let quantized = (normalized * quantization_levels as f64).round() 
+            / quantization_levels as f64;
         quantized * 2.0 * PI
     }
     
@@ -164,7 +167,8 @@ impl PhaseShifter {
         assert!(focal_points.len() <= MAX_FOCAL_POINTS, "Too many focal points");
         assert!(focal_points.iter().all(|p| p.len() == 3), "Focal points must be 3D");
         
-        let weights = weights.unwrap_or(&vec![1.0 / focal_points.len() as f64; focal_points.len()]);
+        let default_weights = vec![1.0 / focal_points.len() as f64; focal_points.len()];
+        let weights = weights.unwrap_or(&default_weights);
         
         self.phase_offsets.fill(0.0);
         
@@ -193,7 +197,9 @@ impl PhaseShifter {
         
         // Convert back to phase
         self.phase_offsets.mapv_inplace(|p| p.atan2(0.0));
-        self.phase_offsets.mapv_inplace(|p| self.quantize_phase(p));
+        if self.quantization_enabled {
+            self.phase_offsets.mapv_inplace(|p| Self::quantize_phase_static(p, PHASE_QUANTIZATION_LEVELS));
+        }
         
         &self.phase_offsets
     }
