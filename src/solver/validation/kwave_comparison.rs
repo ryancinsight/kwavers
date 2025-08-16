@@ -373,8 +373,8 @@ impl KWaveValidator {
         
         // Configure nonlinear solver
         let config = KuznetsovConfig {
-            enable_nonlinearity: true,
-            enable_diffusivity: false,
+            nonlinearity_coefficient: 5.0,  // Enable nonlinearity
+            acoustic_diffusivity: 0.0,      // Disable diffusivity
             nonlinearity_scaling: 1.0,
             spatial_order: 4,
             ..Default::default()

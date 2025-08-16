@@ -121,7 +121,8 @@ pub use gpu::{GpuContext, GpuBackend};
 pub use gpu::memory::GpuMemoryManager;
 #[cfg(feature = "gpu")]
 pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
-pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
+pub use physics::mechanics::{CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
+pub use physics::mechanics::acoustic_wave::NonlinearWave;
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};

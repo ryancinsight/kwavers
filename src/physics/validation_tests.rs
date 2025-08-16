@@ -619,14 +619,14 @@ mod tests {
         
         // Kuznetsov parameters
         let config = KuznetsovConfig {
-            enable_nonlinearity: true,
-            enable_diffusivity: false, // Disable for pure nonlinear test
+            nonlinearity_coefficient: 5.0, // Enable nonlinearity with B/A = 5
+            acoustic_diffusivity: 0.0, // Disable diffusivity for pure nonlinear test
             nonlinearity_scaling: 1.0,
             spatial_order: 4,
             ..Default::default()
         };
         
-        let solver = KuznetsovWave::new(&grid, config)?;
+        let solver = KuznetsovWave::new(config, &grid)?;
         
         // Initial sinusoidal wave
         let frequency = 1e6; // 1 MHz
