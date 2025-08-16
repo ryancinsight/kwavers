@@ -18,7 +18,9 @@ mod tests {
     fn test_plane_wave_absorption() -> crate::error::KwaversResult<()> {
         let grid = Grid::new(128, 128, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let mut cpml = CPMLBoundary::new(config, &grid)?;
+        let dt = 1e-7; // Typical time step for testing
+        let sound_speed = 1540.0; // Water sound speed
+        let mut cpml = CPMLBoundary::new(config, &grid, dt, sound_speed)?;
         
         // Create a Gaussian pulse
         let cx = grid.nx / 2;
@@ -101,11 +103,11 @@ mod tests {
         
         // Standard config
         let standard_config = CPMLConfig::default();
-        let mut standard_cpml = CPMLBoundary::new(standard_config, &grid).unwrap();
+        let mut standard_cpml = CPMLBoundary::new(standard_config, &grid, 1e-7, 1540.0).unwrap();
         
         // Grazing angle configuration
         let grazing_config = CPMLConfig::for_grazing_angles();
-        let mut grazing_cpml = CPMLBoundary::new(grazing_config, &grid).unwrap();
+        let mut grazing_cpml = CPMLBoundary::new(grazing_config, &grid, 1e-7, 1540.0).unwrap();
         
         // Create near-grazing wave (85°)
         let mut field_standard = create_plane_wave(&grid, 85.0, 1e6);
@@ -138,7 +140,7 @@ mod tests {
     fn test_memory_variable_consistency() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let mut cpml = CPMLBoundary::new(config, &grid, 1e-7, 1540.0).unwrap();
         
         // Create test gradient
         let gradient = Array3::ones((64, 64, 64));
@@ -194,7 +196,7 @@ mod tests {
     fn test_reflection_estimation() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::for_grazing_angles();
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let cpml = CPMLBoundary::new(config, &grid, 1e-7, 1540.0).unwrap();
         
         // Test reflection estimates
         let r_0 = cpml.estimate_reflection(0.0).expect("Valid angle");
@@ -223,7 +225,7 @@ mod tests {
             ..Default::default()
         };
         
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let cpml = CPMLBoundary::new(config, &grid, 1e-7, 1540.0).unwrap();
         
         // Check sigma profile continuity
         let mut max_diff = 0.0f64;
@@ -257,7 +259,7 @@ mod tests {
     fn test_dispersive_media_support() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let mut cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let mut cpml = CPMLBoundary::new(config, &grid, 1e-7, 1540.0).unwrap();
         
         // Initially no dispersive support
         assert!(cpml.psi_dispersive.is_none());
@@ -281,7 +283,7 @@ mod tests {
         
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let cpml = CPMLBoundary::new(config, &grid, 1e-7, 1540.0).unwrap();
         
         // Create test field in frequency domain
         let mut field_freq = Array3::from_elem((64, 64, 64), Complex::new(1.0, 0.0));

@@ -259,9 +259,12 @@ impl FdtdSolver {
     /// Enable C-PML boundary conditions
     pub fn enable_cpml(&mut self, config: crate::boundary::cpml::CPMLConfig) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
+        // Use the solver's dt and maximum sound speed for consistency
         self.cpml_boundary = Some(crate::boundary::cpml::CPMLBoundary::new(
             config,
             &self.grid,
+            self.dt,
+            self.max_sound_speed,
         )?);
         Ok(())
     }

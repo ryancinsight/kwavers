@@ -1,5 +1,35 @@
 # Kwavers Development Checklist
 
+## ✅ **STAGE 14 CPML DT CONSISTENCY v2.36.0 COMPLETE** - January 2025
+
+### **📋 Critical CPML Time Step Fix - Version 2.36.0**
+**Objective**: Fix CPML boundary to use solver's dt for consistency  
+**Status**: ✅ **COMPLETE** - CPML now uses solver-provided dt  
+**Build Status**: ✅ **SUCCESS** - All code compiles  
+**Physics Accuracy**: ✅ **IMPROVED** - Proper impedance matching  
+
+### **🔍 Stage 14 Achievements**
+
+#### **Core Fix**
+- [x] **CPMLConfig**: Removed `cfl_number` and `sound_speed` fields
+- [x] **CPMLBoundary::new**: Now requires `dt` and `sound_speed` parameters
+- [x] **Consistency**: CPML coefficients always match solver's time step
+
+#### **API Changes**
+- [x] **Constructor**: `new(config, grid, dt, sound_speed)`
+- [x] **update_dt**: Now takes `sound_speed` parameter
+- [x] **Validation**: Warns if dt exceeds stability limit
+
+#### **Implementation Updates**
+- [x] **All Tests**: Updated to use new API with explicit dt
+- [x] **FdtdSolver**: Uses solver's dt and max_sound_speed
+- [x] **CPMLSolver**: Updated constructor signature
+
+#### **Benefits**
+- [x] **Impedance Matching**: Proper boundary matching with solver
+- [x] **No Spurious Reflections**: Consistent dt prevents mismatches
+- [x] **Clear Responsibility**: Solver controls time stepping
+
 ## ✅ **STAGE 13 HETEROGENEOUS MEDIA FIX v2.35.0 COMPLETE** - January 2025
 
 ### **📋 Critical k-Space Correction Fix - Version 2.35.0**

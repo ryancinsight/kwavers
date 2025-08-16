@@ -28,8 +28,14 @@ pub struct CPMLSolver {
 
 impl CPMLSolver {
     /// Create new C-PML solver integration
-    pub fn new(config: CPMLConfig, grid: &Grid) -> KwaversResult<Self> {
-        let cpml = CPMLBoundary::new(config, grid)?;
+    /// 
+    /// # Arguments
+    /// * `config` - CPML configuration
+    /// * `grid` - Computational grid
+    /// * `dt` - Time step from the main solver
+    /// * `sound_speed` - Reference sound speed (typically max in medium)
+    pub fn new(config: CPMLConfig, grid: &Grid, dt: f64, sound_speed: f64) -> KwaversResult<Self> {
+        let cpml = CPMLBoundary::new(config, grid, dt, sound_speed)?;
         
         Ok(Self {
             cpml,
