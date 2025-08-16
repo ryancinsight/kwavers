@@ -380,7 +380,7 @@ impl KWaveValidator {
             ..Default::default()
         };
         
-        let mut solver = KuznetsovWave::new(&self.grid, config)?;
+        let mut solver = KuznetsovWave::new(config, &self.grid)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         
         // High-amplitude sinusoidal source

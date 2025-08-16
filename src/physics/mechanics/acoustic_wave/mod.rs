@@ -8,7 +8,7 @@ pub mod viscoelastic_wave;
 pub use viscoelastic_wave::ViscoelasticWave;
 
 pub mod kuznetsov;
-pub use kuznetsov::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme};
+pub use kuznetsov::{KuznetsovWave, KuznetsovConfig};
 
 use crate::grid::Grid;
 use crate::medium::Medium;

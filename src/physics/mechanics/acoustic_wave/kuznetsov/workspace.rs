@@ -5,6 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// RK4 time integration workspace
+#[derive(Debug, Clone)]
 pub struct RK4Workspace {
     /// Temporary arrays for RK4 stages
     k1: Array3<f64>,
