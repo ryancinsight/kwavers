@@ -82,7 +82,7 @@ struct PerformanceMetrics {
 /// viscoelastic.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
 /// ```
 #[derive(Debug)]
-pub struct ViscoelasticWave {
+pub struct WesterveltWave {
     // Precomputed k-space grids for spectral operations
     k_squared: Option<Array3<f64>>,
     kx: Option<Array3<f64>>,
@@ -104,7 +104,7 @@ pub struct ViscoelasticWave {
     metrics: Arc<Mutex<PerformanceMetrics>>,
 }
 
-impl ViscoelasticWave {
+impl WesterveltWave {
     pub fn new(grid: &Grid) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let mut k_squared_arr = Array3::<f64>::zeros((nx, ny, nz));
@@ -237,7 +237,7 @@ impl ViscoelasticWave {
     }
 }
 
-impl AcousticWaveModel for ViscoelasticWave {
+impl AcousticWaveModel for WesterveltWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
