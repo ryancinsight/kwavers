@@ -206,10 +206,12 @@ impl KWaveValidator {
         
         // Configure C-PML
         let pml_config = CPMLConfig::default();
-        let cpml = CPMLBoundary::new(pml_config, &self.grid)?;
+        let sound_speed = 1500.0; // Speed of sound in water
+        let dt = 1e-7; // Typical time step for acoustic simulations
+        let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
         
         // Create plane wave
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, sound_speed, &self.grid, 0.0, 0.0);
         let mut pressure = self.grid.create_field();
         
         // Initialize plane wave traveling in +x direction

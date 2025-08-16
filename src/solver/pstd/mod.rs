@@ -739,9 +739,10 @@ impl PstdSolver {
         
         // Transform back to real space
         self.workspace_complex_4d.index_axis_mut(Axis(0), 0).assign(&grad_hat);
-        let grad_real = ifft_3d(&self.workspace_complex_4d, 0, &self.grid);
+        let grad_complex = self.workspace_complex_4d.index_axis(Axis(0), 0);
+        let grad_real = ifft_3d(&grad_complex.to_owned(), &self.grid);
         
-        Ok(grad_real.index_axis(Axis(0), 0).to_owned())
+        Ok(grad_real)
     }
     
     /// Update velocity field with CPML boundary conditions
@@ -835,7 +836,10 @@ impl PstdSolver {
         let divergence = &grad_vx + &grad_vy + &grad_vz;
         
         // Update pressure
-        let bulk_modulus_array = medium.bulk_modulus_array();
+        // Compute bulk modulus from density and sound speed: K = ρc²
+        let density_array = medium.density_array();
+        let sound_speed_array = medium.sound_speed_array();
+        let bulk_modulus_array = &density_array * &sound_speed_array.mapv(|c| c * c);
         
         Zip::from(pressure)
             .and(&divergence)
