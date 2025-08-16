@@ -1039,7 +1039,7 @@ pub mod utils {
 }
 
 /// Error handling utilities using iterator combinators
-pub mod advanced {
+pub mod utilities {
     
     use std::fmt::Debug;
     

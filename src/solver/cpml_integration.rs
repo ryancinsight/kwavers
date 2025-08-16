@@ -298,7 +298,9 @@ mod tests {
     fn test_cpml_solver_creation() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let solver = CPMLSolver::new(config, &grid).unwrap();
+        let dt = 1e-7;
+        let sound_speed = 1500.0;
+        let solver = CPMLSolver::new(config, &grid, dt, sound_speed).unwrap();
         
         assert_eq!(solver.nx, 64);
         assert_eq!(solver.grad_x.dim(), (64, 64, 64));
@@ -308,7 +310,9 @@ mod tests {
     fn test_gradient_computation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let mut solver = CPMLSolver::new(config, &grid).unwrap();
+        let dt = 1e-7;
+        let sound_speed = 1500.0;
+        let mut solver = CPMLSolver::new(config, &grid, dt, sound_speed).unwrap();
         
         // Create test pressure field
         let mut pressure = Array3::zeros((32, 32, 32));

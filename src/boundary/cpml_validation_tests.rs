@@ -166,7 +166,9 @@ mod tests {
     fn test_cpml_solver_integration() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let mut solver = CPMLSolver::new(config, &grid).unwrap();
+        let dt = 1e-7;
+        let sound_speed = 1500.0;
+        let mut solver = CPMLSolver::new(config, &grid, dt, sound_speed).unwrap();
         
         // Create medium
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);

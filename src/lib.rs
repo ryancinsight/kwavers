@@ -21,6 +21,8 @@ mod validation_constants {
     pub const MAX_SOURCE_AMPLITUDE: f64 = 100e6;
     /// Progress reporting interval [steps]
     pub const PROGRESS_REPORT_INTERVAL: usize = 100;
+    /// Default body temperature in Kelvin (37°C)
+    pub const BODY_TEMPERATURE_KELVIN: f64 = 310.0;
     /// Default plugin context frequency [Hz]
     pub const DEFAULT_PLUGIN_FREQUENCY: f64 = 100e3;
     /// Minimum domain size for grid validation [m]
@@ -31,6 +33,16 @@ mod validation_constants {
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 5;
     /// Maximum points per wavelength for grid validation
     pub const MAX_POINTS_PER_WAVELENGTH: usize = 100;
+}
+
+// Sensor configuration constants
+mod sensor_constants {
+    /// Default sensor position 1 [m]
+    pub const SENSOR_POSITION_1: (f64, f64, f64) = (0.03, 0.0, 0.0);
+    /// Default sensor position 2 [m]
+    pub const SENSOR_POSITION_2: (f64, f64, f64) = (0.02, 0.0, 0.0);
+    /// Default sensor position 3 [m]
+    pub const SENSOR_POSITION_3: (f64, f64, f64) = (0.04, 0.0, 0.0);
 }
 
 // Default medium properties constants
@@ -121,7 +133,8 @@ pub use gpu::{GpuContext, GpuBackend};
 pub use gpu::memory::GpuMemoryManager;
 #[cfg(feature = "gpu")]
 pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
-pub use physics::mechanics::{NonlinearWave, CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
+pub use physics::mechanics::{CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
+pub use physics::mechanics::acoustic_wave::NonlinearWave;
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
@@ -318,12 +331,8 @@ pub fn create_validated_simulation(
             reason: e,
         }))?;
     
-    // Create sensor
-    let sensor_positions = vec![
-        (0.03, 0.0, 0.0),
-        (0.02, 0.0, 0.0),
-        (0.04, 0.0, 0.0),
-    ];
+    // Create sensor with default positions from config or defaults
+    let sensor_positions = get_default_sensor_positions();
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
     
     // Create recorder
@@ -339,31 +348,57 @@ pub fn create_validated_simulation(
     Ok((grid, time, medium, source, recorder))
 }
 
+/// Get default sensor positions
+fn get_default_sensor_positions() -> Vec<(f64, f64, f64)> {
+    vec![
+        sensor_constants::SENSOR_POSITION_1,
+        sensor_constants::SENSOR_POSITION_2,
+        sensor_constants::SENSOR_POSITION_3,
+    ]
+}
+
 /// Run a complete simulation with physics
 /// 
 /// Implements ACID principles for simulation execution
 pub fn run_physics_simulation(
     config: Config,
+    pstd_config: solver::pstd::PstdConfig,
+    pml_config: boundary::pml::PMLConfig,
 ) -> KwaversResult<()> {
     use crate::physics::plugin::PluginContext;
     
+    // Step 1: Setup all simulation components
+    let (grid, time, medium, source, mut recorder, mut plugin_manager, mut boundary, mut fields) = 
+        setup_simulation_components(config, pstd_config, pml_config)?;
+    
+    // Step 2: Run the main simulation loop
+    run_simulation_loop(
+        &time, &grid, &medium, &source, &mut recorder, 
+        &mut plugin_manager, &mut boundary, &mut fields,
+    )?;
+    
+    // Step 3: Finalize and report results
+    finalize_simulation(&recorder)?;
+    
+    Ok(())
+}
+
+/// Set up all simulation components
+fn setup_simulation_components(
+    config: Config,
+    pstd_config: solver::pstd::PstdConfig,
+    pml_config: boundary::pml::PMLConfig,
+) -> KwaversResult<(
+    Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder,
+    PluginManager, PMLBoundary, ndarray::Array4<f64>
+)> {
     // Create validated simulation components
-    let (grid, time, medium, source, mut recorder) = create_validated_simulation(config)?;
+    let (grid, time, medium, source, recorder) = create_validated_simulation(config)?;
     
     // Create plugin manager for physics simulation
     let mut plugin_manager = PluginManager::new();
     
     // Add PSTD solver for acoustic wave propagation
-    let pstd_config = solver::pstd::PstdConfig {
-        k_space_correction: true,
-        k_space_order: 2,
-        anti_aliasing: true,
-        pml_stencil_size: 10,
-        cfl_factor: 0.3,
-        use_leapfrog: true,
-        enable_absorption: false,
-        absorption_model: None,
-    };
     plugin_manager.register(Box::new(
         solver::pstd::PstdPlugin::new(pstd_config, &grid)?
     ))?;
@@ -375,11 +410,7 @@ pub fn run_physics_simulation(
     // ))?;
     
     // Create boundary conditions
-    let mut boundary = PMLBoundary::new(
-        PMLConfig::default()
-            .with_thickness(10)
-            .with_reflection_coefficient(1e-6),
-    )?;
+    let boundary = PMLBoundary::new(pml_config)?;
     
     // Initialize fields
     let mut fields = ndarray::Array4::<f64>::zeros((
@@ -389,64 +420,115 @@ pub fn run_physics_simulation(
         grid.nz,
     ));
     
-    // Initialize temperature field
-    fields.index_axis_mut(ndarray::Axis(0), 1).fill(310.0); // 37°C
+    // Initialize temperature field with body temperature
+    fields.index_axis_mut(ndarray::Axis(0), 1).fill(validation_constants::BODY_TEMPERATURE_KELVIN);
     
-    // Create physics context
-    let mut context = PluginContext::new(0, time.num_steps(), 1e6);
+    Ok((grid, time, medium, source, recorder, plugin_manager, boundary, fields))
+}
+
+/// Run the main simulation loop
+fn run_simulation_loop(
+    time: &Time,
+    grid: &Grid,
+    medium: &HomogeneousMedium,
+    source: &Box<dyn Source>,
+    recorder: &mut Recorder,
+    plugin_manager: &mut PluginManager,
+    boundary: &mut PMLBoundary,
+    fields: &mut ndarray::Array4<f64>,
+) -> KwaversResult<()> {
+    use crate::physics::plugin::PluginContext;
     
     // Main simulation loop
     for step in 0..time.num_steps() {
         let t = step as f64 * time.dt;
-        context.step = step;
         
-        // Apply source
-        // Create source field array
-        let (nx, ny, nz) = grid.dimensions();
-        let mut source_field = ndarray::Array3::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let (x, y, z) = grid.coordinates(i, j, k);
-                    source_field[[i, j, k]] = source.get_source_term(t, x, y, z, &grid);
-                }
-            }
-        }
-        // Source term would be added directly to the fields if needed
+        // Apply source term
+        apply_source_term(source, grid, t, fields)?;
         
         // Apply physics using plugin manager
-        let plugin_context = PluginContext::new(step, time.n_steps, validation_constants::DEFAULT_PLUGIN_FREQUENCY);
+        let plugin_context = PluginContext::new(step, time.num_steps(), validation_constants::DEFAULT_PLUGIN_FREQUENCY);
         plugin_manager.update_all(
-            &mut fields,
-            &grid,
-            &medium,
+            fields,
+            grid,
+            medium,
             time.dt,
             t,
             &plugin_context,
         )?;
         
         // Apply boundary conditions
-        let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
-        boundary.apply_acoustic(&mut pressure_field, &grid, step)?;
-        fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
-        let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
-        boundary.apply_light(&mut light_field, &grid, step);
-        fields.index_axis_mut(ndarray::Axis(0), 1).assign(&light_field);
+        apply_boundary_conditions(boundary, fields, grid, step)?;
         
         // Record data
-        recorder.record(&fields, step, t);
+        recorder.record(fields, step, t);
         
         // Progress reporting
         if step % validation_constants::PROGRESS_REPORT_INTERVAL == 0 {
-            println!("Step {}/{} ({}%)", step, time.num_steps(), 
-                (step * 100) / time.num_steps());
+            report_progress(step, time.num_steps());
         }
     }
     
-    // Generate visualizations if enabled
+    Ok(())
+}
+
+/// Apply source term to the fields
+fn apply_source_term(
+    source: &Box<dyn Source>,
+    grid: &Grid,
+    t: f64,
+    fields: &mut ndarray::Array4<f64>,
+) -> KwaversResult<()> {
+    let (nx, ny, nz) = grid.dimensions();
+    let mut source_field = ndarray::Array3::zeros((nx, ny, nz));
+    
+    // Use iterators for better performance
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let (x, y, z) = grid.coordinates(i, j, k);
+                source_field[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
+            }
+        }
+    }
+    
+    // Add source to pressure field
+    fields.index_axis_mut(ndarray::Axis(0), 0)
+        .zip_mut_with(&source_field, |p, &s| *p += s);
+    
+    Ok(())
+}
+
+/// Apply boundary conditions to all fields
+fn apply_boundary_conditions(
+    boundary: &mut PMLBoundary,
+    fields: &mut ndarray::Array4<f64>,
+    grid: &Grid,
+    step: usize,
+) -> KwaversResult<()> {
+    // Apply to pressure field
+    let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
+    boundary.apply_acoustic(&mut pressure_field, grid, step)?;
+    fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+    
+    // Apply to light field
+    let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
+    boundary.apply_light(&mut light_field, grid, step);
+    fields.index_axis_mut(ndarray::Axis(0), 1).assign(&light_field);
+    
+    Ok(())
+}
+
+/// Report simulation progress
+fn report_progress(step: usize, total_steps: usize) {
+    let percentage = (step * 100) / total_steps;
+    println!("Step {}/{} ({}%)", step, total_steps, percentage);
+}
+
+/// Finalize simulation and report results
+fn finalize_simulation(recorder: &Recorder) -> KwaversResult<()> {
     println!("Physics simulation completed successfully!");
     println!("Results saved to: {}", recorder.filename);
-    
     Ok(())
 }
 
@@ -534,19 +616,28 @@ fn get_system_info() -> KwaversResult<HashMap<String, String>> {
     Ok(info)
 }
 
-/// Get CPU core count
+/// Get CPU core count, returning a default value on failure.
 fn get_cpu_cores() -> usize {
-    get_system_info().unwrap().get("cpu_cores").unwrap().parse::<usize>().unwrap()
+    get_system_info()
+        .ok()
+        .and_then(|info| info.get("cpu_cores").and_then(|s| s.parse().ok()))
+        .unwrap_or(1) // Default to 1 core on failure
 }
 
-/// Get available memory in GB
+/// Get available memory in GB, returning a default value on failure.
 fn get_available_memory_gb() -> f64 {
-    get_system_info().unwrap().get("memory_available_gb").unwrap().parse::<f64>().unwrap()
+    get_system_info()
+        .ok()
+        .and_then(|info| info.get("memory_available_gb").and_then(|s| s.parse().ok()))
+        .unwrap_or(1.0) // Default to 1.0 GB on failure (more reasonable than 0.0)
 }
 
-/// Get available disk space in GB for current directory
+/// Get available disk space in GB for current directory, returning a default value on failure.
 fn get_available_disk_space_gb() -> f64 {
-    get_system_info().unwrap().get("disk_space_gb").unwrap().parse::<f64>().unwrap()
+    get_system_info()
+        .ok()
+        .and_then(|info| info.get("disk_space_gb").and_then(|s| s.parse().ok()))
+        .unwrap_or(1.0) // Default to 1.0 GB on failure (more reasonable than 0.0)
 }
 
 #[cfg(test)]

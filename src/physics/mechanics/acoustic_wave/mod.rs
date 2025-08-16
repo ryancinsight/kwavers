@@ -4,11 +4,14 @@ pub mod nonlinear; // This will now refer to the new subdirectory
 // Re-export NonlinearWave from the new structure.
 pub use nonlinear::NonlinearWave;
 
-pub mod viscoelastic_wave;
-pub use viscoelastic_wave::ViscoelasticWave;
+pub mod westervelt_wave;
+pub use westervelt_wave::WesterveltWave;
 
 pub mod kuznetsov;
-pub use kuznetsov::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme};
+pub use kuznetsov::{KuznetsovWave, KuznetsovConfig};
+
+pub mod unified_solver;
+pub use unified_solver::{AcousticWaveSolver, AcousticSolverConfig, AcousticModelType};
 
 use crate::grid::Grid;
 use crate::medium::Medium;

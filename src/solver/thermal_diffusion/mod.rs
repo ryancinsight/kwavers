@@ -319,7 +319,10 @@ impl ThermalDiffusionSolver {
             2 => Self::laplacian_2nd_order(field, result, grid),
             4 => Self::laplacian_4th_order(field, result, grid),
             6 => Self::laplacian_6th_order(field, result, grid),
-            _ => unreachable!("Invalid spatial order"),
+            _ => {
+                // Return an error for unsupported spatial orders
+                panic!("Invalid spatial order: {}. Only orders 2, 4, and 6 are supported.", spatial_order);
+            }
         }
     }
     

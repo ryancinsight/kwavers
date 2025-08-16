@@ -195,7 +195,7 @@ impl NumericalValidator {
         
         // Kuznetsov dispersion test
         let kuznetsov_config = KuznetsovConfig::default();
-        let kuznetsov_solver = KuznetsovWave::new(&self.grid, kuznetsov_config)?;
+        let kuznetsov_solver = KuznetsovWave::new(kuznetsov_config, &self.grid)?;
         let kuznetsov_phase_error = self.compute_phase_error_kuznetsov(&kuznetsov_solver, k, omega, dt)?;
         
         // Compute numerical wavelength and group velocity

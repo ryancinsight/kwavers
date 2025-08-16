@@ -266,11 +266,11 @@ impl BenchmarkSuite {
         
         // Initialize
         let config = KuznetsovConfig {
-            enable_nonlinearity: true,
-            enable_diffusivity: true,
+            nonlinearity_coefficient: 5.0,  // Enable nonlinearity
+            acoustic_diffusivity: 4.5e-6,   // Enable diffusivity
             ..Default::default()
         };
-        let mut solver = KuznetsovWave::new(&grid, config)?;
+        let mut solver = KuznetsovWave::new(config, &grid)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create fields array (7 fields typical for acoustic simulation)

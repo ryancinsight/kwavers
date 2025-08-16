@@ -203,13 +203,16 @@ impl KWaveValidator {
     /// Test 2: PML absorption
     fn test_pml_absorption(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
         use crate::boundary::{CPMLBoundary, CPMLConfig};
+        use crate::constants::{acoustic, simulation};
         
         // Configure C-PML
         let pml_config = CPMLConfig::default();
-        let cpml = CPMLBoundary::new(pml_config, &self.grid)?;
+        let sound_speed = acoustic::SOUND_SPEED_REFERENCE;
+        let dt = simulation::TIME_STEP_DEFAULT;
+        let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
         
         // Create plane wave
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(acoustic::DENSITY_WATER, sound_speed, &self.grid, 0.0, 0.0);
         let mut pressure = self.grid.create_field();
         
         // Initialize plane wave traveling in +x direction
@@ -370,14 +373,14 @@ impl KWaveValidator {
         
         // Configure nonlinear solver
         let config = KuznetsovConfig {
-            enable_nonlinearity: true,
-            enable_diffusivity: false,
+            nonlinearity_coefficient: 5.0,  // Enable nonlinearity
+            acoustic_diffusivity: 0.0,      // Disable diffusivity
             nonlinearity_scaling: 1.0,
             spatial_order: 4,
             ..Default::default()
         };
         
-        let mut solver = KuznetsovWave::new(&self.grid, config)?;
+        let mut solver = KuznetsovWave::new(config, &self.grid)?;
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
         
         // High-amplitude sinusoidal source

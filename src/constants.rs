@@ -92,6 +92,18 @@ pub mod grid {
     
     /// Default buffer zone width for domain coupling
     pub const DEFAULT_BUFFER_WIDTH: usize = 4;
+    
+    /// Minimum grid points for stability
+    pub const MIN_GRID_POINTS: usize = 16;
+    
+    /// Default grid spacing [m]
+    pub const DEFAULT_GRID_SPACING: f64 = 1e-3;
+    
+    /// Minimum grid spacing for numerical stability [m]
+    pub const MIN_GRID_SPACING: f64 = 1e-6;
+    
+    /// Maximum grid spacing for accuracy [m]
+    pub const MAX_GRID_SPACING: f64 = 1e-2;
 }
 
 /// Stability and threshold constants
@@ -390,6 +402,21 @@ pub mod numerical {
     pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
     pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
     pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
+    
+    /// Default numerical tolerance
+    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
+    
+    /// Machine epsilon for f64
+    pub const EPSILON: f64 = f64::EPSILON;
+    
+    /// Default maximum iterations
+    pub const MAX_ITERATIONS: usize = 1000;
+    
+    /// Convergence tolerance for iterative methods
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
+    
+    /// Default relaxation parameter
+    pub const RELAXATION_PARAMETER: f64 = 0.5;
 }
 
 
@@ -534,4 +561,85 @@ pub mod adaptive_integration {
     
     /// Maximum velocity fraction of sound speed
     pub const MAX_VELOCITY_FRACTION: f64 = 0.9;
+}
+
+// Acoustic properties of common media
+pub mod acoustic {
+    /// Speed of sound in water at 20°C [m/s]
+    pub const SOUND_SPEED_WATER: f64 = 1482.0;
+    
+    /// Speed of sound in water at body temperature (37°C) [m/s]
+    pub const SOUND_SPEED_WATER_BODY_TEMP: f64 = 1540.0;
+    
+    /// Reference speed of sound for general calculations [m/s]
+    pub const SOUND_SPEED_REFERENCE: f64 = 1500.0;
+    
+    /// Density of water at 20°C [kg/m³]
+    pub const DENSITY_WATER: f64 = 998.0;
+    
+    /// Density of water at body temperature [kg/m³]
+    pub const DENSITY_WATER_BODY_TEMP: f64 = 993.0;
+    
+    /// Typical density of soft tissue [kg/m³]
+    pub const DENSITY_SOFT_TISSUE: f64 = 1050.0;
+    
+    /// Typical absorption coefficient for water [dB/cm/MHz]
+    pub const ABSORPTION_WATER: f64 = 0.002;
+    
+    /// Typical absorption coefficient for soft tissue [dB/cm/MHz]
+    pub const ABSORPTION_SOFT_TISSUE: f64 = 0.5;
+}
+
+// Numerical simulation parameters
+pub mod simulation {
+    /// Default CFL factor for stability
+    pub const CFL_FACTOR_DEFAULT: f64 = 0.3;
+    
+    /// Conservative CFL factor for nonlinear simulations
+    pub const CFL_FACTOR_CONSERVATIVE: f64 = 0.2;
+    
+    /// Maximum safe CFL factor
+    pub const CFL_FACTOR_MAX: f64 = 1.0;
+    
+    /// Default time step for acoustic simulations [s]
+    pub const TIME_STEP_DEFAULT: f64 = 1e-7;
+    
+    /// Minimum points per wavelength for accurate simulation
+    pub const POINTS_PER_WAVELENGTH_MIN: usize = 5;
+    
+    /// Recommended points per wavelength
+    pub const POINTS_PER_WAVELENGTH_DEFAULT: usize = 10;
+    
+    /// Maximum pressure for biological tissues [Pa]
+    pub const PRESSURE_MAX_TISSUE: f64 = 100e6;
+    
+    /// Typical ambient pressure [Pa]
+    pub const PRESSURE_AMBIENT: f64 = 101325.0;
+}
+
+// Nonlinear acoustics parameters
+pub mod nonlinear {
+    /// Nonlinearity parameter B/A for water
+    pub const B_OVER_A_WATER: f64 = 5.0;
+    
+    /// Nonlinearity parameter B/A for soft tissue (average)
+    pub const B_OVER_A_SOFT_TISSUE: f64 = 7.0;
+    
+    /// Acoustic diffusivity for water at 20°C [m²/s]
+    pub const DIFFUSIVITY_WATER: f64 = 4.5e-6;
+}
+
+// Test and validation parameters
+pub mod test {
+    /// Default test grid size
+    pub const TEST_GRID_SIZE: usize = 32;
+    
+    /// Default test frequency [Hz]
+    pub const TEST_FREQUENCY: f64 = 1e6;
+    
+    /// Default test amplitude [Pa]
+    pub const TEST_AMPLITUDE: f64 = 1e6;
+    
+    /// Test tolerance for floating point comparisons
+    pub const TEST_TOLERANCE: f64 = 1e-6;
 }

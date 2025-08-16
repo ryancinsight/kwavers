@@ -6,8 +6,7 @@ pub mod elastic_wave;
 pub mod streaming;
 pub mod viscosity;
 
-pub use acoustic_wave::NonlinearWave;
-pub use acoustic_wave::{KuznetsovWave, KuznetsovConfig, TimeIntegrationScheme};
+pub use acoustic_wave::{KuznetsovWave, KuznetsovConfig};
 pub use cavitation::CavitationModel;
 pub use elastic_wave::ElasticWave;
 pub use streaming::StreamingModel;
