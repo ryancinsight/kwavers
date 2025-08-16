@@ -267,7 +267,15 @@ impl WENOLimiter {
             3 => self.weno3_limit(&mut limited, shock_indicator)?,
             5 => self.weno5_limit(&mut limited, shock_indicator)?,
             7 => self.weno7_limit(&mut limited, shock_indicator)?,
-            _ => unreachable!(),
+            _ => {
+                return Err(crate::error::KwaversError::Validation(
+                    crate::error::ValidationError::FieldValidation {
+                        field: "weno_order".to_string(),
+                        value: self.order.to_string(),
+                        constraint: "must be 3, 5, or 7".to_string(),
+                    }
+                ));
+            }
         }
         
         Ok(limited)
@@ -361,7 +369,10 @@ impl WENOLimiter {
                 0 => self.weno5_limit_x(field, shock_indicator, nx, ny, nz, epsilon)?,
                 1 => self.weno5_limit_y(field, shock_indicator, nx, ny, nz, epsilon)?,
                 2 => self.weno5_limit_z(field, shock_indicator, nx, ny, nz, epsilon)?,
-                _ => unreachable!(),
+                _ => {
+                    // This is handled by the loop bounds, but we add this for completeness
+                    continue;
+                }
             }
         }
         

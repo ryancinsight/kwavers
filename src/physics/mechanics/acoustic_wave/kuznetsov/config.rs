@@ -204,7 +204,7 @@ impl KuznetsovConfig {
         // Check k-space correction order
         if self.use_k_space_correction && 
            (self.k_space_correction_order != 2 && self.k_space_correction_order != 4) {
-            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "k_space_correction_order".to_string(),
                 value: self.k_space_correction_order.to_string(),
                 constraint: "must be 2 or 4".to_string(),
@@ -213,7 +213,7 @@ impl KuznetsovConfig {
         
         // Check spatial order
         if self.spatial_order != 2 && self.spatial_order != 4 && self.spatial_order != 6 {
-            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),

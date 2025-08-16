@@ -318,7 +318,11 @@ impl HeterogeneousTissueMedium {
                     0 => i as f64 * grid.dx,
                     1 => j as f64 * grid.dy,
                     2 => k as f64 * grid.dz,
-                    _ => unreachable!(),
+                    _ => {
+                        // This should never happen as dir_idx is constrained to 0, 1, or 2
+                        // but we handle it gracefully by returning early
+                        return;
+                    }
                 };
 
                 if pos >= current_pos && pos < end_pos {

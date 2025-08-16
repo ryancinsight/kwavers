@@ -535,3 +535,69 @@ pub mod adaptive_integration {
     /// Maximum velocity fraction of sound speed
     pub const MAX_VELOCITY_FRACTION: f64 = 0.9;
 }
+
+// Acoustic properties of common media
+pub mod acoustic {
+    /// Speed of sound in water at 20°C [m/s]
+    pub const SOUND_SPEED_WATER: f64 = 1482.0;
+    
+    /// Speed of sound in water at body temperature (37°C) [m/s]
+    pub const SOUND_SPEED_WATER_BODY_TEMP: f64 = 1540.0;
+    
+    /// Reference speed of sound for general calculations [m/s]
+    pub const SOUND_SPEED_REFERENCE: f64 = 1500.0;
+    
+    /// Density of water at 20°C [kg/m³]
+    pub const DENSITY_WATER: f64 = 998.0;
+    
+    /// Density of water at body temperature [kg/m³]
+    pub const DENSITY_WATER_BODY_TEMP: f64 = 993.0;
+    
+    /// Typical density of soft tissue [kg/m³]
+    pub const DENSITY_SOFT_TISSUE: f64 = 1050.0;
+    
+    /// Typical absorption coefficient for water [dB/cm/MHz]
+    pub const ABSORPTION_WATER: f64 = 0.002;
+    
+    /// Typical absorption coefficient for soft tissue [dB/cm/MHz]
+    pub const ABSORPTION_SOFT_TISSUE: f64 = 0.5;
+}
+
+// Numerical simulation parameters
+pub mod simulation {
+    /// Default CFL factor for stability
+    pub const CFL_FACTOR_DEFAULT: f64 = 0.3;
+    
+    /// Conservative CFL factor for nonlinear simulations
+    pub const CFL_FACTOR_CONSERVATIVE: f64 = 0.2;
+    
+    /// Maximum safe CFL factor
+    pub const CFL_FACTOR_MAX: f64 = 1.0;
+    
+    /// Default time step for acoustic simulations [s]
+    pub const TIME_STEP_DEFAULT: f64 = 1e-7;
+    
+    /// Minimum points per wavelength for accurate simulation
+    pub const POINTS_PER_WAVELENGTH_MIN: usize = 5;
+    
+    /// Recommended points per wavelength
+    pub const POINTS_PER_WAVELENGTH_DEFAULT: usize = 10;
+    
+    /// Maximum pressure for biological tissues [Pa]
+    pub const PRESSURE_MAX_TISSUE: f64 = 100e6;
+    
+    /// Typical ambient pressure [Pa]
+    pub const PRESSURE_AMBIENT: f64 = 101325.0;
+}
+
+// Nonlinear acoustics parameters
+pub mod nonlinear {
+    /// Nonlinearity parameter B/A for water
+    pub const B_OVER_A_WATER: f64 = 5.0;
+    
+    /// Nonlinearity parameter B/A for soft tissue (average)
+    pub const B_OVER_A_SOFT_TISSUE: f64 = 7.0;
+    
+    /// Acoustic diffusivity for water at 20°C [m²/s]
+    pub const DIFFUSIVITY_WATER: f64 = 4.5e-6;
+}

@@ -129,29 +129,18 @@ impl Source for LinearArray {
         self.signal.amplitude(t)
     }
     
-    /// Legacy method - DEPRECATED for performance reasons
-    /// Use create_mask() and amplitude() for better performance
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let spacing = self.element_spacing();
-        let tolerance = grid.dx * 0.5;
-        (0..self.num_elements)
-            .into_par_iter()
-            .map(|i| {
-                let x_elem = i as f64 * spacing;
-                if (x - x_elem).abs() < tolerance
-                    && (y - self.y_pos).abs() < tolerance
-                    && (z - self.z_pos).abs() < tolerance
-                {
-                    let time_delay = self.time_delays[i];
-                    // Apply time delay by sampling signal at delayed time
-                    let temporal_amplitude = self.signal.amplitude(t - time_delay);
-                    let spatial_weight = self.apodization_weights[i];
-                    temporal_amplitude * spatial_weight
-                } else {
-                    0.0
-                }
-            })
-            .sum()
+        // Use the create_mask method for efficient computation
+        if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {
+            let mask = self.create_mask(grid);
+            if mask[[i, j, k]] > 0.0 {
+                mask[[i, j, k]] * self.amplitude(t)
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
