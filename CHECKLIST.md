@@ -1,5 +1,37 @@
 # Kwavers Development Checklist
 
+## ✅ **STAGE 17 GRID METHOD CORRECTION v2.39.0 COMPLETE** - January 2025
+
+### **📋 Grid Span vs Physical Dimensions Fix - Version 2.39.0**
+**Objective**: Fix incorrect grid_span implementation  
+**Status**: ✅ **COMPLETE** - Methods now correctly distinguished  
+**Build Status**: ✅ **SUCCESS** - All code compiles  
+**Correctness**: ✅ **FIXED** - Semantic distinction restored  
+
+### **🔍 Stage 17 Achievements**
+
+#### **Issue Identified**
+- [x] **Duplicate Implementation**: Both methods returned nx*dx
+- [x] **Semantic Error**: grid_span should be (nx-1)*dx
+- [x] **Confusion Risk**: Made methods indistinguishable aliases
+
+#### **Correction Applied**
+- [x] **physical_dimensions()**: Returns nx*dx (total domain size)
+- [x] **grid_span()**: Returns (nx-1)*dx (first to last point distance)
+- [x] **Documentation**: Clear comments explain the distinction
+- [x] **Edge Cases**: Handles single-point grids correctly (span=0)
+
+#### **Semantic Clarity**
+- [x] **Physical Dimensions**: Total physical size of computational domain
+- [x] **Grid Span**: Distance between first and last grid points
+- [x] **Example**: 10 points, 0.1 spacing → dimensions=1.0, span=0.9
+- [x] **Legacy Method**: domain_size() now correctly uses physical_dimensions()
+
+#### **Test Coverage**
+- [x] **Unit Test**: Added test_grid_span_vs_physical_dimensions
+- [x] **Edge Cases**: Single-point grid returns span=0
+- [x] **Verification**: Methods return different values as expected
+
 ## ✅ **STAGE 16 BOUNDARY PERFORMANCE OPTIMIZATION v2.38.0 COMPLETE** - January 2025
 
 ### **📋 Boundary Computation Optimization - Version 2.38.0**

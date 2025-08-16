@@ -105,23 +105,27 @@ impl Grid {
     }
 
     /// Returns the total physical dimensions (meters) of the grid.
+    /// This represents the total physical size of the computational domain.
+    /// For a grid with nx points and spacing dx, the physical dimension is nx * dx.
     pub fn physical_dimensions(&self) -> (f64, f64, f64) {
         (self.dx * self.nx as f64, 
          self.dy * self.ny as f64, 
          self.dz * self.nz as f64)
     }
     
-    /// Returns the total span of the grid in each dimension (meters).
+    /// Returns the span between the first and last grid points in each dimension (meters).
+    /// This represents the distance from the first grid point to the last grid point.
+    /// For a grid with nx points and spacing dx, the span is (nx - 1) * dx.
     pub fn grid_span(&self) -> (f64, f64, f64) {
-        (self.dx * self.nx as f64, 
-         self.dy * self.ny as f64, 
-         self.dz * self.nz as f64)
+        (self.dx * (self.nx.saturating_sub(1)) as f64, 
+         self.dy * (self.ny.saturating_sub(1)) as f64, 
+         self.dz * (self.nz.saturating_sub(1)) as f64)
     }
     
-    /// Legacy method - use grid_span() or physical_dimensions() for clarity
-    #[deprecated(since = "2.24.0", note = "Use grid_span() or physical_dimensions() for clarity")]
+    /// Legacy method - use physical_dimensions() for total domain size
+    #[deprecated(since = "2.24.0", note = "Use physical_dimensions() for total domain size")]
     pub fn domain_size(&self) -> (f64, f64, f64) {
-        self.grid_span()
+        self.physical_dimensions()
     }
 
     /// Generates 1D arrays of coordinates (meters).
@@ -532,5 +536,41 @@ mod tests {
         
         // Should be the same
         assert!((dt_from_medium - dt_direct).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_grid_span_vs_physical_dimensions() {
+        // Test the distinction between grid_span and physical_dimensions
+        let grid = Grid::new(10, 20, 30, 0.1, 0.2, 0.3);
+        
+        // physical_dimensions should be nx*dx, ny*dy, nz*dz
+        let (phys_x, phys_y, phys_z) = grid.physical_dimensions();
+        assert_eq!(phys_x, 10.0 * 0.1); // 1.0
+        assert_eq!(phys_y, 20.0 * 0.2); // 4.0
+        assert_eq!(phys_z, 30.0 * 0.3); // 9.0
+        
+        // grid_span should be (nx-1)*dx, (ny-1)*dy, (nz-1)*dz
+        let (span_x, span_y, span_z) = grid.grid_span();
+        assert_eq!(span_x, 9.0 * 0.1);  // 0.9
+        assert_eq!(span_y, 19.0 * 0.2); // 3.8
+        assert_eq!(span_z, 29.0 * 0.3); // 8.7
+        
+        // They should be different
+        assert_ne!(phys_x, span_x);
+        assert_ne!(phys_y, span_y);
+        assert_ne!(phys_z, span_z);
+        
+        // Edge case: single point grid
+        let single_grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0);
+        let (single_phys_x, single_phys_y, single_phys_z) = single_grid.physical_dimensions();
+        let (single_span_x, single_span_y, single_span_z) = single_grid.grid_span();
+        
+        // For a single point, physical dimension is dx but span is 0
+        assert_eq!(single_phys_x, 1.0);
+        assert_eq!(single_phys_y, 1.0);
+        assert_eq!(single_phys_z, 1.0);
+        assert_eq!(single_span_x, 0.0);
+        assert_eq!(single_span_y, 0.0);
+        assert_eq!(single_span_z, 0.0);
     }
 }
