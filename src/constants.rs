@@ -77,6 +77,15 @@ pub mod physics {
     
     /// Minimal nonlinearity coefficient for testing linear approximation
     pub const NEAR_LINEAR_NONLINEARITY: f64 = 1e-10;
+    
+    /// Offset for nonlinearity coefficient β = 1 + B/2A
+    pub const NONLINEARITY_COEFFICIENT_OFFSET: f64 = 1.0;
+    
+    /// Divisor for B/A term in nonlinearity coefficient
+    pub const B_OVER_A_DIVISOR: f64 = 2.0;
+    
+    /// Reference frequency for absorption coefficient (Hz)
+    pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1_000_000.0;
 }
 
 /// Grid and discretization constants
