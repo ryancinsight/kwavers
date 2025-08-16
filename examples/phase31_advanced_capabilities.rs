@@ -12,10 +12,11 @@ use kwavers::{
     medium::homogeneous::HomogeneousMedium,
     solver::{
         reconstruction::seismic::{FullWaveformInversion, ReverseTimeMigration, SeismicImagingConfig},
-        Solver,
+        // Removed Solver import as it doesn't exist
     },
     physics::mechanics::acoustic_wave::{KuznetsovWave, KuznetsovConfig, kuznetsov::AcousticEquationMode},
-    source::{Source, gaussian::GaussianSource},
+    physics::traits::AcousticWaveModel, // Added trait import
+    source::Source,  // Removed gaussian::GaussianSource as it doesn't exist
     physics::plugin::acoustic_simulation_plugins::{
         TransducerFieldCalculatorPlugin, TransducerGeometry
     },
@@ -32,7 +33,7 @@ fn main() -> KwaversResult<()> {
     
     // Create simulation grid
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, grid, 0.5, 1.0);
+    let medium = HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.5, 1.0);
     
     // Demo 1: KZK Equation Mode
     println!("\n📐 Demo 1: KZK Equation Mode (Parabolic Approximation)");
@@ -65,12 +66,16 @@ fn demo_kzk_equation(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<(
     // Create KZK solver with parabolic approximation
     let mut kzk_solver = KuznetsovWave::new(grid, kzk_config)?;
     
-    // Create focused source
-    let source = GaussianSource::new(
-        [grid.nx as f64 * grid.dx / 2.0, grid.ny as f64 * grid.dy / 2.0, 0.0],
-        2e-3, // 2mm beam width
-        1e6,  // 1 MHz frequency
-        1e5,  // 100 kPa amplitude
+    // Create focused source using PointSource
+    use kwavers::source::PointSource;
+    use kwavers::signal::SineWave;
+    use std::sync::Arc;
+    let signal = SineWave::new(1e6, 1e5, 0.0); // 1 MHz, 100 kPa, 0 phase
+    let source = PointSource::new(
+        (grid.nx as f64 * grid.dx / 2.0,
+         grid.ny as f64 * grid.dy / 2.0,
+         0.0),
+        Arc::new(signal)
     );
     
     // Initialize fields
@@ -99,21 +104,24 @@ fn demo_kzk_equation(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<(
     println!("  📊 Propagating KZK equation for {} time steps...", num_steps);
     
     for step in 0..num_steps {
+        // Clone pressure field before mutable borrow
+        let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Use the AcousticWaveModel trait method
         kzk_solver.update_wave(
-            &mut fields.view_mut(),
-            &fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-            &*source,
+            &mut fields,
+            &prev_pressure,
+            &source as &dyn Source,
             grid,
             medium,
             dt,
             step as f64 * dt,
         );
         
-        if step % 20 == 0 {
-            let max_pressure = fields.index_axis(ndarray::Axis(0), 0)
-                .iter()
-                .fold(0.0f64, |a, &b| a.max(b.abs()));
-            println!("    Step {}: Max pressure = {:.2e} Pa", step, max_pressure);
+        if step % 10 == 0 {
+            println!("    Step {}: max pressure = {:.2e} Pa", 
+                step, 
+                fields.index_axis(ndarray::Axis(0), 0).iter().map(|&p| p.abs()).fold(0.0, f64::max));
         }
     }
     
@@ -209,7 +217,7 @@ fn demo_seismic_imaging(grid: &Grid) -> KwaversResult<()> {
     println!("  📸 Running Reverse Time Migration (RTM)...");
     
     // Run RTM
-    let rtm = ReverseTimeMigration::new(seismic_config);
+    let mut rtm = ReverseTimeMigration::new(seismic_config);
     let migrated_image = rtm.migrate(
         &observed_data,
         &source_positions,
@@ -279,7 +287,7 @@ fn demo_focus_transducers(grid: &Grid, medium: &HomogeneousMedium) -> KwaversRes
     println!("    - Beamforming: Ready for arbitrary steering and focusing");
     
     // Calculate a simple beam pattern metric
-    let near_field_length = element_width.powi(2) / (4.0 * (medium.sound_speed(0.0, 0.0, 0.0, grid) / frequency));
+    let near_field_length = element_width.powi(2) / (4.0 * (medium.sound_speed / frequency));
     println!("    - Near field length: {:.1} mm", near_field_length * 1e3);
     
     Ok(())
@@ -289,12 +297,18 @@ fn demo_focus_transducers(grid: &Grid, medium: &HomogeneousMedium) -> KwaversRes
 fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResult<()> {
     println!("  🔬 Comparing Full Kuznetsov vs KZK parabolic approximation...");
     
-    // Create identical initial conditions
-    let source = GaussianSource::new(
-        [grid.nx as f64 * grid.dx / 2.0, grid.ny as f64 * grid.dy / 2.0, 0.0],
-        1e-3, // 1mm beam width
-        2e6,  // 2 MHz frequency
-        5e5,  // 500 kPa amplitude (nonlinear regime)
+    // Import necessary types
+    use kwavers::source::PointSource;
+    use kwavers::signal::SineWave;
+    use std::sync::Arc;
+    
+    // Create identical initial conditions using PointSource
+    let signal = SineWave::new(2e6, 5e5, 0.0); // 2 MHz, 500 kPa, 0 phase
+    let source = PointSource::new(
+        (grid.nx as f64 * grid.dx / 2.0,
+         grid.ny as f64 * grid.dy / 2.0,
+         0.0),
+        Arc::new(signal)
     );
     
     // Full Kuznetsov configuration
@@ -334,11 +348,16 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
     
     // Run both solvers
     for step in 0..num_steps {
+        // Clone pressure fields before mutable borrows
+        let full_prev_pressure = full_fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let kzk_prev_pressure = kzk_fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        
+        // Use the AcousticWaveModel trait method
         // Full Kuznetsov
         full_solver.update_wave(
-            &mut full_fields.view_mut(),
-            &full_fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-            &*source,
+            &mut full_fields,
+            &full_prev_pressure,
+            &source as &dyn Source,
             grid,
             medium,
             dt,
@@ -347,9 +366,9 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
         
         // KZK paraxial
         kzk_solver.update_wave(
-            &mut kzk_fields.view_mut(),
-            &kzk_fields.index_axis(ndarray::Axis(0), 0).to_owned(),
-            &*source,
+            &mut kzk_fields,
+            &kzk_prev_pressure,
+            &source as &dyn Source,
             grid,
             medium,
             dt,
@@ -378,7 +397,7 @@ fn demo_kuznetsov_vs_kzk(grid: &Grid, medium: &HomogeneousMedium) -> KwaversResu
         kzk_energy += kzk_val * kzk_val;
     }
     
-    let correlation = correlation_sum / (full_energy * kzk_energy).sqrt();
+    let correlation = correlation_sum / ((full_energy * kzk_energy) as f64).sqrt();
     
     println!("  📈 Comparison Results:");
     println!("    - Full Kuznetsov max pressure: {:.2e} Pa", full_max);

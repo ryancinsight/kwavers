@@ -3,10 +3,13 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::KwaversResult;
 use crate::constants::{stability, performance, cfl};
+use crate::utils::{fft_3d, ifft_3d};
+use crate::solver::PRESSURE_IDX;
 
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{Array3, Array4, ArrayView3, Zip, Axis};
 use log::{debug, warn, info};
 use std::f64;
+use rustfft::num_complex::Complex;
 
 /// Represents an improved nonlinear wave model solver.
 ///
@@ -14,6 +17,34 @@ use std::f64;
 /// with nonlinear effects, focusing on optimized efficiency and physical accuracy.
 /// It includes settings for performance monitoring, physical model characteristics,
 /// precomputed values for faster calculations, and stability control mechanisms.
+///
+/// # Heterogeneous Media Limitations
+///
+/// **IMPORTANT**: This implementation uses the Pseudo-Spectral Time Domain (PSTD) method,
+/// which has fundamental limitations when applied to heterogeneous media:
+///
+/// - The k-space correction factor `sinc(c*k*dt/2)` assumes a constant sound speed
+/// - For heterogeneous media, this correction becomes position-dependent
+/// - The current implementation uses the maximum sound speed for stability
+/// - This approach maintains numerical stability but introduces phase errors
+///
+/// ## Recommended Alternatives for Heterogeneous Media:
+///
+/// 1. **Finite Difference Time Domain (FDTD)**: Naturally handles spatial variations
+/// 2. **Split-Step Fourier Method**: Alternates between spatial and spectral domains
+/// 3. **k-Wave Style Methods**: Use heterogeneous k-space corrections
+/// 4. **Hybrid Methods**: Combine PSTD in homogeneous regions with FDTD in heterogeneous regions
+///
+/// ## Current Mitigation Strategy:
+///
+/// The solver uses `max_sound_speed` for the k-space correction, which:
+/// - Ensures numerical stability across the entire domain
+/// - Prevents phase velocity exceeding physical limits
+/// - May over-correct in regions where `c < c_max`, causing phase lag
+/// - Provides conservative but stable results
+///
+/// For weakly heterogeneous media (variations < 10%), the errors are typically acceptable.
+/// For strongly heterogeneous media, consider using alternative methods.
 #[derive(Debug, Clone)]
 pub struct NonlinearWave {
     // Performance metrics
@@ -77,13 +108,40 @@ pub struct NonlinearWave {
 
 impl NonlinearWave {
     /// Compute linear propagation step using FFT
+    /// 
+    /// IMPORTANT: This PSTD implementation assumes a nearly homogeneous medium.
+    /// For strongly heterogeneous media, the k-space correction factor becomes
+    /// position-dependent and cannot be accurately applied as a simple multiplication
+    /// in k-space. The current implementation uses the maximum sound speed as a
+    /// conservative approximation, which maintains stability but may introduce
+    /// phase errors in heterogeneous regions.
+    /// 
+    /// For accurate heterogeneous media simulation, consider using:
+    /// - Finite difference methods (FDTD)
+    /// - Split-step Fourier methods with spatial correction
+    /// - k-space methods with heterogeneous correction (k-Wave style)
     fn compute_linear_step(&mut self, fields: &Array4<f64>, grid: &Grid, medium: &dyn Medium, dt: f64) -> Array3<f64> {
         let start_fft = Instant::now();
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
         let p_fft = fft_3d(fields, PRESSURE_IDX, grid);
         let k2_values = self.k_squared.as_ref().expect("k_squared should be initialized in new()");
-        let kspace_corr_factor = grid.kspace_correction(medium.sound_speed(0.0, 0.0, 0.0, grid), dt);
+        
+        // Use maximum sound speed for k-space correction to ensure stability
+        // This is a conservative choice that prevents instability but may introduce
+        // phase errors in regions where c < c_max
+        let c_eff = self.max_sound_speed;
+        let kspace_corr_factor = grid.kspace_correction(c_eff, dt);
+        
+        // Log warning if medium is significantly heterogeneous
+        if !medium.is_homogeneous() {
+            static WARNED: std::sync::Once = std::sync::Once::new();
+            WARNED.call_once(|| {
+                warn!("PSTD method is being used with heterogeneous medium. \
+                      Phase accuracy may be reduced. Consider using FDTD for \
+                      strongly heterogeneous media.");
+            });
+        }
         
         let mut p_linear_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
 
@@ -96,12 +154,16 @@ impl NonlinearWave {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+                // Get local medium properties
+                let c_local = medium.sound_speed(x, y, z, grid).max(1e-9);
                 let mu = medium.viscosity(x, y, z, grid);
                 let rho = medium.density(x, y, z, grid).max(1e-9);
 
                 let k_val = k2_values[[i, j, k]].sqrt();
-                let phase = self.calculate_phase_factor(k_val, c, dt);
+                
+                // Use effective sound speed for phase calculation
+                // This maintains consistency with the k-space correction
+                let phase = self.calculate_phase_factor(k_val, c_eff, dt);
 
                 let viscous_damping_arg = -mu * k_val.powi(2) * dt / rho;
                 let viscous_damping = if viscous_damping_arg.is_finite() { 
@@ -110,9 +172,10 @@ impl NonlinearWave {
                     1.0 
                 };
 
-                // Apply absorption: exp(-alpha * c * dt) for spatial absorption
+                // Apply absorption using local sound speed
+                // This is still approximately correct for weak heterogeneity
                 let alpha = medium.absorption_coefficient(x, y, z, grid, self.source_frequency);
-                let absorption_damping_arg = -alpha * c * dt;
+                let absorption_damping_arg = -alpha * c_local * dt;
                 let absorption_damping = if absorption_damping_arg.is_finite() { 
                     absorption_damping_arg.exp() 
                 } else { 
@@ -293,7 +356,54 @@ impl NonlinearWave {
         debug!("Updated cached maximum sound speed: {:.2} m/s", self.max_sound_speed);
     }
 
-
+    /// Quantify the heterogeneity of the medium
+    /// 
+    /// Returns the coefficient of variation (std_dev / mean) of the sound speed.
+    /// Values close to 0 indicate homogeneous media, while larger values indicate
+    /// increasing heterogeneity.
+    /// 
+    /// # Guidelines:
+    /// - < 0.05: Nearly homogeneous, PSTD is accurate
+    /// - 0.05-0.15: Weakly heterogeneous, PSTD has acceptable errors
+    /// - 0.15-0.30: Moderately heterogeneous, consider alternative methods
+    /// - > 0.30: Strongly heterogeneous, PSTD not recommended
+    pub fn quantify_heterogeneity(medium: &dyn Medium, grid: &Grid) -> f64 {
+        let mut sum = 0.0;
+        let mut sum_sq = 0.0;
+        let mut count = 0;
+        
+        // Sample the medium at regular intervals
+        let sample_step = (grid.nx.min(grid.ny).min(grid.nz) / 10).max(1);
+        
+        for i in (0..grid.nx).step_by(sample_step) {
+            for j in (0..grid.ny).step_by(sample_step) {
+                for k in (0..grid.nz).step_by(sample_step) {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let c = medium.sound_speed(x, y, z, grid);
+                    sum += c;
+                    sum_sq += c * c;
+                    count += 1;
+                }
+            }
+        }
+        
+        if count == 0 {
+            return 0.0;
+        }
+        
+        let mean = sum / count as f64;
+        let variance = (sum_sq / count as f64) - mean * mean;
+        let std_dev = variance.sqrt();
+        
+        // Return coefficient of variation
+        if mean > 0.0 {
+            std_dev / mean
+        } else {
+            0.0
+        }
+    }
 
     /// Update source frequency for frequency-dependent calculations
     pub fn set_source_frequency(&mut self, frequency: f64) {
@@ -324,6 +434,24 @@ impl NonlinearWave {
         // Cache maximum sound speed for efficient stability checks
         let max_sound_speed = Self::compute_max_sound_speed(medium, grid);
         debug!("Cached maximum sound speed: {:.2} m/s", max_sound_speed);
+        
+        // Check medium heterogeneity and warn if significant
+        let heterogeneity = Self::quantify_heterogeneity(medium, grid);
+        if heterogeneity > 0.15 {
+            warn!("Medium heterogeneity coefficient: {:.3}. \
+                  PSTD accuracy may be reduced for values > 0.15. \
+                  Consider using FDTD or hybrid methods for strongly heterogeneous media.", 
+                  heterogeneity);
+        } else if heterogeneity > 0.05 {
+            info!("Medium heterogeneity coefficient: {:.3}. \
+                  Weakly heterogeneous medium detected. PSTD will use conservative \
+                  k-space correction based on maximum sound speed.", 
+                  heterogeneity);
+        } else {
+            debug!("Medium heterogeneity coefficient: {:.3}. \
+                   Nearly homogeneous medium, PSTD is well-suited.", 
+                   heterogeneity);
+        }
         
         // Determine optimal chunk size based on grid dimensions
         let total_points = grid.nx * grid.ny * grid.nz;
@@ -693,6 +821,10 @@ impl NonlinearWave {
     }
     
     /// Compute boundary nonlinear terms for edge/corner points
+    /// 
+    /// This optimized implementation iterates only over boundary faces,
+    /// avoiding unnecessary checks for interior points. For a 100x100x100 grid,
+    /// this reduces iterations from 1,000,000 to ~58,800 (>16x speedup).
     fn compute_boundary_nonlinear_terms(
         &self,
         nonlinear_term: &mut Array3<f64>,
@@ -705,35 +837,59 @@ impl NonlinearWave {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
         
-        // Process boundary points directly without collecting
-        for i in 0..nx {
-            for j in 0..ny {
+        // Helper closure to process a single boundary point
+        let mut process_point = |i: usize, j: usize, k: usize| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            
+            let rho = medium.density(x, y, z, grid).max(1e-9);
+            let c = medium.sound_speed(x, y, z, grid).max(1e-9);
+            let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
+            let gradient_scale = dt / (2.0 * rho * c * c);
+            
+            let p_val_current = pressure_current[[i, j, k]];
+            let p_prev_val = pressure_prev[[i, j, k]];
+            let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
+            let dp_dt_limited = if dp_dt.is_finite() {
+                dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
+            } else { 0.0 };
+            let beta = b_a / (rho * c * c);
+            
+            nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+        };
+
+        // Process X faces (i = 0 and i = nx-1)
+        // These faces contribute 2 * ny * nz points
+        for j in 0..ny {
+            for k in 0..nz {
+                process_point(0, j, k);
+                if nx > 1 {
+                    process_point(nx - 1, j, k);
+                }
+            }
+        }
+
+        // Process Y faces (j = 0 and j = ny-1)
+        // Skip edges already processed by X faces
+        // These faces contribute 2 * (nx-2) * nz points
+        if ny > 1 {
+            for i in 1..nx.saturating_sub(1) {
                 for k in 0..nz {
-                    // Skip internal points
-                    if i > 0 && i < nx-1 && 
-                       j > 0 && j < ny-1 && 
-                       k > 0 && k < nz-1 {
-                        continue;
-                    }
-                    
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    
-                    let rho = medium.density(x, y, z, grid).max(1e-9);
-                    let c = medium.sound_speed(x, y, z, grid).max(1e-9);
-                    let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                    let gradient_scale = dt / (2.0 * rho * c * c);
-                    
-                    let p_val_current = pressure_current[[i, j, k]];
-                    let p_prev_val = pressure_prev[[i, j, k]];
-                    let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
-                    let dp_dt_limited = if dp_dt.is_finite() {
-                        dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
-                    } else { 0.0 };
-                    let beta = b_a / (rho * c * c);
-                    
-                    nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+                    process_point(i, 0, k);
+                    process_point(i, ny - 1, k);
+                }
+            }
+        }
+
+        // Process Z faces (k = 0 and k = nz-1)
+        // Skip edges already processed by X and Y faces
+        // These faces contribute 2 * (nx-2) * (ny-2) points
+        if nz > 1 {
+            for i in 1..nx.saturating_sub(1) {
+                for j in 1..ny.saturating_sub(1) {
+                    process_point(i, j, 0);
+                    process_point(i, j, nz - 1);
                 }
             }
         }
@@ -743,11 +899,7 @@ impl NonlinearWave {
 // Move these imports before the test module
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::solver::PRESSURE_IDX;
-use crate::utils::{fft_3d, ifft_3d};
 use log::{trace};
-use ndarray::{Array4, Axis};
-use num_complex::Complex;
 use std::time::Instant;
 
 /// Represents the configuration for multi-frequency simulation

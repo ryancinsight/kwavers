@@ -7,11 +7,11 @@
 //! - Light emission mechanisms
 
 use kwavers::{
-    Grid, Time, HomogeneousMedium, 
-    Source, Signal, SineWave,
-    Solver, Recorder,
-    save_pressure_data, save_light_data, generate_summary,
-    KwaversResult, KwaversError,
+    Grid, time::Time, medium::homogeneous::HomogeneousMedium, 
+    source::Source, signal::Signal, signal::SineSignal,
+    recorder::Recorder,
+    io::{save_pressure_data, save_light_data, generate_summary},
+    KwaversResult, error::KwaversError,
     // physics::{
     //     composable::{
     //         PhysicsPipeline, 

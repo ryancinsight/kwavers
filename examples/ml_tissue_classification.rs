@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 /// Generate synthetic acoustic data for demonstration
 fn generate_synthetic_acoustic_data(grid: &Grid) -> Array3<f64> {
-    let mut data = grid.zeros_array();
+    let mut data = grid.create_field();
     let mut rng = thread_rng();
     
     // Create three distinct regions with different acoustic properties

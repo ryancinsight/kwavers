@@ -162,9 +162,13 @@ impl HeterogeneousTissueMedium {
     pub fn set_tissue_in_region(&mut self, region: &TissueRegion, grid: &Grid) -> KwaversResult<()> {
         region.validate()?;
         
-        let (i_min, i_max) = (grid.x_idx(region.x_min), grid.x_idx(region.x_max) + 1);
-        let (j_min, j_max) = (grid.y_idx(region.y_min), grid.y_idx(region.y_max) + 1);
-        let (k_min, k_max) = (grid.z_idx(region.z_min), grid.z_idx(region.z_max) + 1);
+        // Calculate grid indices for the region
+        let i_min = ((region.x_min / grid.dx).floor() as usize).min(grid.nx - 1);
+        let i_max = (((region.x_max / grid.dx).floor() as usize) + 1).min(grid.nx);
+        let j_min = ((region.y_min / grid.dy).floor() as usize).min(grid.ny - 1);
+        let j_max = (((region.y_max / grid.dy).floor() as usize) + 1).min(grid.ny);
+        let k_min = ((region.z_min / grid.dz).floor() as usize).min(grid.nz - 1);
+        let k_max = (((region.z_max / grid.dz).floor() as usize) + 1).min(grid.nz);
 
         debug!(
             "Setting tissue type {:?} in region ({:.3}, {:.3}, {:.3}) to ({:.3}, {:.3}, {:.3}), indices ({}, {}, {}) to ({}, {}, {})",
@@ -354,7 +358,7 @@ impl HeterogeneousTissueMedium {
 
 impl Medium for HeterogeneousTissueMedium {
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -367,7 +371,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -408,7 +412,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -422,7 +426,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -458,7 +462,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -472,7 +476,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -486,7 +490,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let temperature = self.temperature[indices];
             
@@ -520,7 +524,7 @@ impl Medium for HeterogeneousTissueMedium {
     }
 
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        if let Some(indices) = grid.to_grid_indices(x, y, z) {
+        if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -549,7 +553,7 @@ impl Medium for HeterogeneousTissueMedium {
 
     /// Get the tissue type at a specific position
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
-        grid.to_grid_indices(x, y, z).map(|indices| self.tissue_map[indices])
+        grid.position_to_indices(x, y, z).map(|indices| self.tissue_map[indices])
     }
 
     fn update_temperature(&mut self, temperature: &Array3<f64>) {

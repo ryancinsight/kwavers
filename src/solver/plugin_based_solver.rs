@@ -439,7 +439,7 @@ impl PluginBasedSolver {
         
         // Get mutable field data
         let fields = self.field_registry.data_mut()
-            .ok_or_else(|| KwaversError::FieldDataNotInitialized)?;
+            .ok_or_else(|| KwaversError::Field(FieldError::DataNotInitialized))?;
         
         // Apply source terms - source provides values at specific positions
         // This would need to be integrated into the field update

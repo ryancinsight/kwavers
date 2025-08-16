@@ -226,7 +226,7 @@ fn demonstrate_nonlinear(grid: &Grid, medium: &HomogeneousMedium) -> Result<(), 
 
 /// Create a focused Gaussian beam
 fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f64> {
-    let mut field = grid.zeros_array();
+    let mut field = grid.create_field();
     
     let center_y = grid.ny as f64 / 2.0;
     let center_z = grid.nz as f64 / 2.0;
@@ -253,7 +253,7 @@ fn create_focused_beam(grid: &Grid, amplitude: f64, beam_width: f64) -> Array3<f
 
 /// Create a Gaussian pulse
 fn create_gaussian_pulse(grid: &Grid, amplitude: f64, cx: usize, cy: usize, cz: usize, width: f64) -> Array3<f64> {
-    let mut field = grid.zeros_array();
+    let mut field = grid.create_field();
     
     // Use iterator-based approach for better performance
     field.indexed_iter_mut()

@@ -87,6 +87,7 @@ use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, Plugi
 use crate::validation::ValidationResult;
 use crate::constants::cfl;
 use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig, CorrectionMethod};
+use crate::boundary::cpml::{CPMLBoundary, CPMLConfig};
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use num_complex::Complex;
 use std::f64::consts::PI;
@@ -191,6 +192,8 @@ pub struct PstdSolver {
     anti_alias_filter: Option<Array3<f64>>,
     /// K-space correction
     kappa: Option<Array3<f64>>,
+    /// CPML boundary condition (optional for backward compatibility)
+    boundary: Option<CPMLBoundary>,
     /// Performance metrics
     metrics: HashMap<String, f64>,
     /// Workspace arrays to avoid allocations
@@ -234,6 +237,10 @@ impl PstdSolver {
             None
         };
         
+        // Estimate dt and reference sound speed
+        let c_ref = 1500.0; // Default reference sound speed
+        let dt = config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c_ref;
+        
         // Create k-space correction using unified approach
         let kappa = if config.k_space_correction {
             let kspace_config = KSpaceCorrectionConfig {
@@ -242,11 +249,27 @@ impl PstdSolver {
                 cfl_number: config.cfl_factor,
                 max_correction: 2.0,
             };
-            // Estimate dt and reference sound speed for correction
-            let c_ref = 1500.0; // Will be updated with actual medium properties
-            let dt = config.cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c_ref;
             Some(compute_kspace_correction(grid, &kspace_config, dt, c_ref))
         } else {
+            None
+        };
+        
+        // Initialize CPML boundary if PML is enabled in config
+        // Using default CPML config for now - could be extended to take custom config
+        let boundary = if config.pml_stencil_size > 0 {
+            match CPMLBoundary::new(CPMLConfig::default(), grid, dt, c_ref) {
+                Ok(cpml) => {
+                    info!("CPML boundary initialized for PSTD solver");
+                    Some(cpml)
+                },
+                Err(e) => {
+                    log::warn!("Failed to initialize CPML boundary: {}. \
+                              Continuing without boundary conditions.", e);
+                    None
+                }
+            }
+        } else {
+            debug!("CPML boundary not enabled (pml_stencil_size = 0)");
             None
         };
         
@@ -259,6 +282,7 @@ impl PstdSolver {
             k_squared,
             anti_alias_filter: filter,
             kappa,
+            boundary,
             metrics: HashMap::new(),
             workspace_real: Array3::zeros((nx, ny, nz)),
             workspace_complex: Array3::zeros((nx, ny, nz)),
@@ -267,6 +291,38 @@ impl PstdSolver {
             pressure_prev: None,
             velocity_prev: None,
         })
+    }
+    
+    /// Enable CPML boundary conditions
+    /// 
+    /// # Arguments
+    /// * `config` - CPML configuration
+    /// * `sound_speed` - Reference sound speed for the medium
+    pub fn enable_cpml(&mut self, config: CPMLConfig, sound_speed: f64) -> KwaversResult<()> {
+        let dt = self.config.cfl_factor * self.grid.dx.min(self.grid.dy).min(self.grid.dz) / sound_speed;
+        
+        match CPMLBoundary::new(config, &self.grid, dt, sound_speed) {
+            Ok(cpml) => {
+                info!("CPML boundary enabled for PSTD solver");
+                self.boundary = Some(cpml);
+                Ok(())
+            },
+            Err(e) => {
+                log::error!("Failed to enable CPML boundary: {}", e);
+                Err(e)
+            }
+        }
+    }
+    
+    /// Disable CPML boundary conditions
+    pub fn disable_cpml(&mut self) {
+        info!("CPML boundary disabled for PSTD solver");
+        self.boundary = None;
+    }
+    
+    /// Check if CPML is enabled
+    pub fn has_cpml(&self) -> bool {
+        self.boundary.is_some()
     }
     
     /// Compute wavenumber arrays for FFT
@@ -450,7 +506,14 @@ impl PstdSolver {
         medium: &dyn Medium,
         dt: f64,
     ) -> KwaversResult<()> {
-        debug!("PSTD velocity update, dt={}", dt);
+        // Delegate to CPML version if boundary is configured
+        if self.boundary.is_some() {
+            return self.update_velocity_with_cpml(
+                velocity_x, velocity_y, velocity_z, pressure, medium, dt
+            );
+        }
+        
+        debug!("PSTD velocity update (no CPML), dt={}", dt);
         let start = std::time::Instant::now();
         
         // Get density array
@@ -647,6 +710,141 @@ impl PstdSolver {
                 self.metrics.insert(key.clone(), current.max(*value));
             }
         }
+    }
+
+    /// Compute spatial gradient of a field using spectral differentiation
+    /// 
+    /// # Arguments
+    /// * `field` - Input field
+    /// * `direction` - 0 for x, 1 for y, 2 for z
+    pub fn compute_gradient(&mut self, field: &Array3<f64>, direction: usize) -> KwaversResult<Array3<f64>> {
+        // Transform to k-space
+        self.workspace_real_4d.index_axis_mut(Axis(0), 0).assign(field);
+        let field_hat = fft_3d(&self.workspace_real_4d, 0, &self.grid);
+        
+        // Select wavenumber array based on direction
+        let k_array = match direction {
+            0 => &self.kx,
+            1 => &self.ky,
+            2 => &self.kz,
+            _ => return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "direction".to_string(),
+                value: direction.to_string(),
+                constraint: "Must be 0, 1, or 2".to_string(),
+            })),
+        };
+        
+        // Compute gradient in k-space: ∂f/∂x = F⁻¹{ikₓ F{f}}
+        let grad_hat = &field_hat * &k_array.mapv(|k| Complex::new(0.0, k));
+        
+        // Transform back to real space
+        self.workspace_complex_4d.index_axis_mut(Axis(0), 0).assign(&grad_hat);
+        let grad_real = ifft_3d(&self.workspace_complex_4d, 0, &self.grid);
+        
+        Ok(grad_real.index_axis(Axis(0), 0).to_owned())
+    }
+    
+    /// Update velocity field with CPML boundary conditions
+    pub fn update_velocity_with_cpml(
+        &mut self,
+        velocity_x: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_y: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_z: &mut ndarray::ArrayViewMut3<f64>,
+        pressure: &ndarray::ArrayView3<f64>,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        debug!("PSTD velocity update with CPML, dt={}", dt);
+        
+        // Compute pressure gradients
+        let mut grad_x = self.compute_gradient(&pressure.to_owned(), 0)?;
+        let mut grad_y = self.compute_gradient(&pressure.to_owned(), 1)?;
+        let mut grad_z = self.compute_gradient(&pressure.to_owned(), 2)?;
+        
+        // Apply CPML if boundary is configured
+        if let Some(ref mut boundary) = self.boundary {
+            // Update CPML memory variables
+            boundary.update_acoustic_memory(&grad_x, 0)?;
+            boundary.update_acoustic_memory(&grad_y, 1)?;
+            boundary.update_acoustic_memory(&grad_z, 2)?;
+            
+            // Apply CPML correction to gradients
+            boundary.apply_cpml_gradient(&mut grad_x, 0)?;
+            boundary.apply_cpml_gradient(&mut grad_y, 1)?;
+            boundary.apply_cpml_gradient(&mut grad_z, 2)?;
+        }
+        
+        // Update velocity using corrected gradients
+        let rho_array = medium.density_array();
+        
+        Zip::from(velocity_x)
+            .and(&grad_x)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+            
+        Zip::from(velocity_y)
+            .and(&grad_y)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+            
+        Zip::from(velocity_z)
+            .and(&grad_z)
+            .and(&rho_array)
+            .for_each(|v, &grad, &rho| {
+                *v -= dt * grad / rho;
+            });
+        
+        Ok(())
+    }
+    
+    /// Update pressure field with CPML boundary conditions
+    pub fn update_pressure_with_cpml(
+        &mut self,
+        pressure: &mut ndarray::ArrayViewMut3<f64>,
+        velocity_x: &Array3<f64>,
+        velocity_y: &Array3<f64>,
+        velocity_z: &Array3<f64>,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        debug!("PSTD pressure update with CPML, dt={}", dt);
+        
+        // Compute velocity gradients
+        let mut grad_vx = self.compute_gradient(velocity_x, 0)?;
+        let mut grad_vy = self.compute_gradient(velocity_y, 1)?;
+        let mut grad_vz = self.compute_gradient(velocity_z, 2)?;
+        
+        // Apply CPML if boundary is configured
+        if let Some(ref mut boundary) = self.boundary {
+            // Update CPML memory variables for velocity gradients
+            boundary.update_acoustic_memory(&grad_vx, 0)?;
+            boundary.update_acoustic_memory(&grad_vy, 1)?;
+            boundary.update_acoustic_memory(&grad_vz, 2)?;
+            
+            // Apply CPML correction
+            boundary.apply_cpml_gradient(&mut grad_vx, 0)?;
+            boundary.apply_cpml_gradient(&mut grad_vy, 1)?;
+            boundary.apply_cpml_gradient(&mut grad_vz, 2)?;
+        }
+        
+        // Compute divergence from corrected gradients
+        let divergence = &grad_vx + &grad_vy + &grad_vz;
+        
+        // Update pressure
+        let bulk_modulus_array = medium.bulk_modulus_array();
+        
+        Zip::from(pressure)
+            .and(&divergence)
+            .and(&bulk_modulus_array)
+            .for_each(|p, &div, &bulk| {
+                *p -= dt * bulk * div;
+            });
+        
+        Ok(())
     }
 }
 
@@ -866,14 +1064,20 @@ impl PhysicsPlugin for PstdPlugin {
                 });
         }
         
-        // Compute divergence of velocity in k-space (more efficient)
-        let divergence_kspace = self.solver.compute_divergence_kspace(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
-        
-        // Update pressure using k-space divergence - modifies view in place
-        self.solver.update_pressure_kspace(&mut pressure, &divergence_kspace, medium, dt)?;
-        
-        // Update velocities using new pressure - modifies views in place
-        self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;
+        // Update pressure and velocity with CPML if configured
+        if self.solver.boundary.is_some() {
+            // Use CPML-aware updates
+            let vx = velocity_x.to_owned();
+            let vy = velocity_y.to_owned();
+            let vz = velocity_z.to_owned();
+            self.solver.update_pressure_with_cpml(&mut pressure, &vx, &vy, &vz, medium, dt)?;
+            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;
+        } else {
+            // Use standard k-space updates
+            let divergence_kspace = self.solver.compute_divergence_kspace(&velocity_x.view(), &velocity_y.view(), &velocity_z.view())?;
+            self.solver.update_pressure_kspace(&mut pressure, &divergence_kspace, medium, dt)?;
+            self.solver.update_velocity(&mut velocity_x, &mut velocity_y, &mut velocity_z, &pressure.view(), medium, dt)?;
+        }
         
         // No copy back needed - we modified the views directly!
         

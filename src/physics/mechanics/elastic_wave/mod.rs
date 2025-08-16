@@ -534,7 +534,7 @@ impl ElasticWave {
         let start_time = Instant::now();
         
         // Create a source field array from the source term
-        let mut source_field = grid.zeros_array();
+        let mut source_field = grid.create_field();
         source_field.indexed_iter_mut().for_each(|((i, j, k), val)| {
             let (x, y, z) = grid.coordinates(i, j, k);
             *val = source.get_source_term(t, x, y, z, grid);

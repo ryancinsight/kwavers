@@ -39,6 +39,18 @@ pub struct HeterogeneousMedium {
 }
 
 impl HeterogeneousMedium {
+    /// Helper to get grid indices with fallback to boundary values
+    #[inline]
+    fn get_indices(&self, x: f64, y: f64, z: f64, grid: &Grid) -> (usize, usize, usize) {
+        grid.position_to_indices(x, y, z).unwrap_or_else(|| {
+            // Clamp to grid boundaries if out of bounds
+            let ix = ((x / grid.dx).floor() as usize).min(grid.nx - 1);
+            let iy = ((y / grid.dy).floor() as usize).min(grid.ny - 1);
+            let iz = ((z / grid.dz).floor() as usize).min(grid.nz - 1);
+            (ix, iy, iz)
+        })
+    }
+
     pub fn new_tissue(grid: &Grid) -> Self {
         let density = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1050.0);
         let sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1540.0);
@@ -138,19 +150,12 @@ impl HeterogeneousMedium {
 
 impl Medium for HeterogeneousMedium {
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x); // These are used for bounds checking implicitly by indexing
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
-        // The direct indexing self.lame_lambda[[ix, iy, iz]] handles bounds with ndarray's default panic.
-        // A more robust way would be to use .get() or ensure indices are always valid.
-        // For now, assume valid indices after grid.x_idx or rely on ndarray's panic for out-of-bounds.
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.lame_lambda[[ix, iy, iz]]
     }
 
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.lame_mu[[ix, iy, iz]]
     }
 
@@ -163,60 +168,42 @@ impl Medium for HeterogeneousMedium {
     }
 
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.density[[ix, iy, iz]].max(1.0)
     }
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.sound_speed[[ix, iy, iz]].max(100.0)
     }
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.viscosity[[ix, iy, iz]].max(1e-6)
     }
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.surface_tension[[ix, iy, iz]].max(0.01)
     }
     fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.ambient_pressure
     }
     fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.vapor_pressure[[ix, iy, iz]].max(1.0)
     }
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.polytropic_index[[ix, iy, iz]]
     }
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.specific_heat[[ix, iy, iz]]
     }
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.thermal_conductivity[[ix, iy, iz]].max(0.1)
     }
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         let t = self.temperature[[ix, iy, iz]];
         let alpha0 = self.alpha0[[ix, iy, iz]];
         let delta = self.delta[[ix, iy, iz]];
@@ -224,15 +211,11 @@ impl Medium for HeterogeneousMedium {
             + absorption::absorption_coefficient(frequency, t, Some(self.bubble_radius[[ix, iy, iz]]))
     }
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.thermal_expansion[[ix, iy, iz]].max(1e-6)
     }
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.gas_diffusion_coeff[[ix, iy, iz]].max(1e-10)
     }
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -243,21 +226,15 @@ impl Medium for HeterogeneousMedium {
         (k / (rho * cp)).max(1e-8)
     }
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.b_a[[ix, iy, iz]].max(0.0)
     }
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.mu_a[[ix, iy, iz]].max(0.1)
     }
     fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let ix = grid.x_idx(x);
-        let iy = grid.y_idx(y);
-        let iz = grid.z_idx(z);
+        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.mu_s_prime[[ix, iy, iz]].max(1.0)
     }
     fn reference_frequency(&self) -> f64 { self.reference_frequency } // Added

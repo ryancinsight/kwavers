@@ -878,7 +878,7 @@ impl Source for FlexibleTransducerArray {
         let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         for &element_pos in &self.geometry_state.element_positions {
-            if let Some((ix, iy, iz)) = grid.to_grid_indices(element_pos[0], element_pos[1], element_pos[2]) {
+            if let Some((ix, iy, iz)) = grid.position_to_indices(element_pos[0], element_pos[1], element_pos[2]) {
                 let element_size = (self.config.element_size[0] * self.config.element_size[1]).sqrt();
                 
                 // Apply Gaussian weighting around element position

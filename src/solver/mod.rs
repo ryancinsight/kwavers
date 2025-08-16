@@ -37,17 +37,7 @@ use ndarray::{Array3, Array4, Axis, ArrayView3, ArrayViewMut3};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
 
-// DEPRECATED: Magic number constants - moved to ValidationConfig
-#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
-const MAX_PRESSURE: f64 = 1e9;   // 1 GPa max pressure
-#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
-const MIN_PRESSURE: f64 = -1e9;  // -1 GPa min pressure  
-#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
-const MAX_TEMP: f64 = 1000.0;    // 1000K max temperature
-#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
-const MIN_TEMP: f64 = 273.0;     // 0°C min temperature
-#[deprecated(since = "0.2.0", note = "Use ValidationConfig instead of hardcoded constants")]
-const MAX_LIGHT: f64 = 1e10;     // Max light intensity
+
 
 // Note: Field indices are now imported from physics::field_indices
 // This ensures SSOT - Single Source of Truth

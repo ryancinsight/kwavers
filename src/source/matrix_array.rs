@@ -173,7 +173,7 @@ impl Source for MatrixArray {
                 let y_elem = iy as f64 * dy - self.height / 2.0;
                 let idx = iy * self.num_x + ix;
                 
-                if let Some((gx, gy, gz)) = grid.to_grid_indices(x_elem, y_elem, self.z_pos) {
+                if let Some((gx, gy, gz)) = grid.position_to_indices(x_elem, y_elem, self.z_pos) {
                     mask[(gx, gy, gz)] = self.apodization_weights[idx];
                 }
             }

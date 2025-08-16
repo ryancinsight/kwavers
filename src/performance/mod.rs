@@ -32,6 +32,7 @@
 
 pub mod optimization;
 pub mod profiling;
+pub mod benchmarks;
 
 pub use optimization::{
     PerformanceOptimizer,
@@ -53,4 +54,13 @@ pub use profiling::{
     RooflineAnalysis,
     MemoryEventType,
     PerformanceBound,
+};
+
+// Re-export benchmarking functionality
+pub use benchmarks::{
+    AccuracyResult,
+    BenchmarkSuite,
+    BenchmarkConfig,
+    BenchmarkReport,
+    OutputFormat,
 };

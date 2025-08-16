@@ -46,11 +46,8 @@ pub struct CPMLConfig {
     /// Enable grazing angle absorption
     pub grazing_angle_absorption: bool,
     
-    /// CFL number for stability
-    pub cfl_number: f64,
-    
-    /// Sound speed for time step calculation [m/s]
-    pub sound_speed: f64,
+    // REMOVED: CFL number and sound speed - these should come from the solver
+    // The solver determines dt based on the actual medium properties and stability requirements
 }
 
 impl Default for CPMLConfig {
@@ -63,8 +60,7 @@ impl Default for CPMLConfig {
             alpha_max: 0.24,    // Standard for low-frequency absorption
             target_reflection: 1e-6,
             grazing_angle_absorption: true,
-            cfl_number: 0.5,
-            sound_speed: 1540.0, // Default water sound speed [m/s]
+            // REMOVED: cfl_number and sound_speed
         }
     }
 }
@@ -80,8 +76,7 @@ impl CPMLConfig {
             alpha_max: 0.3,
             target_reflection: 1e-8,
             grazing_angle_absorption: true,
-            cfl_number: 0.5,
-            sound_speed: 1540.0, // Default water sound speed [m/s]
+            // REMOVED: cfl_number and sound_speed
         }
     }
     
@@ -120,12 +115,9 @@ impl CPMLConfig {
 pub struct CPMLBoundary {
     config: CPMLConfig,
     
-    /// Cached time step for performance optimization
-    /// Computed once during initialization to avoid redundant calculations
+    /// Time step from the solver - ensures consistency with simulation
+    /// This must match the solver's dt for proper impedance matching
     dt: f64,
-    
-    /// Sound speed used for dt calculation
-    sound_speed: f64,
     
     /// Profile arrays for each dimension
     sigma_x: Vec<f64>,
@@ -164,27 +156,37 @@ pub struct CPMLBoundary {
 
 impl CPMLBoundary {
     /// Create new C-PML boundary with given configuration
-    pub fn new(config: CPMLConfig, grid: &Grid) -> KwaversResult<Self> {
+    /// 
+    /// # Arguments
+    /// * `config` - CPML configuration parameters
+    /// * `grid` - Computational grid
+    /// * `dt` - Time step from the solver (must be consistent with solver's dt)
+    /// * `sound_speed` - Reference sound speed for the medium (typically max sound speed)
+    /// 
+    /// # Important
+    /// The `dt` parameter MUST be the same as used by the solver to ensure proper
+    /// impedance matching at the boundaries. Using an inconsistent dt will cause
+    /// spurious reflections.
+    pub fn new(config: CPMLConfig, grid: &Grid, dt: f64, sound_speed: f64) -> KwaversResult<Self> {
         config.validate()?;
         
-        debug!("Initializing C-PML with thickness {} and polynomial order {}", 
-               config.thickness, config.polynomial_order);
+        debug!("Initializing C-PML with thickness {}, dt {:.3e} s, sound speed {} m/s", 
+               config.thickness, dt, sound_speed);
         
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
-        // Calculate dt once during initialization for performance optimization
-        // dt = CFL * dx / (c * sqrt(3)) where sqrt(3) accounts for 3D Courant condition
+        // Validate dt for stability
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
-        let dt = config.cfl_number * min_dx / (config.sound_speed * (3.0_f64).sqrt());
-        
-        debug!("C-PML cached dt: {:.3e} s (CFL: {}, sound speed: {} m/s)", 
-               dt, config.cfl_number, config.sound_speed);
+        let max_stable_dt = min_dx / (sound_speed * (3.0_f64).sqrt());
+        if dt > max_stable_dt {
+            log::warn!("CPML: dt ({:.3e}) may be too large for stability. \
+                       Maximum stable dt: {:.3e}", dt, max_stable_dt);
+        }
         
         // Initialize profile arrays
         let mut cpml = Self {
             config: config.clone(),
-            dt,
-            sound_speed: config.sound_speed,
+            dt,  // Use the provided dt from the solver
             sigma_x: vec![0.0; nx],
             sigma_y: vec![0.0; ny],
             sigma_z: vec![0.0; nz],
@@ -207,21 +209,21 @@ impl CPMLBoundary {
             nz,
         };
         
-        // Compute standard profiles
-        cpml.compute_profiles(grid)?;
+        // Compute standard profiles with the provided sound speed
+        cpml.compute_profiles(grid, sound_speed)?;
         
         Ok(cpml)
     }
     
     /// Compute C-PML profiles based on configuration
-    fn compute_profiles(&mut self, grid: &Grid) -> KwaversResult<()> {
+    fn compute_profiles(&mut self, grid: &Grid, sound_speed: f64) -> KwaversResult<()> {
         let thickness = self.config.thickness as f64;
         let m = self.config.polynomial_order;
         
         // Compute theoretical sigma_max based on analytical formula
-        let sigma_theoretical_x = self.compute_theoretical_sigma(grid.dx);
-        let sigma_theoretical_y = self.compute_theoretical_sigma(grid.dy);
-        let sigma_theoretical_z = self.compute_theoretical_sigma(grid.dz);
+        let sigma_theoretical_x = self.compute_theoretical_sigma(grid.dx, sound_speed);
+        let sigma_theoretical_y = self.compute_theoretical_sigma(grid.dy, sound_speed);
+        let sigma_theoretical_z = self.compute_theoretical_sigma(grid.dz, sound_speed);
         
         // X-direction profiles
         let (sigma, kappa, alpha, b, c) = Self::compute_profile_for_dimension(
@@ -259,13 +261,19 @@ impl CPMLBoundary {
         Ok(())
     }
     
-    /// Compute theoretical sigma value based on grid spacing
-    fn compute_theoretical_sigma(&self, dx: f64) -> f64 {
+    /// Compute theoretical sigma value based on grid spacing and sound speed
+    /// 
+    /// The theoretical optimal sigma depends on the impedance Z = rho * c
+    /// For simplicity, we assume constant density and use sound speed directly
+    fn compute_theoretical_sigma(&self, dx: f64, sound_speed: f64) -> f64 {
         let m = self.config.polynomial_order;
         let r_coeff = self.config.target_reflection;
         
-        // Theoretical reference value for C-PML
-        let sigma_opt = -(m + 1.0) * r_coeff.ln() / (2.0 * self.config.thickness as f64 * dx);
+        // Theoretical optimal value for C-PML
+        // sigma_opt = -(m+1) * c * ln(R) / (2 * L)
+        // where L is the PML thickness in meters
+        let pml_width = self.config.thickness as f64 * dx;
+        let sigma_opt = -(m + 1.0) * sound_speed * r_coeff.ln() / (2.0 * pml_width);
         
         sigma_opt * self.config.sigma_factor
     }
@@ -393,14 +401,19 @@ impl CPMLBoundary {
     
     /// Update the time step and recompute coefficients if needed
     /// This should be called if the simulation time step changes
-    pub fn update_dt(&mut self, new_dt: f64, grid: &Grid) -> KwaversResult<()> {
+    /// 
+    /// # Arguments
+    /// * `new_dt` - New time step from the solver
+    /// * `grid` - Computational grid
+    /// * `sound_speed` - Reference sound speed for the medium
+    pub fn update_dt(&mut self, new_dt: f64, grid: &Grid, sound_speed: f64) -> KwaversResult<()> {
         const DT_TOLERANCE: f64 = 1e-12;
         
         if (self.dt - new_dt).abs() > DT_TOLERANCE {
             debug!("Updating CPML coefficients for new dt: {} -> {}", self.dt, new_dt);
             self.dt = new_dt;
-            // Recompute profiles with the new dt
-            self.compute_profiles(grid)?;
+            // Recompute profiles with the new dt and sound speed
+            self.compute_profiles(grid, sound_speed)?;
         }
         Ok(())
     }
@@ -551,7 +564,9 @@ mod tests {
     fn test_cpml_initialization() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let dt = 1e-7; // Typical time step for testing
+        let sound_speed = 1540.0; // Water sound speed
+        let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
         
         assert_eq!(cpml.sigma_x.len(), 64);
         assert_eq!(cpml.kappa_x.len(), 64);
@@ -568,7 +583,9 @@ mod tests {
             ..Default::default()
         };
         
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let dt = 1e-7; // Typical time step for testing
+        let sound_speed = 1540.0; // Water sound speed
+        let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
         
         // Check that profiles are properly graded
         // At PML interface (i=10), values should be zero/one
@@ -584,7 +601,9 @@ mod tests {
     fn test_grazing_angle_reflection() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::for_grazing_angles();
-        let cpml = CPMLBoundary::new(config, &grid).unwrap();
+        let dt = 1e-7; // Typical time step for testing
+        let sound_speed = 1540.0; // Water sound speed
+        let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
         
         // Test reflection estimates at various angles
         let r_normal = cpml.estimate_reflection(0.0).unwrap();    // Normal incidence

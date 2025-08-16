@@ -15,8 +15,8 @@ impl ReactionKinetics {
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing ReactionKinetics");
         Self {
-            hydroxyl_concentration: grid.zeros_array(),
-            hydrogen_peroxide: grid.zeros_array(),
+            hydroxyl_concentration: grid.create_field(),
+            hydrogen_peroxide: grid.create_field(),
         }
     }
 

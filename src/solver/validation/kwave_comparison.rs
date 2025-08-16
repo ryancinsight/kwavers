@@ -149,7 +149,7 @@ impl KWaveValidator {
         let t_end = 40e-6;
         
         // Initial pressure distribution (Gaussian)
-        let mut pressure = self.grid.zeros_array();
+        let mut pressure = self.grid.create_field();
         let center = (self.grid.nx / 2, self.grid.ny / 2, self.grid.nz / 2);
         let sigma = 0.002; // 2mm
         
@@ -167,9 +167,9 @@ impl KWaveValidator {
         let mut solver = PstdSolver::new(config, &self.grid)?;
         
         // Initialize velocity fields
-        let mut vx = self.grid.zeros_array();
-        let mut vy = self.grid.zeros_array();
-        let mut vz = self.grid.zeros_array();
+        let mut vx = self.grid.create_field();
+        let mut vy = self.grid.create_field();
+        let mut vz = self.grid.create_field();
         
         let n_steps = (t_end / dt) as usize;
         for _ in 0..n_steps {
@@ -210,7 +210,7 @@ impl KWaveValidator {
         
         // Create plane wave
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
-        let mut pressure = self.grid.zeros_array();
+        let mut pressure = self.grid.create_field();
         
         // Initialize plane wave traveling in +x direction
         pressure.slice_mut(s![.., .., ..]).indexed_iter_mut()
@@ -278,8 +278,8 @@ impl KWaveValidator {
         
         
         // Create layered medium
-        let mut sound_speed = self.grid.zeros_array();
-        let mut density = self.grid.zeros_array();
+        let mut sound_speed = self.grid.create_field();
+        let mut density = self.grid.create_field();
         
         // Three layers with different properties
         sound_speed.indexed_iter_mut()
@@ -303,7 +303,7 @@ impl KWaveValidator {
         medium.density = density;
         
         // Create source pulse
-        let mut pressure = self.grid.zeros_array();
+        let mut pressure = self.grid.create_field();
         let source_pos = self.grid.nx / 6;
         pressure.slice_mut(s![source_pos, .., ..]).fill(1e6);
         
@@ -313,9 +313,9 @@ impl KWaveValidator {
         let mut solver = PstdSolver::new(config, &self.grid)?;
         
         // Initialize velocity fields
-        let mut vx = self.grid.zeros_array();
-        let mut vy = self.grid.zeros_array();
-        let mut vz = self.grid.zeros_array();
+        let mut vx = self.grid.create_field();
+        let mut vy = self.grid.create_field();
+        let mut vz = self.grid.create_field();
         
         let dt = 5e-8;
         let n_steps = 500;
@@ -383,7 +383,7 @@ impl KWaveValidator {
         // High-amplitude sinusoidal source
         let frequency = 1e6; // 1 MHz
         let amplitude = 1e6; // 1 MPa
-        let mut pressure = self.grid.zeros_array();
+        let mut pressure = self.grid.create_field();
         
         // Initialize with sine wave
         let wavelength = 1500.0 / frequency;
@@ -458,7 +458,7 @@ impl KWaveValidator {
         let transducer = PhasedArrayTransducer::new(config, signal, &medium, &self.grid)?;
         
         // Calculate pressure field
-        let mut pressure = self.grid.zeros_array();
+        let mut pressure = self.grid.create_field();
         let t = 0.0;
         
         pressure.indexed_iter_mut()
@@ -501,7 +501,7 @@ impl KWaveValidator {
         
         // Create point source
         let source_pos = (self.grid.nx / 4, self.grid.ny / 2, self.grid.nz / 2);
-        let mut initial_pressure = self.grid.zeros_array();
+        let mut initial_pressure = self.grid.create_field();
         initial_pressure[source_pos] = 1e6;
         
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
@@ -512,9 +512,9 @@ impl KWaveValidator {
         
         // Initialize pressure and velocity fields
         let mut pressure = initial_pressure.clone();
-        let mut vx = self.grid.zeros_array();
-        let mut vy = self.grid.zeros_array();
-        let mut vz = self.grid.zeros_array();
+        let mut vx = self.grid.create_field();
+        let mut vy = self.grid.create_field();
+        let mut vz = self.grid.create_field();
         
         let dt = 5e-8;
         let n_steps = 1000;
@@ -605,7 +605,7 @@ impl KWaveValidator {
 
     /// Extract boundary data
     fn extract_boundary(&self, field: &Array3<f64>) -> Array3<f64> {
-        let mut boundary = self.grid.zeros_array();
+        let mut boundary = self.grid.create_field();
         
         // Extract all six faces
         let nx = self.grid.nx;
@@ -634,11 +634,11 @@ impl KWaveValidator {
         // IEEE Transactions on Ultrasonics, Ferroelectrics, and Frequency Control
         
         if boundary_data.is_empty() {
-            return Ok(self.grid.zeros_array());
+            return Ok(self.grid.create_field());
         }
         
-        let mut field = self.grid.zeros_array();
-        let mut field_prev = self.grid.zeros_array();
+        let mut field = self.grid.create_field();
+        let mut field_prev = self.grid.create_field();
         let c = medium.sound_speed(0.0, 0.0, 0.0, &self.grid);
         let courant = c * dt / self.grid.dx.min(self.grid.dy).min(self.grid.dz);
         

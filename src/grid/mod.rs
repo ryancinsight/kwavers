@@ -54,9 +54,8 @@ impl Grid {
     /// Create a zero-initialized 3D array with the grid dimensions
     /// This follows DRY principle by centralizing array creation
     #[inline]
-    #[deprecated(since = "2.24.0", note = "Use create_field() instead - it's more semantically descriptive")]
-    pub fn zeros_array(&self) -> Array3<f64> {
-        self.create_field()
+    pub fn create_field(&self) -> Array3<f64> {
+        Array3::zeros((self.nx, self.ny, self.nz))
     }
 
     /// Converts physical position (meters) to grid indices, returning None if out of bounds.
@@ -80,15 +79,7 @@ impl Grid {
         Some((i, j, k))
     }
     
-    /// Legacy method for backward compatibility - use position_to_indices instead
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn position_to_indices_unsafe(&self, x: f64, y: f64, z: f64) -> (usize, usize, usize) {
-        (
-            (x / self.dx).round() as usize,
-            (y / self.dy).round() as usize,
-            (z / self.dz).round() as usize,
-        )
-    }
+
     
     /// Returns the total number of grid points.
     pub fn total_points(&self) -> usize {
@@ -113,27 +104,28 @@ impl Grid {
         (x, y, z)
     }
 
-    /// Calculates the physical distance between the first and last grid points in each dimension.
-    /// This represents the span of the grid points, not the total volume.
-    pub fn grid_span(&self) -> (f64, f64, f64) {
-        let lx = self.dx * (self.nx - 1) as f64;
-        let ly = self.dy * (self.ny - 1) as f64;
-        let lz = self.dz * (self.nz - 1) as f64;
-        (lx, ly, lz)
-    }
-    
-    /// Calculates the total physical dimensions of the domain volume.
-    /// This represents the full extent of the computational domain.
+    /// Returns the total physical dimensions (meters) of the grid.
+    /// This represents the total physical size of the computational domain.
+    /// For a grid with nx points and spacing dx, the physical dimension is nx * dx.
     pub fn physical_dimensions(&self) -> (f64, f64, f64) {
         (self.dx * self.nx as f64, 
          self.dy * self.ny as f64, 
          self.dz * self.nz as f64)
     }
     
-    /// Legacy method - use grid_span() or physical_dimensions() for clarity
-    #[deprecated(since = "2.24.0", note = "Use grid_span() or physical_dimensions() for clarity")]
+    /// Returns the span between the first and last grid points in each dimension (meters).
+    /// This represents the distance from the first grid point to the last grid point.
+    /// For a grid with nx points and spacing dx, the span is (nx - 1) * dx.
+    pub fn grid_span(&self) -> (f64, f64, f64) {
+        (self.dx * (self.nx.saturating_sub(1)) as f64, 
+         self.dy * (self.ny.saturating_sub(1)) as f64, 
+         self.dz * (self.nz.saturating_sub(1)) as f64)
+    }
+    
+    /// Legacy method - use physical_dimensions() for total domain size
+    #[deprecated(since = "2.24.0", note = "Use physical_dimensions() for total domain size")]
     pub fn domain_size(&self) -> (f64, f64, f64) {
-        self.grid_span()
+        self.physical_dimensions()
     }
 
     /// Generates 1D arrays of coordinates (meters).
@@ -149,42 +141,13 @@ impl Grid {
         Array1::linspace(0.0, self.dz * (self.nz - 1) as f64, self.nz)
     }
 
-    /// Creates a 3D array initialized with zeros for fields (e.g., pressure, light).
-    pub fn create_field(&self) -> Array3<f64> {
-        Array3::zeros((self.nx, self.ny, self.nz))
-    }
-
-    /// Checks if a point (x, y, z) is within grid bounds (meters).
+    /// Check if a point is within the grid bounds
     pub fn contains_point(&self, x: f64, y: f64, z: f64) -> bool {
         let (lx, ly, lz) = self.physical_dimensions();
         x >= 0.0 && x < lx && y >= 0.0 && y < ly && z >= 0.0 && z < lz
     }
 
-    /// Converts coordinates to grid indices, clamping to bounds.
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn x_idx(&self, x: f64) -> usize {
-        (x / self.dx).floor().clamp(0.0, (self.nx - 1) as f64) as usize
-    }
-    
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn y_idx(&self, y: f64) -> usize {
-        (y / self.dy).floor().clamp(0.0, (self.ny - 1) as f64) as usize
-    }
-    
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices which returns Option and uses floor()")]
-    pub fn z_idx(&self, z: f64) -> usize {
-        (z / self.dz).floor().clamp(0.0, (self.nz - 1) as f64) as usize
-    }
 
-    /// Converts physical coordinates to grid indices, returning None if out of bounds.
-    #[deprecated(since = "2.24.0", note = "Use position_to_indices instead")]
-    pub fn to_grid_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
-        if !self.contains_point(x, y, z) {
-            return None;
-        }
-        #[allow(deprecated)]
-        Some((self.x_idx(x), self.y_idx(y), self.z_idx(z)))
-    }
 
     /// Generates wavenumber arrays for k-space computations (rad/m).
     pub fn kx(&self) -> Array1<f64> {
@@ -573,5 +536,41 @@ mod tests {
         
         // Should be the same
         assert!((dt_from_medium - dt_direct).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_grid_span_vs_physical_dimensions() {
+        // Test the distinction between grid_span and physical_dimensions
+        let grid = Grid::new(10, 20, 30, 0.1, 0.2, 0.3);
+        
+        // physical_dimensions should be nx*dx, ny*dy, nz*dz
+        let (phys_x, phys_y, phys_z) = grid.physical_dimensions();
+        assert_eq!(phys_x, 10.0 * 0.1); // 1.0
+        assert_eq!(phys_y, 20.0 * 0.2); // 4.0
+        assert_eq!(phys_z, 30.0 * 0.3); // 9.0
+        
+        // grid_span should be (nx-1)*dx, (ny-1)*dy, (nz-1)*dz
+        let (span_x, span_y, span_z) = grid.grid_span();
+        assert_eq!(span_x, 9.0 * 0.1);  // 0.9
+        assert_eq!(span_y, 19.0 * 0.2); // 3.8
+        assert_eq!(span_z, 29.0 * 0.3); // 8.7
+        
+        // They should be different
+        assert_ne!(phys_x, span_x);
+        assert_ne!(phys_y, span_y);
+        assert_ne!(phys_z, span_z);
+        
+        // Edge case: single point grid
+        let single_grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0);
+        let (single_phys_x, single_phys_y, single_phys_z) = single_grid.physical_dimensions();
+        let (single_span_x, single_span_y, single_span_z) = single_grid.grid_span();
+        
+        // For a single point, physical dimension is dx but span is 0
+        assert_eq!(single_phys_x, 1.0);
+        assert_eq!(single_phys_y, 1.0);
+        assert_eq!(single_phys_z, 1.0);
+        assert_eq!(single_span_x, 0.0);
+        assert_eq!(single_span_y, 0.0);
+        assert_eq!(single_span_z, 0.0);
     }
 }

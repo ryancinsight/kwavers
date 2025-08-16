@@ -374,39 +374,3 @@ pub fn derivative(fields: &Array4<f64>, field_idx: usize, grid: &Grid, axis: usi
     Ok(ifft_3d(&field_fft, grid))
 }
 
-/// Compute gradient of a field (DEPRECATED - use differential_operators::gradient)
-#[deprecated(since = "2.26.0", note = "Use differential_operators::gradient for SSOT")]
-pub fn gradient(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<(Array3<f64>, Array3<f64>, Array3<f64>), &'static str> {
-    use self::differential_operators::{gradient as grad_op, SpatialOrder};
-    
-    if field_idx >= fields.shape()[3] {
-        return Err("Field index out of bounds");
-    }
-    
-    let field = fields.index_axis(Axis(3), field_idx);
-    grad_op(field, grid, SpatialOrder::Second)
-        .map_err(|_| "Failed to compute gradient")
-}
-
-/// Compute divergence of velocity fields (DEPRECATED - use differential_operators::divergence)
-#[deprecated(since = "2.26.0", note = "Use differential_operators::divergence for SSOT")]
-pub fn divergence(vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>, grid: &Grid) -> Result<Array3<f64>, &'static str> {
-    use self::differential_operators::{divergence as div_op, SpatialOrder};
-    
-    div_op(vx.view(), vy.view(), vz.view(), grid, SpatialOrder::Second)
-        .map_err(|_| "Failed to compute divergence")
-}
-
-/// Compute Laplacian of a field (DEPRECATED - use differential_operators::laplacian)
-#[deprecated(since = "2.26.0", note = "Use differential_operators::laplacian for SSOT")]
-pub fn laplacian(fields: &Array4<f64>, field_idx: usize, grid: &Grid) -> Result<Array3<f64>, &'static str> {
-    use self::differential_operators::{laplacian as lap_op, SpatialOrder};
-    
-    if field_idx >= fields.shape()[3] {
-        return Err("Field index out of bounds");
-    }
-    
-    let field = fields.index_axis(Axis(3), field_idx);
-    lap_op(field, grid, SpatialOrder::Second)
-        .map_err(|_| "Failed to compute Laplacian")
-}
