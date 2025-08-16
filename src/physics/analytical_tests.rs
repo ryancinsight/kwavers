@@ -189,12 +189,12 @@ mod tests {
         
         // Create solver with optimized configuration
         let mut config = KuznetsovConfig::default();
-        config.enable_nonlinearity = false;
-        config.enable_diffusivity = false;
-        config.enable_dispersion_compensation = true; // Enable dispersion correction
+        config.nonlinearity_coefficient = 0.0; // Disable nonlinearity
+        config.acoustic_diffusivity = 0.0; // Disable diffusivity
+        config.use_k_space_correction = true; // Enable dispersion correction
         config.k_space_correction_order = 4; // Higher-order correction
         
-        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
+        let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         
         // Initialize with plane wave using dispersion-corrected analytical solution
         use crate::constants::physics::{DEFAULT_ULTRASOUND_FREQUENCY, STANDARD_PRESSURE_AMPLITUDE};
@@ -279,11 +279,11 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let mut config = KuznetsovConfig::default();
-        config.enable_nonlinearity = false;
-        config.enable_diffusivity = false;
-        config.enable_dispersion_compensation = true;
+        config.nonlinearity_coefficient = 0.0; // Disable nonlinearity
+        config.acoustic_diffusivity = 0.0; // Disable diffusivity
+        config.use_k_space_correction = true;
         
-        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
+        let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         
         // Initialize with Gaussian pulse for better amplitude tracking
         let mut initial_pressure = grid.create_field();
@@ -678,13 +678,13 @@ mod tests {
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let config = KuznetsovConfig {
-            enable_nonlinearity: false,
-            enable_diffusivity: false,
-            enable_dispersion_compensation: false,
+            nonlinearity_coefficient: 0.0, // Disable nonlinearity
+            acoustic_diffusivity: 0.0, // Disable diffusivity
+            use_k_space_correction: false,
             ..Default::default()
         };
         
-        let mut solver = KuznetsovWave::new(&grid, config).unwrap();
+        let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         
         // Create simple initial condition
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));

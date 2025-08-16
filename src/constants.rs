@@ -92,6 +92,18 @@ pub mod grid {
     
     /// Default buffer zone width for domain coupling
     pub const DEFAULT_BUFFER_WIDTH: usize = 4;
+    
+    /// Minimum grid points for stability
+    pub const MIN_GRID_POINTS: usize = 16;
+    
+    /// Default grid spacing [m]
+    pub const DEFAULT_GRID_SPACING: f64 = 1e-3;
+    
+    /// Minimum grid spacing for numerical stability [m]
+    pub const MIN_GRID_SPACING: f64 = 1e-6;
+    
+    /// Maximum grid spacing for accuracy [m]
+    pub const MAX_GRID_SPACING: f64 = 1e-2;
 }
 
 /// Stability and threshold constants
@@ -390,6 +402,21 @@ pub mod numerical {
     pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
     pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
     pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
+    
+    /// Default numerical tolerance
+    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
+    
+    /// Machine epsilon for f64
+    pub const EPSILON: f64 = f64::EPSILON;
+    
+    /// Default maximum iterations
+    pub const MAX_ITERATIONS: usize = 1000;
+    
+    /// Convergence tolerance for iterative methods
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
+    
+    /// Default relaxation parameter
+    pub const RELAXATION_PARAMETER: f64 = 0.5;
 }
 
 
@@ -600,4 +627,19 @@ pub mod nonlinear {
     
     /// Acoustic diffusivity for water at 20°C [m²/s]
     pub const DIFFUSIVITY_WATER: f64 = 4.5e-6;
+}
+
+// Test and validation parameters
+pub mod test {
+    /// Default test grid size
+    pub const TEST_GRID_SIZE: usize = 32;
+    
+    /// Default test frequency [Hz]
+    pub const TEST_FREQUENCY: f64 = 1e6;
+    
+    /// Default test amplitude [Pa]
+    pub const TEST_AMPLITUDE: f64 = 1e6;
+    
+    /// Test tolerance for floating point comparisons
+    pub const TEST_TOLERANCE: f64 = 1e-6;
 }
