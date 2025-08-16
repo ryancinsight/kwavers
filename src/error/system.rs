@@ -13,6 +13,9 @@ pub enum SystemError {
     ThreadCreation {
         reason: String,
     },
+    ThreadPoolCreation {
+        reason: String,
+    },
     ResourceExhausted {
         resource: String,
         reason: String,
@@ -31,6 +34,9 @@ impl fmt::Display for SystemError {
             }
             Self::ThreadCreation { reason } => {
                 write!(f, "Thread creation failed: {}", reason)
+            }
+            Self::ThreadPoolCreation { reason } => {
+                write!(f, "Thread pool creation failed: {}", reason)
             }
             Self::ResourceExhausted { resource, reason } => {
                 write!(f, "System resource '{}' exhausted: {}", resource, reason)

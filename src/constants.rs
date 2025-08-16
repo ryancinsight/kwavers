@@ -17,6 +17,40 @@ pub mod numerical {
     
     /// FFT wavenumber scaling factor
     pub const FFT_K_SCALING: f64 = 2.0;
+    
+    /// WENO scheme optimal weights
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    
+    /// Artificial viscosity coefficients
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
+    
+    /// WENO smoothness indicator epsilon
+    pub const WENO_EPSILON: f64 = 1e-6;
+    
+    /// Stencil coefficients for numerical differentiation
+    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
+    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
+    
+    /// Default numerical tolerance
+    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
+    
+    /// Machine epsilon for f64
+    pub const EPSILON: f64 = f64::EPSILON;
+    
+    /// Default maximum iterations
+    pub const MAX_ITERATIONS: usize = 1000;
+    
+    /// Convergence tolerance for iterative methods
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
+    
+    /// Default relaxation parameter
+    pub const RELAXATION_PARAMETER: f64 = 0.5;
 }
 
 /// Numerical tolerance constants
@@ -407,41 +441,7 @@ pub mod optics {
 }
 
 /// Shock capturing and numerical methods constants
-pub mod numerical {
-    /// WENO scheme optimal weights
-    pub const WENO_WEIGHT_0: f64 = 0.1;
-    pub const WENO_WEIGHT_1: f64 = 0.6;
-    pub const WENO_WEIGHT_2: f64 = 0.3;
-    
-    /// Artificial viscosity coefficients
-    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
-    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
-    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
-    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
-    
-    /// WENO smoothness indicator epsilon
-    pub const WENO_EPSILON: f64 = 1e-6;
-    
-    /// Stencil coefficients for numerical differentiation
-    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
-    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
-    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
-    
-    /// Default numerical tolerance
-    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
-    
-    /// Machine epsilon for f64
-    pub const EPSILON: f64 = f64::EPSILON;
-    
-    /// Default maximum iterations
-    pub const MAX_ITERATIONS: usize = 1000;
-    
-    /// Convergence tolerance for iterative methods
-    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
-    
-    /// Default relaxation parameter
-    pub const RELAXATION_PARAMETER: f64 = 0.5;
-}
+
 
 
 

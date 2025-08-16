@@ -27,6 +27,11 @@ pub enum GridError {
         dimensions: (usize, usize, usize),
     },
     NotInitialized,
+    ValidationFailed {
+        field: String,
+        value: String,
+        constraint: String,
+    },
 }
 
 impl fmt::Display for GridError {
@@ -45,6 +50,9 @@ impl fmt::Display for GridError {
                 write!(f, "Index {:?} out of bounds for dimensions {:?}", index, dimensions)
             }
             Self::NotInitialized => write!(f, "Grid not initialized"),
+            Self::ValidationFailed { field, value, constraint } => {
+                write!(f, "Grid validation failed: {} = {} violates {}", field, value, constraint)
+            }
         }
     }
 }

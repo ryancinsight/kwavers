@@ -64,6 +64,8 @@ pub enum KwaversError {
     Validation(ValidationError),
     /// IO errors
     Io(String),
+    /// Concurrency errors
+    ConcurrencyError(String),
     /// Feature not yet implemented
     NotImplemented(String),
 }
@@ -83,6 +85,7 @@ impl fmt::Display for KwaversError {
             Self::Composite(e) => write!(f, "Multiple errors: {}", e),
             Self::Validation(e) => write!(f, "Validation error: {:?}", e),
             Self::Io(msg) => write!(f, "I/O error: {}", msg),
+            Self::ConcurrencyError(msg) => write!(f, "Concurrency error: {}", msg),
             Self::NotImplemented(feature) => write!(f, "Not implemented: {}", feature),
         }
     }
@@ -185,4 +188,28 @@ pub enum ValidationError {
     },
     /// State validation failed
     StateValidation,
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FieldValidation { field, value, constraint } => {
+                write!(f, "Field validation failed for {}: {} violates {}", field, value, constraint)
+            }
+            Self::RangeValidation { field, value, min, max } => {
+                write!(f, "Range validation failed for {}: {} not in [{}, {}]", field, value, min, max)
+            }
+            Self::StateValidation => {
+                write!(f, "State validation failed")
+            }
+        }
+    }
+}
+
+impl StdError for ValidationError {}
+
+impl From<ValidationError> for KwaversError {
+    fn from(error: ValidationError) -> Self {
+        Self::Validation(error)
+    }
 }

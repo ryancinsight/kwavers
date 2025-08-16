@@ -19,6 +19,25 @@ pub enum DataError {
         expected: (usize, usize, usize),
         actual: (usize, usize, usize),
     },
+    /// Insufficient data
+    InsufficientData {
+        required: usize,
+        available: usize,
+    },
+    /// Invalid format
+    InvalidFormat {
+        format: String,
+        reason: String,
+    },
+    /// File not found
+    FileNotFound {
+        path: String,
+    },
+    /// Data corruption
+    Corruption {
+        location: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for DataError {
@@ -30,6 +49,18 @@ impl fmt::Display for DataError {
             }
             Self::DimensionMismatch { expected, actual } => {
                 write!(f, "Dimension mismatch: expected {:?}, got {:?}", expected, actual)
+            }
+            Self::InsufficientData { required, available } => {
+                write!(f, "Insufficient data: required {}, available {}", required, available)
+            }
+            Self::InvalidFormat { format, reason } => {
+                write!(f, "Invalid format {}: {}", format, reason)
+            }
+            Self::FileNotFound { path } => {
+                write!(f, "File not found: {}", path)
+            }
+            Self::Corruption { location, reason } => {
+                write!(f, "Data corruption at {}: {}", location, reason)
             }
         }
     }

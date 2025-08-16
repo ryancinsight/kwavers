@@ -45,6 +45,41 @@ pub enum PhysicsError {
         location: (usize, usize, usize),
         pressure: f64,
     },
+    /// Dimension mismatch
+    DimensionMismatch,
+    /// Invalid state
+    InvalidState {
+        field: String,
+        value: String,
+        reason: String,
+    },
+    /// Convergence failure
+    ConvergenceFailure {
+        solver: String,
+        iterations: usize,
+        residual: f64,
+    },
+    /// Invalid configuration
+    InvalidConfiguration {
+        component: String,
+        reason: String,
+    },
+    /// Model not initialized
+    ModelNotInitialized {
+        model: String,
+        reason: String,
+    },
+    /// Unauthorized field access
+    UnauthorizedFieldAccess {
+        field: String,
+        operation: String,
+    },
+    /// Invalid field index
+    InvalidFieldIndex(usize),
+    /// State error
+    StateError(String),
+    /// Instability
+    Instability,
 }
 
 impl fmt::Display for PhysicsError {
@@ -71,6 +106,33 @@ impl fmt::Display for PhysicsError {
             }
             Self::CavitationDetected { location, pressure } => {
                 write!(f, "Cavitation detected at {:?}, pressure: {}", location, pressure)
+            }
+            Self::DimensionMismatch => {
+                write!(f, "Dimension mismatch in physics calculation")
+            }
+            Self::InvalidState { field, value, reason } => {
+                write!(f, "Invalid state for {}: {} ({})", field, value, reason)
+            }
+            Self::ConvergenceFailure { solver, iterations, residual } => {
+                write!(f, "Convergence failure in {}: {} iterations, residual {}", solver, iterations, residual)
+            }
+            Self::InvalidConfiguration { component, reason } => {
+                write!(f, "Invalid configuration for {}: {}", component, reason)
+            }
+            Self::ModelNotInitialized { model, reason } => {
+                write!(f, "Model '{}' not initialized: {}", model, reason)
+            }
+            Self::UnauthorizedFieldAccess { field, operation } => {
+                write!(f, "Unauthorized access to field '{}' during '{}' operation", field, operation)
+            }
+            Self::InvalidFieldIndex(index) => {
+                write!(f, "Invalid field index: {}", index)
+            }
+            Self::StateError(reason) => {
+                write!(f, "State management error: {}", reason)
+            }
+            Self::Instability => {
+                write!(f, "Physics instability detected")
             }
         }
     }

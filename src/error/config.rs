@@ -27,6 +27,12 @@ pub enum ConfigError {
         line: usize,
         message: String,
     },
+    /// Validation failed
+    ValidationFailed {
+        field: String,
+        value: String,
+        constraint: String,
+    },
 }
 
 impl fmt::Display for ConfigError {
@@ -43,6 +49,9 @@ impl fmt::Display for ConfigError {
             }
             Self::ParseError { line, message } => {
                 write!(f, "Parse error at line {}: {}", line, message)
+            }
+            Self::ValidationFailed { field, value, constraint } => {
+                write!(f, "Validation failed for {}: {} violates {}", field, value, constraint)
             }
         }
     }
