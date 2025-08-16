@@ -1054,4 +1054,55 @@ mod tests {
         
         Ok(())
     }
+
+    /// Test heterogeneous media handling in NonlinearWave
+    /// 
+    /// Verifies that the solver correctly identifies and handles heterogeneous media
+    #[test]
+    fn test_heterogeneous_media_handling() {
+        use crate::physics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
+        use crate::medium::heterogeneous::HeterogeneousMedium;
+        
+        // Create a small grid for testing
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        
+        // Test with homogeneous medium
+        let homogeneous = HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.5, 1.0);
+        let heterogeneity_homo = NonlinearWave::quantify_heterogeneity(&homogeneous, &grid);
+        assert!(heterogeneity_homo < 0.01, 
+            "Homogeneous medium should have near-zero heterogeneity: {}", heterogeneity_homo);
+        
+        // Create heterogeneous medium with moderate variation
+        let mut heterogeneous = HeterogeneousMedium::new(&grid);
+        
+        // Set up a two-layer medium
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    
+                    // Two layers with different properties
+                    if i < grid.nx / 2 {
+                        heterogeneous.set_sound_speed(x, y, z, 1450.0, &grid);
+                        heterogeneous.set_density(x, y, z, 950.0, &grid);
+                    } else {
+                        heterogeneous.set_sound_speed(x, y, z, 1550.0, &grid);
+                        heterogeneous.set_density(x, y, z, 1050.0, &grid);
+                    }
+                }
+            }
+        }
+        
+        let heterogeneity_hetero = NonlinearWave::quantify_heterogeneity(&heterogeneous, &grid);
+        assert!(heterogeneity_hetero > 0.01, 
+            "Heterogeneous medium should have non-zero heterogeneity: {}", heterogeneity_hetero);
+        assert!(heterogeneity_hetero < 0.2, 
+            "Two-layer medium should have moderate heterogeneity: {}", heterogeneity_hetero);
+        
+        println!("Heterogeneity test passed:");
+        println!("  Homogeneous: {:.4}", heterogeneity_homo);
+        println!("  Two-layer: {:.4}", heterogeneity_hetero);
+    }
 }

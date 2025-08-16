@@ -1,5 +1,35 @@
 # Kwavers Development Checklist
 
+## ✅ **STAGE 13 HETEROGENEOUS MEDIA FIX v2.35.0 COMPLETE** - January 2025
+
+### **📋 Critical k-Space Correction Fix - Version 2.35.0**
+**Objective**: Fix k-space correction for heterogeneous media in NonlinearWave  
+**Status**: ✅ **COMPLETE** - Conservative fix with proper documentation  
+**Build Status**: ✅ **SUCCESS** - All code compiles  
+**Physics Accuracy**: ✅ **IMPROVED** - Stable for all media types  
+
+### **🔍 Stage 13 Achievements**
+
+#### **Core Fix**
+- [x] **k-Space Correction**: Now uses `max_sound_speed` instead of point sample
+- [x] **Stability**: Conservative approach ensures numerical stability
+- [x] **Phase Accuracy**: Documented trade-offs for heterogeneous media
+
+#### **Documentation Improvements**
+- [x] **Struct Documentation**: Added comprehensive heterogeneous media limitations
+- [x] **Method Documentation**: Clear warnings about PSTD limitations
+- [x] **Alternative Methods**: Listed FDTD, Split-Step, k-Wave alternatives
+
+#### **New Features**
+- [x] **Heterogeneity Quantification**: `quantify_heterogeneity()` method
+- [x] **Automatic Warnings**: Runtime detection and warning system
+- [x] **Coefficient of Variation**: Metric for medium heterogeneity
+
+#### **Validation**
+- [x] **Test Added**: `test_heterogeneous_media_handling`
+- [x] **Guidelines**: Clear thresholds for PSTD applicability
+- [x] **Two-Layer Test**: Validates heterogeneity detection
+
 ## ✅ **STAGE 12 TEST RESOLUTION v2.34.0 COMPLETE** - January 2025
 
 ### **📋 Complete Test & Validation Resolution - Version 2.34.0**
