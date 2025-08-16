@@ -392,6 +392,60 @@ pub fn tissue_specific_absorption(
     absorption.absorption_at_frequency(frequency)
 }
 
+/// Tissue-specific absorption with optional nonlinear effects
+/// 
+/// This function extends the basic absorption model to include
+/// pressure-dependent nonlinear absorption effects, which are
+/// important for high-intensity focused ultrasound (HIFU) applications.
+pub fn tissue_specific_absorption_nonlinear(
+    tissue_type: TissueType,
+    frequency: f64,
+    pressure: Option<f64>,
+) -> f64 {
+    // Get base linear absorption
+    let absorption = PowerLawAbsorption::for_tissue(tissue_type);
+    let base_absorption = absorption.absorption_at_frequency(frequency);
+    
+    // Apply nonlinear correction if pressure is available
+    if let Some(p) = pressure {
+        // Nonlinear absorption increases with pressure amplitude
+        // This is a simplified model; real tissue behavior is more complex
+        // Reference: Duck, F.A. (1990) Physical Properties of Tissue
+        
+        // Normalize pressure (typical HIFU pressures are 1-10 MPa)
+        let p_normalized = p.abs() / 1e6; // Convert to MPa
+        
+        // Nonlinear factor: increases absorption by up to 50% at 10 MPa
+        // This is tissue-dependent; some tissues show more nonlinearity
+        let nonlinear_factor = match tissue_type {
+            TissueType::Liver | TissueType::Brain => {
+                // Highly perfused organs show more nonlinearity
+                1.0 + 0.08 * p_normalized.min(10.0)
+            }
+            TissueType::Muscle | TissueType::Fat => {
+                // Moderate nonlinearity
+                1.0 + 0.05 * p_normalized.min(10.0)
+            }
+            TissueType::Bone => {
+                // Bone shows less pressure-dependent absorption change
+                1.0 + 0.02 * p_normalized.min(10.0)
+            }
+            TissueType::Blood => {
+                // Blood shows high nonlinearity due to microbubbles
+                1.0 + 0.10 * p_normalized.min(10.0)
+            }
+            _ => {
+                // Default moderate nonlinearity (Water, SoftTissue, Skin, Custom)
+                1.0 + 0.05 * p_normalized.min(10.0)
+            }
+        };
+        
+        base_absorption * nonlinear_factor
+    } else {
+        base_absorption
+    }
+}
+
 /// Helper function for computing absorption coefficient
 /// This is for backward compatibility with existing code
 pub fn absorption_coefficient(frequency: f64, _temperature: f64, _bubble_radius: Option<f64>) -> f64 {
@@ -436,6 +490,12 @@ pub mod tissue_specific {
         pub shear_sound_speed: f64,
         pub shear_viscosity_coeff: f64,
         pub bulk_viscosity_coeff: f64,
+        // Additional physical properties for more accurate simulations
+        pub viscosity: f64,  // Dynamic viscosity [Pa·s]
+        pub surface_tension: f64,  // Surface tension [N/m]
+        pub thermal_expansion: f64,  // Thermal expansion coefficient [1/K]
+        pub thermal_diffusivity: f64,  // Thermal diffusivity [m²/s]
+        pub gas_diffusion_coefficient: f64,  // Gas diffusion coefficient [m²/s]
     }
     
     use std::sync::OnceLock;
@@ -460,6 +520,11 @@ pub mod tissue_specific {
             shear_sound_speed: 3.08,  // m/s (calculated from lame_mu/density)
             shear_viscosity_coeff: 0.0,  // Pa·s
             bulk_viscosity_coeff: 0.0,  // Pa·s
+            viscosity: 0.001,  // Pa·s (similar to water)
+            surface_tension: 0.045,  // N/m (tissue-fluid interface)
+            thermal_expansion: 3.0e-4,  // 1/K
+            thermal_diffusivity: 1.4e-7,  // m²/s
+            gas_diffusion_coefficient: 2.0e-9,  // m²/s
         });
         
         db.insert(TissueType::Skin, TissueProperties {
@@ -475,6 +540,11 @@ pub mod tissue_specific {
             shear_sound_speed: 1.5,  // m/s (calculated from lame_mu/density)
             shear_viscosity_coeff: 1.0e-3,  // Pa·s
             bulk_viscosity_coeff: 1.0e-3,  // Pa·s
+            viscosity: 0.0015,  // Pa·s (slightly higher than soft tissue)
+            surface_tension: 0.05,  // N/m
+            thermal_expansion: 2.5e-4,  // 1/K
+            thermal_diffusivity: 1.3e-7,  // m²/s
+            gas_diffusion_coefficient: 1.8e-9,  // m²/s
         });
         
         db
