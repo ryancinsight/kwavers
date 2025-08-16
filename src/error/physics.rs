@@ -79,7 +79,11 @@ pub enum PhysicsError {
     /// State error
     StateError(String),
     /// Instability
-    Instability,
+    Instability {
+        field: String,
+        value: f64,
+        threshold: f64,
+    },
 }
 
 impl fmt::Display for PhysicsError {
@@ -131,8 +135,8 @@ impl fmt::Display for PhysicsError {
             Self::StateError(reason) => {
                 write!(f, "State management error: {}", reason)
             }
-            Self::Instability => {
-                write!(f, "Physics instability detected")
+            Self::Instability { field, value, threshold } => {
+                write!(f, "Physics instability in {}: value {} exceeds threshold {}", field, value, threshold)
             }
         }
     }

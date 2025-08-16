@@ -65,7 +65,11 @@ pub enum KwaversError {
     /// IO errors
     Io(String),
     /// Concurrency errors
-    ConcurrencyError(String),
+    ConcurrencyError {
+        operation: String,
+        resource: String,
+        reason: String,
+    },
     /// Feature not yet implemented
     NotImplemented(String),
 }
@@ -85,7 +89,9 @@ impl fmt::Display for KwaversError {
             Self::Composite(e) => write!(f, "Multiple errors: {}", e),
             Self::Validation(e) => write!(f, "Validation error: {:?}", e),
             Self::Io(msg) => write!(f, "I/O error: {}", msg),
-            Self::ConcurrencyError(msg) => write!(f, "Concurrency error: {}", msg),
+            Self::ConcurrencyError { operation, resource, reason } => {
+                write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
+            }
             Self::NotImplemented(feature) => write!(f, "Not implemented: {}", feature),
         }
     }

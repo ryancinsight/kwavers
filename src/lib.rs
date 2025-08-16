@@ -296,23 +296,26 @@ pub fn create_validated_simulation(
             .collect::<Vec<_>>()
             .join("; ");
         return Err(KwaversError::Config(crate::error::ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: format!("Configuration validation failed: {}", error_summary),
+            field: "simulation".to_string(),
+            value: "configuration".to_string(),
+            constraint: format!("Validation failed: {}", error_summary),
         }));
     }
     
     // Create grid using simulation config
     let grid = config.simulation.initialize_grid()
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: e,
+            field: "grid".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
     // Create time discretization
     let time = config.simulation.initialize_time(&grid)
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: e,
+            field: "time".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
     // Create medium

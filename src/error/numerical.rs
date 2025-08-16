@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 pub enum NumericalError {
     Overflow,
     Underflow,
-    DivisionByZero,
+    DivisionByZero {
+        operation: String,
+        location: String,
+    },
     InvalidOperation(String),
     Instability {
         operation: String,
@@ -18,9 +21,19 @@ pub enum NumericalError {
         operation: String,
         inputs: String,
     },
-    MatrixDimension,
-    SingularMatrix,
-    UnsupportedOperation,
+    MatrixDimension {
+        operation: String,
+        expected: String,
+        actual: String,
+    },
+    SingularMatrix {
+        operation: String,
+        condition_number: f64,
+    },
+    UnsupportedOperation {
+        operation: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for NumericalError {
@@ -28,7 +41,9 @@ impl fmt::Display for NumericalError {
         match self {
             Self::Overflow => write!(f, "Numerical overflow"),
             Self::Underflow => write!(f, "Numerical underflow"),
-            Self::DivisionByZero => write!(f, "Division by zero"),
+            Self::DivisionByZero { operation, location } => {
+                write!(f, "Division by zero in {} at {}", operation, location)
+            }
             Self::InvalidOperation(op) => write!(f, "Invalid operation: {}", op),
             Self::Instability { operation, condition } => {
                 write!(f, "Numerical instability in {}: condition number {}", operation, condition)
@@ -36,9 +51,15 @@ impl fmt::Display for NumericalError {
             Self::NaN { operation, inputs } => {
                 write!(f, "NaN value in {}: inputs {}", operation, inputs)
             }
-            Self::MatrixDimension => write!(f, "Matrix dimension error"),
-            Self::SingularMatrix => write!(f, "Singular matrix"),
-            Self::UnsupportedOperation => write!(f, "Unsupported numerical operation"),
+            Self::MatrixDimension { operation, expected, actual } => {
+                write!(f, "Matrix dimension error in {}: expected {}, got {}", operation, expected, actual)
+            }
+            Self::SingularMatrix { operation, condition_number } => {
+                write!(f, "Singular matrix in {}: condition number {}", operation, condition_number)
+            }
+            Self::UnsupportedOperation { operation, reason } => {
+                write!(f, "Unsupported operation {}: {}", operation, reason)
+            }
         }
     }
 }
