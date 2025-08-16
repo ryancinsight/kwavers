@@ -330,8 +330,9 @@ pub fn create_validated_simulation(
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "source".to_string(),
-            reason: e,
+            field: "source".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
     // Create sensor with default positions from config or defaults

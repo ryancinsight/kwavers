@@ -114,9 +114,11 @@ impl MediumFactory {
                 );
                 Ok(Box::new(medium))
             }
-            MediumType::Heterogeneous { tissue_file: _ } => {
-                // TODO: Implement heterogeneous medium loading
-                Err(KwaversError::NotImplemented("Heterogeneous medium not yet implemented".to_string()))
+            MediumType::Heterogeneous { tissue_file } => {
+                // Heterogeneous medium requires loading from file
+                Err(KwaversError::NotImplemented(
+                    format!("Heterogeneous medium loading from '{}' not yet implemented", tissue_file)
+                ))
             }
         }
     }

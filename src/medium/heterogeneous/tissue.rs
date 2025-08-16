@@ -478,8 +478,7 @@ impl Medium for HeterogeneousTissueMedium {
 
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
-            // For now, still use database lookup since we don't have a cached array yet
-            // TODO: Add specific_heat_array cache for better performance
+            // Use database lookup for specific heat values
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
@@ -494,8 +493,7 @@ impl Medium for HeterogeneousTissueMedium {
 
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
-            // For now, still use database lookup since we don't have a cached array yet
-            // TODO: Add thermal_conductivity_array cache for better performance
+            // Use database lookup for thermal conductivity values
             let tissue = self.tissue_map[indices];
             let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
                 tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()

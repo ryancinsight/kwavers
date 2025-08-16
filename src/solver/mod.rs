@@ -455,18 +455,18 @@ impl Solver {
         if nan_count > 0 {
             let location = first_nan_location.unwrap();
             return Err(PhysicsError::Instability {
-                field: field_name.to_string(),
-                location,
+                field: format!("{} at {:?}", field_name, location),
                 value: f64::NAN,
+                threshold: 0.0,
             }.into());
         }
         
         if inf_count > 0 {
             let location = first_inf_location.unwrap();
             return Err(PhysicsError::Instability {
-                field: field_name.to_string(),
-                location,
+                field: format!("{} at {:?}", field_name, location),
                 value: f64::INFINITY,
+                threshold: f64::MAX,
             }.into());
         }
         

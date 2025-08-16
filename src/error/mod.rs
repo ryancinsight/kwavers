@@ -100,13 +100,19 @@ impl fmt::Display for KwaversError {
 impl StdError for KwaversError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
+            Self::Grid(e) => Some(e),
+            Self::Medium(e) => Some(e),
             Self::Physics(e) => Some(e),
             Self::Gpu(e) => Some(e),
             Self::Data(e) => Some(e),
             Self::Config(e) => Some(e),
             Self::Numerical(e) => Some(e),
             Self::Field(e) => Some(e),
+            Self::System(e) => Some(e),
             Self::Composite(e) => Some(e),
+            Self::Validation(e) => Some(e),
+            Self::Io(_) => None,
+            Self::ConcurrencyError { .. } => None,
             Self::NotImplemented(_) => None,
         }
     }

@@ -85,11 +85,11 @@ impl BowlTransducer {
     pub fn new(config: BowlConfig) -> KwaversResult<Self> {
         // Validate configuration
         if config.diameter > 2.0 * config.radius_of_curvature {
-            return Err(KwaversError::field_validation(
-                "diameter",
-                config.diameter,
-                "Diameter cannot exceed 2 * radius_of_curvature"
-            ));
+            return Err(KwaversError::Validation(crate::error::ValidationError::FieldValidation {
+                field: "diameter".to_string(),
+                value: config.diameter.to_string(),
+                constraint: "Diameter cannot exceed 2 * radius_of_curvature".to_string(),
+            }));
         }
         
         // Calculate element size if not provided
