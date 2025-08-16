@@ -1,0 +1,70 @@
+//! GPU FFT module providing high-performance FFT implementations
+//!
+//! This module is organized by backend to maintain separation of concerns:
+//! - `plan`: FFT planning and workspace management
+//! - `cuda`: CUDA-specific implementation
+//! - `opencl`: OpenCL-specific implementation  
+//! - `webgpu`: WebGPU-specific implementation
+//! - `kernels`: Shared kernel algorithms
+//! - `transpose`: Matrix transpose operations
+
+pub mod plan;
+pub mod kernels;
+pub mod transpose;
+
+#[cfg(feature = "cuda")]
+pub mod cuda;
+
+#[cfg(feature = "opencl")]
+pub mod opencl;
+
+#[cfg(feature = "webgpu")]
+pub mod webgpu;
+
+// Re-export main types
+pub use plan::{GpuFftPlan, FftDirection};
+pub use kernels::FftKernel;
+pub use transpose::TransposeOperation;
+
+use crate::error::KwaversResult;
+use ndarray::Array3;
+use num_complex::Complex;
+
+/// Trait for GPU FFT implementations
+pub trait GpuFftBackend: Send + Sync {
+    /// Create a new FFT plan for the given dimensions
+    fn create_plan(&self, nx: usize, ny: usize, nz: usize, forward: bool) -> KwaversResult<GpuFftPlan>;
+    
+    /// Execute FFT on complex data
+    fn execute(&mut self, plan: &GpuFftPlan, data: &mut Array3<Complex<f64>>) -> KwaversResult<()>;
+    
+    /// Get backend name for debugging
+    fn backend_name(&self) -> &str;
+}
+
+/// Factory function to create appropriate backend
+pub fn create_fft_backend() -> KwaversResult<Box<dyn GpuFftBackend>> {
+    #[cfg(feature = "cuda")]
+    {
+        return Ok(Box::new(cuda::CudaFftBackend::new()?));
+    }
+    
+    #[cfg(feature = "opencl")]
+    {
+        return Ok(Box::new(opencl::OpenClFftBackend::new()?));
+    }
+    
+    #[cfg(feature = "webgpu")]
+    {
+        return Ok(Box::new(webgpu::WebGpuFftBackend::new()?));
+    }
+    
+    #[cfg(not(any(feature = "cuda", feature = "opencl", feature = "webgpu")))]
+    {
+        use crate::error::KwaversError;
+        Err(KwaversError::Config(crate::error::ConfigError::MissingParameter {
+            parameter: "GPU backend".to_string(),
+            section: "features".to_string(),
+        }))
+    }
+}
