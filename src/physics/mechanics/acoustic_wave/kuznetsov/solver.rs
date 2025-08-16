@@ -50,10 +50,13 @@ impl KuznetsovWave {
     ) -> Array3<f64> {
         let mut rhs = Array3::zeros(pressure.dim());
         
-        // Get medium properties (using default values for now)
-        // TODO: Update Medium trait to provide these methods
-        let density = 1000.0; // Default water density
-        let sound_speed = 1500.0; // Default water sound speed
+        // Get medium properties at grid center (assuming homogeneous for now)
+        use crate::constants::physics::GRID_CENTER_FACTOR;
+        let center_x = self.grid.dx * (self.grid.nx as f64) / GRID_CENTER_FACTOR;
+        let center_y = self.grid.dy * (self.grid.ny as f64) / GRID_CENTER_FACTOR;
+        let center_z = self.grid.dz * (self.grid.nz as f64) / GRID_CENTER_FACTOR;
+        let density = medium.density(center_x, center_y, center_z, &self.grid);
+        let sound_speed = medium.sound_speed(center_x, center_y, center_z, &self.grid);
         let nonlinearity = self.config.nonlinearity_coefficient;
         let diffusivity = self.config.acoustic_diffusivity;
         
@@ -166,7 +169,7 @@ impl AcousticWaveModel for KuznetsovWave {
         
         // Time integration using explicit Euler (can be upgraded to RK4)
         // ∂²p/∂t² = rhs  =>  p_new = p + dt * p_dot + 0.5 * dt² * rhs
-        // For now, using simple forward Euler for second-order equation
+        // Currently using forward Euler for second-order equation
         // This should be replaced with a proper time integration scheme
         
         Zip::from(&mut pressure)

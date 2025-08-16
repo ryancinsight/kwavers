@@ -5,6 +5,7 @@
 
 use ndarray::{Array3, Zip};
 use crate::constants::physics::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
+use crate::constants::numerical::THIRD_ORDER_DIFF_COEFF;
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace
 ///
@@ -43,35 +44,12 @@ pub fn compute_diffusive_term_workspace(
         .and(pressure_prev2)
         .and(pressure_prev3)
         .for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
-            let d3p_dt3 = (p - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / dt_cubed;
+            let d3p_dt3 = (p - THIRD_ORDER_DIFF_COEFF * p_prev + THIRD_ORDER_DIFF_COEFF * p_prev2 - p_prev3) / dt_cubed;
             *diff = coeff * d3p_dt3;
         });
 }
 
-/// Legacy function for backward compatibility - allocates memory
-/// Prefer compute_diffusive_term_workspace for performance
-pub fn compute_diffusive_term(
-    pressure: &Array3<f64>,
-    pressure_prev: &Array3<f64>,
-    pressure_prev2: &Array3<f64>,
-    pressure_prev3: &Array3<f64>,
-    dt: f64,
-    sound_speed: f64,
-    acoustic_diffusivity: f64,
-) -> Array3<f64> {
-    let mut diffusive_term = Array3::zeros(pressure.dim());
-    compute_diffusive_term_workspace(
-        pressure,
-        pressure_prev,
-        pressure_prev2,
-        pressure_prev3,
-        dt,
-        sound_speed,
-        acoustic_diffusivity,
-        &mut diffusive_term,
-    );
-    diffusive_term
-}
+
 
 /// Compute frequency-dependent absorption coefficient
 ///

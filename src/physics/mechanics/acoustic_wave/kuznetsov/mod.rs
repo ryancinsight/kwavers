@@ -46,19 +46,7 @@ pub mod spectral;
 // Re-export main types
 pub use config::{KuznetsovConfig, AcousticEquationMode};
 pub use solver::KuznetsovWave;
-pub use workspace::RK4Workspace;
-
-// Re-export constants for backward compatibility
-pub use config::{
-    DEFAULT_CFL_FACTOR,
-    MAX_CFL_FACTOR,
-    DEFAULT_K_SPACE_CORRECTION_ORDER,
-    MAX_K_SPACE_CORRECTION_ORDER,
-    DEFAULT_SPATIAL_ORDER,
-    DEFAULT_NONLINEARITY_SCALING,
-    DEFAULT_DIFFUSIVITY,
-    MAX_K_SPACE_CORRECTION,
-};
+pub use workspace::KuznetsovWorkspace;
 
 #[cfg(test)]
 mod tests;

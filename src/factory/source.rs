@@ -4,8 +4,10 @@
 
 use crate::error::{KwaversResult, ConfigError};
 use crate::grid::Grid;
-use crate::source::Source;
+use crate::source::{Source, PointSource};
+use crate::signal::{Signal, SineWave};
 use crate::constants::physics;
+use std::sync::Arc;
 
 /// Source configuration
 #[derive(Debug, Clone)]
@@ -57,7 +59,7 @@ impl SourceConfig {
 impl Default for SourceConfig {
     fn default() -> Self {
         Self {
-            source_type: "gaussian".to_string(),
+            source_type: "point".to_string(),
             position: (0.0, 0.0, 0.0),
             amplitude: physics::STANDARD_PRESSURE_AMPLITUDE,
             frequency: physics::DEFAULT_ULTRASOUND_FREQUENCY,
@@ -75,12 +77,39 @@ pub struct SourceFactory;
 
 impl SourceFactory {
     /// Create a source from configuration
-    pub fn create_source(config: &SourceConfig, grid: &Grid) -> KwaversResult<Box<dyn Source>> {
+    pub fn create_source(config: &SourceConfig, _grid: &Grid) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
         
-        // Implementation would create appropriate source type based on config
-        // For now, return a placeholder error
-        use crate::error::KwaversError;
-        Err(KwaversError::NotImplemented("Source creation to be implemented".to_string()))
+        // Create signal based on configuration
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(
+            config.frequency,
+            config.amplitude,
+            config.phase,
+        ));
+        
+        // Create appropriate source type based on config
+        match config.source_type.as_str() {
+            "point" => {
+                let source = PointSource::new(config.position, signal);
+                Ok(Box::new(source))
+            }
+            _ => {
+                // For now, default to point source for unrecognized types
+                let source = PointSource::new(config.position, signal);
+                Ok(Box::new(source))
+            }
+        }
+    }
+    
+    /// Create a point source at specified location
+    pub fn create_point_source(
+        x: f64,
+        y: f64,
+        z: f64,
+        amplitude: f64,
+        frequency: f64,
+    ) -> Box<dyn Source> {
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, amplitude, 0.0));
+        Box::new(PointSource::new((x, y, z), signal))
     }
 }

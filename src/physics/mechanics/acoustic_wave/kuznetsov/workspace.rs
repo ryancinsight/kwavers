@@ -87,25 +87,3 @@ impl KuznetsovWorkspace {
     }
 }
 
-/// Legacy RK4 workspace for backward compatibility
-#[derive(Debug, Clone)]
-pub struct RK4Workspace {
-    pub k1: Array3<f64>,
-    pub k2: Array3<f64>,
-    pub k3: Array3<f64>,
-    pub k4: Array3<f64>,
-    pub temp_field: Array3<f64>,
-}
-
-impl RK4Workspace {
-    pub fn new(grid: &Grid) -> KwaversResult<Self> {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        Ok(Self {
-            k1: Array3::zeros(shape),
-            k2: Array3::zeros(shape),
-            k3: Array3::zeros(shape),
-            k4: Array3::zeros(shape),
-            temp_field: Array3::zeros(shape),
-        })
-    }
-}

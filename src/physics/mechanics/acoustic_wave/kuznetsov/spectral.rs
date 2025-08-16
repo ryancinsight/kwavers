@@ -8,6 +8,7 @@ use ndarray::{Array1, Array3, Zip};
 use num_complex::Complex;
 use crate::grid::Grid;
 use crate::fft::{Fft3d, Ifft3d};
+use crate::constants::numerical::FFT_K_SCALING;
 use std::f64::consts::PI;
 
 /// Spectral operator for computing derivatives in Fourier space
@@ -48,25 +49,25 @@ impl SpectralOperator {
         
         let kx_vec: Array1<f64> = (0..nx).map(|i| {
             if i <= nx / 2 {
-                i as f64 * 2.0 * kx_max / nx as f64
+                i as f64 * FFT_K_SCALING * kx_max / nx as f64
             } else {
-                (i as f64 - nx as f64) * 2.0 * kx_max / nx as f64
+                (i as f64 - nx as f64) * FFT_K_SCALING * kx_max / nx as f64
             }
         }).collect();
         
         let ky_vec: Array1<f64> = (0..ny).map(|j| {
             if j <= ny / 2 {
-                j as f64 * 2.0 * ky_max / ny as f64
+                j as f64 * FFT_K_SCALING * ky_max / ny as f64
             } else {
-                (j as f64 - ny as f64) * 2.0 * ky_max / ny as f64
+                (j as f64 - ny as f64) * FFT_K_SCALING * ky_max / ny as f64
             }
         }).collect();
         
         let kz_vec: Array1<f64> = (0..nz).map(|k| {
             if k <= nz / 2 {
-                k as f64 * 2.0 * kz_max / nz as f64
+                k as f64 * FFT_K_SCALING * kz_max / nz as f64
             } else {
-                (k as f64 - nz as f64) * 2.0 * kz_max / nz as f64
+                (k as f64 - nz as f64) * FFT_K_SCALING * kz_max / nz as f64
             }
         }).collect();
         

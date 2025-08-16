@@ -8,6 +8,7 @@ use crate::constants::physics::{
     NONLINEARITY_COEFFICIENT_OFFSET,
     B_OVER_A_DIVISOR,
 };
+use crate::constants::numerical::SECOND_ORDER_DIFF_COEFF;
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace
 ///
@@ -54,34 +55,11 @@ pub fn compute_nonlinear_term_workspace(
         .and(&p_squared_prev)
         .and(&p_squared_prev2)
         .for_each(|nl, &p2, &p2_prev, &p2_prev2| {
-            *nl = coeff * (p2 - 2.0 * p2_prev + p2_prev2) / dt_squared;
+            *nl = coeff * (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
         });
 }
 
-/// Legacy function for backward compatibility - allocates memory
-/// Prefer compute_nonlinear_term_workspace for performance
-pub fn compute_nonlinear_term(
-    pressure: &Array3<f64>,
-    pressure_prev: &Array3<f64>,
-    pressure_prev2: &Array3<f64>,
-    dt: f64,
-    density: f64,
-    sound_speed: f64,
-    nonlinearity_coefficient: f64,
-) -> Array3<f64> {
-    let mut nonlinear_term = Array3::zeros(pressure.dim());
-    compute_nonlinear_term_workspace(
-        pressure,
-        pressure_prev,
-        pressure_prev2,
-        dt,
-        density,
-        sound_speed,
-        nonlinearity_coefficient,
-        &mut nonlinear_term,
-    );
-    nonlinear_term
-}
+
 
 /// Compute the quadratic nonlinearity coefficient
 ///

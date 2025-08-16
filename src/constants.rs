@@ -7,6 +7,18 @@
 // Re-export standard mathematical constants for convenience
 pub use std::f64::consts::{E, PI as PI_CONST, TAU};
 
+/// Numerical constants for finite differences and FFT
+pub mod numerical {
+    /// Coefficient for second-order central difference
+    pub const SECOND_ORDER_DIFF_COEFF: f64 = 2.0;
+    
+    /// Coefficient for third-order finite difference
+    pub const THIRD_ORDER_DIFF_COEFF: f64 = 3.0;
+    
+    /// FFT wavenumber scaling factor
+    pub const FFT_K_SCALING: f64 = 2.0;
+}
+
 /// Numerical tolerance constants
 pub mod tolerance {
     /// Default tolerance for floating-point comparisons
@@ -86,6 +98,9 @@ pub mod physics {
     
     /// Reference frequency for absorption coefficient (Hz)
     pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1_000_000.0;
+    
+    /// Grid center factor for coordinate calculations
+    pub const GRID_CENTER_FACTOR: f64 = 2.0;
 }
 
 /// Grid and discretization constants
