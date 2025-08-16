@@ -1326,8 +1326,8 @@ mod tests {
         }
     }
     
-    // Tests for EnhancedError and ErrorBuilder removed as those types
-    // were removed for violating YAGNI principle
+    // Tests for composite error types and builders removed
+    // to maintain YAGNI principle compliance
     
     #[test]
     fn test_error_utilities() {

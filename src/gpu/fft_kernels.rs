@@ -1,4 +1,4 @@
-//! GPU-Optimized FFT Kernels
+//! GPU FFT Kernels
 //!
 //! This module provides high-performance FFT implementations for various GPU backends:
 //! - CUDA: Using cuFFT library and custom kernels

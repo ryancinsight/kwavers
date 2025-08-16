@@ -41,6 +41,7 @@ pub mod workspace;
 pub mod numerical;
 pub mod nonlinear;
 pub mod diffusion;
+pub mod spectral;
 
 // Re-export main types
 pub use config::{KuznetsovConfig, AcousticEquationMode};

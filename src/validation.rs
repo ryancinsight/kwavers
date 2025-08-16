@@ -1,11 +1,11 @@
-//! Simple validation system for kwavers
+//! Validation system for kwavers
 //!
-//! This module provides a straightforward validation framework using
+//! This module provides a validation framework using
 //! struct methods and the validator crate for complex validations.
 
 use crate::error::ValidationError;
 
-/// Simple validation result
+/// Validation result
 #[derive(Debug, Clone)]
 pub struct ValidationResult {
     pub is_valid: bool,
