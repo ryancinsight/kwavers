@@ -84,7 +84,7 @@ pub mod utils;
 pub mod validation;
 
 // Phase 11: Visualization & Real-Time Interaction
-#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web-visualization", feature = "vr-support")))]
+#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web_visualization", feature = "vr-support")))]
 pub mod visualization;
 
 // Re-export commonly used types for convenience
@@ -140,7 +140,7 @@ pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeCo
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  
-pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, SimulationBuilder, SimulationSetup, SimulationResults};
+pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, PhysicsModelConfig, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, ConfigBuilder, SimulationComponents};
 
 // Re-export I/O functions
 pub use io::{save_pressure_data, save_light_data, generate_summary};

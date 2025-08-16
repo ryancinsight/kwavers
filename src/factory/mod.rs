@@ -1,0 +1,63 @@
+//! Factory patterns for creating simulation components
+//! 
+//! This module follows GRASP principles with domain-based organization:
+//! - Information Expert: Objects that have the information needed to fulfill a responsibility
+//! - Creator: Objects responsible for creating other objects they use
+//! - Controller: Objects that coordinate and control system operations
+//! - Low Coupling: Minimize dependencies between objects
+//! - High Cohesion: Keep related functionality together
+
+pub mod config;
+pub mod grid;
+pub mod medium;
+pub mod physics;
+pub mod source;
+pub mod time;
+pub mod validation;
+
+// Re-export main types
+pub use config::{SimulationConfig, ConfigBuilder};
+pub use grid::{GridFactory, GridConfig};
+pub use medium::{MediumFactory, MediumConfig, MediumType};
+pub use physics::{PhysicsFactory, PhysicsConfig, PhysicsModelConfig, PhysicsModelType};
+pub use source::{SourceFactory, SourceConfig};
+pub use time::{TimeFactory, TimeConfig};
+pub use validation::{ValidationConfig, ConfigValidator};
+
+use crate::error::KwaversResult;
+
+/// Main simulation factory for creating complete simulation setups
+/// Follows Controller pattern from GRASP
+pub struct SimulationFactory;
+
+impl SimulationFactory {
+    /// Create a new simulation from configuration
+    pub fn create_simulation(config: SimulationConfig) -> KwaversResult<SimulationComponents> {
+        // Validate configuration
+        ConfigValidator::validate(&config)?;
+        
+        // Create components using domain-specific factories
+        let grid = GridFactory::create_grid(&config.grid)?;
+        let medium = MediumFactory::create_medium(&config.medium, &grid)?;
+        let physics = PhysicsFactory::create_physics(&config.physics)?;
+        let time = TimeFactory::create_time(&config.time, &grid)?;
+        let source = SourceFactory::create_source(&config.source, &grid)?;
+        
+        Ok(SimulationComponents {
+            grid,
+            medium,
+            physics,
+            time,
+            source,
+        })
+    }
+}
+
+/// Container for all simulation components
+pub struct SimulationComponents {
+    pub grid: crate::grid::Grid,
+    pub medium: Box<dyn crate::medium::Medium>,
+    pub physics: crate::physics::plugin::PluginManager,
+    pub time: crate::time::Time,
+    pub source: Box<dyn crate::source::Source>,
+}
