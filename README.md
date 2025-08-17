@@ -10,13 +10,39 @@
 
 **Next-Generation Acoustic Wave Simulation Platform**
 
-## 🔄 **Version 2.53.0 - Stage 30: Critical Medium Module Fixes**
+## 🔄 **Version 2.54.0 - Stage 31: Critical Plugin Architecture Fixes**
 
-### **Current Status: Correctness & Performance Restored**
+### **Current Status: Plugin System Correctness Restored**
 
-Fixed critical cache poisoning bug that would corrupt physics simulations. Eliminated O(N) performance trap in point-wise property access. Medium module now production-ready.
+Fixed critical design flaws in plugin system: dummy grid initialization, missing cycle detection, and misleading parallel execution. Plugin architecture now robust and correct.
 
-### **✅ Stage 30 Medium Module Achievements**
+### **✅ Stage 31 Plugin Architecture Achievements**
+
+#### **1. Dummy Grid Initialization Fixed** 🎯
+**Bug**: Plugins created with hardcoded `Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)`
+**Impact**: Plugins initialized with wrong parameters, incorrect physics
+**Fix**: Grid now passed to factory create method
+- **Before**: `fn create(config) -> Plugin` with dummy grid
+- **After**: `fn create(config, grid) -> Plugin` with actual grid
+- **Result**: Plugins always initialized with correct simulation parameters
+
+#### **2. Cycle Detection Added** 🔄
+**Bug**: Dependency resolver had no cycle detection, would stack overflow
+**Impact**: Circular dependencies caused crashes with no clear error
+**Fix**: Three-state topological sort with explicit cycle detection
+- **States**: 0=unvisited, 1=visiting (in path), 2=visited
+- **Detection**: If node is "visiting" when reached again = cycle
+- **Result**: Clear error message identifying the circular dependency
+
+#### **3. Misleading ParallelStrategy Fixed** ⚠️
+**Bug**: ParallelStrategy claimed parallelism but executed sequentially
+**Impact**: Misleading API, unnecessary complexity, false expectations
+**Fix**: Documented limitation, simplified implementation
+- **Root Cause**: `&mut fields` prevents true inter-plugin parallelism
+- **Solution**: Marked as deprecated, simplified to sequential execution
+- **Future**: Would require architectural change (read/write phase split)
+
+### **✅ Stage 30 Medium Module Fixes (Previous)**
 
 #### **1. Critical Cache Poisoning Fix** 🚨
 **Bug**: `set_tissue_in_region` was permanently poisoning OnceLock caches with zeros

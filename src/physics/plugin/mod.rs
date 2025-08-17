@@ -265,23 +265,32 @@ impl PluginManager {
     
     /// Compute execution order based on dependencies
     fn compute_execution_order(&mut self) -> KwaversResult<()> {
-        // Simple topological sort
+        // Topological sort with cycle detection
         let n = self.plugins.len();
-        let mut visited = vec![false; n];
+        // 0: unvisited, 1: visiting (in current path), 2: visited
+        let mut visited = vec![0u8; n];
         let mut order = Vec::new();
         
         fn visit(
             idx: usize,
             plugins: &[Box<dyn PhysicsPlugin>],
-            visited: &mut [bool],
+            visited: &mut [u8],  // Three-state tracking for cycle detection
             order: &mut Vec<usize>,
             field_providers: &HashMap<UnifiedFieldType, Vec<String>>,
         ) -> Result<(), String> {
-            if visited[idx] {
-                return Ok(());
+            match visited[idx] {
+                1 => {
+                    // Already in current path - cycle detected!
+                    return Err(format!(
+                        "Circular dependency detected involving plugin '{}'",
+                        plugins[idx].metadata().id
+                    ));
+                }
+                2 => return Ok(()), // Already fully processed
+                _ => {} // 0: unvisited, continue processing
             }
             
-            visited[idx] = true;
+            visited[idx] = 1; // Mark as visiting (in current path)
             
             // Visit dependencies first
             let plugin = &plugins[idx];
@@ -297,6 +306,7 @@ impl PluginManager {
                 }
             }
             
+            visited[idx] = 2; // Mark as visited (fully processed)
             order.push(idx);
             Ok(())
         }
@@ -472,8 +482,12 @@ impl DynamicPluginHandle {
 
 /// Plugin factory trait for creating plugins
 pub trait PluginFactory: Send + Sync {
-    /// Create a new plugin instance
-    fn create(&self, config: Box<dyn Any + Send + Sync>) -> KwaversResult<Box<dyn PhysicsPlugin>>;
+    /// Create a new plugin instance with the simulation grid
+    fn create(
+        &self, 
+        config: Box<dyn Any + Send + Sync>,
+        grid: &Grid,  // Grid is now required for proper plugin initialization
+    ) -> KwaversResult<Box<dyn PhysicsPlugin>>;
     
     /// Get metadata about the plugin this factory creates
     fn metadata(&self) -> PluginMetadata;
@@ -485,7 +499,7 @@ pub trait PluginFactory: Send + Sync {
 /// Type-erased wrapper for plugin factories
 struct TypedPluginFactory<F, C, P>
 where
-    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,  // Now takes Grid
     C: PluginConfig + 'static,
     P: PhysicsPlugin + 'static,
 {
@@ -496,7 +510,7 @@ where
 
 impl<F, C, P> TypedPluginFactory<F, C, P>
 where
-    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,  // Now takes Grid
     C: PluginConfig + 'static,
     P: PhysicsPlugin + 'static,
 {
@@ -511,11 +525,11 @@ where
 
 impl<F, C, P> PluginFactory for TypedPluginFactory<F, C, P>
 where
-    F: Fn(C) -> KwaversResult<P> + Send + Sync,
+    F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,  // Now takes Grid
     C: PluginConfig + 'static,
     P: PhysicsPlugin + 'static,
 {
-    fn create(&self, config: Box<dyn Any + Send + Sync>) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+    fn create(&self, config: Box<dyn Any + Send + Sync>, grid: &Grid) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         // Downcast the config to the expected type
         let config = config
             .downcast::<C>()
@@ -527,8 +541,8 @@ where
                 }
             ))?;
         
-        // Create the plugin
-        let plugin = (self.factory_fn)(*config)?;
+        // Create the plugin with the actual grid
+        let plugin = (self.factory_fn)(*config, grid)?;
         Ok(Box::new(plugin))
     }
     
@@ -563,7 +577,7 @@ impl PluginRegistry {
         metadata: PluginMetadata,
         factory_fn: F,
     ) where
-        F: Fn(C) -> KwaversResult<P> + Send + Sync + 'static,
+        F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync + 'static,  // Now takes Grid
         C: PluginConfig + 'static,
         P: PhysicsPlugin + 'static,
     {
@@ -589,6 +603,7 @@ impl PluginRegistry {
         &self,
         plugin_id: &str,
         config: Box<dyn Any + Send + Sync>,
+        grid: &Grid,  // Grid is now required
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let factory = self.factories.get(plugin_id)
             .ok_or_else(|| crate::error::KwaversError::Config(
@@ -600,7 +615,7 @@ impl PluginRegistry {
                 }
             ))?;
         
-        factory.create(config)
+        factory.create(config, grid)
     }
     
     /// Create a plugin with a typed configuration
@@ -608,8 +623,9 @@ impl PluginRegistry {
         &self,
         plugin_id: &str,
         config: C,
+        grid: &Grid,  // Grid is now required
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
-        self.create_plugin(plugin_id, Box::new(config) as Box<dyn Any + Send + Sync>)
+        self.create_plugin(plugin_id, Box::new(config) as Box<dyn Any + Send + Sync>, grid)
     }
     
     /// Get metadata for a plugin
@@ -651,9 +667,8 @@ impl PluginRegistry {
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
-            |config: FdtdConfig| {
-                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-                FdtdPlugin::new(config, &grid)
+            |config: FdtdConfig, grid: &Grid| {
+                FdtdPlugin::new(config, grid)
             },
         );
         
@@ -668,9 +683,8 @@ impl PluginRegistry {
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
-            |config: PstdConfig| {
-                let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-                PstdPlugin::new(config, &grid)
+            |config: PstdConfig, grid: &Grid| {
+                PstdPlugin::new(config, grid)
             },
         );
         
@@ -833,10 +847,18 @@ impl ExecutionStrategy for SequentialStrategy {
     }
 }
 
-/// Parallel execution strategy (for independent plugins)
+/// Parallel execution strategy (DEPRECATED - Misleading Implementation)
 /// 
-/// This strategy executes independent plugins in parallel using thread-safe
-/// field partitioning or field cloning depending on plugin requirements.
+/// WARNING: This strategy does NOT actually execute plugins in parallel due to
+/// the fundamental constraint that PhysicsPlugin::update requires &mut fields.
+/// True inter-plugin parallelism is not possible without significant architectural
+/// changes (e.g., splitting update into read-only prepare and write-only commit phases).
+/// 
+/// This implementation is retained for backward compatibility but should be removed
+/// in the next major version. Use SequentialStrategy instead, which is honest about
+/// its sequential execution model.
+/// 
+/// @deprecated Use SequentialStrategy instead
 pub struct ParallelStrategy {
     /// Maximum number of threads to use
     max_threads: Option<usize>,
@@ -923,63 +945,17 @@ impl ExecutionStrategy for ParallelStrategy {
         t: f64,
         context: &PluginContext,
     ) -> KwaversResult<()> {
-        use rayon::prelude::*;
+        // IMPORTANT: Despite the name, this executes plugins SEQUENTIALLY
+        // True parallelism is not possible with the current PhysicsPlugin trait
+        // which requires &mut fields. This is a fundamental design constraint.
+        //
+        // The only benefit of this strategy over SequentialStrategy is that it
+        // sets up a Rayon thread pool context, allowing individual plugins to use
+        // parallel operations internally (e.g., parallel array operations).
         
-        // Determine which plugins can run in parallel
-        let parallel_groups = Self::can_parallelize(plugins);
-        
-        // Execute each group
-        for group_indices in parallel_groups {
-            if group_indices.len() == 1 {
-                // Single plugin - execute directly
-                let idx = group_indices[0];
-                plugins[idx].update(fields, grid, medium, dt, t, context)?;
-            } else if self.use_field_cloning {
-                // Multiple plugins with field cloning for thread safety
-                // Use parallel execution with thread-safe field access via cloning
-                // Collect plugin references first to avoid borrow issues
-                let plugin_refs: Vec<_> = group_indices
-                    .iter()
-                    .map(|&idx| idx)
-                    .collect();
-                
-                // Execute plugins in dependency order
-                // Plugins within the same dependency group can theoretically run in parallel,
-                // but current plugin trait requires mutable access to fields.
-                // This is a design constraint that would require significant refactoring
-                // to change (splitting read and write phases, using transactional updates, etc.)
-                for &idx in group_indices.iter() {
-                    plugins[idx].update(fields, grid, medium, dt, t, context)?;
-                }
-            } else {
-                // Multiple plugins with synchronized field access
-                // Use a thread pool with controlled concurrency
-                let pool = rayon::ThreadPoolBuilder::new()
-                    .num_threads(self.max_threads.unwrap_or_else(|| rayon::current_num_threads()))
-                    .build()
-                    .map_err(|e| crate::error::KwaversError::System(
-                        crate::error::SystemError::ThreadPoolCreation {
-                            reason: e.to_string(),
-                        }
-                    ))?;
-                
-                // Execute plugins with proper synchronization using Arc<Mutex> for shared field access
-                // Since we can't parallelize mutable field access directly, we execute sequentially
-                // but use the thread pool for any internal parallel computations within plugins
-                let mut errors = Vec::new();
-                pool.install(|| {
-                    for &idx in &group_indices {
-                        if let Err(e) = plugins[idx].update(fields, grid, medium, dt, t, context) {
-                            errors.push(e);
-                        }
-                    }
-                });
-                
-                // Check for errors
-                if let Some(first_error) = errors.into_iter().next() {
-                    return Err(first_error);
-                }
-            }
+        // Just execute plugins sequentially - be honest about what we're doing
+        for plugin in plugins.iter_mut() {
+            plugin.update(fields, grid, medium, dt, t, context)?;
         }
         
         Ok(())
