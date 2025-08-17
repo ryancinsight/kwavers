@@ -180,38 +180,10 @@ impl HeterogeneousTissueMedium {
             for j in j_min..j_max.min(self.tissue_map.len_of(ndarray::Axis(1))) {
                 for k in k_min..k_max.min(self.tissue_map.len_of(ndarray::Axis(2))) {
                     self.tissue_map[[i, j, k]] = region.tissue_type;
-
-                    // Update acoustic properties
-                    let _props = tissue_specific::tissue_database().get(&region.tissue_type).unwrap_or_else(|| {
-                        tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-                    });
-                                        // Initialize arrays if needed
-                    if self.density_array.get().is_none() {
-                        let _ = self.density_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.sound_speed_array.get().is_none() {
-                        let _ = self.sound_speed_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.pressure_amplitude.is_none() {
-                        self.pressure_amplitude = Some(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    // Initialize other arrays
-                    if self.shear_sound_speed_array.get().is_none() {
-                        let _ = self.shear_sound_speed_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.shear_viscosity_coeff_array.get().is_none() {
-                        let _ = self.shear_viscosity_coeff_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.bulk_viscosity_coeff_array.get().is_none() {
-                        let _ = self.bulk_viscosity_coeff_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.lame_lambda_array.get().is_none() {
-                        let _ = self.lame_lambda_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-                    if self.lame_mu_array.get().is_none() {
-                        let _ = self.lame_mu_array.set(Array3::zeros(self.tissue_map.dim()));
-                    }
-
+                    
+                    // DO NOT initialize caches here! This would poison them with zeros.
+                    // The caches will be properly populated on first access via get_or_init.
+                    
                     // Update thermal properties - use a default body temperature since it's not in props
                     self.temperature[[i, j, k]] = 310.15; // Default body temperature in Kelvin (37°C)
                 }
@@ -416,23 +388,29 @@ impl Medium for HeterogeneousTissueMedium {
 
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
-            // Use cached array for performance - initializes on first call
-            self.density_array()[indices]
+            // Direct lookup without triggering full array computation
+            let tissue = self.tissue_map[indices];
+            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+            });
+            props.density
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
-            soft_tissue.density
+            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().density
         }
     }
 
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
-            // Use cached array for performance - initializes on first call
-            self.sound_speed_array()[indices]
+            // Direct lookup without triggering full array computation
+            let tissue = self.tissue_map[indices];
+            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
+                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+            });
+            props.sound_speed
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
-            soft_tissue.sound_speed
+            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().sound_speed
         }
     }
 
