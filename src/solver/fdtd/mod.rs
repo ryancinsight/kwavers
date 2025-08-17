@@ -349,22 +349,27 @@ impl FdtdSolver {
         let (nx, ny, nz) = field.dim();
         let half_stencil = self.fd_coeffs[&self.config.spatial_order].len();
         
-        // Use 2nd order at boundaries
+        // Apply proper boundary derivatives to avoid perfect reflections
         match axis {
             0 => {
                 for j in 0..ny {
                     for k in 0..nz {
-                        // Left boundary
-                        for i in 0..half_stencil.min(nx) {
-                            if i > 0 && i < nx - 1 {
-                                deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
-                            }
+                        // Left boundary: forward difference at i=0
+                        deriv[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / dx;
+                        
+                        // Near-left boundary: centered difference where possible
+                        for i in 1..half_stencil.min(nx - 1) {
+                            deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
                         }
-                        // Right boundary
-                        for i in (nx - half_stencil).max(0)..nx {
-                            if i > 0 && i < nx - 1 {
-                                deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
-                            }
+                        
+                        // Right boundary: backward difference at i=nx-1
+                        if nx > 1 {
+                            deriv[[nx - 1, j, k]] = (field[[nx - 1, j, k]] - field[[nx - 2, j, k]]) / dx;
+                        }
+                        
+                        // Near-right boundary: centered difference where possible
+                        for i in (nx.saturating_sub(half_stencil)).max(1)..(nx - 1) {
+                            deriv[[i, j, k]] = (field[[i+1, j, k]] - field[[i-1, j, k]]) / (2.0 * dx);
                         }
                     }
                 }
@@ -372,17 +377,22 @@ impl FdtdSolver {
             1 => {
                 for i in 0..nx {
                     for k in 0..nz {
-                        // Bottom boundary
-                        for j in 0..half_stencil.min(ny) {
-                            if j > 0 && j < ny - 1 {
-                                deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
-                            }
+                        // Bottom boundary: forward difference at j=0
+                        deriv[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / dx;
+                        
+                        // Near-bottom boundary: centered difference where possible
+                        for j in 1..half_stencil.min(ny - 1) {
+                            deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
                         }
-                        // Top boundary
-                        for j in (ny - half_stencil).max(0)..ny {
-                            if j > 0 && j < ny - 1 {
-                                deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
-                            }
+                        
+                        // Top boundary: backward difference at j=ny-1
+                        if ny > 1 {
+                            deriv[[i, ny - 1, k]] = (field[[i, ny - 1, k]] - field[[i, ny - 2, k]]) / dx;
+                        }
+                        
+                        // Near-top boundary: centered difference where possible
+                        for j in (ny.saturating_sub(half_stencil)).max(1)..(ny - 1) {
+                            deriv[[i, j, k]] = (field[[i, j+1, k]] - field[[i, j-1, k]]) / (2.0 * dx);
                         }
                     }
                 }
@@ -390,17 +400,22 @@ impl FdtdSolver {
             2 => {
                 for i in 0..nx {
                     for j in 0..ny {
-                        // Front boundary
-                        for k in 0..half_stencil.min(nz) {
-                            if k > 0 && k < nz - 1 {
-                                deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
-                            }
+                        // Front boundary: forward difference at k=0
+                        deriv[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / dx;
+                        
+                        // Near-front boundary: centered difference where possible
+                        for k in 1..half_stencil.min(nz - 1) {
+                            deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
                         }
-                        // Back boundary
-                        for k in (nz - half_stencil).max(0)..nz {
-                            if k > 0 && k < nz - 1 {
-                                deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
-                            }
+                        
+                        // Back boundary: backward difference at k=nz-1
+                        if nz > 1 {
+                            deriv[[i, j, nz - 1]] = (field[[i, j, nz - 1]] - field[[i, j, nz - 2]]) / dx;
+                        }
+                        
+                        // Near-back boundary: centered difference where possible
+                        for k in (nz.saturating_sub(half_stencil)).max(1)..(nz - 1) {
+                            deriv[[i, j, k]] = (field[[i, j, k+1]] - field[[i, j, k-1]]) / (2.0 * dx);
                         }
                     }
                 }
@@ -420,44 +435,105 @@ impl FdtdSolver {
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         
-        // Simple linear interpolation for staggered grid
+        // Match interpolation order to spatial derivative order for consistency
         if offset == 0.5 {
-            match axis {
-                0 => {
-                    // Interpolate to x-face centers
-                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
-                        if i < nx - 1 {
-                            0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
-                        } else {
-                            field[[i, j, k]]
-                        }
-                    }))
-                }
-                1 => {
-                    // Interpolate to y-face centers
-                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
-                        if j < ny - 1 {
-                            0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
-                        } else {
-                            field[[i, j, k]]
-                        }
-                    }))
-                }
+            match self.config.spatial_order {
                 2 => {
-                    // Interpolate to z-face centers
-                    Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
-                        if k < nz - 1 {
-                            0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
-                        } else {
-                            field[[i, j, k]]
-                        }
-                    }))
+                    // 2nd-order: Simple linear interpolation
+                    match axis {
+                        0 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if i < nx - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        1 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if j < ny - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        2 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if k < nz - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                                        _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                            field: "axis".to_string(),
+                            value: axis.to_string(),
+                            constraint: "must be 0, 1, or 2".to_string(),
+                        })),
+                    }
                 }
-                _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
-                    field: "axis".to_string(),
-                    value: axis.to_string(),
-                    constraint: "must be 0, 1, or 2".to_string(),
-                })),
+                4 | 6 => {
+                    // Higher-order interpolation for 4th and 6th order schemes
+                    // TODO: Implement cubic or higher-order interpolation
+                    // For now, fall back to linear interpolation with a warning
+                    log::warn!("Using 2nd-order interpolation for {}-order scheme. Consider implementing higher-order interpolation.", self.config.spatial_order);
+                    match axis {
+                        0 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if i < nx - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        1 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if j < ny - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        2 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if k < nz - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                            field: "axis".to_string(),
+                            value: axis.to_string(),
+                            constraint: "must be 0, 1, or 2".to_string(),
+                        })),
+                    }
+                }
+                _ => {
+                    // Default to linear interpolation for unknown orders
+                    match axis {
+                        0 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if i < nx - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i + 1, j, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        1 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if j < ny - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j + 1, k]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        2 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+                            if k < nz - 1 {
+                                0.5 * (field[[i, j, k]] + field[[i, j, k + 1]])
+                            } else {
+                                field[[i, j, k]]
+                            }
+                        })),
+                        _ => return Err(KwaversError::Grid(GridError::ValidationFailed { 
+                            field: "axis".to_string(),
+                            value: axis.to_string(),
+                            constraint: "must be 0, 1, or 2".to_string(),
+                        })),
+                    }
+                }
             }
         } else {
             // For non-0.5 offsets, just copy (could implement higher-order interpolation)
@@ -671,12 +747,12 @@ impl FdtdSolver {
     pub fn max_stable_dt(&self, max_sound_speed: f64) -> f64 {
         let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
         
-        // Fix: Correct CFL factors for different spatial orders
+        // Use theoretically sound CFL limits for guaranteed stability
         let cfl_limit = match self.config.spatial_order {
-            2 => 0.58,   // For 2nd-order in 3D: sqrt(1/3) ≈ 0.577
-            4 => 0.50,   // More restrictive for 4th-order
-            6 => 0.40,   // Even more restrictive for 6th-order
-            _ => 0.58,
+            2 => 1.0 / (3.0_f64).sqrt(),  // Theoretical limit: 1/√3 ≈ 0.577
+            4 => 0.50,                      // Conservative value for 4th-order
+            6 => 0.40,                      // Conservative value for 6th-order
+            _ => 1.0 / (3.0_f64).sqrt(),   // Default to 2nd-order limit
         };
         
         self.config.cfl_factor * cfl_limit * min_dx / max_sound_speed
