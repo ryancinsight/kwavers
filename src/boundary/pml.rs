@@ -2,7 +2,7 @@ use crate::boundary::Boundary;
 use crate::grid::Grid;
 use crate::error::{KwaversResult, ConfigError};
 use log::trace;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayViewMut3, Zip};
 
 use rustfft::num_complex::Complex;
 
@@ -222,7 +222,7 @@ impl PMLBoundary {
 }
 
 impl Boundary for PMLBoundary {
-    fn apply_acoustic(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
+    fn apply_acoustic(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
 
@@ -231,7 +231,7 @@ impl Boundary for PMLBoundary {
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
         
         // Apply damping using precomputed factors
-        Zip::from(field)
+        Zip::from(&mut field)
             .and(damping_3d)
             .for_each(|val, &damping| {
                 Self::apply_damping(val, damping, dx);
@@ -256,7 +256,7 @@ impl Boundary for PMLBoundary {
         Ok(())
     }
 
-    fn apply_light(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize) {
+    fn apply_light(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) {
         trace!("Applying light PML at step {}", time_step);
         let dx = grid.dx;
 
@@ -265,7 +265,7 @@ impl Boundary for PMLBoundary {
         let damping_3d = self.light_damping_3d.as_ref().unwrap();
         
         // Apply damping using precomputed factors
-        Zip::from(field)
+        Zip::from(&mut field)
             .and(damping_3d)
             .for_each(|val, &damping| {
                 Self::apply_damping(val, damping, dx);
@@ -276,7 +276,7 @@ impl Boundary for PMLBoundary {
 impl PMLBoundary {
     /// Apply acoustic PML with custom damping factor
     /// Follows Open/Closed Principle: Extends functionality without modifying existing code
-    pub fn apply_acoustic_with_factor(&mut self, field: &mut Array3<f64>, grid: &Grid, time_step: usize, damping_factor: f64) {
+    pub fn apply_acoustic_with_factor(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize, damping_factor: f64) {
         trace!("Applying acoustic PML with factor {} at step {}", damping_factor, time_step);
         let dx = grid.dx;
 
@@ -285,7 +285,7 @@ impl PMLBoundary {
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
         
         // Apply damping using precomputed factors with custom scaling
-        Zip::from(field)
+        Zip::from(&mut field)
             .and(damping_3d)
             .for_each(|val, &damping| {
                 let scaled_damping = damping * damping_factor;

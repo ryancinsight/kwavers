@@ -9,6 +9,53 @@ use log::{debug, info, warn}; // Added warn
 use serde::Deserialize;
 use std::sync::Arc; // Added
 
+/// Configuration for the simulation medium
+#[derive(Debug, Clone, Deserialize)]
+pub struct MediumConfig {
+    /// Density of the medium in kg/m^3
+    #[serde(default = "default_medium_density")]
+    pub density: f64,
+    
+    /// Sound speed in the medium in m/s
+    #[serde(default = "default_medium_sound_speed")]
+    pub sound_speed: f64,
+    
+    /// Absorption coefficient
+    #[serde(default = "default_medium_absorption")]
+    pub absorption: f64,
+    
+    /// Dispersion coefficient
+    #[serde(default = "default_medium_dispersion")]
+    pub dispersion: f64,
+}
+
+impl Default for MediumConfig {
+    fn default() -> Self {
+        Self {
+            density: default_medium_density(),
+            sound_speed: default_medium_sound_speed(),
+            absorption: default_medium_absorption(),
+            dispersion: default_medium_dispersion(),
+        }
+    }
+}
+
+fn default_medium_density() -> f64 {
+    1000.0  // Water density
+}
+
+fn default_medium_sound_speed() -> f64 {
+    1500.0  // Water sound speed
+}
+
+fn default_medium_absorption() -> f64 {
+    0.002  // Default absorption
+}
+
+fn default_medium_dispersion() -> f64 {
+    0.0  // Default dispersion
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SimulationConfig {
     pub domain_size_x: f64,
@@ -37,6 +84,10 @@ pub struct SimulationConfig {
     pub kspace_alpha: f64, // k-space correction coefficient
     #[serde(default)]
     pub medium_type: Option<String>, // Added for medium selection
+    
+    /// Medium configuration
+    #[serde(default)]
+    pub medium: MediumConfig,
 }
 
 fn default_pml_sigma_acoustic() -> f64 {
