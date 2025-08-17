@@ -10,13 +10,49 @@
 
 **Next-Generation Acoustic Wave Simulation Platform**
 
-## 🔄 **Version 2.55.0 - Stage 32: Critical FDTD Solver Correctness Fixes**
+## 🔄 **Version 2.56.0 - Stage 33: Plugin-Based Solver Completion**
 
-### **Current Status: FDTD Physics & Stability Restored**
+### **Current Status: Plugin Architecture Functional**
 
-Fixed critical bugs in FDTD solver: zero boundary derivatives causing perfect reflections, inconsistent interpolation order, and violated CFL stability limits. Solver now physically correct.
+Completed plugin-based solver with source/boundary integration, performance metrics, and clear architectural vision. Monolithic solver officially deprecated in favor of modular design.
 
-### **✅ Stage 32 FDTD Solver Achievements**
+### **✅ Stage 33 Plugin-Based Solver Achievements**
+
+#### **1. Source & Boundary Integration** ✅
+**Problem**: Sources and boundaries not applied in plugin solver
+**Impact**: Non-functional solver - no energy injection or absorption
+**Solution**: Integrated into step() method
+```rust
+// 1. Apply boundaries first (prepare fields)
+boundary.apply_acoustic(pressure_field.view_mut(), &grid, step)?;
+
+// 2. Apply sources (inject energy)
+pressure += amplitude * mask;
+
+// 3. Execute physics plugins
+plugin_manager.execute_with_metrics(...)?;
+```
+**Result**: Fully functional simulation pipeline
+
+#### **2. Performance Metrics Collection** 📊
+**Problem**: Metrics defined but never collected
+**Impact**: No performance visibility or optimization data
+**Solution**: Added execute_with_metrics() method
+- Measures each plugin's execution time
+- Records metrics for analysis
+- Enables performance optimization
+**Result**: Full performance observability
+
+#### **3. Boundary Design Clarification** 🎯
+**Problem**: Unclear role of Boundary trait vs plugins
+**Impact**: Architectural confusion and inconsistency
+**Solution**: Documented migration strategy
+- Short-term: Keep Boundary trait for compatibility
+- Long-term: All boundaries become plugins
+- Unifies extension mechanism
+**Result**: Clear architectural vision
+
+### **✅ Stage 32 FDTD Solver Fixes (Previous)**
 
 #### **1. Boundary Derivative Fix** 🚨
 **Bug**: Zero derivatives at boundaries (i=0, i=nx-1, etc.)

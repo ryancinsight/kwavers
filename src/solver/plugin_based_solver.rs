@@ -265,6 +265,18 @@ impl FieldRegistry {
 }
 
 /// Plugin-based solver that follows SOLID principles
+/// 
+/// # Boundary Condition Design Philosophy
+/// 
+/// The current implementation maintains a `Box<dyn Boundary>` for compatibility
+/// with existing boundary implementations. However, the long-term vision is to
+/// migrate all boundary conditions to the plugin architecture:
+/// 
+/// - Simple boundaries (e.g., hard wall) → `HardWallBoundaryPlugin`
+/// - Complex integrated boundaries (e.g., CPML) → `CPMLPlugin`
+/// 
+/// This will unify the design and make plugins the single extension mechanism.
+/// The current hybrid approach is a transitional state that allows gradual migration.
 pub struct PluginBasedSolver {
     /// Grid configuration
     grid: Grid,
@@ -322,6 +334,32 @@ struct CacheMetrics {
     l3_miss_rate: Vec<f64>,
     /// Memory bandwidth saturation
     memory_bandwidth_saturation: Vec<f64>,
+}
+
+impl PerformanceMetrics {
+    /// Create new performance metrics
+    fn new() -> Self {
+        Self {
+            total_steps: 0,
+            plugin_execution_times: HashMap::new(),
+            field_update_times: Vec::new(),
+            memory_usage: Vec::new(),
+            memory_allocations: Vec::new(),
+            cache_metrics: CacheMetrics::default(),
+            flops_per_step: Vec::new(),
+            bandwidth_utilization: Vec::new(),
+            thread_utilization: Vec::new(),
+            gc_time: Vec::new(),
+        }
+    }
+    
+    /// Record plugin execution time
+    pub fn record_plugin_time(&mut self, plugin_name: &str, duration: f64) {
+        self.plugin_execution_times
+            .entry(plugin_name.to_string())
+            .or_insert_with(Vec::new)
+            .push(duration);
+    }
 }
 
 impl PluginBasedSolver {
@@ -441,11 +479,30 @@ impl PluginBasedSolver {
         let fields = self.field_registry.data_mut()
             .ok_or_else(|| KwaversError::Field(FieldError::DataNotInitialized))?;
         
-        // Apply source terms - source provides values at specific positions
-        // This would need to be integrated into the field update
+        // 1. Apply boundary conditions first (prepare fields for physics update)
+        // Boundary conditions are applied directly to the pressure field
+        if let Some(pressure_idx) = self.field_registry.get_field_index("pressure") {
+            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
+            self.boundary.apply_acoustic(pressure_field.view_mut(), &self.grid, step)?;
+        }
         
-        // Execute plugins in dependency order
-        self.plugin_manager.execute(
+        // 2. Apply source terms (inject energy into the system)
+        // Sources add their contribution to the pressure field
+        if let Some(pressure_idx) = self.field_registry.get_field_index("pressure") {
+            let source_mask = self.source.create_mask(&self.grid);
+            let amplitude = self.source.amplitude(t);
+            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
+            
+            // Add source contribution: pressure += amplitude * mask
+            ndarray::Zip::from(&mut pressure_field)
+                .and(&source_mask)
+                .for_each(|p, &mask| {
+                    *p += amplitude * mask;
+                });
+        }
+        
+        // 3. Execute physics plugins in dependency order
+        let plugin_timings = self.plugin_manager.execute_with_metrics(
             fields,
             &self.grid,
             self.medium.as_ref(),
@@ -454,8 +511,10 @@ impl PluginBasedSolver {
             self.time.n_steps
         )?;
         
-        // Boundary conditions would be applied to specific fields
-        // This needs field-specific implementation
+        // 4. Record performance metrics
+        for (plugin_name, duration) in plugin_timings {
+            self.metrics.record_plugin_time(&plugin_name, duration);
+        }
         
         self.metrics.total_steps += 1;
         

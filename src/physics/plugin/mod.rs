@@ -238,6 +238,40 @@ impl PluginManager {
         Ok(())
     }
     
+    /// Execute all plugins with performance metrics collection
+    pub fn execute_with_metrics(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        step: usize,
+        total_steps: usize,
+    ) -> KwaversResult<HashMap<String, f64>> {
+        use std::time::Instant;
+        
+        // Create plugin context
+        let context = PluginContext::new(step, total_steps, 1e6)
+            .with_parameter("dt".to_string(), dt);
+        
+        let t = step as f64 * dt;
+        let mut timings = HashMap::new();
+        
+        // Execute each plugin in order and measure timing
+        for &idx in &self.execution_order {
+            let plugin = &mut self.plugins[idx];
+            let plugin_id = plugin.metadata().id.clone();
+            
+            let start = Instant::now();
+            plugin.update(fields, grid, medium, dt, t, &context)?;
+            let duration = start.elapsed().as_secs_f64();
+            
+            timings.insert(plugin_id, duration);
+        }
+        
+        Ok(timings)
+    }
+    
     /// Register a plugin
     pub fn register(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
         // Check for ID conflicts
