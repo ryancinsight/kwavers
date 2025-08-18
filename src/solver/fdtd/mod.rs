@@ -86,7 +86,11 @@
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 pub mod boundary_stencils;
-pub mod interpolation;use crate::grid::Grid;
+pub mod interpolation;
+pub mod optimized;
+
+// Re-export optimized components
+pub use optimized::{OptimizedFdtdSolver, deprecated_subgridding};use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
