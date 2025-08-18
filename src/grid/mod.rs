@@ -19,6 +19,14 @@ pub struct Grid {
     k_squared_cache: OnceLock<Array3<f64>>,
 }
 
+impl Default for Grid {
+    /// Creates a default 32x32x32 grid with 1mm spacing in each dimension.
+    /// This is intended for use in tests and examples.
+    fn default() -> Self {
+        Self::new(32, 32, 32, 1e-3, 1e-3, 1e-3)
+    }
+}
+
 impl Grid {
     /// Creates a new grid with specified dimensions and spacing.
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
@@ -128,15 +136,33 @@ impl Grid {
         self.physical_dimensions()
     }
 
-    /// Generates 1D arrays of coordinates (meters).
+    /// Generates a 1D array of the physical coordinates of the grid points along the x-axis.
+    ///
+    /// The coordinates represent the center of each grid cell and range from `0.0` to
+    /// `(self.nx - 1) * self.dx`, which corresponds to the grid span (not the full physical dimension).
+    /// 
+    /// # Example
+    /// ```
+    /// let grid = Grid::new(5, 1, 1, 0.1, 0.1, 0.1);
+    /// let x_coords = grid.x_coordinates();
+    /// // x_coords will be [0.0, 0.1, 0.2, 0.3, 0.4]
+    /// ```
     pub fn x_coordinates(&self) -> Array1<f64> {
         Array1::linspace(0.0, self.dx * (self.nx - 1) as f64, self.nx)
     }
 
+    /// Generates a 1D array of the physical coordinates of the grid points along the y-axis.
+    ///
+    /// The coordinates represent the center of each grid cell and range from `0.0` to
+    /// `(self.ny - 1) * self.dy`, which corresponds to the grid span (not the full physical dimension).
     pub fn y_coordinates(&self) -> Array1<f64> {
         Array1::linspace(0.0, self.dy * (self.ny - 1) as f64, self.ny)
     }
 
+    /// Generates a 1D array of the physical coordinates of the grid points along the z-axis.
+    ///
+    /// The coordinates represent the center of each grid cell and range from `0.0` to
+    /// `(self.nz - 1) * self.dz`, which corresponds to the grid span (not the full physical dimension).
     pub fn z_coordinates(&self) -> Array1<f64> {
         Array1::linspace(0.0, self.dz * (self.nz - 1) as f64, self.nz)
     }
@@ -464,19 +490,36 @@ impl Grid {
         field
     }
     
-    /// Compute statistics over a field using iterator combinators
+    /// Compute statistics over a field using zero-copy iteration
+    /// 
+    /// This method efficiently computes all statistics in a single pass
+    /// without any intermediate allocations, making it suitable for large grids.
     pub fn field_statistics(&self, field: &Array3<f64>) -> FieldStatistics {
-        let values: Vec<f64> = field.iter().copied().collect();
+        let count = field.len() as f64;
         
-        let (sum, sum_sq, min, max) = values.iter()
-            .fold((0.0, 0.0, f64::INFINITY, f64::NEG_INFINITY), 
-                  |(sum, sum_sq, min, max), &val| {
-                (sum + val, sum_sq + val * val, min.min(val), max.max(val))
-            });
+        // Handle empty field case
+        if count == 0.0 {
+            return FieldStatistics { 
+                mean: 0.0, 
+                variance: 0.0, 
+                std_dev: 0.0, 
+                min: f64::NAN, 
+                max: f64::NAN 
+            };
+        }
+
+        // Compute all statistics in a single pass with no allocations
+        let (sum, sum_sq, min, max) = field.iter()
+            .fold(
+                (0.0, 0.0, f64::INFINITY, f64::NEG_INFINITY),
+                |(sum, sum_sq, min, max), &val| {
+                    (sum + val, sum_sq + val * val, min.min(val), max.max(val))
+                }
+            );
         
-        let count = values.len() as f64;
         let mean = sum / count;
-        let variance = (sum_sq / count) - mean * mean;
+        // Ensure variance is non-negative to avoid sqrt of negative due to floating point errors
+        let variance = (sum_sq / count - mean * mean).max(0.0);
         
         FieldStatistics {
             mean,
@@ -502,6 +545,76 @@ mod tests {
     use super::*;
     use crate::medium::homogeneous::HomogeneousMedium;
 
+    #[test]
+    fn test_default_grid() {
+        let grid = Grid::default();
+        assert_eq!(grid.nx, 32);
+        assert_eq!(grid.ny, 32);
+        assert_eq!(grid.nz, 32);
+        assert_eq!(grid.dx, 1e-3);
+        assert_eq!(grid.dy, 1e-3);
+        assert_eq!(grid.dz, 1e-3);
+    }
+    
+    #[test]
+    fn test_field_statistics_efficiency() {
+        // Test that field_statistics handles edge cases correctly
+        let grid = Grid::default();
+        
+        // Test empty field
+        let empty_field = Array3::<f64>::zeros((0, 0, 0));
+        let stats = grid.field_statistics(&empty_field);
+        assert_eq!(stats.mean, 0.0);
+        assert!(stats.min.is_nan());
+        assert!(stats.max.is_nan());
+        
+        // Test normal field
+        let mut field = grid.create_field();
+        field.fill(5.0);
+        field[[0, 0, 0]] = 1.0;
+        field[[1, 0, 0]] = 10.0;
+        
+        let stats = grid.field_statistics(&field);
+        assert_eq!(stats.min, 1.0);
+        assert_eq!(stats.max, 10.0);
+        assert!(stats.variance >= 0.0); // Ensure non-negative variance
+        
+        // Test that variance protection works for floating point errors
+        let uniform_field = Array3::from_elem((100, 100, 100), 1.0);
+        let uniform_stats = grid.field_statistics(&uniform_field);
+        assert_eq!(uniform_stats.variance, 0.0);
+        assert_eq!(uniform_stats.std_dev, 0.0);
+    }
+    
+    #[test]
+    fn test_coordinate_generation_ranges() {
+        let grid = Grid::new(5, 4, 3, 0.1, 0.2, 0.3);
+        
+        // Test x coordinates
+        let x_coords = grid.x_coordinates();
+        assert_eq!(x_coords.len(), 5);
+        assert_eq!(x_coords[0], 0.0);
+        assert_eq!(x_coords[4], 0.4); // (5-1) * 0.1
+        
+        // Test y coordinates
+        let y_coords = grid.y_coordinates();
+        assert_eq!(y_coords.len(), 4);
+        assert_eq!(y_coords[0], 0.0);
+        assert_eq!(y_coords[3], 0.6); // (4-1) * 0.2
+        
+        // Test z coordinates
+        let z_coords = grid.z_coordinates();
+        assert_eq!(z_coords.len(), 3);
+        assert_eq!(z_coords[0], 0.0);
+        assert_eq!(z_coords[2], 0.6); // (3-1) * 0.3
+        
+        // Verify that coordinates are grid span, not physical dimensions
+        let (phys_x, phys_y, phys_z) = grid.physical_dimensions();
+        assert!(x_coords[x_coords.len() - 1] < phys_x);
+        assert!(y_coords[y_coords.len() - 1] < phys_y);
+        assert!(z_coords[z_coords.len() - 1] < phys_z);
+    }
+    
     #[test]
     fn test_cfl_timestep_methods() {
         let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
