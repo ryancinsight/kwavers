@@ -342,7 +342,7 @@ impl MLModel for ConvergencePredictorModel {
     }
 }
 
-/// Simple outcome predictor model (binary logistic regression)
+/// Outcome predictor model (binary logistic regression)
 pub struct OutcomePredictorModel {
     weights: Array1<f32>,
     bias: f32,

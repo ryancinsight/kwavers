@@ -35,8 +35,8 @@ pub use plugin::{PhysicsPlugin, PluginManager, PluginMetadata, PluginContext}; /
 pub use optics::sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
 pub use wave_propagation::{WavePropagationCalculator, AttenuationCalculator, WaveMode, Polarization, PropagationCoefficients};
 
-/// Enhanced functional programming utilities for physics calculations
+/// Functional programming utilities for physics calculations
 /// 
 /// This module provides a comprehensive set of functional programming tools
-/// organized into focused submodules for better maintainability and performance.
+/// organized into focused submodules for maintainability and performance.
 pub mod functional;

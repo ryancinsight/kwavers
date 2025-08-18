@@ -389,7 +389,7 @@ mod tests {
         energy
     }
     
-    /// Compute simple Laplacian for wave propagation
+    /// Compute Laplacian for wave propagation
     fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
         let (nx, ny, nz) = field.dim();
         let mut laplacian = Array3::zeros((nx, ny, nz));

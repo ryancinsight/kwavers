@@ -7,7 +7,7 @@
 //! ## Implementation Features
 //! - Full recursive convolution with memory variables
 //! - Support for acoustic, elastic, and dispersive media
-//! - Optimized for grazing angle absorption
+//! - Configured for grazing angle absorption
 //! - Polynomial grading profiles with κ stretching and α frequency shifting
 //!
 //! ## References

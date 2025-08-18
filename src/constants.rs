@@ -91,8 +91,20 @@ pub mod physics {
     /// Speed of sound in water at 20°C (m/s)
     pub const SOUND_SPEED_WATER: f64 = 1480.0;
     
+    /// Speed of sound in water at 25°C (m/s) - commonly used reference
+    pub const SOUND_SPEED_WATER_25C: f64 = 1500.0;
+    
+    /// Speed of sound in air at 20°C (m/s)
+    pub const SOUND_SPEED_AIR: f64 = 343.0;
+    
     /// Speed of sound in soft tissue (m/s)
     pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
+    
+    /// Density of water at 20°C (kg/m³)
+    pub const DENSITY_WATER: f64 = 998.0;
+    
+    /// Reference density for HU calculations (kg/m³)
+    pub const DENSITY_WATER_HU_REF: f64 = 1000.0;
     
     /// Default ultrasound frequency (Hz)
     pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;

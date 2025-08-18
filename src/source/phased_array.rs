@@ -92,7 +92,7 @@ impl Default for ElementSensitivity {
         Self {
             main_lobe_width: 0.5, // ~30 degrees
             side_lobe_level: -20.0, // -20 dB
-            frequency_response: vec![1.0, 0.8, 0.6, 0.4], // Simple rolloff
+            frequency_response: vec![1.0, 0.8, 0.6, 0.4], // Frequency rolloff
         }
     }
 }
@@ -110,7 +110,7 @@ pub enum BeamformingMode {
     PlaneWave { direction: (f64, f64, f64) },
 }
 
-/// Advanced phased array transducer with electronic beam control
+/// Phased array transducer with electronic beam control
 #[derive(Debug)]
 pub struct PhasedArrayTransducer {
     /// Array configuration

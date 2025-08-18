@@ -557,7 +557,7 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         &self.performance_metrics
     }
     
-    /// Advanced parameter optimization using AI (Phase 12)
+    /// Parameter optimization using AI (Phase 12)
     pub fn optimize_parameters_ai(
         &self,
         current_params: &HashMap<String, f64>,

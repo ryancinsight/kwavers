@@ -156,7 +156,7 @@ impl<'a> Iterator for SensorDataIterator<'a> {
     }
 }
 
-/// Advanced sensor data processing methods
+/// Sensor data processing methods
 impl SensorData {
     /// Create an iterator over sensor data
     pub fn iter(&self) -> SensorDataIterator<'_> {

@@ -7,7 +7,7 @@ use ndarray::Array3;
 use rayon::prelude::*;
 use std::ops::Add;
 
-/// Enhanced field operations trait with iterator support
+/// Field operations trait with iterator support
 pub trait FieldOps {
     type Item;
 
@@ -164,7 +164,7 @@ where
     op2(&op1(field))
 }
 
-/// Enhanced kernel operation with sparse kernel optimization
+/// Kernel operation with sparse kernel support
 pub fn apply_kernel<T, K, U>(
     field: &Array3<T>,
     kernel: &Array3<K>,
