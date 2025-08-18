@@ -8,6 +8,11 @@
 use ndarray::{Array2, Array3, Array4, Zip, s};
 use crate::error::{KwaversResult, KwaversError};
 use crate::grid::Grid;
+
+// Fourth-order finite difference coefficients for Laplacian
+const FD_COEFF_0: f64 = -5.0 / 2.0;  // Central coefficient
+const FD_COEFF_1: f64 = 4.0 / 3.0;   // First neighbor
+const FD_COEFF_2: f64 = -1.0 / 12.0; // Second neighbor
 use crate::medium::Medium;
 use crate::solver::reconstruction::Reconstructor;
 use super::config::{SeismicImagingConfig, RtmImagingCondition};
