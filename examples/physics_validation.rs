@@ -253,7 +253,7 @@ fn test_acoustic_absorption() {
         // Expected amplitude after propagation
         let A_expected = A0 * (-alpha_actual * distance).exp();
         
-        // Simple simulation: just apply absorption
+        // Simulation: apply absorption
         let n_steps = 100;
         let dx_step = distance / n_steps as f64;
         let mut amplitude = A0;

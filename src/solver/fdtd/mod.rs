@@ -2,7 +2,6 @@
 
 pub mod boundary_stencils;
 pub mod interpolation;
-pub mod cache_optimized;
 //! 
 //! This module implements the FDTD method using Yee's staggered grid scheme
 //! for solving Maxwell's equations and acoustic wave equations.
@@ -56,7 +55,7 @@ pub mod cache_optimized;
 //!    The finite-difference time-domain method" (3rd ed.). *Artech House*. 
 //!    ISBN: 978-1580538329
 //!    - Definitive reference for FDTD methods
-//!    - Advanced topics including subgridding and PML
+//!    - Topics including subgridding and PML
 //! 
 //! # Implementation Details
 //! 
@@ -443,7 +442,7 @@ impl FdtdSolver {
         if offset == 0.5 {
             match self.config.spatial_order {
                 2 => {
-                    // 2nd-order: Simple linear interpolation
+                    // 2nd-order: Linear interpolation
                     match axis {
                         0 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
                             if i < nx - 1 {
@@ -692,7 +691,7 @@ impl FdtdSolver {
     ) {
         let factor = self.config.subgrid_factor;
         
-        // Simple linear interpolation
+        // Linear interpolation
         for i in 0..fine.shape()[0] {
             for j in 0..fine.shape()[1] {
                 for k in 0..fine.shape()[2] {

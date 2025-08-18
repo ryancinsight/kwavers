@@ -26,7 +26,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 fn main() -> KwaversResult<()> {
-    println!("=== Advanced Sonoluminescence Simulation ===\n");
+    println!("=== Sonoluminescence Simulation ===\n");
     
     // Create simulation grid
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4); // 100μm resolution
@@ -118,7 +118,7 @@ fn main() -> KwaversResult<()> {
     println!("Starting simulation...");
     
     for step in 0..time.n_steps {
-        // Simple physics update - just thermal diffusion
+        // Physics update - thermal diffusion
         let thermal_diffusivity = medium.thermal_diffusivity(0.0, 0.0, 0.0, &grid);
         let temperature = fields.index_axis_mut(ndarray::Axis(0), 2);
         
