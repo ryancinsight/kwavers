@@ -11,10 +11,10 @@ use log::{debug, warn, info};
 use std::f64;
 use rustfft::num_complex::Complex;
 
-/// Represents an improved nonlinear wave model solver.
+/// Represents a nonlinear wave model solver.
 ///
 /// This struct encapsulates the parameters and state for simulating acoustic wave propagation
-/// with nonlinear effects, focusing on optimized efficiency and physical accuracy.
+/// with nonlinear effects, focusing on efficiency and physical accuracy.
 /// It includes settings for performance monitoring, physical model characteristics,
 /// precomputed values for faster calculations, and stability control mechanisms.
 ///

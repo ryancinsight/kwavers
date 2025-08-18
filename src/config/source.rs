@@ -20,6 +20,24 @@ pub struct SourceConfig {
     pub amplitude: Option<f64>, // Added for signal specific amplitude
 }
 
+impl Default for SourceConfig {
+    fn default() -> Self {
+        SourceConfig {
+            num_elements: 32,
+            signal_type: "sine".to_string(),
+            start_freq: None,
+            end_freq: None,
+            signal_duration: None,
+            phase: None,
+            focus_x: Some(0.03),
+            focus_y: Some(0.0),
+            focus_z: Some(0.0),
+            frequency: Some(1e6),
+            amplitude: Some(1e6),
+        }
+    }
+}
+
 impl SourceConfig {
     pub fn initialize_source(
         &self,

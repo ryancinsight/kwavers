@@ -8,31 +8,41 @@ use crate::physics::field_indices;
 use std::fmt;
 
 /// Unified field type enum that maps directly to field indices
+/// Uses repr(usize) for O(1) array indexing instead of HashMap lookups
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(usize)]
 pub enum UnifiedFieldType {
-    Pressure,
-    Temperature,
-    BubbleRadius,
-    BubbleVelocity,
-    Density,
-    SoundSpeed,
-    VelocityX,
-    VelocityY,
-    VelocityZ,
-    StressXX,
-    StressYY,
-    StressZZ,
-    StressXY,
-    StressXZ,
-    StressYZ,
-    LightFluence,
-    ChemicalConcentration,
+    Pressure = 0,
+    Temperature = 1,
+    BubbleRadius = 2,
+    BubbleVelocity = 3,
+    Density = 4,
+    SoundSpeed = 5,
+    VelocityX = 6,
+    VelocityY = 7,
+    VelocityZ = 8,
+    StressXX = 9,
+    StressYY = 10,
+    StressZZ = 11,
+    StressXY = 12,
+    StressXZ = 13,
+    StressYZ = 14,
+    LightFluence = 15,
+    ChemicalConcentration = 16,
 }
 
 impl UnifiedFieldType {
+    /// Total number of field types - used for sizing arrays
+    pub const COUNT: usize = 17;
+    
     /// Get the array index for this field type
-    /// This is the ONLY place where field indices should be defined
+    /// Now simply returns the enum's numeric value for O(1) access
     pub fn index(&self) -> usize {
+        *self as usize
+    }
+    
+    /// Legacy compatibility - maps to old field indices
+    pub fn legacy_index(&self) -> usize {
         match self {
             Self::Pressure => field_indices::PRESSURE_IDX,
             Self::Temperature => field_indices::TEMPERATURE_IDX,

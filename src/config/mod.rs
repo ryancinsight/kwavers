@@ -109,6 +109,16 @@ pub struct Config {
     // Removed cached components: grid, time, source_instance, medium_instance, pml
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            simulation: SimulationConfig::default(),
+            source: SourceConfig::default(),
+            output: OutputConfig::default(),
+        }
+    }
+}
+
 impl Config {
     pub fn from_file(filename: &str) -> Result<Self, String> {
         debug!("Loading config from {}", filename);

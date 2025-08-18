@@ -56,7 +56,7 @@ pub fn correct_leapfrog_initialization(
 /// This fixes the performance issue where three separate FFTs were performed
 /// for each gradient component. Now we do one FFT and compute all gradients
 /// in k-space.
-pub fn update_velocity_with_cpml_optimized(
+pub fn update_velocity_with_cpml_single_fft(
     velocity_x: &mut ArrayViewMut3<f64>,
     velocity_y: &mut ArrayViewMut3<f64>,
     velocity_z: &mut ArrayViewMut3<f64>,

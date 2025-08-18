@@ -84,11 +84,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
           source_position.0, source_position.1, source_position.2,
           focus_position.0, focus_position.1, focus_position.2);
     
-    // Create nonlinear wave solver with enhanced physics
+    // Create nonlinear wave solver with physics
     let mut nonlinear_wave = NonlinearWave::new(&grid, &medium, frequency);
-    nonlinear_wave.set_nonlinearity_scaling(2.0); // Enhance nonlinearity
+    nonlinear_wave.set_nonlinearity_scaling(2.0); // Set nonlinearity
 
-    info!("Configured nonlinear wave solver with enhanced physics");
+    info!("Configured nonlinear wave solver with physics");
     
     // Configure solver
     let dt = 0.2f64 * dx / 1600.0f64; // CFL condition for numerical stability

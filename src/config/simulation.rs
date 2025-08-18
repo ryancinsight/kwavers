@@ -116,6 +116,28 @@ fn default_kspace_alpha() -> f64 {
     1.0
 } // Default correction factor
 
+impl Default for SimulationConfig {
+    fn default() -> Self {
+        SimulationConfig {
+            domain_size_x: 0.1,
+            domain_size_yz: 0.1,
+            points_per_wavelength: 10,
+            frequency: 1e6,
+            num_cycles: 5.0,
+            pml_thickness: 10,
+            pml_sigma_acoustic: default_pml_sigma_acoustic(),
+            pml_sigma_light: default_pml_sigma_light(),
+            pml_polynomial_order: default_pml_polynomial_order(),
+            pml_reflection: default_pml_reflection(),
+            light_wavelength: default_light_wavelength(),
+            kspace_padding: default_kspace_padding(),
+            kspace_alpha: default_kspace_alpha(),
+            medium_type: None,
+            medium: MediumConfig::default(),
+        }
+    }
+}
+
 impl SimulationConfig {
     pub fn initialize_grid(&self) -> Result<Grid, String> {
         self.initialize_grid_with_sound_speed(1500.0)

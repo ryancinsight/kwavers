@@ -94,6 +94,9 @@ pub mod physics {
     /// Speed of sound in water at 25°C (m/s) - commonly used reference
     pub const SOUND_SPEED_WATER_25C: f64 = 1500.0;
     
+    /// Speed of sound in water at 22°C (m/s) - k-Wave default
+    pub const SOUND_SPEED_WATER_KWAVE: f64 = 1482.0;
+    
     /// Speed of sound in air at 20°C (m/s)
     pub const SOUND_SPEED_AIR: f64 = 343.0;
     

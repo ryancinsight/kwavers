@@ -8,7 +8,7 @@
 //! - **CUDA Backend**: NVIDIA GPU acceleration with cudarc
 //! - **Wgpu Backend**: Cross-platform GPU acceleration (Vulkan, Metal, DX12) with wgpu
 //! - **Memory Management**: Efficient GPU memory allocation and transfer
-//! - **Kernel Optimization**: Highly optimized compute kernels
+//! - **Kernel Optimization**: Compute kernels with performance tuning
 //! - **Multi-GPU Support**: Distributed computation across multiple devices
 
 use crate::error::{KwaversResult, KwaversError};

@@ -1,7 +1,7 @@
 //! Hybrid Spectral-DG Methods Module
 //! 
 //! This module implements hybrid spectral and discontinuous Galerkin methods
-//! for robust shock handling and high-order accuracy in smooth regions.
+//! for shock handling and high-order accuracy in continuous regions.
 //! 
 //! ## Literature References
 //! 

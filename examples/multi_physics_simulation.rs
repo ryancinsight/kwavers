@@ -1,7 +1,7 @@
 // examples/multi_physics_simulation.rs
-//! Enhanced Kwavers Simulation Example
+//! Kwavers Simulation Example
 //! 
-//! This example demonstrates advanced kwavers features using the proper factory pattern:
+//! This example demonstrates kwavers features using the proper factory pattern:
 //! - Multiple physics components (acoustic + thermal + cavitation)
 //! - Heterogeneous medium properties
 //! - Advanced initial conditions
