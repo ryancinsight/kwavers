@@ -7,7 +7,8 @@ mod tests {
     use crate::medium::homogeneous::HomogeneousMedium;
     use crate::source::NullSource;
     use ndarray::{Array3, Array4};
-    use crate::physics::mechanics::elastic_wave::{ElasticWave, UnifiedFieldType::VelocityX.index()};
+    use crate::physics::mechanics::elastic_wave::ElasticWave;
+    use crate::physics::field_mapping::UnifiedFieldType;
     use crate::physics::traits::AcousticWaveModel;
 
     #[test]

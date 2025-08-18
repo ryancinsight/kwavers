@@ -318,7 +318,6 @@ impl HeterogeneousTissueMedium {
         }
     }
     
-    /// Clear cached arrays when medium properties change
 }
 
 impl Medium for HeterogeneousTissueMedium {

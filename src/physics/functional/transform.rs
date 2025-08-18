@@ -104,9 +104,6 @@ where
     }
 }
 
-        *self.cached_result.lock().unwrap() = None;
-    }
-}
 
 // Convenience type aliases for common field types
 pub type Array2Transform<T> = FieldTransform<Array2<T>>;
@@ -177,3 +174,5 @@ mod tests {
     #[test]
     fn test_lazy_transform() {
         let source = LazyField::new(|| Array3::ones((2, 2, 2)));
+    }
+}
