@@ -557,7 +557,7 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         &self.performance_metrics
     }
     
-    /// Advanced parameter optimization using AI (Phase 12)
+    /// Parameter optimization using AI (Phase 12)
     pub fn optimize_parameters_ai(
         &self,
         current_params: &HashMap<String, f64>,
@@ -747,7 +747,7 @@ mod tests {
         use crate::ml::models::ConvergencePredictorModel;
         use ndarray::{array, Array2};
 
-        // Simple predictor: if feature > 0 produces success
+        // Predictor: if feature > 0 produces success
         let weights = array![[10.0_f32]];
         let bias = Some(array![-5.0_f32]); // threshold at 0.5 approx
         let model = models::ConvergencePredictorModel::from_weights(weights, bias);

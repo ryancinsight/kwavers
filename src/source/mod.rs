@@ -61,7 +61,7 @@ pub use focused_transducer::{
 // Source implementations are defined in this module
 // No need to re-export them from self
 
-/// Simple point source implementation
+/// Point source implementation
 #[derive(Debug)]
 pub struct PointSource {
     position: (f64, f64, f64),

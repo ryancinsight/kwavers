@@ -8,7 +8,7 @@
 //! - **SOLID**: Single responsibility for each utility function
 //! - **DRY**: Reusable implementations across the codebase
 //! - **Zero-Copy**: Uses iterators and efficient data structures
-//! - **KISS**: Simple, well-documented interfaces
+//! - **KISS**: Clear, well-documented interfaces
 //!
 //! # Literature References
 //! - Pinkerton (1949): "The absorption of ultrasonic waves in liquids"
@@ -235,10 +235,10 @@ impl WaterProperties {
         salinity: f64,      // parts per thousand
         ph: f64,            // pH value
     ) -> f64 {
-        let f = frequency / 1000.0; // Convert to kHz
+        let f = frequency / 1e3; // Convert to kHz
         let t = temperature;
         let s = salinity;
-        let d = depth / 1000.0; // Convert to km
+        let d = depth / 1e3; // Convert to km
         
         // Boric acid contribution
         let f1 = 0.78 * (s / 35.0).sqrt() * (t / 26.0).exp();
@@ -263,7 +263,7 @@ impl WaterProperties {
         
         // Total absorption in dB/km, convert to Np/m
         let alpha_db_per_km = boric + magnesium + water;
-        alpha_db_per_km * 0.1151 / 1000.0 // Convert to Np/m
+        alpha_db_per_km * 0.1151 / 1e3 // Convert to Np/m
     }
     
     /// Pinkerton model for absorption calculations

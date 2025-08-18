@@ -1,6 +1,6 @@
 // config/mod.rs
 
-// Enhanced validation configuration system
+// Validation configuration system
 pub mod validation;
 
 // Re-export the validation system

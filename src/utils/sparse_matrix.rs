@@ -8,7 +8,7 @@
 //! - **Zero-Copy**: ArrayView usage for efficient memory management
 //! - **SOLID**: Single responsibility for sparse matrix operations
 //! - **Literature-Based**: Implementations follow established algorithms
-//! - **Performance**: Optimized for beamforming workloads
+//! - **Performance**: Designed for beamforming workloads
 //!
 //! # Literature References
 //! - Davis (2006): "Direct methods for sparse linear systems"

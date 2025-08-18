@@ -1,4 +1,8 @@
 //! Finite-Difference Time Domain (FDTD) solver
+
+pub mod boundary_stencils;
+pub mod interpolation;
+pub mod cache_optimized;
 //! 
 //! This module implements the FDTD method using Yee's staggered grid scheme
 //! for solving Maxwell's equations and acoustic wave equations.

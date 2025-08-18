@@ -1,8 +1,8 @@
-//! Enhanced Functional Programming Utilities for Physics Calculations
+//! Functional Programming Utilities for Physics Calculations
 //!
 //! This module provides a comprehensive set of functional programming tools
 //! for physics field transformations, operations, and computations.
-//! Organized into focused submodules for better maintainability.
+//! Organized into focused submodules for maintainability.
 
 pub mod transform;  // Field transformation pipelines
 pub mod ops;        // Field operations and combinators

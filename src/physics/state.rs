@@ -197,8 +197,8 @@ impl PhysicsState {
         Ok(f(fields.index_axis_mut(Axis(0), field_index)))
     }
     
-    /// Clone a field (use sparingly - this does allocate)
-    #[deprecated(since = "1.6.0", note = "Use get_field() for zero-copy access or clone explicitly if needed")]
+    /// Get a cloned copy of a field (allocates memory)
+    /// Prefer get_field() for zero-copy access when possible
     pub fn clone_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         self.with_field(field_index, |field| field.to_owned())
     }
