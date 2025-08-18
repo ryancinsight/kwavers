@@ -84,10 +84,9 @@ impl<'a> ChemicalUpdateParams<'a> {
     ) -> KwaversResult<Self> {
         // Validate parameters following Information Expert principle
         if dt <= 0.0 {
-            return Err(crate::error::NumericalError::Instability {
-                operation: "ChemicalUpdateParams validation".to_string(),
-                condition: "Time step must be positive".to_string(),
-            }.into());
+            return Err(crate::error::NumericalError::InvalidOperation(
+                "Time step must be positive".to_string()
+            ).into());
         }
 
         if frequency <= 0.0 {
@@ -165,7 +164,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         if !invalid_pressure_values.is_empty() {
             return Err(crate::error::NumericalError::NaN {
                 operation: "Chemical parameter validation".to_string(),
-                inputs: invalid_pressure_values,
+                inputs: format!("{:?}", invalid_pressure_values),
             }.into());
         }
 
@@ -614,7 +613,7 @@ impl ChemicalModel {
         if self.radical_initiation.radical_concentration.iter().any(|&x| x.is_nan() || x.is_infinite()) {
             return Err(crate::error::NumericalError::NaN {
                 operation: "Chemical model validation".to_string(),
-                inputs: vec![0.0],
+                inputs: format!("{:?}", vec![0.0]),
             }.into());
         }
         Ok(())

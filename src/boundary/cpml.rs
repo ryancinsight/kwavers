@@ -22,6 +22,10 @@ use ndarray::{Array3, Array4, Axis, Zip};
 use std::f64::consts::PI;
 use log::debug;
 
+/// Minimum cosine theta value to prevent division by zero in reflection estimation
+/// This corresponds to angles near 90 degrees (grazing incidence)
+const MIN_COS_THETA_FOR_REFLECTION: f64 = 0.1;
+
 /// Configuration for Convolutional PML
 #[derive(Debug, Clone)]
 pub struct CPMLConfig {
@@ -175,12 +179,18 @@ impl CPMLBoundary {
         
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
-        // Validate dt for stability
+        // Validate dt for stability (CFL condition)
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let max_stable_dt = min_dx / (sound_speed * (3.0_f64).sqrt());
         if dt > max_stable_dt {
-            log::warn!("CPML: dt ({:.3e}) may be too large for stability. \
-                       Maximum stable dt: {:.3e}", dt, max_stable_dt);
+            return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "dt".to_string(),
+                value: dt.to_string(),
+                constraint: format!(
+                    "Time step exceeds CFL stability limit. Maximum stable dt = {:.3e} s for sound speed = {} m/s and min grid spacing = {:.3e} m",
+                    max_stable_dt, sound_speed, min_dx
+                ),
+            }));
         }
         
         // Initialize profile arrays
@@ -216,6 +226,11 @@ impl CPMLBoundary {
     }
     
     /// Compute C-PML profiles based on configuration
+    /// 
+    /// Note: Potential optimization for cubic grids - when dimensions are identical
+    /// (nx==ny==nz and dx==dy==dz), profiles could be computed once and reused.
+    /// However, the performance gain would be minimal as this is only done during
+    /// initialization. The current implementation prioritizes clarity and simplicity.
     fn compute_profiles(&mut self, grid: &Grid, sound_speed: f64) -> KwaversResult<()> {
         let thickness = self.config.thickness as f64;
         let m = self.config.polynomial_order;
@@ -489,7 +504,7 @@ impl CPMLBoundary {
             r_normal * angle_enhancement
         } else {
             // Standard model - reflection increases as angle increases (cos_theta decreases)
-            r_normal / cos_theta.max(0.1)
+            r_normal / cos_theta.max(MIN_COS_THETA_FOR_REFLECTION)
         };
         
         Some(reflection)

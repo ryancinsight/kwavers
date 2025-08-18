@@ -84,7 +84,7 @@ pub mod utils;
 pub mod validation;
 
 // Phase 11: Visualization & Real-Time Interaction
-#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web-visualization", feature = "vr-support")))]
+#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web_visualization", feature = "vr-support")))]
 pub mod visualization;
 
 // Re-export commonly used types for convenience
@@ -140,7 +140,7 @@ pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeCo
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
 // Re-export factory components  
-pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, SimulationBuilder, SimulationSetup, SimulationResults};
+pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, PhysicsModelConfig, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, ConfigBuilder, SimulationComponents};
 
 // Re-export I/O functions
 pub use io::{save_pressure_data, save_light_data, generate_summary};
@@ -218,6 +218,7 @@ pub fn create_default_config() -> Config {
             kspace_padding: 0,
             kspace_alpha: 1.0,
             medium_type: None,
+            medium: config::MediumConfig::default(),
         },
         source: SourceConfig {
             num_elements: 32,
@@ -296,39 +297,43 @@ pub fn create_validated_simulation(
             .collect::<Vec<_>>()
             .join("; ");
         return Err(KwaversError::Config(crate::error::ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: format!("Configuration validation failed: {}", error_summary),
+            field: "simulation".to_string(),
+            value: "configuration".to_string(),
+            constraint: format!("Validation failed: {}", error_summary),
         }));
     }
     
     // Create grid using simulation config
     let grid = config.simulation.initialize_grid()
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: e,
+            field: "grid".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
     // Create time discretization
     let time = config.simulation.initialize_time(&grid)
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "simulation".to_string(),
-            reason: e,
+            field: "time".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
-    // Create medium
+    // Create medium from configuration
     let medium = HomogeneousMedium::new(
-        medium_constants::WATER_DENSITY, 
-        medium_constants::WATER_SOUND_SPEED, 
-        &grid, 
-        medium_constants::DEFAULT_ABSORPTION, 
-        medium_constants::DEFAULT_DISPERSION
+        config.simulation.medium.density,
+        config.simulation.medium.sound_speed,
+        &grid,
+        config.simulation.medium.absorption,
+        config.simulation.medium.dispersion
     );
     
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)
         .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            section: "source".to_string(),
-            reason: e,
+            field: "source".to_string(),
+            value: "initialization".to_string(),
+            constraint: e,
         }))?;
     
     // Create sensor with default positions from config or defaults
@@ -479,22 +484,15 @@ fn apply_source_term(
     t: f64,
     fields: &mut ndarray::Array4<f64>,
 ) -> KwaversResult<()> {
-    let (nx, ny, nz) = grid.dimensions();
-    let mut source_field = ndarray::Array3::zeros((nx, ny, nz));
+    use ndarray::Zip;
     
-    // Use iterators for better performance
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                let (x, y, z) = grid.coordinates(i, j, k);
-                source_field[[i, j, k]] = source.get_source_term(t, x, y, z, grid);
-            }
-        }
-    }
+    let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
     
-    // Add source to pressure field
-    fields.index_axis_mut(ndarray::Axis(0), 0)
-        .zip_mut_with(&source_field, |p, &s| *p += s);
+    // Use Zip for parallel, in-place update (zero-copy, vectorized)
+    Zip::indexed(&mut pressure_field).for_each(|(i, j, k), p| {
+        let (x, y, z) = grid.coordinates(i, j, k);
+        *p += source.get_source_term(t, x, y, z, grid);
+    });
     
     Ok(())
 }
@@ -506,16 +504,14 @@ fn apply_boundary_conditions(
     grid: &Grid,
     step: usize,
 ) -> KwaversResult<()> {
-    // Apply to pressure field
-    let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0).to_owned();
-    boundary.apply_acoustic(&mut pressure_field, grid, step)?;
-    fields.index_axis_mut(ndarray::Axis(0), 0).assign(&pressure_field);
+    // Apply to pressure field using a mutable view (zero-copy)
+    let mut pressure_field_view = fields.index_axis_mut(ndarray::Axis(0), 0);
+    boundary.apply_acoustic(pressure_field_view.view_mut(), grid, step)?;
     
-    // Apply to light field
-    let mut light_field = fields.index_axis_mut(ndarray::Axis(0), 1).to_owned();
-    boundary.apply_light(&mut light_field, grid, step);
-    fields.index_axis_mut(ndarray::Axis(0), 1).assign(&light_field);
-    
+    // Apply to light field using a mutable view (zero-copy)
+    let mut light_field_view = fields.index_axis_mut(ndarray::Axis(0), 1);
+    boundary.apply_light(light_field_view.view_mut(), grid, step);
+
     Ok(())
 }
 
@@ -616,28 +612,28 @@ fn get_system_info() -> KwaversResult<HashMap<String, String>> {
     Ok(info)
 }
 
-/// Get CPU core count, returning a default value on failure.
-fn get_cpu_cores() -> usize {
-    get_system_info()
-        .ok()
-        .and_then(|info| info.get("cpu_cores").and_then(|s| s.parse().ok()))
-        .unwrap_or(1) // Default to 1 core on failure
+/// Get CPU core count.
+fn get_cpu_cores() -> KwaversResult<usize> {
+    get_system_info()?
+        .get("cpu_cores")
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| KwaversError::Internal("Failed to parse CPU cores from system info".to_string()))
 }
 
-/// Get available memory in GB, returning a default value on failure.
-fn get_available_memory_gb() -> f64 {
-    get_system_info()
-        .ok()
-        .and_then(|info| info.get("memory_available_gb").and_then(|s| s.parse().ok()))
-        .unwrap_or(1.0) // Default to 1.0 GB on failure (more reasonable than 0.0)
+/// Get available memory in GB.
+fn get_available_memory_gb() -> KwaversResult<f64> {
+    get_system_info()?
+        .get("memory_available_gb")
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| KwaversError::Internal("Failed to parse available memory from system info".to_string()))
 }
 
-/// Get available disk space in GB for current directory, returning a default value on failure.
-fn get_available_disk_space_gb() -> f64 {
-    get_system_info()
-        .ok()
-        .and_then(|info| info.get("disk_space_gb").and_then(|s| s.parse().ok()))
-        .unwrap_or(1.0) // Default to 1.0 GB on failure (more reasonable than 0.0)
+/// Get available disk space in GB for current directory.
+fn get_available_disk_space_gb() -> KwaversResult<f64> {
+    get_system_info()?
+        .get("disk_space_gb")
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| KwaversError::Internal("Failed to parse disk space from system info".to_string()))
 }
 
 #[cfg(test)]

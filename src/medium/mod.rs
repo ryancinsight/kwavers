@@ -29,6 +29,23 @@ pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
     sound_speed_array.fold(0.0, |max, &val| max.max(val))
 }
 
+/// Trait defining the physical properties of a simulation medium.
+/// 
+/// # Future Refactoring Consideration
+/// 
+/// This trait is currently a "fat trait" containing methods for acoustic, thermal,
+/// elastic, and optical properties. In a future major version, consider refactoring
+/// this into smaller, composable traits:
+/// 
+/// - `AcousticMedium`: density, sound_speed, viscosity, etc.
+/// - `ElasticMedium`: lame_lambda, lame_mu, shear properties
+/// - `ThermalMedium`: specific_heat, thermal_conductivity, temperature
+/// - `OpticalMedium`: refractive_index, absorption_coefficient
+/// 
+/// This would allow structs to implement only the traits they need, following
+/// the Interface Segregation Principle. Additionally, consider standardizing on
+/// array-based access for performance-critical code paths, with point-wise access
+/// provided as a separate utility layer.
 pub trait Medium: Debug + Sync + Send {
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;

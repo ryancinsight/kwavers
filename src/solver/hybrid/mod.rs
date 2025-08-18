@@ -654,8 +654,7 @@ impl HybridSolver {
                 return Err(errors_guard[0].clone());
             } else {
                 return Err(KwaversError::Composite(CompositeError {
-                    context: format!("Multiple errors occurred during parallel domain processing ({} errors)", errors_guard.len()),
-                    errors: errors_guard.clone(),
+                    errors: vec![format!("Multiple errors occurred during parallel domain processing ({} errors)", errors_guard.len())],
                 }));
             }
         }

@@ -38,7 +38,7 @@ pub mod wgpu_backend;
 pub mod memory;
 pub mod kernels;
 pub mod benchmarks;
-pub mod fft_kernels;
+pub mod fft;
 
 /// GPU backend types - simplified and clarified
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

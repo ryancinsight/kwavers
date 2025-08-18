@@ -4,9 +4,10 @@
 //! where δ is the acoustic diffusivity
 
 use ndarray::{Array3, Zip};
-use crate::constants::nonlinear::DIFFUSIVITY_WATER;
+use crate::constants::physics::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
+use crate::constants::numerical::THIRD_ORDER_DIFF_COEFF;
 
-/// Compute the diffusive term for the Kuznetsov equation
+/// Compute the diffusive term for the Kuznetsov equation using workspace
 ///
 /// # Arguments
 /// * `pressure` - Current pressure field
@@ -16,10 +17,11 @@ use crate::constants::nonlinear::DIFFUSIVITY_WATER;
 /// * `dt` - Time step size
 /// * `sound_speed` - Sound speed c₀
 /// * `acoustic_diffusivity` - Diffusivity parameter δ [m²/s]
+/// * `diffusive_term_out` - Pre-allocated output buffer for the result
 ///
 /// # Returns
-/// The diffusive term: -(δ/c₀⁴)∂³p/∂t³
-pub fn compute_diffusive_term(
+/// The diffusive term: -(δ/c₀⁴)∂³p/∂t³ is written to diffusive_term_out
+pub fn compute_diffusive_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,
     pressure_prev2: &Array3<f64>,
@@ -27,54 +29,40 @@ pub fn compute_diffusive_term(
     dt: f64,
     sound_speed: f64,
     acoustic_diffusivity: f64,
-) -> Array3<f64> {
+    diffusive_term_out: &mut Array3<f64>,
+) {
     // Compute coefficient: -δ/c₀⁴
     let coeff = -acoustic_diffusivity / sound_speed.powi(4);
     
-    // Compute third time derivative using finite differences
-    // ∂³p/∂t³ ≈ (p[n+1] - 3*p[n] + 3*p[n-1] - p[n-2]) / dt³
-    let dt_cubed = dt * dt * dt;
-    let mut diffusive_term = Array3::zeros(pressure.dim());
+    // Compute third time derivative using four-point backward finite difference
+    // ∂³p/∂t³ ≈ (p[n] - 3*p[n-1] + 3*p[n-2] - p[n-3]) / dt³
+    let dt_cubed = dt.powi(3);
     
-    Zip::from(&mut diffusive_term)
+    Zip::from(diffusive_term_out)
         .and(pressure)
         .and(pressure_prev)
         .and(pressure_prev2)
         .and(pressure_prev3)
         .for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
-            let d3p_dt3 = (p - 3.0 * p_prev + 3.0 * p_prev2 - p_prev3) / dt_cubed;
+            let d3p_dt3 = (p - THIRD_ORDER_DIFF_COEFF * p_prev + THIRD_ORDER_DIFF_COEFF * p_prev2 - p_prev3) / dt_cubed;
             *diff = coeff * d3p_dt3;
         });
-    
-    diffusive_term
 }
+
+
 
 /// Compute frequency-dependent absorption coefficient
 ///
-/// Uses power-law absorption: α = α₀ * f^n
-/// where α₀ is the absorption coefficient at 1 MHz
+/// Uses power-law absorption: α = α₀ * (f/f_ref)^n
+/// where α₀ is the absorption coefficient at reference frequency
 /// and n is the power (typically 1-2 for biological tissues)
 pub fn compute_absorption_coefficient(
     frequency: f64,
     alpha_0: f64,
     power: f64,
 ) -> f64 {
-    alpha_0 * (frequency / 1e6).powf(power)
+    alpha_0 * (frequency / REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ).powf(power)
 }
 
-/// Apply thermoviscous absorption using the diffusivity model
-///
-/// This models absorption through the acoustic diffusivity parameter
-/// which captures both thermal conduction and viscous losses
-pub fn apply_thermoviscous_absorption(
-    pressure: &mut Array3<f64>,
-    diffusivity: f64,
-    dt: f64,
-    sound_speed: f64,
-) {
-    // Simple exponential decay model for absorption
-    // This is a first-order approximation
-    let absorption_factor = (-diffusivity * dt / sound_speed.powi(2)).exp();
-    
-    pressure.mapv_inplace(|p| p * absorption_factor);
-}
+// Note: The thermoviscous absorption is properly handled through compute_diffusive_term
+// which implements the correct -(δ/c₀⁴)∂³p/∂t³ formulation from the Kuznetsov equation.

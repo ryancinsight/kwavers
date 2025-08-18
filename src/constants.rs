@@ -7,6 +7,52 @@
 // Re-export standard mathematical constants for convenience
 pub use std::f64::consts::{E, PI as PI_CONST, TAU};
 
+/// Numerical constants for finite differences and FFT
+pub mod numerical {
+    /// Coefficient for second-order central difference
+    pub const SECOND_ORDER_DIFF_COEFF: f64 = 2.0;
+    
+    /// Coefficient for third-order finite difference
+    pub const THIRD_ORDER_DIFF_COEFF: f64 = 3.0;
+    
+    /// FFT wavenumber scaling factor
+    pub const FFT_K_SCALING: f64 = 2.0;
+    
+    /// WENO scheme optimal weights
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    
+    /// Artificial viscosity coefficients
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
+    
+    /// WENO smoothness indicator epsilon
+    pub const WENO_EPSILON: f64 = 1e-6;
+    
+    /// Stencil coefficients for numerical differentiation
+    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
+    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
+    
+    /// Default numerical tolerance
+    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
+    
+    /// Machine epsilon for f64
+    pub const EPSILON: f64 = f64::EPSILON;
+    
+    /// Default maximum iterations
+    pub const MAX_ITERATIONS: usize = 1000;
+    
+    /// Convergence tolerance for iterative methods
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
+    
+    /// Default relaxation parameter
+    pub const RELAXATION_PARAMETER: f64 = 0.5;
+}
+
 /// Numerical tolerance constants
 pub mod tolerance {
     /// Default tolerance for floating-point comparisons
@@ -77,6 +123,18 @@ pub mod physics {
     
     /// Minimal nonlinearity coefficient for testing linear approximation
     pub const NEAR_LINEAR_NONLINEARITY: f64 = 1e-10;
+    
+    /// Offset for nonlinearity coefficient β = 1 + B/2A
+    pub const NONLINEARITY_COEFFICIENT_OFFSET: f64 = 1.0;
+    
+    /// Divisor for B/A term in nonlinearity coefficient
+    pub const B_OVER_A_DIVISOR: f64 = 2.0;
+    
+    /// Reference frequency for absorption coefficient (Hz)
+    pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1_000_000.0;
+    
+    /// Grid center factor for coordinate calculations
+    pub const GRID_CENTER_FACTOR: f64 = 2.0;
 }
 
 /// Grid and discretization constants
@@ -383,41 +441,7 @@ pub mod optics {
 }
 
 /// Shock capturing and numerical methods constants
-pub mod numerical {
-    /// WENO scheme optimal weights
-    pub const WENO_WEIGHT_0: f64 = 0.1;
-    pub const WENO_WEIGHT_1: f64 = 0.6;
-    pub const WENO_WEIGHT_2: f64 = 0.3;
-    
-    /// Artificial viscosity coefficients
-    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
-    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.1;
-    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
-    pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
-    
-    /// WENO smoothness indicator epsilon
-    pub const WENO_EPSILON: f64 = 1e-6;
-    
-    /// Stencil coefficients for numerical differentiation
-    pub const STENCIL_COEFF_3_4: f64 = 0.75;  // 3/4
-    pub const STENCIL_COEFF_1_4: f64 = 0.25;  // 1/4
-    pub const STENCIL_COEFF_1_2: f64 = 0.5;   // 1/2
-    
-    /// Default numerical tolerance
-    pub const DEFAULT_TOLERANCE: f64 = 1e-10;
-    
-    /// Machine epsilon for f64
-    pub const EPSILON: f64 = f64::EPSILON;
-    
-    /// Default maximum iterations
-    pub const MAX_ITERATIONS: usize = 1000;
-    
-    /// Convergence tolerance for iterative methods
-    pub const CONVERGENCE_TOLERANCE: f64 = 1e-12;
-    
-    /// Default relaxation parameter
-    pub const RELAXATION_PARAMETER: f64 = 0.5;
-}
+
 
 
 

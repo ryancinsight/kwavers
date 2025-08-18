@@ -98,7 +98,7 @@ pub mod simulation;
 pub mod source;
 
 pub use output::OutputConfig;
-pub use simulation::SimulationConfig;
+pub use simulation::{SimulationConfig, MediumConfig};
 pub use source::SourceConfig;
 
 #[derive(Debug)]
