@@ -50,7 +50,6 @@ impl ExecutionStrategy for SequentialStrategy {
 /// 
 /// Note: This currently executes sequentially due to mutable field access constraints.
 /// True parallelism would require architectural changes (read/write phase separation).
-#[deprecated(note = "Currently executes sequentially due to &mut fields constraint")]
 pub struct ParallelStrategy {
     thread_pool: Option<rayon::ThreadPool>,
 }

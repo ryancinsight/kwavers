@@ -76,7 +76,7 @@ impl MLModel for TissueClassifierModel {
     }
 
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
-        // Simple gradient descent update
+        // Gradient descent update
         let learning_rate = 1e-3_f32;
         
         // Sanity-check dimensionality
@@ -161,7 +161,7 @@ impl MLModel for ParameterOptimizerModel {
     }
 
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
-        // Simple gradient descent update
+        // Gradient descent update
         let learning_rate = 1e-3_f32;
         
         if gradients.shape() != self.engine.weights_mut().shape() {
@@ -245,7 +245,7 @@ impl MLModel for AnomalyDetectorModel {
     }
 
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
-        // Simple gradient descent update
+        // Gradient descent update
         let learning_rate = 1e-3_f32;
         
         if gradients.shape() != self.engine.weights_mut().shape() {
@@ -329,7 +329,7 @@ impl MLModel for ConvergencePredictorModel {
     }
 
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
-        // Simple gradient descent update
+        // Gradient descent update
         let learning_rate = 1e-3_f32;
         
         if gradients.shape() != self.engine.weights_mut().shape() {
