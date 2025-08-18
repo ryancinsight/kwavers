@@ -22,16 +22,19 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 /// Dynamic field registry for type-safe field management
-/// Optimized for zero-copy access and deferred allocation
+/// Optimized for O(1) direct indexing using Vec instead of HashMap
 pub struct FieldRegistry {
-    /// Registered fields and their metadata
-    fields: HashMap<UnifiedFieldType, FieldMetadata>,
+    /// Registered fields indexed by UnifiedFieldType numeric value
+    /// None indicates unregistered field
+    fields: Vec<Option<FieldMetadata>>,
     /// Field data storage - dynamically sized
     data: Option<Array4<f64>>,
     /// Grid dimensions for validation
     grid_dims: (usize, usize, usize),
     /// Flag to defer allocation until build() is called
     deferred_allocation: bool,
+    /// Counter for assigned indices in data array
+    next_data_index: usize,
 }
 
 #[derive(Clone)]
@@ -91,17 +94,18 @@ impl FieldRegistry {
     /// Create a new field registry with deferred allocation
     pub fn new(grid: &Grid) -> Self {
         Self {
-            fields: HashMap::new(),
+            fields: vec![None; UnifiedFieldType::COUNT],
             data: None,
             grid_dims: (grid.nx, grid.ny, grid.nz),
             deferred_allocation: true,
+            next_data_index: 0,
         }
     }
     
     /// Build the field registry by allocating data array
     /// This allows multiple field registrations without reallocations
     pub fn build(&mut self) -> Result<(), FieldError> {
-        let num_fields = self.fields.len();
+        let num_fields = self.next_data_index;
         if num_fields == 0 {
             self.data = None;
             self.deferred_allocation = false;
