@@ -17,6 +17,7 @@ use crate::{
     sensor::{SensorData},
     recorder::Recorder,
     medium::Medium,
+    solver::plugin_based_solver::PluginBasedSolver,
 };
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -123,7 +124,7 @@ impl TimeReversalReconstructor {
         &mut self,
         sensor_data: &SensorData,
         grid: &Grid,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         recorder: &mut Recorder,
         frequency: f64,
     ) -> KwaversResult<Array3<f64>> {
@@ -346,7 +347,7 @@ impl TimeReversalReconstructor {
     fn apply_reversed_sources(
         &self,
         reversed_signals: &HashMap<usize, Vec<f64>>,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         sensor_data: &SensorData,
     ) -> KwaversResult<()> {
         use crate::source::{Source, TimeVaryingSource};
@@ -396,7 +397,7 @@ impl TimeReversalReconstructor {
     fn propagate_backwards(
         &self,
         grid: &Grid,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         recorder: &mut Recorder,
         frequency: f64,
         reversed_signals: &HashMap<usize, Vec<f64>>,
