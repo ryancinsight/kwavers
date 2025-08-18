@@ -417,7 +417,4 @@ impl Reconstructor for FullWaveformInversion {
         Ok(self.velocity_model.clone())
     }
     
-    fn get_algorithm_name(&self) -> &str {
-        "Full Waveform Inversion (FWI)"
-    }
 }

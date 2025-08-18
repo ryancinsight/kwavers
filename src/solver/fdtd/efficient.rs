@@ -1,6 +1,6 @@
-//! Optimized FDTD solver implementation with performance and correctness fixes
+//! Efficient FDTD solver implementation with correctness fixes
 //!
-//! This module provides an optimized version of the FDTD solver that addresses:
+//! This module provides an efficient version of the FDTD solver that addresses:
 //! - Single-pass divergence calculation
 //! - Matched interpolation order
 //! - Deprecated subgridding API
@@ -12,15 +12,15 @@ use crate::error::{KwaversResult, KwaversError, GridError};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip, s};
 use std::collections::HashMap;
 
-/// Optimized FDTD solver with performance improvements
-pub struct OptimizedFdtdSolver {
+/// Efficient FDTD solver implementation
+pub struct EfficientFdtdSolver {
     grid: Grid,
     fd_coeffs: HashMap<usize, Vec<f64>>,
     spatial_order: usize,
 }
 
-impl OptimizedFdtdSolver {
-    /// Create a new optimized FDTD solver
+impl EfficientFdtdSolver {
+    /// Create a new efficient FDTD solver
     pub fn new(grid: Grid, spatial_order: usize) -> KwaversResult<Self> {
         if ![2, 4, 6].contains(&spatial_order) {
             return Err(KwaversError::Grid(GridError::ValidationFailed {
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn test_single_pass_divergence() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
-        let solver = OptimizedFdtdSolver::new(grid, 2).unwrap();
+        let solver = EfficientFdtdSolver::new(grid, 2).unwrap();
         
         let vx = Array3::ones((10, 10, 10));
         let vy = Array3::ones((10, 10, 10));
@@ -548,18 +548,18 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
         
         // Test 2nd order
-        let solver2 = OptimizedFdtdSolver::new(grid.clone(), 2).unwrap();
+        let solver2 = EfficientFdtdSolver::new(grid.clone(), 2).unwrap();
         let field = Array3::ones((10, 10, 10));
         let interp2 = solver2.interpolate_to_staggered_matched(&field.view(), 0, 0.5).unwrap();
         assert_eq!(interp2.dim(), (10, 10, 10));
         
         // Test 4th order
-        let solver4 = OptimizedFdtdSolver::new(grid.clone(), 4).unwrap();
+        let solver4 = EfficientFdtdSolver::new(grid.clone(), 4).unwrap();
         let interp4 = solver4.interpolate_to_staggered_matched(&field.view(), 0, 0.5).unwrap();
         assert_eq!(interp4.dim(), (10, 10, 10));
         
         // Test 6th order
-        let solver6 = OptimizedFdtdSolver::new(grid, 6).unwrap();
+        let solver6 = EfficientFdtdSolver::new(grid, 6).unwrap();
         let interp6 = solver6.interpolate_to_staggered_matched(&field.view(), 0, 0.5).unwrap();
         assert_eq!(interp6.dim(), (10, 10, 10));
     }

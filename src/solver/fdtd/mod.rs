@@ -87,10 +87,10 @@
 
 pub mod boundary_stencils;
 pub mod interpolation;
-pub mod optimized;
+pub mod efficient;
 
-// Re-export optimized components
-pub use optimized::{OptimizedFdtdSolver, deprecated_subgridding};use crate::grid::Grid;
+// Re-export efficient components
+pub use efficient::{EfficientFdtdSolver, deprecated_subgridding};use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};

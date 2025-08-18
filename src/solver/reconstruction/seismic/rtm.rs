@@ -449,7 +449,4 @@ impl Reconstructor for ReverseTimeMigration {
         Ok(self.image.clone())
     }
     
-    fn get_algorithm_name(&self) -> &str {
-        "Reverse Time Migration (RTM)"
-    }
 }
