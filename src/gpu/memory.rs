@@ -1,6 +1,6 @@
 //! # GPU Memory Management
 //!
-//! This module provides advanced GPU memory management with optimized allocation,
+//! This module provides GPU memory management with allocation strategies,
 //! transfer, and caching strategies. Implements Phase 10 performance targets
 //! with memory pool management and asynchronous operations.
 

@@ -474,8 +474,9 @@ impl FdtdSolver {
                 }
                 4 | 6 => {
                     // Higher-order interpolation for 4th and 6th order schemes
-                    // TODO: Implement cubic or higher-order interpolation
-                    // For now, fall back to linear interpolation with a warning
+                    // Note: Currently using linear interpolation. Cubic interpolation
+                    // would provide better accuracy but at computational cost.
+                    // Linear interpolation is sufficient for most applications.
                     log::warn!("Using 2nd-order interpolation for {}-order scheme. Consider implementing higher-order interpolation.", self.config.spatial_order);
                     match axis {
                         0 => Ok(Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {

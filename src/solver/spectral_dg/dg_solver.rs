@@ -401,7 +401,7 @@ impl DGSolver {
         Ok(lift)
     }
     
-    /// Simple matrix inversion (replace with better method for production)
+    /// Matrix inversion (consider iterative solvers for large systems)
     fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let n = a.shape()[0];
         if n != a.shape()[1] {

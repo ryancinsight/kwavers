@@ -25,7 +25,7 @@ pub struct TimeScale {
     pub time_scale: f64,
     /// Spatial scale (meters)
     pub spatial_scale: f64,
-    /// Stiffness indicator (ratio of fastest to slowest eigenvalue)
+    /// Stiffness indicator (ratio of largest to smallest eigenvalue magnitude)
     pub stiffness: f64,
     /// Whether this component is stiff
     pub is_stiff: bool,

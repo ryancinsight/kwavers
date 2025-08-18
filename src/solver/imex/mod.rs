@@ -1,6 +1,6 @@
 //! IMEX (Implicit-Explicit) Time Integration Schemes
 //! 
-//! This module provides advanced time integration methods that combine
+//! This module provides time integration methods that combine
 //! implicit and explicit treatments for different terms in the equations.
 //! This is particularly useful for problems with multiple time scales
 //! where some terms are stiff (requiring implicit treatment) and others
@@ -282,7 +282,7 @@ impl IMEXIntegrator {
             }
         }
         
-        // Perform IMEX time step with enhanced error context
+        // Perform IMEX time step with error context
         self.scheme.step(
             field,
             dt,

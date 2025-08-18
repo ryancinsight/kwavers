@@ -93,7 +93,7 @@ impl StiffnessDetector {
         self.last_metric.clone()
     }
     
-    /// Eigenvalue-based detection (most accurate but expensive)
+    /// Eigenvalue-based detection (precise but computationally intensive)
     fn eigenvalue_detection<F, G>(
         &self,
         field: &Array3<f64>,
@@ -163,7 +163,7 @@ impl StiffnessDetector {
         })
     }
     
-    /// Power iteration method (faster approximation)
+    /// Power iteration method (efficient approximation)
     fn power_iteration_detection<F, G>(
         &self,
         field: &Array3<f64>,
@@ -227,7 +227,7 @@ impl StiffnessDetector {
         })
     }
     
-    /// Norm-based detection (fastest but least accurate)
+    /// Norm-based detection (computationally efficient but approximate)
     fn norm_based_detection<F, G>(
         &self,
         field: &Array3<f64>,

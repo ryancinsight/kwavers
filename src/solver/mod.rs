@@ -256,7 +256,7 @@ impl Solver {
         );
 
         // Pre-warm the FFT cache by performing a dummy FFT
-        trace!("Pre-warming FFT cache for better performance");
+        trace!("Pre-warming FFT cache for performance");
         // Create and execute a dummy FFT to warm up the cache
         let dummy_fft = fft_3d(&self.fields.fields, PRESSURE_IDX, &self.grid);
         let _ = ifft_3d(&dummy_fft, &self.grid);

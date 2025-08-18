@@ -57,7 +57,7 @@ impl ImplicitSolver for LinearSolver {
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
-        // For linear problems, we can use a simple fixed-point iteration
+        // For linear problems, we can use a fixed-point iteration
         // This assumes the problem can be written as y = G(y)
         let mut solution = initial_guess.clone();
         let mut last_norm = f64::INFINITY;
