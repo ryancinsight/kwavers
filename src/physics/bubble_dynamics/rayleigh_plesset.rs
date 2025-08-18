@@ -65,13 +65,8 @@ impl RayleighPlessetSolver {
     /// This ensures both RP and KM models use the same gas physics
     fn calculate_internal_pressure(&self, state: &BubbleState) -> f64 {
         if !self.params.use_thermal_effects {
-            // For equilibrium state, return the stored internal pressure directly
-            // This avoids recalculation errors
-            if (state.radius - self.params.r0).abs() < 1e-12 && state.wall_velocity.abs() < 1e-12 {
-                return state.pressure_internal;
-            }
-            
-            // Simple polytropic relation for dynamic calculations
+            // Polytropic relation for all states (including equilibrium)
+            // The formula naturally handles equilibrium when radius = r0
             let gamma = state.gas_species.gamma();
             let p_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
             return p_eq * (self.params.r0 / state.radius).powf(3.0 * gamma) + self.params.pv;
@@ -126,16 +121,21 @@ impl KellerMiksisModel {
         &self.params
     }
     
-    /// Calculate heat capacity for the bubble contents
-    pub fn heat_capacity(&self, state: &BubbleState) -> f64 {
-        // Heat capacity depends on gas species and conditions
-        // Using constant pressure heat capacity for ideal gas
-        let gamma = state.gas_species.gamma();
-        let cv = R_GAS / (gamma - 1.0); // Molar heat capacity at constant volume
-        let cp = gamma * cv; // Molar heat capacity at constant pressure
+    /// Calculate the molar heat capacity at constant volume (Cv) for the bubble contents
+    /// 
+    /// For consistency with the Van der Waals equation of state used for pressure,
+    /// this should ideally account for real gas effects. However, for many gases
+    /// at moderate conditions, the ideal gas Cv is a reasonable approximation.
+    /// 
+    /// Returns: Molar heat capacity at constant volume in J/(mol·K)
+    pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
+        // For Van der Waals gas, the heat capacity can differ from ideal gas
+        // However, for most conditions in bubble dynamics, the ideal gas approximation
+        // for Cv is acceptable. This should be documented as an assumption.
         
-        // For bubble dynamics, use cv as the bubble volume changes
-        cv
+        // Get the fundamental Cv value for the gas species
+        // This should be a property of the gas, not derived from gamma
+        state.gas_species.molar_heat_capacity_cv()
     }
     
     /// Calculate bubble wall acceleration using Keller-Miksis equation
@@ -145,55 +145,75 @@ impl KellerMiksisModel {
     /// 
     /// Reference: Keller & Miksis (1980), "Bubble oscillations of large amplitude"
     /// Journal of the Acoustical Society of America, 68(2), 628-633
+    /// 
+    /// The standard formulation from the literature is:
+    /// (1 - v/c) * R * R_ddot + (3/2) * v^2 * (1 - v/(3c)) = 
+    ///     (1/ρ) * [(P_B - P_∞) * (1 + v/c) + R/c * (dP_B/dt - dP_∞/dt)]
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,
         p_acoustic: f64,
-        dp_dt: f64,
+        dp_dt: f64,  // This is d(p_acoustic)/dt
         t: f64,
     ) -> f64 {
         let r = state.radius;
         let v = state.wall_velocity;
         let c = self.params.c_liquid;
+        let rho = self.params.rho_liquid;
         
         // Update Mach number
         state.mach_number = v.abs() / c;
         
-        // Liquid pressure at bubble wall
-        let p_l = self.params.p0 + p_acoustic;
-        state.pressure_liquid = p_l;
+        // Far-field liquid pressure
+        let p_liquid_far = self.params.p0 + p_acoustic;
+        state.pressure_liquid = p_liquid_far;
         
         // Internal pressure with thermal effects
         let p_internal = self.calculate_internal_pressure(state);
         state.pressure_internal = p_internal;
         
-        // Pressure difference across interface
-        let p_diff = p_internal - p_l;
+        // Pressure at bubble wall (liquid side) including viscous and surface tension
+        let p_viscous = 4.0 * self.params.mu_liquid * v / r;
+        let p_surface = 2.0 * self.params.sigma / r;
+        let p_bubble_wall = p_internal - p_viscous - p_surface;
         
-        // Viscous stress term
-        let viscous = crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid * v / r;
+        // Time derivative of pressure at bubble wall
+        // For now, we approximate dP_B/dt based on the change in internal pressure
+        // A more accurate implementation would track this derivative explicitly
+        let dp_bubble_wall_dt = self.estimate_pressure_derivative(state, p_internal);
         
-        // Surface tension term
-        let surface = crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / r;
+        // Keller-Miksis equation solved for R_ddot
+        // Standard formulation from literature
+        let mach = v / c;
         
-        // Liquid compressibility factor (1 - Mach number)
-        let comp_factor = 1.0 - v / c;
+        // Left-hand side coefficient
+        let lhs_coeff = r * (1.0 - mach);
         
-        // Keller-Miksis equation (corrected formulation)
-        // The numerator includes pressure terms and their time derivatives
-        let numerator = (p_diff - viscous - surface) * comp_factor / self.params.rho_liquid
-            + r * (p_internal - p_l) / (self.params.rho_liquid * c)
-            + r * dp_dt / (self.params.rho_liquid * c);
+        // Right-hand side terms
+        let pressure_term = (p_bubble_wall - p_liquid_far) * (1.0 + mach) / rho;
+        let derivative_term = (r / c) * (dp_bubble_wall_dt - dp_dt) / rho;
+        let kinetic_term = 1.5 * v * v * (1.0 - mach / 3.0);
         
-        // The denominator accounts for compressibility and kinetic effects
-        // Corrected according to Keller & Miksis (1980)
-        let denominator = r * comp_factor + crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid / (self.params.rho_liquid * c);
-        
-        // The acceleration term includes nonlinear velocity effects
-        let acceleration = numerator / denominator - crate::constants::bubble_dynamics::KINETIC_ENERGY_COEFF * v * v * comp_factor / r;
+        // Solve for acceleration
+        let acceleration = (pressure_term + derivative_term - kinetic_term) / lhs_coeff;
         
         state.wall_acceleration = acceleration;
         acceleration
+    }
+    
+    /// Estimate the time derivative of bubble wall pressure
+    /// This is a first-order approximation based on the polytropic relation
+    fn estimate_pressure_derivative(&self, state: &BubbleState, p_internal: f64) -> f64 {
+        if !self.params.use_thermal_effects {
+            // For polytropic process: dP/dt = -3*gamma*P*(dR/dt)/R
+            let gamma = state.gas_species.gamma();
+            return -3.0 * gamma * p_internal * state.wall_velocity / state.radius;
+        }
+        
+        // For thermal effects, the derivative is more complex
+        // This would ideally track temperature and composition changes
+        // For now, use a quasi-static approximation
+        -3.0 * 1.4 * p_internal * state.wall_velocity / state.radius
     }
     
     /// Calculate internal pressure with thermal and mass transfer effects
@@ -282,7 +302,7 @@ impl KellerMiksisModel {
         
         // Calculate associated heat transfer
         let heat_rate = self.mass_transfer.heat_transfer_rate(mass_rate, state.temperature);
-        state.temperature -= heat_rate * dt / (state.mass() * self.heat_capacity(state));
+        state.temperature -= heat_rate * dt / (state.mass() * self.molar_heat_capacity_cv(state));
     }
 }
 

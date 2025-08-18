@@ -135,6 +135,28 @@ impl GasSpecies {
             Self::Custom { molecular_weight, .. } => *molecular_weight,
         }
     }
+    
+    /// Get molar heat capacity at constant volume [J/(mol·K)]
+    /// 
+    /// These are fundamental thermodynamic properties of the gas species,
+    /// not derived from gamma to maintain consistency with real gas models.
+    pub fn molar_heat_capacity_cv(&self) -> f64 {
+        use crate::constants::thermodynamics::R_GAS;
+        
+        match self {
+            // For diatomic gases (Air, N2, O2): Cv = (5/2)R
+            Self::Air => 2.5 * R_GAS,      // 20.8 J/(mol·K)
+            Self::Nitrogen => 2.5 * R_GAS,  // 20.8 J/(mol·K)
+            Self::Oxygen => 2.5 * R_GAS,    // 20.8 J/(mol·K)
+            
+            // For monatomic gases (Ar, Xe): Cv = (3/2)R
+            Self::Argon => 1.5 * R_GAS,     // 12.5 J/(mol·K)
+            Self::Xenon => 1.5 * R_GAS,     // 12.5 J/(mol·K)
+            
+            // For custom gas, derive from gamma (with documented assumption)
+            Self::Custom { gamma, .. } => R_GAS / (gamma - 1.0),
+        }
+    }
 }
 
 /// Physical parameters for bubble dynamics
