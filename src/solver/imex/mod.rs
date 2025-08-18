@@ -282,14 +282,30 @@ impl IMEXIntegrator {
             }
         }
         
-        // Perform IMEX time step
+        // Perform IMEX time step with enhanced error context
         self.scheme.step(
             field,
             dt,
             explicit_rhs,
             implicit_rhs,
             &self.implicit_solver,
-        )
+        ).map_err(|e| {
+            // Add context about the current scheme and conditions
+            let scheme_name = match &self.scheme {
+                IMEXSchemeType::RungeKutta(rk) => format!("IMEX-RK (order {})", rk.order()),
+                IMEXSchemeType::BDF(bdf) => format!("IMEX-BDF (order {})", bdf.order()),
+            };
+            
+            crate::error::KwaversError::Numerical(
+                crate::error::NumericalError::SolverError {
+                    solver: scheme_name,
+                    details: format!(
+                        "Error during IMEX scheme execution at dt={:.3e}. Original error: {}",
+                        dt, e
+                    ),
+                }
+            )
+        })
     }
     
     /// Get current stiffness metric
