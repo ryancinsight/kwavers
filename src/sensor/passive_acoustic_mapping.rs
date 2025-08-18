@@ -280,6 +280,12 @@ impl PassiveAcousticMappingPlugin {
     
     /// Delay-and-sum beamforming
     fn delay_and_sum_beamforming(&self, output: &mut Array3<f64>, grid: &Grid, frequency: f64) {
+        // Guard against zero frequency
+        if frequency == 0.0 {
+            output.fill(0.0);
+            return;
+        }
+        
         let c = 1500.0; // Speed of sound in water (m/s)
         let wavelength = c / frequency;
         let k = 2.0 * PI / wavelength;

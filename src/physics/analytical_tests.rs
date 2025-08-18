@@ -50,6 +50,13 @@ impl PhysicsTestUtils {
         dispersion_correction: bool
     ) -> Array3<f64> {
         let mut pressure = grid.create_field();
+        
+        // Guard against zero frequency
+        if frequency == 0.0 {
+            // Return zero field for static case
+            return pressure;
+        }
+        
         let wavelength = sound_speed / frequency;
         let k_analytical = 2.0 * PI / wavelength;
         
