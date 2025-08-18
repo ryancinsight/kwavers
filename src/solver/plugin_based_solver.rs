@@ -439,15 +439,21 @@ impl PluginBasedSolver {
     
     /// Run the simulation
     pub fn run(&mut self) -> KwaversResult<()> {
-        info!("Starting simulation for {} steps", self.time.n_steps);
-        
+        self.run_with_progress(&mut crate::solver::NullProgressReporter)
+    }
+    
+    /// Run simulation with progress reporting
+    pub fn run_with_progress(&mut self, reporter: &mut dyn crate::solver::ProgressReporter) -> KwaversResult<()> {
         let dt = self.time.dt;
         let total_steps = self.time.n_steps;
         
+        reporter.on_start(total_steps, dt);
+        
+        let mut step_times = Vec::with_capacity(100);
+        
         for step in 0..total_steps {
+            let step_start = std::time::Instant::now();
             let t = step as f64 * dt;
-            
-            // Time is tracked by step counter
             
             // Execute one time step
             self.step(step, t)?;
@@ -459,16 +465,86 @@ impl PluginBasedSolver {
                 }
             }
             
-            // Log progress
-            if step % 100 == 0 {
-                debug!("Completed step {}/{}", step, total_steps);
+            let step_duration = step_start.elapsed();
+            step_times.push(step_duration);
+            
+            // Keep only recent step times for averaging
+            if step_times.len() > 100 {
+                step_times.remove(0);
             }
+            
+            // Calculate average step time and ETA
+            let avg_step_time = if !step_times.is_empty() {
+                let total: std::time::Duration = step_times.iter().sum();
+                total / step_times.len() as u32
+            } else {
+                step_duration
+            };
+            
+            let remaining_steps = total_steps - step - 1;
+            let estimated_remaining = avg_step_time * remaining_steps as u32;
+            
+            // Gather field summary
+            let fields_summary = self.calculate_fields_summary();
+            
+            // Report progress
+            reporter.report(&crate::solver::ProgressUpdate {
+                current_step: step,
+                total_steps,
+                current_time: t,
+                total_time: total_steps as f64 * dt,
+                step_duration,
+                estimated_remaining,
+                fields_summary,
+            });
         }
         
-        info!("Simulation completed successfully");
+        reporter.on_complete();
         self.finalize()?;
         
         Ok(())
+    }
+    
+    /// Calculate summary statistics for fields
+    fn calculate_fields_summary(&self) -> crate::solver::FieldsSummary {
+        let mut max_pressure = 0.0;
+        let mut max_velocity = 0.0;
+        let mut max_temperature = 0.0;
+        let mut total_energy = 0.0;
+        
+        // Calculate field statistics if data is available
+        if let Some(data) = self.field_registry.data() {
+            // Get pressure field
+            if let Some(pressure) = self.field_registry.get_field(UnifiedFieldType::Pressure) {
+                max_pressure = pressure.iter()
+                    .map(|&p| p.abs())
+                    .fold(0.0, f64::max);
+                total_energy += pressure.iter()
+                    .map(|&p| p * p)
+                    .sum::<f64>();
+            }
+            
+            // Get velocity field
+            if let Some(velocity) = self.field_registry.get_field(UnifiedFieldType::VelocityX) {
+                max_velocity = velocity.iter()
+                    .map(|&v| v.abs())
+                    .fold(max_velocity, f64::max);
+            }
+            
+            // Get temperature field
+            if let Some(temperature) = self.field_registry.get_field(UnifiedFieldType::Temperature) {
+                max_temperature = temperature.iter()
+                    .map(|&t| t.abs())
+                    .fold(0.0, f64::max);
+            }
+        }
+        
+        crate::solver::FieldsSummary {
+            max_pressure,
+            max_velocity,
+            max_temperature,
+            total_energy,
+        }
     }
     
     /// Execute one time step

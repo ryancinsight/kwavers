@@ -201,50 +201,15 @@ pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResul
 // Note: Use Config::default() instead of create_default_config()
 // The Default trait is implemented for Config and provides the same functionality
 
-/// Validate simulation configuration for completeness and correctness
-/// 
-/// Implements Information Expert principle by providing validation logic
-pub fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
-    let mut errors = Vec::new();
-    
-    // Basic validation checks using named constants
-    if config.simulation.domain_size_x < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_x > validation_constants::MAX_DOMAIN_SIZE {
-        errors.push(ValidationError::RangeValidation {
-            field: "domain_size_x".to_string(),
-            value: config.simulation.domain_size_x.to_string(),
-            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
-            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
-        });
-    }
-    
-    if config.simulation.domain_size_yz < validation_constants::MIN_DOMAIN_SIZE || config.simulation.domain_size_yz > validation_constants::MAX_DOMAIN_SIZE {
-        errors.push(ValidationError::RangeValidation {
-            field: "domain_size_yz".to_string(),
-            value: config.simulation.domain_size_yz.to_string(),
-            min: validation_constants::MIN_DOMAIN_SIZE.to_string(),
-            max: validation_constants::MAX_DOMAIN_SIZE.to_string(),
-        });
-    }
-    
-    if config.simulation.points_per_wavelength < validation_constants::MIN_POINTS_PER_WAVELENGTH || config.simulation.points_per_wavelength > validation_constants::MAX_POINTS_PER_WAVELENGTH {
-        errors.push(ValidationError::RangeValidation {
-            field: "points_per_wavelength".to_string(),
-            value: config.simulation.points_per_wavelength.to_string(),
-            min: validation_constants::MIN_POINTS_PER_WAVELENGTH.to_string(),
-            max: validation_constants::MAX_POINTS_PER_WAVELENGTH.to_string(),
-        });
-    }
-    
-    // Return validation result
-    if errors.is_empty() {
-        Ok(ValidationResult::success())
-    } else {
-        Ok(ValidationResult::failure(errors))
-    }
-}
+// Note: Configuration validation should be done through the Config type itself
+// or through the PluginBasedSolver's validation mechanisms
 
-/// Create a complete simulation setup with validation
-pub fn create_validated_simulation(
+// Removed: Use PluginBasedSolver instead
+// This function was part of the deprecated monolithic solver API
+
+#[doc(hidden)]
+#[deprecated(since = "0.3.0", note = "Use PluginBasedSolver instead")]
+fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
     // Validate configuration first
@@ -320,10 +285,12 @@ fn get_default_sensor_positions() -> Vec<(f64, f64, f64)> {
     ]
 }
 
-/// Run a complete simulation with physics
-/// 
-/// Implements ACID principles for simulation execution
-pub fn run_physics_simulation(
+// Removed: Use PluginBasedSolver instead
+// This function was part of the deprecated monolithic solver API
+
+#[doc(hidden)]
+#[deprecated(since = "0.3.0", note = "Use PluginBasedSolver instead")]
+fn run_physics_simulation(
     config: Config,
     pstd_config: solver::pstd::PstdConfig,
     pml_config: boundary::pml::PMLConfig,
@@ -600,18 +567,23 @@ mod tests {
 
     #[test]
     fn test_default_config_creation() {
-        let config = create_default_config();
+        let config = Config::default();
         // Config validation - check that required fields exist
         assert!(config.simulation.frequency > 0.0);
         assert!(config.source.frequency.is_some());
-        assert!(config.output.enable_visualization);
+        assert!(!config.output.enable_visualization); // Default is false
     }
     
     #[test]
-    fn test_config_validation() {
-        let config = create_default_config();
-        let validation_result = validate_simulation_config(&config).unwrap();
-        assert!(validation_result.is_valid);
+    fn test_config_with_custom_values() {
+        let config = Config {
+            simulation: config::SimulationConfig {
+                frequency: 2e6,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(config.simulation.frequency, 2e6);
     }
     
     #[test]
