@@ -192,14 +192,14 @@ impl HeterogeneousTissueMedium {
         
         // ALWAYS clear cached arrays after modification to prevent stale data
         // This ensures caches are invalidated even if the region was out of bounds
-        self.clear_property_caches();
+        self.invalidate_caches();
         
         Ok(())
     }
     
     /// Clear all cached property arrays to force recomputation
     /// This is needed when the tissue map is modified
-    fn clear_property_caches(&mut self) {
+    fn invalidate_caches(&mut self) {
         // Unfortunately, OnceCell doesn't have a clear method
         // We need to work around this by recreating the OnceCell instances
         self.density_array = OnceLock::new();
@@ -245,7 +245,7 @@ impl HeterogeneousTissueMedium {
         });
         
         // Clear cached arrays
-        self.clear_caches();
+        self.invalidate_caches();
     }
 
     /// Construct a layered tissue model (e.g., for skin, fat, muscle, bone)
@@ -305,7 +305,7 @@ impl HeterogeneousTissueMedium {
         }
         
         // Clear cached arrays
-        self.clear_caches();
+        self.invalidate_caches();
     }
 
     /// Update the pressure amplitude field for nonlinear absorption calculations
@@ -319,16 +319,6 @@ impl HeterogeneousTissueMedium {
     }
     
     /// Clear cached arrays when medium properties change
-    fn clear_caches(&mut self) {
-        debug!("Clearing tissue medium property caches");
-        self.density_array = OnceLock::new();
-        self.sound_speed_array = OnceLock::new();
-        self.shear_sound_speed_array = OnceLock::new();
-        self.shear_viscosity_coeff_array = OnceLock::new();
-        self.bulk_viscosity_coeff_array = OnceLock::new();
-        self.lame_lambda_array = OnceLock::new();
-        self.lame_mu_array = OnceLock::new();
-    }
 }
 
 impl Medium for HeterogeneousTissueMedium {
@@ -586,7 +576,7 @@ impl Medium for HeterogeneousTissueMedium {
     fn update_temperature(&mut self, temperature: &Array3<f64>) {
         debug!("Updating temperature in heterogeneous tissue medium");
         self.temperature.assign(temperature);
-        self.clear_caches();
+        self.invalidate_caches();
     }
 
     fn temperature(&self) -> &Array3<f64> {
@@ -604,7 +594,7 @@ impl Medium for HeterogeneousTissueMedium {
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>) {
         self.bubble_radius.assign(radius);
         self.bubble_velocity.assign(velocity);
-        self.clear_caches();
+        self.invalidate_caches();
     }
 
     fn density_array(&self) -> Array3<f64> {
