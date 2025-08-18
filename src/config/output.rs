@@ -31,3 +31,16 @@ fn default_snapshot_interval() -> usize {
 fn default_visualization() -> bool {
     false
 }
+
+
+impl Default for OutputConfig {
+    fn default() -> Self {
+        OutputConfig {
+            pressure_file: default_pressure_file(),
+            light_file: default_light_file(),
+            summary_file: default_summary_file(),
+            snapshot_interval: default_snapshot_interval(),
+            enable_visualization: default_visualization(),
+        }
+    }
+}

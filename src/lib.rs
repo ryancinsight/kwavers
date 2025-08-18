@@ -198,50 +198,8 @@ pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResul
     Ok(())
 }
 
-/// Create a default simulation configuration
-/// 
-/// Implements SSOT principle as the single source of truth for default configuration
-pub fn create_default_config() -> Config {
-    Config {
-        simulation: SimulationConfig {
-            domain_size_x: 0.1,
-            domain_size_yz: 0.1,
-            points_per_wavelength: 10,
-            frequency: 1e6,
-            num_cycles: 5.0,
-            pml_thickness: 10,
-            pml_sigma_acoustic: 100.0,
-            pml_sigma_light: 10.0,
-            pml_polynomial_order: 3,
-            pml_reflection: 1e-6,
-            light_wavelength: 500.0,
-            kspace_padding: 0,
-            kspace_alpha: 1.0,
-            medium_type: None,
-            medium: config::MediumConfig::default(),
-        },
-        source: SourceConfig {
-            num_elements: 32,
-            signal_type: "sine".to_string(),
-            start_freq: None,
-            end_freq: None,
-            signal_duration: None,
-            phase: None,
-            focus_x: Some(0.03),
-            focus_y: Some(0.0),
-            focus_z: Some(0.0),
-            frequency: Some(1e6),
-            amplitude: Some(1e6),
-        },
-        output: OutputConfig {
-            pressure_file: "pressure_output.csv".to_string(),
-            light_file: "light_output.csv".to_string(),
-            summary_file: "summary.csv".to_string(),
-            snapshot_interval: 10,
-            enable_visualization: true,
-        },
-    }
-}
+// Note: Use Config::default() instead of create_default_config()
+// The Default trait is implemented for Config and provides the same functionality
 
 /// Validate simulation configuration for completeness and correctness
 /// 
