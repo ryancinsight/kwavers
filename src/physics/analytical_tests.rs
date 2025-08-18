@@ -10,6 +10,7 @@ use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovWave, Kuznets
 use crate::physics::mechanics::acoustic_wave::nonlinear::core::NonlinearWave;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::NullSource;
+use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{Array3, Array4, Axis, Zip, s};
 use std::f64::consts::PI;
 use log::info;
@@ -393,7 +394,7 @@ mod tests {
         let dt = cfl * dx / c0;
         
         // Initialize fields
-        let mut fields = Array4::zeros((crate::solver::TOTAL_FIELDS, nx, ny, nz));
+        let mut fields = Array4::zeros((UnifiedFieldType::COUNT, nx, ny, nz));
         let mut prev_pressure = grid.create_field();
         
         // Set initial condition: Gaussian pulse
@@ -403,25 +404,25 @@ mod tests {
             let x = i as f64 * dx;
             let envelope = amplitude * (-(x - pulse_center).powi(2) / (2.0 * pulse_width.powi(2))).exp();
             let p = envelope * (k * x).sin();
-            fields[[crate::solver::PRESSURE_IDX, i, 0, 0]] = p;
+            fields[[UnifiedFieldType::Pressure.index(), i, 0, 0]] = p;
             // For k-space method, prev_pressure should be the same as current pressure initially
             prev_pressure[[i, 0, 0]] = p;
         }
         
         // Also initialize velocity fields to zero (important for k-space method)
-        if crate::solver::VX_IDX < crate::solver::TOTAL_FIELDS {
+        if UnifiedFieldType::VelocityX.index() < UnifiedFieldType::COUNT {
             for i in 0..nx {
-                fields[[crate::solver::VX_IDX, i, 0, 0]] = 0.0;
+                fields[[UnifiedFieldType::VelocityX.index(), i, 0, 0]] = 0.0;
             }
         }
-        if crate::solver::VY_IDX < crate::solver::TOTAL_FIELDS {
+        if UnifiedFieldType::VelocityY.index() < UnifiedFieldType::COUNT {
             for i in 0..nx {
-                fields[[crate::solver::VY_IDX, i, 0, 0]] = 0.0;
+                fields[[UnifiedFieldType::VelocityY.index(), i, 0, 0]] = 0.0;
             }
         }
-        if crate::solver::VZ_IDX < crate::solver::TOTAL_FIELDS {
+        if UnifiedFieldType::VelocityZ.index() < UnifiedFieldType::COUNT {
             for i in 0..nx {
-                fields[[crate::solver::VZ_IDX, i, 0, 0]] = 0.0;
+                fields[[UnifiedFieldType::VelocityZ.index(), i, 0, 0]] = 0.0;
             }
         }
         
@@ -433,7 +434,7 @@ mod tests {
         let source = NullSource;
         
         // Store initial max amplitude
-        let initial_pressure = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX).to_owned();
+        let initial_pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index()).to_owned();
         let initial_max = initial_pressure
             .iter()
             .map(|&p| p.abs())
@@ -453,17 +454,17 @@ mod tests {
                 dt,
                 step as f64 * dt,
             );
-            prev_pressure.assign(&fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX));
+            prev_pressure.assign(&fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index()));
             
             if step == 0 {
-                let pressure_after_1 = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX);
+                let pressure_after_1 = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
                 let max_after_1 = pressure_after_1.iter().map(|&p| p.abs()).fold(0.0, f64::max);
                 println!("After step 1: max pressure = {:.3e}", max_after_1);
             }
         }
         
         // Find max amplitude after propagation
-        let final_pressure = fields.index_axis(ndarray::Axis(0), crate::solver::PRESSURE_IDX);
+        let final_pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         let final_max = final_pressure
             .iter()
             .map(|&p| p.abs())

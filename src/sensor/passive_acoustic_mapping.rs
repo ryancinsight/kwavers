@@ -494,26 +494,8 @@ impl PhysicsPlugin for PassiveAcousticMappingPlugin {
         Ok(())
     }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(PassiveAcousticMappingPlugin {
-            metadata: self.metadata.clone(),
-            config: self.config.clone(),
-            sensor_positions: self.sensor_positions.clone(),
-            sensor_indices: self.sensor_indices.clone(),
-            recorded_signals: self.recorded_signals.clone(),
-            cavitation_map: self.cavitation_map.clone(),
-            sonoluminescence_map: self.sonoluminescence_map.clone(),
-            frequency_domain_data: self.frequency_domain_data.clone(),
-        })
-    }
     
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 // Helper functions

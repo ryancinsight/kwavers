@@ -683,20 +683,8 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
         Ok(())
     }
     
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(Self {
-            solver: self.solver.clone(),
-            metadata: self.metadata.clone(),
-        })
-    }
 }
 
 mod validation;

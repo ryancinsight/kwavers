@@ -1121,18 +1121,6 @@ impl PhysicsPlugin for PstdPlugin {
         ]
     }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(PstdPlugin {
-            solver: PstdSolver::new(self.solver.config.clone(), &self.solver.grid).unwrap(),
-            metadata: self.metadata.clone(),
-        })
-    }
     
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
 }

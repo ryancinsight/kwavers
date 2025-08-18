@@ -45,7 +45,7 @@
 //! - **CUPID**: Composable solvers, Unix philosophy, predictable behavior
 //! - **GRASP**: Information expert pattern with domain-specific knowledge
 //! - **DRY**: Shared numerical algorithms between PSTD and FDTD
-//! - **KISS**: Simple interfaces despite complex internals
+//! - **KISS**: Clear interfaces despite complex internals
 //! - **YAGNI**: Only essential features implemented
 //!
 //! ## Performance
@@ -980,10 +980,10 @@ impl HybridSolver {
         fields: &Array4<f64>,
         time: f64,
     ) -> KwaversResult<()> {
-        use crate::solver::PRESSURE_IDX;
+        use crate::physics::field_mapping::UnifiedFieldType;
         
         // Check for NaN or infinite values
-        let pressure = fields.index_axis(ndarray::Axis(0), PRESSURE_IDX);
+        let pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         let has_nan = pressure.iter().any(|&x| x.is_nan());
         let has_inf = pressure.iter().any(|&x| x.is_infinite());
         
@@ -1202,17 +1202,8 @@ impl PhysicsPlugin for HybridSolver {
         }
     }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(self.clone())
-    }
     
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 // Add metadata field to HybridSolver struct

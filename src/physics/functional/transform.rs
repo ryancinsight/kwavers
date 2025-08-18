@@ -4,7 +4,7 @@
 //! with support for lazy evaluation and different data structures.
 
 use ndarray::{Array2, Array3};
-use crate::solver::lazy::LazyField;
+// LazyField removed - using eager evaluation
 use rayon::prelude::*;
 
 /// Generic field transformation pipeline

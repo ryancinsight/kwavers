@@ -5,7 +5,7 @@ use log::info;
 use ndarray::Axis;
 use std::fs::File;
 use std::io::{self, Write};
-use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX};
+use crate::physics::field_indices::{UnifiedFieldType::Pressure.index(), LIGHT_IDX};
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
@@ -66,7 +66,7 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     writeln!(file, "Metric,Value")?;
 
     if let Some((step, fields)) = recorder.fields_snapshots.last() {
-        let pressure = fields.index_axis(Axis(0), PRESSURE_IDX);
+        let pressure = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
         let light = fields.index_axis(Axis(0), LIGHT_IDX);
 
         let max_pressure = pressure

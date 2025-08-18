@@ -5,7 +5,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::solver::{VX_IDX, VY_IDX, VZ_IDX, SXX_IDX, SYY_IDX, SZZ_IDX, SXY_IDX, SXZ_IDX, SYZ_IDX};
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::utils::{fft_3d, ifft_3d};
 use crate::error::{KwaversResult, PhysicsError, NumericalError};
 use ndarray::{Array3, Array4, s};
@@ -572,15 +572,15 @@ impl AcousticWaveModel for ElasticWave {
         }
 
         // Extract current field values
-        let vx = fields.slice(s![VX_IDX, .., .., ..]).to_owned();
-        let vy = fields.slice(s![VY_IDX, .., .., ..]).to_owned();
-        let vz = fields.slice(s![VZ_IDX, .., .., ..]).to_owned();
-        let sxx = fields.slice(s![SXX_IDX, .., .., ..]).to_owned();
-        let syy = fields.slice(s![SYY_IDX, .., .., ..]).to_owned();
-        let szz = fields.slice(s![SZZ_IDX, .., .., ..]).to_owned();
-        let sxy = fields.slice(s![SXY_IDX, .., .., ..]).to_owned();
-        let sxz = fields.slice(s![SXZ_IDX, .., .., ..]).to_owned();
-        let syz = fields.slice(s![SYZ_IDX, .., .., ..]).to_owned();
+        let vx = fields.slice(s![UnifiedFieldType::VelocityX.index(), .., .., ..]).to_owned();
+        let vy = fields.slice(s![UnifiedFieldType::VelocityY.index(), .., .., ..]).to_owned();
+        let vz = fields.slice(s![UnifiedFieldType::VelocityZ.index(), .., .., ..]).to_owned();
+        let sxx = fields.slice(s![UnifiedFieldType::StressXX.index(), .., .., ..]).to_owned();
+        let syy = fields.slice(s![UnifiedFieldType::StressYY.index(), .., .., ..]).to_owned();
+        let szz = fields.slice(s![UnifiedFieldType::StressZZ.index(), .., .., ..]).to_owned();
+        let sxy = fields.slice(s![UnifiedFieldType::StressXY.index(), .., .., ..]).to_owned();
+        let sxz = fields.slice(s![UnifiedFieldType::StressXZ.index(), .., .., ..]).to_owned();
+        let syz = fields.slice(s![UnifiedFieldType::StressYZ.index(), .., .., ..]).to_owned();
 
         // Get medium properties
         let density = medium.density_array();
@@ -679,15 +679,15 @@ impl AcousticWaveModel for ElasticWave {
         new_syz *= dt;
 
         // Update field arrays
-        fields.slice_mut(s![VX_IDX, .., .., ..]).assign(&new_vx);
-        fields.slice_mut(s![VY_IDX, .., .., ..]).assign(&new_vy);
-        fields.slice_mut(s![VZ_IDX, .., .., ..]).assign(&new_vz);
-        fields.slice_mut(s![SXX_IDX, .., .., ..]).assign(&new_sxx);
-        fields.slice_mut(s![SYY_IDX, .., .., ..]).assign(&new_syy);
-        fields.slice_mut(s![SZZ_IDX, .., .., ..]).assign(&new_szz);
-        fields.slice_mut(s![SXY_IDX, .., .., ..]).assign(&new_sxy);
-        fields.slice_mut(s![SXZ_IDX, .., .., ..]).assign(&new_sxz);
-        fields.slice_mut(s![SYZ_IDX, .., .., ..]).assign(&new_syz);
+        fields.slice_mut(s![UnifiedFieldType::VelocityX.index(), .., .., ..]).assign(&new_vx);
+        fields.slice_mut(s![UnifiedFieldType::VelocityY.index(), .., .., ..]).assign(&new_vy);
+        fields.slice_mut(s![UnifiedFieldType::VelocityZ.index(), .., .., ..]).assign(&new_vz);
+        fields.slice_mut(s![UnifiedFieldType::StressXX.index(), .., .., ..]).assign(&new_sxx);
+        fields.slice_mut(s![UnifiedFieldType::StressYY.index(), .., .., ..]).assign(&new_syy);
+        fields.slice_mut(s![UnifiedFieldType::StressZZ.index(), .., .., ..]).assign(&new_szz);
+        fields.slice_mut(s![UnifiedFieldType::StressXY.index(), .., .., ..]).assign(&new_sxy);
+        fields.slice_mut(s![UnifiedFieldType::StressXZ.index(), .., .., ..]).assign(&new_sxz);
+        fields.slice_mut(s![UnifiedFieldType::StressYZ.index(), .., .., ..]).assign(&new_syz);
 
         // Update metrics
         self.metrics.call_count += 1;

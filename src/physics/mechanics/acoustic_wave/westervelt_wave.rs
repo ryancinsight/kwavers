@@ -4,7 +4,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::solver::PRESSURE_IDX; // Assuming pressure is still the primary field
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::utils::{fft_3d, ifft_3d};
 use log::{debug, trace};
 use ndarray::{Array3, Array4, Axis, Zip, ArrayView3, ArrayViewMut3}; // Removed parallel prelude
@@ -253,7 +253,7 @@ impl AcousticWaveModel for WesterveltWave {
         metrics.call_count += 1;
 
         // Use a view instead of cloning for stability check
-        let pressure_view = fields.index_axis(Axis(0), PRESSURE_IDX);
+        let pressure_view = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
 
         if !self.check_stability(dt, grid, medium, &pressure_view.view()) {
             debug!("ViscoelasticWave: Potential instability detected at t={}.", t);
@@ -348,7 +348,7 @@ impl AcousticWaveModel for WesterveltWave {
 
         // --- k-space propagation ---
         let start_fft = Instant::now();
-        let p_fft = fft_3d(fields, PRESSURE_IDX, grid); // FFT of current pressure
+        let p_fft = fft_3d(fields, UnifiedFieldType::Pressure.index(), grid); // FFT of current pressure
         metrics.fft_time += start_fft.elapsed().as_secs_f64();
 
         let start_kspace_ops = Instant::now();
@@ -430,7 +430,7 @@ impl AcousticWaveModel for WesterveltWave {
 
         // --- Combine terms ---
         let start_combine = Instant::now();
-        let mut p_output_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        let mut p_output_view = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
 
         // Current solution: p(t+dt) = p_linear_propagated(from p(t)) + dt * (NonlinearSource + SourceTerm)
         // nonlinear_term and src_term_array represent source rates in the pressure equation.
@@ -447,7 +447,7 @@ impl AcousticWaveModel for WesterveltWave {
 
         // --- Final clamping ---
         // Apply clamping directly to the field without cloning
-        let mut pressure_field = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        let mut pressure_field = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
         if self.clamp_pressure(&mut pressure_field) {
              debug!("ViscoelasticWave: Pressure clamping was applied to prevent instability.");
         }
@@ -460,12 +460,12 @@ impl AcousticWaveModel for WesterveltWave {
         // or fields(t) if using a 2-level scheme where p_linear is based on p(t) and dp/dt(t).
         // The k-Wave first-order scheme is effectively two-level.
         // The NonlinearWave's use of `prev_pressure` in nonlinear term suggests it might be p(t-dt).
-        // However, the linear k-space part `p_fft = fft_3d(fields, PRESSURE_IDX, grid);` uses current `fields` (i.e. p(t)).
+        // However, the linear k-space part `p_fft = fft_3d(fields, UnifiedFieldType::Pressure.index(), grid);` uses current `fields` (i.e. p(t)).
         // This hybrid approach needs care. For now, mirroring NonlinearWave.
 
         // --- Update pressure history for proper second-order derivatives ---
         // Store current pressure state as previous for next iteration
-        let current_pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        let current_pressure = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index()).to_owned();
         
         // Shift pressure history: p(t-dt) becomes p(t-2*dt), current becomes p(t-dt)
         if let Some(ref mut prev_stored) = self.prev_pressure_stored {

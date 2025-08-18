@@ -1,7 +1,4 @@
 //! Finite-Difference Time Domain (FDTD) solver
-
-pub mod boundary_stencils;
-pub mod interpolation;
 //! 
 //! This module implements the FDTD method using Yee's staggered grid scheme
 //! for solving Maxwell's equations and acoustic wave equations.
@@ -27,7 +24,7 @@ pub mod interpolation;
 //! # Literature References
 //! 
 //! 1. **Yee, K. S. (1966)**. "Numerical solution of initial boundary value 
-//!    problems involving Maxwell's equations in isotropic media." *IEEE 
+//!    problems involving Maxwell's equations in isotropic media." *IEEE
 //!    Transactions on Antennas and Propagation*, 14(3), 302-307. 
 //!    DOI: 10.1109/TAP.1966.1138693
 //!    - Original Yee algorithm for electromagnetic waves
@@ -88,7 +85,8 @@ pub mod interpolation;
 //! - DRY: Reuses grid utilities and boundary conditions
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
-use crate::grid::Grid;
+pub mod boundary_stencils;
+pub mod interpolation;use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError, ConfigError, GridError};
 use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState, PluginConfig};
@@ -988,18 +986,5 @@ impl PhysicsPlugin for FdtdPlugin {
         ]
     }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(FdtdPlugin {
-            solver: FdtdSolver::new(self.solver.config.clone(), &self.solver.grid).unwrap(),
-            metadata: self.metadata.clone(),
-        })
-    }
-    
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-    
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
+
 }

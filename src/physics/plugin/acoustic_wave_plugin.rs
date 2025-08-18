@@ -236,22 +236,6 @@ impl PhysicsPlugin for AcousticWavePlugin {
         }
     }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(Self {
-            metadata: self.metadata.clone(),
-            state: self.state,
-            sound_speed: self.sound_speed.clone(),
-            density: self.density.clone(),
-            prev_pressure: self.prev_pressure.clone(),
-            cfl_number: self.cfl_number,
-        })
-    }
     
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }

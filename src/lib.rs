@@ -1,9 +1,9 @@
-//! # Kwavers: Advanced Acoustic Simulation Library
+//! # Kwavers: Acoustic Simulation Library
 //!
 //! A comprehensive acoustic wave simulation library with support for:
 //! - Linear and nonlinear wave propagation
 //! - Multi-physics simulations (acoustic, thermal, optical)
-//! - Advanced numerical methods (FDTD, PSTD, spectral methods)
+//! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
 use std::collections::HashMap;

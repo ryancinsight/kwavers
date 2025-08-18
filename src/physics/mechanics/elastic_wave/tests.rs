@@ -7,7 +7,7 @@ mod tests {
     use crate::medium::homogeneous::HomogeneousMedium;
     use crate::source::NullSource;
     use ndarray::{Array3, Array4};
-    use crate::physics::mechanics::elastic_wave::{ElasticWave, VX_IDX};
+    use crate::physics::mechanics::elastic_wave::{ElasticWave, UnifiedFieldType::VelocityX.index()};
     use crate::physics::traits::AcousticWaveModel;
 
     #[test]
@@ -28,7 +28,7 @@ mod tests {
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));
         
         // Set initial conditions
-        fields[[VX_IDX, 16, 16, 16]] = 1.0;
+        fields[[UnifiedFieldType::VelocityX.index(), 16, 16, 16]] = 1.0;
         
         let prev_pressure = Array3::<f64>::zeros((32, 32, 32));
         
