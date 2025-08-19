@@ -6,11 +6,11 @@ use crate::medium::homogeneous::HomogeneousMedium;
 use crate::medium::heterogeneous::tissue::HeterogeneousTissueMedium; // Added
 use crate::time::Time;
 use log::{debug, info, warn}; // Added warn
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc; // Added
 
 /// Configuration for the simulation medium
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MediumConfig {
     /// Density of the medium in kg/m^3
     #[serde(default = "default_medium_density")]
@@ -56,7 +56,7 @@ fn default_medium_dispersion() -> f64 {
     0.0  // Default dispersion
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SimulationConfig {
     pub domain_size_x: f64,
     pub domain_size_yz: f64,

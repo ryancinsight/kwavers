@@ -1,8 +1,8 @@
 // config/output.rs
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct OutputConfig {
     #[serde(default = "default_pressure_file")]
     pub pressure_file: String,

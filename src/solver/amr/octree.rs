@@ -202,13 +202,13 @@ impl Octree {
     /// Iterate over all leaf nodes
     pub fn leaf_nodes(&self) -> impl Iterator<Item = &OctreeNode> + '_ {
         self.nodes.iter()
-            .filter(|node| node.is_leaf() && node.is_active)
+            .filter(|node| node.is_leaf())
     }
     
     /// Iterate over all active nodes at a given level
     pub fn nodes_at_level(&self, level: usize) -> impl Iterator<Item = &OctreeNode> + '_ {
         self.nodes.iter()
-            .filter(move |node| node.level as usize == level && node.is_active)
+            .filter(move |node| node.level as usize == level)
     }
     
     /// Count active nodes
