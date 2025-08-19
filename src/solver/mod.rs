@@ -30,10 +30,20 @@ pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
 pub use amr::{AMRConfig, AMRManager};
 
-// Progress reporting trait for the plugin-based solver
+use serde::Serialize;
+use std::collections::HashMap;
+
+// Flexible progress reporting system
+
+/// A trait for types that can be reported as progress updates
+/// This allows different simulation types to define custom progress data
+pub trait ProgressData: Serialize + Send + Sync {}
+
+/// Generic progress reporter trait - decoupled from specific data structures
+/// This follows the principle of designing to interfaces, not implementations
 pub trait ProgressReporter: Send + Sync {
-    /// Report progress update
-    fn report(&mut self, progress: &ProgressUpdate);
+    /// Report progress with any type implementing ProgressData
+    fn report<T: ProgressData>(&mut self, progress: &T);
     
     /// Called when simulation starts
     fn on_start(&mut self, total_steps: usize, dt: f64) {}
@@ -42,8 +52,8 @@ pub trait ProgressReporter: Send + Sync {
     fn on_complete(&mut self) {}
 }
 
-/// Progress update information
-#[derive(Debug, Clone)]
+/// Standard progress update information for acoustic simulations
+#[derive(Debug, Clone, Serialize)]
 pub struct ProgressUpdate {
     pub current_step: usize,
     pub total_steps: usize,
@@ -54,13 +64,39 @@ pub struct ProgressUpdate {
     pub fields_summary: FieldsSummary,
 }
 
-/// Summary of field values for progress reporting
-#[derive(Debug, Clone)]
-pub struct FieldsSummary {
-    pub max_pressure: f64,
-    pub max_velocity: f64,
-    pub max_temperature: f64,
-    pub total_energy: f64,
+// Implement ProgressData for the standard ProgressUpdate
+impl ProgressData for ProgressUpdate {}
+
+/// Flexible field summary using HashMap for extensibility
+/// This allows any simulation type to report arbitrary metrics
+#[derive(Debug, Clone, Serialize)]
+pub struct FieldsSummary(HashMap<String, f64>);
+
+impl FieldsSummary {
+    /// Create a new empty field summary
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+    
+    /// Insert a field value
+    pub fn insert(&mut self, key: &str, value: f64) {
+        self.0.insert(key.to_string(), value);
+    }
+    
+    /// Get a field value
+    pub fn get(&self, key: &str) -> Option<f64> {
+        self.0.get(key).copied()
+    }
+    
+    /// Create a standard acoustic simulation summary
+    pub fn acoustic(max_pressure: f64, max_velocity: f64, max_temperature: f64, total_energy: f64) -> Self {
+        let mut summary = Self::new();
+        summary.insert("max_pressure", max_pressure);
+        summary.insert("max_velocity", max_velocity);
+        summary.insert("max_temperature", max_temperature);
+        summary.insert("total_energy", total_energy);
+        summary
+    }
 }
 
 /// Console progress reporter implementation
@@ -91,58 +127,137 @@ impl ProgressReporter for ConsoleProgressReporter {
         );
     }
     
-    fn report(&mut self, progress: &ProgressUpdate) {
+    fn report<T: ProgressData>(&mut self, progress: &T) {
         let now = std::time::Instant::now();
         
-        // Report at start, end, or at intervals
-        if progress.current_step == 0 
-            || progress.current_step == progress.total_steps - 1
-            || now.duration_since(self.last_report_time) >= self.report_interval {
+        // Serialize the progress data to JSON for flexible handling
+        if let Ok(json) = serde_json::to_value(progress) {
+            // Try to extract standard fields if they exist
+            let current_step = json.get("current_step").and_then(|v| v.as_u64()).unwrap_or(0);
+            let total_steps = json.get("total_steps").and_then(|v| v.as_u64()).unwrap_or(1);
             
-            let percent = (progress.current_step as f64 / progress.total_steps as f64) * 100.0;
-            let elapsed = now.duration_since(self.start_time);
-            
-            log::info!(
-                "Step {}/{} ({:.1}%) | t={:.6e}s | Max P={:.2e} | ETA: {}",
-                progress.current_step,
-                progress.total_steps,
-                percent,
-                progress.current_time,
-                progress.fields_summary.max_pressure,
-                format_duration(progress.estimated_remaining)
-            );
-            
-            self.last_report_time = now;
+            // Report at start, end, or at intervals
+            if current_step == 0 
+                || current_step == total_steps - 1
+                || now.duration_since(self.last_report_time) >= self.report_interval {
+                
+                let percent = (current_step as f64 / total_steps as f64) * 100.0;
+                
+                // Extract other fields if available
+                let current_time = json.get("current_time").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let max_pressure = json.get("fields_summary")
+                    .and_then(|fs| fs.get("max_pressure"))
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                
+                log::info!(
+                    "Step {}/{} ({:.1}%) | t={:.6e}s | Progress: {}",
+                    current_step,
+                    total_steps,
+                    percent,
+                    current_time,
+                    serde_json::to_string(&json).unwrap_or_default()
+                );
+                
+                self.last_report_time = now;
+            }
         }
     }
     
     fn on_complete(&mut self) {
         let elapsed = std::time::Instant::now().duration_since(self.start_time);
-        log::info!("Simulation completed in {}", format_duration(elapsed));
+        log::info!("Simulation completed in {}", crate::utils::format::format_duration(elapsed));
     }
 }
 
-/// Format duration for display
-fn format_duration(duration: std::time::Duration) -> String {
-    let total_seconds = duration.as_secs();
-    let hours = total_seconds / 3600;
-    let minutes = (total_seconds % 3600) / 60;
-    let seconds = total_seconds % 60;
-    
-    if hours > 0 {
-        format!("{}h {}m {}s", hours, minutes, seconds)
-    } else if minutes > 0 {
-        format!("{}m {}s", minutes, seconds)
-    } else {
-        format!("{}s", seconds)
-    }
-}
+// Note: format_duration has been moved to utils::format module for reusability
 
 /// Null progress reporter for when progress reporting is not needed
 pub struct NullProgressReporter;
 
 impl ProgressReporter for NullProgressReporter {
-    fn report(&mut self, _progress: &ProgressUpdate) {}
+    fn report<T: ProgressData>(&mut self, _progress: &T) {}
+}
+
+/// Asynchronous console reporter for non-blocking progress reporting
+/// This prevents I/O operations from affecting simulation performance
+pub struct AsyncConsoleReporter {
+    sender: std::sync::mpsc::Sender<String>,
+    last_report_time: std::time::Instant,
+    report_interval: std::time::Duration,
+    start_time: std::time::Instant,
+}
+
+impl AsyncConsoleReporter {
+    /// Create a new async console reporter with a dedicated reporting thread
+    pub fn new() -> Self {
+        use std::sync::mpsc;
+        use std::thread;
+        
+        let (sender, receiver) = mpsc::channel();
+        
+        // Spawn a dedicated thread for console I/O
+        thread::spawn(move || {
+            for message in receiver {
+                // Perform the actual printing in a separate thread
+                // This ensures the simulation loop is never blocked by I/O
+                println!("{}", message);
+            }
+        });
+        
+        Self {
+            sender,
+            last_report_time: std::time::Instant::now(),
+            report_interval: std::time::Duration::from_secs(10),
+            start_time: std::time::Instant::now(),
+        }
+    }
+    
+    /// Set the reporting interval
+    pub fn with_interval(mut self, interval: std::time::Duration) -> Self {
+        self.report_interval = interval;
+        self
+    }
+}
+
+impl ProgressReporter for AsyncConsoleReporter {
+    fn on_start(&mut self, total_steps: usize, dt: f64) {
+        self.start_time = std::time::Instant::now();
+        let message = format!(
+            "Starting simulation: {} steps, dt = {:.6e}s, total time = {:.6e}s",
+            total_steps,
+            dt,
+            total_steps as f64 * dt
+        );
+        // Use try_send to avoid blocking if channel is full
+        let _ = self.sender.send(message);
+    }
+    
+    fn report<T: ProgressData>(&mut self, progress: &T) {
+        let now = std::time::Instant::now();
+        
+        // Only report at intervals to avoid overwhelming the channel
+        if now.duration_since(self.last_report_time) >= self.report_interval {
+            if let Ok(json) = serde_json::to_string(progress) {
+                // Use try_send to avoid blocking the simulation
+                // If the channel is full, we skip this update rather than block
+                let _ = self.sender.send(format!("Progress: {}", json));
+                self.last_report_time = now;
+            }
+        }
+    }
+    
+    fn on_complete(&mut self) {
+        let elapsed = std::time::Instant::now().duration_since(self.start_time);
+        let message = format!("Simulation completed in {:?}", elapsed);
+        let _ = self.sender.send(message);
+    }
+}
+
+impl Default for AsyncConsoleReporter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
@@ -150,9 +265,45 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_format_duration() {
-        assert_eq!(format_duration(std::time::Duration::from_secs(45)), "45s");
-        assert_eq!(format_duration(std::time::Duration::from_secs(125)), "2m 5s");
-        assert_eq!(format_duration(std::time::Duration::from_secs(3725)), "1h 2m 5s");
+    fn test_flexible_fields_summary() {
+        let mut summary = FieldsSummary::new();
+        summary.insert("custom_metric", 42.0);
+        summary.insert("another_metric", 3.14);
+        
+        assert_eq!(summary.get("custom_metric"), Some(42.0));
+        assert_eq!(summary.get("another_metric"), Some(3.14));
+        assert_eq!(summary.get("nonexistent"), None);
+    }
+    
+    #[test]
+    fn test_acoustic_fields_summary() {
+        let summary = FieldsSummary::acoustic(100.0, 50.0, 300.0, 1000.0);
+        
+        assert_eq!(summary.get("max_pressure"), Some(100.0));
+        assert_eq!(summary.get("max_velocity"), Some(50.0));
+        assert_eq!(summary.get("max_temperature"), Some(300.0));
+        assert_eq!(summary.get("total_energy"), Some(1000.0));
+    }
+    
+    #[test]
+    fn test_progress_data_trait() {
+        // Custom progress type for testing
+        #[derive(Debug, Clone, Serialize)]
+        struct CustomProgress {
+            iteration: usize,
+            residual: f64,
+        }
+        
+        impl ProgressData for CustomProgress {}
+        
+        let progress = CustomProgress {
+            iteration: 10,
+            residual: 0.001,
+        };
+        
+        // Should be able to serialize
+        let json = serde_json::to_string(&progress).unwrap();
+        assert!(json.contains("iteration"));
+        assert!(json.contains("residual"));
     }
 }
