@@ -564,24 +564,24 @@ impl Medium for HomogeneousMedium {
     /// The array's shape matches the `self.temperature` field.
     /// The array is lazily initialized on first call and cached using `OnceLock`
     /// for subsequent accesses. The cache is cleared if relevant properties (like temperature, which dictates shape) change.
-    fn density_array(&self) -> Array3<f64> {
+    fn density_array(&self) -> &Array3<f64> {
         self.density_array.get_or_init(|| {
             debug!("Initializing density_array cache for HomogeneousMedium.");
             let shape = self.temperature.dim(); 
             Array3::from_elem(shape, self.density)
-        }).clone()
+        })
     }
     
     /// Returns a 3D array of the medium's speed of sound, filled with the uniform `self.sound_speed` value.
     /// The array's shape matches the `self.temperature` field.
     /// The array is lazily initialized on first call and cached using `OnceLock`
     /// for subsequent accesses. The cache is cleared if relevant properties change.
-    fn sound_speed_array(&self) -> Array3<f64> {
+    fn sound_speed_array(&self) -> &Array3<f64> {
         self.sound_speed_array.get_or_init(|| {
             debug!("Initializing sound_speed_array cache for HomogeneousMedium.");
             let shape = self.temperature.dim(); 
             Array3::from_elem(shape, self.sound_speed)
-        }).clone()
+        })
     }
     
     /// Returns `true` indicating that this medium's base properties are defined as homogeneous.

@@ -255,8 +255,8 @@ impl Medium for HeterogeneousMedium {
             .and(velocity)
             .for_each(|v_self, &v_updated| *v_self = v_updated);
     }
-    fn density_array(&self) -> Array3<f64> { self.density.clone() }
-    fn sound_speed_array(&self) -> Array3<f64> { self.sound_speed.clone() }
+    fn density_array(&self) -> &Array3<f64> { &self.density }
+    fn sound_speed_array(&self) -> &Array3<f64> { &self.sound_speed }
 
     // Implement new trait methods
     fn shear_sound_speed_array(&self) -> Array3<f64> {
