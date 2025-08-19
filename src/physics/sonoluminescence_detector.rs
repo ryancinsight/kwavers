@@ -173,11 +173,11 @@ impl SonoluminescenceDetector {
                     
                     // Check sonoluminescence criteria
                     if self.check_sl_criteria(temperature, pressure, compression_ratio) {
-                        // Check if this is a new event or continuation
+                        // Check if this is a distinct event or continuation
                         let position = (i, j, k);
-                        let is_new_event = self.is_new_event(position, temperature);
+                        let is_distinct_event = self.is_distinct_event(position, temperature);
                         
-                        if is_new_event {
+                        if is_distinct_event {
                             // Calculate emission characteristics
                             let (photon_count, peak_wavelength, energy) = 
                                 self.calculate_emission_characteristics(
@@ -233,8 +233,8 @@ impl SonoluminescenceDetector {
         compression_ratio >= self.config.compression_threshold
     }
     
-    /// Check if this is a new event or continuation of existing
-    fn is_new_event(&self, position: (usize, usize, usize), temperature: f64) -> bool {
+    /// Check if this is a distinct event or continuation of existing
+    fn is_distinct_event(&self, position: (usize, usize, usize), temperature: f64) -> bool {
         match self.event_history.get(&position) {
             Some(history) => {
                 // Check if temperature has dropped and risen again
