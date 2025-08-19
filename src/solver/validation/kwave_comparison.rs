@@ -212,7 +212,7 @@ impl KWaveValidator {
         let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
         
         // Create plane wave
-        let medium = HomogeneousMedium::new(acoustic::DENSITY_WATER, sound_speed, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(998.0, sound_speed, &self.grid, 0.0, 0.0); // Water density at room temperature
         let mut pressure = self.grid.create_field();
         
         // Initialize plane wave traveling in +x direction

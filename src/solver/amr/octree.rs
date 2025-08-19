@@ -24,8 +24,7 @@ pub struct OctreeNode {
     parent: Option<usize>,
     /// Child node indices (None if leaf)
     children: Option<[usize; 8]>,
-    /// Whether this node is active (leaf)
-    is_active: bool,
+    // Removed redundant is_active field - use is_leaf() method instead
 }
 
 impl OctreeNode {
@@ -319,20 +318,10 @@ impl Octree {
             // This is already a parent
             node_idx
         } else {
-            // This is a child, find its parent
-            // Search for a node that has this node as a child
-            let mut found_parent = None;
-            for (idx, node) in self.nodes.iter().enumerate() {
-                if let Some(children) = node.children {
-                    if children.contains(&node_idx) {
-                        found_parent = Some(idx);
-                        break;
-                    }
-                }
-            }
-            match found_parent {
-                Some(idx) => idx,
-                None => return Ok(false), // No parent found
+            // This is a child, use the parent field directly (O(1) lookup)
+            match self.nodes[node_idx].parent {
+                Some(p_idx) => p_idx,
+                None => return Ok(false), // Node is root, cannot coarsen
             }
         };
         
@@ -347,6 +336,11 @@ impl Octree {
             if self.nodes[child_idx].children.is_some() {
                 return Ok(false); // Cannot coarsen - has grandchildren
             }
+        }
+        
+        // Check 2:1 balance constraint - ensure no neighboring cells would violate balance
+        if !self.check_coarsen_balance(parent_idx) {
+            return Ok(false); // Would violate 2:1 balance constraint
         }
         
         // Remove children from coord mapping and mark as free
@@ -371,15 +365,13 @@ impl Octree {
                 self.coord_to_node.remove(&coord);
             }
             
-            // Mark child as inactive and add to free list
-            self.nodes[child_idx].is_active = false;
+            // Add child to free list (is_active is redundant, will be removed)
             self.free_nodes.push(child_idx);
             self.inactive_nodes += 1;
         }
         
         // Mark parent as leaf
         self.nodes[parent_idx].children = None;
-        self.nodes[parent_idx].is_active = true;
         
         // Re-add parent coordinates to mapping
         let parent_bounds_min = self.nodes[parent_idx].bounds_min;

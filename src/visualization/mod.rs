@@ -1,4 +1,4 @@
-//! # Advanced Visualization Module - Phase 11
+//! # Visualization Module - Phase 11
 //!
 //! This module provides comprehensive 3D visualization and real-time interaction capabilities
 //! for Kwavers simulation results. It implements GPU-accelerated volume rendering, interactive

@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::KwaversResult;
 use crate::constants::{stability, performance, cfl};
 use crate::utils::{fft_3d, ifft_3d};
-use crate::solver::PRESSURE_IDX;
+use crate::physics::field_mapping::UnifiedFieldType;
 
 use ndarray::{Array3, Array4, ArrayView3, Zip, Axis};
 use log::{debug, warn, info};
@@ -124,7 +124,7 @@ impl NonlinearWave {
         let start_fft = Instant::now();
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         
-        let p_fft = fft_3d(fields, PRESSURE_IDX, grid);
+        let p_fft = fft_3d(fields, UnifiedFieldType::Pressure.index(), grid);
         let k2_values = self.k_squared.as_ref().expect("k_squared should be initialized in new()");
         
         // Use maximum sound speed for k-space correction to ensure stability
@@ -306,7 +306,7 @@ impl NonlinearWave {
         src_term: &Array3<f64>
     ) {
         let start_combine = Instant::now();
-        let mut p_output_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        let mut p_output_view = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
 
         Zip::from(&mut p_output_view)
             .and(p_linear)
@@ -322,7 +322,7 @@ impl NonlinearWave {
     /// Enforce stability by clamping pressure values
     fn enforce_stability(&self, fields: &mut Array4<f64>) {
         // First pass: clamp pressure using the existing method (but avoid .to_owned())
-        let mut p_view = fields.index_axis_mut(Axis(0), PRESSURE_IDX);
+        let mut p_view = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
         
         // Direct in-place clamping without expensive copying
         for val in p_view.iter_mut() {
@@ -987,7 +987,7 @@ impl AcousticWaveModel for NonlinearWave {
         self.call_count += 1;
 
         // Use view instead of expensive .to_owned() - zero allocation
-        let pressure_at_start = fields.index_axis(Axis(0), PRESSURE_IDX);
+        let pressure_at_start = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
         
         // Check stability using cached maximum sound speed for efficiency
         if !self.check_stability(dt, grid, medium, &pressure_at_start.to_owned()) {

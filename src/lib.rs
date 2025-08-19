@@ -1,9 +1,9 @@
-//! # Kwavers: Advanced Acoustic Simulation Library
+//! # Kwavers: Acoustic Simulation Library
 //!
 //! A comprehensive acoustic wave simulation library with support for:
 //! - Linear and nonlinear wave propagation
 //! - Multi-physics simulations (acoustic, thermal, optical)
-//! - Advanced numerical methods (FDTD, PSTD, spectral methods)
+//! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
 use std::collections::HashMap;
@@ -180,6 +180,9 @@ pub fn init_logging() -> KwaversResult<()> {
 }
 
 /// Create default visualization plots for simulation outputs
+/// 
+/// **Note:** This function is a placeholder and does not yet generate plots.
+#[deprecated(since = "0.3.0", note = "Plotting functionality is not yet implemented. This function is a stub.")]
 pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResult<()> {
     use std::path::Path;
     
@@ -506,6 +509,9 @@ pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
     }
 }
 
+/// Conservative default disk space in GB when actual disk space cannot be determined
+const CONSERVATIVE_DEFAULT_DISK_SPACE_GB: f64 = 20.0;
+
 /// Get system information using the sysinfo crate for cross-platform compatibility
 fn get_system_info() -> KwaversResult<HashMap<String, String>> {
     use sysinfo::{System, SystemExt, DiskExt};
@@ -531,7 +537,7 @@ fn get_system_info() -> KwaversResult<HashMap<String, String>> {
         .iter()
         .find(|disk| current_dir.starts_with(disk.mount_point()))
         .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
-        .unwrap_or(20.0); // Conservative default
+        .unwrap_or(CONSERVATIVE_DEFAULT_DISK_SPACE_GB);
     info.insert("disk_space_gb".to_string(), disk_space_gb.to_string());
     
     Ok(info)
@@ -539,26 +545,38 @@ fn get_system_info() -> KwaversResult<HashMap<String, String>> {
 
 /// Get CPU core count.
 fn get_cpu_cores() -> KwaversResult<usize> {
-    get_system_info()?
+    let info = get_system_info()?;
+    let cores_str = info.get("cpu_cores");
+    cores_str
         .get("cpu_cores")
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal("Failed to parse CPU cores from system info".to_string()))
+        .ok_or_else(|| KwaversError::Internal(
+            format!("Failed to parse CPU cores from system info. Found: {:?}", cores_str)
+        ))
 }
 
 /// Get available memory in GB.
 fn get_available_memory_gb() -> KwaversResult<f64> {
-    get_system_info()?
+    let info = get_system_info()?;
+    let memory_str = info.get("memory_available_gb");
+    memory_str
         .get("memory_available_gb")
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal("Failed to parse available memory from system info".to_string()))
+        .ok_or_else(|| KwaversError::Internal(
+            format!("Failed to parse available memory from system info. Found: {:?}", memory_str)
+        ))
 }
 
 /// Get available disk space in GB for current directory.
 fn get_available_disk_space_gb() -> KwaversResult<f64> {
-    get_system_info()?
+    let info = get_system_info()?;
+    let disk_str = info.get("disk_space_gb");
+    disk_str
         .get("disk_space_gb")
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal("Failed to parse disk space from system info".to_string()))
+        .ok_or_else(|| KwaversError::Internal(
+            format!("Failed to parse disk space from system info. Found: {:?}", disk_str)
+        ))
 }
 
 #[cfg(test)]

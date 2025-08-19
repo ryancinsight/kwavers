@@ -403,7 +403,7 @@ impl DomainDecomposer {
         window: &ndarray::ArrayView3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        // Simple frequency analysis using variance of finite differences
+        // Frequency analysis using variance of finite differences
         let (nx, ny, nz) = window.dim();
         let mut high_freq_indicator = 0.0;
         let mut count = 0;
@@ -514,7 +514,7 @@ impl DomainDecomposer {
         field: &mut Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        // Simple 3x3x3 averaging filter
+        // 3x3x3 averaging filter
         let original = field.clone();
         
         for i in 1..grid.nx-1 {
@@ -546,7 +546,7 @@ impl DomainDecomposer {
     
     /// Fixed decomposition strategy
     fn static_decomposition(&self, grid: &Grid) -> KwaversResult<Vec<DomainRegion>> {
-        // Simple fixed decomposition: PSTD in center, FDTD near boundaries
+        // Fixed decomposition: PSTD in center, FDTD near boundaries
         let mut regions = Vec::new();
         
         let boundary_width = self.min_domain_size.0;

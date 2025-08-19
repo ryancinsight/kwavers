@@ -115,9 +115,6 @@ pub mod physics {
     /// High pressure threshold for cavitation (Pa)
     pub const HIGH_PRESSURE_THRESHOLD: f64 = 1e8;
     
-    /// Density of water at 20°C (kg/m³)
-    pub const DENSITY_WATER: f64 = 998.0;
-    
     /// Density of soft tissue (kg/m³)
     pub const DENSITY_TISSUE: f64 = 1050.0;
     
@@ -612,9 +609,6 @@ pub mod acoustic {
     
     /// Reference speed of sound for general calculations [m/s]
     pub const SOUND_SPEED_REFERENCE: f64 = 1500.0;
-    
-    /// Density of water at 20°C [kg/m³]
-    pub const DENSITY_WATER: f64 = 998.0;
     
     /// Density of water at body temperature [kg/m³]
     pub const DENSITY_WATER_BODY_TEMP: f64 = 993.0;

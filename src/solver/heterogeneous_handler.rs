@@ -1,4 +1,4 @@
-//! Advanced heterogeneous media handler with Gibbs phenomenon mitigation
+//! Heterogeneous media handler with Gibbs phenomenon mitigation
 //!
 //! This module implements state-of-the-art techniques for handling sharp interfaces
 //! in heterogeneous media, preventing spurious oscillations (Gibbs phenomenon) that

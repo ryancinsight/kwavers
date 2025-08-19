@@ -33,6 +33,7 @@
 pub mod optimization;
 pub mod profiling;
 pub mod benchmarks;
+pub mod metrics;
 
 pub use optimization::{
     PerformanceOptimizer,

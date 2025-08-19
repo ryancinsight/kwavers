@@ -404,7 +404,7 @@ impl AdaptiveSelector {
     
     /// Compute efficiency score based on grid properties
     fn compute_efficiency_score(&self, grid: &Grid) -> KwaversResult<f64> {
-        // Simple efficiency metric based on grid size and uniformity
+        // Efficiency metric based on grid size and uniformity
         let total_points = (grid.nx * grid.ny * grid.nz) as f64;
         let max_reasonable_points = 1e7; // 10M points as a reference
         

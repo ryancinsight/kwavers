@@ -213,45 +213,8 @@ impl PhysicsPlugin for AcousticWavePlugin {
         Ok(())
     }
     
-    fn performance_metrics(&self) -> HashMap<String, f64> {
-        let mut metrics = HashMap::new();
-        metrics.insert("cfl_number".to_string(), self.cfl_number);
-        metrics
-    }
     
-    fn validate(&self, grid: &Grid, medium: &dyn Medium) -> ValidationResult {
-        let errors = Vec::new();
-        
-        // Check CFL condition
-        let max_speed = medium.sound_speed_array().iter()
-            .fold(0.0_f64, |a, &b| a.max(b));
-        
-        let dt_max = self.cfl_number * grid.dx.min(grid.dy).min(grid.dz) / max_speed;
-        
-        // For now, just return success - could add CFL validation here if needed
-        if errors.is_empty() {
-            ValidationResult::success()
-        } else {
-            ValidationResult::failure(errors)
-        }
-    }
     
-    fn clone_plugin(&self) -> Box<dyn PhysicsPlugin> {
-        Box::new(Self {
-            metadata: self.metadata.clone(),
-            state: self.state,
-            sound_speed: self.sound_speed.clone(),
-            density: self.density.clone(),
-            prev_pressure: self.prev_pressure.clone(),
-            cfl_number: self.cfl_number,
-        })
-    }
     
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
     
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }

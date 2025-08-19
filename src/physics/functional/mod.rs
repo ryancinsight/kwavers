@@ -10,7 +10,7 @@ pub mod iter;       // Lazy iterators and evaluation
 pub mod result;     // Monadic operations for Result types
 
 // Re-export commonly used types
-pub use transform::{FieldTransform, LazyFieldTransform};
+pub use transform::FieldTransform;
 pub use ops::{FieldOps, apply_kernel, compose_operations};
 pub use iter::LazyFieldIterator;
 pub use result::ResultOps;

@@ -14,6 +14,7 @@ use super::config::SeismicImagingConfig;
 use super::constants::*;
 use super::wavelet::RickerWavelet;
 use super::misfit::{MisfitFunction, MisfitType};
+use super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 
 /// Full Waveform Inversion (FWI) reconstructor
 /// Estimates subsurface velocity models by minimizing misfit between observed and synthetic data
@@ -417,7 +418,4 @@ impl Reconstructor for FullWaveformInversion {
         Ok(self.velocity_model.clone())
     }
     
-    fn get_algorithm_name(&self) -> &str {
-        "Full Waveform Inversion (FWI)"
-    }
 }

@@ -22,7 +22,7 @@ pub mod reconstruction;
 pub mod plugin_based_solver;
 
 // Re-export the main solver type for convenience
-pub use plugin_based_solver::{PluginBasedSolver, SolverPlugin};
+pub use plugin_based_solver::PluginBasedSolver;
 
 // Re-export commonly used types from submodules
 pub use pstd::PstdConfig;

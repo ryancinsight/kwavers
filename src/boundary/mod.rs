@@ -8,6 +8,8 @@ use std::fmt::Debug;
 pub mod pml;
 pub mod cpml;
 
+// Re-export the new PmlAxis enum for type-safe API
+
 /// Trait for boundary condition implementations
 /// Follows Interface Segregation Principle - clients depend only on methods they use
 pub trait Boundary: Debug + Send + Sync {

@@ -6,7 +6,7 @@ use num_complex::Complex;
 use log::debug;
 use std::sync::Arc;
 
-/// Optimized 3D FFT implementation with cache-friendly algorithms
+/// 3D FFT implementation with cache-friendly algorithms
 #[derive(Debug, Clone)]
 pub struct Fft3d {
     padded_nx: usize,

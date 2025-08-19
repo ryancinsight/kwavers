@@ -8,11 +8,19 @@ pub mod heterogeneous;
 pub mod homogeneous;
 pub mod frequency_dependent;
 pub mod anisotropic;
+pub mod traits;
 
 pub use absorption::{PowerLawAbsorption, TissueType, AcousticDiffusivity};
 pub use homogeneous::HomogeneousMedium;
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use anisotropic::{AnisotropicTissueProperties, StiffnessTensor, AnisotropyType};
+
+// Re-export new composable traits
+pub use traits::{
+    AcousticMedium, ElasticMedium, ThermalMedium, OpticalMedium,
+    ViscousMedium, BubbleMedium, InterfacePoint,
+    find_interfaces, max_sound_speed as max_sound_speed_trait
+};
 
 /// Get the maximum sound speed from a medium for CFL condition calculations.
 /// 
@@ -117,8 +125,13 @@ pub trait Medium: Debug + Sync + Send {
     fn bubble_radius(&self) -> &Array3<f64>;
     fn bubble_velocity(&self) -> &Array3<f64>;
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>);
-    fn density_array(&self) -> Array3<f64>;
-    fn sound_speed_array(&self) -> Array3<f64>;
+    /// Get reference to cached density array for efficient access
+    /// Implementations should cache this on first call
+    fn density_array(&self) -> &Array3<f64>;
+    
+    /// Get reference to cached sound speed array for efficient access
+    /// Implementations should cache this on first call
+    fn sound_speed_array(&self) -> &Array3<f64>;
 
     // --- Elastic Properties ---
 

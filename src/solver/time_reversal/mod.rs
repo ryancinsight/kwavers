@@ -13,10 +13,11 @@
 use crate::{
     error::{KwaversResult, KwaversError, ValidationError},
     grid::Grid,
-    solver::{Solver, PRESSURE_IDX},
+    physics::field_mapping::UnifiedFieldType,
     sensor::{SensorData},
     recorder::Recorder,
     medium::Medium,
+    solver::plugin_based_solver::PluginBasedSolver,
 };
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -123,7 +124,7 @@ impl TimeReversalReconstructor {
         &mut self,
         sensor_data: &SensorData,
         grid: &Grid,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         recorder: &mut Recorder,
         frequency: f64,
     ) -> KwaversResult<Array3<f64>> {
@@ -143,7 +144,7 @@ impl TimeReversalReconstructor {
             debug!("Time-reversal iteration {}/{}", iteration + 1, self.config.iterations);
             
             // Reset pressure field to zero
-            solver.fields.fields.index_axis_mut(ndarray::Axis(0), PRESSURE_IDX).fill(0.0);
+            solver.fields.fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index()).fill(0.0);
             
             // Apply time-reversed signals as sources
             self.apply_reversed_sources(&reversed_signals, solver, sensor_data)?;
@@ -346,7 +347,7 @@ impl TimeReversalReconstructor {
     fn apply_reversed_sources(
         &self,
         reversed_signals: &HashMap<usize, Vec<f64>>,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         sensor_data: &SensorData,
     ) -> KwaversResult<()> {
         use crate::source::{Source, TimeVaryingSource};
@@ -396,7 +397,7 @@ impl TimeReversalReconstructor {
     fn propagate_backwards(
         &self,
         grid: &Grid,
-        solver: &mut Solver,
+        solver: &mut PluginBasedSolver,
         recorder: &mut Recorder,
         frequency: f64,
         reversed_signals: &HashMap<usize, Vec<f64>>,
@@ -418,7 +419,7 @@ impl TimeReversalReconstructor {
             solver.step(step, solver.time.dt, frequency)?;
             
             // Track maximum amplitude at each point
-            let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), PRESSURE_IDX);
+            let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
             
             // Update max amplitude field
             for ((i, j, k), max_val) in max_amplitude_field.indexed_iter_mut() {
