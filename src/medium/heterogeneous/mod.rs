@@ -51,7 +51,7 @@ impl HeterogeneousMedium {
         })
     }
 
-    pub fn new_tissue(grid: &Grid) -> Self {
+    pub fn tissue(grid: &Grid) -> Self {
         let density = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1050.0);
         let sound_speed = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1540.0);
         let viscosity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.5e-3);
@@ -286,7 +286,7 @@ mod tests {
     fn test_tissue_initialization_includes_shear_props() {
         let grid_dims = (2, 3, 4);
         let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
-        let medium = HeterogeneousMedium::new_tissue(&grid);
+        let medium = HeterogeneousMedium::tissue(&grid);
 
         // Check dimensions of new fields
         assert_eq!(medium.shear_sound_speed.dim(), grid_dims);
