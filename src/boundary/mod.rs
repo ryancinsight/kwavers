@@ -7,10 +7,8 @@ use std::fmt::Debug;
 
 pub mod pml;
 pub mod cpml;
-pub mod cpml_refactored;
 
 // Re-export the new PmlAxis enum for type-safe API
-pub use cpml_refactored::PmlAxis;
 
 /// Trait for boundary condition implementations
 /// Follows Interface Segregation Principle - clients depend only on methods they use

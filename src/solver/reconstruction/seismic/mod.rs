@@ -18,6 +18,7 @@
 
 pub mod constants;
 pub mod config;
+pub mod fd_coeffs;
 pub mod fwi;
 pub mod rtm;
 pub mod wavelet;
