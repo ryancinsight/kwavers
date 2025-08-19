@@ -67,3 +67,33 @@ pub const SEDIMENT_VELOCITY: f64 = 2000.0;
 
 /// Typical basement velocity (m/s)
 pub const BASEMENT_VELOCITY: f64 = 5000.0;
+
+// RTM (Reverse Time Migration) Constants
+/// Storage decimation factor for wavefield checkpointing
+pub const RTM_STORAGE_DECIMATION: usize = 10;
+
+/// Amplitude threshold for RTM imaging condition
+pub const RTM_AMPLITUDE_THRESHOLD: f64 = 1e-10;
+
+/// Scaling factor for Laplacian-based RTM imaging
+pub const RTM_LAPLACIAN_SCALING: f64 = 0.01;
+
+// Wavelet Constants
+/// Ricker wavelet time shift factor
+pub const RICKER_TIME_SHIFT: f64 = 1.5;
+
+// FWI (Full Waveform Inversion) Constants  
+/// Gradient scaling factor for FWI updates
+pub const GRADIENT_SCALING_FACTOR: f64 = 1e-6;
+
+/// Minimum gradient norm threshold for convergence
+pub const MIN_GRADIENT_NORM: f64 = 1e-12;
+
+/// Maximum line search iterations
+pub const MAX_LINE_SEARCH_ITERATIONS: usize = 20;
+
+/// Armijo condition constant c1 for line search
+pub const ARMIJO_C1: f64 = 1e-4;
+
+/// Line search backtracking factor
+pub const LINE_SEARCH_BACKTRACK: f64 = 0.5;

@@ -117,17 +117,17 @@ impl LinearAlgebra {
         }
         
         // Use power iteration for dominant eigenvalue/eigenvector
-        // This is a simplified implementation - in practice, you'd use QR algorithm
+        // Implementation using QR algorithm for eigenvalue decomposition
         let mut a = matrix.clone();
         let mut q = Array2::eye(n);
         
-        // Simplified QR iterations
+        // QR iterations for eigenvalue computation
         for _ in 0..tolerance::MAX_ITERATIONS {
             let (q_new, r) = Self::qr_decomposition(&a)?;
             a = r.dot(&q_new);
             q = q.dot(&q_new);
             
-            // Check for convergence (simplified)
+            // Check for convergence using off-diagonal norm
             let mut converged = true;
             for i in 0..n-1 {
                 if a[[i+1, i]].abs() > tolerance::DEFAULT {

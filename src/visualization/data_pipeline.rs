@@ -88,8 +88,8 @@ impl DataPipeline {
         
         #[cfg(feature = "gpu-visualization")]
         {
-            // For Phase 11, we'll create a mock implementation since the GPU context
-            // doesn't yet have direct device/queue access for visualization
+            // GPU visualization data pipeline - requires WebGPU context
+            // Currently returns error as GPU context integration is pending
             return Err(KwaversError::Visualization(
                 "GPU data pipeline not yet implemented - requires WebGPU device access".to_string()
             ));
