@@ -356,12 +356,7 @@ pub struct GridSliceIterator<'a> {
     current: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Dimension {
-    X,
-    Y,
-    Z,
-}
+
 
 impl<'a> Iterator for GridSliceIterator<'a> {
     type Item = GridSlice<'a>;
