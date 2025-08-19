@@ -596,7 +596,7 @@ impl Medium for HeterogeneousTissueMedium {
         self.invalidate_caches();
     }
 
-    fn density_array(&self) -> Array3<f64> {
+    fn density_array(&self) -> &Array3<f64> {
         self.density_array.get_or_init(|| {
             let mut density = Array3::zeros(self.tissue_map.dim());
             
