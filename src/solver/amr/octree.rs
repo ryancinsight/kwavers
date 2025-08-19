@@ -86,7 +86,7 @@ impl Default for OctreeNode {
             bounds_max: (0, 0, 0),
             parent: None,
             children: None,
-            is_active: true,
+
         }
     }
 }
@@ -138,7 +138,7 @@ impl Octree {
             bounds_max: self.base_dims,
             parent: None,
             children: None,
-            is_active: true,
+
         };
         
         self.nodes.push(root);
@@ -214,7 +214,7 @@ impl Octree {
     /// Count active nodes
     pub fn active_node_count(&self) -> usize {
         self.nodes.iter()
-            .filter(|node| node.is_active)
+            .filter(|node| node.is_leaf())
             .count()
     }
     
@@ -288,7 +288,7 @@ impl Octree {
                 bounds_max,
                 parent: Some(node_idx),
                 children: None,
-                is_active: true,
+    
             };
             
             // Update the node
@@ -301,7 +301,7 @@ impl Octree {
         
         // Update parent
         self.nodes[node_idx].children = Some(child_indices);
-        self.nodes[node_idx].is_active = false;
+        // Node is now internal (has children)
         
         Ok(true)
     }
@@ -433,7 +433,7 @@ impl Octree {
     /// Get all active (leaf) nodes
     pub fn get_active_nodes(&self) -> Vec<&OctreeNode> {
         self.nodes.iter()
-            .filter(|node| node.is_active)
+            .filter(|node| node.is_leaf())
             .collect()
     }
     
@@ -452,7 +452,7 @@ impl Octree {
         
         // Copy active nodes and build mapping
         for (old_idx, node) in self.nodes.iter().enumerate() {
-            if node.is_active || (node.parent.is_some() && index_mapping.contains_key(&node.parent.unwrap())) {
+            if node.is_leaf() || (node.parent.is_some() && index_mapping.contains_key(&node.parent.unwrap())) {
                 let mut compacted_node = node.clone();
                 
                 // Update parent index
@@ -507,7 +507,7 @@ impl Octree {
         
         for node in &self.nodes {
             level_counts[node.level as usize] += 1;
-            if node.is_active {
+            if node.is_leaf() {
                 active_counts[node.level as usize] += 1;
             }
         }

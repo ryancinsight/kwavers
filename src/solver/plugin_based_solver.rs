@@ -661,14 +661,6 @@ impl PluginBasedSolver {
 }
 
 impl PerformanceMetrics {
-    /// Record plugin execution time
-    pub fn record_plugin_time(&mut self, plugin_name: &str, time: f64) {
-        self.plugin_execution_times
-            .entry(plugin_name.to_string())
-            .or_default()
-            .push(time);
-    }
-    
     /// Record field update time
     pub fn record_field_update_time(&mut self, time: f64) {
         self.field_update_times.push(time);

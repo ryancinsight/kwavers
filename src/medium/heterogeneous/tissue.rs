@@ -609,10 +609,10 @@ impl Medium for HeterogeneousTissueMedium {
             });
             
             density
-        }).clone()
+        })
     }
 
-    fn sound_speed_array(&self) -> Array3<f64> {
+    fn sound_speed_array(&self) -> &Array3<f64> {
         self.sound_speed_array.get_or_init(|| {
             let mut speed = Array3::zeros(self.tissue_map.dim());
             
@@ -625,7 +625,7 @@ impl Medium for HeterogeneousTissueMedium {
             });
             
             speed
-        }).clone()
+        })
     }
 
     fn shear_sound_speed_array(&self) -> Array3<f64> {
