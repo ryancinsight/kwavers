@@ -33,6 +33,16 @@ mod validation_constants {
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 5;
     /// Maximum points per wavelength for grid validation
     pub const MAX_POINTS_PER_WAVELENGTH: usize = 100;
+    
+    // System requirements constants
+    /// Minimum required memory in GB for simulation
+    pub const MIN_REQUIRED_MEMORY_GB: f64 = 4.0;
+    /// Minimum required CPU cores for efficient simulation
+    pub const MIN_REQUIRED_CPU_CORES: usize = 2;
+    /// Minimum required disk space in GB for output files
+    pub const MIN_REQUIRED_DISK_SPACE_GB: f64 = 10.0;
+    /// Default conservative disk space estimate if detection fails
+    pub const DEFAULT_DISK_SPACE_GB: f64 = 20.0;
 }
 
 // Sensor configuration constants
@@ -470,35 +480,93 @@ pub fn get_version_info() -> HashMap<String, String> {
     info
 }
 
+/// Structured system information for validation and logging
+/// 
+/// Follows Single Responsibility Principle: holds system data
+#[derive(Debug, Clone)]
+pub struct SystemInfo {
+    pub cpu_cores: usize,
+    pub memory_available_gb: f64,
+    pub disk_space_gb: f64,
+}
+
+impl SystemInfo {
+    /// Gathers all system information in a single efficient pass
+    /// 
+    /// This centralizes system queries, avoiding redundant calls and
+    /// following the DRY principle for system information gathering
+    pub fn new() -> KwaversResult<Self> {
+        use sysinfo::{System, SystemExt, DiskExt};
+        
+        let mut sys = System::new_all();
+        sys.refresh_all();
+        
+        // Get CPU cores with fallback
+        let cpu_cores = sys.physical_core_count()
+            .unwrap_or_else(|| sys.cpus().len())
+            .max(1);
+        
+        // Get available memory in GB
+        let memory_available_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+        
+        // Get available disk space for current directory
+        let current_dir = std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("/"));
+        let disk_space_gb = sys.disks()
+            .iter()
+            .find(|disk| current_dir.starts_with(disk.mount_point()))
+            .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
+            .unwrap_or(validation_constants::DEFAULT_DISK_SPACE_GB);
+        
+        Ok(Self {
+            cpu_cores,
+            memory_available_gb,
+            disk_space_gb,
+        })
+    }
+}
+
 /// Check system compatibility and requirements
 /// 
+/// Uses SystemInfo for efficient, single-pass system querying
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
     use crate::validation::validators;
     
+    let info = SystemInfo::new()?;
     let mut errors = Vec::new();
     
-    // Get system information
-    let sys_info = get_system_info()?;
-    
-    // Validate memory (at least 4GB available)
-    if let Some(memory_str) = sys_info.get("memory_available_gb") {
-        if let Ok(memory_gb) = memory_str.parse::<f64>() {
-            let memory_result = validators::validate_range(memory_gb, 4.0, f64::INFINITY, "memory_available_gb");
-            if !memory_result.is_valid {
-                errors.extend(memory_result.errors);
-            }
-        }
+    // Validate memory using named constant
+    let memory_result = validators::validate_range(
+        info.memory_available_gb, 
+        validation_constants::MIN_REQUIRED_MEMORY_GB, 
+        f64::INFINITY, 
+        "memory_available_gb"
+    );
+    if !memory_result.is_valid {
+        errors.extend(memory_result.errors);
     }
     
-    // Validate CPU cores (at least 2)
-    if let Some(cores_str) = sys_info.get("cpu_cores") {
-        if let Ok(cores) = cores_str.parse::<u32>() {
-            let cores_result = validators::validate_range(cores, 2, u32::MAX, "cpu_cores");
-            if !cores_result.is_valid {
-                errors.extend(cores_result.errors);
-            }
-        }
+    // Validate CPU cores using named constant
+    let cores_result = validators::validate_range(
+        info.cpu_cores as u32, 
+        validation_constants::MIN_REQUIRED_CPU_CORES as u32, 
+        u32::MAX, 
+        "cpu_cores"
+    );
+    if !cores_result.is_valid {
+        errors.extend(cores_result.errors);
+    }
+    
+    // Validate disk space using named constant
+    let disk_result = validators::validate_range(
+        info.disk_space_gb,
+        validation_constants::MIN_REQUIRED_DISK_SPACE_GB,
+        f64::INFINITY,
+        "disk_space_gb"
+    );
+    if !disk_result.is_valid {
+        errors.extend(disk_result.errors);
     }
     
     // Return the validation result
