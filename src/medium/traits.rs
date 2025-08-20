@@ -51,11 +51,9 @@ pub trait ElasticMedium: Debug + Sync + Send {
     
     /// Get shear wave speed (m/s)
     fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let density = if let Some(acoustic) = (self as &dyn std::any::Any).downcast_ref::<dyn AcousticMedium>() {
-            1000.0 // Default density if not acoustic
-        } else {
-            1000.0
-        };
+        // Use a default density of 1000 kg/m³ for shear wave speed calculation
+        // This should be overridden in concrete implementations that have access to actual density
+        let density = 1000.0;
         (self.lame_mu(x, y, z, grid) / density).sqrt()
     }
     

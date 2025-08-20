@@ -390,7 +390,9 @@ fn run_simulation_loop(
         apply_source_term(source, grid, t, fields)?;
         
         // Apply physics using plugin manager
-        let plugin_context = PluginContext::new(step, time.num_steps(), validation_constants::DEFAULT_PLUGIN_FREQUENCY);
+        let mut plugin_context = PluginContext::new();
+        plugin_context.step = step;
+        plugin_context.total_steps = time.num_steps();
         plugin_manager.execute(
             fields,
             grid,

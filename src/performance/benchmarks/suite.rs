@@ -222,7 +222,9 @@ impl BenchmarkSuite {
         // Warmup - mimic the actual benchmark loop
         for step in 0..10 {
             let t = step as f64 * dt;
-            let context = PluginContext::new(step, 10, 1e6);
+            let mut context = PluginContext::new();
+            context.step = step;
+            context.total_steps = 10;
             plugin_manager.execute(&mut fields, &grid, &medium, dt, t)?;
         }
         
@@ -232,7 +234,9 @@ impl BenchmarkSuite {
         for _ in 0..self.config.iterations {
             for step in 0..self.config.time_steps {
                 let t = step as f64 * dt;
-                let context = PluginContext::new(step, self.config.time_steps, 1e6);
+                let mut context = PluginContext::new();
+                context.step = step;
+                context.total_steps = self.config.time_steps;
                 plugin_manager.execute(&mut fields, &grid, &medium, dt, t)?;
             }
         }

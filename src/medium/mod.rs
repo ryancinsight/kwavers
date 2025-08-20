@@ -228,8 +228,8 @@ pub trait Medium: Debug + Sync + Send {
         let rho_arr = self.density_array();
         let mut s_speed_arr = Array3::zeros(rho_arr.dim());
         Zip::from(&mut s_speed_arr)
-            .and(&mu_arr)
-            .and(&rho_arr)
+            .and(mu_arr)
+            .and(rho_arr)
             .for_each(|s_speed, &mu, &rho| {
                 if rho > 0.0 {
                     *s_speed = (mu / rho).sqrt();

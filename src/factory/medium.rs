@@ -117,7 +117,8 @@ impl MediumFactory {
             MediumType::Heterogeneous { tissue_file } => {
                 // Heterogeneous medium requires loading from file
                 Err(KwaversError::NotImplemented(
-                    format!("Heterogeneous medium loading from '{}' not yet implemented", tissue_file)
+                    format!("Heterogeneous medium loading from '{}' not yet implemented", 
+                            tissue_file.as_deref().unwrap_or("unknown"))
                 ))
             }
         }
