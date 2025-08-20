@@ -145,7 +145,7 @@ impl PluginConfig for FdtdConfig {
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
             errors.push(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "Must be 2, 4, or 6".to_string(),
             });
@@ -246,7 +246,7 @@ impl FdtdSolver {
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),
             }));
@@ -568,7 +568,7 @@ impl FdtdSolver {
         let mut divergence = Array3::zeros((nx, ny, nz));
         let coeffs = self.fd_coeffs.get(&self.config.spatial_order)
             .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: self.config.spatial_order.to_string(),
                 constraint: "unsupported order".to_string(),
             }))?;
@@ -649,7 +649,7 @@ impl FdtdSolver {
         // Compute bulk modulus from density and sound speed
         let rho_array = medium.density_array();
         let c_array = medium.sound_speed_array();
-        let bulk_modulus = rho_array * c_array.mapv(|c| c * c);
+        let bulk_modulus = &rho_array * &c_array * &c_array;
         
         // Compute velocity divergence in a single pass for better performance
         let mut div_v = self.compute_divergence_single_pass(vx, vy, vz)?;

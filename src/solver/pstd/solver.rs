@@ -10,6 +10,7 @@ use super::config::PstdConfig;
 use super::spectral_ops::SpectralOperations;
 
 /// PSTD solver state
+#[derive(Debug)]
 pub struct PstdSolver {
     config: PstdConfig,
     spectral: SpectralOperations,
@@ -48,7 +49,7 @@ impl PstdSolver {
         &mut self,
         medium: &dyn Medium,
         source: &dyn Source,
-        boundary: &dyn Boundary,
+        boundary: &mut dyn Boundary,
         grid: &Grid,
         time: f64,
         dt: f64,

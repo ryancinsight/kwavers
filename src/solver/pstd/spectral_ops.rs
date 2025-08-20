@@ -7,6 +7,7 @@ use crate::error::KwaversResult;
 use crate::utils::{fft_3d_array, ifft_3d_array};
 
 /// Spectral operations handler
+#[derive(Debug)]
 pub struct SpectralOperations {
     pub kx: Array3<f64>,
     pub ky: Array3<f64>,
