@@ -107,7 +107,7 @@ impl ThermalDiffusionSolver {
         
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
-            return Err(KwaversError::Physics(PhysicsError::InvalidConfiguration {
+            return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 component: "ThermalDiffusionSolver".to_string(),
                 reason: format!("Invalid spatial order: {}. Must be 2, 4, or 6", config.spatial_order)
             }));
@@ -581,7 +581,7 @@ impl ThermalDiffusionSolver {
     /// Set initial temperature distribution
     pub fn set_temperature(&mut self, temperature: Array3<f64>) -> KwaversResult<()> {
         if temperature.shape() != self.temperature.shape() {
-            return Err(KwaversError::Physics(PhysicsError::InvalidConfiguration {
+            return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 component: "ThermalDiffusionSolver".to_string(),
                 reason: "Temperature array shape mismatch".to_string()
             }));

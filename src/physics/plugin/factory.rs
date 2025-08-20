@@ -66,7 +66,7 @@ where
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let config = config
             .downcast::<C>()
-            .map_err(|_| ValidationError::InvalidConfiguration {
+            .map_err(|_| ValidationError::FieldValidation {
                 field: "config".to_string(),
                 message: "Invalid configuration type".to_string(),
             })?;
@@ -82,7 +82,7 @@ where
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()> {
         config
             .downcast_ref::<C>()
-            .ok_or_else(|| ValidationError::InvalidConfiguration {
+            .ok_or_else(|| ValidationError::FieldValidation {
                 field: "config".to_string(),
                 message: "Invalid configuration type".to_string(),
             })?
@@ -113,7 +113,7 @@ impl PluginRegistry {
         factory: F,
     ) -> KwaversResult<()> {
         if self.factories.contains_key(id) {
-            return Err(ValidationError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
                 message: format!("Plugin '{}' already registered", id),
             }.into());
@@ -133,7 +133,7 @@ impl PluginRegistry {
         grid: &Grid,
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let factory = self.factories.get(id)
-            .ok_or_else(|| ValidationError::InvalidConfiguration {
+            .ok_or_else(|| ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
                 message: format!("Unknown plugin: {}", id),
             })?;

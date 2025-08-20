@@ -187,10 +187,9 @@ impl<'a> ChemicalUpdateParams<'a> {
             
         if !negative_temperatures.is_empty() {
             return Err(ValidationError::FieldValidation {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Temperature must be non-negative. Found {} negative values, first: {:.2e} K", 
-                               negative_temperatures.len(), 
-                               negative_temperatures[0]),
+                field: "temperature".to_string(),
+                value: format!("{:.2e}", negative_temperatures[0]),
+                constraint: format!("Must be non-negative. Found {} negative values", negative_temperatures.len()),
             }.into());
         }
 
@@ -354,15 +353,17 @@ impl ChemicalReactionConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.pre_exponential_factor <= 0.0 {
             return Err(ValidationError::FieldValidation {
-                component: "ChemicalReactionConfig".to_string(),
-                reason: "Pre-exponential factor must be positive".to_string(),
+                field: "pre_exponential_factor".to_string(),
+                value: self.pre_exponential_factor.to_string(),
+                constraint: "Must be positive".to_string(),
             }.into());
         }
 
         if self.activation_energy < 0.0 {
             return Err(ValidationError::FieldValidation {
-                component: "ChemicalReactionConfig".to_string(),
-                reason: "Activation energy must be non-negative".to_string(),
+                field: "activation_energy".to_string(),
+                value: self.activation_energy.to_string(),
+                constraint: "Must be non-negative".to_string(),
             }.into());
         }
 
@@ -423,8 +424,9 @@ impl ChemicalModel {
         let (nx, ny, nz) = grid.dimensions();
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(ValidationError::FieldValidation {
-                component: "ChemicalModel".to_string(),
-                reason: "Grid dimensions must be positive".to_string(),
+                field: "grid_dimensions".to_string(),
+                value: format!("({}, {}, {})", nx, ny, nz),
+                constraint: "All dimensions must be positive".to_string(),
             }.into());
         }
 

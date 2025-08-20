@@ -180,7 +180,7 @@ impl PluginManager {
             // Record what this plugin provides
             for field in plugin.provided_fields() {
                 if let Some(&other) = provides.get(&field) {
-                    return Err(ValidationError::InvalidConfiguration {
+                    return Err(ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
                         message: format!(
                             "Field {:?} provided by multiple plugins: {} and {}",
@@ -239,7 +239,7 @@ impl PluginManager {
         for i in 0..n {
             if state[i] == 0 {
                 visit(i, &mut state, &requires, &provides, &mut order)
-                    .map_err(|msg| ValidationError::InvalidConfiguration {
+                    .map_err(|msg| ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
                         message: msg,
                     })?;
