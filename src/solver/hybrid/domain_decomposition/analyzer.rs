@@ -40,7 +40,8 @@ impl DomainAnalyzer {
         let mut homogeneity = Array3::ones((grid.nx, grid.ny, grid.nz));
         
         // Check density variations
-        if let Some(density) = medium.density_array() {
+        {
+            let density = medium.density_array();
             let mean = density.mean().unwrap_or(1.0);
             for ((i, j, k), val) in density.indexed_iter() {
                 let variation = (val - mean).abs() / mean;

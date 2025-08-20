@@ -163,6 +163,41 @@ pub struct AdaptiveSelector {
 }
 
 impl AdaptiveSelector {
+    /// Update metrics based on current field state
+    pub fn update_metrics(&mut self, fields: &Array4<f64>, grid: &Grid) -> KwaversResult<()> {
+        // Compute quality metrics from fields
+        let metrics = self.compute_quality_metrics(fields, grid)?;
+        
+        // Add to history
+        self.history.push(metrics);
+        
+        // Limit history size
+        if self.history.len() > self.max_history {
+            self.history.remove(0);
+        }
+        
+        Ok(())
+    }
+    
+    /// Compute quality metrics from field data
+    fn compute_quality_metrics(&self, fields: &Array4<f64>, grid: &Grid) -> KwaversResult<QualityMetrics> {
+        // Extract pressure field (assuming it's at index 0)
+        let pressure = fields.index_axis(ndarray::Axis(0), 0);
+        
+        // Compute basic metrics
+        let smoothness = self.compute_smoothness_metric(&pressure)?;
+        let frequency_content = self.compute_frequency_metric(&pressure)?;
+        let numerical_dispersion = self.estimate_dispersion(&pressure)?;
+        let interface_quality = 0.95; // Placeholder
+        
+        Ok(QualityMetrics {
+            smoothness,
+            frequency_content,
+            numerical_dispersion,
+            interface_quality,
+        })
+    }
+    
     /// Create a new adaptive selector
     pub fn new(criteria: SelectionCriteria) -> KwaversResult<Self> {
         info!("Initializing adaptive selector with criteria: {:?}", criteria);

@@ -717,26 +717,17 @@ impl FdtdSolver {
         }
         
         // Update velocities: ∂v/∂t = -∇p/ρ
-        Zip::from(vx)
-            .and(&dp_dx)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
-            
-        Zip::from(vy)
-            .and(&dp_dy)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
-            
-        Zip::from(vz)
-            .and(&dp_dz)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
+        for ((idx, v), &grad) in vx.indexed_iter_mut().zip(dp_dx.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
+        
+        for ((idx, v), &grad) in vy.indexed_iter_mut().zip(dp_dy.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
+        
+        for ((idx, v), &grad) in vz.indexed_iter_mut().zip(dp_dz.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
         
         Ok(())
     }
