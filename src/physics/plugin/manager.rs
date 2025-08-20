@@ -45,9 +45,10 @@ impl PluginManager {
         let new_id = plugin.metadata().id.clone();
         for existing in &self.plugins {
             if existing.metadata().id == new_id {
-                return Err(ValidationError::InvalidConfiguration {
+                return Err(ValidationError::FieldValidation {
                     field: "plugin_id".to_string(),
-                    message: format!("Plugin with ID '{}' already exists", new_id),
+                    value: new_id.clone(),
+                    constraint: "Plugin ID must be unique".to_string(),
                 }.into());
             }
         }

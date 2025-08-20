@@ -7,7 +7,7 @@
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
 
-use crate::error::{KwaversResult, PhysicsError};
+use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::plugin::PluginContext;
@@ -90,8 +90,9 @@ impl<'a> ChemicalUpdateParams<'a> {
         }
 
         if frequency <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(PhysicsError::InvalidParameter {
+                parameter: "frequency".to_string(),
+                value: frequency,
                 reason: "Frequency must be positive".to_string(),
             }.into());
         }
@@ -101,43 +102,43 @@ impl<'a> ChemicalUpdateParams<'a> {
         let expected_shape = [nx, ny, nz];
         
         if pressure.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Pressure array shape {:?} doesn't match grid dimensions {:?}", 
-                               pressure.shape(), expected_shape),
-            }.into());
+            return Err(KwaversError::DimensionMismatch {
+                expected: format!("{:?}", expected_shape),
+                actual: format!("{:?}", pressure.shape()),
+                context: "Pressure array shape doesn't match grid dimensions".to_string(),
+            });
         }
 
         if light.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Light array shape {:?} doesn't match grid dimensions {:?}", 
-                               light.shape(), expected_shape),
-            }.into());
+            return Err(KwaversError::DimensionMismatch {
+                expected: format!("{:?}", expected_shape),
+                actual: format!("{:?}", light.shape()),
+                context: "Light array shape doesn't match grid dimensions".to_string(),
+            });
         }
 
         if emission_spectrum.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Emission spectrum array shape {:?} doesn't match grid dimensions {:?}", 
-                               emission_spectrum.shape(), expected_shape),
-            }.into());
+            return Err(KwaversError::DimensionMismatch {
+                expected: format!("{:?}", expected_shape),
+                actual: format!("{:?}", emission_spectrum.shape()),
+                context: "Emission spectrum array shape doesn't match grid dimensions".to_string(),
+            });
         }
 
         if bubble_radius.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Bubble radius array shape {:?} doesn't match grid dimensions {:?}", 
-                               bubble_radius.shape(), expected_shape),
-            }.into());
+            return Err(KwaversError::DimensionMismatch {
+                expected: format!("{:?}", expected_shape),
+                actual: format!("{:?}", bubble_radius.shape()),
+                context: "Bubble radius array shape doesn't match grid dimensions".to_string(),
+            });
         }
 
         if temperature.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Temperature array shape {:?} doesn't match grid dimensions {:?}", 
-                               temperature.shape(), expected_shape),
-            }.into());
+            return Err(KwaversError::DimensionMismatch {
+                expected: format!("{:?}", expected_shape),
+                actual: format!("{:?}", temperature.shape()),
+                context: "Temperature array shape doesn't match grid dimensions".to_string(),
+            });
         }
 
         Ok(Self {
@@ -175,7 +176,7 @@ impl<'a> ChemicalUpdateParams<'a> {
             .collect();
             
         if !negative_temperatures.is_empty() {
-            return Err(PhysicsError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 component: "ChemicalUpdateParams".to_string(),
                 reason: format!("Temperature must be non-negative. Found {} negative values, first: {:.2e} K", 
                                negative_temperatures.len(), 
@@ -342,14 +343,14 @@ impl ChemicalReactionConfig {
 
     pub fn validate(&self) -> KwaversResult<()> {
         if self.pre_exponential_factor <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 component: "ChemicalReactionConfig".to_string(),
                 reason: "Pre-exponential factor must be positive".to_string(),
             }.into());
         }
 
         if self.activation_energy < 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 component: "ChemicalReactionConfig".to_string(),
                 reason: "Activation energy must be non-negative".to_string(),
             }.into());
@@ -411,7 +412,7 @@ impl ChemicalModel {
         // Validate grid following Information Expert principle
         let (nx, ny, nz) = grid.dimensions();
         if nx == 0 || ny == 0 || nz == 0 {
-            return Err(PhysicsError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 component: "ChemicalModel".to_string(),
                 reason: "Grid dimensions must be positive".to_string(),
             }.into());
