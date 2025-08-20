@@ -414,7 +414,7 @@ impl Reconstructor for FullWaveformInversion {
         let source_positions = vec![(grid.nx / 2, grid.ny / 2, 0)];
         
         // L-BFGS optimization loop
-        for iteration in 0..self.max_iterations {
+        for iteration in 0..self.config.fwi_iterations {
             // Forward modeling with current velocity
             let synthetic_data = self.forward_model(&source_positions, &receiver_positions, grid)?;
             
@@ -423,7 +423,7 @@ impl Reconstructor for FullWaveformInversion {
             let misfit = 0.5 * residual.iter().map(|r| r * r).sum::<f64>();
             
             // Check convergence
-            if misfit < self.tolerance {
+            if misfit < self.config.fwi_tolerance {
                 break;
             }
             

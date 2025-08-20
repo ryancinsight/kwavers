@@ -516,7 +516,7 @@ impl Octree {
         
         OctreeStats {
             total_nodes: self.nodes.len(),
-            active_nodes: self.nodes.iter().filter(|n| n.is_active).count(),
+            active_nodes: self.nodes.iter().filter(|n| n.is_leaf()).count(),
             level_counts,
             active_counts,
             max_level_used,
