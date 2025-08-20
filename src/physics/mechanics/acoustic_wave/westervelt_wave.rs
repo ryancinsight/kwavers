@@ -1,4 +1,4 @@
-// src/physics/mechanics/acoustic_wave/viscoelastic_wave.rs
+// src/physics/mechanics/acoustic_wave/westervelt_wave.rs
 
 use crate::grid::Grid;
 use crate::medium::Medium;

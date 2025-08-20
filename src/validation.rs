@@ -41,6 +41,14 @@ impl ValidationResult {
         self.is_valid = self.is_valid && other.is_valid;
         self
     }
+
+    /// Create from a vector of errors
+    pub fn from_errors(errors: Vec<ValidationError>) -> Self {
+        Self {
+            is_valid: errors.is_empty(),
+            errors,
+        }
+    }
 }
 
 /// Trait for validatable configuration structs
