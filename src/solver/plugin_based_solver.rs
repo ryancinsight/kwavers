@@ -124,23 +124,29 @@ impl FieldRegistry {
     /// Register a new field dynamically
     /// Allocation is deferred until build() is called for performance optimization
     pub fn register_field(&mut self, field_type: UnifiedFieldType, description: String) -> Result<(), FieldError> {
-        if self.fields.contains_key(&field_type) {
+        let idx = field_type as usize;
+        if idx < self.fields.len() && self.fields[idx].is_some() {
             return Ok(()); // Already registered
         }
         
-        let index = self.fields.len();
-        self.fields.insert(field_type, FieldMetadata {
-            index,
+        // Ensure Vec is large enough
+        while self.fields.len() <= idx {
+            self.fields.push(None);
+        }
+        
+        self.fields[idx] = Some(FieldMetadata {
+            index: self.next_data_index,
             description,
             active: true,
         });
+        self.next_data_index += 1;
         
         // Only reallocate if not using deferred allocation
         if !self.deferred_allocation {
             self.reallocate_data_internal()?;
         }
         
-        info!("Registered field: {} at index {}", field_type, index);
+        info!("Registered field: {} at index {}", field_type, self.next_data_index - 1);
         Ok(())
     }
     
@@ -235,12 +241,18 @@ impl FieldRegistry {
     
     /// Check if a field is registered
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
-        self.fields.contains_key(&field_type)
+        let idx = field_type as usize;
+        idx < self.fields.len() && self.fields[idx].is_some()
     }
     
     /// Get list of registered fields
     pub fn registered_fields(&self) -> Vec<UnifiedFieldType> {
-        self.fields.keys().cloned().collect()
+        self.fields.iter()
+            .enumerate()
+            .filter_map(|(idx, opt)| {
+                opt.as_ref().map(|_| unsafe { std::mem::transmute(idx as u32) })
+            })
+            .collect()
     }
     
     /// Internal method to reallocate data array when fields change

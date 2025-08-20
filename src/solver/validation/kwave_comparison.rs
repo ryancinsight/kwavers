@@ -237,7 +237,7 @@ impl KWaveValidator {
         // Create and add PSTD plugin
         let pstd_config = PstdConfig::default();
         let pstd_plugin = PstdPlugin::new(pstd_config, &self.grid)?;
-        plugin_manager.register(Box::new(pstd_plugin))?;
+        plugin_manager.add_plugin(Box::new(pstd_plugin))?;
         
         // Create fields array
         let mut fields = Array4::zeros((13, self.grid.nx, self.grid.ny, self.grid.nz));

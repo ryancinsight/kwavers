@@ -120,6 +120,32 @@ impl SpectralOperations {
     }
     
     /// Apply anti-aliasing (2/3 rule)
+    /// Compute divergence of a vector field
+    pub fn compute_divergence(&self, vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>) -> Array3<f64> {
+        use crate::utils::{fft_3d, ifft_3d};
+        use num_complex::Complex;
+        
+        // Transform to k-space
+        let vx_hat = fft_3d(vx);
+        let vy_hat = fft_3d(vy);
+        let vz_hat = fft_3d(vz);
+        
+        // Compute divergence in k-space: div(v) = ikx*vx + iky*vy + ikz*vz
+        let mut div_hat = Array3::zeros(vx_hat.raw_dim());
+        let i = Complex::new(0.0, 1.0);
+        for ((idx, d), &vx) in div_hat.indexed_iter_mut().zip(vx_hat.iter()) {
+            let kx = self.kx[idx];
+            let ky = self.ky[idx];
+            let kz = self.kz[idx];
+            let vy = vy_hat[idx];
+            let vz = vz_hat[idx];
+            *d = i * (kx * vx + ky * vy + kz * vz);
+        }
+        
+        // Transform back to real space
+        ifft_3d(&div_hat).mapv(|c| c.re)
+    }
+    
     pub fn apply_antialiasing(&self, field_hat: &mut Array3<Complex<f64>>, grid: &Grid) {
         let kx_max = 2.0 * std::f64::consts::PI / grid.dx / 3.0;
         let ky_max = 2.0 * std::f64::consts::PI / grid.dy / 3.0;
