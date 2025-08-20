@@ -746,7 +746,7 @@ mod tests {
         let emission_spectrum = Array3::zeros((10, 10, 10));
         let bubble_radius = Array3::zeros((10, 10, 10));
         let temperature = Array3::zeros((10, 10, 10));
-        let medium = crate::medium::homogeneous::HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+        let medium = crate::medium::homogeneous::HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.1, 1.0);
 
         // Valid parameters
         let params = ChemicalUpdateParams::new(

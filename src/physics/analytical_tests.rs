@@ -193,7 +193,7 @@ mod tests {
         
         // Setup grid and medium - reduced size for faster testing
         let grid = Grid::new(64, 32, 32, 2e-4, 2e-4, 2e-4);  // Reduced grid size
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create solver with optimized configuration
         let mut config = KuznetsovConfig::default();
@@ -284,7 +284,7 @@ mod tests {
         // Setup for amplitude preservation test
         use crate::constants::physics::STANDARD_SPATIAL_RESOLUTION;
         let grid = Grid::new(64, 64, 64, STANDARD_SPATIAL_RESOLUTION, STANDARD_SPATIAL_RESOLUTION, STANDARD_SPATIAL_RESOLUTION);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let mut config = KuznetsovConfig::default();
         config.nonlinearity_coefficient = 0.0; // Disable nonlinearity
@@ -383,7 +383,7 @@ mod tests {
         // The absorption per time step is: exp(-α * c * dt)
         // So we need to set alpha such that after traveling distance d,
         // the amplitude is reduced by exp(-α * d)
-        let medium = HomogeneousMedium::new(rho0, c0, &grid, 0.0, 0.0)
+        let medium = HomogeneousMedium::new_simple(rho0, c0, &grid, 0.0, 0.0)
             .with_acoustic_absorption(alpha, 0.0); // delta=0 for frequency-independent
         
         // Initialize wave
@@ -512,7 +512,7 @@ mod tests {
         
         let c0 = 1500.0; // m/s
         let rho0 = 1000.0; // kg/m³
-        let medium = HomogeneousMedium::new(rho0, c0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(rho0, c0, &grid, 0.0, 0.0);
         
         // Source at center
         let center = n / 2;
@@ -683,7 +683,7 @@ mod tests {
         
         // Small grid for quick test
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let config = KuznetsovConfig {
             nonlinearity_coefficient: 0.0, // Disable nonlinearity

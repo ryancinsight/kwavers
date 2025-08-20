@@ -269,7 +269,7 @@ mod tests {
         let rho = 1000.0;
         let alpha_db_per_m = 8.686; // dB/m (conversion: 1 Np/m = 8.686 dB/m)
         let alpha_np = 1.0; // Nepers/m
-        let mut medium = HomogeneousMedium::new(rho, c, &grid, 0.0, 0.0);
+        let mut medium = HomogeneousMedium::new_simple(rho, c, &grid, 0.0, 0.0);
         
         // Set power law absorption parameters
         medium.alpha0 = alpha_np; // Np/m at reference frequency
@@ -615,7 +615,7 @@ mod tests {
         use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovWave, KuznetsovConfig};
         
         let grid = Grid::new(256, 1, 1, 1e-4, 1e-4, 1e-4);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Kuznetsov parameters
         let config = KuznetsovConfig {
@@ -771,7 +771,7 @@ mod tests {
         let grid = Grid::new(nx, ny, 1, dx, dx, dx);
         
         // Create medium
-        let medium = HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.5, 1.0);
+        let medium = HomogeneousMedium::new_simple(1500.0, 1000.0, &grid, 0.5, 1.0);
         
         // Wave parameters
         let frequency = 100e3; // 100 kHz
@@ -851,7 +851,7 @@ mod tests {
         use crate::solver::time_integration::conservation::ConservationMonitor;
         
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         let monitor = ConservationMonitor::new(&grid);
         
@@ -899,7 +899,7 @@ mod tests {
         use crate::solver::time_integration::conservation::ConservationMonitor;
         
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create a system with multiple time scales
         // Fast acoustic waves and slow thermal diffusion
@@ -1067,7 +1067,7 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
         
         // Test with homogeneous medium
-        let homogeneous = HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.5, 1.0);
+        let homogeneous = HomogeneousMedium::new_simple(1500.0, 1000.0, &grid, 0.5, 1.0);
         let heterogeneity_homo = NonlinearWave::quantify_heterogeneity(&homogeneous, &grid);
         assert!(heterogeneity_homo < 0.01, 
             "Homogeneous medium should have near-zero heterogeneity: {}", heterogeneity_homo);

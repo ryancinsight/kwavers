@@ -45,7 +45,8 @@ impl ElasticProperties {
     pub fn from_lame(density: f64, lambda: f64, mu: f64) -> KwaversResult<Self> {
         if density <= 0.0 || mu <= 0.0 || lambda < -2.0/3.0 * mu {
             return Err(PhysicsError::InvalidParameter {
-                component: "ElasticProperties".to_string(),
+                parameter: "ElasticProperties".to_string(),
+                value: density,  // Use density as the primary invalid value
                 reason: format!("Invalid elastic parameters: density={}, lambda={}, mu={}", density, lambda, mu)
             }.into());
         }

@@ -769,7 +769,7 @@ mod tests {
     fn test_plugin_based_solver_creation() {
         let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
         let time = Time::new(0.001, 100);
-        let medium = Arc::new(HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.0, 0.0));
+        let medium = Arc::new(HomogeneousMedium::new_simple(1500.0, 1000.0, &grid, 0.0, 0.0));
         let boundary = Box::new(PMLBoundary::new(Default::default()).unwrap());
         use crate::source::PointSource;
         use crate::signal::SineWave;

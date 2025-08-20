@@ -105,12 +105,22 @@ impl MediumFactory {
         
         match &config.medium_type {
             MediumType::Homogeneous { density, sound_speed, mu_a, mu_s_prime } => {
+                // Create water-based medium with custom density and sound speed
+                let mut medium = HomogeneousMedium::water();
+                // Override with custom values using a builder pattern would be better,
+                // but for now we'll create with all parameters
                 let medium = HomogeneousMedium::new(
                     *density,
                     *sound_speed,
-                    grid,
-                    *mu_a,
-                    *mu_s_prime,
+                    1.0e-3,  // viscosity (water default)
+                    0.0728,  // surface tension (water default)
+                    101325.0,  // ambient pressure (1 atm)
+                    2338.0,  // vapor pressure (water at 20°C)
+                    1.4,  // polytropic index (air)
+                    4180.0,  // specific heat (water)
+                    0.6,  // thermal conductivity (water)
+                    *mu_a,  // attenuation
+                    3.5,  // nonlinearity (water B/A)
                 );
                 Ok(Box::new(medium))
             }

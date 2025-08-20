@@ -67,7 +67,7 @@ struct PerformanceMetrics {
 /// use ndarray::{Array3, Array4};
 /// 
 /// let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4);
-/// let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+/// let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.1, 1.0);
 /// 
 /// let mut viscoelastic = ViscoelasticWave::new(&grid);
 /// 
@@ -544,7 +544,7 @@ mod tests {
     fn test_viscoelastic_wave_accuracy_progression() {
         let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001);
         let mut viscoelastic = ViscoelasticWave::new(&grid);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         let source = NullSource;
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 8, 8, 8));
         let prev_pressure = Array3::<f64>::zeros((8, 8, 8));

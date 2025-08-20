@@ -135,7 +135,7 @@ impl BenchmarkSuite {
         let mut solver = crate::solver::pstd::PstdSolver::new(config, &grid)?;
         
         // Create medium
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Initialize fields
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
@@ -211,7 +211,7 @@ impl BenchmarkSuite {
         plugin_manager.add_plugin(Box::new(fdtd_plugin))?;
         
         // Create medium
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Initialize fields
         let mut fields = Array4::zeros((13, grid.nx, grid.ny, grid.nz)); // FDTD uses 13 fields
@@ -275,7 +275,7 @@ impl BenchmarkSuite {
             ..Default::default()
         };
         let mut solver = KuznetsovWave::new(config, &grid)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create fields array (7 fields typical for acoustic simulation)
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
