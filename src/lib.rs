@@ -646,7 +646,6 @@ fn get_cpu_cores() -> KwaversResult<usize> {
     let info = get_system_info()?;
     let cores_str = info.get("cpu_cores");
     cores_str
-        .get("cpu_cores")
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Internal(
             format!("Failed to parse CPU cores from system info. Found: {:?}", cores_str)
@@ -658,7 +657,6 @@ fn get_available_memory_gb() -> KwaversResult<f64> {
     let info = get_system_info()?;
     let memory_str = info.get("memory_available_gb");
     memory_str
-        .get("memory_available_gb")
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Internal(
             format!("Failed to parse available memory from system info. Found: {:?}", memory_str)
@@ -670,7 +668,6 @@ fn get_available_disk_space_gb() -> KwaversResult<f64> {
     let info = get_system_info()?;
     let disk_str = info.get("disk_space_gb");
     disk_str
-        .get("disk_space_gb")
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Internal(
             format!("Failed to parse disk space from system info. Found: {:?}", disk_str)

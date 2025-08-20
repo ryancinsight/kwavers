@@ -57,15 +57,15 @@ impl PstdSolver {
         self.update_pressure(medium, source, grid, time, dt)?;
         
         // Apply boundary conditions to pressure
-        boundary.apply_acoustic(self.pressure.view_mut(), grid, time)?;
+        boundary.apply_acoustic(self.pressure.view_mut(), grid, (time / dt) as usize)?;
         
         // Update velocity: ∂v/∂t = -∇p/ρ
         self.update_velocity(medium, grid, dt)?;
         
         // Apply boundary conditions to velocity
-        boundary.apply_acoustic(self.velocity_x.view_mut(), grid, time)?;
-        boundary.apply_acoustic(self.velocity_y.view_mut(), grid, time)?;
-        boundary.apply_acoustic(self.velocity_z.view_mut(), grid, time)?;
+        boundary.apply_acoustic(self.velocity_x.view_mut(), grid, (time / dt) as usize)?;
+        boundary.apply_acoustic(self.velocity_y.view_mut(), grid, (time / dt) as usize)?;
+        boundary.apply_acoustic(self.velocity_z.view_mut(), grid, (time / dt) as usize)?;
         
         Ok(())
     }

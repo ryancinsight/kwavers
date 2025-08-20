@@ -117,7 +117,7 @@ impl PluginRegistry {
         if self.factories.contains_key(id) {
             return Err(ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
-                value: id.clone(),
+                value: id.to_string(),
                 constraint: "Plugin ID must be unique (already registered)".to_string(),
             }.into());
         }
@@ -138,7 +138,7 @@ impl PluginRegistry {
         let factory = self.factories.get(id)
             .ok_or_else(|| ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
-                value: id.clone(),
+                value: id.to_string(),
                 constraint: "Plugin must be registered".to_string(),
             })?;
         
