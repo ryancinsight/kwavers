@@ -22,7 +22,13 @@ pub struct PstdSolver {
 impl PstdSolver {
     /// Create new PSTD solver
     pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
-        config.validate()?;
+        use crate::validation::Validatable;
+        let validation = config.validate();
+        if !validation.is_valid {
+            return Err(crate::error::KwaversError::Validation(
+                crate::error::ValidationError::StateValidation
+            ));
+        }
         
         let spectral = SpectralOperations::new(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
@@ -51,15 +57,15 @@ impl PstdSolver {
         self.update_pressure(medium, source, grid, time, dt)?;
         
         // Apply boundary conditions to pressure
-        boundary.apply(&mut self.pressure, grid, time)?;
+        boundary.apply_acoustic(self.pressure.view_mut(), grid, time)?;
         
         // Update velocity: ∂v/∂t = -∇p/ρ
         self.update_velocity(medium, grid, dt)?;
         
         // Apply boundary conditions to velocity
-        boundary.apply(&mut self.velocity_x, grid, time)?;
-        boundary.apply(&mut self.velocity_y, grid, time)?;
-        boundary.apply(&mut self.velocity_z, grid, time)?;
+        boundary.apply_acoustic(self.velocity_x.view_mut(), grid, time)?;
+        boundary.apply_acoustic(self.velocity_y.view_mut(), grid, time)?;
+        boundary.apply_acoustic(self.velocity_z.view_mut(), grid, time)?;
         
         Ok(())
     }
@@ -88,11 +94,12 @@ impl PstdSolver {
             });
         
         // Update pressure with source term
-        let source_term = source.evaluate(grid, time);
+        let source_mask = source.create_mask(grid);
+        let amplitude = source.amplitude(time);
         
         Zip::indexed(&mut self.pressure)
             .and(&divergence)
-            .and(&source_term)
+            .and(&source_mask)
             .for_each(|(i, j, k), p, &div, &s| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
@@ -101,7 +108,7 @@ impl PstdSolver {
                 let rho = medium.density(x, y, z, grid);
                 let c = medium.sound_speed(x, y, z, grid);
                 
-                *p -= dt * (rho * c * c * div - s);
+                *p -= dt * (rho * c * c * div - s * amplitude);
             });
         
         Ok(())

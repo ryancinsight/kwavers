@@ -71,7 +71,7 @@ impl PhysicsPlugin for PstdPlugin {
         _grid: &Grid,
         _medium: &dyn Medium,
     ) -> KwaversResult<()> {
-        self.state = PluginState::Active;
+        self.state = PluginState::Running;
         Ok(())
     }
     
@@ -89,7 +89,7 @@ impl PhysicsPlugin for PstdPlugin {
     }
     
     fn finalize(&mut self) -> KwaversResult<()> {
-        self.state = PluginState::Stopped;
+        self.state = PluginState::Finalized;
         Ok(())
     }
     
