@@ -421,8 +421,8 @@ impl PluginBasedSolver {
     }
     
     /// Get current time
-    pub fn time(&self) -> f64 {
-        self.time.current
+    pub fn time(&self) -> &Time {
+        &self.time
     }
     
     /// Get medium
