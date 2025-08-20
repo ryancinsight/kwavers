@@ -7,7 +7,7 @@
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError};
+use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError, GridError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::plugin::PluginContext;
@@ -102,43 +102,53 @@ impl<'a> ChemicalUpdateParams<'a> {
         let expected_shape = [nx, ny, nz];
         
         if pressure.shape() != expected_shape {
-            return Err(KwaversError::DimensionMismatch {
-                expected: format!("{:?}", expected_shape),
-                actual: format!("{:?}", pressure.shape()),
-                context: "Pressure array shape doesn't match grid dimensions".to_string(),
-            });
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: pressure.shape()[0],
+                ny: pressure.shape()[1],
+                nz: pressure.shape()[2],
+                reason: format!("Pressure array shape {:?} doesn't match grid dimensions {:?}", 
+                               pressure.shape(), expected_shape),
+            }));
         }
 
         if light.shape() != expected_shape {
-            return Err(KwaversError::DimensionMismatch {
-                expected: format!("{:?}", expected_shape),
-                actual: format!("{:?}", light.shape()),
-                context: "Light array shape doesn't match grid dimensions".to_string(),
-            });
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: light.shape()[0],
+                ny: light.shape()[1],
+                nz: light.shape()[2],
+                reason: format!("Light array shape {:?} doesn't match grid dimensions {:?}", 
+                               light.shape(), expected_shape),
+            }));
         }
 
         if emission_spectrum.shape() != expected_shape {
-            return Err(KwaversError::DimensionMismatch {
-                expected: format!("{:?}", expected_shape),
-                actual: format!("{:?}", emission_spectrum.shape()),
-                context: "Emission spectrum array shape doesn't match grid dimensions".to_string(),
-            });
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: emission_spectrum.shape()[0],
+                ny: emission_spectrum.shape()[1],
+                nz: emission_spectrum.shape()[2],
+                reason: format!("Emission spectrum array shape {:?} doesn't match grid dimensions {:?}", 
+                               emission_spectrum.shape(), expected_shape),
+            }));
         }
 
         if bubble_radius.shape() != expected_shape {
-            return Err(KwaversError::DimensionMismatch {
-                expected: format!("{:?}", expected_shape),
-                actual: format!("{:?}", bubble_radius.shape()),
-                context: "Bubble radius array shape doesn't match grid dimensions".to_string(),
-            });
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: bubble_radius.shape()[0],
+                ny: bubble_radius.shape()[1],
+                nz: bubble_radius.shape()[2],
+                reason: format!("Bubble radius array shape {:?} doesn't match grid dimensions {:?}", 
+                               bubble_radius.shape(), expected_shape),
+            }));
         }
 
         if temperature.shape() != expected_shape {
-            return Err(KwaversError::DimensionMismatch {
-                expected: format!("{:?}", expected_shape),
-                actual: format!("{:?}", temperature.shape()),
-                context: "Temperature array shape doesn't match grid dimensions".to_string(),
-            });
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: temperature.shape()[0],
+                ny: temperature.shape()[1],
+                nz: temperature.shape()[2],
+                reason: format!("Temperature array shape {:?} doesn't match grid dimensions {:?}", 
+                               temperature.shape(), expected_shape),
+            }));
         }
 
         Ok(Self {
