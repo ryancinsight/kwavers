@@ -6,6 +6,7 @@ use super::region::{DomainRegion, DomainType};
 use super::analyzer::QualityMetrics;
 
 /// Partitions domain into regions for different solvers
+#[derive(Debug)]
 pub struct DomainPartitioner {
     /// Minimum region size to avoid excessive fragmentation
     min_region_size: usize,

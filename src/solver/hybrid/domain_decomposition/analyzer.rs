@@ -6,6 +6,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Analyzes domain characteristics for solver selection
+#[derive(Debug)]
 pub struct DomainAnalyzer {
     /// Threshold for considering a region homogeneous
     homogeneity_threshold: f64,
