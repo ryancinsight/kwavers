@@ -4,7 +4,7 @@ use ndarray::{Array3, Zip};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::source::Source;
-use crate::boundary::BoundaryCondition;
+use crate::boundary::Boundary;
 use crate::error::KwaversResult;
 use super::config::PstdConfig;
 use super::spectral_ops::SpectralOperations;
@@ -42,7 +42,7 @@ impl PstdSolver {
         &mut self,
         medium: &dyn Medium,
         source: &dyn Source,
-        boundary: &dyn BoundaryCondition,
+        boundary: &dyn Boundary,
         grid: &Grid,
         time: f64,
         dt: f64,

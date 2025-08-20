@@ -203,12 +203,12 @@ impl KWaveValidator {
     /// Test 2: PML absorption
     fn test_pml_absorption(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
         use crate::boundary::{CPMLBoundary, CPMLConfig};
-        use crate::constants::{acoustic, simulation};
+        use crate::constants::acoustic;
         
         // Configure C-PML
         let pml_config = CPMLConfig::default();
-        let sound_speed = acoustic::SOUND_SPEED_REFERENCE;
-        let dt = simulation::TIME_STEP_DEFAULT;
+        let sound_speed = 1500.0;  // Reference sound speed in water
+        let dt = 1e-6;  // Default time step
         let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
         
         // Create plane wave

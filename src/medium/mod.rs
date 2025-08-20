@@ -88,6 +88,17 @@ pub trait Medium: Debug + Sync + Send {
     }
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
+    
+    // Acoustic attenuation coefficient
+    fn attenuation(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
+        // Default power law absorption
+        0.0022 * frequency.powf(1.05)  // Np/m for water
+    }
+    
+    // Nonlinearity parameter (B/A)
+    fn nonlinearity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        3.5  // Default B/A for water
+    }
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
