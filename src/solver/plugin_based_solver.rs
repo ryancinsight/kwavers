@@ -255,6 +255,23 @@ impl FieldRegistry {
             .collect()
     }
     
+    /// Get the index of a field by name
+    pub fn get_field_index(&self, field_name: &str) -> Option<usize> {
+        // Convert field name to UnifiedFieldType
+        match field_name {
+            "pressure" => {
+                let field_type = UnifiedFieldType::Pressure;
+                let idx = field_type as usize;
+                if idx < self.fields.len() && self.fields[idx].is_some() {
+                    self.fields[idx].as_ref().map(|m| m.index)
+                } else {
+                    None
+                }
+            }
+            _ => None
+        }
+    }
+    
     /// Internal method to reallocate data array when fields change
     fn reallocate_data_internal(&mut self) -> Result<(), FieldError> {
         let num_fields = self.fields.len();
@@ -403,6 +420,21 @@ impl PluginBasedSolver {
         }
     }
     
+    /// Get current time
+    pub fn time(&self) -> f64 {
+        self.time.current
+    }
+    
+    /// Get medium
+    pub fn medium(&self) -> &Arc<dyn Medium> {
+        &self.medium
+    }
+    
+    /// Get source
+    pub fn source(&self) -> &Box<dyn Source> {
+        &self.source
+    }
+
     /// Register a physics plugin
     pub fn register_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
         // Register required fields

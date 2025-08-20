@@ -164,6 +164,11 @@ impl PluginManager {
         &self.performance_metrics
     }
     
+    /// Get the number of registered plugins
+    pub fn component_count(&self) -> usize {
+        self.plugins.len()
+    }
+    
     /// Resolve plugin dependencies and determine execution order
     fn resolve_dependencies(&mut self) -> KwaversResult<()> {
         let n = self.plugins.len();

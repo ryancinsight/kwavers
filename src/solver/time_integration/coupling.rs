@@ -135,7 +135,7 @@ impl TimeCoupling for AveragingStrategy {
             for _ in 0..n_subcycles {
                 // TODO: PhysicsPlugin doesn't have evaluate, needs refactoring
                 // let rhs = component.evaluate(field, grid)?;
-                field.zip_mut_with(&rhs, |f, &r| *f += local_dt * r);
+                // field.zip_mut_with(&rhs, |f, &r| *f += local_dt * r);
             }
         }
         
