@@ -90,7 +90,7 @@ impl ElasticProperties {
         if self.p_wave_speed <= 0.0 || self.s_wave_speed <= 0.0 {
             return Err(NumericalError::Instability {
                 operation: "ElasticProperties validation".to_string(),
-                condition: "Wave speeds must be positive".to_string(),
+                condition: self.p_wave_speed.min(self.s_wave_speed),
             }.into());
         }
         Ok(())
@@ -490,7 +490,7 @@ impl ElasticWave {
         if params.dt <= 0.0 {
             return Err(NumericalError::Instability {
                 operation: "Stress update".to_string(),
-                condition: "Time step must be positive".to_string(),
+                condition: params.dt,
             }.into());
         }
 

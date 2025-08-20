@@ -329,6 +329,7 @@ impl MultiLaterationSolver {
         if arrival_times.len() < 4 {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 parameter: "TOA localization".to_string(),
+                value: arrival_times.len() as f64,
                 reason: "Need at least 4 sensors for 3D localization".to_string(),
             }));
         }
@@ -357,6 +358,7 @@ impl MultiLaterationSolver {
         if time_differences.len() < 3 {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 parameter: "TDOA localization".to_string(),
+                value: time_differences.len() as f64,
                 reason: "Need at least 3 measurements for 3D localization".to_string(),
             }));
         }
@@ -394,6 +396,7 @@ impl MultiLaterationSolver {
         if sensors.is_empty() {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 parameter: "localization".to_string(),
+                value: 0.0,
                 reason: "No valid sensors found".to_string(),
             }));
         }
@@ -460,6 +463,7 @@ impl MultiLaterationSolver {
                 .find(|s| s.id == *sensor_id)
                 .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidParameter {
                     parameter: "sensor_array".to_string(),
+                    value: *sensor_id as f64,
                     reason: format!("Sensor {} not found", sensor_id),
                 }))?;
             
