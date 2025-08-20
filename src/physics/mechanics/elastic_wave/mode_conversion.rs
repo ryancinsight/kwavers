@@ -107,9 +107,10 @@ impl StiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
     pub fn isotropic(lambda: f64, mu: f64, density: f64) -> KwaversResult<Self> {
         if density <= 0.0 || mu <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "StiffnessTensor".to_string(),
-                reason: "Invalid material parameters".to_string(),
+            return Err(PhysicsError::InvalidParameter {
+                parameter: "density_or_mu".to_string(),
+                value: if density <= 0.0 { density } else { mu },
+                reason: "Material parameters must be positive".to_string(),
             }.into());
         }
         
@@ -162,9 +163,10 @@ impl StiffnessTensor {
     pub fn validate(&self) -> KwaversResult<()> {
         // Check density
         if self.density <= 0.0 {
-                                return Err(PhysicsError::InvalidConfiguration {
-                        component: "StiffnessTensor".to_string(),
-                        reason: "density must be positive".to_string(),
+                                return Err(PhysicsError::InvalidParameter {
+                        parameter: "density".to_string(),
+                        value: self.density,
+                        reason: "Density must be positive".to_string(),
                     }.into());
         }
         
@@ -172,9 +174,10 @@ impl StiffnessTensor {
         for i in 0..6 {
             for j in i+1..6 {
                 if (self.c[[i, j]] - self.c[[j, i]]).abs() > 1e-10 {
-                    return Err(PhysicsError::InvalidConfiguration {
-                        component: "StiffnessTensor".to_string(),
-                        reason: "Stiffness matrix must be symmetric".to_string(),
+                    return Err(PhysicsError::InvalidParameter {
+                        parameter: format!("c[{},{}]", i, j),
+                        value: self.c[[i, j]],
+                        reason: format!("Stiffness matrix must be symmetric: c[{},{}]={} != c[{},{}]={}", i, j, self.c[[i, j]], j, i, self.c[[j, i]]),
                     }.into());
                 }
             }
@@ -184,8 +187,9 @@ impl StiffnessTensor {
         // For a 6x6 symmetric matrix, we need all eigenvalues to be positive
         // This ensures the material is physically stable
         if !self.is_positive_definite(&self.c) {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "StiffnessTensor".to_string(),
+            return Err(PhysicsError::InvalidParameter {
+                parameter: "stiffness_matrix".to_string(),
+                value: 0.0, // Indicates eigenvalue issue
                 reason: "Stiffness matrix must be positive definite for physical stability".to_string(),
             }.into());
         }

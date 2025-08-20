@@ -327,7 +327,7 @@ impl MultiLaterationSolver {
     ) -> KwaversResult<LocalizationResult> {
         // Need at least 4 sensors for 3D localization
         if arrival_times.len() < 4 {
-            return Err(KwaversError::Physics(PhysicsError::InvalidConfiguration {
+            return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 component: "TOA localization".to_string(),
                 reason: "Need at least 4 sensors for 3D localization".to_string(),
             }));
@@ -355,7 +355,7 @@ impl MultiLaterationSolver {
     ) -> KwaversResult<LocalizationResult> {
         // Need at least 3 TDOA measurements for 3D localization
         if time_differences.len() < 3 {
-            return Err(KwaversError::Physics(PhysicsError::InvalidConfiguration {
+            return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 component: "TDOA localization".to_string(),
                 reason: "Need at least 3 measurements for 3D localization".to_string(),
             }));
@@ -392,7 +392,7 @@ impl MultiLaterationSolver {
             .collect();
         
         if sensors.is_empty() {
-            return Err(KwaversError::Physics(PhysicsError::InvalidConfiguration {
+            return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 component: "localization".to_string(),
                 reason: "No valid sensors found".to_string(),
             }));
@@ -458,7 +458,7 @@ impl MultiLaterationSolver {
         for (i, (sensor_id, measured_time)) in times.iter().enumerate() {
             let sensor = self.array.sensors.iter()
                 .find(|s| s.id == *sensor_id)
-                .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidConfiguration {
+                .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidParameter {
                     component: "sensor_array".to_string(),
                     reason: format!("Sensor {} not found", sensor_id),
                 }))?;

@@ -250,10 +250,12 @@ impl KWaveValidator {
             let t = step as f64 * dt;
             
             // Create plugin context
-            let context = PluginContext::new(step, n_steps, 1e6); // 1 MHz reference frequency
+            let mut context = PluginContext::new();
+            context.step = step;
+            context.total_steps = n_steps;
             
             // Update through plugin manager
-            plugin_manager.update_all(&mut fields, &self.grid, &medium, dt, t, &context)?;
+            plugin_manager.execute(&mut fields, &self.grid, &medium, dt, t, &context)?;
         }
         
         // Extract final pressure

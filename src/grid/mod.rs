@@ -5,6 +5,14 @@ use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 use std::sync::OnceLock;
 
+/// Dimension selector for coordinate generation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dimension {
+    X,
+    Y,
+    Z,
+}
+
 /// Defines a 3D Cartesian grid for the simulation domain, optimized for k-space pseudospectral methods.
 #[derive(Debug, Clone)]
 pub struct Grid {
@@ -348,12 +356,7 @@ pub struct GridSliceIterator<'a> {
     current: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Dimension {
-    X,
-    Y,
-    Z,
-}
+
 
 impl<'a> Iterator for GridSliceIterator<'a> {
     type Item = GridSlice<'a>;

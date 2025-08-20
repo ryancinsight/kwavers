@@ -7,7 +7,7 @@
 //! - Dependency Inversion: Depends on abstractions (traits) not concrete types
 //! - Single Responsibility: Each component has one clear purpose
 
-use crate::error::{KwaversResult, PhysicsError};
+use crate::error::{KwaversResult, KwaversError, PhysicsError, ValidationError, GridError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::plugin::PluginContext;
@@ -90,8 +90,9 @@ impl<'a> ChemicalUpdateParams<'a> {
         }
 
         if frequency <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(PhysicsError::InvalidParameter {
+                parameter: "frequency".to_string(),
+                value: frequency,
                 reason: "Frequency must be positive".to_string(),
             }.into());
         }
@@ -101,43 +102,53 @@ impl<'a> ChemicalUpdateParams<'a> {
         let expected_shape = [nx, ny, nz];
         
         if pressure.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: pressure.shape()[0],
+                ny: pressure.shape()[1],
+                nz: pressure.shape()[2],
                 reason: format!("Pressure array shape {:?} doesn't match grid dimensions {:?}", 
                                pressure.shape(), expected_shape),
-            }.into());
+            }));
         }
 
         if light.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: light.shape()[0],
+                ny: light.shape()[1],
+                nz: light.shape()[2],
                 reason: format!("Light array shape {:?} doesn't match grid dimensions {:?}", 
                                light.shape(), expected_shape),
-            }.into());
+            }));
         }
 
         if emission_spectrum.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: emission_spectrum.shape()[0],
+                ny: emission_spectrum.shape()[1],
+                nz: emission_spectrum.shape()[2],
                 reason: format!("Emission spectrum array shape {:?} doesn't match grid dimensions {:?}", 
                                emission_spectrum.shape(), expected_shape),
-            }.into());
+            }));
         }
 
         if bubble_radius.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: bubble_radius.shape()[0],
+                ny: bubble_radius.shape()[1],
+                nz: bubble_radius.shape()[2],
                 reason: format!("Bubble radius array shape {:?} doesn't match grid dimensions {:?}", 
                                bubble_radius.shape(), expected_shape),
-            }.into());
+            }));
         }
 
         if temperature.shape() != expected_shape {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
+            return Err(KwaversError::Grid(GridError::InvalidDimensions {
+                nx: temperature.shape()[0],
+                ny: temperature.shape()[1],
+                nz: temperature.shape()[2],
                 reason: format!("Temperature array shape {:?} doesn't match grid dimensions {:?}", 
                                temperature.shape(), expected_shape),
-            }.into());
+            }));
         }
 
         Ok(Self {
@@ -175,11 +186,10 @@ impl<'a> ChemicalUpdateParams<'a> {
             .collect();
             
         if !negative_temperatures.is_empty() {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalUpdateParams".to_string(),
-                reason: format!("Temperature must be non-negative. Found {} negative values, first: {:.2e} K", 
-                               negative_temperatures.len(), 
-                               negative_temperatures[0]),
+            return Err(ValidationError::FieldValidation {
+                field: "temperature".to_string(),
+                value: format!("{:.2e}", negative_temperatures[0]),
+                constraint: format!("Must be non-negative. Found {} negative values", negative_temperatures.len()),
             }.into());
         }
 
@@ -342,16 +352,18 @@ impl ChemicalReactionConfig {
 
     pub fn validate(&self) -> KwaversResult<()> {
         if self.pre_exponential_factor <= 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalReactionConfig".to_string(),
-                reason: "Pre-exponential factor must be positive".to_string(),
+            return Err(ValidationError::FieldValidation {
+                field: "pre_exponential_factor".to_string(),
+                value: self.pre_exponential_factor.to_string(),
+                constraint: "Must be positive".to_string(),
             }.into());
         }
 
         if self.activation_energy < 0.0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalReactionConfig".to_string(),
-                reason: "Activation energy must be non-negative".to_string(),
+            return Err(ValidationError::FieldValidation {
+                field: "activation_energy".to_string(),
+                value: self.activation_energy.to_string(),
+                constraint: "Must be non-negative".to_string(),
             }.into());
         }
 
@@ -411,9 +423,10 @@ impl ChemicalModel {
         // Validate grid following Information Expert principle
         let (nx, ny, nz) = grid.dimensions();
         if nx == 0 || ny == 0 || nz == 0 {
-            return Err(PhysicsError::InvalidConfiguration {
-                component: "ChemicalModel".to_string(),
-                reason: "Grid dimensions must be positive".to_string(),
+            return Err(ValidationError::FieldValidation {
+                field: "grid_dimensions".to_string(),
+                value: format!("({}, {}, {})", nx, ny, nz),
+                constraint: "All dimensions must be positive".to_string(),
             }.into());
         }
 
@@ -680,21 +693,23 @@ impl ChemicalModelTrait for ChemicalModel {
         fields.insert(UnifiedFieldType::BubbleRadius, bubble_radius.clone());
         
         // Create context with proper structure
-        let mut context = PluginContext::new(0, 1000, frequency);
-        context.parameters.insert("dt".to_string(), dt);
-        context.parameters.insert("time".to_string(), 0.0);
+        let mut context = PluginContext::new();
+        context.step = 0;
+        context.total_steps = 1000;
+        context.metadata.insert("dt".to_string(), dt.to_string());
+        context.metadata.insert("time".to_string(), 0.0.to_string());
         
         // Add grid parameters
-        context.parameters.insert("nx".to_string(), grid.nx as f64);
-        context.parameters.insert("ny".to_string(), grid.ny as f64);
-        context.parameters.insert("nz".to_string(), grid.nz as f64);
-        context.parameters.insert("dx".to_string(), grid.dx);
-        context.parameters.insert("dy".to_string(), grid.dy);
-        context.parameters.insert("dz".to_string(), grid.dz);
+        context.metadata.insert("nx".to_string(), (grid.nx as f64).to_string());
+        context.metadata.insert("ny".to_string(), (grid.ny as f64).to_string());
+        context.metadata.insert("nz".to_string(), (grid.nz as f64).to_string());
+        context.metadata.insert("dx".to_string(), grid.dx.to_string());
+        context.metadata.insert("dy".to_string(), grid.dy.to_string());
+        context.metadata.insert("dz".to_string(), grid.dz.to_string());
         
         // Add medium parameters
-        context.parameters.insert("density".to_string(), medium.density(0.0, 0.0, 0.0, grid));
-        context.parameters.insert("sound_speed".to_string(), medium.sound_speed(0.0, 0.0, 0.0, grid));
+        context.metadata.insert("density".to_string(), medium.density(0.0, 0.0, 0.0, grid).to_string());
+        context.metadata.insert("sound_speed".to_string(), medium.sound_speed(0.0, 0.0, 0.0, grid).to_string());
         
         // Update using the parameters approach
         let params = ChemicalUpdateParams::new(

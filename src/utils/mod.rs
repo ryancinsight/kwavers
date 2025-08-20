@@ -1,6 +1,7 @@
 // src/utils/mod.rs
 pub mod array_utils;
 pub mod field_analysis;
+pub mod format;
 pub mod iterators;
 pub mod kwave_utils;
 pub mod linear_algebra;

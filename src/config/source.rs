@@ -3,9 +3,9 @@ use crate::medium::Medium;
 use crate::signal::{chirp::ChirpSignal, sine_wave::SineWave, sweep::SweepSignal, Signal};
 use crate::source::Source;
 use crate::source::linear_array::LinearArray;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SourceConfig {
     pub num_elements: usize,
     pub signal_type: String,

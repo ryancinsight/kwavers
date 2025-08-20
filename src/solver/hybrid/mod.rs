@@ -18,7 +18,7 @@
 //! characteristics.
 
 pub mod domain_decomposition;
-pub mod coupling_interface;
+pub mod coupling;  // Refactored from coupling_interface
 pub mod adaptive_selection;
 pub mod validation;
 pub mod config;

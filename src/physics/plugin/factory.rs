@@ -66,9 +66,10 @@ where
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let config = config
             .downcast::<C>()
-            .map_err(|_| ValidationError::InvalidConfiguration {
+            .map_err(|_| ValidationError::FieldValidation {
                 field: "config".to_string(),
-                message: "Invalid configuration type".to_string(),
+                value: "unknown".to_string(),
+                constraint: "Invalid configuration type".to_string(),
             })?;
         
         let plugin = (self.create_fn)(*config, grid)?;
@@ -82,9 +83,10 @@ where
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()> {
         config
             .downcast_ref::<C>()
-            .ok_or_else(|| ValidationError::InvalidConfiguration {
+            .ok_or_else(|| ValidationError::FieldValidation {
                 field: "config".to_string(),
-                message: "Invalid configuration type".to_string(),
+                value: "unknown".to_string(),
+                constraint: "Invalid configuration type".to_string(),
             })?
             .validate()?;
         Ok(())
@@ -113,9 +115,10 @@ impl PluginRegistry {
         factory: F,
     ) -> KwaversResult<()> {
         if self.factories.contains_key(id) {
-            return Err(ValidationError::InvalidConfiguration {
+            return Err(ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
-                message: format!("Plugin '{}' already registered", id),
+                value: id.clone(),
+                constraint: "Plugin ID must be unique (already registered)".to_string(),
             }.into());
         }
         
@@ -133,9 +136,10 @@ impl PluginRegistry {
         grid: &Grid,
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
         let factory = self.factories.get(id)
-            .ok_or_else(|| ValidationError::InvalidConfiguration {
+            .ok_or_else(|| ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
-                message: format!("Unknown plugin: {}", id),
+                value: id.clone(),
+                constraint: "Plugin must be registered".to_string(),
             })?;
         
         factory.create(config, grid)

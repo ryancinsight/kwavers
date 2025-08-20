@@ -51,11 +51,9 @@ pub trait ElasticMedium: Debug + Sync + Send {
     
     /// Get shear wave speed (m/s)
     fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let density = if let Some(acoustic) = (self as &dyn std::any::Any).downcast_ref::<dyn AcousticMedium>() {
-            1000.0 // Default density if not acoustic
-        } else {
-            1000.0
-        };
+        // Use a default density of 1000 kg/m³ for shear wave speed calculation
+        // This should be overridden in concrete implementations that have access to actual density
+        let density = 1000.0;
         (self.lame_mu(x, y, z, grid) / density).sqrt()
     }
     
@@ -163,7 +161,7 @@ pub fn max_sound_speed<M: AcousticMedium + ?Sized>(medium: &M, grid: &Grid) -> f
                 for k in 0..grid.nz {
                     let (x, y, z) = grid.coordinates(i, j, k);
                     let speed = medium.sound_speed(x, y, z, grid);
-                    max_speed = max_speed.max(speed);
+                    max_speed = f64::max(max_speed, speed);
                 }
             }
         }
@@ -177,7 +175,7 @@ pub fn find_interfaces<M: AcousticMedium + ?Sized>(
     grid: &Grid,
     threshold: f64,
 ) -> Vec<InterfacePoint> {
-    let mut interfaces = Vec::new();
+    let mut interfaces: Vec<InterfacePoint> = Vec::new();
     
     // Try to use cached array for efficiency
     if let Some(density_array) = medium.density_array() {

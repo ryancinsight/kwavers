@@ -72,7 +72,7 @@ impl Config {
         // Parse the ENTIRE file ONCE into the helper struct
         let helper: TomlConfigHelper = toml::from_str(&contents)
             .map_err(|e| ConfigError::ParseError {
-                line: e.line_col().map(|(l, _)| l + 1).unwrap_or(0),
+                line: 0, // toml error doesnt provide line info in newer versions
                 message: e.to_string(),
             })?;
 

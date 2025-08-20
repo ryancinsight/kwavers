@@ -7,7 +7,7 @@ use crate::solver::pstd::{PstdSolver, PstdConfig};
 use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
 use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
-use crate::solver::hybrid::coupling_interface::{CouplingInterface, InterpolationScheme};
+use crate::solver::hybrid::coupling::{CouplingInterface, InterpolationScheme};
 use crate::solver::hybrid::config::{HybridConfig, DecompositionStrategy};
 use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
 use crate::physics::field_mapping::UnifiedFieldType;

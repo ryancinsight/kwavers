@@ -45,9 +45,10 @@ impl PluginManager {
         let new_id = plugin.metadata().id.clone();
         for existing in &self.plugins {
             if existing.metadata().id == new_id {
-                return Err(ValidationError::InvalidConfiguration {
+                return Err(ValidationError::FieldValidation {
                     field: "plugin_id".to_string(),
-                    message: format!("Plugin with ID '{}' already exists", new_id),
+                    value: new_id.clone(),
+                    constraint: "Plugin ID must be unique".to_string(),
                 }.into());
             }
         }
@@ -145,7 +146,7 @@ impl PluginManager {
     
     /// Get mutable plugin by index
     pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn PhysicsPlugin> {
-        self.plugins.get_mut(index).map(|p| p.as_mut())
+        self.plugins.get_mut(index).map(|p| p.as_mut() as &mut dyn PhysicsPlugin)
     }
     
     /// Get number of plugins
@@ -179,9 +180,10 @@ impl PluginManager {
             // Record what this plugin provides
             for field in plugin.provided_fields() {
                 if let Some(&other) = provides.get(&field) {
-                    return Err(ValidationError::InvalidConfiguration {
+                    return Err(ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
-                        message: format!(
+                        value: format!("{:?}", field),
+                        constraint: format!(
                             "Field {:?} provided by multiple plugins: {} and {}",
                             field,
                             self.plugins[other].metadata().id,
@@ -238,9 +240,10 @@ impl PluginManager {
         for i in 0..n {
             if state[i] == 0 {
                 visit(i, &mut state, &requires, &provides, &mut order)
-                    .map_err(|msg| ValidationError::InvalidConfiguration {
+                    .map_err(|msg| ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
-                        message: msg,
+                        value: "invalid".to_string(),
+                        constraint: msg,
                     })?;
             }
         }
