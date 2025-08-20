@@ -182,8 +182,9 @@ impl PluginManager {
                 if let Some(&other) = provides.get(&field) {
                     return Err(ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
-                        message: format!(
-                            "Field {:?} provided by multiple plugins: {} and {}",
+                        value: format!("{:?}", field),
+                        constraint: format!(
+                            "Field provided by multiple plugins: {} and {}",
                             field,
                             self.plugins[other].metadata().id,
                             plugin.metadata().id
@@ -241,7 +242,8 @@ impl PluginManager {
                 visit(i, &mut state, &requires, &provides, &mut order)
                     .map_err(|msg| ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
-                        message: msg,
+                        value: "invalid".to_string(),
+                        constraint: msg,
                     })?;
             }
         }

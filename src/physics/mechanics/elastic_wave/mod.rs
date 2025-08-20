@@ -384,7 +384,8 @@ impl ElasticWave {
         let (nx, ny, nz) = (self.kx.dim().0, self.ky.dim().1, self.kz.dim().2);
         if tensors.dim() != (nx, ny, nz, 21) {
             return Err(PhysicsError::InvalidParameter {
-                component: "StiffnessTensor field".to_string(),
+                parameter: "stiffness_tensor_shape".to_string(),
+                value: tensors.dim().3 as f64,
                 reason: format!("Expected shape ({}, {}, {}, 21), got {:?}", nx, ny, nz, tensors.dim()),
             }.into());
         }

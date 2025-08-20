@@ -175,8 +175,9 @@ impl StiffnessTensor {
             for j in i+1..6 {
                 if (self.c[[i, j]] - self.c[[j, i]]).abs() > 1e-10 {
                     return Err(PhysicsError::InvalidParameter {
-                        component: "StiffnessTensor".to_string(),
-                        reason: "Stiffness matrix must be symmetric".to_string(),
+                        parameter: format!("c[{},{}]", i, j),
+                        value: self.c[[i, j]],
+                        reason: format!("Stiffness matrix must be symmetric: c[{},{}]={} != c[{},{}]={}", i, j, self.c[[i, j]], j, i, self.c[[j, i]]),
                     }.into());
                 }
             }
@@ -187,7 +188,8 @@ impl StiffnessTensor {
         // This ensures the material is physically stable
         if !self.is_positive_definite(&self.c) {
             return Err(PhysicsError::InvalidParameter {
-                component: "StiffnessTensor".to_string(),
+                parameter: "stiffness_matrix".to_string(),
+                value: 0.0, // Indicates eigenvalue issue
                 reason: "Stiffness matrix must be positive definite for physical stability".to_string(),
             }.into());
         }
