@@ -92,7 +92,7 @@ impl ReverseTimeMigration {
         
         // Initialize wavefields
         let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut pressure_old = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         // Create source wavelet
         let wavelet = RickerWavelet::new(DEFAULT_RICKER_FREQUENCY);
@@ -104,7 +104,7 @@ impl ReverseTimeMigration {
             pressure[source_position] += source_time_function[t];
             
             // Update wavefield
-            self.update_wavefield(&mut pressure, &pressure_old, grid)?;
+            self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
             
             // Store decimated wavefield
             if t % RTM_STORAGE_DECIMATION == 0 {
@@ -113,7 +113,7 @@ impl ReverseTimeMigration {
             }
             
             // Swap time levels
-            std::mem::swap(&mut pressure, &mut pressure_old);
+            std::mem::swap(&mut pressure, &mut pressure_previous);
         }
         
         // Reconstruct full wavefield if needed (using interpolation)
@@ -136,7 +136,7 @@ impl ReverseTimeMigration {
         
         // Initialize wavefields
         let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut pressure_old = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         // Time-reversed loop
         for t in (0..n_time_steps).rev() {
@@ -146,13 +146,13 @@ impl ReverseTimeMigration {
             }
             
             // Update wavefield
-            self.update_wavefield(&mut pressure, &pressure_old, grid)?;
+            self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
             
             // Store wavefield
             backward_wavefield.slice_mut(s![t, .., .., ..]).assign(&pressure);
             
             // Swap time levels
-            std::mem::swap(&mut pressure, &mut pressure_old);
+            std::mem::swap(&mut pressure, &mut pressure_previous);
         }
         
         Ok(backward_wavefield)
@@ -162,7 +162,7 @@ impl ReverseTimeMigration {
     fn update_wavefield(
         &self,
         pressure: &mut Array3<f64>,
-        pressure_old: &Array3<f64>,
+        pressure_previous: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<()> {
         let dt = DEFAULT_TIME_STEP;
@@ -200,7 +200,7 @@ impl ReverseTimeMigration {
         
         // Update pressure
         Zip::from(pressure)
-            .and(&*pressure_old)
+            .and(&*pressure_previous)
             .and(&laplacian)
             .and(&self.velocity_model)
             .for_each(|p, &p_old, &lap, &vel| {

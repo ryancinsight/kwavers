@@ -12,6 +12,21 @@ pub mod physics {
     pub const WATER_REFRACTIVE_INDEX: f64 = 1.33;
     pub const WATER_GRUNEISEN: f64 = 0.12;
     
+    // Aliases for compatibility
+    pub const DENSITY_WATER: f64 = WATER_DENSITY;
+    pub const SOUND_SPEED_WATER: f64 = WATER_SOUND_SPEED;
+    
+    // Tissue properties (soft tissue average)
+    pub const DENSITY_TISSUE: f64 = 1050.0;  // kg/m³
+    pub const SOUND_SPEED_TISSUE: f64 = 1540.0;  // m/s
+    pub const TISSUE_ATTENUATION: f64 = 0.5;  // dB/cm/MHz
+    pub const TISSUE_NONLINEARITY: f64 = 6.0;  // B/A parameter
+    
+    // Ultrasound parameters
+    pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;  // 1 MHz
+    pub const STANDARD_PRESSURE_AMPLITUDE: f64 = 1e6;  // 1 MPa
+    pub const STANDARD_BEAM_WIDTH: f64 = 0.01;  // 10 mm
+    
     // Default mode conversion efficiency
     pub const DEFAULT_MODE_CONVERSION_EFFICIENCY: f64 = 0.3;
     

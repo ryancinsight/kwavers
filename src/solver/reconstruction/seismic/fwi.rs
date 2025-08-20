@@ -119,7 +119,7 @@ impl FullWaveformInversion {
         for (source_idx, &source_pos) in source_positions.iter().enumerate() {
             // Initialize wavefield
             let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            let mut pressure_old = Array3::zeros((grid.nx, grid.ny, grid.nz));
+            let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
             
             // Time stepping
             for t in 0..n_time_steps {
@@ -127,7 +127,7 @@ impl FullWaveformInversion {
                 pressure[source_pos] += source_time_function[t];
                 
                 // Update wavefield using finite differences
-                self.update_wavefield(&mut pressure, &pressure_old, grid)?;
+                self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
                 
                 // Record at receivers
                 for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
@@ -135,7 +135,7 @@ impl FullWaveformInversion {
                 }
                 
                 // Swap time levels
-                std::mem::swap(&mut pressure, &mut pressure_old);
+                std::mem::swap(&mut pressure, &mut pressure_previous);
             }
         }
         
@@ -149,7 +149,7 @@ impl FullWaveformInversion {
     fn update_wavefield(
         &self,
         pressure: &mut Array3<f64>,
-        pressure_old: &Array3<f64>,
+        pressure_previous: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<()> {
         let dt = DEFAULT_TIME_STEP;
@@ -189,7 +189,7 @@ impl FullWaveformInversion {
         
         // Update pressure using wave equation
         Zip::from(pressure)
-            .and(&*pressure_old)
+            .and(&*pressure_previous)
             .and(&laplacian)
             .and(&self.velocity_model)
             .for_each(|p, &p_old, &lap, &vel| {
@@ -222,19 +222,19 @@ impl FullWaveformInversion {
         
         for &source_pos in source_positions {
             let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            let mut pressure_old = Array3::zeros((grid.nx, grid.ny, grid.nz));
+            let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
             
             for t in 0..n_time_steps {
                 pressure[source_pos] += source_time_function[t];
-                self.update_wavefield(&mut pressure, &pressure_old, grid)?;
+                self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
                 forward_wavefield.slice_mut(s![t, .., .., ..]).assign(&pressure);
-                std::mem::swap(&mut pressure, &mut pressure_old);
+                std::mem::swap(&mut pressure, &mut pressure_previous);
             }
         }
         
         // Backward propagation with adjoint source
         let mut adjoint_wavefield = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut adjoint_old = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut adjoint_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         // Time-reversed loop
         for t in (0..n_time_steps).rev() {
@@ -244,7 +244,7 @@ impl FullWaveformInversion {
             }
             
             // Update adjoint wavefield
-            self.update_wavefield(&mut adjoint_wavefield, &adjoint_old, grid)?;
+            self.update_wavefield(&mut adjoint_wavefield, &adjoint_previous, grid)?;
             
             // Compute gradient: zero-lag correlation
             let forward_slice = forward_wavefield.slice(s![t, .., .., ..]);
@@ -257,7 +257,7 @@ impl FullWaveformInversion {
                     *g += -2.0 * f * a / (v * v * v) * DEFAULT_TIME_STEP;
                 });
             
-            std::mem::swap(&mut adjoint_wavefield, &mut adjoint_old);
+            std::mem::swap(&mut adjoint_wavefield, &mut adjoint_previous);
         }
         
         // Scale gradient
@@ -396,10 +396,80 @@ impl Reconstructor for FullWaveformInversion {
         grid: &Grid,
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
-        // FWI requires mutable state for iterations
-        // For now, return a copy of the current velocity model
-        // TODO: Refactor to use interior mutability or separate iterator pattern
-        Ok(self.velocity_model.clone())
+        // Create a mutable copy for the iterative inversion
+        let mut velocity = self.velocity_model.clone();
+        let mut gradient = Array3::zeros(velocity.dim());
+        let mut search_direction = Array3::zeros(velocity.dim());
+        
+        // Convert sensor positions to indices
+        let receiver_positions: Vec<(usize, usize, usize)> = sensor_positions.iter()
+            .map(|pos| (
+                (pos[0] / grid.dx) as usize,
+                (pos[1] / grid.dy) as usize,
+                (pos[2] / grid.dz) as usize,
+            ))
+            .collect();
+        
+        // Source positions (assuming single source at center for now)
+        let source_positions = vec![(grid.nx / 2, grid.ny / 2, 0)];
+        
+        // L-BFGS optimization loop
+        for iteration in 0..self.max_iterations {
+            // Forward modeling with current velocity
+            let synthetic_data = self.forward_model(&source_positions, &receiver_positions, grid)?;
+            
+            // Compute misfit: J = 0.5 * ||d_obs - d_syn||²
+            let residual = sensor_data - &synthetic_data;
+            let misfit = 0.5 * residual.iter().map(|r| r * r).sum::<f64>();
+            
+            // Check convergence
+            if misfit < self.tolerance {
+                break;
+            }
+            
+            // Compute gradient via adjoint state method
+            self.compute_gradient_adjoint(
+                &residual,
+                &source_positions,
+                &receiver_positions,
+                &velocity,
+                &mut gradient,
+                grid
+            )?;
+            
+            // L-BFGS direction (simplified - should use history)
+            if iteration == 0 {
+                search_direction.assign(&gradient);
+            } else {
+                // Approximate L-BFGS with scaled gradient
+                let scaling = 1.0 / (1.0 + iteration as f64);
+                Zip::from(&mut search_direction)
+                    .and(&gradient)
+                    .for_each(|s, &g| *s = scaling * g);
+            }
+            
+            // Line search for optimal step
+            let step_length = self.line_search_wolfe(
+                &velocity,
+                &gradient,
+                &search_direction,
+                misfit,
+                sensor_data,
+                &source_positions,
+                &receiver_positions,
+                grid
+            )?;
+            
+            // Update velocity model
+            Zip::from(&mut velocity)
+                .and(&search_direction)
+                .for_each(|v, &s| {
+                    *v -= step_length * s;
+                    *v = v.clamp(MIN_VELOCITY, MAX_VELOCITY);
+                });
+        }
+        
+        Ok(velocity)
     }
     
 }
