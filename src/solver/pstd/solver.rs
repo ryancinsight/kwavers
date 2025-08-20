@@ -4,7 +4,7 @@ use ndarray::{Array3, Zip};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::source::Source;
-use crate::boundary::BoundaryCondition;
+use crate::boundary::Boundary;
 use crate::error::KwaversResult;
 use super::config::PstdConfig;
 use super::spectral_ops::SpectralOperations;
@@ -42,7 +42,7 @@ impl PstdSolver {
         &mut self,
         medium: &dyn Medium,
         source: &dyn Source,
-        boundary: &dyn BoundaryCondition,
+        boundary: &dyn Boundary,
         grid: &Grid,
         time: f64,
         dt: f64,
@@ -65,7 +65,7 @@ impl PstdSolver {
     }
     
     /// Update pressure field
-    fn update_pressure(
+    pub fn update_pressure(
         &mut self,
         medium: &dyn Medium,
         source: &dyn Source,
@@ -108,7 +108,7 @@ impl PstdSolver {
     }
     
     /// Update velocity field
-    fn update_velocity(
+    pub fn update_velocity(
         &mut self,
         medium: &dyn Medium,
         grid: &Grid,
@@ -159,5 +159,10 @@ impl PstdSolver {
     /// Get velocity fields
     pub fn velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.velocity_x, &self.velocity_y, &self.velocity_z)
+    }
+    
+    /// Compute divergence of velocity field
+    pub fn compute_divergence(&self, vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>) -> Array3<f64> {
+        self.spectral.compute_divergence(vx, vy, vz)
     }
 }

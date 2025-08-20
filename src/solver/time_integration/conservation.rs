@@ -397,7 +397,7 @@ mod tests {
     fn test_energy_computation() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
         let monitor = ConservationMonitor::new(&grid);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // Create test fields
         let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa

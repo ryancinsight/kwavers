@@ -61,7 +61,7 @@ pub enum PhysicsError {
     },
     /// Invalid configuration
     InvalidConfiguration {
-        component: String,
+        parameter: String,
         reason: String,
     },
     /// Model not initialized

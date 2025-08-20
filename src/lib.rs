@@ -222,6 +222,28 @@ pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResul
 
 #[doc(hidden)]
 #[deprecated(since = "0.3.0", note = "Use PluginBasedSolver instead")]
+/// Validate simulation configuration
+fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
+    let mut result = ValidationResult::success();
+    
+    // Validate grid configuration
+    if config.simulation.nx == 0 || config.simulation.ny == 0 || config.simulation.nz == 0 {
+        result.add_error(ValidationError::InvalidInput("Grid dimensions must be non-zero".to_string()));
+    }
+    
+    // Validate time configuration
+    if config.simulation.total_time <= 0.0 {
+        result.add_error(ValidationError::InvalidInput("Total time must be positive".to_string()));
+    }
+    
+    // Validate source configuration
+    if config.source.frequency <= 0.0 {
+        result.add_error(ValidationError::InvalidInput("Source frequency must be positive".to_string()));
+    }
+    
+    Ok(result)
+}
+
 fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {

@@ -583,7 +583,7 @@ impl ThermalDiffusionSolver {
     pub fn set_temperature(&mut self, temperature: Array3<f64>) -> KwaversResult<()> {
         if temperature.shape() != self.temperature.shape() {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-                component: "ThermalDiffusionSolver".to_string(),
+                parameter: "ThermalDiffusionSolver".to_string(),
                 reason: "Temperature array shape mismatch".to_string()
             }));
         }
@@ -713,7 +713,7 @@ mod tests {
         config.track_thermal_dose = false;
         
         let mut solver = ThermalDiffusionSolver::new(config, &grid).unwrap();
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         // No heat source, uniform initial temperature
         let heat_source = Array3::zeros((32, 32, 32));

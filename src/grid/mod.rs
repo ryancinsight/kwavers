@@ -97,6 +97,54 @@ impl Grid {
     
 
     
+    /// Compute k-space wavenumbers in x-direction
+    pub fn compute_kx(&self) -> Array1<f64> {
+        let mut kx = Array1::zeros(self.nx);
+        let dk = 2.0 * PI / (self.nx as f64 * self.dx);
+        
+        for i in 0..self.nx {
+            let idx = if i <= self.nx / 2 {
+                i as f64
+            } else {
+                i as f64 - self.nx as f64
+            };
+            kx[i] = idx * dk;
+        }
+        kx
+    }
+    
+    /// Compute k-space wavenumbers in y-direction
+    pub fn compute_ky(&self) -> Array1<f64> {
+        let mut ky = Array1::zeros(self.ny);
+        let dk = 2.0 * PI / (self.ny as f64 * self.dy);
+        
+        for j in 0..self.ny {
+            let idx = if j <= self.ny / 2 {
+                j as f64
+            } else {
+                j as f64 - self.ny as f64
+            };
+            ky[j] = idx * dk;
+        }
+        ky
+    }
+    
+    /// Compute k-space wavenumbers in z-direction
+    pub fn compute_kz(&self) -> Array1<f64> {
+        let mut kz = Array1::zeros(self.nz);
+        let dk = 2.0 * PI / (self.nz as f64 * self.dz);
+        
+        for k in 0..self.nz {
+            let idx = if k <= self.nz / 2 {
+                k as f64
+            } else {
+                k as f64 - self.nz as f64
+            };
+            kz[k] = idx * dk;
+        }
+        kz
+    }
+    
     /// Returns the total number of grid points.
     pub fn total_points(&self) -> usize {
         self.nx * self.ny * self.nz
@@ -645,7 +693,7 @@ mod tests {
         let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
         
         // Create a medium with known sound speed
-        let medium = HomogeneousMedium::new(1000.0, 2000.0, &grid, 0.1, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 2000.0, &grid, 0.1, 1.0);
         
         let dt_from_medium = grid.cfl_timestep_from_medium(&medium);
         let dt_direct = grid.cfl_timestep_default(2000.0);

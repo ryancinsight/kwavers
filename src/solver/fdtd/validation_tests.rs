@@ -29,7 +29,7 @@ mod tests {
         
         let density = 1000.0;
         let sound_speed = 1500.0;
-        let medium = HomogeneousMedium::new(density, sound_speed, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid, 0.0, 1.0);
         
         let config = FdtdConfig {
             spatial_order: 4,

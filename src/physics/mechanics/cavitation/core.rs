@@ -204,7 +204,7 @@ mod tests {
         let pressure = Array3::from_elem((10, 10, 10), 101325.0);
         
         // Create test medium
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.1, 1.0);
         
         // Update cavitation
         model.update_cavitation(&pressure, &grid, &medium, 1e-6, 0.0).unwrap();
@@ -224,7 +224,7 @@ mod tests {
         let mut pressure = Array3::zeros((5, 5, 5));
         pressure[[2, 2, 2]] = 50000.0; // Low pressure to induce growth
         
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.1, 1.0);
         
         // Run multiple time steps
         let initial_radius = model.bubble_radius().unwrap()[[2, 2, 2]];

@@ -20,7 +20,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct TimeScale {
     /// Component name
-    pub component: String,
+    pub parameter: String,
     /// Characteristic time scale (seconds)
     pub time_scale: f64,
     /// Spatial scale (meters)

@@ -56,7 +56,7 @@ mod tests {
         let ny = 16;
         let nz = 16;
         let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: false,  // Disable for simpler testing
@@ -103,7 +103,7 @@ mod tests {
         let ny = 16;
         let nz = 16;
         let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: false,
@@ -155,7 +155,7 @@ mod tests {
         let ny = 32;
         let nz = 32;
         let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: true,

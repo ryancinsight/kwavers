@@ -45,7 +45,8 @@ impl ElasticProperties {
     pub fn from_lame(density: f64, lambda: f64, mu: f64) -> KwaversResult<Self> {
         if density <= 0.0 || mu <= 0.0 || lambda < -2.0/3.0 * mu {
             return Err(PhysicsError::InvalidParameter {
-                component: "ElasticProperties".to_string(),
+                parameter: "ElasticProperties".to_string(),
+                value: density,  // Use density as the primary invalid value
                 reason: format!("Invalid elastic parameters: density={}, lambda={}, mu={}", density, lambda, mu)
             }.into());
         }
@@ -72,7 +73,7 @@ impl ElasticProperties {
     pub fn from_youngs_poisson(density: f64, youngs_modulus: f64, poisson_ratio: f64) -> KwaversResult<Self> {
         if density <= 0.0 || youngs_modulus <= 0.0 || poisson_ratio <= -1.0 || poisson_ratio >= 0.5 {
             return Err(PhysicsError::InvalidParameter {
-                component: "ElasticProperties".to_string(),
+                parameter: "ElasticProperties".to_string(),
                 reason: format!("Invalid elastic parameters: density={}, E={}, nu={}", density, youngs_modulus, poisson_ratio)
             }.into());
         }
@@ -149,7 +150,7 @@ impl AnisotropicElasticProperties {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.density <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                component: "AnisotropicElasticProperties".to_string(),
+                parameter: "AnisotropicElasticProperties".to_string(),
                 reason: "Density must be positive".to_string(),
             }.into());
         }
@@ -313,14 +314,14 @@ impl ElasticWave {
         // Validate grid dimensions following Information Expert principle
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(PhysicsError::InvalidParameter {
-                component: "ElasticWave".to_string(),
+                parameter: "ElasticWave".to_string(),
                 reason: "Grid dimensions must be positive".to_string(),
             }.into());
         }
 
         if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                component: "ElasticWave".to_string(),
+                parameter: "ElasticWave".to_string(),
                 reason: "Grid spacing must be positive".to_string(),
             }.into());
         }
