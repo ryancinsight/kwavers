@@ -9,13 +9,11 @@ pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;
 pub mod differential_operators;
-pub mod fft_simple;
 
 // Re-export commonly used utilities
 pub use self::field_analysis::FieldAnalyzer;
 pub use self::sparse_matrix::CompressedSparseRowMatrix;
 pub use self::stencil::{Stencil, StencilValue};
-pub use self::fft_simple::{fft_3d_array, ifft_3d_array};
 
 // Export differential operators with unique names to avoid conflicts
 pub use self::differential_operators::{

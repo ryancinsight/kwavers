@@ -64,4 +64,4 @@ cargo test
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - See LICENSE file for details## FINAL VERDICT: CODEBASE IS ARCHITECTURALLY BANKRUPT
