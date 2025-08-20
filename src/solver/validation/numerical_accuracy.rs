@@ -138,7 +138,7 @@ impl NumericalValidator {
     /// Create new validator with default test configuration
     pub fn new() -> Self {
         let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
         
         Self { grid, medium }
     }

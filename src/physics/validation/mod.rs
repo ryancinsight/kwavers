@@ -1,22 +1,16 @@
-//! Physics validation module with domain-based organization
+//! Physics validation module - domain-based organization
 //! 
-//! Validates numerical implementations against analytical solutions
-//! and published benchmarks from peer-reviewed literature.
+//! Validates numerical implementations against analytical solutions from literature
 
-pub mod wave_equations;
+pub mod wave;
 pub mod nonlinear;
-pub mod materials;
-pub mod numerical_methods;
+pub mod material;
+pub mod numerical;
 pub mod conservation;
 
-// Re-export validation traits
-pub use wave_equations::WaveEquationValidator;
-pub use nonlinear::NonlinearValidator;
-pub use materials::MaterialValidator;
-pub use numerical_methods::NumericalValidator;
-pub use conservation::ConservationValidator;
+use crate::error::KwaversResult;
 
-/// Common validation result type
+/// Validation metrics for comparing numerical and analytical solutions
 #[derive(Debug, Clone)]
 pub struct ValidationMetrics {
     pub l2_error: f64,
@@ -35,7 +29,24 @@ impl ValidationMetrics {
         }
     }
     
+    pub fn with_convergence(mut self, rate: f64) -> Self {
+        self.convergence_rate = Some(rate);
+        self
+    }
+    
     pub fn passes_tolerance(&self, tol: f64) -> bool {
         self.relative_error < tol
     }
+}
+
+/// Common trait for physics validators
+pub trait PhysicsValidator {
+    /// Run validation and return metrics
+    fn validate(&self) -> KwaversResult<ValidationMetrics>;
+    
+    /// Get name of validation test
+    fn name(&self) -> &str;
+    
+    /// Get literature reference
+    fn reference(&self) -> &str;
 }

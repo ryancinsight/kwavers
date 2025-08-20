@@ -693,7 +693,7 @@ mod tests {
         let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
         
         // Create a medium with known sound speed
-        let medium = HomogeneousMedium::new_simple(1000.0, 2000.0, &grid, 0.1, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 2000.0, &grid, 0.1, 1.0);
         
         let dt_from_medium = grid.cfl_timestep_from_medium(&medium);
         let dt_direct = grid.cfl_timestep_default(2000.0);

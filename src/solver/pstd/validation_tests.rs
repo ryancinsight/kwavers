@@ -30,7 +30,7 @@ mod tests {
         // Create homogeneous medium
         let density = 1000.0; // kg/m³
         let sound_speed = 1500.0; // m/s
-        let medium = HomogeneousMedium::new_simple(density, sound_speed, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid, 0.0, 1.0);
         
         // PSTD configuration
         let config = PstdConfig {
@@ -136,7 +136,7 @@ mod tests {
     fn test_numerical_dispersion() {
         let nx = 128;
         let grid = Grid::new(nx, nx, nx, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: true,
@@ -249,7 +249,7 @@ mod tests {
     fn test_energy_conservation() {
         let nx = 64;
         let grid = Grid::new(nx, nx, nx, 1e-3, 1e-3, 1e-3);
-        let medium = HomogeneousMedium::new_simple(1000.0, 1500.0, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
             k_space_correction: true,
