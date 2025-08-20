@@ -683,8 +683,8 @@ impl ChemicalModelTrait for ChemicalModel {
         let mut context = PluginContext::new();
         context.step = 0;
         context.total_steps = 1000;
-        context.metadata.insert("dt".to_string(), dt);
-        context.metadata.insert("time".to_string(), 0.0);
+        context.metadata.insert("dt".to_string(), dt.to_string());
+        context.metadata.insert("time".to_string(), 0.0.to_string());
         
         // Add grid parameters
         context.metadata.insert("nx".to_string(), grid.nx as f64);

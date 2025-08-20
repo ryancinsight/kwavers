@@ -161,7 +161,7 @@ pub fn max_sound_speed<M: AcousticMedium + ?Sized>(medium: &M, grid: &Grid) -> f
                 for k in 0..grid.nz {
                     let (x, y, z) = grid.coordinates(i, j, k);
                     let speed = medium.sound_speed(x, y, z, grid);
-                    max_speed = max_speed.max(speed);
+                    max_speed = f64::max(max_speed, speed);
                 }
             }
         }
@@ -175,7 +175,7 @@ pub fn find_interfaces<M: AcousticMedium + ?Sized>(
     grid: &Grid,
     threshold: f64,
 ) -> Vec<InterfacePoint> {
-    let mut interfaces = Vec::new();
+    let mut interfaces: Vec<InterfacePoint> = Vec::new();
     
     // Try to use cached array for efficiency
     if let Some(density_array) = medium.density_array() {
