@@ -1,5 +1,24 @@
 //! Physical and numerical constants used throughout the codebase
 
+/// Physics constants submodule
+pub mod physics {
+    // Water properties at standard conditions (20°C, 1 atm)
+    pub const WATER_DENSITY: f64 = 1000.0;  // kg/m³
+    pub const WATER_SOUND_SPEED: f64 = 1500.0;  // m/s
+    pub const WATER_ATTENUATION: f64 = 0.0022;  // Np/m/MHz
+    pub const WATER_NONLINEARITY: f64 = 3.5;  // B/A parameter
+    pub const WATER_THERMAL_CONDUCTIVITY: f64 = 0.6;  // W/(m·K)
+    pub const WATER_SPECIFIC_HEAT: f64 = 4180.0;  // J/(kg·K)
+    pub const WATER_REFRACTIVE_INDEX: f64 = 1.33;
+    pub const WATER_GRUNEISEN: f64 = 0.12;
+    
+    // Default mode conversion efficiency
+    pub const DEFAULT_MODE_CONVERSION_EFFICIENCY: f64 = 0.3;
+    
+    // Power law absorption
+    pub const DEFAULT_POWER_LAW_EXPONENT: f64 = 1.05;  // Typical for biological tissues
+}
+
 // Numerical tolerances
 pub const FLOAT_EQUALITY_TOLERANCE: f64 = 1e-10;
 pub const NUMERICAL_EPSILON: f64 = 1e-6;

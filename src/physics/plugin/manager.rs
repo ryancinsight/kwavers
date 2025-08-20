@@ -184,7 +184,7 @@ impl PluginManager {
                         field: "plugin_dependencies".to_string(),
                         value: format!("{:?}", field),
                         constraint: format!(
-                            "Field provided by multiple plugins: {} and {}",
+                            "Field {:?} provided by multiple plugins: {} and {}",
                             field,
                             self.plugins[other].metadata().id,
                             plugin.metadata().id
