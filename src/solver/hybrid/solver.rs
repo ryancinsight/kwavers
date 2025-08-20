@@ -102,7 +102,7 @@ impl HybridSolver {
         
         // Update domain decomposition if dynamic
         if self.config.decomposition_strategy == DecompositionStrategy::Dynamic {
-            self.update_decomposition(fields)?;
+            self.update_decomposition(fields, medium)?;
         }
         
         // Process each region with appropriate solver
@@ -209,14 +209,14 @@ impl HybridSolver {
     }
     
     /// Update domain decomposition based on current fields
-    fn update_decomposition(&mut self, fields: &Array4<f64>) -> KwaversResult<()> {
+    fn update_decomposition(&mut self, fields: &Array4<f64>, medium: &dyn Medium) -> KwaversResult<()> {
         let start = Instant::now();
         
         // Re-analyze field characteristics
         self.selector.update_metrics(fields, &self.grid)?;
         
         // Update decomposition if needed
-        let new_regions = self.decomposer.decompose(&self.grid, &self.selector)?;
+        let new_regions = self.decomposer.decompose(&self.grid, medium)?;
         
         if new_regions != self.regions {
             info!("Domain decomposition updated: {} regions", new_regions.len());
