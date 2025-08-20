@@ -208,7 +208,7 @@ impl BenchmarkSuite {
         // Create and add FDTD plugin
         let fdtd_config = crate::solver::fdtd::FdtdConfig::default();
         let fdtd_plugin = FdtdPlugin::new(fdtd_config, &grid)?;
-        plugin_manager.register(Box::new(fdtd_plugin))?;
+        plugin_manager.add_plugin(Box::new(fdtd_plugin))?;
         
         // Create medium
         let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
@@ -223,7 +223,7 @@ impl BenchmarkSuite {
         for step in 0..10 {
             let t = step as f64 * dt;
             let context = PluginContext::new(step, 10, 1e6);
-            plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)?;
+            plugin_manager.execute(&mut fields, &grid, &medium, dt, t)?;
         }
         
         // Benchmark
@@ -233,7 +233,7 @@ impl BenchmarkSuite {
             for step in 0..self.config.time_steps {
                 let t = step as f64 * dt;
                 let context = PluginContext::new(step, self.config.time_steps, 1e6);
-                plugin_manager.update_all(&mut fields, &grid, &medium, dt, t, &context)?;
+                plugin_manager.execute(&mut fields, &grid, &medium, dt, t)?;
             }
         }
         

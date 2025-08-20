@@ -342,7 +342,7 @@ fn setup_simulation_components(
     let mut plugin_manager = PluginManager::new();
     
     // Add PSTD solver for acoustic wave propagation
-    plugin_manager.register(Box::new(
+    plugin_manager.add_plugin(Box::new(
         solver::pstd::PstdPlugin::new(pstd_config, &grid)?
     ))?;
     
@@ -391,7 +391,7 @@ fn run_simulation_loop(
         
         // Apply physics using plugin manager
         let plugin_context = PluginContext::new(step, time.num_steps(), validation_constants::DEFAULT_PLUGIN_FREQUENCY);
-        plugin_manager.update_all(
+        plugin_manager.execute(
             fields,
             grid,
             medium,

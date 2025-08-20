@@ -130,8 +130,8 @@ impl ProgressReporter for ConsoleProgressReporter {
     fn report(&mut self, progress_json: &str) {
         let now = std::time::Instant::now();
         
-        // Serialize the progress data to JSON for flexible handling
-        if let Ok(json) = serde_json::to_value(progress) {
+        // Parse the progress data from JSON for flexible handling
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(progress_json) {
             // Try to extract standard fields if they exist
             let current_step = json.get("current_step").and_then(|v| v.as_u64()).unwrap_or(0);
             let total_steps = json.get("total_steps").and_then(|v| v.as_u64()).unwrap_or(1);
@@ -176,7 +176,7 @@ impl ProgressReporter for ConsoleProgressReporter {
 pub struct NullProgressReporter;
 
 impl ProgressReporter for NullProgressReporter {
-    fn report<T: ProgressData>(&mut self, _progress: &T) {}
+    fn report(&mut self, _progress_json: &str) {}
 }
 
 /// Asynchronous console reporter for non-blocking progress reporting
@@ -238,12 +238,10 @@ impl ProgressReporter for AsyncConsoleReporter {
         
         // Only report at intervals to avoid overwhelming the channel
         if now.duration_since(self.last_report_time) >= self.report_interval {
-            if let Ok(json) = serde_json::to_string(progress) {
-                // Use try_send to avoid blocking the simulation
-                // If the channel is full, we skip this update rather than block
-                let _ = self.sender.send(format!("Progress: {}", json));
-                self.last_report_time = now;
-            }
+            // Use try_send to avoid blocking the simulation
+            // If the channel is full, we skip this update rather than block
+            let _ = self.sender.send(format!("Progress: {}", progress_json));
+            self.last_report_time = now;
         }
     }
     

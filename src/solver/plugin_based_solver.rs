@@ -410,7 +410,7 @@ impl PluginBasedSolver {
         }
         
         // Add to plugin manager
-        self.plugin_manager.register(plugin)?;
+        self.plugin_manager.add_plugin(plugin)?;
         
         Ok(())
     }

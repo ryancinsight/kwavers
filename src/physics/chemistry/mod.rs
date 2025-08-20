@@ -681,20 +681,20 @@ impl ChemicalModelTrait for ChemicalModel {
         
         // Create context with proper structure
         let mut context = PluginContext::new(0, 1000, frequency);
-        context.parameters.insert("dt".to_string(), dt);
-        context.parameters.insert("time".to_string(), 0.0);
+        context.metadata.insert("dt".to_string(), dt);
+        context.metadata.insert("time".to_string(), 0.0);
         
         // Add grid parameters
-        context.parameters.insert("nx".to_string(), grid.nx as f64);
-        context.parameters.insert("ny".to_string(), grid.ny as f64);
-        context.parameters.insert("nz".to_string(), grid.nz as f64);
-        context.parameters.insert("dx".to_string(), grid.dx);
-        context.parameters.insert("dy".to_string(), grid.dy);
-        context.parameters.insert("dz".to_string(), grid.dz);
+        context.metadata.insert("nx".to_string(), grid.nx as f64);
+        context.metadata.insert("ny".to_string(), grid.ny as f64);
+        context.metadata.insert("nz".to_string(), grid.nz as f64);
+        context.metadata.insert("dx".to_string(), grid.dx);
+        context.metadata.insert("dy".to_string(), grid.dy);
+        context.metadata.insert("dz".to_string(), grid.dz);
         
         // Add medium parameters
-        context.parameters.insert("density".to_string(), medium.density(0.0, 0.0, 0.0, grid));
-        context.parameters.insert("sound_speed".to_string(), medium.sound_speed(0.0, 0.0, 0.0, grid));
+        context.metadata.insert("density".to_string(), medium.density(0.0, 0.0, 0.0, grid));
+        context.metadata.insert("sound_speed".to_string(), medium.sound_speed(0.0, 0.0, 0.0, grid));
         
         // Update using the parameters approach
         let params = ChemicalUpdateParams::new(

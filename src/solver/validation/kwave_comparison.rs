@@ -253,7 +253,7 @@ impl KWaveValidator {
             let context = PluginContext::new(step, n_steps, 1e6); // 1 MHz reference frequency
             
             // Update through plugin manager
-            plugin_manager.update_all(&mut fields, &self.grid, &medium, dt, t, &context)?;
+            plugin_manager.execute(&mut fields, &self.grid, &medium, dt, t, &context)?;
         }
         
         // Extract final pressure
