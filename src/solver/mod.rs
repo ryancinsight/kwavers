@@ -37,13 +37,13 @@ use std::collections::HashMap;
 
 /// A trait for types that can be reported as progress updates
 /// This allows different simulation types to define custom progress data
-pub trait ProgressData: Serialize + Send + Sync {}
+pub trait ProgressData: Send + Sync {}
 
 /// Generic progress reporter trait - decoupled from specific data structures
 /// This follows the principle of designing to interfaces, not implementations
 pub trait ProgressReporter: Send + Sync {
     /// Report progress with any type implementing ProgressData
-    fn report<T: ProgressData>(&mut self, progress: &T);
+    fn report(&mut self, progress_json: &str);
     
     /// Called when simulation starts
     fn on_start(&mut self, total_steps: usize, dt: f64) {}
@@ -127,7 +127,7 @@ impl ProgressReporter for ConsoleProgressReporter {
         );
     }
     
-    fn report<T: ProgressData>(&mut self, progress: &T) {
+    fn report(&mut self, progress_json: &str) {
         let now = std::time::Instant::now();
         
         // Serialize the progress data to JSON for flexible handling
@@ -233,7 +233,7 @@ impl ProgressReporter for AsyncConsoleReporter {
         let _ = self.sender.send(message);
     }
     
-    fn report<T: ProgressData>(&mut self, progress: &T) {
+    fn report(&mut self, progress_json: &str) {
         let now = std::time::Instant::now();
         
         // Only report at intervals to avoid overwhelming the channel

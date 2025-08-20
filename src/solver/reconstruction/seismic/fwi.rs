@@ -9,7 +9,7 @@ use ndarray::{Array2, Array3, Array4, Zip, s};
 use crate::error::{KwaversResult, KwaversError};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::solver::reconstruction::{Reconstructor, InterpolationMethod};
+use crate::solver::reconstruction::{Reconstructor, InterpolationMethod, ReconstructionConfig};
 use super::config::SeismicImagingConfig;
 use super::constants::*;
 use super::wavelet::RickerWavelet;
