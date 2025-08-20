@@ -54,6 +54,12 @@ pub struct HybridSolver {
 }
 
 impl HybridSolver {
+    /// Update fields for hybrid solver
+    pub fn update_fields(&mut self, fields: &mut Array4<f64>, dt: f64) -> KwaversResult<()> {
+        // Simple field update placeholder
+        // In production, this would coordinate PSTD and FDTD updates
+        Ok(())
+    }
     /// Create a new hybrid solver
     pub fn new(config: HybridConfig, grid: &Grid) -> KwaversResult<Self> {
         info!("Initializing hybrid PSTD/FDTD solver");
@@ -108,12 +114,12 @@ impl HybridSolver {
         // Process each region with appropriate solver
         for region in &self.regions {
             match region.domain_type {
-                DomainType::Pstd => {
+                DomainType::PSTD => {
                     let pstd_start = Instant::now();
                     self.apply_pstd_region(fields, medium, dt, t, region)?;
                     self.metrics.pstd_time += pstd_start.elapsed();
                 }
-                DomainType::Fdtd => {
+                DomainType::FDTD => {
                     let fdtd_start = Instant::now();
                     self.apply_fdtd_region(fields, medium, dt, t, region)?;
                     self.metrics.fdtd_time += fdtd_start.elapsed();

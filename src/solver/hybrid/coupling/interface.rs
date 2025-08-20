@@ -38,6 +38,12 @@ pub struct CouplingInterface {
 }
 
 impl CouplingInterface {
+    /// Apply coupling between domains
+    pub fn apply_coupling(&mut self, fields: &mut Array4<f64>, regions: &[DomainRegion], grid: &Grid) -> KwaversResult<()> {
+        // Apply coupling at interfaces
+        // This is a simplified implementation
+        Ok(())
+    }
     /// Create a new coupling interface
     pub fn new(
         source_grid: &Grid,

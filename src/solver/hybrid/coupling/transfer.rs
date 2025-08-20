@@ -96,10 +96,10 @@ impl TransferOperators {
                 }
             }
             _ => {
-                return Err(ValidationError::InvalidValue {
+                return Err(ValidationError::FieldValidation {
                     field: "normal_direction".to_string(),
-                    value: geometry.normal_direction as f64,
-                    message: "Must be 0, 1, or 2".to_string(),
+                    value: format!("{}", geometry.normal_direction),
+                    constraint: "Must be 0, 1, or 2".to_string(),
                 }.into());
             }
         }

@@ -60,10 +60,10 @@ impl InterfaceGeometry {
             0 => Ok((source.dy * source.ny as f64, source.dz * source.nz as f64)),
             1 => Ok((source.dx * source.nx as f64, source.dz * source.nz as f64)),
             2 => Ok((source.dx * source.nx as f64, source.dy * source.ny as f64)),
-            _ => Err(ValidationError::InvalidValue {
+            _ => Err(ValidationError::FieldValidation {
                 field: "normal_direction".to_string(),
-                value: normal_direction as f64,
-                message: "Must be 0, 1, or 2".to_string(),
+                value: format!("{}", normal_direction),
+                constraint: "Must be 0, 1, or 2".to_string(),
             }.into()),
         }
     }

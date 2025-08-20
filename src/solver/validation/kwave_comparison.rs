@@ -144,7 +144,7 @@ impl KWaveValidator {
         // Plugin types are already imported at module level
         
         // Create test configuration matching k-Wave example
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &self.grid);
         let dt = 5e-8;
         let t_end = 40e-6;
         
@@ -383,7 +383,7 @@ impl KWaveValidator {
         };
         
         let mut solver = KuznetsovWave::new(config, &self.grid)?;
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &self.grid);
         
         // High-amplitude sinusoidal source
         let frequency = 1e6; // 1 MHz
@@ -458,7 +458,7 @@ impl KWaveValidator {
             crosstalk_coefficient: 0.0,
         };
         
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &self.grid);
         let signal = std::sync::Arc::new(crate::signal::SineWave::new(2e6, 1.0, 0.0));
         let transducer = PhasedArrayTransducer::new(config, signal, &medium, &self.grid)?;
         
@@ -509,7 +509,7 @@ impl KWaveValidator {
         let mut initial_pressure = self.grid.create_field();
         initial_pressure[source_pos] = 1e6;
         
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, &self.grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &self.grid);
         
         // Forward propagation using PSTD solver
         let config = PstdConfig::default();
