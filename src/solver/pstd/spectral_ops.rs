@@ -143,7 +143,7 @@ impl SpectralOperations {
         }
         
         // Transform back to real space
-        ifft_3d_array(&div_hat).mapv(|c| c.re)
+        ifft_3d_array(&div_hat)
     }
     
     pub fn apply_antialiasing(&self, field_hat: &mut Array3<Complex<f64>>, grid: &Grid) {

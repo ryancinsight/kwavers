@@ -32,6 +32,7 @@ impl PstdPlugin {
                 version: "1.0.0".to_string(),
                 description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
                 author: "Kwavers Team".to_string(),
+                license: "MIT".to_string(),
             },
             state: PluginState::Initialized,
             solver,

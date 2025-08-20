@@ -218,7 +218,7 @@ impl HybridSolver {
         // Update decomposition if needed
         let new_regions = self.decomposer.decompose(&self.grid, medium)?;
         
-        if new_regions != self.regions {
+        if new_regions.len() != self.regions.len() {
             info!("Domain decomposition updated: {} regions", new_regions.len());
             self.regions = new_regions;
         }

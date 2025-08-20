@@ -689,9 +689,6 @@ impl PluginBasedSolver {
     }
     
     /// Get the medium
-    pub fn medium(&self) -> &Arc<dyn Medium> {
-        &self.medium
-    }
     
     /// Get performance metrics
     pub fn performance_metrics(&self) -> &PerformanceMetrics {

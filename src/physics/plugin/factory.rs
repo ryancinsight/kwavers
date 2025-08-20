@@ -87,7 +87,7 @@ where
                 field: "config".to_string(),
                 value: "unknown".to_string(),
                 constraint: "Invalid configuration type".to_string(),
-            })?
+            }.into())?
             .validate()?;
         Ok(())
     }

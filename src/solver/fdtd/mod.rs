@@ -145,7 +145,7 @@ impl PluginConfig for FdtdConfig {
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
             errors.push(ValidationError::FieldValidation {
-                parameter: "spatial_order".to_string(),
+                field: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "Must be 2, 4, or 6".to_string(),
             });
@@ -246,7 +246,7 @@ impl FdtdSolver {
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                parameter: "spatial_order".to_string(),
+                field: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),
             }));
@@ -568,7 +568,7 @@ impl FdtdSolver {
         let mut divergence = Array3::zeros((nx, ny, nz));
         let coeffs = self.fd_coeffs.get(&self.config.spatial_order)
             .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
-                parameter: "spatial_order".to_string(),
+                field: "spatial_order".to_string(),
                 value: self.config.spatial_order.to_string(),
                 constraint: "unsupported order".to_string(),
             }))?;
@@ -649,7 +649,7 @@ impl FdtdSolver {
         // Compute bulk modulus from density and sound speed
         let rho_array = medium.density_array();
         let c_array = medium.sound_speed_array();
-        let bulk_modulus = &rho_array * &c_array * &c_array;
+        let bulk_modulus = rho_array * c_array.mapv(|c| c * c);
         
         // Compute velocity divergence in a single pass for better performance
         let mut div_v = self.compute_divergence_single_pass(vx, vy, vz)?;
@@ -662,14 +662,14 @@ impl FdtdSolver {
             let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2)?;
             
             // Update C-PML memory variables and apply to divergence components
-            cpml.update_acoustic_memory(&dvx_dx, 0)?;
-            cpml.apply_cpml_gradient(&mut dvx_dx, 0)?;
+            cpml.update_acoustic_memory(&dvx_dx, 0);;
+            cpml.apply_cpml_gradient(&mut dvx_dx, 0);;
             
-            cpml.update_acoustic_memory(&dvy_dy, 1)?;
-            cpml.apply_cpml_gradient(&mut dvy_dy, 1)?;
+            cpml.update_acoustic_memory(&dvy_dy, 1);;
+            cpml.apply_cpml_gradient(&mut dvy_dy, 1);;
             
-            cpml.update_acoustic_memory(&dvz_dz, 2)?;
-            cpml.apply_cpml_gradient(&mut dvz_dz, 2)?;
+            cpml.update_acoustic_memory(&dvz_dz, 2);;
+            cpml.apply_cpml_gradient(&mut dvz_dz, 2);;
             
             // Recompute divergence with CPML corrections
             div_v = &dvx_dx + &dvy_dy + &dvz_dz;
@@ -706,34 +706,34 @@ impl FdtdSolver {
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
             // Update C-PML memory variables and apply to gradients
-            cpml.update_acoustic_memory(&dp_dx, 0)?;
-            cpml.apply_cpml_gradient(&mut dp_dx, 0)?;
+            cpml.update_acoustic_memory(&dp_dx, 0);;
+            cpml.apply_cpml_gradient(&mut dp_dx, 0);;
             
-            cpml.update_acoustic_memory(&dp_dy, 1)?;
-            cpml.apply_cpml_gradient(&mut dp_dy, 1)?;
+            cpml.update_acoustic_memory(&dp_dy, 1);;
+            cpml.apply_cpml_gradient(&mut dp_dy, 1);;
             
-            cpml.update_acoustic_memory(&dp_dz, 2)?;
-            cpml.apply_cpml_gradient(&mut dp_dz, 2)?;
+            cpml.update_acoustic_memory(&dp_dz, 2);;
+            cpml.apply_cpml_gradient(&mut dp_dz, 2);;
         }
         
         // Update velocities: ∂v/∂t = -∇p/ρ
         Zip::from(vx)
             .and(&dp_dx)
-            .and(&&rho_array)
+            .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
             
         Zip::from(vy)
             .and(&dp_dy)
-            .and(&&rho_array)
+            .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
             
         Zip::from(vz)
             .and(&dp_dz)
-            .and(&&rho_array)
+            .and(&rho_array)
             .for_each(|v, &grad, &rho| {
                 *v -= dt * grad / rho;
             });
