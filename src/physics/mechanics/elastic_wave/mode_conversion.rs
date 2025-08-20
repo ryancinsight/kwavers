@@ -108,8 +108,9 @@ impl StiffnessTensor {
     pub fn isotropic(lambda: f64, mu: f64, density: f64) -> KwaversResult<Self> {
         if density <= 0.0 || mu <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
-                component: "StiffnessTensor".to_string(),
-                reason: "Invalid material parameters".to_string(),
+                parameter: "density_or_mu".to_string(),
+                value: if density <= 0.0 { density } else { mu },
+                reason: "Material parameters must be positive".to_string(),
             }.into());
         }
         
@@ -163,8 +164,9 @@ impl StiffnessTensor {
         // Check density
         if self.density <= 0.0 {
                                 return Err(PhysicsError::InvalidParameter {
-                        component: "StiffnessTensor".to_string(),
-                        reason: "density must be positive".to_string(),
+                        parameter: "density".to_string(),
+                        value: self.density,
+                        reason: "Density must be positive".to_string(),
                     }.into());
         }
         
