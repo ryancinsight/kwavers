@@ -116,7 +116,7 @@ mockall = "0.11"
 
 [features]
 default = []
-parallel = ["dep:parking_lot"]
+parallel = []
 # hdf5 = ["dep:hdf5", "dep:hdf5-sys"]
 plotting = ["plotters", "plotters-backend", "plotters-bitmap"]
 gpu = ["wgpu", "bytemuck", "futures", "pollster"]
