@@ -108,7 +108,8 @@ impl ThermalDiffusionSolver {
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
-                component: "ThermalDiffusionSolver".to_string(),
+                parameter: "spatial_order".to_string(),
+                value: config.spatial_order as f64,
                 reason: format!("Invalid spatial order: {}. Must be 2, 4, or 6", config.spatial_order)
             }));
         }
