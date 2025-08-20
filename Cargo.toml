@@ -33,7 +33,7 @@ nifti = "0.17.0"
 log = "0.4"
 env_logger = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
-parking_lot = { version = "0.12", optional = true }
+parking_lot = "0.12"
 
 # Random number generation
 rand = "0.8"

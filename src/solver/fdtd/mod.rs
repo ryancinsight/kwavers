@@ -95,9 +95,9 @@ pub mod interpolation;
 #[deprecated(since = "0.4.0", note = "Subgridding feature is not fully implemented and is not ready for use.")]
 pub fn deprecated_subgridding() -> KwaversResult<()> {
     Err(KwaversError::Config(ConfigError::InvalidValue {
-        field: "subgridding".to_string(),
+        parameter: "subgridding".to_string(),
         value: "enabled".to_string(),
-        reason: "Subgridding is not fully implemented. The feature requires stable interface schemes between coarse and fine grids which are not yet available.".to_string(),
+        constraint: "Subgridding is not fully implemented. The feature requires stable interface schemes between coarse and fine grids which are not yet available.".to_string(),
     }))
 }use crate::grid::Grid;
 use crate::medium::Medium;
@@ -145,7 +145,7 @@ impl PluginConfig for FdtdConfig {
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
             errors.push(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "Must be 2, 4, or 6".to_string(),
             });
@@ -246,7 +246,7 @@ impl FdtdSolver {
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),
             }));
@@ -568,9 +568,9 @@ impl FdtdSolver {
         let mut divergence = Array3::zeros((nx, ny, nz));
         let coeffs = self.fd_coeffs.get(&self.config.spatial_order)
             .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: self.config.spatial_order.to_string(),
-                reason: "unsupported order".to_string(),
+                constraint: "unsupported order".to_string(),
             }))?;
         
         let half_stencil = coeffs.len() / 2;
