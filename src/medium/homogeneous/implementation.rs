@@ -42,8 +42,11 @@ impl HomogeneousMedium {
     pub fn new(
         density: f64,
         sound_speed: f64,
-        viscosity: f64,
+        mu_a: f64,
+        mu_s_prime: f64,
+        _grid: &Grid,
     ) -> Self {
+        let viscosity = 1.0e-3; // Default water viscosity
         Self {
             density,
             sound_speed,
@@ -61,8 +64,8 @@ impl HomogeneousMedium {
             thermal_expansion: 2.07e-4, // Water at 20°C [1/K]
             gas_diffusion: 2.0e-9, // O2 in water [m²/s]
             nonlinearity: 5.0, // B/A parameter for water
-            optical_absorption: 0.01, // [1/m]
-            optical_scattering: 0.1, // [1/m]
+            optical_absorption: mu_a, // [1/m]
+            optical_scattering: mu_s_prime, // [1/m]
             reference_frequency: 1e6, // 1 MHz
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
@@ -81,7 +84,9 @@ impl HomogeneousMedium {
         let mut medium = Self::new(
             998.0,  // Density [kg/m³]
             1482.0, // Sound speed [m/s]
-            1.0e-3, // Dynamic viscosity [Pa·s]
+            0.01,   // Optical absorption [1/m]
+            0.1,    // Optical scattering [1/m]
+            grid,
         );
         medium.grid_shape = (grid.nx, grid.ny, grid.nz);
         medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15); // 20°C
@@ -95,7 +100,9 @@ impl HomogeneousMedium {
         let mut medium = Self::new(
             1060.0, // Density [kg/m³]
             1570.0, // Sound speed [m/s]
-            3.5e-3, // Dynamic viscosity [Pa·s]
+            0.15,   // Optical absorption [1/m] - higher for blood
+            0.5,    // Optical scattering [1/m] - higher for blood
+            grid,
         );
         medium.grid_shape = (grid.nx, grid.ny, grid.nz);
         medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 310.15); // 37°C
@@ -140,7 +147,7 @@ impl HomogeneousMedium {
 
     /// Create from minimal parameters (for compatibility)
     pub fn from_minimal(density: f64, sound_speed: f64, grid: &Grid) -> Self {
-        let mut medium = Self::new(density, sound_speed, 1.0e-3);
+        let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
         medium.grid_shape = (grid.nx, grid.ny, grid.nz);
         medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15);
         medium.bubble_radius = Array3::zeros((grid.nx, grid.ny, grid.nz));

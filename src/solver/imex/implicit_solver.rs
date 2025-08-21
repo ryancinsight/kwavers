@@ -96,7 +96,7 @@ impl ImplicitSolver for LinearSolver {
 
 /// Newton solver for nonlinear implicit equations
 #[derive(Debug, Clone)]
-pub struct NewtonSolver {
+pub struct NonlinearSolver {
     tolerance: f64,
     max_iterations: usize,
     jacobian_epsilon: f64,

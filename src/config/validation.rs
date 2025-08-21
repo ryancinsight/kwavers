@@ -126,7 +126,7 @@ pub struct PressureValidation {
 
 /// Temperature field validation parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TemperatureValidation {
+pub struct ThermalValidation {
     /// Minimum allowable temperature [K]
     pub min_temperature: f64,
     /// Maximum allowable temperature [K]
