@@ -60,7 +60,7 @@ pub enum ReconstructionAlgorithm {
 }
 
 /// Filter types for reconstruction
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FilterType {
     /// No filtering
     None,

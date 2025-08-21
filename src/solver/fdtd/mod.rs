@@ -95,9 +95,9 @@ pub mod interpolation;
 #[deprecated(since = "0.4.0", note = "Subgridding feature is not fully implemented and is not ready for use.")]
 pub fn deprecated_subgridding() -> KwaversResult<()> {
     Err(KwaversError::Config(ConfigError::InvalidValue {
-        field: "subgridding".to_string(),
+        parameter: "subgridding".to_string(),
         value: "enabled".to_string(),
-        reason: "Subgridding is not fully implemented. The feature requires stable interface schemes between coarse and fine grids which are not yet available.".to_string(),
+        constraint: "Subgridding is not fully implemented. The feature requires stable interface schemes between coarse and fine grids which are not yet available.".to_string(),
     }))
 }use crate::grid::Grid;
 use crate::medium::Medium;
@@ -568,9 +568,9 @@ impl FdtdSolver {
         let mut divergence = Array3::zeros((nx, ny, nz));
         let coeffs = self.fd_coeffs.get(&self.config.spatial_order)
             .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
-                field: "spatial_order".to_string(),
+                parameter: "spatial_order".to_string(),
                 value: self.config.spatial_order.to_string(),
-                reason: "unsupported order".to_string(),
+                constraint: "unsupported order".to_string(),
             }))?;
         
         let half_stencil = coeffs.len() / 2;
@@ -649,31 +649,11 @@ impl FdtdSolver {
         // Compute bulk modulus from density and sound speed
         let rho_array = medium.density_array();
         let c_array = medium.sound_speed_array();
-        let bulk_modulus = &rho_array * &c_array * &c_array;
+        let bulk_modulus = rho_array.clone() * c_array.mapv(|c| c * c);
         
         // Compute velocity divergence in a single pass for better performance
         let mut div_v = self.compute_divergence_single_pass(vx, vy, vz)?;
         
-        // Apply C-PML if enabled
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            // For CPML, we still need component-wise derivatives
-            let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0)?;
-            let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1)?;
-            let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2)?;
-            
-            // Update C-PML memory variables and apply to divergence components
-            cpml.update_acoustic_memory(&dvx_dx, 0)?;
-            cpml.apply_cpml_gradient(&mut dvx_dx, 0)?;
-            
-            cpml.update_acoustic_memory(&dvy_dy, 1)?;
-            cpml.apply_cpml_gradient(&mut dvy_dy, 1)?;
-            
-            cpml.update_acoustic_memory(&dvz_dz, 2)?;
-            cpml.apply_cpml_gradient(&mut dvz_dz, 2)?;
-            
-            // Recompute divergence with CPML corrections
-            div_v = &dvx_dx + &dvy_dy + &dvz_dz;
-        }
         
         // Update pressure: ∂p/∂t = -K·∇·v
         Zip::from(pressure)
@@ -706,37 +686,28 @@ impl FdtdSolver {
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
             // Update C-PML memory variables and apply to gradients
-            cpml.update_acoustic_memory(&dp_dx, 0)?;
-            cpml.apply_cpml_gradient(&mut dp_dx, 0)?;
+            cpml.update_acoustic_memory(&dp_dx, 0);;
+            cpml.apply_cpml_gradient(&mut dp_dx, 0);;
             
-            cpml.update_acoustic_memory(&dp_dy, 1)?;
-            cpml.apply_cpml_gradient(&mut dp_dy, 1)?;
+            cpml.update_acoustic_memory(&dp_dy, 1);;
+            cpml.apply_cpml_gradient(&mut dp_dy, 1);;
             
-            cpml.update_acoustic_memory(&dp_dz, 2)?;
-            cpml.apply_cpml_gradient(&mut dp_dz, 2)?;
+            cpml.update_acoustic_memory(&dp_dz, 2);;
+            cpml.apply_cpml_gradient(&mut dp_dz, 2);;
         }
         
         // Update velocities: ∂v/∂t = -∇p/ρ
-        Zip::from(vx)
-            .and(&dp_dx)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
-            
-        Zip::from(vy)
-            .and(&dp_dy)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
-            
-        Zip::from(vz)
-            .and(&dp_dz)
-            .and(&rho_array)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt * grad / rho;
-            });
+        for ((idx, v), &grad) in vx.indexed_iter_mut().zip(dp_dx.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
+        
+        for ((idx, v), &grad) in vy.indexed_iter_mut().zip(dp_dy.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
+        
+        for ((idx, v), &grad) in vz.indexed_iter_mut().zip(dp_dz.iter()) {
+            *v -= dt * grad / rho_array[idx];
+        }
         
         Ok(())
     }

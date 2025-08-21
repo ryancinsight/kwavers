@@ -120,8 +120,8 @@ impl fmt::Display for PhysicsError {
             Self::ConvergenceFailure { solver, iterations, residual } => {
                 write!(f, "Convergence failure in {}: {} iterations, residual {}", solver, iterations, residual)
             }
-            Self::InvalidConfiguration { component, reason } => {
-                write!(f, "Invalid configuration for {}: {}", component, reason)
+            Self::InvalidConfiguration { parameter, reason } => {
+                write!(f, "Invalid configuration for {}: {}", parameter, reason)
             }
             Self::ModelNotInitialized { model, reason } => {
                 write!(f, "Model '{}' not initialized: {}", model, reason)

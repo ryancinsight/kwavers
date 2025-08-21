@@ -26,12 +26,14 @@ impl Default for InterpolationScheme {
 }
 
 /// Manager for interpolation operations
+#[derive(Debug)]
 pub struct InterpolationManager {
     scheme: InterpolationScheme,
     adaptive_criteria: Option<AdaptiveInterpolationCriteria>,
 }
 
 /// Criteria for adaptive interpolation
+#[derive(Debug)]
 struct AdaptiveInterpolationCriteria {
     gradient_threshold: f64,
     smoothness_threshold: f64,

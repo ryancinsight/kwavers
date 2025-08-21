@@ -62,7 +62,7 @@ impl LinearAlgebra {
             if lu[[k, k]].abs() < tolerance::RANK {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "LU decomposition".to_string(),
-                    condition_number: None,
+                    condition_number: f64::INFINITY,
                 }));
             }
             
@@ -170,7 +170,7 @@ impl LinearAlgebra {
             if r[[j, j]] < tolerance::RANK {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "QR decomposition".to_string(),
-                    condition_number: None,
+                    condition_number: f64::INFINITY,
                 }));
             }
             

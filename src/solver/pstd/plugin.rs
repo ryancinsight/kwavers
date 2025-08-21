@@ -27,11 +27,12 @@ impl PstdPlugin {
         
         Ok(Self {
             metadata: PluginMetadata {
+                id: "pstd_solver".to_string(),
                 name: "PSTD Solver".to_string(),
                 version: "1.0.0".to_string(),
                 description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
                 author: "Kwavers Team".to_string(),
-                capabilities: vec!["acoustic_propagation".to_string(), "spectral_methods".to_string()],
+                license: "MIT".to_string(),
             },
             state: PluginState::Initialized,
             solver,
@@ -71,7 +72,7 @@ impl PhysicsPlugin for PstdPlugin {
         _grid: &Grid,
         _medium: &dyn Medium,
     ) -> KwaversResult<()> {
-        self.state = PluginState::Active;
+        self.state = PluginState::Running;
         Ok(())
     }
     
@@ -89,7 +90,7 @@ impl PhysicsPlugin for PstdPlugin {
     }
     
     fn finalize(&mut self) -> KwaversResult<()> {
-        self.state = PluginState::Stopped;
+        self.state = PluginState::Finalized;
         Ok(())
     }
     

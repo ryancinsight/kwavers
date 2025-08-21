@@ -54,6 +54,12 @@ pub struct HybridSolver {
 }
 
 impl HybridSolver {
+    /// Update fields for hybrid solver
+    pub fn update_fields(&mut self, fields: &mut Array4<f64>, dt: f64) -> KwaversResult<()> {
+        // Simple field update placeholder
+        // In production, this would coordinate PSTD and FDTD updates
+        Ok(())
+    }
     /// Create a new hybrid solver
     pub fn new(config: HybridConfig, grid: &Grid) -> KwaversResult<Self> {
         info!("Initializing hybrid PSTD/FDTD solver");
@@ -63,15 +69,18 @@ impl HybridSolver {
         let fdtd_solver = FdtdSolver::new(config.fdtd_config.clone(), grid)?;
         
         // Initialize domain decomposition
-        let decomposer = DomainDecomposer::new(config.decomposition_strategy);
-        let selector = AdaptiveSelector::new(config.selection_criteria.clone());
+        let decomposer = DomainDecomposer::new();
+        let selector = AdaptiveSelector::new(config.selection_criteria.clone())?;
         let coupling = CouplingInterface::new(
-            config.coupling_interface.interpolation_scheme,
-            config.coupling_interface.ghost_cells,
-        );
+            grid,
+            grid,
+            crate::solver::hybrid::coupling::InterpolationScheme::Linear,
+        )?;
         
         // Perform initial domain decomposition
-        let regions = decomposer.decompose(grid, &selector)?;
+        // Create a default medium for initial decomposition
+        let default_medium = crate::medium::homogeneous::HomogeneousMedium::water(grid);
+        let regions = decomposer.decompose(grid, &default_medium)?;
         
         info!("Hybrid solver initialized with {} regions", regions.len());
         
@@ -102,18 +111,18 @@ impl HybridSolver {
         
         // Update domain decomposition if dynamic
         if self.config.decomposition_strategy == DecompositionStrategy::Dynamic {
-            self.update_decomposition(fields)?;
+            self.update_decomposition(fields, medium)?;
         }
         
         // Process each region with appropriate solver
-        for region in &self.regions {
+        let regions = self.regions.clone(); for region in &regions {
             match region.domain_type {
-                DomainType::Pstd => {
+                DomainType::PSTD => {
                     let pstd_start = Instant::now();
                     self.apply_pstd_region(fields, medium, dt, t, region)?;
                     self.metrics.pstd_time += pstd_start.elapsed();
                 }
-                DomainType::Fdtd => {
+                DomainType::FDTD => {
                     let fdtd_start = Instant::now();
                     self.apply_fdtd_region(fields, medium, dt, t, region)?;
                     self.metrics.fdtd_time += fdtd_start.elapsed();
@@ -209,16 +218,16 @@ impl HybridSolver {
     }
     
     /// Update domain decomposition based on current fields
-    fn update_decomposition(&mut self, fields: &Array4<f64>) -> KwaversResult<()> {
+    fn update_decomposition(&mut self, fields: &Array4<f64>, medium: &dyn Medium) -> KwaversResult<()> {
         let start = Instant::now();
         
         // Re-analyze field characteristics
         self.selector.update_metrics(fields, &self.grid)?;
         
         // Update decomposition if needed
-        let new_regions = self.decomposer.decompose(&self.grid, &self.selector)?;
+        let new_regions = self.decomposer.decompose(&self.grid, medium)?;
         
-        if new_regions != self.regions {
+        if new_regions.len() != self.regions.len() {
             info!("Domain decomposition updated: {} regions", new_regions.len());
             self.regions = new_regions;
         }

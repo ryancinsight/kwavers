@@ -69,7 +69,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
                 return Err(crate::error::KwaversError::Numerical(
                     crate::error::NumericalError::Instability {
                         operation: "adaptive_step".to_string(),
-                        condition: format!("Failed after {} attempts", attempts),
+                        condition: attempts as f64,
                     }
                 ));
             }

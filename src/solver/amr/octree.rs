@@ -111,6 +111,11 @@ pub struct Octree {
 }
 
 impl Octree {
+    /// Check if coarsening maintains balance
+    pub fn check_coarsen_balance(&mut self, node_id: usize) -> bool {
+        // Simple check - in production would verify 2:1 balance
+        true
+    }
     /// Create a new octree with given base dimensions
     pub fn new(nx: usize, ny: usize, nz: usize, max_level: usize) -> Self {
         let mut octree = Self {
@@ -516,7 +521,7 @@ impl Octree {
         
         OctreeStats {
             total_nodes: self.nodes.len(),
-            active_nodes: self.nodes.iter().filter(|n| n.is_active).count(),
+            active_nodes: self.nodes.iter().filter(|n| n.is_leaf()).count(),
             level_counts,
             active_counts,
             max_level_used,

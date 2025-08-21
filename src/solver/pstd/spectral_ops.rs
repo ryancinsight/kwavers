@@ -4,9 +4,10 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 use crate::grid::Grid;
 use crate::error::KwaversResult;
-use crate::utils::{fft_3d, ifft_3d};
+use crate::utils::{fft_3d_array, ifft_3d_array};
 
 /// Spectral operations handler
+#[derive(Debug)]
 pub struct SpectralOperations {
     pub kx: Array3<f64>,
     pub ky: Array3<f64>,
@@ -72,7 +73,7 @@ impl SpectralOperations {
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
-        let field_hat = fft_3d(field, grid);
+        let field_hat = fft_3d_array(field);
         
         let grad_x_hat = &field_hat * &self.kx.mapv(|k| Complex::new(0.0, k));
         let grad_y_hat = &field_hat * &self.ky.mapv(|k| Complex::new(0.0, k));
@@ -91,9 +92,9 @@ impl SpectralOperations {
         };
         
         Ok((
-            ifft_3d(&grad_x_hat, grid),
-            ifft_3d(&grad_y_hat, grid),
-            ifft_3d(&grad_z_hat, grid),
+            ifft_3d_array(&grad_x_hat),
+            ifft_3d_array(&grad_y_hat),
+            ifft_3d_array(&grad_z_hat),
         ))
     }
     
@@ -103,7 +104,7 @@ impl SpectralOperations {
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let field_hat = fft_3d(field, grid);
+        let field_hat = fft_3d_array(field);
         
         let mut laplacian_hat = field_hat.clone();
         Zip::from(&mut laplacian_hat)
@@ -116,10 +117,36 @@ impl SpectralOperations {
                 .for_each(|l, &k| *l *= k);
         }
         
-        Ok(ifft_3d(&laplacian_hat, grid))
+        Ok(ifft_3d_array(&laplacian_hat))
     }
     
     /// Apply anti-aliasing (2/3 rule)
+    /// Compute divergence of a vector field
+    pub fn compute_divergence(&self, vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>) -> Array3<f64> {
+        use crate::utils::{fft_3d_array, ifft_3d_array};
+        use num_complex::Complex;
+        
+        // Transform to k-space
+        let vx_hat = fft_3d_array(vx);
+        let vy_hat = fft_3d_array(vy);
+        let vz_hat = fft_3d_array(vz);
+        
+        // Compute divergence in k-space: div(v) = ikx*vx + iky*vy + ikz*vz
+        let mut div_hat = Array3::zeros(vx_hat.raw_dim());
+        let i = Complex::new(0.0, 1.0);
+        for ((idx, d), &vx) in div_hat.indexed_iter_mut().zip(vx_hat.iter()) {
+            let kx = self.kx[idx];
+            let ky = self.ky[idx];
+            let kz = self.kz[idx];
+            let vy = vy_hat[idx];
+            let vz = vz_hat[idx];
+            *d = i * (kx * vx + ky * vy + kz * vz);
+        }
+        
+        // Transform back to real space
+        ifft_3d_array(&div_hat)
+    }
+    
     pub fn apply_antialiasing(&self, field_hat: &mut Array3<Complex<f64>>, grid: &Grid) {
         let kx_max = 2.0 * std::f64::consts::PI / grid.dx / 3.0;
         let ky_max = 2.0 * std::f64::consts::PI / grid.dy / 3.0;

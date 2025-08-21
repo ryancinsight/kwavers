@@ -74,6 +74,7 @@ impl ElasticProperties {
         if density <= 0.0 || youngs_modulus <= 0.0 || poisson_ratio <= -1.0 || poisson_ratio >= 0.5 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "ElasticProperties".to_string(),
+                value: density,
                 reason: format!("Invalid elastic parameters: density={}, E={}, nu={}", density, youngs_modulus, poisson_ratio)
             }.into());
         }
@@ -89,7 +90,7 @@ impl ElasticProperties {
         if self.p_wave_speed <= 0.0 || self.s_wave_speed <= 0.0 {
             return Err(NumericalError::Instability {
                 operation: "ElasticProperties validation".to_string(),
-                condition: "Wave speeds must be positive".to_string(),
+                condition: self.p_wave_speed.min(self.s_wave_speed),
             }.into());
         }
         Ok(())
@@ -151,6 +152,7 @@ impl AnisotropicElasticProperties {
         if self.density <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "AnisotropicElasticProperties".to_string(),
+                value: self.density,
                 reason: "Density must be positive".to_string(),
             }.into());
         }
@@ -315,6 +317,7 @@ impl ElasticWave {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "ElasticWave".to_string(),
+                value: 0.0,
                 reason: "Grid dimensions must be positive".to_string(),
             }.into());
         }
@@ -322,6 +325,7 @@ impl ElasticWave {
         if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "ElasticWave".to_string(),
+                value: dx.min(dy).min(dz),
                 reason: "Grid spacing must be positive".to_string(),
             }.into());
         }
@@ -486,7 +490,7 @@ impl ElasticWave {
         if params.dt <= 0.0 {
             return Err(NumericalError::Instability {
                 operation: "Stress update".to_string(),
-                condition: "Time step must be positive".to_string(),
+                condition: params.dt,
             }.into());
         }
 

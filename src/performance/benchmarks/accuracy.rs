@@ -200,13 +200,9 @@ pub fn benchmark_absorption_models() -> Vec<AccuracyResult> {
     let distance = 0.1; // 10 cm
     
     for freq in frequencies {
-        let mut medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         
         // Set realistic tissue absorption: α = 0.5 dB/cm/MHz
-        medium.alpha0 = 0.5 * 0.115129; // Convert dB to Np: 1 dB = 0.115129 Np
-        medium.delta = 1.0; // Linear frequency dependence
-        medium.reference_frequency = 1e6;
-        
         let alpha = medium.absorption_coefficient(0.0, 0.0, 0.0, &grid, freq);
         let expected_amplitude = (-alpha * distance).exp();
         

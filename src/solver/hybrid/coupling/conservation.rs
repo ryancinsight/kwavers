@@ -5,6 +5,7 @@ use super::InterfaceGeometry;
 use ndarray::{Array3, Zip};
 
 /// Conservation enforcer for interface coupling
+#[derive(Debug)]
 pub struct ConservationEnforcer {
     /// Interface geometry
     geometry: InterfaceGeometry,

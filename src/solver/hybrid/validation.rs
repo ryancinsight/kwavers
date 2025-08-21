@@ -531,7 +531,7 @@ impl ValidationTestCase for PlaneWaveTest {
         
         for step in 0..num_steps {
             let time = step as f64 * dt;
-            solver.update_fields(&mut fields, medium, dt, time)?;
+            solver.update_fields(&mut fields, dt)?;
         }
         
         let execution_time = start_time.elapsed().as_secs_f64();

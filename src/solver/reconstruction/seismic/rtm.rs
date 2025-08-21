@@ -239,8 +239,8 @@ impl ReverseTimeMigration {
             
             RtmImagingCondition::Normalized => {
                 // Normalized cross-correlation
-                let mut source_energy = Array3::zeros(self.image.dim());
-                let mut receiver_energy = Array3::zeros(self.image.dim());
+                let mut source_energy = Array3::<f64>::zeros(self.image.dim());
+                let mut receiver_energy = Array3::<f64>::zeros(self.image.dim());
                 
                 for t in 0..n_time_steps {
                     let source_slice = source_wavefield.slice(s![t, .., .., ..]);
@@ -271,7 +271,7 @@ impl ReverseTimeMigration {
                     .and(&source_energy)
                     .and(&receiver_energy)
                     .for_each(|img, &se, &re| {
-                        let norm = (se * re).sqrt();
+                        let product: f64 = se * re; let norm = product.sqrt();
                         if norm > RTM_AMPLITUDE_THRESHOLD {
                             *img /= norm;
                         }

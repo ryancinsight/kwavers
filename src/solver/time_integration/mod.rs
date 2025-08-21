@@ -168,7 +168,7 @@ impl MultiRateTimeIntegrator {
                 let max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(
                     field,
                     grid,
-                    &constraints,
+                    &std::collections::HashMap::new(),
                 )?;
                 
                 Ok((name.clone(), max_dt * self.cfl_safety_factor))

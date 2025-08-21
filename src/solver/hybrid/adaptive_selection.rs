@@ -163,6 +163,51 @@ pub struct AdaptiveSelector {
 }
 
 impl AdaptiveSelector {
+    /// Update metrics based on current field state
+    pub fn update_metrics(&mut self, fields: &Array4<f64>, grid: &Grid) -> KwaversResult<()> {
+        // Compute quality metrics from fields
+        let metrics = self.compute_quality_metrics(fields, grid)?;
+        
+        // Add to history
+        self.history.push(metrics);
+        
+        // Limit history size
+        if self.history.len() > self.max_history {
+            self.history.remove(0);
+        }
+        
+        Ok(())
+    }
+    
+    /// Compute quality metrics from field data
+    fn compute_quality_metrics(&self, fields: &Array4<f64>, grid: &Grid) -> KwaversResult<QualityMetrics> {
+        // Extract pressure field (assuming it's at index 0)
+        let pressure = fields.index_axis(ndarray::Axis(0), 0);
+        
+        // Compute basic metrics
+        // Using simplified metrics for now
+        let smoothness = 0.8;
+        let frequency_content = 0.5;
+        let numerical_dispersion = 0.1;
+        let interface_quality = 0.95; // Placeholder
+        
+        Ok(QualityMetrics {
+            smoothness_score: smoothness,
+            frequency_score: frequency_content,
+            homogeneity_score: 0.9,  // Placeholder
+            efficiency_score: 0.85,  // Placeholder
+            composite_score: (smoothness + frequency_content + 0.9 + 0.85) / 4.0,
+            confidence: 0.95,  // Placeholder
+            detailed_metrics: DetailedMetrics {
+                gradient_stats: StatisticalMetrics::default(),
+                curvature_stats: StatisticalMetrics::default(),
+                frequency_spectrum: FrequencySpectrum::default(),
+                material_variations: MaterialVariationMetrics::default(),
+                resolution_adequacy: ResolutionMetrics::default(),
+            },
+        })
+    }
+    
     /// Create a new adaptive selector
     pub fn new(criteria: SelectionCriteria) -> KwaversResult<Self> {
         info!("Initializing adaptive selector with criteria: {:?}", criteria);

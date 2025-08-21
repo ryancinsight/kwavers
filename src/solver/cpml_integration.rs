@@ -67,14 +67,14 @@ impl CPMLSolver {
         self.compute_pressure_gradients(pressure, grid);
         
         // Step 2: Update C-PML memory variables
-        self.cpml.update_acoustic_memory(&self.grad_x, 0)?;
-        self.cpml.update_acoustic_memory(&self.grad_y, 1)?;
-        self.cpml.update_acoustic_memory(&self.grad_z, 2)?;
+        self.cpml.update_acoustic_memory(&self.grad_x, 0);
+        self.cpml.update_acoustic_memory(&self.grad_y, 1);
+        self.cpml.update_acoustic_memory(&self.grad_z, 2);
         
         // Step 3: Apply C-PML to gradients
-        self.cpml.apply_cpml_gradient(&mut self.grad_x, 0)?;
-        self.cpml.apply_cpml_gradient(&mut self.grad_y, 1)?;
-        self.cpml.apply_cpml_gradient(&mut self.grad_z, 2)?;
+        self.cpml.apply_cpml_gradient(&mut self.grad_x, 0);
+        self.cpml.apply_cpml_gradient(&mut self.grad_y, 1);
+        self.cpml.apply_cpml_gradient(&mut self.grad_z, 2);
         
         // Step 4: Update velocity field with modified gradients
         self.update_velocity_with_cpml(velocity, grid, medium, dt);
@@ -274,13 +274,13 @@ impl CPMLSolver {
     }
     
     /// Enable dispersive media support
-    pub fn enable_dispersive_support(&mut self) {
-        self.cpml.enable_dispersive_support();
+    pub fn enable_dispersive_support(&mut self, params: &crate::boundary::cpml::DispersiveParameters) {
+        self.cpml.enable_dispersive_support(params);
     }
     
     /// Estimate reflection coefficient at given angle
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
-        self.cpml.estimate_reflection(angle_degrees).unwrap_or(0.0)
+        self.cpml.estimate_reflection(angle_degrees)
     }
 }
 

@@ -584,6 +584,7 @@ impl ThermalDiffusionSolver {
         if temperature.shape() != self.temperature.shape() {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 parameter: "ThermalDiffusionSolver".to_string(),
+                value: temperature.len() as f64,
                 reason: "Temperature array shape mismatch".to_string()
             }));
         }

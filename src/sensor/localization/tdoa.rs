@@ -41,6 +41,7 @@ impl<'a> TDOASolver<'a> {
             return Err(crate::error::KwaversError::Physics(
                 crate::error::PhysicsError::InvalidParameter {
                     parameter: "TDOA".to_string(),
+                    value: num_sensors as f64,
                     reason: "TDOA requires at least 4 sensors for 3D localization".to_string()
                 }
             ));
