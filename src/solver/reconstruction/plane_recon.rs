@@ -6,7 +6,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::solver::reconstruction::{
-    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction
+    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,
 };
 use ndarray::{Array2, Array3};
 
@@ -29,7 +29,7 @@ impl PlaneRecon {
             back_projector: UniversalBackProjection::new(WeightFunction::SolidAngle),
         }
     }
-    
+
     /// Set weight function for back-projection
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
@@ -46,9 +46,10 @@ impl Reconstructor for PlaneRecon {
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // Use universal back-projection with planar geometry considerations
-        self.back_projector.reconstruct(sensor_data, sensor_positions, grid, config)
+        self.back_projector
+            .reconstruct(sensor_data, sensor_positions, grid, config)
     }
-    
+
     fn name(&self) -> &str {
         "Planar Array Reconstruction (planeRecon)"
     }

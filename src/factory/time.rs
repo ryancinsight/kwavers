@@ -2,10 +2,10 @@
 //!
 //! Follows Information Expert pattern for time step validation
 
-use crate::error::{KwaversResult, ConfigError};
+use crate::constants::cfl;
+use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::time::Time;
-use crate::constants::cfl;
 
 /// Time configuration
 #[derive(Debug, Clone)]
@@ -23,7 +23,8 @@ impl TimeConfig {
                 parameter: "dt".to_string(),
                 value: self.dt.to_string(),
                 constraint: "Time step must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.num_steps == 0 {
@@ -31,7 +32,8 @@ impl TimeConfig {
                 parameter: "num_steps".to_string(),
                 value: self.num_steps.to_string(),
                 constraint: "Number of steps must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
@@ -39,7 +41,8 @@ impl TimeConfig {
                 parameter: "cfl_factor".to_string(),
                 value: self.cfl_factor.to_string(),
                 constraint: "CFL factor must be in (0, 1]".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
@@ -49,7 +52,7 @@ impl TimeConfig {
 impl Default for TimeConfig {
     fn default() -> Self {
         Self {
-            dt: 1e-7,  // Default time step
+            dt: 1e-7, // Default time step
             num_steps: 1000,
             cfl_factor: cfl::FDTD_DEFAULT,
         }
@@ -63,24 +66,26 @@ impl TimeFactory {
     /// Create time configuration from config
     pub fn create_time(config: &TimeConfig, grid: &Grid) -> KwaversResult<Time> {
         config.validate()?;
-        
-        Ok(Time::new(
-            config.dt,
-            config.num_steps,
-        ))
+
+        Ok(Time::new(config.dt, config.num_steps))
     }
-    
+
     /// Create time configuration based on CFL condition
-    pub fn create_from_cfl(grid: &Grid, sound_speed: f64, num_steps: usize, cfl_factor: f64) -> KwaversResult<Time> {
+    pub fn create_from_cfl(
+        grid: &Grid,
+        sound_speed: f64,
+        num_steps: usize,
+        cfl_factor: f64,
+    ) -> KwaversResult<Time> {
         let min_spacing = grid.dx.min(grid.dy).min(grid.dz);
         let dt = cfl_factor * min_spacing / sound_speed;
-        
+
         let config = TimeConfig {
             dt,
             num_steps,
             cfl_factor,
         };
-        
+
         Self::create_time(&config, grid)
     }
 }

@@ -47,7 +47,7 @@ impl Default for QualityThresholds {
         Self {
             max_interpolation_error: 1e-6,
             max_conservation_error: 1e-10,
-            max_reflection: 0.01,  // 1% reflection
+            max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }
     }
@@ -61,18 +61,18 @@ impl QualityMonitor {
             thresholds: QualityThresholds::default(),
         }
     }
-    
+
     /// Update quality metrics
     pub fn update(&mut self, interpolated: &Array3<f64>, target: &Array3<f64>, time: f64) {
         let metrics = self.calculate_metrics(interpolated, target, time);
-        
+
         // Add to history
         if self.history.len() >= MAX_HISTORY_SIZE {
             self.history.pop_front();
         }
         self.history.push_back(metrics);
     }
-    
+
     /// Calculate quality metrics
     fn calculate_metrics(
         &self,
@@ -82,17 +82,17 @@ impl QualityMonitor {
     ) -> InterfaceQualityMetrics {
         // Calculate interpolation error
         let interpolation_error = self.calculate_interpolation_error(interpolated, target);
-        
+
         // Calculate conservation error
         let conservation_error = self.calculate_conservation_error(interpolated, target);
-        
+
         // Calculate reflection and transmission coefficients
         let (reflection, transmission) = self.calculate_coefficients(interpolated, target);
-        
+
         // Calculate phase and amplitude errors
         let phase_error = self.calculate_phase_error(interpolated, target);
         let amplitude_error = self.calculate_amplitude_error(interpolated, target);
-        
+
         InterfaceQualityMetrics {
             interpolation_error,
             conservation_error,
@@ -103,22 +103,34 @@ impl QualityMonitor {
             time,
         }
     }
-    
-    fn calculate_interpolation_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
+
+    fn calculate_interpolation_error(
+        &self,
+        interpolated: &Array3<f64>,
+        target: &Array3<f64>,
+    ) -> f64 {
         let diff = interpolated - target;
         (diff.iter().map(|x| x * x).sum::<f64>() / diff.len() as f64).sqrt()
     }
-    
-    fn calculate_conservation_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
+
+    fn calculate_conservation_error(
+        &self,
+        interpolated: &Array3<f64>,
+        target: &Array3<f64>,
+    ) -> f64 {
         let source_sum: f64 = interpolated.iter().sum();
         let target_sum: f64 = target.iter().sum();
         (source_sum - target_sum).abs()
     }
-    
-    fn calculate_coefficients(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> (f64, f64) {
+
+    fn calculate_coefficients(
+        &self,
+        interpolated: &Array3<f64>,
+        target: &Array3<f64>,
+    ) -> (f64, f64) {
         let source_energy: f64 = interpolated.iter().map(|x| x * x).sum();
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
-        
+
         if source_energy > 1e-10 {
             let transmission = target_energy / source_energy;
             let reflection = 1.0 - transmission;
@@ -127,43 +139,46 @@ impl QualityMonitor {
             (0.0, 1.0)
         }
     }
-    
+
     fn calculate_phase_error(&self, _interpolated: &Array3<f64>, _target: &Array3<f64>) -> f64 {
         // TODO: Implement phase error calculation
         0.0
     }
-    
+
     fn calculate_amplitude_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         let source_max = interpolated.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         let target_max = target.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
-        
+
         if source_max > 1e-10 {
             (target_max - source_max).abs() / source_max
         } else {
             0.0
         }
     }
-    
+
     /// Get current metrics
     pub fn get_metrics(&self) -> InterfaceQualityMetrics {
-        self.history.back().cloned().unwrap_or(InterfaceQualityMetrics {
-            interpolation_error: 0.0,
-            conservation_error: 0.0,
-            reflection_coefficient: 0.0,
-            transmission_coefficient: 1.0,
-            phase_error: 0.0,
-            amplitude_error: 0.0,
-            time: 0.0,
-        })
+        self.history
+            .back()
+            .cloned()
+            .unwrap_or(InterfaceQualityMetrics {
+                interpolation_error: 0.0,
+                conservation_error: 0.0,
+                reflection_coefficient: 0.0,
+                transmission_coefficient: 1.0,
+                phase_error: 0.0,
+                amplitude_error: 0.0,
+                time: 0.0,
+            })
     }
-    
+
     /// Check if quality is acceptable
     pub fn is_quality_acceptable(&self) -> bool {
         if let Some(metrics) = self.history.back() {
-            metrics.interpolation_error <= self.thresholds.max_interpolation_error &&
-            metrics.conservation_error <= self.thresholds.max_conservation_error &&
-            metrics.reflection_coefficient <= self.thresholds.max_reflection &&
-            metrics.transmission_coefficient >= self.thresholds.min_transmission
+            metrics.interpolation_error <= self.thresholds.max_interpolation_error
+                && metrics.conservation_error <= self.thresholds.max_conservation_error
+                && metrics.reflection_coefficient <= self.thresholds.max_reflection
+                && metrics.transmission_coefficient >= self.thresholds.min_transmission
         } else {
             true
         }

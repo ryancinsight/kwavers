@@ -16,17 +16,17 @@
 //!    frequency-space seismic waveform inversion", Geophysical Journal International
 //! 5. **Baysal et al. (1983)**: "Reverse time migration", Geophysics, 48(11), 1514-1524
 
-pub mod constants;
 pub mod config;
+pub mod constants;
 pub mod fd_coeffs;
 pub mod fwi;
+pub mod misfit;
 pub mod rtm;
 pub mod wavelet;
-pub mod misfit;
 
 // Re-export main types
-pub use config::{SeismicImagingConfig, RtmImagingCondition, AnisotropyParameters};
+pub use config::{AnisotropyParameters, RtmImagingCondition, SeismicImagingConfig};
 pub use fwi::FullWaveformInversion;
+pub use misfit::{MisfitFunction, MisfitType};
 pub use rtm::ReverseTimeMigration;
 pub use wavelet::RickerWavelet;
-pub use misfit::{MisfitFunction, MisfitType};

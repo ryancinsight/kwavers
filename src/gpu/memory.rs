@@ -5,12 +5,12 @@
 //! with memory pool management and asynchronous operations.
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::gpu::{GpuBackend, BufferType};
+use crate::gpu::{BufferType, GpuBackend};
+use std::any::Any;
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::any::Any;
 
 /// GPU memory allocation strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,11 +110,13 @@ impl MemoryPool {
 
         // Check if we have space for new allocation
         if self.total_allocated_bytes + size_bytes > self.max_pool_size_bytes {
-            return Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                requested_bytes: size_bytes,
-                available_bytes: self.max_pool_size_bytes - self.total_allocated_bytes,
-                reason: "Memory pool exhausted".to_string(),
-            }));
+            return Err(KwaversError::Gpu(
+                crate::error::GpuError::MemoryAllocation {
+                    requested_bytes: size_bytes,
+                    available_bytes: self.max_pool_size_bytes - self.total_allocated_bytes,
+                    reason: "Memory pool exhausted".to_string(),
+                },
+            ));
         }
 
         // Allocate new buffer
@@ -122,7 +124,7 @@ impl MemoryPool {
         self.buffer_id_counter += 1;
 
         let device_ptr = self.allocate_device_memory(size_bytes)?;
-        
+
         let buffer = GpuBuffer {
             id: buffer_id,
             size_bytes,
@@ -160,33 +162,39 @@ impl MemoryPool {
         // Since we don't have actual GPU backend, we track allocations
         // with unique IDs instead of actual pointers
         static ALLOCATION_COUNTER: AtomicUsize = AtomicUsize::new(1);
-        
+
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => {
                 // Would use CUDA memory allocation here
                 // Track allocation with unique ID
-                let allocation_id = ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let allocation_id =
+                    ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 // self.current_usage.fetch_add(size_bytes, std::sync::atomic::Ordering::Relaxed); // This line was removed from the new_code, so it's removed here.
                 Ok(allocation_id as u64)
             }
             #[cfg(feature = "wgpu")]
             GpuBackend::OpenCL | GpuBackend::WebGPU => {
                 // Would use WebGPU buffer allocation here
-                let allocation_id = ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let allocation_id =
+                    ALLOCATION_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 // self.current_usage.fetch_add(size_bytes, std::sync::atomic::Ordering::Relaxed); // This line was removed from the new_code, so it's removed here.
                 Ok(allocation_id as u64)
             }
             #[cfg(not(any(feature = "cudarc", feature = "wgpu")))]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: format!("{:?}", self.backend),
-                reason: "Backend not available with current features".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: format!("{:?}", self.backend),
+                    reason: "Backend not available with current features".to_string(),
+                },
+            )),
         }
     }
 
@@ -197,11 +205,13 @@ impl MemoryPool {
             self.available_buffers.push_back(buffer);
             Ok(())
         } else {
-            Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                requested_bytes: 0,
-                available_bytes: 0,
-                reason: format!("Buffer {} not found in allocated buffers", buffer_id),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::MemoryAllocation {
+                    requested_bytes: 0,
+                    available_bytes: 0,
+                    reason: format!("Buffer {} not found in allocated buffers", buffer_id),
+                },
+            ))
         }
     }
 
@@ -307,7 +317,7 @@ impl GpuMemoryManager {
         let pool_size_bytes = max_memory_bytes / 8; // Divide among buffer types
 
         let mut memory_pools = HashMap::new();
-        
+
         // Create pools for each buffer type
         for buffer_type in &[
             BufferType::Pressure,
@@ -339,11 +349,15 @@ impl GpuMemoryManager {
     }
 
     /// Allocate a buffer of specified type and size
-    pub fn allocate_buffer(&mut self, size_bytes: usize, buffer_type: BufferType) -> KwaversResult<usize> {
+    pub fn allocate_buffer(
+        &mut self,
+        size_bytes: usize,
+        buffer_type: BufferType,
+    ) -> KwaversResult<usize> {
         if let Some(pool) = self.memory_pools.get(&buffer_type) {
             let mut pool_guard = pool.lock().unwrap();
             let buffer_id = pool_guard.allocate(size_bytes, buffer_type)?;
-            
+
             // Update metrics
             if let Ok(mut metrics) = self.performance_metrics.lock() {
                 metrics.total_allocations += 1;
@@ -353,40 +367,50 @@ impl GpuMemoryManager {
                     metrics.peak_usage_bytes = metrics.current_usage_bytes;
                 }
             }
-            
+
             Ok(buffer_id)
         } else {
-            Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                size_bytes,
-                backend: self.backend,
-                reason: format!("No pool for buffer type {:?}", buffer_type),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::MemoryAllocation {
+                    size_bytes,
+                    backend: self.backend,
+                    reason: format!("No pool for buffer type {:?}", buffer_type),
+                },
+            ))
         }
     }
 
     /// Deallocate a buffer
-    pub fn deallocate_buffer(&mut self, buffer_id: usize, buffer_type: BufferType) -> KwaversResult<()> {
+    pub fn deallocate_buffer(
+        &mut self,
+        buffer_id: usize,
+        buffer_type: BufferType,
+    ) -> KwaversResult<()> {
         if let Some(pool) = self.memory_pools.get(&buffer_type) {
             let mut pool_guard = pool.lock().unwrap();
-            
+
             // Get size before deallocation for metrics
             let size_bytes = pool_guard.get_buffer_size(buffer_id).unwrap_or(0);
             pool_guard.deallocate(buffer_id)?;
-            
+
             // Update metrics
             if let Ok(mut metrics) = self.performance_metrics.lock() {
                 metrics.total_deallocations += 1;
                 metrics.total_bytes_deallocated += size_bytes as u64;
-                metrics.current_usage_bytes = metrics.current_usage_bytes.saturating_sub(size_bytes as u64);
+                metrics.current_usage_bytes = metrics
+                    .current_usage_bytes
+                    .saturating_sub(size_bytes as u64);
             }
-            
+
             Ok(())
         } else {
-            Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-                size_bytes: 0,
-                backend: self.backend,
-                reason: format!("No pool for buffer type {:?}", buffer_type),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::MemoryAllocation {
+                    size_bytes: 0,
+                    backend: self.backend,
+                    reason: format!("No pool for buffer type {:?}", buffer_type),
+                },
+            ))
         }
     }
 
@@ -400,27 +424,27 @@ impl GpuMemoryManager {
     ) -> KwaversResult<usize> {
         let start_time = Instant::now();
         let size_bytes = host_data.len() * std::mem::size_of::<f64>();
-        
+
         // Perform the transfer based on backend
         self.perform_host_to_device_transfer(host_data, device_buffer_id, buffer_type)?;
-        
+
         let transfer_time = start_time.elapsed().as_secs_f64();
         let bandwidth_gb_s = (size_bytes as f64 / 1e9) / transfer_time;
-        
+
         // Update performance metrics
         if let Ok(mut metrics) = self.performance_metrics.lock() {
             metrics.total_transfers += 1;
             metrics.total_bytes_transferred += size_bytes as u64;
             metrics.total_transfer_time_seconds += transfer_time;
-            
+
             if bandwidth_gb_s > metrics.peak_transfer_bandwidth_gb_s {
                 metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;
             }
-            
+
             // Update average bandwidth
             let total_gb = metrics.total_bytes_transferred as f64 / 1e9;
             if metrics.total_transfer_time_seconds > 0.0 {
-                metrics.average_transfer_bandwidth_gb_s = 
+                metrics.average_transfer_bandwidth_gb_s =
                     total_gb / metrics.total_transfer_time_seconds;
             }
         }
@@ -441,27 +465,27 @@ impl GpuMemoryManager {
     ) -> KwaversResult<usize> {
         let start_time = Instant::now();
         let size_bytes = host_data.len() * std::mem::size_of::<f64>();
-        
+
         // Perform the transfer based on backend
         self.perform_device_to_host_transfer(device_buffer_id, host_data, buffer_type)?;
-        
+
         let transfer_time = start_time.elapsed().as_secs_f64();
         let bandwidth_gb_s = (size_bytes as f64 / 1e9) / transfer_time;
-        
+
         // Update performance metrics
         if let Ok(mut metrics) = self.performance_metrics.lock() {
             metrics.total_transfers += 1;
             metrics.total_bytes_transferred += size_bytes as u64;
             metrics.total_transfer_time_seconds += transfer_time;
-            
+
             if bandwidth_gb_s > metrics.peak_transfer_bandwidth_gb_s {
                 metrics.peak_transfer_bandwidth_gb_s = bandwidth_gb_s;
             }
-            
+
             // Update average bandwidth
             let total_gb = metrics.total_bytes_transferred as f64 / 1e9;
             if metrics.total_transfer_time_seconds > 0.0 {
-                metrics.average_transfer_bandwidth_gb_s = 
+                metrics.average_transfer_bandwidth_gb_s =
                     total_gb / metrics.total_transfer_time_seconds;
             }
         }
@@ -545,23 +569,23 @@ impl GpuMemoryManager {
     /// Allocate pinned host memory for optimized transfers
     pub fn allocate_pinned_host_buffer(&mut self, size_bytes: usize) -> KwaversResult<usize> {
         let buffer_id = self.pinned_host_buffers.len();
-        
+
         // Allocate pinned memory based on backend
         let ptr = self.allocate_pinned_memory(size_bytes)?;
-        
+
         let pinned_buffer = PinnedHostBuffer {
             id: buffer_id,
             ptr,
             size_bytes,
             is_mapped: false,
         };
-        
+
         self.pinned_host_buffers.insert(buffer_id, pinned_buffer);
         Ok(buffer_id)
     }
 
     /// Deallocate pinned memory
-    /// 
+    ///
     /// # Safety
     /// The caller must ensure:
     /// - The pointer was allocated by `allocate_pinned_memory` with the exact same size
@@ -571,7 +595,7 @@ impl GpuMemoryManager {
         if ptr.is_null() || size == 0 {
             return;
         }
-        
+
         unsafe {
             // Reconstruct the Vec<u8> to properly deallocate the memory
             // Since we allocated Vec<u8>, size is in bytes which matches both length and capacity
@@ -579,7 +603,7 @@ impl GpuMemoryManager {
             // The Vec will be dropped here, properly freeing the memory
         }
     }
-    
+
     /// Allocate pinned memory for efficient GPU transfers
     pub fn allocate_pinned_memory(&self, size_bytes: usize) -> KwaversResult<*mut u8> {
         let ptr = match self.backend {
@@ -601,16 +625,18 @@ impl GpuMemoryManager {
             }
             #[allow(unreachable_patterns)]
             _ => {
-                return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                    backend: format!("{:?}", self.backend),
-                    reason: "GPU backend not compiled with required features".to_string(),
-                }));
+                return Err(KwaversError::Gpu(
+                    crate::error::GpuError::BackendNotAvailable {
+                        backend: format!("{:?}", self.backend),
+                        reason: "GPU backend not compiled with required features".to_string(),
+                    },
+                ));
             }
         };
-        
+
         // Track the allocation for cleanup
         // self.raw_pinned_allocations.lock().unwrap().push((ptr, size_bytes)); // Not implemented yet
-        
+
         Ok(ptr)
     }
 
@@ -622,27 +648,27 @@ impl GpuMemoryManager {
     /// Get memory pool statistics for all buffer types
     pub fn get_all_pool_statistics(&self) -> HashMap<BufferType, MemoryPoolStatistics> {
         let mut stats = HashMap::new();
-        
+
         for (buffer_type, pool) in &self.memory_pools {
             if let Ok(pool_guard) = pool.lock() {
                 stats.insert(*buffer_type, pool_guard.get_statistics());
             }
         }
-        
+
         stats
     }
 
     /// Optimize memory usage by cleaning up unused buffers
     pub fn optimize_memory_usage(&mut self) -> KwaversResult<usize> {
         let mut total_cleaned = 0;
-        
+
         for pool in self.memory_pools.values() {
             if let Ok(mut pool_guard) = pool.lock() {
                 let cleaned = pool_guard.cleanup_unused_buffers(60)?; // 60 seconds idle time
                 total_cleaned += cleaned;
             }
         }
-        
+
         Ok(total_cleaned)
     }
 
@@ -660,19 +686,19 @@ impl GpuMemoryManager {
     /// Generate memory optimization recommendations
     pub fn get_optimization_recommendations(&self) -> Vec<String> {
         let mut recommendations = Vec::new();
-        
+
         // if self.performance_metrics.average_transfer_bandwidth_gb_s < 50.0 { // Not implemented yet
         //     recommendations.push("Consider using pinned host memory for faster transfers".to_string());
         // }
-        
+
         // if self.performance_metrics.allocation_efficiency < 0.8 { // Not implemented yet
         //     recommendations.push("Increase memory pool sizes to reduce allocation overhead".to_string());
         // }
-        
+
         // if self.performance_metrics.memory_utilization > 0.9 { // Not implemented yet
         //     recommendations.push("Consider increasing total GPU memory allocation".to_string());
         // }
-        
+
         // Check pool fragmentation // Not implemented yet
         for (buffer_type, pool) in &self.memory_pools {
             if let Ok(pool_guard) = pool.lock() {
@@ -680,12 +706,13 @@ impl GpuMemoryManager {
                 if stats.fragmentation_ratio > 0.3 {
                     recommendations.push(format!(
                         "High fragmentation in {:?} pool ({}%), consider defragmentation",
-                        buffer_type, (stats.fragmentation_ratio * 100.0) as u32
+                        buffer_type,
+                        (stats.fragmentation_ratio * 100.0) as u32
                     ));
                 }
             }
         }
-        
+
         recommendations
     }
 }
@@ -696,7 +723,11 @@ mod tests {
 
     #[test]
     fn test_memory_pool_creation() {
-        let pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024 * 1024, AllocationStrategy::Pool);
+        let pool = MemoryPool::new(
+            GpuBackend::Cuda,
+            1024 * 1024 * 1024,
+            AllocationStrategy::Pool,
+        );
         assert_eq!(pool.backend, GpuBackend::Cuda);
         assert_eq!(pool.max_pool_size_bytes, 1024 * 1024 * 1024);
         assert_eq!(pool.allocation_strategy, AllocationStrategy::Pool);
@@ -705,11 +736,11 @@ mod tests {
     #[test]
     fn test_buffer_allocation() {
         let mut pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, AllocationStrategy::Pool);
-        
+
         let buffer_id = pool.allocate(1024, BufferType::Pressure).unwrap();
         assert_eq!(buffer_id, 0);
         assert_eq!(pool.total_allocated_bytes, 1024);
-        
+
         let buffer = pool.get_buffer(buffer_id).unwrap();
         assert_eq!(buffer.size_bytes, 1024);
         assert_eq!(buffer.buffer_type, BufferType::Pressure);
@@ -718,7 +749,7 @@ mod tests {
     #[test]
     fn test_buffer_deallocation() {
         let mut pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, AllocationStrategy::Pool);
-        
+
         let buffer_id = pool.allocate(1024, BufferType::Pressure).unwrap();
         assert!(pool.deallocate(buffer_id).is_ok());
         assert_eq!(pool.available_buffers.len(), 1);
@@ -727,11 +758,11 @@ mod tests {
     #[test]
     fn test_buffer_reuse() {
         let mut pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, AllocationStrategy::Pool);
-        
+
         // Allocate and deallocate
         let buffer_id1 = pool.allocate(1024, BufferType::Pressure).unwrap();
         pool.deallocate(buffer_id1).unwrap();
-        
+
         // Allocate again - should reuse the buffer
         let buffer_id2 = pool.allocate(1024, BufferType::Velocity).unwrap();
         assert_eq!(buffer_id2, buffer_id1); // Same buffer ID reused
@@ -747,7 +778,7 @@ mod tests {
     #[test]
     fn test_manager_allocation() {
         let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8 * 1024 * 1024 * 1024).unwrap();
-        
+
         let buffer_id = manager.allocate_buffer(1024, BufferType::Pressure).unwrap();
         assert_eq!(buffer_id, 0);
         // assert_eq!(manager.performance_metrics.total_allocations, 1); // Not implemented yet
@@ -756,10 +787,10 @@ mod tests {
     #[test]
     fn test_memory_pool_statistics() {
         let mut pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, AllocationStrategy::Pool);
-        
+
         pool.allocate(1024, BufferType::Pressure).unwrap();
         pool.allocate(2048, BufferType::Velocity).unwrap();
-        
+
         let stats = pool.get_statistics();
         assert_eq!(stats.allocated_buffer_count, 2);
         assert_eq!(stats.total_allocated_bytes, 3072);
@@ -774,7 +805,7 @@ mod tests {
             AllocationStrategy::Streaming,
             AllocationStrategy::Unified,
         ];
-        
+
         for strategy in strategies {
             let pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, strategy);
             assert_eq!(pool.allocation_strategy, strategy);
@@ -789,7 +820,7 @@ mod tests {
             TransferMode::Pinned,
             TransferMode::PeerToPeer,
         ];
-        
+
         for mode in &modes {
             // Test that all transfer modes are properly defined
             match mode {
@@ -812,7 +843,7 @@ mod tests {
             BufferType::FFT,
             BufferType::Boundary,
         ];
-        
+
         for buffer_type in types {
             // Test that all buffer types are properly defined
             assert_eq!(buffer_type, buffer_type); // Identity check
@@ -831,14 +862,14 @@ mod tests {
     #[test]
     fn test_memory_cleanup() {
         let mut pool = MemoryPool::new(GpuBackend::Cuda, 1024 * 1024, AllocationStrategy::Pool);
-        
+
         // Allocate and deallocate to create available buffers
         let buffer_id = pool.allocate(1024, BufferType::Pressure).unwrap();
         pool.deallocate(buffer_id).unwrap();
-        
+
         // Sleep briefly to ensure some time has passed
         std::thread::sleep(std::time::Duration::from_millis(10));
-        
+
         // Cleanup with zero idle time should remove all buffers
         let cleaned = pool.cleanup_unused_buffers(0).unwrap();
         assert_eq!(cleaned, 1);
@@ -849,24 +880,26 @@ mod tests {
     fn test_optimization_recommendations() {
         let manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
         let recommendations = manager.get_optimization_recommendations();
-        
+
         // Should have recommendations due to low performance metrics
         assert!(!recommendations.is_empty());
-        assert!(recommendations.iter().any(|r| r.contains("pinned host memory")));
+        assert!(recommendations
+            .iter()
+            .any(|r| r.contains("pinned host memory")));
     }
 
     #[test]
     fn test_performance_targets() {
         let mut manager = GpuMemoryManager::new(GpuBackend::Cuda, 8.0).unwrap();
-        
+
         // Default metrics should not meet targets
         assert!(!manager.meets_performance_targets());
-        
+
         // Set high performance metrics
         // manager.performance_metrics.average_transfer_bandwidth_gb_s = 150.0; // Not implemented yet
         // manager.performance_metrics.allocation_efficiency = 0.95; // Not implemented yet
         // manager.performance_metrics.memory_utilization = 0.7; // Not implemented yet
-        
+
         // Should now meet targets
         assert!(manager.meets_performance_targets());
     }

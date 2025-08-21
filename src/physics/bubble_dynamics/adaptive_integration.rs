@@ -5,7 +5,7 @@
 //!
 //! ## Literature References
 //!
-//! 1. **Hairer & Wanner (1996)**. "Solving Ordinary Differential Equations II: 
+//! 1. **Hairer & Wanner (1996)**. "Solving Ordinary Differential Equations II:
 //!    Stiff and Differential-Algebraic Problems"
 //!    - Adaptive time-stepping strategies for stiff ODEs
 //!
@@ -16,15 +16,14 @@
 //!    - Numerical challenges in bubble dynamics
 
 use super::{BubbleState, KellerMiksisModel};
-use crate::error::{KwaversResult, PhysicsError};
 use crate::constants::adaptive_integration::{
-    MAX_TIME_STEP, MIN_TIME_STEP, DEFAULT_RELATIVE_TOLERANCE, DEFAULT_ABSOLUTE_TOLERANCE,
-    SAFETY_FACTOR, MAX_TIME_STEP_INCREASE, MAX_TIME_STEP_DECREASE, MAX_SUBSTEPS,
-    INITIAL_TIME_STEP_FRACTION, ERROR_CONTROL_EXPONENT, HALF_STEP_FACTOR,
-    MIN_TEMPERATURE, MAX_TEMPERATURE, MIN_RADIUS_SAFETY_FACTOR, MAX_RADIUS_SAFETY_FACTOR,
-    MAX_VELOCITY_FRACTION
+    DEFAULT_ABSOLUTE_TOLERANCE, DEFAULT_RELATIVE_TOLERANCE, ERROR_CONTROL_EXPONENT,
+    HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR, MAX_SUBSTEPS,
+    MAX_TEMPERATURE, MAX_TIME_STEP, MAX_TIME_STEP_DECREASE, MAX_TIME_STEP_INCREASE,
+    MAX_VELOCITY_FRACTION, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE, MIN_TIME_STEP, SAFETY_FACTOR,
 };
-use crate::constants::bubble_dynamics::{MIN_RADIUS, MAX_RADIUS};
+use crate::constants::bubble_dynamics::{MAX_RADIUS, MIN_RADIUS};
+use crate::error::{KwaversResult, PhysicsError};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]
@@ -82,7 +81,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     /// Create new adaptive integrator
     pub fn new(solver: &'a KellerMiksisModel, config: AdaptiveBubbleConfig) -> Self {
         let dt_adaptive = config.dt_max * INITIAL_TIME_STEP_FRACTION; // Start conservatively
-        
+
         Self {
             solver,
             config,
@@ -93,9 +92,9 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             max_dt_used: 0.0,
         }
     }
-    
+
     /// Integrate bubble dynamics with adaptive sub-cycling
-    /// 
+    ///
     /// This method takes multiple smaller time steps internally to resolve
     /// the stiff dynamics while advancing by the main simulation dt.
     pub fn integrate_adaptive(
@@ -109,21 +108,21 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         let mut t = t_start;
         let t_end = t_start + dt_main;
         let mut substeps = 0;
-        
+
         // Sub-cycle until we reach the target time
         while t < t_end && substeps < self.config.max_substeps {
             // Limit time step to not exceed target
             let dt = self.dt_adaptive.min(t_end - t);
-            
+
             // Try a step with current dt
             let (success, dt_new) = self.try_step(state, p_acoustic, dp_dt, dt, t)?;
-            
+
             if success {
                 // Step accepted, advance time
                 t += dt;
                 substeps += 1;
                 self.total_substeps += 1;
-                
+
                 // Update statistics
                 self.min_dt_used = self.min_dt_used.min(dt);
                 self.max_dt_used = self.max_dt_used.max(dt);
@@ -131,22 +130,23 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
                 // Step rejected, will retry with smaller dt
                 self.rejected_steps += 1;
             }
-            
+
             // Update adaptive time step
             self.dt_adaptive = dt_new.max(self.config.dt_min).min(self.config.dt_max);
         }
-        
+
         if substeps >= self.config.max_substeps {
             return Err(PhysicsError::ConvergenceFailure {
                 solver: "AdaptiveBubbleIntegrator".to_string(),
                 iterations: substeps,
                 residual: (t_end - t).abs(),
-            }.into());
+            }
+            .into());
         }
-        
+
         Ok(())
     }
-    
+
     /// Try a single time step with error estimation
     fn try_step(
         &self,
@@ -158,47 +158,51 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     ) -> KwaversResult<(bool, f64)> {
         // Store original state
         let state_orig = state.clone();
-        
+
         // Take one full step
         let mut state_full = state_orig.clone();
         self.step_rk4(&mut state_full, p_acoustic, dp_dt, dt, t)?;
-        
+
         // Take two half steps for error estimation
         let mut state_half = state_orig.clone();
         let dt_half = dt * HALF_STEP_FACTOR;
         self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t)?;
         self.step_rk4(&mut state_half, p_acoustic, dp_dt, dt_half, t + dt_half)?;
-        
+
         // Estimate error (Richardson extrapolation)
         let error_r = (state_full.radius - state_half.radius).abs();
         let error_v = (state_full.wall_velocity - state_half.wall_velocity).abs();
-        
+
         // Compute error norm
         let scale_r = self.config.atol + self.config.rtol * state_half.radius.abs();
         let scale_v = self.config.atol + self.config.rtol * state_half.wall_velocity.abs();
-        
-        let error_norm = ((error_r / scale_r).powi(2) + (error_v / scale_v).powi(2)).sqrt() / 2.0_f64.sqrt();
-        
+
+        let error_norm =
+            ((error_r / scale_r).powi(2) + (error_v / scale_v).powi(2)).sqrt() / 2.0_f64.sqrt();
+
         // Compute new time step based on error
         let dt_new = if error_norm > 0.0 {
-            let factor = self.config.safety_factor * (1.0 / error_norm).powf(ERROR_CONTROL_EXPONENT); // 4th order method
-            let factor = factor.min(self.config.dt_increase_max).max(self.config.dt_decrease_max);
+            let factor =
+                self.config.safety_factor * (1.0 / error_norm).powf(ERROR_CONTROL_EXPONENT); // 4th order method
+            let factor = factor
+                .min(self.config.dt_increase_max)
+                .max(self.config.dt_decrease_max);
             dt * factor
         } else {
             dt * self.config.dt_increase_max
         };
-        
+
         // Accept or reject step
         let accept = error_norm <= 1.0 && self.check_stability(&state_half);
-        
+
         if accept {
             // Use the more accurate half-step result (5th order)
             *state = state_half;
         }
-        
+
         Ok((accept, dt_new))
     }
-    
+
     /// Perform a single RK4 step
     fn step_rk4(
         &self,
@@ -209,78 +213,88 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         t: f64,
     ) -> KwaversResult<()> {
         let r0 = self.solver.params().r0;
-        
+
         // RK4 integration
         let state0 = state.clone();
-        
+
         // k1
         // Note: calculate_acceleration requires mutable state, but doesn't mutate solver
-        let k1_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t);
+        let k1_a = self
+            .solver
+            .calculate_acceleration(state, p_acoustic, dp_dt, t);
         let k1_v = state.wall_velocity;
-        
+
         // k2
         state.radius = state0.radius + 0.5 * dt * k1_v;
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k1_a;
-        let k2_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+        let k2_a = self
+            .solver
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
         let k2_v = state.wall_velocity;
-        
+
         // k3
         state.radius = state0.radius + 0.5 * dt * k2_v;
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k2_a;
-        let k3_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+        let k3_a = self
+            .solver
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
         let k3_v = state.wall_velocity;
-        
+
         // k4
         state.radius = state0.radius + dt * k3_v;
         state.wall_velocity = state0.wall_velocity + dt * k3_a;
-        let k4_a = self.solver.calculate_acceleration(state, p_acoustic, dp_dt, t + dt);
+        let k4_a = self
+            .solver
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + dt);
         let k4_v = state.wall_velocity;
-        
+
         // Combine
         state.radius = state0.radius + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v);
-        state.wall_velocity = state0.wall_velocity + (dt / 6.0) * (k1_a + 2.0 * k2_a + 2.0 * k3_a + k4_a);
-        
+        state.wall_velocity =
+            state0.wall_velocity + (dt / 6.0) * (k1_a + 2.0 * k2_a + 2.0 * k3_a + k4_a);
+
         // Update derived quantities
         state.update_compression(r0);
         state.update_collapse_state();
-        
+
         // Update temperature and mass transfer with smaller time step
         self.solver.update_temperature(state, dt);
         self.solver.update_mass_transfer(state, dt);
-        
+
         Ok(())
     }
-    
+
     /// Check if the state is physically stable
     fn check_stability(&self, state: &BubbleState) -> bool {
         if !self.config.monitor_stability {
             return true;
         }
-        
+
         // Check for NaN or Inf
         if !state.radius.is_finite() || !state.wall_velocity.is_finite() {
             return false;
         }
-        
+
         // Check physical bounds (but don't clamp!)
-        if state.radius < MIN_RADIUS * MIN_RADIUS_SAFETY_FACTOR || 
-           state.radius > MAX_RADIUS * MAX_RADIUS_SAFETY_FACTOR {
+        if state.radius < MIN_RADIUS * MIN_RADIUS_SAFETY_FACTOR
+            || state.radius > MAX_RADIUS * MAX_RADIUS_SAFETY_FACTOR
+        {
             return false;
         }
-        
+
         // Check for extreme velocities (approaching speed of sound)
         if state.wall_velocity.abs() > self.solver.params().c_liquid * MAX_VELOCITY_FRACTION {
             return false;
         }
-        
+
         // Check temperature bounds
         if state.temperature < MIN_TEMPERATURE || state.temperature > MAX_TEMPERATURE {
             return false;
         }
-        
+
         true
     }
-    
+
     /// Get integration statistics
     pub fn statistics(&self) -> IntegrationStatistics {
         IntegrationStatistics {
@@ -291,7 +305,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             rejection_rate: self.rejected_steps as f64 / self.total_substeps.max(1) as f64,
         }
     }
-    
+
     /// Reset statistics
     pub fn reset_statistics(&mut self) {
         self.total_substeps = 0;
@@ -330,51 +344,48 @@ mod tests {
     use super::*;
     use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
-    
     #[test]
     fn test_adaptive_integration() {
         let params = BubbleParameters::default();
         let solver = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
-        
+
         // Create a custom config with more substeps allowed
         let mut config = AdaptiveBubbleConfig::default();
         config.max_substeps = 5000; // Allow more substeps for stiff problem
         let mut integrator = AdaptiveBubbleIntegrator::new(&solver, config);
-        
+
         // Test integration with moderate acoustic forcing
         let result = integrator.integrate_adaptive(
-            &mut state,
-            1e4,  // 0.1 bar acoustic pressure (more reasonable)
-            0.0,
-            1e-6, // 1 microsecond main time step
+            &mut state, 1e4, // 0.1 bar acoustic pressure (more reasonable)
+            0.0, 1e-6, // 1 microsecond main time step
             0.0,
         );
-        
+
         assert!(result.is_ok(), "Integration failed: {:?}", result.err());
         assert!(state.radius > 0.0);
-        
+
         // Check that sub-cycling occurred
         let stats = integrator.statistics();
         assert!(stats.total_substeps > 0);
         println!("Integration stats: {:?}", stats);
     }
-    
+
     #[test]
     fn test_stability_check() {
         let params = BubbleParameters::default();
         let solver = KellerMiksisModel::new(params.clone());
         let config = AdaptiveBubbleConfig::default();
         let integrator = AdaptiveBubbleIntegrator::new(&solver, config);
-        
+
         // Test with stable state
         let mut state = BubbleState::new(&params);
         assert!(integrator.check_stability(&state));
-        
+
         // Test with NaN
         state.radius = f64::NAN;
         assert!(!integrator.check_stability(&state));
-        
+
         // Test with extreme values
         state.radius = 1e10;
         assert!(!integrator.check_stability(&state));

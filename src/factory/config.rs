@@ -42,43 +42,43 @@ impl ConfigBuilder {
             },
         }
     }
-    
+
     /// Set grid configuration
     pub fn with_grid(mut self, grid: super::GridConfig) -> Self {
         self.config.grid = grid;
         self
     }
-    
+
     /// Set medium configuration
     pub fn with_medium(mut self, medium: super::MediumConfig) -> Self {
         self.config.medium = medium;
         self
     }
-    
+
     /// Set physics configuration
     pub fn with_physics(mut self, physics: super::PhysicsConfig) -> Self {
         self.config.physics = physics;
         self
     }
-    
+
     /// Set time configuration
     pub fn with_time(mut self, time: super::TimeConfig) -> Self {
         self.config.time = time;
         self
     }
-    
+
     /// Set source configuration
     pub fn with_source(mut self, source: super::SourceConfig) -> Self {
         self.config.source = source;
         self
     }
-    
+
     /// Set validation configuration
     pub fn with_validation(mut self, validation: super::ValidationConfig) -> Self {
         self.config.validation = validation;
         self
     }
-    
+
     /// Build the final configuration
     pub fn build(self) -> KwaversResult<SimulationConfig> {
         // Validate the complete configuration

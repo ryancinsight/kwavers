@@ -4,7 +4,6 @@ use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
-
 #[derive(Debug, Clone)]
 pub struct RadicalInitiation {
     pub radical_concentration: Array3<f64>, // General radical concentration (e.g., H•, OH• precursors)
@@ -42,14 +41,16 @@ impl RadicalInitiation {
                 let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
 
                 // Cavitation-induced radical formation (e.g., water sonolysis)
-                let cav_rate = if p_val < -1.0e6 { // Threshold for cavitation collapse
+                let cav_rate = if p_val < -1.0e6 {
+                    // Threshold for cavitation collapse
                     1e-6 * alpha * (-p_val - 1.0e6) * r_val.powi(2) // Proportional to bubble surface area
                 } else {
                     0.0
                 };
 
                 // Basic light-induced radical formation (pre-photochemistry)
-                let light_rate = crate::constants::chemistry::BASE_PHOTOCHEMICAL_RATE * light_val.max(0.0);
+                let light_rate =
+                    crate::constants::chemistry::BASE_PHOTOCHEMICAL_RATE * light_val.max(0.0);
 
                 let total_rate = (cav_rate + light_rate) * dt;
                 if rand::random::<f64>() < total_rate {

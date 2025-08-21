@@ -1,41 +1,35 @@
 //! Phase Modulation Module
-//! 
+//!
 //! Implements various phase modulation techniques for ultrasound applications
 //! including phase randomization, phase shifting, and aberration correction.
-//! 
+//!
 //! Literature references:
 //! - Tang & Clement (2010): "Standing wave suppression for transcranial ultrasound"
 //! - Pernot et al. (2007): "Prediction of the skull transmission for aberration correction"
 //! - Aubry et al. (2003): "Optimal focusing by spatio-temporal inverse filter"
 //! - Liu et al. (2018): "Random phase modulation for reduction of peak pressures"
 
+pub mod aberration_correction;
+pub mod phase_encoding;
+pub mod phase_patterns;
 pub mod phase_randomization;
 pub mod phase_shifting;
-pub mod phase_encoding;
-pub mod aberration_correction;
-pub mod phase_patterns;
 
 pub use phase_randomization::{
-    PhaseRandomizer, RandomizationScheme, PhaseDistribution,
-    TemporalRandomization, SpatialRandomization
+    PhaseDistribution, PhaseRandomizer, RandomizationScheme, SpatialRandomization,
+    TemporalRandomization,
 };
 
 pub use phase_shifting::{
-    PhaseShifter, ShiftingStrategy, BeamSteering,
-    DynamicFocusing, PhaseArray
+    BeamSteering, DynamicFocusing, PhaseArray, PhaseShifter, ShiftingStrategy,
 };
 
 pub use phase_encoding::{
-    PhaseEncoder, EncodingScheme, HadamardEncoding,
-    GolayEncoding, BarkerCode, PulseCompression
+    BarkerCode, EncodingScheme, GolayEncoding, HadamardEncoding, PhaseEncoder, PulseCompression,
 };
 
 pub use aberration_correction::{
-    AberrationCorrector, CorrectionMethod, TimeReversal,
-    AdaptiveFocusing, PhaseConjugation
+    AberrationCorrector, AdaptiveFocusing, CorrectionMethod, PhaseConjugation, TimeReversal,
 };
 
-pub use phase_patterns::{
-    PhasePattern, SpiralPhase, VortexBeam,
-    BesselBeam, AiryBeam
-};
+pub use phase_patterns::{AiryBeam, BesselBeam, PhasePattern, SpiralPhase, VortexBeam};

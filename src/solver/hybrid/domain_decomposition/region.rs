@@ -1,6 +1,6 @@
 //! Domain region definitions for hybrid solver decomposition
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Type of solver optimal for a domain region
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ impl DomainRegion {
             quality_score,
         }
     }
-    
+
     /// Get the size of this region in each dimension
     pub fn size(&self) -> (usize, usize, usize) {
         (
@@ -50,17 +50,20 @@ impl DomainRegion {
             self.end.2 - self.start.2,
         )
     }
-    
+
     /// Get the total number of grid points in this region
     pub fn volume(&self) -> usize {
         let (nx, ny, nz) = self.size();
         nx * ny * nz
     }
-    
+
     /// Check if a point is within this region
     pub fn contains(&self, i: usize, j: usize, k: usize) -> bool {
-        i >= self.start.0 && i < self.end.0 &&
-        j >= self.start.1 && j < self.end.1 &&
-        k >= self.start.2 && k < self.end.2
+        i >= self.start.0
+            && i < self.end.0
+            && j >= self.start.1
+            && j < self.end.1
+            && k >= self.start.2
+            && k < self.end.2
     }
 }

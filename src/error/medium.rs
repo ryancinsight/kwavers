@@ -1,8 +1,8 @@
 //! Medium-related error types
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MediumError {
@@ -22,8 +22,16 @@ pub enum MediumError {
 impl fmt::Display for MediumError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidProperties { property, value, constraint } => {
-                write!(f, "Invalid medium property {} = {}: {}", property, value, constraint)
+            Self::InvalidProperties {
+                property,
+                value,
+                constraint,
+            } => {
+                write!(
+                    f,
+                    "Invalid medium property {} = {}: {}",
+                    property, value, constraint
+                )
             }
             Self::NotFound { medium_name } => {
                 write!(f, "Medium '{}' not found", medium_name)

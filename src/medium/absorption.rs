@@ -31,8 +31,8 @@
 
 use ndarray::{Array3, Zip};
 use num_complex::Complex;
+use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
-use serde::{Serialize, Deserialize};
 
 /// Power-law absorption model configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -50,9 +50,9 @@ pub struct PowerLawAbsorption {
 impl Default for PowerLawAbsorption {
     fn default() -> Self {
         Self {
-            alpha_0: 0.75,  // Typical for soft tissue
-            y: 1.05,        // Typical for soft tissue
-            f_ref: 1e6,     // 1 MHz reference
+            alpha_0: 0.75, // Typical for soft tissue
+            y: 1.05,       // Typical for soft tissue
+            f_ref: 1e6,    // 1 MHz reference
             dispersion_correction: true,
         }
     }
@@ -124,7 +124,7 @@ impl PowerLawAbsorption {
             },
         }
     }
-    
+
     /// Compute absorption coefficient at given frequency
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         // Convert to dB/(MHz^y cm) to Np/m
@@ -134,22 +134,22 @@ impl PowerLawAbsorption {
         // 1 dB/cm = 1.1513 Np/m
         alpha_db * 1.1513
     }
-    
+
     /// Compute phase velocity from dispersion relation
     pub fn phase_velocity(&self, frequency: f64, c0: f64) -> f64 {
         if !self.dispersion_correction {
             return c0;
         }
-        
+
         // Kramers-Kronig relation for causality
         // c(ω) = c₀ / (1 - α₀ * tan(πy/2) * ω^(y-1))
         let omega = 2.0 * PI * frequency;
         let omega_ref = 2.0 * PI * self.f_ref;
         let tan_term = (PI * self.y / 2.0).tan();
-        
+
         // Normalized frequency
         let omega_norm = omega / omega_ref;
-        
+
         // Phase velocity with dispersion
         c0 / (1.0 + self.alpha_0 * tan_term * omega_norm.powf(self.y - 1.0) / (2.0 * PI))
     }
@@ -167,7 +167,7 @@ pub enum TissueType {
     Bone,
     SoftTissue,
     Skin,
-    Custom(f64, f64),  // (alpha_0, y)
+    Custom(f64, f64), // (alpha_0, y)
 }
 
 // Manual implementation of Eq for TissueType
@@ -178,7 +178,7 @@ impl std::hash::Hash for TissueType {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         use std::mem::discriminant;
         discriminant(self).hash(state);
-        
+
         // For Custom variant, hash the bit representation of the floats
         if let TissueType::Custom(a, b) = self {
             a.to_bits().hash(state);
@@ -208,7 +208,7 @@ impl FractionalLaplacian {
         // Convert absorption coefficient to appropriate units
         // α₀ in dB/(MHz^y cm) to absorption coefficient for fractional Laplacian
         let alpha_coeff = absorption.alpha_0 * 1.1513e-2 / (2.0 * c0);
-        
+
         Self {
             y: absorption.y,
             alpha_coeff,
@@ -216,7 +216,7 @@ impl FractionalLaplacian {
             use_tan_correction: absorption.dispersion_correction,
         }
     }
-    
+
     /// Apply fractional Laplacian absorption in k-space
     ///
     /// This implements the absorption-dispersion term:
@@ -234,34 +234,32 @@ impl FractionalLaplacian {
         } else {
             0.0
         };
-        
-        Zip::from(field_k)
-            .and(k_squared)
-            .for_each(|f, &k2| {
-                if k2 > 0.0 {
-                    // Fractional power of k²
-                    let k_frac = k2.powf(self.y / 2.0);
-                    
-                    // Absorption term
-                    let absorption = 2.0 * self.alpha_coeff * self.c0.powf(self.y - 1.0) * k_frac;
-                    
-                    // Dispersion term (imaginary part for phase shift)
-                    let dispersion = if self.use_tan_correction {
-                        absorption * tan_factor
-                    } else {
-                        0.0
-                    };
-                    
-                    // Apply absorption and dispersion
-                    // exp(-absorption*dt) ≈ 1 - absorption*dt for small dt
-                    let decay = (-absorption * dt).exp();
-                    let phase = dispersion * dt;
-                    
-                    *f *= Complex::new(decay * phase.cos(), -decay * phase.sin());
-                }
-            });
+
+        Zip::from(field_k).and(k_squared).for_each(|f, &k2| {
+            if k2 > 0.0 {
+                // Fractional power of k²
+                let k_frac = k2.powf(self.y / 2.0);
+
+                // Absorption term
+                let absorption = 2.0 * self.alpha_coeff * self.c0.powf(self.y - 1.0) * k_frac;
+
+                // Dispersion term (imaginary part for phase shift)
+                let dispersion = if self.use_tan_correction {
+                    absorption * tan_factor
+                } else {
+                    0.0
+                };
+
+                // Apply absorption and dispersion
+                // exp(-absorption*dt) ≈ 1 - absorption*dt for small dt
+                let decay = (-absorption * dt).exp();
+                let phase = dispersion * dt;
+
+                *f *= Complex::new(decay * phase.cos(), -decay * phase.sin());
+            }
+        });
     }
-    
+
     /// Compute absorption loss for a field
     pub fn compute_absorption_loss(
         &self,
@@ -270,11 +268,11 @@ impl FractionalLaplacian {
         frequency: f64,
     ) -> Array3<f64> {
         let mut loss = Array3::zeros(field.raw_dim());
-        
+
         // Power-law absorption coefficient at this frequency
         let f_mhz = frequency / 1e6;
         let alpha = self.alpha_coeff * 2.0 * self.c0 * f_mhz.powf(self.y);
-        
+
         Zip::from(&mut loss)
             .and(field)
             .and(k_squared)
@@ -285,7 +283,7 @@ impl FractionalLaplacian {
                     *l = -alpha * k_frac * f;
                 }
             });
-        
+
         loss
     }
 }
@@ -326,13 +324,13 @@ impl AcousticDiffusivity {
             shear_viscosity: 1.002e-3,
             bulk_viscosity: 2.81e-3,
             thermal_conductivity: 0.598,
-            gamma: 1.0,  // Nearly incompressible
+            gamma: 1.0, // Nearly incompressible
             cp: 4182.0,
             rho0: 998.2,
             c0: 1482.0,
         }
     }
-    
+
     /// Create acoustic diffusivity for soft tissue
     pub fn soft_tissue() -> Self {
         Self {
@@ -345,26 +343,23 @@ impl AcousticDiffusivity {
             c0: 1540.0,
         }
     }
-    
+
     /// Compute total acoustic diffusivity coefficient
     pub fn total_diffusivity(&self) -> f64 {
         let viscous_term = (4.0 / 3.0) * self.shear_viscosity + self.bulk_viscosity;
         let thermal_term = self.thermal_conductivity * (self.gamma - 1.0) / self.cp;
-        
+
         (2.0 / (self.rho0 * self.c0.powi(3))) * (viscous_term + thermal_term)
     }
-    
+
     /// Apply diffusivity term in Kuznetsov equation
     ///
     /// This implements the term: -(δ/c₀⁴)∂³p/∂t³
-    pub fn apply_diffusivity(
-        &self,
-        d3p_dt3: &Array3<f64>,
-    ) -> Array3<f64> {
+    pub fn apply_diffusivity(&self, d3p_dt3: &Array3<f64>) -> Array3<f64> {
         let delta = self.total_diffusivity();
         let c0_4 = self.c0.powi(4);
         let coefficient = -delta / c0_4;
-        
+
         d3p_dt3.mapv(|val| coefficient * val)
     }
 }
@@ -384,16 +379,13 @@ pub fn apply_power_law_absorption(
 }
 
 /// Compute tissue-specific absorption coefficient
-pub fn tissue_specific_absorption(
-    tissue_type: TissueType,
-    frequency: f64,
-) -> f64 {
+pub fn tissue_specific_absorption(tissue_type: TissueType, frequency: f64) -> f64 {
     let absorption = PowerLawAbsorption::for_tissue(tissue_type);
     absorption.absorption_at_frequency(frequency)
 }
 
 /// Tissue-specific absorption with optional nonlinear effects
-/// 
+///
 /// This function extends the basic absorption model to include
 /// pressure-dependent nonlinear absorption effects, which are
 /// important for high-intensity focused ultrasound (HIFU) applications.
@@ -405,16 +397,16 @@ pub fn tissue_specific_absorption_nonlinear(
     // Get base linear absorption
     let absorption = PowerLawAbsorption::for_tissue(tissue_type);
     let base_absorption = absorption.absorption_at_frequency(frequency);
-    
+
     // Apply nonlinear correction if pressure is available
     if let Some(p) = pressure {
         // Nonlinear absorption increases with pressure amplitude
         // This is a simplified model; real tissue behavior is more complex
         // Reference: Duck, F.A. (1990) Physical Properties of Tissue
-        
+
         // Normalize pressure (typical HIFU pressures are 1-10 MPa)
         let p_normalized = p.abs() / 1e6; // Convert to MPa
-        
+
         // Nonlinear factor: increases absorption by up to 50% at 10 MPa
         // This is tissue-dependent; some tissues show more nonlinearity
         let nonlinear_factor = match tissue_type {
@@ -439,7 +431,7 @@ pub fn tissue_specific_absorption_nonlinear(
                 1.0 + 0.05 * p_normalized.min(10.0)
             }
         };
-        
+
         base_absorption * nonlinear_factor
     } else {
         base_absorption
@@ -448,7 +440,11 @@ pub fn tissue_specific_absorption_nonlinear(
 
 /// Helper function for computing absorption coefficient
 /// This is for backward compatibility with existing code
-pub fn absorption_coefficient(frequency: f64, _temperature: f64, _bubble_radius: Option<f64>) -> f64 {
+pub fn absorption_coefficient(
+    frequency: f64,
+    _temperature: f64,
+    _bubble_radius: Option<f64>,
+) -> f64 {
     // Default soft tissue absorption
     let absorption = PowerLawAbsorption::default();
     absorption.absorption_at_frequency(frequency)
@@ -457,7 +453,7 @@ pub fn absorption_coefficient(frequency: f64, _temperature: f64, _bubble_radius:
 /// Module for power law absorption (backward compatibility)
 pub mod power_law_absorption {
     use super::*;
-    
+
     /// Compute power-law absorption coefficient
     pub fn power_law_absorption_coefficient(frequency: f64, alpha0: f64, y: f64) -> f64 {
         let absorption = PowerLawAbsorption {
@@ -474,7 +470,7 @@ pub mod power_law_absorption {
 pub mod tissue_specific {
     use super::*;
     use std::collections::HashMap;
-    
+
     /// Tissue properties structure
     #[derive(Debug, Clone, Copy)]
     pub struct TissueProperties {
@@ -486,68 +482,74 @@ pub mod tissue_specific {
         pub lame_mu: f64,
         pub specific_heat: f64,
         pub thermal_conductivity: f64,
-        pub b_a: f64,  // nonlinearity coefficient
+        pub b_a: f64, // nonlinearity coefficient
         pub shear_sound_speed: f64,
         pub shear_viscosity_coeff: f64,
         pub bulk_viscosity_coeff: f64,
         // Additional physical properties for more accurate simulations
-        pub viscosity: f64,  // Dynamic viscosity [Pa·s]
-        pub surface_tension: f64,  // Surface tension [N/m]
-        pub thermal_expansion: f64,  // Thermal expansion coefficient [1/K]
-        pub thermal_diffusivity: f64,  // Thermal diffusivity [m²/s]
-        pub gas_diffusion_coefficient: f64,  // Gas diffusion coefficient [m²/s]
+        pub viscosity: f64,                 // Dynamic viscosity [Pa·s]
+        pub surface_tension: f64,           // Surface tension [N/m]
+        pub thermal_expansion: f64,         // Thermal expansion coefficient [1/K]
+        pub thermal_diffusivity: f64,       // Thermal diffusivity [m²/s]
+        pub gas_diffusion_coefficient: f64, // Gas diffusion coefficient [m²/s]
     }
-    
+
     use std::sync::OnceLock;
-    
+
     static TISSUE_DB: OnceLock<HashMap<TissueType, TissueProperties>> = OnceLock::new();
-    
+
     /// Get tissue database
     pub fn tissue_database() -> &'static HashMap<TissueType, TissueProperties> {
         TISSUE_DB.get_or_init(|| {
             let mut db = HashMap::new();
-        
-        db.insert(TissueType::SoftTissue, TissueProperties {
-            density: 1050.0,
-            sound_speed: 1540.0,
-            alpha0: 0.75,
-            delta: 1.05,
-            lame_lambda: 2.28e9,
-            lame_mu: 1.0e4,
-            specific_heat: 3600.0,  // J/kg·K
-            thermal_conductivity: 0.52,  // W/m·K
-            b_a: 6.0,  // typical for soft tissue
-            shear_sound_speed: 3.08,  // m/s (calculated from lame_mu/density)
-            shear_viscosity_coeff: 0.0,  // Pa·s
-            bulk_viscosity_coeff: 0.0,  // Pa·s
-            viscosity: 0.001,  // Pa·s (similar to water)
-            surface_tension: 0.045,  // N/m (tissue-fluid interface)
-            thermal_expansion: 3.0e-4,  // 1/K
-            thermal_diffusivity: 1.4e-7,  // m²/s
-            gas_diffusion_coefficient: 2.0e-9,  // m²/s
-        });
-        
-        db.insert(TissueType::Skin, TissueProperties {
-            density: 1100.0,
-            sound_speed: 1600.0,
-            alpha0: 2.1,
-            delta: 1.75,
-            lame_lambda: 2.5e9,
-            lame_mu: 2.0e4,
-            specific_heat: 3700.0,  // J/kg·K
-            thermal_conductivity: 0.5,  // W/m·K
-            b_a: 1.0,  // typical for skin
-            shear_sound_speed: 1.5,  // m/s (calculated from lame_mu/density)
-            shear_viscosity_coeff: 1.0e-3,  // Pa·s
-            bulk_viscosity_coeff: 1.0e-3,  // Pa·s
-            viscosity: 0.0015,  // Pa·s (slightly higher than soft tissue)
-            surface_tension: 0.05,  // N/m
-            thermal_expansion: 2.5e-4,  // 1/K
-            thermal_diffusivity: 1.3e-7,  // m²/s
-            gas_diffusion_coefficient: 1.8e-9,  // m²/s
-        });
-        
-        db
+
+            db.insert(
+                TissueType::SoftTissue,
+                TissueProperties {
+                    density: 1050.0,
+                    sound_speed: 1540.0,
+                    alpha0: 0.75,
+                    delta: 1.05,
+                    lame_lambda: 2.28e9,
+                    lame_mu: 1.0e4,
+                    specific_heat: 3600.0,             // J/kg·K
+                    thermal_conductivity: 0.52,        // W/m·K
+                    b_a: 6.0,                          // typical for soft tissue
+                    shear_sound_speed: 3.08,           // m/s (calculated from lame_mu/density)
+                    shear_viscosity_coeff: 0.0,        // Pa·s
+                    bulk_viscosity_coeff: 0.0,         // Pa·s
+                    viscosity: 0.001,                  // Pa·s (similar to water)
+                    surface_tension: 0.045,            // N/m (tissue-fluid interface)
+                    thermal_expansion: 3.0e-4,         // 1/K
+                    thermal_diffusivity: 1.4e-7,       // m²/s
+                    gas_diffusion_coefficient: 2.0e-9, // m²/s
+                },
+            );
+
+            db.insert(
+                TissueType::Skin,
+                TissueProperties {
+                    density: 1100.0,
+                    sound_speed: 1600.0,
+                    alpha0: 2.1,
+                    delta: 1.75,
+                    lame_lambda: 2.5e9,
+                    lame_mu: 2.0e4,
+                    specific_heat: 3700.0,             // J/kg·K
+                    thermal_conductivity: 0.5,         // W/m·K
+                    b_a: 1.0,                          // typical for skin
+                    shear_sound_speed: 1.5,            // m/s (calculated from lame_mu/density)
+                    shear_viscosity_coeff: 1.0e-3,     // Pa·s
+                    bulk_viscosity_coeff: 1.0e-3,      // Pa·s
+                    viscosity: 0.0015,                 // Pa·s (slightly higher than soft tissue)
+                    surface_tension: 0.05,             // N/m
+                    thermal_expansion: 2.5e-4,         // 1/K
+                    thermal_diffusivity: 1.3e-7,       // m²/s
+                    gas_diffusion_coefficient: 1.8e-9, // m²/s
+                },
+            );
+
+            db
         })
     }
 }
@@ -560,40 +562,40 @@ pub use self::FractionalLaplacian as fractional_derivative;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_power_law_absorption() {
         let absorption = PowerLawAbsorption::for_tissue(TissueType::Muscle);
-        
+
         // Test at 1 MHz
         let alpha_1mhz = absorption.absorption_at_frequency(1e6);
         assert!(alpha_1mhz > 0.0);
-        
+
         // Test frequency dependence
         let alpha_2mhz = absorption.absorption_at_frequency(2e6);
         let ratio = alpha_2mhz / alpha_1mhz;
         assert!((ratio - 2.0_f64.powf(absorption.y)).abs() < 0.01);
     }
-    
+
     #[test]
     fn test_acoustic_diffusivity() {
         let diffusivity = AcousticDiffusivity::water_20c();
         let delta = diffusivity.total_diffusivity();
-        
+
         // Check that diffusivity is positive and reasonable
         assert!(delta > 0.0);
-        assert!(delta < 1e-6);  // Should be small for water
+        assert!(delta < 1e-6); // Should be small for water
     }
-    
+
     #[test]
     fn test_phase_velocity_dispersion() {
         let absorption = PowerLawAbsorption::default();
         let c0 = 1500.0;
-        
+
         // Phase velocity should change with frequency due to dispersion
         let c_1mhz = absorption.phase_velocity(1e6, c0);
         let c_5mhz = absorption.phase_velocity(5e6, c0);
-        
+
         assert!(c_1mhz != c_5mhz);
         // Higher frequencies typically travel faster in dispersive media
         assert!(c_5mhz > c_1mhz);

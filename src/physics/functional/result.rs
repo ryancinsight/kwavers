@@ -175,22 +175,19 @@ where
     F: FnMut() -> Result<T, E>,
 {
     let mut last_error = None;
-    
+
     for _ in 0..max_attempts {
         match operation() {
             Ok(value) => return Ok(value),
             Err(error) => last_error = Some(error),
         }
     }
-    
+
     Err(last_error.expect("Should have at least one error after retries"))
 }
 
 /// Timeout wrapper for operations (conceptual - would need async for real implementation)
-pub fn with_fallback<T, E, F, G>(
-    primary: F,
-    fallback: G,
-) -> impl Fn() -> Result<T, E>
+pub fn with_fallback<T, E, F, G>(primary: F, fallback: G) -> impl Fn() -> Result<T, E>
 where
     F: Fn() -> Result<T, E>,
     G: Fn() -> Result<T, E>,

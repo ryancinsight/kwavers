@@ -2,15 +2,15 @@
 
 pub mod adaptive_beamforming;
 pub mod beamforming;
-pub mod passive_acoustic_mapping;
-pub mod localization; // NEW: Multi-lateration localization system
+pub mod localization;
+pub mod passive_acoustic_mapping; // NEW: Multi-lateration localization system
 
-pub use passive_acoustic_mapping::{
-    PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod
-};
 pub use localization::{
-    MultiLaterationSolver, SensorArray, LocalizationResult,
-    Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry
+    ArrayGeometry as LocalizationArrayGeometry, LocalizationResult, MultiLaterationSolver,
+    Sensor as LocalizationSensor, SensorArray,
+};
+pub use passive_acoustic_mapping::{
+    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin,
 };
 
 use crate::grid::Grid;
@@ -35,17 +35,17 @@ impl SensorConfig {
             record_light: true,
         }
     }
-    
+
     pub fn with_positions(mut self, positions: Vec<(f64, f64, f64)>) -> Self {
         self.positions = positions;
         self
     }
-    
+
     pub fn with_pressure_recording(mut self, record: bool) -> Self {
         self.record_pressure = record;
         self
     }
-    
+
     pub fn with_light_recording(mut self, record: bool) -> Self {
         self.record_light = record;
         self
@@ -100,24 +100,30 @@ impl SensorData {
             sensors: Vec::new(),
         }
     }
-    
+
     /// Check if sensor data is empty
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
-    
+
     /// Get sensor configurations
     pub fn sensors(&self) -> &[SensorInfo] {
         &self.sensors
     }
-    
+
     /// Get data iterator
     pub fn data_iter(&self) -> impl Iterator<Item = (&usize, &Vec<f64>)> {
         self.data.iter()
     }
-    
+
     /// Add sensor data
-    pub fn add_sensor_data(&mut self, sensor_id: usize, position: [usize; 3], position_meters: [f64; 3], data: Vec<f64>) {
+    pub fn add_sensor_data(
+        &mut self,
+        sensor_id: usize,
+        position: [usize; 3],
+        position_meters: [f64; 3],
+        data: Vec<f64>,
+    ) {
         self.data.insert(sensor_id, data);
         self.sensors.push(SensorInfo {
             id: sensor_id,
@@ -142,16 +148,16 @@ pub struct SensorDataIterator<'a> {
 
 impl<'a> Iterator for SensorDataIterator<'a> {
     type Item = (&'a SensorInfo, &'a Vec<f64>);
-    
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.sensors.len() {
             return None;
         }
-        
+
         let sensor = self.sensors[self.current];
         let data = self.data.data.get(&sensor.id)?;
         self.current += 1;
-        
+
         Some((sensor, data))
     }
 }
@@ -167,32 +173,33 @@ impl SensorData {
             current: 0,
         }
     }
-    
+
     /// Apply a transformation to all sensor data
     pub fn map_data<F>(&self, f: F) -> HashMap<usize, Vec<f64>>
     where
         F: Fn(&Vec<f64>) -> Vec<f64>,
     {
-        self.data.iter()
-            .map(|(id, data)| (*id, f(data)))
-            .collect()
+        self.data.iter().map(|(id, data)| (*id, f(data))).collect()
     }
-    
+
     /// Filter sensors based on a predicate
     pub fn filter_sensors<F>(&self, predicate: F) -> Vec<&SensorInfo>
     where
         F: Fn(&SensorInfo) -> bool,
     {
-        self.sensors.iter()
+        self.sensors
+            .iter()
             .filter(|sensor| predicate(sensor))
             .collect()
     }
-    
+
     /// Compute statistics for each sensor using iterator combinators
     pub fn compute_statistics(&self) -> HashMap<usize, SensorStatistics> {
-        self.data.iter()
+        self.data
+            .iter()
             .map(|(id, data)| {
-                let stats = data.iter()
+                let stats = data
+                    .iter()
                     .fold(SensorStatisticsAccumulator::new(), |acc, &val| {
                         acc.update(val)
                     })
@@ -201,33 +208,29 @@ impl SensorData {
             })
             .collect()
     }
-    
+
     /// Find sensors with data exceeding a threshold
     pub fn sensors_exceeding_threshold(&self, threshold: f64) -> Vec<usize> {
-        self.data.iter()
-            .filter_map(|(id, data)| {
-                data.iter()
-                    .any(|&val| val > threshold)
-                    .then_some(*id)
-            })
+        self.data
+            .iter()
+            .filter_map(|(id, data)| data.iter().any(|&val| val > threshold).then_some(*id))
             .collect()
     }
-    
+
     /// Apply windowed processing to sensor data
     pub fn windowed_processing<F, T>(&self, window_size: usize, f: F) -> HashMap<usize, Vec<T>>
     where
         F: Fn(&[f64]) -> T,
     {
-        self.data.iter()
+        self.data
+            .iter()
             .map(|(id, data)| {
-                let processed: Vec<T> = data.windows(window_size)
-                    .map(&f)
-                    .collect();
+                let processed: Vec<T> = data.windows(window_size).map(&f).collect();
                 (*id, processed)
             })
             .collect()
     }
-    
+
     /// Parallel processing of sensor data using rayon
     pub fn par_process<F, T>(&self, f: F) -> HashMap<usize, T>
     where
@@ -235,29 +238,28 @@ impl SensorData {
         T: Send,
     {
         use rayon::prelude::*;
-        
-        self.data.par_iter()
+
+        self.data
+            .par_iter()
             .map(|(id, data)| (*id, f(data)))
             .collect()
     }
-    
+
     /// Combine data from multiple sensors using a reduction operation
     pub fn reduce_all<F, T>(&self, init: T, f: F) -> T
     where
         F: Fn(T, &Vec<f64>) -> T,
     {
-        self.data.values()
-            .fold(init, f)
+        self.data.values().fold(init, f)
     }
-    
+
     /// Create a lazy iterator that applies transformations on demand
     pub fn lazy_transform<'a, F, T>(&'a self, f: F) -> impl Iterator<Item = (usize, T)> + 'a
     where
         F: Fn(&Vec<f64>) -> T + 'a,
         T: 'a,
     {
-        self.data.iter()
-            .map(move |(id, data)| (*id, f(data)))
+        self.data.iter().map(move |(id, data)| (*id, f(data)))
     }
 }
 
@@ -287,7 +289,7 @@ impl SensorStatisticsAccumulator {
             max: f64::NEG_INFINITY,
         }
     }
-    
+
     fn update(self, value: f64) -> Self {
         Self {
             sum: self.sum + value,
@@ -296,11 +298,11 @@ impl SensorStatisticsAccumulator {
             max: self.max.max(value),
         }
     }
-    
+
     fn finalize(self, count: usize) -> SensorStatistics {
         let mean = self.sum / count as f64;
         let variance = (self.sum_sq / count as f64) - mean * mean;
-        
+
         SensorStatistics {
             mean,
             variance,
@@ -311,8 +313,6 @@ impl SensorStatisticsAccumulator {
         }
     }
 }
-
-
 
 impl Sensor {
     /// Creates a new sensor with positions in meters, converted to grid indices.
@@ -350,12 +350,12 @@ impl Sensor {
             grid: grid.clone(),
         }
     }
-    
+
     /// Creates a single point sensor at the specified coordinates
     pub fn point(x: f64, y: f64, z: f64) -> SensorConfig {
         SensorConfig::new().with_positions(vec![(x, y, z)])
     }
-    
+
     /// Creates a sensor from configuration
     pub fn from_config(grid: &Grid, time: &Time, config: &SensorConfig) -> Self {
         Self::new(grid, time, &config.positions)

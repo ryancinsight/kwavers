@@ -1,11 +1,11 @@
 //! Nonlinear acoustics validation tests
-//! 
+//!
 //! Reference: Hamilton & Blackstock (1998) - "Nonlinear Acoustics"
 
-use ndarray::Array3;
 use crate::grid::Grid;
-use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
 use crate::physics::mechanics::acoustic_wave::kuznetsov::config::KuznetsovConfig;
+use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 // Nonlinearity parameters
@@ -23,62 +23,65 @@ mod tests {
         let nx = 256;
         let dx = 1e-4;
         let frequency = 1e6; // 1 MHz
-        
+
         let config = KuznetsovConfig {
             nonlinearity: BETA_WATER,
             attenuation_alpha: ATTENUATION_WATER,
             attenuation_power: 2.0,
             reference_frequency: frequency,
         };
-        
+
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
         let mut solver = KuznetsovWave::new(config, &grid);
-        
+
         // Initialize sinusoidal wave
         let wavelength = 1500.0 / frequency;
         let k = 2.0 * PI / wavelength;
         let amplitude = 1e6; // 1 MPa
-        
+
         let mut pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
             let x = i as f64 * dx;
             pressure[[i, 0, 0]] = amplitude * (k * x).sin();
         }
-        
+
         // Propagate to develop harmonics
         let steps = 100;
         for _ in 0..steps {
             solver.step(&mut pressure);
         }
-        
+
         // FFT to extract harmonics
-        use rustfft::{FftPlanner, num_complex::Complex};
+        use rustfft::{num_complex::Complex, FftPlanner};
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(nx);
-        
-        let mut spectrum: Vec<Complex<f64>> = pressure.iter()
-            .map(|&p| Complex::new(p, 0.0))
-            .collect();
-        
+
+        let mut spectrum: Vec<Complex<f64>> =
+            pressure.iter().map(|&p| Complex::new(p, 0.0)).collect();
+
         fft.process(&mut spectrum);
-        
+
         // Find fundamental and second harmonic peaks
         let fundamental_idx = (frequency * nx as f64 * dx / 1500.0) as usize;
         let second_harmonic_idx = 2 * fundamental_idx;
-        
+
         let fundamental_amp = spectrum[fundamental_idx].norm();
         let second_harmonic_amp = spectrum[second_harmonic_idx].norm();
-        
+
         // Theoretical ratio from Blackstock
         let propagation_distance = steps as f64 * dx;
         let shock_distance = 1500.0 / (BETA_WATER * k * amplitude);
         let sigma = propagation_distance / shock_distance;
-        
+
         let expected_ratio = sigma / 2.0; // Linear approximation for small sigma
         let actual_ratio = second_harmonic_amp / fundamental_amp;
-        
+
         let error = (actual_ratio - expected_ratio).abs() / expected_ratio;
-        assert!(error < 0.2, "Second harmonic generation error: {:.2}%", error * 100.0);
+        assert!(
+            error < 0.2,
+            "Second harmonic generation error: {:.2}%",
+            error * 100.0
+        );
     }
 
     #[test]
@@ -88,47 +91,51 @@ mod tests {
         let dx = 1e-4;
         let frequency = 2e6;
         let amplitude = 2e6; // 2 MPa
-        
+
         let config = KuznetsovConfig {
             nonlinearity: BETA_WATER,
             attenuation_alpha: 0.0, // No attenuation for cleaner shock
             attenuation_power: 2.0,
             reference_frequency: frequency,
         };
-        
+
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
         let mut solver = KuznetsovWave::new(config, &grid);
-        
+
         // Initialize sine wave
         let wavelength = 1500.0 / frequency;
         let k = 2.0 * PI / wavelength;
-        
+
         let mut pressure = Array3::zeros((nx, 1, 1));
-        for i in 0..nx/4 {
+        for i in 0..nx / 4 {
             let x = i as f64 * dx;
             pressure[[i, 0, 0]] = amplitude * (k * x).sin();
         }
-        
+
         // Theoretical shock distance (Blackstock Eq. 4.23)
         let shock_distance = 1500.0 / (BETA_WATER * k * amplitude);
         let steps_to_shock = (shock_distance / dx) as usize;
-        
+
         // Propagate to near shock formation
         for _ in 0..(steps_to_shock as f64 * 0.9) as usize {
             solver.step(&mut pressure);
         }
-        
+
         // Check for steepening (increased gradient)
         let mut max_gradient = 0.0;
-        for i in 1..nx-1 {
-            let gradient = (pressure[[i+1, 0, 0]] - pressure[[i-1, 0, 0]]).abs() / (2.0 * dx);
+        for i in 1..nx - 1 {
+            let gradient = (pressure[[i + 1, 0, 0]] - pressure[[i - 1, 0, 0]]).abs() / (2.0 * dx);
             max_gradient = max_gradient.max(gradient);
         }
-        
+
         // Gradient should be significantly increased near shock
         let initial_gradient = amplitude * k;
         let steepening_factor = max_gradient / initial_gradient;
-        
-        assert!(steepening_factor > 5.0, "Insufficient shock steepening: {:.2}x", steepening_factor);
+
+        assert!(
+            steepening_factor > 5.0,
+            "Insufficient shock steepening: {:.2}x",
+            steepening_factor
+        );
     }
 }

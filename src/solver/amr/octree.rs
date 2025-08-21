@@ -1,6 +1,6 @@
 // src/solver/amr/octree.rs
 //! Octree data structure for 3D adaptive mesh refinement
-//! 
+//!
 //! Implements an efficient octree for spatial hierarchy with:
 //! - O(log n) insertion and lookup
 //! - Memory-efficient storage
@@ -32,17 +32,17 @@ impl OctreeNode {
     pub fn is_leaf(&self) -> bool {
         self.children.is_none()
     }
-    
+
     /// Get the refinement level
     pub fn level(&self) -> i32 {
         self.level
     }
-    
+
     /// Get node bounds
     pub fn bounds(&self) -> ((usize, usize, usize), (usize, usize, usize)) {
         (self.bounds_min, self.bounds_max)
     }
-    
+
     /// Get node center coordinates
     pub fn center(&self) -> (usize, usize, usize) {
         (
@@ -51,12 +51,12 @@ impl OctreeNode {
             (self.bounds_min.2 + self.bounds_max.2) / 2,
         )
     }
-    
+
     /// Get children array if they exist
     pub fn children(&self) -> Option<&[usize; 8]> {
         self.children.as_ref()
     }
-    
+
     /// Get iterator over child indices if they exist
     pub fn children_indices(&self) -> impl Iterator<Item = usize> + '_ {
         self.children
@@ -65,12 +65,12 @@ impl OctreeNode {
             .into_iter()
             .flatten()
     }
-    
+
     /// Check if node has children
     pub fn has_children(&self) -> bool {
         self.children.is_some()
     }
-    
+
     /// Get child count
     pub fn child_count(&self) -> usize {
         self.children.as_ref().map_or(0, |c| c.len())
@@ -86,7 +86,6 @@ impl Default for OctreeNode {
             bounds_max: (0, 0, 0),
             parent: None,
             children: None,
-
         }
     }
 }
@@ -127,13 +126,13 @@ impl Octree {
             free_nodes: Vec::new(),
             inactive_nodes: 0,
         };
-        
+
         // Initialize with root node
         octree.create_root();
-        
+
         octree
     }
-    
+
     /// Create the root node covering entire domain
     fn create_root(&mut self) {
         let root = OctreeNode {
@@ -143,18 +142,17 @@ impl Octree {
             bounds_max: self.base_dims,
             parent: None,
             children: None,
-
         };
-        
+
         self.nodes.push(root);
         self.coord_to_node.insert((0, 0, 0), 0);
     }
-    
+
     /// Check if cell coordinates are valid
     pub fn is_valid_cell(&self, i: usize, j: usize, k: usize) -> bool {
         i < self.base_dims.0 && j < self.base_dims.1 && k < self.base_dims.2
     }
-    
+
     /// Get the refinement level of a cell
     pub fn get_level(&self, i: usize, j: usize, k: usize) -> usize {
         if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
@@ -163,7 +161,7 @@ impl Octree {
             0
         }
     }
-    
+
     /// Get parent cell coordinates
     pub fn get_parent(&self, i: usize, j: usize, k: usize) -> Option<(usize, usize, usize)> {
         if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
@@ -177,22 +175,24 @@ impl Octree {
             None
         }
     }
-    
+
     /// Get child nodes of a given node
     pub fn get_children(&self, node_idx: usize) -> impl Iterator<Item = &OctreeNode> + '_ {
-        self.nodes.get(node_idx)
+        self.nodes
+            .get(node_idx)
             .and_then(|node| node.children.as_ref())
             .map(|children| children.iter())
             .into_iter()
             .flatten()
             .filter_map(move |&child_idx| self.nodes.get(child_idx))
     }
-    
+
     /// Get child node indices of a given node
     pub fn get_children_indices(&self, node_idx: usize) -> Vec<usize> {
         if let Some(node) = self.nodes.get(node_idx) {
             if let Some(children) = &node.children {
-                children.iter()
+                children
+                    .iter()
                     .copied()
                     .filter(|&idx| idx < self.nodes.len())
                     .collect()
@@ -203,64 +203,65 @@ impl Octree {
             Vec::new()
         }
     }
-    
+
     /// Iterate over all leaf nodes
     pub fn leaf_nodes(&self) -> impl Iterator<Item = &OctreeNode> + '_ {
-        self.nodes.iter()
-            .filter(|node| node.is_leaf())
+        self.nodes.iter().filter(|node| node.is_leaf())
     }
-    
+
     /// Iterate over all active nodes at a given level
     pub fn nodes_at_level(&self, level: usize) -> impl Iterator<Item = &OctreeNode> + '_ {
-        self.nodes.iter()
+        self.nodes
+            .iter()
             .filter(move |node| node.level as usize == level)
     }
-    
+
     /// Count active nodes
     pub fn active_node_count(&self) -> usize {
-        self.nodes.iter()
-            .filter(|node| node.is_leaf())
-            .count()
+        self.nodes.iter().filter(|node| node.is_leaf()).count()
     }
-    
+
     /// Get children cell coordinates
     pub fn get_children_coords(&self, i: usize, j: usize, k: usize) -> Vec<(usize, usize, usize)> {
-        self.coord_to_node.get(&(i, j, k))
+        self.coord_to_node
+            .get(&(i, j, k))
             .and_then(|&node_idx| self.nodes.get(node_idx))
             .and_then(|node| node.children.as_ref())
             .map(|children| {
-                children.iter()
+                children
+                    .iter()
                     .filter_map(|&child_idx| {
-                        self.nodes.get(child_idx)
-                            .map(|child| child.bounds_min)
+                        self.nodes.get(child_idx).map(|child| child.bounds_min)
                     })
                     .collect()
             })
             .unwrap_or_default()
     }
-    
+
     /// Refine a cell by creating 8 children
     pub fn refine_cell(&mut self, i: usize, j: usize, k: usize) -> KwaversResult<bool> {
         let node_idx = match self.coord_to_node.get(&(i, j, k)) {
             Some(&idx) => idx,
             None => return Ok(false),
         };
-        
+
         // Check if already refined or at max level
-        if self.nodes[node_idx].children.is_some() || self.nodes[node_idx].level >= self.max_level as i32 {
+        if self.nodes[node_idx].children.is_some()
+            || self.nodes[node_idx].level >= self.max_level as i32
+        {
             return Ok(false);
         }
-        
+
         // Create 8 children
         let parent = &self.nodes[node_idx];
         let level = parent.level + 1;
         let (min_i, min_j, min_k) = parent.bounds_min;
         let (max_i, max_j, max_k) = parent.bounds_max;
-        
+
         let mid_i = (min_i + max_i) / 2;
         let mid_j = (min_j + max_j) / 2;
         let mid_k = (min_k + max_k) / 2;
-        
+
         let child_bounds = [
             ((min_i, min_j, min_k), (mid_i, mid_j, mid_k)),
             ((mid_i, min_j, min_k), (max_i, mid_j, mid_k)),
@@ -271,9 +272,9 @@ impl Octree {
             ((min_i, mid_j, mid_k), (mid_i, max_j, max_k)),
             ((mid_i, mid_j, mid_k), (max_i, max_j, max_k)),
         ];
-        
+
         let mut child_indices = [0; 8];
-        
+
         for (child_num, &(bounds_min, bounds_max)) in child_bounds.iter().enumerate() {
             // Determine child index first
             let child_idx = if let Some(free_idx) = self.free_nodes.pop() {
@@ -284,7 +285,7 @@ impl Octree {
                 self.nodes.push(OctreeNode::default()); // Placeholder
                 idx
             };
-            
+
             // Now create the child with correct index
             let child = OctreeNode {
                 index: child_idx,
@@ -293,31 +294,30 @@ impl Octree {
                 bounds_max,
                 parent: Some(node_idx),
                 children: None,
-    
             };
-            
+
             // Update the node
             self.nodes[child_idx] = child;
             self.next_index += 1;
-            
+
             child_indices[child_num] = child_idx;
             self.coord_to_node.insert(bounds_min, child_idx);
         }
-        
+
         // Update parent
         self.nodes[node_idx].children = Some(child_indices);
         // Node is now internal (has children)
-        
+
         Ok(true)
     }
-    
+
     /// Coarsen a cell by removing its children
     pub fn coarsen_cell(&mut self, i: usize, j: usize, k: usize) -> KwaversResult<bool> {
         let node_idx = match self.coord_to_node.get(&(i, j, k)) {
             Some(&idx) => idx,
             None => return Ok(false),
         };
-        
+
         // Check if this node has children (is a parent)
         let parent_idx = if self.nodes[node_idx].children.is_some() {
             // This is already a parent
@@ -329,55 +329,60 @@ impl Octree {
                 None => return Ok(false), // Node is root, cannot coarsen
             }
         };
-        
+
         // Get children array
         let children = match self.nodes[parent_idx].children {
             Some(children) => children,
             None => return Ok(false),
         };
-        
+
         // Check that all children are leaves (cannot coarsen if grandchildren exist)
         for &child_idx in &children {
             if self.nodes[child_idx].children.is_some() {
                 return Ok(false); // Cannot coarsen - has grandchildren
             }
         }
-        
+
         // Check 2:1 balance constraint - ensure no neighboring cells would violate balance
         if !self.check_coarsen_balance(parent_idx) {
             return Ok(false); // Would violate 2:1 balance constraint
         }
-        
+
         // Remove children from coord mapping and mark as free
         for &child_idx in &children {
             // Get all coordinates that map to this child
             let child_node = &self.nodes[child_idx];
             let child_bounds_min = child_node.bounds_min;
             let child_bounds_max = child_node.bounds_max;
-            
+
             // Remove all coordinate mappings within child bounds
-            let coords_to_remove: Vec<_> = self.coord_to_node.keys()
+            let coords_to_remove: Vec<_> = self
+                .coord_to_node
+                .keys()
                 .filter(|&&(ci, cj, ck)| {
-                    ci >= child_bounds_min.0 && ci <= child_bounds_max.0 &&
-                    cj >= child_bounds_min.1 && cj <= child_bounds_max.1 &&
-                    ck >= child_bounds_min.2 && ck <= child_bounds_max.2 &&
-                    self.coord_to_node[&(ci, cj, ck)] == child_idx
+                    ci >= child_bounds_min.0
+                        && ci <= child_bounds_max.0
+                        && cj >= child_bounds_min.1
+                        && cj <= child_bounds_max.1
+                        && ck >= child_bounds_min.2
+                        && ck <= child_bounds_max.2
+                        && self.coord_to_node[&(ci, cj, ck)] == child_idx
                 })
                 .cloned()
                 .collect();
-            
+
             for coord in coords_to_remove {
                 self.coord_to_node.remove(&coord);
             }
-            
+
             // Add child to free list (is_active is redundant, will be removed)
             self.free_nodes.push(child_idx);
             self.inactive_nodes += 1;
         }
-        
+
         // Mark parent as leaf
         self.nodes[parent_idx].children = None;
-        
+
         // Re-add parent coordinates to mapping
         let parent_bounds_min = self.nodes[parent_idx].bounds_min;
         let parent_bounds_max = self.nodes[parent_idx].bounds_max;
@@ -388,60 +393,64 @@ impl Octree {
                 }
             }
         }
-        
+
         Ok(true)
     }
-    
+
     /// Get total number of cells in octree
     pub fn total_cells(&self) -> usize {
         self.nodes.len()
     }
-    
+
     /// Get number of base (uniform grid) cells
     pub fn base_cells(&self) -> usize {
         let (nx, ny, nz) = self.base_dims;
         nx * ny * nz
     }
-    
+
     /// Find the leaf node containing a given point
     pub fn find_leaf_node(&self, i: usize, j: usize, k: usize) -> Option<&OctreeNode> {
         // Start from root
         let mut current = &self.nodes[0];
-        
+
         // Traverse down until we find a leaf
         while let Some(children) = current.children {
             // Find which child contains the point
             let child_idx = self.get_child_index(current, i, j, k);
             current = &self.nodes[children[child_idx]];
         }
-        
+
         Some(current)
     }
-    
+
     /// Determine which child octant contains a point
     fn get_child_index(&self, node: &OctreeNode, i: usize, j: usize, k: usize) -> usize {
         let (min_i, min_j, min_k) = node.bounds_min;
         let (max_i, max_j, max_k) = node.bounds_max;
-        
+
         let mid_i = (min_i + max_i) / 2;
         let mid_j = (min_j + max_j) / 2;
         let mid_k = (min_k + max_k) / 2;
-        
+
         let mut index = 0;
-        if i >= mid_i { index |= 1; }
-        if j >= mid_j { index |= 2; }
-        if k >= mid_k { index |= 4; }
-        
+        if i >= mid_i {
+            index |= 1;
+        }
+        if j >= mid_j {
+            index |= 2;
+        }
+        if k >= mid_k {
+            index |= 4;
+        }
+
         index
     }
-    
+
     /// Get all active (leaf) nodes
     pub fn get_active_nodes(&self) -> Vec<&OctreeNode> {
-        self.nodes.iter()
-            .filter(|node| node.is_leaf())
-            .collect()
+        self.nodes.iter().filter(|node| node.is_leaf()).collect()
     }
-    
+
     /// Compact the octree to remove inactive nodes
     /// This should be called periodically to prevent memory bloat
     pub fn compact(&mut self) {
@@ -449,31 +458,33 @@ impl Octree {
         if self.inactive_nodes < self.nodes.len() / 4 {
             return;
         }
-        
+
         // Create mapping from old to new indices
         let mut index_mapping: HashMap<usize, usize> = HashMap::new();
         let mut compacted_nodes = Vec::new();
         let mut current_index = 0;
-        
+
         // Copy active nodes and build mapping
         for (old_idx, node) in self.nodes.iter().enumerate() {
-            if node.is_leaf() || (node.parent.is_some() && index_mapping.contains_key(&node.parent.unwrap())) {
+            if node.is_leaf()
+                || (node.parent.is_some() && index_mapping.contains_key(&node.parent.unwrap()))
+            {
                 let mut compacted_node = node.clone();
-                
+
                 // Update parent index
                 if let Some(parent_idx) = compacted_node.parent {
                     compacted_node.parent = index_mapping.get(&parent_idx).copied();
                 }
-                
+
                 // Update index
                 compacted_node.index = current_index;
-                
+
                 index_mapping.insert(old_idx, current_index);
                 compacted_nodes.push(compacted_node);
                 current_index += 1;
             }
         }
-        
+
         // Update children indices
         for node in &mut compacted_nodes {
             if let Some(mut children) = node.children {
@@ -485,40 +496,40 @@ impl Octree {
                 node.children = Some(children);
             }
         }
-        
+
         // Rebuild coord_to_node mapping
         self.coord_to_node.clear();
         for (idx, node) in compacted_nodes.iter().enumerate() {
             self.coord_to_node.insert(node.bounds_min, idx);
         }
-        
+
         // Update state
         self.nodes = compacted_nodes;
         self.next_index = self.nodes.len();
         self.free_nodes.clear();
         self.inactive_nodes = 0;
     }
-    
+
     /// Get memory efficiency ratio
     pub fn memory_efficiency(&self) -> f64 {
         let active_nodes = self.nodes.len() - self.inactive_nodes;
         active_nodes as f64 / self.nodes.len() as f64
     }
-    
+
     /// Get statistics about the octree structure
     pub fn stats(&self) -> OctreeStats {
         let mut level_counts = vec![0; self.max_level + 1];
         let mut active_counts = vec![0; self.max_level + 1];
-        
+
         for node in &self.nodes {
             level_counts[node.level as usize] += 1;
             if node.is_leaf() {
                 active_counts[node.level as usize] += 1;
             }
         }
-        
+
         let max_level_used = level_counts.iter().rposition(|&c| c > 0).unwrap_or(0);
-        
+
         OctreeStats {
             total_nodes: self.nodes.len(),
             active_nodes: self.nodes.iter().filter(|n| n.is_leaf()).count(),
@@ -527,12 +538,12 @@ impl Octree {
             max_level_used,
         }
     }
-    
+
     /// Get the root node
     pub fn root(&self) -> &OctreeNode {
         &self.nodes[0]
     }
-    
+
     /// Get the base resolution
     pub fn base_resolution(&self) -> (usize, usize, usize) {
         self.base_dims
@@ -557,75 +568,75 @@ pub struct OctreeStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_octree_creation() {
         let octree = Octree::new(64, 64, 64, 5);
         assert_eq!(octree.total_cells(), 1);
         assert_eq!(octree.base_cells(), 64 * 64 * 64);
     }
-    
+
     #[test]
     fn test_cell_refinement() {
         let mut octree = Octree::new(8, 8, 8, 3);
-        
+
         // Store the root node index before refinement
         let root_idx = *octree.coord_to_node.get(&(0, 0, 0)).unwrap();
-        
+
         // Refine root cell
         assert!(octree.refine_cell(0, 0, 0).unwrap());
         assert_eq!(octree.total_cells(), 9); // 1 root + 8 children
-        
+
         // After refinement, the root node should have children
         assert!(octree.nodes[root_idx].children.is_some());
         let children_indices = octree.nodes[root_idx].children.unwrap();
         assert_eq!(children_indices.len(), 8);
-        
+
         // The coordinate (0,0,0) now maps to the first child
         let new_node_at_origin = octree.coord_to_node.get(&(0, 0, 0)).unwrap();
         assert_eq!(*new_node_at_origin, children_indices[0]);
     }
-    
+
     #[test]
     fn test_cell_coarsening() {
         let mut octree = Octree::new(8, 8, 8, 3);
-        
+
         // Refine root cell
         assert!(octree.refine_cell(0, 0, 0).unwrap());
-        
+
         // After refinement, (0,0,0) maps to a child
         // We can coarsen by using any coordinate that maps to one of the children
         // The coarsen_cell function should work on any child coordinate
         assert!(octree.coarsen_cell(0, 0, 0).unwrap());
-        
+
         // After coarsening, (0,0,0) should map back to the parent
         let node_at_origin = octree.coord_to_node.get(&(0, 0, 0)).unwrap();
-        
+
         // Check that the node at (0,0,0) has no children
         assert!(octree.nodes[*node_at_origin].children.is_none());
     }
-    
+
     #[test]
     fn test_max_level_limit() {
         let mut octree = Octree::new(64, 64, 64, 2);
-        
+
         // Refine to max level
         assert!(octree.refine_cell(0, 0, 0).unwrap());
-        
+
         // After first refinement, (0,0,0) maps to a child
         // Find a child coordinate to refine further
         let child_idx = *octree.coord_to_node.get(&(0, 0, 0)).unwrap();
         let child_node = &octree.nodes[child_idx];
         assert_eq!(child_node.level, 1);
-        
+
         // Refine the child (now at level 1)
         assert!(octree.refine_cell(0, 0, 0).unwrap());
-        
+
         // Now (0,0,0) maps to a grandchild at level 2
         let grandchild_idx = *octree.coord_to_node.get(&(0, 0, 0)).unwrap();
         let grandchild_node = &octree.nodes[grandchild_idx];
         assert_eq!(grandchild_node.level, 2);
-        
+
         // Try to refine beyond max level (should fail)
         assert!(!octree.refine_cell(0, 0, 0).unwrap());
     }

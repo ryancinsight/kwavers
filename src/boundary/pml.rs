@@ -1,6 +1,6 @@
 use crate::boundary::Boundary;
+use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
-use crate::error::{KwaversResult, ConfigError};
 use log::trace;
 use ndarray::{Array3, ArrayViewMut3, Zip};
 
@@ -87,17 +87,22 @@ impl PMLConfig {
                 parameter: "thickness".to_string(),
                 value: self.thickness.to_string(),
                 constraint: "PML thickness must be > 0".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         if self.sigma_max_acoustic < 0.0 || self.sigma_max_light < 0.0 {
             return Err(ConfigError::InvalidValue {
                 parameter: "sigma_max".to_string(),
-                value: format!("acoustic: {}, light: {}", self.sigma_max_acoustic, self.sigma_max_light),
+                value: format!(
+                    "acoustic: {}, light: {}",
+                    self.sigma_max_acoustic, self.sigma_max_light
+                ),
                 constraint: "Sigma values must be >= 0".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         Ok(())
     }
 }
@@ -107,11 +112,13 @@ impl PMLBoundary {
     /// Follows SOLID principles by reducing parameter coupling
     pub fn new(config: PMLConfig) -> KwaversResult<Self> {
         config.validate()?;
-        
+
         // Create damping profiles based on configuration
-        let acoustic_profile = Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_acoustic, 2);
-        let light_profile = Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_light, 2);
-        
+        let acoustic_profile =
+            Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_acoustic, 2);
+        let light_profile =
+            Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_light, 2);
+
         Ok(Self {
             acoustic_damping_x: acoustic_profile.clone(),
             acoustic_damping_y: acoustic_profile.clone(),
@@ -123,7 +130,7 @@ impl PMLBoundary {
             light_damping_3d: None,
         })
     }
-    
+
     /// Create with default configuration
     pub fn with_defaults() -> KwaversResult<Self> {
         Self::new(PMLConfig::default())
@@ -138,42 +145,53 @@ impl PMLBoundary {
     /// * `dx` - Grid spacing
     /// * `sigma_max` - Maximum absorption coefficient
     /// * `order` - Polynomial order for profile grading
-    fn damping_profile(thickness: usize, length: usize, dx: f64, sigma_max: f64, order: usize) -> Vec<f64> {
+    fn damping_profile(
+        thickness: usize,
+        length: usize,
+        dx: f64,
+        sigma_max: f64,
+        order: usize,
+    ) -> Vec<f64> {
         let mut profile = vec![0.0; length];
-        
+
         // PML profile with exponential absorption characteristics
         // Theoretical reference sigma for reflection coefficient R
         let target_reflection: f64 = 1e-6; // -120 dB reflection
-        let reference_sigma = -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
+        let reference_sigma =
+            -((order + 1) as f64) * target_reflection.ln() / (2.0 * thickness as f64 * dx);
         let sigma_eff = sigma_max.min(reference_sigma * 2.0); // Don't exceed theoretical reference
-        
+
         // Apply PML at both domain boundaries (left/right or top/bottom)
         // Left/bottom boundary - polynomial grading
         for (i, profile_val) in profile.iter_mut().enumerate().take(thickness) {
             let normalized_distance = (thickness - i) as f64 / thickness as f64;
             let polynomial_factor = normalized_distance.powi(order as i32);
-            
+
             // Add exponential component for grazing angle absorption
             let exponential_factor = (-2.0 * normalized_distance).exp();
-            
-            *profile_val = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
+
+            *profile_val = sigma_eff
+                * polynomial_factor
+                * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
         }
-        
+
         // Right/top boundary
         (0..thickness).for_each(|i| {
             let idx = length - i - 1;
             let normalized_distance = i as f64 / thickness as f64;
             let polynomial_factor = normalized_distance.powi(order as i32);
-            
-            // Add exponential component for grazing angle absorption  
+
+            // Add exponential component for grazing angle absorption
             let exponential_factor = (-2.0 * normalized_distance).exp();
-            
-            profile[idx] = sigma_eff * polynomial_factor * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
+
+            profile[idx] = sigma_eff
+                * polynomial_factor
+                * (1.0 + PML_EXPONENTIAL_SCALING_FACTOR * exponential_factor);
         });
-        
+
         profile
     }
-    
+
     /// Applies a pre-computed damping factor to a field value
     #[inline]
     fn apply_damping(val: &mut f64, damping: f64, dx: f64) {
@@ -181,7 +199,7 @@ impl PMLBoundary {
             *val *= (-damping * dx).exp();
         }
     }
-    
+
     /// Applies a pre-computed damping factor to a complex field value
     #[inline]
     fn apply_complex_damping(val: &mut Complex<f64>, damping: f64, dx: f64) {
@@ -197,39 +215,46 @@ impl PMLBoundary {
         if self.acoustic_damping_3d.is_none() {
             trace!("Precomputing 3D acoustic damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            
+
             Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
-                *val = self.acoustic_damping_x[i] + self.acoustic_damping_y[j] + self.acoustic_damping_z[k];
+                *val = self.acoustic_damping_x[i]
+                    + self.acoustic_damping_y[j]
+                    + self.acoustic_damping_z[k];
             });
-            
+
             self.acoustic_damping_3d = Some(damping_3d);
         }
     }
-    
+
     /// Precomputes the 3D damping factors for light fields to avoid repeated calculations
     fn precompute_light_damping_3d(&mut self, grid: &Grid) {
         if self.light_damping_3d.is_none() {
             trace!("Precomputing 3D light damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            
+
             Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
                 *val = self.light_damping_x[i] + self.light_damping_y[j] + self.light_damping_z[k];
             });
-            
+
             self.light_damping_3d = Some(damping_3d);
         }
     }
 }
 
 impl Boundary for PMLBoundary {
-    fn apply_acoustic(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
+    fn apply_acoustic(
+        &mut self,
+        mut field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+    ) -> crate::KwaversResult<()> {
         trace!("Applying spatial acoustic PML at step {}", time_step);
         let dx = grid.dx;
 
         // Lazily initialize 3D damping factors if not computed yet
         self.precompute_acoustic_damping_3d(grid);
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
-        
+
         // Apply damping using precomputed factors
         Zip::from(&mut field)
             .and(damping_3d)
@@ -239,20 +264,26 @@ impl Boundary for PMLBoundary {
         Ok(())
     }
 
-    fn apply_acoustic_freq(&mut self, field: &mut Array3<Complex<f64>>, grid: &Grid, time_step: usize) -> crate::KwaversResult<()> {
-        trace!("Applying frequency domain acoustic PML at step {}", time_step);
+    fn apply_acoustic_freq(
+        &mut self,
+        field: &mut Array3<Complex<f64>>,
+        grid: &Grid,
+        time_step: usize,
+    ) -> crate::KwaversResult<()> {
+        trace!(
+            "Applying frequency domain acoustic PML at step {}",
+            time_step
+        );
         let dx = grid.dx;
 
         // Lazily initialize 3D damping factors if not computed yet
         self.precompute_acoustic_damping_3d(grid);
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
-        
+
         // Apply damping using precomputed factors
-        Zip::from(field)
-            .and(damping_3d)
-            .for_each(|val, &damping| {
-                Self::apply_complex_damping(val, damping, dx);
-            });
+        Zip::from(field).and(damping_3d).for_each(|val, &damping| {
+            Self::apply_complex_damping(val, damping, dx);
+        });
         Ok(())
     }
 
@@ -263,7 +294,7 @@ impl Boundary for PMLBoundary {
         // Lazily initialize 3D damping factors if not computed yet
         self.precompute_light_damping_3d(grid);
         let damping_3d = self.light_damping_3d.as_ref().unwrap();
-        
+
         // Apply damping using precomputed factors
         Zip::from(&mut field)
             .and(damping_3d)
@@ -276,14 +307,24 @@ impl Boundary for PMLBoundary {
 impl PMLBoundary {
     /// Apply acoustic PML with custom damping factor
     /// Follows Open/Closed Principle: Extends functionality without modifying existing code
-    pub fn apply_acoustic_with_factor(&mut self, mut field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize, damping_factor: f64) {
-        trace!("Applying acoustic PML with factor {} at step {}", damping_factor, time_step);
+    pub fn apply_acoustic_with_factor(
+        &mut self,
+        mut field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+        damping_factor: f64,
+    ) {
+        trace!(
+            "Applying acoustic PML with factor {} at step {}",
+            damping_factor,
+            time_step
+        );
         let dx = grid.dx;
 
         // Lazily initialize 3D damping factors if not computed yet
         self.precompute_acoustic_damping_3d(grid);
         let damping_3d = self.acoustic_damping_3d.as_ref().unwrap();
-        
+
         // Apply damping using precomputed factors with custom scaling
         Zip::from(&mut field)
             .and(damping_3d)

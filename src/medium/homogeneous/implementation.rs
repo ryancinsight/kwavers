@@ -39,34 +39,28 @@ pub struct HomogeneousMedium {
 
 impl HomogeneousMedium {
     /// Create a new homogeneous medium with specified properties
-    pub fn new(
-        density: f64,
-        sound_speed: f64,
-        mu_a: f64,
-        mu_s_prime: f64,
-        grid: &Grid,
-    ) -> Self {
+    pub fn new(density: f64, sound_speed: f64, mu_a: f64, mu_s_prime: f64, grid: &Grid) -> Self {
         let viscosity = 1.0e-3; // Default water viscosity
         Self {
             density,
             sound_speed,
             viscosity,
-            surface_tension: 0.0728, // Water at 20°C [N/m]
-            ambient_pressure: 101325.0, // 1 atm [Pa]
-            vapor_pressure: 2339.0, // Water at 20°C [Pa]
-            polytropic_index: 1.4, // Diatomic gas approximation
-            specific_heat: 4182.0, // Water [J/(kg·K)]
+            surface_tension: 0.0728,     // Water at 20°C [N/m]
+            ambient_pressure: 101325.0,  // 1 atm [Pa]
+            vapor_pressure: 2339.0,      // Water at 20°C [Pa]
+            polytropic_index: 1.4,       // Diatomic gas approximation
+            specific_heat: 4182.0,       // Water [J/(kg·K)]
             thermal_conductivity: 0.598, // Water at 20°C [W/(m·K)]
             shear_viscosity: viscosity,
             bulk_viscosity: 2.5 * viscosity, // Stokes' hypothesis
-            absorption_alpha: 0.0022, // Water absorption coefficient
-            absorption_power: 1.05, // Power law exponent
-            thermal_expansion: 2.07e-4, // Water at 20°C [1/K]
-            gas_diffusion: 2.0e-9, // O2 in water [m²/s]
-            nonlinearity: 5.0, // B/A parameter for water
-            optical_absorption: mu_a, // [1/m]
-            optical_scattering: mu_s_prime, // [1/m]
-            reference_frequency: 1e6, // 1 MHz
+            absorption_alpha: 0.0022,        // Water absorption coefficient
+            absorption_power: 1.05,          // Power law exponent
+            thermal_expansion: 2.07e-4,      // Water at 20°C [1/K]
+            gas_diffusion: 2.0e-9,           // O2 in water [m²/s]
+            nonlinearity: 5.0,               // B/A parameter for water
+            optical_absorption: mu_a,        // [1/m]
+            optical_scattering: mu_s_prime,  // [1/m]
+            reference_frequency: 1e6,        // 1 MHz
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
             bubble_velocity: Array3::zeros((1, 1, 1)),
@@ -127,15 +121,15 @@ impl HomogeneousMedium {
             ambient_pressure: 101325.0,
             vapor_pressure: 0.0, // Not applicable for air
             polytropic_index: 1.4,
-            specific_heat: 1005.0, // Air [J/(kg·K)]
+            specific_heat: 1005.0,        // Air [J/(kg·K)]
             thermal_conductivity: 0.0257, // Air at 20°C [W/(m·K)]
             shear_viscosity: 1.81e-5,
-            bulk_viscosity: 0.0, // Negligible for ideal gas
+            bulk_viscosity: 0.0,        // Negligible for ideal gas
             absorption_alpha: 1.84e-11, // Air absorption
             absorption_power: 2.0,
             thermal_expansion: 3.43e-3, // Air [1/K]
-            gas_diffusion: 2.0e-5, // Self-diffusion in air [m²/s]
-            nonlinearity: 0.4, // B/A for air
+            gas_diffusion: 2.0e-5,      // Self-diffusion in air [m²/s]
+            nonlinearity: 0.4,          // B/A for air
             optical_absorption: 0.0,
             optical_scattering: 0.0,
             reference_frequency: 1e6,
@@ -145,7 +139,7 @@ impl HomogeneousMedium {
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
             sound_speed_cache: Array3::from_elem((1, 1, 1), 343.0),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
-            lame_mu: 0.0, // Gas has no shear modulus
+            lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
         };
         medium
@@ -214,7 +208,14 @@ impl Medium for HomogeneousMedium {
         self.bulk_viscosity
     }
 
-    fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, grid: &Grid, frequency: f64) -> f64 {
+    fn absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        grid: &Grid,
+        frequency: f64,
+    ) -> f64 {
         // Power law absorption: α = α₀ * (f/f₀)^y
         self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
     }
@@ -310,9 +311,9 @@ mod tests {
             dz: 0.001,
             coordinates: Array3::zeros((10, 10, 10)),
         };
-        
+
         let water = HomogeneousMedium::water(&grid);
-        
+
         assert_eq!(water.density(0.0, 0.0, 0.0, &grid), 998.0);
         assert_eq!(water.sound_speed(0.0, 0.0, 0.0, &grid), 1482.0);
         assert_eq!(water.viscosity(0.0, 0.0, 0.0, &grid), 1.0e-3);
@@ -330,9 +331,9 @@ mod tests {
             dz: 0.001,
             coordinates: Array3::zeros((10, 10, 10)),
         };
-        
+
         let blood = HomogeneousMedium::blood(&grid);
-        
+
         assert_eq!(blood.density(0.0, 0.0, 0.0, &grid), 1060.0);
         assert_eq!(blood.sound_speed(0.0, 0.0, 0.0, &grid), 1570.0);
         assert_eq!(blood.viscosity(0.0, 0.0, 0.0, &grid), 3.5e-3);

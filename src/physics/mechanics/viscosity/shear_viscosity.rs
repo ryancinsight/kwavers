@@ -1,12 +1,12 @@
 // physics/mechanics/viscosity/shear_viscosity.rs
-use log::debug;
 use crate::physics::mechanics::viscosity::ViscosityModel;
+use log::debug;
 
 #[derive(Debug)]
 pub struct ShearViscosityModel {
-    base_viscosity: f64,    // Base viscosity at reference temperature (Pa·s)
-    ref_temperature: f64,   // Reference temperature (K)
-    temp_sensitivity: f64,  // Temperature sensitivity factor (1/K)
+    base_viscosity: f64,   // Base viscosity at reference temperature (Pa·s)
+    ref_temperature: f64,  // Reference temperature (K)
+    temp_sensitivity: f64, // Temperature sensitivity factor (1/K)
 }
 
 impl ShearViscosityModel {

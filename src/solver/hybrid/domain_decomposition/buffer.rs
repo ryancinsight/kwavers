@@ -1,6 +1,6 @@
 //! Buffer zone management for domain interfaces
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Buffer zones for smooth transitions between domains
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,10 +53,9 @@ impl OverlapRegion {
         domain2: usize,
         bounds: ((usize, usize, usize), (usize, usize, usize)),
     ) -> Self {
-        let size = (bounds.1.0 - bounds.0.0) *
-                   (bounds.1.1 - bounds.0.1) *
-                   (bounds.1.2 - bounds.0.2);
-        
+        let size =
+            (bounds.1 .0 - bounds.0 .0) * (bounds.1 .1 - bounds.0 .1) * (bounds.1 .2 - bounds.0 .2);
+
         Self {
             domain1,
             domain2,
@@ -65,21 +64,18 @@ impl OverlapRegion {
             weights2: vec![0.5; size],
         }
     }
-    
+
     /// Compute blending weights based on position
     pub fn compute_weights(&mut self, buffer: &BufferZones) {
         let (start, end) = self.bounds;
         let mut idx = 0;
-        
+
         for i in start.0..end.0 {
             for j in start.1..end.1 {
                 for k in start.2..end.2 {
-                    let weight = self.compute_blend_weight(
-                        i - start.0,
-                        end.0 - start.0,
-                        buffer.blend_type,
-                    );
-                    
+                    let weight =
+                        self.compute_blend_weight(i - start.0, end.0 - start.0, buffer.blend_type);
+
                     self.weights1[idx] = weight;
                     self.weights2[idx] = 1.0 - weight;
                     idx += 1;
@@ -87,11 +83,11 @@ impl OverlapRegion {
             }
         }
     }
-    
+
     /// Compute blend weight for a position
     fn compute_blend_weight(&self, pos: usize, width: usize, blend_type: BlendType) -> f64 {
         let x = pos as f64 / width as f64;
-        
+
         match blend_type {
             BlendType::Linear => x,
             BlendType::Cosine => 0.5 * (1.0 - (x * std::f64::consts::PI).cos()),

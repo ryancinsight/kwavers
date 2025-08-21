@@ -9,11 +9,11 @@
 //! - **Composable**: Modular profiling components
 //! - **Scientific**: Based on established performance models
 
-use std::time::{Duration, Instant};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use crate::grid::Grid;
 use crate::KwaversResult;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Performance profiler for comprehensive analysis
 #[derive(Debug)]
@@ -178,14 +178,19 @@ impl PerformanceProfiler {
     }
 
     /// Record a memory event
-    pub fn record_memory_event(&self, size: usize, event_type: MemoryEventType, description: Option<String>) {
+    pub fn record_memory_event(
+        &self,
+        size: usize,
+        event_type: MemoryEventType,
+        description: Option<String>,
+    ) {
         let event = MemoryEvent {
             timestamp: Instant::now(),
             size,
             event_type,
             description,
         };
-        
+
         if let Ok(mut events) = self.memory_events.lock() {
             events.push(event);
         }
@@ -221,8 +226,9 @@ impl PerformanceProfiler {
     /// Analyze timing measurements
     fn analyze_timings(&self) -> KwaversResult<HashMap<String, TimingSummary>> {
         let timings = self.timings.lock().unwrap();
-        
-        timings.iter()
+
+        timings
+            .iter()
             .map(|(name, durations)| {
                 let summary = self.calculate_timing_summary(durations);
                 Ok((name.clone(), summary))
@@ -246,19 +252,21 @@ impl PerformanceProfiler {
         let total: Duration = durations.iter().sum();
         let count = durations.len();
         let average = total / count as u32;
-        
+
         let min = durations.iter().min().copied().unwrap_or(Duration::ZERO);
         let max = durations.iter().max().copied().unwrap_or(Duration::ZERO);
-        
+
         // Calculate standard deviation using iterator
         let avg_nanos = average.as_nanos() as f64;
-        let variance = durations.iter()
+        let variance = durations
+            .iter()
             .map(|d| {
                 let diff = d.as_nanos() as f64 - avg_nanos;
                 diff * diff
             })
-            .sum::<f64>() / count as f64;
-        
+            .sum::<f64>()
+            / count as f64;
+
         let std_dev = Duration::from_nanos(variance.sqrt() as u64);
 
         TimingSummary {
@@ -274,12 +282,12 @@ impl PerformanceProfiler {
     /// Analyze memory usage
     fn analyze_memory(&self) -> KwaversResult<MemoryProfile> {
         let events = self.memory_events.lock().unwrap();
-        
+
         let mut current_usage = 0usize;
         let mut peak_usage = 0usize;
         let mut total_allocations = 0usize;
         let mut size_histogram = HashMap::new();
-        
+
         // Process events using iterator
         events.iter().for_each(|event| {
             match event.event_type {
@@ -287,7 +295,7 @@ impl PerformanceProfiler {
                     current_usage += event.size;
                     peak_usage = peak_usage.max(current_usage);
                     total_allocations += 1;
-                    
+
                     // Update histogram with power-of-2 buckets
                     let bucket = event.size.next_power_of_two();
                     *size_histogram.entry(bucket).or_insert(0) += 1;
@@ -312,30 +320,30 @@ impl PerformanceProfiler {
     /// Analyze cache behavior
     fn analyze_cache(&self) -> KwaversResult<CacheProfile> {
         let stats = self.cache_stats.lock().unwrap();
-        
+
         let l1_hit_rate = if stats.l1_hits + stats.l1_misses > 0 {
             stats.l1_hits as f64 / (stats.l1_hits + stats.l1_misses) as f64
         } else {
             0.0
         };
-        
+
         let l2_hit_rate = if stats.l2_hits + stats.l2_misses > 0 {
             stats.l2_hits as f64 / (stats.l2_hits + stats.l2_misses) as f64
         } else {
             0.0
         };
-        
+
         let l3_hit_rate = if stats.l3_hits + stats.l3_misses > 0 {
             stats.l3_hits as f64 / (stats.l3_hits + stats.l3_misses) as f64
         } else {
             0.0
         };
-        
+
         // Estimate bandwidth based on cache misses and typical cache line size
         let cache_line_size = 64; // bytes
         let total_misses = stats.l1_misses + stats.l2_misses + stats.l3_misses;
         let bytes_transferred = total_misses * cache_line_size;
-        
+
         // Default 1 second runtime for bandwidth calculation (adjusted with actual timing)
         let bandwidth_gbs = bytes_transferred as f64 / 1e9;
 
@@ -358,29 +366,30 @@ impl PerformanceProfiler {
         let flops_per_point = 14.0; // 7 adds + 7 muls
         let bytes_per_point = 16.0; // 2 doubles read/write
         let arithmetic_intensity = flops_per_point / bytes_per_point;
-        
+
         // Calculate achieved performance
         let total_points = self.grid.nx * self.grid.ny * self.grid.nz;
         let total_flops = total_points as f64 * flops_per_point;
-        
-        let compute_time = timings.values()
+
+        let compute_time = timings
+            .values()
             .filter(|t| t.count > 0)
             .map(|t| t.total.as_secs_f64())
             .sum::<f64>();
-        
+
         let achieved_gflops = if compute_time > 0.0 {
             total_flops / compute_time / 1e9
         } else {
             0.0
         };
-        
+
         // Typical peak performance for modern CPUs
         let peak_gflops = 100.0; // Adjust based on actual hardware
-        
+
         // Determine performance bound
         let roofline_compute = peak_gflops;
         let roofline_memory = cache.bandwidth_gbs * arithmetic_intensity;
-        
+
         let bound_type = if achieved_gflops < 0.9 * roofline_memory.min(roofline_compute) {
             if roofline_memory < roofline_compute {
                 PerformanceBound::MemoryBound
@@ -401,15 +410,19 @@ impl PerformanceProfiler {
     }
 
     /// Calculate grid updates per second
-    fn calculate_grid_updates_per_second(&self, timings: &HashMap<String, TimingSummary>) -> KwaversResult<f64> {
+    fn calculate_grid_updates_per_second(
+        &self,
+        timings: &HashMap<String, TimingSummary>,
+    ) -> KwaversResult<f64> {
         let total_points = self.grid.nx * self.grid.ny * self.grid.nz;
-        
+
         // Find main computation timing
-        let compute_time = timings.iter()
+        let compute_time = timings
+            .iter()
             .filter(|(name, _)| name.contains("compute") || name.contains("update"))
             .map(|(_, summary)| summary.total.as_secs_f64())
             .sum::<f64>();
-        
+
         if compute_time > 0.0 {
             Ok(total_points as f64 / compute_time)
         } else {
@@ -422,7 +435,8 @@ impl Drop for TimingScope {
     fn drop(&mut self) {
         let duration = self.start.elapsed();
         if let Ok(mut timings) = self.profiler.lock() {
-            timings.entry(self.name.clone())
+            timings
+                .entry(self.name.clone())
                 .or_insert_with(Vec::new)
                 .push(duration);
         }
@@ -433,35 +447,48 @@ impl ProfileReport {
     /// Print a formatted report
     pub fn print_summary(&self) {
         println!("\n=== Performance Profile Report ===\n");
-        
-        println!("Grid Updates/Second: {:.2}M", self.grid_updates_per_second / 1e6);
-        
+
+        println!(
+            "Grid Updates/Second: {:.2}M",
+            self.grid_updates_per_second / 1e6
+        );
+
         println!("\nTiming Summary:");
         let mut timing_entries: Vec<_> = self.timings.iter().collect();
         timing_entries.sort_by_key(|(_, summary)| std::cmp::Reverse(summary.total));
-        
+
         for (name, summary) in timing_entries.iter().take(10) {
-            println!("  {}: {:.2}ms total ({} calls, {:.2}μs avg)",
+            println!(
+                "  {}: {:.2}ms total ({} calls, {:.2}μs avg)",
                 name,
                 summary.total.as_secs_f64() * 1000.0,
                 summary.count,
                 summary.average.as_secs_f64() * 1e6
             );
         }
-        
+
         println!("\nMemory Profile:");
-        println!("  Peak Usage: {:.2} MB", self.memory.peak_usage as f64 / 1e6);
-        println!("  Current Usage: {:.2} MB", self.memory.current_usage as f64 / 1e6);
+        println!(
+            "  Peak Usage: {:.2} MB",
+            self.memory.peak_usage as f64 / 1e6
+        );
+        println!(
+            "  Current Usage: {:.2} MB",
+            self.memory.current_usage as f64 / 1e6
+        );
         println!("  Total Allocations: {}", self.memory.total_allocations);
-        
+
         println!("\nCache Profile:");
         println!("  L1 Hit Rate: {:.1}%", self.cache.l1_hit_rate * 100.0);
         println!("  L2 Hit Rate: {:.1}%", self.cache.l2_hit_rate * 100.0);
         println!("  L3 Hit Rate: {:.1}%", self.cache.l3_hit_rate * 100.0);
         println!("  Bandwidth: {:.1} GB/s", self.cache.bandwidth_gbs);
-        
+
         println!("\nRoofline Analysis:");
-        println!("  Arithmetic Intensity: {:.2} FLOP/byte", self.roofline.arithmetic_intensity);
+        println!(
+            "  Arithmetic Intensity: {:.2} FLOP/byte",
+            self.roofline.arithmetic_intensity
+        );
         println!("  Achieved: {:.1} GFLOP/s", self.roofline.achieved_gflops);
         println!("  Peak: {:.1} GFLOP/s", self.roofline.peak_gflops);
         println!("  Performance Bound: {:?}", self.roofline.bound_type);
@@ -471,39 +498,43 @@ impl ProfileReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_performance_profiler() {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let profiler = PerformanceProfiler::new(&grid);
-        
+
         // Test timing scope
         {
             let _scope = profiler.time_scope("test_operation");
             std::thread::sleep(Duration::from_millis(10));
         }
-        
+
         // Test memory event
-        profiler.record_memory_event(1024 * 1024, MemoryEventType::Allocation, Some("test allocation".to_string()));
-        
+        profiler.record_memory_event(
+            1024 * 1024,
+            MemoryEventType::Allocation,
+            Some("test allocation".to_string()),
+        );
+
         // Test cache stats
         profiler.update_cache_stats(|stats| {
             stats.l1_hits = 1000;
             stats.l1_misses = 100;
         });
-        
+
         // Generate report
         let report = profiler.generate_report().unwrap();
         assert!(report.timings.contains_key("test_operation"));
         assert_eq!(report.memory.total_allocations, 1);
         assert!(report.cache.l1_hit_rate > 0.9);
     }
-    
+
     #[test]
     fn test_timing_summary_calculation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
         let profiler = PerformanceProfiler::new(&grid);
-        
+
         let durations = vec![
             Duration::from_millis(10),
             Duration::from_millis(12),
@@ -511,7 +542,7 @@ mod tests {
             Duration::from_millis(11),
             Duration::from_millis(9),
         ];
-        
+
         let summary = profiler.calculate_timing_summary(&durations);
         assert_eq!(summary.count, 5);
         assert_eq!(summary.min, Duration::from_millis(8));

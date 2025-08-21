@@ -17,7 +17,10 @@ pub trait FieldOps {
         F: FnMut(&Self::Item) -> U;
 
     /// Filter and return iterator of matching indices (lazy evaluation)
-    fn filter_indices<'a, F>(&'a self, predicate: F) -> impl Iterator<Item = (usize, usize, usize)> + 'a
+    fn filter_indices<'a, F>(
+        &'a self,
+        predicate: F,
+    ) -> impl Iterator<Item = (usize, usize, usize)> + 'a
     where
         F: Fn(&Self::Item) -> bool + 'a;
 
@@ -71,7 +74,10 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         Array3::from_shape_fn(shape, |(i, j, k)| f(&self[[i, j, k]]))
     }
 
-    fn filter_indices<'a, F>(&'a self, predicate: F) -> impl Iterator<Item = (usize, usize, usize)> + 'a
+    fn filter_indices<'a, F>(
+        &'a self,
+        predicate: F,
+    ) -> impl Iterator<Item = (usize, usize, usize)> + 'a
     where
         F: Fn(&Self::Item) -> bool + 'a,
     {
@@ -111,29 +117,23 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         Self::Item: Sync,
     {
         let shape = self.dim();
-        let flat_results: Vec<U> = self.iter().par_bridge()
-            .map(|x| f(x))
-            .collect();
-        
-        Array3::from_shape_vec(shape, flat_results)
-            .expect("Shape mismatch in parallel map")
+        let flat_results: Vec<U> = self.iter().par_bridge().map(|x| f(x)).collect();
+
+        Array3::from_shape_vec(shape, flat_results).expect("Shape mismatch in parallel map")
     }
 
     fn find_element<F>(&self, predicate: F) -> Option<((usize, usize, usize), &Self::Item)>
     where
         F: Fn(&Self::Item) -> bool,
     {
-        self.indexed_iter()
-            .find(|(_, val)| predicate(val))
+        self.indexed_iter().find(|(_, val)| predicate(val))
     }
 
     fn count_matching<F>(&self, predicate: F) -> usize
     where
         F: Fn(&Self::Item) -> bool,
     {
-        self.iter()
-            .filter(|&val| predicate(val))
-            .count()
+        self.iter().filter(|&val| predicate(val)).count()
     }
 
     fn any<F>(&self, predicate: F) -> bool
@@ -152,11 +152,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
 }
 
 /// Compose multiple field operations efficiently
-pub fn compose_operations<T, F1, F2, U, V>(
-    field: &Array3<T>,
-    op1: F1,
-    op2: F2,
-) -> Array3<V>
+pub fn compose_operations<T, F1, F2, U, V>(field: &Array3<T>, op1: F1, op2: F2) -> Array3<V>
 where
     F1: Fn(&Array3<T>) -> Array3<U>,
     F2: Fn(&Array3<U>) -> Array3<V>,
@@ -361,7 +357,7 @@ mod tests {
     fn test_filter_indices_lazy() {
         let field = Array3::from_shape_fn((3, 3, 3), |(i, j, k)| i + j + k);
         let indices: Vec<_> = field.filter_indices(|&x| x > 5).collect();
-        
+
         assert!(!indices.is_empty());
         assert!(indices.contains(&(2, 2, 2)));
     }
@@ -371,7 +367,7 @@ mod tests {
         let field = Array3::ones((5, 5, 5));
         let mut kernel = Array3::zeros((3, 3, 3));
         kernel[[1, 1, 1]] = 2.0; // Only center element is non-zero
-        
+
         let result = apply_kernel(&field, &kernel, |f: &f64, k: &f64| f * k);
         assert_abs_diff_eq!(result[[2, 2, 2]], 2.0);
     }
@@ -380,14 +376,14 @@ mod tests {
     fn test_parallel_map() {
         let field = Array3::from_shape_fn((10, 10, 10), |(i, j, k)| (i + j + k) as f64);
         let result = field.par_map_field(|&x| x * 2.0);
-        
+
         assert_abs_diff_eq!(result[[5, 5, 5]], (5.0 + 5.0 + 5.0) * 2.0);
     }
 
     #[test]
     fn test_field_reduction() {
         let field = Array3::from_shape_fn((2, 2, 2), |_| 3.0);
-        
+
         assert_abs_diff_eq!(field.sum(), 24.0);
         assert_abs_diff_eq!(field.mean().unwrap(), 3.0);
         // Use fold to find max for f64 since it doesn't implement Ord
@@ -398,10 +394,8 @@ mod tests {
     #[test]
     fn test_windowed_operation() {
         let field = Array3::ones((5, 5, 5));
-        let result = windowed_operation(&field, (3, 3, 3), |window| {
-            window.iter().sum::<f64>()
-        });
-        
+        let result = windowed_operation(&field, (3, 3, 3), |window| window.iter().sum::<f64>());
+
         // Center point should have full 3x3x3 = 27 neighbors
         assert_abs_diff_eq!(result[[2, 2, 2]], 27.0);
     }

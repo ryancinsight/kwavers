@@ -117,10 +117,7 @@ pub mod validators {
     }
 
     /// Validate that a collection is not empty
-    pub fn validate_not_empty<T>(
-        collection: &[T],
-        field_name: &str,
-    ) -> ValidationResult {
+    pub fn validate_not_empty<T>(collection: &[T], field_name: &str) -> ValidationResult {
         if collection.is_empty() {
             ValidationResult::failure(vec![ValidationError::FieldValidation {
                 field: field_name.to_string(),

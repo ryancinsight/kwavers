@@ -8,7 +8,7 @@ use ndarray::{Array2, Array3};
 use rayon::prelude::*;
 
 /// Generic field transformation pipeline
-/// 
+///
 /// This structure supports transformations over any field type F,
 /// enabling reuse with Array2<T>, Array3<T>, or custom field types.
 pub struct FieldTransform<F> {
@@ -25,7 +25,7 @@ where
             transforms: Vec::new(),
         }
     }
-    
+
     /// Add a transformation to the pipeline
     pub fn then<G>(mut self, f: G) -> Self
     where
@@ -34,19 +34,22 @@ where
         self.transforms.push(Box::new(f));
         self
     }
-    
+
     /// Apply all transformations in sequence
     pub fn apply(&self, field: F) -> F {
-        self.transforms.iter().fold(field, |acc, transform| transform(acc))
+        self.transforms
+            .iter()
+            .fold(field, |acc, transform| transform(acc))
     }
-    
+
     /// Apply transformations in parallel to multiple fields
     pub fn apply_parallel(&self, fields: Vec<F>) -> Vec<F> {
-        fields.into_par_iter()
+        fields
+            .into_par_iter()
             .map(|field| self.apply(field))
             .collect()
     }
-    
+
     /// Compose this transform with another
     pub fn compose<G>(self, other: G) -> Self
     where
@@ -54,7 +57,7 @@ where
     {
         self.then(other)
     }
-    
+
     /// Create a reversible transformation (if possible)
     pub fn reversible<G>(self, inverse: G) -> ReversibleTransform<F>
     where
@@ -92,18 +95,17 @@ where
             inverse: Box::new(inverse),
         }
     }
-    
+
     /// Apply the forward transformation
     pub fn forward(&self, field: F) -> F {
         self.forward.apply(field)
     }
-    
+
     /// Apply the inverse transformation
     pub fn inverse(&self, field: F) -> F {
         (self.inverse)(field)
     }
 }
-
 
 // Convenience type aliases for common field types
 pub type Array2Transform<T> = FieldTransform<Array2<T>>;
@@ -118,7 +120,7 @@ where
     pub fn scale(factor: f64) -> Self {
         Self::new().then(move |field| field.mapv(|x| x * factor))
     }
-    
+
     /// Create a smoothing transformation using a simple kernel
     pub fn smooth() -> Self
     where
@@ -127,15 +129,18 @@ where
         Self::new().then(|field| {
             let mut result = field.clone();
             let (nx, ny, nz) = field.dim();
-            
-            for i in 1..nx-1 {
-                for j in 1..ny-1 {
-                    for k in 1..nz-1 {
-                        let sum = field[[i-1,j,k]].clone() + field[[i+1,j,k]].clone() +
-                                 field[[i,j-1,k]].clone() + field[[i,j+1,k]].clone() +
-                                 field[[i,j,k-1]].clone() + field[[i,j,k+1]].clone() +
-                                 field[[i,j,k]].clone();
-                        result[[i,j,k]] = sum / 7.0;
+
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
+                        let sum = field[[i - 1, j, k]].clone()
+                            + field[[i + 1, j, k]].clone()
+                            + field[[i, j - 1, k]].clone()
+                            + field[[i, j + 1, k]].clone()
+                            + field[[i, j, k - 1]].clone()
+                            + field[[i, j, k + 1]].clone()
+                            + field[[i, j, k]].clone();
+                        result[[i, j, k]] = sum / 7.0;
                     }
                 }
             }
@@ -157,20 +162,20 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
     use approx::assert_abs_diff_eq;
-    
+    use ndarray::Array3;
+
     #[test]
     fn test_generic_transform() {
         let field = Array3::ones((4, 4, 4));
         let transform = Array3Transform::new()
             .then(|f| f.mapv(|x: f64| x * 2.0))
             .then(|f| f.mapv(|x: f64| x + 1.0));
-        
+
         let result = transform.apply(field);
         assert_abs_diff_eq!(result[[2, 2, 2]], 3.0);
     }
-    
+
     #[test]
     fn test_lazy_transform() {
         let source = LazyField::new(|| Array3::ones((2, 2, 2)));

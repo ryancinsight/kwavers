@@ -1,15 +1,15 @@
 //! PSTD solver plugin implementation
 
-use std::fmt::Debug;
-use std::collections::HashMap;
 use ndarray::Array4;
+use std::collections::HashMap;
+use std::fmt::Debug;
 
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginState, PluginContext};
-use crate::physics::field_mapping::UnifiedFieldType;
+use super::{PstdConfig, PstdSolver};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::KwaversResult;
-use super::{PstdConfig, PstdSolver};
+use crate::physics::field_mapping::UnifiedFieldType;
+use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
 
 /// PSTD solver plugin
 #[derive(Debug)]
@@ -23,13 +23,14 @@ impl PstdPlugin {
     /// Create a new PSTD plugin
     pub fn new(config: PstdConfig, grid: &Grid) -> KwaversResult<Self> {
         let solver = PstdSolver::new(config.clone(), grid)?;
-        
+
         Ok(Self {
             metadata: PluginMetadata {
                 id: "pstd_solver".to_string(),
                 name: "PSTD Solver".to_string(),
                 version: "1.0.0".to_string(),
-                description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation".to_string(),
+                description: "Pseudo-Spectral Time Domain solver for acoustic wave propagation"
+                    .to_string(),
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
@@ -43,11 +44,11 @@ impl PhysicsPlugin for PstdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
-    
+
     fn state(&self) -> PluginState {
         self.state
     }
-    
+
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         vec![
             UnifiedFieldType::Pressure,
@@ -56,7 +57,7 @@ impl PhysicsPlugin for PstdPlugin {
             UnifiedFieldType::VelocityZ,
         ]
     }
-    
+
     fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![
             UnifiedFieldType::Pressure,
@@ -65,16 +66,12 @@ impl PhysicsPlugin for PstdPlugin {
             UnifiedFieldType::VelocityZ,
         ]
     }
-    
-    fn initialize(
-        &mut self,
-        _grid: &Grid,
-        _medium: &dyn Medium,
-    ) -> KwaversResult<()> {
+
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
         self.state = PluginState::Running;
         Ok(())
     }
-    
+
     fn update(
         &mut self,
         _fields: &mut Array4<f64>,
@@ -87,16 +84,16 @@ impl PhysicsPlugin for PstdPlugin {
         // TODO: Implement PSTD update logic
         Ok(())
     }
-    
+
     fn finalize(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Finalized;
         Ok(())
     }
-    
+
     fn diagnostics(&self) -> HashMap<String, f64> {
         HashMap::new()
     }
-    
+
     fn reset(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Initialized;
         Ok(())

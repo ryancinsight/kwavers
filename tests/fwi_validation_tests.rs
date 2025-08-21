@@ -176,7 +176,7 @@ fn test_fwi_gradient_accuracy() -> KwaversResult<()> {
             if numerical.abs() > 1e-12 {
                 // Avoid division by very small numbers
                 let relative_error = (analytical - numerical).abs() / numerical.abs();
-                assert!(relative_error < 0.1, 
+                assert!(relative_error < 0.1,
                     "Gradient mismatch at ({}, {}, {}): analytical={:.6e}, numerical={:.6e}, error={:.2}%", 
                     i, j, k, analytical, numerical, relative_error * 100.0);
             }

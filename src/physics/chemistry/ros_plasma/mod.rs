@@ -6,12 +6,12 @@
 //! - Radical reactions in aqueous phase
 //! - Sonochemical effects
 
-pub mod ros_species;
 pub mod plasma_reactions;
 pub mod radical_kinetics;
+pub mod ros_species;
 pub mod sonochemistry;
 
-pub use ros_species::{ROSSpecies, ROSConcentrations};
-pub use plasma_reactions::{PlasmaReaction, PlasmaChemistry};
-pub use radical_kinetics::{RadicalReaction, RadicalKinetics};
+pub use plasma_reactions::{PlasmaChemistry, PlasmaReaction};
+pub use radical_kinetics::{RadicalKinetics, RadicalReaction};
+pub use ros_species::{ROSConcentrations, ROSSpecies};
 pub use sonochemistry::{SonochemicalYield, SonochemistryModel};

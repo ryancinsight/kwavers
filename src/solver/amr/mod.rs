@@ -1,6 +1,6 @@
 // src/solver/amr/mod.rs
 //! Adaptive Mesh Refinement (AMR) Module
-//! 
+//!
 //! This module implements adaptive mesh refinement for efficient simulation
 //! of multi-scale phenomena. It provides:
 //! - Wavelet-based error estimation
@@ -10,34 +10,34 @@
 //! - 2-5x performance improvement
 //!
 //! ## Literature References
-//! 
-//! 1. **Berger, M. J., & Oliger, J. (1984)**. "Adaptive mesh refinement for 
-//!    hyperbolic partial differential equations." *Journal of Computational 
+//!
+//! 1. **Berger, M. J., & Oliger, J. (1984)**. "Adaptive mesh refinement for
+//!    hyperbolic partial differential equations." *Journal of Computational
 //!    Physics*, 53(3), 484-512. DOI: 10.1016/0021-9991(84)90073-1
 //!    - Original AMR algorithm
 //!    - Conservative interpolation techniques
-//! 
-//! 2. **Berger, M. J., & Colella, P. (1989)**. "Local adaptive mesh refinement 
-//!    for shock hydrodynamics." *Journal of Computational Physics*, 82(1), 64-84. 
+//!
+//! 2. **Berger, M. J., & Colella, P. (1989)**. "Local adaptive mesh refinement
+//!    for shock hydrodynamics." *Journal of Computational Physics*, 82(1), 64-84.
 //!    DOI: 10.1016/0021-9991(89)90035-1
 //!    - Extension to conservation laws
 //!    - Proper nesting and synchronization
-//! 
-//! 3. **Vasilyev, O. V., & Kevlahan, N. K. R. (2005)**. "An adaptive multilevel 
-//!    wavelet collocation method for elliptic problems." *Journal of Computational 
+//!
+//! 3. **Vasilyev, O. V., & Kevlahan, N. K. R. (2005)**. "An adaptive multilevel
+//!    wavelet collocation method for elliptic problems." *Journal of Computational
 //!    Physics*, 206(2), 412-431. DOI: 10.1016/j.jcp.2004.12.013
 //!    - Wavelet-based error estimation
 //!    - Adaptive grid generation
-//! 
-//! 4. **Popinet, S. (2003)**. "Gerris: a tree-based adaptive solver for the 
-//!    incompressible Euler equations in complex geometries." *Journal of 
+//!
+//! 4. **Popinet, S. (2003)**. "Gerris: a tree-based adaptive solver for the
+//!    incompressible Euler equations in complex geometries." *Journal of
 //!    Computational Physics*, 190(2), 572-600. DOI: 10.1016/S0021-9991(03)00298-5
 //!    - Octree-based refinement
 //!    - Efficient tree traversal algorithms
-//! 
-//! 5. **Domingues, M. O., Gomes, S. M., Roussel, O., & Schneider, K. (2008)**. 
-//!    "An adaptive multiresolution scheme with local time stepping for evolutionary 
-//!    PDEs." *Journal of Computational Physics*, 227(8), 3758-3780. 
+//!
+//! 5. **Domingues, M. O., Gomes, S. M., Roussel, O., & Schneider, K. (2008)**.
+//!    "An adaptive multiresolution scheme with local time stepping for evolutionary
+//!    PDEs." *Journal of Computational Physics*, 227(8), 3758-3780.
 //!    DOI: 10.1016/j.jcp.2007.11.046
 //!    - Multiresolution analysis
 //!    - Local time stepping with AMR
@@ -50,12 +50,12 @@
 //! - **Clean**: Clear abstractions for refinement criteria
 
 pub mod error_estimator;
+pub mod feature_refinement;
 pub mod interpolation;
 pub mod local_operations;
 pub mod octree;
 pub mod refinement;
 pub mod wavelet;
-pub mod feature_refinement;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -177,19 +177,15 @@ struct RefinementEvent {
 impl AMRManager {
     /// Create a new AMR manager with given configuration
     pub fn new(config: AMRConfig, base_grid: &Grid) -> Self {
-        let octree = octree::Octree::new(
-            base_grid.nx,
-            base_grid.ny,
-            base_grid.nz,
-            config.max_level,
-        );
-        
+        let octree =
+            octree::Octree::new(base_grid.nx, base_grid.ny, base_grid.nz, config.max_level);
+
         let error_estimator = error_estimator::ErrorEstimator::new(
             config.wavelet_type,
             config.refine_threshold,
             config.coarsen_threshold,
         );
-        
+
         Self {
             config,
             octree,
@@ -203,33 +199,37 @@ impl AMRManager {
             memory_usage: 0,
         }
     }
-    
+
     /// Add a refinement criterion with weight
-    pub fn add_criterion(&mut self, criterion: Box<dyn feature_refinement::RefinementCriterion>, weight: f64) {
+    pub fn add_criterion(
+        &mut self,
+        criterion: Box<dyn feature_refinement::RefinementCriterion>,
+        weight: f64,
+    ) {
         self.criteria.push(criterion);
         self.criterion_weights.push(weight);
     }
-    
+
     /// Set memory limit for refinement
     pub fn set_memory_limit(&mut self, limit_mb: usize) {
         self.memory_limit = Some(limit_mb * 1024 * 1024);
     }
-    
+
     /// Set load balancing strategy
     pub fn set_load_balancing(&mut self, strategy: feature_refinement::LoadBalancingStrategy) {
         self.load_balancer = Some(feature_refinement::LoadBalancer::new(strategy));
     }
-    
+
     /// Get reference to the octree
     pub fn octree(&self) -> &octree::Octree {
         &self.octree
     }
-    
+
     /// Get the interpolation scheme
     pub fn interpolation_scheme(&self) -> InterpolationScheme {
         self.config.interpolation_scheme
     }
-    
+
     /// Adapt the mesh based on current solution
     pub fn adapt_mesh(
         &mut self,
@@ -242,32 +242,32 @@ impl AMRManager {
         } else {
             self.error_estimator.estimate_error(solution)?
         };
-        
+
         // Mark cells for refinement/coarsening
         let (refine_cells, coarsen_cells) = self.mark_cells(&error_field)?;
-        
+
         // Apply buffer zone around refined regions
         let refine_cells = self.apply_buffer_zone(refine_cells);
-        
+
         // Apply memory limit if set
         let refine_cells = if let Some(limit) = self.memory_limit {
             self.apply_memory_limit(refine_cells, limit)?
         } else {
             refine_cells
         };
-        
+
         // Update octree structure
         let cells_refined = self.refine_cells(&refine_cells)?;
         let cells_coarsened = self.coarsen_cells(&coarsen_cells)?;
-        
+
         // Update memory usage estimate
         self.memory_usage = self.estimate_memory_usage();
-        
+
         // Compact octree if memory efficiency is low
         if self.octree.memory_efficiency() < 0.75 {
             self.octree.compact();
         }
-        
+
         // Record refinement event
         let max_error = error_field.iter().cloned().fold(0.0, f64::max);
         self.refinement_history.push(RefinementEvent {
@@ -276,7 +276,7 @@ impl AMRManager {
             cells_coarsened,
             max_error,
         });
-        
+
         Ok(AdaptationResult {
             cells_refined,
             cells_coarsened,
@@ -284,53 +284,61 @@ impl AMRManager {
             total_active_cells: self.count_active_cells(),
         })
     }
-    
+
     /// Evaluate all dynamic criteria
     fn evaluate_criteria(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use rayon::prelude::*;
-        
+
         let total_weight: f64 = self.criterion_weights.iter().sum();
-        
+
         if total_weight > 0.0 {
             // Create refinement field using parallel computation
             let dim = field.dim();
             let criteria = &self.criteria;
             let weights = &self.criterion_weights;
-            
+
             // Collect indices and compute in parallel
             let values: Vec<_> = (0..dim.0)
                 .into_par_iter()
                 .flat_map(|i| {
                     (0..dim.1).into_par_iter().flat_map(move |j| {
                         (0..dim.2).into_par_iter().map(move |k| {
-                            let val = criteria.iter()
+                            let val = criteria
+                                .iter()
                                 .zip(weights)
-                                .map(|(criterion, &weight)| weight * criterion.evaluate(field, (i, j, k)))
-                                .sum::<f64>() / total_weight;
+                                .map(|(criterion, &weight)| {
+                                    weight * criterion.evaluate(field, (i, j, k))
+                                })
+                                .sum::<f64>()
+                                / total_weight;
                             ((i, j, k), val)
                         })
                     })
                 })
                 .collect();
-            
+
             // Build the result array
             let mut refinement_field = Array3::zeros(dim);
             for ((i, j, k), val) in values {
                 refinement_field[[i, j, k]] = val;
             }
-            
+
             Ok(refinement_field)
         } else {
             Ok(Array3::zeros(field.dim()))
         }
     }
-    
+
     /// Apply memory limit to refinement
-    fn apply_memory_limit(&self, cells: Vec<(usize, usize, usize)>, limit: usize) -> KwaversResult<Vec<(usize, usize, usize)>> {
+    fn apply_memory_limit(
+        &self,
+        cells: Vec<(usize, usize, usize)>,
+        limit: usize,
+    ) -> KwaversResult<Vec<(usize, usize, usize)>> {
         let cell_size = std::mem::size_of::<f64>() * 8; // Assuming 8 fields per cell
         let mut refined_cells = Vec::new();
         let mut current_usage = self.memory_usage;
-        
+
         for cell in cells {
             let additional_memory = cell_size * 7; // Octree refinement creates 7 new cells
             if current_usage + additional_memory <= limit {
@@ -340,46 +348,40 @@ impl AMRManager {
                 break;
             }
         }
-        
+
         Ok(refined_cells)
     }
-    
+
     /// Estimate current memory usage
     fn estimate_memory_usage(&self) -> usize {
         // Estimate based on active cells
         self.count_active_cells() * std::mem::size_of::<f64>() * 8
     }
-    
+
     /// Interpolate field to refined mesh
-    pub fn interpolate_to_refined(
-        &self,
-        coarse_field: &Array3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
+    pub fn interpolate_to_refined(&self, coarse_field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         interpolation::interpolate_to_refined(
             coarse_field,
             &self.octree,
             self.config.interpolation_scheme,
         )
     }
-    
+
     /// Restrict field to coarse mesh (conservative)
-    pub fn restrict_to_coarse(
-        &self,
-        fine_field: &Array3<f64>,
-    ) -> KwaversResult<Array3<f64>> {
+    pub fn restrict_to_coarse(&self, fine_field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         interpolation::restrict_to_coarse(
             fine_field,
             &self.octree,
             self.config.interpolation_scheme,
         )
     }
-    
+
     /// Get memory usage statistics
     pub fn memory_stats(&self) -> MemoryStats {
         let total_cells = self.octree.total_cells();
         let active_cells = self.count_active_cells();
         let uniform_cells = self.octree.base_cells();
-        
+
         MemoryStats {
             total_cells,
             active_cells,
@@ -387,7 +389,7 @@ impl AMRManager {
             memory_saved_percent: (1.0 - active_cells as f64 / uniform_cells as f64) * 100.0,
         }
     }
-    
+
     /// Mark cells for refinement or coarsening
     fn mark_cells(
         &self,
@@ -395,9 +397,11 @@ impl AMRManager {
     ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<(usize, usize, usize)>)> {
         let mut refine_cells = Vec::new();
         let mut coarsen_cells = Vec::new();
-        
+
         for ((i, j, k), &error) in error_field.indexed_iter() {
-            let status = self.cell_status.get(&(i, j, k))
+            let status = self
+                .cell_status
+                .get(&(i, j, k))
                 .copied()
                 .unwrap_or(CellStatus {
                     level: 0,
@@ -405,19 +409,21 @@ impl AMRManager {
                     needs_refinement: false,
                     can_coarsen: false,
                 });
-            
+
             if status.is_active {
                 if error > self.config.refine_threshold && status.level < self.config.max_level {
                     refine_cells.push((i, j, k));
-                } else if error < self.config.coarsen_threshold && status.level > self.config.min_level {
+                } else if error < self.config.coarsen_threshold
+                    && status.level > self.config.min_level
+                {
                     coarsen_cells.push((i, j, k));
                 }
             }
         }
-        
+
         Ok((refine_cells, coarsen_cells))
     }
-    
+
     /// Apply buffer zone around cells marked for refinement using efficient BFS algorithm
     fn apply_buffer_zone(
         &self,
@@ -431,11 +437,11 @@ impl AMRManager {
         }
 
         // Initialize BFS queue with initial cells and their distance (0)
-        let mut queue: VecDeque<((usize, usize, usize), usize)> = 
+        let mut queue: VecDeque<((usize, usize, usize), usize)> =
             refine_cells.into_iter().map(|cell| (cell, 0)).collect();
-        
+
         // Track visited cells to avoid duplicates
-        let mut visited: HashSet<(usize, usize, usize)> = 
+        let mut visited: HashSet<(usize, usize, usize)> =
             queue.iter().map(|(cell, _)| *cell).collect();
 
         // BFS to expand buffer zone level by level
@@ -446,8 +452,12 @@ impl AMRManager {
 
             // Add 6-connected neighbors (face-adjacent cells)
             for (di, dj, dk) in [
-                (1, 0, 0), (-1, 0, 0), (0, 1, 0),
-                (0, -1, 0), (0, 0, 1), (0, 0, -1),
+                (1, 0, 0),
+                (-1, 0, 0),
+                (0, 1, 0),
+                (0, -1, 0),
+                (0, 0, 1),
+                (0, 0, -1),
             ] {
                 let ni_i32 = i as i32 + di;
                 let nj_i32 = j as i32 + dj;
@@ -456,10 +466,13 @@ impl AMRManager {
                 // Check bounds
                 if ni_i32 >= 0 && nj_i32 >= 0 && nk_i32 >= 0 {
                     let next_cell = (ni_i32 as usize, nj_i32 as usize, nk_i32 as usize);
-                    
+
                     // Check if cell is valid and not already visited
-                    if self.octree.is_valid_cell(next_cell.0, next_cell.1, next_cell.2) 
-                        && visited.insert(next_cell) {
+                    if self
+                        .octree
+                        .is_valid_cell(next_cell.0, next_cell.1, next_cell.2)
+                        && visited.insert(next_cell)
+                    {
                         queue.push_back((next_cell, level + 1));
                     }
                 }
@@ -469,51 +482,53 @@ impl AMRManager {
         // Convert HashSet back to Vec
         visited.into_iter().collect()
     }
-    
+
     /// Refine specified cells
-    fn refine_cells(
-        &mut self,
-        cells: &[(usize, usize, usize)],
-    ) -> KwaversResult<usize> {
+    fn refine_cells(&mut self, cells: &[(usize, usize, usize)]) -> KwaversResult<usize> {
         let mut refined_count = 0;
-        
+
         for &(i, j, k) in cells {
             if self.octree.refine_cell(i, j, k)? {
                 refined_count += 1;
-                
+
                 // Update cell status
-                self.cell_status.insert((i, j, k), CellStatus {
-                    level: self.octree.get_level(i, j, k),
-                    is_active: false,
-                    needs_refinement: false,
-                    can_coarsen: false,
-                });
-                
+                self.cell_status.insert(
+                    (i, j, k),
+                    CellStatus {
+                        level: self.octree.get_level(i, j, k),
+                        is_active: false,
+                        needs_refinement: false,
+                        can_coarsen: false,
+                    },
+                );
+
                 // Mark children as active
                 // Get children of the refined cell
                 let children_coords = self.octree.get_children_coords(i, j, k);
                 for child_coord in children_coords {
-                    let child_level = self.octree.get_level(child_coord.0, child_coord.1, child_coord.2);
-                    self.cell_status.insert(child_coord, CellStatus {
-                        level: child_level,
-                        is_active: true,
-                        needs_refinement: false,
-                        can_coarsen: false,
-                    });
+                    let child_level =
+                        self.octree
+                            .get_level(child_coord.0, child_coord.1, child_coord.2);
+                    self.cell_status.insert(
+                        child_coord,
+                        CellStatus {
+                            level: child_level,
+                            is_active: true,
+                            needs_refinement: false,
+                            can_coarsen: false,
+                        },
+                    );
                 }
             }
         }
-        
+
         Ok(refined_count)
     }
-    
+
     /// Coarsen specified cells
-    fn coarsen_cells(
-        &mut self,
-        cells: &[(usize, usize, usize)],
-    ) -> KwaversResult<usize> {
+    fn coarsen_cells(&mut self, cells: &[(usize, usize, usize)]) -> KwaversResult<usize> {
         let mut coarsened_count = 0;
-        
+
         // Group cells by parent for coarsening
         let mut parents = HashMap::new();
         for &cell in cells {
@@ -521,33 +536,37 @@ impl AMRManager {
                 parents.entry(parent).or_insert_with(Vec::new).push(cell);
             }
         }
-        
+
         // Coarsen if all children of a parent can be coarsened
         for (parent, children) in parents {
             if children.len() == 8 && self.octree.coarsen_cell(parent.0, parent.1, parent.2)? {
                 coarsened_count += 8;
-                
+
                 // Update cell status
-                self.cell_status.insert(parent, CellStatus {
-                    level: self.octree.get_level(parent.0, parent.1, parent.2),
-                    is_active: true,
-                    needs_refinement: false,
-                    can_coarsen: false,
-                });
-                
+                self.cell_status.insert(
+                    parent,
+                    CellStatus {
+                        level: self.octree.get_level(parent.0, parent.1, parent.2),
+                        is_active: true,
+                        needs_refinement: false,
+                        can_coarsen: false,
+                    },
+                );
+
                 // Remove children status
                 for child in children {
                     self.cell_status.remove(&child);
                 }
             }
         }
-        
+
         Ok(coarsened_count)
     }
-    
+
     /// Count active (leaf) cells
     fn count_active_cells(&self) -> usize {
-        self.cell_status.values()
+        self.cell_status
+            .values()
             .filter(|status| status.is_active)
             .count()
     }
@@ -580,10 +599,10 @@ pub struct MemoryStats {
 }
 
 // Re-export key types
-pub use self::error_estimator::{ErrorEstimator};
-pub use self::octree::{Octree, OctreeNode};
+pub use self::error_estimator::ErrorEstimator;
 pub use self::interpolation::{interpolate_to_refined, restrict_to_coarse};
-pub use self::local_operations::{adapt_field_to_octree, adapt_all_fields, LocalAMRResult};
+pub use self::local_operations::{adapt_all_fields, adapt_field_to_octree, LocalAMRResult};
+pub use self::octree::{Octree, OctreeNode};
 
 #[cfg(test)]
 mod tests;

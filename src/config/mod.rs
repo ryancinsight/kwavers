@@ -4,7 +4,7 @@
 pub mod validation;
 
 // Re-export the validation system including FieldValidationConfig
-pub use validation::{ValidationConfig, FieldValidationConfig, FieldLimits};
+pub use validation::{FieldLimits, FieldValidationConfig, ValidationConfig};
 
 // No longer directly used here: Medium, Arc
 use log::debug;
@@ -21,7 +21,7 @@ pub mod simulation;
 pub mod source;
 
 pub use output::OutputConfig;
-pub use simulation::{SimulationConfig, MediumConfig};
+pub use simulation::{MediumConfig, SimulationConfig};
 pub use source::SourceConfig;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,16 +62,15 @@ impl Config {
     /// Load configuration from TOML file - parses ONCE for efficiency
     pub fn from_file(filename: &str) -> Result<Self, crate::error::ConfigError> {
         use crate::error::ConfigError;
-        
+
         debug!("Loading config from {}", filename);
-        let contents = fs::read_to_string(filename)
-            .map_err(|e| ConfigError::FileNotFound {
-                path: filename.to_string(),
-            })?;
+        let contents = fs::read_to_string(filename).map_err(|e| ConfigError::FileNotFound {
+            path: filename.to_string(),
+        })?;
 
         // Parse the ENTIRE file ONCE into the helper struct
-        let helper: TomlConfigHelper = toml::from_str(&contents)
-            .map_err(|e| ConfigError::ParseError {
+        let helper: TomlConfigHelper =
+            toml::from_str(&contents).map_err(|e| ConfigError::ParseError {
                 line: 0, // toml error doesnt provide line info in newer versions
                 message: e.to_string(),
             })?;
@@ -82,28 +81,26 @@ impl Config {
             output: helper.output,
         })
     }
-    
+
     /// Save configuration to TOML file for reproducibility
     pub fn to_file(&self, filename: &str) -> Result<(), crate::error::ConfigError> {
         use crate::error::ConfigError;
-        
+
         let helper = TomlSerializeHelper {
             simulation: &self.simulation,
             source: &self.source,
             output: &self.output,
         };
-        
-        let contents = toml::to_string_pretty(&helper)
-            .map_err(|e| ConfigError::ParseError {
-                line: 0,
-                message: format!("Failed to serialize config: {}", e),
-            })?;
-            
-        fs::write(filename, contents)
-            .map_err(|e| ConfigError::FileNotFound {
-                path: filename.to_string(),
-            })?;
-            
+
+        let contents = toml::to_string_pretty(&helper).map_err(|e| ConfigError::ParseError {
+            line: 0,
+            message: format!("Failed to serialize config: {}", e),
+        })?;
+
+        fs::write(filename, contents).map_err(|e| ConfigError::FileNotFound {
+            path: filename.to_string(),
+        })?;
+
         debug!("Saved config to {}", filename);
         Ok(())
     }

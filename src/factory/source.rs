@@ -2,11 +2,11 @@
 //!
 //! Follows Creator pattern for source instantiation
 
-use crate::error::{KwaversResult, ConfigError};
-use crate::grid::Grid;
-use crate::source::{Source, PointSource};
-use crate::signal::{Signal, SineWave};
 use crate::constants::physics;
+use crate::error::{ConfigError, KwaversResult};
+use crate::grid::Grid;
+use crate::signal::{Signal, SineWave};
+use crate::source::{PointSource, Source};
 use std::sync::Arc;
 
 /// Source configuration
@@ -31,7 +31,8 @@ impl SourceConfig {
                 parameter: "amplitude".to_string(),
                 value: self.amplitude.to_string(),
                 constraint: "Amplitude must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.frequency <= 0.0 {
@@ -39,7 +40,8 @@ impl SourceConfig {
                 parameter: "frequency".to_string(),
                 value: self.frequency.to_string(),
                 constraint: "Frequency must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if let Some(radius) = self.radius {
@@ -48,7 +50,8 @@ impl SourceConfig {
                     parameter: "radius".to_string(),
                     value: radius.to_string(),
                     constraint: "Radius must be positive".to_string(),
-                }.into());
+                }
+                .into());
             }
         }
 
@@ -79,14 +82,14 @@ impl SourceFactory {
     /// Create a source from configuration
     pub fn create_source(config: &SourceConfig, _grid: &Grid) -> KwaversResult<Box<dyn Source>> {
         config.validate()?;
-        
+
         // Create signal based on configuration
         let signal: Arc<dyn Signal> = Arc::new(SineWave::new(
             config.frequency,
             config.amplitude,
             config.phase,
         ));
-        
+
         // Create appropriate source type based on config
         match config.source_type.as_str() {
             "point" => {
@@ -100,7 +103,7 @@ impl SourceFactory {
             }
         }
     }
-    
+
     /// Create a point source at specified location
     pub fn create_point_source(
         x: f64,

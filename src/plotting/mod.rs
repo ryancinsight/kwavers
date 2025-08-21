@@ -8,17 +8,17 @@ use ndarray::Array3;
 // Note: Field indices imported from physics::field_indices for SSOT
 
 #[cfg(feature = "plotly")]
-use plotly::{Plot, Scatter, Surface, HeatMap, Layout};
+use plotly::{HeatMap, Layout, Plot, Scatter, Surface};
 
 #[cfg(feature = "plotly")]
 mod plotting_impl {
     use crate::grid::Grid;
+    use crate::physics::field_indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
     use crate::recorder::Recorder;
     use crate::time::Time;
-    use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX};
-    use ndarray::{Array3, Axis};
-    use plotly::{Plot, Scatter, Surface, HeatMap, Layout, common::Title};
     use log::info;
+    use ndarray::{Array3, Axis};
+    use plotly::{common::Title, HeatMap, Layout, Plot, Scatter, Surface};
     use std::fs::File;
     use std::io::Write;
 
@@ -35,8 +35,7 @@ mod plotting_impl {
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
-        let layout = Layout::new()
-            .title(Title::new(title));
+        let layout = Layout::new().title(Title::new(title));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -61,7 +60,8 @@ mod plotting_impl {
             .map(|j| (0..nx).map(|i| slice[[i, j]]).collect())
             .collect();
 
-        let trace = HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::new("Pressure (Pa)")));
+        let trace =
+            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::new("Pressure (Pa)")));
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
@@ -102,18 +102,15 @@ mod plotting_impl {
             }
         }
 
-        let trace = Scatter3D::new(x, y, z)
-            .mode(Mode::Markers)
-            .marker(
-                plotly::common::Marker::new()
-                    .size(3)
-                    .color_bar(ColorBar::new().title(Title::new("Pressure (Pa)"))),
-            );
+        let trace = Scatter3D::new(x, y, z).mode(Mode::Markers).marker(
+            plotly::common::Marker::new()
+                .size(3)
+                .color_bar(ColorBar::new().title(Title::new("Pressure (Pa)"))),
+        );
         let mut plot = Plot::new();
         plot.add_trace(trace);
 
-        let layout = Layout::new()
-            .title(Title::new(title));
+        let layout = Layout::new().title(Title::new(title));
         plot.set_layout(layout);
 
         plot.write_html(filename);
@@ -168,8 +165,8 @@ mod plotting_impl {
             .map(|j| (0..nx).map(|i| diff[[i, j]]).collect())
             .collect();
 
-        let trace = HeatMap::new(x, y, z)
-            .color_bar(ColorBar::new().title(Title::new("Difference")));
+        let trace =
+            HeatMap::new(x, y, z).color_bar(ColorBar::new().title(Title::new("Difference")));
         let mut plot = Plot::new();
         plot.add_trace(trace);
 

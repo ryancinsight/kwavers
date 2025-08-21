@@ -2,9 +2,9 @@
 //!
 //! Follows Information Expert principle - knows how to create and validate grids
 
-use crate::error::{KwaversResult, ConfigError};
-use crate::grid::Grid;
 use crate::constants;
+use crate::error::{ConfigError, KwaversResult};
+use crate::grid::Grid;
 
 /// Grid configuration
 #[derive(Debug, Clone)]
@@ -26,7 +26,8 @@ impl GridConfig {
                 parameter: "grid dimensions".to_string(),
                 value: format!("({}, {}, {})", self.nx, self.ny, self.nz),
                 constraint: "All dimensions must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.dx <= 0.0 || self.dy <= 0.0 || self.dz <= 0.0 {
@@ -34,7 +35,8 @@ impl GridConfig {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),
                 constraint: "All spacing values must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         // Check for reasonable grid size to prevent memory issues
@@ -45,18 +47,21 @@ impl GridConfig {
                 parameter: "grid size".to_string(),
                 value: total_points.to_string(),
                 constraint: format!("Total grid points must be <= {}", MAX_GRID_POINTS),
-            }.into());
+            }
+            .into());
         }
 
         // Check minimum grid spacing
-        if self.dx < constants::grid::MIN_GRID_SPACING || 
-           self.dy < constants::grid::MIN_GRID_SPACING || 
-           self.dz < constants::grid::MIN_GRID_SPACING {
+        if self.dx < constants::grid::MIN_GRID_SPACING
+            || self.dy < constants::grid::MIN_GRID_SPACING
+            || self.dz < constants::grid::MIN_GRID_SPACING
+        {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),
                 constraint: format!("Spacing must be >= {}", constants::grid::MIN_GRID_SPACING),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
@@ -83,17 +88,12 @@ impl GridFactory {
     /// Create a grid from configuration
     pub fn create_grid(config: &GridConfig) -> KwaversResult<Grid> {
         config.validate()?;
-        
+
         Ok(Grid::new(
-            config.nx,
-            config.ny,
-            config.nz,
-            config.dx,
-            config.dy,
-            config.dz,
+            config.nx, config.ny, config.nz, config.dx, config.dy, config.dz,
         ))
     }
-    
+
     /// Create a uniform grid with equal spacing
     pub fn create_uniform(size: usize, spacing: f64) -> KwaversResult<Grid> {
         let config = GridConfig {
@@ -106,16 +106,20 @@ impl GridFactory {
         };
         Self::create_grid(&config)
     }
-    
+
     /// Create a grid optimized for a given frequency
-    pub fn create_for_frequency(frequency: f64, sound_speed: f64, points_per_wavelength: usize) -> KwaversResult<Grid> {
+    pub fn create_for_frequency(
+        frequency: f64,
+        sound_speed: f64,
+        points_per_wavelength: usize,
+    ) -> KwaversResult<Grid> {
         let wavelength = sound_speed / frequency;
         let spacing = wavelength / points_per_wavelength as f64;
-        
+
         // Calculate reasonable grid size based on wavelength
         let size = ((wavelength * 10.0) / spacing) as usize;
         let size = size.max(constants::grid::MIN_GRID_POINTS);
-        
+
         let config = GridConfig {
             nx: size,
             ny: size,

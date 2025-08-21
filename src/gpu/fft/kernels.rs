@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 pub trait FftKernel {
     /// Perform 1D FFT on a slice of complex numbers
     fn fft_1d(&mut self, data: &mut [Complex<f64>], forward: bool);
-    
+
     /// Compute twiddle factors for FFT
     fn compute_twiddle_factors(&self, n: usize) -> Vec<Complex<f64>>;
 }
@@ -23,10 +23,10 @@ impl FftKernel for CooleyTukeyFft {
         if n <= 1 {
             return;
         }
-        
+
         // Bit-reversal permutation
         bit_reverse_permutation(data);
-        
+
         // Cooley-Tukey FFT
         let mut size = 2;
         while size <= n {
@@ -34,7 +34,7 @@ impl FftKernel for CooleyTukeyFft {
             let angle_sign = if forward { -1.0 } else { 1.0 };
             let angle = angle_sign * 2.0 * PI / size as f64;
             let w = Complex::new(angle.cos(), angle.sin());
-            
+
             for start in (0..n).step_by(size) {
                 let mut w_n = Complex::new(1.0, 0.0);
                 for k in 0..half_size {
@@ -46,7 +46,7 @@ impl FftKernel for CooleyTukeyFft {
             }
             size *= 2;
         }
-        
+
         // Normalize for inverse FFT
         if !forward {
             let norm = 1.0 / n as f64;
@@ -55,7 +55,7 @@ impl FftKernel for CooleyTukeyFft {
             }
         }
     }
-    
+
     fn compute_twiddle_factors(&self, n: usize) -> Vec<Complex<f64>> {
         (0..n)
             .map(|k| {
@@ -70,7 +70,7 @@ impl FftKernel for CooleyTukeyFft {
 fn bit_reverse_permutation(data: &mut [Complex<f64>]) {
     let n = data.len();
     let mut j = 0;
-    
+
     for i in 1..n {
         let mut bit = n >> 1;
         while j & bit != 0 {
@@ -78,7 +78,7 @@ fn bit_reverse_permutation(data: &mut [Complex<f64>]) {
             bit >>= 1;
         }
         j ^= bit;
-        
+
         if i < j {
             data.swap(i, j);
         }

@@ -5,11 +5,11 @@ mod tests {
     // Note: Removed unused import following YAGNI principle
     use crate::grid::Grid;
     use crate::medium::homogeneous::HomogeneousMedium;
+    use crate::physics::field_mapping::UnifiedFieldType;
+    use crate::physics::mechanics::elastic_wave::ElasticWave;
+    use crate::physics::traits::AcousticWaveModel;
     use crate::source::NullSource;
     use ndarray::{Array3, Array4};
-    use crate::physics::mechanics::elastic_wave::ElasticWave;
-    use crate::physics::field_mapping::UnifiedFieldType;
-    use crate::physics::traits::AcousticWaveModel;
 
     #[test]
     fn test_elastic_wave_constructor() {
@@ -27,12 +27,12 @@ mod tests {
         let source = NullSource;
 
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));
-        
+
         // Set initial conditions
         fields[[UnifiedFieldType::VelocityX.index(), 16, 16, 16]] = 1.0;
-        
+
         let prev_pressure = Array3::<f64>::zeros((32, 32, 32));
-        
+
         // This should run without panicking
         elastic_wave.update_wave(
             &mut fields,

@@ -1,12 +1,12 @@
 // boundary/mod.rs
 
-use crate::KwaversResult;
 use crate::grid::Grid;
+use crate::KwaversResult;
 use ndarray::{Array3, ArrayViewMut3};
 use std::fmt::Debug;
 
-pub mod pml;
 pub mod cpml;
+pub mod pml;
 
 // Re-export the new PmlAxis enum for type-safe API
 
@@ -20,7 +20,12 @@ pub trait Boundary: Debug + Send + Sync {
     /// * `field` - The acoustic pressure field to apply boundary conditions to
     /// * `grid` - The simulation grid
     /// * `time_step` - Current simulation time step
-    fn apply_acoustic(&mut self, field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize) -> KwaversResult<()>;
+    fn apply_acoustic(
+        &mut self,
+        field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+    ) -> KwaversResult<()>;
 
     /// Applies boundary conditions to the acoustic field in frequency domain (k-space).
     ///
@@ -44,7 +49,13 @@ pub trait Boundary: Debug + Send + Sync {
     /// * `grid` - The simulation grid
     /// * `time_step` - Current simulation time step
     /// * `factor` - Scaling factor for boundary application
-    fn apply_acoustic_with_factor(&mut self, field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize, _factor: f64) -> KwaversResult<()> {
+    fn apply_acoustic_with_factor(
+        &mut self,
+        field: ArrayViewMut3<f64>,
+        grid: &Grid,
+        time_step: usize,
+        _factor: f64,
+    ) -> KwaversResult<()> {
         // Default implementation applies regular boundary conditions
         self.apply_acoustic(field, grid, time_step)?;
         // Scale the boundary effects by the factor if needed
@@ -62,5 +73,5 @@ pub trait Boundary: Debug + Send + Sync {
     fn apply_light(&mut self, field: ArrayViewMut3<f64>, grid: &Grid, time_step: usize);
 }
 
-pub use pml::{PMLBoundary, PMLConfig};
 pub use cpml::{CPMLBoundary, CPMLConfig};
+pub use pml::{PMLBoundary, PMLConfig};

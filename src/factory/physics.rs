@@ -2,9 +2,9 @@
 //!
 //! Follows Creator pattern for physics component instantiation
 
-use crate::error::{KwaversResult, ConfigError};
-use crate::physics::plugin::PluginManager;
 use crate::constants::physics as phys_const;
+use crate::error::{ConfigError, KwaversResult};
+use crate::physics::plugin::PluginManager;
 use std::collections::HashMap;
 
 /// Physics configuration
@@ -41,7 +41,8 @@ impl PhysicsConfig {
                 parameter: "frequency".to_string(),
                 value: self.frequency.to_string(),
                 constraint: "Frequency must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.models.is_empty() {
@@ -49,19 +50,19 @@ impl PhysicsConfig {
                 parameter: "physics models".to_string(),
                 value: "empty".to_string(),
                 constraint: "At least one physics model must be specified".to_string(),
-            }.into());
+            }
+            .into());
         }
 
-        let enabled_models: Vec<_> = self.models.iter()
-            .filter(|m| m.enabled)
-            .collect();
+        let enabled_models: Vec<_> = self.models.iter().filter(|m| m.enabled).collect();
 
         if enabled_models.is_empty() {
             return Err(ConfigError::InvalidValue {
                 parameter: "enabled physics models".to_string(),
                 value: "none".to_string(),
                 constraint: "At least one physics model must be enabled".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
@@ -71,13 +72,11 @@ impl PhysicsConfig {
 impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
-            models: vec![
-                PhysicsModelConfig {
-                    model_type: PhysicsModelType::AcousticWave,
-                    enabled: true,
-                    parameters: HashMap::new(),
-                }
-            ],
+            models: vec![PhysicsModelConfig {
+                model_type: PhysicsModelType::AcousticWave,
+                enabled: true,
+                parameters: HashMap::new(),
+            }],
             frequency: phys_const::DEFAULT_ULTRASOUND_FREQUENCY,
             parameters: HashMap::new(),
         }
@@ -91,14 +90,14 @@ impl PhysicsFactory {
     /// Create physics models from configuration
     pub fn create_physics(config: &PhysicsConfig) -> KwaversResult<PluginManager> {
         config.validate()?;
-        
+
         let manager = PluginManager::new();
-        
+
         for model_config in &config.models {
             if !model_config.enabled {
                 continue;
             }
-            
+
             match model_config.model_type {
                 PhysicsModelType::AcousticWave => {
                     // Register acoustic wave plugin
@@ -117,7 +116,7 @@ impl PhysicsFactory {
                 }
             }
         }
-        
+
         Ok(manager)
     }
 }

@@ -1,6 +1,5 @@
 //! Refraction calculations for wave propagation
 
-
 /// Refraction calculator
 pub struct RefractionCalculator {
     // Implementation details

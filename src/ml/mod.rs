@@ -1,6 +1,6 @@
 // Phase 12: AI/ML Integration Module
 //! Machine learning and AI capabilities for intelligent simulation control
-//! 
+//!
 //! This module provides:
 //! - Neural network inference for parameter optimization
 //! - Pre-trained models for tissue classification
@@ -18,8 +18,8 @@ pub mod training;
 
 // Re-export key types for easier access
 pub use optimization::{
-    ParameterOptimizer, PatternRecognizer, SimulationPatterns, PatternSummary,
-    CavitationEvent, AcousticEvent, ConvergencePredictor
+    AcousticEvent, CavitationEvent, ConvergencePredictor, ParameterOptimizer, PatternRecognizer,
+    PatternSummary, SimulationPatterns,
 };
 
 /// ML model types supported by the system
@@ -78,7 +78,7 @@ impl Model {
             Model::ConvergencePredictor(_) => ModelType::ConvergencePredictor,
         }
     }
-    
+
     /// Run inference on input data
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         match self {
@@ -88,7 +88,7 @@ impl Model {
             Model::ConvergencePredictor(m) => m.infer(input),
         }
     }
-    
+
     /// Get model metadata
     pub fn metadata(&self) -> &ModelMetadata {
         match self {
@@ -98,7 +98,7 @@ impl Model {
             Model::ConvergencePredictor(m) => m.metadata(),
         }
     }
-    
+
     /// Update model weights (for online learning)
     pub fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
         match self {
@@ -114,13 +114,13 @@ impl Model {
 pub trait MLModel: Send + Sync {
     /// Get model type
     fn model_type(&self) -> ModelType;
-    
+
     /// Run inference on input data
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>>;
-    
+
     /// Get model metadata
     fn metadata(&self) -> &ModelMetadata;
-    
+
     /// Update model weights (for online learning)
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()>;
 }
@@ -153,33 +153,37 @@ impl MLEngine {
             performance_metrics: PerformanceMetrics::default(),
             backend: _backend,
         };
-        
+
         // Initialize default models for Phase 12
         engine.initialize_default_models()?;
-        
+
         Ok(engine)
     }
-    
+
     /// Initialize default AI/ML models for Phase 12 capabilities
     fn initialize_default_models(&mut self) -> KwaversResult<()> {
         use crate::ml::models::TissueClassifierModel;
-        
+
         // Initialize tissue classifier with enhanced features
         let tissue_classifier = TissueClassifierModel::new_random(10, 5); // 10 features, 5 tissue types
-        self.models.insert(ModelType::TissueClassifier, Model::TissueClassifier(tissue_classifier));
-        
+        self.models.insert(
+            ModelType::TissueClassifier,
+            Model::TissueClassifier(tissue_classifier),
+        );
+
         Ok(())
     }
-    
+
     /// Load a pre-trained model
-    /// 
+    ///
     /// Supports both ONNX models (recommended) and legacy JSON format for testing.
     /// ONNX models provide much better performance and are the standard format.
     pub fn load_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
         use std::path::Path;
-        
+
         let path_obj = Path::new(path);
-        let extension = path_obj.extension()
+        let extension = path_obj
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
@@ -188,8 +192,9 @@ impl MLEngine {
             "json" => self.load_json_model_legacy(model_type, path),
             _ => Err(KwaversError::Data(crate::error::DataError::InvalidFormat {
                 format: extension.to_string(),
-                reason: "Unsupported model format. Use .onnx (recommended) or .json (legacy)".to_string(),
-            }))
+                reason: "Unsupported model format. Use .onnx (recommended) or .json (legacy)"
+                    .to_string(),
+            })),
         }
     }
 
@@ -197,41 +202,48 @@ impl MLEngine {
     #[cfg(feature = "ml")]
     fn load_onnx_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
         use ort::{Environment, SessionBuilder};
-        
+
         // Create ONNX Runtime environment
         let environment = Environment::builder()
             .with_name("kwavers_ml")
             .build()
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalLibrary {
-                library: "onnx_runtime".to_string(),
-                error: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalLibrary {
+                    library: "onnx_runtime".to_string(),
+                    error: e.to_string(),
+                })
+            })?;
 
         // Create session from ONNX model file
         let session = SessionBuilder::new(&environment)
-            .map_err(|e| KwaversError::System(crate::error::SystemError::ExternalLibrary {
-                library: "onnx_runtime".to_string(), 
-                error: e.to_string(),
-            }))?
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::ExternalLibrary {
+                    library: "onnx_runtime".to_string(),
+                    error: e.to_string(),
+                })
+            })?
             .with_model_from_file(path)
-            .map_err(|e| KwaversError::Data(crate::error::DataError::InvalidFormat {
-                format: "onnx".to_string(),
-                reason: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::Data(crate::error::DataError::InvalidFormat {
+                    format: "onnx".to_string(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Create model wrapper based on type
         let model = match model_type {
             ModelType::TissueClassifier => {
                 let onnx_model = models::OnnxTissueClassifierModel::new(session)?;
                 Model::TissueClassifier(models::TissueClassifierModel::Onnx(onnx_model))
-            },
+            }
             ModelType::ParameterOptimizer => {
                 let onnx_model = models::OnnxParameterOptimizerModel::new(session)?;
                 Model::ParameterOptimizer(models::ParameterOptimizerModel::Onnx(onnx_model))
-            },
+            }
             _ => {
                 return Err(KwaversError::NotImplemented(format!(
-                    "ONNX loading not yet implemented for {:?}", model_type
+                    "ONNX loading not yet implemented for {:?}",
+                    model_type
                 )));
             }
         };
@@ -245,17 +257,17 @@ impl MLEngine {
     #[cfg(not(feature = "ml"))]
     fn load_onnx_model(&mut self, _model_type: ModelType, _path: &str) -> KwaversResult<()> {
         Err(KwaversError::NotImplemented(
-            "ONNX model loading requires the 'ml' feature to be enabled".to_string()
+            "ONNX model loading requires the 'ml' feature to be enabled".to_string(),
         ))
     }
 
     /// Load JSON model (legacy format, inefficient but useful for testing)
-    /// 
+    ///
     /// **DEPRECATED**: Use ONNX format for production. JSON loading is slow
     /// and memory-inefficient for large models.
     fn load_json_model_legacy(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
         log::warn!("Loading JSON model format is deprecated and inefficient. Consider converting to ONNX format.");
-        
+
         // Legacy JSON loading implementation (kept for backward compatibility)
         use std::fs;
 
@@ -275,30 +287,36 @@ impl MLEngine {
         match model_type {
             ModelType::TissueClassifier => {
                 use ndarray::Array2;
-                let weights_json = json
-                    .get("weights")
-                    .ok_or_else(|| KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                let weights_json = json.get("weights").ok_or_else(|| {
+                    KwaversError::Config(crate::error::ConfigError::MissingParameter {
                         parameter: "weights".to_string(),
                         section: "model".to_string(),
-                    }))?;
+                    })
+                })?;
                 let weights_vec: Vec<Vec<f32>> = serde_json::from_value(weights_json.clone())
-                    .map_err(|e| KwaversError::Data(crate::error::DataError::InvalidFormat {
-                        format: "json".to_string(),
-                        reason: e.to_string(),
-                    }))?;
+                    .map_err(|e| {
+                        KwaversError::Data(crate::error::DataError::InvalidFormat {
+                            format: "json".to_string(),
+                            reason: e.to_string(),
+                        })
+                    })?;
                 let rows = weights_vec.len();
                 if rows == 0 {
-                    return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
-                        required: 1,
-                        available: 0,
-                    }));
+                    return Err(KwaversError::Data(
+                        crate::error::DataError::InsufficientData {
+                            required: 1,
+                            available: 0,
+                        },
+                    ));
                 }
                 let cols = weights_vec[0].len();
                 if cols == 0 {
-                    return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
-                        required: 1,
-                        available: 0,
-                    }));
+                    return Err(KwaversError::Data(
+                        crate::error::DataError::InsufficientData {
+                            required: 1,
+                            available: 0,
+                        },
+                    ));
                 }
                 let flat: Vec<f32> = weights_vec.into_iter().flatten().collect();
                 let weights = Array2::from_shape_vec((rows, cols), flat).map_err(|e| {
@@ -309,22 +327,26 @@ impl MLEngine {
                 })?;
 
                 let bias = if let Some(bias_json) = json.get("bias") {
-                    let bias_vec: Vec<f32> = serde_json::from_value(bias_json.clone())
-                        .map_err(|e| KwaversError::Data(crate::error::DataError::InvalidFormat {
-                            format: "json".to_string(),
-                            reason: e.to_string(),
-                        }))?;
+                    let bias_vec: Vec<f32> =
+                        serde_json::from_value(bias_json.clone()).map_err(|e| {
+                            KwaversError::Data(crate::error::DataError::InvalidFormat {
+                                format: "json".to_string(),
+                                reason: e.to_string(),
+                            })
+                        })?;
                     Some(ndarray::Array1::from(bias_vec))
                 } else {
                     None
                 };
 
                 let model = crate::ml::models::TissueClassifierModel::from_weights(weights, bias);
-                self.models.insert(model_type, Model::TissueClassifier(model));
+                self.models
+                    .insert(model_type, Model::TissueClassifier(model));
             }
             _ => {
                 return Err(KwaversError::NotImplemented(format!(
-                    "JSON loading not supported for {:?}", model_type
+                    "JSON loading not supported for {:?}",
+                    model_type
                 )));
             }
         }
@@ -341,10 +363,12 @@ impl MLEngine {
         let model = self
             .models
             .get(&ModelType::TissueClassifier)
-            .ok_or_else(|| KwaversError::Config(crate::error::ConfigError::MissingParameter {
-                parameter: "TissueClassifier model".to_string(),
-                section: "MLEngine".to_string(),
-            }))?;
+            .ok_or_else(|| {
+                KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                    parameter: "TissueClassifier model".to_string(),
+                    section: "MLEngine".to_string(),
+                })
+            })?;
 
         // Flatten the 3-D field into (cells, features=1)
         let flat_f32: Vec<f32> = field_data.iter().map(|&v| v as f32).collect();
@@ -367,10 +391,12 @@ impl MLEngine {
                     .unwrap_or(0)
             })
             .into_shape(field_data.dim())
-            .map_err(|e| KwaversError::Data(crate::error::DataError::Corruption {
-                location: "classify_tissue reshape".to_string(),
-                reason: e.to_string(),
-            }))?;
+            .map_err(|e| {
+                KwaversError::Data(crate::error::DataError::Corruption {
+                    location: "classify_tissue reshape".to_string(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Update counters
         self.performance_metrics.total_inferences += 1;
@@ -397,13 +423,15 @@ impl MLEngine {
         let model = self
             .models
             .get(&ModelType::TissueClassifier)
-            .ok_or_else(|| KwaversError::Config(crate::error::ConfigError::MissingParameter {
-                parameter: "TissueClassifier model".to_string(),
-                section: "MLEngine".to_string(),
-            }))?;
+            .ok_or_else(|| {
+                KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                    parameter: "TissueClassifier model".to_string(),
+                    section: "MLEngine".to_string(),
+                })
+            })?;
 
         // Flatten 3-D field into (cells, features = 1)
-let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
+        let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         let cells = flat_f32.len();
         let input = Array2::from_shape_vec((cells, 1), flat_f32).map_err(|e| {
             KwaversError::System(crate::error::SystemError::MemoryAllocation {
@@ -416,10 +444,12 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         let probs = model.infer(&input)?; // (cells, classes)
         let classes_count = probs.dim().1;
         if classes_count == 0 {
-            return Err(KwaversError::Data(crate::error::DataError::InsufficientData {
-                required: 1,
-                available: 0,
-            }));
+            return Err(KwaversError::Data(
+                crate::error::DataError::InsufficientData {
+                    required: 1,
+                    available: 0,
+                },
+            ));
         }
 
         // Compute arg-max class and entropy per voxel.
@@ -428,16 +458,16 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
 
         for row in probs.rows() {
             // Arg-max
-            let (idx, max_p) = row
-                .iter()
-                .enumerate()
-                .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {
-                    if p > max_p {
-                        (i, p)
-                    } else {
-                        (max_i, max_p)
-                    }
-                });
+            let (idx, max_p) =
+                row.iter()
+                    .enumerate()
+                    .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {
+                        if p > max_p {
+                            (i, p)
+                        } else {
+                            (max_i, max_p)
+                        }
+                    });
             classes_vec.push(idx as u8);
 
             // Entropy
@@ -493,10 +523,7 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
 
         let sum: f64 = field_data.iter().copied().sum();
         let mean = sum / count;
-        let var_sum: f64 = field_data
-            .iter()
-            .map(|v| (*v - mean).powi(2))
-            .sum();
+        let var_sum: f64 = field_data.iter().map(|v| (*v - mean).powi(2)).sum();
         let std = (var_sum / count).sqrt();
         let threshold = mean + 3.0 * std;
 
@@ -530,7 +557,9 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
 
         // Very naive prediction: assume exponential decay and derive the time
         // to reach 1e-6 residual.
-        let predicted = (current_state.convergence_metric / 1e-6_f64).log10().max(0.0);
+        let predicted = (current_state.convergence_metric / 1e-6_f64)
+            .log10()
+            .max(0.0);
         self.performance_metrics.total_inferences += 1;
         Ok(predicted)
     }
@@ -539,24 +568,27 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
     /// Returns *p_success* in range [0,1] for each sample in `features`.
     pub fn predict_outcome(&mut self, features: &Array2<f32>) -> KwaversResult<Array1<f32>> {
         use ndarray::Axis;
-        let model = self.models.get(&ModelType::ConvergencePredictor).ok_or_else(|| {
-            KwaversError::Config(crate::error::ConfigError::MissingParameter {
-                parameter: "ConvergencePredictor model".to_string(),
-                section: "MLEngine".to_string(),
-            })
-        })?;
+        let model = self
+            .models
+            .get(&ModelType::ConvergencePredictor)
+            .ok_or_else(|| {
+                KwaversError::Config(crate::error::ConfigError::MissingParameter {
+                    parameter: "ConvergencePredictor model".to_string(),
+                    section: "MLEngine".to_string(),
+                })
+            })?;
         let probs = model.infer(features)?; // (samples, 2)
-        // Extract probability of class-1 (success) for each sample
+                                            // Extract probability of class-1 (success) for each sample
         let p_success = probs.index_axis(Axis(1), 1).to_owned();
         self.performance_metrics.total_inferences += probs.dim().0;
         Ok(p_success)
     }
-    
+
     /// Get performance metrics
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
-    
+
     /// Parameter optimization using AI (Phase 12)
     pub fn optimize_parameters_ai(
         &self,
@@ -567,7 +599,7 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
     ) -> KwaversResult<HashMap<String, f64>> {
         optimizer.optimize_with_ai(current_params, target_params, simulation_state)
     }
-    
+
     /// Pattern recognition for cavitation and acoustic events (Phase 12)
     pub fn analyze_simulation_patterns(
         &self,
@@ -577,15 +609,20 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         frequencies: &Array1<f64>,
     ) -> KwaversResult<SimulationPatterns> {
         let recognizer = PatternRecognizer::new();
-        recognizer.analyze_simulation_patterns(pressure, bubble_radius, acoustic_spectrum, frequencies)
+        recognizer.analyze_simulation_patterns(
+            pressure,
+            bubble_radius,
+            acoustic_spectrum,
+            frequencies,
+        )
     }
-    
+
     /// Predict simulation convergence using AI (Phase 12)
     pub fn predict_convergence_ai(&self, residual_history: &[f64]) -> (bool, f64) {
         let predictor = ConvergencePredictor::new(20, 1e-6);
         predictor.predict_convergence(residual_history)
     }
-    
+
     /// AI-assisted acceleration recommendations (Phase 12)
     pub fn suggest_acceleration_parameters(
         &self,
@@ -593,16 +630,16 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         residual_history: &[f64],
     ) -> KwaversResult<AIAccelerationRecommendation> {
         let predictor = ConvergencePredictor::new(20, 1e-6);
-        
+
         // Calculate trend
         let trend = if residual_history.len() > 1 {
             let recent = &residual_history[residual_history.len().saturating_sub(10)..];
-            let first_half = &recent[0..recent.len()/2];
-            let second_half = &recent[recent.len()/2..];
-            
+            let first_half = &recent[0..recent.len() / 2];
+            let second_half = &recent[recent.len() / 2..];
+
             let avg_first: f64 = first_half.iter().sum::<f64>() / first_half.len() as f64;
             let avg_second: f64 = second_half.iter().sum::<f64>() / second_half.len() as f64;
-            
+
             // Prevent division by zero
             if avg_first.abs() < 1e-15 {
                 // If avg_first is effectively zero, use absolute difference as trend indicator
@@ -617,10 +654,10 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
         } else {
             0.0
         };
-        
+
         let acceleration_factor = predictor.suggest_acceleration(current_residual, trend);
         let (will_converge, confidence) = predictor.predict_convergence(residual_history);
-        
+
         Ok(AIAccelerationRecommendation {
             acceleration_factor,
             confidence_level: confidence,
@@ -628,29 +665,29 @@ let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
             recommended_actions: self.generate_acceleration_actions(trend, current_residual),
         })
     }
-    
+
     fn generate_acceleration_actions(&self, trend: f64, residual: f64) -> Vec<String> {
         let mut actions = Vec::new();
-        
+
         if trend > 0.2 {
             actions.push("Increase time step size by 1.5x".to_string());
             actions.push("Enable multigrid acceleration".to_string());
         }
-        
+
         if residual > 1e-3 {
             actions.push("Apply preconditioning".to_string());
             actions.push("Switch to adaptive time stepping".to_string());
         }
-        
+
         if trend < 0.05 {
             actions.push("Reduce time step for stability".to_string());
             actions.push("Check for numerical instability".to_string());
         }
-        
+
         if actions.is_empty() {
             actions.push("Continue with current parameters".to_string());
         }
-        
+
         actions
     }
 }
@@ -685,7 +722,7 @@ pub struct AIAccelerationRecommendation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_ml_engine_creation() {
         let engine = MLEngine::new(MLBackend::Native).unwrap();
@@ -693,13 +730,13 @@ mod tests {
         assert!(!engine.models.is_empty()); // Should have default models
         assert!(engine.models.contains_key(&ModelType::TissueClassifier));
     }
-    
+
     #[test]
     fn test_model_type_enum() {
         let model_type = ModelType::TissueClassifier;
         assert_eq!(model_type, ModelType::TissueClassifier);
     }
-    
+
     #[test]
     fn test_ml_backend_enum() {
         let backend = MLBackend::ONNX;
@@ -721,7 +758,10 @@ mod tests {
 
         // Create engine and register model
         let mut engine = super::MLEngine::new(super::MLBackend::Native).unwrap();
-        engine.models.insert(super::ModelType::TissueClassifier, Model::TissueClassifier(model));
+        engine.models.insert(
+            super::ModelType::TissueClassifier,
+            Model::TissueClassifier(model),
+        );
 
         // Run classification with uncertainty quantification
         let (classes, entropy) = engine.classify_tissue_with_uncertainty(&field).unwrap();
@@ -753,7 +793,10 @@ mod tests {
         let model = models::ConvergencePredictorModel::from_weights(weights, bias);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
-        engine.models.insert(ModelType::ConvergencePredictor, Model::ConvergencePredictor(model));
+        engine.models.insert(
+            ModelType::ConvergencePredictor,
+            Model::ConvergencePredictor(model),
+        );
 
         let features: Array2<f32> = array![[0.0], [1.0]];
         let probs = engine.predict_outcome(&features).unwrap();

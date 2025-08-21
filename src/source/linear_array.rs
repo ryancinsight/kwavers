@@ -3,9 +3,9 @@ use crate::medium::Medium;
 use crate::signal::Signal;
 use crate::source::{Apodization, Source};
 use log::debug;
+use ndarray::Array3;
 use rayon::prelude::*;
 use std::fmt::Debug;
-use ndarray::Array3;
 
 #[derive(Debug)]
 pub struct LinearArray {
@@ -60,9 +60,7 @@ impl LinearArray {
         }
 
         let apodization_weights: Vec<f64> = (0..num_elements)
-            .map(|i| {
-                apodization.weight(i, num_elements)
-            })
+            .map(|i| apodization.weight(i, num_elements))
             .collect();
 
         Self {
@@ -88,7 +86,7 @@ impl LinearArray {
     ) {
         let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
         let spacing = self.element_spacing();
-        
+
         // Calculate time delays (not phase delays) for proper broadband focusing
         self.time_delays
             .par_iter_mut()
@@ -101,7 +99,10 @@ impl LinearArray {
                 .sqrt();
                 *delay = distance / c; // Time delay, not phase delay
             });
-        debug!("Adjusted focus to ({}, {}, {}) using time delays", focus_x, focus_y, focus_z);
+        debug!(
+            "Adjusted focus to ({}, {}, {}) using time delays",
+            focus_x, focus_y, focus_z
+        );
     }
 
     fn element_spacing(&self) -> f64 {
@@ -113,7 +114,7 @@ impl Source for LinearArray {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let spacing = self.element_spacing();
-        
+
         for i in 0..self.num_elements {
             let x_elem = i as f64 * spacing;
             if let Some((ix, iy, iz)) = grid.position_to_indices(x_elem, self.y_pos, self.z_pos) {
@@ -122,13 +123,13 @@ impl Source for LinearArray {
         }
         mask
     }
-    
+
     fn amplitude(&self, t: f64) -> f64 {
         // For arrays, return the base signal amplitude
         // Individual element delays are handled in the mask application
         self.signal.amplitude(t)
     }
-    
+
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Use the create_mask method for efficient computation
         if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {

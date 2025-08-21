@@ -1,12 +1,12 @@
 // output/mod.rs
+use crate::physics::field_indices::LIGHT_IDX;
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::recorder::Recorder;
 use crate::time::Time;
 use log::info;
 use ndarray::Axis;
 use std::fs::File;
 use std::io::{self, Write};
-use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::field_indices::LIGHT_IDX;
 
 // Note: Field indices imported from physics::field_indices for SSOT
 

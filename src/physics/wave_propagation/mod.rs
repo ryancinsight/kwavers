@@ -5,7 +5,7 @@
 //!
 //! # Literature References
 //!
-//! 1. **Born, M., & Wolf, E. (1999)**. "Principles of Optics" (7th ed.). 
+//! 1. **Born, M., & Wolf, E. (1999)**. "Principles of Optics" (7th ed.).
 //!    Cambridge University Press. ISBN: 978-0521642224
 //!    - Comprehensive treatment of reflection and refraction
 //!    - Fresnel equations derivation and applications
@@ -20,28 +20,28 @@
 //!    - Reflection from layered media
 //!    - Critical angles and total internal reflection
 //!
-//! 4. **Pierce, A. D. (2019)**. "Acoustics: An Introduction to Its Physical 
+//! 4. **Pierce, A. D. (2019)**. "Acoustics: An Introduction to Its Physical
 //!    Principles and Applications" (3rd ed.). Springer. ISBN: 978-3030112134
 //!    - Comprehensive acoustic wave propagation theory
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
-use crate::constants::physics::{SOUND_SPEED_WATER, DENSITY_WATER};
+use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 
+pub mod fresnel;
+pub mod interface;
 pub mod reflection;
 pub mod refraction;
-pub mod interface;
-pub mod fresnel;
-pub mod snell;
-pub mod scattering; // Unified scattering module
+pub mod scattering;
+pub mod snell; // Unified scattering module
 
-pub use reflection::{ReflectionCalculator, ReflectionCoefficients};
-pub use refraction::{RefractionCalculator, RefractionAngles};
+pub use fresnel::{FresnelCalculator, FresnelCoefficients};
 pub use interface::{InterfaceProperties, InterfaceType};
-pub use fresnel::{FresnelCoefficients, FresnelCalculator};
-pub use snell::{SnellLawCalculator, CriticalAngles};
-pub use scattering::{ScatteringCalculator, ScatteringRegime, VolumeScattering, PhaseFunction};
+pub use reflection::{ReflectionCalculator, ReflectionCoefficients};
+pub use refraction::{RefractionAngles, RefractionCalculator};
+pub use scattering::{PhaseFunction, ScatteringCalculator, ScatteringRegime, VolumeScattering};
+pub use snell::{CriticalAngles, SnellLawCalculator};
 
 /// Wave propagation mode
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -107,17 +107,17 @@ impl MediumProperties {
         Self {
             wave_speed: SOUND_SPEED_WATER,
             density: DENSITY_WATER,
-            refractive_index: 1.333,  // At 20°C, 589 nm
+            refractive_index: 1.333, // At 20°C, 589 nm
             absorption: 0.0,
             anisotropy: None,
         }
     }
-    
+
     /// Calculate acoustic impedance Z = ρc
     pub fn acoustic_impedance(&self) -> f64 {
         self.density * self.wave_speed
     }
-    
+
     /// Calculate optical impedance Z = √(μ/ε) ≈ Z₀/n for non-magnetic media
     pub fn optical_impedance(&self) -> f64 {
         const VACUUM_IMPEDANCE: f64 = 376.730313668; // Ohms
@@ -156,31 +156,31 @@ impl AttenuationCalculator {
             wave_speed,
         }
     }
-    
+
     /// Calculate amplitude attenuation over distance using Beer-Lambert law
     /// A(x) = A₀ * exp(-α * x)
     pub fn amplitude_at_distance(&self, initial_amplitude: f64, distance: f64) -> f64 {
         initial_amplitude * (-self.absorption_coefficient * distance).exp()
     }
-    
+
     /// Calculate intensity attenuation (intensity ~ amplitude²)
     /// I(x) = I₀ * exp(-2α * x)
     pub fn intensity_at_distance(&self, initial_intensity: f64, distance: f64) -> f64 {
         initial_intensity * (-2.0 * self.absorption_coefficient * distance).exp()
     }
-    
+
     /// Calculate attenuation in dB over distance
     /// Attenuation_dB = 20 * log₁₀(A₀/A) = 8.686 * α * x
     pub fn attenuation_db(&self, distance: f64) -> f64 {
         8.686 * self.absorption_coefficient * distance
     }
-    
+
     /// Calculate frequency-dependent absorption for acoustic waves in tissue
     /// α = α₀ * f^n where n is typically 1-2
     pub fn tissue_absorption(frequency: f64, alpha_0: f64, power_law: f64) -> f64 {
         alpha_0 * frequency.powf(power_law)
     }
-    
+
     /// Calculate thermo-viscous absorption in fluids (classical absorption)
     /// α = 2πf²/ρc³ * (4μ/3 + μ_B + κ(γ-1)/C_p)
     pub fn classical_absorption(
@@ -199,7 +199,7 @@ impl AttenuationCalculator {
         let thermal_term = thermal_conductivity * (specific_heat_ratio - 1.0) / specific_heat_cp;
         factor1 * (viscous_term + thermal_term)
     }
-    
+
     /// Apply attenuation to a 3D field
     pub fn apply_attenuation_field(
         &self,
@@ -208,18 +208,19 @@ impl AttenuationCalculator {
         grid_spacing: [f64; 3],
     ) {
         let (nx, ny, nz) = field.dim();
-        
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let x = i as f64 * grid_spacing[0];
                     let y = j as f64 * grid_spacing[1];
                     let z = k as f64 * grid_spacing[2];
-                    
-                    let distance = ((x - source_position[0]).powi(2) +
-                                   (y - source_position[1]).powi(2) +
-                                   (z - source_position[2]).powi(2)).sqrt();
-                    
+
+                    let distance = ((x - source_position[0]).powi(2)
+                        + (y - source_position[1]).powi(2)
+                        + (z - source_position[2]).powi(2))
+                    .sqrt();
+
                     field[(i, j, k)] *= (-self.absorption_coefficient * distance).exp();
                 }
             }
@@ -238,7 +239,7 @@ impl WavePropagationCalculator {
             wavelength,
         }
     }
-    
+
     /// Calculate reflection and transmission for given incident angle
     pub fn calculate_coefficients(
         &self,
@@ -253,16 +254,16 @@ impl WavePropagationCalculator {
                 reason: "must be between 0 and π/2".to_string(),
             }));
         }
-        
+
         // Calculate transmitted angle using Snell's law
         let snell_calc = SnellLawCalculator::new(&self.interface);
         let transmitted_angle = snell_calc.calculate_transmitted_angle(incident_angle)?;
-        
+
         // Check for total internal reflection
         let critical_angle = snell_calc.critical_angle();
-        let total_internal_reflection = critical_angle.is_some() 
-            && incident_angle > critical_angle.unwrap();
-        
+        let total_internal_reflection =
+            critical_angle.is_some() && incident_angle > critical_angle.unwrap();
+
         // Calculate coefficients based on wave mode
         let coefficients = match self.mode {
             WaveMode::Acoustic => {
@@ -276,7 +277,7 @@ impl WavePropagationCalculator {
                 self.calculate_elastic_coefficients(incident_angle, transmitted_angle)?
             }
         };
-        
+
         Ok(PropagationCoefficients {
             reflection_amplitude: coefficients.0,
             transmission_amplitude: coefficients.1,
@@ -284,10 +285,14 @@ impl WavePropagationCalculator {
             transmission_phase: coefficients.3,
             total_internal_reflection,
             incident_angle,
-            transmitted_angle: if total_internal_reflection { None } else { Some(transmitted_angle) },
+            transmitted_angle: if total_internal_reflection {
+                None
+            } else {
+                Some(transmitted_angle)
+            },
         })
     }
-    
+
     /// Calculate acoustic reflection and transmission coefficients
     fn calculate_acoustic_coefficients(
         &self,
@@ -296,23 +301,23 @@ impl WavePropagationCalculator {
     ) -> KwaversResult<(f64, f64, f64, f64)> {
         let z1 = self.interface.medium1.acoustic_impedance();
         let z2 = self.interface.medium2.acoustic_impedance();
-        
+
         let cos_i = incident_angle.cos();
         let cos_t = transmitted_angle.cos();
-        
+
         // Acoustic reflection coefficient (pressure)
         let r = (z2 * cos_i - z1 * cos_t) / (z2 * cos_i + z1 * cos_t);
-        
+
         // Acoustic transmission coefficient (pressure)
         let t = (2.0 * z2 * cos_i) / (z2 * cos_i + z1 * cos_t);
-        
+
         // Phase shifts
         let r_phase = if r < 0.0 { PI } else { 0.0 };
         let t_phase = 0.0; // No phase shift for transmission
-        
+
         Ok((r.abs(), t.abs(), r_phase, t_phase))
     }
-    
+
     /// Calculate optical Fresnel coefficients
     fn calculate_optical_coefficients(
         &self,
@@ -322,10 +327,10 @@ impl WavePropagationCalculator {
     ) -> KwaversResult<(f64, f64, f64, f64)> {
         let n1 = self.interface.medium1.refractive_index;
         let n2 = self.interface.medium2.refractive_index;
-        
+
         let fresnel = FresnelCalculator::new(n1, n2);
         let coeffs = fresnel.calculate(incident_angle, transmitted_angle, polarization)?;
-        
+
         Ok((
             coeffs.reflection_amplitude,
             coeffs.transmission_amplitude,
@@ -333,7 +338,7 @@ impl WavePropagationCalculator {
             coeffs.transmission_phase,
         ))
     }
-    
+
     /// Calculate elastic wave coefficients (simplified for now)
     fn calculate_elastic_coefficients(
         &self,
@@ -370,7 +375,7 @@ impl PropagationCoefficients {
     pub fn energy_reflection(&self) -> f64 {
         self.reflection_amplitude.powi(2)
     }
-    
+
     /// Calculate energy transmission coefficient T = |t|²
     pub fn energy_transmission(&self) -> f64 {
         if self.total_internal_reflection {
@@ -379,7 +384,7 @@ impl PropagationCoefficients {
             self.transmission_amplitude.powi(2)
         }
     }
-    
+
     /// Verify energy conservation: R + T = 1 (for lossless media)
     pub fn verify_energy_conservation(&self) -> f64 {
         self.energy_reflection() + self.energy_transmission()
@@ -389,13 +394,13 @@ impl PropagationCoefficients {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_snells_law() {
         let medium1 = MediumProperties::water();
         let mut medium2 = MediumProperties::water();
         medium2.refractive_index = 1.5; // Glass
-        
+
         let interface = Interface {
             medium1,
             medium2,
@@ -403,27 +408,28 @@ mod tests {
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
         };
-        
+
         let calc = WavePropagationCalculator::new(
             WaveMode::Optical,
             interface,
             5e14, // Green light
         );
-        
-        let coeffs = calc.calculate_coefficients(PI / 6.0, Some(Polarization::Unpolarized))
+
+        let coeffs = calc
+            .calculate_coefficients(PI / 6.0, Some(Polarization::Unpolarized))
             .expect("Failed to calculate coefficients");
-        
+
         // Verify Snell's law: n1 * sin(θ1) = n2 * sin(θ2)
         let n1_sin_theta1 = 1.333 * (PI / 6.0).sin();
         let n2_sin_theta2 = 1.5 * coeffs.transmitted_angle.unwrap().sin();
         assert!((n1_sin_theta1 - n2_sin_theta2).abs() < 1e-10);
     }
-    
+
     #[test]
     fn test_energy_conservation() {
         let medium1 = MediumProperties::water();
         let medium2 = MediumProperties::water();
-        
+
         let interface = Interface {
             medium1,
             medium2,
@@ -431,21 +437,26 @@ mod tests {
             position: [0.0, 0.0, 0.0],
             interface_type: InterfaceType::Planar,
         };
-        
+
         let calc = WavePropagationCalculator::new(
             WaveMode::Acoustic,
             interface,
             1e6, // 1 MHz
         );
-        
+
         for angle in [0.0, PI / 6.0, PI / 4.0, PI / 3.0] {
-            let coeffs = calc.calculate_coefficients(angle, None)
+            let coeffs = calc
+                .calculate_coefficients(angle, None)
                 .expect("Failed to calculate coefficients");
-            
+
             // Energy should be conserved (within numerical precision)
             let energy_sum = coeffs.verify_energy_conservation();
-            assert!((energy_sum - 1.0).abs() < 1e-10,
-                "Energy not conserved at angle {}: sum = {}", angle, energy_sum);
+            assert!(
+                (energy_sum - 1.0).abs() < 1e-10,
+                "Energy not conserved at angle {}: sum = {}",
+                angle,
+                energy_sum
+            );
         }
     }
 }

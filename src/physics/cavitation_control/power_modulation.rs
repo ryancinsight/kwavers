@@ -1,7 +1,7 @@
 //! Power Modulation for Cavitation Control
-//! 
+//!
 //! Implements amplitude and power modulation schemes for controlling cavitation activity.
-//! 
+//!
 //! References:
 //! - Hockham et al. (2010): "A real-time controller for sustaining thermally relevant acoustic cavitation"
 //! - O'Reilly & Hynynen (2012): "Blood-brain barrier: real-time feedback-controlled focused ultrasound"
@@ -36,7 +36,7 @@ const MECHANICAL_INDEX_LIMIT: f64 = 1.9;
 /// Modulation schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ModulationScheme {
-    Continuous,           // No modulation
+    Continuous,          // No modulation
     Pulsed,              // On/off pulsing
     DutyCycleControl,    // Variable duty cycle
     AmplitudeModulation, // Continuous amplitude control
@@ -50,9 +50,9 @@ pub enum ModulationScheme {
 pub struct PowerControl {
     pub amplitude: f64,        // Current amplitude (0-1)
     pub duty_cycle: f64,       // Current duty cycle (0-1)
-    pub prf: f64,             // Pulse repetition frequency
+    pub prf: f64,              // Pulse repetition frequency
     pub burst_length: usize,   // Number of cycles per burst
-    pub ramp_time: f64,       // Ramp up/down time
+    pub ramp_time: f64,        // Ramp up/down time
     pub mechanical_index: f64, // Current MI
 }
 
@@ -92,27 +92,30 @@ impl PowerModulator {
             safety_limiter: SafetyLimiter::new(),
         }
     }
-    
+
     /// Set modulation scheme
     pub fn set_scheme(&mut self, scheme: ModulationScheme) {
         self.scheme = scheme;
     }
-    
+
     /// Update control parameters
     pub fn update_control(&mut self, control: PowerControl) {
         // Apply safety limits
         self.control = control;
-        self.control.duty_cycle = self.control.duty_cycle.clamp(MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
+        self.control.duty_cycle = self
+            .control
+            .duty_cycle
+            .clamp(MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
         self.control.amplitude = self.control.amplitude.clamp(0.0, 1.0);
     }
-    
+
     /// Get modulation envelope at current time
     pub fn get_envelope(&mut self, dt: f64) -> f64 {
         self.time += dt;
-        
+
         let envelope = match self.scheme {
             ModulationScheme::Continuous => 1.0,
-            
+
             ModulationScheme::Pulsed => {
                 let period = 1.0 / self.control.prf;
                 let phase = (self.time % period) / period;
@@ -122,14 +125,14 @@ impl PowerModulator {
                     0.0
                 }
             }
-            
+
             ModulationScheme::DutyCycleControl => {
                 let period = 1.0 / self.control.prf;
                 let phase = (self.time % period) / period;
-                
+
                 // Smooth transitions using raised cosine
                 let transition_width = 0.05; // 5% of period
-                
+
                 if phase < transition_width {
                     // Rising edge
                     0.5 * (1.0 + (PI * phase / transition_width).cos())
@@ -137,35 +140,36 @@ impl PowerModulator {
                     1.0
                 } else if phase < self.control.duty_cycle {
                     // Falling edge
-                    let fall_phase = (phase - (self.control.duty_cycle - transition_width)) / transition_width;
+                    let fall_phase =
+                        (phase - (self.control.duty_cycle - transition_width)) / transition_width;
                     0.5 * (1.0 - (PI * fall_phase).cos())
                 } else {
                     0.0
                 }
             }
-            
+
             ModulationScheme::AmplitudeModulation => {
                 // Direct amplitude control with filtering
                 self.control.amplitude
             }
-            
+
             ModulationScheme::BurstMode => {
                 let burst_period = 1.0 / self.control.prf;
                 let phase = self.time % burst_period;
                 let cycles_per_burst = self.control.burst_length as f64;
                 let burst_duration = cycles_per_burst / (self.control.prf * 10.0); // Assuming 10x carrier freq
-                
+
                 if phase < burst_duration {
                     1.0
                 } else {
                     0.0
                 }
             }
-            
+
             ModulationScheme::Ramped => {
                 let period = 1.0 / self.control.prf;
                 let phase = (self.time % period) / period;
-                
+
                 if phase < self.control.ramp_time {
                     // Ramp up
                     phase / self.control.ramp_time
@@ -179,28 +183,29 @@ impl PowerModulator {
                     0.0
                 }
             }
-            
+
             ModulationScheme::Sinusoidal => {
                 let modulation_freq = self.control.prf;
                 0.5 * (1.0 + (2.0 * PI * modulation_freq * self.time).sin())
             }
         };
-        
+
         // Apply amplitude control and filtering
         let modulated = envelope * self.control.amplitude;
         let filtered = self.amplitude_filter.filter(modulated);
-        
+
         // Apply safety limiting
-        self.safety_limiter.limit(filtered, self.control.mechanical_index)
+        self.safety_limiter
+            .limit(filtered, self.control.mechanical_index)
     }
-    
+
     /// Reset modulator state
     pub fn reset(&mut self) {
         self.time = 0.0;
         self.current_phase = 0.0;
         self.amplitude_filter.reset();
     }
-    
+
     /// Get current control parameters
     pub fn control(&self) -> &PowerControl {
         &self.control
@@ -224,29 +229,29 @@ impl AmplitudeController {
             filter: ExponentialFilter::new(0.01),
         }
     }
-    
+
     /// Set target amplitude
     pub fn set_target(&mut self, target: f64) {
         self.target_amplitude = target.clamp(0.0, 1.0);
     }
-    
+
     /// Update amplitude with rate limiting
     pub fn update(&mut self, dt: f64) -> f64 {
         let max_change = self.rate_limit * dt;
         let error = self.target_amplitude - self.current_amplitude;
-        
+
         let change = if error.abs() > max_change {
             max_change * error.signum()
         } else {
             error
         };
-        
+
         self.current_amplitude += change;
         self.current_amplitude = self.filter.filter(self.current_amplitude);
-        
+
         self.current_amplitude
     }
-    
+
     /// Get current amplitude
     pub fn amplitude(&self) -> f64 {
         self.current_amplitude
@@ -272,34 +277,34 @@ impl DutyCycleController {
             transition_rate: 1.0, // Full range in 1 second
         }
     }
-    
+
     /// Set target duty cycle
     pub fn set_target(&mut self, target: f64) {
         self.target_duty_cycle = target.clamp(self.min_duty, self.max_duty);
     }
-    
+
     /// Update duty cycle with smooth transition
     pub fn update(&mut self, dt: f64) -> f64 {
         let max_change = self.transition_rate * dt;
         let error = self.target_duty_cycle - self.current_duty_cycle;
-        
+
         let change = if error.abs() > max_change {
             max_change * error.signum()
         } else {
             error
         };
-        
+
         self.current_duty_cycle += change;
         self.current_duty_cycle = self.current_duty_cycle.clamp(self.min_duty, self.max_duty);
-        
+
         self.current_duty_cycle
     }
-    
+
     /// Get current duty cycle
     pub fn duty_cycle(&self) -> f64 {
         self.current_duty_cycle
     }
-    
+
     /// Set duty cycle limits
     pub fn set_limits(&mut self, min: f64, max: f64) {
         self.min_duty = min.max(MIN_DUTY_CYCLE);
@@ -320,12 +325,12 @@ impl ExponentialFilter {
             state: 0.0,
         }
     }
-    
+
     fn filter(&mut self, input: f64) -> f64 {
         self.state = self.alpha * self.state + (1.0 - self.alpha) * input;
         self.state
     }
-    
+
     fn reset(&mut self) {
         self.state = 0.0;
     }
@@ -346,7 +351,7 @@ impl SafetyLimiter {
             history: VecDeque::with_capacity(100),
         }
     }
-    
+
     fn limit(&mut self, amplitude: f64, current_mi: f64) -> f64 {
         // Limit based on mechanical index
         let mi_limit = if current_mi > 0.0 {
@@ -354,16 +359,16 @@ impl SafetyLimiter {
         } else {
             amplitude
         };
-        
+
         // Track power history
         self.history.push_back(amplitude * amplitude);
         if self.history.len() > 100 {
             self.history.pop_front();
         }
-        
+
         // Calculate average power
         let avg_power: f64 = self.history.iter().sum::<f64>() / self.history.len() as f64;
-        
+
         // Limit if average power exceeds threshold
         if avg_power > self.max_power {
             mi_limit * (self.max_power / avg_power).sqrt()
@@ -398,33 +403,33 @@ impl PulseSequenceGenerator {
             repeat,
         }
     }
-    
+
     /// Get current pulse parameters
     pub fn update(&mut self, dt: f64) -> Option<PulseDescriptor> {
         if self.sequence.is_empty() || (!self.repeat && self.current_index >= self.sequence.len()) {
             return None;
         }
-        
+
         self.current_time += dt;
-        
+
         let current_pulse = &self.sequence[self.current_index];
-        
+
         if self.current_time >= current_pulse.duration {
             self.current_time = 0.0;
             self.current_index += 1;
-            
+
             if self.repeat && self.current_index >= self.sequence.len() {
                 self.current_index = 0;
             }
         }
-        
+
         if self.current_index < self.sequence.len() {
             Some(self.sequence[self.current_index].clone())
         } else {
             None
         }
     }
-    
+
     /// Reset sequence to beginning
     pub fn reset(&mut self) {
         self.current_index = 0;
@@ -435,7 +440,7 @@ impl PulseSequenceGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_pulsed_modulation() {
         let mut modulator = PowerModulator::new(ModulationScheme::Pulsed, 1000.0);
@@ -444,11 +449,11 @@ mod tests {
             prf: 100.0,
             ..Default::default()
         });
-        
+
         // Sample over one period
         let period = 1.0 / 100.0;
         let dt = period / 100.0;
-        
+
         let mut on_time = 0.0;
         for _ in 0..100 {
             let envelope = modulator.get_envelope(dt);
@@ -456,35 +461,35 @@ mod tests {
                 on_time += dt;
             }
         }
-        
+
         // Should be approximately 30% duty cycle
         let actual_duty = on_time / period;
         assert!((actual_duty - 0.3).abs() < 0.05);
     }
-    
+
     #[test]
     fn test_amplitude_controller() {
         let mut controller = AmplitudeController::new(0.0);
         controller.set_target(1.0);
-        
+
         // Update with rate limiting
         let final_amplitude = controller.update(0.1);
-        
+
         // Should not jump instantly to 1.0 due to rate limiting
         assert!(final_amplitude < 1.0);
         assert!(final_amplitude > 0.0);
     }
-    
+
     #[test]
     fn test_duty_cycle_limits() {
         let mut controller = DutyCycleController::new(0.5);
         controller.set_limits(0.2, 0.8);
-        
+
         // Try to set outside limits
         controller.set_target(0.1);
         controller.update(1.0);
         assert!(controller.duty_cycle() >= 0.2);
-        
+
         controller.set_target(0.9);
         controller.update(1.0);
         assert!(controller.duty_cycle() <= 0.8);

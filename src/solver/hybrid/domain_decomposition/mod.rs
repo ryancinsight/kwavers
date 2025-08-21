@@ -23,17 +23,17 @@
 //! - **Intermediate smoothness**: Neither fully smooth nor highly discontinuous
 //! - **Multi-scale features**: Mixed frequency content
 
-pub mod region;
 pub mod analyzer;
-pub mod partitioner;
 pub mod buffer;
 pub mod metrics;
+pub mod partitioner;
+pub mod region;
 
-pub use region::{DomainRegion, DomainType};
 pub use analyzer::DomainAnalyzer;
-pub use partitioner::DomainPartitioner;
 pub use buffer::{BufferZones, OverlapRegion};
 pub use metrics::QualityMetrics;
+pub use partitioner::DomainPartitioner;
+pub use region::{DomainRegion, DomainType};
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
@@ -54,16 +54,12 @@ impl DomainDecomposer {
             partitioner: DomainPartitioner::new(),
         }
     }
-    
+
     /// Decompose the domain based on medium properties and grid
-    pub fn decompose(
-        &self,
-        grid: &Grid,
-        medium: &dyn Medium,
-    ) -> KwaversResult<Vec<DomainRegion>> {
+    pub fn decompose(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Vec<DomainRegion>> {
         // Analyze the domain
         let metrics = self.analyzer.analyze(grid, medium)?;
-        
+
         // Partition based on analysis
         self.partitioner.partition(grid, &metrics)
     }

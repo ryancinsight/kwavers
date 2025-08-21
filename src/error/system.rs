@@ -1,8 +1,8 @@
 //! System error types
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SystemError {
@@ -29,8 +29,15 @@ pub enum SystemError {
 impl fmt::Display for SystemError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MemoryAllocation { requested_bytes, reason } => {
-                write!(f, "Memory allocation failed for {} bytes: {}", requested_bytes, reason)
+            Self::MemoryAllocation {
+                requested_bytes,
+                reason,
+            } => {
+                write!(
+                    f,
+                    "Memory allocation failed for {} bytes: {}",
+                    requested_bytes, reason
+                )
             }
             Self::ThreadCreation { reason } => {
                 write!(f, "Thread creation failed: {}", reason)

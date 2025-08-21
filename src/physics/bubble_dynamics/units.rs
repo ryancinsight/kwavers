@@ -3,12 +3,12 @@
 //! This module provides type-safe wrappers for bubble dynamics parameters
 //! using the uom crate to prevent unit conversion errors at compile time.
 
+use std::collections::HashMap;
+use uom::si::dynamic_viscosity::pascal_second;
 use uom::si::f64::*;
-use uom::si::pressure::pascal;
 use uom::si::length::meter;
 use uom::si::mass_density::kilogram_per_cubic_meter;
-use uom::si::dynamic_viscosity::pascal_second;
-use std::collections::HashMap;
+use uom::si::pressure::pascal;
 
 // Physical constants for bubble dynamics
 const WATER_DENSITY: f64 = 998.0; // kg/m³
@@ -66,16 +66,28 @@ impl Default for BubbleParameters {
             mole_fractions: HashMap::new(),
             molecular_weights: HashMap::new(),
         };
-        
+
         // Default: Air bubble
-        gas_composition.mole_fractions.insert("N2".to_string(), 0.78);
-        gas_composition.mole_fractions.insert("O2".to_string(), 0.21);
-        gas_composition.mole_fractions.insert("Ar".to_string(), 0.01);
-        
-        gas_composition.molecular_weights.insert("N2".to_string(), 0.028);
-        gas_composition.molecular_weights.insert("O2".to_string(), 0.032);
-        gas_composition.molecular_weights.insert("Ar".to_string(), 0.040);
-        
+        gas_composition
+            .mole_fractions
+            .insert("N2".to_string(), 0.78);
+        gas_composition
+            .mole_fractions
+            .insert("O2".to_string(), 0.21);
+        gas_composition
+            .mole_fractions
+            .insert("Ar".to_string(), 0.01);
+
+        gas_composition
+            .molecular_weights
+            .insert("N2".to_string(), 0.028);
+        gas_composition
+            .molecular_weights
+            .insert("O2".to_string(), 0.032);
+        gas_composition
+            .molecular_weights
+            .insert("Ar".to_string(), 0.040);
+
         Self {
             r0: Length::new::<meter>(DEFAULT_BUBBLE_RADIUS),
             p0: Pressure::new::<pascal>(ATMOSPHERIC_PRESSURE),
@@ -84,7 +96,7 @@ impl Default for BubbleParameters {
             mu_liquid: DynamicViscosity::new::<pascal_second>(WATER_VISCOSITY),
             sigma: WATER_SURFACE_TENSION, // N/m
             pv: Pressure::new::<pascal>(WATER_VAPOR_PRESSURE),
-            gamma: 1.4, // Diatomic gas
+            gamma: 1.4,       // Diatomic gas
             k_thermal: 0.598, // W/(m·K) for water
             accommodation_coeff: ACCOMMODATION_COEFFICIENT,
             initial_gas_pressure: Pressure::new::<pascal>(ATMOSPHERIC_PRESSURE),
@@ -98,37 +110,49 @@ impl BubbleParameters {
     pub fn air_in_water() -> Self {
         Self::default()
     }
-    
+
     /// Create parameters for a vapor bubble (cavitation)
     pub fn vapor_bubble() -> Self {
         let mut params = Self::default();
         params.initial_gas_pressure = params.pv;
-        
+
         // Pure water vapor
         params.gas_composition.mole_fractions.clear();
-        params.gas_composition.mole_fractions.insert("H2O".to_string(), 1.0);
+        params
+            .gas_composition
+            .mole_fractions
+            .insert("H2O".to_string(), 1.0);
         params.gas_composition.molecular_weights.clear();
-        params.gas_composition.molecular_weights.insert("H2O".to_string(), WATER_MOLECULAR_WEIGHT);
-        
+        params
+            .gas_composition
+            .molecular_weights
+            .insert("H2O".to_string(), WATER_MOLECULAR_WEIGHT);
+
         params
     }
-    
+
     /// Create parameters for ultrasound contrast agent
     pub fn contrast_agent(shell_elasticity: f64) -> Self {
         let mut params = Self::default();
-        
+
         // Typical UCA: Perfluorocarbon gas
         params.gas_composition.mole_fractions.clear();
-        params.gas_composition.mole_fractions.insert("C4F10".to_string(), 1.0);
+        params
+            .gas_composition
+            .mole_fractions
+            .insert("C4F10".to_string(), 1.0);
         params.gas_composition.molecular_weights.clear();
-        params.gas_composition.molecular_weights.insert("C4F10".to_string(), 0.238);
-        
+        params
+            .gas_composition
+            .molecular_weights
+            .insert("C4F10".to_string(), 0.238);
+
         // Smaller initial radius
         params.r0 = Length::new::<meter>(2e-6);
-        
+
         // Modified surface tension due to shell
         params.sigma = shell_elasticity;
-        
+
         params
     }
 }
@@ -152,7 +176,7 @@ impl DimensionlessParameters {
         let mu = params.mu_liquid.get::<pascal_second>();
         let p0 = params.p0.get::<pascal>();
         let pv = params.pv.get::<pascal>();
-        
+
         Self {
             reynolds: rho * velocity_scale * r0 / mu,
             weber: rho * velocity_scale.powi(2) * r0 / params.sigma,
@@ -170,7 +194,7 @@ pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
             m_eff += mole_frac * mol_weight;
         }
     }
-    
+
     if m_eff == 0.0 {
         // Default to air if no composition specified
         AIR_MOLECULAR_WEIGHT
@@ -183,7 +207,7 @@ pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
 pub fn specific_heat_ratio(composition: &GasComposition, temperature: f64) -> f64 {
     // Simplified - would need gas species info for accurate calculation
     let molecular_weight = effective_molecular_weight(composition);
-    
+
     // Estimate based on molecular weight
     if molecular_weight < 0.010 {
         // Light gas (H2, He) - closer to monatomic
@@ -200,27 +224,27 @@ pub fn specific_heat_ratio(composition: &GasComposition, temperature: f64) -> f6
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_parameters() {
         let params = BubbleParameters::default();
         assert_eq!(params.r0.get::<meter>(), DEFAULT_BUBBLE_RADIUS);
         assert_eq!(params.p0.get::<pascal>(), ATMOSPHERIC_PRESSURE);
     }
-    
+
     #[test]
     fn test_dimensionless_numbers() {
         let params = BubbleParameters::default();
         let velocity = 10.0; // m/s
         let dim = DimensionlessParameters::from_bubble_params(&params, velocity);
-        
+
         // Check Reynolds number
         assert!(dim.reynolds > 0.0);
         assert!(dim.reynolds < 1000.0); // Should be in intermediate regime
-        
+
         // Check Weber number
         assert!(dim.weber > 0.0);
-        
+
         // Check cavitation number
         assert!(dim.cavitation > 0.0);
     }

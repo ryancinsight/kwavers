@@ -1,7 +1,7 @@
 //! Sensor calibration for localization
 
+use super::{CalibrationData, PhantomMeasurement, SensorArray};
 use crate::error::KwaversResult;
-use super::{SensorArray, CalibrationData, PhantomMeasurement};
 
 /// Sensor calibration data
 #[derive(Debug, Clone, Default)]
@@ -30,7 +30,7 @@ impl<'a> Calibrator<'a> {
     pub fn new(array: &'a SensorArray) -> Self {
         Self { array }
     }
-    
+
     /// Calibrate using phantom measurements
     pub fn calibrate(
         &self,

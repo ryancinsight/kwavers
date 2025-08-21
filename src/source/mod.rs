@@ -19,17 +19,17 @@ pub trait Source: Debug + Sync + Send {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
     /// This is called once during initialization for optimal performance
     fn create_mask(&self, grid: &Grid) -> Array3<f64>;
-    
+
     /// Get the signal amplitude at time t
     /// This is called once per time step, not per grid point
     fn amplitude(&self, t: f64) -> f64;
-    
+
     /// Get source positions for visualization/analysis
     fn positions(&self) -> Vec<(f64, f64, f64)>;
-    
+
     /// Get the underlying signal
     fn signal(&self) -> &dyn Signal;
-    
+
     /// Get source term at a specific position and time
     /// Uses create_mask() and amplitude() internally for compatibility
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -47,15 +47,15 @@ pub use apodization::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization,
 };
+pub use focused_transducer::{
+    make_annular_array, make_bowl, ApodizationType, ArcConfig, ArcSource, BowlConfig,
+    BowlTransducer, MultiBowlArray,
+};
 pub use linear_array::LinearArray;
 pub use matrix_array::MatrixArray;
 pub use phased_array::{
-    PhasedArrayTransducer, PhasedArrayConfig, TransducerElement, 
-    ElementSensitivity, BeamformingMode
-};
-pub use focused_transducer::{
-    BowlTransducer, BowlConfig, ArcSource, ArcConfig,
-    MultiBowlArray, ApodizationType, make_bowl, make_annular_array
+    BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
+    TransducerElement,
 };
 
 // Source implementations are defined in this module
@@ -77,20 +77,22 @@ impl PointSource {
 impl Source for PointSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        if let Some((ix, iy, iz)) = grid.position_to_indices(self.position.0, self.position.1, self.position.2) {
+        if let Some((ix, iy, iz)) =
+            grid.position_to_indices(self.position.0, self.position.1, self.position.2)
+        {
             mask[(ix, iy, iz)] = 1.0;
         }
         mask
     }
-    
+
     fn amplitude(&self, t: f64) -> f64 {
         self.signal.amplitude(t)
     }
-    
+
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         vec![self.position]
     }
-    
+
     fn signal(&self) -> &dyn Signal {
         self.signal.as_ref()
     }
@@ -123,7 +125,7 @@ impl Source for TimeVaryingSource {
         }
         mask
     }
-    
+
     fn amplitude(&self, t: f64) -> f64 {
         let index = (t / self.dt) as usize;
         if index < self.signal_values.len() {
@@ -132,7 +134,7 @@ impl Source for TimeVaryingSource {
             0.0
         }
     }
-    
+
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         // Convert grid indices to physical coordinates
         let x = self.position.0 as f64; // Simplified - would need grid spacing
@@ -140,7 +142,7 @@ impl Source for TimeVaryingSource {
         let z = self.position.2 as f64;
         vec![(x, y, z)]
     }
-    
+
     fn signal(&self) -> &dyn Signal {
         &NullSignal // Placeholder since this uses direct signal values
     }
@@ -167,19 +169,18 @@ impl Source for CompositeSource {
         }
         mask
     }
-    
+
     fn amplitude(&self, t: f64) -> f64 {
-        self.sources.iter()
-            .map(|source| source.amplitude(t))
-            .sum()
+        self.sources.iter().map(|source| source.amplitude(t)).sum()
     }
-    
+
     fn positions(&self) -> Vec<(f64, f64, f64)> {
-        self.sources.iter()
+        self.sources
+            .iter()
             .flat_map(|source| source.positions())
             .collect()
     }
-    
+
     fn signal(&self) -> &dyn Signal {
         // Return the first source's signal as a representative
         if let Some(first_source) = self.sources.first() {
@@ -198,15 +199,15 @@ impl Source for NullSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         Array3::zeros((grid.nx, grid.ny, grid.nz))
     }
-    
+
     fn amplitude(&self, _t: f64) -> f64 {
         0.0
     }
-    
+
     fn positions(&self) -> Vec<(f64, f64, f64)> {
         vec![]
     }
-    
+
     fn signal(&self) -> &dyn Signal {
         &NullSignal
     }
@@ -228,16 +229,16 @@ impl<'a> Signal for TimeVaryingSignal<'a> {
             0.0
         }
     }
-    
+
     fn frequency(&self, _t: f64) -> f64 {
         // Time-varying signal doesn't have a single frequency
         0.0
     }
-    
+
     fn phase(&self, _t: f64) -> f64 {
         0.0
     }
-    
+
     fn clone_box(&self) -> Box<dyn Signal> {
         Box::new(NullSignal)
     }
@@ -251,15 +252,15 @@ impl Signal for NullSignal {
     fn amplitude(&self, _t: f64) -> f64 {
         0.0
     }
-    
+
     fn frequency(&self, _t: f64) -> f64 {
         0.0
     }
-    
+
     fn phase(&self, _t: f64) -> f64 {
         0.0
     }
-    
+
     fn clone_box(&self) -> Box<dyn Signal> {
         Box::new(self.clone())
     }

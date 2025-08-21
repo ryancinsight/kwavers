@@ -17,7 +17,9 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::solver::reconstruction::{ReconstructionConfig, FilterType, InterpolationMethod, Reconstructor};
+use crate::solver::reconstruction::{
+    FilterType, InterpolationMethod, ReconstructionConfig, Reconstructor,
+};
 use ndarray::{Array1, Array2, Array3, ArrayView2, ArrayView3, Zip};
 use std::f64::consts::PI;
 
@@ -33,7 +35,7 @@ pub enum PhotoacousticAlgorithm {
     /// Fourier domain reconstruction
     FourierDomain,
     /// Iterative reconstruction (SIRT/ART)
-    Iterative { 
+    Iterative {
         algorithm: IterativeAlgorithm,
         iterations: usize,
         relaxation_factor: f64,
@@ -96,23 +98,23 @@ impl PhotoacousticReconstructor {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
-        
+
         let mut reconstructed_image = Array3::zeros((nx, ny, nz));
-        
+
         // Apply pre-processing filters if specified
         let filtered_data = if let Some((low_freq, high_freq)) = self.config.bandpass_filter {
             self.apply_bandpass_filter(sensor_data, low_freq, high_freq)?
         } else {
             sensor_data.to_owned()
         };
-        
+
         // Apply envelope detection if enabled
         let processed_data = if self.config.envelope_detection {
             self.apply_envelope_detection(&filtered_data)?
         } else {
             filtered_data
         };
-        
+
         // Universal back-projection algorithm
         Zip::indexed(reconstructed_image.view_mut()).for_each(|(i, j, k), pixel_value| {
             let voxel_pos = [
@@ -120,31 +122,36 @@ impl PhotoacousticReconstructor {
                 grid.y_coordinates()[j],
                 grid.z_coordinates()[k],
             ];
-            
+
             let mut accumulator = 0.0;
             let mut weight_sum = 0.0;
-            
+
             // Sum contributions from all sensors
             for (sensor_idx, &sensor_pos) in sensor_positions.iter().enumerate() {
                 let distance = Self::euclidean_distance(&voxel_pos, &sensor_pos);
                 let time_of_flight = distance / self.config.sound_speed;
                 let time_index = (time_of_flight / dt).round() as usize;
-                
+
                 if time_index < processed_data.ncols() {
-                    let weight = self.calculate_back_projection_weight(distance, &voxel_pos, &sensor_pos);
+                    let weight =
+                        self.calculate_back_projection_weight(distance, &voxel_pos, &sensor_pos);
                     let signal_value = processed_data[[sensor_idx, time_index]];
-                    
+
                     accumulator += weight * signal_value;
                     weight_sum += weight;
                 }
             }
-            
-            *pixel_value = if weight_sum > 1e-12 { accumulator / weight_sum } else { 0.0 };
+
+            *pixel_value = if weight_sum > 1e-12 {
+                accumulator / weight_sum
+            } else {
+                0.0
+            };
         });
-        
+
         // Apply post-processing filters
         let result = self.apply_reconstruction_filter(&reconstructed_image)?;
-        
+
         Ok(result)
     }
 
@@ -157,10 +164,10 @@ impl PhotoacousticReconstructor {
     ) -> KwaversResult<Array3<f64>> {
         // Apply Hilbert transform for phase-sensitive reconstruction
         let hilbert_data = self.apply_hilbert_transform(sensor_data)?;
-        
+
         // Apply reconstruction filter in frequency domain
         let filtered_data = self.apply_fbp_filter(&hilbert_data)?;
-        
+
         // Perform back-projection with filtered data
         self.universal_back_projection(filtered_data.view(), sensor_positions, grid)
     }
@@ -174,12 +181,12 @@ impl PhotoacousticReconstructor {
     ) -> KwaversResult<Array3<f64>> {
         // Time reverse the sensor data
         let mut time_reversed_data = Array2::zeros(sensor_data.dim());
-        
+
         Zip::indexed(time_reversed_data.view_mut()).for_each(|(i, j), value| {
             let reversed_j = sensor_data.ncols() - 1 - j;
             *value = sensor_data[[i, reversed_j]];
         });
-        
+
         // Propagate time-reversed signals back into the medium
         self.propagate_time_reversed_signals(time_reversed_data.view(), sensor_positions, grid)
     }
@@ -196,13 +203,13 @@ impl PhotoacousticReconstructor {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
-        
+
         // Initialize reconstruction with uniform distribution
         let mut reconstruction = Array3::from_elem((nx, ny, nz), 0.1);
-        
+
         // Build system matrix (sparse representation)
         let system_matrix = self.build_system_matrix(sensor_positions, grid)?;
-        
+
         // Iterative algorithm
         for iteration in 0..iterations {
             match algorithm {
@@ -210,19 +217,24 @@ impl PhotoacousticReconstructor {
                     self.sirt_iteration(&mut reconstruction, sensor_data, &system_matrix)?;
                 }
                 IterativeAlgorithm::ART => {
-                    self.art_iteration(&mut reconstruction, sensor_data, &system_matrix, iteration)?;
+                    self.art_iteration(
+                        &mut reconstruction,
+                        sensor_data,
+                        &system_matrix,
+                        iteration,
+                    )?;
                 }
                 IterativeAlgorithm::OSEM => {
                     self.osem_iteration(&mut reconstruction, sensor_data, &system_matrix)?;
                 }
             }
-            
+
             // Apply regularization
             if self.config.regularization > 0.0 {
                 self.apply_regularization(&mut reconstruction)?;
             }
         }
-        
+
         Ok(reconstruction)
     }
 
@@ -236,13 +248,13 @@ impl PhotoacousticReconstructor {
     ) -> KwaversResult<Array3<f64>> {
         // Use acoustic wave equation with known medium properties
         let mut reconstruction = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        
+
         // Forward model with acoustic propagation
         let forward_model = self.build_forward_model(sensor_positions, grid, absorption_map)?;
-        
+
         // Solve inverse problem using least squares with regularization
         self.solve_regularized_least_squares(sensor_data, &forward_model, &mut reconstruction)?;
-        
+
         Ok(reconstruction)
     }
 
@@ -255,20 +267,25 @@ impl PhotoacousticReconstructor {
         high_freq: f64,
     ) -> KwaversResult<Array2<f64>> {
         let mut filtered_data = data.to_owned();
-        
+
         // Apply bandpass filter in frequency domain
         Zip::from(filtered_data.rows_mut()).for_each(|mut row| {
             let filtered_row = self.bandpass_filter_1d(row.view(), low_freq, high_freq);
             row.assign(&filtered_row);
         });
-        
+
         Ok(filtered_data)
     }
 
-    fn bandpass_filter_1d(&self, signal: ndarray::ArrayView1<f64>, low_freq: f64, high_freq: f64) -> Array1<f64> {
+    fn bandpass_filter_1d(
+        &self,
+        signal: ndarray::ArrayView1<f64>,
+        low_freq: f64,
+        high_freq: f64,
+    ) -> Array1<f64> {
         let n = signal.len();
         let dt = 1.0 / self.config.sampling_frequency;
-        
+
         // Create frequency vector
         let mut frequencies = Array1::zeros(n);
         for i in 0..n {
@@ -277,7 +294,7 @@ impl PhotoacousticReconstructor {
                 frequencies[i] -= 1.0 / dt;
             }
         }
-        
+
         // Create bandpass filter
         let mut filter = Array1::zeros(n);
         for i in 0..n {
@@ -286,29 +303,28 @@ impl PhotoacousticReconstructor {
                 filter[i] = 1.0;
             }
         }
-        
+
         // Apply filter using FFT-based convolution
-        use rustfft::{FftPlanner, num_complex::Complex};
-        
+        use rustfft::{num_complex::Complex, FftPlanner};
+
         let n = signal.len();
         if n == 0 {
             return signal.to_owned();
         }
-        
+
         // Convert signal to complex
-        let mut signal_fft: Vec<Complex<f64>> = signal.iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-        
+        let mut signal_fft: Vec<Complex<f64>> =
+            signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
+
         // Pad to power of 2
         let padded_len = n.next_power_of_two();
         signal_fft.resize(padded_len, Complex::new(0.0, 0.0));
-        
+
         // Forward FFT
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(padded_len);
         fft.process(&mut signal_fft);
-        
+
         // Apply frequency domain filter
         for (i, sample) in signal_fft.iter_mut().enumerate() {
             if i < filter.len() {
@@ -317,14 +333,15 @@ impl PhotoacousticReconstructor {
                 *sample = Complex::new(0.0, 0.0);
             }
         }
-        
+
         // Inverse FFT
         let ifft = planner.plan_fft_inverse(padded_len);
         ifft.process(&mut signal_fft);
-        
+
         // Extract real part and original length
         let scale = 1.0 / padded_len as f64;
-        signal_fft.into_iter()
+        signal_fft
+            .into_iter()
             .take(n)
             .map(|c| c.re * scale)
             .collect()
@@ -332,90 +349,88 @@ impl PhotoacousticReconstructor {
 
     fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let mut envelope_data = Array2::zeros(data.dim());
-        
+
         for i in 0..data.nrows() {
             let data_row = data.row(i);
             let mut env_row = envelope_data.row_mut(i);
-            
+
             // Apply Hilbert transform to get analytic signal
             let analytic_signal = self.hilbert_transform_1d(data_row);
-            
+
             // Calculate envelope as magnitude of analytic signal
             for (j, &complex_val) in analytic_signal.iter().enumerate() {
                 env_row[j] = complex_val.norm();
             }
         }
-        
+
         Ok(envelope_data)
     }
 
-    fn hilbert_transform_1d(&self, signal: ndarray::ArrayView1<f64>) -> Array1<num_complex::Complex<f64>> {
-        use rustfft::{FftPlanner, num_complex::Complex};
-        
+    fn hilbert_transform_1d(
+        &self,
+        signal: ndarray::ArrayView1<f64>,
+    ) -> Array1<num_complex::Complex<f64>> {
+        use rustfft::{num_complex::Complex, FftPlanner};
+
         let n = signal.len();
         if n == 0 {
             return Array1::from_vec(vec![]);
         }
-        
+
         // Convert to complex signal
-        let mut buffer: Vec<Complex<f64>> = signal.iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
-        
+        let mut buffer: Vec<Complex<f64>> = signal.iter().map(|&x| Complex::new(x, 0.0)).collect();
+
         // Pad to power of 2 for efficiency
         let padded_len = n.next_power_of_two();
         buffer.resize(padded_len, Complex::new(0.0, 0.0));
-        
+
         // Forward FFT
         let mut planner = FftPlanner::new();
         let fft = planner.plan_fft_forward(padded_len);
         fft.process(&mut buffer);
-        
+
         // Apply Hilbert transform in frequency domain
         // H(f) = -i * sign(f) for f > 0, +i * sign(f) for f < 0, 0 for f = 0
-        for k in 1..padded_len/2 {
+        for k in 1..padded_len / 2 {
             buffer[k] *= Complex::new(0.0, -1.0); // Multiply by -i
         }
-        for k in (padded_len/2 + 1)..padded_len {
-            buffer[k] *= Complex::new(0.0, 1.0);  // Multiply by +i
+        for k in (padded_len / 2 + 1)..padded_len {
+            buffer[k] *= Complex::new(0.0, 1.0); // Multiply by +i
         }
         // DC and Nyquist components remain unchanged
-        
+
         // Inverse FFT
         let ifft = planner.plan_fft_inverse(padded_len);
         ifft.process(&mut buffer);
-        
+
         // Normalize and extract original length
         let scale = 1.0 / padded_len as f64;
-        let result: Vec<Complex<f64>> = buffer.into_iter()
-            .take(n)
-            .map(|c| c * scale)
-            .collect();
-        
+        let result: Vec<Complex<f64>> = buffer.into_iter().take(n).map(|c| c * scale).collect();
+
         Array1::from_vec(result)
     }
 
     fn apply_hilbert_transform(&self, data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
         let mut hilbert_data = Array2::zeros(data.dim());
-        
+
         for i in 0..data.nrows() {
             let data_row = data.row(i);
             let mut hilbert_row = hilbert_data.row_mut(i);
-            
+
             let analytic_signal = self.hilbert_transform_1d(data_row);
-            
+
             // Use imaginary part of analytic signal
             for (j, &complex_val) in analytic_signal.iter().enumerate() {
                 hilbert_row[j] = complex_val.im;
             }
         }
-        
+
         Ok(hilbert_data)
     }
 
     fn apply_fbp_filter(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let mut filtered_data = data.clone();
-        
+
         // Apply reconstruction filter based on configuration
         match self.config.filter {
             FilterType::RamLak => {
@@ -429,7 +444,7 @@ impl PhotoacousticReconstructor {
             }
             _ => {} // No filtering
         }
-        
+
         Ok(filtered_data)
     }
 
@@ -439,7 +454,7 @@ impl PhotoacousticReconstructor {
         Zip::from(data.rows_mut()).for_each(|mut row| {
             let n = row.len();
             let dt = 1.0 / self.config.sampling_frequency;
-            
+
             // Apply ramp filter in frequency domain (simplified)
             for i in 0..n {
                 let freq = (i as f64) / (n as f64 * dt);
@@ -447,7 +462,7 @@ impl PhotoacousticReconstructor {
                 row[i] *= weight;
             }
         });
-        
+
         Ok(())
     }
 
@@ -456,7 +471,7 @@ impl PhotoacousticReconstructor {
         Zip::from(data.rows_mut()).for_each(|mut row| {
             let n = row.len();
             let dt = 1.0 / self.config.sampling_frequency;
-            
+
             for i in 0..n {
                 let freq = (i as f64) / (n as f64 * dt);
                 let normalized_freq = freq * dt;
@@ -469,18 +484,18 @@ impl PhotoacousticReconstructor {
                 row[i] *= weight;
             }
         });
-        
+
         Ok(())
     }
 
     fn apply_cosine_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         // Cosine filter: |f| * cos(πf/2fc)
         let nyquist_freq = self.config.sampling_frequency / 2.0;
-        
+
         Zip::from(data.rows_mut()).for_each(|mut row| {
             let n = row.len();
             let dt = 1.0 / self.config.sampling_frequency;
-            
+
             for i in 0..n {
                 let freq = (i as f64) / (n as f64 * dt);
                 let cosine_val = (PI * freq / (2.0 * nyquist_freq)).cos();
@@ -488,7 +503,7 @@ impl PhotoacousticReconstructor {
                 row[i] *= weight;
             }
         });
-        
+
         Ok(())
     }
 
@@ -527,9 +542,9 @@ impl PhotoacousticReconstructor {
         // Each column represents a voxel
         let n_sensors = sensor_positions.len();
         let mut system_matrix = vec![Vec::new(); n_sensors];
-        
+
         let dt = 1.0 / self.config.sampling_frequency;
-        
+
         for (sensor_idx, &sensor_pos) in sensor_positions.iter().enumerate() {
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
@@ -539,10 +554,14 @@ impl PhotoacousticReconstructor {
                             grid.y_coordinates()[j],
                             grid.z_coordinates()[k],
                         ];
-                        
+
                         let distance = Self::euclidean_distance(&voxel_pos, &sensor_pos);
-                        let weight = self.calculate_back_projection_weight(distance, &voxel_pos, &sensor_pos);
-                        
+                        let weight = self.calculate_back_projection_weight(
+                            distance,
+                            &voxel_pos,
+                            &sensor_pos,
+                        );
+
                         if weight > 1e-12 {
                             let voxel_idx = i * grid.ny * grid.nz + j * grid.nz + k;
                             system_matrix[sensor_idx].push((voxel_idx, weight));
@@ -551,7 +570,7 @@ impl PhotoacousticReconstructor {
                 }
             }
         }
-        
+
         Ok(system_matrix)
     }
 
@@ -563,35 +582,35 @@ impl PhotoacousticReconstructor {
     ) -> KwaversResult<()> {
         // Simultaneous Iterative Reconstruction Technique
         let mut correction = Array3::<f64>::zeros(reconstruction.dim());
-        
+
         // Calculate correction for each measurement
         for (sensor_idx, sensor_weights) in system_matrix.iter().enumerate() {
             let measured_value = sensor_data[[sensor_idx, 0]]; // Simplified - use first time sample
-            
+
             // Forward projection
             let mut forward_proj = 0.0;
             for &(voxel_idx, weight) in sensor_weights {
                 let (i, j, k) = self.linear_to_3d_index(voxel_idx, reconstruction.dim());
                 forward_proj += weight * reconstruction[[i, j, k]];
             }
-            
+
             // Calculate residual
             let residual = measured_value - forward_proj;
-            
+
             // Back-project residual
             for &(voxel_idx, weight) in sensor_weights {
                 let (i, j, k) = self.linear_to_3d_index(voxel_idx, reconstruction.dim());
                 correction[[i, j, k]] += weight * residual / sensor_weights.len() as f64;
             }
         }
-        
+
         // Apply correction with relaxation
         let relaxation = 0.1; // Conservative relaxation factor
         for (recon, &corr) in reconstruction.iter_mut().zip(correction.iter()) {
             *recon += relaxation * corr;
             *recon = recon.max(0.0); // Non-negativity constraint
         }
-        
+
         Ok(())
     }
 
@@ -605,22 +624,22 @@ impl PhotoacousticReconstructor {
         // Algebraic Reconstruction Technique
         let sensor_idx = iteration % system_matrix.len();
         let sensor_weights = &system_matrix[sensor_idx];
-        
+
         let measured_value = sensor_data[[sensor_idx, 0]];
-        
+
         // Forward projection for this sensor
         let mut forward_proj = 0.0;
         let mut norm_squared = 0.0;
-        
+
         for &(voxel_idx, weight) in sensor_weights {
             let (i, j, k) = self.linear_to_3d_index(voxel_idx, reconstruction.dim());
             forward_proj += weight * reconstruction[[i, j, k]];
             norm_squared += weight * weight;
         }
-        
+
         if norm_squared > 1e-12 {
             let correction_factor = (measured_value - forward_proj) / norm_squared;
-            
+
             // Update reconstruction
             for &(voxel_idx, weight) in sensor_weights {
                 let (i, j, k) = self.linear_to_3d_index(voxel_idx, reconstruction.dim());
@@ -628,7 +647,7 @@ impl PhotoacousticReconstructor {
                 reconstruction[[i, j, k]] = reconstruction[[i, j, k]].max(0.0);
             }
         }
-        
+
         Ok(())
     }
 
@@ -646,19 +665,22 @@ impl PhotoacousticReconstructor {
         // Apply Total Variation regularization
         let reg_strength = self.config.regularization;
         let mut regularized = reconstruction.clone();
-        
+
         // 3D Total Variation regularization
-        for i in 1..reconstruction.shape()[0]-1 {
-            for j in 1..reconstruction.shape()[1]-1 {
-                for k in 1..reconstruction.shape()[2]-1 {
+        for i in 1..reconstruction.shape()[0] - 1 {
+            for j in 1..reconstruction.shape()[1] - 1 {
+                for k in 1..reconstruction.shape()[2] - 1 {
                     let center = reconstruction[[i, j, k]];
-                    
-                    let gradient_x = reconstruction[[i+1, j, k]] - reconstruction[[i-1, j, k]];
-                    let gradient_y = reconstruction[[i, j+1, k]] - reconstruction[[i, j-1, k]];
-                    let gradient_z = reconstruction[[i, j, k+1]] - reconstruction[[i, j, k-1]];
-                    
-                    let gradient_magnitude = (gradient_x*gradient_x + gradient_y*gradient_y + gradient_z*gradient_z).sqrt();
-                    
+
+                    let gradient_x = reconstruction[[i + 1, j, k]] - reconstruction[[i - 1, j, k]];
+                    let gradient_y = reconstruction[[i, j + 1, k]] - reconstruction[[i, j - 1, k]];
+                    let gradient_z = reconstruction[[i, j, k + 1]] - reconstruction[[i, j, k - 1]];
+
+                    let gradient_magnitude = (gradient_x * gradient_x
+                        + gradient_y * gradient_y
+                        + gradient_z * gradient_z)
+                        .sqrt();
+
                     if gradient_magnitude > 1e-12 {
                         let regularization_term = reg_strength / gradient_magnitude;
                         regularized[[i, j, k]] = center - regularization_term * gradient_magnitude;
@@ -666,7 +688,7 @@ impl PhotoacousticReconstructor {
                 }
             }
         }
-        
+
         *reconstruction = regularized;
         Ok(())
     }
@@ -680,10 +702,10 @@ impl PhotoacousticReconstructor {
         // Build forward model matrix for model-based reconstruction
         let n_sensors = sensor_positions.len();
         let n_voxels = grid.nx * grid.ny * grid.nz;
-        
+
         // Simplified forward model - would use full acoustic wave equation in practice
         let forward_model = Array2::zeros((n_sensors, n_voxels));
-        
+
         Ok(forward_model)
     }
 
@@ -696,11 +718,15 @@ impl PhotoacousticReconstructor {
         // Solve regularized least squares problem
         // (A^T A + λI) x = A^T b
         // Simplified implementation
-        
+
         Ok(())
     }
 
-    fn linear_to_3d_index(&self, linear_idx: usize, shape: (usize, usize, usize)) -> (usize, usize, usize) {
+    fn linear_to_3d_index(
+        &self,
+        linear_idx: usize,
+        shape: (usize, usize, usize),
+    ) -> (usize, usize, usize) {
         let (nx, ny, nz) = shape;
         let k = linear_idx % nz;
         let j = (linear_idx / nz) % ny;
@@ -711,10 +737,10 @@ impl PhotoacousticReconstructor {
     fn apply_reconstruction_filter(&self, image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         // Apply post-reconstruction filtering
         let filtered_image = image.clone();
-        
+
         // Apply 3D Gaussian smoothing if specified
         // Implementation would depend on specific filter requirements
-        
+
         Ok(filtered_image)
     }
 
@@ -741,18 +767,24 @@ impl Reconstructor for PhotoacousticReconstructor {
             PhotoacousticAlgorithm::TimeReversal => {
                 self.time_reversal_reconstruction(sensor_data.view(), sensor_positions, grid)
             }
-            PhotoacousticAlgorithm::Iterative { algorithm, iterations, .. } => {
-                self.iterative_reconstruction(sensor_data.view(), sensor_positions, grid, *iterations, algorithm)
-            }
+            PhotoacousticAlgorithm::Iterative {
+                algorithm,
+                iterations,
+                ..
+            } => self.iterative_reconstruction(
+                sensor_data.view(),
+                sensor_positions,
+                grid,
+                *iterations,
+                algorithm,
+            ),
             PhotoacousticAlgorithm::ModelBased => {
                 self.model_based_reconstruction(sensor_data.view(), sensor_positions, grid, None)
             }
-            _ => {
-                self.universal_back_projection(sensor_data.view(), sensor_positions, grid)
-            }
+            _ => self.universal_back_projection(sensor_data.view(), sensor_positions, grid),
         }
     }
-    
+
     fn name(&self) -> &str {
         "PhotoacousticReconstructor"
     }
@@ -762,7 +794,7 @@ impl Reconstructor for PhotoacousticReconstructor {
 mod tests {
     use super::*;
     use crate::grid::Grid;
-    
+
     #[test]
     fn test_photoacoustic_reconstructor_creation() {
         let config = PhotoacousticConfig {
@@ -775,11 +807,11 @@ mod tests {
             envelope_detection: true,
             regularization: 0.01,
         };
-        
+
         let reconstructor = PhotoacousticReconstructor::new(config);
         assert_eq!(reconstructor.name(), "PhotoacousticReconstructor");
     }
-    
+
     #[test]
     fn test_universal_back_projection() {
         let config = PhotoacousticConfig {
@@ -792,13 +824,14 @@ mod tests {
             envelope_detection: false,
             regularization: 0.0,
         };
-        
+
         let reconstructor = PhotoacousticReconstructor::new(config);
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3);
         let sensor_data = Array2::zeros((8, 100));
         let sensor_positions = vec![[0.0, 0.0, 0.01]; 8];
-        
-        let result = reconstructor.universal_back_projection(sensor_data.view(), &sensor_positions, &grid);
+
+        let result =
+            reconstructor.universal_back_projection(sensor_data.view(), &sensor_positions, &grid);
         assert!(result.is_ok());
     }
 }

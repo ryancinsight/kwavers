@@ -1,13 +1,13 @@
 //! Core PSTD solver implementation
 
-use ndarray::{Array3, Zip};
+use super::config::PstdConfig;
+use super::spectral_ops::SpectralOperations;
+use crate::boundary::Boundary;
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::source::Source;
-use crate::boundary::Boundary;
-use crate::error::KwaversResult;
-use super::config::PstdConfig;
-use super::spectral_ops::SpectralOperations;
+use ndarray::{Array3, Zip};
 
 /// PSTD solver state
 #[derive(Debug)]
@@ -27,13 +27,13 @@ impl PstdSolver {
         let validation = config.validate();
         if !validation.is_valid {
             return Err(crate::error::KwaversError::Validation(
-                crate::error::ValidationError::StateValidation
+                crate::error::ValidationError::StateValidation,
             ));
         }
-        
+
         let spectral = SpectralOperations::new(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
-        
+
         Ok(Self {
             config,
             spectral,
@@ -43,7 +43,6 @@ impl PstdSolver {
             velocity_z: Array3::zeros(shape),
         })
     }
-    
 
     /// Get the timestep for this solver
     pub fn get_timestep(&self) -> f64 {
@@ -62,21 +61,21 @@ impl PstdSolver {
     ) -> KwaversResult<()> {
         // Update pressure: ∂p/∂t = -ρc²∇·v
         self.update_pressure(medium, source, grid, time, dt)?;
-        
+
         // Apply boundary conditions to pressure
         boundary.apply_acoustic(self.pressure.view_mut(), grid, (time / dt) as usize)?;
-        
+
         // Update velocity: ∂v/∂t = -∇p/ρ
         self.update_velocity(medium, grid, dt)?;
-        
+
         // Apply boundary conditions to velocity
         boundary.apply_acoustic(self.velocity_x.view_mut(), grid, (time / dt) as usize)?;
         boundary.apply_acoustic(self.velocity_y.view_mut(), grid, (time / dt) as usize)?;
         boundary.apply_acoustic(self.velocity_z.view_mut(), grid, (time / dt) as usize)?;
-        
+
         Ok(())
     }
-    
+
     /// Update pressure field
     pub fn update_pressure(
         &mut self,
@@ -90,7 +89,7 @@ impl PstdSolver {
         let (dvx_dx, _, _) = self.spectral.compute_gradient(&self.velocity_x, grid)?;
         let (_, dvy_dy, _) = self.spectral.compute_gradient(&self.velocity_y, grid)?;
         let (_, _, dvz_dz) = self.spectral.compute_gradient(&self.velocity_z, grid)?;
-        
+
         let mut divergence = Array3::zeros(self.pressure.dim());
         Zip::from(&mut divergence)
             .and(&dvx_dx)
@@ -99,11 +98,11 @@ impl PstdSolver {
             .for_each(|d, &dx, &dy, &dz| {
                 *d = dx + dy + dz;
             });
-        
+
         // Update pressure with source term
         let source_mask = source.create_mask(grid);
         let amplitude = source.amplitude(time);
-        
+
         Zip::indexed(&mut self.pressure)
             .and(&divergence)
             .and(&source_mask)
@@ -111,16 +110,16 @@ impl PstdSolver {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                
+
                 let rho = medium.density(x, y, z, grid);
                 let c = medium.sound_speed(x, y, z, grid);
-                
+
                 *p -= dt * (rho * c * c * div - s * amplitude);
             });
-        
+
         Ok(())
     }
-    
+
     /// Update velocity field
     pub fn update_velocity(
         &mut self,
@@ -130,7 +129,7 @@ impl PstdSolver {
     ) -> KwaversResult<()> {
         // Compute pressure gradient
         let (grad_x, grad_y, grad_z) = self.spectral.compute_gradient(&self.pressure, grid)?;
-        
+
         // Update velocity components
         Zip::indexed(&mut self.velocity_x)
             .and(&grad_x)
@@ -141,7 +140,7 @@ impl PstdSolver {
                 let rho = medium.density(x, y, z, grid);
                 *v -= dt * grad / rho;
             });
-        
+
         Zip::indexed(&mut self.velocity_y)
             .and(&grad_y)
             .for_each(|(i, j, k), v, &grad| {
@@ -151,7 +150,7 @@ impl PstdSolver {
                 let rho = medium.density(x, y, z, grid);
                 *v -= dt * grad / rho;
             });
-        
+
         Zip::indexed(&mut self.velocity_z)
             .and(&grad_z)
             .for_each(|(i, j, k), v, &grad| {
@@ -161,22 +160,27 @@ impl PstdSolver {
                 let rho = medium.density(x, y, z, grid);
                 *v -= dt * grad / rho;
             });
-        
+
         Ok(())
     }
-    
+
     /// Get pressure field
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
-    
+
     /// Get velocity fields
     pub fn velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.velocity_x, &self.velocity_y, &self.velocity_z)
     }
-    
+
     /// Compute divergence of velocity field
-    pub fn compute_divergence(&self, vx: &Array3<f64>, vy: &Array3<f64>, vz: &Array3<f64>) -> Array3<f64> {
+    pub fn compute_divergence(
+        &self,
+        vx: &Array3<f64>,
+        vy: &Array3<f64>,
+        vz: &Array3<f64>,
+    ) -> Array3<f64> {
         self.spectral.compute_divergence(vx, vy, vz)
     }
 }

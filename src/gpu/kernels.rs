@@ -5,8 +5,8 @@
 //! of >17M grid updates/second with optimized memory access patterns.
 
 use crate::error::KwaversResult;
-use crate::grid::Grid;
 use crate::gpu::{GpuBackend, GpuPerformanceMetrics};
+use crate::grid::Grid;
 use std::collections::HashMap;
 
 /// GPU kernel types for different physics operations
@@ -102,7 +102,7 @@ impl KernelManager {
             let config = self.generate_kernel_config(kernel_type, grid)?;
             let source = self.generate_kernel_source(kernel_type, &config)?;
             let binary = self.compile_kernel_source(&source)?;
-            
+
             let compiled_kernel = CompiledKernel {
                 kernel_type,
                 source_code: source,
@@ -110,7 +110,7 @@ impl KernelManager {
                 config,
                 performance_metrics: None,
             };
-            
+
             self.kernels.insert(kernel_type, compiled_kernel);
         }
 
@@ -118,9 +118,13 @@ impl KernelManager {
     }
 
     /// Generate optimal kernel configuration for grid size
-    fn generate_kernel_config(&self, kernel_type: KernelType, grid: &Grid) -> KwaversResult<KernelConfig> {
+    fn generate_kernel_config(
+        &self,
+        kernel_type: KernelType,
+        grid: &Grid,
+    ) -> KwaversResult<KernelConfig> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        
+
         // Calculate optimal block size based on grid dimensions and GPU architecture
         let block_size = match self.backend {
             GpuBackend::Cuda => self.calculate_cuda_block_size(nx, ny, nz),
@@ -138,11 +142,13 @@ impl KernelManager {
         let shared_memory_size = match (kernel_type, self.optimization_level) {
             (KernelType::AcousticWave, OptimizationLevel::Aggressive) => {
                 // Shared memory for pressure and velocity fields
-                (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 4 * 8 // 4 fields * 8 bytes
+                (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 4 * 8
+                // 4 fields * 8 bytes
             }
             (KernelType::ThermalDiffusion, OptimizationLevel::Aggressive) => {
                 // Shared memory for temperature field with halo
-                (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 8 // 8 bytes per element
+                (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 8
+                // 8 bytes per element
             }
             _ => 0,
         };
@@ -163,7 +169,11 @@ impl KernelManager {
         match self.optimization_level {
             OptimizationLevel::Basic => (32, 4, 1),
             OptimizationLevel::Moderate => {
-                if nz >= 8 { (16, 8, 2) } else { (32, 8, 1) }
+                if nz >= 8 {
+                    (16, 8, 2)
+                } else {
+                    (32, 8, 1)
+                }
             }
             OptimizationLevel::Aggressive => {
                 // Adaptive block size based on grid dimensions
@@ -189,15 +199,25 @@ impl KernelManager {
     }
 
     /// Generate kernel source code for specific type and backend
-    fn generate_kernel_source(&self, kernel_type: KernelType, config: &KernelConfig) -> KwaversResult<String> {
+    fn generate_kernel_source(
+        &self,
+        kernel_type: KernelType,
+        config: &KernelConfig,
+    ) -> KwaversResult<String> {
         match self.backend {
             GpuBackend::Cuda => self.generate_cuda_kernel(kernel_type, config),
-            GpuBackend::OpenCL | GpuBackend::WebGPU => self.generate_wgsl_kernel(kernel_type, config),
+            GpuBackend::OpenCL | GpuBackend::WebGPU => {
+                self.generate_wgsl_kernel(kernel_type, config)
+            }
         }
     }
 
     /// Generate CUDA kernel source
-    fn generate_cuda_kernel(&self, kernel_type: KernelType, config: &KernelConfig) -> KwaversResult<String> {
+    fn generate_cuda_kernel(
+        &self,
+        kernel_type: KernelType,
+        config: &KernelConfig,
+    ) -> KwaversResult<String> {
         match kernel_type {
             KernelType::AcousticWave => Ok(self.generate_cuda_acoustic_kernel(config)),
             KernelType::ThermalDiffusion => Ok(self.generate_cuda_thermal_kernel(config)),
@@ -214,7 +234,11 @@ impl KernelManager {
     }
 
     /// Generate WGSL kernel source for WebGPU
-    fn generate_wgsl_kernel(&self, kernel_type: KernelType, config: &KernelConfig) -> KwaversResult<String> {
+    fn generate_wgsl_kernel(
+        &self,
+        kernel_type: KernelType,
+        config: &KernelConfig,
+    ) -> KwaversResult<String> {
         match kernel_type {
             KernelType::AcousticWave => Ok(self.generate_wgsl_acoustic_kernel(config)),
             KernelType::ThermalDiffusion => Ok(self.generate_wgsl_thermal_kernel(config)),
@@ -234,8 +258,12 @@ impl KernelManager {
     fn generate_cuda_acoustic_kernel(&self, config: &KernelConfig) -> String {
         // Load kernel from file and apply template substitutions
         let kernel_template = include_str!("kernels/acoustic.cu");
-        let float_type = if cfg!(feature = "gpu-f64") { "double" } else { "float" };
-        
+        let float_type = if cfg!(feature = "gpu-f64") {
+            "double"
+        } else {
+            "float"
+        };
+
         kernel_template
             .replace("{{float_type}}", float_type)
             .replace("{{block_size_x}}", &config.block_size.0.to_string())
@@ -291,7 +319,8 @@ impl KernelManager {
             }
         };
 
-        format!(r#"
+        format!(
+            r#"
 extern "C" __global__ void thermal_diffusion_kernel(
     double* temperature,
     double* heat_source,
@@ -320,11 +349,12 @@ extern "C" __global__ void thermal_diffusion_kernel(
     
     new_temperature[idx] = temp_center + dt * (alpha * laplacian + heat_source[idx]);
 }}
-"#, optimization_code = optimization_code)
+"#,
+            optimization_code = optimization_code
+        )
     }
 
     /// Generate CUDA FFT kernel
-
 
     /// Generate CUDA memory copy kernel
     fn generate_cuda_memcpy_kernel(&self, _config: &KernelConfig) -> String {
@@ -339,7 +369,8 @@ extern "C" __global__ void memcpy_kernel(
     
     dst[idx] = src[idx];
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate CUDA boundary condition kernel
@@ -364,7 +395,8 @@ extern "C" __global__ void boundary_kernel(
         field[idx] *= (1.0 - absorption_coeff);
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate WGSL acoustic wave kernel for WebGPU
@@ -475,7 +507,6 @@ fn thermal_diffusion(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     /// Generate WGSL FFT kernel
 
-
     /// Generate WGSL memory copy kernel
     fn generate_wgsl_memcpy_kernel(&self, _config: &KernelConfig) -> String {
         r#"
@@ -487,7 +518,8 @@ fn memcpy(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx = global_id.x;
     dst[idx] = src[idx];
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generate WGSL boundary condition kernel
@@ -543,7 +575,11 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     /// Update kernel performance metrics
-    pub fn update_performance_metrics(&mut self, kernel_type: KernelType, metrics: GpuPerformanceMetrics) {
+    pub fn update_performance_metrics(
+        &mut self,
+        kernel_type: KernelType,
+        metrics: GpuPerformanceMetrics,
+    ) {
         if let Some(kernel) = self.kernels.get_mut(&kernel_type) {
             kernel.performance_metrics = Some(metrics);
         }
@@ -551,7 +587,8 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     /// Get performance summary for all kernels
     pub fn get_performance_summary(&self) -> HashMap<KernelType, Option<GpuPerformanceMetrics>> {
-        self.kernels.iter()
+        self.kernels
+            .iter()
             .map(|(k, v)| (*k, v.performance_metrics.clone()))
             .collect()
     }
@@ -559,11 +596,14 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
     /// Optimize kernels based on runtime performance data
     pub fn optimize_kernels(&mut self, _grid: &Grid) -> KwaversResult<()> {
         // Analyze performance metrics and adjust configurations
-        let kernel_updates: Vec<_> = self.kernels
+        let kernel_updates: Vec<_> = self
+            .kernels
             .iter()
             .filter_map(|(kernel_type, kernel)| {
                 if let Some(metrics) = &kernel.performance_metrics {
-                    if !metrics.meets_targets() && kernel.config.optimization_level != OptimizationLevel::Aggressive {
+                    if !metrics.meets_targets()
+                        && kernel.config.optimization_level != OptimizationLevel::Aggressive
+                    {
                         let new_config = KernelConfig {
                             optimization_level: OptimizationLevel::Aggressive,
                             ..kernel.config.clone()
@@ -574,7 +614,7 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 None
             })
             .collect();
-        
+
         for (kernel_type, new_config) in kernel_updates {
             let new_source = self.generate_kernel_source(kernel_type, &new_config)?;
             if let Some(kernel) = self.kernels.get_mut(&kernel_type) {
@@ -610,11 +650,11 @@ mod tests {
     #[test]
     fn test_cuda_block_size_calculation() {
         let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Aggressive);
-        
+
         // Large grid
         let block_size = manager.calculate_cuda_block_size(256, 256, 128);
         assert_eq!(block_size, (16, 16, 4));
-        
+
         // Small grid
         let block_size = manager.calculate_cuda_block_size(32, 32, 16);
         assert_eq!(block_size, (32, 4, 2));
@@ -639,7 +679,9 @@ mod tests {
             dz: 0.1e-3,
         };
 
-        let config = manager.generate_kernel_config(KernelType::AcousticWave, &grid).unwrap();
+        let config = manager
+            .generate_kernel_config(KernelType::AcousticWave, &grid)
+            .unwrap();
         assert_eq!(config.kernel_type, KernelType::AcousticWave);
         assert!(config.grid_size.0 > 0);
         assert!(config.grid_size.1 > 0);
@@ -650,7 +692,7 @@ mod tests {
     fn test_cuda_acoustic_kernel_generation() {
         let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
         let config = KernelConfig::default();
-        
+
         let source = manager.generate_cuda_acoustic_kernel(&config);
         assert!(source.contains("acoustic_wave_kernel"));
         assert!(source.contains("pressure"));
@@ -662,7 +704,7 @@ mod tests {
     fn test_cuda_thermal_kernel_generation() {
         let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Basic);
         let config = KernelConfig::default();
-        
+
         let source = manager.generate_cuda_thermal_kernel(&config);
         assert!(source.contains("thermal_diffusion_kernel"));
         assert!(source.contains("temperature"));
@@ -673,7 +715,7 @@ mod tests {
     fn test_wgsl_acoustic_kernel_generation() {
         let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Moderate);
         let config = KernelConfig::default();
-        
+
         let source = manager.generate_wgsl_acoustic_kernel(&config);
         assert!(source.contains("@compute"));
         assert!(source.contains("acoustic_wave"));
@@ -685,7 +727,7 @@ mod tests {
     fn test_wgsl_thermal_kernel_generation() {
         let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Moderate);
         let config = KernelConfig::default();
-        
+
         let source = manager.generate_wgsl_thermal_kernel(&config);
         assert!(source.contains("@compute"));
         assert!(source.contains("thermal_diffusion"));
@@ -697,7 +739,7 @@ mod tests {
     fn test_kernel_type_enum() {
         assert_eq!(KernelType::AcousticWave, KernelType::AcousticWave);
         assert_ne!(KernelType::AcousticWave, KernelType::ThermalDiffusion);
-        
+
         // Test hash map usage
         let mut map = HashMap::new();
         map.insert(KernelType::AcousticWave, "acoustic");
@@ -711,7 +753,7 @@ mod tests {
             OptimizationLevel::Moderate,
             OptimizationLevel::Aggressive,
         ];
-        
+
         for level in levels {
             let manager = KernelManager::new(GpuBackend::Cuda, level);
             assert_eq!(manager.optimization_level, level);
@@ -721,7 +763,7 @@ mod tests {
     #[test]
     fn test_performance_metrics_integration() {
         let mut manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
-        
+
         // First, we need to compile a kernel to add it to the manager
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
         let config = KernelConfig {
@@ -732,10 +774,10 @@ mod tests {
             optimization_level: OptimizationLevel::Moderate,
             registers_per_thread: 32,
         };
-        
+
         // Generate and compile a kernel (this adds it to the kernels HashMap)
         let _ = manager.compile_kernels(&grid);
-        
+
         let metrics = GpuPerformanceMetrics::new(
             1_000_000, // 1M grid points
             10.0,      // 10ms kernel time
@@ -743,12 +785,12 @@ mod tests {
             500.0,     // 500 GB/s bandwidth
             0.1,       // 0.1 GB data
         );
-        
+
         manager.update_performance_metrics(KernelType::AcousticWave, metrics.clone());
-        
+
         let summary = manager.get_performance_summary();
         assert!(summary.contains_key(&KernelType::AcousticWave));
-        
+
         if let Some(Some(retrieved_metrics)) = summary.get(&KernelType::AcousticWave) {
             assert_eq!(retrieved_metrics.kernel_execution_time_ms, 10.0);
         }

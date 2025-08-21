@@ -11,7 +11,7 @@
 //! - **Kernel Optimization**: Compute kernels with performance tuning
 //! - **Multi-GPU Support**: Distributed computation across multiple devices
 
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -33,12 +33,12 @@ pub fn gpu_float_type_str() -> &'static str {
     }
 }
 
-pub mod cuda;
-pub mod wgpu_backend;
-pub mod memory;
-pub mod kernels;
 pub mod benchmarks;
+pub mod cuda;
 pub mod fft;
+pub mod kernels;
+pub mod memory;
+pub mod wgpu_backend;
 
 /// GPU backend types - simplified and clarified
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,13 +71,14 @@ impl GpuContext {
     /// Create new GPU context with automatic device detection
     pub async fn new() -> KwaversResult<Self> {
         let devices = Self::detect_devices().await?;
-        
+
         if devices.is_empty() {
             return Err(KwaversError::Gpu(crate::error::GpuError::NoDevicesFound));
         }
 
         // Select best device (highest memory and compute units)
-        let active_device = devices.iter()
+        let active_device = devices
+            .iter()
             .enumerate()
             .max_by_key(|(_, device)| (device.memory_size, device.compute_units))
             .map(|(idx, _)| idx);
@@ -151,10 +152,16 @@ impl GpuContext {
     /// Set active device by index
     pub fn set_active_device(&mut self, device_idx: usize) -> KwaversResult<()> {
         if device_idx >= self.devices.len() {
-            return Err(KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
-                device_id: device_idx as u32,
-                reason: format!("Device index {} out of range (0-{})", device_idx, self.devices.len() - 1),
-            }));
+            return Err(KwaversError::Gpu(
+                crate::error::GpuError::DeviceInitialization {
+                    device_id: device_idx as u32,
+                    reason: format!(
+                        "Device index {} out of range (0-{})",
+                        device_idx,
+                        self.devices.len() - 1
+                    ),
+                },
+            ));
         }
         self.active_device = Some(device_idx);
         Ok(())
@@ -164,29 +171,33 @@ impl GpuContext {
     pub fn devices(&self) -> &[GpuDevice] {
         &self.devices
     }
-    
+
     /// Get the backend type
     pub fn backend(&self) -> GpuBackend {
         self.backend
     }
-    
+
     /// Allocate a GPU buffer
     pub fn allocate_buffer(&self, size_bytes: usize) -> KwaversResult<GpuBuffer> {
         use memory::BufferType;
         use std::time::Instant;
-        
+
         let device_ptr = match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::allocate_cuda_memory(size_bytes)? as u64,
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::allocate_wgpu_memory(size_bytes)? as u64,
             #[allow(unreachable_patterns)]
-            _ => return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => {
+                return Err(KwaversError::Gpu(
+                    crate::error::GpuError::BackendNotAvailable {
+                        backend: "Any".to_string(),
+                        reason: "No GPU backend available".to_string(),
+                    },
+                ))
+            }
         };
-        
+
         Ok(GpuBuffer {
             id: 0, // Should be managed by a proper allocator
             size_bytes,
@@ -199,72 +210,94 @@ impl GpuContext {
             buffer_type: BufferType::General,
         })
     }
-    
+
     /// Upload data to a GPU buffer
-    pub fn upload_to_buffer<T: bytemuck::Pod>(&self, buffer: &GpuBuffer, data: &[T]) -> KwaversResult<()> {
+    pub fn upload_to_buffer<T: bytemuck::Pod>(
+        &self,
+        buffer: &GpuBuffer,
+        data: &[T],
+    ) -> KwaversResult<()> {
         let device_ptr = buffer.device_ptr.ok_or_else(|| {
             KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
                 operation: "upload_to_buffer".to_string(),
                 reason: "Buffer has no device pointer".to_string(),
             })
         })?;
-        
+
         // Convert to byte slice safely using bytemuck
         let byte_slice = bytemuck::cast_slice(data);
-        
+
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::host_to_device_bytes(byte_slice, device_ptr as usize),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
         }
     }
-    
+
     /// Download data from a GPU buffer
-    pub fn download_from_buffer<T: bytemuck::Pod>(&mut self, buffer: &GpuBuffer, data: &mut [T]) -> KwaversResult<()> {
+    pub fn download_from_buffer<T: bytemuck::Pod>(
+        &mut self,
+        buffer: &GpuBuffer,
+        data: &mut [T],
+    ) -> KwaversResult<()> {
         let device_ptr = buffer.device_ptr.ok_or_else(|| {
             KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
                 operation: "download_from_buffer".to_string(),
                 reason: "Buffer has no device pointer".to_string(),
             })
         })?;
-        
+
         // Convert to mutable byte slice safely using bytemuck
         let byte_slice = bytemuck::cast_slice_mut(data);
-        
+
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::device_to_host_bytes(device_ptr as usize, byte_slice),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
         }
     }
-    
+
     /// Launch a compute kernel
-    pub fn launch_kernel(&mut self, kernel_name: &str, grid_size: (u32, u32, u32), block_size: (u32, u32, u32), args: &[*const std::ffi::c_void]) -> KwaversResult<()> {
+    pub fn launch_kernel(
+        &mut self,
+        kernel_name: &str,
+        grid_size: (u32, u32, u32),
+        block_size: (u32, u32, u32),
+        args: &[*const std::ffi::c_void],
+    ) -> KwaversResult<()> {
         match self.backend {
             #[cfg(feature = "cudarc")]
             GpuBackend::Cuda => cuda::launch_cuda_kernel(kernel_name, grid_size, block_size, args),
             #[cfg(feature = "wgpu")]
-            GpuBackend::Wgpu => wgpu_backend::launch_webgpu_kernel(kernel_name, grid_size, block_size, args),
+            GpuBackend::Wgpu => {
+                wgpu_backend::launch_webgpu_kernel(kernel_name, grid_size, block_size, args)
+            }
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
         }
     }
-    
+
     /// Enable peer access between GPUs
     pub fn enable_peer_access(&self, peer_device_id: u32) -> KwaversResult<()> {
         match self.backend {
@@ -276,10 +309,12 @@ impl GpuContext {
                 Ok(())
             }
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
         }
     }
 }
@@ -342,15 +377,19 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::allocate_wgpu_memory(size),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: format!("{:?}", self.context.backend),
-                reason: "Backend not available with current features".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: format!("{:?}", self.context.backend),
+                    reason: "Backend not available with current features".to_string(),
+                },
+            )),
         }
     }
 
@@ -362,15 +401,19 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::host_to_device_wgpu(host_data, device_buffer),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: format!("{:?}", self.context.backend),
-                reason: "Backend not available with current features".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: format!("{:?}", self.context.backend),
+                    reason: "Backend not available with current features".to_string(),
+                },
+            )),
         }
     }
 
@@ -382,15 +425,19 @@ impl GpuMemoryManager {
             #[cfg(feature = "wgpu")]
             GpuBackend::Wgpu => wgpu_backend::device_to_host_wgpu(device_buffer, host_data),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "Any".to_string(),
-                reason: "No GPU backend available".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "Any".to_string(),
+                    reason: "No GPU backend available".to_string(),
+                },
+            )),
             #[allow(unreachable_patterns)]
-            _ => Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: format!("{:?}", self.context.backend),
-                reason: "Backend not available with current features".to_string(),
-            })),
+            _ => Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: format!("{:?}", self.context.backend),
+                    reason: "Backend not available with current features".to_string(),
+                },
+            )),
         }
     }
 }
@@ -416,7 +463,8 @@ impl GpuPerformanceMetrics {
     ) -> Self {
         let total_time_ms = kernel_time_ms + transfer_time_ms;
         let grid_updates_per_second = (grid_size as f64) / (total_time_ms / 1000.0);
-        let memory_bandwidth_utilization = (data_size_gb / (transfer_time_ms / 1000.0)) / memory_bandwidth_gb_s;
+        let memory_bandwidth_utilization =
+            (data_size_gb / (transfer_time_ms / 1000.0)) / memory_bandwidth_gb_s;
 
         Self {
             grid_updates_per_second,
@@ -430,12 +478,12 @@ impl GpuPerformanceMetrics {
     /// Check if performance targets are met (Phase 9 requirements)
     pub fn meets_targets(&self) -> bool {
         self.grid_updates_per_second > 17_000_000.0 && // >17M grid updates/second
-        self.memory_bandwidth_utilization > 0.8        // >80% memory bandwidth utilization
+        self.memory_bandwidth_utilization > 0.8 // >80% memory bandwidth utilization
     }
 }
 
 // Re-export FFT kernels
-pub use fft_kernels::{GpuFft3d, MultiGpuFft3d, DataDistribution};
+pub use fft_kernels::{DataDistribution, GpuFft3d, MultiGpuFft3d};
 
 #[cfg(test)]
 mod tests {
@@ -473,7 +521,7 @@ mod tests {
     fn test_gpu_context_sync_creation() {
         // Test synchronous GPU context creation
         let result = GpuContext::new_sync();
-        
+
         // Should either succeed with devices or fail with NoDevicesFound
         match result {
             Ok(context) => {
@@ -500,11 +548,11 @@ mod tests {
         assert_eq!(metrics.kernel_execution_time_ms, 10.0);
         assert_eq!(metrics.memory_transfer_time_ms, 5.0);
         assert_eq!(metrics.total_time_ms, 15.0);
-        
+
         // Calculate expected values
         let expected_updates_per_sec = 1_000_000.0 / (15.0 / 1000.0);
         let expected_bandwidth_util = (0.1 / (5.0 / 1000.0)) / 500.0;
-        
+
         assert!((metrics.grid_updates_per_second - expected_updates_per_sec).abs() < 1.0);
         assert!((metrics.memory_bandwidth_utilization - expected_bandwidth_util).abs() < 0.01);
     }
@@ -523,20 +571,29 @@ mod tests {
 
         // Test metrics that don't meet targets
         let bad_metrics = GpuPerformanceMetrics::new(
-            1_000_000,  // 1M grid points (too low)
-            100.0,      // 100ms kernel time (too slow)
-            50.0,       // 50ms transfer time
-            100.0,      // 100 GB/s memory bandwidth
-            0.1,        // 0.1 GB data size
+            1_000_000, // 1M grid points (too low)
+            100.0,     // 100ms kernel time (too slow)
+            50.0,      // 50ms transfer time
+            100.0,     // 100 GB/s memory bandwidth
+            0.1,       // 0.1 GB data size
         );
         assert!(!bad_metrics.meets_targets());
     }
 
     #[test]
     fn test_memory_transfer_direction_display() {
-        assert_eq!(format!("{}", MemoryTransferDirection::HostToDevice), "HostToDevice");
-        assert_eq!(format!("{}", MemoryTransferDirection::DeviceToHost), "DeviceToHost");
-        assert_eq!(format!("{}", MemoryTransferDirection::DeviceToDevice), "DeviceToDevice");
+        assert_eq!(
+            format!("{}", MemoryTransferDirection::HostToDevice),
+            "HostToDevice"
+        );
+        assert_eq!(
+            format!("{}", MemoryTransferDirection::DeviceToHost),
+            "DeviceToHost"
+        );
+        assert_eq!(
+            format!("{}", MemoryTransferDirection::DeviceToDevice),
+            "DeviceToDevice"
+        );
     }
 
     #[test]
@@ -575,46 +632,44 @@ mod tests {
     fn test_gpu_context_creation() {
         // Test GPU context creation (synchronous test for proper validation)
         // This test validates the core functionality without requiring async runtime
-        
+
         // Test case 1: Mock successful context creation
-        let devices = vec![
-            GpuDevice {
-                id: 0,
-                name: "Test GPU".to_string(),
-                backend: GpuBackend::Cuda,
-                memory_size: 8192 * 1024 * 1024, // 8192 MB in bytes
-                compute_units: 20,
-                max_work_group_size: 1024,
-            }
-        ];
-        
+        let devices = vec![GpuDevice {
+            id: 0,
+            name: "Test GPU".to_string(),
+            backend: GpuBackend::Cuda,
+            memory_size: 8192 * 1024 * 1024, // 8192 MB in bytes
+            compute_units: 20,
+            max_work_group_size: 1024,
+        }];
+
         let context = GpuContext {
             devices: devices.clone(),
             active_device: Some(0),
             backend: GpuBackend::Cuda,
         };
-        
+
         // Validate device properties
         assert!(!context.devices.is_empty());
         assert!(context.active_device.is_some());
-        
+
         if let Some(device) = context.active_device() {
             assert!(!device.name.is_empty());
             assert!(device.compute_units > 0);
             assert!(device.memory_size > 0);
         }
-        
+
         // Test device list access
         assert_eq!(context.devices().len(), 1);
         assert_eq!(context.devices()[0].name, "Test GPU");
-        
+
         // Test case 2: Empty devices (should handle gracefully)
         let empty_context = GpuContext {
             devices: vec![],
             active_device: None,
             backend: GpuBackend::Wgpu, // Use a valid backend even with no devices
         };
-        
+
         assert!(empty_context.devices.is_empty());
         assert!(empty_context.active_device.is_none());
         assert!(empty_context.active_device().is_none());
@@ -661,26 +716,26 @@ mod tests {
         // Test that would validate acoustic kernel correctness
         // GPU validation requires CUDA hardware availability
         println!("GPU acoustic kernel validation test - requires CUDA hardware");
-        
+
         // Create test grid
         let grid = create_test_grid();
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        
+
         // Create test arrays
         let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
         let mut velocity_x = Array3::<f64>::zeros((nx, ny, nz));
         let mut velocity_y = Array3::<f64>::zeros((nx, ny, nz));
         let mut velocity_z = Array3::<f64>::zeros((nx, ny, nz));
-        
+
         // Initialize with test pattern
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     pressure[[i, j, k]] = ((i + j + k) as f64).sin();
                 }
             }
         }
-        
+
         // Attempt GPU acoustic update
         if let Ok(context) = GpuContext::new_sync() {
             if context.devices().len() > 0 {
@@ -694,24 +749,24 @@ mod tests {
     fn test_gpu_thermal_kernel_validation() {
         // Test that would validate thermal kernel correctness
         println!("GPU thermal kernel validation test - requires CUDA hardware");
-        
+
         // Create test grid
         let grid = create_test_grid();
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        
+
         // Create test arrays
         let mut temperature = Array3::<f64>::zeros((nx, ny, nz));
         let heat_source = Array3::<f64>::zeros((nx, ny, nz));
-        
+
         // Initialize with test pattern
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     temperature[[i, j, k]] = 37.0 + ((i * j * k) as f64).sin(); // Body temperature + variation
                 }
             }
         }
-        
+
         // Attempt GPU thermal update
         if let Ok(context) = GpuContext::new_sync() {
             if context.devices().len() > 0 {
@@ -725,18 +780,21 @@ mod tests {
         // Benchmark test for Phase 9 performance targets
         let grid_sizes = vec![
             (32, 32, 32),    // Small: 32K points
-            (64, 64, 64),    // Medium: 262K points  
+            (64, 64, 64),    // Medium: 262K points
             (128, 128, 128), // Large: 2M points
         ];
-        
+
         for (nx, ny, nz) in grid_sizes {
             let grid_size = nx * ny * nz;
-            println!("Testing grid size: {}x{}x{} = {} points", nx, ny, nz, grid_size);
-            
+            println!(
+                "Testing grid size: {}x{}x{} = {} points",
+                nx, ny, nz, grid_size
+            );
+
             // Simulate kernel execution times based on grid size
             let kernel_time_ms = (grid_size as f64) / 1_000_000.0; // 1M points per ms
             let transfer_time_ms = kernel_time_ms * 0.1; // 10% transfer overhead
-            
+
             let metrics = GpuPerformanceMetrics::new(
                 grid_size,
                 kernel_time_ms,
@@ -744,10 +802,13 @@ mod tests {
                 1000.0, // 1000 GB/s theoretical bandwidth
                 (grid_size * std::mem::size_of::<f64>()) as f64 / 1e9, // Data size in GB
             );
-            
+
             println!("  Grid updates/sec: {:.0}", metrics.grid_updates_per_second);
-            println!("  Memory bandwidth util: {:.1}%", metrics.memory_bandwidth_utilization * 100.0);
-            
+            println!(
+                "  Memory bandwidth util: {:.1}%",
+                metrics.memory_bandwidth_utilization * 100.0
+            );
+
             // For large grids, should meet Phase 9 targets
             if grid_size >= 1_000_000 {
                 println!("  Meets Phase 9 targets: {}", metrics.meets_targets());
@@ -759,7 +820,7 @@ mod tests {
     fn create_test_grid() -> Grid {
         Grid {
             nx: 64,
-            ny: 64, 
+            ny: 64,
             nz: 64,
             dx: 0.1e-3, // 0.1 mm
             dy: 0.1e-3,

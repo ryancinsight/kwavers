@@ -57,15 +57,19 @@ impl MLModel for TissueClassifierModel {
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Convert 2D input to 3D for the engine
         let (batch, features) = input.dim();
-        let input_3d = input.clone().into_shape((batch, features, 1))
-            .map_err(|e| KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: batch * features * std::mem::size_of::<f32>(),
-                reason: e.to_string(),
-            }))?;
+        let input_3d = input
+            .clone()
+            .into_shape((batch, features, 1))
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: batch * features * std::mem::size_of::<f32>(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Run inference
         let output_3d = self.engine.infer_batch(&input_3d)?;
-        
+
         // Convert back to 2D
         let output_2d = output_3d.index_axis(Axis(2), 0).to_owned();
         Ok(output_2d)
@@ -78,12 +82,14 @@ impl MLModel for TissueClassifierModel {
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
         // Gradient descent update
         let learning_rate = 1e-3_f32;
-        
+
         // Sanity-check dimensionality
         if gradients.shape() != self.engine.weights_mut().shape() {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
-        
+
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
         Ok(())
@@ -142,15 +148,19 @@ impl MLModel for ParameterOptimizerModel {
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Convert 2D input to 3D for the engine
         let (batch, features) = input.dim();
-        let input_3d = input.clone().into_shape((batch, features, 1))
-            .map_err(|e| KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: batch * features * std::mem::size_of::<f32>(),
-                reason: e.to_string(),
-            }))?;
+        let input_3d = input
+            .clone()
+            .into_shape((batch, features, 1))
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: batch * features * std::mem::size_of::<f32>(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Run inference
         let output_3d = self.engine.infer_batch(&input_3d)?;
-        
+
         // Convert back to 2D
         let output_2d = output_3d.index_axis(Axis(2), 0).to_owned();
         Ok(output_2d)
@@ -163,11 +173,13 @@ impl MLModel for ParameterOptimizerModel {
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
         // Gradient descent update
         let learning_rate = 1e-3_f32;
-        
+
         if gradients.shape() != self.engine.weights_mut().shape() {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
-        
+
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
         Ok(())
@@ -226,15 +238,19 @@ impl MLModel for AnomalyDetectorModel {
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Convert 2D input to 3D for the engine
         let (batch, features) = input.dim();
-        let input_3d = input.clone().into_shape((batch, features, 1))
-            .map_err(|e| KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: batch * features * std::mem::size_of::<f32>(),
-                reason: e.to_string(),
-            }))?;
+        let input_3d = input
+            .clone()
+            .into_shape((batch, features, 1))
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: batch * features * std::mem::size_of::<f32>(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Run inference
         let output_3d = self.engine.infer_batch(&input_3d)?;
-        
+
         // Convert back to 2D
         let output_2d = output_3d.index_axis(Axis(2), 0).to_owned();
         Ok(output_2d)
@@ -247,11 +263,13 @@ impl MLModel for AnomalyDetectorModel {
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
         // Gradient descent update
         let learning_rate = 1e-3_f32;
-        
+
         if gradients.shape() != self.engine.weights_mut().shape() {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
-        
+
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
         Ok(())
@@ -310,15 +328,19 @@ impl MLModel for ConvergencePredictorModel {
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Convert 2D input to 3D for the engine
         let (batch, features) = input.dim();
-        let input_3d = input.clone().into_shape((batch, features, 1))
-            .map_err(|e| KwaversError::System(crate::error::SystemError::MemoryAllocation {
-                requested_bytes: batch * features * std::mem::size_of::<f32>(),
-                reason: e.to_string(),
-            }))?;
+        let input_3d = input
+            .clone()
+            .into_shape((batch, features, 1))
+            .map_err(|e| {
+                KwaversError::System(crate::error::SystemError::MemoryAllocation {
+                    requested_bytes: batch * features * std::mem::size_of::<f32>(),
+                    reason: e.to_string(),
+                })
+            })?;
 
         // Run inference
         let output_3d = self.engine.infer_batch(&input_3d)?;
-        
+
         // Convert back to 2D
         let output_2d = output_3d.index_axis(Axis(2), 0).to_owned();
         Ok(output_2d)
@@ -331,11 +353,13 @@ impl MLModel for ConvergencePredictorModel {
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()> {
         // Gradient descent update
         let learning_rate = 1e-3_f32;
-        
+
         if gradients.shape() != self.engine.weights_mut().shape() {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
-        
+
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
         Ok(())
@@ -361,11 +385,17 @@ impl OutcomePredictorModel {
             accuracy: 0.0,
             inference_time_ms: 0.0,
         };
-        Self { weights, bias, metadata }
+        Self {
+            weights,
+            bias,
+            metadata,
+        }
     }
 
     /// Sigmoid function
-    fn sigmoid(x: f32) -> f32 { 1.0 / (1.0 + (-x).exp()) }
+    fn sigmoid(x: f32) -> f32 {
+        1.0 / (1.0 + (-x).exp())
+    }
 }
 
 impl MLModel for OutcomePredictorModel {
@@ -377,7 +407,9 @@ impl MLModel for OutcomePredictorModel {
         // Input validation
         let (samples, features) = input.dim();
         if features != self.metadata.input_shape[0] {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
 
         // Compute raw logit = x·w + b
@@ -398,10 +430,14 @@ impl MLModel for OutcomePredictorModel {
         Ok(probs)
     }
 
-    fn metadata(&self) -> &ModelMetadata { &self.metadata }
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
 
     fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
         // Online learning not yet implemented for predictor
-        Err(KwaversError::NotImplemented("Online update for OutcomePredictor".to_string()))
+        Err(KwaversError::NotImplemented(
+            "Online update for OutcomePredictor".to_string(),
+        ))
     }
 }

@@ -81,27 +81,29 @@ impl HeterogeneousMedium {
         let shear_sound_speed = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, _k)| {
             // Vary shear speed based on position to simulate tissue heterogeneity
             let base_speed = 3.0; // m/s (typical for muscle tissue)
-            let variation = 0.5 * ((i as f64 / grid.nx as f64).sin() + 
-                                  (j as f64 / grid.ny as f64).cos());
+            let variation =
+                0.5 * ((i as f64 / grid.nx as f64).sin() + (j as f64 / grid.ny as f64).cos());
             (base_speed + variation).max(1.0).min(8.0)
         });
-        
+
         // Shear viscosity coefficient for soft tissue: 0.1-10 Pa·s
-        let shear_viscosity_coeff = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
-            // Higher viscosity near boundaries, lower in center
-            let center_x = grid.nx as f64 / 2.0;
-            let center_y = grid.ny as f64 / 2.0;
-            let center_z = grid.nz as f64 / 2.0;
-            let dist_from_center = ((i as f64 - center_x).powi(2) + 
-                                   (j as f64 - center_y).powi(2) + 
-                                   (k as f64 - center_z).powi(2)).sqrt();
-            let max_dist = (center_x.powi(2) + center_y.powi(2) + center_z.powi(2)).sqrt();
-            let normalized_dist = (dist_from_center / max_dist).min(1.0);
-            
-            // Base viscosity + position-dependent variation
-            1.0 + 2.0 * normalized_dist // Range: 1.0-3.0 Pa·s
-        });
-        
+        let shear_viscosity_coeff =
+            Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+                // Higher viscosity near boundaries, lower in center
+                let center_x = grid.nx as f64 / 2.0;
+                let center_y = grid.ny as f64 / 2.0;
+                let center_z = grid.nz as f64 / 2.0;
+                let dist_from_center = ((i as f64 - center_x).powi(2)
+                    + (j as f64 - center_y).powi(2)
+                    + (k as f64 - center_z).powi(2))
+                .sqrt();
+                let max_dist = (center_x.powi(2) + center_y.powi(2) + center_z.powi(2)).sqrt();
+                let normalized_dist = (dist_from_center / max_dist).min(1.0);
+
+                // Base viscosity + position-dependent variation
+                1.0 + 2.0 * normalized_dist // Range: 1.0-3.0 Pa·s
+            });
+
         // Bulk viscosity coefficient: typically 2-5x shear viscosity
         let bulk_viscosity_coeff = shear_viscosity_coeff.mapv(|shear_visc| shear_visc * 3.0);
 
@@ -208,7 +210,11 @@ impl Medium for HeterogeneousMedium {
         let alpha0 = self.alpha0[[ix, iy, iz]];
         let delta = self.delta[[ix, iy, iz]];
         power_law_absorption::power_law_absorption_coefficient(frequency, alpha0, delta)
-            + absorption::absorption_coefficient(frequency, t, Some(self.bubble_radius[[ix, iy, iz]]))
+            + absorption::absorption_coefficient(
+                frequency,
+                t,
+                Some(self.bubble_radius[[ix, iy, iz]]),
+            )
     }
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
@@ -237,16 +243,24 @@ impl Medium for HeterogeneousMedium {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         self.mu_s_prime[[ix, iy, iz]].max(1.0)
     }
-    fn reference_frequency(&self) -> f64 { self.reference_frequency } // Added
+    fn reference_frequency(&self) -> f64 {
+        self.reference_frequency
+    } // Added
 
     fn update_temperature(&mut self, temperature: &Array3<f64>) {
         Zip::from(&mut self.temperature)
             .and(temperature)
             .for_each(|t_self, &t_updated| *t_self = t_updated.max(273.15));
     }
-    fn temperature(&self) -> &Array3<f64> { &self.temperature }
-    fn bubble_radius(&self) -> &Array3<f64> { &self.bubble_radius }
-    fn bubble_velocity(&self) -> &Array3<f64> { &self.bubble_velocity }
+    fn temperature(&self) -> &Array3<f64> {
+        &self.temperature
+    }
+    fn bubble_radius(&self) -> &Array3<f64> {
+        &self.bubble_radius
+    }
+    fn bubble_velocity(&self) -> &Array3<f64> {
+        &self.bubble_velocity
+    }
     fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>) {
         Zip::from(&mut self.bubble_radius)
             .and(radius)
@@ -255,8 +269,12 @@ impl Medium for HeterogeneousMedium {
             .and(velocity)
             .for_each(|v_self, &v_updated| *v_self = v_updated);
     }
-    fn density_array(&self) -> &Array3<f64> { &self.density }
-    fn sound_speed_array(&self) -> &Array3<f64> { &self.sound_speed }
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density
+    }
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed
+    }
 
     // Implement new trait methods
     fn shear_sound_speed_array(&self) -> Array3<f64> {
@@ -295,11 +313,20 @@ mod tests {
 
         // Check realistic tissue values are set (these are set in new_tissue)
         // Shear sound speed should be in range 1-8 m/s (tissue-appropriate values)
-        assert!(medium.shear_sound_speed.iter().all(|&x| x >= 1.0 && x <= 8.0));
+        assert!(medium
+            .shear_sound_speed
+            .iter()
+            .all(|&x| x >= 1.0 && x <= 8.0));
         // Shear viscosity should be in range 1-3 Pa·s
-        assert!(medium.shear_viscosity_coeff.iter().all(|&x| x >= 1.0 && x <= 3.0));
+        assert!(medium
+            .shear_viscosity_coeff
+            .iter()
+            .all(|&x| x >= 1.0 && x <= 3.0));
         // Bulk viscosity should be about 3x shear viscosity
-        assert!(medium.bulk_viscosity_coeff.iter().all(|&x| x >= 3.0 && x <= 9.0));
+        assert!(medium
+            .bulk_viscosity_coeff
+            .iter()
+            .all(|&x| x >= 3.0 && x <= 9.0));
     }
 
     #[test]
@@ -321,7 +348,6 @@ mod tests {
         assert_eq!(sss_arr, new_sss);
         // Ensure it's a clone, not the same instance
         assert_ne!(sss_arr.as_ptr(), medium.shear_sound_speed.as_ptr());
-
 
         let svc_arr = medium.shear_viscosity_coeff_array();
         assert_eq!(svc_arr, new_svc);

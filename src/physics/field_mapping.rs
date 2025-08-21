@@ -34,13 +34,13 @@ pub enum UnifiedFieldType {
 impl UnifiedFieldType {
     /// Total number of field types - used for sizing arrays
     pub const COUNT: usize = 17;
-    
+
     /// Get the array index for this field type
     /// Now simply returns the enum's numeric value for O(1) access
     pub fn index(&self) -> usize {
         *self as usize
     }
-    
+
     /// Legacy compatibility - maps to old field indices
     pub fn legacy_index(&self) -> usize {
         match self {
@@ -63,7 +63,7 @@ impl UnifiedFieldType {
             Self::ChemicalConcentration => field_indices::CHEMICAL_IDX,
         }
     }
-    
+
     /// Get human-readable name for this field
     pub fn name(&self) -> &'static str {
         match self {
@@ -86,7 +86,7 @@ impl UnifiedFieldType {
             Self::ChemicalConcentration => "Chemical Concentration",
         }
     }
-    
+
     /// Get unit string for this field
     pub fn unit(&self) -> &'static str {
         match self {
@@ -97,13 +97,17 @@ impl UnifiedFieldType {
             Self::Density => "kg/m³",
             Self::SoundSpeed => "m/s",
             Self::VelocityX | Self::VelocityY | Self::VelocityZ => "m/s",
-            Self::StressXX | Self::StressYY | Self::StressZZ |
-            Self::StressXY | Self::StressXZ | Self::StressYZ => "Pa",
+            Self::StressXX
+            | Self::StressYY
+            | Self::StressZZ
+            | Self::StressXY
+            | Self::StressXZ
+            | Self::StressYZ => "Pa",
             Self::LightFluence => "J/m²",
             Self::ChemicalConcentration => "mol/m³",
         }
     }
-    
+
     /// Get all field types
     pub fn all() -> Vec<Self> {
         vec![
@@ -126,7 +130,7 @@ impl UnifiedFieldType {
             Self::ChemicalConcentration,
         ]
     }
-    
+
     /// Create from index (efficient constant-time lookup)
     pub fn from_index(index: usize) -> Option<Self> {
         match index {
@@ -167,22 +171,22 @@ impl<'a> FieldAccessor<'a> {
     pub fn new(fields: &'a ndarray::Array4<f64>) -> Self {
         Self { fields }
     }
-    
+
     /// Get a specific field by type
     pub fn get(&self, field_type: UnifiedFieldType) -> ndarray::ArrayView3<'a, f64> {
         self.fields.index_axis(ndarray::Axis(0), field_type.index())
     }
-    
+
     /// Get pressure field
     pub fn pressure(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Pressure)
     }
-    
+
     /// Get temperature field
     pub fn temperature(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Temperature)
     }
-    
+
     /// Get density field
     pub fn density(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Density)
@@ -198,22 +202,23 @@ impl<'a> FieldAccessorMut<'a> {
     pub fn new(fields: &'a mut ndarray::Array4<f64>) -> Self {
         Self { fields }
     }
-    
+
     /// Get a specific field mutably by type
     pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<f64> {
-        self.fields.index_axis_mut(ndarray::Axis(0), field_type.index())
+        self.fields
+            .index_axis_mut(ndarray::Axis(0), field_type.index())
     }
-    
+
     /// Get pressure field mutably
     pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.get_mut(UnifiedFieldType::Pressure)
     }
-    
+
     /// Get temperature field mutably
     pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.get_mut(UnifiedFieldType::Temperature)
     }
-    
+
     /// Get density field mutably
     pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<f64> {
         self.get_mut(UnifiedFieldType::Density)
@@ -225,18 +230,23 @@ impl<'a> FieldAccessorMut<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_field_indices_are_unique() {
         let all_fields = UnifiedFieldType::all();
         let mut indices = std::collections::HashSet::new();
-        
+
         for field in &all_fields {
             let idx = field.index();
-            assert!(indices.insert(idx), "Duplicate index {} for field {:?}", idx, field);
+            assert!(
+                indices.insert(idx),
+                "Duplicate index {} for field {:?}",
+                idx,
+                field
+            );
         }
     }
-    
+
     #[test]
     fn test_field_index_consistency() {
         // Ensure indices match the constants in state.rs
@@ -247,11 +257,17 @@ mod tests {
         assert_eq!(UnifiedFieldType::Density.index(), 4);
         assert_eq!(UnifiedFieldType::SoundSpeed.index(), 5);
     }
-    
+
     #[test]
     fn test_from_index() {
-        assert_eq!(UnifiedFieldType::from_index(0), Some(UnifiedFieldType::Pressure));
-        assert_eq!(UnifiedFieldType::from_index(1), Some(UnifiedFieldType::Temperature));
+        assert_eq!(
+            UnifiedFieldType::from_index(0),
+            Some(UnifiedFieldType::Pressure)
+        );
+        assert_eq!(
+            UnifiedFieldType::from_index(1),
+            Some(UnifiedFieldType::Temperature)
+        );
         assert_eq!(UnifiedFieldType::from_index(100), None);
     }
 

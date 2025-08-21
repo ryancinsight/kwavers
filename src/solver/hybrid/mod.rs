@@ -17,17 +17,20 @@
 //! computational domain can use different numerical methods based on local field
 //! characteristics.
 
-pub mod domain_decomposition;
-pub mod coupling;  // Refactored from coupling_interface
 pub mod adaptive_selection;
-pub mod validation;
 pub mod config;
+pub mod coupling; // Refactored from coupling_interface
+pub mod domain_decomposition;
 pub mod metrics;
-pub mod solver;
 pub mod plugin;
+pub mod solver;
+pub mod validation;
 
 // Re-export main types
-pub use config::{HybridConfig, DecompositionStrategy, CouplingInterfaceConfig, OptimizationConfig, ValidationConfig};
-pub use metrics::{HybridMetrics, EfficiencyMetrics, ValidationResults};
-pub use solver::HybridSolver;
+pub use config::{
+    CouplingInterfaceConfig, DecompositionStrategy, HybridConfig, OptimizationConfig,
+    ValidationConfig,
+};
+pub use metrics::{EfficiencyMetrics, HybridMetrics, ValidationResults};
 pub use plugin::HybridPlugin;
+pub use solver::HybridSolver;

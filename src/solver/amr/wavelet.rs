@@ -1,12 +1,12 @@
 // src/solver/amr/wavelet.rs
 //! Wavelet transforms for AMR error estimation
-//! 
+//!
 //! Implements various wavelet transforms for detecting regions
 //! requiring refinement based on solution smoothness.
 
-use crate::error::KwaversResult;
-use ndarray::{Array1, Array3, s};
 use super::WaveletType;
+use crate::error::KwaversResult;
+use ndarray::{s, Array1, Array3};
 
 /// Wavelet transform for error estimation
 #[derive(Debug)]
@@ -37,18 +37,18 @@ impl WaveletTransform {
             WaveletType::Daubechies6 => FilterBank::daubechies6(),
             WaveletType::Coiflet6 => FilterBank::coiflet6(),
         };
-        
+
         Self {
             wavelet_type,
             filter_bank,
         }
     }
-    
+
     /// Compute wavelet coefficients for a 3D field
     pub fn forward_transform(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut coeffs = field.clone();
-        
+
         // Apply 1D transforms along each dimension
         // X-direction
         for j in 0..ny {
@@ -64,7 +64,7 @@ impl WaveletTransform {
                 }
             }
         }
-        
+
         // Y-direction
         for i in 0..nx {
             for k in 0..nz {
@@ -79,7 +79,7 @@ impl WaveletTransform {
                 }
             }
         }
-        
+
         // Z-direction
         for i in 0..nx {
             for j in 0..ny {
@@ -94,63 +94,63 @@ impl WaveletTransform {
                 }
             }
         }
-        
+
         Ok(coeffs)
     }
-    
+
     /// Compute detail coefficients magnitude (error indicator)
     pub fn detail_magnitude(&self, coeffs: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = coeffs.dim();
         let mut magnitude = Array3::zeros((nx, ny, nz));
-        
+
         // Compute magnitude of high-frequency components
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     // Consider a coefficient as detail if any dimension index is in high-freq band
-                    let is_detail = i >= nx/2 || j >= ny/2 || k >= nz/2;
-                    
+                    let is_detail = i >= nx / 2 || j >= ny / 2 || k >= nz / 2;
+
                     if is_detail {
                         magnitude[[i, j, k]] = coeffs[[i, j, k]].abs();
                     }
                 }
             }
         }
-        
+
         magnitude
     }
-    
+
     /// 1D forward discrete wavelet transform
     fn dwt_1d_forward(&self, data: &mut [f64]) {
         let n = data.len();
         if n < 2 {
             return;
         }
-        
+
         let mut temp = vec![0.0; n];
         let h0 = &self.filter_bank.h0;
         let h1 = &self.filter_bank.h1;
         let filter_len = h0.len();
-        
+
         // Apply filters
-        for i in 0..n/2 {
+        for i in 0..n / 2 {
             let mut sum_low = 0.0;
             let mut sum_high = 0.0;
-            
+
             for j in 0..filter_len {
                 let idx = (2 * i + j) % n;
                 sum_low += h0[j] * data[idx];
                 sum_high += h1[j] * data[idx];
             }
-            
+
             temp[i] = sum_low;
-            temp[n/2 + i] = sum_high;
+            temp[n / 2 + i] = sum_high;
         }
-        
+
         // Copy back
         data.copy_from_slice(&temp);
     }
-    
+
     /// Multi-level wavelet decomposition for better error estimation
     pub fn multi_level_decomposition(
         &self,
@@ -159,25 +159,25 @@ impl WaveletTransform {
     ) -> KwaversResult<Vec<Array3<f64>>> {
         let mut decompositions = Vec::with_capacity(levels);
         let current = field.clone();
-        
+
         for level in 0..levels {
             // Get current level size
             let (nx, ny, nz) = current.dim();
             let new_nx = nx / 2_usize.pow(level as u32);
             let new_ny = ny / 2_usize.pow(level as u32);
             let new_nz = nz / 2_usize.pow(level as u32);
-            
+
             if new_nx < 2 || new_ny < 2 || new_nz < 2 {
                 break;
             }
-            
+
             // Apply transform to low-frequency part only
             let low_freq = current.slice(s![..new_nx, ..new_ny, ..new_nz]).to_owned();
             let coeffs = self.forward_transform(&low_freq)?;
-            
+
             decompositions.push(coeffs);
         }
-        
+
         Ok(decompositions)
     }
 }
@@ -187,32 +187,27 @@ impl FilterBank {
     fn haar() -> Self {
         let sqrt2 = 2.0_f64.sqrt();
         Self {
-            h0: Array1::from_vec(vec![1.0/sqrt2, 1.0/sqrt2]),
-            h1: Array1::from_vec(vec![1.0/sqrt2, -1.0/sqrt2]),
-            g0: Array1::from_vec(vec![1.0/sqrt2, 1.0/sqrt2]),
-            g1: Array1::from_vec(vec![1.0/sqrt2, -1.0/sqrt2]),
+            h0: Array1::from_vec(vec![1.0 / sqrt2, 1.0 / sqrt2]),
+            h1: Array1::from_vec(vec![1.0 / sqrt2, -1.0 / sqrt2]),
+            g0: Array1::from_vec(vec![1.0 / sqrt2, 1.0 / sqrt2]),
+            g1: Array1::from_vec(vec![1.0 / sqrt2, -1.0 / sqrt2]),
         }
     }
-    
+
     /// Daubechies 4 wavelet filters
     fn daubechies4() -> Self {
         let sqrt2 = 2.0_f64.sqrt();
         let sqrt3 = 3.0_f64.sqrt();
-        
+
         let h0_vals = vec![
             (1.0 + sqrt3) / (4.0 * sqrt2),
             (3.0 + sqrt3) / (4.0 * sqrt2),
             (3.0 - sqrt3) / (4.0 * sqrt2),
             (1.0 - sqrt3) / (4.0 * sqrt2),
         ];
-        
-        let h1_vals = vec![
-            h0_vals[3],
-            -h0_vals[2],
-            h0_vals[1],
-            -h0_vals[0],
-        ];
-        
+
+        let h1_vals = vec![h0_vals[3], -h0_vals[2], h0_vals[1], -h0_vals[0]];
+
         Self {
             h0: Array1::from_vec(h0_vals.clone()),
             h1: Array1::from_vec(h1_vals),
@@ -220,7 +215,7 @@ impl FilterBank {
             g1: Array1::from_vec(h0_vals.into_iter().rev().collect()),
         }
     }
-    
+
     /// Daubechies 6 wavelet filters
     fn daubechies6() -> Self {
         // Daubechies 6 coefficients
@@ -232,13 +227,14 @@ impl FilterBank {
             -0.085441273882027,
             0.035226291885710,
         ];
-        
-        let h1_vals: Vec<f64> = h0_vals.iter()
+
+        let h1_vals: Vec<f64> = h0_vals
+            .iter()
             .enumerate()
             .map(|(i, &v)| if i % 2 == 0 { v } else { -v })
             .rev()
             .collect();
-        
+
         Self {
             h0: Array1::from_vec(h0_vals.clone()),
             h1: Array1::from_vec(h1_vals),
@@ -246,7 +242,7 @@ impl FilterBank {
             g1: Array1::from_vec(h0_vals.into_iter().rev().collect()),
         }
     }
-    
+
     /// Coiflet 6 wavelet filters
     fn coiflet6() -> Self {
         // Coiflet 6 coefficients (symmetric-like)
@@ -258,13 +254,14 @@ impl FilterBank {
             0.337897662457809,
             -0.072732619512854,
         ];
-        
-        let h1_vals: Vec<f64> = h0_vals.iter()
+
+        let h1_vals: Vec<f64> = h0_vals
+            .iter()
             .enumerate()
             .map(|(i, &v)| if i % 2 == 0 { -v } else { v })
             .rev()
             .collect();
-        
+
         Self {
             h0: Array1::from_vec(h0_vals.clone()),
             h1: Array1::from_vec(h1_vals),
@@ -279,22 +276,22 @@ pub fn smoothness_indicator(coeffs: &Array3<f64>) -> f64 {
     let (nx, ny, nz) = coeffs.dim();
     let mut detail_energy = 0.0;
     let mut total_energy = 0.0;
-    
+
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
                 let val = coeffs[[i, j, k]];
                 let energy = val * val;
                 total_energy += energy;
-                
+
                 // High-frequency components
-                if i >= nx/2 || j >= ny/2 || k >= nz/2 {
+                if i >= nx / 2 || j >= ny / 2 || k >= nz / 2 {
                     detail_energy += energy;
                 }
             }
         }
     }
-    
+
     if total_energy > 0.0 {
         detail_energy / total_energy
     } else {
@@ -306,43 +303,51 @@ pub fn smoothness_indicator(coeffs: &Array3<f64>) -> f64 {
 mod tests {
     use super::*;
     use ndarray::Array3;
-    
+
     #[test]
     fn test_haar_transform() {
         let transform = WaveletTransform::new(WaveletType::Haar);
-        
+
         // Create simple test field
         let mut field = Array3::zeros((4, 4, 4));
         field[[0, 0, 0]] = 1.0;
         field[[1, 1, 1]] = 1.0;
-        
+
         // Apply transform
         let coeffs = transform.forward_transform(&field).unwrap();
-        
+
         // Check that we get non-zero coefficients
         assert!(coeffs.iter().any(|&x| x != 0.0));
     }
-    
+
     #[test]
     fn test_smoothness_detection() {
         let transform = WaveletTransform::new(WaveletType::Daubechies4);
-        
+
         // Smooth field (low detail)
         let smooth = Array3::from_shape_fn((8, 8, 8), |(i, j, k)| {
             (i as f64 / 8.0) + (j as f64 / 8.0) + (k as f64 / 8.0)
         });
-        
+
         // Sharp field (high detail)
-        let sharp = Array3::from_shape_fn((8, 8, 8), |(i, j, k)| {
-            if i < 4 && j < 4 && k < 4 { 1.0 } else { 0.0 }
-        });
-        
+        let sharp =
+            Array3::from_shape_fn(
+                (8, 8, 8),
+                |(i, j, k)| {
+                    if i < 4 && j < 4 && k < 4 {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                },
+            );
+
         let smooth_coeffs = transform.forward_transform(&smooth).unwrap();
         let sharp_coeffs = transform.forward_transform(&sharp).unwrap();
-        
+
         let smooth_indicator = smoothness_indicator(&smooth_coeffs);
         let sharp_indicator = smoothness_indicator(&sharp_coeffs);
-        
+
         // Sharp field should have higher detail coefficient ratio
         assert!(sharp_indicator > smooth_indicator);
     }

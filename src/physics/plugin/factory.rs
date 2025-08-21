@@ -3,7 +3,7 @@
 //! This module provides factory patterns for creating and managing plugins.
 
 use super::{PhysicsPlugin, PluginConfig, PluginMetadata};
-use crate::error::{KwaversResult, KwaversError, ValidationError};
+use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use std::any::Any;
 use std::collections::HashMap;
@@ -17,10 +17,10 @@ pub trait PluginFactory: Send + Sync {
         config: Box<dyn Any + Send + Sync>,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn PhysicsPlugin>>;
-    
+
     /// Get the plugin metadata
     fn metadata(&self) -> &PluginMetadata;
-    
+
     /// Validate configuration before creation
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()>;
 }
@@ -70,24 +70,29 @@ where
                 value: "unknown".to_string(),
                 constraint: "Invalid configuration type".to_string(),
             })?;
-        
+
         let plugin = (self.create_fn)(*config, grid)?;
         Ok(Box::new(plugin))
     }
-    
+
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
-    
+
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()> {
         config
             .downcast_ref::<C>()
-            .ok_or_else(|| KwaversError::Validation(ValidationError::FieldValidation {
-                field: "config".to_string(),
-                value: "unknown".to_string(),
-                constraint: "Invalid configuration type".to_string(),
-            }))?
-            .validate(); if !config.downcast_ref::<C>().unwrap().validate().is_valid { return Err(KwaversError::Validation(ValidationError::StateValidation)); }
+            .ok_or_else(|| {
+                KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "config".to_string(),
+                    value: "unknown".to_string(),
+                    constraint: "Invalid configuration type".to_string(),
+                })
+            })?
+            .validate();
+        if !config.downcast_ref::<C>().unwrap().validate().is_valid {
+            return Err(KwaversError::Validation(ValidationError::StateValidation));
+        }
         Ok(())
     }
 }
@@ -106,7 +111,7 @@ impl PluginRegistry {
             metadata_cache: HashMap::new(),
         }
     }
-    
+
     /// Register a plugin factory
     pub fn register<F: PluginFactory + 'static>(
         &mut self,
@@ -118,15 +123,16 @@ impl PluginRegistry {
                 field: "plugin_id".to_string(),
                 value: id.to_string(),
                 constraint: "Plugin ID must be unique (already registered)".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         let metadata = factory.metadata().clone();
         self.metadata_cache.insert(id.to_string(), metadata);
         self.factories.insert(id.to_string(), Arc::new(factory));
         Ok(())
     }
-    
+
     /// Create a plugin instance
     pub fn create(
         &self,
@@ -134,26 +140,28 @@ impl PluginRegistry {
         config: Box<dyn Any + Send + Sync>,
         grid: &Grid,
     ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
-        let factory = self.factories.get(id)
+        let factory = self
+            .factories
+            .get(id)
             .ok_or_else(|| ValidationError::FieldValidation {
                 field: "plugin_id".to_string(),
                 value: id.to_string(),
                 constraint: "Plugin must be registered".to_string(),
             })?;
-        
+
         factory.create(config, grid)
     }
-    
+
     /// Get plugin metadata
     pub fn get_metadata(&self, id: &str) -> Option<&PluginMetadata> {
         self.metadata_cache.get(id)
     }
-    
+
     /// List all registered plugins
     pub fn list_plugins(&self) -> Vec<&PluginMetadata> {
         self.metadata_cache.values().collect()
     }
-    
+
     /// Check if a plugin is registered
     pub fn has_plugin(&self, id: &str) -> bool {
         self.factories.contains_key(id)

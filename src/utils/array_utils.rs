@@ -1,11 +1,11 @@
 //! Array utility functions to reduce code duplication
-//! 
+//!
 //! Implements DRY principle by providing reusable array initialization functions
 
 use ndarray::{Array3, Array4};
 
 /// Create a zero-initialized 3D array with the given dimensions
-/// 
+///
 /// # Arguments
 /// * `nx` - Size in x dimension
 /// * `ny` - Size in y dimension  
@@ -16,7 +16,7 @@ pub fn zeros_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
 }
 
 /// Create a zero-initialized 4D array with the given dimensions
-/// 
+///
 /// # Arguments
 /// * `n0` - Size in first dimension
 /// * `n1` - Size in second dimension
@@ -28,7 +28,7 @@ pub fn zeros_4d(n0: usize, n1: usize, n2: usize, n3: usize) -> Array4<f64> {
 }
 
 /// Create a 3D array filled with a specific value
-/// 
+///
 /// # Arguments
 /// * `nx` - Size in x dimension
 /// * `ny` - Size in y dimension
@@ -40,7 +40,7 @@ pub fn filled_3d(nx: usize, ny: usize, nz: usize, value: f64) -> Array3<f64> {
 }
 
 /// Create a 3D array from a grid's dimensions
-/// 
+///
 /// # Arguments
 /// * `grid` - Grid reference to get dimensions from
 #[inline]
@@ -49,7 +49,7 @@ pub fn zeros_from_grid(grid: &crate::grid::Grid) -> Array3<f64> {
 }
 
 /// Clone and convert a 3D array to ensure contiguous memory layout
-/// 
+///
 /// # Arguments
 /// * `array` - Array to clone and make contiguous
 #[inline]

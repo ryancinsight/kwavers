@@ -1,11 +1,11 @@
 //! Coupling strategies for multi-rate time integration
-//! 
+//!
 //! This module provides different strategies for coupling physics
 //! components that evolve at different time scales.
 
 use crate::grid::Grid;
-use crate::KwaversResult;
 use crate::physics::plugin::PhysicsPlugin;
+use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -48,12 +48,12 @@ impl TimeCoupling for SubcyclingStrategy {
     ) -> KwaversResult<()> {
         // Find maximum number of subcycles
         let max_cycles = subcycles.values().cloned().max().unwrap_or(1);
-        
+
         // Advance each component with its own subcycling
         for cycle in 0..max_cycles {
             for (name, component) in physics_components {
                 let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
-                
+
                 // Check if this component should be updated in this cycle
                 if cycle % (max_cycles / n_subcycles) == 0 {
                     let field = fields.get_mut(name).ok_or_else(|| {
@@ -62,13 +62,13 @@ impl TimeCoupling for SubcyclingStrategy {
                                 field: "fields".to_string(),
                                 value: name.clone(),
                                 constraint: "Field not found".to_string(),
-                            }
+                            },
                         )
                     })?;
-                    
+
                     // Compute local time step
                     let local_dt = global_dt * (max_cycles / n_subcycles) as f64;
-                    
+
                     // Evaluate physics and update field
                     // Update physics component using plugin interface
                     // PhysicsPlugin uses update method with fields array
@@ -76,13 +76,13 @@ impl TimeCoupling for SubcyclingStrategy {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
 
 /// Averaging strategy for multi-rate integration
-/// 
+///
 /// This strategy uses time-averaged coupling between components
 #[derive(Debug)]
 pub struct AveragingStrategy {
@@ -93,7 +93,9 @@ pub struct AveragingStrategy {
 impl AveragingStrategy {
     /// Create a new averaging strategy
     pub fn new(interpolation_order: usize) -> Self {
-        Self { interpolation_order }
+        Self {
+            interpolation_order,
+        }
     }
 }
 
@@ -115,29 +117,29 @@ impl TimeCoupling for AveragingStrategy {
             .iter()
             .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
             .collect();
-        
+
         // First pass: advance all components independently
         for (name, component) in physics_components {
             let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
             let local_dt = global_dt / n_subcycles as f64;
-            
+
             let field = fields.get_mut(name).ok_or_else(|| {
                 crate::error::KwaversError::Validation(
                     crate::error::ValidationError::FieldValidation {
                         field: "fields".to_string(),
                         value: name.clone(),
                         constraint: "Field not found".to_string(),
-                    }
+                    },
                 )
             })?;
-            
+
             // Subcycle this component
             for _ in 0..n_subcycles {
                 // Update physics component using plugin interface
                 // PhysicsPlugin uses update method with fields array
             }
         }
-        
+
         // Second pass: apply averaging/interpolation for coupling
         // This is a simplified version - in practice, you'd implement
         // proper interpolation based on the order
@@ -149,7 +151,7 @@ impl TimeCoupling for AveragingStrategy {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -164,7 +166,9 @@ pub struct PredictorCorrectorStrategy {
 impl PredictorCorrectorStrategy {
     /// Create a new predictor-corrector strategy
     pub fn new(corrector_iterations: usize) -> Self {
-        Self { corrector_iterations }
+        Self {
+            corrector_iterations,
+        }
     }
 }
 
@@ -185,7 +189,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             .iter()
             .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
             .collect();
-        
+
         // Predictor-corrector iterations
         for iteration in 0..=self.corrector_iterations {
             // Reset to initial state for each iteration except the last
@@ -196,22 +200,22 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                     }
                 }
             }
-            
+
             // Advance each component
             for (name, component) in physics_components {
                 let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
                 let local_dt = global_dt / n_subcycles as f64;
-                
+
                 let field = fields.get_mut(name).ok_or_else(|| {
                     crate::error::KwaversError::Validation(
                         crate::error::ValidationError::FieldValidation {
                             field: "fields".to_string(),
                             value: name.clone(),
                             constraint: "Field not found".to_string(),
-                        }
+                        },
                     )
                 })?;
-                
+
                 // Use predicted values from other components
                 for _ in 0..n_subcycles {
                     // Update physics component using plugin interface
@@ -220,7 +224,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                 }
             }
         }
-        
+
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 //! Thread-safe absorption coefficient cache
 
+use super::float_key::FloatKey;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use super::float_key::FloatKey;
 
 /// Thread-safe cache for absorption coefficients
 pub struct AbsorptionCache {
@@ -23,22 +23,22 @@ impl AbsorptionCache {
         F: FnOnce() -> f64,
     {
         let key = FloatKey(frequency);
-        
+
         // Try to get from cache first
         if let Ok(cache) = self.cache.lock() {
             if let Some(&value) = cache.get(&key) {
                 return value;
             }
         }
-        
+
         // Compute if not in cache
         let value = compute();
-        
+
         // Store in cache
         if let Ok(mut cache) = self.cache.lock() {
             cache.insert(key, value);
         }
-        
+
         value
     }
 

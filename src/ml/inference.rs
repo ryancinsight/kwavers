@@ -81,7 +81,9 @@ impl InferenceEngine {
         }
 
         if features != self.weights.nrows() {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
 
         // Reshape to 2-D for matrix multiplication: (batch, features)
