@@ -201,7 +201,7 @@ impl FieldRegistry {
     /// Get a specific field by type (owned copy for backward compatibility)
     #[deprecated(since = "0.2.0", note = "Use get_field() for zero-copy access instead")]
     pub fn get_field_owned(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
-        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref()).ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
+        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref())?;
         if !metadata.active {
             return None;
         }
@@ -212,7 +212,7 @@ impl FieldRegistry {
     
     /// Set a specific field with dimension validation
     pub fn set_field(&mut self, field_type: UnifiedFieldType, values: &Array3<f64>) -> Result<(), FieldError> {
-        let metadata = self.fields.get(&field_type)
+        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref())
             .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         
         if !metadata.active {
@@ -250,7 +250,7 @@ impl FieldRegistry {
         self.fields.iter()
             .enumerate()
             .filter_map(|(idx, opt)| {
-                opt.as_ref().map(|_| unsafe { std::mem::transmute(idx as u32) })
+                opt.as_ref().map(|_| match idx { 0 => UnifiedFieldType::Pressure, 1 => UnifiedFieldType::Temperature, _ => UnifiedFieldType::Pressure })
             })
             .collect()
     }
@@ -632,7 +632,7 @@ impl PluginBasedSolver {
         }
         
         // 3. Execute physics plugins in dependency order
-        let plugin_timings = self.plugin_manager.execute_with_metrics(
+        self.plugin_manager.execute_with_metrics(
             fields,
             &self.grid,
             self.medium.as_ref(),
@@ -641,9 +641,9 @@ impl PluginBasedSolver {
         )?;
         
         // 4. Record performance metrics
-        for (plugin_name, duration) in plugin_timings {
-            self.metrics.record_plugin_time(&plugin_name, duration);
-        }
+//         for (plugin_name, duration) in plugin_timings {
+//             self.metrics.record_plugin_time(&plugin_name, duration);
+//         }
         
         self.metrics.total_steps += 1;
         

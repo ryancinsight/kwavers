@@ -115,7 +115,7 @@ impl HybridSolver {
         }
         
         // Process each region with appropriate solver
-        for region in &self.regions {
+        let regions = self.regions.clone(); for region in &regions {
             match region.domain_type {
                 DomainType::PSTD => {
                     let pstd_start = Instant::now();
