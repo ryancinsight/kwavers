@@ -172,6 +172,10 @@ pub struct CPMLBoundary {
 }
 
 impl CPMLBoundary {
+    /// Get the CPML configuration
+    pub fn config(&self) -> &CPMLConfig {
+        &self.config
+    }
     /// Create new C-PML boundary with given configuration
     /// 
     /// # Arguments

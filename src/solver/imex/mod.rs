@@ -297,13 +297,9 @@ impl IMEXIntegrator {
             };
             
             crate::error::KwaversError::Numerical(
-                crate::error::NumericalError::SolverError {
-                    solver: scheme_name,
-                    details: format!(
-                        "Error during IMEX scheme execution at dt={:.3e}. Original error: {}",
-                        dt, e
-                    ),
-                }
+                crate::error::NumericalError::InvalidOperation(
+                    format!("IMEX scheme {} failed at dt={:.3e}: {}", scheme_name, dt, e)
+                )
             )
         })
     }

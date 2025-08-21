@@ -197,6 +197,8 @@ impl AdaptiveSelector {
             homogeneity_score: 0.9,  // Placeholder
             efficiency_score: 0.85,  // Placeholder
             composite_score: (smoothness + frequency_content + 0.9 + 0.85) / 4.0,
+            confidence: 0.95,  // Placeholder
+            detailed_metrics: None,  // Placeholder
         })
     }
     

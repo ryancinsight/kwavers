@@ -303,7 +303,7 @@ impl KWaveValidator {
             });
         
         // Create heterogeneous medium
-        let mut medium = crate::medium::heterogeneous::HeterogeneousMedium::new_tissue(&self.grid);
+        let mut medium = crate::medium::heterogeneous::HeterogeneousMedium::new(&self.grid, 1.0e6);
         medium.sound_speed = sound_speed;
         medium.density = density;
         

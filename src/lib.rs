@@ -647,9 +647,11 @@ fn get_cpu_cores() -> KwaversResult<usize> {
     let cores_str = info.get("cpu_cores");
     cores_str
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal(
-            format!("Failed to parse CPU cores from system info. Found: {:?}", cores_str)
-        ))
+        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+            parameter: "cpu_cores".to_string(),
+            value: cores_str.unwrap_or("unknown").to_string(),
+            constraint: "Must be a valid integer".to_string(),
+        }))
 }
 
 /// Get available memory in GB.
@@ -658,9 +660,11 @@ fn get_available_memory_gb() -> KwaversResult<f64> {
     let memory_str = info.get("memory_available_gb");
     memory_str
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal(
-            format!("Failed to parse available memory from system info. Found: {:?}", memory_str)
-        ))
+        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+            parameter: "available_memory".to_string(),
+            value: memory_str.unwrap_or("unknown").to_string(),
+            constraint: "Must be a valid number".to_string(),
+        }))
 }
 
 /// Get available disk space in GB for current directory.
@@ -669,9 +673,11 @@ fn get_available_disk_space_gb() -> KwaversResult<f64> {
     let disk_str = info.get("disk_space_gb");
     disk_str
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Internal(
-            format!("Failed to parse disk space from system info. Found: {:?}", disk_str)
-        ))
+        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+            parameter: "disk_space".to_string(),
+            value: disk_str.unwrap_or("unknown").to_string(),
+            constraint: "Must be a valid number".to_string(),
+        }))
 }
 
 #[cfg(test)]

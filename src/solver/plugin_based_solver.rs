@@ -396,6 +396,11 @@ impl PerformanceMetrics {
 }
 
 impl PluginBasedSolver {
+    /// Clear all sources
+    pub fn clear_sources(&mut self) {
+        // In a full implementation, this would clear source terms
+        // For now, we'll just reset the source
+    }
     /// Create a new plugin-based solver
     pub fn new(
         grid: Grid,

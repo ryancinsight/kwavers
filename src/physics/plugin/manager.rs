@@ -23,6 +23,13 @@ pub struct PluginManager {
 }
 
 impl PluginManager {
+    /// Initialize all plugins
+    pub fn initialize_all(&mut self, grid: &crate::grid::Grid, medium: &dyn crate::medium::Medium) -> crate::error::KwaversResult<()> {
+        for plugin in &mut self.plugins {
+            plugin.initialize(grid, medium)?;
+        }
+        Ok(())
+    }
     /// Create a new plugin manager
     pub fn new() -> Self {
         Self {
