@@ -250,9 +250,9 @@ impl NonlinearWave {
 
         // Transform back to spatial domain
         Ok((
-            ifft_3d(&grad_x_k)?,
-            ifft_3d(&grad_y_k)?,
-            ifft_3d(&grad_z_k)?,
+            ifft_3d_array(&grad_x_k),
+            ifft_3d_array(&grad_y_k),
+            ifft_3d_array(&grad_z_k),
         ))
     }
 
@@ -300,7 +300,7 @@ impl NonlinearWave {
         }
 
         // Transform back to spatial domain
-        ifft_3d(&laplacian_k)
+        Ok(ifft_3d_array(&laplacian_k))
     }
 
     /// Applies stability constraints to prevent numerical instabilities.

@@ -70,18 +70,18 @@ impl AcousticWaveModel for NonlinearWave {
 impl NonlinearWave {
     /// Gets the stability timestep for the given medium and grid.
     pub fn get_stability_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
-        self.get_stable_timestep(medium)
+        self.get_stable_timestep(medium, grid)
     }
 
     /// Validates the parameters for the simulation.
     pub fn validate_parameters(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Check CFL condition
-        if !self.is_stable(medium) {
+        if !self.is_stable(medium, grid) {
             return Err(crate::error::KwaversError::InvalidParameter(
                 format!(
                     "Unstable configuration: CFL number exceeds threshold. \
                     Consider reducing timestep to {} s",
-                    self.get_stable_timestep(medium)
+                    self.get_stable_timestep(medium, grid)
                 )
             ));
         }
