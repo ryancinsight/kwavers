@@ -1,21 +1,29 @@
 // examples/hifu_sonoluminescence.rs
+use kwavers::boundary::pml::PMLConfig;
 use kwavers::{
-    boundary::PMLBoundary, config::SimulationConfig, grid::Grid, init_logging, medium::HomogeneousMedium,
+    boundary::PMLBoundary,
+    config::SimulationConfig,
+    grid::Grid,
+    init_logging,
+    medium::HomogeneousMedium,
     physics::{
         bubble_dynamics::CavitationModel, bubble_dynamics::CavitationModelBehavior,
-        chemistry::ChemicalModel, chemistry::ChemicalModelTrait,
-        heterogeneity::HeterogeneityModel, heterogeneity::HeterogeneityModelTrait,
-        mechanics::acoustic_wave::nonlinear::NonlinearWave,
+        chemistry::ChemicalModel, chemistry::ChemicalModelTrait, heterogeneity::HeterogeneityModel,
+        heterogeneity::HeterogeneityModelTrait, mechanics::acoustic_wave::nonlinear::NonlinearWave,
         mechanics::streaming::StreamingModel, mechanics::streaming::StreamingModelTrait,
-        optics::light_diffusion::LightDiffusionModel, optics::light_diffusion::LightDiffusionModelTrait,
-        thermal::ThermalModel, thermal::ThermalModelTrait,
-        traits::AcousticWaveModel,
-        wave_propagation::scattering::AcousticScattering, wave_propagation::scattering::AcousticScatteringModelTrait,
+        optics::light_diffusion::LightDiffusionModel,
+        optics::light_diffusion::LightDiffusionModelTrait, thermal::ThermalModel,
+        thermal::ThermalModelTrait, traits::AcousticWaveModel,
+        wave_propagation::scattering::AcousticScattering,
+        wave_propagation::scattering::AcousticScatteringModelTrait,
     },
-    recorder::Recorder, sensor::Sensor, solver::plugin_based_solver::PluginBasedSolver,
-    source::PointSource, time::Time, visualization::plot_simulation_outputs,
+    recorder::Recorder,
+    sensor::Sensor,
+    solver::plugin_based_solver::PluginBasedSolver,
+    source::PointSource,
+    time::Time,
+    visualization::plot_simulation_outputs,
 };
-use kwavers::boundary::pml::PMLConfig;
 use std::error::Error;
 // use std::fs::File; // Removed
 // use std::io::Write; // Removed
@@ -38,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         pml_polynomial_order: 2, // TOML had 2, SimulationConfig default is 3. Let's use 2.
         pml_reflection: 0.000001,
         light_wavelength: kwavers::config::simulation::default_light_wavelength(), // Use default
-        kspace_padding: kwavers::config::simulation::default_kspace_padding(), // Use default
+        kspace_padding: kwavers::config::simulation::default_kspace_padding(),     // Use default
         kspace_alpha: 0.5,
         medium_type: None, // Default to homogeneous_water in initialize_medium
     };
@@ -77,7 +85,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         source: source_config,
         output: output_config,
     };
-    
+
     // Initialize grid and time from simulation config
     let grid = config.simulation.initialize_grid()?;
     let time = config.simulation.initialize_time(&grid)?;
@@ -85,24 +93,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Create a custom, more physically accurate water medium for HIFU
     // This medium will be used to initialize the source and boundary
     let mut medium_obj = HomogeneousMedium::new(
-        998.0,   // Density (kg/m³) for water
-        1482.0,  // Sound speed (m/s) for water at body temperature
-        &grid, 
-        0.3,     // mu_a (absorption coefficient for light)
-        10.0,    // mu_s_prime (reduced scattering coefficient)
+        998.0,  // Density (kg/m³) for water
+        1482.0, // Sound speed (m/s) for water at body temperature
+        &grid, 0.3,  // mu_a (absorption coefficient for light)
+        10.0, // mu_s_prime (reduced scattering coefficient)
     );
-    
+
     // Configure the medium for improved absorption modeling
-    medium_obj.alpha0 = 0.3;     // Power law absorption coefficient
-    medium_obj.delta = 1.1;      // Power law exponent
-    medium_obj.b_a = 5.2;        // Nonlinearity parameter (B/A) for water
-    
+    medium_obj.alpha0 = 0.3; // Power law absorption coefficient
+    medium_obj.delta = 1.1; // Power law exponent
+    medium_obj.b_a = 5.2; // Nonlinearity parameter (B/A) for water
+
     // Wrap in Arc after configuration
     let custom_medium = Arc::new(medium_obj); // Renamed to avoid conflict if config.medium() was used
-    
+
     // Initialize source using the custom medium and source config
-    let source = config.source.initialize_source(custom_medium.as_ref(), &grid)?;
-    
+    let source = config
+        .source
+        .initialize_source(custom_medium.as_ref(), &grid)?;
+
     // Initialize PML boundary using the custom medium and simulation config for PML params
     let pml_config = PMLConfig {
         thickness: config.simulation.pml_thickness,
@@ -115,7 +124,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         target_reflection: Some(1e-6),
     };
     let boundary = Box::new(PMLBoundary::new(pml_config).expect("Failed to create PML boundary"));
-    
+
     // Place sensors strategically at focus and surrounding areas
     let sensor_positions: Vec<(f64, f64, f64)> = vec![
         (0.03, 0.0, 0.0),   // Focal point
@@ -123,7 +132,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         (0.035, 0.0, 0.0),  // Post-focal region
         (0.03, 0.005, 0.0), // Off-axis near focus
     ];
-    
+
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
     let mut recorder = Recorder::new(
         sensor,
@@ -138,28 +147,28 @@ fn main() -> Result<(), Box<dyn Error>> {
     let grid_clone = grid.clone(); // Clone grid for model instantiation
 
     let mut acoustic_wave_model = NonlinearWave::new(&grid_clone, custom_medium.as_ref(), 1e6); // 1 MHz frequency
-    // Configure the nonlinear wave solver for better HIFU physics
+                                                                                                // Configure the nonlinear wave solver for better HIFU physics
     acoustic_wave_model.set_nonlinearity_scaling(2.0);
 
-
     let wave: Box<dyn AcousticWaveModel> = Box::new(acoustic_wave_model);
-    let cavitation: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid_clone, 10e-6));
-    let light: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
-    let thermal: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
-    let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true)?);
+    let cavitation: Box<dyn CavitationModelBehavior> =
+        Box::new(CavitationModel::new(&grid_clone, 10e-6));
+    let light: Box<dyn LightDiffusionModelTrait> =
+        Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
+    let thermal: Box<dyn ThermalModelTrait> =
+        Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
+    let chemical: Box<dyn ChemicalModelTrait> =
+        Box::new(ChemicalModel::new(&grid_clone, true, true)?);
     let streaming: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid_clone));
-    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
-    let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
+    let scattering: Box<dyn AcousticScatteringModelTrait> =
+        Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
+    let heterogeneity: Box<dyn HeterogeneityModelTrait> =
+        Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
 
     // Create the plugin-based solver instead of deprecated Solver
-    let mut solver = PluginBasedSolver::new(
-        grid.clone(),
-        time.clone(),
-        custom_medium,
-        boundary,
-        source,
-    );
-    
+    let mut solver =
+        PluginBasedSolver::new(grid.clone(), time.clone(), custom_medium, boundary, source);
+
     // Register physics plugins
     solver.register_plugin(Box::new(wave))?;
     solver.register_plugin(Box::new(cavitation))?;
@@ -169,16 +178,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     solver.register_plugin(Box::new(streaming))?;
     solver.register_plugin(Box::new(scattering))?;
     solver.register_plugin(Box::new(heterogeneity))?;
-    
-    // Set recorder if needed  
+
+    // Set recorder if needed
     solver.set_recorder(Box::new(recorder));
-    
+
     // Run the simulation
     solver.run()?;
-    
+
     // Note: The recorder saves data internally during the simulation
     // The solver manages the recorder lifecycle
-    
+
     // Create visualizations
     println!("Simulation complete. Creating visualizations...");
     plot_simulation_outputs(&config)?;

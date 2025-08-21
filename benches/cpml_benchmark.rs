@@ -7,11 +7,11 @@
 #[cfg(feature = "benchmark-placeholder")]
 mod disabled_benchmark {
     use criterion::{criterion_group, criterion_main, Criterion};
-    
+
     fn placeholder_bench(_c: &mut Criterion) {
         // Placeholder implementation
     }
-    
+
     criterion_group!(benches, placeholder_bench);
     criterion_main!(benches);
 }
