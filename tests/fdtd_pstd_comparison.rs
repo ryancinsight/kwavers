@@ -3,10 +3,10 @@
 //! These tests verify that both solvers produce similar results for simple cases
 //! and compare against analytical solutions where available.
 
-use kwavers::physics::plugin::{PluginContext, PluginManager};
-use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
-use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
-use kwavers::*;
+use kwavers::{
+    Grid, HomogeneousMedium, PluginManager,
+    FdtdConfig, FdtdPlugin, PstdConfig, PstdPlugin
+};
 use ndarray::{Array3, Array4};
 
 /// Test 1D plane wave propagation - both solvers should give similar results
@@ -138,7 +138,7 @@ fn run_fdtd_simulation_timed(
     let cfl_factor = config.cfl_factor;
     let mut plugin_manager = PluginManager::new();
     plugin_manager
-        .register(Box::new(FdtdPlugin::new(config, grid).unwrap()))
+        .add_plugin(Box::new(FdtdPlugin::new(config, grid).unwrap()))
         .unwrap();
 
     // Initialize fields
@@ -152,12 +152,12 @@ fn run_fdtd_simulation_timed(
     let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
     let n_steps = (t_end / dt).ceil() as usize;
 
-    plugin_manager.initialize_all(grid, medium).unwrap();
+    plugin_manager.initialize(grid, medium).unwrap();
 
-    for step in 0..n_steps {
-        let context = PluginContext::new(step, n_steps, 1e6);
+    for _step in 0..n_steps {
+        let t = _step as f64 * dt;
         plugin_manager
-            .update_all(&mut fields, grid, medium, dt, step as f64 * dt, &context)
+            .execute(&mut fields, grid, medium, dt, t)
             .unwrap();
     }
 
@@ -193,7 +193,7 @@ fn run_pstd_simulation_timed(
     let cfl_factor = config.cfl_factor;
     let mut plugin_manager = PluginManager::new();
     plugin_manager
-        .register(Box::new(PstdPlugin::new(config, grid).unwrap()))
+        .add_plugin(Box::new(PstdPlugin::new(config, grid).unwrap()))
         .unwrap();
 
     // Initialize fields
@@ -207,12 +207,12 @@ fn run_pstd_simulation_timed(
     let dt = cfl_factor * grid.dx.min(grid.dy).min(grid.dz) / c;
     let n_steps = (t_end / dt).ceil() as usize;
 
-    plugin_manager.initialize_all(grid, medium).unwrap();
+    plugin_manager.initialize(grid, medium).unwrap();
 
-    for step in 0..n_steps {
-        let context = PluginContext::new(step, n_steps, 1e6);
+    for _step in 0..n_steps {
+        let t = _step as f64 * dt;
         plugin_manager
-            .update_all(&mut fields, grid, medium, dt, step as f64 * dt, &context)
+            .execute(&mut fields, grid, medium, dt, t)
             .unwrap();
     }
 
