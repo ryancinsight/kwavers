@@ -23,7 +23,7 @@ pub mod wave_propagation; // NEW: Wave propagation with reflection and refractio
 pub mod analytical_tests;
 
 #[cfg(test)]
-pub mod validation_tests;
+pub mod validation;
 
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleState, BubbleParameters};
