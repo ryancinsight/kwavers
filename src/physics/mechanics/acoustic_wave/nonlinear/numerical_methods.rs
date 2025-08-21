@@ -2,7 +2,7 @@
 //!
 //! This module contains the core numerical algorithms for solving nonlinear acoustic equations.
 
-use crate::constants::{numerical, stability};
+use crate::constants::numerical;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};
@@ -47,8 +47,13 @@ impl NonlinearWave {
 
         // Validate inputs
         if pressure.shape() != [grid.nx, grid.ny, grid.nz] {
-            return Err(crate::error::KwaversError::InvalidParameter(
-                "Pressure field dimensions do not match grid".to_string(),
+            return Err(crate::error::KwaversError::Grid(
+                crate::error::GridError::InvalidDimensions {
+                    nx: pressure.shape()[0],
+                    ny: pressure.shape()[1],
+                    nz: pressure.shape()[2],
+                    reason: format!("Must match grid dimensions [{}, {}, {}]", grid.nx, grid.ny, grid.nz),
+                }
             ));
         }
 
@@ -287,9 +292,9 @@ impl NonlinearWave {
                 });
         } else {
             // Compute k-squared on the fly
-            let kx = grid.get_kx();
-            let ky = grid.get_ky();
-            let kz = grid.get_kz();
+            let kx = grid.compute_kx();
+            let ky = grid.compute_ky();
+            let kz = grid.compute_kz();
 
             laplacian_k
                 .indexed_iter_mut()

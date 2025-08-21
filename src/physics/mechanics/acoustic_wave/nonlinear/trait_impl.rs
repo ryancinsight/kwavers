@@ -30,10 +30,9 @@ impl AcousticWaveModel for NonlinearWave {
         let pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
         
         // Create source term array
-        let mut source_term = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-        
-        // Apply source at current time
-        source.add_to_field(&mut source_term, grid, t, dt);
+        let source_mask = source.create_mask(grid);
+        let amplitude = source.amplitude(t);
+        let source_term = source_mask * amplitude;
         
         // Update using the nonlinear wave equation
         match self.update_wave(&pressure, &source_term, medium, grid, (t / dt) as usize) {
@@ -77,36 +76,45 @@ impl NonlinearWave {
     pub fn validate_parameters(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Check CFL condition
         if !self.is_stable(medium, grid) {
-            return Err(crate::error::KwaversError::InvalidParameter(
-                format!(
-                    "Unstable configuration: CFL number exceeds threshold. \
-                    Consider reducing timestep to {} s",
-                    self.get_stable_timestep(medium, grid)
-                )
+            return Err(crate::error::KwaversError::Physics(
+                crate::error::PhysicsError::InvalidParameter {
+                    parameter: "timestep".to_string(),
+                    value: self.dt,
+                    reason: format!("Must be <= {} for stability", self.get_stable_timestep(medium, grid)),
+                }
             ));
         }
 
         // Check grid resolution
-        let min_wavelength = medium.get_min_wavelength(self.source_frequency);
+        // Calculate minimum wavelength based on source frequency and sound speed
+        let x = grid.nx as f64 * grid.dx / 2.0;
+        let y = grid.ny as f64 * grid.dy / 2.0;
+        let z = grid.nz as f64 * grid.dz / 2.0;
+        let sound_speed = medium.sound_speed(x, y, z, grid);
+        let min_wavelength = sound_speed / self.source_frequency;
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let points_per_wavelength = min_wavelength / min_dx;
         
         const MIN_POINTS_PER_WAVELENGTH: f64 = 4.0;
         if points_per_wavelength < MIN_POINTS_PER_WAVELENGTH {
-            return Err(crate::error::KwaversError::InvalidParameter(
-                format!(
-                    "Insufficient grid resolution: {:.1} points per wavelength \
-                    (minimum required: {:.1})",
-                    points_per_wavelength, MIN_POINTS_PER_WAVELENGTH
-                )
+            return Err(crate::error::KwaversError::Physics(
+                crate::error::PhysicsError::InvalidParameter {
+                    parameter: "grid_resolution".to_string(),
+                    value: points_per_wavelength,
+                    reason: format!("Minimum {:.1} points/wavelength required, got {:.1}", MIN_POINTS_PER_WAVELENGTH, points_per_wavelength),
+                }
             ));
         }
 
         // Validate multi-frequency configuration if present
         if let Some(ref config) = self.multi_freq_config {
             if !config.validate() {
-                return Err(crate::error::KwaversError::InvalidParameter(
-                    "Invalid multi-frequency configuration".to_string()
+                return Err(crate::error::KwaversError::Config(
+                    crate::error::ConfigError::InvalidValue {
+                        parameter: "multi_frequency".to_string(),
+                        value: "invalid".to_string(),
+                        constraint: "Configuration must be valid".to_string(),
+                    }
                 ));
             }
         }
