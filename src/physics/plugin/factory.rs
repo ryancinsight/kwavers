@@ -88,7 +88,7 @@ where
                 value: "unknown".to_string(),
                 constraint: "Invalid configuration type".to_string(),
             }))?
-            .validate()?;
+            .validate(); if !config.downcast_ref::<C>().unwrap().validate().is_valid { return Err(KwaversError::Validation(ValidationError::StateValidation)); }
         Ok(())
     }
 }

@@ -418,7 +418,7 @@ impl TimeReversalReconstructor {
             // which will automatically provide the correct amplitude for each time step
             
             // Advance solver one step
-            solver.step(step, solver.time().dt, frequency)?;
+            solver.step(step, step as f64 * solver.time().dt)?;
             
             // Track maximum amplitude at each point
 //             let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());

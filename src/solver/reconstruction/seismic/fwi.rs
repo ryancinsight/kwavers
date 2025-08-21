@@ -453,16 +453,16 @@ impl Reconstructor for FullWaveformInversion {
             }
             
             // Line search for optimal step
-            let step_length = self.line_search_wolfe(
-                &velocity,
-                &gradient,
-                &search_direction,
-                misfit,
-                sensor_data,
-                &source_positions,
-                &receiver_positions,
-                grid
-            )?;
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
+            let step_length = self.line_search_wolfe(&search_direction, &gradient);
             
             // Update velocity model
             Zip::from(&mut velocity)

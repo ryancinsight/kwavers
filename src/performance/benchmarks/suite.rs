@@ -141,7 +141,7 @@ impl BenchmarkSuite {
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
         self.initialize_gaussian_pulse(&mut fields, &grid);
         let mut pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
-        let mut vx = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut vx: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut vy = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut vz = Array3::zeros((grid.nx, grid.ny, grid.nz));
         

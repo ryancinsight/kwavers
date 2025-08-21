@@ -170,7 +170,7 @@ impl FieldRegistry {
     
     /// Get a specific field by type (zero-copy view)
     pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
-        let metadata = self.fields.get(&field_type)
+        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref())
             .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         
         if !metadata.active {
@@ -185,7 +185,7 @@ impl FieldRegistry {
     
     /// Get a mutable field view (zero-copy)
     pub fn get_field_mut(&mut self, field_type: UnifiedFieldType) -> Result<ArrayViewMut3<f64>, FieldError> {
-        let metadata = self.fields.get(&field_type)
+        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref())
             .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         
         if !metadata.active {
@@ -201,7 +201,7 @@ impl FieldRegistry {
     /// Get a specific field by type (owned copy for backward compatibility)
     #[deprecated(since = "0.2.0", note = "Use get_field() for zero-copy access instead")]
     pub fn get_field_owned(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
-        let metadata = self.fields.get(&field_type)?;
+        let metadata = self.fields.get(field_type as usize).and_then(|opt| opt.as_ref()).ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         if !metadata.active {
             return None;
         }
@@ -638,7 +638,6 @@ impl PluginBasedSolver {
             self.medium.as_ref(),
             dt,
             step,
-            self.time.n_steps
         )?;
         
         // 4. Record performance metrics

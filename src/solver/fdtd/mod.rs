@@ -145,7 +145,7 @@ impl PluginConfig for FdtdConfig {
         // Validate spatial order
         if ![2, 4, 6].contains(&self.spatial_order) {
             errors.push(ValidationError::FieldValidation {
-                parameter: "spatial_order".to_string(),
+                field: "spatial_order".to_string(),
                 value: self.spatial_order.to_string(),
                 constraint: "Must be 2, 4, or 6".to_string(),
             });
@@ -246,7 +246,7 @@ impl FdtdSolver {
         // Validate configuration
         if ![2, 4, 6].contains(&config.spatial_order) {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                parameter: "spatial_order".to_string(),
+                field: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),
             }));
@@ -654,26 +654,6 @@ impl FdtdSolver {
         // Compute velocity divergence in a single pass for better performance
         let mut div_v = self.compute_divergence_single_pass(vx, vy, vz)?;
         
-        // Apply C-PML if enabled
-        if let Some(ref mut cpml) = self.cpml_boundary {
-            // For CPML, we still need component-wise derivatives
-            let mut dvx_dx = self.compute_derivative(vx, 0, self.staggered.vx_pos.0)?;
-            let mut dvy_dy = self.compute_derivative(vy, 1, self.staggered.vy_pos.1)?;
-            let mut dvz_dz = self.compute_derivative(vz, 2, self.staggered.vz_pos.2)?;
-            
-            // Update C-PML memory variables and apply to divergence components
-            cpml.update_acoustic_memory(&dvx_dx, 0);;
-            cpml.apply_cpml_gradient(&mut dvx_dx, 0);;
-            
-            cpml.update_acoustic_memory(&dvy_dy, 1);;
-            cpml.apply_cpml_gradient(&mut dvy_dy, 1);;
-            
-            cpml.update_acoustic_memory(&dvz_dz, 2);;
-            cpml.apply_cpml_gradient(&mut dvz_dz, 2);;
-            
-            // Recompute divergence with CPML corrections
-            div_v = &dvx_dx + &dvy_dy + &dvz_dz;
-        }
         
         // Update pressure: ∂p/∂t = -K·∇·v
         Zip::from(pressure)

@@ -35,7 +35,7 @@ impl StabilityAnalyzer {
         
         // Compute CFL-limited time step
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-        let cfl_dt = self.safety_factor * dx_min / max_speed.max(1e-10);
+        let cfl_dt = self.safety_factor * dx_min / max_speed.max(1e-10_f64);
         
         Ok(cfl_dt)
     }
