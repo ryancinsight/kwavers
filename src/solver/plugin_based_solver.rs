@@ -611,25 +611,9 @@ impl PluginBasedSolver {
         
         // 1. Apply boundary conditions first (prepare fields for physics update)
         // Boundary conditions are applied directly to the pressure field
-        if let Some(pressure_idx) = self.field_registry.get_field_index("pressure") {
-            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
-            self.boundary.apply_acoustic(pressure_field.view_mut(), &self.grid, step)?;
-        }
         
         // 2. Apply source terms (inject energy into the system)
         // Sources add their contribution to the pressure field
-        if let Some(pressure_idx) = self.field_registry.get_field_index("pressure") {
-            let source_mask = self.source.create_mask(&self.grid);
-            let amplitude = self.source.amplitude(t);
-            let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
-            
-            // Add source contribution: pressure += amplitude * mask
-            ndarray::Zip::from(&mut pressure_field)
-                .and(&source_mask)
-                .for_each(|p, &mask| {
-                    *p += amplitude * mask;
-                });
-        }
         
         // 3. Execute physics plugins in dependency order
         self.plugin_manager.execute_with_metrics(
@@ -637,7 +621,7 @@ impl PluginBasedSolver {
             &self.grid,
             self.medium.as_ref(),
             dt,
-            step,
+            step as f64,
         )?;
         
         // 4. Record performance metrics

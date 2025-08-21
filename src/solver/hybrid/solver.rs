@@ -74,7 +74,7 @@ impl HybridSolver {
         let coupling = CouplingInterface::new(
             grid,
             grid,
-            config.coupling_interface.interpolation_scheme,
+            crate::solver::hybrid::coupling::InterpolationScheme::Linear,
         )?;
         
         // Perform initial domain decomposition
