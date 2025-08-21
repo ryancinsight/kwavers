@@ -2,75 +2,74 @@
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
-[![Examples](https://img.shields.io/badge/examples-working-green.svg)](./examples)
+[![Examples](https://img.shields.io/badge/examples-1_working-yellow.svg)](./examples)
 [![Status](https://img.shields.io/badge/status-alpha-yellow.svg)](./src)
 
-## Status Overview
+## Current Status
 
 | Component | Status | Details |
 |-----------|--------|---------|
 | **Library Build** | ✅ **PASSING** | Compiles with 501 warnings |
-| **Core Examples** | ✅ **WORKING** | `basic_simulation` runs successfully |
-| **Test Suite** | ⚠️ **PARTIAL** | 119 compilation errors (trait implementations) |
-| **All Examples** | ⚠️ **PARTIAL** | 20 compilation errors (API changes) |
-| **Architecture** | ✅ **SOLID** | Plugin-based, modular, extensible |
+| **Core Example** | ✅ **WORKING** | `basic_simulation` runs successfully |
+| **Test Suite** | ⚠️ **ISSUES** | 119 compilation errors (incomplete trait implementations) |
+| **Other Examples** | ⚠️ **PARTIAL** | API migrations in progress |
+| **Architecture** | ✅ **SOLID** | Clean plugin-based design |
 
 ## Quick Start
 
 ```bash
-# Clone and build
+# Clone repository
 git clone https://github.com/kwavers/kwavers
 cd kwavers
+
+# Build library
 cargo build --release
 
 # Run working example
 cargo run --example basic_simulation
 
-# Output shows successful simulation:
+# Output:
 # Grid properties:
 #   CFL timestep: 1.15e-7 s
 #   Grid points: 262144
 #   Memory estimate: 21.0 MB
 ```
 
-## What Works Today
+## What Works
 
-### ✅ Verified Working
-- **Grid Management**: 3D grid creation, CFL calculation, memory estimation
-- **Medium Modeling**: Homogeneous media with water/blood presets
-- **Basic Simulation**: Complete simulation pipeline
-- **Plugin Architecture**: Extensible solver framework
+### ✅ Core Functionality
+- **Grid Management**: 3D grid creation, CFL calculation
+- **Medium Modeling**: Homogeneous media with presets
+- **Basic Simulation**: Complete pipeline functional
 - **Memory Safety**: Guaranteed by Rust
 
-### 🔄 Partially Working
-- **Test Suite**: Core functionality works, trait implementations need updates
-- **Examples**: Basic examples work, advanced ones need API migration
-- **Physics Models**: Core implementations complete, some integrations pending
+### 🔄 In Progress
+- Test compilation fixes (trait implementations)
+- Example API migrations
+- Warning reduction (501 → <100)
+- Documentation improvements
 
 ### ❌ Known Issues
-- Test compilation: Missing trait method implementations
-- Some examples: Using deprecated APIs
-- Documentation: Incomplete for advanced features
+- HeterogeneousTissueMedium: Missing trait methods
+- Some examples: Using outdated APIs
+- High warning count (but stable)
 
 ## Architecture
 
-The library implements enterprise-grade design principles:
-
 ```
 kwavers/
-├── physics/          # Physics models (acoustic, thermal, optics)
-├── solver/           # Numerical methods (FDTD, PSTD, spectral)
-├── medium/           # Material properties
-├── boundary/         # Boundary conditions (PML, CPML)
-├── source/           # Wave sources
-├── grid/            # Grid management
-└── utils/           # Utilities and helpers
+├── physics/      # Physics models and traits
+├── solver/       # Numerical methods (FDTD, PSTD)
+├── medium/       # Material properties
+├── boundary/     # Boundary conditions
+├── source/       # Wave sources
+├── grid/        # Grid management
+└── utils/       # Utilities and FFT operations
 ```
 
-### Design Principles Applied
+### Design Principles
 - **SOLID**: Single Responsibility, Open/Closed, Liskov, Interface Segregation, Dependency Inversion
 - **CUPID**: Composable, Unix Philosophy, Predictable, Idiomatic, Domain-based
-- **GRASP**: General Responsibility Assignment
 - **CLEAN**: Clear, Lean, Efficient, Adaptable, Neat
 - **SSOT/SPOT**: Single Source/Point of Truth
 
@@ -80,105 +79,52 @@ kwavers/
 use kwavers::{Grid, HomogeneousMedium, Time};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create 3D computational grid
+    // Create computational grid
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
     
-    // Define medium properties (water)
+    // Define medium (water)
     let medium = HomogeneousMedium::water(&grid);
     
-    // Setup time stepping
+    // Calculate stable timestep
     let dt = grid.cfl_timestep_default(1500.0);
-    let time = Time::new(dt, 100);
     
-    // Run simulation
-    println!("Simulation configured successfully!");
     println!("Grid: {}x{}x{}", grid.nx, grid.ny, grid.nz);
     println!("Time step: {:.2e} s", dt);
+    println!("Memory: ~{:.1} MB", grid.nx * grid.ny * grid.nz * 8 / 1_000_000);
     
     Ok(())
 }
 ```
 
-## Features
+## Development Metrics
 
-### Implemented
-- ✅ 3D grid management with CFL stability
-- ✅ Homogeneous and heterogeneous media
-- ✅ Plugin-based solver architecture
-- ✅ FDTD and PSTD numerical methods
-- ✅ PML/CPML boundary conditions
-- ✅ FFT-based spectral operations
-- ✅ Nonlinear acoustic models
-
-### In Development
-- 🔄 GPU acceleration (stubs present)
-- 🔄 Machine learning integration
-- 🔄 Advanced visualization
-- 🔄 Full test coverage
-
-## Performance
-
-Current characteristics on modern hardware:
-- **Memory**: ~21 MB for 64³ grid
-- **Scaling**: Linear with grid points
-- **Safety**: Zero unsafe code blocks
-- **Parallelism**: Rayon-ready architecture
-
-## Development Status
-
-### Metrics
 | Metric | Current | Target | Priority |
 |--------|---------|--------|----------|
-| Warnings | 501 | <50 | Medium |
-| Test Coverage | ~40% | >80% | High |
-| Examples Working | 5% | 100% | High |
-| Documentation | 60% | 95% | Medium |
+| Build Errors | 0 | 0 | ✅ Done |
+| Test Errors | 119 | 0 | High |
+| Example Errors | ~15 | 0 | Medium |
+| Warnings | 501 | <50 | Low |
+| Documentation | 60% | 90% | Medium |
 
-### Timeline
-- **Now**: Core functionality works, basic examples run
-- **1 Week**: Fix test compilation, update examples
-- **1 Month**: Full test suite, all examples working
-- **3 Months**: Production ready, published to crates.io
+## Roadmap
 
-## Contributing
+### Immediate (This Week)
+- [ ] Fix test compilation errors
+- [ ] Complete example migrations
+- [ ] Reduce warnings by 50%
 
-Priority areas for contribution:
+### Short Term (1 Month)
+- [ ] All tests passing
+- [ ] All examples working
+- [ ] Warnings <100
+- [ ] Basic benchmarks
 
-1. **Test Fixes** (High Priority)
-   - Complete trait implementations
-   - Fix compilation errors
-   
-2. **Example Updates** (High Priority)
-   - Migrate to current APIs
-   - Add documentation
-
-3. **Warning Reduction** (Medium Priority)
-   - Remove unused code
-   - Fix deprecated usage
-
-4. **Documentation** (Medium Priority)
-   - API documentation
-   - Usage guides
-
-## Building
-
-```bash
-# Build library
-cargo build --release
-
-# Run tests (currently has issues)
-cargo test --lib
-
-# Run working example
-cargo run --example basic_simulation
-
-# Check code
-cargo clippy
-```
+### Long Term (3-6 Months)
+- [ ] Production quality
+- [ ] GPU support
+- [ ] Published to crates.io
 
 ## Dependencies
-
-Core dependencies are minimal and well-maintained:
 
 ```toml
 [dependencies]
@@ -188,22 +134,18 @@ rayon = "1.7"       # Parallel processing
 nalgebra = "0.32"   # Linear algebra
 ```
 
+## Contributing
+
+Priority areas:
+1. **Test Fixes**: Complete trait implementations
+2. **Example Updates**: Migrate to current APIs
+3. **Warning Reduction**: Clean up unused code
+4. **Documentation**: API docs and guides
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details
 
 ## Assessment
 
-**Kwavers is a functional alpha library** with solid architecture and working core features. The foundation is excellent, following Rust best practices and modern design principles. With focused effort on test fixes and example updates, it will be production-ready in 2-3 months.
-
-### Strengths
-- ✅ Clean, modular architecture
-- ✅ Memory and type safety
-- ✅ Working simulation pipeline
-- ✅ Extensible plugin system
-
-### Areas for Improvement
-- 🔄 Complete test suite
-- 🔄 Update all examples
-- 🔄 Reduce warnings
-- 🔄 Expand documentation
+**Kwavers is a functional alpha library** with working core features and solid architecture. The foundation is excellent, following Rust best practices. With focused effort on tests and examples, production readiness is achievable in 2-3 months.
