@@ -2,10 +2,9 @@
 
 mod float_key;
 mod absorption_cache;
-mod core;
+mod constants;
+mod implementation;
 
-pub use core::HomogeneousMedium;
-
-// Re-export for backward compatibility (will be removed)
+pub use implementation::HomogeneousMedium;
 pub(crate) use float_key::FloatKey;
 pub(crate) use absorption_cache::AbsorptionCache;

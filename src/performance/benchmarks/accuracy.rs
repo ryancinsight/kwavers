@@ -215,7 +215,7 @@ pub fn benchmark_absorption_models() -> Vec<AccuracyResult> {
             amplitude *= (-alpha * dx).exp();
         }
         
-        let error = (amplitude - expected_amplitude).abs() / expected_amplitude;
+        let error = ((amplitude - expected_amplitude).abs() as f64) / expected_amplitude;
         
         results.push(AccuracyResult {
             test_name: "Power Law Absorption".to_string(),
