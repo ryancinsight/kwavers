@@ -192,10 +192,11 @@ impl AdaptiveSelector {
         let interface_quality = 0.95; // Placeholder
         
         Ok(QualityMetrics {
-            smoothness,
-            frequency_content,
-            numerical_dispersion,
-            interface_quality,
+            smoothness_score: smoothness,
+            frequency_score: frequency_content,
+            homogeneity_score: 0.9,  // Placeholder
+            efficiency_score: 0.85,  // Placeholder
+            composite_score: (smoothness + frequency_content + 0.9 + 0.85) / 4.0,
         })
     }
     

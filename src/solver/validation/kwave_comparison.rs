@@ -174,7 +174,7 @@ impl KWaveValidator {
         let n_steps = (t_end / dt) as usize;
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
+            let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
             let mut pressure_view = pressure.view_mut();
@@ -212,7 +212,7 @@ impl KWaveValidator {
         let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
         
         // Create plane wave
-        let medium = HomogeneousMedium::new(998.0, sound_speed, &self.grid, 0.0, 0.0); // Water density at room temperature
+        let medium = HomogeneousMedium::new(998.0, sound_speed, 0.0, 0.0, &self.grid); // Water density at room temperature
         let mut pressure = self.grid.create_field();
         
         // Initialize plane wave traveling in +x direction
@@ -326,7 +326,7 @@ impl KWaveValidator {
         let n_steps = 500;
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
+            let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
             let mut pressure_view = pressure.view_mut();
@@ -528,7 +528,7 @@ impl KWaveValidator {
         let mut boundary_data = Vec::new();
         for _ in 0..n_steps {
             // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
+            let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
             let mut pressure_view = pressure.view_mut();

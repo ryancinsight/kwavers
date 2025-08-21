@@ -274,8 +274,8 @@ impl CPMLSolver {
     }
     
     /// Enable dispersive media support
-    pub fn enable_dispersive_support(&mut self) {
-        self.cpml.enable_dispersive_support();
+    pub fn enable_dispersive_support(&mut self, params: &crate::boundary::cpml::DispersiveParameters) {
+        self.cpml.enable_dispersive_support(params);
     }
     
     /// Estimate reflection coefficient at given angle

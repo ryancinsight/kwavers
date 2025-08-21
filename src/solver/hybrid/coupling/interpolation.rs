@@ -26,6 +26,7 @@ impl Default for InterpolationScheme {
 }
 
 /// Manager for interpolation operations
+#[derive(Debug)]
 pub struct InterpolationManager {
     scheme: InterpolationScheme,
     adaptive_criteria: Option<AdaptiveInterpolationCriteria>,

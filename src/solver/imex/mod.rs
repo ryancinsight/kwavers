@@ -276,7 +276,7 @@ impl IMEXIntegrator {
                 return Err(crate::error::KwaversError::Numerical(
                     crate::error::NumericalError::Instability {
                         operation: "IMEX time step".to_string(),
-                        condition: format!("dt={:.3e} exceeds stable dt={:.3e}", dt, stable_dt),
+                        condition: dt,
                     }
                 ));
             }

@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 const MAX_HISTORY_SIZE: usize = 100;
 
 /// Quality monitor for interface coupling
+#[derive(Debug)]
 pub struct QualityMonitor {
     /// Quality metrics history
     history: VecDeque<InterfaceQualityMetrics>,

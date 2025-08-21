@@ -5,7 +5,7 @@ use super::{ConservationEnforcer, QualityMonitor, TransferOperators};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::solver::hybrid::domain_decomposition::DomainRegion;
-use ndarray::Array3;
+use ndarray::{Array3, Array4};
 
 /// Interface coupling data for a single boundary
 #[derive(Debug, Clone)]

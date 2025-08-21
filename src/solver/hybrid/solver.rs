@@ -69,12 +69,13 @@ impl HybridSolver {
         let fdtd_solver = FdtdSolver::new(config.fdtd_config.clone(), grid)?;
         
         // Initialize domain decomposition
-        let decomposer = DomainDecomposer::new(config.decomposition_strategy);
-        let selector = AdaptiveSelector::new(config.selection_criteria.clone());
+        let decomposer = DomainDecomposer::new();
+        let selector = AdaptiveSelector::new(config.selection_criteria.clone())?;
         let coupling = CouplingInterface::new(
+            grid,
+            grid,
             config.coupling_interface.interpolation_scheme,
-            config.coupling_interface.ghost_cells,
-        );
+        )?;
         
         // Perform initial domain decomposition
         let regions = decomposer.decompose(grid, &selector)?;
