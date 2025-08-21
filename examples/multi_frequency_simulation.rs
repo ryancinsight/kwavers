@@ -3,7 +3,7 @@
 use kwavers::{
     factory::{
         GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelConfig, PhysicsModelType,
-        SimulationConfig, SimulationFactory, SimulationResults, SourceConfig, TimeConfig,
+        SimulationConfig, SimulationFactory, SourceConfig, TimeConfig,
         ValidationConfig,
     },
     grid::Grid,
@@ -68,7 +68,6 @@ fn main() -> KwaversResult<()> {
             num_elements: None,
             signal_type: "multi_tone".to_string(),
             phase: 0.0,
-            duration: Some(5e-6),
         },
         validation: ValidationConfig {
             enable_validation: true,
@@ -77,8 +76,7 @@ fn main() -> KwaversResult<()> {
         },
     };
 
-    let builder = SimulationFactory::create_simulation(config)?;
-    let mut simulation = builder.build()?;
+    let mut simulation = SimulationFactory::create_simulation(config)?;
 
     // Create multi-frequency acoustic wave component
     let multi_freq_config = MultiFrequencyConfig::new(vec![1e6, 2e6, 3e6]) // 1, 2, 3 MHz
