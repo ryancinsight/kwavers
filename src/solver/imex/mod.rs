@@ -76,7 +76,7 @@ pub use traits::{IMEXScheme, IMEXConfig, OperatorSplitting, StiffnessIndicator};
 pub use imex_rk::{IMEXRK, IMEXRKConfig, IMEXRKType};
 pub use imex_bdf::{IMEXBDF, IMEXBDFConfig};
 pub use operator_splitting::{StrangSplitting, LieTrotterSplitting};
-pub use implicit_solver::{ImplicitSolver, LinearSolver, NewtonSolver};
+pub use implicit_solver::{ImplicitSolver, LinearSolver, NonlinearSolver};
 pub use stability::{IMEXStabilityAnalyzer, StabilityRegion};
 pub use stiffness_detection::{StiffnessDetector, StiffnessMetric};
 
@@ -153,7 +153,7 @@ impl IMEXSchemeType {
 #[derive(Debug)]
 pub enum ImplicitSolverType {
     Linear(LinearSolver),
-    Newton(NewtonSolver),
+    Newton(NonlinearSolver),
 }
 
 impl ImplicitSolverType {
@@ -227,7 +227,7 @@ impl IMEXIntegrator {
         grid: Arc<Grid>,
     ) -> Self {
         let implicit_solver = ImplicitSolverType::Newton(
-            NewtonSolver::new(config.tolerance, config.max_iterations)
+            NonlinearSolver::new(config.tolerance, config.max_iterations)
         );
         let stiffness_detector = StiffnessDetector::new(config.stiffness_threshold);
         let stability_analyzer = IMEXStabilityAnalyzer::new();

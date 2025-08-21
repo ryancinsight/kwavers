@@ -103,7 +103,7 @@ pub struct NonlinearSolver {
     line_search: bool,
 }
 
-impl Default for NewtonSolver {
+impl Default for NonlinearSolver {
     fn default() -> Self {
         Self {
             tolerance: 1e-10,
@@ -114,7 +114,7 @@ impl Default for NewtonSolver {
     }
 }
 
-impl NewtonSolver {
+impl NonlinearSolver {
     /// Create a new Newton solver
     pub fn new(tolerance: f64, max_iterations: usize) -> Self {
         Self {
@@ -206,7 +206,7 @@ impl NewtonSolver {
     }
 }
 
-impl ImplicitSolver for NewtonSolver {
+impl ImplicitSolver for NonlinearSolver {
     fn solve<F>(
         &self,
         initial_guess: &Array3<f64>,
@@ -258,7 +258,7 @@ impl ImplicitSolver for NewtonSolver {
         }
         
         Err(KwaversError::Physics(crate::error::PhysicsError::ConvergenceFailure {
-            solver: "NewtonSolver".to_string(),
+            solver: "NonlinearSolver".to_string(),
             iterations: self.max_iterations,
             residual: last_norm,
         }))
