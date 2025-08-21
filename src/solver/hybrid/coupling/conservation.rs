@@ -2,7 +2,7 @@
 
 use crate::error::KwaversResult;
 use super::InterfaceGeometry;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]

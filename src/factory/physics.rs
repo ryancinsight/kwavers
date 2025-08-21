@@ -92,7 +92,7 @@ impl PhysicsFactory {
     pub fn create_physics(config: &PhysicsConfig) -> KwaversResult<PluginManager> {
         config.validate()?;
         
-        let mut manager = PluginManager::new();
+        let manager = PluginManager::new();
         
         for model_config in &config.models {
             if !model_config.enabled {

@@ -2,8 +2,7 @@
 //!
 //! Follows SSOT principle - single source of truth for configuration
 
-use crate::error::{KwaversResult, ConfigError};
-use std::collections::HashMap;
+use crate::error::KwaversResult;
 
 /// Main simulation configuration
 /// Follows SSOT principle - single source of truth for configuration

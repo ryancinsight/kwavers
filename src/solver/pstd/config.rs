@@ -1,7 +1,7 @@
 //! PSTD solver configuration
 
 use serde::{Serialize, Deserialize};
-use crate::error::{KwaversResult, ValidationError};
+use crate::error::ValidationError;
 use crate::validation::{Validatable, ValidationResult};
 
 /// PSTD solver configuration

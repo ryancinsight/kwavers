@@ -1,6 +1,6 @@
 //! Misfit functions for Full Waveform Inversion
 
-use ndarray::{Array2, Array3, Zip};
+use ndarray::{Array2, Zip};
 use crate::error::KwaversResult;
 
 /// Type of misfit function for FWI

@@ -132,7 +132,7 @@ impl BenchmarkSuite {
         
         // Initialize PSTD solver
         let config = crate::solver::pstd::PstdConfig::default();
-        let mut solver = crate::solver::pstd::PstdSolver::new(config, &grid)?;
+        let solver = crate::solver::pstd::PstdSolver::new(config, &grid)?;
         
         // Create medium
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
@@ -140,10 +140,10 @@ impl BenchmarkSuite {
         // Initialize fields
         let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
         self.initialize_gaussian_pulse(&mut fields, &grid);
-        let mut pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
-        let mut vx: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut vy: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut vz: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let vx: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let vy: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let vz: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
         
         // Warmup - commented out due to API mismatch
         // TODO: Fix benchmark to use correct PstdSolver API

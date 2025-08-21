@@ -652,7 +652,7 @@ impl FdtdSolver {
         let bulk_modulus = rho_array.clone() * c_array.mapv(|c| c * c);
         
         // Compute velocity divergence in a single pass for better performance
-        let mut div_v = self.compute_divergence_single_pass(vx, vy, vz)?;
+        let div_v = self.compute_divergence_single_pass(vx, vy, vz)?;
         
         
         // Update pressure: ∂p/∂t = -K·∇·v

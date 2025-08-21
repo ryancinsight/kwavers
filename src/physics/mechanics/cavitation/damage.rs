@@ -12,6 +12,14 @@ use crate::constants::cavitation::{
 use ndarray::Array3;
 use std::f64::consts::PI;
 
+
+// Material constants for stainless steel 316
+const STAINLESS_STEEL_316_YIELD_STRENGTH: f64 = 290e6;  // Pa
+const STAINLESS_STEEL_316_ULTIMATE_STRENGTH: f64 = 580e6;  // Pa
+const STAINLESS_STEEL_316_HARDNESS: f64 = 2.0e9;  // Pa
+const STAINLESS_STEEL_316_DENSITY: f64 = 7850.0;  // kg/m³
+const DEFAULT_FATIGUE_EXPONENT: f64 = 3.0;
+const DEFAULT_EROSION_RESISTANCE: f64 = 1.0;
 /// Cavitation damage model
 #[derive(Debug)]
 pub struct CavitationDamage {
@@ -50,12 +58,12 @@ impl Default for MaterialProperties {
     fn default() -> Self {
         // Default: Stainless steel 316
         Self {
-            yield_strength: 290e6,      // 290 MPa
-            ultimate_strength: 580e6,   // 580 MPa
-            hardness: 2.0e9,           // 2 GPa
-            density: 7850.0,           // kg/m³
-            fatigue_exponent: 3.0,
-            erosion_resistance: 1.0,
+            yield_strength: STAINLESS_STEEL_316_YIELD_STRENGTH,      // 290 MPa
+            ultimate_strength: STAINLESS_STEEL_316_ULTIMATE_STRENGTH,   // 580 MPa
+            hardness: STAINLESS_STEEL_316_HARDNESS,           // 2 GPa
+            density: STAINLESS_STEEL_316_DENSITY,           // kg/m³
+            fatigue_exponent: DEFAULT_FATIGUE_EXPONENT,
+            erosion_resistance: DEFAULT_EROSION_RESISTANCE,
         }
     }
 }

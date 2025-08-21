@@ -2,7 +2,7 @@
 
 use crate::error::{KwaversResult, ValidationError};
 use super::InterfaceGeometry;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Transfer operators for field coupling

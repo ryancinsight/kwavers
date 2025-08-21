@@ -6,5 +6,3 @@ mod constants;
 mod implementation;
 
 pub use implementation::HomogeneousMedium;
-pub(crate) use float_key::FloatKey;
-pub(crate) use absorption_cache::AbsorptionCache;

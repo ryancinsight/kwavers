@@ -19,7 +19,6 @@ use crate::grid::Grid;
 use crate::error::{KwaversResult, KwaversError, ConfigError, ValidationError};
 use ndarray::{Array3, Array4, Axis, Zip};
 
-use std::f64::consts::PI;
 use log::debug;
 
 /// Minimum cosine theta value to prevent division by zero in reflection estimation

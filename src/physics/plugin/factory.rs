@@ -7,8 +7,7 @@ use crate::error::{KwaversResult, KwaversError, ValidationError};
 use crate::grid::Grid;
 use std::any::Any;
 use std::collections::HashMap;
-use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 /// Factory for creating physics plugins
 pub trait PluginFactory: Send + Sync {

@@ -1,6 +1,6 @@
 //! Numerical methods for Kuznetsov equation solver
 
-use ndarray::{Array3, Array4, Zip};
+use ndarray::{Array3, Zip};
 use num_complex::Complex;
 use crate::grid::Grid;
 use crate::fft::{Fft3d, Ifft3d};

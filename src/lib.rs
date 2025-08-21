@@ -336,7 +336,7 @@ fn run_physics_simulation(
     pstd_config: solver::pstd::PstdConfig,
     pml_config: boundary::pml::PMLConfig,
 ) -> KwaversResult<()> {
-    use crate::physics::plugin::PluginContext;
+    
     
     // Step 1: Setup all simulation components
     let (grid, time, medium, source, mut recorder, mut plugin_manager, mut boundary, mut fields) = 

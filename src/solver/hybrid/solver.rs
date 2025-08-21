@@ -3,16 +3,14 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::{KwaversResult, KwaversError};
-use crate::solver::pstd::{PstdSolver, PstdConfig};
-use crate::solver::fdtd::{FdtdSolver, FdtdConfig};
+use crate::solver::pstd::PstdSolver;
+use crate::solver::fdtd::FdtdSolver;
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
-use crate::solver::hybrid::adaptive_selection::{AdaptiveSelector, SelectionCriteria};
-use crate::solver::hybrid::coupling::{CouplingInterface, InterpolationScheme};
+use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
+use crate::solver::hybrid::coupling::CouplingInterface;
 use crate::solver::hybrid::config::{HybridConfig, DecompositionStrategy};
 use crate::solver::hybrid::metrics::{HybridMetrics, ValidationResults};
-use crate::physics::field_mapping::UnifiedFieldType;
-use ndarray::{Array4, s, Zip};
-use std::collections::HashMap;
+use ndarray::{Array4, s};
 use std::time::Instant;
 use log::{debug, info};
 
@@ -160,7 +158,7 @@ impl HybridSolver {
         region: &DomainRegion,
     ) -> KwaversResult<()> {
         // Extract region view
-        let mut region_fields = fields.slice_mut(s![
+        let region_fields = fields.slice_mut(s![
             ..,
             region.start.0..region.end.0,
             region.start.1..region.end.1,
@@ -184,7 +182,7 @@ impl HybridSolver {
         region: &DomainRegion,
     ) -> KwaversResult<()> {
         // Extract region view
-        let mut region_fields = fields.slice_mut(s![
+        let region_fields = fields.slice_mut(s![
             ..,
             region.start.0..region.end.0,
             region.start.1..region.end.1,

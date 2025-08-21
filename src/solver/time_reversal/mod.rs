@@ -13,7 +13,6 @@
 use crate::{
     error::{KwaversResult, KwaversError, ValidationError},
     grid::Grid,
-    physics::field_mapping::UnifiedFieldType,
     sensor::{SensorData},
     recorder::Recorder,
     medium::Medium,
@@ -404,7 +403,7 @@ impl TimeReversalReconstructor {
         frequency: f64,
         reversed_signals: &HashMap<usize, Vec<f64>>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut max_amplitude_field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+        let max_amplitude_field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
         let time_steps = reversed_signals.values()
             .map(|v| v.len())
             .max()

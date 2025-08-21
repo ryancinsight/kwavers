@@ -2,15 +2,14 @@
 //!
 //! This module provides the main plugin manager that coordinates plugin execution.
 
-use super::{PhysicsPlugin, PluginContext, PluginState, ExecutionStrategy, SequentialStrategy};
-use crate::error::{KwaversResult, KwaversError, ValidationError};
+use super::{PhysicsPlugin, PluginContext, ExecutionStrategy, SequentialStrategy};
+use crate::error::{KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::performance::metrics::PerformanceMetrics;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::time::Instant;
 
 /// Plugin manager for orchestrating plugin lifecycle and execution
@@ -47,7 +46,7 @@ impl PluginManager {
     }
     
     /// Add a plugin to the manager
-    pub fn add_plugin(&mut self, mut plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
+    pub fn add_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
         // Check for duplicate plugin IDs
         let new_id = plugin.metadata().id.clone();
         for existing in &self.plugins {

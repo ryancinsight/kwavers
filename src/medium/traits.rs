@@ -175,7 +175,7 @@ pub fn find_interfaces<M: AcousticMedium + ?Sized>(
     grid: &Grid,
     threshold: f64,
 ) -> Vec<InterfacePoint> {
-    let mut interfaces: Vec<InterfacePoint> = Vec::new();
+    let interfaces: Vec<InterfacePoint> = Vec::new();
     
     // Try to use cached array for efficiency
     if let Some(density_array) = medium.density_array() {

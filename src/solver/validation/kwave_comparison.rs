@@ -164,7 +164,7 @@ impl KWaveValidator {
         
         // Setup PSTD solver directly
         let config = PstdConfig::default();
-        let mut solver = PstdSolver::new(config, &self.grid)?;
+        let solver = PstdSolver::new(config, &self.grid)?;
         
         // Initialize velocity fields
         let mut vx = self.grid.create_field();
@@ -177,13 +177,13 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
-            let mut pressure_view = pressure.view_mut();
+            let pressure_view = pressure.view_mut();
             // TODO: update_pressure has wrong signature here
             
             // Update velocity
-            let mut vx_view = vx.view_mut();
-            let mut vy_view = vy.view_mut();
-            let mut vz_view = vz.view_mut();
+            let vx_view = vx.view_mut();
+            let vy_view = vy.view_mut();
+            let vz_view = vz.view_mut();
             // TODO: update_velocity has wrong signature here
         }
         
@@ -203,7 +203,7 @@ impl KWaveValidator {
     /// Test 2: PML absorption
     fn test_pml_absorption(&self, test_case: &KWaveTestCase) -> KwaversResult<TestResult> {
         use crate::boundary::{CPMLBoundary, CPMLConfig};
-        use crate::constants::acoustic;
+        
         
         // Configure C-PML
         let pml_config = CPMLConfig::default();
@@ -315,7 +315,7 @@ impl KWaveValidator {
         // Run simulation
         // Use PSTD solver directly
         let config = PstdConfig::default();
-        let mut solver = PstdSolver::new(config, &self.grid)?;
+        let solver = PstdSolver::new(config, &self.grid)?;
         
         // Initialize velocity fields
         let mut vx = self.grid.create_field();
@@ -329,13 +329,13 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
-            let mut pressure_view = pressure.view_mut();
+            let pressure_view = pressure.view_mut();
             // TODO: update_pressure has wrong signature here
             
             // Update velocity
-            let mut vx_view = vx.view_mut();
-            let mut vy_view = vy.view_mut();
-            let mut vz_view = vz.view_mut();
+            let vx_view = vx.view_mut();
+            let vy_view = vy.view_mut();
+            let vz_view = vz.view_mut();
             // TODO: update_velocity has wrong signature here
         }
         
@@ -531,13 +531,13 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
             
             // Update pressure
-            let mut pressure_view = pressure.view_mut();
+            let pressure_view = pressure.view_mut();
             // TODO: update_pressure has wrong signature here
             
             // Update velocity
-            let mut vx_view = vx.view_mut();
-            let mut vy_view = vy.view_mut();
-            let mut vz_view = vz.view_mut();
+            let vx_view = vx.view_mut();
+            let vy_view = vy.view_mut();
+            let vz_view = vz.view_mut();
             solver.update_velocity(&medium, &self.grid, dt)?;
             
             boundary_data.push(self.extract_boundary(&pressure));

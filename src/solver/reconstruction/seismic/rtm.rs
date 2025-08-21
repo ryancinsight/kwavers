@@ -10,13 +10,11 @@ use crate::error::{KwaversResult, KwaversError};
 use crate::grid::Grid;
 
 // Fourth-order finite difference coefficients for Laplacian
-use crate::medium::Medium;
 use super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 use crate::solver::reconstruction::{Reconstructor, ReconstructionConfig};
 use super::config::{SeismicImagingConfig, RtmImagingCondition};
 use super::constants::*;
 use super::wavelet::RickerWavelet;
-use std::collections::VecDeque;
 
 /// Reverse Time Migration reconstructor
 /// Creates subsurface images by cross-correlating forward and backward wavefields

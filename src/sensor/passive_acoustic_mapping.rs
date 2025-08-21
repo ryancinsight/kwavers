@@ -19,7 +19,6 @@ use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext};
 use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{Array1, Array2, Array3, Array4, Axis};
 use std::f64::consts::PI;
-use std::any::Any;
 
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]

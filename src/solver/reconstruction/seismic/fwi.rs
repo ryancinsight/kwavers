@@ -6,10 +6,9 @@
 //! - Plessix (2006): "Adjoint-state method for gradient computation"
 
 use ndarray::{Array2, Array3, Array4, Zip, s};
-use crate::error::{KwaversResult, KwaversError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::solver::reconstruction::{Reconstructor, InterpolationMethod, ReconstructionConfig};
+use crate::solver::reconstruction::{Reconstructor, ReconstructionConfig};
 use super::config::SeismicImagingConfig;
 use super::constants::*;
 use super::wavelet::RickerWavelet;
@@ -290,13 +289,13 @@ impl FullWaveformInversion {
                 for j in 1..(ny-1) {
                     for k in 1..(nz-1) {
                         // Discrete Laplacian
-                        let lap = (self.velocity_model[[i+1, j, k]] 
+                        let lap = self.velocity_model[[i+1, j, k]] 
                                 + self.velocity_model[[i-1, j, k]]
                                 + self.velocity_model[[i, j+1, k]]
                                 + self.velocity_model[[i, j-1, k]]
                                 + self.velocity_model[[i, j, k+1]]
                                 + self.velocity_model[[i, j, k-1]]
-                                - 6.0 * self.velocity_model[[i, j, k]]);
+                                - 6.0 * self.velocity_model[[i, j, k]];
                         
                         regularization[[i, j, k]] = lambda * lap;
                     }
@@ -361,7 +360,7 @@ impl FullWaveformInversion {
                 });
             
             // Create temporary FWI with test velocity
-            let mut test_fwi = Self::new(self.config.clone(), test_velocity);
+            let test_fwi = Self::new(self.config.clone(), test_velocity);
             let synthetic_data = test_fwi.forward_model(source_positions, receiver_positions, grid)?;
             let test_misfit = self.misfit_function.compute(observed_data, &synthetic_data)?;
             

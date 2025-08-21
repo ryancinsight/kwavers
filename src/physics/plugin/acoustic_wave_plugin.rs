@@ -8,10 +8,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::error::KwaversResult;
-use crate::validation::ValidationResult;
 use ndarray::{Array3, Array4};
-use std::collections::HashMap;
-use std::any::Any;
 
 /// Acoustic wave propagation plugin
 #[derive(Debug)]

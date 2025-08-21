@@ -16,7 +16,6 @@ use uom::si::acceleration::meter_per_second_squared;
 use uom::si::volume::cubic_meter;
 use uom::si::area::square_meter;
 use uom::si::mass::kilogram;
-use uom::si::power::watt;
 
 use std::collections::HashMap;
 use super::bubble_state::GasType;

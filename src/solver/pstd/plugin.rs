@@ -1,6 +1,5 @@
 //! PSTD solver plugin implementation
 
-use std::any::Any;
 use std::fmt::Debug;
 use std::collections::HashMap;
 use ndarray::Array4;

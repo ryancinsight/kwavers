@@ -3,11 +3,10 @@
 //! This module provides different execution strategies for running plugins.
 
 use super::{PhysicsPlugin, PluginContext};
-use crate::error::{KwaversResult, KwaversError, ValidationError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array4;
-use std::sync::Arc;
 use rayon::prelude::*;
 
 /// Strategy for executing plugins
