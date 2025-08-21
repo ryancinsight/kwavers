@@ -5,12 +5,11 @@
 use crate::constants::{numerical, stability};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::field_mapping::UnifiedFieldType;
-use crate::utils::{fft_3d, ifft_3d};
+use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};
 use crate::KwaversResult;
 
-use log::{debug, info, warn};
-use ndarray::{Array3, Array4, ArrayView3, Axis, Zip, s};
+use log::{debug, warn};
+use ndarray::{Array3, Zip};
 use rustfft::num_complex::Complex;
 use std::f64;
 use std::time::Instant;
@@ -48,7 +47,7 @@ impl NonlinearWave {
 
         // Validate inputs
         if pressure.shape() != [grid.nx, grid.ny, grid.nz] {
-            return Err(crate::error::KwaversError::DimensionMismatch(
+            return Err(crate::error::KwaversError::InvalidParameter(
                 "Pressure field dimensions do not match grid".to_string(),
             ));
         }
@@ -108,9 +107,14 @@ impl NonlinearWave {
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let density = medium.get_density();
-        let sound_speed = medium.get_sound_speed();
-        let nonlinearity = medium.get_nonlinearity_b_a();
+        // Get average medium properties (simplified for homogeneous media)
+        // For heterogeneous media, this would need position-dependent calculations
+        let x = grid.nx as f64 * grid.dx / 2.0;
+        let y = grid.ny as f64 * grid.dy / 2.0;
+        let z = grid.nz as f64 * grid.dz / 2.0;
+        let density = medium.density(x, y, z, grid);
+        let sound_speed = medium.sound_speed(x, y, z, grid);
+        let nonlinearity = 3.5; // Default B/A for water (would need to be added to Medium trait)
 
         // Compute pressure gradients using spectral differentiation
         let (grad_x, grad_y, grad_z) = self.compute_spectral_gradient(pressure, grid)?;
@@ -150,12 +154,12 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         // Transform to k-space
-        let pressure_k = fft_3d(pressure)?;
+        let pressure_k = fft_3d_array(pressure);
 
         // Get k-space grid
-        let kx = grid.get_kx();
-        let ky = grid.get_ky();
-        let kz = grid.get_kz();
+        let kx = grid.compute_kx();
+        let ky = grid.compute_ky();
+        let kz = grid.compute_kz();
 
         // Apply k-space operator
         let c = self.max_sound_speed; // Use max for stability in heterogeneous media
@@ -195,7 +199,7 @@ impl NonlinearWave {
         }
 
         // Transform back to spatial domain
-        ifft_3d(&result_k)
+        Ok(ifft_3d_array(&result_k))
     }
 
     /// Computes the spectral gradient of a field.
@@ -214,12 +218,12 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
         // Transform to k-space
-        let field_k = fft_3d(field)?;
+        let field_k = fft_3d_array(field);
 
         // Get k-space grid
-        let kx = grid.get_kx();
-        let ky = grid.get_ky();
-        let kz = grid.get_kz();
+        let kx = grid.compute_kx();
+        let ky = grid.compute_ky();
+        let kz = grid.compute_kz();
 
         // Compute gradients in k-space
         let mut grad_x_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
@@ -268,7 +272,7 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         // Transform to k-space
-        let field_k = fft_3d(field)?;
+        let field_k = fft_3d_array(field);
 
         // Apply Laplacian operator in k-space
         let mut laplacian_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
@@ -329,7 +333,7 @@ impl NonlinearWave {
     ///
     /// Recommended time step [s]
     pub fn compute_adaptive_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
-        let max_c = medium.get_max_sound_speed();
+        let max_c = self.max_sound_speed;
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         
         // CFL condition for PSTD
@@ -337,7 +341,7 @@ impl NonlinearWave {
         
         // Additional constraint for nonlinear terms
         let dt_nonlinear = if self.nonlinearity_scaling > 0.0 {
-            let beta = 1.0 + medium.get_nonlinearity_b_a() / 2.0;
+            let beta = 1.0 + 3.5 / 2.0; // Using default B/A = 3.5
             min_dx / (beta * max_c)
         } else {
             f64::INFINITY

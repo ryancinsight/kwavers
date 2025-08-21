@@ -2,16 +2,11 @@
 //! 
 //! This module contains the core NonlinearWave struct and its basic implementation.
 
-use crate::constants::{cfl, performance, stability};
+use crate::constants::{performance, stability};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::field_mapping::UnifiedFieldType;
-use crate::utils::{fft_3d, ifft_3d};
-use crate::KwaversResult;
 
-use log::{debug, info, warn};
-use ndarray::{Array3, Array4, ArrayView3, Axis, Zip};
-use rustfft::num_complex::Complex;
+use ndarray::Array3;
 use std::f64;
 
 use super::multi_frequency::MultiFrequencyConfig;
@@ -151,8 +146,8 @@ impl NonlinearWave {
 
             // Stability parameters
             max_pressure: stability::PRESSURE_LIMIT,
-            stability_threshold: cfl::DEFAULT_STABILITY_THRESHOLD,
-            cfl_safety_factor: cfl::DEFAULT_SAFETY_FACTOR,
+            stability_threshold: 0.5, // Default CFL stability threshold
+            cfl_safety_factor: 0.9, // Default CFL safety factor
             clamp_gradients: false,
 
             // Iterator optimization
@@ -181,9 +176,9 @@ impl NonlinearWave {
     /// This method calculates and stores the square of the wavenumber magnitudes
     /// for each point in the k-space grid, which speeds up subsequent calculations.
     pub fn precompute_k_squared(&mut self, grid: &Grid) {
-        let kx = grid.get_kx();
-        let ky = grid.get_ky();
-        let kz = grid.get_kz();
+        let kx = grid.compute_kx();
+        let ky = grid.compute_ky();
+        let kz = grid.compute_kz();
 
         let mut k_squared = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
@@ -200,8 +195,23 @@ impl NonlinearWave {
     /// Updates the maximum sound speed cache.
     ///
     /// This method should be called whenever the medium properties change.
-    pub fn update_max_sound_speed(&mut self, medium: &dyn Medium) {
-        self.max_sound_speed = medium.get_max_sound_speed();
+    pub fn update_max_sound_speed(&mut self, medium: &dyn Medium, grid: &Grid) {
+        // Calculate maximum sound speed by sampling the medium
+        let mut max_c = 0.0;
+        for i in 0..grid.nx {
+            for j in 0..grid.ny {
+                for k in 0..grid.nz {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let c = medium.sound_speed(x, y, z, grid);
+                    if c > max_c {
+                        max_c = c;
+                    }
+                }
+            }
+        }
+        self.max_sound_speed = max_c;
     }
 
     /// Checks if the current configuration is stable.
@@ -209,12 +219,13 @@ impl NonlinearWave {
     /// # Arguments
     ///
     /// * `medium` - The medium to check stability against
+    /// * `grid` - The computational grid
     ///
     /// # Returns
     ///
     /// `true` if the configuration is stable, `false` otherwise
-    pub fn is_stable(&self, medium: &dyn Medium) -> bool {
-        let max_c = medium.get_max_sound_speed();
+    pub fn is_stable(&self, medium: &dyn Medium, grid: &Grid) -> bool {
+        let max_c = self.max_sound_speed;
         let min_dx = self.dx.min(self.dy).min(self.dz);
         let cfl_number = max_c * self.dt / min_dx;
         
@@ -226,12 +237,13 @@ impl NonlinearWave {
     /// # Arguments
     ///
     /// * `medium` - The medium to calculate time step for
+    /// * `grid` - The computational grid
     ///
     /// # Returns
     ///
     /// The recommended time step size [s]
-    pub fn get_stable_timestep(&self, medium: &dyn Medium) -> f64 {
-        let max_c = medium.get_max_sound_speed();
+    pub fn get_stable_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
+        let max_c = self.max_sound_speed;
         let min_dx = self.dx.min(self.dy).min(self.dz);
         
         self.cfl_safety_factor * self.stability_threshold * min_dx / max_c
