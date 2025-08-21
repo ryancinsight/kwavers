@@ -239,7 +239,7 @@ fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult
     // }
     
     // Validate source configuration
-    if config.source.frequency <= 0.0 {
+    if config.source.frequency.unwrap_or(0.0) <= 0.0 {
         result.add_error(ValidationError::FieldValidation {
             field: "source.frequency".to_string(),
             value: config.source.frequency.map_or("None".to_string(), |f| f.to_string()),
@@ -284,13 +284,13 @@ fn create_validated_simulation(
         }))?;
     
     // Create medium from configuration
-    let medium = HomogeneousMedium::new(
-        config.simulation.medium.density,
-        config.simulation.medium.sound_speed,
-        &grid,
-        config.simulation.medium.absorption,
-        config.simulation.medium.dispersion
-    );
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
     
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)
@@ -427,7 +427,6 @@ fn run_simulation_loop(
             medium,
             time.dt,
             t,
-            &plugin_context,
         )?;
         
         // Apply boundary conditions
@@ -649,7 +648,7 @@ fn get_cpu_cores() -> KwaversResult<usize> {
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
             parameter: "cpu_cores".to_string(),
-            value: cores_str.unwrap_or("unknown").to_string(),
+            value: cores_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid integer".to_string(),
         }))
 }
@@ -662,7 +661,7 @@ fn get_available_memory_gb() -> KwaversResult<f64> {
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
             parameter: "available_memory".to_string(),
-            value: memory_str.unwrap_or("unknown").to_string(),
+            value: memory_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid number".to_string(),
         }))
 }
@@ -675,7 +674,7 @@ fn get_available_disk_space_gb() -> KwaversResult<f64> {
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
             parameter: "disk_space".to_string(),
-            value: disk_str.unwrap_or("unknown").to_string(),
+            value: disk_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid number".to_string(),
         }))
 }

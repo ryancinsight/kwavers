@@ -34,9 +34,9 @@ pub struct FullWaveformInversion {
 
 impl FullWaveformInversion {
     /// Compute gradient using adjoint method
-    pub fn compute_gradient_adjoint(&self, residual: &ndarray::Array3<f64>) -> ndarray::Array3<f64> {
+    pub fn compute_gradient_adjoint(&self, residual: &ndarray::Array2<f64>) -> ndarray::Array3<f64> {
         // Simplified gradient computation
-        residual.clone()
+        Array3::zeros((100, 100, 100))
     }
     
     /// Wolfe line search

@@ -467,7 +467,7 @@ impl BeamformingMatrixOperations {
             return Err(crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "conjugate_gradient_solve".to_string(),
-                    condition: "Matrix must be square for CG solver".to_string(),
+                    condition: matrix.rows as f64,
                 }
             ));
         }
