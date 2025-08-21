@@ -4,7 +4,6 @@ use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
-
 #[derive(Debug, Clone)]
 pub struct ReactionKinetics {
     pub hydroxyl_concentration: Array3<f64>,
@@ -39,7 +38,10 @@ impl ReactionKinetics {
                 let _y = j as f64 * grid.dy;
                 let _z = k as f64 * grid.dz;
 
-                use crate::constants::thermodynamics::{REACTION_REFERENCE_TEMPERATURE, SONOCHEMISTRY_BASE_RATE, SECONDARY_REACTION_RATE};
+                use crate::constants::thermodynamics::{
+                    REACTION_REFERENCE_TEMPERATURE, SECONDARY_REACTION_RATE,
+                    SONOCHEMISTRY_BASE_RATE,
+                };
                 let k1 = SONOCHEMISTRY_BASE_RATE * (t / REACTION_REFERENCE_TEMPERATURE).exp();
                 let k2 = SECONDARY_REACTION_RATE * (t / REACTION_REFERENCE_TEMPERATURE);
 

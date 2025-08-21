@@ -5,16 +5,15 @@
 //! - Tarantola (1984): "Inversion of seismic reflection data"
 //! - Plessix (2006): "Adjoint-state method for gradient computation"
 
-use ndarray::{Array2, Array3, Array4, Zip, s};
-use crate::error::{KwaversResult, KwaversError};
-use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::solver::reconstruction::{Reconstructor, InterpolationMethod, ReconstructionConfig};
 use super::config::SeismicImagingConfig;
 use super::constants::*;
-use super::wavelet::RickerWavelet;
-use super::misfit::{MisfitFunction, MisfitType};
 use super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
+use super::misfit::{MisfitFunction, MisfitType};
+use super::wavelet::RickerWavelet;
+use crate::error::KwaversResult;
+use crate::grid::Grid;
+use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
+use ndarray::{s, Array2, Array3, Array4, Zip};
 
 /// Full Waveform Inversion (FWI) reconstructor
 /// Estimates subsurface velocity models by minimizing misfit between observed and synthetic data
@@ -34,13 +33,20 @@ pub struct FullWaveformInversion {
 
 impl FullWaveformInversion {
     /// Compute gradient using adjoint method
-    pub fn compute_gradient_adjoint(&self, residual: &ndarray::Array2<f64>) -> ndarray::Array3<f64> {
+    pub fn compute_gradient_adjoint(
+        &self,
+        residual: &ndarray::Array2<f64>,
+    ) -> ndarray::Array3<f64> {
         // Simplified gradient computation
         Array3::zeros((100, 100, 100))
     }
-    
+
     /// Wolfe line search
-    pub fn line_search_wolfe(&self, direction: &ndarray::Array3<f64>, gradient: &ndarray::Array3<f64>) -> f64 {
+    pub fn line_search_wolfe(
+        &self,
+        direction: &ndarray::Array3<f64>,
+        gradient: &ndarray::Array3<f64>,
+    ) -> f64 {
         // Simplified line search - return fixed step size
         0.01
     }
@@ -49,7 +55,7 @@ impl FullWaveformInversion {
         let gradient = Array3::zeros(initial_velocity.dim());
         let search_direction = Array3::zeros(initial_velocity.dim());
         let misfit_function = MisfitFunction::new(MisfitType::L2Norm);
-        
+
         Self {
             config,
             velocity_model: initial_velocity,
@@ -59,7 +65,7 @@ impl FullWaveformInversion {
             misfit_function,
         }
     }
-    
+
     /// Perform FWI iteration
     /// Returns the misfit value and updates the velocity model
     pub fn iterate(
@@ -71,31 +77,35 @@ impl FullWaveformInversion {
     ) -> KwaversResult<f64> {
         // Step 1: Forward modeling with current velocity model
         let synthetic_data = self.forward_model(source_positions, receiver_positions, grid)?;
-        
+
         // Step 2: Compute misfit
-        let misfit = self.misfit_function.compute(observed_data, &synthetic_data)?;
-        
+        let misfit = self
+            .misfit_function
+            .compute(observed_data, &synthetic_data)?;
+
         // Step 3: Compute adjoint source
-        let adjoint_source = self.misfit_function.compute_adjoint_source(observed_data, &synthetic_data)?;
-        
+        let adjoint_source = self
+            .misfit_function
+            .compute_adjoint_source(observed_data, &synthetic_data)?;
+
         // Step 4: Backward propagation to compute gradient
         self.compute_gradient(&adjoint_source, source_positions, receiver_positions, grid)?;
-        
+
         // Step 5: Apply regularization
         self.apply_regularization()?;
-        
+
         // Step 6: Update search direction (conjugate gradient)
         self.update_search_direction()?;
-        
+
         // Step 7: Line search for optimal step length
         let step_length = self.line_search(
             observed_data,
             source_positions,
             receiver_positions,
             grid,
-            misfit
+            misfit,
         )?;
-        
+
         // Step 8: Update velocity model
         Zip::from(&mut self.velocity_model)
             .and(&self.search_direction)
@@ -104,10 +114,10 @@ impl FullWaveformInversion {
                 // Apply physical bounds
                 *v = v.clamp(MIN_VELOCITY, MAX_VELOCITY);
             });
-        
+
         Ok(misfit)
     }
-    
+
     /// Forward modeling: solve wave equation with current velocity model
     fn forward_model(
         &self,
@@ -118,44 +128,44 @@ impl FullWaveformInversion {
         let n_sources = source_positions.len();
         let n_receivers = receiver_positions.len();
         let n_time_steps = DEFAULT_TIME_STEPS;
-        
+
         // Initialize synthetic data array
         let mut synthetic_data = Array2::zeros((n_receivers, n_time_steps));
-        
+
         // Create Ricker wavelet source
         let wavelet = RickerWavelet::new(DEFAULT_RICKER_FREQUENCY);
         let source_time_function = wavelet.generate_time_series(DEFAULT_TIME_STEP, n_time_steps);
-        
+
         // For each source
         for (source_idx, &source_pos) in source_positions.iter().enumerate() {
             // Initialize wavefield
             let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
             let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            
+
             // Time stepping
             for t in 0..n_time_steps {
                 // Apply source
                 pressure[source_pos] += source_time_function[t];
-                
+
                 // Update wavefield using finite differences
                 self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
-                
+
                 // Record at receivers
                 for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
                     synthetic_data[[rec_idx, t]] += pressure[rec_pos];
                 }
-                
+
                 // Swap time levels
                 std::mem::swap(&mut pressure, &mut pressure_previous);
             }
         }
-        
+
         // Average over sources
         synthetic_data /= n_sources as f64;
-        
+
         Ok(synthetic_data)
     }
-    
+
     /// Update wavefield using 4th-order finite differences
     fn update_wavefield(
         &self,
@@ -165,39 +175,42 @@ impl FullWaveformInversion {
     ) -> KwaversResult<()> {
         let dt = DEFAULT_TIME_STEP;
         let (nx, ny, nz) = pressure.dim();
-        
+
         // Compute Laplacian using 4th-order stencil
         let mut laplacian = Array3::zeros((nx, ny, nz));
-        
-        for i in 2..(nx-2) {
-            for j in 2..(ny-2) {
-                for k in 2..(nz-2) {
+
+        for i in 2..(nx - 2) {
+            for j in 2..(ny - 2) {
+                for k in 2..(nz - 2) {
                     // X-direction
-                    let d2p_dx2 = (FD_COEFF_2 * pressure[[i-2, j, k]]
-                                + FD_COEFF_1 * pressure[[i-1, j, k]]
-                                + FD_COEFF_0 * pressure[[i, j, k]]
-                                + FD_COEFF_1 * pressure[[i+1, j, k]]
-                                + FD_COEFF_2 * pressure[[i+2, j, k]]) / (grid.dx * grid.dx);
-                    
+                    let d2p_dx2 = (FD_COEFF_2 * pressure[[i - 2, j, k]]
+                        + FD_COEFF_1 * pressure[[i - 1, j, k]]
+                        + FD_COEFF_0 * pressure[[i, j, k]]
+                        + FD_COEFF_1 * pressure[[i + 1, j, k]]
+                        + FD_COEFF_2 * pressure[[i + 2, j, k]])
+                        / (grid.dx * grid.dx);
+
                     // Y-direction
-                    let d2p_dy2 = (FD_COEFF_2 * pressure[[i, j-2, k]]
-                                + FD_COEFF_1 * pressure[[i, j-1, k]]
-                                + FD_COEFF_0 * pressure[[i, j, k]]
-                                + FD_COEFF_1 * pressure[[i, j+1, k]]
-                                + FD_COEFF_2 * pressure[[i, j+2, k]]) / (grid.dy * grid.dy);
-                    
+                    let d2p_dy2 = (FD_COEFF_2 * pressure[[i, j - 2, k]]
+                        + FD_COEFF_1 * pressure[[i, j - 1, k]]
+                        + FD_COEFF_0 * pressure[[i, j, k]]
+                        + FD_COEFF_1 * pressure[[i, j + 1, k]]
+                        + FD_COEFF_2 * pressure[[i, j + 2, k]])
+                        / (grid.dy * grid.dy);
+
                     // Z-direction
-                    let d2p_dz2 = (FD_COEFF_2 * pressure[[i, j, k-2]]
-                                + FD_COEFF_1 * pressure[[i, j, k-1]]
-                                + FD_COEFF_0 * pressure[[i, j, k]]
-                                + FD_COEFF_1 * pressure[[i, j, k+1]]
-                                + FD_COEFF_2 * pressure[[i, j, k+2]]) / (grid.dz * grid.dz);
-                    
+                    let d2p_dz2 = (FD_COEFF_2 * pressure[[i, j, k - 2]]
+                        + FD_COEFF_1 * pressure[[i, j, k - 1]]
+                        + FD_COEFF_0 * pressure[[i, j, k]]
+                        + FD_COEFF_1 * pressure[[i, j, k + 1]]
+                        + FD_COEFF_2 * pressure[[i, j, k + 2]])
+                        / (grid.dz * grid.dz);
+
                     laplacian[[i, j, k]] = d2p_dx2 + d2p_dy2 + d2p_dz2;
                 }
             }
         }
-        
+
         // Update pressure using wave equation
         Zip::from(pressure)
             .and(&*pressure_previous)
@@ -207,10 +220,10 @@ impl FullWaveformInversion {
                 let vel2_dt2 = vel * vel * dt * dt;
                 *p = 2.0 * *p - p_old + vel2_dt2 * lap;
             });
-        
+
         Ok(())
     }
-    
+
     /// Compute gradient using adjoint-state method
     fn compute_gradient(
         &mut self,
@@ -221,42 +234,44 @@ impl FullWaveformInversion {
     ) -> KwaversResult<()> {
         // Reset gradient
         self.gradient.fill(0.0);
-        
+
         let n_time_steps = DEFAULT_TIME_STEPS;
-        
+
         // Forward wavefield storage (simplified - in practice would use checkpointing)
         let mut forward_wavefield = Array4::zeros((n_time_steps, grid.nx, grid.ny, grid.nz));
-        
+
         // Recompute forward wavefield and store
         let wavelet = RickerWavelet::new(DEFAULT_RICKER_FREQUENCY);
         let source_time_function = wavelet.generate_time_series(DEFAULT_TIME_STEP, n_time_steps);
-        
+
         for &source_pos in source_positions {
             let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
             let mut pressure_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
-            
+
             for t in 0..n_time_steps {
                 pressure[source_pos] += source_time_function[t];
                 self.update_wavefield(&mut pressure, &pressure_previous, grid)?;
-                forward_wavefield.slice_mut(s![t, .., .., ..]).assign(&pressure);
+                forward_wavefield
+                    .slice_mut(s![t, .., .., ..])
+                    .assign(&pressure);
                 std::mem::swap(&mut pressure, &mut pressure_previous);
             }
         }
-        
+
         // Backward propagation with adjoint source
         let mut adjoint_wavefield = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut adjoint_previous = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        
+
         // Time-reversed loop
         for t in (0..n_time_steps).rev() {
             // Apply adjoint sources at receiver positions
             for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
                 adjoint_wavefield[rec_pos] += adjoint_source[[rec_idx, t]];
             }
-            
+
             // Update adjoint wavefield
             self.update_wavefield(&mut adjoint_wavefield, &adjoint_previous, grid)?;
-            
+
             // Compute gradient: zero-lag correlation
             let forward_slice = forward_wavefield.slice(s![t, .., .., ..]);
             Zip::from(&mut self.gradient)
@@ -267,58 +282,58 @@ impl FullWaveformInversion {
                     // Gradient of velocity with respect to misfit
                     *g += -2.0 * f * a / (v * v * v) * DEFAULT_TIME_STEP;
                 });
-            
+
             std::mem::swap(&mut adjoint_wavefield, &mut adjoint_previous);
         }
-        
+
         // Scale gradient
         self.gradient *= GRADIENT_SCALING_FACTOR;
-        
+
         Ok(())
     }
-    
+
     /// Apply Tikhonov regularization to gradient
     fn apply_regularization(&mut self) -> KwaversResult<()> {
         let lambda = self.config.regularization_lambda;
-        
+
         if lambda > 0.0 {
             // Add smoothness constraint: λ * ∇²v
             let (nx, ny, nz) = self.gradient.dim();
             let mut regularization = Array3::zeros((nx, ny, nz));
-            
-            for i in 1..(nx-1) {
-                for j in 1..(ny-1) {
-                    for k in 1..(nz-1) {
+
+            for i in 1..(nx - 1) {
+                for j in 1..(ny - 1) {
+                    for k in 1..(nz - 1) {
                         // Discrete Laplacian
-                        let lap = (self.velocity_model[[i+1, j, k]] 
-                                + self.velocity_model[[i-1, j, k]]
-                                + self.velocity_model[[i, j+1, k]]
-                                + self.velocity_model[[i, j-1, k]]
-                                + self.velocity_model[[i, j, k+1]]
-                                + self.velocity_model[[i, j, k-1]]
-                                - 6.0 * self.velocity_model[[i, j, k]]);
-                        
+                        let lap = self.velocity_model[[i + 1, j, k]]
+                            + self.velocity_model[[i - 1, j, k]]
+                            + self.velocity_model[[i, j + 1, k]]
+                            + self.velocity_model[[i, j - 1, k]]
+                            + self.velocity_model[[i, j, k + 1]]
+                            + self.velocity_model[[i, j, k - 1]]
+                            - 6.0 * self.velocity_model[[i, j, k]];
+
                         regularization[[i, j, k]] = lambda * lap;
                     }
                 }
             }
-            
+
             self.gradient += &regularization;
         }
-        
+
         Ok(())
     }
-    
+
     /// Update search direction using conjugate gradient method
     fn update_search_direction(&mut self) -> KwaversResult<()> {
         if let Some(ref prev_grad) = self.previous_gradient {
             // Fletcher-Reeves formula
             let grad_norm_sq = self.gradient.mapv(|x| x * x).sum();
             let prev_norm_sq = prev_grad.mapv(|x| x * x).sum();
-            
+
             if prev_norm_sq > MIN_GRADIENT_NORM {
                 let beta = grad_norm_sq / prev_norm_sq;
-                
+
                 // Update search direction
                 self.search_direction = &self.gradient + beta * &self.search_direction;
             } else {
@@ -329,13 +344,13 @@ impl FullWaveformInversion {
             // First iteration: use steepest descent
             self.search_direction.assign(&self.gradient);
         }
-        
+
         // Store current gradient for next iteration
         self.previous_gradient = Some(self.gradient.clone());
-        
+
         Ok(())
     }
-    
+
     /// Armijo line search for optimal step length
     fn line_search(
         &self,
@@ -349,7 +364,7 @@ impl FullWaveformInversion {
         let grad_dot_dir = Zip::from(&self.gradient)
             .and(&self.search_direction)
             .fold(0.0, |acc, &g, &d| acc + g * d);
-        
+
         for _ in 0..MAX_LINE_SEARCH_ITERATIONS {
             // Test velocity model
             let mut test_velocity = self.velocity_model.clone();
@@ -359,35 +374,38 @@ impl FullWaveformInversion {
                     *v -= alpha * s;
                     *v = v.clamp(MIN_VELOCITY, MAX_VELOCITY);
                 });
-            
+
             // Create temporary FWI with test velocity
-            let mut test_fwi = Self::new(self.config.clone(), test_velocity);
-            let synthetic_data = test_fwi.forward_model(source_positions, receiver_positions, grid)?;
-            let test_misfit = self.misfit_function.compute(observed_data, &synthetic_data)?;
-            
+            let test_fwi = Self::new(self.config.clone(), test_velocity);
+            let synthetic_data =
+                test_fwi.forward_model(source_positions, receiver_positions, grid)?;
+            let test_misfit = self
+                .misfit_function
+                .compute(observed_data, &synthetic_data)?;
+
             // Armijo condition
             if test_misfit <= current_misfit - ARMIJO_C1 * alpha * grad_dot_dir {
                 return Ok(alpha);
             }
-            
+
             // Backtrack
             alpha *= LINE_SEARCH_BACKTRACK;
         }
-        
+
         // Return small step if line search fails
         Ok(1e-6)
     }
-    
+
     /// Get current velocity model
     pub fn get_velocity_model(&self) -> &Array3<f64> {
         &self.velocity_model
     }
-    
+
     /// Get current gradient
     pub fn get_gradient(&self) -> &Array3<f64> {
         &self.gradient
     }
-    
+
     /// Check convergence based on gradient norm
     pub fn is_converged(&self) -> bool {
         let grad_norm = self.gradient.mapv(|x| x * x).sum().sqrt();
@@ -411,36 +429,40 @@ impl Reconstructor for FullWaveformInversion {
         let mut velocity = self.velocity_model.clone();
         let mut gradient = Array3::zeros(velocity.dim());
         let mut search_direction = Array3::zeros(velocity.dim());
-        
+
         // Convert sensor positions to indices
-        let receiver_positions: Vec<(usize, usize, usize)> = sensor_positions.iter()
-            .map(|pos| (
-                (pos[0] / grid.dx) as usize,
-                (pos[1] / grid.dy) as usize,
-                (pos[2] / grid.dz) as usize,
-            ))
+        let receiver_positions: Vec<(usize, usize, usize)> = sensor_positions
+            .iter()
+            .map(|pos| {
+                (
+                    (pos[0] / grid.dx) as usize,
+                    (pos[1] / grid.dy) as usize,
+                    (pos[2] / grid.dz) as usize,
+                )
+            })
             .collect();
-        
+
         // Source positions (assuming single source at center for now)
         let source_positions = vec![(grid.nx / 2, grid.ny / 2, 0)];
-        
+
         // L-BFGS optimization loop
         for iteration in 0..self.config.fwi_iterations {
             // Forward modeling with current velocity
-            let synthetic_data = self.forward_model(&source_positions, &receiver_positions, grid)?;
-            
+            let synthetic_data =
+                self.forward_model(&source_positions, &receiver_positions, grid)?;
+
             // Compute misfit: J = 0.5 * ||d_obs - d_syn||²
             let residual = sensor_data - &synthetic_data;
             let misfit = 0.5 * residual.iter().map(|r| r * r).sum::<f64>();
-            
+
             // Check convergence
             if misfit < self.config.fwi_tolerance {
                 break;
             }
-            
+
             // Compute gradient via adjoint state method
             gradient = self.compute_gradient_adjoint(&residual);
-            
+
             // L-BFGS direction (simplified - should use history)
             if iteration == 0 {
                 search_direction.assign(&gradient);
@@ -451,7 +473,7 @@ impl Reconstructor for FullWaveformInversion {
                     .and(&gradient)
                     .for_each(|s, &g| *s = scaling * g);
             }
-            
+
             // Line search for optimal step
             let step_length = self.line_search_wolfe(&search_direction, &gradient);
             let step_length = self.line_search_wolfe(&search_direction, &gradient);
@@ -463,7 +485,7 @@ impl Reconstructor for FullWaveformInversion {
             let step_length = self.line_search_wolfe(&search_direction, &gradient);
             let step_length = self.line_search_wolfe(&search_direction, &gradient);
             let step_length = self.line_search_wolfe(&search_direction, &gradient);
-            
+
             // Update velocity model
             Zip::from(&mut velocity)
                 .and(&search_direction)
@@ -472,8 +494,7 @@ impl Reconstructor for FullWaveformInversion {
                     *v = v.clamp(MIN_VELOCITY, MAX_VELOCITY);
                 });
         }
-        
+
         Ok(velocity)
     }
-    
 }

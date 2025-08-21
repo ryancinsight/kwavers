@@ -18,7 +18,7 @@
 //! - Li & Stoica (2006): "Robust adaptive beamforming"
 
 use crate::error::KwaversResult;
-use crate::sensor::beamforming::{BeamformingProcessor, BeamformingConfig};
+use crate::sensor::beamforming::{BeamformingConfig, BeamformingProcessor};
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
 use std::collections::VecDeque;
 
@@ -59,15 +59,9 @@ impl Default for AdaptiveBeamformingConfig {
 #[derive(Debug, Clone)]
 pub enum AdaptiveAlgorithm {
     /// Least Mean Squares (LMS)
-    LMS {
-        step_size: f64,
-        regularization: f64,
-    },
+    LMS { step_size: f64, regularization: f64 },
     /// Normalized LMS
-    NLMS {
-        step_size: f64,
-        regularization: f64,
-    },
+    NLMS { step_size: f64, regularization: f64 },
     /// Recursive Least Squares (RLS)
     RLS {
         forgetting_factor: f64,
@@ -120,16 +114,11 @@ pub struct AdaptiveBeamformingProcessor {
 
 impl AdaptiveBeamformingProcessor {
     /// Create new adaptive beamforming processor
-    pub fn new(
-        config: AdaptiveBeamformingConfig,
-        sensor_positions: Vec<[f64; 3]>,
-    ) -> Self {
+    pub fn new(config: AdaptiveBeamformingConfig, sensor_positions: Vec<[f64; 3]>) -> Self {
         let num_sensors = sensor_positions.len();
-        let base_processor = BeamformingProcessor::new(
-            config.base_config.clone(),
-            sensor_positions.clone(),
-        );
-        
+        let base_processor =
+            BeamformingProcessor::new(config.base_config.clone(), sensor_positions.clone());
+
         let adaptive_state = AdaptiveState {
             weights: Array1::ones(num_sensors) / num_sensors as f64,
             covariance_estimate: Array2::eye(num_sensors),
@@ -139,7 +128,7 @@ impl AdaptiveBeamformingProcessor {
             snapshot_count: 0,
             last_update: 0.0,
         };
-        
+
         Self {
             config,
             base_processor,
@@ -158,13 +147,13 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<Array1<f64>> {
         // Update adaptive weights
         self.update_adaptive_weights(sensor_data, algorithm, timestamp)?;
-        
+
         // Apply adaptive beamforming
         let mut beamformed_output = Array1::zeros(scan_points.len());
-        
+
         for (point_idx, &scan_point) in scan_points.iter().enumerate() {
             let steering_vector = self.calculate_steering_vector(&scan_point)?;
-            
+
             // Apply current adaptive weights
             let mut output = 0.0;
             for t in 0..sensor_data.ncols() {
@@ -174,10 +163,10 @@ impl AdaptiveBeamformingProcessor {
                 }
                 output += weighted_sum.powi(2);
             }
-            
+
             beamformed_output[point_idx] = output / sensor_data.ncols() as f64;
         }
-        
+
         Ok(beamformed_output)
     }
 
@@ -189,32 +178,56 @@ impl AdaptiveBeamformingProcessor {
         timestamp: f64,
     ) -> KwaversResult<()> {
         match algorithm {
-            AdaptiveAlgorithm::LMS { step_size, regularization } => {
+            AdaptiveAlgorithm::LMS {
+                step_size,
+                regularization,
+            } => {
                 self.lms_update(sensor_data, *step_size, *regularization)?;
             }
-            AdaptiveAlgorithm::NLMS { step_size, regularization } => {
+            AdaptiveAlgorithm::NLMS {
+                step_size,
+                regularization,
+            } => {
                 self.nlms_update(sensor_data, *step_size, *regularization)?;
             }
-            AdaptiveAlgorithm::RLS { forgetting_factor, initialization_factor } => {
+            AdaptiveAlgorithm::RLS {
+                forgetting_factor,
+                initialization_factor,
+            } => {
                 self.rls_update(sensor_data, *forgetting_factor, *initialization_factor)?;
             }
-            AdaptiveAlgorithm::ConstrainedLMS { step_size, constraints, response } => {
-                self.constrained_lms_update(sensor_data, *step_size, constraints.view(), response.view())?;
+            AdaptiveAlgorithm::ConstrainedLMS {
+                step_size,
+                constraints,
+                response,
+            } => {
+                self.constrained_lms_update(
+                    sensor_data,
+                    *step_size,
+                    constraints.view(),
+                    response.view(),
+                )?;
             }
-            AdaptiveAlgorithm::SMI { diagonal_loading, adaptation_rate } => {
+            AdaptiveAlgorithm::SMI {
+                diagonal_loading,
+                adaptation_rate,
+            } => {
                 self.smi_update(sensor_data, *diagonal_loading, *adaptation_rate)?;
             }
-            AdaptiveAlgorithm::EigenspaceBased { signal_subspace_rank, tracking_factor } => {
+            AdaptiveAlgorithm::EigenspaceBased {
+                signal_subspace_rank,
+                tracking_factor,
+            } => {
                 self.eigenspace_update(sensor_data, *signal_subspace_rank, *tracking_factor)?;
             }
         }
-        
+
         self.adaptive_state.last_update = timestamp;
         self.adaptive_state.snapshot_count += sensor_data.ncols();
-        
+
         // Track convergence
         self.update_convergence_metrics()?;
-        
+
         Ok(())
     }
 
@@ -227,31 +240,33 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
-        
+
         for t in 0..num_samples {
             // Get current sensor snapshot
             let x = sensor_data.column(t);
-            
+
             // Compute output
             let y = self.adaptive_state.weights.dot(&x);
-            
+
             // Assume desired signal is from main look direction (simplified)
             let d = x[0]; // Use first sensor as reference
-            
+
             // Compute error
             let e = d - y;
-            
+
             // Update weights: w(n+1) = w(n) + μ * e * x
             for i in 0..num_sensors {
                 self.adaptive_state.weights[i] += step_size * e * x[i];
             }
-            
+
             // Apply regularization
             if regularization > 0.0 {
-                self.adaptive_state.weights.mapv_inplace(|w| w * (1.0 - regularization * step_size));
+                self.adaptive_state
+                    .weights
+                    .mapv_inplace(|w| w * (1.0 - regularization * step_size));
             }
         }
-        
+
         Ok(())
     }
 
@@ -264,23 +279,23 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
-        
+
         for t in 0..num_samples {
             let x = sensor_data.column(t);
             let y = self.adaptive_state.weights.dot(&x);
             let d = x[0]; // Reference signal
             let e = d - y;
-            
+
             // Normalized step size
             let x_power = x.dot(&x) + regularization;
             let normalized_step = step_size / x_power;
-            
+
             // Update weights
             for i in 0..num_sensors {
                 self.adaptive_state.weights[i] += normalized_step * e * x[i];
             }
         }
-        
+
         Ok(())
     }
 
@@ -293,41 +308,44 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
-        
+
         // Initialize inverse correlation matrix if needed
         if self.adaptive_state.inverse_covariance.is_none() {
-            self.adaptive_state.inverse_covariance = Some(
-                Array2::eye(num_sensors) * initialization_factor
-            );
+            self.adaptive_state.inverse_covariance =
+                Some(Array2::eye(num_sensors) * initialization_factor);
         }
-        
-        let mut p_matrix = self.adaptive_state.inverse_covariance.as_ref().unwrap().clone();
-        
+
+        let mut p_matrix = self
+            .adaptive_state
+            .inverse_covariance
+            .as_ref()
+            .unwrap()
+            .clone();
+
         for t in 0..num_samples {
             let x = sensor_data.column(t);
             let d = x[0]; // Reference signal
-            
+
             // Compute gain vector: g = P * x / (λ + x^T * P * x)
             let px = p_matrix.dot(&x);
             let denominator = forgetting_factor + x.dot(&px);
             let gain = &px / denominator;
-            
+
             // Compute a priori error
             let y = self.adaptive_state.weights.dot(&x);
             let e = d - y;
-            
+
             // Update weights: w(n+1) = w(n) + g * e
             for i in 0..num_sensors {
                 self.adaptive_state.weights[i] += gain[i] * e;
             }
-            
+
             // Update inverse correlation matrix: P(n+1) = (P(n) - g * x^T * P(n)) / λ
-            let px_outer = Array2::from_shape_fn((num_sensors, num_sensors), |(i, j)| {
-                gain[i] * px[j]
-            });
+            let px_outer =
+                Array2::from_shape_fn((num_sensors, num_sensors), |(i, j)| gain[i] * px[j]);
             p_matrix = (&p_matrix - &px_outer) / forgetting_factor;
         }
-        
+
         self.adaptive_state.inverse_covariance = Some(p_matrix);
         Ok(())
     }
@@ -341,28 +359,28 @@ impl AdaptiveBeamformingProcessor {
         response: ArrayView1<f64>,
     ) -> KwaversResult<()> {
         let num_samples = sensor_data.ncols();
-        
+
         for t in 0..num_samples {
             let x = sensor_data.column(t);
             let y = self.adaptive_state.weights.dot(&x);
             let d = x[0]; // Reference signal
             let e = d - y;
-            
+
             // Standard LMS update
             let unconstrained_update = &self.adaptive_state.weights + &(&x * (step_size * e));
-            
+
             // Project onto constraint subspace
             // w_constrained = w_unconstrained - C^T * (C * C^T)^-1 * (C * w_unconstrained - f)
             let c_w = constraints.dot(&unconstrained_update);
             let constraint_error = &c_w - &response;
-            
+
             // Compute constraint correction (simplified - assumes C*C^T is invertible)
             let ct_c_inv = self.pseudo_inverse(&constraints.dot(&constraints.t()))?;
             let correction = constraints.t().dot(&ct_c_inv.dot(&constraint_error));
-            
+
             self.adaptive_state.weights = &unconstrained_update - &correction;
         }
-        
+
         Ok(())
     }
 
@@ -375,7 +393,7 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
-        
+
         // Update covariance matrix estimate
         let mut new_covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
         for t in 0..num_samples {
@@ -387,29 +405,30 @@ impl AdaptiveBeamformingProcessor {
             }
         }
         new_covariance.mapv_inplace(|x| x / num_samples as f64);
-        
+
         // Exponential averaging
         let alpha = adaptation_rate;
-        self.adaptive_state.covariance_estimate = 
-            &(&self.adaptive_state.covariance_estimate * (1.0 - alpha)) + &(&new_covariance * alpha);
-        
+        self.adaptive_state.covariance_estimate = &(&self.adaptive_state.covariance_estimate
+            * (1.0 - alpha))
+            + &(&new_covariance * alpha);
+
         // Add diagonal loading
         for i in 0..num_sensors {
             self.adaptive_state.covariance_estimate[[i, i]] += diagonal_loading;
         }
-        
+
         // Compute steering vector for main look direction
         let steering_vector = Array1::ones(num_sensors) / (num_sensors as f64).sqrt();
-        
+
         // SMI beamforming: w = R^-1 * a / (a^T * R^-1 * a)
         let r_inv = self.matrix_inverse(&self.adaptive_state.covariance_estimate)?;
         let r_inv_a = r_inv.dot(&steering_vector);
         let denominator = steering_vector.dot(&r_inv_a);
-        
+
         if denominator.abs() > 1e-12 {
             self.adaptive_state.weights = &r_inv_a / denominator;
         }
-        
+
         Ok(())
     }
 
@@ -422,17 +441,18 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         // Update covariance matrix
         self.update_covariance_estimate(sensor_data, tracking_factor)?;
-        
+
         // Compute eigendecomposition
-        let (eigenvalues, eigenvectors) = self.eigendecomposition(&self.adaptive_state.covariance_estimate)?;
-        
+        let (eigenvalues, eigenvectors) =
+            self.eigendecomposition(&self.adaptive_state.covariance_estimate)?;
+
         // Signal subspace projection
         let signal_subspace = eigenvectors.slice(ndarray::s![.., 0..signal_subspace_rank]);
-        
+
         // Compute beamforming weights using signal subspace
-        let steering_vector = Array1::ones(self.adaptive_state.weights.len()) / 
-                             (self.adaptive_state.weights.len() as f64).sqrt();
-        
+        let steering_vector = Array1::ones(self.adaptive_state.weights.len())
+            / (self.adaptive_state.weights.len() as f64).sqrt();
+
         // Project steering vector onto signal subspace
         let mut projected_steering = Array1::<f64>::zeros(steering_vector.len());
         for i in 0..signal_subspace_rank {
@@ -442,13 +462,13 @@ impl AdaptiveBeamformingProcessor {
                 projected_steering[j] += projection * eigenvec[j];
             }
         }
-        
+
         // Normalize
         let norm = projected_steering.dot(&projected_steering).sqrt();
         if norm > 1e-12 {
             self.adaptive_state.weights = projected_steering / norm;
         }
-        
+
         Ok(())
     }
 
@@ -457,16 +477,17 @@ impl AdaptiveBeamformingProcessor {
     fn calculate_steering_vector(&self, scan_point: &[f64; 3]) -> KwaversResult<Array1<f64>> {
         // Simplified steering vector calculation
         let mut steering_vector = Array1::zeros(self.sensor_positions.len());
-        let wavelength = self.config.base_config.sound_speed / self.config.base_config.reference_frequency;
+        let wavelength =
+            self.config.base_config.sound_speed / self.config.base_config.reference_frequency;
         let wavenumber = 2.0 * std::f64::consts::PI / wavelength;
-        
+
         let reference_pos = self.sensor_positions[0];
         for (i, &sensor_pos) in self.sensor_positions.iter().enumerate() {
-            let path_diff = Self::euclidean_distance(scan_point, &sensor_pos) 
-                          - Self::euclidean_distance(scan_point, &reference_pos);
+            let path_diff = Self::euclidean_distance(scan_point, &sensor_pos)
+                - Self::euclidean_distance(scan_point, &reference_pos);
             steering_vector[i] = (wavenumber * path_diff).cos();
         }
-        
+
         Ok(steering_vector)
     }
 
@@ -477,7 +498,7 @@ impl AdaptiveBeamformingProcessor {
     ) -> KwaversResult<()> {
         let num_sensors = self.adaptive_state.weights.len();
         let num_samples = sensor_data.ncols();
-        
+
         let mut sample_covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
         for t in 0..num_samples {
             let x = sensor_data.column(t);
@@ -488,43 +509,50 @@ impl AdaptiveBeamformingProcessor {
             }
         }
         sample_covariance.mapv_inplace(|x| x / num_samples as f64);
-        
+
         // Exponential averaging
-        self.adaptive_state.covariance_estimate = 
-            &(&self.adaptive_state.covariance_estimate * (1.0 - tracking_factor)) + 
-            &(&sample_covariance * tracking_factor);
-        
+        self.adaptive_state.covariance_estimate = &(&self.adaptive_state.covariance_estimate
+            * (1.0 - tracking_factor))
+            + &(&sample_covariance * tracking_factor);
+
         Ok(())
     }
 
     fn update_convergence_metrics(&mut self) -> KwaversResult<()> {
         // Store weight history
-        self.adaptive_state.weight_history.push_back(self.adaptive_state.weights.clone());
+        self.adaptive_state
+            .weight_history
+            .push_back(self.adaptive_state.weights.clone());
         if self.adaptive_state.weight_history.len() > 100 {
             self.adaptive_state.weight_history.pop_front();
         }
-        
+
         // Compute convergence metric (weight change)
         if self.adaptive_state.weight_history.len() >= 2 {
-            let current = &self.adaptive_state.weight_history[self.adaptive_state.weight_history.len() - 1];
-            let previous = &self.adaptive_state.weight_history[self.adaptive_state.weight_history.len() - 2];
+            let current =
+                &self.adaptive_state.weight_history[self.adaptive_state.weight_history.len() - 1];
+            let previous =
+                &self.adaptive_state.weight_history[self.adaptive_state.weight_history.len() - 2];
             let change = (current - previous).mapv(|x| x.abs()).sum();
-            
+
             self.adaptive_state.convergence_history.push_back(change);
             if self.adaptive_state.convergence_history.len() > 100 {
                 self.adaptive_state.convergence_history.pop_front();
             }
         }
-        
+
         Ok(())
     }
 
-    fn eigendecomposition(&self, matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
+    fn eigendecomposition(
+        &self,
+        matrix: &Array2<f64>,
+    ) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
         // Use the enhanced eigendecomposition from the base processor
         // This is a simplified delegation - in practice would implement here
         let processor = BeamformingProcessor::new(
             self.config.base_config.clone(),
-            self.sensor_positions.clone()
+            self.sensor_positions.clone(),
         );
         processor.eigendecomposition(matrix)
     }
@@ -533,7 +561,7 @@ impl AdaptiveBeamformingProcessor {
         // Delegate to base processor's enhanced matrix inverse
         let processor = BeamformingProcessor::new(
             self.config.base_config.clone(),
-            self.sensor_positions.clone()
+            self.sensor_positions.clone(),
         );
         processor.matrix_inverse(matrix)
     }
@@ -565,7 +593,9 @@ impl AdaptiveBeamformingProcessor {
     /// Get convergence rate
     pub fn convergence_rate(&self) -> f64 {
         if self.adaptive_state.convergence_history.len() >= 10 {
-            let recent: Vec<f64> = self.adaptive_state.convergence_history
+            let recent: Vec<f64> = self
+                .adaptive_state
+                .convergence_history
                 .iter()
                 .rev()
                 .take(10)
@@ -595,13 +625,13 @@ mod tests {
         let config = AdaptiveBeamformingConfig::default();
         let sensor_positions = vec![[0.0, 0.0, 0.0], [1e-3, 0.0, 0.0]];
         let mut processor = AdaptiveBeamformingProcessor::new(config, sensor_positions);
-        
+
         let sensor_data = Array2::ones((2, 10));
         let algorithm = AdaptiveAlgorithm::LMS {
             step_size: 0.01,
             regularization: 0.001,
         };
-        
+
         let result = processor.lms_update(sensor_data.view(), 0.01, 0.001);
         assert!(result.is_ok());
     }
@@ -611,10 +641,10 @@ mod tests {
         let config = AdaptiveBeamformingConfig::default();
         let sensor_positions = vec![[0.0, 0.0, 0.0], [1e-3, 0.0, 0.0]];
         let processor = AdaptiveBeamformingProcessor::new(config, sensor_positions);
-        
+
         // Initially should not be converged
         assert!(!processor.has_converged());
-        
+
         // Convergence rate should be 1.0 without enough data
         assert_eq!(processor.convergence_rate(), 1.0);
     }

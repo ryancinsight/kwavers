@@ -8,22 +8,22 @@ use std::time::Duration;
 pub struct HybridMetrics {
     /// Time spent in PSTD regions
     pub pstd_time: Duration,
-    
+
     /// Time spent in FDTD regions
     pub fdtd_time: Duration,
-    
+
     /// Time spent in coupling interfaces
     pub coupling_time: Duration,
-    
+
     /// Time spent in domain decomposition
     pub decomposition_time: Duration,
-    
+
     /// Number of PSTD grid points
     pub pstd_points: usize,
-    
+
     /// Number of FDTD grid points
     pub fdtd_points: usize,
-    
+
     /// Method-specific metrics
     pub method_metrics: HashMap<String, f64>,
 }
@@ -33,12 +33,12 @@ impl HybridMetrics {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Calculate total computation time
     pub fn total_time(&self) -> Duration {
         self.pstd_time + self.fdtd_time + self.coupling_time + self.decomposition_time
     }
-    
+
     /// Calculate PSTD fraction of computation
     pub fn pstd_fraction(&self) -> f64 {
         let total = (self.pstd_points + self.fdtd_points) as f64;
@@ -55,10 +55,10 @@ impl HybridMetrics {
 pub struct EfficiencyMetrics {
     /// Computational efficiency score (0-1)
     pub efficiency_score: f64,
-    
+
     /// Memory bandwidth utilization (0-1)
     pub bandwidth_utilization: f64,
-    
+
     /// Cache hit rate (0-1)
     pub cache_hit_rate: f64,
 }
@@ -68,10 +68,10 @@ pub struct EfficiencyMetrics {
 pub struct ValidationResults {
     /// Solution quality score (0-1)
     pub quality_score: f64,
-    
+
     /// Maximum relative error
     pub max_relative_error: f64,
-    
+
     /// Number of NaN/Inf values detected
     pub nan_inf_count: usize,
 }

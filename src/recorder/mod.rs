@@ -1,11 +1,11 @@
 // recorder/mod.rs
-use crate::physics::field_indices::{PRESSURE_IDX, LIGHT_IDX, TEMPERATURE_IDX, BUBBLE_RADIUS_IDX};
-use crate::physics::sonoluminescence_detector::{
-    SonoluminescenceDetector, SonoluminescenceEvent, DetectorConfig
-};
-use crate::physics::bubble_dynamics::BubbleStateFields;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
+use crate::physics::bubble_dynamics::BubbleStateFields;
+use crate::physics::field_indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use crate::physics::sonoluminescence_detector::{
+    DetectorConfig, SonoluminescenceDetector, SonoluminescenceEvent,
+};
 use crate::sensor::Sensor;
 use crate::time::Time;
 use log::{debug, info};
@@ -17,10 +17,10 @@ use std::io::{self, Write};
 pub trait RecorderTrait: Send + Sync {
     /// Initialize the recorder
     fn initialize(&mut self, grid: &Grid) -> KwaversResult<()>;
-    
+
     /// Record data at a specific time step
     fn record(&mut self, fields: &Array4<f64>, step: usize) -> KwaversResult<()>;
-    
+
     /// Finalize recording and save data
     fn finalize(&mut self) -> KwaversResult<()>;
 }
@@ -55,34 +55,38 @@ impl RecorderConfig {
             sl_detector_config: None,
         }
     }
-    
+
     pub fn with_pressure_recording(mut self, record: bool) -> Self {
         self.record_pressure = record;
         self
     }
-    
+
     pub fn with_light_recording(mut self, record: bool) -> Self {
         self.record_light = record;
         self
     }
-    
+
     pub fn with_temperature_recording(mut self, record: bool) -> Self {
         self.record_temperature = record;
         self
     }
-    
+
     pub fn with_cavitation_detection(mut self, enable: bool, threshold: f64) -> Self {
         self.record_cavitation = enable;
         self.cavitation_threshold = threshold;
         self
     }
-    
-    pub fn with_sonoluminescence_detection(mut self, enable: bool, config: Option<DetectorConfig>) -> Self {
+
+    pub fn with_sonoluminescence_detection(
+        mut self,
+        enable: bool,
+        config: Option<DetectorConfig>,
+    ) -> Self {
         self.record_sonoluminescence = enable;
         self.sl_detector_config = config;
         self
     }
-    
+
     pub fn with_snapshot_interval(mut self, interval: usize) -> Self {
         self.snapshot_interval = interval;
         self
@@ -130,22 +134,22 @@ pub struct Recorder {
     pub temperature_sensor_data: Vec<Vec<f64>>,
     pub recorded_steps: Vec<f64>,
     pub time: Time,
-    
+
     // Cavitation tracking
     pub cavitation_events: Vec<CavitationEvent>,
     pub cavitation_threshold: f64,
     pub cavitation_map: Array3<f64>,
-    
+
     // Sonoluminescence tracking
     pub sl_detector: Option<SonoluminescenceDetector>,
     pub sl_events: Vec<SonoluminescenceEvent>,
     pub sl_intensity_map: Array3<f64>,
-    
+
     // Thermal tracking
     pub thermal_events: Vec<ThermalEvent>,
     pub max_temperature_map: Array3<f64>,
     pub thermal_dose_map: Array3<f64>, // CEM43 thermal dose
-    
+
     // Statistics
     pub statistics: RecorderStatistics,
 }
@@ -181,10 +185,10 @@ impl Recorder {
             record_light
         );
         assert!(time.dt > 0.0, "Time step must be positive");
-        
+
         // Get grid dimensions from sensor
         let grid_shape = sensor.grid_shape();
-        
+
         Self {
             sensor,
             filename: filename.to_string(),
@@ -216,11 +220,11 @@ impl Recorder {
     pub fn default_sdt(sensor: Sensor, time: &Time) -> Self {
         Self::new(sensor, time, "sensor_data", true, true, 10)
     }
-    
+
     /// Creates a recorder from configuration
     pub fn from_config(sensor: Sensor, time: &Time, config: &RecorderConfig) -> Self {
         let grid_shape = sensor.grid_shape();
-        
+
         let mut recorder = Self::new(
             sensor,
             time,
@@ -229,17 +233,19 @@ impl Recorder {
             config.record_light,
             config.snapshot_interval,
         );
-        
+
         recorder.record_temperature = config.record_temperature;
         recorder.record_cavitation = config.record_cavitation;
         recorder.record_sonoluminescence = config.record_sonoluminescence;
         recorder.cavitation_threshold = config.cavitation_threshold;
-        
+
         // Initialize sonoluminescence detector if enabled
         if config.record_sonoluminescence {
-            let sl_config = config.sl_detector_config.clone()
+            let sl_config = config
+                .sl_detector_config
+                .clone()
                 .unwrap_or_else(DetectorConfig::default);
-            
+
             let grid_spacing = (1e-3, 1e-3, 1e-3); // Default 1mm spacing
             recorder.sl_detector = Some(SonoluminescenceDetector::new(
                 grid_shape,
@@ -247,7 +253,7 @@ impl Recorder {
                 sl_config,
             ));
         }
-        
+
         recorder
     }
 
@@ -264,7 +270,7 @@ impl Recorder {
                 .map(|&(ix, iy, iz)| pressure[[ix, iy, iz]])
                 .collect();
             self.pressure_sensor_data.push(pressure_values);
-            
+
             // Update statistics
             let max_p = pressure.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             let min_p = pressure.iter().fold(f64::INFINITY, |a, &b| a.min(b));
@@ -281,12 +287,12 @@ impl Recorder {
                 .map(|&(ix, iy, iz)| light[[ix, iy, iz]])
                 .collect();
             self.light_sensor_data.push(light_values);
-            
+
             // Update statistics
             let max_l = light.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             self.statistics.max_light_intensity = self.statistics.max_light_intensity.max(max_l);
         }
-        
+
         if self.record_temperature {
             let temperature = fields.index_axis(Axis(0), TEMPERATURE_IDX);
             let temperature_values: Vec<f64> = self
@@ -296,16 +302,16 @@ impl Recorder {
                 .map(|&(ix, iy, iz)| temperature[[ix, iy, iz]])
                 .collect();
             self.temperature_sensor_data.push(temperature_values);
-            
+
             // Update statistics and thermal dose
             self.update_thermal_tracking(&temperature.to_owned(), current_time);
         }
-        
+
         // Detect and record cavitation events
         if self.record_cavitation {
             self.detect_cavitation_events(fields, current_time);
         }
-        
+
         // Detect and record sonoluminescence events
         if self.record_sonoluminescence {
             self.detect_sonoluminescence_events(fields, current_time);
@@ -318,20 +324,20 @@ impl Recorder {
 
         self.recorded_steps.push(current_time);
     }
-    
+
     /// Detect cavitation events based on pressure threshold and bubble dynamics
     fn detect_cavitation_events(&mut self, fields: &Array4<f64>, current_time: f64) {
         let pressure = fields.index_axis(Axis(0), PRESSURE_IDX);
         let bubble_radius = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX);
-        
+
         let (nx, ny, nz) = pressure.dim();
-        
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let p = pressure[[i, j, k]];
                     let r = bubble_radius[[i, j, k]];
-                    
+
                     // Cavitation detection criteria:
                     // 1. Pressure below threshold (tensile stress)
                     // 2. Bubble present and growing rapidly
@@ -342,7 +348,7 @@ impl Recorder {
                         } else {
                             0.0
                         };
-                        
+
                         let event = CavitationEvent {
                             time: current_time,
                             position: (i, j, k),
@@ -350,7 +356,7 @@ impl Recorder {
                             radius: r,
                             collapse_rate,
                         };
-                        
+
                         self.cavitation_events.push(event);
                         self.cavitation_map[[i, j, k]] += 1.0; // Increment cavitation count
                         self.statistics.total_cavitation_events += 1;
@@ -359,7 +365,7 @@ impl Recorder {
             }
         }
     }
-    
+
     /// Detect sonoluminescence events using the integrated detector
     fn detect_sonoluminescence_events(&mut self, fields: &Array4<f64>, current_time: f64) {
         if let Some(ref mut detector) = self.sl_detector {
@@ -367,7 +373,7 @@ impl Recorder {
             let temperature = fields.index_axis(Axis(0), TEMPERATURE_IDX);
             let pressure = fields.index_axis(Axis(0), PRESSURE_IDX);
             let bubble_radius = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX);
-            
+
             // Create bubble state fields with all required fields
             let bubble_states = BubbleStateFields {
                 radius: bubble_radius.to_owned(),
@@ -377,14 +383,15 @@ impl Recorder {
                 is_collapsing: Array3::zeros(bubble_radius.dim()), // Default to not collapsing
                 compression_ratio: Array3::ones(bubble_radius.dim()), // Default to 1.0
             };
-            
+
             // Use bubble radius as initial radius (simplified)
             let initial_radius = bubble_radius.mapv(|r| if r > 0.0 { r * 10.0 } else { 0.0 });
-            
+
             // Detect events
             let dt = self.time.dt;
-            let events = detector.detect_events(&bubble_states, &pressure.to_owned(), &initial_radius, dt);
-            
+            let events =
+                detector.detect_events(&bubble_states, &pressure.to_owned(), &initial_radius, dt);
+
             // Update intensity map and statistics
             for event in &events {
                 let (i, j, k) = event.position;
@@ -392,34 +399,35 @@ impl Recorder {
                 self.statistics.total_sl_photons += event.photon_count;
                 self.statistics.total_sl_energy += event.energy;
             }
-            
+
             self.statistics.total_sl_events += events.len();
             self.sl_events.extend(events);
         }
     }
-    
+
     /// Update thermal tracking and calculate thermal dose
     fn update_thermal_tracking(&mut self, temperature: &Array3<f64>, current_time: f64) {
         let dt = self.time.dt;
         let (nx, ny, nz) = temperature.dim();
-        
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
                     let temp = temperature[[i, j, k]];
-                    
+
                     // Update maximum temperature map
-                    self.max_temperature_map[[i, j, k]] = 
+                    self.max_temperature_map[[i, j, k]] =
                         self.max_temperature_map[[i, j, k]].max(temp);
-                    
+
                     // Calculate CEM43 thermal dose
                     // CEM43 = Σ R^(43-T) * Δt
                     // where R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
-                    if temp > 37.0 { // Only accumulate dose above body temperature
+                    if temp > 37.0 {
+                        // Only accumulate dose above body temperature
                         let r: f64 = if temp >= 43.0 { 0.5 } else { 0.25 };
                         let cem43_increment = r.powf(43.0 - temp) * (dt / 60.0); // Convert to minutes
                         self.thermal_dose_map[[i, j, k]] += cem43_increment;
-                        
+
                         // Detect significant thermal events (e.g., > 50°C)
                         if temp > 50.0 {
                             let heating_rate = 0.0; // Would need previous temperature to calculate
@@ -436,7 +444,7 @@ impl Recorder {
                 }
             }
         }
-        
+
         // Update max temperature statistic
         let max_t = temperature.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
         self.statistics.max_temperature = self.statistics.max_temperature.max(max_t);
@@ -487,31 +495,43 @@ impl Recorder {
             writeln!(file)?;
         }
 
-        info!("Saved {} time steps to {}.csv", self.recorded_steps.len(), self.filename);
-        
+        info!(
+            "Saved {} time steps to {}.csv",
+            self.recorded_steps.len(),
+            self.filename
+        );
+
         // Save cavitation events if recorded
         if self.record_cavitation && !self.cavitation_events.is_empty() {
             let mut cav_file = File::create(format!("{}_cavitation.csv", self.filename))?;
             writeln!(cav_file, "time,x,y,z,pressure,radius,collapse_rate")?;
             for event in &self.cavitation_events {
-                writeln!(cav_file, "{},{},{},{},{},{},{}", 
+                writeln!(
+                    cav_file,
+                    "{},{},{},{},{},{},{}",
                     event.time,
                     event.position.0,
                     event.position.1,
                     event.position.2,
                     event.pressure,
                     event.radius,
-                    event.collapse_rate)?;
+                    event.collapse_rate
+                )?;
             }
             info!("Saved {} cavitation events", self.cavitation_events.len());
         }
-        
+
         // Save sonoluminescence events if recorded
         if self.record_sonoluminescence && !self.sl_events.is_empty() {
             let mut sl_file = File::create(format!("{}_sonoluminescence.csv", self.filename))?;
-            writeln!(sl_file, "time,x,y,z,temperature,pressure,photons,wavelength,energy")?;
+            writeln!(
+                sl_file,
+                "time,x,y,z,temperature,pressure,photons,wavelength,energy"
+            )?;
             for event in &self.sl_events {
-                writeln!(sl_file, "{},{},{},{},{},{},{},{},{}", 
+                writeln!(
+                    sl_file,
+                    "{},{},{},{},{},{},{},{},{}",
                     event.time,
                     event.position.0,
                     event.position.1,
@@ -520,23 +540,27 @@ impl Recorder {
                     event.peak_pressure,
                     event.photon_count,
                     event.peak_wavelength,
-                    event.energy)?;
+                    event.energy
+                )?;
             }
             info!("Saved {} sonoluminescence events", self.sl_events.len());
         }
-        
+
         // Save thermal events if recorded
         if self.record_temperature && !self.thermal_events.is_empty() {
             let mut thermal_file = File::create(format!("{}_thermal.csv", self.filename))?;
             writeln!(thermal_file, "time,x,y,z,temperature,heating_rate")?;
             for event in &self.thermal_events {
-                writeln!(thermal_file, "{},{},{},{},{},{}", 
+                writeln!(
+                    thermal_file,
+                    "{},{},{},{},{},{}",
                     event.time,
                     event.position.0,
                     event.position.1,
                     event.position.2,
                     event.temperature,
-                    event.heating_rate)?;
+                    event.heating_rate
+                )?;
             }
             info!("Saved {} thermal events", self.thermal_events.len());
         }
@@ -639,22 +663,23 @@ impl RecorderTrait for Recorder {
         info!("Initializing recorder with filename: {}", self.filename);
         Ok(())
     }
-    
+
     fn record(&mut self, fields: &Array4<f64>, step: usize) -> KwaversResult<()> {
         // Record at specified intervals
         if step % self.snapshot_interval == 0 {
             self.fields_snapshots.push((step, fields.clone()));
         }
-        
+
         // Record sensor data - extract pressure and light fields
         use ndarray::Axis;
         let pressure_field = fields.index_axis(Axis(0), 0); // Assuming pressure is at index 0
-        let light_field = fields.index_axis(Axis(0), 2);    // Assuming light is at index 2
-        self.sensor.record(&pressure_field.to_owned(), &light_field.to_owned(), step);
-        
+        let light_field = fields.index_axis(Axis(0), 2); // Assuming light is at index 2
+        self.sensor
+            .record(&pressure_field.to_owned(), &light_field.to_owned(), step);
+
         Ok(())
     }
-    
+
     fn finalize(&mut self) -> KwaversResult<()> {
         self.save()?;
         info!("Recorder finalized. Data saved to {}", self.filename);

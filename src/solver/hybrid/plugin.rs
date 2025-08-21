@@ -1,11 +1,11 @@
 //! Physics plugin implementation for hybrid solver
 
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::error::KwaversResult;
-use crate::physics::plugin::{PhysicsPlugin, PluginMetadata, PluginContext, PluginState};
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::solver::hybrid::{HybridSolver, HybridConfig};
+use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::solver::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
 use std::collections::HashMap;
 
@@ -28,7 +28,7 @@ impl HybridPlugin {
             description: "Adaptive hybrid solver combining PSTD and FDTD methods".to_string(),
             license: "MIT".to_string(),
         };
-        
+
         Ok(Self { solver, metadata })
     }
 }
@@ -37,16 +37,16 @@ impl PhysicsPlugin for HybridPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
-    
+
     fn state(&self) -> PluginState {
         PluginState::Initialized
     }
-    
+
     fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
         // Solver is already initialized in new()
         Ok(())
     }
-    
+
     fn update(
         &mut self,
         fields: &mut Array4<f64>,
@@ -58,7 +58,7 @@ impl PhysicsPlugin for HybridPlugin {
     ) -> KwaversResult<()> {
         self.solver.update(fields, medium, dt, t)
     }
-    
+
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         vec![
             UnifiedFieldType::Pressure,
@@ -69,7 +69,7 @@ impl PhysicsPlugin for HybridPlugin {
             UnifiedFieldType::SoundSpeed,
         ]
     }
-    
+
     fn provided_fields(&self) -> Vec<UnifiedFieldType> {
         vec![
             UnifiedFieldType::Pressure,
@@ -78,18 +78,21 @@ impl PhysicsPlugin for HybridPlugin {
             UnifiedFieldType::VelocityZ,
         ]
     }
-    
+
     fn finalize(&mut self) -> KwaversResult<()> {
         Ok(())
     }
-    
+
     fn diagnostics(&self) -> HashMap<String, f64> {
         let mut diagnostics = HashMap::new();
         let metrics = self.solver.metrics();
-        
+
         diagnostics.insert("pstd_fraction".to_string(), metrics.pstd_fraction());
-        diagnostics.insert("total_time_ms".to_string(), metrics.total_time().as_millis() as f64);
-        
+        diagnostics.insert(
+            "total_time_ms".to_string(),
+            metrics.total_time().as_millis() as f64,
+        );
+
         diagnostics
     }
 }

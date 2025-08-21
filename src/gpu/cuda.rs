@@ -4,8 +4,8 @@
 //! It implements high-performance kernels for acoustic wave propagation,
 //! thermal diffusion, and FFT operations.
 
-use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
-use crate::gpu::{GpuDevice, GpuFieldOps, GpuBackend};
+use crate::error::{KwaversError, KwaversResult, MemoryTransferDirection};
+use crate::gpu::{GpuBackend, GpuDevice, GpuFieldOps};
 use crate::grid::Grid;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -27,37 +27,40 @@ impl CudaContext {
         #[cfg(feature = "cudarc")]
         {
             use std::panic;
-            
+
             // Catch panics from CUDA library loading failures
             let result = panic::catch_unwind(|| {
-                let device = CudaDevice::new(device_id)
-                    .map_err(|e| KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
+                let device = CudaDevice::new(device_id).map_err(|e| {
+                    KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
                         device_id: device_id as u32,
                         reason: format!("Failed to create CUDA device: {:?}", e),
-                    }))?;
-                
-                Ok(Self {
-                    device,
-                })
+                    })
+                })?;
+
+                Ok(Self { device })
             });
-            
+
             match result {
                 Ok(context_result) => context_result,
                 Err(_) => {
                     // CUDA library loading failed (panic caught)
-                    Err(KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
-                        device_id: device_id as u32,
-                        reason: "CUDA runtime library not available".to_string(),
-                    }))
+                    Err(KwaversError::Gpu(
+                        crate::error::GpuError::DeviceInitialization {
+                            device_id: device_id as u32,
+                            reason: "CUDA runtime library not available".to_string(),
+                        },
+                    ))
                 }
             }
         }
         #[cfg(not(feature = "cudarc"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "CUDA".to_string(),
-                reason: "CUDA support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "CUDA".to_string(),
+                    reason: "CUDA support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -75,7 +78,8 @@ impl CudaContext {
             Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::HostToDevice,
                 size_bytes: array.len() * std::mem::size_of::<f64>(),
-                reason: "Array is not in standard layout - cannot safely access as slice".to_string(),
+                reason: "Array is not in standard layout - cannot safely access as slice"
+                    .to_string(),
             }))
         }
     }
@@ -96,7 +100,8 @@ impl CudaContext {
             Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::DeviceToHost,
                 size_bytes,
-                reason: "Array is not in standard layout - cannot safely access as slice".to_string(),
+                reason: "Array is not in standard layout - cannot safely access as slice"
+                    .to_string(),
             }))
         }
     }
@@ -104,39 +109,52 @@ impl CudaContext {
     /// Allocate GPU memory for array data
     #[cfg(feature = "cudarc")]
     fn allocate_gpu_memory(&self, grid_size: usize) -> KwaversResult<CudaSlice<f64>> {
-        self.device.alloc_zeros::<f64>(grid_size)
-            .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
+        self.device.alloc_zeros::<f64>(grid_size).map_err(|e| {
+            KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
                 requested_bytes: grid_size * std::mem::size_of::<f64>(),
                 available_bytes: 0, // Not easily available from cudarc error
                 reason: format!("Failed to allocate GPU memory: {:?}", e),
-            }))
+            })
+        })
     }
 
     /// Copy array data to GPU
     #[cfg(feature = "cudarc")]
-    fn copy_array_to_gpu(&self, array: &Array3<f64>, d_array: &mut CudaSlice<f64>) -> KwaversResult<()> {
+    fn copy_array_to_gpu(
+        &self,
+        array: &Array3<f64>,
+        d_array: &mut CudaSlice<f64>,
+    ) -> KwaversResult<()> {
         let slice = Self::get_safe_slice(array)?;
         let vec_data = slice.to_vec(); // Convert to Vec as required by cudarc
-        
-        self.device.htod_copy_into(vec_data, d_array)
-            .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+
+        self.device.htod_copy_into(vec_data, d_array).map_err(|e| {
+            KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::HostToDevice,
                 size_bytes: array.len() * std::mem::size_of::<f64>(),
                 reason: format!("Failed to copy array to GPU: {:?}", e),
-            }))
+            })
+        })
     }
 
     /// Copy array data from GPU
     #[cfg(feature = "cudarc")]
-    fn copy_array_from_gpu(&self, d_array: &CudaSlice<f64>, array: &mut Array3<f64>) -> KwaversResult<()> {
+    fn copy_array_from_gpu(
+        &self,
+        d_array: &CudaSlice<f64>,
+        array: &mut Array3<f64>,
+    ) -> KwaversResult<()> {
         let slice = Self::get_safe_slice_mut(array)?;
-        
-        self.device.dtoh_sync_copy_into(d_array, slice)
-            .map_err(|e| KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
-                direction: MemoryTransferDirection::DeviceToHost,
-                size_bytes: array.len() * std::mem::size_of::<f64>(),
-                reason: format!("Failed to copy array from GPU: {:?}", e),
-            }))
+
+        self.device
+            .dtoh_sync_copy_into(d_array, slice)
+            .map_err(|e| {
+                KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
+                    direction: MemoryTransferDirection::DeviceToHost,
+                    size_bytes: array.len() * std::mem::size_of::<f64>(),
+                    reason: format!("Failed to copy array from GPU: {:?}", e),
+                })
+            })
     }
 
     /// Execute acoustic wave kernel
@@ -152,38 +170,39 @@ impl CudaContext {
     ) -> KwaversResult<()> {
         // GPU memory management framework with kernel execution capability
         // Kernel launch implementation using cudarc framework
-        
+
         let grid_size = pressure.len();
-        
+
         // Allocate GPU memory to demonstrate the framework
         let mut d_pressure = self.allocate_gpu_memory(grid_size)?;
         let mut d_vx = self.allocate_gpu_memory(grid_size)?;
         let mut d_vy = self.allocate_gpu_memory(grid_size)?;
         let mut d_vz = self.allocate_gpu_memory(grid_size)?;
-        
+
         // Copy data to GPU
         self.copy_array_to_gpu(pressure, &mut d_pressure)?;
         self.copy_array_to_gpu(velocity_x, &mut d_vx)?;
         self.copy_array_to_gpu(velocity_y, &mut d_vy)?;
         self.copy_array_to_gpu(velocity_z, &mut d_vz)?;
-        
+
         // Placeholder for actual kernel execution
         // In a full implementation, this would launch CUDA kernels
         // For now, we just demonstrate the memory management framework
-        
+
         // Copy results back to host
         self.copy_array_from_gpu(&d_pressure, pressure)?;
         self.copy_array_from_gpu(&d_vx, velocity_x)?;
         self.copy_array_from_gpu(&d_vy, velocity_y)?;
         self.copy_array_from_gpu(&d_vz, velocity_z)?;
-        
+
         Ok(())
     }
 
     /// Generate CUDA kernel source code for acoustic wave propagation
     #[cfg(feature = "cudarc")]
     fn generate_acoustic_kernel(&self, _grid: &Grid) -> KwaversResult<String> {
-        let kernel_source = format!(r#"
+        let kernel_source = format!(
+            r#"
 extern "C" __global__ void acoustic_wave_kernel(
     double* pressure,
     double* vx,
@@ -241,7 +260,8 @@ extern "C" __global__ void acoustic_wave_kernel(
     
     pressure[idx] -= dt * bulk_modulus * (dvx + dvy + dvz);
 }}
-"#);
+"#
+        );
 
         Ok(kernel_source)
     }
@@ -290,10 +310,12 @@ impl GpuFieldOps for CudaContext {
         }
         #[cfg(not(feature = "cudarc"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "CUDA".to_string(),
-                reason: "CUDA support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "CUDA".to_string(),
+                    reason: "CUDA support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -328,10 +350,12 @@ impl GpuFieldOps for CudaContext {
         }
         #[cfg(not(feature = "cudarc"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "CUDA".to_string(),
-                reason: "CUDA support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "CUDA".to_string(),
+                    reason: "CUDA support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -352,10 +376,12 @@ impl GpuFieldOps for CudaContext {
         }
         #[cfg(not(feature = "cudarc"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "CUDA".to_string(),
-                reason: "CUDA support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "CUDA".to_string(),
+                    reason: "CUDA support not compiled".to_string(),
+                },
+            ))
         }
     }
 }
@@ -364,13 +390,14 @@ impl GpuFieldOps for CudaContext {
 #[cfg(feature = "cudarc")]
 pub fn detect_cuda_devices() -> KwaversResult<Vec<GpuDevice>> {
     use std::panic;
-    
+
     // Catch panics from CUDA library loading failures
     let result = panic::catch_unwind(|| {
-        let device_count = CudaDevice::count()
-            .map_err(|e| KwaversError::Gpu(crate::error::GpuError::DeviceDetection {
+        let device_count = CudaDevice::count().map_err(|e| {
+            KwaversError::Gpu(crate::error::GpuError::DeviceDetection {
                 reason: format!("Failed to get CUDA device count: {:?}", e),
-            }))?;
+            })
+        })?;
 
         let mut devices = Vec::new();
         for i in 0..device_count {
@@ -394,7 +421,7 @@ pub fn detect_cuda_devices() -> KwaversResult<Vec<GpuDevice>> {
 
         Ok(devices)
     });
-    
+
     match result {
         Ok(devices_result) => devices_result,
         Err(_) => {
@@ -413,19 +440,23 @@ pub fn detect_cuda_devices() -> KwaversResult<Vec<GpuDevice>> {
 #[cfg(feature = "cudarc")]
 pub fn allocate_cuda_memory(size: usize) -> KwaversResult<usize> {
     // Implementation would use CUDA memory allocation
-    Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-        requested_bytes: size,
-        available_bytes: 0,
-        reason: "CUDA memory allocation not implemented".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::MemoryAllocation {
+            requested_bytes: size,
+            available_bytes: 0,
+            reason: "CUDA memory allocation not implemented".to_string(),
+        },
+    ))
 }
 
 #[cfg(not(feature = "cudarc"))]
 pub fn allocate_cuda_memory(_size: usize) -> KwaversResult<usize> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "CUDA".to_string(),
-        reason: "CUDA support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        },
+    ))
 }
 
 /// Host to device memory transfer (bytes)
@@ -440,10 +471,12 @@ pub fn host_to_device_bytes(_host_data: &[u8], _device_buffer: usize) -> Kwavers
     }
     #[cfg(not(feature = "cudarc"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "CUDA".to_string(),
-            reason: "CUDA support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "CUDA".to_string(),
+                reason: "CUDA support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -459,10 +492,12 @@ pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> Kwavers
 
 #[cfg(not(feature = "cudarc"))]
 pub fn host_to_device_cuda(_host_data: &[f64], _device_buffer: usize) -> KwaversResult<()> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "CUDA".to_string(),
-        reason: "CUDA support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        },
+    ))
 }
 
 /// Device to host memory transfer (bytes)
@@ -477,10 +512,12 @@ pub fn device_to_host_bytes(_device_buffer: usize, _host_data: &mut [u8]) -> Kwa
     }
     #[cfg(not(feature = "cudarc"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "CUDA".to_string(),
-            reason: "CUDA support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "CUDA".to_string(),
+                reason: "CUDA support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -496,10 +533,12 @@ pub fn device_to_host_cuda(_device_buffer: usize, _host_data: &mut [f64]) -> Kwa
 
 #[cfg(not(feature = "cudarc"))]
 pub fn device_to_host_cuda(_device_buffer: usize, _host_data: &mut [f64]) -> KwaversResult<()> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "CUDA".to_string(),
-        reason: "CUDA support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "CUDA".to_string(),
+            reason: "CUDA support not compiled".to_string(),
+        },
+    ))
 }
 
 /// CUDA kernel for acoustic wave update
@@ -641,7 +680,7 @@ pub fn launch_cuda_kernel(
     #[cfg(feature = "cudarc")]
     {
         use cudarc::driver::{CudaDevice, LaunchConfig};
-        
+
         // Get the current CUDA device
         let device = CudaDevice::new(0).map_err(|e| {
             KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
@@ -649,27 +688,29 @@ pub fn launch_cuda_kernel(
                 reason: format!("Failed to get CUDA device: {}", e),
             })
         })?;
-        
+
         // Create launch configuration
         let config = LaunchConfig {
             grid_dim: (_grid_size.0, _grid_size.1, _grid_size.2),
             block_dim: (_block_size.0, _block_size.1, _block_size.2),
             shared_mem_bytes: 0,
         };
-        
+
         // Note: In a real implementation, kernels would be pre-compiled and loaded
         // Kernel launch mechanism using cudarc framework
         // The kernel function would be retrieved from a kernel registry
-        
+
         // For now, return success as the infrastructure is in place
         Ok(())
     }
     #[cfg(not(feature = "cudarc"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "CUDA".to_string(),
-            reason: "CUDA support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "CUDA".to_string(),
+                reason: "CUDA support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -678,7 +719,7 @@ pub fn enable_peer_access(src_device: u32, dst_device: u32) -> KwaversResult<()>
     #[cfg(feature = "cudarc")]
     {
         use cudarc::driver::CudaDevice;
-        
+
         // Get source device
         let src_dev = CudaDevice::new(src_device as usize).map_err(|e| {
             KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
@@ -686,7 +727,7 @@ pub fn enable_peer_access(src_device: u32, dst_device: u32) -> KwaversResult<()>
                 reason: format!("Failed to get source CUDA device: {}", e),
             })
         })?;
-        
+
         // Get destination device
         let dst_dev = CudaDevice::new(dst_device as usize).map_err(|e| {
             KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
@@ -694,20 +735,26 @@ pub fn enable_peer_access(src_device: u32, dst_device: u32) -> KwaversResult<()>
                 reason: format!("Failed to get destination CUDA device: {}", e),
             })
         })?;
-        
+
         // Enable peer access
         // Note: In cudarc, peer access is handled differently than in raw CUDA
         // Peer access implementation using cudarc
-        log::info!("Enabling peer access from device {} to device {}", src_device, dst_device);
-        
+        log::info!(
+            "Enabling peer access from device {} to device {}",
+            src_device,
+            dst_device
+        );
+
         Ok(())
     }
-    
+
     #[cfg(not(feature = "cudarc"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "CUDA".to_string(),
-            reason: "CUDA feature not enabled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "CUDA".to_string(),
+                reason: "CUDA feature not enabled".to_string(),
+            },
+        ))
     }
 }

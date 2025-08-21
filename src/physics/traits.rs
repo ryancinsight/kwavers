@@ -81,7 +81,7 @@ pub trait CavitationModelBehavior: Debug + Send + Sync {
 
     /// Returns the 3D array of bubble wall velocities (m/s).
     fn bubble_velocity(&self) -> crate::error::KwaversResult<Array3<f64>>;
-    
+
     /// Returns the 3D array of light emission from sonoluminescence (W/m³).
     fn light_emission(&self) -> Array3<f64>;
 

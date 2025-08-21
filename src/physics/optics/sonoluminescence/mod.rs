@@ -8,10 +8,12 @@
 
 pub mod blackbody;
 pub mod bremsstrahlung;
-pub mod spectral;
 pub mod emission;
+pub mod spectral;
 
 pub use blackbody::BlackbodyModel;
 pub use bremsstrahlung::BremsstrahlungModel;
-pub use spectral::{SpectralAnalyzer, EmissionSpectrum};
-pub use emission::{SonoluminescenceEmission, EmissionParameters, SpectralField, SpectralStatistics};
+pub use emission::{
+    EmissionParameters, SonoluminescenceEmission, SpectralField, SpectralStatistics,
+};
+pub use spectral::{EmissionSpectrum, SpectralAnalyzer};

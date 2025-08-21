@@ -1,11 +1,11 @@
 //! Local AMR operations for cell-by-cell refinement and coarsening
-//! 
+//!
 //! This module provides the correct implementation of AMR field operations
 //! that work locally on specific cells rather than globally on the entire field.
 
-use crate::error::{KwaversResult, KwaversError, ConfigError};
+use super::{octree::Octree, InterpolationScheme};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::{Array3, Array4};
-use super::{InterpolationScheme, octree::Octree};
 use std::collections::HashMap;
 
 // Forward declaration to avoid circular dependency
@@ -25,7 +25,7 @@ pub struct LocalAMRResult {
 }
 
 /// Adapt a field based on the octree structure
-/// 
+///
 /// This function creates a new field with the appropriate dimensions based on
 /// the octree refinement levels and transfers data from the old field,
 /// applying interpolation or restriction where necessary.
@@ -36,15 +36,15 @@ pub fn adapt_field_to_octree(
 ) -> KwaversResult<LocalAMRResult> {
     // First, compute the new grid dimensions based on the octree
     let new_dims = compute_adapted_dimensions(octree)?;
-    
+
     // Create the new field with the computed dimensions
     let mut new_field = Array3::<f64>::zeros(new_dims);
-    
+
     // Create index mapping
     let mut index_map = HashMap::new();
     let mut cells_refined = 0;
     let mut cells_coarsened = 0;
-    
+
     // Traverse the octree and copy/interpolate data
     transfer_data_recursive(
         old_field,
@@ -57,7 +57,7 @@ pub fn adapt_field_to_octree(
         &mut cells_coarsened,
         scheme,
     )?;
-    
+
     Ok(LocalAMRResult {
         new_field,
         index_map,
@@ -70,7 +70,7 @@ pub fn adapt_field_to_octree(
 fn compute_adapted_dimensions(octree: &Octree) -> KwaversResult<(usize, usize, usize)> {
     let base_res = octree.base_resolution();
     let mut max_indices = (0, 0, 0);
-    
+
     // Traverse octree to find maximum indices
     compute_max_indices_recursive(
         octree.root(),
@@ -80,7 +80,7 @@ fn compute_adapted_dimensions(octree: &Octree) -> KwaversResult<(usize, usize, u
         base_res,
         &mut max_indices,
     );
-    
+
     // Add 1 to convert from max index to dimension
     Ok((max_indices.0 + 1, max_indices.1 + 1, max_indices.2 + 1))
 }
@@ -102,7 +102,7 @@ fn compute_max_indices_recursive(
     } else {
         // Process children
         let half_size = (current_size.0 / 2, current_size.1 / 2, current_size.2 / 2);
-        
+
         // Note: This is a simplified version - real implementation would need
         // to properly traverse the octree structure
     }
@@ -121,7 +121,7 @@ fn transfer_data_recursive(
     scheme: InterpolationScheme,
 ) -> KwaversResult<()> {
     let old_dims = old_field.dim();
-    
+
     if node.is_leaf() {
         // This is a leaf node - transfer data for this region
         if node.level() == 0 {
@@ -161,12 +161,12 @@ fn transfer_data_recursive(
     } else {
         // Internal node - process children
         let half_size = (current_size.0 / 2, current_size.1 / 2, current_size.2 / 2);
-        
+
         // Note: This requires access to the octree to get child nodes
         // For now, we skip processing children since we don't have tree access
         // This is a design issue that needs refactoring (SOLID: Dependency Inversion)
     }
-    
+
     Ok(())
 }
 
@@ -180,7 +180,7 @@ fn copy_region(
 ) -> KwaversResult<()> {
     let old_dims = old_field.dim();
     let new_dims = new_field.dim();
-    
+
     // Use iterator combinators for better performance (CUPID: Composable, Idiomatic)
     // This avoids nested loops and provides better optimization opportunities
     (0..size.0)
@@ -188,14 +188,18 @@ fn copy_region(
         .flat_map(|(i, j)| (0..size.2).map(move |k| (i, j, k)))
         .map(|(i, j, k)| (origin.0 + i, origin.1 + j, origin.2 + k))
         .filter(|&idx| {
-            idx.0 < old_dims.0 && idx.1 < old_dims.1 && idx.2 < old_dims.2 &&
-            idx.0 < new_dims.0 && idx.1 < new_dims.1 && idx.2 < new_dims.2
+            idx.0 < old_dims.0
+                && idx.1 < old_dims.1
+                && idx.2 < old_dims.2
+                && idx.0 < new_dims.0
+                && idx.1 < new_dims.1
+                && idx.2 < new_dims.2
         })
         .for_each(|idx| {
             new_field[idx] = old_field[idx];
             index_map.insert(idx, idx);
         });
-    
+
     Ok(())
 }
 
@@ -216,7 +220,7 @@ fn interpolate_region(
         size.1 / refinement_factor,
         size.2 / refinement_factor,
     );
-    
+
     match scheme {
         InterpolationScheme::Linear => {
             // Trilinear interpolation
@@ -224,16 +228,17 @@ fn interpolate_region(
                 for j in 0..coarse_size.1 {
                     for k in 0..coarse_size.2 {
                         let coarse_idx = (origin.0 + i, origin.1 + j, origin.2 + k);
-                        
+
                         // Get coarse cell value
-                        let coarse_val = if coarse_idx.0 < old_field.dim().0 &&
-                                           coarse_idx.1 < old_field.dim().1 &&
-                                           coarse_idx.2 < old_field.dim().2 {
+                        let coarse_val = if coarse_idx.0 < old_field.dim().0
+                            && coarse_idx.1 < old_field.dim().1
+                            && coarse_idx.2 < old_field.dim().2
+                        {
                             old_field[coarse_idx]
                         } else {
                             0.0
                         };
-                        
+
                         // Interpolate to fine cells
                         for di in 0..refinement_factor {
                             for dj in 0..refinement_factor {
@@ -243,10 +248,11 @@ fn interpolate_region(
                                         origin.1 + j * refinement_factor + dj,
                                         origin.2 + k * refinement_factor + dk,
                                     );
-                                    
-                                    if fine_idx.0 < new_field.dim().0 &&
-                                       fine_idx.1 < new_field.dim().1 &&
-                                       fine_idx.2 < new_field.dim().2 {
+
+                                    if fine_idx.0 < new_field.dim().0
+                                        && fine_idx.1 < new_field.dim().1
+                                        && fine_idx.2 < new_field.dim().2
+                                    {
                                         // Simple injection for now - can be improved with proper interpolation
                                         new_field[fine_idx] = coarse_val;
                                         index_map.insert(coarse_idx, fine_idx);
@@ -254,7 +260,7 @@ fn interpolate_region(
                                 }
                             }
                         }
-                        
+
                         *cells_refined += 1;
                     }
                 }
@@ -264,23 +270,24 @@ fn interpolate_region(
             // Conservative interpolation preserves integral
             // For now, use same as linear but divide by refinement factor cubed
             let volume_factor = (refinement_factor * refinement_factor * refinement_factor) as f64;
-            
+
             for i in 0..coarse_size.0 {
                 for j in 0..coarse_size.1 {
                     for k in 0..coarse_size.2 {
                         let coarse_idx = (origin.0 + i, origin.1 + j, origin.2 + k);
-                        
-                        let coarse_val = if coarse_idx.0 < old_field.dim().0 &&
-                                           coarse_idx.1 < old_field.dim().1 &&
-                                           coarse_idx.2 < old_field.dim().2 {
+
+                        let coarse_val = if coarse_idx.0 < old_field.dim().0
+                            && coarse_idx.1 < old_field.dim().1
+                            && coarse_idx.2 < old_field.dim().2
+                        {
                             old_field[coarse_idx]
                         } else {
                             0.0
                         };
-                        
+
                         // Distribute value conservatively
                         let fine_val = coarse_val / volume_factor;
-                        
+
                         for di in 0..refinement_factor {
                             for dj in 0..refinement_factor {
                                 for dk in 0..refinement_factor {
@@ -289,17 +296,18 @@ fn interpolate_region(
                                         origin.1 + j * refinement_factor + dj,
                                         origin.2 + k * refinement_factor + dk,
                                     );
-                                    
-                                    if fine_idx.0 < new_field.dim().0 &&
-                                       fine_idx.1 < new_field.dim().1 &&
-                                       fine_idx.2 < new_field.dim().2 {
+
+                                    if fine_idx.0 < new_field.dim().0
+                                        && fine_idx.1 < new_field.dim().1
+                                        && fine_idx.2 < new_field.dim().2
+                                    {
                                         new_field[fine_idx] = fine_val;
                                         index_map.insert(coarse_idx, fine_idx);
                                     }
                                 }
                             }
                         }
-                        
+
                         *cells_refined += 1;
                     }
                 }
@@ -314,7 +322,7 @@ fn interpolate_region(
             }));
         }
     }
-    
+
     Ok(())
 }
 
@@ -330,7 +338,7 @@ fn restrict_region(
     scheme: InterpolationScheme,
 ) -> KwaversResult<()> {
     let coarsening_factor = 2_usize.pow(coarsening_level as u32);
-    
+
     match scheme {
         InterpolationScheme::Conservative => {
             // Average fine cells to get coarse value
@@ -339,39 +347,38 @@ fn restrict_region(
                     for k in (0..size.2).step_by(coarsening_factor) {
                         let mut sum = 0.0;
                         let mut count = 0;
-                        
+
                         // Average over fine cells
                         for di in 0..coarsening_factor {
                             for dj in 0..coarsening_factor {
                                 for dk in 0..coarsening_factor {
-                                    let fine_idx = (
-                                        origin.0 + i + di,
-                                        origin.1 + j + dj,
-                                        origin.2 + k + dk,
-                                    );
-                                    
-                                    if fine_idx.0 < old_field.dim().0 &&
-                                       fine_idx.1 < old_field.dim().1 &&
-                                       fine_idx.2 < old_field.dim().2 {
+                                    let fine_idx =
+                                        (origin.0 + i + di, origin.1 + j + dj, origin.2 + k + dk);
+
+                                    if fine_idx.0 < old_field.dim().0
+                                        && fine_idx.1 < old_field.dim().1
+                                        && fine_idx.2 < old_field.dim().2
+                                    {
                                         sum += old_field[fine_idx];
                                         count += 1;
                                     }
                                 }
                             }
                         }
-                        
+
                         let coarse_idx = (
                             origin.0 + i / coarsening_factor,
                             origin.1 + j / coarsening_factor,
                             origin.2 + k / coarsening_factor,
                         );
-                        
-                        if count > 0 && 
-                           coarse_idx.0 < new_field.dim().0 &&
-                           coarse_idx.1 < new_field.dim().1 &&
-                           coarse_idx.2 < new_field.dim().2 {
+
+                        if count > 0
+                            && coarse_idx.0 < new_field.dim().0
+                            && coarse_idx.1 < new_field.dim().1
+                            && coarse_idx.2 < new_field.dim().2
+                        {
                             new_field[coarse_idx] = sum / count as f64;
-                            
+
                             // Map all fine indices to the coarse index
                             for di in 0..coarsening_factor {
                                 for dj in 0..coarsening_factor {
@@ -385,7 +392,7 @@ fn restrict_region(
                                     }
                                 }
                             }
-                            
+
                             *cells_coarsened += 1;
                         }
                     }
@@ -406,7 +413,7 @@ fn restrict_region(
             );
         }
     }
-    
+
     Ok(())
 }
 
@@ -419,7 +426,7 @@ fn compute_child_origin(
     let i_offset = if child_idx & 1 != 0 { child_size.0 } else { 0 };
     let j_offset = if child_idx & 2 != 0 { child_size.1 } else { 0 };
     let k_offset = if child_idx & 4 != 0 { child_size.2 } else { 0 };
-    
+
     (
         parent_origin.0 + i_offset,
         parent_origin.1 + j_offset,
@@ -435,16 +442,16 @@ pub fn adapt_all_fields(
 ) -> KwaversResult<Array4<f64>> {
     let num_fields = fields.shape()[0];
     let mut results = Vec::with_capacity(num_fields);
-    
+
     // Process each field
     for field_idx in 0..num_fields {
         let field = fields.index_axis(ndarray::Axis(0), field_idx);
         let field_3d = field.to_owned();
-        
+
         let result = adapt_field_to_octree(&field_3d, octree, scheme)?;
         results.push(result);
     }
-    
+
     // All fields should have the same dimensions after adaptation
     if results.is_empty() {
         return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -453,44 +460,63 @@ pub fn adapt_all_fields(
             constraint: "No fields to adapt".to_string(),
         }));
     }
-    
+
     let new_dims = results[0].new_field.dim();
-    
+
     // Create new 4D array
-    let mut new_fields = Array4::<f64>::zeros((
-        num_fields,
-        new_dims.0,
-        new_dims.1,
-        new_dims.2,
-    ));
-    
+    let mut new_fields = Array4::<f64>::zeros((num_fields, new_dims.0, new_dims.1, new_dims.2));
+
     // Copy adapted fields
     for (field_idx, result) in results.into_iter().enumerate() {
         new_fields
             .index_axis_mut(ndarray::Axis(0), field_idx)
             .assign(&result.new_field);
     }
-    
+
     Ok(new_fields)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_compute_child_origin() {
         let parent_origin = (10, 20, 30);
         let child_size = (5, 5, 5);
-        
+
         // Test all 8 children
-        assert_eq!(compute_child_origin(parent_origin, child_size, 0), (10, 20, 30));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 1), (15, 20, 30));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 2), (10, 25, 30));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 3), (15, 25, 30));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 4), (10, 20, 35));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 5), (15, 20, 35));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 6), (10, 25, 35));
-        assert_eq!(compute_child_origin(parent_origin, child_size, 7), (15, 25, 35));
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 0),
+            (10, 20, 30)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 1),
+            (15, 20, 30)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 2),
+            (10, 25, 30)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 3),
+            (15, 25, 30)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 4),
+            (10, 20, 35)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 5),
+            (15, 20, 35)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 6),
+            (10, 25, 35)
+        );
+        assert_eq!(
+            compute_child_origin(parent_origin, child_size, 7),
+            (15, 25, 35)
+        );
     }
 }

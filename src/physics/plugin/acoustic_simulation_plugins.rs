@@ -14,9 +14,9 @@
 //! - **Performance**: Zero-copy techniques and efficient algorithms
 
 use crate::error::KwaversResult;
-use crate::physics::plugin::{PluginMetadata, PluginState};
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 /// Multi-Element Transducer Field Calculator Plugin
@@ -40,7 +40,8 @@ impl TransducerFieldCalculatorPlugin {
                 name: "FOCUS Transducer Field Calculator".to_string(),
                 version: "1.0.0".to_string(),
                 author: "Kwavers Team".to_string(),
-                description: "Multi-element transducer field calculation with FOCUS compatibility".to_string(),
+                description: "Multi-element transducer field calculation with FOCUS compatibility"
+                    .to_string(),
                 license: "MIT".to_string(),
             },
             state: PluginState::Initialized,
@@ -48,7 +49,7 @@ impl TransducerFieldCalculatorPlugin {
             sir_cache: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Calculate spatial impulse response for given geometry
     fn calculate_spatial_impulse_response(
         &mut self,
@@ -57,24 +58,25 @@ impl TransducerFieldCalculatorPlugin {
         medium: &dyn Medium,
     ) -> KwaversResult<Array3<f64>> {
         let mut sir = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        
+
         // Rayleigh-Sommerfeld integral approach
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     let field_point = [i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz];
                     let mut total_response = 0.0;
-                    
+
                     // Sum contributions from all elements
                     for (elem_idx, elem_pos) in geometry.element_positions.iter().enumerate() {
-                        let distance = ((field_point[0] - elem_pos[0]).powi(2) +
-                                       (field_point[1] - elem_pos[1]).powi(2) +
-                                       (field_point[2] - elem_pos[2]).powi(2)).sqrt();
-                        
+                        let distance = ((field_point[0] - elem_pos[0]).powi(2)
+                            + (field_point[1] - elem_pos[1]).powi(2)
+                            + (field_point[2] - elem_pos[2]).powi(2))
+                        .sqrt();
+
                         // Element dimensions
                         let elem_dims = &geometry.element_dimensions[elem_idx];
                         let elem_area = elem_dims[0] * elem_dims[1];
-                        
+
                         // Directivity factor based on element orientation
                         let elem_normal = &geometry.element_orientations[elem_idx];
                         let direction = [
@@ -82,25 +84,31 @@ impl TransducerFieldCalculatorPlugin {
                             (field_point[1] - elem_pos[1]) / distance,
                             (field_point[2] - elem_pos[2]) / distance,
                         ];
-                        let directivity = elem_normal[0] * direction[0] +
-                                         elem_normal[1] * direction[1] +
-                                         elem_normal[2] * direction[2];
-                        
+                        let directivity = elem_normal[0] * direction[0]
+                            + elem_normal[1] * direction[1]
+                            + elem_normal[2] * direction[2];
+
                         // Spatial impulse response contribution
-                        let c = medium.sound_speed(field_point[0], field_point[1], field_point[2], grid);
-                        let response = directivity * elem_area / (2.0 * std::f64::consts::PI * distance * c);
-                        
+                        let c = medium.sound_speed(
+                            field_point[0],
+                            field_point[1],
+                            field_point[2],
+                            grid,
+                        );
+                        let response =
+                            directivity * elem_area / (2.0 * std::f64::consts::PI * distance * c);
+
                         total_response += response;
                     }
-                    
+
                     sir[[i, j, k]] = total_response;
                 }
             }
         }
-        
+
         Ok(sir)
     }
-    
+
     /// Compute pressure field using Rayleigh integral
     fn compute_pressure_field(
         &self,
@@ -110,16 +118,17 @@ impl TransducerFieldCalculatorPlugin {
         medium: &dyn Medium,
     ) -> KwaversResult<Array3<f64>> {
         let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        
+
         // Temporal frequency response
         let omega = 2.0 * std::f64::consts::PI * frequency;
-        
+
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     let field_point = [i as f64 * grid.dx, j as f64 * grid.dy, k as f64 * grid.dz];
-                    let c = medium.sound_speed(field_point[0], field_point[1], field_point[2], grid);
-                    
+                    let c =
+                        medium.sound_speed(field_point[0], field_point[1], field_point[2], grid);
+
                     // Convert spatial impulse response to pressure
                     // P(ω) = jωρc * h(r) where h(r) is spatial impulse response
                     let rho = medium.density(field_point[0], field_point[1], field_point[2], grid);
@@ -127,7 +136,7 @@ impl TransducerFieldCalculatorPlugin {
                 }
             }
         }
-        
+
         Ok(pressure)
     }
 }
@@ -198,7 +207,10 @@ pub enum AbsorptionModel {
     /// Power law absorption: α = α₀ * f^γ
     PowerLaw { alpha0: f64, gamma: f64 },
     /// Thermoviscous absorption
-    Thermoviscous { thermal_coeff: f64, viscous_coeff: f64 },
+    Thermoviscous {
+        thermal_coeff: f64,
+        viscous_coeff: f64,
+    },
     /// Custom absorption function
     Custom(fn(f64) -> f64),
 }
@@ -247,9 +259,14 @@ pub enum SoundSpeedEstimator {
     /// Cross-correlation based estimation
     CrossCorrelation { window_size: usize, overlap: f64 },
     /// Maximum likelihood estimation
-    MaximumLikelihood { search_range: [f64; 2], resolution: f64 },
+    MaximumLikelihood {
+        search_range: [f64; 2],
+        resolution: f64,
+    },
     /// Bayesian estimation
-    Bayesian { prior_distribution: PriorDistribution },
+    Bayesian {
+        prior_distribution: PriorDistribution,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -361,13 +378,16 @@ pub struct Phase31PluginFactory;
 
 impl Phase31PluginFactory {
     /// Create multi-element transducer field calculator plugin
-    pub fn create_transducer_field_calculator_plugin() -> KwaversResult<TransducerFieldCalculatorPlugin> {
+    pub fn create_transducer_field_calculator_plugin(
+    ) -> KwaversResult<TransducerFieldCalculatorPlugin> {
         Ok(TransducerFieldCalculatorPlugin {
             metadata: PluginMetadata {
                 id: "transducer_field_calculator".to_string(),
                 name: "Multi-Element Transducer Field Calculator".to_string(),
                 version: "1.0.0".to_string(),
-                description: "Multi-element transducer field calculation with spatial impulse response".to_string(),
+                description:
+                    "Multi-element transducer field calculation with spatial impulse response"
+                        .to_string(),
                 author: "Kwavers Team".to_string(),
                 license: "MIT".to_string(),
             },
@@ -376,7 +396,7 @@ impl Phase31PluginFactory {
             sir_cache: std::collections::HashMap::new(),
         })
     }
-    
+
     /// Create KZK equation solver plugin
     pub fn create_kzk_plugin() -> KwaversResult<KzkSolverPlugin> {
         Ok(KzkSolverPlugin {
@@ -390,11 +410,16 @@ impl Phase31PluginFactory {
             },
             state: PluginState::Initialized,
             nonlinearity_parameter: 3.5, // Typical B/A for water
-            absorption_coefficients: AbsorptionModel::PowerLaw { alpha0: 0.217, gamma: 2.0 },
-            shock_handler: ShockHandlingMethod::ArtificialViscosity { viscosity_coeff: 0.1 },
+            absorption_coefficients: AbsorptionModel::PowerLaw {
+                alpha0: 0.217,
+                gamma: 2.0,
+            },
+            shock_handler: ShockHandlingMethod::ArtificialViscosity {
+                viscosity_coeff: 0.1,
+            },
         })
     }
-    
+
     /// Create mixed-domain acoustic propagation plugin
     pub fn create_mixed_domain_propagation_plugin() -> KwaversResult<MixedDomainPropagationPlugin> {
         Ok(MixedDomainPropagationPlugin {
@@ -411,7 +436,7 @@ impl Phase31PluginFactory {
             frequency_operators: Vec::new(),
         })
     }
-    
+
     /// Create phase correction plugin
     pub fn create_phase_correction_plugin() -> KwaversResult<PhaseCorrectionPlugin> {
         Ok(PhaseCorrectionPlugin {
@@ -424,14 +449,14 @@ impl Phase31PluginFactory {
                 license: "MIT".to_string(),
             },
             state: PluginState::Initialized,
-            sound_speed_estimator: SoundSpeedEstimator::CrossCorrelation { 
-                window_size: 64, 
-                overlap: 0.5 
+            sound_speed_estimator: SoundSpeedEstimator::CrossCorrelation {
+                window_size: 64,
+                overlap: 0.5,
             },
             correction_algorithms: Vec::new(),
         })
     }
-    
+
     /// Create seismic imaging plugin
     pub fn create_seismic_plugin() -> KwaversResult<SeismicImagingPlugin> {
         Ok(SeismicImagingPlugin {
@@ -459,7 +484,9 @@ impl Phase31PluginFactory {
             },
             rtm_settings: RtmSettings {
                 imaging_condition: ImagingCondition::ZeroLagCrossCorrelation,
-                source_wavelet: SourceWavelet::Ricker { central_frequency: 30.0 },
+                source_wavelet: SourceWavelet::Ricker {
+                    central_frequency: 30.0,
+                },
                 migration_aperture: MigrationAperture {
                     aperture_angle: std::f64::consts::PI / 3.0, // 60 degrees
                     taper_function: TaperFunction::Hanning,

@@ -1,41 +1,41 @@
 //! Hybrid Spectral-DG Methods Module
-//! 
+//!
 //! This module implements hybrid spectral and discontinuous Galerkin methods
 //! for shock handling and high-order accuracy in continuous regions.
-//! 
+//!
 //! ## Literature References
-//! 
-//! 1. **Hesthaven, J. S., & Warburton, T. (2008)**. "Nodal discontinuous Galerkin 
-//!    methods: algorithms, analysis, and applications." *Springer Science & Business 
+//!
+//! 1. **Hesthaven, J. S., & Warburton, T. (2008)**. "Nodal discontinuous Galerkin
+//!    methods: algorithms, analysis, and applications." *Springer Science & Business
 //!    Media*. DOI: 10.1007/978-0-387-72067-8
 //!    - Comprehensive DG theory and implementation
 //!    - High-order polynomial bases
-//! 
-//! 2. **Persson, P. O., & Peraire, J. (2006)**. "Sub-cell shock capturing for 
-//!    discontinuous Galerkin methods." *44th AIAA Aerospace Sciences Meeting and 
+//!
+//! 2. **Persson, P. O., & Peraire, J. (2006)**. "Sub-cell shock capturing for
+//!    discontinuous Galerkin methods." *44th AIAA Aerospace Sciences Meeting and
 //!    Exhibit* (p. 112). DOI: 10.2514/6.2006-112
 //!    - Shock detection algorithms
 //!    - Artificial viscosity methods
-//! 
-//! 3. **Krivodonova, L., Xin, J., Remacle, J. F., Chevaugeon, N., & Flaherty, J. E. 
-//!    (2004)**. "Shock detection and limiting with discontinuous Galerkin methods 
-//!    for hyperbolic conservation laws." *Applied Numerical Mathematics*, 48(3-4), 
+//!
+//! 3. **Krivodonova, L., Xin, J., Remacle, J. F., Chevaugeon, N., & Flaherty, J. E.
+//!    (2004)**. "Shock detection and limiting with discontinuous Galerkin methods
+//!    for hyperbolic conservation laws." *Applied Numerical Mathematics*, 48(3-4),
 //!    323-338. DOI: 10.1016/j.apnum.2003.11.002
 //!    - Discontinuity indicators
 //!    - Limiting strategies
-//! 
-//! 4. **Cockburn, B., & Shu, C. W. (2001)**. "Runge–Kutta discontinuous Galerkin 
-//!    methods for convection-dominated problems." *Journal of Scientific Computing*, 
+//!
+//! 4. **Cockburn, B., & Shu, C. W. (2001)**. "Runge–Kutta discontinuous Galerkin
+//!    methods for convection-dominated problems." *Journal of Scientific Computing*,
 //!    16(3), 173-261. DOI: 10.1023/A:1012873910884
 //!    - Time integration for DG methods
 //!    - Stability analysis
-//! 
-//! 5. **Gassner, G., Staudenmaier, M., Hindenlang, F., Atak, M., & Munz, C. D. 
-//!    (2015)**. "A space–time adaptive discontinuous Galerkin scheme." *Computers & 
+//!
+//! 5. **Gassner, G., Staudenmaier, M., Hindenlang, F., Atak, M., & Munz, C. D.
+//!    (2015)**. "A space–time adaptive discontinuous Galerkin scheme." *Computers &
 //!    Fluids*, 117, 247-261. DOI: 10.1016/j.compfluid.2015.05.002
 //!    - Hybrid spectral-DG approaches
 //!    - Adaptive method switching
-//! 
+//!
 //! ## Design Principles
 //! - SOLID: Each component (spectral solver, DG solver, discontinuity detector) is a separate module
 //! - CUPID: Composable solvers with clear interfaces
@@ -45,22 +45,22 @@
 //! - YAGNI: Only implementing validated numerical methods
 //! - Clean: Comprehensive documentation and testing
 
-pub mod spectral_solver;
+pub mod coupling;
 pub mod dg_solver;
 pub mod discontinuity_detector;
-pub mod coupling;
-pub mod traits;
 pub mod shock_capturing;
+pub mod spectral_solver;
+pub mod traits;
 
 #[cfg(test)]
 mod tests;
 
 // Re-export main types
+pub use coupling::HybridCoupler;
+pub use dg_solver::DGSolver;
 pub use discontinuity_detector::DiscontinuityDetector;
 pub use spectral_solver::SpectralSolver;
-pub use dg_solver::DGSolver;
-pub use coupling::HybridCoupler;
-pub use traits::{NumericalSolver, SolverConfig, SolutionCoupling};
+pub use traits::{NumericalSolver, SolutionCoupling, SolverConfig};
 
 use crate::grid::Grid;
 use crate::KwaversResult;
@@ -125,7 +125,7 @@ impl HybridSpectralDGSolver {
         };
         let dg_solver = DGSolver::new(dg_config, grid.clone()).expect("Failed to create DG solver");
         let coupler = HybridCoupler::new(config.conservation_tolerance);
-        
+
         Self {
             config,
             detector,
@@ -138,25 +138,25 @@ impl HybridSpectralDGSolver {
             artificial_viscosity: None,
         }
     }
-    
+
     /// Enable shock detection
     pub fn with_shock_detection(&mut self) -> &mut Self {
         self.shock_detector = Some(shock_capturing::ShockDetector::default());
         self
     }
-    
+
     /// Enable WENO limiting with specified order (3, 5, or 7)
     pub fn with_weno_limiting(&mut self, order: usize) -> KwaversResult<&mut Self> {
         self.weno_limiter = Some(shock_capturing::WENOLimiter::new(order)?);
         Ok(self)
     }
-    
+
     /// Enable artificial viscosity
     pub fn with_artificial_viscosity(&mut self) -> &mut Self {
         self.artificial_viscosity = Some(shock_capturing::ArtificialViscosity::default());
         self
     }
-    
+
     /// Update the solution using the hybrid method
     pub fn solve(
         &mut self,
@@ -167,33 +167,30 @@ impl HybridSpectralDGSolver {
         // Step 1: Detect discontinuities
         let discontinuity_mask = self.detector.detect(field, grid)?;
         self.discontinuity_mask = Some(discontinuity_mask.clone());
-        
+
         // Step 2: Apply appropriate solver in each region
         let result = if self.config.adaptive_switching {
             // Use spectral solver in smooth regions
             let spectral_result = self.spectral_solver.solve(field, dt, &discontinuity_mask)?;
-            
+
             // Use DG solver in discontinuous regions
             let dg_result = self.dg_solver.solve(field, dt, &discontinuity_mask)?;
-            
+
             // Step 3: Couple the solutions ensuring conservation
-            self.coupler.couple(
-                &spectral_result,
-                &dg_result,
-                &discontinuity_mask,
-                field,
-            )?
+            self.coupler
+                .couple(&spectral_result, &dg_result, &discontinuity_mask, field)?
         } else {
             // Use only spectral solver if adaptive switching is disabled
-            self.spectral_solver.solve(field, dt, &Array3::from_elem(field.dim(), false))?
+            self.spectral_solver
+                .solve(field, dt, &Array3::from_elem(field.dim(), false))?
         };
-        
+
         // Step 4: Verify conservation properties
         self.verify_conservation(field, &result)?;
-        
+
         Ok(result)
     }
-    
+
     /// Verify that conservation properties are maintained
     fn verify_conservation(
         &self,
@@ -202,8 +199,9 @@ impl HybridSpectralDGSolver {
     ) -> KwaversResult<()> {
         let initial_integral: f64 = initial.sum();
         let final_integral: f64 = final_field.sum();
-        let conservation_error = (final_integral - initial_integral).abs() / initial_integral.abs().max(1e-10);
-        
+        let conservation_error =
+            (final_integral - initial_integral).abs() / initial_integral.abs().max(1e-10);
+
         if conservation_error > self.config.conservation_tolerance {
             log::warn!(
                 "Conservation error {} exceeds tolerance {}",
@@ -211,21 +209,22 @@ impl HybridSpectralDGSolver {
                 self.config.conservation_tolerance
             );
         }
-        
+
         Ok(())
     }
-    
+
     /// Get the current discontinuity mask
     pub fn discontinuity_mask(&self) -> Option<&Array3<bool>> {
         self.discontinuity_mask.as_ref()
     }
-    
+
     /// Update configuration
     pub fn update_config(&mut self, config: HybridSpectralDGConfig) {
         self.config = config;
-        self.detector.update_threshold(self.config.discontinuity_threshold);
-        self.spectral_solver.update_order(self.config.spectral_order);
+        self.detector
+            .update_threshold(self.config.discontinuity_threshold);
+        self.spectral_solver
+            .update_order(self.config.spectral_order);
         self.dg_solver.update_order(self.config.dg_polynomial_order);
     }
 }
-

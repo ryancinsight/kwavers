@@ -6,7 +6,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::solver::reconstruction::{
-    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction
+    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,
 };
 use ndarray::{Array2, Array3};
 
@@ -26,12 +26,7 @@ pub struct BowlRecon {
 
 impl BowlRecon {
     /// Create a new bowl array reconstruction
-    pub fn new(
-        center: [f64; 3],
-        radius: f64,
-        focus: [f64; 3],
-        opening_angle: f64,
-    ) -> Self {
+    pub fn new(center: [f64; 3], radius: f64, focus: [f64; 3], opening_angle: f64) -> Self {
         Self {
             center,
             radius,
@@ -40,17 +35,17 @@ impl BowlRecon {
             back_projector: UniversalBackProjection::new(WeightFunction::SolidAngle),
         }
     }
-    
+
     /// Create a hemispherical array reconstruction
     pub fn hemispherical(center: [f64; 3], radius: f64) -> Self {
         Self::new(
             center,
             radius,
-            center, // Focus at center for hemispherical
+            center,                     // Focus at center for hemispherical
             std::f64::consts::PI / 2.0, // 90 degree opening
         )
     }
-    
+
     /// Set weight function for back-projection
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
@@ -68,9 +63,10 @@ impl Reconstructor for BowlRecon {
     ) -> KwaversResult<Array3<f64>> {
         // Use universal back-projection with bowl geometry considerations
         // Bowl arrays provide excellent coverage for 3D imaging
-        self.back_projector.reconstruct(sensor_data, sensor_positions, grid, config)
+        self.back_projector
+            .reconstruct(sensor_data, sensor_positions, grid, config)
     }
-    
+
     fn name(&self) -> &str {
         "Bowl/Hemispherical Array Reconstruction (bowlRecon)"
     }

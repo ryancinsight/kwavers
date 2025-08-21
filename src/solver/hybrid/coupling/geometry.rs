@@ -3,7 +3,7 @@
 use crate::error::{KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::solver::hybrid::domain_decomposition::DomainRegion;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Interface geometry description
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,16 +25,16 @@ impl InterfaceGeometry {
     pub fn from_grids(source: &Grid, target: &Grid) -> KwaversResult<Self> {
         // Detect interface direction and position
         let (normal_direction, plane_position) = Self::detect_interface(source, target)?;
-        
+
         // Calculate interface extent
         let extent = Self::calculate_extent(source, target, normal_direction)?;
-        
+
         // Calculate interface area
         let area = extent.0 * extent.1;
-        
+
         // Calculate number of interface points
         let num_points = Self::calculate_num_points(source, target, normal_direction);
-        
+
         Ok(Self {
             normal_direction,
             plane_position,
@@ -43,13 +43,13 @@ impl InterfaceGeometry {
             num_points,
         })
     }
-    
+
     fn detect_interface(source: &Grid, target: &Grid) -> KwaversResult<(usize, f64)> {
         // Implementation to detect interface direction and position
         // This would analyze grid boundaries to find the interface
         Ok((0, 0.0)) // TODO: Implement proper detection
     }
-    
+
     fn calculate_extent(
         source: &Grid,
         target: &Grid,
@@ -64,10 +64,11 @@ impl InterfaceGeometry {
                 field: "normal_direction".to_string(),
                 value: format!("{}", normal_direction),
                 constraint: "Must be 0, 1, or 2".to_string(),
-            }.into()),
+            }
+            .into()),
         }
     }
-    
+
     fn calculate_num_points(source: &Grid, _target: &Grid, normal_direction: usize) -> usize {
         match normal_direction {
             0 => source.ny * source.nz,

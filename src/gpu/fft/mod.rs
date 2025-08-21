@@ -8,8 +8,8 @@
 //! - `kernels`: Shared kernel algorithms
 //! - `transpose`: Matrix transpose operations
 
-pub mod plan;
 pub mod kernels;
+pub mod plan;
 pub mod transpose;
 
 #[cfg(feature = "cuda")]
@@ -22,8 +22,8 @@ pub mod opencl;
 pub mod webgpu;
 
 // Re-export main types
-pub use plan::{GpuFftPlan, FftDirection};
 pub use kernels::FftKernel;
+pub use plan::{FftDirection, GpuFftPlan};
 pub use transpose::TransposeOperation;
 
 use crate::error::KwaversResult;
@@ -33,11 +33,17 @@ use num_complex::Complex;
 /// Trait for GPU FFT implementations
 pub trait GpuFftBackend: Send + Sync {
     /// Create a new FFT plan for the given dimensions
-    fn create_plan(&self, nx: usize, ny: usize, nz: usize, forward: bool) -> KwaversResult<GpuFftPlan>;
-    
+    fn create_plan(
+        &self,
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        forward: bool,
+    ) -> KwaversResult<GpuFftPlan>;
+
     /// Execute FFT on complex data
     fn execute(&mut self, plan: &GpuFftPlan, data: &mut Array3<Complex<f64>>) -> KwaversResult<()>;
-    
+
     /// Get backend name for debugging
     fn backend_name(&self) -> &str;
 }
@@ -48,23 +54,25 @@ pub fn create_fft_backend() -> KwaversResult<Box<dyn GpuFftBackend>> {
     {
         return Ok(Box::new(cuda::CudaFftBackend::new()?));
     }
-    
+
     #[cfg(feature = "opencl")]
     {
         return Ok(Box::new(opencl::OpenClFftBackend::new()?));
     }
-    
+
     #[cfg(feature = "webgpu")]
     {
         return Ok(Box::new(webgpu::WebGpuFftBackend::new()?));
     }
-    
+
     #[cfg(not(any(feature = "cuda", feature = "opencl", feature = "webgpu")))]
     {
         use crate::error::KwaversError;
-        Err(KwaversError::Config(crate::error::ConfigError::MissingParameter {
-            parameter: "GPU backend".to_string(),
-            section: "features".to_string(),
-        }))
+        Err(KwaversError::Config(
+            crate::error::ConfigError::MissingParameter {
+                parameter: "GPU backend".to_string(),
+                section: "features".to_string(),
+            },
+        ))
     }
 }

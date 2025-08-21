@@ -6,4 +6,4 @@ pub mod sonoluminescence;
 // Re-export commonly used types
 pub use diffusion::*;
 pub use polarization::*;
-pub use sonoluminescence::{SonoluminescenceEmission, EmissionParameters};
+pub use sonoluminescence::{EmissionParameters, SonoluminescenceEmission};

@@ -32,7 +32,6 @@ fn default_visualization() -> bool {
     false
 }
 
-
 impl Default for OutputConfig {
     fn default() -> Self {
         OutputConfig {

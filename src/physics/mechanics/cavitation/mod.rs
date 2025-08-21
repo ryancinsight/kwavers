@@ -16,4 +16,4 @@ pub mod core;
 pub mod damage;
 
 pub use core::CavitationModel;
-pub use damage::{CavitationDamage, MaterialProperties, DamageParameters, cavitation_intensity};
+pub use damage::{cavitation_intensity, CavitationDamage, DamageParameters, MaterialProperties};

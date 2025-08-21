@@ -1,8 +1,8 @@
 //! Field registry error types
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FieldError {
@@ -22,8 +22,16 @@ impl fmt::Display for FieldError {
             Self::NotRegistered(name) => write!(f, "Field not registered: {}", name),
             Self::Inactive(name) => write!(f, "Field inactive: {}", name),
             Self::DataNotInitialized => write!(f, "Field data not initialized"),
-            Self::DimensionMismatch { field, expected, actual } => {
-                write!(f, "Field {} dimension mismatch: expected {:?}, got {:?}", field, expected, actual)
+            Self::DimensionMismatch {
+                field,
+                expected,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "Field {} dimension mismatch: expected {:?}, got {:?}",
+                    field, expected, actual
+                )
             }
         }
     }

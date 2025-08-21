@@ -1,5 +1,5 @@
 //! Traits for time integration
-//! 
+//!
 //! This module defines the common interfaces for time integration methods,
 //! following the Interface Segregation Principle (ISP).
 
@@ -12,13 +12,13 @@ use std::fmt::Debug;
 pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
     /// Get the order of accuracy
     fn order(&self) -> usize;
-    
+
     /// Get the number of stages (for multi-stage methods)
     fn stages(&self) -> usize;
-    
+
     /// Is this an explicit method?
     fn is_explicit(&self) -> bool;
-    
+
     /// Validate the configuration
     fn validate(&self) -> KwaversResult<()>;
 }
@@ -27,12 +27,12 @@ pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
 pub trait TimeStepper: Send + Sync + Debug {
     /// Configuration type for this time stepper
     type Config: TimeStepperConfig;
-    
+
     /// Create a new time stepper with given configuration
     fn new(config: Self::Config) -> Self;
-    
+
     /// Advance the solution by one time step (in-place)
-    /// 
+    ///
     /// # Arguments
     /// * `field` - Current field values (will be updated in-place)
     /// * `rhs_fn` - Function that computes the right-hand side (time derivative)
@@ -47,10 +47,10 @@ pub trait TimeStepper: Send + Sync + Debug {
     ) -> KwaversResult<()>
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>;
-    
+
     /// Get the stability region scaling factor
     fn stability_factor(&self) -> f64;
-    
+
     /// Reset internal state (for multi-step methods)
     fn reset(&mut self) {}
 }
@@ -58,31 +58,21 @@ pub trait TimeStepper: Send + Sync + Debug {
 /// Trait for adaptive time stepping
 pub trait AdaptiveTimeStepperTrait: TimeStepper {
     /// Estimate the error for adaptive time stepping
-    fn estimate_error(
-        &self,
-        field: &Array3<f64>,
-        updated_field: &Array3<f64>,
-        dt: f64,
-    ) -> f64;
-    
+    fn estimate_error(&self, field: &Array3<f64>, updated_field: &Array3<f64>, dt: f64) -> f64;
+
     /// Compute optimal time step based on error estimate
-    fn compute_optimal_dt(
-        &self,
-        current_dt: f64,
-        error: f64,
-        tolerance: f64,
-    ) -> f64 {
+    fn compute_optimal_dt(&self, current_dt: f64, error: f64, tolerance: f64) -> f64 {
         // Default implementation using standard formula
         let safety_factor = 0.9;
         let max_increase = 2.0;
         let max_decrease = 0.1;
-        
+
         let factor = safety_factor * (tolerance / error).powf(1.0 / (self.order() as f64 + 1.0));
         let factor = factor.clamp(max_decrease, max_increase);
-        
+
         current_dt * factor
     }
-    
+
     /// Get the order of the method for error estimation
     fn order(&self) -> usize;
 }
@@ -149,11 +139,11 @@ impl TimeStepperType {
             Self::Leapfrog => 2,
         }
     }
-    
+
     /// Get the stability factor for CFL calculation
     pub fn stability_factor(&self) -> f64 {
         match self {
-            Self::RungeKutta4 => 2.8,  // Approximate stability limit
+            Self::RungeKutta4 => 2.8, // Approximate stability limit
             Self::AdamsBashforth2 => 1.0,
             Self::AdamsBashforth3 => 0.5,
             Self::ForwardEuler => 1.0,
@@ -171,11 +161,7 @@ pub trait ErrorEstimatorTrait: Send + Sync + Debug {
         field_high: &Array3<f64>,
         dt: f64,
     ) -> f64;
-    
+
     /// Estimate the global error accumulation
-    fn estimate_global_error(
-        &self,
-        local_errors: &[f64],
-        time_steps: &[f64],
-    ) -> f64;
+    fn estimate_global_error(&self, local_errors: &[f64], time_steps: &[f64]) -> f64;
 }

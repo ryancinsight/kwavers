@@ -3,11 +3,10 @@
 //! This module provides different execution strategies for running plugins.
 
 use super::{PhysicsPlugin, PluginContext};
-use crate::error::{KwaversResult, KwaversError, ValidationError};
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array4;
-use std::sync::Arc;
 use rayon::prelude::*;
 
 /// Strategy for executing plugins
@@ -47,7 +46,7 @@ impl ExecutionStrategy for SequentialStrategy {
 }
 
 /// Parallel execution strategy
-/// 
+///
 /// Note: This currently executes sequentially due to mutable field access constraints.
 /// True parallelism would require architectural changes (read/write phase separation).
 pub struct ParallelStrategy {
@@ -57,11 +56,9 @@ pub struct ParallelStrategy {
 impl ParallelStrategy {
     /// Create a new parallel execution strategy
     pub fn new() -> Self {
-        Self {
-            thread_pool: None,
-        }
+        Self { thread_pool: None }
     }
-    
+
     /// Create with a specific thread pool
     pub fn with_thread_pool(pool: rayon::ThreadPool) -> Self {
         Self {
@@ -92,7 +89,7 @@ impl ExecutionStrategy for ParallelStrategy {
         // 1. Read phase: plugins declare what they need to read
         // 2. Compute phase: parallel computation
         // 3. Write phase: merge results
-        
+
         for plugin in plugins.iter_mut() {
             plugin.update(fields, grid, medium, dt, t, context)?;
         }

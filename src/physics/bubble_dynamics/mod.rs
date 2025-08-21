@@ -7,28 +7,24 @@
 //!
 //! Based on the Keller-Miksis equation and extended models from literature
 
-pub mod bubble_state;
-pub mod rayleigh_plesset;
+pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bubble_field;
-pub mod interactions;
-pub mod thermodynamics;
+pub mod bubble_state;
+pub mod energy_balance; // NEW: Comprehensive energy balance model
 pub mod imex_integration;
-pub mod adaptive_integration;  // NEW: Adaptive time-stepping for stiff ODEs
-pub mod energy_balance;  // NEW: Comprehensive energy balance model
-pub mod units;  // NEW: Unit-safe types using uom crate
+pub mod interactions;
+pub mod rayleigh_plesset;
+pub mod thermodynamics;
+pub mod units; // NEW: Unit-safe types using uom crate
 
-pub use bubble_state::{BubbleState, BubbleParameters, GasSpecies};
-pub use rayleigh_plesset::{RayleighPlessetSolver, KellerMiksisModel};
-pub use bubble_field::{BubbleField, BubbleCloud, BubbleStateFields};
-pub use interactions::{BubbleInteractions, BjerknesForce, CollectiveEffects};
-pub use imex_integration::{
-    BubbleIMEXIntegrator, BubbleIMEXConfig, integrate_bubble_dynamics_imex
-};
 pub use adaptive_integration::{
-    AdaptiveBubbleIntegrator, AdaptiveBubbleConfig, 
-    integrate_bubble_dynamics_adaptive, IntegrationStatistics
+    integrate_bubble_dynamics_adaptive, AdaptiveBubbleConfig, AdaptiveBubbleIntegrator,
+    IntegrationStatistics,
 };
-pub use units::{
-    SafeBubbleParameters, SafeBubbleState,
-    calculate_rp_acceleration_safe, calculate_work_rate
+pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
+pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
+pub use imex_integration::{
+    integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
+pub use interactions::{BjerknesForce, BubbleInteractions, CollectiveEffects};
+pub use rayleigh_plesset::{KellerMiksisModel, RayleighPlessetSolver};

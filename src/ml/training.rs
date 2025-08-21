@@ -1,11 +1,11 @@
 //! Model training pipeline with data augmentation
 
 use crate::error::{KwaversError, KwaversResult};
+use crate::ml::models::TissueClassifierModel;
 use crate::ml::MLModel;
 use ndarray::{Array1, Array2, Array3, Axis};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use crate::ml::models::TissueClassifierModel;
 
 /// Training pipeline for ML models
 pub struct TrainingPipeline {
@@ -22,7 +22,7 @@ impl TrainingPipeline {
             learning_rate,
         }
     }
-    
+
     /// Train the provided TissueClassifierModel on `(samples, features, 1)` data
     /// with integer class labels stored as `(samples, 1, 1)`.  Returns the loss
     /// at each epoch.
@@ -35,7 +35,9 @@ impl TrainingPipeline {
         // Input validation
         let (samples, features, depth) = training_data.dim();
         if depth != 1 {
-            return Err(KwaversError::Physics(crate::error::PhysicsError::DimensionMismatch));
+            return Err(KwaversError::Physics(
+                crate::error::PhysicsError::DimensionMismatch,
+            ));
         }
 
         let (label_samples, _, _) = labels.dim();

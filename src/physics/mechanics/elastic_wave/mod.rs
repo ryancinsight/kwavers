@@ -1,18 +1,18 @@
 // src/physics/mechanics/elastic_wave/mod.rs
 pub mod mode_conversion;
 
+use crate::error::{KwaversResult, NumericalError, PhysicsError};
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::physics::field_mapping::UnifiedFieldType;
 use crate::utils::{fft_3d, ifft_3d};
-use crate::error::{KwaversResult, PhysicsError, NumericalError};
-use ndarray::{Array3, Array4, s};
+use log::{debug, info, warn};
+use ndarray::{s, Array3, Array4};
 use num_complex::Complex;
-use log::{debug, warn, info};
-use std::time::Instant;
 use std::collections::HashMap;
+use std::time::Instant;
 
 /// Type alias for complex 3D arrays to reduce type complexity
 /// Follows SOLID principles by providing clear, reusable types
@@ -43,12 +43,16 @@ impl ElasticProperties {
     /// Create elastic properties from density and Lamé parameters
     /// Follows Information Expert principle - knows how to compute derived properties
     pub fn from_lame(density: f64, lambda: f64, mu: f64) -> KwaversResult<Self> {
-        if density <= 0.0 || mu <= 0.0 || lambda < -2.0/3.0 * mu {
+        if density <= 0.0 || mu <= 0.0 || lambda < -2.0 / 3.0 * mu {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "ElasticProperties".to_string(),
-                value: density,  // Use density as the primary invalid value
-                reason: format!("Invalid elastic parameters: density={}, lambda={}, mu={}", density, lambda, mu)
-            }.into());
+                value: density, // Use density as the primary invalid value
+                reason: format!(
+                    "Invalid elastic parameters: density={}, lambda={}, mu={}",
+                    density, lambda, mu
+                ),
+            }
+            .into());
         }
 
         let youngs_modulus = mu * (3.0 * lambda + 2.0 * mu) / (lambda + mu);
@@ -70,16 +74,26 @@ impl ElasticProperties {
     }
 
     /// Create elastic properties from Young's modulus and Poisson's ratio
-    pub fn from_youngs_poisson(density: f64, youngs_modulus: f64, poisson_ratio: f64) -> KwaversResult<Self> {
-        if density <= 0.0 || youngs_modulus <= 0.0 || poisson_ratio <= -1.0 || poisson_ratio >= 0.5 {
+    pub fn from_youngs_poisson(
+        density: f64,
+        youngs_modulus: f64,
+        poisson_ratio: f64,
+    ) -> KwaversResult<Self> {
+        if density <= 0.0 || youngs_modulus <= 0.0 || poisson_ratio <= -1.0 || poisson_ratio >= 0.5
+        {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "ElasticProperties".to_string(),
                 value: density,
-                reason: format!("Invalid elastic parameters: density={}, E={}, nu={}", density, youngs_modulus, poisson_ratio)
-            }.into());
+                reason: format!(
+                    "Invalid elastic parameters: density={}, E={}, nu={}",
+                    density, youngs_modulus, poisson_ratio
+                ),
+            }
+            .into());
         }
 
-        let lambda = youngs_modulus * poisson_ratio / ((1.0 + poisson_ratio) * (1.0 - 2.0 * poisson_ratio));
+        let lambda =
+            youngs_modulus * poisson_ratio / ((1.0 + poisson_ratio) * (1.0 - 2.0 * poisson_ratio));
         let mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
 
         Self::from_lame(density, lambda, mu)
@@ -91,7 +105,8 @@ impl ElasticProperties {
             return Err(NumericalError::Instability {
                 operation: "ElasticProperties validation".to_string(),
                 condition: self.p_wave_speed.min(self.s_wave_speed),
-            }.into());
+            }
+            .into());
         }
         Ok(())
     }
@@ -113,7 +128,7 @@ impl AnisotropicElasticProperties {
     /// Create isotropic properties (simplified case)
     pub fn isotropic(density: f64, lambda: f64, mu: f64) -> KwaversResult<Self> {
         let mut stiffness = [[0.0; 6]; 6];
-        
+
         // Fill stiffness tensor for isotropic material
         stiffness[0][0] = lambda + 2.0 * mu; // C11
         stiffness[1][1] = lambda + 2.0 * mu; // C22
@@ -129,7 +144,7 @@ impl AnisotropicElasticProperties {
         // Compute compliance tensor (simplified for isotropic case)
         let youngs_modulus = mu * (3.0 * lambda + 2.0 * mu) / (lambda + mu);
         let poisson_ratio = lambda / (2.0 * (lambda + mu));
-        
+
         compliance[0][0] = 1.0 / youngs_modulus;
         compliance[1][1] = 1.0 / youngs_modulus;
         compliance[2][2] = 1.0 / youngs_modulus;
@@ -154,7 +169,8 @@ impl AnisotropicElasticProperties {
                 parameter: "AnisotropicElasticProperties".to_string(),
                 value: self.density,
                 reason: "Density must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
         // Additional validation for stiffness tensor positive definiteness could be added
         Ok(())
@@ -258,14 +274,23 @@ impl ElasticWaveMetrics {
         if self.call_count == 0 {
             return HashMap::new();
         }
-        
+
         let count = self.call_count as f64;
         let mut averages = HashMap::new();
         averages.insert("fft_time".to_string(), self.fft_time / count);
-        averages.insert("stress_update_time".to_string(), self.stress_update_time / count);
-        averages.insert("velocity_update_time".to_string(), self.velocity_update_time / count);
+        averages.insert(
+            "stress_update_time".to_string(),
+            self.stress_update_time / count,
+        );
+        averages.insert(
+            "velocity_update_time".to_string(),
+            self.velocity_update_time / count,
+        );
         averages.insert("source_time".to_string(), self.source_time / count);
-        averages.insert("total_update_time".to_string(), self.total_update_time / count);
+        averages.insert(
+            "total_update_time".to_string(),
+            self.total_update_time / count,
+        );
         averages
     }
 }
@@ -319,7 +344,8 @@ impl ElasticWave {
                 parameter: "ElasticWave".to_string(),
                 value: 0.0,
                 reason: "Grid dimensions must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
@@ -327,7 +353,8 @@ impl ElasticWave {
                 parameter: "ElasticWave".to_string(),
                 value: dx.min(dy).min(dz),
                 reason: "Grid spacing must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         // Create wavenumber arrays
@@ -354,9 +381,13 @@ impl ElasticWave {
     fn create_wavenumber_array(n: usize, d: f64) -> Array3<f64> {
         let mut k = Array3::zeros((n, n, n));
         let dk = 2.0 * std::f64::consts::PI / (n as f64 * d);
-        
+
         for i in 0..n {
-            let ki = if i <= n / 2 { i as f64 } else { (i as f64) - n as f64 } * dk;
+            let ki = if i <= n / 2 {
+                i as f64
+            } else {
+                (i as f64) - n as f64
+            } * dk;
             k.slice_mut(s![i, .., ..]).fill(ki);
         }
         k
@@ -364,25 +395,31 @@ impl ElasticWave {
 
     /// Set anisotropic properties
     /// Follows Open/Closed principle - extends functionality without modification
-    pub fn set_anisotropic_properties(&mut self, properties: AnisotropicElasticProperties) -> KwaversResult<()> {
+    pub fn set_anisotropic_properties(
+        &mut self,
+        properties: AnisotropicElasticProperties,
+    ) -> KwaversResult<()> {
         properties.validate()?;
         self.anisotropic_properties = Some(properties);
         self.is_anisotropic = true;
         Ok(())
     }
-    
+
     /// Enable mode conversion with custom configuration
-    pub fn with_mode_conversion(&mut self, config: mode_conversion::ModeConversionConfig) -> &mut Self {
+    pub fn with_mode_conversion(
+        &mut self,
+        config: mode_conversion::ModeConversionConfig,
+    ) -> &mut Self {
         self.mode_conversion = Some(config);
         self
     }
-    
+
     /// Enable viscoelastic damping
     pub fn with_viscoelastic(&mut self, config: mode_conversion::ViscoelasticConfig) -> &mut Self {
         self.viscoelastic = Some(config);
         self
     }
-    
+
     /// Set spatially varying stiffness tensors
     pub fn set_stiffness_field(&mut self, tensors: Array4<f64>) -> KwaversResult<()> {
         // Validate dimensions
@@ -391,57 +428,66 @@ impl ElasticWave {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "stiffness_tensor_shape".to_string(),
                 value: tensors.dim().3 as f64,
-                reason: format!("Expected shape ({}, {}, {}, 21), got {:?}", nx, ny, nz, tensors.dim()),
-            }.into());
+                reason: format!(
+                    "Expected shape ({}, {}, {}, 21), got {:?}",
+                    nx,
+                    ny,
+                    nz,
+                    tensors.dim()
+                ),
+            }
+            .into());
         }
-        
+
         self.stiffness_tensors = Some(tensors);
         Ok(())
     }
-    
+
     /// Detect material interfaces for mode conversion
     pub fn detect_interfaces(&mut self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         if let Some(ref config) = self.mode_conversion {
             info!("Detecting material interfaces for mode conversion");
             let (nx, ny, nz) = grid.dimensions();
             let mut interface_mask = Array3::from_elem((nx, ny, nz), false);
-            
+
             // Detect interfaces based on property gradients
-            for i in 1..nx-1 {
-                for j in 1..ny-1 {
-                    for k in 1..nz-1 {
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
                         let density = medium.density(x, y, z, grid);
-                        
+
                         // Check neighboring points
                         let mut max_gradient = 0.0;
                         for di in -1..=1 {
                             for dj in -1..=1 {
                                 for dk in -1..=1 {
-                                    if di == 0 && dj == 0 && dk == 0 { continue; }
-                                    
+                                    if di == 0 && dj == 0 && dk == 0 {
+                                        continue;
+                                    }
+
                                     let ni = (i as i32 + di).max(0).min(nx as i32 - 1) as usize;
                                     let nj = (j as i32 + dj).max(0).min(ny as i32 - 1) as usize;
                                     let nk = (k as i32 + dk).max(0).min(nz as i32 - 1) as usize;
-                                    
+
                                     let nx = ni as f64 * grid.dx;
                                     let ny = nj as f64 * grid.dy;
                                     let nz = nk as f64 * grid.dz;
                                     let ndensity = medium.density(nx, ny, nz, grid);
-                                    
+
                                     let gradient = (ndensity - density).abs() / density;
                                     max_gradient = f64::max(max_gradient, gradient);
                                 }
                             }
                         }
-                        
+
                         interface_mask[[i, j, k]] = max_gradient > config.interface_threshold;
                     }
                 }
             }
-            
+
             self.interface_mask = Some(interface_mask);
         }
         Ok(())
@@ -465,7 +511,8 @@ impl ElasticWave {
             return Err(PhysicsError::ModelNotInitialized {
                 model: "ElasticWave".to_string(),
                 reason: "Wave vectors not initialized".to_string(),
-            }.into());
+            }
+            .into());
         }
         Ok(())
     }
@@ -485,25 +532,29 @@ impl ElasticWave {
 
     fn _update_stress_fft(&self, params: &StressUpdateParams) -> KwaversResult<StressFields> {
         let start_time = Instant::now();
-        
+
         // Validate inputs following Information Expert principle
         if params.dt <= 0.0 {
             return Err(NumericalError::Instability {
                 operation: "Stress update".to_string(),
                 condition: params.dt,
-            }.into());
+            }
+            .into());
         }
 
         // Stress update in k-space
-        let txx_fft = params.vx_fft * &(params.kx * params.lame_lambda + 2.0 * params.kx * params.lame_mu);
-        let tyy_fft = params.vy_fft * &(params.ky * params.lame_lambda + 2.0 * params.ky * params.lame_mu);
-        let tzz_fft = params.vz_fft * &(params.kz * params.lame_lambda + 2.0 * params.kz * params.lame_mu);
+        let txx_fft =
+            params.vx_fft * &(params.kx * params.lame_lambda + 2.0 * params.kx * params.lame_mu);
+        let tyy_fft =
+            params.vy_fft * &(params.ky * params.lame_lambda + 2.0 * params.ky * params.lame_mu);
+        let tzz_fft =
+            params.vz_fft * &(params.kz * params.lame_lambda + 2.0 * params.kz * params.lame_mu);
         let txy_fft = (params.vx_fft * params.ky + params.vy_fft * params.kx) * params.lame_mu;
         let txz_fft = (params.vx_fft * params.kz + params.vz_fft * params.kx) * params.lame_mu;
         let tyz_fft = (params.vy_fft * params.kz + params.vz_fft * params.ky) * params.lame_mu;
 
         let stress_update_time = start_time.elapsed().as_secs_f64();
-        
+
         Ok(StressFields {
             txx: txx_fft,
             tyy: tyy_fft,
@@ -516,14 +567,20 @@ impl ElasticWave {
 
     fn _update_velocity_fft(&self, params: &VelocityUpdateParams) -> KwaversResult<VelocityFields> {
         let start_time = Instant::now();
-        
+
         // Velocity update in k-space
-        let vx_fft = (params.txx_fft * params.kx + params.txy_fft * params.ky + params.txz_fft * params.kz) / params.density;
-        let vy_fft = (params.txy_fft * params.kx + params.tyy_fft * params.ky + params.tyz_fft * params.kz) / params.density;
-        let vz_fft = (params.txz_fft * params.kx + params.tyz_fft * params.ky + params.tzz_fft * params.kz) / params.density;
+        let vx_fft =
+            (params.txx_fft * params.kx + params.txy_fft * params.ky + params.txz_fft * params.kz)
+                / params.density;
+        let vy_fft =
+            (params.txy_fft * params.kx + params.tyy_fft * params.ky + params.tyz_fft * params.kz)
+                / params.density;
+        let vz_fft =
+            (params.txz_fft * params.kx + params.tyz_fft * params.ky + params.tzz_fft * params.kz)
+                / params.density;
 
         let velocity_update_time = start_time.elapsed().as_secs_f64();
-        
+
         Ok(VelocityFields {
             vx: vx_fft,
             vy: vy_fft,
@@ -531,24 +588,21 @@ impl ElasticWave {
         })
     }
 
-    fn _apply_source_term(
-        &self,
-        source: &dyn Source,
-        grid: &Grid,
-        t: f64,
-    ) -> Array3<Complex<f64>> {
+    fn _apply_source_term(&self, source: &dyn Source, grid: &Grid, t: f64) -> Array3<Complex<f64>> {
         let start_time = Instant::now();
-        
+
         // Create a source field array from the source term
         let mut source_field = grid.create_field();
-        source_field.indexed_iter_mut().for_each(|((i, j, k), val)| {
-            let (x, y, z) = grid.coordinates(i, j, k);
-            *val = source.get_source_term(t, x, y, z, grid);
-        });
+        source_field
+            .indexed_iter_mut()
+            .for_each(|((i, j, k), val)| {
+                let (x, y, z) = grid.coordinates(i, j, k);
+                *val = source.get_source_term(t, x, y, z, grid);
+            });
         let source_fft = self._perform_fft(&source_field, grid);
-        
+
         let source_time = start_time.elapsed().as_secs_f64();
-        
+
         source_fft
     }
 }
@@ -565,7 +619,7 @@ impl AcousticWaveModel for ElasticWave {
         t: f64,
     ) {
         let total_start_time = Instant::now();
-        
+
         // Validate inputs following Information Expert principle
         if let Err(e) = self.validate() {
             warn!("ElasticWave validation failed: {}", e);
@@ -578,15 +632,33 @@ impl AcousticWaveModel for ElasticWave {
         }
 
         // Extract current field values
-        let vx = fields.slice(s![UnifiedFieldType::VelocityX.index(), .., .., ..]).to_owned();
-        let vy = fields.slice(s![UnifiedFieldType::VelocityY.index(), .., .., ..]).to_owned();
-        let vz = fields.slice(s![UnifiedFieldType::VelocityZ.index(), .., .., ..]).to_owned();
-        let sxx = fields.slice(s![UnifiedFieldType::StressXX.index(), .., .., ..]).to_owned();
-        let syy = fields.slice(s![UnifiedFieldType::StressYY.index(), .., .., ..]).to_owned();
-        let szz = fields.slice(s![UnifiedFieldType::StressZZ.index(), .., .., ..]).to_owned();
-        let sxy = fields.slice(s![UnifiedFieldType::StressXY.index(), .., .., ..]).to_owned();
-        let sxz = fields.slice(s![UnifiedFieldType::StressXZ.index(), .., .., ..]).to_owned();
-        let syz = fields.slice(s![UnifiedFieldType::StressYZ.index(), .., .., ..]).to_owned();
+        let vx = fields
+            .slice(s![UnifiedFieldType::VelocityX.index(), .., .., ..])
+            .to_owned();
+        let vy = fields
+            .slice(s![UnifiedFieldType::VelocityY.index(), .., .., ..])
+            .to_owned();
+        let vz = fields
+            .slice(s![UnifiedFieldType::VelocityZ.index(), .., .., ..])
+            .to_owned();
+        let sxx = fields
+            .slice(s![UnifiedFieldType::StressXX.index(), .., .., ..])
+            .to_owned();
+        let syy = fields
+            .slice(s![UnifiedFieldType::StressYY.index(), .., .., ..])
+            .to_owned();
+        let szz = fields
+            .slice(s![UnifiedFieldType::StressZZ.index(), .., .., ..])
+            .to_owned();
+        let sxy = fields
+            .slice(s![UnifiedFieldType::StressXY.index(), .., .., ..])
+            .to_owned();
+        let sxz = fields
+            .slice(s![UnifiedFieldType::StressXZ.index(), .., .., ..])
+            .to_owned();
+        let syz = fields
+            .slice(s![UnifiedFieldType::StressYZ.index(), .., .., ..])
+            .to_owned();
 
         // Get medium properties
         let density = medium.density_array();
@@ -685,15 +757,33 @@ impl AcousticWaveModel for ElasticWave {
         new_syz *= dt;
 
         // Update field arrays
-        fields.slice_mut(s![UnifiedFieldType::VelocityX.index(), .., .., ..]).assign(&new_vx);
-        fields.slice_mut(s![UnifiedFieldType::VelocityY.index(), .., .., ..]).assign(&new_vy);
-        fields.slice_mut(s![UnifiedFieldType::VelocityZ.index(), .., .., ..]).assign(&new_vz);
-        fields.slice_mut(s![UnifiedFieldType::StressXX.index(), .., .., ..]).assign(&new_sxx);
-        fields.slice_mut(s![UnifiedFieldType::StressYY.index(), .., .., ..]).assign(&new_syy);
-        fields.slice_mut(s![UnifiedFieldType::StressZZ.index(), .., .., ..]).assign(&new_szz);
-        fields.slice_mut(s![UnifiedFieldType::StressXY.index(), .., .., ..]).assign(&new_sxy);
-        fields.slice_mut(s![UnifiedFieldType::StressXZ.index(), .., .., ..]).assign(&new_sxz);
-        fields.slice_mut(s![UnifiedFieldType::StressYZ.index(), .., .., ..]).assign(&new_syz);
+        fields
+            .slice_mut(s![UnifiedFieldType::VelocityX.index(), .., .., ..])
+            .assign(&new_vx);
+        fields
+            .slice_mut(s![UnifiedFieldType::VelocityY.index(), .., .., ..])
+            .assign(&new_vy);
+        fields
+            .slice_mut(s![UnifiedFieldType::VelocityZ.index(), .., .., ..])
+            .assign(&new_vz);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressXX.index(), .., .., ..])
+            .assign(&new_sxx);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressYY.index(), .., .., ..])
+            .assign(&new_syy);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressZZ.index(), .., .., ..])
+            .assign(&new_szz);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressXY.index(), .., .., ..])
+            .assign(&new_sxy);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressXZ.index(), .., .., ..])
+            .assign(&new_sxz);
+        fields
+            .slice_mut(s![UnifiedFieldType::StressYZ.index(), .., .., ..])
+            .assign(&new_syz);
 
         // Update metrics
         self.metrics.call_count += 1;
@@ -705,20 +795,36 @@ impl AcousticWaveModel for ElasticWave {
         let averages = self.metrics.get_average_times();
         debug!("ElasticWave Performance Report:");
         debug!("  Total calls: {}", self.metrics.call_count);
-        debug!("  Average FFT time: {:.6} ms", averages.get("fft_time").unwrap_or(&0.0) * 1000.0);
-        debug!("  Average stress update time: {:.6} ms", averages.get("stress_update_time").unwrap_or(&0.0) * 1000.0);
-        debug!("  Average velocity update time: {:.6} ms", averages.get("velocity_update_time").unwrap_or(&0.0) * 1000.0);
-        debug!("  Average source time: {:.6} ms", averages.get("source_time").unwrap_or(&0.0) * 1000.0);
-        debug!("  Average total update time: {:.6} ms", averages.get("total_update_time").unwrap_or(&0.0) * 1000.0);
-        debug!("  Memory usage: {} MB", self.metrics.memory_usage / (1024 * 1024));
+        debug!(
+            "  Average FFT time: {:.6} ms",
+            averages.get("fft_time").unwrap_or(&0.0) * 1000.0
+        );
+        debug!(
+            "  Average stress update time: {:.6} ms",
+            averages.get("stress_update_time").unwrap_or(&0.0) * 1000.0
+        );
+        debug!(
+            "  Average velocity update time: {:.6} ms",
+            averages.get("velocity_update_time").unwrap_or(&0.0) * 1000.0
+        );
+        debug!(
+            "  Average source time: {:.6} ms",
+            averages.get("source_time").unwrap_or(&0.0) * 1000.0
+        );
+        debug!(
+            "  Average total update time: {:.6} ms",
+            averages.get("total_update_time").unwrap_or(&0.0) * 1000.0
+        );
+        debug!(
+            "  Memory usage: {} MB",
+            self.metrics.memory_usage / (1024 * 1024)
+        );
     }
 
     fn set_nonlinearity_scaling(&mut self, _scaling: f64) {
         // Not applicable for linear elastic waves
         debug!("Nonlinearity scaling not applicable for linear elastic waves");
     }
-
-
 }
 
 mod tests;

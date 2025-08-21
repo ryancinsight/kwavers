@@ -5,24 +5,20 @@
 //! and multi-field visualization with real-time performance.
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::grid::Grid;
 use crate::gpu::GpuContext;
+use crate::grid::Grid;
 use crate::visualization::{ColorScheme, FieldType, RenderQuality, VisualizationConfig};
 use log::{debug, info, warn};
 use std::sync::Arc;
 
 #[cfg(feature = "gpu-visualization")]
-use {
-    nalgebra::Matrix4,
-    std::collections::HashMap,
-    wgpu::*,
-};
+use {nalgebra::Matrix4, std::collections::HashMap, wgpu::*};
 
 /// GPU-accelerated 3D renderer for scientific visualization
 pub struct Renderer3D {
     gpu_context: Arc<GpuContext>,
     config: VisualizationConfig,
-    
+
     #[cfg(feature = "gpu-visualization")]
     device: Arc<Device>,
     #[cfg(feature = "gpu-visualization")]
@@ -39,7 +35,7 @@ pub struct Renderer3D {
     uniform_buffer: Buffer,
     #[cfg(feature = "gpu-visualization")]
     bind_group: BindGroup,
-    
+
     // Performance tracking
     memory_usage: usize,
     primitive_count: usize,
@@ -84,30 +80,33 @@ impl Renderer3D {
         gpu_context: Arc<GpuContext>,
     ) -> KwaversResult<Self> {
         info!("Initializing GPU-accelerated 3D renderer");
-        
+
         // Check if the advanced visualization feature is enabled
         #[cfg(feature = "gpu-visualization")]
         {
             // GPU visualization implementation - requires WebGPU context
             // Currently provides basic rendering pipeline setup
             warn!("GPU visualization feature is enabled, initializing WebGPU pipeline.");
-            
+
             // Create WebGPU resources
-            
-            
+
             let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
                 dx12_shader_compiler: Default::default(),
                 flags: wgpu::InstanceFlags::default(),
                 gles_minor_version: wgpu::Gles3MinorVersion::default(),
             });
-            
-            let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                force_fallback_adapter: false,
-                compatible_surface: None,
-            })).ok_or(KwaversError::Visualization("Failed to find suitable GPU adapter".to_string()))?;
-            
+
+            let adapter =
+                pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    force_fallback_adapter: false,
+                    compatible_surface: None,
+                }))
+                .ok_or(KwaversError::Visualization(
+                    "Failed to find suitable GPU adapter".to_string(),
+                ))?;
+
             let (device, queue) = pollster::block_on(adapter.request_device(
                 &wgpu::DeviceDescriptor {
                     label: Some("Kwavers Visualization Device"),
@@ -116,24 +115,26 @@ impl Renderer3D {
                     memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
-            )).map_err(|e| KwaversError::Visualization(format!("Failed to create device: {}", e)))?;
-            
+            ))
+            .map_err(|e| KwaversError::Visualization(format!("Failed to create device: {}", e)))?;
+
             let device = Arc::new(device);
             let queue = Arc::new(queue);
-            
+
             // Create dummy shaders
             let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Dummy Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("../../shaders/dummy.wgsl").into()),
             });
-            
+
             // Create dummy render pipeline
-            let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
-            
+            let render_pipeline_layout =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Render Pipeline Layout"),
+                    bind_group_layouts: &[],
+                    push_constant_ranges: &[],
+                });
+
             let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Render Pipeline"),
                 layout: Some(&render_pipeline_layout),
@@ -171,30 +172,32 @@ impl Renderer3D {
                 multiview: None,
                 cache: None,
             });
-            
+
             // Create dummy compute pipeline
-            let compute_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Compute Pipeline Layout"),
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
-            
-            let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Compute Pipeline"),
-                layout: Some(&compute_pipeline_layout),
-                module: &shader,
-                entry_point: "cs_main",
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            });
-            
+            let compute_pipeline_layout =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("Compute Pipeline Layout"),
+                    bind_group_layouts: &[],
+                    push_constant_ranges: &[],
+                });
+
+            let compute_pipeline =
+                device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Compute Pipeline"),
+                    layout: Some(&compute_pipeline_layout),
+                    module: &shader,
+                    entry_point: "cs_main",
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None,
+                });
+
             // Create dummy textures
             let texture_size = wgpu::Extent3d {
                 width: 256,
                 height: 256,
                 depth_or_array_layers: 256,
             };
-            
+
             let color_lut_texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("Color LUT"),
                 size: wgpu::Extent3d {
@@ -209,7 +212,7 @@ impl Renderer3D {
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 view_formats: &[],
             });
-            
+
             // Create uniform buffer
             let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Uniform Buffer"),
@@ -217,12 +220,12 @@ impl Renderer3D {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            
+
             // Create bind group layout and bind group
-            let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Bind Group Layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
+            let bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bind Group Layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
@@ -231,21 +234,18 @@ impl Renderer3D {
                             min_binding_size: None,
                         },
                         count: None,
-                    },
-                ],
-            });
-            
+                    }],
+                });
+
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Bind Group"),
                 layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: uniform_buffer.as_entire_binding(),
-                    },
-                ],
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                }],
             });
-            
+
             return Ok(Self {
                 gpu_context,
                 config: config.clone(),
@@ -261,7 +261,7 @@ impl Renderer3D {
                 primitive_count: 0,
             });
         }
-        
+
         // Fallback for when the advanced visualization feature is not enabled
         #[cfg(not(feature = "gpu-visualization"))]
         Ok(Self {
@@ -271,24 +271,21 @@ impl Renderer3D {
             primitive_count: 0,
         })
     }
-    
+
     /// Render a volume field using GPU acceleration
-    pub async fn render_volume(
-        &mut self,
-        field_type: FieldType,
-        grid: &Grid,
-    ) -> KwaversResult<()> {
+    pub async fn render_volume(&mut self, field_type: FieldType, grid: &Grid) -> KwaversResult<()> {
         #[cfg(feature = "gpu-visualization")]
         {
             debug!("Rendering volume for field type: {:?}", field_type);
-            
+
             // Check if volume texture exists for this field
             if !self.volume_textures.contains_key(&field_type) {
-                return Err(KwaversError::Visualization(
-                    format!("No volume texture found for field type: {:?}", field_type)
-                ));
+                return Err(KwaversError::Visualization(format!(
+                    "No volume texture found for field type: {:?}",
+                    field_type
+                )));
             }
-            
+
             // Update uniforms
             let uniforms = VolumeUniforms {
                 volume_size: [grid.nx as f32, grid.ny as f32, grid.nz as f32],
@@ -298,34 +295,41 @@ impl Renderer3D {
                     RenderQuality::High => 0.005,
                     RenderQuality::Ultra => 0.002,
                 },
-                transparency: if self.config.enable_transparency { 0.5 } else { 1.0 },
+                transparency: if self.config.enable_transparency {
+                    0.5
+                } else {
+                    1.0
+                },
                 ..Default::default()
             };
-            
-            self.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
-            
+
+            self.queue
+                .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
             // Record rendering commands
-            let encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
-                label: Some("Volume Render Encoder"),
-            });
-            
+            let encoder = self
+                .device
+                .create_command_encoder(&CommandEncoderDescriptor {
+                    label: Some("Volume Render Encoder"),
+                });
+
             // Begin render pass (this would typically render to a surface or texture)
             // Update the primitive count for rendering statistics
             self.primitive_count = (grid.nx * grid.ny * grid.nz) / 8; // Approximate voxel count
-            
+
             self.queue.submit(std::iter::once(encoder.finish()));
-            
+
             debug!("Volume rendering complete for {:?}", field_type);
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("GPU visualization not enabled for volume rendering");
         }
-        
+
         Ok(())
     }
-    
+
     /// Render multiple volume fields with transparency blending
     pub async fn render_multi_volume(
         &mut self,
@@ -334,24 +338,27 @@ impl Renderer3D {
     ) -> KwaversResult<()> {
         #[cfg(feature = "gpu-visualization")]
         {
-            info!("Rendering {} volume fields with transparency", field_types.len());
-            
+            info!(
+                "Rendering {} volume fields with transparency",
+                field_types.len()
+            );
+
             for field_type in field_types {
                 self.render_volume(*field_type, grid).await?;
             }
-            
+
             // Update primitive count for all fields
             self.primitive_count = (grid.nx * grid.ny * grid.nz * field_types.len()) / 8;
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("GPU visualization not enabled for multi-volume rendering");
         }
-        
+
         Ok(())
     }
-    
+
     /// Create a volume texture for a specific field type
     pub async fn create_volume_texture(
         &mut self,
@@ -374,31 +381,37 @@ impl Renderer3D {
                 usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
                 view_formats: &[],
             });
-            
+
             // Calculate memory usage
-            let texture_size = dimensions.0 as usize * dimensions.1 as usize * dimensions.2 as usize * 4; // 4 bytes per float
+            let texture_size =
+                dimensions.0 as usize * dimensions.1 as usize * dimensions.2 as usize * 4; // 4 bytes per float
             self.memory_usage += texture_size;
-            
+
             self.volume_textures.insert(field_type, texture);
-            
-            debug!("Created volume texture for {:?}: {}x{}x{} ({} MB)", 
-                   field_type, dimensions.0, dimensions.1, dimensions.2, 
-                   texture_size / (1024 * 1024));
+
+            debug!(
+                "Created volume texture for {:?}: {}x{}x{} ({} MB)",
+                field_type,
+                dimensions.0,
+                dimensions.1,
+                dimensions.2,
+                texture_size / (1024 * 1024)
+            );
         }
-        
+
         Ok(())
     }
-    
+
     /// Get current GPU memory usage
     pub fn get_memory_usage(&self) -> usize {
         self.memory_usage
     }
-    
+
     /// Get current primitive count
     pub fn get_primitive_count(&self) -> usize {
         self.primitive_count
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_render_pipeline(
         device: &Device,
@@ -408,13 +421,13 @@ impl Renderer3D {
             label: Some("Volume Render Shader"),
             source: ShaderSource::Wgsl(include_str!("shaders/volume_render.wgsl").into()),
         });
-        
+
         let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Volume Render Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Volume Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -452,23 +465,23 @@ impl Renderer3D {
             multiview: None,
             cache: None,
         });
-        
+
         Ok(pipeline)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_compute_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Volume Compute Shader"),
             source: ShaderSource::Wgsl(include_str!("shaders/volume_compute.wgsl").into()),
         });
-        
+
         let compute_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Volume Compute Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some("Volume Compute Pipeline"),
             layout: Some(&compute_pipeline_layout),
@@ -477,10 +490,10 @@ impl Renderer3D {
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
-        
+
         Ok(pipeline)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_color_lut_texture(
         device: &Device,
@@ -489,7 +502,7 @@ impl Renderer3D {
     ) -> KwaversResult<Texture> {
         let lut_size = 256;
         let mut lut_data = vec![0.0f32; lut_size * 4]; // RGBA
-        
+
         // Generate color lookup table based on scheme
         for i in 0..lut_size {
             let t = i as f32 / (lut_size - 1) as f32;
@@ -501,16 +514,20 @@ impl Renderer3D {
                 ColorScheme::Grayscale => (t, t, t),
                 ColorScheme::Custom => (t, 0.5, 1.0 - t), // Example custom mapping
             };
-            
+
             lut_data[i * 4] = r;
             lut_data[i * 4 + 1] = g;
             lut_data[i * 4 + 2] = b;
             lut_data[i * 4 + 3] = 1.0; // Alpha
         }
-        
+
         let texture = device.create_texture(&TextureDescriptor {
             label: Some("Color LUT Texture"),
-            size: Extent3d { width: lut_size as u32, height: 1, depth_or_array_layers: 1 },
+            size: Extent3d {
+                width: lut_size as u32,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: TextureDimension::D1,
@@ -518,7 +535,7 @@ impl Renderer3D {
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        
+
         queue.write_texture(
             ImageCopyTexture {
                 texture: &texture,
@@ -532,12 +549,16 @@ impl Renderer3D {
                 bytes_per_row: Some(lut_size as u32 * 16), // 4 floats * 4 bytes
                 rows_per_image: Some(1),
             },
-            Extent3d { width: lut_size as u32, height: 1, depth_or_array_layers: 1 },
+            Extent3d {
+                width: lut_size as u32,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
         );
-        
+
         Ok(texture)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn viridis_colormap(t: f32) -> (f32, f32, f32) {
         // Viridis colormap implementation
@@ -546,7 +567,7 @@ impl Renderer3D {
         let b = (0.329415 + t * (0.531829 + t * (-0.891344 + t * 0.030334))).clamp(0.0, 1.0);
         (r, g, b)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn plasma_colormap(t: f32) -> (f32, f32, f32) {
         // Plasma colormap implementation
@@ -555,7 +576,7 @@ impl Renderer3D {
         let b = (0.527975 + t * (0.291343 + t * (-0.746495 + t * (-0.072650)))).clamp(0.0, 1.0);
         (r, g, b)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn inferno_colormap(t: f32) -> (f32, f32, f32) {
         // Inferno colormap implementation
@@ -564,7 +585,7 @@ impl Renderer3D {
         let b = (0.013866 + t * (0.553582 + t * (-0.318448 + t * (-0.248750)))).clamp(0.0, 1.0);
         (r, g, b)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn turbo_colormap(t: f32) -> (f32, f32, f32) {
         // Turbo colormap implementation

@@ -1,9 +1,9 @@
 // config/simulation.rs
 
 use crate::grid::Grid;
-use crate::medium::Medium; // Added
-use crate::medium::homogeneous::HomogeneousMedium;
 use crate::medium::heterogeneous::tissue::HeterogeneousTissueMedium; // Added
+use crate::medium::homogeneous::HomogeneousMedium;
+use crate::medium::Medium; // Added
 use crate::time::Time;
 use log::{debug, info, warn}; // Added warn
 use serde::{Deserialize, Serialize};
@@ -15,15 +15,15 @@ pub struct MediumConfig {
     /// Density of the medium in kg/m^3
     #[serde(default = "default_medium_density")]
     pub density: f64,
-    
+
     /// Sound speed in the medium in m/s
     #[serde(default = "default_medium_sound_speed")]
     pub sound_speed: f64,
-    
+
     /// Absorption coefficient
     #[serde(default = "default_medium_absorption")]
     pub absorption: f64,
-    
+
     /// Dispersion coefficient
     #[serde(default = "default_medium_dispersion")]
     pub dispersion: f64,
@@ -41,19 +41,19 @@ impl Default for MediumConfig {
 }
 
 fn default_medium_density() -> f64 {
-    1000.0  // Water density
+    1000.0 // Water density
 }
 
 fn default_medium_sound_speed() -> f64 {
-    1500.0  // Water sound speed
+    1500.0 // Water sound speed
 }
 
 fn default_medium_absorption() -> f64 {
-    0.002  // Default absorption
+    0.002 // Default absorption
 }
 
 fn default_medium_dispersion() -> f64 {
-    0.0  // Default dispersion
+    0.0 // Default dispersion
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,7 +84,7 @@ pub struct SimulationConfig {
     pub kspace_alpha: f64, // k-space correction coefficient
     #[serde(default)]
     pub medium_type: Option<String>, // Added for medium selection
-    
+
     /// Medium configuration
     #[serde(default)]
     pub medium: MediumConfig,
@@ -106,10 +106,12 @@ fn default_pml_reflection() -> f64 {
     1e-6
 }
 
-pub fn default_light_wavelength() -> f64 { // Made public
+pub fn default_light_wavelength() -> f64 {
+    // Made public
     500.0
 }
-pub fn default_kspace_padding() -> usize { // Made public
+pub fn default_kspace_padding() -> usize {
+    // Made public
     0
 } // No padding by default
 fn default_kspace_alpha() -> f64 {
@@ -163,7 +165,11 @@ impl SimulationConfig {
         self.initialize_time_with_sound_speed(grid, 1500.0)
     }
 
-    pub fn initialize_time_with_sound_speed(&self, grid: &Grid, sound_speed: f64) -> Result<Time, String> {
+    pub fn initialize_time_with_sound_speed(
+        &self,
+        grid: &Grid,
+        sound_speed: f64,
+    ) -> Result<Time, String> {
         let duration = self.num_cycles / self.frequency;
         let max_dt = grid.cfl_timestep_default(sound_speed);
         let dt = max_dt * 0.95 * self.kspace_alpha; // Adjusted for k-space stability
@@ -193,14 +199,16 @@ impl SimulationConfig {
                 info!("Initializing homogeneous water medium.");
                 Ok(Arc::new(HomogeneousMedium::water(grid)))
             }
-            Some(unknown_type) => {
-                Err(format!("Unknown medium_type in config: {}", unknown_type))
-            }
+            Some(unknown_type) => Err(format!("Unknown medium_type in config: {}", unknown_type)),
         }
     }
 
     /// Initialize time from a medium, using the medium's maximum sound speed for CFL condition
-    pub fn initialize_time_from_medium(&self, grid: &Grid, medium: &dyn crate::medium::Medium) -> Result<Time, String> {
+    pub fn initialize_time_from_medium(
+        &self,
+        grid: &Grid,
+        medium: &dyn crate::medium::Medium,
+    ) -> Result<Time, String> {
         let max_sound_speed = crate::medium::max_sound_speed(medium);
         self.initialize_time_with_sound_speed(grid, max_sound_speed)
     }

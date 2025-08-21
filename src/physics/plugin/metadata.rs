@@ -27,7 +27,7 @@ pub struct PluginMetadata {
 pub trait PluginConfig: Debug + Send + Sync {
     /// Validate the configuration
     fn validate(&self) -> ValidationResult;
-    
+
     /// Clone the configuration as a boxed Any for type erasure
     fn clone_boxed(&self) -> Box<dyn Any + Send + Sync>;
 }

@@ -6,8 +6,8 @@
 use crate::error::KwaversResult;
 use crate::gpu::GpuContext;
 // Note: Other imports removed as they're not currently used in this implementation
-use std::time::Instant;
 use std::collections::HashMap;
+use std::time::Instant;
 
 /// GPU benchmark suite
 pub struct GpuBenchmarkSuite {
@@ -19,13 +19,13 @@ pub struct GpuBenchmarkSuite {
 pub trait GpuBenchmark {
     /// Get benchmark name
     fn name(&self) -> &str;
-    
+
     /// Run the benchmark
     fn run(&self, context: &GpuContext) -> KwaversResult<BenchmarkResult>;
-    
+
     /// Get benchmark description
     fn description(&self) -> &str;
-    
+
     /// Get expected performance targets
     fn targets(&self) -> PerformanceTargets;
 }
@@ -103,24 +103,30 @@ impl GpuBenchmarkSuite {
         let mut failed = 0;
 
         for benchmark in &self.benchmarks {
-log::info!("Running benchmark: {}", benchmark.name());
-            
-match benchmark.run(context) {
-    Ok(result) => {
-        if result.passed {
-            passed += 1;
-            log::info!("  ✅ PASSED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
-        } else {
-            failed += 1;
-            log::warn!("  ❌ FAILED: {:.2} M elements/sec", result.throughput_elements_per_sec / 1e6);
-        }
-        self.results.insert(result.name.clone(), result);
-    }
-    Err(e) => {
-        failed += 1;
-        log::error!("  ❌ ERROR: {}", e);
-    }
-}
+            log::info!("Running benchmark: {}", benchmark.name());
+
+            match benchmark.run(context) {
+                Ok(result) => {
+                    if result.passed {
+                        passed += 1;
+                        log::info!(
+                            "  ✅ PASSED: {:.2} M elements/sec",
+                            result.throughput_elements_per_sec / 1e6
+                        );
+                    } else {
+                        failed += 1;
+                        log::warn!(
+                            "  ❌ FAILED: {:.2} M elements/sec",
+                            result.throughput_elements_per_sec / 1e6
+                        );
+                    }
+                    self.results.insert(result.name.clone(), result);
+                }
+                Err(e) => {
+                    failed += 1;
+                    log::error!("  ❌ ERROR: {}", e);
+                }
+            }
         }
 
         let total_time = start_time.elapsed().as_secs_f64();
@@ -151,17 +157,46 @@ match benchmark.run(context) {
 
         report.push_str(&format!("## Summary\n"));
         report.push_str(&format!("- Total benchmarks: {}\n", total));
-report.push_str(&format!("- Passed: {} ({:.1}%)\n", passed, if total > 0 { (passed as f64 / total as f64) * 100.0 } else { 0.0 }));
-report.push_str(&format!("- Failed: {} ({:.1}%)\n\n", failed, if total > 0 { (failed as f64 / total as f64) * 100.0 } else { 0.0 }));
+        report.push_str(&format!(
+            "- Passed: {} ({:.1}%)\n",
+            passed,
+            if total > 0 {
+                (passed as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            }
+        ));
+        report.push_str(&format!(
+            "- Failed: {} ({:.1}%)\n\n",
+            failed,
+            if total > 0 {
+                (failed as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            }
+        ));
 
         // Detailed results
         report.push_str("## Detailed Results\n\n");
         for result in self.results.values() {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             report.push_str(&format!("### {} - {}\n", result.name, status));
-            report.push_str(&format!("- Throughput: {:.2} M elements/sec\n", result.throughput_elements_per_sec / 1e6));
-            report.push_str(&format!("- Memory Bandwidth: {:.1} GB/s\n", result.memory_bandwidth_gb_s));
-            report.push_str(&format!("- GPU Utilization: {:.1}%\n", result.gpu_utilization * 100.0));
+            report.push_str(&format!(
+                "- Throughput: {:.2} M elements/sec\n",
+                result.throughput_elements_per_sec / 1e6
+            ));
+            report.push_str(&format!(
+                "- Memory Bandwidth: {:.1} GB/s\n",
+                result.memory_bandwidth_gb_s
+            ));
+            report.push_str(&format!(
+                "- GPU Utilization: {:.1}%\n",
+                result.gpu_utilization * 100.0
+            ));
             report.push_str(&format!("- Duration: {:.2} ms\n\n", result.duration_ms));
         }
 
@@ -199,10 +234,13 @@ impl BenchmarkSummary {
         if self.results.is_empty() {
             0.0
         } else {
-            let avg_throughput = self.results.values()
+            let avg_throughput = self
+                .results
+                .values()
                 .map(|r| r.throughput_elements_per_sec)
-                .sum::<f64>() / self.results.len() as f64;
-            
+                .sum::<f64>()
+                / self.results.len() as f64;
+
             // Score based on Phase 9 target (17M elements/sec)
             // Values > 1.0 indicate exceeding the target
             avg_throughput / 17_000_000.0
@@ -243,12 +281,12 @@ impl GpuBenchmark for AcousticWaveBenchmark {
 
     fn run(&self, _context: &GpuContext) -> KwaversResult<BenchmarkResult> {
         let start_time = Instant::now();
-        
+
         // Simulate acoustic wave benchmark
         let mut total_elements = 0;
         for &(nx, ny, nz) in &self.grid_sizes {
             total_elements += nx * ny * nz;
-            
+
             // Simulate kernel execution time
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
@@ -256,18 +294,18 @@ impl GpuBenchmark for AcousticWaveBenchmark {
         let duration_ms = start_time.elapsed().as_secs_f64() * 1000.0;
         let throughput = total_elements as f64 / (duration_ms / 1000.0);
         let memory_bandwidth = (total_elements * 32) as f64 / (duration_ms / 1000.0) / 1e9; // 32 bytes per element
-        
+
         let targets = self.targets();
-        let passed = throughput >= targets.min_throughput_elements_per_sec &&
-                    memory_bandwidth >= targets.min_memory_bandwidth_gb_s &&
-                    duration_ms <= targets.max_duration_ms;
+        let passed = throughput >= targets.min_throughput_elements_per_sec
+            && memory_bandwidth >= targets.min_memory_bandwidth_gb_s
+            && duration_ms <= targets.max_duration_ms;
 
         Ok(BenchmarkResult {
             name: self.name().to_string(),
             duration_ms,
             throughput_elements_per_sec: throughput,
             memory_bandwidth_gb_s: memory_bandwidth,
-            gpu_utilization: 0.85, // Simulated
+            gpu_utilization: 0.85,    // Simulated
             memory_utilization: 0.75, // Simulated
             passed,
             details: HashMap::new(),
@@ -417,9 +455,11 @@ mod tests {
     fn test_performance_targets() {
         let standard = PerformanceTargets::phase9_standard();
         assert_eq!(standard.min_throughput_elements_per_sec, 17_000_000.0);
-        
+
         let aggressive = PerformanceTargets::phase9_aggressive();
-        assert!(aggressive.min_throughput_elements_per_sec > standard.min_throughput_elements_per_sec);
+        assert!(
+            aggressive.min_throughput_elements_per_sec > standard.min_throughput_elements_per_sec
+        );
     }
 
     #[test]
@@ -442,16 +482,19 @@ mod tests {
     #[test]
     fn test_benchmark_summary() {
         let mut results = HashMap::new();
-        results.insert("test1".to_string(), BenchmarkResult {
-            name: "test1".to_string(),
-            duration_ms: 10.0,
-            throughput_elements_per_sec: 20_000_000.0,
-            memory_bandwidth_gb_s: 450.0,
-            gpu_utilization: 0.85,
-            memory_utilization: 0.75,
-            passed: true,
-            details: HashMap::new(),
-        });
+        results.insert(
+            "test1".to_string(),
+            BenchmarkResult {
+                name: "test1".to_string(),
+                duration_ms: 10.0,
+                throughput_elements_per_sec: 20_000_000.0,
+                memory_bandwidth_gb_s: 450.0,
+                gpu_utilization: 0.85,
+                memory_utilization: 0.75,
+                passed: true,
+                details: HashMap::new(),
+            },
+        );
 
         let summary = BenchmarkSummary {
             total_benchmarks: 1,

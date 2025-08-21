@@ -1,10 +1,13 @@
 use crate::grid::Grid;
-use crate::medium::{Medium, absorption::{TissueType, tissue_specific}};
-use ndarray::{Array3, Axis, Zip}; // Restored Axis
+use crate::medium::{
+    absorption::{tissue_specific, TissueType},
+    Medium,
+};
 use log::{debug, info}; // Removed trace
+use ndarray::{Array3, Axis, Zip}; // Restored Axis
 use std::sync::OnceLock;
 // Removed std::sync::Arc
-use crate::error::{KwaversResult, ConfigError};
+use crate::error::{ConfigError, KwaversResult};
 
 /// Configuration for setting tissue in a specific region
 /// Follows SOLID principles by grouping related parameters
@@ -40,7 +43,7 @@ impl TissueRegion {
             z_max,
         }
     }
-    
+
     /// Validate the region bounds
     /// Follows SOLID Single Responsibility Principle
     pub fn validate(&self) -> KwaversResult<()> {
@@ -49,25 +52,28 @@ impl TissueRegion {
                 parameter: "x_bounds".to_string(),
                 value: format!("{} to {}", self.x_min, self.x_max),
                 constraint: "x_min must be < x_max".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         if self.y_min >= self.y_max {
             return Err(ConfigError::InvalidValue {
                 parameter: "y_bounds".to_string(),
                 value: format!("{} to {}", self.y_min, self.y_max),
                 constraint: "y_min must be < y_max".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         if self.z_min >= self.z_max {
             return Err(ConfigError::InvalidValue {
                 parameter: "z_bounds".to_string(),
                 value: format!("{} to {}", self.z_min, self.z_max),
                 constraint: "z_min must be < z_max".to_string(),
-            }.into());
+            }
+            .into());
         }
-        
+
         Ok(())
     }
 }
@@ -113,8 +119,11 @@ impl HeterogeneousTissueMedium {
         let bubble_radius = Array3::from_elem(dims, 0.0);
         let bubble_velocity = Array3::zeros(dims);
 
-        info!("Created heterogeneous tissue medium with dimensions {:?}", dims);
-        
+        info!(
+            "Created heterogeneous tissue medium with dimensions {:?}",
+            dims
+        );
+
         Self {
             tissue_map,
             temperature,
@@ -137,31 +146,35 @@ impl HeterogeneousTissueMedium {
     pub fn new_layered(grid: &Grid) -> Self {
         let reference_frequency = 1.0e6; // 1 MHz is typical for medical ultrasound
         let mut medium = Self::new(grid, reference_frequency);
-        
+
         // Define layers: (tissue type, thickness in meters)
         let layers = vec![
-            (TissueType::Skin, 0.002),           // 2mm of skin
-            (TissueType::Fat, 0.010),            // 10mm of fat
-            (TissueType::Muscle, 0.020),         // 20mm of muscle
-            (TissueType::Bone, 0.015),           // 15mm of bone
-            (TissueType::Muscle, 0.020),         // 20mm of muscle on other side
-            (TissueType::Fat, 0.010),            // 10mm of fat
-            (TissueType::Skin, 0.002),           // 2mm of skin
+            (TissueType::Skin, 0.002),   // 2mm of skin
+            (TissueType::Fat, 0.010),    // 10mm of fat
+            (TissueType::Muscle, 0.020), // 20mm of muscle
+            (TissueType::Bone, 0.015),   // 15mm of bone
+            (TissueType::Muscle, 0.020), // 20mm of muscle on other side
+            (TissueType::Fat, 0.010),    // 10mm of fat
+            (TissueType::Skin, 0.002),   // 2mm of skin
         ];
-        
+
         // Create layers along x-axis starting at position 0.01
         medium.create_layered_model(&layers, Axis(0), 0.01, grid);
-        
+
         info!("Created layered tissue medium with {} layers", layers.len());
-        
+
         medium
     }
 
     /// Set tissue type in a specific region using configuration struct
     /// Follows SOLID principles by reducing parameter coupling
-    pub fn set_tissue_in_region(&mut self, region: &TissueRegion, grid: &Grid) -> KwaversResult<()> {
+    pub fn set_tissue_in_region(
+        &mut self,
+        region: &TissueRegion,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
         region.validate()?;
-        
+
         // Calculate grid indices for the region
         let i_min = ((region.x_min / grid.dx).floor() as usize).min(grid.nx - 1);
         let i_max = (((region.x_max / grid.dx).floor() as usize) + 1).min(grid.nx);
@@ -180,23 +193,23 @@ impl HeterogeneousTissueMedium {
             for j in j_min..j_max.min(self.tissue_map.len_of(ndarray::Axis(1))) {
                 for k in k_min..k_max.min(self.tissue_map.len_of(ndarray::Axis(2))) {
                     self.tissue_map[[i, j, k]] = region.tissue_type;
-                    
+
                     // DO NOT initialize caches here! This would poison them with zeros.
                     // The caches will be properly populated on first access via get_or_init.
-                    
+
                     // Update thermal properties - use a default body temperature since it's not in props
                     self.temperature[[i, j, k]] = 310.15; // Default body temperature in Kelvin (37°C)
                 }
             }
         }
-        
+
         // ALWAYS clear cached arrays after modification to prevent stale data
         // This ensures caches are invalidated even if the region was out of bounds
         self.invalidate_caches();
-        
+
         Ok(())
     }
-    
+
     /// Clear all cached property arrays to force recomputation
     /// This is needed when the tissue map is modified
     fn invalidate_caches(&mut self) {
@@ -210,7 +223,6 @@ impl HeterogeneousTissueMedium {
         self.lame_lambda_array = OnceLock::new();
         self.lame_mu_array = OnceLock::new();
     }
-
 
     /// Set tissue type for a spherical region
     pub fn set_tissue_in_sphere(
@@ -243,7 +255,7 @@ impl HeterogeneousTissueMedium {
                 *cell = tissue_type;
             }
         });
-        
+
         // Clear cached arrays
         self.invalidate_caches();
     }
@@ -252,8 +264,8 @@ impl HeterogeneousTissueMedium {
     pub fn create_layered_model(
         &mut self,
         layers: &[(TissueType, f64)], // (tissue type, thickness in m)
-        direction: Axis, // Direction of layering (0=x, 1=y, 2=z)
-        start_position: f64, // Starting position of first layer
+        direction: Axis,              // Direction of layering (0=x, 1=y, 2=z)
+        start_position: f64,          // Starting position of first layer
         grid: &Grid,
     ) {
         let dir_idx = direction.0;
@@ -280,9 +292,15 @@ impl HeterogeneousTissueMedium {
         // Create layers
         for (idx, (tissue, thickness)) in layers.iter().enumerate() {
             let end_pos = current_pos + thickness;
-            
-            debug!("Layer {}: {:?}, thickness {:.3}mm, position {:.3}-{:.3}m",
-                   idx, tissue, thickness * 1000.0, current_pos, end_pos);
+
+            debug!(
+                "Layer {}: {:?}, thickness {:.3}mm, position {:.3}-{:.3}m",
+                idx,
+                tissue,
+                thickness * 1000.0,
+                current_pos,
+                end_pos
+            );
 
             Zip::indexed(&mut self.tissue_map).for_each(|(i, j, k), cell| {
                 let pos = match dir_idx {
@@ -303,89 +321,122 @@ impl HeterogeneousTissueMedium {
 
             current_pos = end_pos;
         }
-        
+
         // Clear cached arrays
         self.invalidate_caches();
     }
 
     /// Update the pressure amplitude field for nonlinear absorption calculations
     pub fn update_pressure_amplitude(&mut self, pressure: &Array3<f64>) {
-        if self.pressure_amplitude.is_none() || 
-           self.pressure_amplitude.as_ref().unwrap().dim() != pressure.dim() {
+        if self.pressure_amplitude.is_none()
+            || self.pressure_amplitude.as_ref().unwrap().dim() != pressure.dim()
+        {
             self.pressure_amplitude = Some(pressure.clone());
         } else {
             self.pressure_amplitude.as_mut().unwrap().assign(pressure);
         }
     }
-    
 }
 
 impl Medium for HeterogeneousTissueMedium {
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             // Values are now expected to be directly in props from tissue_specific.rs
             props.lame_lambda
         } else {
-            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().lame_lambda
+            tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap()
+                .lame_lambda
         }
     }
 
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             // Values are now expected to be directly in props from tissue_specific.rs
-             props.lame_mu
+            props.lame_mu
         } else {
-            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().lame_mu
+            tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap()
+                .lame_mu
         }
     }
 
     fn lame_lambda_array(&self) -> Array3<f64> {
-        self.lame_lambda_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+        self.lame_lambda_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.lame_lambda; // EXPECTING THIS FIELD
                 });
-                *val = props.lame_lambda; // EXPECTING THIS FIELD
-            });
-            arr
-        }).clone()
+                arr
+            })
+            .clone()
     }
 
     fn lame_mu_array(&self) -> Array3<f64> {
-        self.lame_mu_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+        self.lame_mu_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.lame_mu; // EXPECTING THIS FIELD
                 });
-                *val = props.lame_mu; // EXPECTING THIS FIELD
-            });
-            arr
-        }).clone()
+                arr
+            })
+            .clone()
     }
 
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             // Direct lookup without triggering full array computation
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.density
         } else {
             // Default to soft tissue if out of bounds
-            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().density
+            tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap()
+                .density
         }
     }
 
@@ -393,26 +444,39 @@ impl Medium for HeterogeneousTissueMedium {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             // Direct lookup without triggering full array computation
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.sound_speed
         } else {
             // Default to soft tissue if out of bounds
-            tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap().sound_speed
+            tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap()
+                .sound_speed
         }
     }
 
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.viscosity
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.viscosity
         }
     }
@@ -420,13 +484,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.surface_tension
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.surface_tension
         }
     }
@@ -447,13 +517,19 @@ impl Medium for HeterogeneousTissueMedium {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             // Use database lookup for specific heat values
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.specific_heat
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.specific_heat
         }
     }
@@ -462,13 +538,19 @@ impl Medium for HeterogeneousTissueMedium {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             // Use database lookup for thermal conductivity values
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.thermal_conductivity
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.thermal_conductivity
         }
     }
@@ -477,22 +559,20 @@ impl Medium for HeterogeneousTissueMedium {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             let _temperature = self.temperature[indices]; // Keep for future use
-            
+
             // Get pressure amplitude for nonlinear effects, if available
             let pressure = self.pressure_amplitude.as_ref().map(|p| p[indices]);
-            
+
             // Use the tissue-specific absorption model WITH pressure for nonlinear effects
             crate::medium::absorption::tissue_specific_absorption_nonlinear(
-                tissue,
-                frequency,
-                pressure  // Pass the pressure for nonlinear absorption
+                tissue, frequency, pressure, // Pass the pressure for nonlinear absorption
             )
         } else {
             // Default to soft tissue if out of bounds
             crate::medium::absorption::tissue_specific_absorption_nonlinear(
                 TissueType::SoftTissue,
                 frequency,
-                None  // No pressure data for out-of-bounds
+                None, // No pressure data for out-of-bounds
             )
         }
     }
@@ -500,13 +580,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.thermal_expansion
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.thermal_expansion
         }
     }
@@ -514,13 +600,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.gas_diffusion_coefficient
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.gas_diffusion_coefficient
         }
     }
@@ -528,13 +620,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.thermal_diffusivity
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.thermal_diffusivity
         }
     }
@@ -542,13 +640,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
-            let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-            });
+            let props = tissue_specific::tissue_database()
+                .get(&tissue)
+                .unwrap_or_else(|| {
+                    tissue_specific::tissue_database()
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
+                });
             props.b_a
         } else {
             // Default to soft tissue if out of bounds
-            let soft_tissue = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+            let soft_tissue = tissue_specific::tissue_database()
+                .get(&TissueType::SoftTissue)
+                .unwrap();
             soft_tissue.b_a
         }
     }
@@ -569,7 +673,8 @@ impl Medium for HeterogeneousTissueMedium {
 
     /// Get the tissue type at a specific position
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
-        grid.position_to_indices(x, y, z).map(|indices| self.tissue_map[indices])
+        grid.position_to_indices(x, y, z)
+            .map(|indices| self.tissue_map[indices])
     }
 
     fn update_temperature(&mut self, temperature: &Array3<f64>) {
@@ -599,15 +704,19 @@ impl Medium for HeterogeneousTissueMedium {
     fn density_array(&self) -> &Array3<f64> {
         self.density_array.get_or_init(|| {
             let mut density = Array3::zeros(self.tissue_map.dim());
-            
+
             Zip::indexed(&mut density).for_each(|(i, j, k), d| {
                 let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-                });
+                let props = tissue_specific::tissue_database()
+                    .get(&tissue)
+                    .unwrap_or_else(|| {
+                        tissue_specific::tissue_database()
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                 *d = props.density;
             });
-            
+
             density
         })
     }
@@ -615,59 +724,81 @@ impl Medium for HeterogeneousTissueMedium {
     fn sound_speed_array(&self) -> &Array3<f64> {
         self.sound_speed_array.get_or_init(|| {
             let mut speed = Array3::zeros(self.tissue_map.dim());
-            
+
             Zip::indexed(&mut speed).for_each(|(i, j, k), s| {
                 let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
-                });
+                let props = tissue_specific::tissue_database()
+                    .get(&tissue)
+                    .unwrap_or_else(|| {
+                        tissue_specific::tissue_database()
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                 *s = props.sound_speed;
             });
-            
+
             speed
         })
     }
 
     fn shear_sound_speed_array(&self) -> Array3<f64> {
-        self.shear_sound_speed_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+        self.shear_sound_speed_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.shear_sound_speed;
                 });
-                *val = props.shear_sound_speed;
-            });
-            arr
-        }).clone()
+                arr
+            })
+            .clone()
     }
 
     fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
-        self.shear_viscosity_coeff_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+        self.shear_viscosity_coeff_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.shear_viscosity_coeff;
                 });
-                *val = props.shear_viscosity_coeff;
-            });
-            arr
-        }).clone()
+                arr
+            })
+            .clone()
     }
 
     fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
-        self.bulk_viscosity_coeff_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database().get(&tissue).unwrap_or_else(|| {
-                    tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap()
+        self.bulk_viscosity_coeff_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.bulk_viscosity_coeff;
                 });
-                *val = props.bulk_viscosity_coeff;
-            });
-            arr
-        }).clone()
+                arr
+            })
+            .clone()
     }
 }
 
@@ -687,8 +818,14 @@ mod tests {
         let grid = create_test_grid_ht(10, 10, 10);
         let medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 
-        assert!(medium.tissue_map.iter().all(|&t| t == TissueType::SoftTissue));
-        assert!(medium.temperature.iter().all(|&t| (t - 310.15).abs() < 1e-9));
+        assert!(medium
+            .tissue_map
+            .iter()
+            .all(|&t| t == TissueType::SoftTissue));
+        assert!(medium
+            .temperature
+            .iter()
+            .all(|&t| (t - 310.15).abs() < 1e-9));
         assert_eq!(medium.reference_frequency, 1e6);
         assert!(medium.density_array.get().is_none()); // Check caches are initially empty
         assert!(medium.sound_speed_array.get().is_none());
@@ -705,40 +842,51 @@ mod tests {
         let bone_region = TissueRegion::new(TissueType::Bone, 0.002, 0.005, 0.0, 0.001, 0.0, 0.001);
         let _ = medium.set_tissue_in_region(&bone_region, &grid);
 
-        let bone_props = tissue_specific::tissue_database().get(&TissueType::Bone).unwrap();
-        let soft_tissue_props = tissue_specific::tissue_database().get(&TissueType::SoftTissue).unwrap();
+        let bone_props = tissue_specific::tissue_database()
+            .get(&TissueType::Bone)
+            .unwrap();
+        let soft_tissue_props = tissue_specific::tissue_database()
+            .get(&TissueType::SoftTissue)
+            .unwrap();
 
         // Check point in bone region
-        assert_eq!(medium.lame_lambda(0.003, 0.0, 0.0, &grid), bone_props.lame_lambda);
+        assert_eq!(
+            medium.lame_lambda(0.003, 0.0, 0.0, &grid),
+            bone_props.lame_lambda
+        );
         assert_eq!(medium.lame_mu(0.003, 0.0, 0.0, &grid), bone_props.lame_mu);
         let expected_cs_bone = bone_props.shear_sound_speed; // Use direct value from props
         assert!((medium.shear_wave_speed(0.003, 0.0, 0.0, &grid) - expected_cs_bone).abs() < 1e-6);
 
         // Check point in soft tissue region
-        assert_eq!(medium.lame_lambda(0.000, 0.0, 0.0, &grid), soft_tissue_props.lame_lambda);
-        assert_eq!(medium.lame_mu(0.000, 0.0, 0.0, &grid), soft_tissue_props.lame_mu);
+        assert_eq!(
+            medium.lame_lambda(0.000, 0.0, 0.0, &grid),
+            soft_tissue_props.lame_lambda
+        );
+        assert_eq!(
+            medium.lame_mu(0.000, 0.0, 0.0, &grid),
+            soft_tissue_props.lame_mu
+        );
 
         // Check array versions
         let lambda_arr = medium.lame_lambda_array();
         let mu_arr = medium.lame_mu_array();
         let cs_arr_trait = medium.shear_sound_speed_array(); // Uses default from trait
 
-
-
-        assert_eq!(lambda_arr[[0,0,0]], soft_tissue_props.lame_lambda);
-        assert_eq!(lambda_arr[[3,0,0]], bone_props.lame_lambda);
-        assert_eq!(mu_arr[[0,0,0]], soft_tissue_props.lame_mu);
-        assert_eq!(mu_arr[[3,0,0]], bone_props.lame_mu);
+        assert_eq!(lambda_arr[[0, 0, 0]], soft_tissue_props.lame_lambda);
+        assert_eq!(lambda_arr[[3, 0, 0]], bone_props.lame_lambda);
+        assert_eq!(mu_arr[[0, 0, 0]], soft_tissue_props.lame_mu);
+        assert_eq!(mu_arr[[3, 0, 0]], bone_props.lame_mu);
 
         let expected_cs_soft_tissue_arr = soft_tissue_props.shear_sound_speed; // Use direct value
-        assert!((cs_arr_trait[[0,0,0]] - expected_cs_soft_tissue_arr).abs() < 1e-6);
+        assert!((cs_arr_trait[[0, 0, 0]] - expected_cs_soft_tissue_arr).abs() < 1e-6);
         // expected_cs_bone was already changed above to use props.shear_sound_speed
-        assert!((cs_arr_trait[[3,0,0]] - expected_cs_bone).abs() < 1e-6);
+        assert!((cs_arr_trait[[3, 0, 0]] - expected_cs_bone).abs() < 1e-6);
     }
 
     #[test]
     fn test_clear_caches_heterogeneous() {
-        let grid = create_test_grid_ht(5,5,5);
+        let grid = create_test_grid_ht(5, 5, 5);
         let mut medium = HeterogeneousTissueMedium::new(&grid, 1e6);
 
         // Populate caches

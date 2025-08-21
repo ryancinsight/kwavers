@@ -1,8 +1,8 @@
 //! Transducer Design Module
-//! 
+//!
 //! Comprehensive transducer design parameters including element size, kerf,
 //! bandwidth, impedance matching, and coupling considerations.
-//! 
+//!
 //! References:
 //! - Szabo (2014): "Diagnostic Ultrasound Imaging: Inside Out"
 //! - Shung (2015): "Diagnostic Ultrasound: Imaging and Blood Flow Measurements"
@@ -10,7 +10,7 @@
 //! - Kino (1987): "Acoustic Waves: Devices, Imaging, and Analog Signal Processing"
 //! - Hunt et al. (1983): "Ultrasound transducers for pulse-echo medical imaging"
 
-use crate::error::{KwaversError, KwaversResult, ConfigError};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -90,7 +90,7 @@ impl ElementGeometry {
                 constraint: "Must be positive".to_string(),
             }));
         }
-        
+
         if kerf < 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "kerf".to_string(),
@@ -98,7 +98,7 @@ impl ElementGeometry {
                 constraint: "Cannot be negative".to_string(),
             }));
         }
-        
+
         // Check kerf ratio
         let kerf_ratio = kerf / width;
         if kerf_ratio < MIN_KERF_RATIO {
@@ -108,7 +108,7 @@ impl ElementGeometry {
                 constraint: format!("Must be >= {:.3}", MIN_KERF_RATIO),
             }));
         }
-        
+
         if kerf_ratio > MAX_KERF_RATIO {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "kerf_ratio".to_string(),
@@ -116,18 +116,21 @@ impl ElementGeometry {
                 constraint: format!("must be <= {:.3}", MAX_KERF_RATIO),
             }));
         }
-        
+
         let aspect_ratio = width / thickness;
-        
+
         // Check aspect ratio for lateral mode suppression
         if aspect_ratio < MIN_ASPECT_RATIO || aspect_ratio > MAX_ASPECT_RATIO {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "aspect_ratio".to_string(),
                 value: format!("{:.1}", aspect_ratio),
-                constraint: format!("must be in range [{:.1}, {:.1}]", MIN_ASPECT_RATIO, MAX_ASPECT_RATIO),
+                constraint: format!(
+                    "must be in range [{:.1}, {:.1}]",
+                    MIN_ASPECT_RATIO, MAX_ASPECT_RATIO
+                ),
             }));
         }
-        
+
         Ok(Self {
             width,
             height,
@@ -139,20 +142,20 @@ impl ElementGeometry {
             volume: width * height * thickness,
         })
     }
-    
+
     /// Calculate element capacitance (Farads)
     pub fn calculate_capacitance(&self, permittivity: f64) -> f64 {
         // C = ε₀ * εᵣ * A / t
         const EPSILON_0: f64 = 8.854e-12; // F/m
         EPSILON_0 * permittivity * self.area / self.thickness
     }
-    
+
     /// Calculate lateral mode frequency
     pub fn calculate_lateral_mode_frequency(&self, sound_speed: f64) -> f64 {
         // Lateral resonance frequency
         sound_speed / (2.0 * self.width)
     }
-    
+
     /// Calculate thickness mode frequency (fundamental)
     pub fn calculate_thickness_mode_frequency(&self, sound_speed: f64) -> f64 {
         // Thickness resonance frequency
@@ -191,49 +194,48 @@ impl FrequencyResponse {
         num_points: usize,
     ) -> KwaversResult<Self> {
         let fc = material.sound_speed / (2.0 * geometry.thickness);
-        
+
         // Frequency range (0.1fc to 2fc)
         let frequencies = Array1::linspace(0.1 * fc, 2.0 * fc, num_points);
         let mut magnitude = Array1::zeros(num_points);
         let mut phase = Array1::zeros(num_points);
-        
+
         // Calculate response at each frequency
         for (i, &f) in frequencies.iter().enumerate() {
-            let response = Self::calculate_klm_response(
-                f, fc, geometry, material, backing, matching
-            );
+            let response =
+                Self::calculate_klm_response(f, fc, geometry, material, backing, matching);
             magnitude[i] = 20.0 * response.norm().log10();
             phase[i] = response.arg();
         }
-        
+
         // Find -6dB points
         let max_mag = magnitude.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let threshold = max_mag + BANDWIDTH_THRESHOLD_DB;
-        
+
         let mut lower_idx = 0;
         let mut upper_idx = num_points - 1;
-        
+
         for (i, &mag) in magnitude.iter().enumerate() {
             if mag >= threshold {
                 lower_idx = i;
                 break;
             }
         }
-        
+
         for (i, &mag) in magnitude.iter().rev().enumerate() {
             if mag >= threshold {
                 upper_idx = num_points - 1 - i;
                 break;
             }
         }
-        
+
         let lower_frequency = frequencies[lower_idx];
         let upper_frequency = frequencies[upper_idx];
         let bandwidth = upper_frequency - lower_frequency;
         let center_frequency = (lower_frequency + upper_frequency) / 2.0;
         let fractional_bandwidth = 100.0 * bandwidth / center_frequency;
         let quality_factor = center_frequency / bandwidth;
-        
+
         Ok(Self {
             center_frequency,
             lower_frequency,
@@ -245,7 +247,7 @@ impl FrequencyResponse {
             phase,
         })
     }
-    
+
     /// Calculate KLM model response at a frequency
     fn calculate_klm_response(
         f: f64,
@@ -257,37 +259,35 @@ impl FrequencyResponse {
     ) -> Complex64 {
         let omega = 2.0 * PI * f;
         let k = omega / material.sound_speed;
-        
+
         // Acoustic impedances
         let z_piezo = material.acoustic_impedance;
         let z_back = backing.acoustic_impedance;
         let z_match = matching.acoustic_impedance;
         let z_load = TISSUE_IMPEDANCE;
-        
+
         // Transmission line model
         let gamma = Complex64::new(0.0, k * geometry.thickness);
-        
+
         // Input impedance at backing interface
         let z_in_back = z_back;
-        
+
         // Transform through piezo layer
-        let z_in_front = z_piezo * (z_in_back + z_piezo * gamma.tanh()) /
-                        (z_piezo + z_in_back * gamma.tanh());
-        
+        let z_in_front =
+            z_piezo * (z_in_back + z_piezo * gamma.tanh()) / (z_piezo + z_in_back * gamma.tanh());
+
         // Through matching layer
         let gamma_match = Complex64::new(0.0, k * matching.thickness);
-        let z_in_match = z_match * (z_load + z_match * gamma_match.tanh()) /
-                        (z_match + z_load * gamma_match.tanh());
-        
+        let z_in_match = z_match * (z_load + z_match * gamma_match.tanh())
+            / (z_match + z_load * gamma_match.tanh());
+
         // Total transfer function
         let h = 2.0 * z_load / (z_in_front + z_in_match);
-        
+
         // Add resonance effects
-        let resonance = 1.0 / Complex64::new(
-            1.0 - (f / fc).powi(2),
-            f / (fc * material.mechanical_q)
-        );
-        
+        let resonance =
+            1.0 / Complex64::new(1.0 - (f / fc).powi(2), f / (fc * material.mechanical_q));
+
         h * resonance
     }
 }
@@ -343,7 +343,7 @@ impl PiezoMaterial {
             loss_tangent: 0.02,
         }
     }
-    
+
     /// Create standard PZT-4 material
     pub fn pzt_4() -> Self {
         Self {
@@ -359,7 +359,7 @@ impl PiezoMaterial {
             loss_tangent: 0.004,
         }
     }
-    
+
     /// Create PVDF polymer
     pub fn pvdf() -> Self {
         Self {
@@ -375,7 +375,7 @@ impl PiezoMaterial {
             loss_tangent: 0.18,
         }
     }
-    
+
     /// Create PMN-PT single crystal
     pub fn pmn_pt() -> Self {
         Self {
@@ -410,10 +410,10 @@ pub struct BackingLayer {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BackingMaterial {
-    Epoxy,           // Low impedance
-    TungstenEpoxy,   // High impedance
-    Air,             // Air backing
-    Composite,       // Composite backing
+    Epoxy,         // Low impedance
+    TungstenEpoxy, // High impedance
+    Air,           // Air backing
+    Composite,     // Composite backing
 }
 
 impl BackingLayer {
@@ -427,7 +427,7 @@ impl BackingLayer {
             has_scatterers: true,
         }
     }
-    
+
     /// Create air backing for high Q
     pub fn air_backed() -> Self {
         Self {
@@ -458,14 +458,14 @@ impl MatchingLayer {
     pub fn quarter_wave(frequency: f64, z_piezo: f64, z_load: f64) -> Self {
         // Optimal impedance for single layer: Z = sqrt(Z_piezo * Z_load)
         let acoustic_impedance = (z_piezo * z_load).sqrt();
-        
+
         // Typical matching layer sound speed
         let sound_speed = 3000.0; // m/s
-        
+
         // Quarter wavelength thickness
         let wavelength = sound_speed / frequency;
         let thickness = wavelength / 4.0;
-        
+
         Self {
             num_layers: 1,
             thickness,
@@ -473,17 +473,17 @@ impl MatchingLayer {
             sound_speed,
         }
     }
-    
+
     /// Design dual matching layers
     pub fn dual_layer(frequency: f64, z_piezo: f64, z_load: f64) -> Vec<Self> {
         // Optimal impedances for two layers (Kino 1987)
         let z1 = z_piezo.powf(0.67) * z_load.powf(0.33);
         let z2 = z_piezo.powf(0.33) * z_load.powf(0.67);
-        
+
         let sound_speed = 3000.0;
         let wavelength = sound_speed / frequency;
         let thickness = wavelength / 4.0;
-        
+
         vec![
             Self {
                 num_layers: 2,
@@ -527,21 +527,17 @@ pub enum LensMaterial {
 
 impl AcousticLens {
     /// Design focusing lens
-    pub fn focusing_lens(
-        focal_length: f64,
-        aperture: f64,
-        frequency: f64,
-    ) -> KwaversResult<Self> {
+    pub fn focusing_lens(focal_length: f64, aperture: f64, frequency: f64) -> KwaversResult<Self> {
         // Lens equation: 1/f = (n-1)/R
         // where n = c_medium/c_lens
-        
+
         // Polystyrene lens in water
-        let c_lens = 2350.0;  // m/s in polystyrene
+        let c_lens = 2350.0; // m/s in polystyrene
         let c_medium = 1540.0; // m/s in water
         let n = c_medium / c_lens;
-        
+
         let radius_of_curvature = focal_length * (n - 1.0);
-        
+
         if radius_of_curvature <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "radius_of_curvature".to_string(),
@@ -549,14 +545,14 @@ impl AcousticLens {
                 constraint: "must be > 0.0 for valid focusing".to_string(),
             }));
         }
-        
+
         // Calculate center thickness
-        let sagitta = radius_of_curvature - 
-                     (radius_of_curvature.powi(2) - (aperture / 2.0).powi(2)).sqrt();
+        let sagitta =
+            radius_of_curvature - (radius_of_curvature.powi(2) - (aperture / 2.0).powi(2)).sqrt();
         let center_thickness = sagitta + aperture / 10.0; // Add margin
-        
+
         let f_number = focal_length / aperture;
-        
+
         Ok(Self {
             material: LensMaterial::Polystyrene,
             radius_of_curvature,
@@ -585,47 +581,42 @@ pub struct DirectivityPattern {
 
 impl DirectivityPattern {
     /// Calculate rectangular element directivity
-    pub fn rectangular_element(
-        width: f64,
-        height: f64,
-        frequency: f64,
-        num_points: usize,
-    ) -> Self {
+    pub fn rectangular_element(width: f64, height: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = 1540.0 / frequency; // Assume water/tissue
         let angles = Array1::linspace(-PI / 2.0, PI / 2.0, num_points);
         let mut directivity = Array1::zeros(num_points);
-        
+
         let kw = 2.0 * PI * width / wavelength;
         let kh = 2.0 * PI * height / wavelength;
-        
+
         for (i, &theta) in angles.iter().enumerate() {
             // Directivity of rectangular piston
             let arg_w = kw * theta.sin() / 2.0;
             let arg_h = kh * theta.sin() / 2.0;
-            
+
             let sinc_w = if arg_w.abs() < 1e-10 {
                 1.0
             } else {
                 arg_w.sin() / arg_w
             };
-            
+
             let sinc_h = if arg_h.abs() < 1e-10 {
                 1.0
             } else {
                 arg_h.sin() / arg_h
             };
-            
+
             directivity[i] = (sinc_w * sinc_h).abs();
         }
-        
+
         // Find beamwidths
         let max_val = directivity.iter().cloned().fold(0.0, f64::max);
         let threshold_3db = max_val / 2.0_f64.sqrt();
         let threshold_6db = max_val / 2.0;
-        
+
         let mut beamwidth_3db = 0.0;
         let mut beamwidth_6db = 0.0;
-        
+
         for i in 0..num_points / 2 {
             if directivity[num_points / 2 + i] < threshold_3db && beamwidth_3db == 0.0 {
                 beamwidth_3db = 2.0 * angles[num_points / 2 + i].abs();
@@ -634,7 +625,7 @@ impl DirectivityPattern {
                 beamwidth_6db = 2.0 * angles[num_points / 2 + i].abs();
             }
         }
-        
+
         // Find first sidelobe level
         let mut sidelobe_level = -60.0; // Default if no sidelobe
         let center = num_points / 2;
@@ -644,7 +635,7 @@ impl DirectivityPattern {
                 break;
             }
         }
-        
+
         Self {
             angles,
             directivity,
@@ -670,28 +661,23 @@ pub struct ElementCoupling {
 
 impl ElementCoupling {
     /// Calculate coupling matrix for linear array
-    pub fn linear_array(
-        num_elements: usize,
-        pitch: f64,
-        frequency: f64,
-    ) -> Self {
+    pub fn linear_array(num_elements: usize, pitch: f64, frequency: f64) -> Self {
         let mut coupling_matrix = Array2::eye(num_elements);
         let wavelength = 1540.0 / frequency;
         let decay_factor = (-2.0 * PI * pitch / wavelength).exp();
-        
+
         for i in 0..num_elements {
             for j in 0..num_elements {
                 if i != j {
                     let distance = ((i as i32 - j as i32).abs() as f64) * pitch;
-                    let coupling = CROSS_COUPLING_COEFFICIENT * 
-                                  (-distance / wavelength).exp();
+                    let coupling = CROSS_COUPLING_COEFFICIENT * (-distance / wavelength).exp();
                     coupling_matrix[(i, j)] = coupling;
                 }
             }
         }
-        
+
         let max_coupling = CROSS_COUPLING_COEFFICIENT;
-        
+
         Self {
             coupling_matrix,
             num_elements,
@@ -699,11 +685,11 @@ impl ElementCoupling {
             decay_factor,
         }
     }
-    
+
     /// Apply coupling effects to element signals
     pub fn apply_coupling(&self, signals: &Array1<Complex64>) -> Array1<Complex64> {
         let mut coupled = Array1::zeros(self.num_elements);
-        
+
         for i in 0..self.num_elements {
             let mut sum = Complex64::new(0.0, 0.0);
             for j in 0..self.num_elements {
@@ -711,7 +697,7 @@ impl ElementCoupling {
             }
             coupled[i] = sum;
         }
-        
+
         coupled
     }
 }
@@ -733,35 +719,31 @@ pub struct TransducerSensitivity {
 
 impl TransducerSensitivity {
     /// Calculate from transducer parameters
-    pub fn calculate(
-        geometry: &ElementGeometry,
-        material: &PiezoMaterial,
-        frequency: f64,
-    ) -> Self {
+    pub fn calculate(geometry: &ElementGeometry, material: &PiezoMaterial, frequency: f64) -> Self {
         // Transmit sensitivity (Mason model)
         let area_factor = geometry.area.sqrt();
         let coupling_factor = material.coupling_kt;
-        let transmit_sensitivity = 
+        let transmit_sensitivity =
             area_factor * coupling_factor * material.acoustic_impedance * 1e6;
-        
+
         // Receive sensitivity (reciprocity)
         let capacitance = geometry.calculate_capacitance(material.relative_permittivity);
-        let receive_sensitivity = 
+        let receive_sensitivity =
             coupling_factor / (2.0 * PI * frequency * capacitance * material.acoustic_impedance);
-        
+
         // Efficiency (based on coupling and Q factors)
-        let efficiency = 100.0 * coupling_factor.powi(2) * 
-                        material.mechanical_q / (material.mechanical_q + material.electrical_q);
-        
+        let efficiency = 100.0 * coupling_factor.powi(2) * material.mechanical_q
+            / (material.mechanical_q + material.electrical_q);
+
         // Insertion loss
         let z_ratio = material.acoustic_impedance / TISSUE_IMPEDANCE;
         let reflection_coeff = (z_ratio - 1.0) / (z_ratio + 1.0);
         let transmission_coeff = 1.0 - reflection_coeff.abs();
         let insertion_loss = -20.0 * transmission_coeff.log10();
-        
+
         // Round-trip sensitivity
         let round_trip_sensitivity = transmit_sensitivity * receive_sensitivity;
-        
+
         Self {
             transmit_sensitivity,
             receive_sensitivity,
@@ -807,48 +789,38 @@ impl TransducerDesign {
         let element_width = wavelength * 0.95; // Just under λ for grating lobe suppression
         let kerf = element_width * 0.1; // 10% kerf
         let pitch = element_width + kerf;
-        
+
         // Determine array height
         let array_width = num_elements as f64 * pitch;
         let element_height = aperture / array_width * element_width * 10.0; // Elevation dimension
-        
+
         // Material selection based on frequency
         let material = if center_frequency < 5e6 {
             PiezoMaterial::pzt_5h() // Lower frequency, high sensitivity
         } else {
             PiezoMaterial::pmn_pt() // Higher frequency, wide bandwidth
         };
-        
+
         // Calculate thickness for half-wave resonance
         let thickness = material.sound_speed / (2.0 * center_frequency);
-        
+
         // Create geometry
-        let geometry = ElementGeometry::new(
-            element_width,
-            element_height,
-            thickness,
-            kerf,
-        )?;
-        
+        let geometry = ElementGeometry::new(element_width, element_height, thickness, kerf)?;
+
         // Design backing for bandwidth
         let backing = BackingLayer::tungsten_epoxy(thickness * 10.0);
-        
+
         // Design matching layers
         let matching = MatchingLayer::dual_layer(
             center_frequency,
             material.acoustic_impedance,
             TISSUE_IMPEDANCE,
         );
-        
+
         // Calculate frequency response
-        let frequency_response = FrequencyResponse::from_klm_model(
-            &geometry,
-            &material,
-            &backing,
-            &matching[0],
-            100,
-        )?;
-        
+        let frequency_response =
+            FrequencyResponse::from_klm_model(&geometry, &material, &backing, &matching[0], 100)?;
+
         // Calculate directivity
         let directivity = DirectivityPattern::rectangular_element(
             element_width,
@@ -856,28 +828,20 @@ impl TransducerDesign {
             center_frequency,
             180,
         );
-        
+
         // Calculate coupling
-        let coupling = ElementCoupling::linear_array(
-            num_elements,
-            pitch,
-            center_frequency,
-        );
-        
+        let coupling = ElementCoupling::linear_array(num_elements, pitch, center_frequency);
+
         // Calculate sensitivity
-        let sensitivity = TransducerSensitivity::calculate(
-            &geometry,
-            &material,
-            center_frequency,
-        );
-        
+        let sensitivity = TransducerSensitivity::calculate(&geometry, &material, center_frequency);
+
         // Optional lens design
         let lens = if let Some(fl) = focal_length {
             Some(AcousticLens::focusing_lens(fl, aperture, center_frequency)?)
         } else {
             None
         };
-        
+
         Ok(Self {
             geometry,
             material,
@@ -890,7 +854,7 @@ impl TransducerDesign {
             lens,
         })
     }
-    
+
     /// Validate design against specifications
     pub fn validate(&self) -> KwaversResult<()> {
         // Check bandwidth
@@ -901,7 +865,7 @@ impl TransducerDesign {
                 constraint: "must be >= 20%".to_string(),
             }));
         }
-        
+
         // Check efficiency
         if self.sensitivity.efficiency < 30.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -910,7 +874,7 @@ impl TransducerDesign {
                 constraint: "must be >= 30%".to_string(),
             }));
         }
-        
+
         // Check aspect ratio
         if self.geometry.aspect_ratio > MAX_ASPECT_RATIO {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -919,7 +883,7 @@ impl TransducerDesign {
                 constraint: format!("must be <= {:.1}", MAX_ASPECT_RATIO),
             }));
         }
-        
+
         Ok(())
     }
 }
@@ -927,7 +891,7 @@ impl TransducerDesign {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_element_geometry() {
         let geometry = ElementGeometry::new(
@@ -935,55 +899,57 @@ mod tests {
             10e-3,   // 10mm height
             0.5e-3,  // 0.5mm thickness
             0.05e-3, // 0.05mm kerf
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         assert!((geometry.pitch - 0.35e-3).abs() < 1e-6);
         assert!((geometry.aspect_ratio - 0.6).abs() < 0.01);
     }
-    
+
     #[test]
     fn test_piezo_materials() {
         let pzt5h = PiezoMaterial::pzt_5h();
         assert_eq!(pzt5h.coupling_k33, 0.75);
-        
+
         let pmn_pt = PiezoMaterial::pmn_pt();
         assert_eq!(pmn_pt.coupling_k33, 0.90);
     }
-    
+
     #[test]
     fn test_matching_layer_design() {
         let matching = MatchingLayer::quarter_wave(
-            2.5e6,  // 2.5 MHz
-            34.5,   // PZT impedance
-            1.5,    // Tissue impedance
+            2.5e6, // 2.5 MHz
+            34.5,  // PZT impedance
+            1.5,   // Tissue impedance
         );
-        
+
         let expected_z = (34.5 * 1.5_f64).sqrt();
         assert!((matching.acoustic_impedance - expected_z).abs() < 0.1);
     }
-    
+
     #[test]
     fn test_transducer_design() {
         let design = TransducerDesign::design_for_application(
-            2.5e6,     // 2.5 MHz
-            64,        // 64 elements
-            20e-3,     // 20mm aperture
+            2.5e6,       // 2.5 MHz
+            64,          // 64 elements
+            20e-3,       // 20mm aperture
             Some(50e-3), // 50mm focal length
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         assert!(design.validate().is_ok());
         assert!(design.frequency_response.fractional_bandwidth > 20.0);
     }
-    
+
     #[test]
     fn test_directivity_pattern() {
         let pattern = DirectivityPattern::rectangular_element(
-            0.5e-3,  // 0.5mm width
-            10e-3,   // 10mm height
-            2.5e6,   // 2.5 MHz
+            0.5e-3, // 0.5mm width
+            10e-3,  // 10mm height
+            2.5e6,  // 2.5 MHz
             180,
         );
-        
+
         assert!(pattern.beamwidth_3db > 0.0);
         assert!(pattern.beamwidth_6db > pattern.beamwidth_3db);
         assert!(pattern.sidelobe_level < -10.0);

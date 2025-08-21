@@ -1,6 +1,6 @@
 // log/file.rs
 use crate::log::format_record;
-use log::{Log, Metadata, Record, LevelFilter};
+use log::{LevelFilter, Log, Metadata, Record};
 use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::sync::Mutex;

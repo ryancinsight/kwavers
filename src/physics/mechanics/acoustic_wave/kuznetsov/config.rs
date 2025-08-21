@@ -80,40 +80,40 @@ impl Default for AcousticEquationMode {
 pub struct KuznetsovConfig {
     /// Equation mode selector
     pub equation_mode: AcousticEquationMode,
-    
+
     /// CFL factor for time step calculation (0 < cfl_factor <= 1)
     pub cfl_factor: f64,
-    
+
     /// Nonlinearity coefficient B/A (typical values: 3.5-12 for biological tissues)
     pub nonlinearity_coefficient: f64,
-    
+
     /// Acoustic diffusivity δ [m²/s] for thermoviscous losses
     pub acoustic_diffusivity: f64,
-    
+
     /// Enable k-space correction for accurate time stepping
     pub use_k_space_correction: bool,
-    
+
     /// Order of k-space correction (2 or 4)
     pub k_space_correction_order: usize,
-    
+
     /// Spatial accuracy order (2, 4, or 6)
     pub spatial_order: usize,
-    
+
     /// Enable adaptive time stepping
     pub adaptive_time_stepping: bool,
-    
+
     /// Maximum pressure before limiting [Pa]
     pub max_pressure: f64,
-    
+
     /// Enable shock capturing for strong nonlinearity
     pub shock_capturing: bool,
-    
+
     /// Number of history levels for time integration
     pub history_levels: usize,
-    
+
     /// Nonlinearity scaling factor (for testing/calibration)
     pub nonlinearity_scaling: f64,
-    
+
     /// Diffusivity scaling factor (for testing/calibration)
     pub diffusivity: f64,
 }
@@ -123,8 +123,8 @@ impl Default for KuznetsovConfig {
         Self {
             equation_mode: AcousticEquationMode::FullKuznetsov,
             cfl_factor: DEFAULT_CFL_FACTOR,
-            nonlinearity_coefficient: 5.0,  // Typical for soft tissue
-            acoustic_diffusivity: 4.5e-6,   // Typical for water at 20°C
+            nonlinearity_coefficient: 5.0, // Typical for soft tissue
+            acoustic_diffusivity: 4.5e-6,  // Typical for water at 20°C
             use_k_space_correction: true,
             k_space_correction_order: DEFAULT_K_SPACE_CORRECTION_ORDER,
             spatial_order: DEFAULT_SPATIAL_ORDER,
@@ -147,7 +147,7 @@ impl KuznetsovConfig {
             ..Default::default()
         }
     }
-    
+
     /// Create configuration for Westervelt equation
     pub fn westervelt() -> Self {
         Self {
@@ -156,7 +156,7 @@ impl KuznetsovConfig {
             ..Default::default()
         }
     }
-    
+
     /// Create configuration for linear wave equation
     pub fn linear() -> Self {
         Self {
@@ -167,7 +167,7 @@ impl KuznetsovConfig {
             ..Default::default()
         }
     }
-    
+
     /// Validate configuration parameters
     pub fn validate(&self, grid: &Grid) -> Result<(), KwaversError> {
         // Check CFL factor
@@ -179,7 +179,7 @@ impl KuznetsovConfig {
                 max: MAX_CFL_FACTOR.to_string(),
             }));
         }
-        
+
         // Check grid spacing
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         if min_dx <= MIN_GRID_SPACING {
@@ -190,9 +190,11 @@ impl KuznetsovConfig {
                 max: "inf".to_string(),
             }));
         }
-        
+
         // Check nonlinearity coefficient
-        if self.nonlinearity_coefficient < 0.0 || self.nonlinearity_coefficient > MAX_NONLINEARITY_COEFFICIENT {
+        if self.nonlinearity_coefficient < 0.0
+            || self.nonlinearity_coefficient > MAX_NONLINEARITY_COEFFICIENT
+        {
             return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "nonlinearity_coefficient".to_string(),
                 value: self.nonlinearity_coefficient.to_string(),
@@ -200,17 +202,18 @@ impl KuznetsovConfig {
                 max: MAX_NONLINEARITY_COEFFICIENT.to_string(),
             }));
         }
-        
+
         // Check k-space correction order
-        if self.use_k_space_correction && 
-           (self.k_space_correction_order != 2 && self.k_space_correction_order != 4) {
+        if self.use_k_space_correction
+            && (self.k_space_correction_order != 2 && self.k_space_correction_order != 4)
+        {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "k_space_correction_order".to_string(),
                 value: self.k_space_correction_order.to_string(),
                 constraint: "must be 2 or 4".to_string(),
             }));
         }
-        
+
         // Check spatial order
         if self.spatial_order != 2 && self.spatial_order != 4 && self.spatial_order != 6 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
@@ -219,7 +222,7 @@ impl KuznetsovConfig {
                 constraint: "must be 2, 4, or 6".to_string(),
             }));
         }
-        
+
         Ok(())
     }
 }

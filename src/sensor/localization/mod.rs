@@ -6,35 +6,35 @@
 //!
 //! # Literature References
 //!
-//! 1. **Gyöngy, M., & Coussios, C. C. (2010)**. "Passive cavitation mapping for 
-//!    localization and tracking of bubble activity during high intensity focused 
-//!    ultrasound exposure." *Journal of the Acoustical Society of America*, 128(4), 
+//! 1. **Gyöngy, M., & Coussios, C. C. (2010)**. "Passive cavitation mapping for
+//!    localization and tracking of bubble activity during high intensity focused
+//!    ultrasound exposure." *Journal of the Acoustical Society of America*, 128(4),
 //!    EL175-EL180. DOI: 10.1121/1.3467491
 //!
 //! 2. **Foy, W. H. (1976)**. "Position-location solutions by Taylor-series estimation."
 //!    *IEEE Transactions on Aerospace and Electronic Systems*, AES-12(2), 187-194.
 //!    DOI: 10.1109/TAES.1976.308294
 //!
-//! 3. **Chan, Y. T., & Ho, K. C. (1994)**. "A simple and efficient estimator for 
+//! 3. **Chan, Y. T., & Ho, K. C. (1994)**. "A simple and efficient estimator for
 //!    hyperbolic location." *IEEE Transactions on Signal Processing*, 42(8), 1905-1915.
 //!    DOI: 10.1109/78.301830
 //!
 //! 4. **Caffery, J. J. (2000)**. "Wireless Location in CDMA Cellular Radio Systems."
 //!    Kluwer Academic Publishers. ISBN: 978-0792379690
 
-use crate::error::{KwaversResult, KwaversError, PhysicsError};
+use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use nalgebra::{DMatrix, DVector};
 use std::collections::HashMap;
 
-pub mod trilateration;
-pub mod tdoa;
 pub mod calibration;
 pub mod phantom;
+pub mod tdoa;
+pub mod trilateration;
 
-pub use trilateration::{TrilaterationSolver, TrilaterationResult};
-pub use tdoa::TDOASolver;
-pub use calibration::{SensorCalibration, CalibrationPhantom};
+pub use calibration::{CalibrationPhantom, SensorCalibration};
 pub use phantom::{CentroidPhantom, PhantomTarget};
+pub use tdoa::TDOASolver;
+pub use trilateration::{TrilaterationResult, TrilaterationSolver};
 
 /// Time Difference of Arrival measurement
 #[derive(Debug, Clone)]
@@ -73,7 +73,7 @@ impl Sensor {
             bandwidth: (20e3, 10e6), // 20 kHz to 10 MHz typical for cavitation
         }
     }
-    
+
     /// Distance to a point
     pub fn distance_to(&self, point: &[f64; 3]) -> f64 {
         let dx = self.position[0] - point[0];
@@ -81,7 +81,7 @@ impl Sensor {
         let dz = self.position[2] - point[2];
         (dx * dx + dy * dy + dz * dz).sqrt()
     }
-    
+
     /// Time of flight from a point
     pub fn time_of_flight(&self, point: &[f64; 3], sound_speed: f64) -> f64 {
         self.distance_to(point) / sound_speed
@@ -123,38 +123,38 @@ impl SensorArray {
             geometry,
         }
     }
-    
+
     /// Get the sound speed
     pub fn sound_speed(&self) -> f64 {
         self.sound_speed
     }
-    
+
     /// Get sensor positions
     pub fn get_sensor_positions(&self) -> Vec<[f64; 3]> {
         self.sensors.iter().map(|s| s.position).collect()
     }
-    
+
     /// Get number of sensors
     pub fn num_sensors(&self) -> usize {
         self.sensors.len()
     }
-    
+
     /// Get a specific sensor
     pub fn get_sensor(&self, index: usize) -> Option<&Sensor> {
         self.sensors.get(index)
     }
-    
+
     /// Detect array geometry from sensor positions
     fn detect_geometry(sensors: &[Sensor]) -> ArrayGeometry {
         if sensors.len() < 2 {
             return ArrayGeometry::Arbitrary;
         }
-        
+
         // Check if all sensors are on a line (linear array)
         let linear_tolerance = 1e-3;
         let first = &sensors[0].position;
         let second = &sensors[1].position;
-        
+
         // Direction vector
         let dir = [
             second[0] - first[0],
@@ -162,36 +162,36 @@ impl SensorArray {
             second[2] - first[2],
         ];
         let dir_norm = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt();
-        
+
         if dir_norm > 0.0 {
             let dir_unit = [dir[0] / dir_norm, dir[1] / dir_norm, dir[2] / dir_norm];
-            
+
             let all_linear = sensors.iter().skip(2).all(|s| {
                 let to_sensor = [
                     s.position[0] - first[0],
                     s.position[1] - first[1],
                     s.position[2] - first[2],
                 ];
-                
+
                 // Project onto direction
-                let projection = to_sensor[0] * dir_unit[0] 
-                    + to_sensor[1] * dir_unit[1] 
+                let projection = to_sensor[0] * dir_unit[0]
+                    + to_sensor[1] * dir_unit[1]
                     + to_sensor[2] * dir_unit[2];
-                
+
                 // Check perpendicular distance
                 let perp_x = to_sensor[0] - projection * dir_unit[0];
                 let perp_y = to_sensor[1] - projection * dir_unit[1];
                 let perp_z = to_sensor[2] - projection * dir_unit[2];
                 let perp_dist = (perp_x * perp_x + perp_y * perp_y + perp_z * perp_z).sqrt();
-                
+
                 perp_dist < linear_tolerance
             });
-            
+
             if all_linear {
                 return ArrayGeometry::Linear;
             }
         }
-        
+
         // Check if all sensors are on a plane (planar array)
         if sensors.len() >= 3 {
             // Use first three non-collinear points to define plane
@@ -201,30 +201,30 @@ impl SensorArray {
                 // Simplified: check if all z-coordinates are similar
                 (s.position[2] - first[2]).abs() < planar_tolerance
             });
-            
+
             if all_planar {
                 return ArrayGeometry::Planar;
             }
         }
-        
+
         // Check for spherical arrangement
         let center = Self::calculate_centroid(sensors);
         let first_radius = Self::distance(&sensors[0].position, &center);
         let spherical_tolerance = 1e-2;
-        
+
         let all_spherical = sensors.iter().all(|s| {
             let radius = Self::distance(&s.position, &center);
             (radius - first_radius).abs() < spherical_tolerance
         });
-        
+
         if all_spherical {
             return ArrayGeometry::Spherical;
         }
-        
+
         // Otherwise volumetric or arbitrary
         ArrayGeometry::Volumetric
     }
-    
+
     /// Calculate centroid of sensor positions
     fn calculate_centroid(sensors: &[Sensor]) -> [f64; 3] {
         let n = sensors.len() as f64;
@@ -237,7 +237,7 @@ impl SensorArray {
         });
         [sum[0] / n, sum[1] / n, sum[2] / n]
     }
-    
+
     /// Calculate distance between two points
     fn distance(p1: &[f64; 3], p2: &[f64; 3]) -> f64 {
         let dx = p1[0] - p2[0];
@@ -301,13 +301,13 @@ impl MultiLaterationSolver {
             calibration: None,
         }
     }
-    
+
     /// Set solver configuration
     pub fn with_config(mut self, config: SolverConfig) -> Self {
         self.config = config;
         self
     }
-    
+
     /// Calibrate using phantom targets
     pub fn calibrate_with_phantom(
         &mut self,
@@ -319,7 +319,7 @@ impl MultiLaterationSolver {
         self.calibration = Some(calib_data.clone());
         Ok(calib_data)
     }
-    
+
     /// Localize using time-of-arrival measurements
     pub fn localize_toa(
         &self,
@@ -333,14 +333,14 @@ impl MultiLaterationSolver {
                 reason: "Need at least 4 sensors for 3D localization".to_string(),
             }));
         }
-        
+
         // Apply calibration if available
         let corrected_times = self.apply_time_calibration(arrival_times);
-        
+
         // Use iterative least squares solver
         let initial_guess = self.compute_initial_guess(&corrected_times)?;
         let solution = self.iterative_least_squares_toa(initial_guess, &corrected_times)?;
-        
+
         Ok(LocalizationResult {
             position: solution,
             uncertainty: self.estimate_uncertainty(&solution, &corrected_times)?,
@@ -348,7 +348,7 @@ impl MultiLaterationSolver {
             num_sensors: arrival_times.len(),
         })
     }
-    
+
     /// Localize using time-difference-of-arrival measurements
     pub fn localize_tdoa(
         &self,
@@ -362,10 +362,10 @@ impl MultiLaterationSolver {
                 reason: "Need at least 3 measurements for 3D localization".to_string(),
             }));
         }
-        
+
         let solver = tdoa::TDOASolver::new(&self.array);
         let solution = solver.solve(time_differences)?;
-        
+
         Ok(LocalizationResult {
             position: solution.position,
             uncertainty: solution.uncertainty,
@@ -373,26 +373,30 @@ impl MultiLaterationSolver {
             num_sensors: time_differences.len() + 1,
         })
     }
-    
+
     /// Apply time calibration corrections
     fn apply_time_calibration(&self, times: &HashMap<usize, f64>) -> HashMap<usize, f64> {
         if let Some(calib) = &self.calibration {
-            times.iter().map(|(id, t)| {
-                let correction = calib.time_delays.get(id).unwrap_or(&0.0);
-                (*id, t - correction)
-            }).collect()
+            times
+                .iter()
+                .map(|(id, t)| {
+                    let correction = calib.time_delays.get(id).unwrap_or(&0.0);
+                    (*id, t - correction)
+                })
+                .collect()
         } else {
             times.clone()
         }
     }
-    
+
     /// Compute initial guess for position
     fn compute_initial_guess(&self, times: &HashMap<usize, f64>) -> KwaversResult<[f64; 3]> {
         // Use centroid of sensors as initial guess
-        let sensors: Vec<Sensor> = times.keys()
+        let sensors: Vec<Sensor> = times
+            .keys()
             .filter_map(|id| self.array.sensors.iter().find(|s| s.id == *id).cloned())
             .collect();
-        
+
         if sensors.is_empty() {
             return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
                 parameter: "localization".to_string(),
@@ -400,10 +404,10 @@ impl MultiLaterationSolver {
                 reason: "No valid sensors found".to_string(),
             }));
         }
-        
+
         Ok(SensorArray::calculate_centroid(&sensors))
     }
-    
+
     /// Iterative least squares solver for TOA
     fn iterative_least_squares_toa(
         &self,
@@ -412,27 +416,28 @@ impl MultiLaterationSolver {
     ) -> KwaversResult<[f64; 3]> {
         for _ in 0..self.config.max_iterations {
             let (jacobian, residuals) = self.build_toa_system(&position, times)?;
-            
+
             // Solve: J^T * J * delta = -J^T * r
             let jt = jacobian.transpose();
             let jtj = &jt * &jacobian;
-            
+
             // Add regularization
             let mut jtj_reg = jtj.clone();
             for i in 0..3 {
                 jtj_reg[(i, i)] += self.config.regularization;
             }
-            
+
             let jtr = &jt * &residuals;
-            
+
             // Solve for position update
             if let Some(delta) = jtj_reg.lu().solve(&(-jtr)) {
                 position[0] += delta[0];
                 position[1] += delta[1];
                 position[2] += delta[2];
-                
+
                 // Check convergence
-                let delta_norm = (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt();
+                let delta_norm =
+                    (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt();
                 if delta_norm < self.config.tolerance {
                     break;
                 }
@@ -444,10 +449,10 @@ impl MultiLaterationSolver {
                 }));
             }
         }
-        
+
         Ok(position)
     }
-    
+
     /// Build Jacobian and residual for TOA system
     fn build_toa_system(
         &self,
@@ -457,33 +462,41 @@ impl MultiLaterationSolver {
         let n = times.len();
         let mut jacobian = DMatrix::zeros(n, 3);
         let mut residuals = DVector::zeros(n);
-        
+
         for (i, (sensor_id, measured_time)) in times.iter().enumerate() {
-            let sensor = self.array.sensors.iter()
+            let sensor = self
+                .array
+                .sensors
+                .iter()
                 .find(|s| s.id == *sensor_id)
-                .ok_or_else(|| KwaversError::Physics(PhysicsError::InvalidParameter {
-                    parameter: "sensor_array".to_string(),
-                    value: *sensor_id as f64,
-                    reason: format!("Sensor {} not found", sensor_id),
-                }))?;
-            
+                .ok_or_else(|| {
+                    KwaversError::Physics(PhysicsError::InvalidParameter {
+                        parameter: "sensor_array".to_string(),
+                        value: *sensor_id as f64,
+                        reason: format!("Sensor {} not found", sensor_id),
+                    })
+                })?;
+
             let distance = sensor.distance_to(position);
             let predicted_time = distance / self.array.sound_speed;
-            
+
             // Residual
             residuals[i] = measured_time - predicted_time;
-            
+
             // Jacobian entries: partial derivatives of time with respect to position
             if distance > 1e-10 {
-                jacobian[(i, 0)] = -(position[0] - sensor.position[0]) / (distance * self.array.sound_speed);
-                jacobian[(i, 1)] = -(position[1] - sensor.position[1]) / (distance * self.array.sound_speed);
-                jacobian[(i, 2)] = -(position[2] - sensor.position[2]) / (distance * self.array.sound_speed);
+                jacobian[(i, 0)] =
+                    -(position[0] - sensor.position[0]) / (distance * self.array.sound_speed);
+                jacobian[(i, 1)] =
+                    -(position[1] - sensor.position[1]) / (distance * self.array.sound_speed);
+                jacobian[(i, 2)] =
+                    -(position[2] - sensor.position[2]) / (distance * self.array.sound_speed);
             }
         }
-        
+
         Ok((jacobian, residuals))
     }
-    
+
     /// Estimate position uncertainty
     fn estimate_uncertainty(
         &self,
@@ -491,7 +504,7 @@ impl MultiLaterationSolver {
         times: &HashMap<usize, f64>,
     ) -> KwaversResult<[f64; 3]> {
         let (jacobian, residuals) = self.build_toa_system(position, times)?;
-        
+
         // Estimate measurement noise variance
         let n = residuals.len();
         let sigma_squared = if n > 3 {
@@ -499,11 +512,11 @@ impl MultiLaterationSolver {
         } else {
             1e-12 // Default small variance
         };
-        
+
         // Covariance matrix: (J^T * J)^(-1) * sigma^2
         let jt = jacobian.transpose();
         let jtj = &jt * &jacobian;
-        
+
         if let Some(cov) = jtj.lu().try_inverse() {
             let cov_scaled = cov * sigma_squared;
             Ok([
@@ -515,17 +528,21 @@ impl MultiLaterationSolver {
             Ok([1e-3, 1e-3, 1e-3]) // Default uncertainty
         }
     }
-    
+
     /// Compute residual error
     fn compute_residual(&self, position: &[f64; 3], times: &HashMap<usize, f64>) -> f64 {
-        times.iter().map(|(sensor_id, measured_time)| {
-            if let Some(sensor) = self.array.sensors.iter().find(|s| s.id == *sensor_id) {
-                let predicted_time = sensor.distance_to(position) / self.array.sound_speed;
-                (measured_time - predicted_time).powi(2)
-            } else {
-                0.0
-            }
-        }).sum::<f64>().sqrt()
+        times
+            .iter()
+            .map(|(sensor_id, measured_time)| {
+                if let Some(sensor) = self.array.sensors.iter().find(|s| s.id == *sensor_id) {
+                    let predicted_time = sensor.distance_to(position) / self.array.sound_speed;
+                    (measured_time - predicted_time).powi(2)
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f64>()
+            .sqrt()
     }
 }
 
@@ -556,7 +573,7 @@ mod tests {
     use super::*;
     use crate::constants::physics::SOUND_SPEED_WATER;
     use approx::assert_abs_diff_eq;
-    
+
     #[test]
     fn test_sensor_array_geometry_detection() {
         // Linear array
@@ -566,9 +583,10 @@ mod tests {
             Sensor::new(2, [0.2, 0.0, 0.0]),
             Sensor::new(3, [0.3, 0.0, 0.0]),
         ];
-        let linear_array = SensorArray::new(linear_sensors, SOUND_SPEED_WATER, ArrayGeometry::Linear);
+        let linear_array =
+            SensorArray::new(linear_sensors, SOUND_SPEED_WATER, ArrayGeometry::Linear);
         assert_eq!(linear_array.geometry, ArrayGeometry::Linear);
-        
+
         // Planar array
         let planar_sensors = vec![
             Sensor::new(0, [0.0, 0.0, 0.0]),
@@ -576,9 +594,10 @@ mod tests {
             Sensor::new(2, [0.0, 0.1, 0.0]),
             Sensor::new(3, [0.1, 0.1, 0.0]),
         ];
-        let planar_array = SensorArray::new(planar_sensors, SOUND_SPEED_WATER, ArrayGeometry::Planar);
+        let planar_array =
+            SensorArray::new(planar_sensors, SOUND_SPEED_WATER, ArrayGeometry::Planar);
         assert_eq!(planar_array.geometry, ArrayGeometry::Planar);
-        
+
         // Volumetric array
         let volume_sensors = vec![
             Sensor::new(0, [0.0, 0.0, 0.0]),
@@ -586,10 +605,11 @@ mod tests {
             Sensor::new(2, [0.0, 0.1, 0.0]),
             Sensor::new(3, [0.0, 0.0, 0.1]),
         ];
-        let volume_array = SensorArray::new(volume_sensors, SOUND_SPEED_WATER, ArrayGeometry::Volumetric);
+        let volume_array =
+            SensorArray::new(volume_sensors, SOUND_SPEED_WATER, ArrayGeometry::Volumetric);
         assert_eq!(volume_array.geometry, ArrayGeometry::Volumetric);
     }
-    
+
     #[test]
     fn test_toa_localization() {
         // Create a simple sensor array
@@ -600,22 +620,22 @@ mod tests {
             Sensor::new(3, [0.0, 0.0, 0.1]),
         ];
         let array = SensorArray::new(sensors, SOUND_SPEED_WATER, ArrayGeometry::Arbitrary);
-        
+
         // Create solver
         let solver = MultiLaterationSolver::new(array);
-        
+
         // Simulate measurements from a known source
         let true_position = [0.05, 0.05, 0.05];
         let mut arrival_times = HashMap::new();
-        
+
         for sensor in &solver.array.sensors {
             let tof = sensor.time_of_flight(&true_position, SOUND_SPEED_WATER);
             arrival_times.insert(sensor.id, tof);
         }
-        
+
         // Localize
         let result = solver.localize_toa(&arrival_times).unwrap();
-        
+
         // Check accuracy (should be very close to true position)
         assert!((result.position[0] - true_position[0]).abs() < 1e-6);
         assert!((result.position[1] - true_position[1]).abs() < 1e-6);

@@ -1,8 +1,8 @@
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::signal::{chirp::ChirpSignal, sine_wave::SineWave, sweep::SweepSignal, Signal};
-use crate::source::Source;
 use crate::source::linear_array::LinearArray;
+use crate::source::Source;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,8 +47,12 @@ impl SourceConfig {
         // default_frequency: f64,
         // default_amplitude: f64,
     ) -> Result<Box<dyn Source>, String> {
-        let signal_frequency = self.frequency.ok_or_else(|| "frequency is required in SourceConfig for selected signal_type".to_string())?;
-        let signal_amplitude = self.amplitude.ok_or_else(|| "amplitude is required in SourceConfig for selected signal_type".to_string())?;
+        let signal_frequency = self.frequency.ok_or_else(|| {
+            "frequency is required in SourceConfig for selected signal_type".to_string()
+        })?;
+        let signal_amplitude = self.amplitude.ok_or_else(|| {
+            "amplitude is required in SourceConfig for selected signal_type".to_string()
+        })?;
 
         let signal: Box<dyn Signal> = match self.signal_type.as_str() {
             "sine" => Box::new(SineWave::new(

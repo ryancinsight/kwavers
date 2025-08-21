@@ -1,23 +1,32 @@
 // examples/sonodynamic_therapy_simulation.rs
+use kwavers::boundary::pml::PMLConfig;
 use kwavers::{
-    generate_summary, init_logging, plot_simulation_outputs, save_light_data, save_pressure_data,
-    Config, PMLBoundary, Recorder, Sensor,
-    Solver, NonlinearWave, // Added NonlinearWave for concrete type
-    physics::{ // Import physics models and traits
+    generate_summary,
+    init_logging,
+    physics::{
+        chemistry::ChemicalModel,
+        heterogeneity::HeterogeneityModel,
+        // Import physics models and traits
         mechanics::cavitation::CavitationModel,
         mechanics::streaming::StreamingModel,
-        chemistry::ChemicalModel,
         optics::diffusion::LightDiffusion as LightDiffusionModel,
         scattering::acoustic::AcousticScattering,
         thermodynamics::heat_transfer::ThermalModel,
-        heterogeneity::HeterogeneityModel,
         traits::*, // Import all traits
     },
+    plot_simulation_outputs,
+    save_light_data,
+    save_pressure_data,
+    Config,
+    NonlinearWave, // Added NonlinearWave for concrete type
+    PMLBoundary,
+    Recorder,
+    Sensor,
+    Solver,
 };
 use log::info;
 use std::fs::File;
-use std::io::{Write};
-use kwavers::boundary::pml::PMLConfig;
+use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging()?;
@@ -62,9 +71,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grid = config.simulation.initialize_grid()?;
     let time = config.simulation.initialize_time(&grid)?;
     let medium = config.simulation.initialize_medium(&grid)?; // Returns Arc<dyn Medium>
-    
+
     let source = config.source.initialize_source(medium.as_ref(), &grid)?;
-    
+
     let pml_config = PMLConfig {
         thickness: config.simulation.pml_thickness,
         sigma_max_acoustic: 2.0,
@@ -84,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (0.025, 0.0, 0.01),
         (0.025, 0.01, 0.01),
     ];
-    
+
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
     let mut recorder = Recorder::new(sensor, &time, "sdt_sensor_data", true, true, 10);
 
@@ -93,13 +102,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Default physics models (as Solver::new used to create them)
     let wave: Box<dyn AcousticWaveModel> = Box::new(NonlinearWave::new(&grid_clone));
-    let cavitation: Box<dyn CavitationModelBehavior> = Box::new(CavitationModel::new(&grid_clone, 10e-6));
-    let light: Box<dyn LightDiffusionModelTrait> = Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
-    let thermal: Box<dyn ThermalModelTrait> = Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
-    let chemical: Box<dyn ChemicalModelTrait> = Box::new(ChemicalModel::new(&grid_clone, true, true)?);
+    let cavitation: Box<dyn CavitationModelBehavior> =
+        Box::new(CavitationModel::new(&grid_clone, 10e-6));
+    let light: Box<dyn LightDiffusionModelTrait> =
+        Box::new(LightDiffusionModel::new(&grid_clone, true, true, true));
+    let thermal: Box<dyn ThermalModelTrait> =
+        Box::new(ThermalModel::new(&grid_clone, 293.15, 1e-6, 1e-6));
+    let chemical: Box<dyn ChemicalModelTrait> =
+        Box::new(ChemicalModel::new(&grid_clone, true, true)?);
     let streaming: Box<dyn StreamingModelTrait> = Box::new(StreamingModel::new(&grid_clone));
-    let scattering: Box<dyn AcousticScatteringModelTrait> = Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
-    let heterogeneity: Box<dyn HeterogeneityModelTrait> = Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
+    let scattering: Box<dyn AcousticScatteringModelTrait> =
+        Box::new(AcousticScattering::new(&grid_clone, 1e6, 0.1));
+    let heterogeneity: Box<dyn HeterogeneityModelTrait> =
+        Box::new(HeterogeneityModel::new(&grid_clone, 1500.0, 0.05));
 
     // Run simulation
     let mut solver = Solver::new(
@@ -116,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         streaming,
         scattering,
         heterogeneity,
-        4, // num_simulation_fields for acoustic + light + temp + bubble_radius
+        4,    // num_simulation_fields for acoustic + light + temp + bubble_radius
         None, // validation_config
     );
     let _ = solver.run(&mut recorder, config.simulation.frequency);

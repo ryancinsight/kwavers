@@ -5,7 +5,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::solver::reconstruction::{
-    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction
+    ReconstructionConfig, Reconstructor, UniversalBackProjection, WeightFunction,
 };
 use ndarray::{Array2, Array3};
 
@@ -43,12 +43,12 @@ impl ArcRecon {
             back_projector: UniversalBackProjection::new(WeightFunction::SolidAngle),
         }
     }
-    
+
     /// Create a full circular array reconstruction
     pub fn circular(center: [f64; 3], radius: f64, normal: [f64; 3]) -> Self {
         Self::new(center, radius, 0.0, 2.0 * std::f64::consts::PI, normal)
     }
-    
+
     /// Set weight function for back-projection
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
@@ -65,9 +65,10 @@ impl Reconstructor for ArcRecon {
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // Use universal back-projection with arc geometry considerations
-        self.back_projector.reconstruct(sensor_data, sensor_positions, grid, config)
+        self.back_projector
+            .reconstruct(sensor_data, sensor_positions, grid, config)
     }
-    
+
     fn name(&self) -> &str {
         "Arc/Circular Array Reconstruction (arcRecon)"
     }

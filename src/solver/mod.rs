@@ -2,21 +2,36 @@
 // Clean module structure focusing only on the plugin-based architecture
 
 // Core solver modules
-pub mod pstd;
-pub mod fdtd;
-pub mod hybrid;
-pub mod time_integration;
-pub mod spectral_dg;
-pub mod imex;
 pub mod amr;
-pub mod kspace_correction;
-pub mod heterogeneous_handler;
 pub mod cpml_integration;
+pub mod fdtd;
+pub mod heterogeneous_handler;
+pub mod hybrid;
+pub mod imex;
+pub mod kspace_correction;
+pub mod pstd;
+pub mod spectral_dg;
+pub mod time_integration;
 pub mod validation;
-pub mod workspace;
-pub mod time_reversal;
-pub mod thermal_diffusion;
+
+/// Total number of field components in simulations
+pub const TOTAL_FIELDS: usize = 10;
+
+// Field indices for unified field array
+pub const P_IDX: usize = 0;     // Pressure
+pub const VX_IDX: usize = 1;    // Velocity X
+pub const VY_IDX: usize = 2;    // Velocity Y
+pub const VZ_IDX: usize = 3;    // Velocity Z
+pub const SXX_IDX: usize = 4;   // Stress XX
+pub const SYY_IDX: usize = 5;   // Stress YY
+pub const SZZ_IDX: usize = 6;   // Stress ZZ
+pub const SXY_IDX: usize = 7;   // Stress XY
+pub const SXZ_IDX: usize = 8;   // Stress XZ
+pub const SYZ_IDX: usize = 9;   // Stress YZ // pressure, vx, vy, vz, temperature, etc.
 pub mod reconstruction;
+pub mod thermal_diffusion;
+pub mod time_reversal;
+pub mod workspace;
 
 // The new plugin-based architecture - the primary solver
 pub mod plugin_based_solver;
@@ -25,10 +40,10 @@ pub mod plugin_based_solver;
 pub use plugin_based_solver::PluginBasedSolver;
 
 // Re-export commonly used types from submodules
-pub use pstd::PstdConfig;
+pub use amr::{AMRConfig, AMRManager};
 pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
-pub use amr::{AMRConfig, AMRManager};
+pub use pstd::PstdConfig;
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -44,10 +59,10 @@ pub trait ProgressData: Send + Sync {}
 pub trait ProgressReporter: Send + Sync {
     /// Report progress with any type implementing ProgressData
     fn report(&mut self, progress_json: &str);
-    
+
     /// Called when simulation starts
     fn on_start(&mut self, total_steps: usize, dt: f64) {}
-    
+
     /// Called when simulation completes
     fn on_complete(&mut self) {}
 }
@@ -77,19 +92,24 @@ impl FieldsSummary {
     pub fn new() -> Self {
         Self(HashMap::new())
     }
-    
+
     /// Insert a field value
     pub fn insert(&mut self, key: &str, value: f64) {
         self.0.insert(key.to_string(), value);
     }
-    
+
     /// Get a field value
     pub fn get(&self, key: &str) -> Option<f64> {
         self.0.get(key).copied()
     }
-    
+
     /// Create a standard acoustic simulation summary
-    pub fn acoustic(max_pressure: f64, max_velocity: f64, max_temperature: f64, total_energy: f64) -> Self {
+    pub fn acoustic(
+        max_pressure: f64,
+        max_velocity: f64,
+        max_temperature: f64,
+        total_energy: f64,
+    ) -> Self {
         let mut summary = Self::new();
         summary.insert("max_pressure", max_pressure);
         summary.insert("max_velocity", max_velocity);
@@ -126,30 +146,40 @@ impl ProgressReporter for ConsoleProgressReporter {
             total_steps as f64 * dt
         );
     }
-    
+
     fn report(&mut self, progress_json: &str) {
         let now = std::time::Instant::now();
-        
+
         // Parse the progress data from JSON for flexible handling
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(progress_json) {
             // Try to extract standard fields if they exist
-            let current_step = json.get("current_step").and_then(|v| v.as_u64()).unwrap_or(0);
-            let total_steps = json.get("total_steps").and_then(|v| v.as_u64()).unwrap_or(1);
-            
+            let current_step = json
+                .get("current_step")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let total_steps = json
+                .get("total_steps")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1);
+
             // Report at start, end, or at intervals
-            if current_step == 0 
+            if current_step == 0
                 || current_step == total_steps - 1
-                || now.duration_since(self.last_report_time) >= self.report_interval {
-                
+                || now.duration_since(self.last_report_time) >= self.report_interval
+            {
                 let percent = (current_step as f64 / total_steps as f64) * 100.0;
-                
+
                 // Extract other fields if available
-                let current_time = json.get("current_time").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let max_pressure = json.get("fields_summary")
+                let current_time = json
+                    .get("current_time")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+                let max_pressure = json
+                    .get("fields_summary")
                     .and_then(|fs| fs.get("max_pressure"))
                     .and_then(|v| v.as_f64())
                     .unwrap_or(0.0);
-                
+
                 log::info!(
                     "Step {}/{} ({:.1}%) | t={:.6e}s | Progress: {}",
                     current_step,
@@ -158,15 +188,18 @@ impl ProgressReporter for ConsoleProgressReporter {
                     current_time,
                     serde_json::to_string(&json).unwrap_or_default()
                 );
-                
+
                 self.last_report_time = now;
             }
         }
     }
-    
+
     fn on_complete(&mut self) {
         let elapsed = std::time::Instant::now().duration_since(self.start_time);
-        log::info!("Simulation completed in {}", crate::utils::format::format_duration(elapsed));
+        log::info!(
+            "Simulation completed in {}",
+            crate::utils::format::format_duration(elapsed)
+        );
     }
 }
 
@@ -193,9 +226,9 @@ impl AsyncConsoleReporter {
     pub fn new() -> Self {
         use std::sync::mpsc;
         use std::thread;
-        
+
         let (sender, receiver) = mpsc::channel();
-        
+
         // Spawn a dedicated thread for console I/O
         thread::spawn(move || {
             for message in receiver {
@@ -204,7 +237,7 @@ impl AsyncConsoleReporter {
                 println!("{}", message);
             }
         });
-        
+
         Self {
             sender,
             last_report_time: std::time::Instant::now(),
@@ -212,7 +245,7 @@ impl AsyncConsoleReporter {
             start_time: std::time::Instant::now(),
         }
     }
-    
+
     /// Set the reporting interval
     pub fn with_interval(mut self, interval: std::time::Duration) -> Self {
         self.report_interval = interval;
@@ -232,10 +265,10 @@ impl ProgressReporter for AsyncConsoleReporter {
         // Use try_send to avoid blocking if channel is full
         let _ = self.sender.send(message);
     }
-    
+
     fn report(&mut self, progress_json: &str) {
         let now = std::time::Instant::now();
-        
+
         // Only report at intervals to avoid overwhelming the channel
         if now.duration_since(self.last_report_time) >= self.report_interval {
             // Use try_send to avoid blocking the simulation
@@ -244,7 +277,7 @@ impl ProgressReporter for AsyncConsoleReporter {
             self.last_report_time = now;
         }
     }
-    
+
     fn on_complete(&mut self) {
         let elapsed = std::time::Instant::now().duration_since(self.start_time);
         let message = format!("Simulation completed in {:?}", elapsed);
@@ -261,28 +294,28 @@ impl Default for AsyncConsoleReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_flexible_fields_summary() {
         let mut summary = FieldsSummary::new();
         summary.insert("custom_metric", 42.0);
         summary.insert("another_metric", 3.14);
-        
+
         assert_eq!(summary.get("custom_metric"), Some(42.0));
         assert_eq!(summary.get("another_metric"), Some(3.14));
         assert_eq!(summary.get("nonexistent"), None);
     }
-    
+
     #[test]
     fn test_acoustic_fields_summary() {
         let summary = FieldsSummary::acoustic(100.0, 50.0, 300.0, 1000.0);
-        
+
         assert_eq!(summary.get("max_pressure"), Some(100.0));
         assert_eq!(summary.get("max_velocity"), Some(50.0));
         assert_eq!(summary.get("max_temperature"), Some(300.0));
         assert_eq!(summary.get("total_energy"), Some(1000.0));
     }
-    
+
     #[test]
     fn test_progress_data_trait() {
         // Custom progress type for testing
@@ -291,14 +324,14 @@ mod tests {
             iteration: usize,
             residual: f64,
         }
-        
+
         impl ProgressData for CustomProgress {}
-        
+
         let progress = CustomProgress {
             iteration: 10,
             residual: 0.001,
         };
-        
+
         // Should be able to serialize
         let json = serde_json::to_string(&progress).unwrap();
         assert!(json.contains("iteration"));

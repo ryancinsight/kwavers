@@ -3,9 +3,9 @@
 //! Implements the diffusive term: -(δ/c₀⁴)∂³p/∂t³
 //! where δ is the acoustic diffusivity
 
-use ndarray::{Array3, Zip};
-use crate::constants::physics::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use crate::constants::numerical::THIRD_ORDER_DIFF_COEFF;
+use crate::constants::physics::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
+use ndarray::{Array3, Zip};
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace
 ///
@@ -33,34 +33,30 @@ pub fn compute_diffusive_term_workspace(
 ) {
     // Compute coefficient: -δ/c₀⁴
     let coeff = -acoustic_diffusivity / sound_speed.powi(4);
-    
+
     // Compute third time derivative using four-point backward finite difference
     // ∂³p/∂t³ ≈ (p[n] - 3*p[n-1] + 3*p[n-2] - p[n-3]) / dt³
     let dt_cubed = dt.powi(3);
-    
+
     Zip::from(diffusive_term_out)
         .and(pressure)
         .and(pressure_prev)
         .and(pressure_prev2)
         .and(pressure_prev3)
         .for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
-            let d3p_dt3 = (p - THIRD_ORDER_DIFF_COEFF * p_prev + THIRD_ORDER_DIFF_COEFF * p_prev2 - p_prev3) / dt_cubed;
+            let d3p_dt3 = (p - THIRD_ORDER_DIFF_COEFF * p_prev + THIRD_ORDER_DIFF_COEFF * p_prev2
+                - p_prev3)
+                / dt_cubed;
             *diff = coeff * d3p_dt3;
         });
 }
-
-
 
 /// Compute frequency-dependent absorption coefficient
 ///
 /// Uses power-law absorption: α = α₀ * (f/f_ref)^n
 /// where α₀ is the absorption coefficient at reference frequency
 /// and n is the power (typically 1-2 for biological tissues)
-pub fn compute_absorption_coefficient(
-    frequency: f64,
-    alpha_0: f64,
-    power: f64,
-) -> f64 {
+pub fn compute_absorption_coefficient(frequency: f64, alpha_0: f64, power: f64) -> f64 {
     alpha_0 * (frequency / REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ).powf(power)
 }
 

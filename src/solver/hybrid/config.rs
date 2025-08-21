@@ -1,9 +1,9 @@
 //! Configuration structures for hybrid PSTD/FDTD solver
 
-use crate::solver::pstd::PstdConfig;
 use crate::solver::fdtd::FdtdConfig;
 use crate::solver::hybrid::adaptive_selection::SelectionCriteria;
-use serde::{Serialize, Deserialize};
+use crate::solver::pstd::PstdConfig;
+use serde::{Deserialize, Serialize};
 
 /// Domain decomposition strategy
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -23,22 +23,22 @@ pub enum DecompositionStrategy {
 pub struct HybridConfig {
     /// PSTD solver configuration
     pub pstd_config: PstdConfig,
-    
+
     /// FDTD solver configuration  
     pub fdtd_config: FdtdConfig,
-    
+
     /// Domain decomposition strategy
     pub decomposition_strategy: DecompositionStrategy,
-    
+
     /// Adaptive selection parameters
     pub selection_criteria: SelectionCriteria,
-    
+
     /// Coupling interface configuration
     pub coupling_interface: CouplingInterfaceConfig,
-    
+
     /// Performance optimization settings
     pub optimization: OptimizationConfig,
-    
+
     /// Validation settings
     pub validation: ValidationConfig,
 }
@@ -62,10 +62,10 @@ impl Default for HybridConfig {
 pub struct CouplingInterfaceConfig {
     /// Interpolation scheme for data exchange
     pub interpolation_scheme: InterpolationScheme,
-    
+
     /// Number of ghost cells for coupling
     pub ghost_cells: usize,
-    
+
     /// Enable filtering at interfaces
     pub enable_filtering: bool,
 }
@@ -96,10 +96,10 @@ pub enum InterpolationScheme {
 pub struct OptimizationConfig {
     /// Enable cache optimization
     pub cache_optimization: bool,
-    
+
     /// Enable SIMD vectorization
     pub simd_enabled: bool,
-    
+
     /// Thread pool size (0 for auto)
     pub thread_pool_size: usize,
 }
@@ -119,10 +119,10 @@ impl Default for OptimizationConfig {
 pub struct ValidationConfig {
     /// Enable solution validation
     pub enable_validation: bool,
-    
+
     /// Check for NaN/Inf values
     pub check_nan_inf: bool,
-    
+
     /// Maximum allowed relative error
     pub max_relative_error: f64,
 }

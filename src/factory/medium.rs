@@ -2,10 +2,10 @@
 //!
 //! Follows Creator pattern - responsible for creating medium objects
 
-use crate::error::{KwaversResult, ConfigError};
-use crate::grid::Grid;
-use crate::medium::{Medium, homogeneous::HomogeneousMedium};
 use crate::constants::physics;
+use crate::error::{ConfigError, KwaversResult};
+use crate::grid::Grid;
+use crate::medium::{homogeneous::HomogeneousMedium, Medium};
 use std::collections::HashMap;
 
 /// Medium configuration
@@ -17,14 +17,14 @@ pub struct MediumConfig {
 
 #[derive(Debug, Clone)]
 pub enum MediumType {
-    Homogeneous { 
-        density: f64, 
-        sound_speed: f64, 
-        mu_a: f64, 
-        mu_s_prime: f64 
+    Homogeneous {
+        density: f64,
+        sound_speed: f64,
+        mu_a: f64,
+        mu_s_prime: f64,
     },
-    Heterogeneous { 
-        tissue_file: Option<String> 
+    Heterogeneous {
+        tissue_file: Option<String>,
     },
 }
 
@@ -32,13 +32,19 @@ impl MediumConfig {
     /// Validate medium configuration
     pub fn validate(&self) -> KwaversResult<()> {
         match &self.medium_type {
-            MediumType::Homogeneous { density, sound_speed, mu_a, mu_s_prime } => {
+            MediumType::Homogeneous {
+                density,
+                sound_speed,
+                mu_a,
+                mu_s_prime,
+            } => {
                 if *density <= 0.0 {
                     return Err(ConfigError::InvalidValue {
                         parameter: "density".to_string(),
                         value: density.to_string(),
                         constraint: "Density must be positive".to_string(),
-                    }.into());
+                    }
+                    .into());
                 }
 
                 if *sound_speed <= 0.0 {
@@ -46,7 +52,8 @@ impl MediumConfig {
                         parameter: "sound_speed".to_string(),
                         value: sound_speed.to_string(),
                         constraint: "Sound speed must be positive".to_string(),
-                    }.into());
+                    }
+                    .into());
                 }
 
                 if *mu_a < 0.0 {
@@ -54,15 +61,18 @@ impl MediumConfig {
                         parameter: "mu_a".to_string(),
                         value: mu_a.to_string(),
                         constraint: "Absorption coefficient must be non-negative".to_string(),
-                    }.into());
+                    }
+                    .into());
                 }
 
                 if *mu_s_prime < 0.0 {
                     return Err(ConfigError::InvalidValue {
                         parameter: "mu_s_prime".to_string(),
                         value: mu_s_prime.to_string(),
-                        constraint: "Reduced scattering coefficient must be non-negative".to_string(),
-                    }.into());
+                        constraint: "Reduced scattering coefficient must be non-negative"
+                            .to_string(),
+                    }
+                    .into());
                 }
             }
             MediumType::Heterogeneous { tissue_file } => {
@@ -72,7 +82,8 @@ impl MediumConfig {
                             parameter: "tissue_file".to_string(),
                             value: "empty".to_string(),
                             constraint: "Tissue file path must not be empty".to_string(),
-                        }.into());
+                        }
+                        .into());
                     }
                 }
             }
@@ -102,29 +113,29 @@ impl MediumFactory {
     /// Create a medium from configuration
     pub fn create_medium(config: &MediumConfig, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         config.validate()?;
-        
+
         match &config.medium_type {
-            MediumType::Homogeneous { density, sound_speed, mu_a, mu_s_prime } => {
+            MediumType::Homogeneous {
+                density,
+                sound_speed,
+                mu_a,
+                mu_s_prime,
+            } => {
                 // Create homogeneous medium with the required parameters
-                let medium = HomogeneousMedium::new(
-                    *density,
-                    *sound_speed,
-                    *mu_a,
-                    *mu_s_prime,
-                    grid,
-                );
+                let medium =
+                    HomogeneousMedium::new(*density, *sound_speed, *mu_a, *mu_s_prime, grid);
                 Ok(Box::new(medium))
             }
             MediumType::Heterogeneous { tissue_file } => {
                 // Heterogeneous medium requires loading from file
-                Err(KwaversError::NotImplemented(
-                    format!("Heterogeneous medium loading from '{}' not yet implemented", 
-                            tissue_file.as_deref().unwrap_or("unknown"))
-                ))
+                Err(KwaversError::NotImplemented(format!(
+                    "Heterogeneous medium loading from '{}' not yet implemented",
+                    tissue_file.as_deref().unwrap_or("unknown")
+                )))
             }
         }
     }
-    
+
     /// Create a water medium with standard properties
     pub fn create_water(grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         let config = MediumConfig {
@@ -138,15 +149,15 @@ impl MediumFactory {
         };
         Self::create_medium(&config, grid)
     }
-    
+
     /// Create a soft tissue medium with standard properties
     pub fn create_tissue(grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         let config = MediumConfig {
             medium_type: MediumType::Homogeneous {
                 density: physics::DENSITY_TISSUE,
                 sound_speed: physics::SOUND_SPEED_TISSUE,
-                mu_a: 0.01,  // Typical tissue absorption
-                mu_s_prime: 1.0,  // Typical tissue scattering
+                mu_a: 0.01,      // Typical tissue absorption
+                mu_s_prime: 1.0, // Typical tissue scattering
             },
             properties: HashMap::new(),
         };

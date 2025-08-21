@@ -1,8 +1,8 @@
 //! Numerical computation error types
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NumericalError {
@@ -41,21 +41,46 @@ impl fmt::Display for NumericalError {
         match self {
             Self::Overflow => write!(f, "Numerical overflow"),
             Self::Underflow => write!(f, "Numerical underflow"),
-            Self::DivisionByZero { operation, location } => {
+            Self::DivisionByZero {
+                operation,
+                location,
+            } => {
                 write!(f, "Division by zero in {} at {}", operation, location)
             }
             Self::InvalidOperation(op) => write!(f, "Invalid operation: {}", op),
-            Self::Instability { operation, condition } => {
-                write!(f, "Numerical instability in {}: condition number {}", operation, condition)
+            Self::Instability {
+                operation,
+                condition,
+            } => {
+                write!(
+                    f,
+                    "Numerical instability in {}: condition number {}",
+                    operation, condition
+                )
             }
             Self::NaN { operation, inputs } => {
                 write!(f, "NaN value in {}: inputs {}", operation, inputs)
             }
-            Self::MatrixDimension { operation, expected, actual } => {
-                write!(f, "Matrix dimension error in {}: expected {}, got {}", operation, expected, actual)
+            Self::MatrixDimension {
+                operation,
+                expected,
+                actual,
+            } => {
+                write!(
+                    f,
+                    "Matrix dimension error in {}: expected {}, got {}",
+                    operation, expected, actual
+                )
             }
-            Self::SingularMatrix { operation, condition_number } => {
-                write!(f, "Singular matrix in {}: condition number {}", operation, condition_number)
+            Self::SingularMatrix {
+                operation,
+                condition_number,
+            } => {
+                write!(
+                    f,
+                    "Singular matrix in {}: condition number {}",
+                    operation, condition_number
+                )
             }
             Self::UnsupportedOperation { operation, reason } => {
                 write!(f, "Unsupported operation {}: {}", operation, reason)

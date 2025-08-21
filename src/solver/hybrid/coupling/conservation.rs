@@ -1,8 +1,8 @@
 //! Conservation enforcement for interface coupling
 
-use crate::error::KwaversResult;
 use super::InterfaceGeometry;
-use ndarray::{Array3, Zip};
+use crate::error::KwaversResult;
+use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl ConservationEnforcer {
             tolerance: 1e-10,
         }
     }
-    
+
     /// Enforce conservation laws on transferred fields
     pub fn enforce(
         &self,
@@ -29,19 +29,19 @@ impl ConservationEnforcer {
         target: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
         let mut conserved = interpolated.clone();
-        
+
         // Check and enforce mass conservation
         self.enforce_mass_conservation(&mut conserved, target)?;
-        
+
         // Check and enforce momentum conservation
         self.enforce_momentum_conservation(&mut conserved, target)?;
-        
+
         // Check and enforce energy conservation
         self.enforce_energy_conservation(&mut conserved, target)?;
-        
+
         Ok(conserved)
     }
-    
+
     /// Enforce mass conservation
     fn enforce_mass_conservation(
         &self,
@@ -50,16 +50,16 @@ impl ConservationEnforcer {
     ) -> KwaversResult<()> {
         // Calculate total mass before and after
         let total_mass: f64 = fields.iter().sum();
-        
+
         if total_mass.abs() > self.tolerance {
             // Normalize to conserve mass
             let correction = 1.0 / total_mass;
             fields.map_inplace(|x| *x *= correction);
         }
-        
+
         Ok(())
     }
-    
+
     /// Enforce momentum conservation
     fn enforce_momentum_conservation(
         &self,
@@ -70,7 +70,7 @@ impl ConservationEnforcer {
         // This would require velocity field components
         Ok(())
     }
-    
+
     /// Enforce energy conservation
     fn enforce_energy_conservation(
         &self,
@@ -80,7 +80,7 @@ impl ConservationEnforcer {
         // Calculate total energy
         let source_energy: f64 = fields.iter().map(|x| x * x).sum();
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
-        
+
         if source_energy > self.tolerance {
             let energy_ratio = (target_energy / source_energy).sqrt();
             if (energy_ratio - 1.0).abs() > self.tolerance {
@@ -88,10 +88,10 @@ impl ConservationEnforcer {
                 fields.map_inplace(|x| *x *= energy_ratio);
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Get conservation metrics
     pub fn get_metrics(&self) -> ConservationMetrics {
         ConservationMetrics {

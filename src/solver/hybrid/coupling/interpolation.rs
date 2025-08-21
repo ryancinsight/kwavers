@@ -2,7 +2,7 @@
 
 use crate::error::KwaversResult;
 use ndarray::Array3;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Interpolation schemes for inter-domain coupling
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -48,7 +48,7 @@ impl InterpolationManager {
             adaptive_criteria: None,
         }
     }
-    
+
     /// Interpolate fields from source to target grid
     pub fn interpolate(
         &self,
@@ -57,14 +57,24 @@ impl InterpolationManager {
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
         match self.scheme {
-            InterpolationScheme::Linear => self.linear_interpolation(source_field, source_coords, target_coords),
-            InterpolationScheme::CubicSpline => self.cubic_spline_interpolation(source_field, source_coords, target_coords),
-            InterpolationScheme::Spectral => self.spectral_interpolation(source_field, source_coords, target_coords),
-            InterpolationScheme::Conservative => self.conservative_interpolation(source_field, source_coords, target_coords),
-            InterpolationScheme::Adaptive => self.adaptive_interpolation(source_field, source_coords, target_coords),
+            InterpolationScheme::Linear => {
+                self.linear_interpolation(source_field, source_coords, target_coords)
+            }
+            InterpolationScheme::CubicSpline => {
+                self.cubic_spline_interpolation(source_field, source_coords, target_coords)
+            }
+            InterpolationScheme::Spectral => {
+                self.spectral_interpolation(source_field, source_coords, target_coords)
+            }
+            InterpolationScheme::Conservative => {
+                self.conservative_interpolation(source_field, source_coords, target_coords)
+            }
+            InterpolationScheme::Adaptive => {
+                self.adaptive_interpolation(source_field, source_coords, target_coords)
+            }
         }
     }
-    
+
     fn linear_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -75,7 +85,7 @@ impl InterpolationManager {
         let shape = source_field.shape();
         Ok(Array3::zeros([shape[0], shape[1], shape[2]])) // TODO: Implement
     }
-    
+
     fn cubic_spline_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -86,7 +96,7 @@ impl InterpolationManager {
         let shape = source_field.shape();
         Ok(Array3::zeros([shape[0], shape[1], shape[2]])) // TODO: Implement
     }
-    
+
     fn spectral_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -97,7 +107,7 @@ impl InterpolationManager {
         let shape = source_field.shape();
         Ok(Array3::zeros([shape[0], shape[1], shape[2]])) // TODO: Implement
     }
-    
+
     fn conservative_interpolation(
         &self,
         source_field: &Array3<f64>,
@@ -108,7 +118,7 @@ impl InterpolationManager {
         let shape = source_field.shape();
         Ok(Array3::zeros([shape[0], shape[1], shape[2]])) // TODO: Implement
     }
-    
+
     fn adaptive_interpolation(
         &self,
         source_field: &Array3<f64>,

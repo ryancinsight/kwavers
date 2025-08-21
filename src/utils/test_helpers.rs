@@ -1,5 +1,5 @@
 //! Common test helper functions
-//! 
+//!
 //! This module consolidates test utilities to avoid duplication
 //! and maintain SSOT (Single Source of Truth) principle.
 
@@ -8,7 +8,7 @@ use crate::medium::homogeneous::HomogeneousMedium;
 use ndarray::Array3;
 
 /// Create a standard test grid with specified dimensions
-/// 
+///
 /// This function provides a consistent grid for testing across modules
 pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
     Grid::new(nx, ny, nz, 0.001, 0.001, 0.001)

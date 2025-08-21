@@ -29,10 +29,10 @@ pub fn transpose_3d(data: &mut Array3<Complex<f64>>, operation: TransposeOperati
 fn transpose_xy(data: &mut Array3<Complex<f64>>) {
     let shape = data.dim();
     let (nx, ny, nz) = shape;
-    
+
     // Create transposed array
     let mut transposed = Array3::zeros((ny, nx, nz));
-    
+
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -40,7 +40,7 @@ fn transpose_xy(data: &mut Array3<Complex<f64>>) {
             }
         }
     }
-    
+
     *data = transposed;
 }
 
@@ -48,10 +48,10 @@ fn transpose_xy(data: &mut Array3<Complex<f64>>) {
 fn transpose_xz(data: &mut Array3<Complex<f64>>) {
     let shape = data.dim();
     let (nx, ny, nz) = shape;
-    
+
     // Create transposed array
     let mut transposed = Array3::zeros((nz, ny, nx));
-    
+
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -59,7 +59,7 @@ fn transpose_xz(data: &mut Array3<Complex<f64>>) {
             }
         }
     }
-    
+
     *data = transposed;
 }
 
@@ -67,10 +67,10 @@ fn transpose_xz(data: &mut Array3<Complex<f64>>) {
 fn transpose_yz(data: &mut Array3<Complex<f64>>) {
     let shape = data.dim();
     let (nx, ny, nz) = shape;
-    
+
     // Create transposed array
     let mut transposed = Array3::zeros((nx, nz, ny));
-    
+
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -78,31 +78,31 @@ fn transpose_yz(data: &mut Array3<Complex<f64>>) {
             }
         }
     }
-    
+
     *data = transposed;
 }
 
 /// In-place transpose for contiguous memory (cache-friendly)
 pub fn transpose_inplace_2d(data: &mut [Complex<f64>], rows: usize, cols: usize) {
     assert_eq!(data.len(), rows * cols);
-    
+
     // Use cycle-following algorithm for in-place transpose
     let mut visited = vec![false; data.len()];
-    
+
     for start in 0..data.len() {
         if visited[start] {
             continue;
         }
-        
+
         let mut current = start;
         loop {
             visited[current] = true;
             let next = (current % rows) * cols + current / rows;
-            
+
             if next == start {
                 break;
             }
-            
+
             data.swap(current, next);
             current = next;
         }

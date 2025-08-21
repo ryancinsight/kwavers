@@ -1,9 +1,9 @@
 //! Performance optimization module for the Kwavers acoustic simulation library
 
 use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, s};
-use rayon::prelude::*;
 use log::info;
+use ndarray::{s, Array3};
+use rayon::prelude::*;
 
 /// Performance optimization configuration
 #[derive(Debug, Clone)]
@@ -73,7 +73,7 @@ impl SimdLevel {
             SimdLevel::None
         }
     }
-    
+
     /// Get vector width in f64 elements
     pub fn vector_width(&self) -> usize {
         match self {
@@ -103,14 +103,17 @@ struct PerformanceMetrics {
 
 impl PerformanceOptimizer {
     pub fn new(config: OptimizationConfig) -> Self {
-        info!("Initializing performance optimizer with SIMD level: {:?}", config.simd_level);
-        
+        info!(
+            "Initializing performance optimizer with SIMD level: {:?}",
+            config.simd_level
+        );
+
         Self {
             config,
             metrics: PerformanceMetrics::default(),
         }
     }
-    
+
     /// Apply stencil operation with optimizations
     pub fn apply_stencil(
         &mut self,
@@ -119,7 +122,7 @@ impl PerformanceOptimizer {
         stencil: &StencilKernel,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = input.dim();
-        
+
         if self.config.enable_simd {
             match self.config.simd_level {
                 SimdLevel::AVX512 => self.stencil_vectorized(input, output, stencil, 8)?,
@@ -130,10 +133,10 @@ impl PerformanceOptimizer {
         } else {
             self.stencil_scalar(input, output, stencil)?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Vectorized stencil computation using safe abstractions
     fn stencil_vectorized(
         &mut self,
@@ -143,23 +146,23 @@ impl PerformanceOptimizer {
         vector_width: usize,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = input.dim();
-        
+
         // Cache blocking parameters
         let block_size = if self.config.cache_blocking {
             self.config.cache_block_size
         } else {
             nx
         };
-        
+
         // Use iterators for cache-friendly access pattern
-        (1..nz-1).step_by(block_size).for_each(|block_k| {
-            (1..ny-1).step_by(block_size).for_each(|block_j| {
-                (1..nx-1).step_by(block_size).for_each(|block_i| {
+        (1..nz - 1).step_by(block_size).for_each(|block_k| {
+            (1..ny - 1).step_by(block_size).for_each(|block_j| {
+                (1..nx - 1).step_by(block_size).for_each(|block_i| {
                     // Process block boundaries
                     let k_end = (block_k + block_size).min(nz - 1);
                     let j_end = (block_j + block_size).min(ny - 1);
                     let i_end = (block_i + block_size).min(nx - 1);
-                    
+
                     // Process block with vectorization
                     (block_k..k_end).for_each(|k| {
                         (block_j..j_end).for_each(|j| {
@@ -178,10 +181,10 @@ impl PerformanceOptimizer {
                 });
             });
         });
-        
+
         Ok(())
     }
-    
+
     /// AVX-512 optimized stencil computation - removed unsafe implementation
     #[cfg(feature = "avx512")]
     #[target_feature(enable = "avx512f")]
@@ -193,7 +196,7 @@ impl PerformanceOptimizer {
     ) -> KwaversResult<()> {
         self.stencil_vectorized(input, output, stencil, 8)
     }
-    
+
     /// AVX-512 implementation (requires AVX-512 feature)
     #[cfg(not(feature = "avx512"))]
     fn stencil_avx512(
@@ -202,13 +205,15 @@ impl PerformanceOptimizer {
         _output: &mut Array3<f64>,
         _stencil: &StencilKernel,
     ) -> KwaversResult<()> {
-        Err(KwaversError::Config(crate::error::ConfigError::InvalidValue {
-            parameter: "simd_level".to_string(),
-            value: "AVX-512".to_string(),
-            constraint: "AVX-512 not enabled in build".to_string(),
-        }))
+        Err(KwaversError::Config(
+            crate::error::ConfigError::InvalidValue {
+                parameter: "simd_level".to_string(),
+                value: "AVX-512".to_string(),
+                constraint: "AVX-512 not enabled in build".to_string(),
+            },
+        ))
     }
-    
+
     /// Scalar stencil computation (fallback)
     fn stencil_scalar(
         &mut self,
@@ -217,23 +222,24 @@ impl PerformanceOptimizer {
         stencil: &StencilKernel,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = input.dim();
-        
+
         // Parallel execution over outer dimensions
-        let mut output_slice = output.slice_mut(s![1..nx-1, 1..ny-1, 1..nz-1]);
+        let mut output_slice = output.slice_mut(s![1..nx - 1, 1..ny - 1, 1..nz - 1]);
         let output_vec: Vec<_> = output_slice.iter_mut().collect();
-        output_vec.into_par_iter()
+        output_vec
+            .into_par_iter()
             .enumerate()
             .for_each(|(idx, out)| {
                 let k = idx / ((nx - 2) * (ny - 2)) + 1;
                 let j = (idx % ((nx - 2) * (ny - 2))) / (nx - 2) + 1;
                 let i = idx % (nx - 2) + 1;
-                
+
                 *out = stencil.apply_scalar(input, i, j, k);
             });
-        
+
         Ok(())
     }
-    
+
     /// Optimize GPU kernel execution
     #[cfg(feature = "gpu")]
     pub fn optimize_gpu_kernels(
@@ -244,7 +250,7 @@ impl PerformanceOptimizer {
         log::warn!("GPU kernel optimization not yet implemented");
         Ok(())
     }
-    
+
     /// Fuse multiple GPU kernels into a single launch
     #[cfg(feature = "gpu")]
     fn fuse_kernels(
@@ -253,88 +259,91 @@ impl PerformanceOptimizer {
         kernels: Vec<Box<dyn std::any::Any>>,
     ) -> KwaversResult<()> {
         use crate::gpu::GpuContext;
-        
+
         info!("Fusing {} GPU kernels", kernels.len());
-        
+
         // Downcast GPU context
-        let context = gpu_context.downcast_mut::<GpuContext>()
-            .ok_or_else(|| KwaversError::Config(crate::error::ConfigError::InvalidValue {
+        let context = gpu_context.downcast_mut::<GpuContext>().ok_or_else(|| {
+            KwaversError::Config(crate::error::ConfigError::InvalidValue {
                 parameter: "gpu_context".to_string(),
                 value: "invalid type".to_string(),
                 constraint: "Expected GpuContext".to_string(),
-            }))?;
-        
+            })
+        })?;
+
         // Downcast and collect kernels
         let mut gpu_kernels = Vec::new();
         let mut all_parameters = Vec::new();
         let mut fused_code = String::new();
         let mut fused_body = String::new();
-        
+
         for (i, kernel_box) in kernels.into_iter().enumerate() {
-            let kernel = kernel_box.downcast::<GpuKernel>()
-                .map_err(|_| KwaversError::Config(crate::error::ConfigError::InvalidValue {
+            let kernel = kernel_box.downcast::<GpuKernel>().map_err(|_| {
+                KwaversError::Config(crate::error::ConfigError::InvalidValue {
                     parameter: "kernel".to_string(),
                     value: format!("kernel {}", i),
                     constraint: "Expected GpuKernel".to_string(),
-                }))?;
-            
+                })
+            })?;
+
             let kernel_data = *kernel;
-            
+
             // Append kernel code
             fused_code.push_str(&kernel_data.code);
             fused_code.push_str("\n");
-            
+
             // Append kernel body with unique function name
             fused_body.push_str(&format!("    // Kernel {}: {}\n", i, kernel_data.name));
             fused_body.push_str(&format!("    {{\n"));
             fused_body.push_str(&kernel_data.body);
             fused_body.push_str(&format!("    }}\n\n"));
-            
+
             // Collect parameters - do this after using other fields to avoid partial moves
             for param in kernel_data.parameters.iter() {
                 all_parameters.push(param.clone());
             }
-            
+
             gpu_kernels.push(kernel_data);
         }
-        
+
         // Create fused kernel
         let fused_kernel_code = format!(
             "__global__ void fused_kernel({}) {{\n{}\n}}\n",
-            all_parameters.iter()
+            all_parameters
+                .iter()
                 .map(|p| format!("{} {}{}", p.dtype, p.name, p.suffix))
                 .collect::<Vec<_>>()
                 .join(", "),
             fused_body
         );
-        
+
         // Prepare kernel arguments as void pointers
-        let kernel_args: Vec<*const std::ffi::c_void> = all_parameters.iter()
+        let kernel_args: Vec<*const std::ffi::c_void> = all_parameters
+            .iter()
             .map(|p| {
                 // Map parameter names to buffer/value references for kernel invocation
                 p.name.as_ptr() as *const std::ffi::c_void
             })
             .collect();
-        
+
         // Launch the fused kernel
-        let block_size = gpu_kernels.first()
+        let block_size = gpu_kernels
+            .first()
             .map(|k| k.block_size)
             .unwrap_or((256, 1, 1));
-            
-        let grid_size = gpu_kernels.first()
-            .map(|k| k.grid_size)
-            .unwrap_or(1024);
-        
+
+        let grid_size = gpu_kernels.first().map(|k| k.grid_size).unwrap_or(1024);
+
         context.launch_kernel(
             "fused_kernel",
             (grid_size as u32, 1, 1),
             block_size,
             &kernel_args,
         )?;
-        
+
         Ok(())
     }
-    
+
     /// Execute kernels sequentially
     #[cfg(feature = "gpu")]
     fn execute_kernels_sequential(
@@ -345,16 +354,22 @@ impl PerformanceOptimizer {
         log::warn!("Sequential kernel execution not yet implemented");
         Ok(())
     }
-    
+
     /// Enable multi-GPU execution
     #[cfg(feature = "gpu")]
-    pub fn setup_multi_gpu(&mut self, gpu_contexts: Vec<Arc<crate::gpu::GpuContext>>) -> KwaversResult<()> {
+    pub fn setup_multi_gpu(
+        &mut self,
+        gpu_contexts: Vec<Arc<crate::gpu::GpuContext>>,
+    ) -> KwaversResult<()> {
         if !self.config.multi_gpu || gpu_contexts.len() <= 1 {
             return Ok(());
         }
-        
-        info!("Setting up multi-GPU execution with {} devices", gpu_contexts.len());
-        
+
+        info!(
+            "Setting up multi-GPU execution with {} devices",
+            gpu_contexts.len()
+        );
+
         // Setup peer-to-peer access between GPUs
         for (i, ctx1) in gpu_contexts.iter().enumerate() {
             for (j, _ctx2) in gpu_contexts.iter().enumerate() {
@@ -363,10 +378,10 @@ impl PerformanceOptimizer {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Distribute work across multiple GPUs
     #[cfg(feature = "gpu")]
     pub fn distribute_work_multi_gpu<T: Send + Sync>(
@@ -377,30 +392,31 @@ impl PerformanceOptimizer {
     ) -> KwaversResult<()> {
         let num_gpus = gpu_contexts.len();
         let items_per_gpu = (work_items.len() + num_gpus - 1) / num_gpus;
-        
+
         // Distribute work
-        work_items.par_chunks(items_per_gpu)
+        work_items
+            .par_chunks(items_per_gpu)
             .zip(gpu_contexts.par_iter())
-            .try_for_each(|(chunk, gpu_ctx)| {
-                process_fn(gpu_ctx, chunk)
-            })?;
-        
+            .try_for_each(|(chunk, gpu_ctx)| process_fn(gpu_ctx, chunk))?;
+
         Ok(())
     }
-    
+
     /// Update performance metrics
     pub fn update_metrics(&mut self, updates_per_second: f64) {
         self.metrics.grid_updates_per_second = updates_per_second;
-        
+
         // Estimate other metrics
         let bytes_per_update = 8.0 * 7.0; // 7-point stencil, 8 bytes per double
         self.metrics.memory_bandwidth_gbps = updates_per_second * bytes_per_update / 1e9;
-        
-        info!("Performance: {:.1}M updates/sec, {:.1} GB/s bandwidth",
-              updates_per_second / 1e6,
-              self.metrics.memory_bandwidth_gbps);
+
+        info!(
+            "Performance: {:.1}M updates/sec, {:.1} GB/s bandwidth",
+            updates_per_second / 1e6,
+            self.metrics.memory_bandwidth_gbps
+        );
     }
-    
+
     /// Get current performance metrics
     pub fn get_metrics(&self) -> &PerformanceMetrics {
         &self.metrics
@@ -419,12 +435,14 @@ pub struct StencilKernel {
 impl StencilKernel {
     /// Apply stencil at a single point
     pub fn apply_scalar(&self, input: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
-        self.center * input[[i, j, k]] +
-        self.neighbor * (
-            input[[i-1, j, k]] + input[[i+1, j, k]] +
-            input[[i, j-1, k]] + input[[i, j+1, k]] +
-            input[[i, j, k-1]] + input[[i, j, k+1]]
-        )
+        self.center * input[[i, j, k]]
+            + self.neighbor
+                * (input[[i - 1, j, k]]
+                    + input[[i + 1, j, k]]
+                    + input[[i, j - 1, k]]
+                    + input[[i, j + 1, k]]
+                    + input[[i, j, k - 1]]
+                    + input[[i, j, k + 1]])
     }
 }
 
@@ -485,7 +503,7 @@ impl BandwidthOptimizer {
             prefetch_strategy: PrefetchStrategy::Software(8),
         }
     }
-    
+
     /// Optimize memory layout for bandwidth
     pub fn optimize_layout(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
         match self.access_pattern {
@@ -522,19 +540,19 @@ pub struct CacheOptimizer {
 impl CacheOptimizer {
     pub fn new() -> Self {
         Self {
-            l1_size: 32 * 1024,      // 32 KB typical L1
-            l2_size: 256 * 1024,     // 256 KB typical L2
+            l1_size: 32 * 1024,       // 32 KB typical L1
+            l2_size: 256 * 1024,      // 256 KB typical L2
             l3_size: 8 * 1024 * 1024, // 8 MB typical L3
             cache_line_size: 64,      // 64 bytes typical
         }
     }
-    
+
     /// Calculate optimal block size for cache
     pub fn optimal_block_size(&self, element_size: usize) -> usize {
         // Target 1/3 of L1 cache for working set
         let working_set_size = self.l1_size / 3;
         let elements_per_block = working_set_size / element_size;
-        
+
         // Round down to cache line boundary
         let elements_per_line = self.cache_line_size / element_size;
         (elements_per_block / elements_per_line) * elements_per_line
@@ -544,33 +562,33 @@ impl CacheOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_simd_detection() {
         let level = SimdLevel::detect_best();
         println!("Detected SIMD level: {:?}", level);
         assert!(level.vector_width() >= 1);
     }
-    
+
     #[test]
     fn test_stencil_kernel() {
         let stencil = StencilKernel {
             center: -6.0,
             neighbor: 1.0,
         };
-        
+
         let mut input = Array3::zeros((5, 5, 5));
         input[[2, 2, 2]] = 1.0;
-        
+
         let result = stencil.apply_scalar(&input, 2, 2, 2);
         assert_eq!(result, -6.0);
     }
-    
+
     #[test]
     fn test_cache_optimizer() {
         let optimizer = CacheOptimizer::new();
         let block_size = optimizer.optimal_block_size(8); // 8 bytes per f64
-        
+
         assert!(block_size > 0);
         assert!(block_size * 8 <= optimizer.l1_size / 3);
     }

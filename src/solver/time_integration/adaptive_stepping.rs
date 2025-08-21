@@ -1,13 +1,13 @@
 //! Adaptive time stepping
-//! 
+//!
 //! This module provides adaptive time step control based on
 //! error estimation and tolerance requirements.
 
-use super::traits::{TimeStepper, ErrorEstimatorTrait};
+use super::traits::{ErrorEstimatorTrait, TimeStepper};
 use ndarray::{Array3, Zip};
 
 /// Adaptive time stepper wrapper
-/// 
+///
 /// Wraps any time stepper to provide adaptive time step control
 #[derive(Debug)]
 pub struct AdaptiveTimeStepper<T: TimeStepper> {
@@ -48,7 +48,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
             tolerance,
         }
     }
-    
+
     /// Perform adaptive time step with error control
     pub fn adaptive_step<F>(
         &mut self,
@@ -62,7 +62,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
         let mut dt = self.current_dt;
         let mut attempts = 0;
         const MAX_ATTEMPTS: usize = 10;
-        
+
         loop {
             attempts += 1;
             if attempts > MAX_ATTEMPTS {
@@ -70,21 +70,25 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
                     crate::error::NumericalError::Instability {
                         operation: "adaptive_step".to_string(),
                         condition: attempts as f64,
-                    }
+                    },
                 ));
             }
-            
+
             // Compute high-order solution (in-place update on a copy)
             let mut high_order = field.clone();
-            self.base_stepper.step(&mut high_order, rhs_fn.clone(), dt, grid)?;
-            
+            self.base_stepper
+                .step(&mut high_order, rhs_fn.clone(), dt, grid)?;
+
             // Compute low-order solution for error estimation (on another copy)
             let mut low_order = field.clone();
-            self.low_order_stepper.step(&mut low_order, rhs_fn.clone(), dt, grid)?;
-            
+            self.low_order_stepper
+                .step(&mut low_order, rhs_fn.clone(), dt, grid)?;
+
             // Estimate error
-            let error = self.error_estimator.estimate_local_error(&low_order, &high_order, dt);
-            
+            let error = self
+                .error_estimator
+                .estimate_local_error(&low_order, &high_order, dt);
+
             // Check if error is acceptable
             if error <= self.tolerance {
                 // Accept the step
@@ -92,39 +96,40 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
                 self.current_dt = self.current_dt.clamp(self.min_dt, self.max_dt);
                 return Ok((high_order, dt));
             }
-            
+
             // Reject the step and try with smaller dt
             dt = self.compute_optimal_dt(dt, error);
             dt = dt.max(self.min_dt);
-            
+
             if dt == self.min_dt && error > 10.0 * self.tolerance {
                 // Error too large even with minimum time step
                 log::warn!(
                     "Adaptive time stepping: error {} exceeds tolerance {} even at min dt",
-                    error, self.tolerance
+                    error,
+                    self.tolerance
                 );
             }
         }
     }
-    
+
     /// Compute optimal time step based on error
     fn compute_optimal_dt(&self, current_dt: f64, error: f64) -> f64 {
         let safety_factor = 0.9;
         let max_increase = 2.0;
         let max_decrease = 0.1;
-        
+
         if error < 1e-10 {
             // Error is essentially zero, increase time step
             return current_dt * max_increase;
         }
-        
+
         let order = 4.0; // Assuming 4th order method
         let factor = safety_factor * (self.tolerance / error).powf(1.0 / (order + 1.0));
         let factor = factor.clamp(max_decrease, max_increase);
-        
+
         current_dt * factor
     }
-    
+
     /// Get current time step
     pub fn get_current_dt(&self) -> f64 {
         self.current_dt
@@ -154,36 +159,32 @@ impl ErrorEstimatorTrait for RichardsonErrorEstimator {
     ) -> f64 {
         // Richardson extrapolation error estimate
         let mut max_error: f64 = 0.0;
-        
+
         Zip::from(field_low)
             .and(field_high)
             .for_each(|&low, &high| {
                 let error = (high - low).abs();
                 max_error = max_error.max(error);
             });
-        
+
         // Scale by order-dependent factor
         let factor = 1.0 / (2.0_f64.powi(self.order as i32) - 1.0);
         max_error * factor
     }
-    
-    fn estimate_global_error(
-        &self,
-        local_errors: &[f64],
-        time_steps: &[f64],
-    ) -> f64 {
+
+    fn estimate_global_error(&self, local_errors: &[f64], time_steps: &[f64]) -> f64 {
         // Estimate global error accumulation
         if local_errors.is_empty() || time_steps.is_empty() {
             return 0.0;
         }
-        
+
         // Simple accumulation model
         let mut global_error = 0.0;
         for (i, (&local_err, &dt)) in local_errors.iter().zip(time_steps.iter()).enumerate() {
             // Error growth model: e_global ~ sum(e_local * sqrt(n))
             global_error += local_err * dt * ((i + 1) as f64).sqrt();
         }
-        
+
         global_error
     }
 }
@@ -229,7 +230,7 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
                         max_error = max_error.max((high - low).abs());
                     });
                 max_error
-            },
+            }
             ErrorNorm::L2 => {
                 let mut sum_sq = 0.0;
                 let mut count = 0;
@@ -240,7 +241,7 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
                         count += 1;
                     });
                 (sum_sq / count as f64).sqrt()
-            },
+            }
             ErrorNorm::L1 => {
                 let mut sum = 0.0;
                 let mut count = 0;
@@ -251,15 +252,11 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
                         count += 1;
                     });
                 sum / count as f64
-            },
+            }
         }
     }
-    
-    fn estimate_global_error(
-        &self,
-        local_errors: &[f64],
-        _time_steps: &[f64],
-    ) -> f64 {
+
+    fn estimate_global_error(&self, local_errors: &[f64], _time_steps: &[f64]) -> f64 {
         // Simple sum for embedded methods
         local_errors.iter().sum()
     }

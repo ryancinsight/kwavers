@@ -1,20 +1,20 @@
 // physics/optics/diffusion/mod.rs
-use ndarray::{Array3, Array4, Axis};
 use crate::grid::Grid;
-use crate::physics::field_indices::LIGHT_IDX;
-use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
-use crate::physics::optics::polarization::LinearPolarization;
-use crate::physics::thermal::ThermalCalculator;
 use crate::medium::Medium;
+use crate::physics::field_indices::LIGHT_IDX;
+use crate::physics::optics::polarization::LinearPolarization;
+use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
+use crate::physics::thermal::ThermalCalculator;
 use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
+use ndarray::{Array3, Array4, Axis};
 
-use std::time::Instant;
-use crate::physics::traits::LightDiffusionModelTrait;
 use crate::constants::optics::{
-    TISSUE_DIFFUSION_COEFFICIENT, TISSUE_ABSORPTION_COEFFICIENT, 
-    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF
+    DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, TISSUE_ABSORPTION_COEFFICIENT,
+    TISSUE_DIFFUSION_COEFFICIENT,
 };
+use crate::physics::traits::LightDiffusionModelTrait;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct LightDiffusion {
@@ -44,12 +44,14 @@ impl LightDiffusion {
         enable_thermal: bool,
     ) -> Self {
         let (nx, ny, nz) = grid.dimensions();
-        
+
         Self {
             fluence_rate: Array4::zeros((1, nx, ny, nz)),
             emission_spectrum: Array3::zeros((nx, ny, nz)),
             polarization: if enable_polarization {
-                Some(Box::new(LinearPolarization::new(DEFAULT_POLARIZATION_FACTOR)))
+                Some(Box::new(LinearPolarization::new(
+                    DEFAULT_POLARIZATION_FACTOR,
+                )))
             } else {
                 None
             },
@@ -89,58 +91,65 @@ impl LightDiffusionModelTrait for LightDiffusion {
         dt: f64,
     ) {
         let start_time = Instant::now();
-        
+
         // Update the light field in the fields array
         let mut light_field = fields.index_axis_mut(Axis(0), LIGHT_IDX);
-        
+
         // Get dimensions
         let (nx, ny, nz) = light_field.dim();
-        
+
         // Photon diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
         // where φ is photon fluence rate, D is diffusion coefficient, μₐ is absorption coefficient
         let diffusion_coefficient = TISSUE_DIFFUSION_COEFFICIENT; // mm²/ns - typical tissue value
         let absorption_coeff = TISSUE_ABSORPTION_COEFFICIENT; // mm⁻¹ - typical tissue absorption
-        
+
         // Create a temporary array to store the updated values
         let mut updated_field = light_field.to_owned();
-        
+
         let dx2_inv = 1.0 / (grid.dx * grid.dx);
         let dy2_inv = 1.0 / (grid.dy * grid.dy);
         let dz2_inv = 1.0 / (grid.dz * grid.dz);
-        
+
         // Apply diffusion equation with second-order central differences
-        for i in 1..nx-1 {
-            for j in 1..ny-1 {
-                for k in 1..nz-1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let center_val = light_field[[i, j, k]];
-                    
+
                     // Source term from sonoluminescence
                     let source_term = self.emission_spectrum[[i, j, k]];
-                    
-                    let laplacian_phi = 
-                        (light_field[[i+1, j, k]] + LAPLACIAN_CENTER_COEFF * center_val + light_field[[i-1, j, k]]) * dx2_inv +
-                        (light_field[[i, j+1, k]] + LAPLACIAN_CENTER_COEFF * center_val + light_field[[i, j-1, k]]) * dy2_inv +
-                        (light_field[[i, j, k+1]] + LAPLACIAN_CENTER_COEFF * center_val + light_field[[i, j, k-1]]) * dz2_inv;
-                    
+
+                    let laplacian_phi = (light_field[[i + 1, j, k]]
+                        + LAPLACIAN_CENTER_COEFF * center_val
+                        + light_field[[i - 1, j, k]])
+                        * dx2_inv
+                        + (light_field[[i, j + 1, k]]
+                            + LAPLACIAN_CENTER_COEFF * center_val
+                            + light_field[[i, j - 1, k]])
+                            * dy2_inv
+                        + (light_field[[i, j, k + 1]]
+                            + LAPLACIAN_CENTER_COEFF * center_val
+                            + light_field[[i, j, k - 1]])
+                            * dz2_inv;
+
                     // Update using diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
-                    let update = center_val + dt * (
-                        diffusion_coefficient * laplacian_phi - 
-                        absorption_coeff * center_val + 
-                        source_term
-                    );
-                    
+                    let update = center_val
+                        + dt * (diffusion_coefficient * laplacian_phi
+                            - absorption_coeff * center_val
+                            + source_term);
+
                     // Ensure non-negative values (physical constraint)
                     updated_field[[i, j, k]] = update.max(0.0);
                 }
             }
         }
-        
+
         // Update the light field
         light_field.assign(&updated_field);
-        
+
         // Update fluence_rate to match
         self.fluence_rate.assign(fields);
-        
+
         self.update_time = start_time.elapsed().as_secs_f64();
         self.call_count += 1;
     }

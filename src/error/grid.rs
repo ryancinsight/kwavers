@@ -1,8 +1,8 @@
 //! Grid-related error types
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GridError {
@@ -38,20 +38,47 @@ impl fmt::Display for GridError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidDimensions { nx, ny, nz, reason } => {
-                write!(f, "Invalid grid dimensions ({}, {}, {}): {}", nx, ny, nz, reason)
+                write!(
+                    f,
+                    "Invalid grid dimensions ({}, {}, {}): {}",
+                    nx, ny, nz, reason
+                )
             }
             Self::InvalidSpacing { dx, dy, dz, reason } => {
-                write!(f, "Invalid grid spacing ({}, {}, {}): {}", dx, dy, dz, reason)
+                write!(
+                    f,
+                    "Invalid grid spacing ({}, {}, {}): {}",
+                    dx, dy, dz, reason
+                )
             }
-            Self::OutOfMemory { required_bytes, available_bytes } => {
-                write!(f, "Grid requires {} bytes but only {} available", required_bytes, available_bytes)
+            Self::OutOfMemory {
+                required_bytes,
+                available_bytes,
+            } => {
+                write!(
+                    f,
+                    "Grid requires {} bytes but only {} available",
+                    required_bytes, available_bytes
+                )
             }
             Self::IndexOutOfBounds { index, dimensions } => {
-                write!(f, "Index {:?} out of bounds for dimensions {:?}", index, dimensions)
+                write!(
+                    f,
+                    "Index {:?} out of bounds for dimensions {:?}",
+                    index, dimensions
+                )
             }
             Self::NotInitialized => write!(f, "Grid not initialized"),
-            Self::ValidationFailed { field, value, constraint } => {
-                write!(f, "Grid validation failed: {} = {} violates {}", field, value, constraint)
+            Self::ValidationFailed {
+                field,
+                value,
+                constraint,
+            } => {
+                write!(
+                    f,
+                    "Grid validation failed: {} = {} violates {}",
+                    field, value, constraint
+                )
             }
         }
     }

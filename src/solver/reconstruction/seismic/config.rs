@@ -1,7 +1,7 @@
 //! Configuration structures for seismic imaging algorithms
 
-use serde::{Serialize, Deserialize};
-use crate::solver::reconstruction::{ReconstructionConfig, InterpolationMethod};
+use crate::solver::reconstruction::{InterpolationMethod, ReconstructionConfig};
+use serde::{Deserialize, Serialize};
 
 // Import constants from the constants module
 use super::constants::*;
@@ -35,23 +35,23 @@ pub enum RtmImagingCondition {
     /// Zero-lag cross-correlation (Claerbout, 1985)
     /// I(x) = ∫ S(x,t) * R(x,t) dt
     ZeroLag,
-    
+
     /// Normalized cross-correlation (Valenciano et al., 2006)
     /// I(x) = ∫ S(x,t) * R(x,t) dt / (|S| * |R|)
     Normalized,
-    
+
     /// Laplacian imaging condition (Zhang & Sun, 2009)
     /// I(x) = ∫ ∇²S(x,t) * R(x,t) dt
     Laplacian,
-    
+
     /// Energy-normalized imaging condition (Schleicher et al., 2008)
     /// I(x) = ∫ S(x,t) * R(x,t) dt / ∫ S(x,t)² dt
     EnergyNormalized,
-    
+
     /// Source-normalized imaging condition (Guitton et al., 2007)
     /// I(x) = ∫ ∂S/∂t * R(x,t) dt
     SourceNormalized,
-    
+
     /// Poynting vector imaging condition (Yoon et al., 2004)
     /// I(x) = ∫ ∇S(x,t) · ∇R(x,t) dt
     Poynting,
@@ -72,9 +72,10 @@ impl Default for SeismicImagingConfig {
     fn default() -> Self {
         Self {
             base_config: ReconstructionConfig {
-                sound_speed: 3000.0, // Typical crustal velocity
+                sound_speed: 3000.0,                         // Typical crustal velocity
                 sampling_frequency: 1.0 / DEFAULT_TIME_STEP, // 2000 Hz
-                algorithm: crate::solver::reconstruction::ReconstructionAlgorithm::FullWaveformInversion,
+                algorithm:
+                    crate::solver::reconstruction::ReconstructionAlgorithm::FullWaveformInversion,
                 filter: crate::solver::reconstruction::FilterType::None,
                 interpolation: InterpolationMethod::Linear,
             },

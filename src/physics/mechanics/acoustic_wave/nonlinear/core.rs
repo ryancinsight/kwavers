@@ -1,15 +1,15 @@
 // src/physics/mechanics/acoustic_wave/nonlinear/core.rs
+use crate::constants::{cfl, performance, stability};
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::KwaversResult;
-use crate::constants::{stability, performance, cfl};
-use crate::utils::{fft_3d, ifft_3d};
 use crate::physics::field_mapping::UnifiedFieldType;
+use crate::utils::{fft_3d, ifft_3d};
+use crate::KwaversResult;
 
-use ndarray::{Array3, Array4, ArrayView3, Zip, Axis};
-use log::{debug, warn, info};
-use std::f64;
+use log::{debug, info, warn};
+use ndarray::{Array3, Array4, ArrayView3, Axis, Zip};
 use rustfft::num_complex::Complex;
+use std::f64;
 
 /// Represents a nonlinear wave model solver.
 ///
@@ -66,7 +66,6 @@ pub struct NonlinearWave {
     pub(super) use_adaptive_timestep: bool,
     /// Order of k-space correction for dispersion handling (e.g., 1 for first-order, 2 for second-order).
 
-
     // Precomputed arrays
     /// Precomputed k-squared values (square of wavenumber magnitudes) for the grid, used to speed up calculations.
     pub(super) k_squared: Option<Array3<f64>>,
@@ -80,7 +79,7 @@ pub struct NonlinearWave {
     pub(super) cfl_safety_factor: f64,
     /// Flag to enable or disable clamping of pressure gradients to `max_gradient`.
     pub(super) clamp_gradients: bool,
-    
+
     // Iterator optimization settings
     /// Chunk size for cache-friendly processing
     chunk_size: usize,
@@ -90,15 +89,15 @@ pub struct NonlinearWave {
     // Multi-frequency simulation support
     /// Configuration for multi-frequency analysis
     pub(super) multi_freq_config: Option<MultiFrequencyConfig>,
-    
+
     // Frequency-dependent physics
     /// Source frequency for frequency-dependent absorption and dispersion [Hz]
     pub(super) source_frequency: f64,
-    
+
     // Performance optimization caches
     /// Cached maximum sound speed of the medium for efficient stability checks
     pub(super) max_sound_speed: f64,
-    
+
     // Kuznetsov equation support
     /// Enable Kuznetsov equation terms (includes diffusivity and nonlinearity)
     pub(super) use_kuznetsov_terms: bool,
@@ -108,46 +107,56 @@ pub struct NonlinearWave {
 
 impl NonlinearWave {
     /// Compute linear propagation step using FFT
-    /// 
+    ///
     /// IMPORTANT: This PSTD implementation assumes a nearly homogeneous medium.
     /// For strongly heterogeneous media, the k-space correction factor becomes
     /// position-dependent and cannot be accurately applied as a simple multiplication
     /// in k-space. The current implementation uses the maximum sound speed as a
     /// conservative approximation, which maintains stability but may introduce
     /// phase errors in heterogeneous regions.
-    /// 
+    ///
     /// For accurate heterogeneous media simulation, consider using:
     /// - Finite difference methods (FDTD)
     /// - Split-step Fourier methods with spatial correction
     /// - k-space methods with heterogeneous correction (k-Wave style)
-    fn compute_linear_step(&mut self, fields: &Array4<f64>, grid: &Grid, medium: &dyn Medium, dt: f64) -> Array3<f64> {
+    fn compute_linear_step(
+        &mut self,
+        fields: &Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> Array3<f64> {
         let start_fft = Instant::now();
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        
+
         let p_fft = fft_3d(fields, UnifiedFieldType::Pressure.index(), grid);
-        let k2_values = self.k_squared.as_ref().expect("k_squared should be initialized in new()");
-        
+        let k2_values = self
+            .k_squared
+            .as_ref()
+            .expect("k_squared should be initialized in new()");
+
         // Use maximum sound speed for k-space correction to ensure stability
         // This is a conservative choice that prevents instability but may introduce
         // phase errors in regions where c < c_max
         let c_eff = self.max_sound_speed;
         let kspace_corr_factor = grid.kspace_correction(c_eff, dt);
-        
+
         // Log warning if medium is significantly heterogeneous
         if !medium.is_homogeneous() {
             static WARNED: std::sync::Once = std::sync::Once::new();
             WARNED.call_once(|| {
-                warn!("PSTD method is being used with heterogeneous medium. \
+                warn!(
+                    "PSTD method is being used with heterogeneous medium. \
                       Phase accuracy may be reduced. Consider using FDTD for \
-                      strongly heterogeneous media.");
+                      strongly heterogeneous media."
+                );
             });
         }
-        
+
         let mut p_linear_fft = Array3::<Complex<f64>>::zeros((nx, ny, nz));
 
-        Zip::indexed(&mut p_linear_fft)
-            .and(&p_fft)
-            .for_each(|idx, p_updated_fft_val, p_old_fft_val_ref| {
+        Zip::indexed(&mut p_linear_fft).and(&p_fft).for_each(
+            |idx, p_updated_fft_val, p_old_fft_val_ref| {
                 let (i, j, k) = idx;
                 let p_old_fft_val = *p_old_fft_val_ref;
                 let x = i as f64 * grid.dx;
@@ -160,32 +169,34 @@ impl NonlinearWave {
                 let rho = medium.density(x, y, z, grid).max(1e-9);
 
                 let k_val = k2_values[[i, j, k]].sqrt();
-                
+
                 // Use effective sound speed for phase calculation
                 // This maintains consistency with the k-space correction
                 let phase = self.calculate_phase_factor(k_val, c_eff, dt);
 
                 let viscous_damping_arg = -mu * k_val.powi(2) * dt / rho;
-                let viscous_damping = if viscous_damping_arg.is_finite() { 
-                    viscous_damping_arg.exp() 
-                } else { 
-                    1.0 
+                let viscous_damping = if viscous_damping_arg.is_finite() {
+                    viscous_damping_arg.exp()
+                } else {
+                    1.0
                 };
 
                 // Apply absorption using local sound speed
                 // This is still approximately correct for weak heterogeneity
                 let alpha = medium.absorption_coefficient(x, y, z, grid, self.source_frequency);
                 let absorption_damping_arg = -alpha * c_local * dt;
-                let absorption_damping = if absorption_damping_arg.is_finite() { 
-                    absorption_damping_arg.exp() 
-                } else { 
-                    1.0 
+                let absorption_damping = if absorption_damping_arg.is_finite() {
+                    absorption_damping_arg.exp()
+                } else {
+                    1.0
                 };
 
                 let phase_complex = Complex::new(phase.cos(), phase.sin());
                 let decay = absorption_damping * viscous_damping;
-                *p_updated_fft_val = p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
-            });
+                *p_updated_fft_val =
+                    p_old_fft_val * phase_complex * kspace_corr_factor[[i, j, k]] * decay;
+            },
+        );
 
         let p_linear = ifft_3d(&p_linear_fft, grid);
         self.fft_time += start_fft.elapsed().as_secs_f64();
@@ -194,15 +205,15 @@ impl NonlinearWave {
 
     /// Compute nonlinear term using Westervelt equation
     fn compute_nonlinear_term(
-        &mut self, 
-        pressure: &ArrayView3<f64>, 
-        _prev_pressure: &Array3<f64>, 
-        grid: &Grid, 
-        medium: &dyn Medium, 
-        dt: f64
+        &mut self,
+        pressure: &ArrayView3<f64>,
+        _prev_pressure: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
     ) -> Array3<f64> {
         let start_nonlinear = Instant::now();
-        
+
         // Early return for linear simulations
         if self.nonlinearity_scaling.abs() <= 1e-10 {
             self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
@@ -211,59 +222,65 @@ impl NonlinearWave {
 
         let mut result = Array3::zeros(pressure.raw_dim());
         let min_grid_spacing = grid.dx.min(grid.dy).min(grid.dz);
-        let max_gradient = if min_grid_spacing > 1e-9 { 
-            self.max_pressure / min_grid_spacing 
-        } else { 
-            self.max_pressure 
+        let max_gradient = if min_grid_spacing > 1e-9 {
+            self.max_pressure / min_grid_spacing
+        } else {
+            self.max_pressure
         };
-        
+
         // Precompute inverse grid spacings
         let dx_inv = 1.0 / (2.0 * grid.dx);
         let dy_inv = 1.0 / (2.0 * grid.dy);
         let dz_inv = 1.0 / (2.0 * grid.dz);
-        
+
         // Process interior points with cache-friendly access pattern
-        for i in 1..grid.nx-1 {
-            for j in 1..grid.ny-1 {
-                for k in 1..grid.nz-1 {
+        for i in 1..grid.nx - 1 {
+            for j in 1..grid.ny - 1 {
+                for k in 1..grid.nz - 1 {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    
+
                     // Compute gradients using central differences
-                    let grad_x = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) * dx_inv;
-                    let grad_y = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) * dy_inv;
-                    let grad_z = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) * dz_inv;
-                    
+                    let grad_x = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) * dx_inv;
+                    let grad_y = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) * dy_inv;
+                    let grad_z = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) * dz_inv;
+
                     // Get medium properties
                     let rho = medium.density(x, y, z, grid).max(1e-9);
                     let c = medium.sound_speed(x, y, z, grid).max(1e-9);
                     let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
-                    
+
                     // Compute nonlinear term coefficients
                     let gradient_scale = dt / (2.0 * rho * c * c);
                     let beta = b_a / (rho * c * c);
-                    
+
                     // Apply gradient clamping if enabled
                     let (grad_x_final, grad_y_final, grad_z_final) = if self.clamp_gradients {
                         (
                             grad_x.clamp(-max_gradient, max_gradient),
                             grad_y.clamp(-max_gradient, max_gradient),
-                            grad_z.clamp(-max_gradient, max_gradient)
+                            grad_z.clamp(-max_gradient, max_gradient),
                         )
                     } else {
                         (grad_x, grad_y, grad_z)
                     };
-                    
+
                     // Compute gradient magnitude
-                    let grad_magnitude = (grad_x_final * grad_x_final + 
-                                         grad_y_final * grad_y_final + 
-                                         grad_z_final * grad_z_final).sqrt();
-                    
+                    let grad_magnitude = (grad_x_final * grad_x_final
+                        + grad_y_final * grad_y_final
+                        + grad_z_final * grad_z_final)
+                        .sqrt();
+
                     // Compute and store nonlinear term
-                    let p_limited = pressure[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
-                    let nl_term = -beta * self.nonlinearity_scaling * gradient_scale * p_limited * grad_magnitude;
-                    
+                    let p_limited =
+                        pressure[[i, j, k]].clamp(-self.max_pressure, self.max_pressure);
+                    let nl_term = -beta
+                        * self.nonlinearity_scaling
+                        * gradient_scale
+                        * p_limited
+                        * grad_magnitude;
+
                     result[[i, j, k]] = if nl_term.is_finite() {
                         nl_term.clamp(-self.max_pressure, self.max_pressure)
                     } else {
@@ -272,9 +289,9 @@ impl NonlinearWave {
                 }
             }
         }
-        
+
         // Boundary points use zero nonlinear terms for stability
-        
+
         self.nonlinear_time += start_nonlinear.elapsed().as_secs_f64();
         result
     }
@@ -285,25 +302,24 @@ impl NonlinearWave {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let mut src_term_array = Array3::<f64>::zeros((nx, ny, nz));
 
-        Zip::indexed(&mut src_term_array)
-            .for_each(|(i, j, k), src_val| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                *src_val = source.get_source_term(t, x, y, z, grid);
-            });
-        
+        Zip::indexed(&mut src_term_array).for_each(|(i, j, k), src_val| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+            *src_val = source.get_source_term(t, x, y, z, grid);
+        });
+
         self.source_time += start_source.elapsed().as_secs_f64();
         src_term_array
     }
 
     /// Combine linear, nonlinear, and source terms
     fn combine_terms(
-        &mut self, 
-        fields: &mut Array4<f64>, 
-        p_linear: &Array3<f64>, 
-        nonlinear_term: &Array3<f64>, 
-        src_term: &Array3<f64>
+        &mut self,
+        fields: &mut Array4<f64>,
+        p_linear: &Array3<f64>,
+        nonlinear_term: &Array3<f64>,
+        src_term: &Array3<f64>,
     ) {
         let start_combine = Instant::now();
         let mut p_output_view = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
@@ -315,7 +331,7 @@ impl NonlinearWave {
             .for_each(|p_out, &p_lin_val, &nl_val, &src_val| {
                 *p_out = p_lin_val + nl_val + src_val;
             });
-        
+
         self.combination_time += start_combine.elapsed().as_secs_f64();
     }
 
@@ -323,7 +339,7 @@ impl NonlinearWave {
     fn enforce_stability(&self, fields: &mut Array4<f64>) {
         // First pass: clamp pressure using the existing method (but avoid .to_owned())
         let mut p_view = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
-        
+
         // Direct in-place clamping without expensive copying
         for val in p_view.iter_mut() {
             if !val.is_finite() {
@@ -353,15 +369,18 @@ impl NonlinearWave {
     /// Update the cached maximum sound speed (call when medium properties change)
     pub fn update_max_sound_speed(&mut self, medium: &dyn Medium, grid: &Grid) {
         self.max_sound_speed = Self::compute_max_sound_speed(medium, grid);
-        debug!("Updated cached maximum sound speed: {:.2} m/s", self.max_sound_speed);
+        debug!(
+            "Updated cached maximum sound speed: {:.2} m/s",
+            self.max_sound_speed
+        );
     }
 
     /// Quantify the heterogeneity of the medium
-    /// 
+    ///
     /// Returns the coefficient of variation (std_dev / mean) of the sound speed.
     /// Values close to 0 indicate homogeneous media, while larger values indicate
     /// increasing heterogeneity.
-    /// 
+    ///
     /// # Guidelines:
     /// - < 0.05: Nearly homogeneous, PSTD is accurate
     /// - 0.05-0.15: Weakly heterogeneous, PSTD has acceptable errors
@@ -371,10 +390,10 @@ impl NonlinearWave {
         let mut sum = 0.0;
         let mut sum_sq = 0.0;
         let mut count = 0;
-        
+
         // Sample the medium at regular intervals
         let sample_step = (grid.nx.min(grid.ny).min(grid.nz) / 10).max(1);
-        
+
         for i in (0..grid.nx).step_by(sample_step) {
             for j in (0..grid.ny).step_by(sample_step) {
                 for k in (0..grid.nz).step_by(sample_step) {
@@ -388,15 +407,15 @@ impl NonlinearWave {
                 }
             }
         }
-        
+
         if count == 0 {
             return 0.0;
         }
-        
+
         let mean = sum / count as f64;
         let variance = (sum_sq / count as f64) - mean * mean;
         let std_dev = variance.sqrt();
-        
+
         // Return coefficient of variation
         if mean > 0.0 {
             std_dev / mean
@@ -426,33 +445,42 @@ impl NonlinearWave {
     ///
     /// A new `NonlinearWave` instance implementing the Westervelt equation.
     pub fn new(grid: &Grid, medium: &dyn Medium, source_frequency: f64) -> Self {
-        debug!("Initializing NonlinearWave solver (Westervelt equation) with frequency {} Hz", source_frequency);
+        debug!(
+            "Initializing NonlinearWave solver (Westervelt equation) with frequency {} Hz",
+            source_frequency
+        );
 
         // Precompute k-squared values to avoid recomputation in every step
         let k_squared = Some(grid.k_squared().clone());
-        
+
         // Cache maximum sound speed for efficient stability checks
         let max_sound_speed = Self::compute_max_sound_speed(medium, grid);
         debug!("Cached maximum sound speed: {:.2} m/s", max_sound_speed);
-        
+
         // Check medium heterogeneity and warn if significant
         let heterogeneity = Self::quantify_heterogeneity(medium, grid);
         if heterogeneity > 0.15 {
-            warn!("Medium heterogeneity coefficient: {:.3}. \
+            warn!(
+                "Medium heterogeneity coefficient: {:.3}. \
                   PSTD accuracy may be reduced for values > 0.15. \
-                  Consider using FDTD or hybrid methods for strongly heterogeneous media.", 
-                  heterogeneity);
+                  Consider using FDTD or hybrid methods for strongly heterogeneous media.",
+                heterogeneity
+            );
         } else if heterogeneity > 0.05 {
-            info!("Medium heterogeneity coefficient: {:.3}. \
+            info!(
+                "Medium heterogeneity coefficient: {:.3}. \
                   Weakly heterogeneous medium detected. PSTD will use conservative \
-                  k-space correction based on maximum sound speed.", 
-                  heterogeneity);
+                  k-space correction based on maximum sound speed.",
+                heterogeneity
+            );
         } else {
-            debug!("Medium heterogeneity coefficient: {:.3}. \
-                   Nearly homogeneous medium, PSTD is well-suited.", 
-                   heterogeneity);
+            debug!(
+                "Medium heterogeneity coefficient: {:.3}. \
+                   Nearly homogeneous medium, PSTD is well-suited.",
+                heterogeneity
+            );
         }
-        
+
         // Determine optimal chunk size based on grid dimensions
         let total_points = grid.nx * grid.ny * grid.nz;
         let chunk_size = if total_points > performance::LARGE_GRID_THRESHOLD {
@@ -469,21 +497,21 @@ impl NonlinearWave {
             source_time: 0.0,
             combination_time: 0.0,
             call_count: 0,
-            nonlinearity_scaling: 1.0,     // Default scaling factor for nonlinearity
-            use_adaptive_timestep: false,  // Default to fixed timestep
+            nonlinearity_scaling: 1.0, // Default scaling factor for nonlinearity
+            use_adaptive_timestep: false, // Default to fixed timestep
 
             k_squared,
             max_pressure: stability::PRESSURE_LIMIT,
             stability_threshold: cfl::CONSERVATIVE,
             cfl_safety_factor: cfl::AGGRESSIVE,
-            clamp_gradients: true,    // Enable gradient clamping (should be configurable)
+            clamp_gradients: true, // Enable gradient clamping (should be configurable)
             chunk_size,
             use_chunked_processing: total_points > performance::CHUNKED_PROCESSING_THRESHOLD,
             multi_freq_config: None, // Initialize as None
             source_frequency,
             max_sound_speed,
             use_kuznetsov_terms: false, // Default to Westervelt equation
-            use_diffusivity: false, // Default to no diffusivity
+            use_diffusivity: false,     // Default to no diffusivity
         }
     }
 
@@ -494,12 +522,16 @@ impl NonlinearWave {
         multi_freq_config: MultiFrequencyConfig,
     ) -> Self {
         // Use the first frequency as the primary frequency for absorption calculations
-        let primary_frequency = multi_freq_config.frequencies.first().copied().unwrap_or(1e6);
+        let primary_frequency = multi_freq_config
+            .frequencies
+            .first()
+            .copied()
+            .unwrap_or(1e6);
         let mut instance = Self::new(grid, medium, primary_frequency);
         instance.multi_freq_config = Some(multi_freq_config);
         instance
     }
-    
+
     /// Set the nonlinearity scaling factor.
     ///
     /// Controls the strength of the nonlinear term in the wave equation.
@@ -512,10 +544,10 @@ impl NonlinearWave {
         self.nonlinearity_scaling = scaling;
         debug!("Set nonlinearity scaling to {}", scaling);
     }
-    
+
     /// Enable or disable Kuznetsov equation terms
     ///
-    /// When enabled, includes additional terms for diffusivity and 
+    /// When enabled, includes additional terms for diffusivity and
     /// higher-order nonlinearities as per the Kuznetsov equation.
     ///
     /// # Arguments
@@ -526,9 +558,12 @@ impl NonlinearWave {
         if enable {
             self.use_diffusivity = true; // Kuznetsov equation includes diffusivity
         }
-        debug!("Kuznetsov terms {}", if enable { "enabled" } else { "disabled" });
+        debug!(
+            "Kuznetsov terms {}",
+            if enable { "enabled" } else { "disabled" }
+        );
     }
-    
+
     /// Enable or disable diffusivity terms
     ///
     /// When enabled, includes acoustic absorption through diffusivity.
@@ -538,22 +573,25 @@ impl NonlinearWave {
     /// * `enable` - Whether to enable diffusivity
     pub fn enable_diffusivity(&mut self, enable: bool) {
         self.use_diffusivity = enable;
-        debug!("Diffusivity {}", if enable { "enabled" } else { "disabled" });
+        debug!(
+            "Diffusivity {}",
+            if enable { "enabled" } else { "disabled" }
+        );
     }
-    
+
     /// Set whether to use gradient clamping for stability
-    /// 
+    ///
     /// # Warning
-    /// 
+    ///
     /// Gradient clamping can suppress physical shock formation and introduce
     /// non-physical artifacts. It should be used with caution and ideally replaced
     /// with more sophisticated shock-capturing methods like:
     /// - Artificial viscosity
     /// - WENO limiters
     /// - Hybrid spectral-DG methods
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `enable` - Whether to enable gradient clamping
     pub fn set_gradient_clamping(&mut self, enable: bool) {
         self.clamp_gradients = enable;
@@ -564,34 +602,34 @@ impl NonlinearWave {
             info!("Gradient clamping disabled. Ensure numerical stability through other means.");
         }
     }
-    
+
     /// Detect potential shock regions based on local pressure gradients
-    /// 
+    ///
     /// Returns a mask indicating regions where shocks may be forming
     fn detect_shock_regions(&self, pressure: &Array3<f64>, grid: &Grid) -> Array3<bool> {
         let mut shock_mask = Array3::from_elem(pressure.dim(), false);
-        
+
         // Shock detection based on normalized pressure gradient
         let dx_inv = 1.0 / grid.dx;
         let dy_inv = 1.0 / grid.dy;
         let dz_inv = 1.0 / grid.dz;
-        
+
         // Threshold for shock detection (normalized gradient)
         let shock_threshold = 0.3; // Configurable parameter
-        
-        for i in 1..grid.nx-1 {
-            for j in 1..grid.ny-1 {
-                for k in 1..grid.nz-1 {
+
+        for i in 1..grid.nx - 1 {
+            for j in 1..grid.ny - 1 {
+                for k in 1..grid.nz - 1 {
                     // Compute local gradients
-                    let grad_x = (pressure[[i+1, j, k]] - pressure[[i-1, j, k]]) * dx_inv * 0.5;
-                    let grad_y = (pressure[[i, j+1, k]] - pressure[[i, j-1, k]]) * dy_inv * 0.5;
-                    let grad_z = (pressure[[i, j, k+1]] - pressure[[i, j, k-1]]) * dz_inv * 0.5;
-                    
+                    let grad_x = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) * dx_inv * 0.5;
+                    let grad_y = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) * dy_inv * 0.5;
+                    let grad_z = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) * dz_inv * 0.5;
+
                     // Compute normalized gradient magnitude
                     let p_local = pressure[[i, j, k]].abs().max(1e-10);
-                    let grad_mag = (grad_x*grad_x + grad_y*grad_y + grad_z*grad_z).sqrt();
+                    let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
                     let normalized_grad = grad_mag / p_local;
-                    
+
                     // Mark as shock region if gradient is large
                     if normalized_grad > shock_threshold {
                         shock_mask[[i, j, k]] = true;
@@ -599,12 +637,12 @@ impl NonlinearWave {
                 }
             }
         }
-        
+
         shock_mask
     }
-    
+
     /// Apply artificial viscosity in shock regions for stability
-    /// 
+    ///
     /// This is a more physically motivated approach than gradient clamping
     fn apply_artificial_viscosity(
         &self,
@@ -616,20 +654,25 @@ impl NonlinearWave {
         // Von Neumann-Richtmyer artificial viscosity
         let viscosity_coeff = 2.0; // Tunable parameter
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-        
+
         // Apply smoothing only in shock regions
         let mut pressure_smooth = pressure.clone();
-        
-        for i in 1..grid.nx-1 {
-            for j in 1..grid.ny-1 {
-                for k in 1..grid.nz-1 {
+
+        for i in 1..grid.nx - 1 {
+            for j in 1..grid.ny - 1 {
+                for k in 1..grid.nz - 1 {
                     if shock_mask[[i, j, k]] {
                         // Apply local smoothing
-                        let laplacian = 
-                            (pressure[[i+1, j, k]] - 2.0*pressure[[i, j, k]] + pressure[[i-1, j, k]]) / (grid.dx * grid.dx) +
-                            (pressure[[i, j+1, k]] - 2.0*pressure[[i, j, k]] + pressure[[i, j-1, k]]) / (grid.dy * grid.dy) +
-                            (pressure[[i, j, k+1]] - 2.0*pressure[[i, j, k]] + pressure[[i, j, k-1]]) / (grid.dz * grid.dz);
-                        
+                        let laplacian = (pressure[[i + 1, j, k]] - 2.0 * pressure[[i, j, k]]
+                            + pressure[[i - 1, j, k]])
+                            / (grid.dx * grid.dx)
+                            + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
+                                + pressure[[i, j - 1, k]])
+                                / (grid.dy * grid.dy)
+                            + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
+                                + pressure[[i, j, k - 1]])
+                                / (grid.dz * grid.dz);
+
                         // Apply artificial viscosity
                         let nu = viscosity_coeff * dx_min * dx_min / dt;
                         pressure_smooth[[i, j, k]] += nu * dt * laplacian;
@@ -637,7 +680,7 @@ impl NonlinearWave {
                 }
             }
         }
-        
+
         // Update pressure in shock regions
         Zip::from(pressure)
             .and(&pressure_smooth)
@@ -648,7 +691,7 @@ impl NonlinearWave {
                 }
             });
     }
-    
+
     /// Apply multi-frequency source excitation
     pub fn apply_multi_frequency_source(
         &self,
@@ -660,18 +703,19 @@ impl NonlinearWave {
     ) -> KwaversResult<()> {
         if let Some(ref config) = self.multi_freq_config {
             let (x_src, y_src, z_src) = source_position;
-            
+
             // Calculate multi-frequency excitation
             let mut total_amplitude = 0.0;
             for (i, &freq) in config.frequencies.iter().enumerate() {
                 let amplitude = config.amplitudes.get(i).unwrap_or(&1.0);
                 let phase = config.phases.get(i).unwrap_or(&0.0);
-                
+
                 // Multi-tone excitation with proper phase relationships
-                let component = amplitude * (2.0 * std::f64::consts::PI * freq * time + phase).sin();
+                let component =
+                    amplitude * (2.0 * std::f64::consts::PI * freq * time + phase).sin();
                 total_amplitude += component;
             }
-            
+
             // Apply source with spatial distribution
             let source_radius = grid.dx * 3.0; // 3-cell radius
             for i in 0..grid.nx {
@@ -680,21 +724,24 @@ impl NonlinearWave {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        
-                        let distance = ((x - x_src).powi(2) + (y - y_src).powi(2) + (z - z_src).powi(2)).sqrt();
-                        
+
+                        let distance =
+                            ((x - x_src).powi(2) + (y - y_src).powi(2) + (z - z_src).powi(2))
+                                .sqrt();
+
                         if distance <= source_radius {
                             let spatial_factor = (-0.5 * (distance / source_radius).powi(2)).exp();
-                            pressure[[i, j, k]] += base_amplitude * total_amplitude * spatial_factor;
+                            pressure[[i, j, k]] +=
+                                base_amplitude * total_amplitude * spatial_factor;
                         }
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Calculate frequency-dependent attenuation coefficient
     pub fn calculate_frequency_dependent_attenuation(
         &self,
@@ -731,7 +778,12 @@ impl NonlinearWave {
     /// * `threshold` - The CFL condition threshold.
     /// * `safety_factor` - The safety factor for the CFL condition.
     /// * `clamp_gradients` - `true` to enable clamping of pressure gradients, `false` otherwise.
-    pub fn set_stability_params(&mut self, threshold: f64, safety_factor: f64, clamp_gradients: bool) {
+    pub fn set_stability_params(
+        &mut self,
+        threshold: f64,
+        safety_factor: f64,
+        clamp_gradients: bool,
+    ) {
         self.stability_threshold = threshold;
         self.cfl_safety_factor = safety_factor;
         self.clamp_gradients = clamp_gradients;
@@ -746,16 +798,22 @@ impl NonlinearWave {
     }
 
     /// Checks the stability of the simulation.
-    pub(super) fn check_stability(&self, dt: f64, grid: &Grid, medium: &dyn Medium, pressure: &Array3<f64>) -> bool {
+    pub(super) fn check_stability(
+        &self,
+        dt: f64,
+        grid: &Grid,
+        medium: &dyn Medium,
+        pressure: &Array3<f64>,
+    ) -> bool {
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
-        
+
         // Optimized: Use cached max sound speed instead of recalculating
         let max_c = self.max_sound_speed;
         let mut max_pressure_val = f64::NEG_INFINITY;
         let mut min_pressure_val = f64::INFINITY;
         let mut has_nan = false;
         let mut has_inf = false;
-        
+
         // Only check pressure validity - no need to recalculate sound speed
         for &p_val in pressure.iter() {
             if p_val.is_nan() {
@@ -770,7 +828,11 @@ impl NonlinearWave {
             }
         }
 
-        let cfl = if min_dx > 1e-9 { max_c * dt / min_dx } else { f64::INFINITY };
+        let cfl = if min_dx > 1e-9 {
+            max_c * dt / min_dx
+        } else {
+            f64::INFINITY
+        };
         let is_stable = cfl < self.cfl_safety_factor && !has_nan && !has_inf;
 
         if !is_stable {
@@ -793,7 +855,9 @@ impl NonlinearWave {
         let mut clamped_values = 0;
         let total_values = pressure.len();
 
-        if total_values == 0 { return false; }
+        if total_values == 0 {
+            return false;
+        }
 
         for val in pressure.iter_mut() {
             if val.is_nan() || val.is_infinite() {
@@ -819,9 +883,9 @@ impl NonlinearWave {
         }
         had_extreme_values
     }
-    
+
     /// Compute boundary nonlinear terms for edge/corner points
-    /// 
+    ///
     /// This optimized implementation iterates only over boundary faces,
     /// avoiding unnecessary checks for interior points. For a 100x100x100 grid,
     /// this reduces iterations from 1,000,000 to ~58,800 (>16x speedup).
@@ -835,28 +899,39 @@ impl NonlinearWave {
         dt: f64,
     ) {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let dp_dt_max_abs = if dt > 1e-9 { self.max_pressure / dt } else { self.max_pressure };
-        
+        let dp_dt_max_abs = if dt > 1e-9 {
+            self.max_pressure / dt
+        } else {
+            self.max_pressure
+        };
+
         // Helper closure to process a single boundary point
         let mut process_point = |i: usize, j: usize, k: usize| {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
-            
+
             let rho = medium.density(x, y, z, grid).max(1e-9);
             let c = medium.sound_speed(x, y, z, grid).max(1e-9);
             let b_a = medium.nonlinearity_coefficient(x, y, z, grid);
             let gradient_scale = dt / (2.0 * rho * c * c);
-            
+
             let p_val_current = pressure_current[[i, j, k]];
             let p_prev_val = pressure_prev[[i, j, k]];
-            let dp_dt = if dt > 1e-9 { (p_val_current - p_prev_val) / dt } else { 0.0 };
+            let dp_dt = if dt > 1e-9 {
+                (p_val_current - p_prev_val) / dt
+            } else {
+                0.0
+            };
             let dp_dt_limited = if dp_dt.is_finite() {
                 dp_dt.clamp(-dp_dt_max_abs, dp_dt_max_abs)
-            } else { 0.0 };
+            } else {
+                0.0
+            };
             let beta = b_a / (rho * c * c);
-            
-            nonlinear_term[[i, j, k]] = -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
+
+            nonlinear_term[[i, j, k]] =
+                -beta * self.nonlinearity_scaling * gradient_scale * p_val_current * dp_dt_limited;
         };
 
         // Process X faces (i = 0 and i = nx-1)
@@ -899,7 +974,7 @@ impl NonlinearWave {
 // Move these imports before the test module
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use log::{trace};
+use log::trace;
 use std::time::Instant;
 
 /// Represents the configuration for multi-frequency simulation
@@ -941,7 +1016,7 @@ impl MultiFrequencyConfig {
             enable_harmonics: false,
         }
     }
-    
+
     /// Set relative amplitudes for each frequency component
     pub fn with_amplitudes(mut self, amplitudes: Vec<f64>) -> Result<Self, &'static str> {
         if amplitudes.len() != self.frequencies.len() {
@@ -950,21 +1025,24 @@ impl MultiFrequencyConfig {
         self.amplitudes = amplitudes;
         Ok(self)
     }
-    
+
     /// Set phase relationships between frequency components
     pub fn with_phases(mut self, phases: Vec<f64>) -> Self {
-        assert_eq!(phases.len(), self.frequencies.len(), 
-                   "Number of phases must match number of frequencies");
+        assert_eq!(
+            phases.len(),
+            self.frequencies.len(),
+            "Number of phases must match number of frequencies"
+        );
         self.phases = phases;
         self
     }
-    
+
     /// Enable frequency-dependent attenuation modeling
     pub fn with_frequency_dependent_attenuation(mut self, enable: bool) -> Self {
         self.frequency_dependent_attenuation = enable;
         self
     }
-    
+
     /// Enable harmonic generation from nonlinear effects
     pub fn with_harmonics(mut self, enable: bool) -> Self {
         self.enable_harmonics = enable;
@@ -988,7 +1066,7 @@ impl AcousticWaveModel for NonlinearWave {
 
         // Use view instead of expensive .to_owned() - zero allocation
         let pressure_at_start = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
-        
+
         // Check stability using cached maximum sound speed for efficiency
         if !self.check_stability(dt, grid, medium, &pressure_at_start.to_owned()) {
             debug!("Potential instability detected at t={}.", t);
@@ -1004,18 +1082,23 @@ impl AcousticWaveModel for NonlinearWave {
         let p_linear = self.compute_linear_step(fields, grid, medium, dt);
 
         // 2. Compute the nonlinear term
-        let nonlinear_term = self.compute_nonlinear_term(&pressure_at_start, prev_pressure, grid, medium, dt);
+        let nonlinear_term =
+            self.compute_nonlinear_term(&pressure_at_start, prev_pressure, grid, medium, dt);
 
         // 3. Compute the source term
         let src_term = self.compute_source_term(source, grid, t);
 
         // 4. Combine all terms
         self.combine_terms(fields, &p_linear, &nonlinear_term, &src_term);
-        
+
         // 5. Enforce stability (clamping)
         self.enforce_stability(fields);
 
-        trace!("Wave update for t={} completed in {:.3e} s", t, start_total.elapsed().as_secs_f64());
+        trace!(
+            "Wave update for t={} completed in {:.3e} s",
+            t,
+            start_total.elapsed().as_secs_f64()
+        );
     }
 
     fn report_performance(&self) {
@@ -1024,8 +1107,13 @@ impl AcousticWaveModel for NonlinearWave {
             return;
         }
 
-        let total_time = self.nonlinear_time + self.fft_time + self.source_time + self.combination_time;
-        let avg_time = if self.call_count > 0 { total_time / self.call_count as f64 } else { 0.0 };
+        let total_time =
+            self.nonlinear_time + self.fft_time + self.source_time + self.combination_time;
+        let avg_time = if self.call_count > 0 {
+            total_time / self.call_count as f64
+        } else {
+            0.0
+        };
 
         debug!(
             "NonlinearWave performance with iterator patterns (avg over {} calls):",
@@ -1058,16 +1146,26 @@ impl AcousticWaveModel for NonlinearWave {
             );
         } else {
             debug!("  Detailed breakdown not available (total_time or call_count is zero leading to no meaningful percentages).");
-            debug!("    Nonlinear term calc:    {:.3e} s", self.nonlinear_time / self.call_count.max(1) as f64);
-            debug!("    FFT operations:         {:.3e} s", self.fft_time / self.call_count.max(1) as f64);
-            debug!("    Source application:     {:.3e} s", self.source_time / self.call_count.max(1) as f64);
-            debug!("    Field combination:      {:.3e} s", self.combination_time / self.call_count.max(1) as f64);
+            debug!(
+                "    Nonlinear term calc:    {:.3e} s",
+                self.nonlinear_time / self.call_count.max(1) as f64
+            );
+            debug!(
+                "    FFT operations:         {:.3e} s",
+                self.fft_time / self.call_count.max(1) as f64
+            );
+            debug!(
+                "    Source application:     {:.3e} s",
+                self.source_time / self.call_count.max(1) as f64
+            );
+            debug!(
+                "    Field combination:      {:.3e} s",
+                self.combination_time / self.call_count.max(1) as f64
+            );
         }
     }
 
     fn set_nonlinearity_scaling(&mut self, scaling: f64) {
         self.set_nonlinearity_scaling(scaling);
     }
-
-
 }

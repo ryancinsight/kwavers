@@ -1,11 +1,11 @@
 //! Time stepper implementations
-//! 
+//!
 //! This module provides various time integration methods including
 //! Runge-Kutta and Adams-Bashforth schemes.
 
+use super::traits::{TimeStepper, TimeStepperConfig};
 use crate::grid::Grid;
 use crate::KwaversResult;
-use super::traits::{TimeStepper, TimeStepperConfig};
 use ndarray::{Array3, Zip};
 use std::collections::VecDeque;
 
@@ -18,17 +18,23 @@ pub struct RK4Config {
 
 impl Default for RK4Config {
     fn default() -> Self {
-        Self {
-            safety_factor: 0.9,
-        }
+        Self { safety_factor: 0.9 }
     }
 }
 
 impl TimeStepperConfig for RK4Config {
-    fn order(&self) -> usize { 4 }
-    fn stages(&self) -> usize { 4 }
-    fn is_explicit(&self) -> bool { true }
-    fn validate(&self) -> KwaversResult<()> { Ok(()) }
+    fn order(&self) -> usize {
+        4
+    }
+    fn stages(&self) -> usize {
+        4
+    }
+    fn is_explicit(&self) -> bool {
+        true
+    }
+    fn validate(&self) -> KwaversResult<()> {
+        Ok(())
+    }
 }
 
 /// 4th-order Runge-Kutta time stepper
@@ -46,7 +52,7 @@ pub struct RungeKutta4 {
 
 impl TimeStepper for RungeKutta4 {
     type Config = RK4Config;
-    
+
     fn new(config: Self::Config) -> Self {
         Self {
             config,
@@ -57,7 +63,7 @@ impl TimeStepper for RungeKutta4 {
             y_temp: None,
         }
     }
-    
+
     fn step<F>(
         &mut self,
         field: &mut Array3<f64>,
@@ -69,7 +75,7 @@ impl TimeStepper for RungeKutta4 {
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
         let shape = field.dim();
-        
+
         // Initialize storage if needed (lazy initialization)
         if self.k1.is_none() {
             self.k1 = Some(Array3::zeros(shape));
@@ -78,16 +84,16 @@ impl TimeStepper for RungeKutta4 {
             self.k4 = Some(Array3::zeros(shape));
             self.y_temp = Some(Array3::zeros(shape));
         }
-        
+
         let k1 = self.k1.as_mut().unwrap();
         let k2 = self.k2.as_mut().unwrap();
         let k3 = self.k3.as_mut().unwrap();
         let k4 = self.k4.as_mut().unwrap();
         let y_temp = self.y_temp.as_mut().unwrap();
-        
+
         // Stage 1: k1 = f(t, y)
         *k1 = rhs_fn(field)?;
-        
+
         // Stage 2: k2 = f(t + dt/2, y + dt/2 * k1)
         // Use pre-allocated workspace instead of cloning
         y_temp.assign(field);
@@ -95,7 +101,7 @@ impl TimeStepper for RungeKutta4 {
             .and(&*k1)
             .for_each(|t, k| *t += 0.5 * dt * *k);
         *k2 = rhs_fn(y_temp)?;
-        
+
         // Stage 3: k3 = f(t + dt/2, y + dt/2 * k2)
         // Reuse the same workspace
         y_temp.assign(field);
@@ -103,14 +109,14 @@ impl TimeStepper for RungeKutta4 {
             .and(&*k2)
             .for_each(|t, k| *t += 0.5 * dt * *k);
         *k3 = rhs_fn(y_temp)?;
-        
+
         // Stage 4: k4 = f(t + dt, y + dt * k3)
         y_temp.assign(field);
         Zip::from(&mut *y_temp)
             .and(&*k3)
             .for_each(|t, k| *t += dt * *k);
         *k4 = rhs_fn(y_temp)?;
-        
+
         // Combine stages: y_new = y + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         // Update field in-place
         Zip::from(field)
@@ -121,10 +127,10 @@ impl TimeStepper for RungeKutta4 {
             .for_each(|r, k1, k2, k3, k4| {
                 *r += dt / 6.0 * (*k1 + 2.0 * *k2 + 2.0 * *k3 + *k4);
             });
-        
+
         Ok(())
     }
-    
+
     fn stability_factor(&self) -> f64 {
         2.8 * self.config.safety_factor
     }
@@ -151,10 +157,16 @@ impl Default for AdamsBashforthConfig {
 }
 
 impl TimeStepperConfig for AdamsBashforthConfig {
-    fn order(&self) -> usize { self.order }
-    fn stages(&self) -> usize { 1 }
-    fn is_explicit(&self) -> bool { true }
-    
+    fn order(&self) -> usize {
+        self.order
+    }
+    fn stages(&self) -> usize {
+        1
+    }
+    fn is_explicit(&self) -> bool {
+        true
+    }
+
     fn validate(&self) -> KwaversResult<()> {
         if self.order != 2 && self.order != 3 {
             return Err(crate::error::KwaversError::Validation(
@@ -162,7 +174,7 @@ impl TimeStepperConfig for AdamsBashforthConfig {
                     field: "order".to_string(),
                     value: self.order.to_string(),
                     constraint: "Must be 2 or 3".to_string(),
-                }
+                },
             ));
         }
         Ok(())
@@ -193,7 +205,7 @@ pub struct AdamsBashforth {
 
 impl TimeStepper for AdamsBashforth {
     type Config = AdamsBashforthConfig;
-    
+
     fn new(config: Self::Config) -> Self {
         // Validate that we have enough startup steps
         assert!(
@@ -203,7 +215,7 @@ impl TimeStepper for AdamsBashforth {
             config.order - 1,
             config.order
         );
-        
+
         let history_size = config.order;
         Self {
             config,
@@ -212,7 +224,7 @@ impl TimeStepper for AdamsBashforth {
             step_count: 0,
         }
     }
-    
+
     fn step<F>(
         &mut self,
         field: &mut Array3<f64>,
@@ -226,25 +238,25 @@ impl TimeStepper for AdamsBashforth {
         // Use RK4 for startup
         if self.step_count < self.config.startup_steps {
             self.step_count += 1;
-            
+
             // Store RHS evaluation before updating field
             let rhs = rhs_fn(field)?;
-            
+
             // Update field in-place using RK4
             self.startup_stepper.step(field, &rhs_fn, dt, grid)?;
-            
+
             // Store RHS in history
             self.rhs_history.push_back(rhs);
             if self.rhs_history.len() > self.config.order {
                 self.rhs_history.pop_front();
             }
-            
+
             return Ok(());
         }
-        
+
         // Evaluate RHS at current state
         let current_rhs = rhs_fn(field)?;
-        
+
         // Apply Adams-Bashforth formula in-place
         match self.config.order {
             2 => {
@@ -252,7 +264,7 @@ impl TimeStepper for AdamsBashforth {
                 if !self.rhs_history.is_empty() {
                     let f_n = &current_rhs;
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
-                    
+
                     Zip::from(field)
                         .and(f_n)
                         .and(f_nm1)
@@ -260,36 +272,36 @@ impl TimeStepper for AdamsBashforth {
                             *r += dt * (1.5 * *fn_val - 0.5 * *fnm1_val);
                         });
                 }
-            },
+            }
             3 => {
                 // AB3: y_{n+1} = y_n + dt * (23/12 * f_n - 16/12 * f_{n-1} + 5/12 * f_{n-2})
                 if self.rhs_history.len() >= 2 {
                     let f_n = &current_rhs;
                     let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
                     let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
-                    
-                    Zip::from(field)
-                        .and(f_n)
-                        .and(f_nm1)
-                        .and(f_nm2)
-                        .for_each(|r, fn_val, fnm1_val, fnm2_val| {
-                            *r += dt * (23.0/12.0 * *fn_val - 16.0/12.0 * *fnm1_val + 5.0/12.0 * *fnm2_val);
-                        });
+
+                    Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).for_each(
+                        |r, fn_val, fnm1_val, fnm2_val| {
+                            *r += dt
+                                * (23.0 / 12.0 * *fn_val - 16.0 / 12.0 * *fnm1_val
+                                    + 5.0 / 12.0 * *fnm2_val);
+                        },
+                    );
                 }
-            },
+            }
             _ => unreachable!("Order validated in new()"),
         }
-        
+
         // Update history
         self.rhs_history.push_back(current_rhs);
         if self.rhs_history.len() > self.config.order {
             self.rhs_history.pop_front();
         }
-        
+
         self.step_count += 1;
         Ok(())
     }
-    
+
     fn stability_factor(&self) -> f64 {
         match self.config.order {
             2 => 1.0,
@@ -297,10 +309,9 @@ impl TimeStepper for AdamsBashforth {
             _ => 0.5,
         }
     }
-    
+
     fn reset(&mut self) {
         self.rhs_history.clear();
         self.step_count = 0;
     }
 }
-

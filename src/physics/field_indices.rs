@@ -1,5 +1,5 @@
 //! Unified field indices - Single Source of Truth (SSOT)
-//! 
+//!
 //! This module provides all field indices used throughout the simulation.
 //! All modules should import from here rather than defining their own.
 

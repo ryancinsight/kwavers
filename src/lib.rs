@@ -8,7 +8,6 @@
 
 use std::collections::HashMap;
 
-
 // Validation constants to replace magic numbers
 mod validation_constants {
     /// Minimum frequency for source validation [Hz]
@@ -33,7 +32,7 @@ mod validation_constants {
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 5;
     /// Maximum points per wavelength for grid validation
     pub const MAX_POINTS_PER_WAVELENGTH: usize = 100;
-    
+
     // System requirements constants
     /// Minimum required memory in GB for simulation
     pub const MIN_REQUIRED_MEMORY_GB: f64 = 4.0;
@@ -94,93 +93,120 @@ pub mod utils;
 pub mod validation;
 
 // Phase 11: Visualization & Real-Time Interaction
-#[cfg(all(feature = "gpu", any(feature = "gpu-visualization", feature = "web_visualization", feature = "vr-support")))]
+#[cfg(all(
+    feature = "gpu",
+    any(
+        feature = "gpu-visualization",
+        feature = "web_visualization",
+        feature = "vr-support"
+    )
+))]
 pub mod visualization;
 
 // Re-export commonly used types for convenience
-pub use error::{KwaversResult, KwaversError};
+pub use boundary::{Boundary, CPMLBoundary, CPMLConfig, PMLBoundary, PMLConfig};
+pub use error::{KwaversError, KwaversResult};
 pub use grid::Grid;
-pub use time::Time;
-pub use medium::{Medium, homogeneous::HomogeneousMedium};
-pub use source::Source;
-pub use sensor::{Sensor, SensorData, PassiveAcousticMappingPlugin, PAMConfig, ArrayGeometry, BeamformingMethod};
+pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
-pub use boundary::{Boundary, PMLBoundary, CPMLBoundary, CPMLConfig, PMLConfig};
-// Solver exports
-pub use solver::plugin_based_solver::PluginBasedSolver;
-pub use solver::reconstruction::{
-    Reconstructor, ReconstructionAlgorithm, ReconstructionConfig,
-    FilterType, InterpolationMethod, UniversalBackProjection, WeightFunction
+pub use sensor::{
+    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin, Sensor, SensorData,
 };
+pub use source::Source;
+pub use time::Time;
+// Solver exports
+pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
+pub use error::{ConfigError, ValidationError};
+pub use solver::amr::{
+    feature_refinement::{
+        CurvatureCriterion, FeatureCriterion, FeatureType, GradientCriterion, LoadBalancer,
+        LoadBalancingStrategy, PredictiveCriterion, RefinementCriterion,
+    },
+    AMRConfig, AMRManager, InterpolationScheme, WaveletType,
+};
+pub use solver::plugin_based_solver::PluginBasedSolver;
 pub use solver::reconstruction::photoacoustic::PhotoacousticReconstructor;
 pub use solver::reconstruction::seismic::{
-    FullWaveformInversion, ReverseTimeMigration,
-    SeismicImagingConfig, RtmImagingCondition
+    FullWaveformInversion, ReverseTimeMigration, RtmImagingCondition, SeismicImagingConfig,
 };
-pub use solver::amr::{AMRConfig, AMRManager, WaveletType, InterpolationScheme, feature_refinement::{RefinementCriterion, GradientCriterion, CurvatureCriterion, FeatureCriterion, FeatureType, PredictiveCriterion, LoadBalancer, LoadBalancingStrategy}};
+pub use solver::reconstruction::{
+    FilterType, InterpolationMethod, ReconstructionAlgorithm, ReconstructionConfig, Reconstructor,
+    UniversalBackProjection, WeightFunction,
+};
 pub use solver::time_reversal::{TimeReversalConfig, TimeReversalReconstructor};
-pub use config::{Config, SimulationConfig, SourceConfig, OutputConfig};
-pub use validation::{ValidationResult, Validatable};
-pub use error::{ValidationError, ConfigError};
+pub use validation::{Validatable, ValidationResult};
 
 // Re-export physics plugin system (the new unified architecture)
-pub use physics::plugin::{PhysicsPlugin, PluginManager, PluginContext, PluginMetadata};
-pub use physics::field_mapping::{UnifiedFieldType, FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut};
-pub use physics::state::{PhysicsState, field_indices};
+pub use physics::field_mapping::{
+    FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
+};
+pub use physics::plugin::{PhysicsPlugin, PluginContext, PluginManager, PluginMetadata};
+pub use physics::state::{field_indices, PhysicsState};
 
 // Re-export spectral-DG components
-pub use solver::spectral_dg::{HybridSpectralDGSolver, HybridSpectralDGConfig};
-pub use solver::spectral_dg::shock_capturing::{ShockDetector, WENOLimiter, ArtificialViscosity};
+pub use solver::spectral_dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
+pub use solver::spectral_dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
 // Re-export PSTD and FDTD plugins
-pub use solver::pstd::{PstdSolver, PstdConfig, PstdPlugin};
-pub use solver::fdtd::{FdtdSolver, FdtdConfig, FdtdPlugin};
+pub use solver::fdtd::{FdtdConfig, FdtdPlugin, FdtdSolver};
+pub use solver::pstd::{PstdConfig, PstdPlugin, PstdSolver};
 
 // Re-export GPU-related items only when feature enabled
 #[cfg(feature = "gpu")]
-pub use gpu::{GpuContext, GpuBackend};
+pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
 #[cfg(feature = "gpu")]
 pub use gpu::memory::GpuMemoryManager;
 #[cfg(feature = "gpu")]
-pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
-pub use physics::mechanics::{CavitationModel, StreamingModel, KuznetsovWave, KuznetsovConfig};
-pub use physics::mechanics::acoustic_wave::NonlinearWave;
+pub use gpu::{GpuBackend, GpuContext};
 pub use physics::chemistry::ChemicalModel;
-pub use physics::mechanics::elastic_wave::{ElasticWave, mode_conversion::{ModeConversionConfig, ViscoelasticConfig, StiffnessTensor, MaterialSymmetry}};
+pub use physics::mechanics::acoustic_wave::NonlinearWave;
+pub use physics::mechanics::elastic_wave::{
+    mode_conversion::{
+        MaterialSymmetry, ModeConversionConfig, StiffnessTensor, ViscoelasticConfig,
+    },
+    ElasticWave,
+};
+pub use physics::mechanics::{CavitationModel, KuznetsovConfig, KuznetsovWave, StreamingModel};
 pub use physics::traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait};
 
-// Re-export factory components  
-pub use factory::{SimulationFactory, SimulationConfig as FactorySimulationConfig, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelType, PhysicsModelConfig, TimeConfig, ValidationConfig, SourceConfig as FactorySourceConfig, ConfigBuilder, SimulationComponents};
+// Re-export factory components
+pub use factory::{
+    ConfigBuilder, GridConfig, MediumConfig, MediumType, PhysicsConfig, PhysicsModelConfig,
+    PhysicsModelType, SimulationComponents, SimulationConfig as FactorySimulationConfig,
+    SimulationFactory, SourceConfig as FactorySourceConfig, TimeConfig, ValidationConfig,
+};
 
 // Re-export I/O functions
-pub use io::{save_pressure_data, save_light_data, generate_summary};
+pub use io::{generate_summary, save_light_data, save_pressure_data};
 
 // Re-export performance optimization
 pub use performance::{
-    PerformanceOptimizer, OptimizationConfig, SimdLevel,
-    profiling::{PerformanceProfiler, ProfileReport, TimingScope, MemoryProfile, CacheProfile, RooflineAnalysis}
+    profiling::{
+        CacheProfile, MemoryProfile, PerformanceProfiler, ProfileReport, RooflineAnalysis,
+        TimingScope,
+    },
+    OptimizationConfig, PerformanceOptimizer, SimdLevel,
 };
 
 // Re-export signal types
-pub use signal::{SineWave, Signal};
+pub use signal::{Signal, SineWave};
 
 // Re-export source types
-pub use source::{LinearArray, HanningApodization};
+pub use source::{HanningApodization, LinearArray};
 
 // Re-export configuration types
-pub use sensor::SensorConfig;
 pub use recorder::RecorderConfig;
+pub use sensor::SensorConfig;
 
 // Re-export benchmarks from performance module
-pub use performance::{BenchmarkSuite, BenchmarkConfig, BenchmarkReport, OutputFormat};
+pub use performance::{BenchmarkConfig, BenchmarkReport, BenchmarkSuite, OutputFormat};
 
 // Re-export solver validation
-pub use solver::validation::{KWaveValidator, KWaveTestCase, ValidationReport};
+pub use solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};
 
 // Additional reconstruction exports for specific recon types
 pub use solver::reconstruction::{
-    plane_recon::PlaneRecon, line_recon::LineRecon, 
-    arc_recon::ArcRecon, bowl_recon::BowlRecon
+    arc_recon::ArcRecon, bowl_recon::BowlRecon, line_recon::LineRecon, plane_recon::PlaneRecon,
 };
 
 /// Initialize logging for the kwavers library
@@ -190,24 +216,27 @@ pub fn init_logging() -> KwaversResult<()> {
 }
 
 /// Create default visualization plots for simulation outputs
-/// 
+///
 /// **Note:** This function is a placeholder and does not yet generate plots.
-#[deprecated(since = "0.3.0", note = "Plotting functionality is not yet implemented. This function is a stub.")]
+#[deprecated(
+    since = "0.3.0",
+    note = "Plotting functionality is not yet implemented. This function is a stub."
+)]
 pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResult<()> {
     use std::path::Path;
-    
+
     for file in files {
         let filepath = Path::new(output_dir).join(file);
         if !filepath.exists() {
             println!("Warning: File not found: {}", filepath.display());
             continue;
         }
-        
+
         // For now, just log what would be plotted
         // Actual plotting would require loading CSV data and using the plotting module functions
         println!("Would plot: {}", filepath.display());
     }
-    
+
     Ok(())
 }
 
@@ -225,28 +254,31 @@ pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResul
 /// Validate simulation configuration
 fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
     let mut result = ValidationResult::success();
-    
+
     // Validate grid configuration
     // TODO: Fix field access - SimulationConfig doesn't have nx, ny, nz fields
     // if config.simulation.nx == 0 || config.simulation.ny == 0 || config.simulation.nz == 0 {
     //     result.add_error(ValidationError::InvalidInput("Grid dimensions must be non-zero".to_string()));
     // }
-    
+
     // Validate time configuration
     // TODO: Fix field access - SimulationConfig doesn't have total_time field
     // if config.simulation.total_time <= 0.0 {
     //     result.add_error(ValidationError::InvalidInput("Total time must be positive".to_string()));
     // }
-    
+
     // Validate source configuration
     if config.source.frequency.unwrap_or(0.0) <= 0.0 {
         result.add_error(ValidationError::FieldValidation {
             field: "source.frequency".to_string(),
-            value: config.source.frequency.map_or("None".to_string(), |f| f.to_string()),
+            value: config
+                .source
+                .frequency
+                .map_or("None".to_string(), |f| f.to_string()),
             constraint: "Must be positive".to_string(),
         });
     }
-    
+
     Ok(result)
 }
 
@@ -256,54 +288,64 @@ fn create_validated_simulation(
     // Validate configuration first
     let validation_result = validate_simulation_config(&config)?;
     if !validation_result.is_valid {
-        let error_summary = validation_result.errors.iter()
+        let error_summary = validation_result
+            .errors
+            .iter()
             .map(|e| e.to_string())
             .collect::<Vec<_>>()
             .join("; ");
-        return Err(KwaversError::Config(crate::error::ConfigError::ValidationFailed {
-            field: "simulation".to_string(),
-            value: "configuration".to_string(),
-            constraint: format!("Validation failed: {}", error_summary),
-        }));
+        return Err(KwaversError::Config(
+            crate::error::ConfigError::ValidationFailed {
+                field: "simulation".to_string(),
+                value: "configuration".to_string(),
+                constraint: format!("Validation failed: {}", error_summary),
+            },
+        ));
     }
-    
+
     // Create grid using simulation config
-    let grid = config.simulation.initialize_grid()
-        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
+    let grid = config.simulation.initialize_grid().map_err(|e| {
+        KwaversError::Config(ConfigError::ValidationFailed {
             field: "grid".to_string(),
             value: "initialization".to_string(),
             constraint: e,
-        }))?;
-    
+        })
+    })?;
+
     // Create time discretization
-    let time = config.simulation.initialize_time(&grid)
-        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
+    let time = config.simulation.initialize_time(&grid).map_err(|e| {
+        KwaversError::Config(ConfigError::ValidationFailed {
             field: "time".to_string(),
             value: "initialization".to_string(),
             constraint: e,
-        }))?;
-    
+        })
+    })?;
+
     // Create medium from configuration
     let medium = HomogeneousMedium::new(
-        config.simulation.medium.density, 
-        config.simulation.medium.sound_speed, 
-        config.simulation.medium.absorption, 
-        config.simulation.medium.dispersion, 
-        &grid
+        config.simulation.medium.density,
+        config.simulation.medium.sound_speed,
+        config.simulation.medium.absorption,
+        config.simulation.medium.dispersion,
+        &grid,
     );
-    
+
     // Create source using source config
-    let source = config.source.initialize_source(&medium, &grid)
-        .map_err(|e| KwaversError::Config(ConfigError::ValidationFailed {
-            field: "source".to_string(),
-            value: "initialization".to_string(),
-            constraint: e,
-        }))?;
-    
+    let source = config
+        .source
+        .initialize_source(&medium, &grid)
+        .map_err(|e| {
+            KwaversError::Config(ConfigError::ValidationFailed {
+                field: "source".to_string(),
+                value: "initialization".to_string(),
+                constraint: e,
+            })
+        })?;
+
     // Create sensor with default positions from config or defaults
     let sensor_positions = get_default_sensor_positions();
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
-    
+
     // Create recorder
     let recorder = Recorder::new(
         sensor,
@@ -313,7 +355,7 @@ fn create_validated_simulation(
         true,
         config.output.snapshot_interval,
     );
-    
+
     Ok((grid, time, medium, source, recorder))
 }
 
@@ -336,21 +378,25 @@ fn run_physics_simulation(
     pstd_config: solver::pstd::PstdConfig,
     pml_config: boundary::pml::PMLConfig,
 ) -> KwaversResult<()> {
-    use crate::physics::plugin::PluginContext;
-    
     // Step 1: Setup all simulation components
-    let (grid, time, medium, source, mut recorder, mut plugin_manager, mut boundary, mut fields) = 
+    let (grid, time, medium, source, mut recorder, mut plugin_manager, mut boundary, mut fields) =
         setup_simulation_components(config, pstd_config, pml_config)?;
-    
+
     // Step 2: Run the main simulation loop
     run_simulation_loop(
-        &time, &grid, &medium, &source, &mut recorder, 
-        &mut plugin_manager, &mut boundary, &mut fields,
+        &time,
+        &grid,
+        &medium,
+        &source,
+        &mut recorder,
+        &mut plugin_manager,
+        &mut boundary,
+        &mut fields,
     )?;
-    
+
     // Step 3: Finalize and report results
     finalize_simulation(&recorder)?;
-    
+
     Ok(())
 }
 
@@ -360,41 +406,54 @@ fn setup_simulation_components(
     pstd_config: solver::pstd::PstdConfig,
     pml_config: boundary::pml::PMLConfig,
 ) -> KwaversResult<(
-    Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder,
-    PluginManager, PMLBoundary, ndarray::Array4<f64>
+    Grid,
+    Time,
+    HomogeneousMedium,
+    Box<dyn Source>,
+    Recorder,
+    PluginManager,
+    PMLBoundary,
+    ndarray::Array4<f64>,
 )> {
     // Create validated simulation components
     let (grid, time, medium, source, recorder) = create_validated_simulation(config)?;
-    
+
     // Create plugin manager for physics simulation
     let mut plugin_manager = PluginManager::new();
-    
+
     // Add PSTD solver for acoustic wave propagation
-    plugin_manager.add_plugin(Box::new(
-        solver::pstd::PstdPlugin::new(pstd_config, &grid)?
-    ))?;
-    
+    plugin_manager.add_plugin(Box::new(solver::pstd::PstdPlugin::new(pstd_config, &grid)?))?;
+
     // Add thermal diffusion component using adapter
     // Note: Specific physics plugins need to be implemented
     // plugin_manager.register(Box::new(
     //     physics::plugin::thermal_diffusion_plugin("thermal".to_string())
     // ))?;
-    
+
     // Create boundary conditions
     let boundary = PMLBoundary::new(pml_config)?;
-    
+
     // Initialize fields
     let mut fields = ndarray::Array4::<f64>::zeros((
         3, // pressure, temperature, light
-        grid.nx,
-        grid.ny,
-        grid.nz,
+        grid.nx, grid.ny, grid.nz,
     ));
-    
+
     // Initialize temperature field with body temperature
-    fields.index_axis_mut(ndarray::Axis(0), 1).fill(validation_constants::BODY_TEMPERATURE_KELVIN);
-    
-    Ok((grid, time, medium, source, recorder, plugin_manager, boundary, fields))
+    fields
+        .index_axis_mut(ndarray::Axis(0), 1)
+        .fill(validation_constants::BODY_TEMPERATURE_KELVIN);
+
+    Ok((
+        grid,
+        time,
+        medium,
+        source,
+        recorder,
+        plugin_manager,
+        boundary,
+        fields,
+    ))
 }
 
 /// Run the main simulation loop
@@ -409,38 +468,32 @@ fn run_simulation_loop(
     fields: &mut ndarray::Array4<f64>,
 ) -> KwaversResult<()> {
     use crate::physics::plugin::PluginContext;
-    
+
     // Main simulation loop
     for step in 0..time.num_steps() {
         let t = step as f64 * time.dt;
-        
+
         // Apply source term
         apply_source_term(source, grid, t, fields)?;
-        
+
         // Apply physics using plugin manager
         let mut plugin_context = PluginContext::new();
         plugin_context.step = step;
         plugin_context.total_steps = time.num_steps();
-        plugin_manager.execute(
-            fields,
-            grid,
-            medium,
-            time.dt,
-            t,
-        )?;
-        
+        plugin_manager.execute(fields, grid, medium, time.dt, t)?;
+
         // Apply boundary conditions
         apply_boundary_conditions(boundary, fields, grid, step)?;
-        
+
         // Record data
         recorder.record(fields, step, t);
-        
+
         // Progress reporting
         if step % validation_constants::PROGRESS_REPORT_INTERVAL == 0 {
             report_progress(step, time.num_steps());
         }
     }
-    
+
     Ok(())
 }
 
@@ -452,15 +505,15 @@ fn apply_source_term(
     fields: &mut ndarray::Array4<f64>,
 ) -> KwaversResult<()> {
     use ndarray::Zip;
-    
+
     let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
-    
+
     // Use Zip for parallel, in-place update (zero-copy, vectorized)
     Zip::indexed(&mut pressure_field).for_each(|(i, j, k), p| {
         let (x, y, z) = grid.coordinates(i, j, k);
         *p += source.get_source_term(t, x, y, z, grid);
     });
-    
+
     Ok(())
 }
 
@@ -474,7 +527,7 @@ fn apply_boundary_conditions(
     // Apply to pressure field using a mutable view (zero-copy)
     let mut pressure_field_view = fields.index_axis_mut(ndarray::Axis(0), 0);
     boundary.apply_acoustic(pressure_field_view.view_mut(), grid, step)?;
-    
+
     // Apply to light field using a mutable view (zero-copy)
     let mut light_field_view = fields.index_axis_mut(ndarray::Axis(0), 1);
     boundary.apply_light(light_field_view.view_mut(), grid, step);
@@ -496,21 +549,27 @@ fn finalize_simulation(recorder: &Recorder) -> KwaversResult<()> {
 }
 
 /// Get library version and build information
-/// 
+///
 /// Implements SSOT principle for version information
 pub fn get_version_info() -> HashMap<String, String> {
     let mut info = HashMap::new();
     info.insert("version".to_string(), env!("CARGO_PKG_VERSION").to_string());
     info.insert("name".to_string(), env!("CARGO_PKG_NAME").to_string());
-    info.insert("description".to_string(), env!("CARGO_PKG_DESCRIPTION").to_string());
+    info.insert(
+        "description".to_string(),
+        env!("CARGO_PKG_DESCRIPTION").to_string(),
+    );
     info.insert("authors".to_string(), env!("CARGO_PKG_AUTHORS").to_string());
-    info.insert("repository".to_string(), env!("CARGO_PKG_REPOSITORY").to_string());
+    info.insert(
+        "repository".to_string(),
+        env!("CARGO_PKG_REPOSITORY").to_string(),
+    );
     info.insert("license".to_string(), env!("CARGO_PKG_LICENSE").to_string());
     info
 }
 
 /// Structured system information for validation and logging
-/// 
+///
 /// Follows Single Responsibility Principle: holds system data
 #[derive(Debug, Clone)]
 pub struct SystemInfo {
@@ -521,32 +580,33 @@ pub struct SystemInfo {
 
 impl SystemInfo {
     /// Gathers all system information in a single efficient pass
-    /// 
+    ///
     /// This centralizes system queries, avoiding redundant calls and
     /// following the DRY principle for system information gathering
     pub fn new() -> KwaversResult<Self> {
-        use sysinfo::{System, SystemExt, DiskExt};
-        
+        use sysinfo::{DiskExt, System, SystemExt};
+
         let mut sys = System::new_all();
         sys.refresh_all();
-        
+
         // Get CPU cores with fallback
-        let cpu_cores = sys.physical_core_count()
+        let cpu_cores = sys
+            .physical_core_count()
             .unwrap_or_else(|| sys.cpus().len())
             .max(1);
-        
+
         // Get available memory in GB
         let memory_available_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
-        
+
         // Get available disk space for current directory
-        let current_dir = std::env::current_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("/"));
-        let disk_space_gb = sys.disks()
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
+        let disk_space_gb = sys
+            .disks()
             .iter()
             .find(|disk| current_dir.starts_with(disk.mount_point()))
             .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
             .unwrap_or(validation_constants::DEFAULT_DISK_SPACE_GB);
-        
+
         Ok(Self {
             cpu_cores,
             memory_available_gb,
@@ -556,48 +616,48 @@ impl SystemInfo {
 }
 
 /// Check system compatibility and requirements
-/// 
+///
 /// Uses SystemInfo for efficient, single-pass system querying
 /// Implements Information Expert principle for system validation
 pub fn check_system_compatibility() -> KwaversResult<ValidationResult> {
     use crate::validation::validators;
-    
+
     let info = SystemInfo::new()?;
     let mut errors = Vec::new();
-    
+
     // Validate memory using named constant
     let memory_result = validators::validate_range(
-        info.memory_available_gb, 
-        validation_constants::MIN_REQUIRED_MEMORY_GB, 
-        f64::INFINITY, 
-        "memory_available_gb"
+        info.memory_available_gb,
+        validation_constants::MIN_REQUIRED_MEMORY_GB,
+        f64::INFINITY,
+        "memory_available_gb",
     );
     if !memory_result.is_valid {
         errors.extend(memory_result.errors);
     }
-    
+
     // Validate CPU cores using named constant
     let cores_result = validators::validate_range(
-        info.cpu_cores as u32, 
-        validation_constants::MIN_REQUIRED_CPU_CORES as u32, 
-        u32::MAX, 
-        "cpu_cores"
+        info.cpu_cores as u32,
+        validation_constants::MIN_REQUIRED_CPU_CORES as u32,
+        u32::MAX,
+        "cpu_cores",
     );
     if !cores_result.is_valid {
         errors.extend(cores_result.errors);
     }
-    
+
     // Validate disk space using named constant
     let disk_result = validators::validate_range(
         info.disk_space_gb,
         validation_constants::MIN_REQUIRED_DISK_SPACE_GB,
         f64::INFINITY,
-        "disk_space_gb"
+        "disk_space_gb",
     );
     if !disk_result.is_valid {
         errors.extend(disk_result.errors);
     }
-    
+
     // Return the validation result
     if errors.is_empty() {
         Ok(ValidationResult::success())
@@ -611,32 +671,34 @@ const CONSERVATIVE_DEFAULT_DISK_SPACE_GB: f64 = 20.0;
 
 /// Get system information using the sysinfo crate for cross-platform compatibility
 fn get_system_info() -> KwaversResult<HashMap<String, String>> {
-    use sysinfo::{System, SystemExt, DiskExt};
-    
+    use sysinfo::{DiskExt, System, SystemExt};
+
     let mut sys = System::new_all();
     sys.refresh_all();
-    
+
     let mut info = HashMap::new();
-    
+
     // Get CPU cores
-    let cpu_cores = sys.physical_core_count()
+    let cpu_cores = sys
+        .physical_core_count()
         .unwrap_or_else(|| sys.cpus().len())
         .max(1);
     info.insert("cpu_cores".to_string(), cpu_cores.to_string());
-    
+
     // Get available memory in GB
     let memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
     info.insert("memory_available_gb".to_string(), memory_gb.to_string());
-    
+
     // Get available disk space for the current directory
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
-    let disk_space_gb = sys.disks()
+    let disk_space_gb = sys
+        .disks()
         .iter()
         .find(|disk| current_dir.starts_with(disk.mount_point()))
         .map(|disk| disk.available_space() as f64 / (1024.0 * 1024.0 * 1024.0))
         .unwrap_or(CONSERVATIVE_DEFAULT_DISK_SPACE_GB);
     info.insert("disk_space_gb".to_string(), disk_space_gb.to_string());
-    
+
     Ok(info)
 }
 
@@ -644,39 +706,39 @@ fn get_system_info() -> KwaversResult<HashMap<String, String>> {
 fn get_cpu_cores() -> KwaversResult<usize> {
     let info = get_system_info()?;
     let cores_str = info.get("cpu_cores");
-    cores_str
-        .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+    cores_str.and_then(|s| s.parse().ok()).ok_or_else(|| {
+        KwaversError::Config(ConfigError::InvalidValue {
             parameter: "cpu_cores".to_string(),
             value: cores_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid integer".to_string(),
-        }))
+        })
+    })
 }
 
 /// Get available memory in GB.
 fn get_available_memory_gb() -> KwaversResult<f64> {
     let info = get_system_info()?;
     let memory_str = info.get("memory_available_gb");
-    memory_str
-        .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+    memory_str.and_then(|s| s.parse().ok()).ok_or_else(|| {
+        KwaversError::Config(ConfigError::InvalidValue {
             parameter: "available_memory".to_string(),
             value: memory_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid number".to_string(),
-        }))
+        })
+    })
 }
 
 /// Get available disk space in GB for current directory.
 fn get_available_disk_space_gb() -> KwaversResult<f64> {
     let info = get_system_info()?;
     let disk_str = info.get("disk_space_gb");
-    disk_str
-        .and_then(|s| s.parse().ok())
-        .ok_or_else(|| KwaversError::Config(ConfigError::InvalidValue {
+    disk_str.and_then(|s| s.parse().ok()).ok_or_else(|| {
+        KwaversError::Config(ConfigError::InvalidValue {
             parameter: "disk_space".to_string(),
             value: disk_str.map_or("unknown", |s| s.as_str()).to_string(),
             constraint: "Must be a valid number".to_string(),
-        }))
+        })
+    })
 }
 
 #[cfg(test)]
@@ -691,7 +753,7 @@ mod tests {
         assert!(config.source.frequency.is_some());
         assert!(!config.output.enable_visualization); // Default is false
     }
-    
+
     #[test]
     fn test_config_with_custom_values() {
         let config = Config {
@@ -703,14 +765,14 @@ mod tests {
         };
         assert_eq!(config.simulation.frequency, 2e6);
     }
-    
+
     #[test]
     fn test_version_info() {
         let info = get_version_info();
         assert!(info.contains_key("version"));
         assert!(info.contains_key("name"));
     }
-    
+
     #[test]
     fn test_system_compatibility() {
         let result = check_system_compatibility().unwrap();

@@ -14,10 +14,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 #[cfg(feature = "gpu-visualization")]
-use {
-    std::sync::Mutex,
-    wgpu::*,
-};
+use {std::sync::Mutex, wgpu::*};
 
 /// Data processing operations for visualization
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -61,7 +58,7 @@ impl Default for TransferStatistics {
 /// GPU data pipeline for visualization
 pub struct DataPipeline {
     gpu_context: Arc<GpuContext>,
-    
+
     #[cfg(feature = "gpu-visualization")]
     device: Arc<Device>,
     #[cfg(feature = "gpu-visualization")]
@@ -74,7 +71,7 @@ pub struct DataPipeline {
     processing_pipelines: HashMap<ProcessingOperation, ComputePipeline>,
     #[cfg(feature = "gpu-visualization")]
     transfer_stats: Arc<Mutex<TransferStatistics>>,
-    
+
     // Field metadata cache
     field_dimensions: HashMap<FieldType, (u32, u32, u32)>,
     field_ranges: HashMap<FieldType, (f32, f32)>,
@@ -85,16 +82,16 @@ impl DataPipeline {
     /// Create a new data pipeline
     pub async fn new(gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
-        
+
         #[cfg(feature = "gpu-visualization")]
         {
             // GPU visualization data pipeline - requires WebGPU context
             // Currently returns error as GPU context integration is pending
             return Err(KwaversError::Visualization(
-                "GPU data pipeline not yet implemented - requires WebGPU device access".to_string()
+                "GPU data pipeline not yet implemented - requires WebGPU device access".to_string(),
             ));
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {
@@ -105,7 +102,7 @@ impl DataPipeline {
             })
         }
     }
-    
+
     /// Upload field data to GPU with optional processing
     pub async fn upload_field(
         &mut self,
@@ -115,45 +112,53 @@ impl DataPipeline {
         let start_time = Instant::now();
         let (nx, ny, nz) = field.dim();
         let dimensions = (nx as u32, ny as u32, nz as u32);
-        
-        debug!("Uploading {} field: {}x{}x{}", 
-               format!("{:?}", field_type), nx, ny, nz);
-        
+
+        debug!(
+            "Uploading {} field: {}x{}x{}",
+            format!("{:?}", field_type),
+            nx,
+            ny,
+            nz
+        );
+
         #[cfg(feature = "gpu-visualization")]
         {
             // Create or update volume texture if needed
-            if !self.volume_textures.contains_key(&field_type) || 
-               self.field_dimensions.get(&field_type) != Some(&dimensions) {
+            if !self.volume_textures.contains_key(&field_type)
+                || self.field_dimensions.get(&field_type) != Some(&dimensions)
+            {
                 self.create_volume_texture(field_type, dimensions).await?;
             }
-            
+
             // Convert field data to f32 for GPU
             let field_data: Vec<f32> = field.iter().map(|&x| x as f32).collect();
             let data_size = field_data.len() * std::mem::size_of::<f32>();
-            
+
             // Basic implementation for GPU data transfer
             // The actual GPU implementation will be completed when WebGPU device access is available
-            debug!("Field upload transfer: {}x{}x{} = {} bytes", 
-                   dimensions.0, dimensions.1, dimensions.2, data_size);
-            
+            debug!(
+                "Field upload transfer: {}x{}x{} = {} bytes",
+                dimensions.0, dimensions.1, dimensions.2, data_size
+            );
+
             // Update statistics (simulated)
             let transfer_time = start_time.elapsed().as_secs_f32() * 1000.0;
-            
+
             // Cache field metadata
             self.field_dimensions.insert(field_type, dimensions);
             self.update_field_range(field_type, &field_data);
-            
+
             debug!("Field upload transfer complete: {:.2}ms", transfer_time);
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             warn!("GPU visualization not enabled for field upload");
         }
-        
+
         Ok(())
     }
-    
+
     /// Upload multiple fields from a 4D array
     pub async fn upload_multi_field(
         &mut self,
@@ -161,61 +166,64 @@ impl DataPipeline {
         field_types: &[FieldType],
     ) -> KwaversResult<()> {
         let start_time = Instant::now();
-        
+
         info!("Uploading {} fields from 4D array", field_types.len());
-        
+
         for (i, &field_type) in field_types.iter().enumerate() {
             if i < fields.shape()[3] {
                 let field = fields.slice(ndarray::s![.., .., .., i]);
                 self.upload_field(field, field_type).await?;
             }
         }
-        
+
         let total_time = start_time.elapsed().as_secs_f32() * 1000.0;
         info!("Multi-field upload complete: {:.2}ms total", total_time);
-        
+
         Ok(())
     }
-    
+
     /// Set processing operation for a field type
     pub fn set_processing_operation(
         &mut self,
         field_type: FieldType,
         operation: ProcessingOperation,
     ) {
-        debug!("Setting processing operation for {:?}: {:?}", field_type, operation);
+        debug!(
+            "Setting processing operation for {:?}: {:?}",
+            field_type, operation
+        );
         self.processing_operations.insert(field_type, operation);
     }
-    
+
     /// Get field dimensions
     pub fn get_field_dimensions(&self, field_type: FieldType) -> Option<(u32, u32, u32)> {
         self.field_dimensions.get(&field_type).copied()
     }
-    
+
     /// Get field value range
     pub fn get_field_range(&self, field_type: FieldType) -> Option<(f32, f32)> {
         self.field_ranges.get(&field_type).copied()
     }
-    
+
     /// Get transfer statistics
     pub fn get_transfer_statistics(&self) -> TransferStatistics {
         #[cfg(feature = "gpu-visualization")]
         {
             self.transfer_stats.lock().unwrap().clone()
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             TransferStatistics::default()
         }
     }
-    
+
     /// Get volume texture for a field type
     #[cfg(feature = "gpu-visualization")]
     pub fn get_volume_texture(&self, field_type: FieldType) -> Option<&Texture> {
         self.volume_textures.get(&field_type)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_volume_texture(
         &mut self,
@@ -233,19 +241,23 @@ impl DataPipeline {
             sample_count: 1,
             dimension: TextureDimension::D3,
             format: TextureFormat::R32Float,
-            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::STORAGE_BINDING,
+            usage: TextureUsages::TEXTURE_BINDING
+                | TextureUsages::COPY_DST
+                | TextureUsages::STORAGE_BINDING,
             view_formats: &[],
         });
-        
+
         self.volume_textures.insert(field_type, texture);
         self.field_dimensions.insert(field_type, dimensions);
-        
-        debug!("Created volume texture for {:?}: {}x{}x{}", 
-               field_type, dimensions.0, dimensions.1, dimensions.2);
-        
+
+        debug!(
+            "Created volume texture for {:?}: {}x{}x{}",
+            field_type, dimensions.0, dimensions.1, dimensions.2
+        );
+
         Ok(())
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn get_or_create_staging_buffer(
         &mut self,
@@ -259,62 +271,69 @@ impl DataPipeline {
                 usage: BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
-            
+
             self.staging_buffers.insert(field_type, buffer);
         }
-        
+
         Ok(self.staging_buffers.get(&field_type).unwrap())
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn apply_processing(
         &mut self,
         field_type: FieldType,
         operation: ProcessingOperation,
     ) -> KwaversResult<()> {
-        debug!("Applying processing operation {:?} to field {:?}", operation, field_type);
-        
-        let pipeline = self.processing_pipelines.get(&operation)
-            .ok_or_else(|| KwaversError::Visualization(
-                format!("Processing pipeline not found for operation: {:?}", operation)
-            ))?;
-        
-        let dimensions = self.field_dimensions.get(&field_type)
-            .ok_or_else(|| KwaversError::Visualization(
-                format!("Field dimensions not found for: {:?}", field_type)
-            ))?;
-        
-        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor {
-            label: Some("Processing Encoder"),
-        });
-        
+        debug!(
+            "Applying processing operation {:?} to field {:?}",
+            operation, field_type
+        );
+
+        let pipeline = self.processing_pipelines.get(&operation).ok_or_else(|| {
+            KwaversError::Visualization(format!(
+                "Processing pipeline not found for operation: {:?}",
+                operation
+            ))
+        })?;
+
+        let dimensions = self.field_dimensions.get(&field_type).ok_or_else(|| {
+            KwaversError::Visualization(format!("Field dimensions not found for: {:?}", field_type))
+        })?;
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor {
+                label: Some("Processing Encoder"),
+            });
+
         {
             let mut compute_pass = encoder.begin_compute_pass(&ComputePassDescriptor {
                 label: Some("Field Processing Pass"),
                 timestamp_writes: None,
             });
-            
+
             compute_pass.set_pipeline(pipeline);
-            
+
             // Dispatch compute shader
             let workgroup_size = 8;
             let dispatch_x = (dimensions.0 + workgroup_size - 1) / workgroup_size;
             let dispatch_y = (dimensions.1 + workgroup_size - 1) / workgroup_size;
             let dispatch_z = (dimensions.2 + workgroup_size - 1) / workgroup_size;
-            
+
             compute_pass.dispatch_workgroups(dispatch_x, dispatch_y, dispatch_z);
         }
-        
+
         self.queue.submit(std::iter::once(encoder.finish()));
-        
+
         Ok(())
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_normalize_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: Some("Normalize Shader"),
-            source: ShaderSource::Wgsl(r#"
+            source: ShaderSource::Wgsl(
+                r#"
                 @group(0) @binding(0) var input_texture: texture_3d<f32>;
                 @group(0) @binding(1) var output_texture: texture_storage_3d<r32float, write>;
                 
@@ -332,15 +351,17 @@ impl DataPipeline {
                     let normalized = clamp(value * 0.5 + 0.5, 0.0, 1.0);
                     textureStore(output_texture, coords, vec4<f32>(normalized, 0.0, 0.0, 0.0));
                 }
-            "#.into()),
+            "#
+                .into(),
+            ),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Normalize Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some("Normalize Pipeline"),
             layout: Some(&pipeline_layout),
@@ -349,10 +370,10 @@ impl DataPipeline {
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
-        
+
         Ok(pipeline)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_gaussian_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
@@ -403,13 +424,13 @@ impl DataPipeline {
                 }
             "#.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Gaussian Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some("Gaussian Pipeline"),
             layout: Some(&pipeline_layout),
@@ -418,10 +439,10 @@ impl DataPipeline {
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
-        
+
         Ok(pipeline)
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     async fn create_gradient_pipeline(device: &Device) -> KwaversResult<ComputePipeline> {
         let shader = device.create_shader_module(ShaderModuleDescriptor {
@@ -465,13 +486,13 @@ impl DataPipeline {
                 }
             "#.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Gradient Pipeline Layout"),
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        
+
         let pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: Some("Gradient Pipeline"),
             layout: Some(&pipeline_layout),
@@ -480,20 +501,23 @@ impl DataPipeline {
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None,
         });
-        
+
         Ok(pipeline)
     }
-    
+
     fn update_field_range(&mut self, field_type: FieldType, field_data: &[f32]) {
         if let (Some(min_val), Some(max_val)) = (
             field_data.iter().min_by(|a, b| a.partial_cmp(b).unwrap()),
             field_data.iter().max_by(|a, b| a.partial_cmp(b).unwrap()),
         ) {
             self.field_ranges.insert(field_type, (*min_val, *max_val));
-            debug!("Field {:?} range: [{:.3}, {:.3}]", field_type, min_val, max_val);
+            debug!(
+                "Field {:?} range: [{:.3}, {:.3}]",
+                field_type, min_val, max_val
+            );
         }
     }
-    
+
     #[cfg(feature = "gpu-visualization")]
     fn update_transfer_stats(&self, bytes_transferred: usize, transfer_time_ms: f32) {
         if let Ok(mut stats) = self.transfer_stats.lock() {
@@ -501,9 +525,10 @@ impl DataPipeline {
             stats.transfer_time_ms += transfer_time_ms;
             stats.num_transfers += 1;
             stats.last_transfer_time = Instant::now();
-            
+
             if transfer_time_ms > 0.0 {
-                let bandwidth_bytes_per_sec = (bytes_transferred as f32) / (transfer_time_ms / 1000.0);
+                let bandwidth_bytes_per_sec =
+                    (bytes_transferred as f32) / (transfer_time_ms / 1000.0);
                 stats.bandwidth_gb_per_sec = bandwidth_bytes_per_sec / (1024.0 * 1024.0 * 1024.0);
             }
         }

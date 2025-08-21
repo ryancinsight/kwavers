@@ -8,34 +8,34 @@
 //! - `numerical`: Numerical computation errors
 //! - `field`: Field registry and management errors
 
-pub mod physics;
-pub mod gpu;
-pub mod io;
-pub mod config;
-pub mod numerical;
-pub mod field;
 pub mod composite;
+pub mod config;
 pub mod context;
+pub mod field;
+pub mod gpu;
 pub mod grid;
+pub mod io;
 pub mod medium;
+pub mod numerical;
+pub mod physics;
 pub mod system;
 
 // Re-export main error types
-pub use physics::PhysicsError;
-pub use gpu::GpuError;
-pub use io::DataError;
-pub use config::ConfigError;
-pub use numerical::NumericalError;
-pub use field::FieldError;
 pub use composite::CompositeError;
+pub use config::ConfigError;
 pub use context::ErrorContext;
+pub use field::FieldError;
+pub use gpu::GpuError;
 pub use grid::GridError;
+pub use io::DataError;
 pub use medium::MediumError;
+pub use numerical::NumericalError;
+pub use physics::PhysicsError;
 pub use system::SystemError;
 
+use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use serde::{Deserialize, Serialize};
 
 /// Main error type for kwavers operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,8 +89,16 @@ impl fmt::Display for KwaversError {
             Self::Composite(e) => write!(f, "Multiple errors: {}", e),
             Self::Validation(e) => write!(f, "Validation error: {:?}", e),
             Self::Io(msg) => write!(f, "I/O error: {}", msg),
-            Self::ConcurrencyError { operation, resource, reason } => {
-                write!(f, "Concurrency error in {} on {}: {}", operation, resource, reason)
+            Self::ConcurrencyError {
+                operation,
+                resource,
+                reason,
+            } => {
+                write!(
+                    f,
+                    "Concurrency error in {} on {}: {}",
+                    operation, resource, reason
+                )
             }
             Self::NotImplemented(feature) => write!(f, "Not implemented: {}", feature),
         }
@@ -205,11 +213,28 @@ pub enum ValidationError {
 impl fmt::Display for ValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::FieldValidation { field, value, constraint } => {
-                write!(f, "Field validation failed for {}: {} violates {}", field, value, constraint)
+            Self::FieldValidation {
+                field,
+                value,
+                constraint,
+            } => {
+                write!(
+                    f,
+                    "Field validation failed for {}: {} violates {}",
+                    field, value, constraint
+                )
             }
-            Self::RangeValidation { field, value, min, max } => {
-                write!(f, "Range validation failed for {}: {} not in [{}, {}]", field, value, min, max)
+            Self::RangeValidation {
+                field,
+                value,
+                min,
+                max,
+            } => {
+                write!(
+                    f,
+                    "Range validation failed for {}: {} not in [{}, {}]",
+                    field, value, min, max
+                )
             }
             Self::StateValidation => {
                 write!(f, "State validation failed")

@@ -1,8 +1,8 @@
 //! Transfer operators for field coupling
 
-use crate::error::{KwaversResult, ValidationError};
 use super::InterfaceGeometry;
-use ndarray::{Array3, Zip};
+use crate::error::{KwaversResult, ValidationError};
+use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Transfer operators for field coupling
@@ -29,35 +29,50 @@ impl TransferOperators {
     /// Create new transfer operators
     pub fn new(geometry: &InterfaceGeometry) -> KwaversResult<Self> {
         let mut operators = HashMap::new();
-        
+
         // Create operators for standard fields
-        operators.insert("pressure".to_string(), Self::create_operator(geometry, "pressure")?);
-        operators.insert("velocity_x".to_string(), Self::create_operator(geometry, "velocity_x")?);
-        operators.insert("velocity_y".to_string(), Self::create_operator(geometry, "velocity_y")?);
-        operators.insert("velocity_z".to_string(), Self::create_operator(geometry, "velocity_z")?);
-        
+        operators.insert(
+            "pressure".to_string(),
+            Self::create_operator(geometry, "pressure")?,
+        );
+        operators.insert(
+            "velocity_x".to_string(),
+            Self::create_operator(geometry, "velocity_x")?,
+        );
+        operators.insert(
+            "velocity_y".to_string(),
+            Self::create_operator(geometry, "velocity_y")?,
+        );
+        operators.insert(
+            "velocity_z".to_string(),
+            Self::create_operator(geometry, "velocity_z")?,
+        );
+
         Ok(Self {
             operators,
             geometry: geometry.clone(),
         })
     }
-    
+
     /// Create a transfer operator for a specific field
-    fn create_operator(geometry: &InterfaceGeometry, field_type: &str) -> KwaversResult<TransferOperator> {
+    fn create_operator(
+        geometry: &InterfaceGeometry,
+        field_type: &str,
+    ) -> KwaversResult<TransferOperator> {
         // Calculate weights and indices based on geometry
         let num_points = geometry.num_points;
         let weights = vec![1.0 / num_points as f64; num_points];
-        
+
         // Generate indices based on interface normal
         let (source_indices, target_indices) = Self::generate_indices(geometry, field_type)?;
-        
+
         Ok(TransferOperator {
             weights,
             source_indices,
             target_indices,
         })
     }
-    
+
     /// Generate source and target indices
     fn generate_indices(
         geometry: &InterfaceGeometry,
@@ -65,12 +80,13 @@ impl TransferOperators {
     ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<(usize, usize, usize)>)> {
         let mut source_indices = Vec::new();
         let mut target_indices = Vec::new();
-        
+
         // Generate based on interface normal direction
         match geometry.normal_direction {
             0 => {
                 // X-normal interface
-                for j in 0..10 {  // TODO: Use actual grid dimensions
+                for j in 0..10 {
+                    // TODO: Use actual grid dimensions
                     for k in 0..10 {
                         source_indices.push((0, j, k));
                         target_indices.push((0, j, k));
@@ -100,30 +116,33 @@ impl TransferOperators {
                     field: "normal_direction".to_string(),
                     value: format!("{}", geometry.normal_direction),
                     constraint: "Must be 0, 1, or 2".to_string(),
-                }.into());
+                }
+                .into());
             }
         }
-        
+
         Ok((source_indices, target_indices))
     }
-    
+
     /// Apply transfer operators to fields
     pub fn apply(&self, source: &Array3<f64>, target: &mut Array3<f64>) -> KwaversResult<()> {
         // Apply pressure transfer operator
         if let Some(op) = self.operators.get("pressure") {
             Self::apply_operator(op, source, target)?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Apply a single transfer operator
     fn apply_operator(
         operator: &TransferOperator,
         source: &Array3<f64>,
         target: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        for (idx, (&(si, sj, sk), &(ti, tj, tk))) in operator.source_indices.iter()
+        for (idx, (&(si, sj, sk), &(ti, tj, tk))) in operator
+            .source_indices
+            .iter()
             .zip(operator.target_indices.iter())
             .enumerate()
         {
@@ -131,7 +150,7 @@ impl TransferOperators {
                 target[[ti, tj, tk]] += source[[si, sj, sk]] * operator.weights[idx];
             }
         }
-        
+
         Ok(())
     }
 }

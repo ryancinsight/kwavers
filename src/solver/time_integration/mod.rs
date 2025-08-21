@@ -1,9 +1,9 @@
 //! Multi-Rate Time Integration Module
-//! 
+//!
 //! This module implements multi-rate time integration methods that allow
 //! different time steps for different physics components, enabling efficient
 //! simulation of multi-physics problems with disparate time scales.
-//! 
+//!
 //! # Design Principles
 //! - SOLID: Separate modules for time steppers, stability analysis, and coupling
 //! - CUPID: Composable time integration schemes with clear interfaces
@@ -13,34 +13,34 @@
 //! - YAGNI: Only implementing well-established multi-rate methods
 //! - Clean: Comprehensive documentation and testing
 
-pub mod traits;
-pub mod time_stepper;
 pub mod adaptive_stepping;
+pub mod conservation;
+pub mod coupling;
 pub mod multi_rate_controller;
 pub mod stability;
-pub mod coupling;
 pub mod time_scale_separation;
-pub mod conservation;
+pub mod time_stepper;
+pub mod traits;
 
 // Re-export main types
-pub use traits::{TimeStepper, TimeStepperConfig, MultiRateConfig, TimeStepperType};
-pub use time_stepper::{RungeKutta4, AdamsBashforth};
 pub use adaptive_stepping::{AdaptiveTimeStepper, ErrorEstimator};
+pub use conservation::{ConservationError, ConservationMonitor, ConservedQuantities};
+pub use coupling::{SubcyclingStrategy, TimeCoupling};
 pub use multi_rate_controller::MultiRateController;
-pub use stability::{StabilityAnalyzer, CFLCondition};
-pub use coupling::{TimeCoupling, SubcyclingStrategy};
-pub use time_scale_separation::{TimeScaleSeparator, TimeScale};
-pub use conservation::{ConservationMonitor, ConservedQuantities, ConservationError};
+pub use stability::{CFLCondition, StabilityAnalyzer};
+pub use time_scale_separation::{TimeScale, TimeScaleSeparator};
+pub use time_stepper::{AdamsBashforth, RungeKutta4};
+pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperType};
 
-use crate::grid::Grid;
-use crate::KwaversResult;
 use crate::error::{KwaversError, ValidationError};
+use crate::grid::Grid;
 use crate::physics::plugin::PhysicsPlugin;
+use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Multi-Rate Time Integration System
-/// 
+///
 /// Manages different time steps for different physics components
 /// while maintaining stability and accuracy.
 #[derive(Debug)]
@@ -71,7 +71,7 @@ impl MultiRateTimeIntegrator {
         let coupling = SubcyclingStrategy::new(config.max_subcycles);
         let time_scale_separator = TimeScaleSeparator::new(grid);
         let conservation_monitor = ConservationMonitor::new(grid);
-        
+
         Self {
             config: config.clone(),
             controller,
@@ -83,7 +83,7 @@ impl MultiRateTimeIntegrator {
             conservation_monitor,
         }
     }
-    
+
     /// Advance the solution using multi-rate time integration
     pub fn advance(
         &mut self,
@@ -101,26 +101,22 @@ impl MultiRateTimeIntegrator {
                 constraint: format!("Must be greater than global_time {}", global_time),
             }));
         }
-        
+
         // Step 1: Compute stable time steps for each component
-        let component_time_steps = self.compute_component_time_steps(
-            fields,
-            physics_components,
-            grid,
-        )?;
-        
+        let component_time_steps =
+            self.compute_component_time_steps(fields, physics_components, grid)?;
+
         // Step 2: Determine global time step and subcycling strategy
-        let (global_dt, subcycles) = self.controller.determine_time_steps(
-            &component_time_steps,
-            target_time - global_time,
-        )?;
-        
+        let (global_dt, subcycles) = self
+            .controller
+            .determine_time_steps(&component_time_steps, target_time - global_time)?;
+
         // Step 3: Perform multi-rate time integration
         let mut current_time = global_time;
-        
+
         while current_time < target_time {
             let dt = global_dt.min(target_time - current_time);
-            
+
             // Apply coupling strategy to advance all components
             self.coupling.advance_coupled_system(
                 fields,
@@ -129,9 +125,9 @@ impl MultiRateTimeIntegrator {
                 dt,
                 grid,
             )?;
-            
+
             current_time += dt;
-            
+
             // Update time step history
             for (component, &local_dt) in &component_time_steps {
                 self.time_step_history
@@ -140,10 +136,10 @@ impl MultiRateTimeIntegrator {
                     .push(local_dt);
             }
         }
-        
+
         Ok(current_time)
     }
-    
+
     /// Compute stable time steps for each physics component
     fn compute_component_time_steps(
         &self,
@@ -151,31 +147,33 @@ impl MultiRateTimeIntegrator {
         physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
-        physics_components.iter()
+        physics_components
+            .iter()
             .map(|(name, component)| {
                 // Get the field associated with this component
-                let field = fields.get(name)
-                    .ok_or_else(|| KwaversError::Validation(ValidationError::FieldValidation {
+                let field = fields.get(name).ok_or_else(|| {
+                    KwaversError::Validation(ValidationError::FieldValidation {
                         field: "fields".to_string(),
                         value: name.clone(),
                         constraint: "Field not found for component".to_string(),
-                    }))?;
-                
+                    })
+                })?;
+
                 // Get stability constraints from the component
                 let constraints = component.stability_constraints();
-                
+
                 // Compute CFL-limited time step
                 let max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(
                     field,
                     grid,
                     &std::collections::HashMap::new(),
                 )?;
-                
+
                 Ok((name.clone(), max_dt * self.cfl_safety_factor))
             })
             .collect::<KwaversResult<HashMap<String, f64>>>()
     }
-    
+
     /// Get time stepping statistics
     pub fn get_statistics(&self) -> TimeSteppingStatistics {
         TimeSteppingStatistics {
@@ -185,7 +183,7 @@ impl MultiRateTimeIntegrator {
             efficiency_ratio: self.controller.efficiency_ratio(),
         }
     }
-    
+
     /// Compute average time steps for each component
     fn compute_average_time_steps(&self) -> HashMap<String, f64> {
         self.time_step_history

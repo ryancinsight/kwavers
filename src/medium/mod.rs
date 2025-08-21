@@ -4,32 +4,31 @@ use ndarray::{Array3, Zip}; // Added Zip
 use std::fmt::Debug;
 
 pub mod absorption;
+pub mod anisotropic;
+pub mod frequency_dependent;
 pub mod heterogeneous;
 pub mod homogeneous;
-pub mod frequency_dependent;
-pub mod anisotropic;
 pub mod traits;
 
-pub use absorption::{PowerLawAbsorption, TissueType, AcousticDiffusivity};
-pub use homogeneous::HomogeneousMedium;
+pub use absorption::{AcousticDiffusivity, PowerLawAbsorption, TissueType};
+pub use anisotropic::{AnisotropicTissueProperties, AnisotropyType, StiffnessTensor};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
-pub use anisotropic::{AnisotropicTissueProperties, StiffnessTensor, AnisotropyType};
+pub use homogeneous::HomogeneousMedium;
 
 // Re-export new composable traits
 pub use traits::{
-    AcousticMedium, ElasticMedium, ThermalMedium, OpticalMedium,
-    ViscousMedium, BubbleMedium, InterfacePoint,
-    find_interfaces, max_sound_speed as max_sound_speed_trait
+    find_interfaces, max_sound_speed as max_sound_speed_trait, AcousticMedium, BubbleMedium,
+    ElasticMedium, InterfacePoint, OpticalMedium, ThermalMedium, ViscousMedium,
 };
 
 /// Get the maximum sound speed from a medium for CFL condition calculations.
-/// 
+///
 /// This function is useful for determining the most restrictive CFL condition
 /// when the medium has spatially varying sound speeds.
-/// 
+///
 /// # Arguments
 /// * `medium` - Reference to the medium
-/// 
+///
 /// # Returns
 /// The maximum sound speed in the medium (m/s)
 pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
@@ -38,18 +37,18 @@ pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
 }
 
 /// Trait defining the physical properties of a simulation medium.
-/// 
+///
 /// # Future Refactoring Consideration
-/// 
+///
 /// This trait is currently a "fat trait" containing methods for acoustic, thermal,
 /// elastic, and optical properties. In a future major version, consider refactoring
 /// this into smaller, composable traits:
-/// 
+///
 /// - `AcousticMedium`: density, sound_speed, viscosity, etc.
 /// - `ElasticMedium`: lame_lambda, lame_mu, shear properties
 /// - `ThermalMedium`: specific_heat, thermal_conductivity, temperature
 /// - `OpticalMedium`: refractive_index, absorption_coefficient
-/// 
+///
 /// This would allow structs to implement only the traits they need, following
 /// the Interface Segregation Principle. Additionally, consider standardizing on
 /// array-based access for performance-critical code paths, with point-wise access
@@ -57,7 +56,9 @@ pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
 pub trait Medium: Debug + Sync + Send {
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn is_homogeneous(&self) -> bool { false }
+    fn is_homogeneous(&self) -> bool {
+        false
+    }
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn ambient_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
@@ -65,39 +66,39 @@ pub trait Medium: Debug + Sync + Send {
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    
+
     // Additional properties for acoustic diffusivity calculation
     fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Default value for water-like media
         1.0e-3 // Pa·s
     }
-    
+
     fn bulk_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Default: 2.5 times shear viscosity (Stokes' hypothesis)
         2.5 * self.shear_viscosity(x, y, z, grid)
     }
-    
+
     fn specific_heat_ratio(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Default gamma for liquids
         1.1
     }
-    
+
     fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Default Cp for water
         4180.0 // J/(kg·K)
     }
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    
+
     // Acoustic attenuation coefficient
     fn attenuation(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
         // Default power law absorption
-        0.0022 * frequency.powf(1.05)  // Np/m for water
+        0.0022 * frequency.powf(1.05) // Np/m for water
     }
-    
+
     // Nonlinearity parameter (B/A)
     fn nonlinearity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        3.5  // Default B/A for water
+        3.5 // Default B/A for water
     }
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
@@ -105,14 +106,14 @@ pub trait Medium: Debug + Sync + Send {
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
     fn reference_frequency(&self) -> f64; // Added for absorption calculations
-    
+
     /// Get the nonlinearity parameter (beta or B/A) for the medium
     /// This parameter characterizes the degree of nonlinear wave distortion
     fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Default B/A parameter for water-like media
         5.0
     }
-    
+
     /// Get the acoustic diffusivity for the medium
     /// Represents the ratio of thermal diffusivity to acoustic velocity
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -121,15 +122,17 @@ pub trait Medium: Debug + Sync + Send {
         let sound_speed = self.sound_speed(x, y, z, grid);
         thermal_diff / sound_speed
     }
-    
+
     /// Get the adiabatic index (gamma) for the medium
     /// Default is 1.4 for air, but different media have different values
     fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         1.4 // Default for air
     }
-    
+
     /// Get the tissue type at a specific position (if medium supports tissue types)
-    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> { None }
+    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> {
+        None
+    }
 
     fn update_temperature(&mut self, temperature: &Array3<f64>);
     fn temperature(&self) -> &Array3<f64>;
@@ -139,7 +142,7 @@ pub trait Medium: Debug + Sync + Send {
     /// Get reference to cached density array for efficient access
     /// Implementations should cache this on first call
     fn density_array(&self) -> &Array3<f64>;
-    
+
     /// Get reference to cached sound speed array for efficient access
     /// Implementations should cache this on first call
     fn sound_speed_array(&self) -> &Array3<f64>;
@@ -272,16 +275,16 @@ pub trait Medium: Debug + Sync + Send {
 pub mod iterators {
     use super::*;
     use crate::grid::Grid;
-    
+
     use rayon::prelude::*;
-    
+
     /// Iterator over medium properties at each grid point
     pub struct MediumPropertyIterator<'a> {
         medium: &'a dyn Medium,
         grid: &'a Grid,
         current: usize,
     }
-    
+
     impl<'a> MediumPropertyIterator<'a> {
         pub fn new(medium: &'a dyn Medium, grid: &'a Grid) -> Self {
             Self {
@@ -291,42 +294,48 @@ pub mod iterators {
             }
         }
     }
-    
+
     impl<'a> Iterator for MediumPropertyIterator<'a> {
         type Item = MediumProperties;
-        
+
         fn next(&mut self) -> Option<Self::Item> {
             if self.current >= self.grid.total_points() {
                 return None;
             }
-            
+
             let k = self.current % self.grid.nz;
             let j = (self.current / self.grid.nz) % self.grid.ny;
             let i = self.current / (self.grid.ny * self.grid.nz);
-            
+
             let (x, y, z) = self.grid.coordinates(i, j, k);
-            
+
             let properties = MediumProperties {
                 density: self.medium.density(x, y, z, self.grid),
                 sound_speed: self.medium.sound_speed(x, y, z, self.grid),
-                absorption: self.medium.absorption_coefficient(x, y, z, self.grid, self.medium.reference_frequency()),
+                absorption: self.medium.absorption_coefficient(
+                    x,
+                    y,
+                    z,
+                    self.grid,
+                    self.medium.reference_frequency(),
+                ),
                 nonlinearity: self.medium.nonlinearity_coefficient(x, y, z, self.grid),
                 position: (x, y, z),
                 indices: (i, j, k),
             };
-            
+
             self.current += 1;
             Some(properties)
         }
-        
+
         fn size_hint(&self) -> (usize, Option<usize>) {
             let remaining = self.grid.total_points() - self.current;
             (remaining, Some(remaining))
         }
     }
-    
+
     impl<'a> ExactSizeIterator for MediumPropertyIterator<'a> {}
-    
+
     #[derive(Debug, Clone)]
     pub struct MediumProperties {
         pub density: f64,
@@ -336,7 +345,7 @@ pub mod iterators {
         pub position: (f64, f64, f64),
         pub indices: (usize, usize, usize),
     }
-    
+
     /// Iterator that finds interfaces in the medium
     pub struct InterfaceIterator<'a> {
         medium: &'a dyn Medium,
@@ -344,7 +353,7 @@ pub mod iterators {
         threshold: f64,
         current: usize,
     }
-    
+
     impl<'a> InterfaceIterator<'a> {
         pub fn new(medium: &'a dyn Medium, grid: &'a Grid, threshold: f64) -> Self {
             Self {
@@ -354,26 +363,32 @@ pub mod iterators {
                 current: 0,
             }
         }
-        
+
         /// Check if a point is at an interface
         fn is_interface(&self, i: usize, j: usize, k: usize) -> bool {
-            if i == 0 || j == 0 || k == 0 || 
-               i >= self.grid.nx - 1 || 
-               j >= self.grid.ny - 1 || 
-               k >= self.grid.nz - 1 {
+            if i == 0
+                || j == 0
+                || k == 0
+                || i >= self.grid.nx - 1
+                || j >= self.grid.ny - 1
+                || k >= self.grid.nz - 1
+            {
                 return false;
             }
-            
+
             let (x, y, z) = self.grid.coordinates(i, j, k);
             let center_density = self.medium.density(x, y, z, self.grid);
-            
+
             // Check all 6 neighbors
             let neighbors = [
-                (i + 1, j, k), (i - 1, j, k),
-                (i, j + 1, k), (i, j - 1, k),
-                (i, j, k + 1), (i, j, k - 1),
+                (i + 1, j, k),
+                (i - 1, j, k),
+                (i, j + 1, k),
+                (i, j - 1, k),
+                (i, j, k + 1),
+                (i, j, k - 1),
             ];
-            
+
             neighbors.iter().any(|&(ni, nj, nk)| {
                 let (nx, ny, nz) = self.grid.coordinates(ni, nj, nk);
                 let neighbor_density = self.medium.density(nx, ny, nz, self.grid);
@@ -381,18 +396,18 @@ pub mod iterators {
             })
         }
     }
-    
+
     impl<'a> Iterator for InterfaceIterator<'a> {
         type Item = InterfacePoint;
-        
+
         fn next(&mut self) -> Option<Self::Item> {
             while self.current < self.grid.total_points() {
                 let k = self.current % self.grid.nz;
                 let j = (self.current / self.grid.nz) % self.grid.ny;
                 let i = self.current / (self.grid.ny * self.grid.nz);
-                
+
                 self.current += 1;
-                
+
                 if self.is_interface(i, j, k) {
                     let (x, y, z) = self.grid.coordinates(i, j, k);
                     return Some(InterfacePoint {
@@ -403,26 +418,28 @@ pub mod iterators {
                     });
                 }
             }
-            
+
             None
         }
     }
-    
+
     impl<'a> InterfaceIterator<'a> {
         fn calculate_density_jump(&self, i: usize, j: usize, k: usize) -> f64 {
             let (x, y, z) = self.grid.coordinates(i, j, k);
             let center = self.medium.density(x, y, z, self.grid);
-            
+
             let mut max_jump = 0.0;
             for di in -1..=1 {
                 for dj in -1..=1 {
                     for dk in -1..=1 {
-                        if di == 0 && dj == 0 && dk == 0 { continue; }
-                        
+                        if di == 0 && dj == 0 && dk == 0 {
+                            continue;
+                        }
+
                         let ni = (i as i32 + di) as usize;
                         let nj = (j as i32 + dj) as usize;
                         let nk = (k as i32 + dk) as usize;
-                        
+
                         if ni < self.grid.nx && nj < self.grid.ny && nk < self.grid.nz {
                             let (nx, ny, nz) = self.grid.coordinates(ni, nj, nk);
                             let neighbor = self.medium.density(nx, ny, nz, self.grid);
@@ -431,13 +448,13 @@ pub mod iterators {
                     }
                 }
             }
-            
+
             max_jump
         }
-        
+
         fn calculate_normal(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
             let (x, y, z) = self.grid.coordinates(i, j, k);
-            
+
             // Calculate gradient using central differences
             let dx = if i > 0 && i < self.grid.nx - 1 {
                 let (x1, _, _) = self.grid.coordinates(i + 1, j, k);
@@ -445,24 +462,30 @@ pub mod iterators {
                 let d1 = self.medium.density(x1, y, z, self.grid);
                 let d0 = self.medium.density(x0, y, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dx)
-            } else { 0.0 };
-            
+            } else {
+                0.0
+            };
+
             let dy = if j > 0 && j < self.grid.ny - 1 {
                 let (_, y1, _) = self.grid.coordinates(i, j + 1, k);
                 let (_, y0, _) = self.grid.coordinates(i, j - 1, k);
                 let d1 = self.medium.density(x, y1, z, self.grid);
                 let d0 = self.medium.density(x, y0, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dy)
-            } else { 0.0 };
-            
+            } else {
+                0.0
+            };
+
             let dz = if k > 0 && k < self.grid.nz - 1 {
                 let (_, _, z1) = self.grid.coordinates(i, j, k + 1);
                 let (_, _, z0) = self.grid.coordinates(i, j, k - 1);
                 let d1 = self.medium.density(x, y, z1, self.grid);
                 let d0 = self.medium.density(x, y, z0, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dz)
-            } else { 0.0 };
-            
+            } else {
+                0.0
+            };
+
             // Normalize
             let mag = (dx * dx + dy * dy + dz * dz).sqrt();
             if mag > 0.0 {
@@ -472,7 +495,7 @@ pub mod iterators {
             }
         }
     }
-    
+
     #[derive(Debug, Clone)]
     pub struct InterfacePoint {
         pub indices: (usize, usize, usize),
@@ -480,18 +503,18 @@ pub mod iterators {
         pub density_jump: f64,
         pub normal: (f64, f64, f64),
     }
-    
+
     /// Parallel iterator adapter for medium properties
     pub struct ParallelMediumIterator<'a> {
         medium: &'a dyn Medium,
         grid: &'a Grid,
     }
-    
+
     impl<'a> ParallelMediumIterator<'a> {
         pub fn new(medium: &'a dyn Medium, grid: &'a Grid) -> Self {
             Self { medium, grid }
         }
-        
+
         /// Map properties in parallel
         pub fn par_map<F, T>(&self, f: F) -> Vec<T>
         where
@@ -504,23 +527,29 @@ pub mod iterators {
                     let k = idx % self.grid.nz;
                     let j = (idx / self.grid.nz) % self.grid.ny;
                     let i = idx / (self.grid.ny * self.grid.nz);
-                    
+
                     let (x, y, z) = self.grid.coordinates(i, j, k);
-                    
+
                     let properties = MediumProperties {
                         density: self.medium.density(x, y, z, self.grid),
                         sound_speed: self.medium.sound_speed(x, y, z, self.grid),
-                        absorption: self.medium.absorption_coefficient(x, y, z, self.grid, self.medium.reference_frequency()),
+                        absorption: self.medium.absorption_coefficient(
+                            x,
+                            y,
+                            z,
+                            self.grid,
+                            self.medium.reference_frequency(),
+                        ),
                         nonlinearity: self.medium.nonlinearity_coefficient(x, y, z, self.grid),
                         position: (x, y, z),
                         indices: (i, j, k),
                     };
-                    
+
                     f(properties)
                 })
                 .collect()
         }
-        
+
         /// Filter and collect in parallel
         pub fn par_filter<F>(&self, predicate: F) -> Vec<MediumProperties>
         where
@@ -532,18 +561,24 @@ pub mod iterators {
                     let k = idx % self.grid.nz;
                     let j = (idx / self.grid.nz) % self.grid.ny;
                     let i = idx / (self.grid.ny * self.grid.nz);
-                    
+
                     let (x, y, z) = self.grid.coordinates(i, j, k);
-                    
+
                     let properties = MediumProperties {
                         density: self.medium.density(x, y, z, self.grid),
                         sound_speed: self.medium.sound_speed(x, y, z, self.grid),
-                        absorption: self.medium.absorption_coefficient(x, y, z, self.grid, self.medium.reference_frequency()),
+                        absorption: self.medium.absorption_coefficient(
+                            x,
+                            y,
+                            z,
+                            self.grid,
+                            self.medium.reference_frequency(),
+                        ),
                         nonlinearity: self.medium.nonlinearity_coefficient(x, y, z, self.grid),
                         position: (x, y, z),
                         indices: (i, j, k),
                     };
-                    
+
                     if predicate(&properties) {
                         Some(properties)
                     } else {
@@ -553,28 +588,28 @@ pub mod iterators {
                 .collect()
         }
     }
-    
+
     /// Extension trait to add iterator methods to Medium
     pub trait MediumIteratorExt {
         /// Create an iterator over medium properties
         fn iter_properties<'a>(&'a self, grid: &'a Grid) -> MediumPropertyIterator<'a>;
-        
+
         /// Create an interface iterator
         fn iter_interfaces<'a>(&'a self, grid: &'a Grid, threshold: f64) -> InterfaceIterator<'a>;
-        
+
         /// Create a parallel iterator
         fn par_iter<'a>(&'a self, grid: &'a Grid) -> ParallelMediumIterator<'a>;
     }
-    
+
     impl MediumIteratorExt for dyn Medium {
         fn iter_properties<'a>(&'a self, grid: &'a Grid) -> MediumPropertyIterator<'a> {
             MediumPropertyIterator::new(self, grid)
         }
-        
+
         fn iter_interfaces<'a>(&'a self, grid: &'a Grid, threshold: f64) -> InterfaceIterator<'a> {
             InterfaceIterator::new(self, grid, threshold)
         }
-        
+
         fn par_iter<'a>(&'a self, grid: &'a Grid) -> ParallelMediumIterator<'a> {
             ParallelMediumIterator::new(self, grid)
         }

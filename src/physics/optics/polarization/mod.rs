@@ -44,10 +44,8 @@ impl PolarizationModel for LinearPolarization {
         _medium: &dyn Medium,
     ) {
         debug!("Applying polarization effects to light fluence");
-        Zip::from(fluence)
-            .and(emission_spectrum)
-            .for_each(|f, &e| {
-                *f *= 1.0 + self.polarization_factor * e.abs();
-            });
+        Zip::from(fluence).and(emission_spectrum).for_each(|f, &e| {
+            *f *= 1.0 + self.polarization_factor * e.abs();
+        });
     }
 }
