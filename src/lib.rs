@@ -284,13 +284,13 @@ fn create_validated_simulation(
         }))?;
     
     // Create medium from configuration
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
-    let medium = HomogeneousMedium::new(config.simulation.medium.density, config.simulation.medium.sound_speed, config.simulation.medium.absorption, config.simulation.medium.dispersion, &grid);
+    let medium = HomogeneousMedium::new(
+        config.simulation.medium.density, 
+        config.simulation.medium.sound_speed, 
+        config.simulation.medium.absorption, 
+        config.simulation.medium.dispersion, 
+        &grid
+    );
     
     // Create source using source config
     let source = config.source.initialize_source(&medium, &grid)

@@ -98,7 +98,7 @@ pub struct ValidationConfig {
     /// Pressure field validation
     pub pressure: PressureValidation,
     /// Temperature field validation
-    pub temperature: TemperatureValidation,
+    pub temperature: ThermalValidation,
     /// Light field validation
     pub light: LightValidation,
     /// Velocity field validation
@@ -126,7 +126,7 @@ pub struct PressureValidation {
 
 /// Temperature field validation parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TemperatureValidation {
+pub struct ThermalValidation {
     /// Minimum allowable temperature [K]
     pub min_temperature: f64,
     /// Maximum allowable temperature [K]
@@ -204,7 +204,7 @@ impl Default for ValidationConfig {
     fn default() -> Self {
         Self {
             pressure: PressureValidation::default(),
-            temperature: TemperatureValidation::default(),
+            temperature: ThermalValidation::default(),
             light: LightValidation::default(),
             velocity: VelocityValidation::default(),
             density: DensityValidation::default(),
@@ -225,7 +225,7 @@ impl Default for PressureValidation {
     }
 }
 
-impl Default for TemperatureValidation {
+impl Default for ThermalValidation {
     fn default() -> Self {
         Self {
             min_temperature: 273.15,  // 0°C
