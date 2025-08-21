@@ -28,7 +28,3 @@ pub use adaptive_integration::{
     AdaptiveBubbleIntegrator, AdaptiveBubbleConfig, 
     integrate_bubble_dynamics_adaptive, IntegrationStatistics
 };
-pub use units::{
-    SafeBubbleParameters, SafeBubbleState,
-    calculate_rp_acceleration_safe, calculate_work_rate
-};

@@ -4,8 +4,8 @@
 
 use ndarray::Array3;
 use crate::grid::Grid;
-use crate::physics::mechanics::acoustic_wave::kuznetsov::KuznetsovSolver;
-use crate::physics::mechanics::acoustic_wave::kuznetsov::KuznetsovConfig;
+use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
+use crate::physics::mechanics::acoustic_wave::kuznetsov::config::KuznetsovConfig;
 use std::f64::consts::PI;
 
 // Nonlinearity parameters
@@ -32,7 +32,7 @@ mod tests {
         };
         
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovSolver::new(config, &grid);
+        let mut solver = KuznetsovWave::new(config, &grid);
         
         // Initialize sinusoidal wave
         let wavelength = 1500.0 / frequency;
@@ -97,7 +97,7 @@ mod tests {
         };
         
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovSolver::new(config, &grid);
+        let mut solver = KuznetsovWave::new(config, &grid);
         
         // Initialize sine wave
         let wavelength = 1500.0 / frequency;

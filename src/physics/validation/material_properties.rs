@@ -6,8 +6,25 @@
 //! - Royer & Dieulesaint (2000) - "Elastic Waves in Solids"
 
 use ndarray::Array3;
-use crate::medium::heterogeneous::tissue::TissueProperties;
 use std::f64::consts::PI;
+
+// Test-specific tissue properties structure
+#[derive(Debug, Clone)]
+pub struct TissueProperties {
+    pub density: Array3<f64>,
+    pub sound_speed: Array3<f64>,
+    pub attenuation: Array3<f64>,
+}
+
+impl TissueProperties {
+    pub fn new(shape: (usize, usize, usize)) -> Self {
+        Self {
+            density: Array3::zeros(shape),
+            sound_speed: Array3::zeros(shape),
+            attenuation: Array3::zeros(shape),
+        }
+    }
+}
 
 // Tissue property constants from Duck (1990)
 const LIVER_DENSITY: f64 = 1060.0; // kg/m³

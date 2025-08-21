@@ -37,7 +37,7 @@ mod tests {
         
         let config = PstdConfig::default();
         let grid = Grid::new(n, n, 1, dx, dx, dx);
-        let mut solver = PstdSolver::new(config, &grid);
+        let mut solver = PstdSolver::new(config, &grid).unwrap();
         
         // Initialize plane wave
         let k = 2.0 * PI / wavelength;

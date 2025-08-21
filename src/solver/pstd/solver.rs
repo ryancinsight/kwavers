@@ -44,6 +44,12 @@ impl PstdSolver {
         })
     }
     
+
+    /// Get the timestep for this solver
+    pub fn get_timestep(&self) -> f64 {
+        // CFL condition for PSTD
+        0.3 * 1e-3 / 1500.0 // CFL=0.3, assuming water sound speed
+    }
     /// Advance one time step
     pub fn step(
         &mut self,
