@@ -31,9 +31,9 @@ fn main() -> KwaversResult<()> {
     let medium = HomogeneousMedium::new(
         1000.0,  // Density (kg/m³)
         1500.0,  // Sound speed (m/s)
-        &grid,
-        0.0,     // Nonlinearity coefficient
-        0.0,     // Attenuation coefficient
+        0.0,     // Optical absorption
+        0.0,     // Optical scattering
+        &grid
     );
     
     println!("Medium: water (density=1000 kg/m³, c=1500 m/s)");
