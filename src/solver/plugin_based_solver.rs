@@ -602,7 +602,7 @@ impl PluginBasedSolver {
     }
     
     /// Execute one time step
-    fn step(&mut self, step: usize, t: f64) -> KwaversResult<()> {
+    pub fn step(&mut self, step: usize, t: f64) -> KwaversResult<()> {
         let dt = self.time.dt;
         
         // Get mutable field data

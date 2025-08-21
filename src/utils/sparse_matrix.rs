@@ -84,7 +84,7 @@ impl CompressedSparseRowMatrix {
             return Err(crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "sparse_matrix_add_element".to_string(),
-                    condition: format!("Index ({}, {}) out of bounds for {}x{} matrix", row, col, self.rows, self.cols),
+                    condition: row.max(col) as f64,
                 }
             ));
         }
@@ -185,7 +185,7 @@ impl CompressedSparseRowMatrix {
             return Err(crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "csr_matrix_vector_multiply".to_string(),
-                    condition: format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols),
+                    condition: x.len() as f64,
                 }
             ));
         }
@@ -209,7 +209,7 @@ impl CompressedSparseRowMatrix {
             return Err(crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "sparse_matrix_transpose_vector_multiply".to_string(),
-                    condition: format!("Vector length {} doesn't match matrix rows {}", x.len(), self.rows),
+                    condition: x.len() as f64,
                 }
             ));
         }
@@ -343,7 +343,7 @@ impl CompressedSparseColumnMatrix {
             return Err(crate::error::KwaversError::Numerical(
                 crate::error::NumericalError::Instability {
                     operation: "csc_matrix_vector_multiply".to_string(),
-                    condition: format!("Vector length {} doesn't match matrix columns {}", x.len(), self.cols),
+                    condition: x.len() as f64,
                 }
             ));
         }

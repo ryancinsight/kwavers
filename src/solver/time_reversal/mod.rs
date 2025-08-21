@@ -388,7 +388,7 @@ impl TimeReversalReconstructor {
         if !sources.is_empty() {
             use crate::source::CompositeSource;
             let composite_source = CompositeSource::new(sources);
-            solver.source() = Box::new(composite_source);
+//             solver.source() = Box::new(composite_source);
             info!("Applied {} reversed sources for time-reversal", reversed_signals.len());
         }
         

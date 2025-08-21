@@ -62,6 +62,10 @@ impl PluginContext {
 pub trait PhysicsPlugin: Debug + Send + Sync {
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
+    /// Get stability constraints for time stepping
+    fn stability_constraints(&self) -> f64 {
+        1.0 // Default stable timestep multiplier
+    }
     
     /// Get current plugin state
     fn state(&self) -> PluginState;

@@ -242,7 +242,7 @@ fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult
     if config.source.frequency <= 0.0 {
         result.add_error(ValidationError::FieldValidation {
             field: "source.frequency".to_string(),
-            value: config.source.frequency.to_string(),
+            value: config.source.frequency.map_or("None".to_string(), |f| f.to_string()),
             constraint: "Must be positive".to_string(),
         });
     }
