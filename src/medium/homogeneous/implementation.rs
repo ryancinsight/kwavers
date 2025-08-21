@@ -302,15 +302,7 @@ mod tests {
 
     #[test]
     fn test_water_properties() {
-        let grid = Grid {
-            nx: 10,
-            ny: 10,
-            nz: 10,
-            dx: 0.001,
-            dy: 0.001,
-            dz: 0.001,
-            coordinates: Array3::zeros((10, 10, 10)),
-        };
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
 
         let water = HomogeneousMedium::water(&grid);
 
@@ -322,15 +314,7 @@ mod tests {
 
     #[test]
     fn test_blood_properties() {
-        let grid = Grid {
-            nx: 10,
-            ny: 10,
-            nz: 10,
-            dx: 0.001,
-            dy: 0.001,
-            dz: 0.001,
-            coordinates: Array3::zeros((10, 10, 10)),
-        };
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
 
         let blood = HomogeneousMedium::blood(&grid);
 

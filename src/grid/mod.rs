@@ -97,50 +97,44 @@ impl Grid {
 
     /// Compute k-space wavenumbers in x-direction
     pub fn compute_kx(&self) -> Array1<f64> {
-        let mut kx = Array1::zeros(self.nx);
         let dk = 2.0 * PI / (self.nx as f64 * self.dx);
-
-        for i in 0..self.nx {
+        
+        Array1::from_iter((0..self.nx).map(|i| {
             let idx = if i <= self.nx / 2 {
                 i as f64
             } else {
                 i as f64 - self.nx as f64
             };
-            kx[i] = idx * dk;
-        }
-        kx
+            idx * dk
+        }))
     }
 
     /// Compute k-space wavenumbers in y-direction
     pub fn compute_ky(&self) -> Array1<f64> {
-        let mut ky = Array1::zeros(self.ny);
         let dk = 2.0 * PI / (self.ny as f64 * self.dy);
-
-        for j in 0..self.ny {
+        
+        Array1::from_iter((0..self.ny).map(|j| {
             let idx = if j <= self.ny / 2 {
                 j as f64
             } else {
                 j as f64 - self.ny as f64
             };
-            ky[j] = idx * dk;
-        }
-        ky
+            idx * dk
+        }))
     }
 
     /// Compute k-space wavenumbers in z-direction
     pub fn compute_kz(&self) -> Array1<f64> {
-        let mut kz = Array1::zeros(self.nz);
         let dk = 2.0 * PI / (self.nz as f64 * self.dz);
-
-        for k in 0..self.nz {
+        
+        Array1::from_iter((0..self.nz).map(|k| {
             let idx = if k <= self.nz / 2 {
                 k as f64
             } else {
                 k as f64 - self.nz as f64
             };
-            kz[k] = idx * dk;
-        }
-        kz
+            idx * dk
+        }))
     }
 
     /// Returns the total number of grid points.

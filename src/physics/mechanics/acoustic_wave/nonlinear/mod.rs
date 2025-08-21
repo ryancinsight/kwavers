@@ -1,10 +1,15 @@
-// src/physics/mechanics/acoustic_wave/nonlinear/mod.rs
+//! Nonlinear acoustic wave propagation module
+//!
+//! This module provides implementations for nonlinear acoustic wave propagation,
+//! including finite-amplitude effects and harmonic generation.
 
-// This module now organizes the different components of the nonlinear wave model.
+mod wave_model;
+mod multi_frequency;
+mod numerical_methods;
+mod trait_impl;
 
-// Core simulation logic (implementation of the AcousticWaveModel trait)
-pub mod core;
-// Simulation state module temporarily disabled - double buffering implemented in-place
+pub use wave_model::NonlinearWave;
+pub use multi_frequency::MultiFrequencyConfig;
 
-// Re-export the main struct and multi-frequency configuration
-pub use core::{MultiFrequencyConfig, NonlinearWave};
+// Re-export commonly used items
+pub use crate::physics::traits::AcousticWaveModel;

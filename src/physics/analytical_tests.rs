@@ -11,7 +11,7 @@ use crate::medium::homogeneous::HomogeneousMedium;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::mechanics::acoustic_wave::kuznetsov::{KuznetsovConfig, KuznetsovWave};
-use crate::physics::mechanics::acoustic_wave::nonlinear::core::NonlinearWave;
+use crate::physics::mechanics::acoustic_wave::nonlinear::NonlinearWave;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::NullSource;
 use log::info;

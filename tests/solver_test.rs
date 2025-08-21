@@ -1,7 +1,7 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
 use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::{PluginContext, PluginManager};
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
@@ -59,11 +59,11 @@ fn test_fdtd_solver() {
     let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
     let mut plugin_manager = PluginManager::new();
     plugin_manager
-        .register(Box::new(plugin))
-        .expect("Failed to register plugin");
+        .add_plugin(Box::new(plugin))
+        .expect("Failed to add plugin");
 
     plugin_manager
-        .initialize_all(&grid, &medium)
+        .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
     let c = TEST_SOUND_SPEED;
@@ -72,10 +72,9 @@ fn test_fdtd_solver() {
     // Run simulation for a few steps
     for step in 0..TEST_STEPS_SHORT {
         let t = step as f64 * dt;
-        let context = PluginContext::new(step, TEST_STEPS_SHORT, TEST_FREQUENCY);
         plugin_manager
-            .update_all(&mut fields, &grid, &medium, dt, t, &context)
-            .expect("Failed to update plugins");
+            .execute(&mut fields, &grid, &medium, dt, t)
+            .expect("Failed to execute plugins");
     }
 
     // Check that wave has propagated
@@ -124,11 +123,11 @@ fn test_pstd_solver() {
     let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
     let mut plugin_manager = PluginManager::new();
     plugin_manager
-        .register(Box::new(plugin))
-        .expect("Failed to register plugin");
+        .add_plugin(Box::new(plugin))
+        .expect("Failed to add plugin");
 
     plugin_manager
-        .initialize_all(&grid, &medium)
+        .initialize(&grid, &medium)
         .expect("Failed to initialize plugins");
 
     let c = TEST_SOUND_SPEED;
@@ -137,10 +136,9 @@ fn test_pstd_solver() {
     // Run simulation for a few steps
     for step in 0..TEST_STEPS_SHORT {
         let t = step as f64 * dt;
-        let context = PluginContext::new(step, TEST_STEPS_SHORT, TEST_FREQUENCY);
         plugin_manager
-            .update_all(&mut fields, &grid, &medium, dt, t, &context)
-            .expect("Failed to update plugins");
+            .execute(&mut fields, &grid, &medium, dt, t)
+            .expect("Failed to execute plugins");
     }
 
     // Check that wave has propagated
@@ -203,10 +201,10 @@ fn test_wave_propagation() {
         let plugin = FdtdPlugin::new(config, &grid).expect("Failed to create FDTD plugin");
         let mut plugin_manager = PluginManager::new();
         plugin_manager
-            .register(Box::new(plugin))
-            .expect("Failed to register plugin");
+            .add_plugin(Box::new(plugin))
+            .expect("Failed to add plugin");
         plugin_manager
-            .initialize_all(&grid, &medium)
+            .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
         let c = TEST_SOUND_SPEED;
@@ -215,10 +213,9 @@ fn test_wave_propagation() {
         // Run for enough steps to see propagation
         for step in 0..TEST_STEPS_MEDIUM {
             let t = step as f64 * dt;
-            let context = PluginContext::new(step, TEST_STEPS_MEDIUM, TEST_FREQUENCY);
             plugin_manager
-                .update_all(&mut fields_fdtd, &grid, &medium, dt, t, &context)
-                .expect("Failed to update plugins");
+                .execute(&mut fields_fdtd, &grid, &medium, dt, t)
+                .expect("Failed to execute plugins");
         }
 
         // Check that wave has spread (center should be lower)
@@ -248,10 +245,10 @@ fn test_wave_propagation() {
         let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
         let mut plugin_manager = PluginManager::new();
         plugin_manager
-            .register(Box::new(plugin))
-            .expect("Failed to register plugin");
+            .add_plugin(Box::new(plugin))
+            .expect("Failed to add plugin");
         plugin_manager
-            .initialize_all(&grid, &medium)
+            .initialize(&grid, &medium)
             .expect("Failed to initialize plugins");
 
         let c = TEST_SOUND_SPEED;
@@ -260,10 +257,9 @@ fn test_wave_propagation() {
         // Run for enough steps to see propagation
         for step in 0..TEST_STEPS_MEDIUM {
             let t = step as f64 * dt;
-            let context = PluginContext::new(step, TEST_STEPS_MEDIUM, TEST_FREQUENCY);
             plugin_manager
-                .update_all(&mut fields_pstd, &grid, &medium, dt, t, &context)
-                .expect("Failed to update plugins");
+                .execute(&mut fields_pstd, &grid, &medium, dt, t)
+                .expect("Failed to execute plugins");
         }
 
         // Check that wave has spread (center should be lower)

@@ -1,28 +1,20 @@
 // examples/hifu_sonoluminescence.rs
-use kwavers::boundary::pml::PMLConfig;
 use kwavers::{
-    boundary::PMLBoundary,
+    boundary::{PMLBoundary, PMLConfig},
     config::SimulationConfig,
     grid::Grid,
-    init_logging,
     medium::HomogeneousMedium,
     physics::{
-        bubble_dynamics::CavitationModel, bubble_dynamics::CavitationModelBehavior,
-        chemistry::ChemicalModel, chemistry::ChemicalModelTrait, heterogeneity::HeterogeneityModel,
-        heterogeneity::HeterogeneityModelTrait, mechanics::acoustic_wave::nonlinear::NonlinearWave,
-        mechanics::streaming::StreamingModel, mechanics::streaming::StreamingModelTrait,
-        optics::light_diffusion::LightDiffusionModel,
-        optics::light_diffusion::LightDiffusionModelTrait, thermal::ThermalModel,
-        thermal::ThermalModelTrait, traits::AcousticWaveModel,
-        wave_propagation::scattering::AcousticScattering,
-        wave_propagation::scattering::AcousticScatteringModelTrait,
+        chemistry::ChemicalModel,
+        mechanics::acoustic_wave::NonlinearWave,
+        mechanics::{CavitationModel, StreamingModel},
+        traits::{AcousticWaveModel, CavitationModelBehavior, ChemicalModelTrait},
     },
     recorder::Recorder,
     sensor::Sensor,
     solver::plugin_based_solver::PluginBasedSolver,
     source::PointSource,
     time::Time,
-    visualization::plot_simulation_outputs,
 };
 use std::error::Error;
 // use std::fs::File; // Removed
@@ -30,7 +22,8 @@ use std::error::Error;
 use std::sync::Arc;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    init_logging()?;
+    // Initialize logging if needed
+    // kwavers::log::init_logging()?;
 
     // Hardcode configuration values to bypass TOML parsing issues
     let simulation_config = kwavers::SimulationConfig {
@@ -189,8 +182,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // The solver manages the recorder lifecycle
 
     // Create visualizations
-    println!("Simulation complete. Creating visualizations...");
-    plot_simulation_outputs(&config)?;
+    println!("Simulation complete.");
+    // Visualization not yet implemented
+    // plot_simulation_outputs(&config)?;
 
     Ok(())
 }
