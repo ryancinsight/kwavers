@@ -75,64 +75,159 @@ mod tests {
     struct HeterogeneousMediumMock {
         /// Returns different properties based on position
         position_dependent: bool,
+        /// Cached density array
+        density: ndarray::Array3<f64>,
+        /// Cached sound speed array
+        sound_speed: ndarray::Array3<f64>,
+        /// Temperature array
+        temperature: ndarray::Array3<f64>,
+        /// Bubble radius array
+        bubble_radius: ndarray::Array3<f64>,
+        /// Bubble velocity array
+        bubble_velocity: ndarray::Array3<f64>,
     }
 
     impl HeterogeneousMediumMock {
         fn new(position_dependent: bool) -> Self {
-            Self { position_dependent }
+            Self { 
+                position_dependent,
+                density: ndarray::Array3::ones((10, 10, 10)) * 1000.0,
+                sound_speed: ndarray::Array3::ones((10, 10, 10)) * 1500.0,
+                temperature: ndarray::Array3::ones((10, 10, 10)) * 310.0,
+                bubble_radius: ndarray::Array3::zeros((10, 10, 10)),
+                bubble_velocity: ndarray::Array3::zeros((10, 10, 10)),
+            }
         }
     }
 
     impl Medium for HeterogeneousMediumMock {
-        fn density(&self, x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        fn density(&self, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
             if self.position_dependent {
-                1000.0 + x * 100.0 // Varies with x
+                1000.0 + x + y + z
             } else {
                 1000.0
             }
         }
 
-        fn sound_speed(&self, x: f64, y: f64, _z: f64, _grid: &Grid) -> f64 {
+        fn sound_speed(&self, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
             if self.position_dependent {
-                // Different sound speeds at different positions
-                if x < 0.2 {
-                    1600.0 // Higher speed in first region
-                } else if y < 0.5 {
-                    1400.0 // Lower speed in second region
-                } else {
-                    1500.0 // Medium speed elsewhere
-                }
+                1500.0 + x * 10.0 + y * 5.0 + z * 2.0
             } else {
                 1500.0
             }
         }
 
-        fn absorption_coefficient(
-            &self,
-            x: f64,
-            y: f64,
-            z: f64,
-            _grid: &Grid,
-            _frequency: f64,
-        ) -> f64 {
-            if self.position_dependent {
-                // Spatially varying absorption
-                0.5 + 0.1 * x + 0.05 * y + 0.02 * z
-            } else {
-                0.5
-            }
+        fn is_homogeneous(&self) -> bool {
+            !self.position_dependent
+        }
+
+        fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1e-3
+        }
+
+        fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.072
+        }
+
+        fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            101325.0
+        }
+
+        fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2330.0
+        }
+
+        fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4
+        }
+
+        fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            4180.0
+        }
+
+        fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.6
+        }
+
+        fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 {
+            0.01
+        }
+
+        fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            3e-4
+        }
+
+        fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2e-9
+        }
+
+        fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4e-7
+        }
+
+        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            3.5
+        }
+
+        fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.1
+        }
+
+        fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.0
+        }
+
+        fn reference_frequency(&self) -> f64 {
+            1e6
         }
 
         fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             5.0
         }
 
-        fn density_array(&self) -> ndarray::Array3<f64> {
-            ndarray::Array3::ones((10, 10, 10)) * 1000.0
+        fn density_array(&self) -> &ndarray::Array3<f64> {
+            &self.density
         }
 
-        fn sound_speed_array(&self) -> ndarray::Array3<f64> {
-            ndarray::Array3::ones((10, 10, 10)) * 1500.0
+        fn sound_speed_array(&self) -> &ndarray::Array3<f64> {
+            &self.sound_speed
+        }
+
+        fn update_temperature(&mut self, temperature: &ndarray::Array3<f64>) {
+            self.temperature.assign(temperature);
+        }
+
+        fn temperature(&self) -> &ndarray::Array3<f64> {
+            &self.temperature
+        }
+
+        fn bubble_radius(&self) -> &ndarray::Array3<f64> {
+            &self.bubble_radius
+        }
+
+        fn bubble_velocity(&self) -> &ndarray::Array3<f64> {
+            &self.bubble_velocity
+        }
+
+        fn update_bubble_state(&mut self, radius: &ndarray::Array3<f64>, velocity: &ndarray::Array3<f64>) {
+            self.bubble_radius.assign(radius);
+            self.bubble_velocity.assign(velocity);
+        }
+
+        fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2.2e9
+        }
+
+        fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.0
+        }
+
+        fn lame_lambda_array(&self) -> &ndarray::Array3<f64> {
+            &self.density // Just reuse density array for testing
+        }
+
+        fn lame_mu_array(&self) -> &ndarray::Array3<f64> {
+            &self.bubble_radius // Just reuse bubble_radius array (zeros) for testing
         }
     }
 

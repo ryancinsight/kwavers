@@ -394,6 +394,10 @@ mod tests {
             temperature_field: Array3<f64>,
             bubble_radius_field: Array3<f64>,
             bubble_velocity_field: Array3<f64>,
+            density_field: Array3<f64>,
+            sound_speed_field: Array3<f64>,
+            lame_lambda_field: Array3<f64>,
+            lame_mu_field: Array3<f64>,
         }
 
         impl TestMedium {
@@ -402,6 +406,10 @@ mod tests {
                     temperature_field: Array3::from_elem((10, 10, 10), 310.15),
                     bubble_radius_field: Array3::from_elem((10, 10, 10), 1e-6),
                     bubble_velocity_field: Array3::zeros((10, 10, 10)),
+                    density_field: Array3::from_elem((10, 10, 10), 1000.0),
+                    sound_speed_field: Array3::from_elem((10, 10, 10), 1500.0),
+                    lame_lambda_field: Array3::from_elem((10, 10, 10), 1e9),
+                    lame_mu_field: Array3::zeros((10, 10, 10)),
                 }
             }
         }
@@ -413,32 +421,11 @@ mod tests {
             fn sound_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1500.0
             }
-            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 {
-                0.1
-            }
-            fn nonlinearity_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                3.5
-            }
-            fn thermal_conductivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                0.5
-            }
-            fn specific_heat(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                4000.0
-            }
-            fn thermal_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1.25e-7
-            }
-            fn optical_absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                100.0
-            }
-            fn optical_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1000.0
-            }
             fn viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1e-3
             }
             fn surface_tension(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                0.073
+                0.072
             }
             fn ambient_pressure(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 101325.0
@@ -449,11 +436,32 @@ mod tests {
             fn polytropic_index(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1.4
             }
+            fn specific_heat(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                4180.0
+            }
+            fn thermal_conductivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.6
+            }
+            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 {
+                0.01
+            }
             fn thermal_expansion(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                2e-4
+                3e-4
             }
             fn gas_diffusion_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                2e-5
+                2e-9
+            }
+            fn thermal_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.4e-7
+            }
+            fn nonlinearity_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                3.5
+            }
+            fn optical_absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.1
+            }
+            fn optical_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.0
             }
             fn reference_frequency(&self) -> f64 {
                 1e6
@@ -474,23 +482,23 @@ mod tests {
                 self.bubble_radius_field = radius.clone();
                 self.bubble_velocity_field = velocity.clone();
             }
-            fn density_array(&self) -> Array3<f64> {
-                Array3::from_elem((10, 10, 10), 1000.0)
+            fn density_array(&self) -> &Array3<f64> {
+                &self.density_field
             }
-            fn sound_speed_array(&self) -> Array3<f64> {
-                Array3::from_elem((10, 10, 10), 1500.0)
+            fn sound_speed_array(&self) -> &Array3<f64> {
+                &self.sound_speed_field
             }
             fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1e9
             }
             fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1e9
+                0.0
             }
-            fn lame_lambda_array(&self) -> Array3<f64> {
-                Array3::from_elem((10, 10, 10), 1e9)
+            fn lame_lambda_array(&self) -> &Array3<f64> {
+                &self.lame_lambda_field
             }
-            fn lame_mu_array(&self) -> Array3<f64> {
-                Array3::from_elem((10, 10, 10), 1e9)
+            fn lame_mu_array(&self) -> &Array3<f64> {
+                &self.lame_mu_field
             }
         }
 
