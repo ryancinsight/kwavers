@@ -30,8 +30,8 @@ pub struct HomogeneousMedium {
     temperature: Array3<f64>,
     bubble_radius: Array3<f64>,
     bubble_velocity: Array3<f64>,
-    density_cache: Option<Array3<f64>>,
-    sound_speed_cache: Option<Array3<f64>>,
+    density_cache: Array3<f64>,
+    sound_speed_cache: Array3<f64>,
     lame_lambda: f64,
     lame_mu: f64,
     grid_shape: (usize, usize, usize),
@@ -70,8 +70,8 @@ impl HomogeneousMedium {
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
             bubble_velocity: Array3::zeros((1, 1, 1)),
-            density_cache: None,
-            sound_speed_cache: None,
+            density_cache: Array3::from_elem((1, 1, 1), density),
+            sound_speed_cache: Array3::from_elem((1, 1, 1), sound_speed),
             // For fluids, lambda is the bulk modulus, mu is 0
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0, // Fluid has no shear modulus
@@ -88,10 +88,13 @@ impl HomogeneousMedium {
             0.1,    // Optical scattering [1/m]
             grid,
         );
-        medium.grid_shape = (grid.nx, grid.ny, grid.nz);
-        medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15); // 20°C
-        medium.bubble_radius = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        medium.bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let shape = (grid.nx, grid.ny, grid.nz);
+        medium.grid_shape = shape;
+        medium.temperature = Array3::from_elem(shape, 293.15); // 20°C
+        medium.bubble_radius = Array3::zeros(shape);
+        medium.bubble_velocity = Array3::zeros(shape);
+        medium.density_cache = Array3::from_elem(shape, medium.density);
+        medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
         medium
     }
 
@@ -104,10 +107,13 @@ impl HomogeneousMedium {
             0.5,    // Optical scattering [1/m] - higher for blood
             grid,
         );
-        medium.grid_shape = (grid.nx, grid.ny, grid.nz);
-        medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 310.15); // 37°C
-        medium.bubble_radius = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        medium.bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let shape = (grid.nx, grid.ny, grid.nz);
+        medium.grid_shape = shape;
+        medium.temperature = Array3::from_elem(shape, 310.15); // 37°C
+        medium.bubble_radius = Array3::zeros(shape);
+        medium.bubble_velocity = Array3::zeros(shape);
+        medium.density_cache = Array3::from_elem(shape, medium.density);
+        medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
         medium
     }
 
@@ -136,8 +142,8 @@ impl HomogeneousMedium {
             temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15),
             bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
-            density_cache: None,
-            sound_speed_cache: None,
+            density_cache: Array3::from_elem((1, 1, 1), density),
+            sound_speed_cache: Array3::from_elem((1, 1, 1), sound_speed),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0, // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
@@ -148,10 +154,13 @@ impl HomogeneousMedium {
     /// Create from minimal parameters (for compatibility)
     pub fn from_minimal(density: f64, sound_speed: f64, grid: &Grid) -> Self {
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
-        medium.grid_shape = (grid.nx, grid.ny, grid.nz);
-        medium.temperature = Array3::from_elem((grid.nx, grid.ny, grid.nz), 293.15);
-        medium.bubble_radius = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        medium.bubble_velocity = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let shape = (grid.nx, grid.ny, grid.nz);
+        medium.grid_shape = shape;
+        medium.temperature = Array3::from_elem(shape, 293.15);
+        medium.bubble_radius = Array3::zeros(shape);
+        medium.bubble_velocity = Array3::zeros(shape);
+        medium.density_cache = Array3::from_elem(shape, density);
+        medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
         medium
     }
 }
@@ -261,15 +270,11 @@ impl Medium for HomogeneousMedium {
     }
 
     fn density_array(&self) -> &Array3<f64> {
-        // Return a reference to a cached array
-        // This is a limitation - we need to store these arrays
-        unimplemented!("HomogeneousMedium needs cached arrays for density_array()")
+        &self.density_cache
     }
 
     fn sound_speed_array(&self) -> &Array3<f64> {
-        // Return a reference to a cached array
-        // This is a limitation - we need to store these arrays
-        unimplemented!("HomogeneousMedium needs cached arrays for sound_speed_array()")
+        &self.sound_speed_cache
     }
 
     fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
