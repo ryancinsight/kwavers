@@ -71,6 +71,7 @@ mod tests {
     use crate::medium::homogeneous::HomogeneousMedium;
     
     /// Test implementation of Medium trait for heterogeneous testing
+    #[derive(Debug)]
     struct HeterogeneousMediumMock {
         /// Returns different properties based on position
         position_dependent: bool,

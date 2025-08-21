@@ -13,6 +13,9 @@ pub mod kspace_correction;
 pub mod heterogeneous_handler;
 pub mod cpml_integration;
 pub mod validation;
+
+/// Total number of field components in simulations
+pub const TOTAL_FIELDS: usize = 10; // pressure, vx, vy, vz, temperature, etc.
 pub mod workspace;
 pub mod time_reversal;
 pub mod thermal_diffusion;

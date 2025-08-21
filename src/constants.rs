@@ -55,6 +55,27 @@ pub mod chemistry {
 }
 
 /// Acoustic constants
+pub mod optics {
+    /// Gaussian pulse width factor for optical simulations
+    pub const GAUSSIAN_PULSE_WIDTH_FACTOR: f64 = 2.0;
+    /// Gaussian pulse center factor
+    pub const GAUSSIAN_PULSE_CENTER_FACTOR: f64 = 0.5;
+    /// Window width factor for spectral analysis
+    pub const WINDOW_WIDTH_FACTOR: f64 = 4.0;
+}
+
+pub mod physics {
+    /// Standard spatial resolution in meters
+    pub const STANDARD_SPATIAL_RESOLUTION: f64 = 1e-3;
+}
+
+pub mod validation {
+    /// Tolerance for floating point comparisons
+    pub const TOLERANCE: f64 = 1e-10;
+    /// Maximum iterations for convergence
+    pub const MAX_ITERATIONS: usize = 1000;
+}
+
 pub mod acoustic {
     pub const REFERENCE_PRESSURE: f64 = 20e-6;  // Pa (20 μPa)
     pub const REFERENCE_INTENSITY: f64 = 1e-12;  // W/m²
