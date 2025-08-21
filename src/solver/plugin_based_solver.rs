@@ -541,7 +541,7 @@ impl PluginBasedSolver {
             let fields_summary = self.calculate_fields_summary();
             
             // Report progress
-            reporter.report(&crate::solver::ProgressUpdate {
+            let progress = crate::solver::ProgressUpdate {
                 current_step: step,
                 total_steps,
                 current_time: t,
@@ -549,7 +549,8 @@ impl PluginBasedSolver {
                 step_duration,
                 estimated_remaining,
                 fields_summary,
-            });
+            };
+            reporter.report(&serde_json::to_string(&progress).unwrap());
         }
         
         reporter.on_complete();
@@ -568,7 +569,7 @@ impl PluginBasedSolver {
         // Calculate field statistics if data is available
         if let Some(data) = self.field_registry.data() {
             // Get pressure field
-            if let Some(pressure) = self.field_registry.get_field(UnifiedFieldType::Pressure) {
+            if let Ok(pressure) = self.field_registry.get_field(UnifiedFieldType::Pressure) {
                 max_pressure = pressure.iter()
                     .map(|&p| p.abs())
                     .fold(0.0, f64::max);
@@ -578,26 +579,26 @@ impl PluginBasedSolver {
             }
             
             // Get velocity field
-            if let Some(velocity) = self.field_registry.get_field(UnifiedFieldType::VelocityX) {
+            if let Ok(velocity) = self.field_registry.get_field(UnifiedFieldType::VelocityX) {
                 max_velocity = velocity.iter()
                     .map(|&v| v.abs())
                     .fold(max_velocity, f64::max);
             }
             
             // Get temperature field
-            if let Some(temperature) = self.field_registry.get_field(UnifiedFieldType::Temperature) {
+            if let Ok(temperature) = self.field_registry.get_field(UnifiedFieldType::Temperature) {
                 max_temperature = temperature.iter()
                     .map(|&t| t.abs())
                     .fold(0.0, f64::max);
             }
         }
         
-        crate::solver::FieldsSummary {
-            max_pressure,
-            max_velocity,
-            max_temperature,
-            total_energy,
-        }
+        let mut summary = crate::solver::FieldsSummary::new();
+        summary.insert("max_pressure", max_pressure);
+        summary.insert("max_velocity", max_velocity);
+        summary.insert("max_temperature", max_temperature);
+        summary.insert("total_energy", total_energy);
+        summary
     }
     
     /// Execute one time step

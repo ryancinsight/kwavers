@@ -198,7 +198,13 @@ impl AdaptiveSelector {
             efficiency_score: 0.85,  // Placeholder
             composite_score: (smoothness + frequency_content + 0.9 + 0.85) / 4.0,
             confidence: 0.95,  // Placeholder
-            detailed_metrics: None,  // Placeholder
+            detailed_metrics: DetailedMetrics {
+                gradient_stats: StatisticalMetrics::default(),
+                curvature_stats: StatisticalMetrics::default(),
+                frequency_spectrum: FrequencySpectrum::default(),
+                material_variations: MaterialVariationMetrics::default(),
+                resolution_adequacy: ResolutionMetrics::default(),
+            },
         })
     }
     

@@ -439,14 +439,7 @@ impl Reconstructor for FullWaveformInversion {
             }
             
             // Compute gradient via adjoint state method
-            self.compute_gradient_adjoint(
-                &residual,
-                &source_positions,
-                &receiver_positions,
-                &velocity,
-                &mut gradient,
-                grid
-            )?;
+            gradient = self.compute_gradient_adjoint(&residual);
             
             // L-BFGS direction (simplified - should use history)
             if iteration == 0 {

@@ -255,7 +255,7 @@ impl KWaveValidator {
             context.total_steps = n_steps;
             
             // Update through plugin manager
-            plugin_manager.execute(&mut fields, &self.grid, &medium, dt, t, &context)?;
+            plugin_manager.execute(&mut fields, &self.grid, &medium, dt, t)?;
         }
         
         // Extract final pressure
@@ -538,7 +538,7 @@ impl KWaveValidator {
             let mut vx_view = vx.view_mut();
             let mut vy_view = vy.view_mut();
             let mut vz_view = vz.view_mut();
-            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure.view(), &medium, dt)?;
+            solver.update_velocity(&medium, &self.grid, dt)?;
             
             boundary_data.push(self.extract_boundary(&pressure));
         }

@@ -67,14 +67,14 @@ impl CPMLSolver {
         self.compute_pressure_gradients(pressure, grid);
         
         // Step 2: Update C-PML memory variables
-        self.cpml.update_acoustic_memory(&self.grad_x, 0)?;
-        self.cpml.update_acoustic_memory(&self.grad_y, 1)?;
-        self.cpml.update_acoustic_memory(&self.grad_z, 2)?;
+        self.cpml.update_acoustic_memory(&self.grad_x, 0);
+        self.cpml.update_acoustic_memory(&self.grad_y, 1);
+        self.cpml.update_acoustic_memory(&self.grad_z, 2);
         
         // Step 3: Apply C-PML to gradients
-        self.cpml.apply_cpml_gradient(&mut self.grad_x, 0)?;
-        self.cpml.apply_cpml_gradient(&mut self.grad_y, 1)?;
-        self.cpml.apply_cpml_gradient(&mut self.grad_z, 2)?;
+        self.cpml.apply_cpml_gradient(&mut self.grad_x, 0);
+        self.cpml.apply_cpml_gradient(&mut self.grad_y, 1);
+        self.cpml.apply_cpml_gradient(&mut self.grad_z, 2);
         
         // Step 4: Update velocity field with modified gradients
         self.update_velocity_with_cpml(velocity, grid, medium, dt);

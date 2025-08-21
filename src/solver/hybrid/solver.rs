@@ -78,7 +78,9 @@ impl HybridSolver {
         )?;
         
         // Perform initial domain decomposition
-        let regions = decomposer.decompose(grid, &selector)?;
+        // Create a default medium for initial decomposition
+        let default_medium = crate::medium::homogeneous::HomogeneousMedium::water(grid);
+        let regions = decomposer.decompose(grid, &default_medium)?;
         
         info!("Hybrid solver initialized with {} regions", regions.len());
         
