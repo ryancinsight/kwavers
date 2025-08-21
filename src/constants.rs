@@ -161,6 +161,9 @@ pub mod cfl {
     pub const CFL_SAFETY_FACTOR: f64 = 0.3;
     pub const CFL_MAX: f64 = 0.5;
     pub const CFL_MIN: f64 = 0.1;
+    pub const FDTD_DEFAULT: f64 = 0.3;  // Default CFL for FDTD
+    pub const CONSERVATIVE: f64 = 0.2;  // Conservative CFL value
+    pub const AGGRESSIVE: f64 = 0.4;  // Aggressive CFL value
 }
 
 /// Numerical constants
@@ -173,6 +176,8 @@ pub mod numerical {
     pub const FD2_CENTRAL_COEFF: f64 = 0.5;  // Central difference coefficient
     pub const FD2_FORWARD_COEFF: [f64; 3] = [-1.5, 2.0, -0.5];  // Forward difference
     pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5];  // Backward difference
+    pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;  // Second order difference coefficient
+    pub const THIRD_ORDER_DIFF_COEFF: f64 = 1.0;  // Third order difference coefficient
     
     // Fourth-order accurate finite difference coefficients
     pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0/12.0, -2.0/3.0, 0.0, 2.0/3.0, -1.0/12.0];
@@ -182,6 +187,20 @@ pub mod numerical {
     pub const FFT_FORWARD_SCALE: f64 = 1.0;
     pub const FFT_INVERSE_SCALE_2D: f64 = 1.0;  // Will be divided by N*M at runtime
     pub const FFT_INVERSE_SCALE_3D: f64 = 1.0;  // Will be divided by N*M*L at runtime
+    pub const FFT_K_SCALING: f64 = 2.0 * std::f64::consts::PI;  // k-space scaling factor
+    
+    // WENO scheme weights and coefficients
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    pub const WENO_EPSILON: f64 = 1e-6;
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;
+    
+    // Artificial viscosity coefficients
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 2.0;
     
     // PML parameters
     pub const PML_ALPHA_MAX: f64 = 0.0;  // Maximum PML alpha value
@@ -282,6 +301,8 @@ pub mod grid {
     pub const MIN_POINTS_PER_WAVELENGTH: usize = 6;
     pub const MAX_ASPECT_RATIO: f64 = 10.0;
     pub const DEFAULT_GRID_SPACING: f64 = 1e-4;  // 0.1 mm
+    pub const MIN_GRID_SPACING: f64 = 1e-6;  // 1 μm minimum grid spacing
+    pub const MIN_GRID_POINTS: usize = 16;  // Minimum grid points per dimension
 }
 
 /// Source constants
@@ -319,6 +340,9 @@ pub mod thermodynamics {
     pub const NUSSELT_PECLET_COEFF: f64 = 0.6;  // Coefficient for Peclet correction
     pub const NUSSELT_PECLET_EXPONENT: f64 = 0.33;  // Exponent for Peclet correction
     pub const SHERWOOD_PECLET_EXPONENT: f64 = 0.33;  // Sherwood number Peclet exponent
+    pub const REACTION_REFERENCE_TEMPERATURE: f64 = 298.15;  // K - Reference temperature for reactions
+    pub const SONOCHEMISTRY_BASE_RATE: f64 = 1e-6;  // mol/(L·s) - Base sonochemical reaction rate
+    pub const SECONDARY_REACTION_RATE: f64 = 1e-7;  // 1/s - Secondary reaction rate constant
 }
 
 /// Bubble dynamics constants
@@ -328,6 +352,8 @@ pub mod bubble_dynamics {
     pub const BLAKE_RADIUS_RATIO: f64 = 0.915;  // Blake threshold radius ratio
     pub const MINIMUM_RADIUS_RATIO: f64 = 0.1;  // Minimum radius as fraction of R0
     pub const MAXIMUM_RADIUS_RATIO: f64 = 10.0;  // Maximum radius as fraction of R0
+    pub const MIN_RADIUS: f64 = 1e-9;  // m - Absolute minimum bubble radius
+    pub const MAX_RADIUS: f64 = 1e-3;  // m - Absolute maximum bubble radius
     pub const RAYLEIGH_COLLAPSE_TIME_FACTOR: f64 = 0.915;  // Rayleigh collapse time factor
     pub const VISCOUS_DAMPING_FACTOR: f64 = 4.0;  // Viscous damping coefficient
     pub const THERMAL_DAMPING_FACTOR: f64 = 3.0;  // Thermal damping coefficient
@@ -335,6 +361,36 @@ pub mod bubble_dynamics {
     pub const L_TO_M3: f64 = 1e-3;  // Conversion from L to m³
     pub const PECLET_SCALING_FACTOR: f64 = 1.0;  // Peclet number scaling
     pub const MIN_PECLET_NUMBER: f64 = 0.1;  // Minimum Peclet number for heat transfer
+    pub const VISCOUS_STRESS_COEFF: f64 = 4.0;  // Viscous stress coefficient
+    pub const SURFACE_TENSION_COEFF: f64 = 2.0;  // Surface tension coefficient
+    pub const KINETIC_ENERGY_COEFF: f64 = 0.5;  // Kinetic energy coefficient
+    pub const WATER_LATENT_HEAT_VAPORIZATION: f64 = 2.257e6;  // J/kg - Latent heat of vaporization for water
+}
+
+/// Stability constants
+pub mod stability {
+    pub const COURANT_NUMBER: f64 = 0.3;  // CFL condition
+    pub const DIFFUSION_NUMBER: f64 = 0.25;  // Diffusion stability
+    pub const PECLET_NUMBER_MAX: f64 = 2.0;  // Maximum Peclet number
+    pub const REYNOLDS_NUMBER_CRITICAL: f64 = 2300.0;  // Critical Reynolds number
+    pub const DAMPING_COEFFICIENT: f64 = 0.01;  // Numerical damping
+    pub const PRESSURE_LIMIT: f64 = 1e9;  // Pa - Maximum pressure limit for stability
+}
+
+/// Performance constants
+pub mod performance {
+    pub const CACHE_LINE_SIZE: usize = 64;  // Bytes
+    pub const SIMD_WIDTH: usize = 8;  // AVX2 double precision
+    pub const THREAD_POOL_SIZE: usize = 4;  // Default thread count
+    pub const CHUNK_SIZE: usize = 1024;  // Default chunk size for parallel processing
+    pub const CHUNK_SIZE_LARGE: usize = 4096;  // Large chunk size for parallel processing
+    pub const CHUNK_SIZE_MEDIUM: usize = 1024;  // Medium chunk size for parallel processing
+    pub const CHUNK_SIZE_SMALL: usize = 256;  // Small chunk size for parallel processing
+    pub const PREFETCH_DISTANCE: usize = 8;  // Cache prefetch distance
+    pub const LARGE_GRID_THRESHOLD: usize = 1000000;  // Threshold for large grid optimizations
+    pub const MEDIUM_GRID_THRESHOLD: usize = 100000;  // Threshold for medium grid optimizations
+    pub const SMALL_GRID_THRESHOLD: usize = 10000;  // Threshold for small grid optimizations
+    pub const CHUNKED_PROCESSING_THRESHOLD: usize = 10000;  // Threshold for chunked processing
 }
 
 /// Adaptive integration constants
@@ -343,8 +399,23 @@ pub mod adaptive_integration {
     pub const RELATIVE_TOLERANCE: f64 = 1e-8;
     pub const MINIMUM_TIMESTEP: f64 = 1e-15;  // seconds
     pub const MAXIMUM_TIMESTEP: f64 = 1e-6;  // seconds
+    pub const MIN_TIME_STEP: f64 = 1e-15;  // Alias for MINIMUM_TIMESTEP
+    pub const MAX_TIME_STEP: f64 = 1e-6;  // Alias for MAXIMUM_TIMESTEP
+    pub const DEFAULT_ABSOLUTE_TOLERANCE: f64 = 1e-10;
+    pub const DEFAULT_RELATIVE_TOLERANCE: f64 = 1e-8;
     pub const SAFETY_FACTOR: f64 = 0.9;
     pub const ERROR_EXPONENT: f64 = 0.2;  // For step size control
+    pub const ERROR_CONTROL_EXPONENT: f64 = 0.2;  // Alias
     pub const GROWTH_LIMIT: f64 = 5.0;  // Maximum step size growth factor
     pub const SHRINK_LIMIT: f64 = 0.1;  // Minimum step size shrink factor
+    pub const MAX_TIME_STEP_INCREASE: f64 = 5.0;  // Maximum increase factor
+    pub const MAX_TIME_STEP_DECREASE: f64 = 0.1;  // Maximum decrease factor
+    pub const MAX_SUBSTEPS: usize = 1000;  // Maximum substeps in integration
+    pub const INITIAL_TIME_STEP_FRACTION: f64 = 0.01;  // Initial timestep as fraction of total
+    pub const HALF_STEP_FACTOR: f64 = 0.5;  // Factor for half-step method
+    pub const MIN_TEMPERATURE: f64 = 273.15;  // Minimum temperature (K)
+    pub const MAX_TEMPERATURE: f64 = 373.15;  // Maximum temperature (K)
+    pub const MIN_RADIUS_SAFETY_FACTOR: f64 = 0.01;  // Minimum radius safety
+    pub const MAX_RADIUS_SAFETY_FACTOR: f64 = 100.0;  // Maximum radius safety
+    pub const MAX_VELOCITY_FRACTION: f64 = 0.1;  // Maximum velocity as fraction of sound speed
 }
