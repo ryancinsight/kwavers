@@ -1,7 +1,7 @@
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
 use kwavers::grid::Grid;
-use kwavers::medium::HomogeneousMedium;
+use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::{PluginContext, PluginManager};
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
