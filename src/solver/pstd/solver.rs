@@ -12,12 +12,12 @@ use ndarray::{Array3, Zip};
 /// PSTD solver state
 #[derive(Debug)]
 pub struct PstdSolver {
-    config: PstdConfig,
-    spectral: SpectralOperations,
-    pressure: Array3<f64>,
-    velocity_x: Array3<f64>,
-    velocity_y: Array3<f64>,
-    velocity_z: Array3<f64>,
+    pub(crate) config: PstdConfig,
+    pub(crate) spectral: SpectralOperations,
+    pub(crate) pressure: Array3<f64>,
+    pub(crate) velocity_x: Array3<f64>,
+    pub(crate) velocity_y: Array3<f64>,
+    pub(crate) velocity_z: Array3<f64>,
 }
 
 impl PstdSolver {

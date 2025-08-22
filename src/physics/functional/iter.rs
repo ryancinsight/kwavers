@@ -124,23 +124,23 @@ impl<'a, T> Iterator for ChunkedFieldIterator<'a, T> {
 /// Extension trait for creating lazy iterators from fields
 pub trait LazyIterExt<T> {
     /// Create a lazy iterator with transformation
-    fn lazy_iter<F, U>(&self, transform: F) -> LazyFieldIterator<T, F, U>
+    fn lazy_iter<F, U>(&self, transform: F) -> LazyFieldIterator<'_, T, F, U>
     where
         F: Fn(&T) -> U;
 
     /// Create a chunked iterator
-    fn chunked_iter(&self, chunk_size: usize) -> ChunkedFieldIterator<T>;
+    fn chunked_iter(&self, chunk_size: usize) -> ChunkedFieldIterator<'_, T>;
 }
 
 impl<T> LazyIterExt<T> for Array3<T> {
-    fn lazy_iter<F, U>(&self, transform: F) -> LazyFieldIterator<T, F, U>
+    fn lazy_iter<F, U>(&self, transform: F) -> LazyFieldIterator<'_, T, F, U>
     where
         F: Fn(&T) -> U,
     {
         LazyFieldIterator::new(self, transform)
     }
 
-    fn chunked_iter(&self, chunk_size: usize) -> ChunkedFieldIterator<T> {
+    fn chunked_iter(&self, chunk_size: usize) -> ChunkedFieldIterator<'_, T> {
         ChunkedFieldIterator::new(self, chunk_size)
     }
 }

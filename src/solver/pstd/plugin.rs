@@ -74,14 +74,86 @@ impl PhysicsPlugin for PstdPlugin {
 
     fn update(
         &mut self,
-        _fields: &mut Array4<f64>,
-        _grid: &Grid,
-        _medium: &dyn Medium,
-        _dt: f64,
-        _t: f64,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // TODO: Implement PSTD update logic
+        // Extract pressure and velocity fields from the unified field array
+        // Assuming standard field indices for acoustic fields
+        let pressure_idx = 0;
+        let vx_idx = 1;
+        let vy_idx = 2;
+        let vz_idx = 3;
+        
+        // Get field slices and perform spectral operations
+        let mut pressure = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
+        let mut velocity_x = fields.index_axis(ndarray::Axis(0), vx_idx).to_owned();
+        let mut velocity_y = fields.index_axis(ndarray::Axis(0), vy_idx).to_owned();
+        let mut velocity_z = fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
+        
+        // Compute spectral divergence of velocity for pressure update
+        let (dvx_dx, _, _) = self.solver.spectral.compute_gradient(&velocity_x, grid)?;
+        let (_, dvy_dy, _) = self.solver.spectral.compute_gradient(&velocity_y, grid)?;
+        let (_, _, dvz_dz) = self.solver.spectral.compute_gradient(&velocity_z, grid)?;
+        
+        // Update pressure field using divergence
+        ndarray::Zip::indexed(&mut pressure)
+            .and(&dvx_dx)
+            .and(&dvy_dy)
+            .and(&dvz_dz)
+            .for_each(|(i, j, k), p, &dx, &dy, &dz| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                let c = medium.sound_speed(x, y, z, grid);
+                let divergence = dx + dy + dz;
+                *p -= dt * rho * c * c * divergence;
+            });
+        
+        // Compute pressure gradient for velocity update
+        let (grad_x, grad_y, grad_z) = self.solver.spectral.compute_gradient(&pressure, grid)?;
+        
+        // Update velocity components
+        ndarray::Zip::indexed(&mut velocity_x)
+            .and(&grad_x)
+            .for_each(|(i, j, k), v, &grad| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *v -= dt * grad / rho;
+            });
+            
+        ndarray::Zip::indexed(&mut velocity_y)
+            .and(&grad_y)
+            .for_each(|(i, j, k), v, &grad| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *v -= dt * grad / rho;
+            });
+            
+        ndarray::Zip::indexed(&mut velocity_z)
+            .and(&grad_z)
+            .for_each(|(i, j, k), v, &grad| {
+                let x = i as f64 * grid.dx;
+                let y = j as f64 * grid.dy;
+                let z = k as f64 * grid.dz;
+                let rho = medium.density(x, y, z, grid);
+                *v -= dt * grad / rho;
+            });
+        
+        // Copy updated fields back to the plugin fields
+        fields.index_axis_mut(ndarray::Axis(0), pressure_idx).assign(&pressure);
+        fields.index_axis_mut(ndarray::Axis(0), vx_idx).assign(&velocity_x);
+        fields.index_axis_mut(ndarray::Axis(0), vy_idx).assign(&velocity_y);
+        fields.index_axis_mut(ndarray::Axis(0), vz_idx).assign(&velocity_z);
+        
         Ok(())
     }
 

@@ -61,7 +61,7 @@ impl<'a> PluginFieldAccess<'a> {
     }
 
     /// Get read access to a field
-    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<FieldReadGuard> {
+    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<FieldReadGuard<'_>> {
         if !self.can_read(field) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
                 field: field.name().to_string(),
@@ -74,7 +74,7 @@ impl<'a> PluginFieldAccess<'a> {
     }
 
     /// Get write access to a field
-    pub fn get_field_mut(&self, field: UnifiedFieldType) -> KwaversResult<FieldWriteGuard> {
+    pub fn get_field_mut(&self, field: UnifiedFieldType) -> KwaversResult<FieldWriteGuard<'_>> {
         if !self.can_write(field) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
                 field: field.name().to_string(),
@@ -161,7 +161,7 @@ impl<'a> DirectPluginFieldAccess<'a> {
     }
 
     /// Get a read-only view of a field
-    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<ArrayView3<f64>> {
+    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<ArrayView3<'_, f64>> {
         let index = field.index();
         if !self.readable_indices.contains(&index) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
@@ -175,7 +175,7 @@ impl<'a> DirectPluginFieldAccess<'a> {
     }
 
     /// Get a mutable view of a field
-    pub fn get_field_mut(&mut self, field: UnifiedFieldType) -> KwaversResult<ArrayViewMut3<f64>> {
+    pub fn get_field_mut(&mut self, field: UnifiedFieldType) -> KwaversResult<ArrayViewMut3<'_, f64>> {
         let index = field.index();
         if !self.writable_indices.contains(&index) {
             return Err(PhysicsError::UnauthorizedFieldAccess {

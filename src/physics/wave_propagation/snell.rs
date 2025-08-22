@@ -128,16 +128,17 @@ impl<'a> SnellLawCalculator<'a> {
 mod tests {
     use super::*;
     use crate::physics::wave_propagation::{InterfaceType, MediumProperties};
+    use crate::constants::optics::{SPEED_OF_LIGHT, WATER_REFRACTIVE_INDEX, GLASS_REFRACTIVE_INDEX};
 
     #[test]
     fn test_snells_law_water_to_glass() {
         let mut medium1 = MediumProperties::water();
-        medium1.refractive_index = 1.333;
-        medium1.wave_speed = 3e8 / 1.333; // Speed of light in water
+        medium1.refractive_index = WATER_REFRACTIVE_INDEX;
+        medium1.wave_speed = SPEED_OF_LIGHT / WATER_REFRACTIVE_INDEX;
 
         let mut medium2 = MediumProperties::water();
-        medium2.refractive_index = 1.5;
-        medium2.wave_speed = 3e8 / 1.5; // Speed of light in glass
+        medium2.refractive_index = GLASS_REFRACTIVE_INDEX;
+        medium2.wave_speed = SPEED_OF_LIGHT / GLASS_REFRACTIVE_INDEX;
 
         let interface = Interface {
             medium1,
@@ -158,16 +159,16 @@ mod tests {
         let transmitted = calc.calculate_transmitted_angle(incident).unwrap();
 
         // Verify Snell's law
-        let n1_sin_i = 1.333 * incident.sin();
-        let n2_sin_t = 1.5 * transmitted.sin();
+        let n1_sin_i = WATER_REFRACTIVE_INDEX * incident.sin();
+        let n2_sin_t = GLASS_REFRACTIVE_INDEX * transmitted.sin();
         assert!((n1_sin_i - n2_sin_t).abs() < 1e-10);
     }
 
     #[test]
     fn test_critical_angle() {
         let mut medium1 = MediumProperties::water();
-        medium1.refractive_index = 1.5; // Glass
-        medium1.wave_speed = 3e8 / 1.5;
+        medium1.refractive_index = GLASS_REFRACTIVE_INDEX;
+        medium1.wave_speed = SPEED_OF_LIGHT / GLASS_REFRACTIVE_INDEX;
 
         let mut medium2 = MediumProperties::water();
         medium2.refractive_index = 1.0; // Air

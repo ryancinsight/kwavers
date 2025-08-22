@@ -140,7 +140,7 @@ impl PhysicsState {
     }
 
     /// Get a read-only view of a specific field (zero-copy)
-    pub fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard> {
+    pub fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard<'_>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
@@ -154,7 +154,7 @@ impl PhysicsState {
     }
 
     /// Get a mutable view of a specific field (zero-copy)
-    pub fn get_field_mut(&self, field_index: usize) -> KwaversResult<FieldWriteGuard> {
+    pub fn get_field_mut(&self, field_index: usize) -> KwaversResult<FieldWriteGuard<'_>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
@@ -304,15 +304,15 @@ impl<'a> FieldAccessor<'a> {
         Self { state }
     }
 
-    pub fn pressure(&self) -> KwaversResult<FieldReadGuard> {
+    pub fn pressure(&self) -> KwaversResult<FieldReadGuard<'_>> {
         self.state.get_field(field_indices::PRESSURE_IDX)
     }
 
-    pub fn temperature(&self) -> KwaversResult<FieldReadGuard> {
+    pub fn temperature(&self) -> KwaversResult<FieldReadGuard<'_>> {
         self.state.get_field(field_indices::TEMPERATURE_IDX)
     }
 
-    pub fn density(&self) -> KwaversResult<FieldReadGuard> {
+    pub fn density(&self) -> KwaversResult<FieldReadGuard<'_>> {
         self.state.get_field(field_indices::DENSITY_IDX)
     }
 }
@@ -323,7 +323,7 @@ pub trait HasPhysicsState {
     fn physics_state(&self) -> &PhysicsState;
 
     /// Get a specific field by index
-    fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard> {
+    fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard<'_>> {
         self.physics_state().get_field(field_index)
     }
 
