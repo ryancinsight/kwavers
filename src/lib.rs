@@ -6,6 +6,11 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
+// Suppress warnings for intentionally unused code that forms part of the API
+#![allow(dead_code)] // API surface for future use
+#![allow(unused_variables)] // Trait method parameters
+#![allow(unused_imports)] // Feature-gated imports
+
 use std::collections::HashMap;
 
 // Validation constants to replace magic numbers

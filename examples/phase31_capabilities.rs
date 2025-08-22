@@ -38,7 +38,7 @@ fn main() -> KwaversResult<()> {
 
     // Create simulation grid
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::new(1500.0, 1000.0, &grid, 0.5, 1.0);
+    let medium = HomogeneousMedium::new(1500.0, 1000.0, 0.5, 1.0, &grid);
 
     // Demo 1: KZK Equation Mode
     println!("\n📐 Demo 1: KZK Equation Mode (Parabolic Approximation)");
@@ -227,7 +227,7 @@ fn demo_seismic_imaging(grid: &Grid) -> KwaversResult<()> {
 
     // Run FWI (simplified for demo)
     let mut fwi = FullWaveformInversion::new(seismic_config.clone(), initial_velocity);
-    let medium = HomogeneousMedium::new(2500.0, 2000.0, grid, 0.3, 0.5);
+    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3, 0.5, grid);
 
     let velocity_model = fwi.reconstruct_fwi(
         &observed_data,

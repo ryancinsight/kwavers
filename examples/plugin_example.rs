@@ -231,7 +231,7 @@ fn main() -> KwaversResult<()> {
 
     // Create simulation components
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
     // Create plugin manager
     let mut plugin_manager = PluginManager::new();
