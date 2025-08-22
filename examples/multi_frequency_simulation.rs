@@ -96,7 +96,7 @@ fn main() -> KwaversResult<()> {
     
     // Get the grid and medium from simulation components
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
     
     // Initialize fields
     let mut fields = Array4::zeros((7, 64, 64, 64));

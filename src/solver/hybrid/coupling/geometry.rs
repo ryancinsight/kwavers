@@ -45,9 +45,45 @@ impl InterfaceGeometry {
     }
 
     fn detect_interface(source: &Grid, target: &Grid) -> KwaversResult<(usize, f64)> {
-        // Implementation to detect interface direction and position
-        // This would analyze grid boundaries to find the interface
-        Ok((0, 0.0)) // TODO: Implement proper detection
+        // Detect interface by finding the dimension with maximum overlap
+        // Returns (dimension_index, position) where dimension is 0=x, 1=y, 2=z
+        
+        // Calculate grid boundaries
+        let source_bounds = (
+            (0.0, source.nx as f64 * source.dx),
+            (0.0, source.ny as f64 * source.dy),
+            (0.0, source.nz as f64 * source.dz),
+        );
+        
+        let target_bounds = (
+            (0.0, target.nx as f64 * target.dx),
+            (0.0, target.ny as f64 * target.dy),
+            (0.0, target.nz as f64 * target.dz),
+        );
+        
+        // Find dimension with smallest overlap (likely the interface)
+        let overlaps = [
+            (source_bounds.0.1.min(target_bounds.0.1) - source_bounds.0.0.max(target_bounds.0.0)).abs(),
+            (source_bounds.1.1.min(target_bounds.1.1) - source_bounds.1.0.max(target_bounds.1.0)).abs(),
+            (source_bounds.2.1.min(target_bounds.2.1) - source_bounds.2.0.max(target_bounds.2.0)).abs(),
+        ];
+        
+        let interface_dim = overlaps
+            .iter()
+            .enumerate()
+            .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        
+        // Interface position is at the boundary between grids
+        let interface_pos = match interface_dim {
+            0 => source_bounds.0.1.min(target_bounds.0.1),
+            1 => source_bounds.1.1.min(target_bounds.1.1),
+            2 => source_bounds.2.1.min(target_bounds.2.1),
+            _ => 0.0,
+        };
+        
+        Ok((interface_dim, interface_pos))
     }
 
     fn calculate_extent(

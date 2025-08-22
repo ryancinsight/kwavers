@@ -6,6 +6,9 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
+// Note: Some warnings are expected for unused trait parameters and feature-gated code
+// These should be addressed individually, not suppressed globally
+
 use std::collections::HashMap;
 
 // Validation constants to replace magic numbers

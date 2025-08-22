@@ -234,8 +234,8 @@ mod tests {
     #[test]
     fn test_zero_frequency_safety() {
         // Test that zero frequency doesn't cause division by zero
-        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 5.0);
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 5.0, &grid);
 
         // This should not panic and should return 0.0
         let diffusivity = compute_acoustic_diffusivity(&medium, 0.0, 0.0, 0.0, &grid, 0.0);

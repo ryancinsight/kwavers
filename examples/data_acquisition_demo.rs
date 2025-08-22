@@ -121,7 +121,7 @@ fn run_data_acquisition_demo(params: SimulationParams) -> KwaversResult<()> {
     let sensor = Sensor::new(&grid, &time, &sensor_positions);
 
     // Create medium
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 0.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 0.0, &grid);
 
     // Configure recorder with all monitoring capabilities
     let sl_config = DetectorConfig {

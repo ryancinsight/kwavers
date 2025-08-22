@@ -21,7 +21,7 @@ pub fn create_default_test_grid() -> Grid {
 
 /// Create a standard test medium for the given grid
 pub fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
-    HomogeneousMedium::new(1000.0, 1500.0, grid, 0.1, 1.0)
+    HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, grid)
 }
 
 /// Create a test field with specified dimensions

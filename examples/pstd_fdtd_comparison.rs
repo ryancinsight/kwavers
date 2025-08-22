@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grid = Grid::new(grid_points, grid_points, grid_points, dx, dx, dx);
 
     // Create medium (homogeneous water)
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.0, 1.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.0, 1.0, &grid);
 
     // Time parameters
     let c_max = 1500.0;

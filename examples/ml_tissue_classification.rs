@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
 
     // Create heterogeneous medium with different tissue regions
-    let mut medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+    let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     // Simulate different tissue properties in regions
     println!("📊 Setting up tissue regions:");

@@ -58,7 +58,7 @@ fn test_fwi_two_layer_model() -> KwaversResult<()> {
 
     // Run FWI
     let mut fwi = FullWaveformInversion::new(config, initial_velocity);
-    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3);
+    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3, 0.5, &grid);
 
     let recovered_velocity = fwi.reconstruct_fwi(
         &observed_data,
@@ -117,7 +117,7 @@ fn test_fwi_gradient_accuracy() -> KwaversResult<()> {
     };
 
     let mut fwi = FullWaveformInversion::new(config, velocity_model.clone());
-    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3);
+    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3, 0.5, &grid);
 
     // Compute analytical gradient
     fwi.compute_gradient(
@@ -252,7 +252,7 @@ fn test_fwi_convergence() -> KwaversResult<()> {
     };
 
     let mut fwi = FullWaveformInversion::new(config, initial_velocity);
-    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3);
+    let medium = HomogeneousMedium::new(2500.0, 2000.0, 0.3, 0.5, &grid);
 
     // Track misfit evolution
     let mut misfits = Vec::new();
@@ -476,7 +476,7 @@ mod integration_tests {
         };
 
         let mut fwi = FullWaveformInversion::new(config.clone(), initial_velocity);
-        let medium = HomogeneousMedium::new(2800.0, 2200.0, 0.3);
+        let medium = HomogeneousMedium::new(2800.0, 2200.0, 0.3, 0.5, &grid);
 
         let estimated_velocity = fwi.reconstruct_fwi(
             &observed_data,

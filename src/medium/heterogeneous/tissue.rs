@@ -379,7 +379,7 @@ impl Medium for HeterogeneousTissueMedium {
         }
     }
 
-    fn lame_lambda_array(&self) -> &Array3<f64> {
+    fn lame_lambda_array(&self) -> Array3<f64> {
         self.lame_lambda_array
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
@@ -396,9 +396,10 @@ impl Medium for HeterogeneousTissueMedium {
                 });
                 arr
             })
+            .clone()
     }
 
-    fn lame_mu_array(&self) -> &Array3<f64> {
+    fn lame_mu_array(&self) -> Array3<f64> {
         self.lame_mu_array
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
@@ -415,6 +416,7 @@ impl Medium for HeterogeneousTissueMedium {
                 });
                 arr
             })
+            .clone()
     }
 
     fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

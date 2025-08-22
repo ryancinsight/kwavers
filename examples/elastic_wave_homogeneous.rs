@@ -104,7 +104,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let lame_mu: f64 = 0.357e6;
     let lame_lambda: f64 = 1.428e6;
 
-    let mut medium_props = HomogeneousMedium::new(density, 1500.0, &grid, 0.0, 0.0);
+    let mut medium_props = HomogeneousMedium::new(density, 1500.0, 0.0, 0.0, &grid);
     medium_props.density = density;
     medium_props.lame_lambda_val = lame_lambda;
     medium_props.lame_mu_val = lame_mu;
