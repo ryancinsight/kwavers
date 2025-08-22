@@ -1,15 +1,14 @@
-//! # GPU Acceleration Module
+//! GPU acceleration module (NOT IMPLEMENTED)
 //!
-//! This module provides GPU acceleration capabilities for Kwavers using CUDA and wgpu backends.
-//! It implements Phase 9 requirements for massive performance scaling (>17M grid updates/second).
+//! This module contains stub interfaces for future GPU acceleration support.
+//! Currently, all GPU functionality returns NotImplemented errors.
+//! 
+//! To use GPU acceleration in the future:
+//! - Enable the `gpu` feature in Cargo.toml
+//! - Implement the actual GPU kernels
+//! - Replace stub implementations with real CUDA/OpenCL/WebGPU code
 //!
-//! ## Architecture
-//!
-//! - **CUDA Backend**: NVIDIA GPU acceleration with cudarc
-//! - **Wgpu Backend**: Cross-platform GPU acceleration (Vulkan, Metal, DX12) with wgpu
-//! - **Memory Management**: Efficient GPU memory allocation and transfer
-//! - **Kernel Optimization**: Compute kernels with performance tuning
-//! - **Multi-GPU Support**: Distributed computation across multiple devices
+//! **WARNING**: Do not use this module in production code.
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;

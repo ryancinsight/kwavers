@@ -141,8 +141,8 @@ fn run_fdtd_simulation_timed(
         .add_plugin(Box::new(FdtdPlugin::new(config, grid).unwrap()))
         .unwrap();
 
-    // Initialize fields
-    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
+    // Initialize fields - must match UnifiedFieldType::COUNT
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
     fields
         .slice_mut(ndarray::s![0, .., .., ..])
         .assign(initial_pressure);
@@ -199,8 +199,8 @@ fn run_pstd_simulation_timed(
         .add_plugin(Box::new(PstdPlugin::new(config, grid).unwrap()))
         .unwrap();
 
-    // Initialize fields
-    let mut fields = Array4::zeros((7, grid.nx, grid.ny, grid.nz));
+    // Initialize fields - must match UnifiedFieldType::COUNT
+    let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
     fields
         .slice_mut(ndarray::s![0, .., .., ..])
         .assign(initial_pressure);

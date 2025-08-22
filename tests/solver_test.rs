@@ -48,6 +48,10 @@ fn test_fdtd_solver() {
     let center = TEST_GRID_SIZE / 2;
     fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
 
+    // Debug: Check initial state
+    let initial_max = fields.slice(s![0, .., .., ..]).iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+    println!("Initial max pressure: {}", initial_max);
+
     let config = FdtdConfig {
         spatial_order: 2,
         staggered_grid: true,
@@ -72,9 +76,22 @@ fn test_fdtd_solver() {
     // Run simulation for a few steps
     for step in 0..TEST_STEPS_SHORT {
         let t = step as f64 * dt;
+        
+        // Debug: Check field before update
+        if step % 5 == 0 {
+            let max_before = fields.slice(s![0, .., .., ..]).iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+            println!("Step {}: max pressure before update: {}", step, max_before);
+        }
+        
         plugin_manager
             .execute(&mut fields, &grid, &medium, dt, t)
             .expect("Failed to execute plugins");
+            
+        // Debug: Check field after update
+        if step % 5 == 0 {
+            let max_after = fields.slice(s![0, .., .., ..]).iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+            println!("Step {}: max pressure after update: {}", step, max_after);
+        }
     }
 
     // Check that wave has propagated
