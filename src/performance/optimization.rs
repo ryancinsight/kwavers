@@ -186,7 +186,7 @@ impl PerformanceOptimizer {
     }
 
     /// AVX-512 optimized stencil computation - removed unsafe implementation
-    #[cfg(feature = "avx512")]
+    #[cfg(target_feature = "avx512f")]
     #[target_feature(enable = "avx512f")]
     fn stencil_avx512(
         &mut self,
@@ -198,7 +198,7 @@ impl PerformanceOptimizer {
     }
 
     /// AVX-512 implementation (requires AVX-512 feature)
-    #[cfg(not(feature = "avx512"))]
+    #[cfg(not(target_feature = "avx512f"))]
     fn stencil_avx512(
         &mut self,
         _input: &Array3<f64>,

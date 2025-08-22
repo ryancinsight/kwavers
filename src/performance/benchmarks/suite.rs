@@ -394,7 +394,7 @@ impl BenchmarkSuite {
 
     /// Benchmark GPU operations
     fn benchmark_gpu(&mut self, _grid_size: usize) -> KwaversResult<()> {
-        #[cfg(feature = "gpu-acceleration")]
+        #[cfg(feature = "gpu")]
         {
             // Note: GPU benchmarking would require async runtime
             // For now, we'll skip the actual GPU benchmark
