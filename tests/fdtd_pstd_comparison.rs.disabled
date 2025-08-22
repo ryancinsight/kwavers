@@ -180,14 +180,17 @@ fn run_pstd_simulation_timed(
     t_end: f64,
 ) -> Array3<f64> {
     let config = PstdConfig {
-        k_space_correction: true,
-        k_space_order: 2,
-        anti_aliasing: true,
-        pml_stencil_size: 4,
+        use_kspace_correction: true,
+        correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
+        use_antialiasing: true,
+        use_absorption: false,
+        absorption_alpha: 0.0,
+        absorption_y: 1.0,
         cfl_factor: 0.3,
-        use_leapfrog: true,
-        enable_absorption: false,
-        absorption_model: None,
+        max_steps: 1000,
+        dispersive_media: false,
+        pml_layers: 4,
+        pml_alpha: 0.0,
     };
 
     let cfl_factor = config.cfl_factor;

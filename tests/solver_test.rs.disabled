@@ -110,14 +110,17 @@ fn test_pstd_solver() {
     fields[[0, center, center, center]] = TEST_PRESSURE_AMPLITUDE; // Point source in pressure field
 
     let config = PstdConfig {
-        k_space_correction: true,
-        k_space_order: DEFAULT_K_SPACE_ORDER,
-        anti_aliasing: true,
-        pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
+        use_kspace_correction: true,
+        correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
+        use_antialiasing: true,
+        use_absorption: false,
+        absorption_alpha: 0.0,
+        absorption_y: 1.0,
         cfl_factor: PSTD_CFL_FACTOR,
-        use_leapfrog: true,
-        enable_absorption: false,
-        absorption_model: None,
+        max_steps: 1000,
+        dispersive_media: false,
+        pml_layers: DEFAULT_PML_STENCIL_SIZE,
+        pml_alpha: 0.0,
     };
 
     let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");
@@ -232,14 +235,17 @@ fn test_wave_propagation() {
     {
         let mut fields_pstd = initial_fields.clone();
         let config = PstdConfig {
-            k_space_correction: true,
-            k_space_order: DEFAULT_K_SPACE_ORDER,
-            anti_aliasing: true,
-            pml_stencil_size: DEFAULT_PML_STENCIL_SIZE,
+            use_kspace_correction: true,
+            correction_method: kwavers::solver::pstd::CorrectionMethod::Sinc,
+            use_antialiasing: true,
+            use_absorption: false,
+            absorption_alpha: 0.0,
+            absorption_y: 1.0,
             cfl_factor: PSTD_CFL_FACTOR,
-            use_leapfrog: true,
-            enable_absorption: false,
-            absorption_model: None,
+            max_steps: 1000,
+            dispersive_media: false,
+            pml_layers: DEFAULT_PML_STENCIL_SIZE,
+            pml_alpha: 0.0,
         };
 
         let plugin = PstdPlugin::new(config, &grid).expect("Failed to create PSTD plugin");

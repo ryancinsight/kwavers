@@ -1,190 +1,146 @@
-# Kwavers: Production-Ready Acoustic Wave Simulation Library
+# Kwavers: Acoustic Wave Simulation Library
 
-[![Rust](https://img.shields.io/badge/rust-1.89%2B-green.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.89%2B-blue.svg)](https://www.rust-lang.org)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
-[![Tests](https://img.shields.io/badge/tests-5_of_5-green.svg)](./tests)
-[![Examples](https://img.shields.io/badge/examples-7_of_7-green.svg)](./examples)
+[![Tests](https://img.shields.io/badge/tests-5_of_5_core-yellow.svg)](./tests)
+[![Examples](https://img.shields.io/badge/examples-5_of_7-yellow.svg)](./examples)
 [![Warnings](https://img.shields.io/badge/warnings-0-green.svg)](./src)
-[![Status](https://img.shields.io/badge/status-production-green.svg)](./src)
+[![Status](https://img.shields.io/badge/status-partial_production-yellow.svg)](./src)
 
-## 🚀 Production Ready - Enhanced
+## ⚠️ Production Status - Please Read
 
-**Zero errors. Zero warnings. All tests pass. All examples work.**
+**Core features are stable. Advanced features have issues.**
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Build** | ✅ **PRISTINE** | 0 errors, 0 warnings |
-| **Tests** | ✅ **PASSING** | 5/5 integration tests |
-| **Examples** | ✅ **WORKING** | 7/7 fully functional |
-| **Physics** | ✅ **VALIDATED** | Literature verified |
-| **Architecture** | ✅ **SOLID** | Clean, maintainable |
-| **Performance** | ✅ **OPTIMIZED** | Release build ready |
-| **Code Quality** | ✅ **A++** | Industry-leading |
+| Feature | Status | Safe to Use |
+|---------|--------|-------------|
+| **Core Simulation** | ✅ Stable | Yes |
+| **FDTD Solver** | ✅ Working | Yes |
+| **Plugin System** | ✅ Functional | Yes |
+| **PSTD Solver** | ⚠️ Segfaults | Test carefully |
+| **GPU Support** | ❌ Not implemented | No |
+| **RTM/FWI** | ❌ Broken APIs | No |
 
-## Quick Start
+## Quick Start (Stable Features Only)
 
 ```bash
-# Build optimized release
+# Build
 cargo build --release
 
-# Run tests
-cargo test --test integration_test
-
-# Run examples
+# Run working examples
 cargo run --release --example basic_simulation
-cargo run --release --example wave_simulation
+cargo run --release --example plugin_example
 cargo run --release --example phased_array_beamforming
+
+# Run core tests (advanced tests disabled)
+cargo test --test integration_test
 ```
 
-## Core Features
+## What Works ✅
 
-### Solvers
-- **FDTD** - Finite-difference time-domain (Yee's algorithm)
-- **PSTD** - Pseudo-spectral time-domain (k-space methods)
-- **DG** - Discontinuous Galerkin methods
-- **Hybrid** - Multi-method coupling
+### Core Features
+- Grid and medium abstractions
+- Basic FDTD solver
+- Plugin architecture
+- PML/CPML boundaries
+- Homogeneous media
+- Basic wave propagation
 
-### Physics
-- **Wave Propagation** - Linear and nonlinear acoustics
-- **Medium Modeling** - Homogeneous, heterogeneous, tissue models
-- **Boundary Conditions** - PML, CPML, absorbing layers
-- **Sources** - Transducers, arrays, custom waveforms
+### Working Examples
+- `basic_simulation` - Core functionality demo
+- `plugin_example` - Plugin system demo
+- `phased_array_beamforming` - Array control
+- `physics_validation` - Validation tests
+- `wave_simulation` - Works but slow
 
-### Architecture
-- **Plugin System** - Composable physics modules
-- **Zero-Copy** - Efficient memory operations
-- **Parallel** - Multi-threaded with Rayon
-- **Type-Safe** - Rust's ownership system
+## Known Issues ⚠️
 
-## Usage Example
+### Critical Problems
+1. **PSTD solver causes segmentation faults** - FFT buffer issues
+2. **Advanced tests disabled** - 4 test files don't compile/crash
+3. **Examples fail** - tissue_model_example doesn't work
+4. **GPU is stub code only** - Not implemented
+
+### Do Not Use
+- GPU acceleration (not implemented)
+- RTM/FWI reconstruction (broken APIs)
+- PSTD solver in production (segfaults)
+
+## Usage Example (Safe)
 
 ```rust
 use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
-    physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
-    solver::plugin_based_solver::PluginBasedSolver,
-    boundary::pml::{PMLBoundary, PMLConfig},
-    source::NullSource,
-    time::Time,
+    solver::fdtd::{FdtdConfig, FdtdSolver},
     error::KwaversResult,
 };
-use std::sync::Arc;
 
 fn main() -> KwaversResult<()> {
-    // Setup simulation grid
-    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
+    // This is safe and works
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let medium = HomogeneousMedium::water(&grid);
     
-    // Configure medium properties
-    let medium = Arc::new(HomogeneousMedium::water(&grid));
+    let config = FdtdConfig {
+        spatial_order: 2,
+        staggered_grid: true,
+        cfl_factor: 0.5,
+        subgridding: false,
+        subgrid_factor: 1,
+    };
     
-    // Create solver with plugins
-    let mut solver = PluginBasedSolver::new(
-        grid.clone(),
-        Time::new(1e-7, 1000),
-        medium,
-        Box::new(PMLBoundary::new(PMLConfig::default())?),
-        Box::new(NullSource),
-    );
-    
-    // Register physics modules
-    solver.register_plugin(Box::new(AcousticWavePlugin::new(0.95)))?;
-    solver.initialize()?;
-    
-    // Run simulation
-    for step in 0..1000 {
-        solver.step(step, step as f64 * 1e-7)?;
-    }
+    // Basic simulation works fine
+    // ... 
     
     Ok(())
 }
 ```
 
-## Working Examples
+## Installation
 
-| Example | Description | Key Features |
-|---------|-------------|--------------|
-| `basic_simulation` | Core functionality demo | Grid setup, time stepping |
-| `wave_simulation` | Wave propagation | Plugin system, field evolution |
-| `plugin_example` | Custom physics modules | Extensibility, composition |
-| `phased_array_beamforming` | Array control | Beam steering, focusing |
-| `physics_validation` | Validation suite | Absorption, dispersion, conservation |
-| `pstd_fdtd_comparison` | Method comparison | Spectral vs finite-difference |
-| `tissue_model_example` | Biological media | Heterogeneous properties |
-
-## Design Principles
-
-The codebase follows industry best practices:
-
-- **SOLID** - Single responsibility, open/closed, Liskov substitution, interface segregation, dependency inversion
-- **CUPID** - Composable, Unix philosophy, predictable, idiomatic, domain-based
-- **GRASP** - General responsibility assignment software patterns
-- **CLEAN** - Clear, lean, efficient, adaptable, neat
-- **SSOT/SPOT** - Single source/point of truth
-- **PIM** - Pure, Immutable, Modular
-- **SLAP** - Single Level of Abstraction Principle
-- **DRY** - Don't Repeat Yourself
-- **POLA** - Principle of Least Astonishment
-
-## Performance
-
-- **Zero-cost abstractions** - Rust's compile-time optimizations
-- **SIMD operations** - Vectorized numerical computations
-- **Parallel execution** - Multi-threaded with Rayon
-- **Cache-friendly** - Optimized data structures
-- **Memory efficient** - Zero-copy operations where possible
-
-## Physics Validation
-
-All implementations validated against:
-- Yee's algorithm (1966)
-- Taflove & Hagness (2005)
-- Virieux (1986)
-- Conservation laws (energy, momentum, mass)
-- CFL stability conditions
-- Literature-verified test cases
-
-## Build Information
-
-### Requirements
-- Rust 1.89+
-- 8GB RAM recommended
-- Optional: CUDA for GPU acceleration
-
-### Build Options
-```bash
-# Standard build
-cargo build --release
-
-# With all features
-cargo build --release --all-features
-
-# Minimal build
-cargo build --release --no-default-features
+```toml
+[dependencies]
+# Use with caution - not all features work
+kwavers = "1.0.0-rc1"
 ```
+
+## Development Status
+
+This is a **release candidate** with:
+- ✅ Stable core (production-ready)
+- ⚠️ Experimental advanced features (use with caution)
+- ❌ Incomplete GPU support (do not use)
+
+### Roadmap
+- **v1.0** - Current release candidate
+- **v1.1** - Fix segfaults and test issues
+- **v2.0** - Complete GPU implementation
+
+## Contributing
+
+We need help with:
+1. Fixing PSTD segmentation faults
+2. Updating test APIs
+3. Implementing GPU support
+4. Performance optimization
 
 ## Testing
 
 ```bash
-# Integration tests
+# Run only stable tests
 cargo test --test integration_test
 
-# Run with optimizations
-cargo test --release
-
-# Specific test
-cargo test test_grid_creation
+# Disabled tests (will crash):
+# - solver_test.rs
+# - fdtd_pstd_comparison.rs
+# - rtm_validation_tests.rs
+# - fwi_validation_tests.rs
 ```
 
-## Contributing
+## Documentation
 
-Contributions welcome! Priority areas:
-- GPU acceleration (CUDA/OpenCL)
-- Additional physics models
-- Performance optimizations
-- Documentation improvements
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+- Core features are well documented
+- Advanced features may have incomplete docs
+- See examples for usage patterns
 
 ## License
 
@@ -193,23 +149,15 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/kwavers/kwavers/issues)
-- **Documentation**: [docs.rs/kwavers](https://docs.rs/kwavers)
-- **Examples**: [/examples](./examples)
-- **Discussions**: [GitHub Discussions](https://github.com/kwavers/kwavers/discussions)
+- **Known Problems**: See [CHECKLIST.md](CHECKLIST.md)
+- **Status**: See [PRD.md](PRD.md)
 
-## Citation
+## ⚠️ Important Notice
 
-If you use Kwavers in your research, please cite:
-```bibtex
-@software{kwavers2024,
-  title = {Kwavers: Acoustic Wave Simulation Library},
-  year = {2024},
-  url = {https://github.com/kwavers/kwavers}
-}
-```
+This library is partially production-ready. Core acoustic simulation features work well, but advanced imaging and GPU features are broken or unimplemented. Please test thoroughly before production use.
 
 ---
 
-**Status: Production Ready - Enhanced** ✅
+**Status: Partial Production** ⚠️
 
-The library is fully functional, tested, optimized, refactored to the highest standards, and ready for production use.
+Use core features with confidence. Avoid advanced features until v2.0.
