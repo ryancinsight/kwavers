@@ -144,6 +144,11 @@ pub mod optics {
     pub const SPEED_OF_LIGHT: f64 = 299792458.0; // m/s
     pub const PLANCK_CONSTANT: f64 = 6.62607015e-34; // J·s
     pub const PHOTON_ENERGY_CONVERSION: f64 = 1.602176634e-19; // J/eV
+    
+    // Refractive indices
+    pub const WATER_REFRACTIVE_INDEX: f64 = 1.333; // Water at 20°C, 589nm
+    pub const GLASS_REFRACTIVE_INDEX: f64 = 1.5; // Typical borosilicate glass
+    pub const AIR_REFRACTIVE_INDEX: f64 = 1.0003; // Air at STP
 
     // Tissue optical properties
     pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 0.03; // cm - Tissue optical diffusion coefficient

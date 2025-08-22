@@ -10,7 +10,7 @@ use kwavers::{
     Grid, HomogeneousMedium, KwaversResult,
 };
 use ndarray::Array4;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 /// Custom plugin for modeling frequency-dependent absorption
 #[derive(Debug)]

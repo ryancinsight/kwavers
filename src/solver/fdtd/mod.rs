@@ -1065,7 +1065,7 @@ impl PhysicsPlugin for FdtdPlugin {
         context: &PluginContext,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
-        use ndarray::s;
+        use ndarray::Axis;
 
         // Get field indices using type-safe approach
         let pressure_idx = UnifiedFieldType::Pressure.index();
@@ -1073,34 +1073,40 @@ impl PhysicsPlugin for FdtdPlugin {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        // Use zero-copy views for optimal performance with type-safe indices
-        let mut fields_view = fields.view_mut();
-        let (mut pressure, mut velocity_x, mut velocity_y, mut velocity_z) = fields_view
-            .multi_slice_mut((
-                s![pressure_idx, .., .., ..],
-                s![vx_idx, .., .., ..],
-                s![vy_idx, .., .., ..],
-                s![vz_idx, .., .., ..],
-            ));
-
-        // FDTD uses leapfrog scheme: update velocity first, then pressure
-
-        // Update velocities using current pressure - zero-copy operation
+        // Create temporary arrays for the update
+        // This avoids borrowing issues with the fields array
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        
+        // Extract current field values
+        let pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();
+        let mut vx = fields.index_axis(Axis(0), vx_idx).to_owned();
+        let mut vy = fields.index_axis(Axis(0), vy_idx).to_owned();
+        let mut vz = fields.index_axis(Axis(0), vz_idx).to_owned();
+        
+        // Update velocities using the solver
         self.solver.update_velocity(
-            &mut velocity_x,
-            &mut velocity_y,
-            &mut velocity_z,
+            &mut vx.view_mut(),
+            &mut vy.view_mut(),
+            &mut vz.view_mut(),
             &pressure.view(),
             medium,
             dt,
         )?;
-
-        // Update pressure using new velocities - zero-copy operation
+        
+        // Copy updated velocities back
+        fields.index_axis_mut(Axis(0), vx_idx).assign(&vx);
+        fields.index_axis_mut(Axis(0), vy_idx).assign(&vy);
+        fields.index_axis_mut(Axis(0), vz_idx).assign(&vz);
+        
+        // Update pressure using new velocities
+        let mut pressure = fields.index_axis_mut(Axis(0), pressure_idx);
         self.solver.update_pressure(
             &mut pressure,
-            &velocity_x.view(),
-            &velocity_y.view(),
-            &velocity_z.view(),
+            &vx.view(),
+            &vy.view(),
+            &vz.view(),
             medium,
             dt,
         )?;
