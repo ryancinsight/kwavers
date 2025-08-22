@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-Kwavers is a Rust-based acoustic wave simulation library that provides researchers and engineers with a safe, performant platform for computational acoustics. The library currently has working core functionality with a clear path to production readiness.
+Kwavers is a Rust-based acoustic wave simulation research project that attempts to provide a platform for computational acoustics. The library has theoretical foundations but lacks verification, testing infrastructure, and has significant architectural issues.
 
 ### Current State
 - ❓ **Build unknown** (No CI/CD pipeline)

@@ -1,9 +1,9 @@
 # Kwavers: Acoustic Wave Simulation Library
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
-[![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
-[![Examples](https://img.shields.io/badge/examples-1_working-yellow.svg)](./examples)
-[![Status](https://img.shields.io/badge/status-alpha-yellow.svg)](./src)
+[![Build](https://img.shields.io/badge/build-unknown-gray.svg)](https://github.com/kwavers/kwavers)
+[![Tests](https://img.shields.io/badge/tests-unverified-gray.svg)](./tests)
+[![Status](https://img.shields.io/badge/status-research_prototype-orange.svg)](./src)
 
 ## Project Status
 
@@ -16,23 +16,21 @@
 | **Physics** | ✅ **SOUND** | Mathematical models are correct |
 | **Code Quality** | ⚠️ **C+** | Good physics, poor software engineering |
 
-## Quick Start
+## Quick Start (Theoretical)
 
 ```bash
-# Clone and build
+# Clone repository
 git clone https://github.com/kwavers/kwavers
 cd kwavers
-cargo build --release
 
-# Run working example
+# Build (requires Rust toolchain)
+cargo build --release  # May have warnings/errors
+
+# Run example (if it compiles)
 cargo run --example basic_simulation
-
-# Output:
-# Grid: 64x64x64
-# CFL timestep: 1.15e-7 s
-# Grid points: 262144
-# Memory estimate: 21.0 MB
 ```
+
+**Note**: Build status cannot be verified without proper CI/CD.
 
 ## Working Features
 
