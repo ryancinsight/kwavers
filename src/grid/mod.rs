@@ -198,6 +198,7 @@ impl Grid {
     ///
     /// # Example
     /// ```
+    /// use kwavers::grid::Grid;
     /// let grid = Grid::new(5, 1, 1, 0.1, 0.1, 0.1);
     /// let x_coords = grid.x_coordinates();
     /// // x_coords will be [0.0, 0.1, 0.2, 0.3, 0.4]

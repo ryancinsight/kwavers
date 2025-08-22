@@ -91,11 +91,11 @@ impl PhysicsPlugin for PstdPlugin {
             ));
         }
         
-        // Extract field indices
-        let pressure_idx = 0;
-        let vx_idx = 1;
-        let vy_idx = 2;
-        let vz_idx = 3;
+        // Extract field indices using UnifiedFieldType
+        let pressure_idx = UnifiedFieldType::Pressure.index();
+        let vx_idx = UnifiedFieldType::VelocityX.index();
+        let vy_idx = UnifiedFieldType::VelocityY.index();
+        let vz_idx = UnifiedFieldType::VelocityZ.index();
         
         // Simple finite difference implementation to avoid FFT issues
         // This is a temporary fix for the segfault - proper spectral implementation needs debugging
