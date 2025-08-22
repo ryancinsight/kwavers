@@ -64,7 +64,7 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Get a field view (zero-copy, read-only)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
         if !self.allowed_fields.contains(&field_type) {
             return Err(FieldError::NotRegistered(format!(
                 "Field {} not allowed for this plugin",
@@ -78,7 +78,7 @@ impl<'a> FieldProvider<'a> {
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
-    ) -> Result<ArrayViewMut3<f64>, FieldError> {
+    ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
         if !self.allowed_fields.contains(&field_type) {
             return Err(FieldError::NotRegistered(format!(
                 "Field {} not allowed for this plugin",
@@ -193,7 +193,7 @@ impl FieldRegistry {
     }
 
     /// Get a specific field by type (zero-copy view)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
         let metadata = self
             .fields
             .get(field_type as usize)
@@ -213,7 +213,7 @@ impl FieldRegistry {
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
-    ) -> Result<ArrayViewMut3<f64>, FieldError> {
+    ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
         let metadata = self
             .fields
             .get(field_type as usize)

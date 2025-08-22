@@ -323,7 +323,7 @@ pub enum PiezoType {
     PZT4,   // High power
     PZT8,   // High temperature
     PVDF,   // Polymer
-    PMN_PT, // Single crystal
+    PmnPt, // Single crystal
     LiNbO3, // Lithium niobate
 }
 
@@ -379,7 +379,7 @@ impl PiezoMaterial {
     /// Create PMN-PT single crystal
     pub fn pmn_pt() -> Self {
         Self {
-            material_type: PiezoType::PMN_PT,
+            material_type: PiezoType::PmnPt,
             density: 8100.0,
             sound_speed: 4600.0,
             acoustic_impedance: 37.3,

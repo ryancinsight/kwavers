@@ -4,7 +4,6 @@
 
 use ndarray::{Array3, Zip};
 use crate::grid::Grid;
-use crate::error::KwaversResult;
 
 /// Conservation validation results
 #[derive(Debug, Clone)]

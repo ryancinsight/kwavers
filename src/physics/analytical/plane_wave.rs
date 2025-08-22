@@ -1,7 +1,6 @@
 //! Plane wave analytical solutions for validation
 
 use crate::grid::Grid;
-use crate::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;

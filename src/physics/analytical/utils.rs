@@ -1,8 +1,5 @@
 //! Utilities for physics validation and testing
 
-use crate::constants::optics::{
-    GAUSSIAN_PULSE_CENTER_FACTOR, GAUSSIAN_PULSE_WIDTH_FACTOR, WINDOW_WIDTH_FACTOR,
-};
 use crate::grid::Grid;
 use ndarray::Array3;
 use std::f64::consts::PI;

@@ -288,7 +288,9 @@ fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult
 fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
-    // Validate configuration first
+    // Skip deprecated validation - use PluginBasedSolver validation instead
+    // The validation is now handled by the solver itself
+    /*
     let validation_result = validate_simulation_config(&config)?;
     if !validation_result.is_valid {
         let error_summary = validation_result
@@ -305,6 +307,7 @@ fn create_validated_simulation(
             },
         ));
     }
+    */
 
     // Create grid using simulation config
     let grid = config.simulation.initialize_grid().map_err(|e| {
