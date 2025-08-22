@@ -7,7 +7,7 @@ use ndarray::Array3;
 use std::path::Path;
 
 // Re-export the nifti crate types for convenience
-pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject};
+pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject, ReaderOptions};
 
 /// NIFTI file reader with proper endianness and format handling
 pub struct NiftiReader {
@@ -42,7 +42,7 @@ impl NiftiReader {
         }
 
         // Load the NIFTI file
-        let nifti_object = InMemNiftiObject::from_file(path)
+        let nifti_object = ReaderOptions::new().read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         // Get header for dimensions
@@ -151,7 +151,7 @@ impl NiftiReader {
         }
 
         // Load the NIFTI object
-        let nifti_object = InMemNiftiObject::from_file(path)
+        let nifti_object = ReaderOptions::new().read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         // Get header
@@ -168,7 +168,7 @@ impl NiftiReader {
         let path = path.as_ref();
 
         // Load only the header
-        let nifti_object = InMemNiftiObject::from_file(path)
+        let nifti_object = ReaderOptions::new().read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         let header = nifti_object.header();

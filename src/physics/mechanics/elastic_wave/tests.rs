@@ -23,7 +23,7 @@ mod tests {
     fn test_elastic_wave_single_step() {
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
         let mut elastic_wave = ElasticWave::new(&grid).unwrap();
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let source = NullSource;
 
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));

@@ -27,6 +27,20 @@ use crate::medium::Medium;
 use ndarray::Array3;
 use std::f64::consts::PI;
 
+// Scattering regime thresholds
+/// Rayleigh regime upper bound (ka < 0.1)
+const RAYLEIGH_REGIME_THRESHOLD: f64 = 0.1;
+/// Mie regime upper bound (0.1 < ka < 10.0)
+const MIE_REGIME_THRESHOLD: f64 = 10.0;
+
+// Scattering coefficients
+/// Rayleigh scattering coefficient (8π/3)
+const RAYLEIGH_COEFFICIENT: f64 = 8.0 * PI / 3.0;
+/// Rayleigh-Gans angular factor coefficient
+const RAYLEIGH_GANS_ANGULAR_COEFFICIENT: f64 = 3.0 / (16.0 * PI);
+/// Isotropic phase function normalization
+const ISOTROPIC_PHASE_NORMALIZATION: f64 = 1.0 / (4.0 * PI);
+
 /// Scattering regime based on size parameter
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ScatteringRegime {
@@ -66,9 +80,9 @@ impl ScatteringCalculator {
     pub fn determine_regime(&self, particle_radius: f64) -> ScatteringRegime {
         let size_parameter = self.wave_number * particle_radius;
 
-        if size_parameter < 0.1 {
+        if size_parameter < RAYLEIGH_REGIME_THRESHOLD {
             ScatteringRegime::Rayleigh
-        } else if size_parameter < 10.0 {
+        } else if size_parameter < MIE_REGIME_THRESHOLD {
             ScatteringRegime::Mie
         } else {
             ScatteringRegime::Geometric
@@ -86,7 +100,7 @@ impl ScatteringCalculator {
         let m2 = refractive_index_ratio * refractive_index_ratio;
         let polarizability = (m2 - 1.0) / (m2 + 2.0);
 
-        (8.0 * PI / 3.0) * ka4 * a6 * polarizability * polarizability
+        RAYLEIGH_COEFFICIENT * ka4 * a6 * polarizability * polarizability
     }
 
     /// Calculate Rayleigh scattering amplitude

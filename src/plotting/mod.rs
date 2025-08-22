@@ -7,10 +7,10 @@ use ndarray::Array3;
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
-#[cfg(feature = "plotly")]
+#[cfg(feature = "plotting")]
 use plotly::{HeatMap, Layout, Plot, Scatter, Surface};
 
-#[cfg(feature = "plotly")]
+#[cfg(feature = "plotting")]
 mod plotting_impl {
     use crate::grid::Grid;
     use crate::physics::field_indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
@@ -226,16 +226,16 @@ mod plotting_impl {
 }
 
 // Re-export functions when plotly feature is enabled
-#[cfg(feature = "plotly")]
+#[cfg(feature = "plotting")]
 pub use plotting_impl::*;
 
 // Provide fallback implementations when plotly feature is disabled
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_positions(_positions: &[(f64, f64, f64)], _title: &str, _filename: &str) {
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_pressure_field_2d(
     _pressure: &Array3<f64>,
     _grid: &Grid,
@@ -246,7 +246,7 @@ pub fn plot_pressure_field_2d(
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_pressure_field_3d(
     _pressure: &Array3<f64>,
     _grid: &Grid,
@@ -256,7 +256,7 @@ pub fn plot_pressure_field_3d(
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_temporal_evolution(
     _data: &[f64],
     _time_points: &[f64],
@@ -267,7 +267,7 @@ pub fn plot_temporal_evolution(
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_field_comparison(
     _field1: &Array3<f64>,
     _field2: &Array3<f64>,
@@ -279,13 +279,13 @@ pub fn plot_field_comparison(
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn save_data_csv(_data: &Array3<f64>, _filename: &str) -> Result<(), std::io::Error> {
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
     Ok(())
 }
 
-#[cfg(not(feature = "plotly"))]
+#[cfg(not(feature = "plotting"))]
 pub fn plot_recorder_data(_recorder: &crate::recorder::Recorder, _filename: &str) {
     log::warn!("Plotting functionality not available - compile with 'plotly' feature");
 }

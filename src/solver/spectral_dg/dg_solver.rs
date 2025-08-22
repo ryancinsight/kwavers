@@ -363,6 +363,7 @@ impl DGSolver {
         basis_type: BasisType,
     ) -> KwaversResult<Array2<f64>> {
         let n = nodes.len();
+        #[allow(unused_assignments)]
         let mut dr = Array2::zeros((n, n));
 
         // Compute derivative Vandermonde matrix

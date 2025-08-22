@@ -19,8 +19,8 @@ pub mod thermal; // Unified thermal physics module
 pub mod traits;
 pub mod wave_propagation; // NEW: Wave propagation with reflection and refraction
 
-#[cfg(test)]
-pub mod analytical_tests;
+pub mod analytical;
+pub mod conservation;
 
 #[cfg(test)]
 pub mod validation;

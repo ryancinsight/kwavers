@@ -64,7 +64,7 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Get a field view (zero-copy, read-only)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
         if !self.allowed_fields.contains(&field_type) {
             return Err(FieldError::NotRegistered(format!(
                 "Field {} not allowed for this plugin",
@@ -78,7 +78,7 @@ impl<'a> FieldProvider<'a> {
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
-    ) -> Result<ArrayViewMut3<f64>, FieldError> {
+    ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
         if !self.allowed_fields.contains(&field_type) {
             return Err(FieldError::NotRegistered(format!(
                 "Field {} not allowed for this plugin",
@@ -114,20 +114,22 @@ impl FieldRegistry {
     /// Build the field registry by allocating data array
     /// This allows multiple field registrations without reallocations
     pub fn build(&mut self) -> Result<(), FieldError> {
-        let num_fields = self.next_data_index;
-        if num_fields == 0 {
+        // Find the maximum field index to determine array size
+        let max_field_index = self.fields.len();
+        if max_field_index == 0 {
             self.data = None;
             self.deferred_allocation = false;
             return Ok(());
         }
 
         let (nx, ny, nz) = self.grid_dims;
-        self.data = Some(Array4::zeros((num_fields, nx, ny, nz)));
+        // Allocate based on maximum field index, not number of fields
+        self.data = Some(Array4::zeros((max_field_index, nx, ny, nz)));
         self.deferred_allocation = false;
 
         debug!(
-            "Built FieldRegistry with {} fields and dimensions ({}, {}, {})",
-            num_fields, nx, ny, nz
+            "Built FieldRegistry with array size {} for {} registered fields and dimensions ({}, {}, {})",
+            max_field_index, self.next_data_index, nx, ny, nz
         );
         Ok(())
     }
@@ -150,7 +152,7 @@ impl FieldRegistry {
         }
 
         self.fields[idx] = Some(FieldMetadata {
-            index: self.next_data_index,
+            index: idx,  // Use the field type's enum value as the index
             description,
             active: true,
         });
@@ -191,7 +193,7 @@ impl FieldRegistry {
     }
 
     /// Get a specific field by type (zero-copy view)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<f64>, FieldError> {
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
         let metadata = self
             .fields
             .get(field_type as usize)
@@ -211,7 +213,7 @@ impl FieldRegistry {
     pub fn get_field_mut(
         &mut self,
         field_type: UnifiedFieldType,
-    ) -> Result<ArrayViewMut3<f64>, FieldError> {
+    ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
         let metadata = self
             .fields
             .get(field_type as usize)
@@ -377,7 +379,7 @@ pub struct PluginBasedSolver {
 
 /// Enhanced performance metrics for high-performance computing
 #[derive(Default)]
-struct PerformanceMetrics {
+pub struct PerformanceMetrics {
     /// Total simulation steps completed
     total_steps: usize,
     /// Plugin execution times by name [seconds]
@@ -516,6 +518,10 @@ impl PluginBasedSolver {
     /// Initialize the simulation
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
+
+        // Build the field registry to allocate field data
+        self.field_registry.build()
+            .map_err(|e| KwaversError::Field(e))?;
 
         // Initialize all plugins
         self.plugin_manager

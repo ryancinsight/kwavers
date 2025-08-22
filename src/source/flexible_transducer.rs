@@ -1057,7 +1057,7 @@ mod tests {
         let config = FlexibleTransducerConfig::default();
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid);
 
         let transducer = FlexibleTransducerArray::new(config, signal, &medium, &grid);
         assert!(transducer.is_ok());
@@ -1071,7 +1071,7 @@ mod tests {
         let config = FlexibleTransducerConfig::default();
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid);
 
         let transducer = FlexibleTransducerArray::new(config, signal, &medium, &grid).unwrap();
 
@@ -1086,7 +1086,7 @@ mod tests {
         let config = FlexibleTransducerConfig::default();
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1540.0, 1000.0, &grid);
 
         let transducer = FlexibleTransducerArray::new(config, signal, &medium, &grid).unwrap();
         let uncertainties = transducer.estimate_geometry_uncertainty().unwrap();

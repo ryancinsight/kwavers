@@ -1,5 +1,5 @@
-// Volume Rendering Shader - Phase 11 Advanced Visualization
-// High-performance GPU volume rendering with ray casting and transparency
+// Volume Rendering Shader - Phase 11 Visualization
+// GPU volume rendering with ray casting and transparency
 
 struct VolumeUniforms {
     view_matrix: mat4x4<f32>,

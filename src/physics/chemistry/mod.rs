@@ -856,7 +856,7 @@ mod tests {
         let bubble_radius = Array3::zeros((10, 10, 10));
         let temperature = Array3::zeros((10, 10, 10));
         let medium = crate::medium::homogeneous::HomogeneousMedium::from_minimal(
-            1000.0, 1500.0, &grid, 0.1, 1.0,
+            1000.0, 1500.0, &grid
         );
 
         // Valid parameters
