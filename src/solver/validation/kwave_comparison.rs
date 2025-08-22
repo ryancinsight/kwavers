@@ -176,14 +176,14 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
 
             // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, dt);
 
             // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
-            // TODO: update_velocity has wrong signature here
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure, dt);
         }
 
         // Compare with analytical solution
@@ -324,14 +324,14 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
 
             // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, dt);
 
             // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
-            // TODO: update_velocity has wrong signature here
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure, dt);
         }
 
         // Check for proper transmission and reflection
@@ -539,14 +539,14 @@ impl KWaveValidator {
             let divergence = solver.compute_divergence(&vx, &vy, &vz);
 
             // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
+            let mut pressure_view = pressure.view_mut();
+            solver.update_pressure(&mut pressure_view, &divergence, dt);
 
             // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
-            solver.update_velocity(&medium, &self.grid, dt)?;
+            let mut vx_view = vx.view_mut();
+            let mut vy_view = vy.view_mut();
+            let mut vz_view = vz.view_mut();
+            solver.update_velocity(&mut vx_view, &mut vy_view, &mut vz_view, &pressure, dt);
 
             boundary_data.push(self.extract_boundary(&pressure));
         }

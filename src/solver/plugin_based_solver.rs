@@ -882,3 +882,21 @@ mod tests {
         assert_eq!(solver.field_registry.registered_fields().len(), 0);
     }
 }
+
+// Getter methods for PluginBasedSolver
+impl PluginBasedSolver {
+    /// Get current time
+    pub fn time(&self) -> f64 {
+        self.time.current
+    }
+    
+    /// Get medium
+    pub fn medium(&self) -> &Arc<dyn Medium> {
+        &self.medium
+    }
+    
+    /// Get source
+    pub fn source(&self) -> &Box<dyn Source> {
+        &self.source
+    }
+}

@@ -447,14 +447,14 @@ impl TimeReversalReconstructor {
             solver.step(step, step as f64 * solver.time().dt)?;
 
             // Track maximum amplitude at each point
-            //             let pressure = solver.fields.fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
-
-            // Update max amplitude field
-            // TODO: Fix field access - needs proper API
-            // for ((i, j, k), max_val) in max_amplitude_field.indexed_iter_mut() {
-            //     let current_val = pressure[[i, j, k]];
-            //     *max_val = f64::max(*max_val, current_val.abs());
-            // }
+            // Get pressure field using proper API
+            if let Some(pressure) = solver.get_field(UnifiedFieldType::Pressure) {
+                // Update max amplitude field
+                for ((i, j, k), max_val) in max_amplitude_field.indexed_iter_mut() {
+                    let current_val = pressure[[i, j, k]];
+                    *max_val = f64::max(*max_val, current_val.abs());
+                }
+            }
 
             // Record if needed
             if step % 10 == 0 {

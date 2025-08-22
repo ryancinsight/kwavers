@@ -155,8 +155,8 @@ pub struct VisualizationEngine {
 }
 
 impl VisualizationEngine {
-    /// Create a new visualization engine
-    pub fn new(config: VisualizationConfig) -> KwaversResult<Self> {
+    /// Create a visualization engine
+    pub fn create(config: VisualizationConfig) -> KwaversResult<Self> {
         info!("Initializing Phase 11 Visualization Engine");
 
         let metrics = Arc::new(Mutex::new(VisualizationMetrics {
@@ -193,13 +193,13 @@ impl VisualizationEngine {
         {
             // Initialize renderer with GPU context
             self.renderer =
-                Some(renderer::Renderer3D::new(&self.config, gpu_context.clone()).await?);
+                Some(renderer::Renderer3D::create(&self.config, gpu_context.clone()).await?);
 
             // Initialize data pipeline for efficient GPU transfers
             self.data_pipeline = Some(data_pipeline::DataPipeline::new(gpu_context).await?);
 
             // Initialize interactive controls
-            self.controls = Some(controls::InteractiveControls::new(&self.config)?);
+            self.controls = Some(controls::InteractiveControls::create(&self.config)?);
         }
 
         info!("GPU visualization initialization complete");
