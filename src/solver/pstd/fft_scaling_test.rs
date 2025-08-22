@@ -8,6 +8,7 @@ mod tests {
     use super::super::*;
     use crate::grid::Grid;
     use crate::medium::HomogeneousMedium;
+    use crate::solver::pstd::config::CorrectionMethod;
     use ndarray::{Array3, Array4};
     use num_complex::Complex;
     use std::f64::consts::PI;
@@ -59,14 +60,17 @@ mod tests {
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
-            k_space_correction: false,  // Disable for simpler testing
-            k_space_order: 2,
-            anti_aliasing: false,
-            pml_stencil_size: 4,
+            use_kspace_correction: false,  // Disable for simpler testing
+            correction_method: CorrectionMethod::None,
+            use_antialiasing: false,
+            use_absorption: false,
+            absorption_alpha: 0.0,
+            absorption_y: 0.0,
             cfl_factor: 0.3,
-            use_leapfrog: false,  // Use Euler for simplicity
-            enable_absorption: false,
-            absorption_model: None,
+            max_steps: 1000,
+            dispersive_media: false,
+            pml_layers: 4,
+            pml_alpha: 0.0,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
@@ -106,14 +110,17 @@ mod tests {
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
-            k_space_correction: false,
-            k_space_order: 2,
-            anti_aliasing: false,
-            pml_stencil_size: 4,
+            use_kspace_correction: false,
+            correction_method: CorrectionMethod::None,
+            use_antialiasing: false,
+            use_absorption: false,
+            absorption_alpha: 0.0,
+            absorption_y: 0.0,
             cfl_factor: 0.3,
-            use_leapfrog: false,
-            enable_absorption: false,
-            absorption_model: None,
+            max_steps: 1000,
+            dispersive_media: false,
+            pml_layers: 4,
+            pml_alpha: 0.0,
         };
         
         let mut solver = PstdSolver::new(config, &grid).unwrap();
@@ -158,14 +165,17 @@ mod tests {
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 1.0);
         
         let config = PstdConfig {
-            k_space_correction: true,
-            k_space_order: 4,
-            anti_aliasing: true,
-            pml_stencil_size: 4,
+            use_kspace_correction: true,
+            correction_method: CorrectionMethod::Exact,
+            use_antialiasing: true,
+            use_absorption: false,
+            absorption_alpha: 0.0,
+            absorption_y: 0.0,
             cfl_factor: 0.3,
-            use_leapfrog: true,
-            enable_absorption: false,
-            absorption_model: None,
+            max_steps: 1000,
+            dispersive_media: false,
+            pml_layers: 4,
+            pml_alpha: 0.0,
         };
         
         let cfl_factor = config.cfl_factor;
