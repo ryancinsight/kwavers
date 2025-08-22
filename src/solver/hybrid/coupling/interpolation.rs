@@ -83,7 +83,13 @@ impl InterpolationManager {
     ) -> KwaversResult<Array3<f64>> {
         // Linear interpolation implementation
         let shape = source_field.shape();
-        Ok(Array3::zeros([shape[0], shape[1], shape[2]])) // TODO: Implement
+        let mut result = Array3::zeros([shape[0], shape[1], shape[2]]);
+        
+        // For now, return a copy of the source field
+        // Full trilinear interpolation would require mapping target coordinates
+        // to source grid indices and performing weighted averaging
+        result.assign(source_field);
+        Ok(result)
     }
 
     fn cubic_spline_interpolation(

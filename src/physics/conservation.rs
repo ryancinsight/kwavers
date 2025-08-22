@@ -56,7 +56,7 @@ pub fn validate_mass_conservation(
     dt: f64,
     grid: &Grid,
 ) -> f64 {
-    let mut max_error = 0.0;
+    let mut max_error: f64 = 0.0;
     let dx_inv = 1.0 / grid.dx;
     let dy_inv = 1.0 / grid.dy;
     let dz_inv = 1.0 / grid.dz;
@@ -101,9 +101,9 @@ pub fn validate_momentum_conservation(
     dt: f64,
     grid: &Grid,
 ) -> (f64, f64, f64) {
-    let mut max_error_x = 0.0;
-    let mut max_error_y = 0.0;
-    let mut max_error_z = 0.0;
+    let mut max_error_x: f64 = 0.0;
+    let mut max_error_y: f64 = 0.0;
+    let mut max_error_z: f64 = 0.0;
     
     let dx_inv = 1.0 / grid.dx;
     let dy_inv = 1.0 / grid.dy;

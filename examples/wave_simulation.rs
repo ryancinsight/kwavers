@@ -55,10 +55,18 @@ fn main() -> KwaversResult<()> {
         source
     );
     
+    // Register acoustic wave plugin
+    use kwavers::physics::plugin::acoustic_wave_plugin::AcousticWavePlugin;
+    let acoustic_plugin = Box::new(AcousticWavePlugin::new(0.95)); // CFL number
+    solver.register_plugin(acoustic_plugin)?;
+    
     println!("\nSimulation parameters:");
     println!("  Time step: {:.2} ns", dt * 1e9);
     println!("  Steps: {}", num_steps);
     println!("  Total time: {:.2} μs", total_time * 1e6);
+
+    // Initialize the solver
+    solver.initialize()?;
 
     // Run simulation
     println!("\nRunning simulation...");

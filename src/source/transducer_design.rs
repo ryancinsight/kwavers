@@ -777,7 +777,7 @@ pub struct TransducerDesign {
 }
 
 impl TransducerDesign {
-    /// Design optimized transducer for given specifications
+    /// Design transducer for given specifications
     pub fn design_for_application(
         center_frequency: f64,
         num_elements: usize,

@@ -1,4 +1,4 @@
-// Volume Compute Shader - Phase 11 Advanced Visualization
+// Volume Compute Shader - Phase 11 Visualization
 // GPU compute shaders for volume processing and isosurface extraction
 
 struct VolumeUniforms {

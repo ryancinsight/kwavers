@@ -114,20 +114,22 @@ impl FieldRegistry {
     /// Build the field registry by allocating data array
     /// This allows multiple field registrations without reallocations
     pub fn build(&mut self) -> Result<(), FieldError> {
-        let num_fields = self.next_data_index;
-        if num_fields == 0 {
+        // Find the maximum field index to determine array size
+        let max_field_index = self.fields.len();
+        if max_field_index == 0 {
             self.data = None;
             self.deferred_allocation = false;
             return Ok(());
         }
 
         let (nx, ny, nz) = self.grid_dims;
-        self.data = Some(Array4::zeros((num_fields, nx, ny, nz)));
+        // Allocate based on maximum field index, not number of fields
+        self.data = Some(Array4::zeros((max_field_index, nx, ny, nz)));
         self.deferred_allocation = false;
 
         debug!(
-            "Built FieldRegistry with {} fields and dimensions ({}, {}, {})",
-            num_fields, nx, ny, nz
+            "Built FieldRegistry with array size {} for {} registered fields and dimensions ({}, {}, {})",
+            max_field_index, self.next_data_index, nx, ny, nz
         );
         Ok(())
     }
@@ -150,7 +152,7 @@ impl FieldRegistry {
         }
 
         self.fields[idx] = Some(FieldMetadata {
-            index: self.next_data_index,
+            index: idx,  // Use the field type's enum value as the index
             description,
             active: true,
         });
@@ -516,6 +518,10 @@ impl PluginBasedSolver {
     /// Initialize the simulation
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
+
+        // Build the field registry to allocate field data
+        self.field_registry.build()
+            .map_err(|e| KwaversError::Field(e))?;
 
         // Initialize all plugins
         self.plugin_manager
