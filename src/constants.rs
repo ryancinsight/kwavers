@@ -4,6 +4,8 @@ use std::f64::consts::PI;
 
 /// Common numerical constants
 pub mod numerical {
+    use std::f64::consts::PI;
+    
     /// Default CFL safety factor for stability
     pub const CFL_SAFETY_FACTOR: f64 = 0.95;
     /// Default grid resolution points
@@ -12,12 +14,50 @@ pub mod numerical {
     pub const MIN_GRID_POINTS: usize = 10;
     /// Maximum grid points for memory safety
     pub const MAX_GRID_POINTS: usize = 1000;
-    /// Default convergence tolerance
-    pub const CONVERGENCE_TOLERANCE: f64 = 1e-6;
     /// Default spatial resolution in meters
     pub const DEFAULT_SPATIAL_RESOLUTION: f64 = 1e-3;
     /// Interpolation factor for symmetric corrections
     pub const SYMMETRIC_CORRECTION_FACTOR: f64 = 0.5;
+    
+    // Core numerical constants
+    pub const EPSILON: f64 = 1e-10;
+    pub const MAX_ITERATIONS: usize = 1000;
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-6;
+    
+    // Finite difference coefficients
+    pub const FD2_CENTRAL_COEFF: f64 = 0.5;
+    pub const FD2_FORWARD_COEFF: [f64; 3] = [-1.5, 2.0, -0.5];
+    pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5];
+    pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;
+    pub const THIRD_ORDER_DIFF_COEFF: f64 = 1.0;
+    
+    // Fourth-order coefficients
+    pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0 / 12.0, -2.0 / 3.0, 0.0, 2.0 / 3.0, -1.0 / 12.0];
+    pub const FD4_LAPLACIAN_COEFF: [f64; 5] = [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
+    
+    // FFT scaling
+    pub const FFT_FORWARD_SCALE: f64 = 1.0;
+    pub const FFT_INVERSE_SCALE_2D: f64 = 1.0;
+    pub const FFT_INVERSE_SCALE_3D: f64 = 1.0;
+    pub const FFT_K_SCALING: f64 = 2.0 * PI;
+    
+    // WENO scheme
+    pub const WENO_WEIGHT_0: f64 = 0.1;
+    pub const WENO_WEIGHT_1: f64 = 0.6;
+    pub const WENO_WEIGHT_2: f64 = 0.3;
+    pub const WENO_EPSILON: f64 = 1e-6;
+    pub const STENCIL_COEFF_1_4: f64 = 0.25;
+    
+    // Artificial viscosity
+    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
+    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+    pub const MAX_VISCOSITY_LIMIT: f64 = 2.0;
+    
+    // PML parameters
+    pub const PML_ALPHA_MAX: f64 = 0.0;
+    pub const PML_POLYNOMIAL_ORDER: f64 = 2.0;
+    pub const PML_SIGMA_OPTIMAL: f64 = 0.8;
 }
 
 /// Standard medium properties
@@ -210,48 +250,7 @@ pub mod cfl {
     pub const AGGRESSIVE: f64 = 0.4; // Aggressive CFL value
 }
 
-/// Numerical constants
-pub mod numerical {
-    pub const EPSILON: f64 = 1e-10;
-    pub const MAX_ITERATIONS: usize = 1000;
-    pub const CONVERGENCE_TOLERANCE: f64 = 1e-6;
-
-    // Finite difference coefficients for second-order accurate schemes
-    pub const FD2_CENTRAL_COEFF: f64 = 0.5; // Central difference coefficient
-    pub const FD2_FORWARD_COEFF: [f64; 3] = [-1.5, 2.0, -0.5]; // Forward difference
-    pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5]; // Backward difference
-    pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0; // Second order difference coefficient
-    pub const THIRD_ORDER_DIFF_COEFF: f64 = 1.0; // Third order difference coefficient
-
-    // Fourth-order accurate finite difference coefficients
-    pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0 / 12.0, -2.0 / 3.0, 0.0, 2.0 / 3.0, -1.0 / 12.0];
-    pub const FD4_LAPLACIAN_COEFF: [f64; 5] =
-        [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
-
-    // FFT scaling factors
-    pub const FFT_FORWARD_SCALE: f64 = 1.0;
-    pub const FFT_INVERSE_SCALE_2D: f64 = 1.0; // Will be divided by N*M at runtime
-    pub const FFT_INVERSE_SCALE_3D: f64 = 1.0; // Will be divided by N*M*L at runtime
-    pub const FFT_K_SCALING: f64 = 2.0 * std::f64::consts::PI; // k-space scaling factor
-
-    // WENO scheme weights and coefficients
-    pub const WENO_WEIGHT_0: f64 = 0.1;
-    pub const WENO_WEIGHT_1: f64 = 0.6;
-    pub const WENO_WEIGHT_2: f64 = 0.3;
-    pub const WENO_EPSILON: f64 = 1e-6;
-    pub const STENCIL_COEFF_1_4: f64 = 0.25;
-
-    // Artificial viscosity coefficients
-    pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
-    pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
-    pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
-    pub const MAX_VISCOSITY_LIMIT: f64 = 2.0;
-
-    // PML parameters
-    pub const PML_ALPHA_MAX: f64 = 0.0; // Maximum PML alpha value
-    pub const PML_POLYNOMIAL_ORDER: f64 = 2.0; // PML polynomial order
-    pub const PML_SIGMA_OPTIMAL: f64 = 0.8; // Optimal PML sigma factor
-}
+// Numerical constants have been moved to the first numerical module above
 
 /// Material constants
 pub mod material {

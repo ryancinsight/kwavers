@@ -163,31 +163,25 @@ impl KWaveValidator {
 
         // Setup PSTD solver directly
         let config = PstdConfig::default();
-        let solver = PstdSolver::new(config, &self.grid)?;
+        let mut solver = PstdSolver::new(config, &self.grid)?;
 
-        // Initialize velocity fields
-        let mut vx = self.grid.create_field();
-        let mut vy = self.grid.create_field();
-        let mut vz = self.grid.create_field();
+        // Create a null source for testing
+        use crate::source::NullSource;
+        let source = NullSource;
 
         let n_steps = (t_end / dt) as usize;
+        let mut time = 0.0;
         for _ in 0..n_steps {
-            // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz);
-
-            // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
-
-            // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
-            // TODO: update_velocity has wrong signature here
+            // Update pressure and velocity using the correct API
+            solver.update_pressure(&medium, &source, &self.grid, time, dt)?;
+            solver.update_velocity(&medium, &self.grid, dt)?;
+            time += dt;
         }
+        
+        // Get the final pressure field from the solver
+        let final_pressure = solver.get_pressure().clone();
 
         // Compare with analytical solution
-        let final_pressure = pressure.clone();
         let error = self.compute_relative_error(&final_pressure, &pressure)?;
 
         Ok(TestResult {
@@ -310,32 +304,24 @@ impl KWaveValidator {
         // Run simulation
         // Use PSTD solver directly
         let config = PstdConfig::default();
-        let solver = PstdSolver::new(config, &self.grid)?;
+        let mut solver = PstdSolver::new(config, &self.grid)?;
 
-        // Initialize velocity fields
-        let mut vx = self.grid.create_field();
-        let mut vy = self.grid.create_field();
-        let mut vz = self.grid.create_field();
+        // Create a null source for testing
+        use crate::source::NullSource;
+        let source = NullSource;
 
         let dt = 5e-8;
         let n_steps = 500;
+        let mut time = 0.0;
         for _ in 0..n_steps {
-            // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz);
-
-            // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
-
-            // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
-            // TODO: update_velocity has wrong signature here
+            // Update pressure and velocity using the correct API
+            solver.update_pressure(&medium, &source, &self.grid, time, dt)?;
+            solver.update_velocity(&medium, &self.grid, dt)?;
+            time += dt;
         }
 
         // Check for proper transmission and reflection
-        let final_pressure = pressure.clone();
+        let final_pressure = solver.get_pressure().clone();
 
         // Simple validation: check energy distribution
         let energy_layer1: f64 = final_pressure
@@ -523,32 +509,23 @@ impl KWaveValidator {
         let config = PstdConfig::default();
         let mut solver = PstdSolver::new(config, &self.grid)?;
 
-        // Initialize pressure and velocity fields
-        let mut pressure = initial_pressure.clone();
-        let mut vx = self.grid.create_field();
-        let mut vy = self.grid.create_field();
-        let mut vz = self.grid.create_field();
+        // Create a null source for testing
+        use crate::source::NullSource;
+        let source = NullSource;
 
         let dt = 5e-8;
         let n_steps = 1000;
+        let mut time = 0.0;
 
         // Record boundary data
         let mut boundary_data = Vec::new();
         for _ in 0..n_steps {
-            // Compute velocity divergence
-            let divergence = solver.compute_divergence(&vx, &vy, &vz);
-
-            // Update pressure
-            let pressure_view = pressure.view_mut();
-            // TODO: update_pressure has wrong signature here
-
-            // Update velocity
-            let vx_view = vx.view_mut();
-            let vy_view = vy.view_mut();
-            let vz_view = vz.view_mut();
+            // Update pressure and velocity using the correct API
+            solver.update_pressure(&medium, &source, &self.grid, time, dt)?;
             solver.update_velocity(&medium, &self.grid, dt)?;
+            time += dt;
 
-            boundary_data.push(self.extract_boundary(&pressure));
+            boundary_data.push(self.extract_boundary(solver.get_pressure()));
         }
 
         // Time reversal

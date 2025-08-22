@@ -183,4 +183,14 @@ impl PstdSolver {
     ) -> Array3<f64> {
         self.spectral.compute_divergence(vx, vy, vz)
     }
+    
+    /// Get the current pressure field
+    pub fn get_pressure(&self) -> &Array3<f64> {
+        &self.pressure
+    }
+    
+    /// Get the current velocity fields
+    pub fn get_velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
+        (&self.velocity_x, &self.velocity_y, &self.velocity_z)
+    }
 }

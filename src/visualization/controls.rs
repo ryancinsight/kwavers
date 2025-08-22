@@ -79,8 +79,8 @@ impl ParameterValue {
 #[derive(Debug, Clone)]
 pub struct ParameterChangeEvent {
     pub parameter_name: String,
-    pub old_value: ParameterValue,
-    pub new_value: ParameterValue,
+    pub previous_value: ParameterValue,
+    pub current_value: ParameterValue,
     pub timestamp: Instant,
 }
 
@@ -119,8 +119,8 @@ struct UiState {
 }
 
 impl InteractiveControls {
-    /// Create a new interactive controls manager
-    pub fn new(config: &VisualizationConfig) -> KwaversResult<Self> {
+    /// Create an interactive controls manager
+    pub fn create(config: &VisualizationConfig) -> KwaversResult<Self> {
         info!("Initializing interactive controls system");
 
         let mut controls = Self {
@@ -153,7 +153,7 @@ impl InteractiveControls {
         Ok(controls)
     }
 
-    /// Register a new parameter for interactive control
+    /// Register a parameter for interactive control
     pub fn register_parameter(&mut self, definition: ParameterDefinition) -> KwaversResult<()> {
         debug!("Registering parameter: {}", definition.name);
 
@@ -194,7 +194,7 @@ impl InteractiveControls {
         }
 
         // Create change event
-        let old_value = self
+        let previous_value = self
             .current_values
             .get(name)
             .cloned()
@@ -202,8 +202,8 @@ impl InteractiveControls {
 
         let change_event = ParameterChangeEvent {
             parameter_name: name.to_string(),
-            old_value,
-            new_value: value.clone(),
+            previous_value,
+            current_value: value.clone(),
             timestamp: Instant::now(),
         };
 
@@ -218,7 +218,7 @@ impl InteractiveControls {
 
         debug!(
             "Updated parameter '{}' to {:?}",
-            name, change_event.new_value
+            name, change_event.current_value
         );
         Ok(())
     }
@@ -272,7 +272,7 @@ impl InteractiveControls {
     pub fn undo_last_change(&mut self) -> KwaversResult<()> {
         if let Some(last_change) = self.parameter_history.pop() {
             self.current_values
-                .insert(last_change.parameter_name.clone(), last_change.old_value);
+                .insert(last_change.parameter_name.clone(), last_change.previous_value);
             info!("Undid change to parameter: {}", last_change.parameter_name);
             Ok(())
         } else {
@@ -397,16 +397,16 @@ impl InteractiveControls {
             if let Some(current_value) = self.current_values.get(name).cloned() {
                 match (&definition.parameter_type, current_value) {
                     (ParameterType::Float { min, max, step }, ParameterValue::Float(mut value)) => {
-                        let old_value = value;
+                        let previous_value = value;
                         ui.add(egui::Slider::new(&mut value, *min..=*max).step_by(*step));
-                        if old_value != value {
+                        if previous_value != value {
                             let _ = self.update_parameter(name, ParameterValue::Float(value));
                         }
                     }
                     (ParameterType::Boolean, ParameterValue::Boolean(mut value)) => {
-                        let old_value = value;
+                        let previous_value = value;
                         ui.checkbox(&mut value, "");
-                        if old_value != value {
+                        if previous_value != value {
                             let _ = self.update_parameter(name, ParameterValue::Boolean(value));
                         }
                     }
@@ -417,13 +417,13 @@ impl InteractiveControls {
                         let mut changed = false;
                         ui.horizontal(|ui| {
                             for (_, value) in values.iter_mut().enumerate() {
-                                let old_value = *value;
+                                let previous_value = *value;
                                 ui.add(
                                     egui::DragValue::new(value)
                                         .clamp_range(*min..=*max)
                                         .speed(*step),
                                 );
-                                if old_value != *value {
+                                if previous_value != *value {
                                     changed = true;
                                 }
                             }

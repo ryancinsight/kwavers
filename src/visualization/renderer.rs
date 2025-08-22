@@ -74,8 +74,8 @@ impl Default for VolumeUniforms {
 }
 
 impl Renderer3D {
-    /// Create a new 3D renderer with GPU acceleration
-    pub async fn new(
+    /// Create a 3D renderer with GPU acceleration
+    pub async fn create(
         config: &VisualizationConfig,
         gpu_context: Arc<GpuContext>,
     ) -> KwaversResult<Self> {
