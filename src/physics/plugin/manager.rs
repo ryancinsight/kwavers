@@ -3,7 +3,7 @@
 //! This module provides the main plugin manager that coordinates plugin execution.
 
 use super::{ExecutionStrategy, PhysicsPlugin, PluginContext, SequentialStrategy};
-use crate::error::{KwaversResult, ValidationError};
+use crate::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::performance::metrics::PerformanceMetrics;
@@ -86,22 +86,21 @@ impl PluginManager {
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
-        // Execute plugins in dependency order
-        let mut ordered_plugins = Vec::new();
+        // Execute plugins in dependency order - safe implementation
         for &idx in &self.execution_order {
-            ordered_plugins.push(&mut self.plugins[idx] as *mut Box<dyn PhysicsPlugin>);
+            if idx >= self.plugins.len() {
+                return Err(KwaversError::Physics(PhysicsError::InvalidState {
+                    field: "plugin_index".to_string(),
+                    value: idx.to_string(),
+                    reason: format!("Index {} out of bounds for {} plugins", idx, self.plugins.len()),
+                }));
+            }
+            
+            // Execute plugin directly without unsafe pointer manipulation
+            self.plugins[idx].update(fields, grid, medium, dt, t, &self.context)?;
         }
-
-        // Convert raw pointers back to references for execution
-        let plugins_slice = unsafe {
-            std::slice::from_raw_parts_mut(
-                ordered_plugins.as_mut_ptr() as *mut Box<dyn PhysicsPlugin>,
-                ordered_plugins.len(),
-            )
-        };
-
-        self.execution_strategy
-            .execute(plugins_slice, fields, grid, medium, dt, t, &self.context)
+        
+        Ok(())
     }
 
     /// Execute plugins with performance metrics collection
@@ -117,6 +116,14 @@ impl PluginManager {
 
         // Execute each plugin and measure its time
         for &idx in &self.execution_order {
+            if idx >= self.plugins.len() {
+                return Err(KwaversError::Physics(PhysicsError::InvalidState {
+                    field: "plugin_index".to_string(),
+                    value: idx.to_string(),
+                    reason: format!("Index {} out of bounds for {} plugins", idx, self.plugins.len()),
+                }));
+            }
+            
             let plugin_start = Instant::now();
             let plugin = &mut self.plugins[idx];
 

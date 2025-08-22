@@ -24,7 +24,7 @@ const WAVE_DECAY_THRESHOLD: f64 = 0.9;
 const DEFAULT_SUBGRID_FACTOR: usize = 2;
 const DEFAULT_K_SPACE_ORDER: usize = 2;
 const DEFAULT_PML_STENCIL_SIZE: usize = 4;
-const NUM_FIELD_COMPONENTS: usize = 7; // Standard field components
+const NUM_FIELD_COMPONENTS: usize = 17; // Must match UnifiedFieldType::COUNT
 
 #[test]
 fn test_fdtd_solver() {
