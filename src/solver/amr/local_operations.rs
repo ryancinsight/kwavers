@@ -127,8 +127,8 @@ fn transfer_data_recursive(
         if node.level() == 0 {
             // Base level - direct copy
             copy_region(
-                old_field,
-                new_field,
+                source_field,
+                target_field,
                 current_origin,
                 current_size,
                 index_map,
@@ -136,8 +136,8 @@ fn transfer_data_recursive(
         } else if node.level() > 0 {
             // Refined region - interpolate from coarser data
             interpolate_region(
-                old_field,
-                new_field,
+                source_field,
+                target_field,
                 current_origin,
                 current_size,
                 node.level(),
@@ -148,8 +148,8 @@ fn transfer_data_recursive(
         } else {
             // Coarsened region - restrict from finer data
             restrict_region(
-                old_field,
-                new_field,
+                source_field,
+                target_field,
                 current_origin,
                 current_size,
                 node.level().abs() as usize,
@@ -461,7 +461,7 @@ pub fn adapt_all_fields(
         }));
     }
 
-    let new_dims = results[0].new_field.dim();
+    let new_dims = results[0].adapted_field.dim();
 
     // Create new 4D array
     let mut new_fields = Array4::<f64>::zeros((num_fields, new_dims.0, new_dims.1, new_dims.2));
@@ -470,7 +470,7 @@ pub fn adapt_all_fields(
     for (field_idx, result) in results.into_iter().enumerate() {
         new_fields
             .index_axis_mut(ndarray::Axis(0), field_idx)
-            .assign(&result.new_field);
+            .assign(&result.adapted_field);
     }
 
     Ok(new_fields)

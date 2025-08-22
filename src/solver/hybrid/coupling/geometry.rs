@@ -63,9 +63,9 @@ impl InterfaceGeometry {
         
         // Find dimension with smallest overlap (likely the interface)
         let overlaps = [
-            (source_bounds.0.1.min(target_bounds.0.1) - source_bounds.0.0.max(target_bounds.0.0)).abs(),
-            (source_bounds.1.1.min(target_bounds.1.1) - source_bounds.1.0.max(target_bounds.1.0)).abs(),
-            (source_bounds.2.1.min(target_bounds.2.1) - source_bounds.2.0.max(target_bounds.2.0)).abs(),
+            (source_bounds.0.1.min(target_bounds.0.1) - f64::max(source_bounds.0.0, target_bounds.0.0)).abs(),
+            (source_bounds.1.1.min(target_bounds.1.1) - f64::max(source_bounds.1.0, target_bounds.1.0)).abs(),
+            (source_bounds.2.1.min(target_bounds.2.1) - f64::max(source_bounds.2.0, target_bounds.2.0)).abs(),
         ];
         
         let interface_dim = overlaps
