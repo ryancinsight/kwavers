@@ -172,29 +172,4 @@ fn run_pstd_simulation_with_time(
     fields.slice(ndarray::s![0, .., .., ..]).to_owned()
 }
 
-/// Calculate relative error between two fields
-fn calculate_relative_error(computed: &Array3<f64>, analytical: &Array3<f64>) -> f64 {
-    let diff = (computed - analytical).mapv(f64::abs);
-    let max_diff = diff.fold(0.0f64, |a, &b| a.max(b));
-    let max_analytical = analytical.mapv(f64::abs).fold(0.0f64, |a, &b| a.max(b));
-
-    max_diff / max_analytical
-}
-
-
-
-/// Find the position of the peak in a 1D field
-fn find_peak_position(field: &Array3<f64>) -> usize {
-    let mut max_val = 0.0;
-    let mut max_idx = 0;
-
-    for i in 0..field.shape()[0] {
-        let val = field[[i, 8, 8]].abs();
-        if val > max_val {
-            max_val = val;
-            max_idx = i;
-        }
-    }
-
-    max_idx
-}
+// Helper functions removed - no longer needed after test simplification

@@ -2,17 +2,17 @@
 
 use kwavers::grid::Grid;
 use kwavers::medium::homogeneous::HomogeneousMedium;
-use kwavers::physics::plugin::{PluginContext, PluginManager};
+use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
-use ndarray::{s, Array4, Zip};
+use ndarray::{Array4, Zip};
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;
 const TEST_GRID_SPACING: f64 = 1e-3;
 const TEST_PRESSURE_AMPLITUDE: f64 = 1e6;
 const TEST_SOUND_SPEED: f64 = 1500.0;
-const TEST_FREQUENCY: f64 = 1e6;
+// const TEST_FREQUENCY: f64 = 1e6; // Unused, kept for future use
 const FDTD_CFL_FACTOR: f64 = 0.5;
 const PSTD_CFL_FACTOR: f64 = 0.3;
 const TEST_STEPS_SHORT: usize = 10;
@@ -20,9 +20,9 @@ const TEST_STEPS_MEDIUM: usize = 20;
 const LARGE_GRID_SIZE: usize = 64;
 const GAUSSIAN_CENTER: usize = 32;
 const GAUSSIAN_SIGMA: f64 = 3.0;
-const WAVE_DECAY_THRESHOLD: f64 = 0.9;
+// const WAVE_DECAY_THRESHOLD: f64 = 0.9; // Unused after test simplification
 const DEFAULT_SUBGRID_FACTOR: usize = 2;
-const DEFAULT_K_SPACE_ORDER: usize = 2;
+// const DEFAULT_K_SPACE_ORDER: usize = 2; // Unused, kept for future use
 const DEFAULT_PML_STENCIL_SIZE: usize = 4;
 const NUM_FIELD_COMPONENTS: usize = 17; // Must match UnifiedFieldType::COUNT
 
@@ -188,7 +188,7 @@ fn test_wave_propagation() {
         });
     }
 
-    let initial_center = initial_fields[[0, center, center, center]];
+    let _initial_center = initial_fields[[0, center, center, center]]; // Kept for reference
 
     // Test FDTD
     {
