@@ -14,9 +14,9 @@ use super::octree::OctreeNode;
 /// Result of local AMR field adaptation
 #[derive(Debug)]
 pub struct LocalAMRResult {
-    /// New field with adapted dimensions
-    pub new_field: Array3<f64>,
-    /// Mapping from old to new indices
+    /// Adapted field with updated dimensions
+    pub adapted_field: Array3<f64>,
+    /// Mapping from source to target indices
     pub index_map: HashMap<(usize, usize, usize), (usize, usize, usize)>,
     /// Number of cells that were refined
     pub cells_refined: usize,
@@ -26,19 +26,19 @@ pub struct LocalAMRResult {
 
 /// Adapt a field based on the octree structure
 ///
-/// This function creates a new field with the appropriate dimensions based on
-/// the octree refinement levels and transfers data from the old field,
+/// This function creates an adapted field with the appropriate dimensions based on
+/// the octree refinement levels and transfers data from the source field,
 /// applying interpolation or restriction where necessary.
 pub fn adapt_field_to_octree(
-    old_field: &Array3<f64>,
+    source_field: &Array3<f64>,
     octree: &Octree,
     scheme: InterpolationScheme,
 ) -> KwaversResult<LocalAMRResult> {
-    // First, compute the new grid dimensions based on the octree
-    let new_dims = compute_adapted_dimensions(octree)?;
+    // First, compute the adapted grid dimensions based on the octree
+    let adapted_dims = compute_adapted_dimensions(octree)?;
 
-    // Create the new field with the computed dimensions
-    let mut new_field = Array3::<f64>::zeros(new_dims);
+    // Create the adapted field with the computed dimensions
+    let mut adapted_field = Array3::<f64>::zeros(adapted_dims);
 
     // Create index mapping
     let mut index_map = HashMap::new();
@@ -47,8 +47,8 @@ pub fn adapt_field_to_octree(
 
     // Traverse the octree and copy/interpolate data
     transfer_data_recursive(
-        old_field,
-        &mut new_field,
+        source_field,
+        &mut adapted_field,
         octree.root(),
         (0, 0, 0), // Start at origin
         octree.base_resolution(),
@@ -59,7 +59,7 @@ pub fn adapt_field_to_octree(
     )?;
 
     Ok(LocalAMRResult {
-        new_field,
+        adapted_field,
         index_map,
         cells_refined,
         cells_coarsened,
@@ -110,8 +110,8 @@ fn compute_max_indices_recursive(
 
 /// Transfer data from old field to new field based on octree structure
 fn transfer_data_recursive(
-    old_field: &Array3<f64>,
-    new_field: &mut Array3<f64>,
+    source_field: &Array3<f64>,
+    target_field: &mut Array3<f64>,
     node: &OctreeNode,
     current_origin: (usize, usize, usize),
     current_size: (usize, usize, usize),
@@ -120,7 +120,7 @@ fn transfer_data_recursive(
     cells_coarsened: &mut usize,
     scheme: InterpolationScheme,
 ) -> KwaversResult<()> {
-    let old_dims = old_field.dim();
+    let source_dims = source_field.dim();
 
     if node.is_leaf() {
         // This is a leaf node - transfer data for this region

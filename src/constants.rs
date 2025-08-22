@@ -2,6 +2,48 @@
 
 use std::f64::consts::PI;
 
+/// Common numerical constants
+pub mod numerical {
+    /// Default CFL safety factor for stability
+    pub const CFL_SAFETY_FACTOR: f64 = 0.95;
+    /// Default grid resolution points
+    pub const DEFAULT_GRID_POINTS: usize = 100;
+    /// Minimum grid points for valid simulation
+    pub const MIN_GRID_POINTS: usize = 10;
+    /// Maximum grid points for memory safety
+    pub const MAX_GRID_POINTS: usize = 1000;
+    /// Default convergence tolerance
+    pub const CONVERGENCE_TOLERANCE: f64 = 1e-6;
+    /// Default spatial resolution in meters
+    pub const DEFAULT_SPATIAL_RESOLUTION: f64 = 1e-3;
+    /// Interpolation factor for symmetric corrections
+    pub const SYMMETRIC_CORRECTION_FACTOR: f64 = 0.5;
+}
+
+/// Standard medium properties
+pub mod medium_properties {
+    /// Water density at 20°C [kg/m³]
+    pub const WATER_DENSITY: f64 = 998.0;
+    /// Water sound speed at 20°C [m/s]
+    pub const WATER_SOUND_SPEED: f64 = 1482.0;
+    /// Soft tissue density [kg/m³]
+    pub const TISSUE_DENSITY: f64 = 1050.0;
+    /// Soft tissue sound speed [m/s]
+    pub const TISSUE_SOUND_SPEED: f64 = 1540.0;
+    /// Air density at STP [kg/m³]
+    pub const AIR_DENSITY: f64 = 1.225;
+    /// Air sound speed at 20°C [m/s]
+    pub const AIR_SOUND_SPEED: f64 = 343.0;
+    /// Blood density [kg/m³]
+    pub const BLOOD_DENSITY: f64 = 1060.0;
+    /// Blood sound speed [m/s]
+    pub const BLOOD_SOUND_SPEED: f64 = 1570.0;
+    /// Bone density [kg/m³]
+    pub const BONE_DENSITY: f64 = 1900.0;
+    /// Bone sound speed [m/s]
+    pub const BONE_SOUND_SPEED: f64 = 3500.0;
+}
+
 /// Chemistry constants for sonodynamic therapy
 pub mod chemistry {
     pub const SINGLET_OXYGEN_LIFETIME: f64 = 3.5e-6; // seconds - Singlet oxygen lifetime in water
