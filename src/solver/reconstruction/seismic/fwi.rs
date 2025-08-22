@@ -427,6 +427,7 @@ impl Reconstructor for FullWaveformInversion {
     ) -> KwaversResult<Array3<f64>> {
         // Create a mutable copy for the iterative inversion
         let mut velocity = self.velocity_model.clone();
+        #[allow(unused_assignments)]
         let mut gradient = Array3::zeros(velocity.dim());
         let mut search_direction = Array3::zeros(velocity.dim());
 

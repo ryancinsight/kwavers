@@ -93,7 +93,7 @@ pub struct PerformanceOptimizer {
 
 /// Performance metrics tracking
 #[derive(Debug, Default)]
-struct PerformanceMetrics {
+pub struct PerformanceMetrics {
     grid_updates_per_second: f64,
     memory_bandwidth_gbps: f64,
     cache_hit_rate: f64,

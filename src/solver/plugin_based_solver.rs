@@ -379,7 +379,7 @@ pub struct PluginBasedSolver {
 
 /// Enhanced performance metrics for high-performance computing
 #[derive(Default)]
-struct PerformanceMetrics {
+pub struct PerformanceMetrics {
     /// Total simulation steps completed
     total_steps: usize,
     /// Plugin execution times by name [seconds]

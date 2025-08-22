@@ -44,7 +44,7 @@ impl<'a> FieldReadGuard<'a> {
     }
 
     /// Get the field view
-    pub fn view(&self) -> ArrayView3<f64> {
+    pub fn view(&self) -> ArrayView3<'_, f64> {
         self.data.view()
     }
 
