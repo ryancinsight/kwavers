@@ -748,7 +748,7 @@ mod tests {
         config.track_thermal_dose = false;
 
         let mut solver = ThermalDiffusionSolver::new(config, &grid).unwrap();
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // No heat source, uniform initial temperature
         let heat_source = Array3::zeros((32, 32, 32));

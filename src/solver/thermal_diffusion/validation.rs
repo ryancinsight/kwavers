@@ -121,7 +121,7 @@ mod tests {
         let dx = domain_size / (n - 1) as f64;
 
         let grid = Grid::new(n, n, n, dx, dx, dx);
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = false;
@@ -206,7 +206,7 @@ mod tests {
     fn test_pennes_steady_state() {
         let n = 21;
         let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::from_minimal(1050.0, 1540.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1050.0, 1540.0, &grid);
 
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = true;
@@ -282,7 +282,7 @@ mod tests {
     fn test_thermal_dose_cem43() {
         let n = 11;
         let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::from_minimal(1050.0, 1540.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1050.0, 1540.0, &grid);
 
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = false; // No perfusion for simple test
@@ -351,7 +351,7 @@ mod tests {
     fn test_hyperbolic_heat_wave() {
         let n = 21;
         let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         let mut config = ThermalDiffusionConfig::default();
         config.enable_hyperbolic = true;
@@ -427,7 +427,7 @@ mod tests {
     fn test_energy_conservation() {
         let n = 21;
         let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = false;
@@ -475,7 +475,7 @@ mod tests {
     fn test_spatial_order_convergence() {
         let n = 41;
         let grid = Grid::new(n, n, n, 0.001, 0.001, 0.001);
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // Test smooth initial condition where higher order should be more accurate
         let mut initial_temp = Array3::zeros((n, n, n));

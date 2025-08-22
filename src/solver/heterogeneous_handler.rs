@@ -692,7 +692,7 @@ mod tests {
         let mut handler = HeterogeneousHandler::new(config, grid.clone());
 
         // Create medium with sharp interface
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // Detect interfaces
         handler.detect_interfaces(&medium).unwrap();
@@ -711,7 +711,7 @@ mod tests {
         };
         let mut handler = HeterogeneousHandler::new(config, grid.clone());
 
-        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid, 0.0, 0.0);
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // Apply smoothing
         handler.smooth_properties(&medium).unwrap();
