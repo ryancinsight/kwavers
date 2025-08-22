@@ -38,6 +38,11 @@ pub enum PhysicsError {
     },
     /// Dimension mismatch
     DimensionMismatch,
+    /// Invalid field dimensions
+    InvalidFieldDimensions {
+        expected: String,
+        actual: String,
+    },
     /// Invalid state
     InvalidState {
         field: String,
@@ -129,6 +134,9 @@ impl fmt::Display for PhysicsError {
             }
             Self::DimensionMismatch => {
                 write!(f, "Dimension mismatch in physics calculation")
+            }
+            Self::InvalidFieldDimensions { expected, actual } => {
+                write!(f, "Invalid field dimensions: expected {}, got {}", expected, actual)
             }
             Self::InvalidState {
                 field,

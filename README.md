@@ -1,163 +1,110 @@
-# Kwavers: Acoustic Wave Simulation Library
+# Kwavers: Acoustic Wave Simulation Library (Beta)
 
 [![Rust](https://img.shields.io/badge/rust-1.89%2B-blue.svg)](https://www.rust-lang.org)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
-[![Tests](https://img.shields.io/badge/tests-5_of_5_core-yellow.svg)](./tests)
+[![Core Tests](https://img.shields.io/badge/core_tests-passing-green.svg)](./tests)
 [![Examples](https://img.shields.io/badge/examples-5_of_7-yellow.svg)](./examples)
-[![Warnings](https://img.shields.io/badge/warnings-0-green.svg)](./src)
-[![Status](https://img.shields.io/badge/status-partial_production-yellow.svg)](./src)
+[![Status](https://img.shields.io/badge/status-beta-orange.svg)](./src)
 
-## ⚠️ Production Status - Please Read
+## ⚠️ Beta Software - Read Before Use
 
-**Core features are stable. Advanced features have issues.**
+This library has a **stable core** but **experimental features**. The plugin system has known issues.
 
-| Feature | Status | Safe to Use |
-|---------|--------|-------------|
-| **Core Simulation** | ✅ Stable | Yes |
-| **FDTD Solver** | ✅ Working | Yes |
-| **Plugin System** | ✅ Functional | Yes |
-| **PSTD Solver** | ⚠️ Segfaults | Test carefully |
-| **GPU Support** | ❌ Not implemented | No |
-| **RTM/FWI** | ❌ Broken APIs | No |
-
-## Quick Start (Stable Features Only)
-
-```bash
-# Build
-cargo build --release
-
-# Run working examples
-cargo run --release --example basic_simulation
-cargo run --release --example plugin_example
-cargo run --release --example phased_array_beamforming
-
-# Run core tests (advanced tests disabled)
-cargo test --test integration_test
-```
-
-## What Works ✅
-
-### Core Features
-- Grid and medium abstractions
-- Basic FDTD solver
-- Plugin architecture
-- PML/CPML boundaries
-- Homogeneous media
-- Basic wave propagation
-
-### Working Examples
-- `basic_simulation` - Core functionality demo
-- `plugin_example` - Plugin system demo
-- `phased_array_beamforming` - Array control
-- `physics_validation` - Validation tests
-- `wave_simulation` - Works but slow
-
-## Known Issues ⚠️
-
-### Critical Problems
-1. **PSTD solver causes segmentation faults** - FFT buffer issues
-2. **Advanced tests disabled** - 4 test files don't compile/crash
-3. **Examples fail** - tissue_model_example doesn't work
-4. **GPU is stub code only** - Not implemented
-
-### Do Not Use
-- GPU acceleration (not implemented)
-- RTM/FWI reconstruction (broken APIs)
-- PSTD solver in production (segfaults)
-
-## Usage Example (Safe)
-
-```rust
-use kwavers::{
-    grid::Grid,
-    medium::HomogeneousMedium,
-    solver::fdtd::{FdtdConfig, FdtdSolver},
-    error::KwaversResult,
-};
-
-fn main() -> KwaversResult<()> {
-    // This is safe and works
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-    let medium = HomogeneousMedium::water(&grid);
-    
-    let config = FdtdConfig {
-        spatial_order: 2,
-        staggered_grid: true,
-        cfl_factor: 0.5,
-        subgridding: false,
-        subgrid_factor: 1,
-    };
-    
-    // Basic simulation works fine
-    // ... 
-    
-    Ok(())
-}
-```
+### Quick Assessment
+- ✅ **Core simulation**: Production ready
+- ⚠️ **Plugin system**: Has segfault issues
+- ❌ **GPU support**: Not implemented
 
 ## Installation
 
 ```toml
 [dependencies]
-# Use with caution - not all features work
-kwavers = "1.0.0-rc1"
+kwavers = "0.9.0-beta"  # Beta release
 ```
 
-## Development Status
+## Safe Usage Pattern
 
-This is a **release candidate** with:
-- ✅ Stable core (production-ready)
-- ⚠️ Experimental advanced features (use with caution)
-- ❌ Incomplete GPU support (do not use)
+```rust
+// ✅ SAFE: Direct solver usage
+use kwavers::{
+    grid::Grid,
+    medium::HomogeneousMedium,
+    solver::fdtd::FdtdSolver,
+};
 
-### Roadmap
-- **v1.0** - Current release candidate
-- **v1.1** - Fix segfaults and test issues
-- **v2.0** - Complete GPU implementation
+let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+let medium = HomogeneousMedium::water(&grid);
+// Direct solver usage is stable
 
-## Contributing
+// ⚠️ CAUTION: Plugin system may segfault
+// Test thoroughly before production use
+```
 
-We need help with:
-1. Fixing PSTD segmentation faults
-2. Updating test APIs
-3. Implementing GPU support
-4. Performance optimization
+## What Works ✅
+
+- Grid and medium abstractions
+- Basic FDTD solver (direct usage)
+- PML/CPML boundaries
+- 5 of 7 examples
+- Integration tests
+
+## Known Issues ⚠️
+
+1. **Plugin system segfaults** - Memory management issues
+2. **PSTD uses finite differences** - Spectral methods removed due to bugs
+3. **2 examples fail** - tissue_model and wave_simulation have issues
+4. **GPU is stub code** - Not implemented
 
 ## Testing
 
 ```bash
-# Run only stable tests
+# Safe tests
 cargo test --test integration_test
 
-# Disabled tests (will crash):
-# - solver_test.rs
-# - fdtd_pstd_comparison.rs
-# - rtm_validation_tests.rs
-# - fwi_validation_tests.rs
+# These may crash:
+# - solver_test.rs (plugin issues)
+# - fdtd_pstd_comparison.rs (plugin issues)
 ```
 
-## Documentation
+## Examples
 
-- Core features are well documented
-- Advanced features may have incomplete docs
-- See examples for usage patterns
+```bash
+# Working examples
+cargo run --example basic_simulation
+cargo run --example plugin_example  # May crash
+cargo run --example phased_array_beamforming
+cargo run --example physics_validation
 
-## License
+# Broken examples
+# - tissue_model_example (config issues)
+# - wave_simulation (performance issues)
+```
 
-MIT License - See [LICENSE](LICENSE) for details.
+## Development Status
+
+| Version | Status | Focus |
+|---------|--------|-------|
+| 0.9.0-beta | Current | Core features stable, plugins experimental |
+| 1.0.0 | Planned | Fix plugin architecture |
+| 2.0.0 | Future | GPU implementation |
+
+## Contributing
+
+Priority areas:
+1. Fix plugin system memory management
+2. Optimize spectral methods
+3. Implement GPU support
+4. Fix failing examples
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/kwavers/kwavers/issues)
-- **Known Problems**: See [CHECKLIST.md](CHECKLIST.md)
-- **Status**: See [PRD.md](PRD.md)
+- Issues: [GitHub Issues](https://github.com/kwavers/kwavers/issues)
+- Status: [CHECKLIST.md](CHECKLIST.md)
 
-## ⚠️ Important Notice
+## License
 
-This library is partially production-ready. Core acoustic simulation features work well, but advanced imaging and GPU features are broken or unimplemented. Please test thoroughly before production use.
+MIT - See [LICENSE](LICENSE)
 
 ---
 
-**Status: Partial Production** ⚠️
-
-Use core features with confidence. Avoid advanced features until v2.0.
+**⚠️ Beta Software**: Core is stable, plugins are experimental. Test thoroughly before production use.
