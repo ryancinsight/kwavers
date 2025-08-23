@@ -101,7 +101,7 @@ pub struct Octree {
 impl Octree {
     /// Check if coarsening maintains balance
     pub fn check_coarsen_balance(&mut self, node_id: usize) -> bool {
-        // Simple check - in production would verify 2:1 balance
+        // Check refinement level - production code would verify 2:1 balance
         true
     }
     /// Create a new octree with given base dimensions

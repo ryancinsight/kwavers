@@ -186,7 +186,7 @@ impl ThermodynamicsCalculator {
 
     /// Buck equation (meteorological standard)
     ///
-    /// Enhanced Magnus formula with higher accuracy
+    /// Magnus formula for vapor pressure calculation
     fn buck_equation(&self, temperature: f64) -> f64 {
         let t_celsius = temperature - 273.15;
 
@@ -318,7 +318,7 @@ impl ThermodynamicsCalculator {
     }
 }
 
-/// Enhanced mass transfer model for bubble dynamics
+/// Mass transfer model for bubble dynamics
 #[derive(Debug, Clone)]
 pub struct MassTransferModel {
     thermo: ThermodynamicsCalculator,

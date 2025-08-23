@@ -1,7 +1,8 @@
 //! FDTD solver configuration
 
 use crate::constants::cfl;
-use crate::error::{ValidationError, ValidationResult};
+use crate::error::ValidationError;
+use crate::ValidationResult;
 use serde::{Deserialize, Serialize};
 
 /// FDTD solver configuration

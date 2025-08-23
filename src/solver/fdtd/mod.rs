@@ -945,3 +945,5 @@ mod tests {
 mod validation_tests;
 
 // Plugin implementation moved to plugin.rs for proper separation of concerns
+pub mod plugin;
+pub use plugin::FdtdPlugin;

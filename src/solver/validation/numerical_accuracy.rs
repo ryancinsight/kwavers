@@ -356,19 +356,19 @@ impl NumericalValidator {
     fn calculate_absorption_coefficient(&self, solver: &str, grid: &Grid) -> f64 {
         // Calculate absorption using Beer-Lambert law validation
         // A = -ln(I/I0) / (α * d)
-        let frequency = 1e6; // 1 MHz test frequency
-        let distance = 0.1; // 10 cm propagation
+        let frequency = 1e6_f64; // 1 MHz test frequency
+        let distance = 0.1_f64; // 10 cm propagation
         let alpha = match solver {
-            "FDTD" => 0.5, // Np/m for water at 1 MHz
-            "PSTD" => 0.5,
-            _ => 1.0,
+            "FDTD" => 0.5_f64, // Np/m for water at 1 MHz
+            "PSTD" => 0.5_f64,
+            _ => 1.0_f64,
         };
         
         // Expected attenuation: exp(-α * d)
         let expected_ratio = (-alpha * distance).exp();
         
         // Return absorption coefficient accuracy (1.0 = perfect)
-        1.0 - (1.0 - expected_ratio).abs()
+        1.0_f64 - (1.0_f64 - expected_ratio).abs()
     }
 
     fn calculate_spurious_reflections(&self, solver: &str, grid: &Grid) -> f64 {

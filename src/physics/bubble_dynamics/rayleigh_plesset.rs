@@ -214,7 +214,7 @@ impl KellerMiksisModel {
     /// Calculate internal pressure with thermal and mass transfer effects
     fn calculate_internal_pressure(&self, state: &BubbleState) -> f64 {
         if !self.params.use_thermal_effects {
-            // Simple polytropic relation
+            // Polytropic gas relation
             let gamma = state.gas_species.gamma();
             return (self.params.p0
                 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma
