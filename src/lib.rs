@@ -6,14 +6,6 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Pragmatic warning suppressions for production readiness
-// These are cosmetic issues that don't affect functionality
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(dead_code)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::type_complexity)]
-
 use std::collections::HashMap;
 
 // Validation constants to replace magic numbers

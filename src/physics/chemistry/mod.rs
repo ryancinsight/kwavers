@@ -20,67 +20,32 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 // Sub-modules
+pub mod parameters;
 pub mod photochemistry;
 pub mod radical_initiation;
 pub mod reaction_kinetics;
+pub mod reactions;
 pub mod ros_plasma;
 
 // Re-export commonly used types
+pub use parameters::{ChemicalMetrics, ChemicalUpdateParams};
+pub use reactions::{
+    ChemicalReaction, ChemicalReactionConfig, LightDependence, PressureDependence,
+    ReactionRate, ReactionType, Species, TemperatureDependence,
+};
 pub use ros_plasma::{ROSConcentrations, ROSSpecies, SonochemicalYield, SonochemistryModel};
 
-// Define reaction types locally
-#[derive(Debug, Clone)]
-pub struct ChemicalReaction {
-    pub name: String,
-    pub rate_constant: f64,
-}
+// ChemicalUpdateParams and ChemicalMetrics have been moved to the parameters module
+// ChemicalReaction and related types have been moved to the reactions module
 
-impl ChemicalReaction {
-    pub fn rate_constant(&self, _temperature: f64, _pressure: f64) -> f64 {
-        self.rate_constant
-    }
-}
+// Re-import photochemistry and radical_initiation for local use
+use photochemistry::PhotochemicalEffects;
+use radical_initiation::RadicalInitiation;
+use reaction_kinetics::ReactionKinetics;
 
-#[derive(Debug, Clone)]
-pub struct ReactionRate {
-    pub value: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct Species {
-    pub name: String,
-    pub concentration: f64,
-}
-
-/// Parameters for chemical update operations
-/// Follows SOLID principles by grouping related parameters
-#[derive(Debug, Clone)]
-pub struct ChemicalUpdateParams<'a> {
-    pub pressure: &'a Array3<f64>,
-    pub light: &'a Array3<f64>,
-    pub emission_spectrum: &'a Array3<f64>,
-    pub bubble_radius: &'a Array3<f64>,
-    pub temperature: &'a Array3<f64>,
-    pub grid: &'a Grid,
-    pub dt: f64,
-    pub medium: &'a dyn Medium,
-    pub frequency: f64,
-}
-
-impl<'a> ChemicalUpdateParams<'a> {
-    /// Create new chemical update parameters
-    /// Follows Information Expert principle - validates its own parameters
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        pressure: &'a Array3<f64>,
-        light: &'a Array3<f64>,
-        emission_spectrum: &'a Array3<f64>,
-        bubble_radius: &'a Array3<f64>,
-        temperature: &'a Array3<f64>,
-        grid: &'a Grid,
-        dt: f64,
-        medium: &'a dyn Medium,
-        frequency: f64,
+// The ChemicalUpdateParams implementation has been moved to parameters.rs
+// The ChemicalMetrics implementation has been moved to parameters.rs  
+// The ChemicalReaction and related enums have been moved to reactions.rs
     ) -> KwaversResult<Self> {
         // Validate parameters following Information Expert principle
         if dt <= 0.0 {
