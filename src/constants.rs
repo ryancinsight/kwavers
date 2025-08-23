@@ -63,6 +63,11 @@ pub mod numerical {
     
     // Pressure limits for numerical stability
     pub const MAX_PRESSURE_CLAMP: f64 = 1e9; // Pa - Maximum pressure for clamping in nonlinear simulations
+    
+    // Beamforming and sparse matrix constants
+    pub const BEAMFORMING_DISTANCE_WEIGHT: f64 = 1.0; // Numerator for distance weighting
+    pub const SPHERICAL_SPREADING_POWER: i32 = 2; // Power for spherical spreading (1/r²)
+    pub const SPHERICAL_SPREADING_SCALE: f64 = 4.0 * PI; // Scale factor for spherical spreading
 }
 
 /// Temperature constants

@@ -276,9 +276,6 @@ impl StiffnessTensor {
 // Extended ElasticWave functionality has been integrated into the main ElasticWave struct
 // The enhanced features are now available through the standard ElasticWave API
 
-// Note: EnhancedElasticWaveHelper removed as it was unused (YAGNI principle)
-// All necessary functionality is available through the main ElasticWave struct
-
 #[cfg(test)]
 mod tests {
     use super::*;
