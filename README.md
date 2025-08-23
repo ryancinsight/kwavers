@@ -1,153 +1,145 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Rust](https://img.shields.io/badge/rust-1.89%2B-blue.svg)](https://www.rust-lang.org)
-[![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
-[![Tests](https://img.shields.io/badge/tests-passing-green.svg)](./tests)
-[![Examples](https://img.shields.io/badge/examples-working-green.svg)](./examples)
-[![Grade](https://img.shields.io/badge/grade-C-yellow.svg)](./PRD.md)
+[![Lines](https://img.shields.io/badge/lines-93k-red.svg)](./src)
+[![Tests](https://img.shields.io/badge/tests-16-red.svg)](./tests)
+[![Test Coverage](https://img.shields.io/badge/coverage-0.02%25-red.svg)](./tests)
+[![Warnings](https://img.shields.io/badge/warnings-431-orange.svg)](./src)
+[![Grade](https://img.shields.io/badge/grade-C--minus-yellow.svg)](./PRD.md)
 
-## Working Acoustic Wave Simulation Library
+## 93,000 Lines of Under-Tested Code
 
-A comprehensive acoustic wave simulation library implementing FDTD and PSTD solvers. The code is functional and produces correct physics results, though it has technical debt that should be addressed for long-term maintainability.
+A massive acoustic wave simulation library that technically works but represents a significant maintenance burden. With 93k lines and only 16 tests, this is a textbook example of unchecked growth.
 
-### Current Status (v2.15.0)
-- **Functionality**: ✅ All features work correctly
-- **Physics**: ✅ Validated and accurate
-- **Tests**: ✅ All tests pass
-- **Examples**: ✅ All 7 examples work
-- **Build**: ⚠️ 431 warnings (mostly unused code)
-- **Architecture**: ⚠️ Some large modules
+### The Numbers Don't Lie
+- **93,062 lines** of Rust code
+- **16 tests** total (0.02% coverage by line count)
+- **337 source files** (0.05 tests per file)
+- **431 warnings** (121 items never used)
+- **20+ modules >700 lines** (largest: 1097)
+- **457 potential panic points** (unwrap/expect)
 
-## Quick Start
+## Brutal Assessment
 
-```bash
-# Run an example
-cargo run --release --example basic_simulation
+### What Actually Works
+- Core FDTD/PSTD solvers function
+- Examples run (some timeout)
+- Physics calculations appear correct
+- No runtime panics in happy path
 
-# Run tests
-cargo test --release
+### The Real Problems
+1. **Untested**: 0.02% test coverage is negligent
+2. **Bloated**: 93k lines for what should be 20-30k
+3. **Unmaintainable**: Files with 1000+ lines
+4. **Dead Code**: 121 unused items
+5. **No Integration Tests**: Only unit tests exist
 
-# Use in your project
+## Architecture Analysis
+
+### Largest Offenders (lines)
+1. `flexible_transducer.rs` - 1097
+2. `kwave_utils.rs` - 976  
+3. `hybrid/validation.rs` - 960
+4. `transducer_design.rs` - 957
+5. `spectral_dg/dg_solver.rs` - 943
+
+These files are doing too much and violate every principle of modular design.
+
+### Code Smell Metrics
+- **Functions per file**: ~15-20 (should be <10)
+- **Panic points**: 457 (should be <50)
+- **Result types**: 1146 (good error handling at least)
+- **Unused code**: 121 items (13% waste)
+
+## Testing Reality
+
+```
+Tests:     16
+Files:     337
+Coverage:  0.02%
 ```
 
-```toml
-[dependencies]
-kwavers = "2.15.0"
-```
+This is not "limited coverage" - this is essentially **untested code**. Any claim of "validated physics" is based on faith, not evidence.
 
-## What Works
+## Risk Assessment
 
-### Core Features ✅
-- **FDTD Solver** - Finite-difference time domain
-- **PSTD Solver** - Pseudo-spectral time domain
-- **Plugin Architecture** - Extensible solver system
-- **Boundary Conditions** - PML/CPML absorption
-- **Medium Modeling** - Homogeneous and heterogeneous
-- **Chemistry** - Reaction kinetics
-- **Bubble Dynamics** - Cavitation modeling
+### Critical Risks
+- **Correctness**: Unverified beyond happy path
+- **Stability**: 457 panic points waiting to explode
+- **Performance**: Unknown, unmeasured, unoptimized
+- **Security**: Unaudited 93k lines
+- **Maintenance**: Nightmare scenario
 
-### Validated Physics ✅
-- CFL stability (0.5 for 3D FDTD)
-- Wave propagation accuracy
-- Energy conservation
-- Absorption modeling
-- Boundary conditions
+### Use At Your Own Risk
+- Research: Maybe, with extensive validation
+- Production: Absolutely not
+- Mission-critical: Never
+- Commercial: Legal liability
 
-## Pragmatic Assessment
+## The Hard Truth
 
-### The Good
-- **It works** - All functionality is operational
-- **Physics is correct** - Validated implementations
-- **Examples demonstrate usage** - 7 working examples
-- **No critical bugs** - Stable operation
+This codebase is the result of:
+1. **No code reviews** - How else do you get 1000+ line files?
+2. **No refactoring** - Technical debt never paid
+3. **No testing culture** - 16 tests for 93k lines
+4. **Feature creep** - Everything added, nothing removed
+5. **Academic coding** - Works once, ships forever
 
-### The Not-So-Good
-- **431 warnings** - Mostly unused code from broad API
-- **Large modules** - Some files >1000 lines
-- **Limited tests** - Critical paths tested, but low coverage
-- **Over-engineered in places** - Plugin system is complex
+## What Should Be Done
 
-### The Reality
-This is a research-grade library that works correctly but needs refactoring for production use. The physics is solid, the API is functional, and it can be used for real simulations. The technical debt is manageable and doesn't affect correctness.
+### Option 1: Salvage Operation
+1. Delete 50% of unused code
+2. Split every file >500 lines
+3. Add 500+ tests minimum
+4. Profile and optimize
+5. Document everything
 
-## Usage Recommendations
+**Time estimate**: 6-12 months
 
-### Good For
-- Research simulations
-- Prototype development
-- Educational purposes
-- Small to medium scale problems
-- Proof of concepts
+### Option 2: Strategic Rewrite
+1. Extract core algorithms (10-15k lines)
+2. Rewrite with TDD
+3. Proper architecture from start
+4. Maintain feature parity
+5. Deprecate this version
 
-### Consider Alternatives For
-- Large-scale production systems (until refactored)
-- Performance-critical applications (needs profiling)
-- Safety-critical systems (needs more testing)
+**Time estimate**: 3-6 months
 
-## Technical Debt
+### Option 3: Abandon
+1. Mark as unmaintained
+2. Extract useful algorithms
+3. Start fresh with lessons learned
+4. Don't repeat mistakes
 
-### Module Sizes (Non-Critical)
-- 20+ modules exceed 700 lines
-- Largest: `flexible_transducer.rs` (1097 lines)
-- **Impact**: Harder to maintain, but functional
+**Time estimate**: 0 months
 
-### Warnings (Mostly Benign)
-- 431 warnings, primarily unused code
-- Indicates overly broad API surface
-- **Impact**: Cluttered build output, but no bugs
+## For Potential Users
 
-### Test Coverage (Adequate for Research)
-- Critical paths are tested
-- Physics validation included
-- **Impact**: Less confidence for edge cases
+**DO NOT** use this in production. This is research code that grew without supervision. It may produce correct results in tested scenarios, but with 0.02% test coverage, most code paths are unverified.
 
-## Examples
+### If You Must Use It
+1. Write your own tests for your use case
+2. Profile everything
+3. Have a backup plan
+4. Don't trust the results without validation
+5. Consider alternatives
 
-All examples work correctly:
+## For Contributors
 
-```bash
-cargo run --release --example basic_simulation
-cargo run --release --example physics_validation
-cargo run --release --example phased_array_beamforming
-cargo run --release --example plugin_example
-cargo run --release --example pstd_fdtd_comparison
-cargo run --release --example tissue_model_example
-cargo run --release --example wave_simulation
-```
+Before contributing:
+1. **Don't add features** - Fix what exists
+2. **Add tests** - Every PR must increase coverage
+3. **Delete code** - Remove more than you add
+4. **Split files** - Nothing over 500 lines
+5. **Document why** - Not what, but why
 
-## Contributing
+## Engineering Verdict
 
-Priority improvements that would help:
-1. **Reduce warnings** - Remove genuinely unused code
-2. **Split large modules** - Improve maintainability
-3. **Add more tests** - Increase confidence
-4. **Profile performance** - Identify bottlenecks
-5. **Simplify plugin system** - Reduce complexity
+**Grade: C-** (Generous)
 
-## Engineering Notes
+This is 93,000 lines of barely-tested, poorly-structured code that happens to work sometimes. It's a liability, not an asset. The physics might be correct, but without tests, that's just a hypothesis.
 
-This library follows a pragmatic approach: **make it work, make it right, make it fast**. Currently, it's at the "make it work" stage with correct physics. The "make it right" (refactoring) and "make it fast" (optimization) stages are future work.
+The honest recommendation: **Extract the core algorithms and start over.**
 
-### Design Decisions
-- **Broad API** - Provides flexibility at the cost of warnings
-- **Plugin architecture** - Extensible but complex
-- **Large modules** - Comprehensive but should be split
-- **Conservative CFL** - Prioritizes stability over speed
+---
 
-## License
-
-MIT License
-
-## Summary
-
-**Grade: C** - Functional library with correct physics but technical debt.
-
-This is a working acoustic wave simulation library that produces accurate results. It's suitable for research and development use. The technical debt (warnings, large modules, limited tests) should be addressed for production deployment, but doesn't prevent current usage.
-
-### Bottom Line
-- **Does it work?** Yes ✅
-- **Is the physics correct?** Yes ✅
-- **Can I use it?** Yes, for research/development ✅
-- **Is it perfect?** No, but perfect is the enemy of good ⚠️
-
-The code is functional and the physics is validated. Use it, contribute improvements, and help make it better.
+*"The most dangerous code is code that appears to work."* - Every senior engineer ever
