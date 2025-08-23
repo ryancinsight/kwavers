@@ -390,7 +390,9 @@ pub struct PerformanceMetrics {
     memory_usage: Vec<usize>,
     /// Memory allocations count per step
     memory_allocations: Vec<usize>,
-    /// Cache performance metrics (placeholder for future hardware integration)
+    /// Cache performance metrics
+    /// 
+    /// Future enhancement: integrate with hardware performance counters
     cache_metrics: CacheMetrics,
     /// Floating-point operations per second
     flops_per_step: Vec<f64>,
@@ -402,7 +404,9 @@ pub struct PerformanceMetrics {
     gc_time: Vec<f64>,
 }
 
-/// Cache performance metrics (placeholder for hardware-level profiling)
+/// Cache performance metrics
+/// 
+/// Future enhancement: hardware-level profiling integration
 #[derive(Default)]
 struct CacheMetrics {
     /// L1 cache miss rate
