@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod metrics;
 pub mod optimization;
 pub mod profiling;
+pub mod simd;
 
 pub use optimization::{
     AccessPattern, BandwidthOptimizer, CacheOptimizer, OptimizationConfig, PerformanceOptimizer,

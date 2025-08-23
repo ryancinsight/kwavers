@@ -6,8 +6,36 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// WARNING: Removing suppressions to fix real issues
-// Dead code and unused variables indicate incomplete implementation
+// Aggressive warning configuration - no tolerance for dead code
+#![warn(
+    dead_code,
+    unused_variables,
+    unused_imports,
+    unused_mut,
+    unreachable_code,
+    unreachable_patterns,
+    unused_must_use,
+    unused_unsafe,
+    path_statements,
+    unused_attributes,
+    unused_macros
+)]
+// Warn about code quality issues (will fix incrementally)
+#![warn(
+    missing_debug_implementations,
+)]
+// Warn about potentially unnecessary casts
+#![warn(
+    trivial_casts,
+    trivial_numeric_casts,
+)]
+// Warn about unsafe code but allow it for performance-critical sections
+#![warn(unsafe_code)]
+// Allow certain patterns during refactoring
+#![allow(
+    clippy::too_many_arguments,  // Will fix in refactoring
+    clippy::type_complexity,      // Will simplify types
+)]
 
 use std::collections::HashMap;
 
