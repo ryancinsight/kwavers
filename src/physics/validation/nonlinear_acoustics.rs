@@ -5,7 +5,8 @@
 use crate::grid::Grid;
 use crate::physics::mechanics::acoustic_wave::kuznetsov::config::KuznetsovConfig;
 use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
-use ndarray::Array3;
+use crate::physics::traits::AcousticWaveModel;
+use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
 
 // Nonlinearity parameters
@@ -49,16 +50,37 @@ mod tests {
         let k = 2.0 * PI / wavelength;
         let amplitude = 1e6; // 1 MPa
 
-        let mut pressure = Array3::zeros((nx, 1, 1));
+        // Initialize fields array (4D: [field_type, x, y, z])
+        let mut fields = Array4::zeros((1, nx, 1, 1)); // Single field for pressure
+        let prev_pressure = Array3::zeros((nx, 1, 1));
+        
+        // Initialize pressure field with sinusoidal wave
         for i in 0..nx {
             let x = i as f64 * dx;
-            pressure[[i, 0, 0]] = amplitude * (k * x).sin();
+            fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
         }
+
+        // Create a null source and medium for testing
+        use crate::source::NullSource;
+        use crate::medium::HomogeneousMedium;
+        let source = NullSource;
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        
+        // Calculate time step
+        let dt = 0.5 * dx / 1500.0; // CFL condition
+        let mut t = 0.0;
 
         // Propagate to develop harmonics
         let steps = 100;
         for _ in 0..steps {
-            solver.step(&mut pressure);
+            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
+            t += dt;
+        }
+        
+        // Extract pressure for analysis
+        let mut pressure = Array3::zeros((nx, 1, 1));
+        for i in 0..nx {
+            pressure[[i, 0, 0]] = fields[[0, i, 0, 0]];
         }
 
         // FFT to extract harmonics
@@ -125,11 +147,24 @@ mod tests {
         let wavelength = 1500.0 / frequency;
         let k = 2.0 * PI / wavelength;
 
-        let mut pressure = Array3::zeros((nx, 1, 1));
+        // Initialize fields array (4D: [field_type, x, y, z])
+        let mut fields = Array4::zeros((1, nx, 1, 1));
+        let prev_pressure = Array3::zeros((nx, 1, 1));
+        
         for i in 0..nx / 4 {
             let x = i as f64 * dx;
-            pressure[[i, 0, 0]] = amplitude * (k * x).sin();
+            fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
         }
+
+        // Create a null source and medium for testing
+        use crate::source::NullSource;
+        use crate::medium::HomogeneousMedium;
+        let source = NullSource;
+        let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        
+        // Calculate time step
+        let dt = 0.5 * dx / 1500.0; // CFL condition
+        let mut t = 0.0;
 
         // Theoretical shock distance (Blackstock Eq. 4.23)
         let shock_distance = 1500.0 / (BETA_WATER * k * amplitude);
@@ -137,7 +172,14 @@ mod tests {
 
         // Propagate to near shock formation
         for _ in 0..(steps_to_shock as f64 * 0.9) as usize {
-            solver.step(&mut pressure);
+            solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
+            t += dt;
+        }
+        
+        // Extract pressure for analysis
+        let mut pressure = Array3::zeros((nx, 1, 1));
+        for i in 0..nx {
+            pressure[[i, 0, 0]] = fields[[0, i, 0, 0]];
         }
 
         // Check for steepening (increased gradient)
