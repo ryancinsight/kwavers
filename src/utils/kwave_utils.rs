@@ -298,7 +298,8 @@ impl HounsfieldUnits {
     /// Based on Mast (2000) empirical relationship
     pub fn to_sound_speed(hu: f64) -> f64 {
         // Empirical relationship for soft tissues
-        let _density = Self::to_density(hu);
+        // Density could be used for more accurate calculation but simplified here
+        // let density = Self::to_density(hu);
 
         // Mast's formula
         if hu < -100.0 {
@@ -796,7 +797,8 @@ fn bessel_j1(x: f64) -> f64 {
         x * (0.5 - x2 / 8.0 + x2 * x2 / 192.0 - x2 * x2 * x2 / 9216.0)
     } else {
         // Asymptotic expansion for large x
-        let _inv_x = 1.0 / x;
+        // inv_x could be used for higher order terms but not needed here
+        // let inv_x = 1.0 / x;
         let phase = x - 3.0 * PI / 4.0;
         (2.0 / (PI * x)).sqrt()
             * phase.cos()

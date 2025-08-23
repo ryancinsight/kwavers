@@ -532,7 +532,7 @@ impl AcousticWaveSolver {
         let dx = self.grid.dx;
 
         // Compute correction factor based on k-space order
-        let correction_factor = match self.config.k_space_order {
+        match self.config.k_space_order {
             1 => {
                 // First-order correction: sinc(kΔx/2)
                 Zip::from(pressure_hat)

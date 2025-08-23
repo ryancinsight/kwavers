@@ -130,7 +130,7 @@ impl ThermodynamicsCalculator {
 
         let t_celsius = temperature - 273.15;
 
-        if t_celsius < 1.0 || t_celsius > 100.0 {
+        if !(1.0..=100.0).contains(&t_celsius) {
             // Fall back to Wagner equation outside valid range
             return self.wagner_equation(temperature);
         }
@@ -186,7 +186,7 @@ impl ThermodynamicsCalculator {
 
     /// Buck equation (meteorological standard)
     ///
-    /// Enhanced Magnus formula with higher accuracy
+    /// Magnus formula for vapor pressure calculation
     fn buck_equation(&self, temperature: f64) -> f64 {
         let t_celsius = temperature - 273.15;
 
@@ -318,7 +318,7 @@ impl ThermodynamicsCalculator {
     }
 }
 
-/// Enhanced mass transfer model for bubble dynamics
+/// Mass transfer model for bubble dynamics
 #[derive(Debug, Clone)]
 pub struct MassTransferModel {
     thermo: ThermodynamicsCalculator,

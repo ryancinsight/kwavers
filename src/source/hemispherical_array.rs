@@ -357,7 +357,7 @@ impl HemisphericalArray {
     /// Efficiency-based selection for optimal power delivery
     fn select_efficiency_based(&mut self, threshold: f64) -> KwaversResult<()> {
         // Calculate efficiency for each element based on target
-        let steering_target = self.steering_target.clone();
+        let steering_target = self.steering_target;
         let radius = self.radius;
         for (i, element) in self.elements.iter_mut().enumerate() {
             let efficiency =

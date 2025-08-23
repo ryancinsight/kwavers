@@ -244,7 +244,7 @@ impl Recorder {
             let sl_config = config
                 .sl_detector_config
                 .clone()
-                .unwrap_or_else(DetectorConfig::default);
+                .unwrap_or_default();
 
             let grid_spacing = (1e-3, 1e-3, 1e-3); // Default 1mm spacing
             recorder.sl_detector = Some(SonoluminescenceDetector::new(

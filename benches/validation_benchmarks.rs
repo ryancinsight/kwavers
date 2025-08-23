@@ -14,7 +14,7 @@ fn system_validation_benchmark(c: &mut Criterion) {
 
 fn medium_validation_benchmark(c: &mut Criterion) {
     let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
-    let medium = HomogeneousMedium::new(1000.0, 1500.0, &grid, 0.1, 1.0);
+    let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     c.bench_function("medium_validation", |b| {
         b.iter(|| {

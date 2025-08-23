@@ -8,7 +8,7 @@
 //! - **SOLID**: Single responsibility for time-reversal operations
 //! - **CUPID**: Composable with other solver components
 //! - **DRY**: Reuses existing grid and solver infrastructure
-//! - **KISS**: Simple interface for complex algorithms
+//! - **KISS**: Clear interface for algorithms
 
 use crate::{
     error::{KwaversError, KwaversResult, ValidationError},
@@ -85,7 +85,7 @@ impl TimeReversalReconstructor {
     /// Create a new time-reversal reconstructor
     pub fn new(config: TimeReversalConfig) -> KwaversResult<Self> {
         // Validate configuration
-        // Simple validation for now
+        // Validation checks
         if config.iterations == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "iterations".to_string(),
@@ -166,7 +166,7 @@ impl TimeReversalReconstructor {
                 self.propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
 
             // Accumulate reconstruction
-            reconstruction = reconstruction + &iteration_result;
+            reconstruction += &iteration_result;
 
             // Check convergence for iterative methods
             if self.config.iterations > 1 {

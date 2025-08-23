@@ -92,6 +92,7 @@ impl FieldValidationConfig {
 /// This structure centralizes all validation limits and thresholds, providing
 /// a single source of truth for numerical bounds and stability criteria.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ValidationConfig {
     /// Pressure field validation
     pub pressure: PressureValidation,
@@ -198,19 +199,6 @@ pub struct TimeStepValidation {
     pub max_simulation_time: f64,
 }
 
-impl Default for ValidationConfig {
-    fn default() -> Self {
-        Self {
-            pressure: PressureValidation::default(),
-            temperature: ThermalValidation::default(),
-            light: LightValidation::default(),
-            velocity: VelocityValidation::default(),
-            density: DensityValidation::default(),
-            stability: StabilityValidation::default(),
-            time_step: TimeStepValidation::default(),
-        }
-    }
-}
 
 impl Default for PressureValidation {
     fn default() -> Self {

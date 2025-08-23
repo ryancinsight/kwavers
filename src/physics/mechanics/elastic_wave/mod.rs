@@ -300,11 +300,11 @@ impl ElasticWaveMetrics {
 /// This solver updates particle velocities (vx, vy, vz) and stress components
 /// (sxx, syy, szz, sxy, sxz, syz) based on the 3D linear elastic wave equations.
 ///
-/// Enhanced with:
-/// - Better error handling following SOLID principles
+/// Features:
+/// - Error handling following SOLID principles
 /// - Performance monitoring with SSOT metrics
 /// - Support for anisotropic materials (future)
-/// - Improved numerical stability checks
+/// - Numerical stability checks
 /// - Memory usage tracking
 ///
 /// Design Principles Implemented:
@@ -692,7 +692,7 @@ impl AcousticWaveModel for ElasticWave {
             kz: &self.kz,
             lame_lambda: &lambda,
             lame_mu: &mu,
-            density: &density,
+            density,
             dt,
         };
 
@@ -720,7 +720,7 @@ impl AcousticWaveModel for ElasticWave {
             kx: &self.kx,
             ky: &self.ky,
             kz: &self.kz,
-            density: &density,
+            density,
             dt,
         };
 

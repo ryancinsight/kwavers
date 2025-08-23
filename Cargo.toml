@@ -116,6 +116,7 @@ mockall = "0.11"
 
 [features]
 default = []
+strict = []  # Enable strict compilation without unused code warnings
 parallel = ["ndarray/rayon"]
 gpu = ["dep:cudarc"]
 ml = ["dep:candle-core", "dep:candle-nn", "dep:ort"]

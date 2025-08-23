@@ -5,7 +5,7 @@ use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
-use ndarray::{Array4, Zip};
+use ndarray::{Array4, Zip, s};
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;

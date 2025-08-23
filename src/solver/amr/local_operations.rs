@@ -152,7 +152,7 @@ fn transfer_data_recursive(
                 target_field,
                 current_origin,
                 current_size,
-                node.level().abs() as usize,
+                node.level().unsigned_abs() as usize,
                 index_map,
                 cells_coarsened,
                 scheme,

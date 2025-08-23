@@ -53,6 +53,12 @@ impl Default for QualityThresholds {
     }
 }
 
+impl Default for QualityMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QualityMonitor {
     /// Create a new quality monitor
     pub fn new() -> Self {

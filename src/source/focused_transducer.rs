@@ -336,9 +336,9 @@ impl BowlTransducer {
         };
 
         // Add time-varying component
-        let p = p_amplitude * (omega * time - k * d1 + self.config.phase).sin();
+        
 
-        p
+        p_amplitude * (omega * time - k * d1 + self.config.phase).sin()
     }
 }
 

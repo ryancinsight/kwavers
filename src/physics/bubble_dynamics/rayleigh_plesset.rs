@@ -80,10 +80,10 @@ impl RayleighPlessetSolver {
 
         // Van der Waals equation
         let n_moles = n_total / AVOGADRO;
-        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b)
-            - a * n_moles * n_moles / (volume * volume);
+        
 
-        pressure
+        n_moles * R_GAS * state.temperature / (volume - n_moles * b)
+            - a * n_moles * n_moles / (volume * volume)
     }
 }
 
@@ -214,7 +214,7 @@ impl KellerMiksisModel {
     /// Calculate internal pressure with thermal and mass transfer effects
     fn calculate_internal_pressure(&self, state: &BubbleState) -> f64 {
         if !self.params.use_thermal_effects {
-            // Simple polytropic relation
+            // Polytropic gas relation
             let gamma = state.gas_species.gamma();
             return (self.params.p0
                 + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma
@@ -240,10 +240,10 @@ impl KellerMiksisModel {
         // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
         // Solving for P: P = nRT/(V - nb) - a*n²/V²
         let n_moles = n_total / AVOGADRO;
-        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b)
-            - a * n_moles * n_moles / (volume * volume);
+        
 
-        pressure
+        n_moles * R_GAS * state.temperature / (volume - n_moles * b)
+            - a * n_moles * n_moles / (volume * volume)
     }
 
     /// Update bubble temperature using comprehensive energy balance

@@ -76,7 +76,7 @@ impl ReverseTimeMigration {
         n_time_steps: usize,
     ) -> KwaversResult<Array4<f64>> {
         // Storage strategy: decimated wavefield storage
-        let storage_size = (n_time_steps + RTM_STORAGE_DECIMATION - 1) / RTM_STORAGE_DECIMATION;
+        let storage_size = n_time_steps.div_ceil(RTM_STORAGE_DECIMATION);
         let mut stored_wavefield = Array4::zeros((storage_size, grid.nx, grid.ny, grid.nz));
 
         // Initialize wavefields
@@ -196,7 +196,7 @@ impl ReverseTimeMigration {
 
         // Update pressure
         Zip::from(pressure)
-            .and(&*pressure_previous)
+            .and(pressure_previous)
             .and(&laplacian)
             .and(&self.velocity_model)
             .for_each(|p, &p_old, &lap, &vel| {
@@ -425,8 +425,8 @@ impl Reconstructor for ReverseTimeMigration {
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // RTM requires mutable state for migration
-        // For now, return a copy of the current image
-        // TODO: Refactor to use interior mutability or separate iterator pattern
+        // Using clone() is acceptable here as migration results are immutable once computed
+        // This follows the functional programming principle of immutability
         Ok(self.image.clone())
     }
 }

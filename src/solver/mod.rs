@@ -87,6 +87,12 @@ impl ProgressData for ProgressUpdate {}
 #[derive(Debug, Clone, Serialize)]
 pub struct FieldsSummary(HashMap<String, f64>);
 
+impl Default for FieldsSummary {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FieldsSummary {
     /// Create a new empty field summary
     pub fn new() -> Self {

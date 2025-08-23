@@ -113,7 +113,8 @@ impl HomogeneousMedium {
 
     /// Create an air medium with standard properties at 20°C
     pub fn air(grid: &Grid) -> Self {
-        let medium = Self {
+        
+        Self {
             density: 1.204,
             sound_speed: 343.0,
             viscosity: 1.81e-5,
@@ -141,8 +142,7 @@ impl HomogeneousMedium {
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
-        };
-        medium
+        }
     }
 
     /// Create from minimal parameters (for compatibility)
@@ -160,11 +160,11 @@ impl HomogeneousMedium {
 }
 
 impl Medium for HomogeneousMedium {
-    fn density(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.density
     }
 
-    fn sound_speed(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn sound_speed(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.sound_speed
     }
 
@@ -172,11 +172,11 @@ impl Medium for HomogeneousMedium {
         true
     }
 
-    fn viscosity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.viscosity
     }
 
-    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.surface_tension
     }
 

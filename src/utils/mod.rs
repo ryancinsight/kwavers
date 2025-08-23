@@ -33,7 +33,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
-use rayon::prelude::*;
+
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},

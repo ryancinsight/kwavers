@@ -62,6 +62,8 @@ pub enum KwaversError {
     Composite(CompositeError),
     /// Validation errors
     Validation(ValidationError),
+    /// Invalid input parameters
+    InvalidInput(String),
     /// IO errors
     Io(String),
     /// Concurrency errors
@@ -88,6 +90,7 @@ impl fmt::Display for KwaversError {
             Self::System(e) => write!(f, "System error: {}", e),
             Self::Composite(e) => write!(f, "Multiple errors: {}", e),
             Self::Validation(e) => write!(f, "Validation error: {:?}", e),
+            Self::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
             Self::Io(msg) => write!(f, "I/O error: {}", msg),
             Self::ConcurrencyError {
                 operation,
@@ -119,6 +122,7 @@ impl StdError for KwaversError {
             Self::System(e) => Some(e),
             Self::Composite(e) => Some(e),
             Self::Validation(e) => Some(e),
+            Self::InvalidInput(_) => None,
             Self::Io(_) => None,
             Self::ConcurrencyError { .. } => None,
             Self::NotImplemented(_) => None,

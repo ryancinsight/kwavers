@@ -348,11 +348,11 @@ impl ThermalDiffusionSolver {
             6 => Self::laplacian_6th_order(field, result, grid),
             _ => {
                 // Return an error for unsupported spatial orders
-                return Err(KwaversError::Config(ConfigError::InvalidValue {
+                Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "spatial_order".to_string(),
                     value: spatial_order.to_string(),
                     constraint: "Only orders 2, 4, and 6 are supported".to_string(),
-                }));
+                }))
             }
         }
     }

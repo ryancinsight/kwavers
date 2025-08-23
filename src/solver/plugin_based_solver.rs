@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Dynamic field registry for type-safe field management
-/// Optimized for O(1) direct indexing using Vec instead of HashMap
+/// Direct indexing field registry using Vec for O(1) access
 pub struct FieldRegistry {
     /// Registered fields indexed by UnifiedFieldType numeric value
     /// None indicates unregistered field
@@ -171,7 +171,7 @@ impl FieldRegistry {
         Ok(())
     }
 
-    /// Register multiple fields at once (optimized for batch registration)
+    /// Register multiple fields at once for batch registration
     pub fn register_fields(
         &mut self,
         fields: &[(UnifiedFieldType, String)],
@@ -351,7 +351,7 @@ impl FieldRegistry {
 /// with existing boundary implementations. However, the long-term vision is to
 /// migrate all boundary conditions to the plugin architecture:
 ///
-/// - Simple boundaries (e.g., hard wall) → `HardWallBoundaryPlugin`
+/// - Reflective boundaries (e.g., hard wall) → `HardWallBoundaryPlugin`
 /// - Complex integrated boundaries (e.g., CPML) → `CPMLPlugin`
 ///
 /// This will unify the design and make plugins the single extension mechanism.
@@ -377,7 +377,7 @@ pub struct PluginBasedSolver {
     metrics: PerformanceMetrics,
 }
 
-/// Enhanced performance metrics for high-performance computing
+/// Performance metrics for computational analysis
 #[derive(Default)]
 pub struct PerformanceMetrics {
     /// Total simulation steps completed
@@ -390,7 +390,9 @@ pub struct PerformanceMetrics {
     memory_usage: Vec<usize>,
     /// Memory allocations count per step
     memory_allocations: Vec<usize>,
-    /// Cache performance metrics (placeholder for future hardware integration)
+    /// Cache performance metrics
+    /// 
+    /// Future enhancement: integrate with hardware performance counters
     cache_metrics: CacheMetrics,
     /// Floating-point operations per second
     flops_per_step: Vec<f64>,
@@ -402,7 +404,9 @@ pub struct PerformanceMetrics {
     gc_time: Vec<f64>,
 }
 
-/// Cache performance metrics (placeholder for hardware-level profiling)
+/// Cache performance metrics
+/// 
+/// Future enhancement: hardware-level profiling integration
 #[derive(Default)]
 struct CacheMetrics {
     /// L1 cache miss rate
@@ -436,7 +440,7 @@ impl PerformanceMetrics {
     pub fn record_plugin_time(&mut self, plugin_name: &str, duration: f64) {
         self.plugin_execution_times
             .entry(plugin_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(duration);
     }
 }
@@ -521,7 +525,7 @@ impl PluginBasedSolver {
 
         // Build the field registry to allocate field data
         self.field_registry.build()
-            .map_err(|e| KwaversError::Field(e))?;
+            .map_err(KwaversError::Field)?;
 
         // Initialize all plugins
         self.plugin_manager
@@ -660,7 +664,7 @@ impl PluginBasedSolver {
         let fields = self
             .field_registry
             .data_mut()
-            .ok_or_else(|| KwaversError::Field(FieldError::DataNotInitialized))?;
+            .ok_or(KwaversError::Field(FieldError::DataNotInitialized))?;
 
         // 1. Apply boundary conditions first (prepare fields for physics update)
         // Boundary conditions are applied directly to the pressure field
@@ -731,7 +735,7 @@ impl PluginBasedSolver {
     ) -> KwaversResult<()> {
         self.field_registry
             .set_field(field_type, values)
-            .map_err(|e| KwaversError::Field(e))
+            .map_err(KwaversError::Field)
     }
 
     /// Get the grid
