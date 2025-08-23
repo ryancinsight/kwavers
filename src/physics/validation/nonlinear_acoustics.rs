@@ -24,15 +24,21 @@ mod tests {
         let dx = 1e-4;
         let frequency = 1e6; // 1 MHz
 
-        use crate::physics::mechanics::acoustic_wave::kuznetsov::config::AcousticEquationMode;
+        use crate::physics::mechanics::acoustic_wave::kuznetsov::AcousticEquationMode;
         let config = KuznetsovConfig {
-            equation_mode: AcousticEquationMode::Kuznetsov,
+            equation_mode: AcousticEquationMode::FullKuznetsov,
             cfl_factor: 0.5,
             nonlinearity_coefficient: BETA_WATER,
             acoustic_diffusivity: ATTENUATION_WATER * 1500.0_f64.powi(3) / (2.0 * std::f64::consts::PI * std::f64::consts::PI * frequency.powi(2)),
             use_k_space_correction: false,
             k_space_correction_order: 2,
             spatial_order: 4,
+            adaptive_time_stepping: false,
+            max_pressure: 1e9,
+            shock_capturing: true,
+            history_levels: 3,
+            nonlinearity_scaling: 1.0,
+            diffusivity: 1.0,
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
@@ -97,13 +103,19 @@ mod tests {
         let amplitude = 2e6; // 2 MPa
 
         let config = KuznetsovConfig {
-            equation_mode: AcousticEquationMode::Kuznetsov,
+            equation_mode: AcousticEquationMode::FullKuznetsov,
             cfl_factor: 0.5,
             nonlinearity_coefficient: BETA_WATER,
             acoustic_diffusivity: 0.0, // No attenuation for cleaner shock
             use_k_space_correction: false,
             k_space_correction_order: 2,
             spatial_order: 4,
+            adaptive_time_stepping: false,
+            max_pressure: 1e9,
+            shock_capturing: true,
+            history_levels: 3,
+            nonlinearity_scaling: 1.0,
+            diffusivity: 0.0,
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);

@@ -65,7 +65,7 @@ impl HybridValidationSuite {
     fn run_convergence_test(&self) -> KwaversResult<bool> {
         // Test that error decreases with grid refinement
         let mut errors = Vec::new();
-        let mut grid_sizes = vec![32, 64, 128];
+        let grid_sizes = vec![32, 64, 128];
         
         for size in grid_sizes {
             let error = self.compute_error_for_grid_size(size)?;
