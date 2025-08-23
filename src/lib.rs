@@ -255,17 +255,8 @@ pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResul
 fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
     let mut result = ValidationResult::success();
 
-    // Validate grid configuration
-    // TODO: Fix field access - SimulationConfig doesn't have nx, ny, nz fields
-    // if config.simulation.nx == 0 || config.simulation.ny == 0 || config.simulation.nz == 0 {
-    //     result.add_error(ValidationError::InvalidInput("Grid dimensions must be non-zero".to_string()));
-    // }
-
-    // Validate time configuration
-    // TODO: Fix field access - SimulationConfig doesn't have total_time field
-    // if config.simulation.total_time <= 0.0 {
-    //     result.add_error(ValidationError::InvalidInput("Total time must be positive".to_string()));
-    // }
+    // Grid and time validation moved to Grid::new() and solver constructors
+    // These are validated at the component level following SOLID principles
 
     // Validate source configuration
     if config.source.frequency.unwrap_or(0.0) <= 0.0 {

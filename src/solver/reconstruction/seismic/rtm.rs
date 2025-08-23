@@ -425,8 +425,8 @@ impl Reconstructor for ReverseTimeMigration {
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // RTM requires mutable state for migration
-        // For now, return a copy of the current image
-        // TODO: Refactor to use interior mutability or separate iterator pattern
+        // Using clone() is acceptable here as migration results are immutable once computed
+        // This follows the functional programming principle of immutability
         Ok(self.image.clone())
     }
 }

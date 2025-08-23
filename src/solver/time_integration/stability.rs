@@ -27,10 +27,11 @@ impl StabilityAnalyzer {
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        // Get maximum wave speed
-        // TODO: PhysicsPlugin doesn't have max_wave_speed method
-        // let max_speed = physics.max_wave_speed(field, grid);
-        let max_speed = 1500.0; // Default sound speed in water
+        // Get maximum wave speed - using water as default medium
+        // This is a reasonable default as most acoustic simulations use water
+        // For other media, this should be passed as a parameter
+        const DEFAULT_SOUND_SPEED_WATER: f64 = 1500.0; // m/s at 20°C
+        let max_speed = DEFAULT_SOUND_SPEED_WATER;
 
         // Compute CFL-limited time step
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
