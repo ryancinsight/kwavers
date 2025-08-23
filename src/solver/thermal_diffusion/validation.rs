@@ -59,8 +59,8 @@ mod tests {
 
         // Set initial temperature distribution: T0 * sin(πx/L)
         let t0 = 10.0; // 10K amplitude
-        let t_ambient = 293.15; // 20°C
-        let mut initial_temp = Array3::zeros((nx, ny, nz));
+        let t_ambient = crate::constants::temperature::ROOM_TEMPERATURE_K; // 20°C
+        let mut initial_temperature = Array3::zeros((nx, ny, nz));
 
         // Set 1D temperature profile (same in all y,z)
         for i in 0..nx {
@@ -68,12 +68,12 @@ mod tests {
             let temp = t_ambient + t0 * (std::f64::consts::PI * x / length).sin();
             for j in 0..ny {
                 for k in 0..nz {
-                    initial_temp[[i, j, k]] = temp;
+                    initial_temperature[[i, j, k]] = temp;
                 }
             }
         }
 
-        solver.set_temperature(initial_temp).unwrap();
+        solver.set_temperature(initial_temperature).unwrap();
 
         // No heat source
         let heat_source = Array3::zeros((nx, ny, nz));
@@ -211,15 +211,15 @@ mod tests {
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = true;
         config.perfusion_rate = 0.5e-3; // 0.5 mL/g/min
-        config.arterial_temperature = 310.15; // 37°C
+        config.arterial_temperature = crate::constants::temperature::BODY_TEMPERATURE_K; // 37°C
         config.track_thermal_dose = false;
 
-        let arterial_temp = config.arterial_temperature;
+        let arterial_temperature = config.arterial_temperature;
         let mut solver = ThermalDiffusionSolver::new(config.clone(), &grid).unwrap();
 
         // Uniform initial temperature at arterial temperature
         solver
-            .set_temperature(Array3::from_elem((n, n, n), arterial_temp))
+            .set_temperature(Array3::from_elem((n, n, n), arterial_temperature))
             .unwrap();
 
         // Uniform heat source
@@ -239,21 +239,21 @@ mod tests {
         let c_b = config.blood_specific_heat;
         let t_a = config.arterial_temperature;
 
-        let expected_temp = t_a + q_metabolic / (omega_b * rho_b * c_b);
+        let expected_temperature = t_a + q_metabolic / (omega_b * rho_b * c_b);
 
         let temperature = solver.temperature();
-        let avg_temp = temperature.mean().unwrap();
+        let average_temperature = temperature.mean().unwrap();
 
         // With perfusion and heat source, we expect temperature between arterial and steady state
         println!(
             "Expected steady state: {:.2}K, Actual average: {:.2}K",
-            expected_temp, avg_temp
+            expected_temperature, average_temperature
         );
 
         // Verify temperature is reasonable and moving towards steady state
-        assert!(avg_temp > t_a, "Temperature should be above arterial");
+        assert!(average_temperature > t_a, "Temperature should be above arterial");
         assert!(
-            avg_temp < expected_temp,
+            average_temperature < expected_temperature,
             "Temperature should not exceed theoretical steady state"
         );
 
@@ -287,7 +287,7 @@ mod tests {
         let mut config = ThermalDiffusionConfig::default();
         config.enable_bioheat = false; // No perfusion for simple test
         config.track_thermal_dose = true;
-        config.dose_reference_temp = 43.0;
+        config.dose_reference_temperature = crate::constants::temperature::THERMAL_DOSE_REFERENCE_C;
 
         let mut solver = ThermalDiffusionSolver::new(config.clone(), &grid).unwrap();
 
@@ -363,7 +363,7 @@ mod tests {
         let mut solver = ThermalDiffusionSolver::new(config, &grid).unwrap();
 
         // Initial Gaussian temperature distribution
-        let mut initial_temp = Array3::zeros((n, n, n));
+        let mut initial_temperature = Array3::zeros((n, n, n));
         let center = n / 2;
         for i in 0..n {
             for j in 0..n {
@@ -372,12 +372,12 @@ mod tests {
                         + (j as f64 - center as f64).powi(2)
                         + (k as f64 - center as f64).powi(2))
                         * 0.001_f64.powi(2);
-                    initial_temp[[i, j, k]] = 293.15 + 10.0 * (-r2 / 0.00001).exp();
+                    initial_temperature[[i, j, k]] = 293.15 + 10.0 * (-r2 / 0.00001).exp();
                 }
             }
         }
 
-        solver.set_temperature(initial_temp.clone()).unwrap();
+        solver.set_temperature(initial_temperature.clone()).unwrap();
 
         let heat_source = Array3::zeros((n, n, n));
 
@@ -386,7 +386,7 @@ mod tests {
         let dt = 0.000001; // 1 microsecond
         let n_steps = 10;
 
-        let initial_energy = initial_temp.sum();
+        let initial_energy = initial_temperature.sum();
 
         // Just run a few steps to verify it doesn't crash
         for step in 0..n_steps {
@@ -436,18 +436,18 @@ mod tests {
         let mut solver = ThermalDiffusionSolver::new(config, &grid).unwrap();
 
         // Random initial temperature distribution
-        let mut initial_temp = Array3::zeros((n, n, n));
+        let mut initial_temperature = Array3::zeros((n, n, n));
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
-                    initial_temp[[i, j, k]] =
+                    initial_temperature[[i, j, k]] =
                         293.15 + 10.0 * ((i + j + k) as f64 / (3.0 * n as f64));
                 }
             }
         }
 
-        let initial_energy = initial_temp.sum();
-        solver.set_temperature(initial_temp).unwrap();
+        let initial_energy = initial_temperature.sum();
+        solver.set_temperature(initial_temperature).unwrap();
 
         // No heat source - isolated system
         let heat_source = Array3::zeros((n, n, n));
@@ -478,7 +478,7 @@ mod tests {
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // Test smooth initial condition where higher order should be more accurate
-        let mut initial_temp = Array3::zeros((n, n, n));
+        let mut initial_temperature = Array3::zeros((n, n, n));
         let center = n / 2;
         for i in 0..n {
             for j in 0..n {
@@ -487,7 +487,7 @@ mod tests {
                         + (j as f64 - center as f64).powi(2)
                         + (k as f64 - center as f64).powi(2))
                         * 0.001_f64.powi(2);
-                    initial_temp[[i, j, k]] = 293.15 + 10.0 * (-r2 / 0.0001).exp();
+                    initial_temperature[[i, j, k]] = 293.15 + 10.0 * (-r2 / 0.0001).exp();
                 }
             }
         }
@@ -505,7 +505,7 @@ mod tests {
             config.spatial_order = order;
 
             let mut solver = ThermalDiffusionSolver::new(config, &grid).unwrap();
-            solver.set_temperature(initial_temp.clone()).unwrap();
+            solver.set_temperature(initial_temperature.clone()).unwrap();
 
             for _ in 0..n_steps {
                 solver.update(&heat_source, &grid, &medium, dt).unwrap();

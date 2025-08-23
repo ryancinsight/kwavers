@@ -139,7 +139,7 @@ impl WesterveltWave {
             kz: Some(kz_arr_nd),
             nonlinearity_scaling: 1.0, // Default, can be adjusted
 
-            max_pressure: 1e9, // Default max pressure for clamping
+            max_pressure: crate::constants::numerical::MAX_PRESSURE_CLAMP, // Default max pressure for clamping
             pressure_history: None,
             prev_pressure_stored: None,
             metrics: Arc::new(Mutex::new(PerformanceMetrics::default())),

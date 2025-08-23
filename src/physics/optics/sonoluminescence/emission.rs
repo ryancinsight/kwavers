@@ -393,12 +393,12 @@ impl SonoluminescencePulse {
         let (peak_wavelength, color_temperature) = if peak_idx < spectra.len() {
             let spectrum = &spectra[peak_idx];
             let peak_wl = spectrum.peak_wavelength();
-            let color_temp = if peak_wl > 0.0 {
+            let color_temperature = if peak_wl > 0.0 {
                 2.897771955e-3 / peak_wl
             } else {
                 0.0
             };
-            (peak_wl, color_temp)
+            (peak_wl, color_temperature)
         } else {
             (0.0, 0.0)
         };

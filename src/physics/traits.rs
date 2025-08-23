@@ -160,7 +160,7 @@ pub trait ThermalModelTrait: Debug + Send + Sync {
 
     /// Sets the 3D temperature field.
     /// Required for numerical solvers that manage state externally or for initialization.
-    fn set_temperature(&mut self, new_temp: &Array3<f64>);
+    fn set_temperature(&mut self, temperature: &Array3<f64>);
 
     /// Reports performance metrics of the thermal model.
     fn report_performance(&self);

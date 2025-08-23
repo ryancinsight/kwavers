@@ -342,7 +342,7 @@ impl SonoluminescenceDetector {
         let total_energy = cluster.iter().map(|e| e.energy).sum();
 
         // Find peak values
-        let peak_temp = cluster
+        let peak_temperature = cluster
             .iter()
             .map(|e| e.peak_temperature)
             .fold(0.0, f64::max);
@@ -367,11 +367,11 @@ impl SonoluminescenceDetector {
             time,
             position: cluster[0].position, // Use first event's grid position
             physical_position: (x, y, z),
-            peak_temperature: peak_temp,
+            peak_temperature,
             peak_pressure,
             compression_ratio: cluster[0].compression_ratio, // Use first
             photon_count: total_photons,
-            peak_wavelength: 2.898e-3 / peak_temp, // Wien's law with peak temp
+            peak_wavelength: 2.898e-3 / peak_temperature, // Wien's law with peak temperature
             duration,
             energy: total_energy,
         }

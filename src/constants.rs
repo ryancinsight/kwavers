@@ -60,6 +60,31 @@ pub mod numerical {
     pub const PML_ALPHA_MAX: f64 = 0.0;
     pub const PML_POLYNOMIAL_ORDER: f64 = 2.0;
     pub const PML_SIGMA_OPTIMAL: f64 = 0.8;
+    
+    // Pressure limits for numerical stability
+    pub const MAX_PRESSURE_CLAMP: f64 = 1e9; // Pa - Maximum pressure for clamping in nonlinear simulations
+}
+
+/// Temperature constants
+pub mod temperature {
+    /// Room temperature in Kelvin (20°C)
+    pub const ROOM_TEMPERATURE_K: f64 = 293.15;
+    /// Body temperature in Kelvin (37°C)
+    pub const BODY_TEMPERATURE_K: f64 = 310.15;
+    /// Body temperature in Celsius
+    pub const BODY_TEMPERATURE_C: f64 = 37.0;
+    /// Reference temperature for thermal dose calculation in Celsius
+    pub const THERMAL_DOSE_REFERENCE_C: f64 = 43.0;
+    /// Reference temperature for thermal dose calculation in Kelvin
+    pub const THERMAL_DOSE_REFERENCE_K: f64 = 316.15;
+    /// Freezing point of water in Kelvin
+    pub const WATER_FREEZING_K: f64 = 273.15;
+    /// Boiling point of water in Kelvin at 1 atm
+    pub const WATER_BOILING_K: f64 = 373.15;
+    /// Absolute zero in Celsius
+    pub const ABSOLUTE_ZERO_C: f64 = -273.15;
+    /// Safety threshold - 1°C above body temperature in Kelvin
+    pub const SAFETY_TEMPERATURE_K: f64 = 311.15;
 }
 
 /// Standard medium properties
