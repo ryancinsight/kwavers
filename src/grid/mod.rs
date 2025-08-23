@@ -42,12 +42,12 @@ impl Grid {
     /// # Panics
     /// Panics if dimensions or spacing are not positive.
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
-        Self::try_new(nx, ny, nz, dx, dy, dz)
+        Self::create(nx, ny, nz, dx, dy, dz)
             .expect("Invalid grid parameters")
     }
 
     /// Creates a new grid with specified dimensions and spacing, returning an error if invalid.
-    pub fn try_new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
+    pub fn create(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(KwaversError::InvalidInput(
                 format!("Grid dimensions must be positive, got nx={}, ny={}, nz={}", nx, ny, nz)

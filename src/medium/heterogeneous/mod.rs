@@ -333,7 +333,35 @@ mod tests {
     fn test_shear_property_array_methods_heterogeneous() {
         let grid_dims = (2, 2, 2);
         let grid = create_test_grid(grid_dims.0, grid_dims.1, grid_dims.2);
-        let mut medium = HeterogeneousMedium::new_tissue(&grid);
+        // Create a test medium with default values
+        let mut medium = HeterogeneousMedium {
+            density: Array3::from_elem(grid_dims, 1000.0),
+            sound_speed: Array3::from_elem(grid_dims, 1500.0),
+            viscosity: Array3::from_elem(grid_dims, 0.001),
+            surface_tension: Array3::from_elem(grid_dims, 0.0728),
+            ambient_pressure: 101325.0,
+            vapor_pressure: Array3::from_elem(grid_dims, 2338.0),
+            polytropic_index: Array3::from_elem(grid_dims, 1.4),
+            specific_heat: Array3::from_elem(grid_dims, 4182.0),
+            thermal_conductivity: Array3::from_elem(grid_dims, 0.6),
+            thermal_expansion: Array3::from_elem(grid_dims, 0.0002),
+            gas_diffusion_coeff: Array3::from_elem(grid_dims, 2e-9),
+            thermal_diffusivity: Array3::from_elem(grid_dims, 1.4e-7),
+            mu_a: Array3::from_elem(grid_dims, 0.01),
+            mu_s_prime: Array3::from_elem(grid_dims, 1.0),
+            temperature: Array3::from_elem(grid_dims, 293.15),
+            bubble_radius: Array3::zeros(grid_dims),
+            bubble_velocity: Array3::zeros(grid_dims),
+            alpha0: Array3::from_elem(grid_dims, 0.01),
+            delta: Array3::from_elem(grid_dims, 2.0),
+            b_a: Array3::from_elem(grid_dims, 5.0),
+            reference_frequency: 1e6,
+            shear_sound_speed: Array3::from_elem(grid_dims, 10.0),
+            shear_viscosity_coeff: Array3::from_elem(grid_dims, 0.001),
+            bulk_viscosity_coeff: Array3::from_elem(grid_dims, 0.001),
+            lame_lambda: Array3::from_elem(grid_dims, 2.0e9),
+            lame_mu: Array3::from_elem(grid_dims, 1.0e9),
+        };
 
         // Modify the arrays directly for testing the getter methods
         let new_sss = Array3::from_elem(grid_dims, 25.0);

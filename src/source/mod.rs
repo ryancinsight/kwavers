@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::fmt::Debug;
 
 pub mod apodization;
-pub mod flexible_transducer;
+pub mod flexible;
 pub mod focused_transducer;
 pub mod hemispherical_array;
 pub mod linear_array;

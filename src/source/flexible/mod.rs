@@ -2,14 +2,14 @@
 //!
 //! Modular implementation following SOLID principles
 
-mod config;
-mod geometry;
-mod calibration;
-mod array;
+pub mod config;
+pub mod geometry;
+pub mod calibration;
+pub mod array;
 
-pub use config::{FlexibleTransducerConfig, FlexibilityModel};
+pub use config::{FlexibleTransducerConfig, FlexibilityModel, CalibrationMethod, TrackingSystem};
 pub use geometry::{GeometryState, DeformationState};
-pub use calibration::{CalibrationMethod, TrackingSystem};
+pub use calibration::{CalibrationData, CalibrationProcessor, GeometrySnapshot};
 pub use array::FlexibleTransducerArray;
 
 // Re-export at parent level for backward compatibility

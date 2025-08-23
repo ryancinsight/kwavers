@@ -96,8 +96,8 @@ impl EnergyBalanceCalculator {
         let h_value = nusselt * k_value / r_value; // W/(m²·K)
 
         // Temperature difference
-        let bubble_temp = ThermodynamicTemperature::new::<kelvin>(state.temperature);
-        let delta_t_k = bubble_temp.get::<kelvin>() - self.ambient_temperature.get::<kelvin>();
+        let bubble_temperature = ThermodynamicTemperature::new::<kelvin>(state.temperature);
+        let delta_t_k = bubble_temperature.get::<kelvin>() - self.ambient_temperature.get::<kelvin>();
 
         // Heat transfer rate: Q = h * A * ΔT
         let area = Area::new::<square_meter>(state.surface_area());
@@ -134,15 +134,15 @@ impl EnergyBalanceCalculator {
         let heat_cap_j_per_k = heat_capacity.get::<joule_per_kelvin>();
         let temp_change_k = energy_joules / (mass_kg * heat_cap_j_per_k);
 
-        let current_temp_k = state.temperature;
-        let new_temp_k = current_temp_k + temp_change_k;
+        let current_temperature_k = state.temperature;
+        let temperature_k = current_temperature_k + temp_change_k;
 
         // Ensure temperature doesn't go below ambient (non-physical)
         let ambient_k = self.ambient_temperature.get::<kelvin>();
-        if new_temp_k < ambient_k {
+        if temperature_k < ambient_k {
             self.ambient_temperature
         } else {
-            ThermodynamicTemperature::new::<kelvin>(new_temp_k)
+            ThermodynamicTemperature::new::<kelvin>(temperature_k)
         }
     }
 }
@@ -191,10 +191,10 @@ pub fn update_temperature_energy_balance(
     let heat_capacity = HeatCapacity::new::<joule_per_kelvin>(cv);
 
     // Update temperature
-    let new_temp =
+    let temperature =
         calculator.update_temperature_from_energy(state, energy_rate, time_step, heat_capacity);
 
-    state.temperature = new_temp.get::<kelvin>();
+    state.temperature = temperature.get::<kelvin>();
     state.update_max_temperature();
 }
 

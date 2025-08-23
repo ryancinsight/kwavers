@@ -56,7 +56,7 @@ pub struct ThermalDiffusionConfig {
     /// Enable thermal dose tracking
     pub track_thermal_dose: bool,
     /// Reference temperature for dose calculation [°C]
-    pub dose_reference_temp: f64,
+    pub dose_reference_temperature: f64,
     /// Spatial discretization order (2, 4, or 6)
     pub spatial_order: usize,
 }
@@ -68,11 +68,11 @@ impl Default for ThermalDiffusionConfig {
             perfusion_rate: 0.5e-3,       // 0.5 mL/g/min typical tissue
             blood_density: 1050.0,        // kg/m³
             blood_specific_heat: 3840.0,  // J/(kg·K)
-            arterial_temperature: 310.15, // 37°C in Kelvin
+            arterial_temperature: crate::constants::temperature::BODY_TEMPERATURE_K, // 37°C in Kelvin
             enable_hyperbolic: false,
             relaxation_time: 20.0, // 20s for tissue
             track_thermal_dose: true,
-            dose_reference_temp: 43.0, // 43°C reference
+            dose_reference_temperature: crate::constants::temperature::THERMAL_DOSE_REFERENCE_C, // 43°C reference
             spatial_order: 4,
         }
     }
@@ -574,22 +574,22 @@ impl ThermalDiffusionSolver {
     /// Update cumulative thermal dose using CEM43 formulation
     fn update_thermal_dose(&mut self, dt: f64) -> KwaversResult<()> {
         if let Some(ref mut dose) = self.thermal_dose {
-            let t_ref = self.config.dose_reference_temp + 273.15; // Convert to Kelvin
+            let t_ref = self.config.dose_reference_temperature + crate::constants::temperature::WATER_FREEZING_K; // Convert to Kelvin
 
             Zip::from(&self.temperature)
                 .and(dose)
                 .for_each(|&temp, dose_val| {
                     let temp_c = temp - 273.15; // Convert to Celsius
 
-                    if temp_c > self.config.dose_reference_temp {
+                    if temp_c > self.config.dose_reference_temperature {
                         // Above reference: R = 0.5 for T > 43°C
                         let r = 0.5_f64;
-                        let exponent = self.config.dose_reference_temp - temp_c;
+                        let exponent = self.config.dose_reference_temperature - temp_c;
                         *dose_val += dt * r.powf(exponent) / 60.0; // Convert to minutes
-                    } else if temp_c > 37.0 {
+                    } else if temp_c > crate::constants::temperature::BODY_TEMPERATURE_C {
                         // Below reference but above body temp: R = 0.25 for T < 43°C
                         let r = 0.25_f64;
-                        let exponent = self.config.dose_reference_temp - temp_c;
+                        let exponent = self.config.dose_reference_temperature - temp_c;
                         *dose_val += dt * r.powf(exponent) / 60.0;
                     }
                     // No dose accumulation below 37°C

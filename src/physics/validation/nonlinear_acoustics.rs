@@ -24,15 +24,19 @@ mod tests {
         let dx = 1e-4;
         let frequency = 1e6; // 1 MHz
 
+        use crate::physics::mechanics::acoustic_wave::kuznetsov::config::AcousticEquationMode;
         let config = KuznetsovConfig {
-            nonlinearity: BETA_WATER,
-            attenuation_alpha: ATTENUATION_WATER,
-            attenuation_power: 2.0,
-            reference_frequency: frequency,
+            equation_mode: AcousticEquationMode::Kuznetsov,
+            cfl_factor: 0.5,
+            nonlinearity_coefficient: BETA_WATER,
+            acoustic_diffusivity: ATTENUATION_WATER * 1500.0_f64.powi(3) / (2.0 * std::f64::consts::PI * std::f64::consts::PI * frequency.powi(2)),
+            use_k_space_correction: false,
+            k_space_correction_order: 2,
+            spatial_order: 4,
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovWave::new(config, &grid);
+        let mut solver = KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 
         // Initialize sinusoidal wave
         let wavelength = 1500.0 / frequency;
@@ -93,14 +97,17 @@ mod tests {
         let amplitude = 2e6; // 2 MPa
 
         let config = KuznetsovConfig {
-            nonlinearity: BETA_WATER,
-            attenuation_alpha: 0.0, // No attenuation for cleaner shock
-            attenuation_power: 2.0,
-            reference_frequency: frequency,
+            equation_mode: AcousticEquationMode::Kuznetsov,
+            cfl_factor: 0.5,
+            nonlinearity_coefficient: BETA_WATER,
+            acoustic_diffusivity: 0.0, // No attenuation for cleaner shock
+            use_k_space_correction: false,
+            k_space_correction_order: 2,
+            spatial_order: 4,
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovWave::new(config, &grid);
+        let mut solver = KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 
         // Initialize sine wave
         let wavelength = 1500.0 / frequency;

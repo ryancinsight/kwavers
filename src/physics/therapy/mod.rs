@@ -441,9 +441,9 @@ impl TherapyCalculator {
 
             // Ensure temperature stays in safe range (< 1°C increase)
             let temp = thermal.temperature();
-            let max_temp = temp.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-            if max_temp > 311.15 {
-                // More than 1°C above body temp
+            let maximum_temperature = temp.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            if maximum_temperature > crate::constants::temperature::SAFETY_TEMPERATURE_K {
+                // More than 1°C above body temperature
                 self.metrics.safety_index *= 0.9; // Reduce safety index
             }
         }

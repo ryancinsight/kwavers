@@ -47,7 +47,7 @@ pub struct RungeKutta4 {
     k3: Option<Array3<f64>>,
     k4: Option<Array3<f64>>,
     /// Workspace for intermediate field values (avoids allocations)
-    y_temp: Option<Array3<f64>>,
+    intermediate_field: Option<Array3<f64>>,
 }
 
 impl TimeStepper for RungeKutta4 {
@@ -60,7 +60,7 @@ impl TimeStepper for RungeKutta4 {
             k2: None,
             k3: None,
             k4: None,
-            y_temp: None,
+            intermediate_field: None,
         }
     }
 
@@ -82,40 +82,40 @@ impl TimeStepper for RungeKutta4 {
             self.k2 = Some(Array3::zeros(shape));
             self.k3 = Some(Array3::zeros(shape));
             self.k4 = Some(Array3::zeros(shape));
-            self.y_temp = Some(Array3::zeros(shape));
+            self.intermediate_field = Some(Array3::zeros(shape));
         }
 
         let k1 = self.k1.as_mut().unwrap();
         let k2 = self.k2.as_mut().unwrap();
         let k3 = self.k3.as_mut().unwrap();
         let k4 = self.k4.as_mut().unwrap();
-        let y_temp = self.y_temp.as_mut().unwrap();
+        let intermediate_field = self.intermediate_field.as_mut().unwrap();
 
         // Stage 1: k1 = f(t, y)
         *k1 = rhs_fn(field)?;
 
         // Stage 2: k2 = f(t + dt/2, y + dt/2 * k1)
         // Use pre-allocated workspace instead of cloning
-        y_temp.assign(field);
-        Zip::from(&mut *y_temp)
+        intermediate_field.assign(field);
+        Zip::from(&mut *intermediate_field)
             .and(&*k1)
             .for_each(|t, k| *t += 0.5 * dt * *k);
-        *k2 = rhs_fn(y_temp)?;
+        *k2 = rhs_fn(intermediate_field)?;
 
         // Stage 3: k3 = f(t + dt/2, y + dt/2 * k2)
         // Reuse the same workspace
-        y_temp.assign(field);
-        Zip::from(&mut *y_temp)
+        intermediate_field.assign(field);
+        Zip::from(&mut *intermediate_field)
             .and(&*k2)
             .for_each(|t, k| *t += 0.5 * dt * *k);
-        *k3 = rhs_fn(y_temp)?;
+        *k3 = rhs_fn(intermediate_field)?;
 
         // Stage 4: k4 = f(t + dt, y + dt * k3)
-        y_temp.assign(field);
-        Zip::from(&mut *y_temp)
+        intermediate_field.assign(field);
+        Zip::from(&mut *intermediate_field)
             .and(&*k3)
             .for_each(|t, k| *t += dt * *k);
-        *k4 = rhs_fn(y_temp)?;
+        *k4 = rhs_fn(intermediate_field)?;
 
         // Combine stages: y_new = y + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
         // Update field in-place
