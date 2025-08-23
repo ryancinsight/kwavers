@@ -222,12 +222,12 @@ mod tests {
             0.0
         }
 
-        fn lame_lambda_array(&self) -> &ndarray::Array3<f64> {
-            &self.density // Just reuse density array for testing
+        fn lame_lambda_array(&self) -> ndarray::Array3<f64> {
+            self.density.clone() // Just reuse density array for testing
         }
 
-        fn lame_mu_array(&self) -> &ndarray::Array3<f64> {
-            &self.bubble_radius // Just reuse bubble_radius array (zeros) for testing
+        fn lame_mu_array(&self) -> ndarray::Array3<f64> {
+            self.bubble_radius.clone() // Just reuse bubble_radius array (zeros) for testing
         }
     }
 
@@ -263,7 +263,7 @@ mod tests {
 
         // Test point 1: x=0.1, y=0.2, z=0.3
         let diffusivity1 = compute_acoustic_diffusivity(&medium, 0.1, 0.2, 0.3, &grid, frequency);
-        let c1 = 1600.0; // x < 0.2
+        let c1: f64 = 1600.0; // x < 0.2
         let alpha1 = 0.5 + 0.1 * 0.1 + 0.05 * 0.2 + 0.02 * 0.3; // 0.526
         let omega = 2.0 * PI * frequency;
         let expected1 = 2.0 * alpha1 * c1.powi(3) / (omega * omega);
@@ -276,7 +276,7 @@ mod tests {
 
         // Test point 2: x=0.4, y=0.3, z=0.5
         let diffusivity2 = compute_acoustic_diffusivity(&medium, 0.4, 0.3, 0.5, &grid, frequency);
-        let c2 = 1400.0; // x >= 0.2 and y < 0.5
+        let c2: f64 = 1400.0; // x >= 0.2 and y < 0.5
         let alpha2 = 0.5 + 0.1 * 0.4 + 0.05 * 0.3 + 0.02 * 0.5; // 0.565
         let expected2 = 2.0 * alpha2 * c2.powi(3) / (omega * omega);
         assert!(
@@ -288,7 +288,7 @@ mod tests {
 
         // Test point 3: x=0.5, y=0.6, z=0.7
         let diffusivity3 = compute_acoustic_diffusivity(&medium, 0.5, 0.6, 0.7, &grid, frequency);
-        let c3 = 1500.0; // x >= 0.2 and y >= 0.5
+        let c3: f64 = 1500.0; // x >= 0.2 and y >= 0.5
         let alpha3 = 0.5 + 0.1 * 0.5 + 0.05 * 0.6 + 0.02 * 0.7; // 0.594
         let expected3 = 2.0 * alpha3 * c3.powi(3) / (omega * omega);
         assert!(

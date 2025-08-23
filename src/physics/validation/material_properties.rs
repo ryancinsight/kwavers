@@ -50,7 +50,7 @@ mod tests {
         for freq in frequencies {
             // Calculate attenuation using power law
             let attenuation_db = LIVER_ATTENUATION_COEFF
-                * (freq / 1e6).powf(LIVER_ATTENUATION_POWER)
+                * (freq / 1e6_f64).powf(LIVER_ATTENUATION_POWER)
                 * distance
                 * 100.0; // Convert to cm
 

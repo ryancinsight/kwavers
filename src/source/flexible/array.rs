@@ -5,14 +5,13 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::medium::Medium;
 use crate::signal::Signal;
 use crate::source::Source;
-use ndarray::{Array1, Array3, ArrayView2};
+use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
-use super::calibration::{CalibrationData, CalibrationProcessor};
-use super::config::{CalibrationMethod, FlexibleTransducerConfig, FlexibilityModel, TrackingSystem};
+use super::calibration::CalibrationProcessor;
+use super::config::{CalibrationMethod, FlexibleTransducerConfig, FlexibilityModel};
 use super::geometry::{DeformationState, GeometryState};
 
 /// Flexible transducer array with real-time geometry tracking

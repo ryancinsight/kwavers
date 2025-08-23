@@ -494,11 +494,11 @@ mod tests {
             fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 0.0
             }
-            fn lame_lambda_array(&self) -> &Array3<f64> {
-                &self.lame_lambda_field
+            fn lame_lambda_array(&self) -> Array3<f64> {
+                self.lame_lambda_field.clone()
             }
-            fn lame_mu_array(&self) -> &Array3<f64> {
-                &self.lame_mu_field
+            fn lame_mu_array(&self) -> Array3<f64> {
+                self.lame_mu_field.clone()
             }
         }
 

@@ -260,7 +260,7 @@ mod tests {
         // Check uniformity (should be constant everywhere)
         let temp_std = temperature
             .iter()
-            .map(|&t| (t - avg_temp).powi(2))
+            .map(|&t| (t - average_temperature).powi(2))
             .sum::<f64>()
             .sqrt()
             / (n * n * n) as f64;
