@@ -3,7 +3,7 @@
 //! Reference: Hamilton & Blackstock (1998) - "Nonlinear Acoustics"
 
 use crate::grid::Grid;
-use crate::physics::mechanics::acoustic_wave::kuznetsov::config::KuznetsovConfig;
+use crate::physics::mechanics::acoustic_wave::kuznetsov::config::{AcousticEquationMode, KuznetsovConfig};
 use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
 use crate::physics::traits::AcousticWaveModel;
 use ndarray::{Array3, Array4};
@@ -23,7 +23,7 @@ mod tests {
         // Test second harmonic generation in nonlinear propagation
         let nx = 256;
         let dx = 1e-4;
-        let frequency = 1e6; // 1 MHz
+        let frequency: f64 = 1e6; // 1 MHz
 
         use crate::physics::mechanics::acoustic_wave::kuznetsov::AcousticEquationMode;
         let config = KuznetsovConfig {
@@ -183,7 +183,7 @@ mod tests {
         }
 
         // Check for steepening (increased gradient)
-        let mut max_gradient = 0.0;
+        let mut max_gradient: f64 = 0.0;
         for i in 1..nx - 1 {
             let gradient = (pressure[[i + 1, 0, 0]] - pressure[[i - 1, 0, 0]]).abs() / (2.0 * dx);
             max_gradient = max_gradient.max(gradient);
