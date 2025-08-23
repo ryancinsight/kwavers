@@ -160,11 +160,11 @@ impl HomogeneousMedium {
 }
 
 impl Medium for HomogeneousMedium {
-    fn density(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.density
     }
 
-    fn sound_speed(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn sound_speed(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.sound_speed
     }
 
@@ -172,11 +172,11 @@ impl Medium for HomogeneousMedium {
         true
     }
 
-    fn viscosity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.viscosity
     }
 
-    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.surface_tension
     }
 

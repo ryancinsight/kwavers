@@ -7,7 +7,7 @@
 //! - O'Reilly & Hynynen (2012): "Blood-brain barrier: real-time feedback-controlled focused ultrasound"
 //! - Tsai et al. (2016): "Real-time monitoring of focused ultrasound blood-brain barrier opening"
 
-use crate::signal::Signal;
+
 use std::collections::VecDeque;
 use std::f64::consts::PI;
 

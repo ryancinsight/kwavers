@@ -7,7 +7,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array4;
-use rayon::prelude::*;
+
 
 /// Strategy for executing plugins
 pub trait ExecutionStrategy: Send + Sync {

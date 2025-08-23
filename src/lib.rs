@@ -230,31 +230,15 @@ pub fn init_logging() -> KwaversResult<()> {
 // Removed: Use PluginBasedSolver instead
 // This function was part of the deprecated monolithic solver API
 
-#[doc(hidden)]
-#[deprecated(since = "0.3.0", note = "Use PluginBasedSolver instead")]
-/// Validate simulation configuration
-fn validate_simulation_config(config: &Config) -> KwaversResult<ValidationResult> {
-    let mut result = ValidationResult::success();
+// Deprecated demo code removed - Use PluginBasedSolver for simulations
+// See examples/ directory for usage patterns
 
-    // Grid and time validation moved to Grid::new() and solver constructors
-    // These are validated at the component level following SOLID principles
-
-    // Validate source configuration
-    if config.source.frequency.unwrap_or(0.0) <= 0.0 {
-        result.add_error(ValidationError::FieldValidation {
-            field: "source.frequency".to_string(),
-            value: config
-                .source
-                .frequency
-                .map_or("None".to_string(), |f| f.to_string()),
-            constraint: "Must be positive".to_string(),
-        });
-    }
-
-    Ok(result)
-}
-
-fn create_validated_simulation(
+#[cfg(test)]
+mod deprecated_demo {
+    #![allow(dead_code)]
+    use super::*;
+    
+    fn create_validated_simulation(
     config: Config,
 ) -> KwaversResult<(Grid, Time, HomogeneousMedium, Box<dyn Source>, Recorder)> {
     // Skip deprecated validation - use PluginBasedSolver validation instead
@@ -517,11 +501,12 @@ fn report_progress(step: usize, total_steps: usize) {
 }
 
 /// Finalize simulation and report results
-fn finalize_simulation(recorder: &Recorder) -> KwaversResult<()> {
-    println!("Physics simulation completed successfully!");
-    println!("Results saved to: {}", recorder.filename);
-    Ok(())
-}
+    fn finalize_simulation(recorder: &Recorder) -> KwaversResult<()> {
+        println!("Physics simulation completed successfully!");
+        println!("Results saved to: {}", recorder.filename);
+        Ok(())
+    }
+} // end deprecated_demo module
 
 /// Get library version and build information
 ///

@@ -64,7 +64,7 @@ pub struct TimeFactory;
 
 impl TimeFactory {
     /// Create time configuration from config
-    pub fn create_time(config: &TimeConfig, grid: &Grid) -> KwaversResult<Time> {
+    pub fn create_time(config: &TimeConfig, _grid: &Grid) -> KwaversResult<Time> {
         config.validate()?;
 
         Ok(Time::new(config.dt, config.num_steps))

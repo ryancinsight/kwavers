@@ -9,7 +9,7 @@
 //! - Guo et al. (2020): "Reduced cavitation threshold using phase shift keying"
 
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
-use rand::distributions::Distribution;
+
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
