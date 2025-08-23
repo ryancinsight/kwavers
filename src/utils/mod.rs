@@ -5,8 +5,7 @@ pub mod fft_operations;
 pub mod field_analysis;
 pub mod format;
 pub mod iterators;
-pub mod kwave;  // Refactored modular structure
-pub mod kwave_utils;  // Deprecated - will be removed after migration
+pub mod kwave;  // Modular k-Wave utilities
 pub mod linear_algebra;
 pub mod sparse_matrix;
 pub mod spectral;

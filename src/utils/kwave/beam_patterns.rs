@@ -2,7 +2,6 @@
 //!
 //! Implements beam width and directivity calculations
 
-use crate::error::KwaversResult;
 
 /// Beam pattern calculations
 #[derive(Debug)]
@@ -11,7 +10,6 @@ pub struct BeamPatterns;
 impl BeamPatterns {
     /// Calculate beam width at specified dB level
     pub fn beam_width(aperture: f64, wavelength: f64, level_db: f64) -> f64 {
-        // Placeholder - will be moved from kwave_utils.rs
         let factor = match level_db {
             l if l >= -3.0 => 0.88,
             l if l >= -6.0 => 1.02,

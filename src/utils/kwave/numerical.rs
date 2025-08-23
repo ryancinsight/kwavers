@@ -3,7 +3,7 @@
 //! Implements various numerical helper functions
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3, Axis};
+use ndarray::Array1;
 
 /// Numerical utility functions
 #[derive(Debug)]

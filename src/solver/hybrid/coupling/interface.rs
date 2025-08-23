@@ -2,7 +2,7 @@
 
 use super::{ConservationEnforcer, QualityMonitor, TransferOperators};
 use super::{InterfaceGeometry, InterpolationManager, InterpolationScheme};
-use crate::error::KwaversResult;
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use crate::grid::Grid;
 use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use ndarray::{Array3, Array4};
@@ -99,9 +99,61 @@ impl CouplingInterface {
     }
 
     /// Get interface coordinates
-    fn get_interface_coords(&self, source: bool) -> KwaversResult<Vec<(f64, f64, f64)>> {
-        // TODO: Implement proper coordinate extraction based on geometry
-        Ok(vec![(0.0, 0.0, 0.0)])
+    fn get_interface_coords(&self, _source: bool) -> KwaversResult<Vec<(f64, f64, f64)>> {
+        let mut coords = Vec::with_capacity(self.geometry.num_points);
+        let plane_pos = self.geometry.plane_position;
+        let (extent_1, extent_2) = self.geometry.extent;
+        
+        // Generate a grid of points on the interface plane
+        let grid_size = (self.geometry.num_points as f64).sqrt() as usize;
+        let step_1 = extent_1 / grid_size as f64;
+        let step_2 = extent_2 / grid_size as f64;
+        
+        match self.geometry.normal_direction {
+            0 => {
+                // X-normal interface (YZ plane)
+                for j in 0..grid_size {
+                    for k in 0..grid_size {
+                        coords.push((
+                            plane_pos,
+                            j as f64 * step_1,
+                            k as f64 * step_2,
+                        ));
+                    }
+                }
+            }
+            1 => {
+                // Y-normal interface (XZ plane)
+                for i in 0..grid_size {
+                    for k in 0..grid_size {
+                        coords.push((
+                            i as f64 * step_1,
+                            plane_pos,
+                            k as f64 * step_2,
+                        ));
+                    }
+                }
+            }
+            2 => {
+                // Z-normal interface (XY plane)
+                for i in 0..grid_size {
+                    for j in 0..grid_size {
+                        coords.push((
+                            i as f64 * step_1,
+                            j as f64 * step_2,
+                            plane_pos,
+                        ));
+                    }
+                }
+            }
+            _ => return Err(KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "normal_direction".to_string(),
+                value: self.geometry.normal_direction.to_string(),
+                constraint: "Must be 0, 1, or 2".to_string(),
+            })),
+        }
+        
+        Ok(coords)
     }
 
     /// Get quality metrics
