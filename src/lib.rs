@@ -6,11 +6,8 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Targeted warning suppressions for comprehensive API
-// These are intentional design choices, not oversights
-#![cfg_attr(not(feature = "strict"), allow(dead_code))]
-#![cfg_attr(not(feature = "strict"), allow(unused_variables))]
-#![cfg_attr(not(feature = "strict"), allow(unused_imports))]
+// WARNING: Removing suppressions to expose real issues
+// Production code should not hide warnings
 
 use std::collections::HashMap;
 
@@ -221,30 +218,8 @@ pub fn init_logging() -> KwaversResult<()> {
     Ok(())
 }
 
-/// Create default visualization plots for simulation outputs
-///
-/// **Note:** This function is a placeholder and does not yet generate plots.
-#[deprecated(
-    since = "0.3.0",
-    note = "Plotting functionality is not yet implemented. This function is a stub."
-)]
-pub fn plot_simulation_outputs(output_dir: &str, files: &[&str]) -> KwaversResult<()> {
-    use std::path::Path;
-
-    for file in files {
-        let filepath = Path::new(output_dir).join(file);
-        if !filepath.exists() {
-            println!("Warning: File not found: {}", filepath.display());
-            continue;
-        }
-
-        // For now, just log what would be plotted
-        // Actual plotting would require loading CSV data and using the plotting module functions
-        println!("Would plot: {}", filepath.display());
-    }
-
-    Ok(())
-}
+// NOTE: Plotting functionality removed - was incomplete stub
+// Use external visualization tools or implement actual plotting
 
 // Note: Use Config::default() instead of create_default_config()
 // The Default trait is implemented for Config and provides the same functionality

@@ -567,7 +567,7 @@ impl FlexibleTransducerArray {
                         field_generator_position,
                     );
 
-                    // Simple distance-based confidence model
+                    // Distance-based confidence model
                     let confidence = 1.0 / (1.0 + distance * 0.01);
                     self.geometry_state.position_confidence[i] = confidence * sensor_sensitivity;
                 }
@@ -1022,7 +1022,7 @@ impl Source for FlexibleTransducerArray {
                 + (z - element_pos[2]).powi(2))
             .sqrt();
 
-            // Simple Gaussian falloff
+            // Gaussian falloff
             let element_size = (self.config.element_size[0] * self.config.element_size[1]).sqrt();
             if distance < element_size * 2.0 {
                 let weight = (-distance.powi(2) / (element_size.powi(2) / 2.0)).exp();

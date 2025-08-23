@@ -7,7 +7,9 @@ pub mod numerical {
     use std::f64::consts::PI;
     
     /// Default CFL safety factor for stability
-    pub const CFL_SAFETY_FACTOR: f64 = 0.95;
+    /// For 3D FDTD: max stable value is 1/sqrt(3) ≈ 0.577
+    /// Using 0.5 for safety margin (Taflove & Hagness, 2005)
+    pub const CFL_SAFETY_FACTOR: f64 = 0.5;
     /// Default grid resolution points
     pub const DEFAULT_GRID_POINTS: usize = 100;
     /// Minimum grid points for valid simulation
@@ -250,7 +252,7 @@ pub mod cfl {
     pub const CFL_SAFETY_FACTOR: f64 = 0.3;
     pub const CFL_MAX: f64 = 0.5;
     pub const CFL_MIN: f64 = 0.1;
-    pub const FDTD_DEFAULT: f64 = 0.3; // Default CFL for FDTD
+    pub const FDTD_DEFAULT: f64 = 0.3; // Conservative CFL for 3D FDTD (max: 0.577)
     pub const CONSERVATIVE: f64 = 0.2; // Conservative CFL value
     pub const AGGRESSIVE: f64 = 0.4; // Aggressive CFL value
 }
