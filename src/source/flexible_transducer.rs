@@ -489,7 +489,7 @@ impl FlexibleTransducerArray {
             // Update positions using gradient descent with adaptive step size
             let gradient_norm = total_gradient
                 .iter()
-                .map(|g| Self::vector_magnitude(g))
+                .map(Self::vector_magnitude)
                 .fold(0.0, |acc, x| acc + x * x)
                 .sqrt();
 

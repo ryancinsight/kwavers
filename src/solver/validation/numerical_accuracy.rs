@@ -9,6 +9,7 @@ use crate::medium::{HomogeneousMedium, Medium};
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ValidationResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
@@ -17,17 +18,6 @@ pub struct ValidationResults {
     pub convergence_tests: ConvergenceResults,
 }
 
-impl Default for ValidationResults {
-    fn default() -> Self {
-        Self {
-            dispersion_tests: DispersionResults::default(),
-            stability_tests: StabilityResults::default(),
-            boundary_tests: BoundaryResults::default(),
-            conservation_tests: ConservationResults::default(),
-            convergence_tests: ConvergenceResults::default(),
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct DispersionResults {

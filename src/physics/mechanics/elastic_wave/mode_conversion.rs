@@ -229,7 +229,7 @@ impl StiffnessTensor {
         // We'll use Sylvester's criterion
 
         // Check dimensions
-        if matrix.shape() != &[6, 6] {
+        if matrix.shape() != [6, 6] {
             return false;
         }
 

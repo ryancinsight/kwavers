@@ -353,10 +353,10 @@ impl HybridValidationSuite {
         }
 
         let n_f = n as f64;
-        let slope = (n_f * sum_log_h_log_e - sum_log_h * sum_log_e)
-            / (n_f * sum_log_h_squared - sum_log_h * sum_log_h);
+        
 
-        slope // This is the convergence rate
+        (n_f * sum_log_h_log_e - sum_log_h * sum_log_e)
+            / (n_f * sum_log_h_squared - sum_log_h * sum_log_h) // This is the convergence rate
     }
 
     /// Generate comprehensive validation report

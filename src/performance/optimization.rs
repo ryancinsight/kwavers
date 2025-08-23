@@ -496,6 +496,12 @@ pub enum PrefetchStrategy {
     Hardware,
 }
 
+impl Default for BandwidthOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BandwidthOptimizer {
     pub fn new() -> Self {
         Self {
@@ -535,6 +541,12 @@ pub struct CacheOptimizer {
     l3_size: usize,
     /// Cache line size (bytes)
     cache_line_size: usize,
+}
+
+impl Default for CacheOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CacheOptimizer {

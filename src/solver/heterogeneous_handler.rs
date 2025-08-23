@@ -189,13 +189,13 @@ impl HeterogeneousHandler {
         // This could be optimized with Cow (Clone-on-Write) in future iterations
         let (density_smooth, sound_speed_smooth) = match self.config.smoothing_method {
             SmoothingMethod::None => (density.clone(), sound_speed.clone()),
-            SmoothingMethod::Gaussian => self.apply_gaussian_smoothing(&density, &sound_speed)?,
-            SmoothingMethod::Tanh => self.apply_tanh_smoothing(&density, &sound_speed)?,
+            SmoothingMethod::Gaussian => self.apply_gaussian_smoothing(density, sound_speed)?,
+            SmoothingMethod::Tanh => self.apply_tanh_smoothing(density, sound_speed)?,
             SmoothingMethod::Polynomial => {
-                self.apply_polynomial_smoothing(&density, &sound_speed)?
+                self.apply_polynomial_smoothing(density, sound_speed)?
             }
             SmoothingMethod::SpectralFilter => {
-                self.apply_spectral_filter(&density, &sound_speed)?
+                self.apply_spectral_filter(density, sound_speed)?
             }
         };
 

@@ -496,7 +496,7 @@ impl BenchmarkReport {
         for result in &self.results {
             by_solver
                 .entry(result.name.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(result);
         }
 

@@ -9,12 +9,10 @@
 
 use crate::error::{KwaversResult, ValidationError};
 use crate::grid::Grid;
-use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::PluginContext;
 use crate::physics::traits::ChemicalModelTrait;
 use log::debug;
 use ndarray::Array3;
-use ndarray::ArrayView3;
 use std::collections::HashMap;
 use std::time::Instant;
 

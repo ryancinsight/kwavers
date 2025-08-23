@@ -120,7 +120,7 @@ impl ElementGeometry {
         let aspect_ratio = width / thickness;
 
         // Check aspect ratio for lateral mode suppression
-        if aspect_ratio < MIN_ASPECT_RATIO || aspect_ratio > MAX_ASPECT_RATIO {
+        if !(MIN_ASPECT_RATIO..=MAX_ASPECT_RATIO).contains(&aspect_ratio) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "aspect_ratio".to_string(),
                 value: format!("{:.1}", aspect_ratio),

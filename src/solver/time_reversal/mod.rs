@@ -166,7 +166,7 @@ impl TimeReversalReconstructor {
                 self.propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
 
             // Accumulate reconstruction
-            reconstruction = reconstruction + &iteration_result;
+            reconstruction += &iteration_result;
 
             // Check convergence for iterative methods
             if self.config.iterations > 1 {

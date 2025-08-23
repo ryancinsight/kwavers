@@ -436,7 +436,7 @@ impl PerformanceMetrics {
     pub fn record_plugin_time(&mut self, plugin_name: &str, duration: f64) {
         self.plugin_execution_times
             .entry(plugin_name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(duration);
     }
 }
@@ -521,7 +521,7 @@ impl PluginBasedSolver {
 
         // Build the field registry to allocate field data
         self.field_registry.build()
-            .map_err(|e| KwaversError::Field(e))?;
+            .map_err(KwaversError::Field)?;
 
         // Initialize all plugins
         self.plugin_manager
@@ -660,7 +660,7 @@ impl PluginBasedSolver {
         let fields = self
             .field_registry
             .data_mut()
-            .ok_or_else(|| KwaversError::Field(FieldError::DataNotInitialized))?;
+            .ok_or(KwaversError::Field(FieldError::DataNotInitialized))?;
 
         // 1. Apply boundary conditions first (prepare fields for physics update)
         // Boundary conditions are applied directly to the pressure field
@@ -731,7 +731,7 @@ impl PluginBasedSolver {
     ) -> KwaversResult<()> {
         self.field_registry
             .set_field(field_type, values)
-            .map_err(|e| KwaversError::Field(e))
+            .map_err(KwaversError::Field)
     }
 
     /// Get the grid

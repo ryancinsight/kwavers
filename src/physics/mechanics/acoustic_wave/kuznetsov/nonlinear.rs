@@ -67,5 +67,5 @@ pub fn compute_nonlinearity_coefficient(b_over_a: f64) -> f64 {
 ///
 /// Takes the local B/A values and computes effective β
 pub fn compute_heterogeneous_nonlinearity(b_over_a_field: &Array3<f64>) -> Array3<f64> {
-    b_over_a_field.mapv(|b_a| compute_nonlinearity_coefficient(b_a))
+    b_over_a_field.mapv(compute_nonlinearity_coefficient)
 }

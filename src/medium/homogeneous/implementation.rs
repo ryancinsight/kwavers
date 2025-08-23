@@ -113,7 +113,8 @@ impl HomogeneousMedium {
 
     /// Create an air medium with standard properties at 20°C
     pub fn air(grid: &Grid) -> Self {
-        let medium = Self {
+        
+        Self {
             density: 1.204,
             sound_speed: 343.0,
             viscosity: 1.81e-5,
@@ -141,8 +142,7 @@ impl HomogeneousMedium {
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
-        };
-        medium
+        }
     }
 
     /// Create from minimal parameters (for compatibility)

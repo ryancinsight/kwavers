@@ -185,7 +185,7 @@ impl PluginConfig for FdtdConfig {
     }
 
     fn clone_boxed(&self) -> Box<dyn std::any::Any + Send + Sync> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 }
 
@@ -502,7 +502,7 @@ impl FdtdSolver {
                             }
                         })),
                         _ => {
-                            return Err(KwaversError::Grid(GridError::ValidationFailed {
+                            Err(KwaversError::Grid(GridError::ValidationFailed {
                                 field: "axis".to_string(),
                                 value: axis.to_string(),
                                 constraint: "must be 0, 1, or 2".to_string(),
@@ -539,7 +539,7 @@ impl FdtdSolver {
                             }
                         })),
                         _ => {
-                            return Err(KwaversError::Grid(GridError::ValidationFailed {
+                            Err(KwaversError::Grid(GridError::ValidationFailed {
                                 field: "axis".to_string(),
                                 value: axis.to_string(),
                                 constraint: "must be 0, 1, or 2".to_string(),
@@ -572,7 +572,7 @@ impl FdtdSolver {
                             }
                         })),
                         _ => {
-                            return Err(KwaversError::Grid(GridError::ValidationFailed {
+                            Err(KwaversError::Grid(GridError::ValidationFailed {
                                 field: "axis".to_string(),
                                 value: axis.to_string(),
                                 constraint: "must be 0, 1, or 2".to_string(),
@@ -1023,7 +1023,7 @@ pub struct FdtdPlugin {
 impl FdtdPlugin {
     /// Create a new FDTD plugin
     pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = FdtdSolver::new(config, &grid)?;
+        let solver = FdtdSolver::new(config, grid)?;
         let metadata = PluginMetadata {
             id: "fdtd_solver".to_string(),
             name: "FDTD Solver".to_string(),

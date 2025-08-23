@@ -3,7 +3,6 @@
 //! This module defines the core reaction types and rate calculations
 //! following SOLID principles with clear separation of concerns.
 
-use crate::error::KwaversResult;
 
 /// Represents a chemical reaction with its kinetic parameters
 #[derive(Debug, Clone)]

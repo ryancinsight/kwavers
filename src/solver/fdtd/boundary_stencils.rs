@@ -18,6 +18,12 @@ pub struct BoundaryStencils {
     backward_coeffs: HashMap<usize, Vec<f64>>,
 }
 
+impl Default for BoundaryStencils {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BoundaryStencils {
     pub fn new() -> Self {
         let mut forward_coeffs = HashMap::new();

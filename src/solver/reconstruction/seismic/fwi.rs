@@ -213,7 +213,7 @@ impl FullWaveformInversion {
 
         // Update pressure using wave equation
         Zip::from(pressure)
-            .and(&*pressure_previous)
+            .and(pressure_previous)
             .and(&laplacian)
             .and(&self.velocity_model)
             .for_each(|p, &p_old, &lap, &vel| {

@@ -117,7 +117,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         Self::Item: Sync,
     {
         let shape = self.dim();
-        let flat_results: Vec<U> = self.iter().par_bridge().map(|x| f(x)).collect();
+        let flat_results: Vec<U> = self.iter().par_bridge().map(f).collect();
 
         Array3::from_shape_vec(shape, flat_results).expect("Shape mismatch in parallel map")
     }

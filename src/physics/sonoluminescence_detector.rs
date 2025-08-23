@@ -274,7 +274,7 @@ impl SonoluminescenceDetector {
     fn update_event_history(&mut self, position: (usize, usize, usize), temperature: f64) {
         self.event_history
             .entry(position)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(temperature);
 
         // Keep only recent history
@@ -368,7 +368,7 @@ impl SonoluminescenceDetector {
             position: cluster[0].position, // Use first event's grid position
             physical_position: (x, y, z),
             peak_temperature: peak_temp,
-            peak_pressure: peak_pressure,
+            peak_pressure,
             compression_ratio: cluster[0].compression_ratio, // Use first
             photon_count: total_photons,
             peak_wavelength: 2.898e-3 / peak_temp, // Wien's law with peak temp

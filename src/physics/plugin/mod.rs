@@ -37,6 +37,12 @@ pub struct PluginContext {
     pub total_steps: usize,
 }
 
+impl Default for PluginContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PluginContext {
     /// Create a new plugin context
     pub fn new() -> Self {
@@ -298,6 +304,12 @@ pub trait PluginVisitor {
 /// Metadata collector visitor
 pub struct MetadataCollector {
     metadata: Vec<PluginMetadata>,
+}
+
+impl Default for MetadataCollector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MetadataCollector {

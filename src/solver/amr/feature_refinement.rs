@@ -339,7 +339,7 @@ impl LoadBalancer {
         &self,
         cells: Vec<(usize, usize, usize)>,
     ) -> Vec<Vec<(usize, usize, usize)>> {
-        let chunk_size = (cells.len() + self.num_threads - 1) / self.num_threads;
+        let chunk_size = cells.len().div_ceil(self.num_threads);
         cells
             .chunks(chunk_size)
             .map(|chunk| chunk.to_vec())

@@ -233,7 +233,7 @@ impl PhysicsState {
             PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
         })?;
 
-        Ok(f(&mut *fields))
+        Ok(f(&mut fields))
     }
 
     /// Get all fields

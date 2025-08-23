@@ -64,7 +64,7 @@ impl HybridSolver {
 
         // Initialize component solvers
         let pstd_solver = PstdSolver::new(config.pstd_config.clone(), grid)?;
-        let fdtd_solver = FdtdSolver::new(config.fdtd_config.clone(), grid)?;
+        let fdtd_solver = FdtdSolver::new(config.fdtd_config, grid)?;
 
         // Initialize domain decomposition
         let decomposer = DomainDecomposer::new();

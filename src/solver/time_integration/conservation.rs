@@ -30,6 +30,12 @@ pub struct ConservationHistory {
     pub quantities: Vec<ConservedQuantities>,
 }
 
+impl Default for ConservationHistory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConservationHistory {
     /// Create new empty history
     pub fn new() -> Self {

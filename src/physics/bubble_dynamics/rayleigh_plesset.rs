@@ -80,10 +80,10 @@ impl RayleighPlessetSolver {
 
         // Van der Waals equation
         let n_moles = n_total / AVOGADRO;
-        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b)
-            - a * n_moles * n_moles / (volume * volume);
+        
 
-        pressure
+        n_moles * R_GAS * state.temperature / (volume - n_moles * b)
+            - a * n_moles * n_moles / (volume * volume)
     }
 }
 
@@ -240,10 +240,10 @@ impl KellerMiksisModel {
         // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
         // Solving for P: P = nRT/(V - nb) - a*n²/V²
         let n_moles = n_total / AVOGADRO;
-        let pressure = n_moles * R_GAS * state.temperature / (volume - n_moles * b)
-            - a * n_moles * n_moles / (volume * volume);
+        
 
-        pressure
+        n_moles * R_GAS * state.temperature / (volume - n_moles * b)
+            - a * n_moles * n_moles / (volume * volume)
     }
 
     /// Update bubble temperature using comprehensive energy balance

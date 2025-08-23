@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 /// Node in the octree structure
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct OctreeNode {
     /// Node index in the octree
     index: usize,
@@ -77,18 +78,6 @@ impl OctreeNode {
     }
 }
 
-impl Default for OctreeNode {
-    fn default() -> Self {
-        Self {
-            index: 0,
-            level: 0,
-            bounds_min: (0, 0, 0),
-            bounds_max: (0, 0, 0),
-            parent: None,
-            children: None,
-        }
-    }
-}
 
 /// Octree for adaptive mesh refinement
 #[derive(Debug)]

@@ -130,7 +130,7 @@ impl ThermodynamicsCalculator {
 
         let t_celsius = temperature - 273.15;
 
-        if t_celsius < 1.0 || t_celsius > 100.0 {
+        if !(1.0..=100.0).contains(&t_celsius) {
             // Fall back to Wagner equation outside valid range
             return self.wagner_equation(temperature);
         }

@@ -247,7 +247,7 @@ impl WavePropagationCalculator {
         polarization: Option<Polarization>,
     ) -> KwaversResult<PropagationCoefficients> {
         // Validate incident angle
-        if incident_angle < 0.0 || incident_angle > PI / 2.0 {
+        if !(0.0..=PI / 2.0).contains(&incident_angle) {
             return Err(KwaversError::Physics(PhysicsError::InvalidState {
                 field: "incident_angle".to_string(),
                 value: format!("{}", incident_angle),

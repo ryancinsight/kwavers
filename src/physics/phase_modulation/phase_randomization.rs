@@ -387,7 +387,7 @@ pub struct PhaseShiftKeying {
 impl PhaseShiftKeying {
     pub fn new(num_states: usize) -> Self {
         assert!(
-            num_states >= 2 && num_states <= 8,
+            (2..=8).contains(&num_states),
             "Number of states must be between 2 and 8"
         );
 

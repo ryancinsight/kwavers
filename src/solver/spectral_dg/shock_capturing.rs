@@ -266,8 +266,7 @@ impl WENOLimiter {
                     value: order.to_string(),
                     constraint: "WENO order must be 3, 5, or 7".to_string(),
                 },
-            )
-            .into());
+            ));
         }
 
         Ok(Self {

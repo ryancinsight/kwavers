@@ -202,7 +202,7 @@ impl PerformanceProfiler {
         F: FnOnce(&mut CacheStatistics),
     {
         if let Ok(mut stats) = self.cache_stats.lock() {
-            update_fn(&mut *stats);
+            update_fn(&mut stats);
         }
     }
 
