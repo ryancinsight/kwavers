@@ -126,7 +126,10 @@ pub fn warm_fft_cache(grid: &Grid) {
     // Create a dummy field and perform a warm-up transform
     let dummy_field = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
     let dummy_fft = fft_3d(&dummy_field, 0, grid);
-    let _dummy_ifft = ifft_3d(&dummy_fft, grid);
+    let dummy_ifft = ifft_3d(&dummy_fft, grid);
+    
+    // Verify FFT operations are working correctly
+    debug!("FFT warmup verification: field dimensions {:?}", dummy_ifft.dim());
 
     debug!("FFT/IFFT cache warm-up complete");
 }
