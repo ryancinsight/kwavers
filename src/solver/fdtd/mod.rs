@@ -86,7 +86,10 @@
 //! - YAGNI: Implements only necessary features for acoustic simulation
 
 pub mod boundary_stencils;
+pub mod config;
 pub mod interpolation;
+
+pub use config::FdtdConfig;
 
 /// Deprecated subgridding functionality
 ///
@@ -117,77 +120,7 @@ use ndarray::{Array3, Array4, Zip};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// FDTD solver configuration
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct FdtdConfig {
-    /// Spatial derivative order (2, 4, or 6)
-    pub spatial_order: usize,
-    /// Use staggered grid (Yee cell)
-    pub staggered_grid: bool,
-    /// CFL safety factor (typically 0.95 for FDTD)
-    pub cfl_factor: f64,
-    /// Enable subgridding for local refinement
-    pub subgridding: bool,
-    /// Subgridding refinement factor
-    pub subgrid_factor: usize,
-}
-
-impl Default for FdtdConfig {
-    fn default() -> Self {
-        Self {
-            spatial_order: 4,
-            staggered_grid: true,
-            cfl_factor: cfl::FDTD_DEFAULT,
-            subgridding: false,
-            subgrid_factor: 2,
-        }
-    }
-}
-
-impl PluginConfig for FdtdConfig {
-    fn validate(&self) -> ValidationResult {
-        let mut errors = Vec::new();
-
-        // Validate spatial order
-        if ![2, 4, 6].contains(&self.spatial_order) {
-            errors.push(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
-                value: self.spatial_order.to_string(),
-                constraint: "Must be 2, 4, or 6".to_string(),
-            });
-        }
-
-        // Validate CFL factor
-        if self.cfl_factor <= 0.0 || self.cfl_factor > 1.0 {
-            errors.push(ValidationError::FieldValidation {
-                field: "cfl_factor".to_string(),
-                value: self.cfl_factor.to_string(),
-                constraint: "Must be in (0, 1]".to_string(),
-            });
-        } else if self.cfl_factor > 0.7 {
-            // Note: Warning removed for simplicity in new validation system
-        }
-
-        // Validate subgridding
-        if self.subgridding && self.subgrid_factor < 2 {
-            errors.push(ValidationError::FieldValidation {
-                field: "subgrid_factor".to_string(),
-                value: self.subgrid_factor.to_string(),
-                constraint: "Must be >= 2".to_string(),
-            });
-        }
-
-        if errors.is_empty() {
-            ValidationResult::success()
-        } else {
-            ValidationResult::failure(errors)
-        }
-    }
-
-    fn clone_boxed(&self) -> Box<dyn std::any::Any + Send + Sync> {
-        Box::new(*self)
-    }
-}
+// FdtdConfig moved to config.rs for proper separation of concerns
 
 /// Staggered grid positions for Yee cell
 #[derive(Debug, Clone)]
@@ -1011,128 +944,4 @@ mod tests {
 #[cfg(test)]
 mod validation_tests;
 
-// Plugin implementation for FDTD solver
-
-/// FDTD solver plugin for integration with the physics pipeline
-#[derive(Debug)]
-pub struct FdtdPlugin {
-    solver: FdtdSolver,
-    metadata: PluginMetadata,
-}
-
-impl FdtdPlugin {
-    /// Create a new FDTD plugin
-    pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = FdtdSolver::new(config, grid)?;
-        let metadata = PluginMetadata {
-            id: "fdtd_solver".to_string(),
-            name: "FDTD Solver".to_string(),
-            version: "1.0.0".to_string(),
-            author: "Kwavers Team".to_string(),
-            description: "Finite-Difference Time Domain solver with staggered grid".to_string(),
-            license: "MIT".to_string(),
-        };
-
-        Ok(Self { solver, metadata })
-    }
-}
-
-impl PhysicsPlugin for FdtdPlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        PluginState::Initialized
-    }
-
-    fn initialize(
-        &mut self,
-        _grid: &Grid,
-        _medium: &dyn crate::medium::Medium,
-    ) -> KwaversResult<()> {
-        // Solver is already initialized in new()
-        Ok(())
-    }
-
-    fn update(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn crate::medium::Medium,
-        dt: f64,
-        t: f64,
-        context: &PluginContext,
-    ) -> KwaversResult<()> {
-        use crate::physics::field_mapping::UnifiedFieldType;
-        use ndarray::Axis;
-
-        // Get field indices using type-safe approach
-        let pressure_idx = UnifiedFieldType::Pressure.index();
-        let vx_idx = UnifiedFieldType::VelocityX.index();
-        let vy_idx = UnifiedFieldType::VelocityY.index();
-        let vz_idx = UnifiedFieldType::VelocityZ.index();
-
-        // Create temporary arrays for the update
-        // This avoids borrowing issues with the fields array
-        let nx = grid.nx;
-        let ny = grid.ny;
-        let nz = grid.nz;
-        
-        // Extract current field values
-        let pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();
-        let mut vx = fields.index_axis(Axis(0), vx_idx).to_owned();
-        let mut vy = fields.index_axis(Axis(0), vy_idx).to_owned();
-        let mut vz = fields.index_axis(Axis(0), vz_idx).to_owned();
-        
-        // Update velocities using the solver
-        self.solver.update_velocity(
-            &mut vx.view_mut(),
-            &mut vy.view_mut(),
-            &mut vz.view_mut(),
-            &pressure.view(),
-            medium,
-            dt,
-        )?;
-        
-        // Copy updated velocities back
-        fields.index_axis_mut(Axis(0), vx_idx).assign(&vx);
-        fields.index_axis_mut(Axis(0), vy_idx).assign(&vy);
-        fields.index_axis_mut(Axis(0), vz_idx).assign(&vz);
-        
-        // Update pressure using new velocities
-        let mut pressure = fields.index_axis_mut(Axis(0), pressure_idx);
-        self.solver.update_pressure(
-            &mut pressure,
-            &vx.view(),
-            &vy.view(),
-            &vz.view(),
-            medium,
-            dt,
-        )?;
-
-        Ok(())
-    }
-
-    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
-        use crate::physics::field_mapping::UnifiedFieldType;
-        vec![
-            UnifiedFieldType::Pressure,
-            UnifiedFieldType::VelocityX,
-            UnifiedFieldType::VelocityY,
-            UnifiedFieldType::VelocityZ,
-            UnifiedFieldType::Density,
-            UnifiedFieldType::SoundSpeed,
-        ]
-    }
-
-    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
-        use crate::physics::field_mapping::UnifiedFieldType;
-        vec![
-            UnifiedFieldType::Pressure,
-            UnifiedFieldType::VelocityX,
-            UnifiedFieldType::VelocityY,
-            UnifiedFieldType::VelocityZ,
-        ]
-    }
-}
+// Plugin implementation moved to plugin.rs for proper separation of concerns

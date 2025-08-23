@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Dynamic field registry for type-safe field management
-/// Optimized for O(1) direct indexing using Vec instead of HashMap
+/// Direct indexing field registry using Vec for O(1) access
 pub struct FieldRegistry {
     /// Registered fields indexed by UnifiedFieldType numeric value
     /// None indicates unregistered field
@@ -171,7 +171,7 @@ impl FieldRegistry {
         Ok(())
     }
 
-    /// Register multiple fields at once (optimized for batch registration)
+    /// Register multiple fields at once for batch registration
     pub fn register_fields(
         &mut self,
         fields: &[(UnifiedFieldType, String)],
@@ -351,7 +351,7 @@ impl FieldRegistry {
 /// with existing boundary implementations. However, the long-term vision is to
 /// migrate all boundary conditions to the plugin architecture:
 ///
-/// - Simple boundaries (e.g., hard wall) → `HardWallBoundaryPlugin`
+/// - Reflective boundaries (e.g., hard wall) → `HardWallBoundaryPlugin`
 /// - Complex integrated boundaries (e.g., CPML) → `CPMLPlugin`
 ///
 /// This will unify the design and make plugins the single extension mechanism.
@@ -377,7 +377,7 @@ pub struct PluginBasedSolver {
     metrics: PerformanceMetrics,
 }
 
-/// Enhanced performance metrics for high-performance computing
+/// Performance metrics for computational analysis
 #[derive(Default)]
 pub struct PerformanceMetrics {
     /// Total simulation steps completed

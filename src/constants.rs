@@ -142,7 +142,7 @@ pub mod chemistry {
 
 /// Optical constants (merged)
 pub mod optics {
-    // Basic optical constants
+    // Optical constants
     pub const SPEED_OF_LIGHT: f64 = 299792458.0; // m/s
     pub const PLANCK_CONSTANT: f64 = 6.62607015e-34; // J·s
     pub const PHOTON_ENERGY_CONVERSION: f64 = 1.602176634e-19; // J/eV
@@ -253,8 +253,8 @@ pub mod cfl {
     pub const CFL_MAX: f64 = 0.5;
     pub const CFL_MIN: f64 = 0.1;
     pub const FDTD_DEFAULT: f64 = 0.3; // Conservative CFL for 3D FDTD (max: 0.577)
-    pub const CONSERVATIVE: f64 = 0.2; // Conservative CFL value
-    pub const AGGRESSIVE: f64 = 0.4; // Aggressive CFL value
+    pub const LOW_STABILITY: f64 = 0.2; // Lower bound CFL value
+    pub const HIGH_STABILITY: f64 = 0.4; // Higher bound CFL value
 }
 
 // Numerical constants have been moved to the first numerical module above

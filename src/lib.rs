@@ -6,11 +6,8 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Pragmatic warning management for comprehensive API
-// These are intentional - the API is designed to be complete
-#![allow(dead_code)]  // API functions may not all be used internally
-#![allow(unused_variables)]  // Function signatures for trait compliance
-#![allow(unused_imports)]  // Re-exports for API convenience
+// WARNING: Removing suppressions to fix real issues
+// Dead code and unused variables indicate incomplete implementation
 
 use std::collections::HashMap;
 
