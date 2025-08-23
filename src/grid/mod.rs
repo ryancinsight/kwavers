@@ -1,7 +1,9 @@
 // grid/mod.rs
 
+use crate::error::{KwaversError, KwaversResult};
 use log::debug;
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array2, Array3};
+use serde::{Deserialize, Serialize};
 use std::f64::consts::PI;
 use std::sync::OnceLock;
 
@@ -37,15 +39,26 @@ impl Default for Grid {
 
 impl Grid {
     /// Creates a new grid with specified dimensions and spacing.
+    /// 
+    /// # Panics
+    /// Panics if dimensions or spacing are not positive.
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
-        assert!(
-            nx > 0 && ny > 0 && nz > 0,
-            "Grid dimensions must be positive"
-        );
-        assert!(
-            dx > 0.0 && dy > 0.0 && dz > 0.0,
-            "Grid spacing must be positive"
-        );
+        Self::try_new(nx, ny, nz, dx, dy, dz)
+            .expect("Invalid grid parameters")
+    }
+
+    /// Creates a new grid with specified dimensions and spacing, returning an error if invalid.
+    pub fn try_new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
+        if nx == 0 || ny == 0 || nz == 0 {
+            return Err(KwaversError::InvalidInput(
+                format!("Grid dimensions must be positive, got nx={}, ny={}, nz={}", nx, ny, nz)
+            ));
+        }
+        if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
+            return Err(KwaversError::InvalidInput(
+                format!("Grid spacing must be positive, got dx={}, dy={}, dz={}", dx, dy, dz)
+            ));
+        }
 
         let grid = Self {
             nx,
@@ -64,7 +77,7 @@ impl Grid {
         if (dx - dy).abs() > 1e-10 || (dy - dz).abs() > 1e-10 {
             debug!("Warning: Non-uniform grid spacing may affect k-space accuracy");
         }
-        grid
+        Ok(grid)
     }
 
     /// Create a zero-initialized 3D array with the grid dimensions
