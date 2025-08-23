@@ -106,18 +106,11 @@ pub fn deprecated_subgridding() -> KwaversResult<()> {
         constraint: "Subgridding is not fully implemented. The feature requires stable interface schemes between coarse and fine grids which are not yet available.".to_string(),
     }))
 }
-use crate::constants::cfl;
 use crate::error::ValidationError;
 use crate::error::{ConfigError, GridError, KwaversError, KwaversResult};
 use crate::grid::Grid;
-use crate::medium::Medium;
-use crate::physics::plugin::{
-    PhysicsPlugin, PluginConfig, PluginContext, PluginMetadata, PluginState,
-};
-use crate::validation::ValidationResult;
 use log::info;
-use ndarray::{Array3, Array4, Zip};
-use serde::{Deserialize, Serialize};
+use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 
 // FdtdConfig moved to config.rs for proper separation of concerns

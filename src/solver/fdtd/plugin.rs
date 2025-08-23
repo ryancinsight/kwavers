@@ -22,7 +22,7 @@ pub struct FdtdPlugin {
 impl FdtdPlugin {
     /// Create a new FDTD plugin
     pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
-        let solver = FdtdSolver::new(config.clone(), grid)?;
+        let solver = FdtdSolver::new(config, grid)?;
 
         Ok(Self {
             metadata: PluginMetadata {
