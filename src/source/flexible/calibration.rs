@@ -4,7 +4,7 @@
 //! transducer arrays, including self-calibration and external tracking integration.
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3, s};
+use ndarray::{Array1, Array2, Array3};
 use nalgebra::{DMatrix, DVector};
 
 /// Calibration data storage

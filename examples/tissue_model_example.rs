@@ -50,7 +50,7 @@ fn main() -> KwaversResult<()> {
     let boundary = Box::new(PMLBoundary::new(PMLConfig::default())?);
     
     // Source (null for this demo - in practice would be ultrasound transducer)
-    let source = Box::new(NullSource);
+    let source = Box::new(NullSource::new());
     
     // Create solver
     let mut solver = PluginBasedSolver::new(
