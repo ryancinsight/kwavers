@@ -6,9 +6,9 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Pragmatic warning configuration - focus on real issues
-#![allow(dead_code)]  // Temporarily allow while refactoring
-#![allow(unused_variables)]  // Many test placeholders
+// Pragmatic warning configuration
+// TODO: Remove after fixing 304 unused variables
+#![allow(unused_variables)]
 #![warn(
     unused_imports,
     unused_mut,

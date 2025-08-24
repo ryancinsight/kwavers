@@ -63,7 +63,7 @@ mod tests {
         // Create a null source and medium for testing
         use crate::source::NullSource;
         use crate::medium::HomogeneousMedium;
-        let source = NullSource;
+        let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         
         // Calculate time step
@@ -159,7 +159,7 @@ mod tests {
         // Create a null source and medium for testing
         use crate::source::NullSource;
         use crate::medium::HomogeneousMedium;
-        let source = NullSource;
+        let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         
         // Calculate time step

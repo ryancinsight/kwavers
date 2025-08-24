@@ -29,7 +29,7 @@ mod tests {
 
         let density = 1000.0;
         let sound_speed = 1500.0;
-        let medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid, 0.0, 1.0);
+        let medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid);
 
         let config = FdtdConfig {
             spatial_order: 4,
@@ -74,23 +74,31 @@ mod tests {
         let n_steps = (propagation_time / dt).ceil() as usize;
 
         for _ in 0..n_steps {
+            // Create density array from the medium
+            let density_array = Array3::from_elem((nx, ny, nz), density);
+            
             solver
                 .update_velocity(
-                    &mut velocity_x.view_mut(),
-                    &mut velocity_y.view_mut(),
-                    &mut velocity_z.view_mut(),
-                    &pressure.view(),
-                    &medium,
+                    &mut velocity_x,
+                    &mut velocity_y,
+                    &mut velocity_z,
+                    &pressure,
+                    &density_array,
                     dt,
                 )
                 .unwrap();
+            // Create density and sound speed arrays from the medium
+            let density_array = Array3::from_elem((nx, ny, nz), density);
+            let sound_speed_array = Array3::from_elem((nx, ny, nz), sound_speed);
+            
             solver
                 .update_pressure(
-                    &mut pressure.view_mut(),
-                    &velocity_x.view(),
-                    &velocity_y.view(),
-                    &velocity_z.view(),
-                    &medium,
+                    &mut pressure,
+                    &velocity_x,
+                    &velocity_y,
+                    &velocity_z,
+                    &density_array,
+                    &sound_speed_array,
                     dt,
                 )
                 .unwrap();
@@ -231,8 +239,8 @@ mod tests {
                 }
             }
 
-            // Compute derivative
-            let deriv = solver.compute_derivative(&field.view(), 0, 0.0)?;
+            // Compute derivative using the finite difference operator
+            let deriv = solver.fd_operator.compute_derivative(&field.view(), 0, grid.dx)?;
 
             // Check accuracy in the interior, away from boundaries
             let margin = order / 2 + 3; // Extra margin for boundary effects
@@ -263,33 +271,7 @@ mod tests {
         Ok(())
     }
 
-    /// Test subgridding functionality
-    #[test]
-    fn test_subgridding() {
-        let grid = Grid::new(40, 40, 40, 1e-3, 1e-3, 1e-3);
-        let config = FdtdConfig {
-            spatial_order: 4,
-            staggered_grid: true,
-            cfl_factor: 0.9,
-            subgridding: true,
-            subgrid_factor: 2,
-        };
-
-        let mut solver = FdtdSolver::new(config, &grid).unwrap();
-
-        // Add subgrid region
-        solver.add_subgrid((10, 10, 10), (30, 30, 30)).unwrap();
-        assert_eq!(solver.subgrids.len(), 1);
-
-        // Test interpolation
-        let coarse = Array3::ones((40, 40, 40));
-        let mut fine = Array3::zeros((40, 40, 40)); // Size doesn't matter for test
-
-        solver.interpolate_to_fine(&coarse, &mut fine, &solver.subgrids[0]);
-
-        // Fine grid should have interpolated values
-        assert!(fine.iter().any(|&v| v == 1.0));
-    }
+    // Subgridding test removed - feature was incomplete and has been removed
 
     /// Test CFL stability condition
     #[test]

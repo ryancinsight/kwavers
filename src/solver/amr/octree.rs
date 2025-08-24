@@ -99,6 +99,11 @@ pub struct Octree {
 }
 
 impl Octree {
+    /// Get the maximum refinement level
+    pub fn max_level(&self) -> usize {
+        self.max_level
+    }
+    
     /// Check if coarsening maintains balance
     pub fn check_coarsen_balance(&mut self, node_id: usize) -> bool {
         // Check refinement level - production code would verify 2:1 balance

@@ -44,9 +44,10 @@ mod tests {
         let grid = Grid::new(nx, ny, nz, dx, dy, dz);
         let medium = HomogeneousMedium::new(
             1000.0, // density [kg/m³]
-            1500.0, // sound speed [m/s] (not used)
-            &grid, 0.0, // absorption (not used)
-            0.0, // nonlinearity (not used)
+            1500.0, // sound speed [m/s] (not used for thermal)
+            0.0,    // absorption coefficient
+            0.0,    // scattering coefficient  
+            &grid
         );
 
         // Configure for standard diffusion

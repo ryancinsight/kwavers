@@ -539,7 +539,7 @@ impl CPMLBoundary {
                     },
                 );
             }
-            _ => unsafe { std::hint::unreachable_unchecked() },
+            _ => panic!("Invalid component index: must be 0, 1, or 2"),
         }
     }
 
@@ -609,7 +609,7 @@ impl CPMLBoundary {
                         *grad = grad.mul_add(self.inv_kappa_z[k], psi_val);
                     });
             }
-            _ => unsafe { std::hint::unreachable_unchecked() },
+            _ => panic!("Invalid component index: must be 0, 1, or 2"),
         }
     }
 

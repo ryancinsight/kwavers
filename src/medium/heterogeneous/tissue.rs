@@ -328,12 +328,16 @@ impl HeterogeneousTissueMedium {
 
     /// Update the pressure amplitude field for nonlinear absorption calculations
     pub fn update_pressure_amplitude(&mut self, pressure: &Array3<f64>) {
-        if self.pressure_amplitude.is_none()
-            || self.pressure_amplitude.as_ref().unwrap().dim() != pressure.dim()
-        {
-            self.pressure_amplitude = Some(pressure.clone());
-        } else {
-            self.pressure_amplitude.as_mut().unwrap().assign(pressure);
+        match &self.pressure_amplitude {
+            None => self.pressure_amplitude = Some(pressure.clone()),
+            Some(amp) if amp.dim() != pressure.dim() => {
+                self.pressure_amplitude = Some(pressure.clone());
+            }
+            Some(_) => {
+                if let Some(amp) = &mut self.pressure_amplitude {
+                    amp.assign(pressure);
+                }
+            }
         }
     }
 }

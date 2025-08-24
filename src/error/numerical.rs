@@ -34,6 +34,10 @@ pub enum NumericalError {
         operation: String,
         reason: String,
     },
+    SolverFailed {
+        method: String,
+        reason: String,
+    },
 }
 
 impl fmt::Display for NumericalError {
@@ -84,6 +88,9 @@ impl fmt::Display for NumericalError {
             }
             Self::UnsupportedOperation { operation, reason } => {
                 write!(f, "Unsupported operation {}: {}", operation, reason)
+            }
+            Self::SolverFailed { method, reason } => {
+                write!(f, "Solver '{}' failed: {}", method, reason)
             }
         }
     }

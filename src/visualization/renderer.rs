@@ -315,7 +315,8 @@ impl Renderer3D {
 
             // Begin render pass (this would typically render to a surface or texture)
             // Update the primitive count for rendering statistics
-            self.primitive_count = (grid.nx * grid.ny * grid.nz) / 8; // Approximate voxel count
+            // Using exact voxel count for the grid
+            self.primitive_count = grid.nx * grid.ny * grid.nz;
 
             self.queue.submit(std::iter::once(encoder.finish()));
 

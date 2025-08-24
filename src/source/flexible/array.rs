@@ -10,7 +10,7 @@ use crate::source::Source;
 use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
-use super::calibration::CalibrationProcessor;
+use super::calibration::CalibrationManager;
 use super::config::{CalibrationMethod, FlexibleTransducerConfig, FlexibilityModel};
 use super::geometry::{DeformationState, GeometryState};
 
@@ -21,7 +21,7 @@ pub struct FlexibleTransducerArray {
     /// Current geometry state
     geometry_state: GeometryState,
     /// Calibration processor
-    calibration_processor: CalibrationProcessor,
+    calibration_processor: CalibrationManager,
     /// Signal generator
     signal: Arc<dyn Signal>,
     /// Last update timestamp
@@ -39,7 +39,7 @@ impl FlexibleTransducerArray {
             config.nominal_spacing,
         );
         
-        let calibration_processor = CalibrationProcessor::new();
+        let calibration_processor = CalibrationManager::new();
         
         Ok(Self {
             config,
@@ -60,9 +60,14 @@ impl FlexibleTransducerArray {
         let new_positions = match &self.config.calibration_method {
             CalibrationMethod::SelfCalibration { reference_reflectors, calibration_interval } => {
                 if timestamp - self.last_update_time > *calibration_interval {
-                    self.calibration_processor.self_calibrate(
-                        measurement_data,
-                        reference_reflectors,
+                    // For 2D measurement data, we use external tracking instead of self-calibration
+                    // Self-calibration requires 3D pressure field data
+                    // Measurement noise level based on typical ultrasound tracking accuracy
+                    // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
+                    const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
+                    self.calibration_processor.process_external_tracking(
+                        &measurement_data.to_owned(),
+                        TRACKING_NOISE_LEVEL,
                         timestamp,
                     )?
                 } else {

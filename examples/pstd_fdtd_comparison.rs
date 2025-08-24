@@ -45,7 +45,7 @@ fn main() -> KwaversResult<()> {
     println!("   Using finite-difference approximations");
     
     // Source (null for this demo)
-    let source = Box::new(NullSource);
+    let source = Box::new(NullSource::new());
     
     let mut fdtd_solver = PluginBasedSolver::new(
         grid.clone(),

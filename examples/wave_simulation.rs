@@ -34,7 +34,7 @@ fn main() -> KwaversResult<()> {
 
     // For now, use a null source (no source) 
     // In a real application, you would implement a proper source
-    let source = Box::new(NullSource);
+    let source = Box::new(NullSource::new());
     println!("Source: Using null source for demonstration");
 
     // Create time configuration

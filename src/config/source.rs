@@ -96,7 +96,7 @@ impl SourceConfig {
                 medium,
                 grid,
             );
-            Box::new(array) as Box<dyn Source>
+            Box::new(array)
         } else {
             Box::new(LinearArray::new(
                 0.1,
@@ -108,7 +108,7 @@ impl SourceConfig {
                 grid,
                 self.frequency.unwrap_or(1e6), // Use configured frequency or default
                 crate::source::RectangularApodization, // Use correct apodization
-            )) as Box<dyn Source>
+            ))
         };
 
         Ok(source)

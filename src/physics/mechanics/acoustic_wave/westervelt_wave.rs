@@ -74,7 +74,7 @@ struct PerformanceMetrics {
 /// // Example arrays for demonstration
 /// let mut fields = Array4::zeros((4, 16, 16, 16));
 /// let prev_pressure = Array3::zeros((16, 16, 16));
-/// let source = NullSource;
+/// let source = NullSource::new();
 /// let dt = 1e-7;
 /// let t = 0.0;
 ///

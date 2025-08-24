@@ -1,13 +1,13 @@
 // benches/validation_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::{medium::homogeneous::HomogeneousMedium, validation::ValidationValue, Grid, Medium};
+use kwavers::{medium::homogeneous::HomogeneousMedium, Grid, Medium};
 
 fn system_validation_benchmark(c: &mut Criterion) {
     c.bench_function("validation_pipeline", |b| {
         b.iter(|| {
-            // System validation
-            let value = ValidationValue::Float(8.0);
-            black_box(value)
+            // System validation - just test basic grid creation
+            let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4);
+            black_box(grid)
         })
     });
 }

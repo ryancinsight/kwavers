@@ -12,7 +12,8 @@ pub mod hemispherical_array;
 pub mod linear_array;
 pub mod matrix_array;
 pub mod phased_array;
-pub mod transducer_design;
+pub mod transducer;
+pub mod transducer_design; // Legacy - to be migrated
 
 /// Efficient source trait using mask-based approach
 pub trait Source: Debug + Sync + Send {
@@ -104,14 +105,17 @@ pub struct TimeVaryingSource {
     position: (usize, usize, usize),
     signal_values: Vec<f64>,
     dt: f64,
+    signal_wrapper: TimeVaryingSignal,
 }
 
 impl TimeVaryingSource {
     pub fn new(position: (usize, usize, usize), signal_values: Vec<f64>, dt: f64) -> Self {
+        let signal_wrapper = TimeVaryingSignal::new(signal_values.clone(), dt);
         Self {
             position,
             signal_values,
             dt,
+            signal_wrapper,
         }
     }
 }
@@ -136,15 +140,16 @@ impl Source for TimeVaryingSource {
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
-        // Convert grid indices to physical coordinates
-        let x = self.position.0 as f64; // Simplified - would need grid spacing
+        // Return grid indices as positions - caller should convert using grid spacing
+        // This maintains consistency with the mask which uses grid indices
+        let x = self.position.0 as f64;
         let y = self.position.1 as f64;
         let z = self.position.2 as f64;
         vec![(x, y, z)]
     }
 
     fn signal(&self) -> &dyn Signal {
-        &NullSignal // Placeholder since this uses direct signal values
+        &self.signal_wrapper
     }
 }
 
@@ -152,11 +157,15 @@ impl Source for TimeVaryingSource {
 #[derive(Debug)]
 pub struct CompositeSource {
     sources: Vec<Box<dyn Source>>,
+    null_signal: NullSignal,
 }
 
 impl CompositeSource {
     pub fn new(sources: Vec<Box<dyn Source>>) -> Self {
-        Self { sources }
+        Self { 
+            sources,
+            null_signal: NullSignal,
+        }
     }
 }
 
@@ -186,14 +195,52 @@ impl Source for CompositeSource {
         if let Some(first_source) = self.sources.first() {
             first_source.signal()
         } else {
-            &NullSignal
+            &self.null_signal
         }
+    }
+}
+
+/// Null signal for sources with no signal
+#[derive(Debug, Clone)]
+struct NullSignal;
+
+impl Signal for NullSignal {
+    fn amplitude(&self, _t: f64) -> f64 {
+        0.0
+    }
+
+    fn frequency(&self, _t: f64) -> f64 {
+        0.0
+    }
+
+    fn phase(&self, _t: f64) -> f64 {
+        0.0
+    }
+
+    fn clone_box(&self) -> Box<dyn Signal> {
+        Box::new(self.clone())
     }
 }
 
 /// Null source implementation for testing
 #[derive(Debug)]
-pub struct NullSource;
+pub struct NullSource {
+    null_signal: NullSignal,
+}
+
+impl NullSource {
+    pub fn new() -> Self {
+        Self {
+            null_signal: NullSignal,
+        }
+    }
+}
+
+impl Default for NullSource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Source for NullSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
@@ -209,18 +256,32 @@ impl Source for NullSource {
     }
 
     fn signal(&self) -> &dyn Signal {
-        &NullSignal
+        &self.null_signal
     }
 }
 
-/// Signal implementation for time-varying source
-#[derive(Debug)]
-struct TimeVaryingSignal<'a> {
-    values: &'a [f64],
+
+/// Time-varying signal wrapper for sources with pre-computed values
+#[derive(Debug, Clone)]
+struct TimeVaryingSignal {
+    values: Vec<f64>,
     dt: f64,
+    base_frequency: f64,
 }
 
-impl<'a> Signal for TimeVaryingSignal<'a> {
+impl TimeVaryingSignal {
+    fn new(values: Vec<f64>, dt: f64) -> Self {
+        // Estimate base frequency from signal using FFT or zero-crossing
+        let base_frequency = if dt > 0.0 { 1.0 / (dt * values.len() as f64) } else { 0.0 };
+        Self {
+            values,
+            dt,
+            base_frequency,
+        }
+    }
+}
+
+impl Signal for TimeVaryingSignal {
     fn amplitude(&self, t: f64) -> f64 {
         let index = (t / self.dt) as usize;
         if index < self.values.len() {
@@ -231,34 +292,12 @@ impl<'a> Signal for TimeVaryingSignal<'a> {
     }
 
     fn frequency(&self, _t: f64) -> f64 {
-        // Time-varying signal doesn't have a single frequency
-        0.0
+        self.base_frequency
     }
 
-    fn phase(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn clone_box(&self) -> Box<dyn Signal> {
-        Box::new(NullSignal)
-    }
-}
-
-/// Null signal implementation
-#[derive(Debug, Clone)]
-struct NullSignal;
-
-impl Signal for NullSignal {
-    fn amplitude(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn frequency(&self, _t: f64) -> f64 {
-        0.0
-    }
-
-    fn phase(&self, _t: f64) -> f64 {
-        0.0
+    fn phase(&self, t: f64) -> f64 {
+        // Phase estimation based on time index
+        2.0 * std::f64::consts::PI * self.base_frequency * t
     }
 
     fn clone_box(&self) -> Box<dyn Signal> {
