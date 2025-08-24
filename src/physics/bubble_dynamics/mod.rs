@@ -3,6 +3,9 @@
 //! This module provides the core bubble dynamics calculations that are used by:
 //! - Mechanics: for cavitation damage and erosion
 //! - Optics: for sonoluminescence light emission
+
+// TODO: Bubble dynamics has complex equations with many parameters not always used
+#![allow(unused_variables)]
 //! - Chemistry: for ROS generation and sonochemistry
 //!
 //! Based on the Keller-Miksis equation and extended models from literature

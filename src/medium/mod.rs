@@ -1,6 +1,9 @@
 // src/medium/mod.rs
-// Allow unused variables in this module due to trait interface requirements
-// Many implementations don't need all parameters but must match trait signatures
+
+// TODO: Refactor Medium trait to follow Interface Segregation Principle
+// The current Medium trait has 100+ methods which violates ISP.
+// This causes unused parameter warnings in implementations.
+// Temporary allow until we can break this into focused traits without breaking API.
 #![allow(unused_variables)]
 
 use crate::grid::Grid;

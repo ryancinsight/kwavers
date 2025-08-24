@@ -1,6 +1,6 @@
 //! Performance optimization module for the Kwavers acoustic simulation library
 
-// Allow unused variables in optimization code that's still being developed
+// TODO: Optimization module has many experimental features with unused parameters
 #![allow(unused_variables)]
 
 use crate::error::{KwaversError, KwaversResult};

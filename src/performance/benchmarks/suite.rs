@@ -4,8 +4,6 @@
 //! components of the Kwavers simulation framework.
 //!
 
-// Allow unused variables in benchmark code
-#![allow(unused_variables)]
 //! ## Design Principles
 //! - **Automated**: Run all benchmarks with a single command
 //! - **Reproducible**: Consistent results across runs

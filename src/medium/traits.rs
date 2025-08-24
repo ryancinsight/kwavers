@@ -3,8 +3,8 @@
 //! This module provides fine-grained traits for different physical properties,
 //! allowing media to implement only the behaviors they actually support.
 
-// Allow unused variables in trait default implementations
-// This is a known design issue - traits are too broad but refactoring would break API
+// TODO: These traits are properly designed but not yet used everywhere.
+// The monolithic Medium trait in mod.rs should be deprecated in favor of these.
 #![allow(unused_variables)]
 
 use crate::grid::Grid;
