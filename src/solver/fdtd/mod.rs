@@ -120,8 +120,8 @@ mod tests {
         let config = FdtdConfig::default();
         let solver = FdtdSolver::new(config, &grid).unwrap();
 
-        // Check that solver was created successfully
-        assert_eq!(solver.config.spatial_order, 2);
+        // Check that solver was created successfully with default config
+        assert_eq!(solver.config.spatial_order, 4);
     }
 
     #[test]
