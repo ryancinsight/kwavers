@@ -60,6 +60,7 @@ impl Default for TimeConfig {
 }
 
 /// Factory for creating time configurations
+#[derive(Debug)]
 pub struct TimeFactory;
 
 impl TimeFactory {

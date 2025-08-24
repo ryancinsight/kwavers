@@ -2,7 +2,6 @@
 //!
 //! Models transmit and receive sensitivity characteristics.
 
-use std::f64::consts::PI;
 
 /// Transducer sensitivity parameters
 ///

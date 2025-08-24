@@ -6,7 +6,6 @@
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 use ndarray::Array1;
 use num_complex::Complex64;
-use std::f64::consts::PI;
 
 /// Frequency response characteristics of a transducer
 ///

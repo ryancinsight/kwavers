@@ -657,13 +657,13 @@ mod tests {
         let y_coords = grid.y_coordinates();
         assert_eq!(y_coords.len(), 4);
         assert_eq!(y_coords[0], 0.0);
-        assert_eq!(y_coords[3], 0.6); // (4-1) * 0.2
+        assert!((y_coords[3] - 0.6).abs() < 1e-10); // (4-1) * 0.2
 
         // Test z coordinates
         let z_coords = grid.z_coordinates();
         assert_eq!(z_coords.len(), 3);
         assert_eq!(z_coords[0], 0.0);
-        assert_eq!(z_coords[2], 0.6); // (3-1) * 0.3
+        assert!((z_coords[2] - 0.6).abs() < 1e-10); // (3-1) * 0.3
 
         // Verify that coordinates are grid span, not physical dimensions
         let (phys_x, phys_y, phys_z) = grid.physical_dimensions();

@@ -4,7 +4,6 @@
 //! and acoustic lenses used in transducer construction.
 
 use crate::error::{ConfigError, KwaversError, KwaversResult};
-use std::f64::consts::PI;
 
 /// Piezoelectric material properties
 ///

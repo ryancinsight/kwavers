@@ -84,6 +84,7 @@ impl Default for PhysicsConfig {
 }
 
 /// Factory for creating physics models
+#[derive(Debug)]
 pub struct PhysicsFactory;
 
 impl PhysicsFactory {

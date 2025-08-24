@@ -28,6 +28,7 @@ use crate::error::KwaversResult;
 
 /// Main simulation factory for creating complete simulation setups
 /// Follows Controller pattern from GRASP
+#[derive(Debug)]
 pub struct SimulationFactory;
 
 impl SimulationFactory {

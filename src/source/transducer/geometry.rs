@@ -4,7 +4,6 @@
 //! dimensions, spacing, and aspect ratios.
 
 use crate::error::{ConfigError, KwaversError, KwaversResult};
-use std::f64::consts::PI;
 
 /// Element geometry parameters for transducer design
 ///
