@@ -158,7 +158,7 @@ impl PluginManager {
     pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn PhysicsPlugin> {
         self.plugins
             .get_mut(index)
-            .map(|p| p.as_mut() as &mut dyn PhysicsPlugin)
+            .map(|p| p.as_mut())
     }
 
     /// Get number of plugins

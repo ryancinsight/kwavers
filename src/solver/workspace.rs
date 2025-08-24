@@ -7,6 +7,7 @@
 //! - **Performance**: Zero-allocation hot paths
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
+use crate::error::{KwaversError, KwaversResult, SystemError};
 use crate::grid::Grid;
 use ndarray::Array3;
 use num_complex::Complex;
@@ -98,11 +99,17 @@ impl WorkspacePool {
     }
 
     /// Borrow a workspace from the pool
-    pub fn acquire(&self) -> WorkspaceGuard {
+    pub fn acquire(&self) -> KwaversResult<WorkspaceGuard> {
         #[cfg(feature = "parallel")]
         let mut pool = self.workspaces.lock();
         #[cfg(not(feature = "parallel"))]
-        let mut pool = self.workspaces.lock().unwrap();
+        let mut pool = match self.workspaces.lock() {
+            Ok(p) => p,
+            Err(e) => return Err(KwaversError::System(SystemError::ResourceExhausted {
+                resource: "workspace pool".to_string(),
+                reason: format!("Failed to acquire lock: {}", e),
+            })),
+        };
 
         let workspace = if let Some(ws) = pool.pop() {
             ws
@@ -111,10 +118,10 @@ impl WorkspacePool {
             SolverWorkspace::new(&self.grid)
         };
 
-        WorkspaceGuard {
+        Ok(WorkspaceGuard {
             workspace: Some(workspace),
             pool: Arc::clone(&self.workspaces),
-        }
+        })
     }
 
     /// Get the current pool size
@@ -122,7 +129,7 @@ impl WorkspacePool {
         #[cfg(feature = "parallel")]
         let pool = self.workspaces.lock();
         #[cfg(not(feature = "parallel"))]
-        let pool = self.workspaces.lock().unwrap();
+        let pool = self.workspaces.lock().unwrap_or_else(|e| e.into_inner());
         pool.len()
     }
 }
@@ -152,7 +159,9 @@ impl Drop for WorkspaceGuard {
             #[cfg(feature = "parallel")]
             self.pool.lock().push(workspace);
             #[cfg(not(feature = "parallel"))]
-            self.pool.lock().unwrap().push(workspace);
+            if let Ok(mut pool) = self.pool.lock() {
+                pool.push(workspace);
+            }
         }
     }
 }
@@ -221,7 +230,7 @@ mod tests {
         assert_eq!(pool.size(), 2);
 
         // Acquire workspace
-        let mut guard = pool.acquire();
+        let mut guard = pool.acquire().unwrap();
         assert_eq!(pool.size(), 1);
 
         // Use workspace
