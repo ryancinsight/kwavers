@@ -6,9 +6,7 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Pragmatic warning configuration - focus on real issues
-#![allow(dead_code)]  // Temporarily allow while refactoring
-#![allow(unused_variables)]  // Many test placeholders
+// Strict warning configuration - no hiding issues
 #![warn(
     unused_imports,
     unused_mut,
