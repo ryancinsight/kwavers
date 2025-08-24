@@ -54,6 +54,9 @@ pub const DENSITY_IDX: usize = 15;
 /// Sound speed field
 pub const SOUND_SPEED_IDX: usize = 16;
 
+/// Total number of field components in simulations
+pub const TOTAL_FIELDS: usize = 17;
+
 // Aliases for stress components (for compatibility)
 pub const SXX_IDX: usize = STRESS_XX_IDX;
 pub const SYY_IDX: usize = STRESS_YY_IDX;
@@ -61,9 +64,6 @@ pub const SZZ_IDX: usize = STRESS_ZZ_IDX;
 pub const SXY_IDX: usize = STRESS_XY_IDX;
 pub const SXZ_IDX: usize = STRESS_XZ_IDX;
 pub const SYZ_IDX: usize = STRESS_YZ_IDX;
-
-/// Total number of fields
-pub const TOTAL_FIELDS: usize = 17;
 
 /// Get field name from index
 pub fn field_name(idx: usize) -> &'static str {

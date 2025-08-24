@@ -293,34 +293,7 @@ impl PhysicsState {
     }
 }
 
-/// Field accessor for convenient field access
-/// This is a legacy interface - prefer using the new zero-copy methods
-#[deprecated(
-    since = "1.6.0",
-    note = "Use PhysicsState methods directly for zero-copy access"
-)]
-pub struct FieldAccessor<'a> {
-    state: &'a PhysicsState,
-}
 
-#[allow(deprecated)]
-impl<'a> FieldAccessor<'a> {
-    pub fn new(state: &'a PhysicsState) -> Self {
-        Self { state }
-    }
-
-    pub fn pressure(&self) -> KwaversResult<FieldReadGuard<'_>> {
-        self.state.get_field(field_indices::PRESSURE_IDX)
-    }
-
-    pub fn temperature(&self) -> KwaversResult<FieldReadGuard<'_>> {
-        self.state.get_field(field_indices::TEMPERATURE_IDX)
-    }
-
-    pub fn density(&self) -> KwaversResult<FieldReadGuard<'_>> {
-        self.state.get_field(field_indices::DENSITY_IDX)
-    }
-}
 
 /// Trait for types that provide access to physics state
 pub trait HasPhysicsState {

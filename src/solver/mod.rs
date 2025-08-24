@@ -14,20 +14,13 @@ pub mod spectral_dg;
 pub mod time_integration;
 pub mod validation;
 
-/// Total number of field components in simulations
-pub const TOTAL_FIELDS: usize = 10;
-
-// Field indices for unified field array
-pub const P_IDX: usize = 0;     // Pressure
-pub const VX_IDX: usize = 1;    // Velocity X
-pub const VY_IDX: usize = 2;    // Velocity Y
-pub const VZ_IDX: usize = 3;    // Velocity Z
-pub const SXX_IDX: usize = 4;   // Stress XX
-pub const SYY_IDX: usize = 5;   // Stress YY
-pub const SZZ_IDX: usize = 6;   // Stress ZZ
-pub const SXY_IDX: usize = 7;   // Stress XY
-pub const SXZ_IDX: usize = 8;   // Stress XZ
-pub const SYZ_IDX: usize = 9;   // Stress YZ // pressure, vx, vy, vz, temperature, etc.
+// Re-export field indices from the single source of truth
+pub use crate::physics::field_indices::{
+    PRESSURE_IDX as P_IDX, VX_IDX, VY_IDX, VZ_IDX,
+    STRESS_XX_IDX as SXX_IDX, STRESS_YY_IDX as SYY_IDX, STRESS_ZZ_IDX as SZZ_IDX,
+    STRESS_XY_IDX as SXY_IDX, STRESS_XZ_IDX as SXZ_IDX, STRESS_YZ_IDX as SYZ_IDX,
+    TOTAL_FIELDS
+};
 pub mod reconstruction;
 pub mod thermal_diffusion;
 pub mod time_reversal;

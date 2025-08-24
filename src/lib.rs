@@ -6,9 +6,7 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Pragmatic warning configuration
-// TODO: Remove after fixing 304 unused variables
-#![allow(unused_variables)]
+// Strict warning configuration for code quality
 #![warn(
     unused_imports,
     unused_mut,

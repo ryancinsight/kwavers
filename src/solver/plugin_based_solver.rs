@@ -229,20 +229,7 @@ impl FieldRegistry {
         Ok(data.index_axis_mut(ndarray::Axis(0), metadata.index))
     }
 
-    /// Get a specific field by type (owned copy for backward compatibility)
-    #[deprecated(since = "0.2.0", note = "Use get_field() for zero-copy access instead")]
-    pub fn get_field_owned(&self, field_type: UnifiedFieldType) -> Option<Array3<f64>> {
-        let metadata = self
-            .fields
-            .get(field_type as usize)
-            .and_then(|opt| opt.as_ref())?;
-        if !metadata.active {
-            return None;
-        }
 
-        let data = self.data.as_ref()?;
-        Some(data.index_axis(ndarray::Axis(0), metadata.index).to_owned())
-    }
 
     /// Set a specific field with dimension validation
     pub fn set_field(

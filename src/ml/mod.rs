@@ -189,10 +189,10 @@ impl MLEngine {
 
         match extension {
             "onnx" => self.load_onnx_model(model_type, path),
-            "json" => self.load_json_model_legacy(model_type, path),
+            "json" => self.load_json_model(model_type, path),
             _ => Err(KwaversError::Data(crate::error::DataError::InvalidFormat {
                 format: extension.to_string(),
-                reason: "Unsupported model format. Use .onnx (recommended) or .json (legacy)"
+                reason: "Unsupported model format. Use .onnx (recommended) or .json (testing)"
                     .to_string(),
             })),
         }
@@ -261,14 +261,14 @@ impl MLEngine {
         ))
     }
 
-    /// Load JSON model (legacy format, inefficient but useful for testing)
+    /// Load JSON model format
     ///
-    /// **DEPRECATED**: Use ONNX format for production. JSON loading is slow
-    /// and memory-inefficient for large models.
-    fn load_json_model_legacy(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
-        log::warn!("Loading JSON model format is deprecated and inefficient. Consider converting to ONNX format.");
+    /// Note: ONNX format is preferred for production due to better performance.
+    /// JSON format is useful for testing and debugging.
+    fn load_json_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
+        log::info!("Loading JSON model. Consider ONNX format for better performance.");
 
-        // Legacy JSON loading implementation (kept for backward compatibility)
+        // JSON loading implementation for testing and debugging
         use std::fs;
 
         let content = fs::read_to_string(path).map_err(|_| {

@@ -194,14 +194,7 @@ impl Grid {
         )
     }
 
-    /// Legacy method - use physical_dimensions() for total domain size
-    #[deprecated(
-        since = "2.24.0",
-        note = "Use physical_dimensions() for total domain size"
-    )]
-    pub fn domain_size(&self) -> (f64, f64, f64) {
-        self.physical_dimensions()
-    }
+
 
     /// Generates a 1D array of the physical coordinates of the grid points along the x-axis.
     ///
