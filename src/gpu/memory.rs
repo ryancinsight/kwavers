@@ -146,15 +146,11 @@ impl MemoryPool {
     /// Find suitable buffer from available pool
     fn find_suitable_buffer(&mut self, required_size: usize) -> Option<GpuBuffer> {
         // Find buffer with size >= required_size
-        for i in 0..self.available_buffers.len() {
-            if self.available_buffers[i].size_bytes >= required_size {
-                let mut buffer = self.available_buffers.remove(i).unwrap();
-                buffer.last_access_time = Instant::now();
-                buffer.access_count += 1;
-                return Some(buffer);
-            }
-        }
-        None
+        let position = self.available_buffers.iter().position(|b| b.size_bytes >= required_size)?;
+        let mut buffer = self.available_buffers.remove(position);
+        buffer.last_access_time = Instant::now();
+        buffer.access_count += 1;
+        Some(buffer)
     }
 
     /// Allocate device memory based on backend
@@ -355,7 +351,13 @@ impl GpuMemoryManager {
         buffer_type: BufferType,
     ) -> KwaversResult<usize> {
         if let Some(pool) = self.memory_pools.get(&buffer_type) {
-            let mut pool_guard = pool.lock().unwrap();
+            let mut pool_guard = pool.lock().map_err(|_| {
+                KwaversError::Gpu(GpuError::AllocationFailed {
+                    requested: size_bytes,
+                    available: 0,
+                    reason: "Failed to acquire memory pool lock".to_string(),
+                })
+            })?;
             let buffer_id = pool_guard.allocate(size_bytes, buffer_type)?;
 
             // Update metrics
