@@ -265,10 +265,10 @@ mod tests {
         // which are applied during the refine() method call
         assert_eq!(amr.octree().max_level(), 3);
         
-        // Test that refinement can be triggered (though actual refinement
+        // Test that mesh adaptation can be triggered (though actual refinement
         // depends on the field gradients exceeding thresholds)
-        let refined = amr.refine(&field, 0.1);
-        assert!(refined.is_ok());
+        let adaptation_result = amr.adapt_mesh(&field, 0.1);
+        assert!(adaptation_result.is_ok());
     }
 
     #[test]

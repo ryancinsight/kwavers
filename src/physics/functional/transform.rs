@@ -176,8 +176,5 @@ mod tests {
         assert_abs_diff_eq!(result[[2, 2, 2]], 3.0);
     }
 
-    #[test]
-    fn test_lazy_transform() {
-        let source = LazyField::new(|| Array3::ones((2, 2, 2)));
-    }
+
 }

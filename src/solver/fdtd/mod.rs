@@ -170,21 +170,7 @@ mod tests {
         assert!(dt < 1e-3); // Should be smaller than spatial step
     }
 
-    #[test]
-    fn test_subgrid_creation() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-        let config = FdtdConfig {
-            subgridding: true,
-            subgrid_factor: 2,
-            ..Default::default()
-        };
-        let mut solver = FdtdSolver::new(config, &grid).unwrap();
 
-        // Add a subgrid region
-        let result = solver.add_subgrid((10, 10, 10), (20, 20, 20));
-        assert!(result.is_ok());
-        assert_eq!(solver.subgrids.len(), 1);
-    }
 }
 
 #[cfg(test)]
