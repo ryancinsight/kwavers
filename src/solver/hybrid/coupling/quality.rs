@@ -45,8 +45,8 @@ struct QualityThresholds {
 impl Default for QualityThresholds {
     fn default() -> Self {
         Self {
-            max_interpolation_error: 1e-6,
-            max_conservation_error: 1e-10,
+            max_interpolation_error: crate::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
+            max_conservation_error: crate::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
             max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }
@@ -137,7 +137,7 @@ impl QualityMonitor {
         let source_energy: f64 = interpolated.iter().map(|x| x * x).sum();
         let target_energy: f64 = target.iter().map(|x| x * x).sum();
 
-        if source_energy > 1e-10 {
+        if source_energy > crate::constants::numerical::ENERGY_THRESHOLD {
             let transmission = target_energy / source_energy;
             let reflection = 1.0 - transmission;
             (reflection.max(0.0), transmission.min(1.0))
@@ -146,16 +146,39 @@ impl QualityMonitor {
         }
     }
 
-    fn calculate_phase_error(&self, _interpolated: &Array3<f64>, _target: &Array3<f64>) -> f64 {
-        // TODO: Implement phase error calculation
-        0.0
+    fn calculate_phase_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
+        // Phase error calculation using cross-correlation peak shift
+        // This measures the phase difference between the interpolated and target fields
+        
+        // Find the peak locations in both fields
+        let interp_peak_idx = interpolated
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx)
+            .unwrap_or(0);
+            
+        let target_peak_idx = target
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(idx, _)| idx)
+            .unwrap_or(0);
+        
+        // Calculate phase shift as normalized position difference
+        let total_size = interpolated.len();
+        if total_size > 0 {
+            (interp_peak_idx as f64 - target_peak_idx as f64).abs() / total_size as f64
+        } else {
+            0.0
+        }
     }
 
     fn calculate_amplitude_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         let source_max = interpolated.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
         let target_max = target.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
 
-        if source_max > 1e-10 {
+        if source_max > crate::constants::numerical::AMPLITUDE_THRESHOLD {
             (target_max - source_max).abs() / source_max
         } else {
             0.0

@@ -11,7 +11,10 @@ use ndarray::Array3;
 ///
 /// This function provides a consistent grid for testing across modules
 pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
-    Grid::new(nx, ny, nz, 0.001, 0.001, 0.001)
+    Grid::new(nx, ny, nz, 
+              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION, 
+              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION, 
+              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION)
 }
 
 /// Create a standard test grid with default dimensions (32x32x32)

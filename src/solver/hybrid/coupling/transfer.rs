@@ -82,12 +82,14 @@ impl TransferOperators {
         let mut target_indices = Vec::new();
 
         // Generate based on interface normal direction
+        // Generate interface point indices based on geometry
+        let grid_size = (geometry.num_points as f64).sqrt() as usize;
+        
         match geometry.normal_direction {
             0 => {
                 // X-normal interface
-                for j in 0..10 {
-                    // TODO: Use actual grid dimensions
-                    for k in 0..10 {
+                for j in 0..grid_size {
+                    for k in 0..grid_size {
                         source_indices.push((0, j, k));
                         target_indices.push((0, j, k));
                     }
@@ -95,8 +97,8 @@ impl TransferOperators {
             }
             1 => {
                 // Y-normal interface
-                for i in 0..10 {
-                    for k in 0..10 {
+                for i in 0..grid_size {
+                    for k in 0..grid_size {
                         source_indices.push((i, 0, k));
                         target_indices.push((i, 0, k));
                     }
@@ -104,8 +106,8 @@ impl TransferOperators {
             }
             2 => {
                 // Z-normal interface
-                for i in 0..10 {
-                    for j in 0..10 {
+                for i in 0..grid_size {
+                    for j in 0..grid_size {
                         source_indices.push((i, j, 0));
                         target_indices.push((i, j, 0));
                     }

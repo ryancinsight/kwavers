@@ -5,7 +5,9 @@
 
 use crate::grid::Grid;
 use crate::physics::state::PhysicsState;
-use crate::solver::time_integration::RungeKutta4;
+use crate::physics::field_indices;
+use crate::solver::time_integration::{RungeKutta4, TimeStepper};
+use crate::solver::time_integration::time_stepper::RK4Config;
 use ndarray::{s, Array3};
 use std::f64::consts::PI;
 
@@ -27,20 +29,23 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0); // CFL condition
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Initialize Gaussian pulse
         let x0 = nx as f64 * dx / 2.0;
         let sigma = WAVELENGTH_FACTOR * dx;
 
+        let mut initial_pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
             let x = i as f64 * dx;
             let amplitude = ((-(x - x0).powi(2)) / (2.0 * sigma.powi(2))).exp();
-            state.pressure[[i, 0, 0]] = amplitude;
+            initial_pressure[[i, 0, 0]] = amplitude;
         }
+        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
 
         // Propagate using RK4
-        let mut solver = RungeKutta4::new(dt);
+        let config = RK4Config::default();
+        let mut solver = RungeKutta4::new(config);
         let steps = 100;
 
         for _ in 0..steps {
@@ -52,11 +57,12 @@ mod tests {
         let expected_peak = x0 + travel_distance;
 
         // Find peak position
+        let pressure_field = state.pressure().unwrap();
         let mut max_val = 0.0;
         let mut max_idx = 0;
         for i in 0..nx {
-            if state.pressure[[i, 0, 0]].abs() > max_val {
-                max_val = state.pressure[[i, 0, 0]].abs();
+            if pressure_field[[i, 0, 0]].abs() > max_val {
+                max_val = pressure_field[[i, 0, 0]].abs();
                 max_idx = i;
             }
         }
@@ -78,30 +84,37 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Initialize standing wave (first mode)
+        let mut initial_pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
             let x = i as f64 * dx;
             let k = PI / (nx as f64 * dx); // Wave number for first mode
-            state.pressure[[i, 0, 0]] = (k * x).sin();
+            initial_pressure[[i, 0, 0]] = (k * x).sin();
         }
+        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
 
         // Should oscillate in place with rigid boundaries
         let period = 2.0 * PI / (SOUND_SPEED_WATER * PI / (nx as f64 * dx));
         let steps = (period / dt) as usize;
 
-        let initial_energy: f64 = state.pressure.iter().map(|p| p * p).sum();
+        let pressure_field = state.pressure().unwrap();
+        let initial_energy: f64 = pressure_field.iter().map(|p| p * p).sum();
 
-        let mut solver = RungeKutta4::new(dt);
+        let config = RK4Config::default();
+        let mut solver = RungeKutta4::new(config);
         for _ in 0..steps {
             solver.step(&mut state, &grid);
             // Apply rigid boundary conditions
-            state.pressure[[0, 0, 0]] = 0.0;
-            state.pressure[[nx - 1, 0, 0]] = 0.0;
+            let mut pressure = state.pressure().unwrap().to_owned();
+            pressure[[0, 0, 0]] = 0.0;
+            pressure[[nx - 1, 0, 0]] = 0.0;
+            state.update_field(field_indices::PRESSURE_IDX, &pressure).unwrap();
         }
 
-        let final_energy: f64 = state.pressure.iter().map(|p| p * p).sum();
+        let pressure_field = state.pressure().unwrap();
+        let final_energy: f64 = pressure_field.iter().map(|p| p * p).sum();
         let energy_error = (final_energy - initial_energy).abs() / initial_energy;
 
         assert!(
@@ -119,13 +132,16 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(n, n, n, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Point source at center
         let center = n / 2;
-        state.pressure[[center, center, center]] = 1.0;
+        let mut initial_pressure = Array3::zeros((n, n, n));
+        initial_pressure[[center, center, center]] = 1.0;
+        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
 
-        let mut solver = RungeKutta4::new(dt);
+        let config = RK4Config::default();
+        let mut solver = RungeKutta4::new(config);
         let steps = 20;
 
         for _ in 0..steps {
@@ -136,8 +152,9 @@ mod tests {
         let r1 = 5;
         let r2 = 10;
 
-        let amp1 = state.pressure[[center + r1, center, center]].abs();
-        let amp2 = state.pressure[[center + r2, center, center]].abs();
+        let pressure_field = state.pressure().unwrap();
+        let amp1 = pressure_field[[center + r1, center, center]].abs();
+        let amp2 = pressure_field[[center + r2, center, center]].abs();
 
         // Should follow 1/r relationship
         let expected_ratio = r1 as f64 / r2 as f64;

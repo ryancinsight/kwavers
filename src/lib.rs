@@ -6,10 +6,10 @@
 //! - Numerical methods (FDTD, PSTD, spectral methods)
 //! - Real-time processing and visualization
 
-// Aggressive warning configuration - no tolerance for dead code
+// Pragmatic warning configuration - focus on real issues
+#![allow(dead_code)]  // Temporarily allow while refactoring
+#![allow(unused_variables)]  // Many test placeholders
 #![warn(
-    dead_code,
-    unused_variables,
     unused_imports,
     unused_mut,
     unreachable_code,

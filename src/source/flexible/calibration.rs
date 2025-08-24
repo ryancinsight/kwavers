@@ -49,6 +49,12 @@ pub struct CalibrationProcessor {
     last_calibration_time: f64,
 }
 
+impl Default for CalibrationProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CalibrationProcessor {
     /// Create a new calibration processor
     pub fn new() -> Self {

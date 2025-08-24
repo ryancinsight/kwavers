@@ -128,7 +128,7 @@ mod tests {
     fn test_tissue_heterogeneity() {
         // Test proper handling of tissue interfaces
         let nx = 100;
-        let tissue_map = Array3::zeros((nx, 1, 1));
+        let tissue_map: Array3<f64> = Array3::zeros((nx, 1, 1));
 
         // Create layered medium: water -> liver -> bone
         let mut properties = TissueProperties::new((nx, 1, 1));
