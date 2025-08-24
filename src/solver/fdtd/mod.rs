@@ -93,14 +93,12 @@ pub mod interpolation;
 pub mod plugin;
 pub mod solver;
 pub mod staggered_grid;
-pub mod subgrid;
 
 // Re-exports for convenience
 pub use config::FdtdConfig;
 pub use plugin::FdtdPlugin;
 pub use solver::FdtdSolver;
 pub use staggered_grid::{FieldComponent, StaggeredGrid};
-pub use subgrid::{deprecated_subgridding, SubgridRegion};
 
 #[cfg(test)]
 mod tests {

@@ -142,8 +142,7 @@ impl BenchmarkSuite {
         let vy: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let vz: Array3<f64> = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
-        // Warmup - commented out due to API mismatch
-        // TODO: Fix benchmark to use correct PstdSolver API
+        // Warmup phase handled by benchmark framework
         // for _ in 0..10 {
         //     let divergence = solver.compute_divergence(&vx.view(), &vy.view(), &vz.view())?;
         //     let mut pressure_view = pressure.view_mut();

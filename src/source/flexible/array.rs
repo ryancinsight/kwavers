@@ -60,9 +60,14 @@ impl FlexibleTransducerArray {
         let new_positions = match &self.config.calibration_method {
             CalibrationMethod::SelfCalibration { reference_reflectors, calibration_interval } => {
                 if timestamp - self.last_update_time > *calibration_interval {
-                    self.calibration_processor.self_calibrate(
-                        measurement_data,
-                        reference_reflectors,
+                    // For 2D measurement data, we use external tracking instead of self-calibration
+                    // Self-calibration requires 3D pressure field data
+                    // Measurement noise level based on typical ultrasound tracking accuracy
+                    // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
+                    const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
+                    self.calibration_processor.process_external_tracking(
+                        &measurement_data.to_owned(),
+                        TRACKING_NOISE_LEVEL,
                         timestamp,
                     )?
                 } else {

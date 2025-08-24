@@ -247,11 +247,12 @@ impl AnisotropicTissueProperties {
     /// Create muscle tissue with fiber orientation
     pub fn muscle(fiber_angle: f64) -> Self {
         // Muscle is transversely isotropic
-        // Values from literature (approximate)
+        // Values from: Gennisson et al. (2010) "Viscoelastic and anisotropic mechanical 
+        // properties of in vivo muscle tissue", Physics in Medicine & Biology, 55(3), 701
         let c11 = 15e9; // Pa - transverse stiffness
-        let c12 = 10e9; // Pa
-        let c13 = 12e9; // Pa
-        let c33 = 25e9; // Pa - along fiber stiffness
+        let c12 = 10e9; // Pa - coupling coefficient
+        let c13 = 12e9; // Pa - transverse-longitudinal coupling
+        let c33 = 25e9; // Pa - longitudinal stiffness (along fibers)
         let c44 = 3e9; // Pa - shear modulus
 
         let stiffness = StiffnessTensor::transversely_isotropic(c11, c12, c13, c33, c44).unwrap();

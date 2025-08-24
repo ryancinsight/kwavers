@@ -260,12 +260,15 @@ mod tests {
             }
         }
 
-        // TODO: AMRManager API has changed - wavelet_transform and compute_refinement_flags
-        // methods no longer exist. This test needs to be rewritten to use the new API.
-        // For now, we'll just verify the AMR manager was created successfully.
-        
-        // Basic check that AMR manager exists and has correct configuration
+        // Verify AMR manager configuration
+        // The AMR manager uses internal wavelet-based refinement criteria
+        // which are applied during the refine() method call
         assert_eq!(amr.octree().max_level(), 3);
+        
+        // Test that refinement can be triggered (though actual refinement
+        // depends on the field gradients exceeding thresholds)
+        let refined = amr.refine(&field, 0.1);
+        assert!(refined.is_ok());
     }
 
     #[test]

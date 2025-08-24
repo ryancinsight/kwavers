@@ -201,7 +201,13 @@ impl LinearAlgebra {
         Ok(inverse)
     }
 
-    /// Singular Value Decomposition (simplified implementation)
+    /// Singular Value Decomposition
+    /// 
+    /// Note: This implementation uses the eigendecomposition of A^T*A which is numerically
+    /// less stable than methods like Golub-Kahan bidiagonalization. For production use,
+    /// consider using LAPACK bindings or a more robust algorithm.
+    /// 
+    /// Reference: Golub & Van Loan (2013) "Matrix Computations", 4th ed., Section 8.6
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
         let (m, n) = matrix.dim();
 

@@ -13,7 +13,6 @@ use std::collections::HashMap;
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;
 use super::staggered_grid::StaggeredGrid;
-use super::subgrid::SubgridRegion;
 
 /// FDTD solver for acoustic wave propagation
 #[derive(Clone, Debug)]
@@ -28,8 +27,6 @@ pub struct FdtdSolver {
     pub(crate) fd_operator: FiniteDifference,
     /// Performance metrics
     metrics: HashMap<String, f64>,
-    /// Subgrid regions (if enabled)
-    pub(crate) subgrids: Vec<SubgridRegion>,
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
 }
@@ -57,7 +54,6 @@ impl FdtdSolver {
             staggered: StaggeredGrid::default(),
             fd_operator,
             metrics: HashMap::new(),
-            subgrids: Vec::new(),
             cpml_boundary: None,
         })
     }
@@ -79,24 +75,7 @@ impl FdtdSolver {
         Ok(())
     }
 
-    /// Add a subgrid region for local refinement
-    pub fn add_subgrid(
-        &mut self,
-        start: (usize, usize, usize),
-        end: (usize, usize, usize),
-    ) -> KwaversResult<()> {
-        if !self.config.subgridding {
-            return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "subgridding".to_string(),
-                value: "false".to_string(),
-                constraint: "must be enabled to add subgrid regions".to_string(),
-            }));
-        }
 
-        let subgrid = SubgridRegion::new(start, end, self.config.subgrid_factor)?;
-        self.subgrids.push(subgrid);
-        Ok(())
-    }
 
     /// Update pressure field using velocity divergence
     pub fn update_pressure(
