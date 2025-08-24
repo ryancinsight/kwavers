@@ -3,6 +3,9 @@
 //! This module provides fine-grained traits for different physical properties,
 //! allowing media to implement only the behaviors they actually support.
 
+// Allow unused variables in trait default implementations
+#![allow(unused_variables)]
+
 use crate::grid::Grid;
 use ndarray::Array3;
 use std::fmt::Debug;
@@ -83,12 +86,12 @@ pub trait ThermalMedium: Debug + Sync + Send {
     }
 
     /// Get thermal expansion coefficient (1/K)
-    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         2.0e-4 // Default for water
     }
 
     /// Get temperature at a point (K)
-    fn temperature(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn temperature(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         310.0 // Body temperature default
     }
 }
@@ -102,12 +105,12 @@ pub trait OpticalMedium: Debug + Sync + Send {
     fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
 
     /// Get refractive index
-    fn refractive_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn refractive_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         1.33 // Default for water
     }
 
     /// Get anisotropy factor for scattering
-    fn anisotropy_factor(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn anisotropy_factor(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.9 // Default for tissue
     }
 }
@@ -115,7 +118,7 @@ pub trait OpticalMedium: Debug + Sync + Send {
 /// Trait for viscous properties
 pub trait ViscousMedium: Debug + Sync + Send {
     /// Get shear viscosity (Pa·s)
-    fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         1.0e-3 // Default for water
     }
 
@@ -128,22 +131,22 @@ pub trait ViscousMedium: Debug + Sync + Send {
 /// Trait for bubble dynamics properties
 pub trait BubbleMedium: Debug + Sync + Send {
     /// Get surface tension (N/m)
-    fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.072 // Default for water-air interface
     }
 
     /// Get ambient pressure (Pa)
-    fn ambient_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         101325.0 // Atmospheric pressure
     }
 
     /// Get vapor pressure (Pa)
-    fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         2338.0 // Water at 20°C
     }
 
     /// Get polytropic index
-    fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         1.4 // Default for air
     }
 }
