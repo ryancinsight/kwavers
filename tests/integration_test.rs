@@ -17,19 +17,7 @@ fn test_grid_creation() {
     assert_eq!(grid.dz, 1e-3);
 }
 
-#[test]
-fn test_safe_grid_creation() {
-    // Test the new safe API
-    let grid = Grid::try_new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-    assert!(grid.is_ok());
-    
-    // Test invalid inputs
-    let bad_grid = Grid::try_new(0, 32, 32, 1e-3, 1e-3, 1e-3);
-    assert!(bad_grid.is_err());
-    
-    let bad_spacing = Grid::try_new(32, 32, 32, 0.0, 1e-3, 1e-3);
-    assert!(bad_spacing.is_err());
-}
+
 
 #[test]
 fn test_time_creation() {

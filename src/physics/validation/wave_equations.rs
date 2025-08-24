@@ -3,6 +3,7 @@
 //! Validates basic wave propagation against analytical solutions
 //! Reference: Pierce (1989) - "Acoustics: An Introduction"
 
+use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::grid::Grid;
 use crate::physics::state::PhysicsState;
 use crate::physics::field_indices;
@@ -11,9 +12,7 @@ use crate::solver::time_integration::time_stepper::RK4Config;
 use ndarray::{s, Array3};
 use std::f64::consts::PI;
 
-// Physical constants
-const SOUND_SPEED_WATER: f64 = 1500.0; // m/s
-const DENSITY_WATER: f64 = 1000.0; // kg/m³
+// Wave simulation constants
 const WAVE_FREQUENCY: f64 = 1e6; // 1 MHz
 const WAVELENGTH_FACTOR: f64 = 10.0; // Points per wavelength
 
