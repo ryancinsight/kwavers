@@ -29,7 +29,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0); // CFL condition
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Initialize Gaussian pulse
         let x0 = nx as f64 * dx / 2.0;
@@ -84,7 +84,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Initialize standing wave (first mode)
         let mut initial_pressure = Array3::zeros((nx, 1, 1));
@@ -132,7 +132,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(n, n, n, dx, dx, dx);
-        let mut state = PhysicsState::new(&grid);
+        let mut state = PhysicsState::new(grid.clone());
 
         // Point source at center
         let center = n / 2;
