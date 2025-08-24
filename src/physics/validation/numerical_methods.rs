@@ -54,7 +54,7 @@ mod tests {
         use crate::medium::HomogeneousMedium;
         use crate::boundary::pml::{PMLBoundary, PMLConfig};
         
-        let source = NullSource;
+        let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let pml_config = PMLConfig::default();
         let mut boundary = PMLBoundary::new(pml_config).unwrap();

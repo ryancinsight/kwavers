@@ -9,7 +9,7 @@ pub mod array;
 
 pub use config::{FlexibleTransducerConfig, FlexibilityModel, CalibrationMethod, TrackingSystem};
 pub use geometry::{GeometryState, DeformationState};
-pub use calibration::{CalibrationData, CalibrationProcessor, GeometrySnapshot};
+pub use calibration::{CalibrationData, CalibrationManager, GeometrySnapshot};
 pub use array::FlexibleTransducerArray;
 
 // Re-export at parent level for backward compatibility

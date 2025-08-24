@@ -24,11 +24,18 @@ pub struct SpectralSolver {
     kz: Array3<f64>,
     /// Filter for de-aliasing (2/3 rule)
     filter: Array3<f64>,
+    /// Wave speed for the solver
+    wave_speed: f64,
 }
 
 impl SpectralSolver {
-    /// Create a new spectral solver
+    /// Create a new spectral solver with default wave speed
     pub fn new(order: usize, grid: Arc<Grid>) -> Self {
+        Self::with_wave_speed(order, grid, crate::constants::physics::SOUND_SPEED_WATER)
+    }
+    
+    /// Create a new spectral solver with specified wave speed
+    pub fn with_wave_speed(order: usize, grid: Arc<Grid>, wave_speed: f64) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
         // Initialize wavenumber arrays
@@ -77,6 +84,7 @@ impl SpectralSolver {
             ky,
             kz,
             filter,
+            wave_speed,
         }
     }
 
@@ -196,20 +204,17 @@ impl NumericalSolver for SpectralSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        // For now, assume wave equation with unit wave speed
-        // In practice, this would be configured based on the specific PDE
-        let c = 1.0; // wave speed
-        self.spectral_wave_step(field, dt, c, mask)
+        // Use configured wave speed from the solver
+        self.spectral_wave_step(field, dt, self.wave_speed, mask)
     }
 
     fn max_stable_dt(&self, grid: &Grid) -> f64 {
         // CFL condition for spectral methods
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
         let k_max = PI / dx_min;
-        let c_max = 1.0; // Maximum wave speed
 
         // Spectral methods have stricter stability requirements
-        0.5 * dx_min / (c_max * self.order as f64)
+        0.5 * dx_min / (self.wave_speed * self.order as f64)
     }
 
     fn update_order(&mut self, order: usize) {

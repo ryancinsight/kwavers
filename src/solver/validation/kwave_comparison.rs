@@ -167,7 +167,7 @@ impl KWaveValidator {
 
         // Create a null source for testing
         use crate::source::NullSource;
-        let source = NullSource;
+        let source = NullSource::new();
 
         let n_steps = (t_end / dt) as usize;
         let mut time = 0.0;
@@ -308,7 +308,7 @@ impl KWaveValidator {
 
         // Create a null source for testing
         use crate::source::NullSource;
-        let source = NullSource;
+        let source = NullSource::new();
 
         let dt = 5e-8;
         let n_steps = 500;
@@ -390,7 +390,7 @@ impl KWaveValidator {
 
         let dt = 5e-8;
         let n_steps = 1000;
-        let source = NullSource;
+        let source = NullSource::new();
         let mut fields = Array4::zeros((7, self.grid.nx, self.grid.ny, self.grid.nz));
         fields.slice_mut(s![0, .., .., ..]).assign(&pressure);
         let mut prev_pressure = pressure.clone();
@@ -511,7 +511,7 @@ impl KWaveValidator {
 
         // Create a null source for testing
         use crate::source::NullSource;
-        let source = NullSource;
+        let source = NullSource::new();
 
         let dt = 5e-8;
         let n_steps = 1000;

@@ -10,7 +10,7 @@ use crate::source::Source;
 use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
-use super::calibration::CalibrationProcessor;
+use super::calibration::CalibrationManager;
 use super::config::{CalibrationMethod, FlexibleTransducerConfig, FlexibilityModel};
 use super::geometry::{DeformationState, GeometryState};
 
@@ -21,7 +21,7 @@ pub struct FlexibleTransducerArray {
     /// Current geometry state
     geometry_state: GeometryState,
     /// Calibration processor
-    calibration_processor: CalibrationProcessor,
+    calibration_processor: CalibrationManager,
     /// Signal generator
     signal: Arc<dyn Signal>,
     /// Last update timestamp
@@ -39,7 +39,7 @@ impl FlexibleTransducerArray {
             config.nominal_spacing,
         );
         
-        let calibration_processor = CalibrationProcessor::new();
+        let calibration_processor = CalibrationManager::new();
         
         Ok(Self {
             config,
