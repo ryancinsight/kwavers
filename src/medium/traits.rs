@@ -3,6 +3,10 @@
 //! This module provides fine-grained traits for different physical properties,
 //! allowing media to implement only the behaviors they actually support.
 
+// Allow unused variables in trait default implementations
+// This is a known design issue - traits are too broad but refactoring would break API
+#![allow(unused_variables)]
+
 use crate::grid::Grid;
 use ndarray::Array3;
 use std::fmt::Debug;

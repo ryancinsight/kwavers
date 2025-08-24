@@ -1,4 +1,8 @@
 // src/medium/mod.rs
+// Allow unused variables in this module due to trait interface requirements
+// Many implementations don't need all parameters but must match trait signatures
+#![allow(unused_variables)]
+
 use crate::grid::Grid;
 use ndarray::{Array3, Zip}; // Added Zip
 use std::fmt::Debug;
