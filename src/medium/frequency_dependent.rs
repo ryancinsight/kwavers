@@ -171,7 +171,7 @@ impl TissueFrequencyModels {
 /// Dispersion correction for frequency-dependent media
 pub struct DispersionCorrection {
     /// Reference frequency for dispersion calculation
-    reference_frequency: f64,
+    _reference_frequency: f64,
     /// Frequency-dependent properties
     properties: FrequencyDependentProperties,
 }
@@ -180,7 +180,7 @@ impl DispersionCorrection {
     /// Create new dispersion correction
     pub fn new(properties: FrequencyDependentProperties, reference_frequency: f64) -> Self {
         Self {
-            reference_frequency,
+            _reference_frequency: reference_frequency,
             properties,
         }
     }

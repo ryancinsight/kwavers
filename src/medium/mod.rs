@@ -1,6 +1,4 @@
 // src/medium/mod.rs
-// Allow unused variables in trait default implementations
-#![allow(unused_variables)]
 use crate::grid::Grid;
 use ndarray::{Array3, Zip}; // Added Zip
 use std::fmt::Debug;

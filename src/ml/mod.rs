@@ -52,7 +52,7 @@ pub enum MLBackend {
 pub struct MLEngine {
     models: HashMap<ModelType, Model>,
     performance_metrics: PerformanceMetrics,
-    backend: MLBackend,
+    _backend: MLBackend,
 }
 
 /// Type-safe model enum to avoid unsafe downcasts
@@ -151,7 +151,7 @@ impl MLEngine {
         let mut engine = Self {
             models: HashMap::new(),
             performance_metrics: PerformanceMetrics::default(),
-            backend: _backend,
+            _backend,
         };
 
         // Initialize default models for Phase 12

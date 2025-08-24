@@ -140,7 +140,7 @@ impl TimeReversalReconstructor {
             sensor_data,
             grid,
             solver.time().dt,
-            &(medium as Arc<dyn Medium + Send + Sync>),
+            &(medium.clone() as Arc<dyn Medium + Send + Sync>),
             frequency,
         )?;
 

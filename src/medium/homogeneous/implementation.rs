@@ -1,4 +1,8 @@
 //! Homogeneous medium implementation with uniform properties
+//! 
+//! Note: Many methods have unused grid/position parameters because homogeneous
+//! media have uniform properties. These parameters are kept for trait consistency.
+#![allow(unused_variables)]
 
 use crate::grid::Grid;
 use crate::medium::Medium;
