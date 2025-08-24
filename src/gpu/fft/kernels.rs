@@ -15,6 +15,7 @@ pub trait FftKernel {
 }
 
 /// Cooley-Tukey FFT implementation
+#[derive(Debug)]
 pub struct CooleyTukeyFft;
 
 impl FftKernel for CooleyTukeyFft {

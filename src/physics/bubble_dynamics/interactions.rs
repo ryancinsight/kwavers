@@ -77,6 +77,7 @@ impl BubbleInteractions {
 }
 
 /// Calculate Bjerknes force between two bubbles
+#[derive(Debug)]
 pub struct BjerknesForce;
 
 impl BjerknesForce {
@@ -127,6 +128,7 @@ pub enum InteractionType {
 }
 
 /// Collective effects in bubble clouds
+#[derive(Debug)]
 pub struct CollectiveEffects;
 
 impl CollectiveEffects {

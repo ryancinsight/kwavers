@@ -272,6 +272,7 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
 }
 
 /// Predict erosion patterns
+#[derive(Debug)]
 pub struct ErosionPattern;
 
 impl ErosionPattern {

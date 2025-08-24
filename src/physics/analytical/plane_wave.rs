@@ -6,6 +6,7 @@ use std::f64::consts::PI;
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 
 /// Plane wave analytical solutions
+#[derive(Debug)]
 pub struct PlaneWaveSolution;
 
 impl PlaneWaveSolution {

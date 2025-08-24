@@ -362,6 +362,7 @@ impl CompressedSparseColumnMatrix {
 }
 
 /// Beamforming-specific sparse matrix operations
+#[derive(Debug)]
 pub struct BeamformingMatrixOperations;
 
 impl BeamformingMatrixOperations {
@@ -507,6 +508,7 @@ impl BeamformingMatrixOperations {
 }
 
 /// Sparse matrix statistics and analysis
+#[derive(Debug)]
 pub struct SparseMatrixAnalyzer;
 
 impl SparseMatrixAnalyzer {

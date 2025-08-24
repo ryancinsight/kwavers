@@ -18,6 +18,7 @@ pub mod tolerance {
 }
 
 /// Pure Rust implementation of basic linear algebra operations
+#[derive(Debug)]
 pub struct LinearAlgebra;
 
 impl LinearAlgebra {

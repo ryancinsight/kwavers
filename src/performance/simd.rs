@@ -10,6 +10,7 @@ use ndarray::{Array3, Zip};
 use std::arch::x86_64::*;
 
 /// SIMD-optimized field operations
+#[derive(Debug)]
 pub struct SimdOps;
 
 impl SimdOps {

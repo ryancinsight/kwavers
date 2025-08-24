@@ -19,7 +19,7 @@ pub trait AcousticMedium: Debug + Sync + Send {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
 
     /// Get nonlinearity parameter (B/A) at a specific point
-    fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         5.0 // Default for water-like media
     }
 

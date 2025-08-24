@@ -25,6 +25,7 @@ pub trait ExecutionStrategy: Send + Sync {
 }
 
 /// Sequential execution strategy
+#[derive(Debug)]
 pub struct SequentialStrategy;
 
 impl ExecutionStrategy for SequentialStrategy {

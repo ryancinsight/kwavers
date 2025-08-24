@@ -120,6 +120,7 @@ impl FrequencyDependentProperties {
 }
 
 /// Tissue-specific frequency-dependent models
+#[derive(Debug)]
 pub struct TissueFrequencyModels;
 
 impl TissueFrequencyModels {

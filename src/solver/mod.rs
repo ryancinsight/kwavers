@@ -205,6 +205,7 @@ impl ProgressReporter for ConsoleProgressReporter {
 // Note: format_duration has been moved to utils::format module for reusability
 
 /// Null progress reporter for when progress reporting is not needed
+#[derive(Debug)]
 pub struct NullProgressReporter;
 
 impl ProgressReporter for NullProgressReporter {
