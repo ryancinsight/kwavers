@@ -542,7 +542,6 @@ impl CPMLBoundary {
             _ => {
                 // Invalid component, do nothing
                 // This should be validated at call site
-                return;
             }
         }
     }
@@ -616,7 +615,6 @@ impl CPMLBoundary {
             _ => {
                 // Invalid component, do nothing
                 // This should be validated at call site
-                return;
             }
         }
     }

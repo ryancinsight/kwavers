@@ -13,7 +13,7 @@ pub trait AcousticProperties: CoreMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
 
     /// Get acoustic attenuation coefficient (Np/m)
-    fn attenuation(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
+    fn attenuation(&self, _x: f64, _y: f64, _z: f64, frequency: f64, _grid: &Grid) -> f64 {
         // Default power law absorption for water
         0.0022 * frequency.powf(1.05)
     }

@@ -14,11 +14,7 @@ pub mod unified_solver;
 pub use unified_solver::{AcousticModelType, AcousticSolverConfig, AcousticWaveSolver};
 
 use crate::grid::Grid;
-use crate::medium::{
-    acoustic::AcousticProperties,
-    core::CoreMedium,
-    Medium,
-};
+use crate::medium::Medium;
 use std::f64::consts::PI;
 
 /// Compute acoustic diffusivity from medium properties

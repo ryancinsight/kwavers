@@ -26,8 +26,8 @@ use crate::{
     error::KwaversResult,
     grid::Grid,
     medium::{
-        core::CoreMedium,
-        thermal::{TemperatureState, ThermalProperties},
+
+
         Medium,
     },
 };

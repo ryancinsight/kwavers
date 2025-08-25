@@ -458,7 +458,7 @@ impl MLEngine {
 
         for row in probs.rows() {
             // Arg-max
-            let (idx, max_p) =
+            let (idx, _max_p) =
                 row.iter()
                     .enumerate()
                     .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {

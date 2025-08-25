@@ -260,11 +260,7 @@ impl AcousticProperties for HeterogeneousTissueMedium {
     }
 
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
-        if let Some(indices) = grid.position_to_indices(x, y, z) {
-            Some(self.tissue_map[indices])
-        } else {
-            None
-        }
+        grid.position_to_indices(x, y, z).map(|indices| self.tissue_map[indices])
     }
 }
 
