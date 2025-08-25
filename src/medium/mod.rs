@@ -1,282 +1,47 @@
 // src/medium/mod.rs
 
-// TODO: Refactor Medium trait to follow Interface Segregation Principle
-// The current Medium trait has 100+ methods which violates ISP.
-// This causes unused parameter warnings in implementations.
-// Temporary allow until we can break this into focused traits without breaking API.
-#![allow(unused_variables)]
-
 use crate::grid::Grid;
-use ndarray::{Array3, Zip}; // Added Zip
+use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 
+// Module declarations
 pub mod absorption;
+pub mod acoustic;
 pub mod anisotropic;
+pub mod bubble;
+pub mod composite;
+pub mod core;
+pub mod elastic;
 pub mod frequency_dependent;
 pub mod heterogeneous;
 pub mod homogeneous;
-pub mod traits;
+pub mod interface;
+pub mod optical;
+pub mod thermal;
+pub mod viscous;
 
+// Re-export types from submodules
 pub use absorption::{AcousticDiffusivity, PowerLawAbsorption, TissueType};
 pub use anisotropic::{AnisotropicTissueProperties, AnisotropyType, StiffnessTensor};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
 
-// Re-export new composable traits
-pub use traits::{
-    find_interfaces, max_sound_speed as max_sound_speed_trait, AcousticMedium, BubbleMedium,
-    ElasticMedium, InterfacePoint, OpticalMedium, ThermalMedium, ViscousMedium,
-};
+// Re-export new modular traits
+pub use acoustic::AcousticProperties;
+pub use bubble::{BubbleProperties, BubbleState};
+pub use composite::{CompositeMedium, Medium};
+pub use core::{ArrayAccess, CoreMedium};
+pub use elastic::{ElasticArrayAccess, ElasticProperties};
+pub use optical::OpticalProperties;
+pub use thermal::{TemperatureState, ThermalProperties};
+pub use viscous::ViscousProperties;
 
-/// Get the maximum sound speed from a medium for CFL condition calculations.
-///
-/// This function is useful for determining the most restrictive CFL condition
-/// when the medium has spatially varying sound speeds.
-///
-/// # Arguments
-/// * `medium` - Reference to the medium
-///
-/// # Returns
-/// The maximum sound speed in the medium (m/s)
-pub fn max_sound_speed(medium: &dyn Medium) -> f64 {
-    let sound_speed_array = medium.sound_speed_array();
-    sound_speed_array.fold(0.0, |max, &val| max.max(val))
-}
+// Re-export utility functions and types
+pub use core::{max_sound_speed, max_sound_speed_pointwise};
+pub use interface::{find_interfaces, InterfacePoint};
 
-/// Trait defining the physical properties of a simulation medium.
-///
-/// # Future Refactoring Consideration
-///
-/// This trait is currently a "fat trait" containing methods for acoustic, thermal,
-/// elastic, and optical properties. In a future major version, consider refactoring
-/// this into smaller, composable traits:
-///
-/// - `AcousticMedium`: density, sound_speed, viscosity, etc.
-/// - `ElasticMedium`: lame_lambda, lame_mu, shear properties
-/// - `ThermalMedium`: specific_heat, thermal_conductivity, temperature
-/// - `OpticalMedium`: refractive_index, absorption_coefficient
-///
-/// This would allow structs to implement only the traits they need, following
-/// the Interface Segregation Principle. Additionally, consider standardizing on
-/// array-based access for performance-critical code paths, with point-wise access
-/// provided as a separate utility layer.
-pub trait Medium: Debug + Sync + Send {
-    fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn is_homogeneous(&self) -> bool {
-        false
-    }
-    fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn ambient_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-
-    // Additional properties for acoustic diffusivity calculation
-    fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        // Default value for water-like media
-        1.0e-3 // Pa·s
-    }
-
-    fn bulk_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        // Default: 2.5 times shear viscosity (Stokes' hypothesis)
-        2.5 * self.shear_viscosity(x, y, z, grid)
-    }
-
-    fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // Default gamma for liquids
-        1.1
-    }
-
-    fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // Default Cp for water
-        4180.0 // J/(kg·K)
-    }
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64;
-    fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-
-    // Acoustic attenuation coefficient
-    fn attenuation(&self, _x: f64, _y: f64, _z: f64, frequency: f64, _grid: &Grid) -> f64 {
-        // Default power law absorption
-        0.0022 * frequency.powf(1.05) // Np/m for water
-    }
-
-    // Nonlinearity parameter (B/A)
-    fn nonlinearity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        3.5 // Default B/A for water
-    }
-    fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-    fn reference_frequency(&self) -> f64; // Added for absorption calculations
-
-    /// Get the nonlinearity parameter (beta or B/A) for the medium
-    /// This parameter characterizes the degree of nonlinear wave distortion
-    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // Default B/A parameter for water-like media
-        5.0
-    }
-
-    /// Get the acoustic diffusivity for the medium
-    /// Represents the ratio of thermal diffusivity to acoustic velocity
-    fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        // Default acoustic diffusivity for water-like media
-        let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
-        let sound_speed = self.sound_speed(x, y, z, grid);
-        thermal_diff / sound_speed
-    }
-
-    /// Get the adiabatic index (gamma) for the medium
-    /// Default is 1.4 for air, but different media have different values
-    fn gamma(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        1.4 // Default for air
-    }
-
-    /// Get the tissue type at a specific position (if medium supports tissue types)
-    fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<TissueType> {
-        None
-    }
-
-    fn update_temperature(&mut self, temperature: &Array3<f64>);
-    fn temperature(&self) -> &Array3<f64>;
-    fn bubble_radius(&self) -> &Array3<f64>;
-    fn bubble_velocity(&self) -> &Array3<f64>;
-    fn update_bubble_state(&mut self, radius: &Array3<f64>, velocity: &Array3<f64>);
-    /// Get reference to cached density array for efficient access
-    /// Implementations should cache this on first call
-    fn density_array(&self) -> &Array3<f64>;
-
-    /// Get reference to cached sound speed array for efficient access
-    /// Implementations should cache this on first call
-    fn sound_speed_array(&self) -> &Array3<f64>;
-
-    // --- Elastic Properties ---
-
-    /// Returns Lamé's first parameter (lambda) at the given spatial coordinates (Pa).
-    ///
-    /// Lambda is one of the Lamé parameters and is related to the material's
-    /// incompressibility and Young's modulus.
-    ///
-    /// # Arguments
-    /// * `x`, `y`, `z` - Spatial coordinates (m).
-    /// * `grid` - Reference to the simulation grid.
-    fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-
-    /// Returns Lamé's second parameter (mu), also known as the shear modulus,
-    /// at the given spatial coordinates (Pa).
-    ///
-    /// Mu measures the material's resistance to shear deformation. For ideal fluids, mu is 0.
-    ///
-    /// # Arguments
-    /// * `x`, `y`, `z` - Spatial coordinates (m).
-    /// * `grid` - Reference to the simulation grid.
-    fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
-
-    /// Calculates and returns the shear wave speed (m/s) at the given spatial coordinates.
-    ///
-    /// Shear waves (S-waves) are waves that involve oscillation perpendicular
-    /// to the direction of propagation. They can only propagate in materials with a non-zero
-    /// shear modulus (mu > 0), i.e., solids.
-    /// The speed is calculated as `sqrt(mu / rho)`.
-    ///
-    /// A default implementation is provided.
-    ///
-    /// # Arguments
-    /// * `x`, `y`, `z` - Spatial coordinates (m).
-    /// * `grid` - Reference to the simulation grid.
-    fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let mu = self.lame_mu(x, y, z, grid);
-        let rho = self.density(x, y, z, grid);
-        if rho > 0.0 {
-            (mu / rho).sqrt()
-        } else {
-            0.0
-        }
-    }
-
-    /// Calculates and returns the compressional wave speed (m/s) at the given spatial coordinates.
-    ///
-    /// Compressional waves (P-waves) involve oscillation parallel to the direction
-    /// of propagation. These are the primary sound waves in fluids and can also propagate in solids.
-    /// The speed is calculated as `sqrt((lambda + 2*mu) / rho)`.
-    /// For fluids where mu = 0, this simplifies to `sqrt(lambda / rho)`, where lambda is the bulk modulus K.
-    /// This method can be considered the more general form of `sound_speed()` when dealing with elastic media.
-    ///
-    /// A default implementation is provided.
-    ///
-    /// # Arguments
-    /// * `x`, `y`, `z` - Spatial coordinates (m).
-    /// * `grid` - Reference to the simulation grid.
-    fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let lambda = self.lame_lambda(x, y, z, grid);
-        let mu = self.lame_mu(x, y, z, grid);
-        let rho = self.density(x, y, z, grid);
-        if rho > 0.0 {
-            ((lambda + 2.0 * mu) / rho).sqrt()
-        } else {
-            0.0
-        }
-    }
-
-    // --- Array-based Elastic Properties (primarily for solver optimization) ---
-
-    /// Returns a 3D array of Lamé's first parameter (lambda) values (Pa) over the entire grid.
-    ///
-    /// This is typically used by solvers for efficient computation, avoiding repeated point-wise queries.
-    /// Implementations are expected to cache this array if the medium's properties are static.
-    fn lame_lambda_array(&self) -> Array3<f64>;
-
-    /// Returns a 3D array of Lamé's second parameter (mu, shear modulus) values (Pa) over the entire grid.
-    ///
-    /// This is typically used by solvers for efficient computation.
-    /// Implementations are expected to cache this array if the medium's properties are static.
-    fn lame_mu_array(&self) -> Array3<f64>;
-
-    // Existing viscoelastic properties - can be related to or used alongside Lamé parameters
-    // For instance, shear_sound_speed_array could be derived from lame_mu_array and density_array.
-    // Keeping them distinct for now to allow different levels of model complexity.
-
-    /// Returns a 3D array of shear wave speeds (m/s) over the entire grid.
-    ///
-    /// The default implementation calculates this from `lame_mu_array()` and `density_array()`.
-    /// This is typically used by solvers for efficient computation.
-    fn shear_sound_speed_array(&self) -> Array3<f64> {
-        let mu_arr = self.lame_mu_array();
-        let rho_arr = self.density_array();
-        let mut s_speed_arr = Array3::zeros(rho_arr.dim());
-        Zip::from(&mut s_speed_arr)
-            .and(&mu_arr)
-            .and(rho_arr)
-            .for_each(|s_speed, &mu, &rho| {
-                if rho > 0.0 {
-                    *s_speed = (mu / rho).sqrt();
-                } else {
-                    *s_speed = 0.0;
-                }
-            });
-        s_speed_arr
-    }
-
-    /// Returns a 3D array of shear viscosity coefficients over the grid.
-    /// This represents damping of shear waves.
-    fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
-        // Default implementation: assumes no shear viscosity if not specified.
-        let shape = self.density_array().dim();
-        Array3::zeros(shape)
-    }
-
-    /// Returns a 3D array of bulk viscosity coefficients over the grid.
-    /// This represents damping of compressional waves beyond typical absorption.
-    fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
-        // Default implementation: assumes no bulk viscosity if not specified.
-        let shape = self.density_array().dim();
-        Array3::zeros(shape)
-    }
-}
+// The max_sound_speed function is now provided by the core module
+// and re-exported above for backward compatibility
 
 /// Custom iterators for medium property traversal
 pub mod iterators {
