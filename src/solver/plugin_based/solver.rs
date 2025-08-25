@@ -78,7 +78,7 @@ impl PluginBasedSolver {
             )?;
         }
         
-        self.plugin_manager.add_plugin(plugin);
+        self.plugin_manager.add_plugin(plugin)?;
         Ok(())
     }
 
@@ -153,10 +153,27 @@ impl PluginBasedSolver {
             }
         }
         
-        // Execute plugins
-        // Note: Plugin execution is temporarily disabled due to API mismatch
-        // The plugin system expects Array4<f64> but we have FieldRegistry
-        // TODO: Properly integrate plugin system with field registry
+        // Execute plugins with direct field array access
+        if let Some(fields_array) = self.field_registry.data_mut() {
+            // The plugin manager needs mutable access to execute plugins
+            // We need to temporarily extract it and put it back
+            let mut plugin_manager = std::mem::replace(&mut self.plugin_manager, PluginManager::new());
+            
+            // Execute all plugins with the field array
+            let result = plugin_manager.execute(
+                fields_array,
+                &self.grid,
+                &**self.medium,  // Deref Arc<dyn Medium> to &dyn Medium
+                self.time.dt,
+                t
+            );
+            
+            // Restore the plugin manager
+            self.plugin_manager = plugin_manager;
+            
+            // Handle any errors from plugin execution
+            result?;
+        }
         
         // Apply boundary conditions
         if let Ok(pressure) = self.field_registry.get_field_mut(UnifiedFieldType::Pressure) {

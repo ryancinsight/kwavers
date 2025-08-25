@@ -149,7 +149,7 @@ impl PlasmaChemistry {
     }
 
     /// Initialize species concentrations based on initial conditions
-    fn initialize_concentrations(&mut self) {
+    fn initialize_concentrations(&mut self) -> crate::KwaversResult<()> {
         let r_gas = 8.314;
         if self.temperature <= 0.0 {
             return Err(crate::KwaversError::InvalidInput(
