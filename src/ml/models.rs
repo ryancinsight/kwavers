@@ -304,14 +304,14 @@ impl ConvergencePredictorModel {
 
     /// Create from explicit weights and bias
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let (features, _) = weights.dim();
+        let (features, outputs) = weights.dim();
         let engine = InferenceEngine::from_weights(weights, bias, 64, false);
 
         let metadata = ModelMetadata {
             name: "ConvergencePredictor".to_string(),
             version: "1.0.0".to_string(),
             input_shape: vec![features],
-            output_shape: vec![1],
+            output_shape: vec![outputs],
             accuracy: 0.0,
             inference_time_ms: 0.0,
         };
