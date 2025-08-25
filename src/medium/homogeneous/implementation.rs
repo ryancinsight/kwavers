@@ -1,11 +1,15 @@
 //! Homogeneous medium implementation with uniform properties
 
-// TODO: Homogeneous media don't need position parameters since properties are uniform.
-// This causes many unused parameter warnings. Will be fixed when Medium trait is refactored.
-#![allow(unused_variables)]
-
 use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::medium::{
+    acoustic::AcousticProperties,
+    bubble::{BubbleProperties, BubbleState},
+    core::{ArrayAccess, CoreMedium},
+    elastic::{ElasticArrayAccess, ElasticProperties},
+    optical::OpticalProperties,
+    thermal::{TemperatureState, ThermalProperties},
+    viscous::ViscousProperties,
+};
 use ndarray::Array3;
 use std::fmt::Debug;
 
@@ -68,12 +72,12 @@ impl HomogeneousMedium {
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
             bubble_velocity: Array3::zeros((1, 1, 1)),
-            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
-            sound_speed_cache: Array3::from_elem((1, 1, 1), sound_speed),
+            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), density),
+            sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
             // For fluids, lambda is the bulk modulus, mu is 0
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0, // Fluid has no shear modulus
-            grid_shape: (1, 1, 1),
+            grid_shape: (grid.nx, grid.ny, grid.nz),
         }
     }
 
@@ -112,12 +116,15 @@ impl HomogeneousMedium {
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
         medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
+        // Blood has higher viscosity than water
+        medium.viscosity = 3.5e-3;
+        medium.shear_viscosity = 3.5e-3;
+        medium.bulk_viscosity = 2.5 * 3.5e-3;
         medium
     }
 
     /// Create an air medium with standard properties at 20°C
     pub fn air(grid: &Grid) -> Self {
-        
         Self {
             density: 1.204,
             sound_speed: 343.0,
@@ -142,7 +149,7 @@ impl HomogeneousMedium {
             bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
-            sound_speed_cache: Array3::from_elem((1, 1, 1), 343.0),
+            sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 343.0),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
@@ -163,7 +170,8 @@ impl HomogeneousMedium {
     }
 }
 
-impl Medium for HomogeneousMedium {
+// Core medium properties
+impl CoreMedium for HomogeneousMedium {
     fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.density
     }
@@ -176,10 +184,127 @@ impl Medium for HomogeneousMedium {
         true
     }
 
+    fn reference_frequency(&self) -> f64 {
+        self.reference_frequency
+    }
+}
+
+// Array-based access
+impl ArrayAccess for HomogeneousMedium {
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density_cache
+    }
+
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed_cache
+    }
+}
+
+// Acoustic properties
+impl AcousticProperties for HomogeneousMedium {
+    fn absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+        frequency: f64,
+    ) -> f64 {
+        // Power law absorption: α = α₀ * (f/f₀)^y
+        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
+    }
+
+    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.nonlinearity
+    }
+
+    fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        // α = k / (ρ * Cp * c)
+        self.thermal_conductivity / (self.density * self.specific_heat * self.sound_speed)
+    }
+}
+
+// Elastic properties
+impl ElasticProperties for HomogeneousMedium {
+    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.lame_lambda
+    }
+
+    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.lame_mu
+    }
+}
+
+// Elastic array access
+impl ElasticArrayAccess for HomogeneousMedium {
+    fn lame_lambda_array(&self) -> Array3<f64> {
+        Array3::from_elem(self.grid_shape, self.lame_lambda)
+    }
+
+    fn lame_mu_array(&self) -> Array3<f64> {
+        Array3::from_elem(self.grid_shape, self.lame_mu)
+    }
+}
+
+// Thermal properties
+impl ThermalProperties for HomogeneousMedium {
+    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.specific_heat
+    }
+
+    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.thermal_conductivity
+    }
+
+    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        // α = k / (ρ * Cp)
+        self.thermal_conductivity / (self.density * self.specific_heat)
+    }
+
+    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.thermal_expansion
+    }
+}
+
+// Temperature state management
+impl TemperatureState for HomogeneousMedium {
+    fn update_temperature(&mut self, temperature: &Array3<f64>) {
+        self.temperature = temperature.clone();
+    }
+
+    fn temperature(&self) -> &Array3<f64> {
+        &self.temperature
+    }
+}
+
+// Optical properties
+impl OpticalProperties for HomogeneousMedium {
+    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.optical_absorption
+    }
+
+    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.optical_scattering
+    }
+}
+
+// Viscous properties
+impl ViscousProperties for HomogeneousMedium {
     fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.viscosity
     }
 
+    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.shear_viscosity
+    }
+
+    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.bulk_viscosity
+    }
+}
+
+// Bubble properties
+impl BubbleProperties for HomogeneousMedium {
     fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.surface_tension
     }
@@ -196,71 +321,13 @@ impl Medium for HomogeneousMedium {
         self.polytropic_index
     }
 
-    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.specific_heat
-    }
-
-    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_conductivity
-    }
-
-    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.shear_viscosity
-    }
-
-    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.bulk_viscosity
-    }
-
-    fn absorption_coefficient(
-        &self,
-        _x: f64,
-        _y: f64,
-        _z: f64,
-        grid: &Grid,
-        frequency: f64,
-    ) -> f64 {
-        // Power law absorption: α = α₀ * (f/f₀)^y
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
-    }
-
-    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.thermal_expansion
-    }
-
     fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.gas_diffusion
     }
+}
 
-    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        // α = k / (ρ * Cp)
-        self.thermal_conductivity / (self.density * self.specific_heat)
-    }
-
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.nonlinearity
-    }
-
-    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.optical_absorption
-    }
-
-    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.optical_scattering
-    }
-
-    fn reference_frequency(&self) -> f64 {
-        self.reference_frequency
-    }
-
-    fn update_temperature(&mut self, temperature: &Array3<f64>) {
-        self.temperature = temperature.clone();
-    }
-
-    fn temperature(&self) -> &Array3<f64> {
-        &self.temperature
-    }
-
+// Bubble state management
+impl BubbleState for HomogeneousMedium {
     fn bubble_radius(&self) -> &Array3<f64> {
         &self.bubble_radius
     }
@@ -273,30 +340,6 @@ impl Medium for HomogeneousMedium {
         self.bubble_radius = radius.clone();
         self.bubble_velocity = velocity.clone();
     }
-
-    fn density_array(&self) -> &Array3<f64> {
-        &self.density_cache
-    }
-
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        &self.sound_speed_cache
-    }
-
-    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_lambda
-    }
-
-    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.lame_mu
-    }
-
-    fn lame_lambda_array(&self) -> Array3<f64> {
-        Array3::from_elem(self.grid_shape, self.lame_lambda)
-    }
-
-    fn lame_mu_array(&self) -> Array3<f64> {
-        Array3::from_elem(self.grid_shape, self.lame_mu)
-    }
 }
 
 #[cfg(test)]
@@ -307,7 +350,6 @@ mod tests {
     #[test]
     fn test_water_properties() {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
-
         let water = HomogeneousMedium::water(&grid);
 
         assert_eq!(water.density(0.0, 0.0, 0.0, &grid), 998.0);
@@ -319,11 +361,20 @@ mod tests {
     #[test]
     fn test_blood_properties() {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
-
         let blood = HomogeneousMedium::blood(&grid);
 
         assert_eq!(blood.density(0.0, 0.0, 0.0, &grid), 1060.0);
         assert_eq!(blood.sound_speed(0.0, 0.0, 0.0, &grid), 1570.0);
         assert_eq!(blood.viscosity(0.0, 0.0, 0.0, &grid), 3.5e-3);
+    }
+
+    #[test]
+    fn test_air_properties() {
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let air = HomogeneousMedium::air(&grid);
+
+        assert_eq!(air.density(0.0, 0.0, 0.0, &grid), 1.204);
+        assert_eq!(air.sound_speed(0.0, 0.0, 0.0, &grid), 343.0);
+        assert!(air.is_homogeneous());
     }
 }
