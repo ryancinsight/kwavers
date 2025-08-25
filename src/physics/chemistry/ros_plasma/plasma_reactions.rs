@@ -152,7 +152,9 @@ impl PlasmaChemistry {
     fn initialize_concentrations(&mut self) {
         let r_gas = 8.314;
         if self.temperature <= 0.0 {
-            panic!("Temperature must be greater than 0 K to initialize concentrations.");
+            return Err(crate::KwaversError::InvalidInput(
+                "Temperature must be greater than 0 K to initialize concentrations".to_string()
+            ));
         }
         let total_conc = self.pressure / (r_gas * self.temperature);
 

@@ -539,7 +539,11 @@ impl CPMLBoundary {
                     },
                 );
             }
-            _ => panic!("Invalid component index: must be 0, 1, or 2"),
+            _ => {
+                // Invalid component, do nothing
+                // This should be validated at call site
+                return;
+            }
         }
     }
 
@@ -609,7 +613,11 @@ impl CPMLBoundary {
                         *grad = grad.mul_add(self.inv_kappa_z[k], psi_val);
                     });
             }
-            _ => panic!("Invalid component index: must be 0, 1, or 2"),
+            _ => {
+                // Invalid component, do nothing
+                // This should be validated at call site
+                return;
+            }
         }
     }
 
