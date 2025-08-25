@@ -98,7 +98,7 @@ pub use solver::amr::{
     },
     AMRConfig, AMRManager, InterpolationScheme, WaveletType,
 };
-pub use solver::plugin_based_solver::PluginBasedSolver;
+pub use solver::plugin_based::PluginBasedSolver;
 pub use solver::reconstruction::photoacoustic::PhotoacousticReconstructor;
 pub use solver::reconstruction::seismic::{
     FullWaveformInversion, ReverseTimeMigration, RtmImagingCondition, SeismicImagingConfig,

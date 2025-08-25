@@ -17,7 +17,7 @@ use crate::{
     physics::field_mapping::UnifiedFieldType,
     recorder::Recorder,
     sensor::SensorData,
-    solver::plugin_based_solver::PluginBasedSolver,
+    solver::plugin_based::PluginBasedSolver,
 };
 use log::{debug, info};
 use ndarray::Array3;
