@@ -9,7 +9,7 @@ use kwavers::{
     grid::Grid,
     medium::{heterogeneous::HeterogeneousMedium, HomogeneousMedium, Medium},
     physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
-    solver::plugin_based_solver::PluginBasedSolver,
+    solver::plugin_based::PluginBasedSolver,
     source::NullSource,
     time::Time,
 };
@@ -63,7 +63,7 @@ fn main() -> KwaversResult<()> {
     
     // Register acoustic plugin
     let acoustic_plugin = Box::new(AcousticWavePlugin::new(0.5));
-    solver.register_plugin(acoustic_plugin)?;
+    solver.add_plugin(acoustic_plugin)?;
     solver.initialize()?;
     
     println!("\n✓ Solver initialized with tissue model");
@@ -71,7 +71,7 @@ fn main() -> KwaversResult<()> {
     // Run simulation
     println!("\nRunning tissue simulation:");
     for step in 0..20 {
-        solver.step(step, step as f64 * dt)?;
+        solver.step()?;
         if step % 5 == 0 {
             println!("  Step {}/20: t = {:.2} μs", step, step as f64 * dt * 1e6);
         }

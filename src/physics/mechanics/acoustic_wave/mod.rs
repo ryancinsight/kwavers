@@ -177,7 +177,8 @@ mod tests {
         }
 
         fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            self.sound_speed(x, y, z, grid)
+            // Use the CoreMedium trait method
+            <Self as crate::medium::core::CoreMedium>::sound_speed(self, x, y, z, grid)
         }
     }
 
