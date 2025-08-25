@@ -82,16 +82,17 @@ pub mod iterators {
             let (x, y, z) = self.grid.coordinates(i, j, k);
 
             let properties = MediumProperties {
-                density: self.medium.density(x, y, z, self.grid),
-                sound_speed: self.medium.sound_speed(x, y, z, self.grid),
-                absorption: self.medium.absorption_coefficient(
+                density: CoreMedium::density(self.medium, x, y, z, self.grid),
+                sound_speed: CoreMedium::sound_speed(self.medium, x, y, z, self.grid),
+                absorption: AcousticProperties::absorption_coefficient(
+                    self.medium,
                     x,
                     y,
                     z,
                     self.grid,
-                    self.medium.reference_frequency(),
+                    CoreMedium::reference_frequency(self.medium),
                 ),
-                nonlinearity: self.medium.nonlinearity_coefficient(x, y, z, self.grid),
+                nonlinearity: AcousticProperties::nonlinearity_coefficient(self.medium, x, y, z, self.grid),
                 position: (x, y, z),
                 indices: (i, j, k),
             };
