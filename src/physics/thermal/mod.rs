@@ -22,7 +22,20 @@
 //! 4. **Welch, A. J., & van Gemert, M. J. (2011)**. "Optical-Thermal Response of
 //!    Laser-Irradiated Tissue" (2nd ed.). Springer. ISBN: 978-90-481-8830-7
 
-use crate::{error::KwaversResult, grid::Grid, medium::Medium};
+use crate::{
+    error::KwaversResult,
+    grid::Grid,
+    medium::{
+        acoustic::AcousticProperties,
+        bubble::{BubbleProperties, BubbleState},
+        core::{ArrayAccess, CoreMedium},
+        elastic::{ElasticArrayAccess, ElasticProperties},
+        optical::OpticalProperties,
+        thermal::{TemperatureState, ThermalProperties},
+        viscous::ViscousProperties,
+        Medium,
+    },
+};
 use ndarray::{Array3, Zip};
 
 /// Heat source types
@@ -414,16 +427,152 @@ mod tests {
             }
         }
 
-        impl Medium for TestMedium {
+        // Implement component traits for TestMedium
+        impl CoreMedium for TestMedium {
             fn density(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1000.0
             }
             fn sound_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1500.0
             }
+            fn is_homogeneous(&self) -> bool {
+                true
+            }
+            fn reference_frequency(&self) -> f64 {
+                1e6
+            }
+        }
+
+        impl ArrayAccess for TestMedium {
+            fn density_array(&self) -> &Array3<f64> {
+                &self.density_field
+            }
+            fn sound_speed_array(&self) -> &Array3<f64> {
+                &self.sound_speed_field
+            }
+        }
+
+        impl AcousticProperties for TestMedium {
+            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 {
+                0.01
+            }
+            fn attenuation(&self, _: f64, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.01
+            }
+            fn nonlinearity_parameter(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                3.5
+            }
+            fn nonlinearity_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                3.5
+            }
+            fn acoustic_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.4e-7
+            }
+            fn tissue_type(&self, _: f64, _: f64, _: f64, _: &Grid) -> Option<crate::medium::absorption::TissueType> {
+                None
+            }
+        }
+
+        impl ElasticProperties for TestMedium {
+            fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1e9
+            }
+            fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.0
+            }
+            fn shear_wave_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.0
+            }
+            fn compressional_wave_speed(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1500.0
+            }
+        }
+
+        impl ElasticArrayAccess for TestMedium {
+            fn lame_lambda_array(&self) -> Array3<f64> {
+                self.lame_lambda_field.clone()
+            }
+            fn lame_mu_array(&self) -> Array3<f64> {
+                self.lame_mu_field.clone()
+            }
+            fn shear_sound_speed_array(&self) -> Array3<f64> {
+                Array3::zeros((10, 10, 10))
+            }
+            fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
+                Array3::from_elem((10, 10, 10), 1e-3)
+            }
+            fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
+                Array3::from_elem((10, 10, 10), 2e-3)
+            }
+        }
+
+        impl ThermalProperties for TestMedium {
+            fn specific_heat(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                4180.0
+            }
+            fn specific_heat_capacity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                4180.0
+            }
+            fn thermal_conductivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.6
+            }
+            fn thermal_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.4e-7
+            }
+            fn thermal_expansion(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                3e-4
+            }
+            fn specific_heat_ratio(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.4
+            }
+            fn gamma(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.4
+            }
+        }
+
+        impl TemperatureState for TestMedium {
+            fn update_temperature(&mut self, temperature: &Array3<f64>) {
+                self.temperature_field = temperature.clone();
+            }
+            fn temperature(&self) -> &Array3<f64> {
+                &self.temperature_field
+            }
+        }
+
+        impl OpticalProperties for TestMedium {
+            fn optical_absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.1
+            }
+            fn optical_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.0
+            }
+            fn refractive_index(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1.33
+            }
+            fn anisotropy_factor(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.9
+            }
+            fn reduced_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                0.1
+            }
+        }
+
+        impl ViscousProperties for TestMedium {
             fn viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1e-3
             }
+            fn shear_viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1e-3
+            }
+            fn bulk_viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                2e-3
+            }
+            fn kinematic_viscosity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
+                1e-6
+            }
+        }
+
+        impl BubbleProperties for TestMedium {
             fn surface_tension(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 0.072
             }
@@ -436,42 +585,12 @@ mod tests {
             fn polytropic_index(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1.4
             }
-            fn specific_heat(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                4180.0
-            }
-            fn thermal_conductivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                0.6
-            }
-            fn absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid, _: f64) -> f64 {
-                0.01
-            }
-            fn thermal_expansion(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                3e-4
-            }
             fn gas_diffusion_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 2e-9
             }
-            fn thermal_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1.4e-7
-            }
-            fn nonlinearity_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                3.5
-            }
-            fn optical_absorption_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                0.1
-            }
-            fn optical_scattering_coefficient(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1.0
-            }
-            fn reference_frequency(&self) -> f64 {
-                1e6
-            }
-            fn update_temperature(&mut self, temperature: &Array3<f64>) {
-                self.temperature_field = temperature.clone();
-            }
-            fn temperature(&self) -> &Array3<f64> {
-                &self.temperature_field
-            }
+        }
+
+        impl BubbleState for TestMedium {
             fn bubble_radius(&self) -> &Array3<f64> {
                 &self.bubble_radius_field
             }
@@ -482,25 +601,9 @@ mod tests {
                 self.bubble_radius_field = radius.clone();
                 self.bubble_velocity_field = velocity.clone();
             }
-            fn density_array(&self) -> &Array3<f64> {
-                &self.density_field
-            }
-            fn sound_speed_array(&self) -> &Array3<f64> {
-                &self.sound_speed_field
-            }
-            fn lame_lambda(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                1e9
-            }
-            fn lame_mu(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
-                0.0
-            }
-            fn lame_lambda_array(&self) -> Array3<f64> {
-                self.lame_lambda_field.clone()
-            }
-            fn lame_mu_array(&self) -> Array3<f64> {
-                self.lame_mu_field.clone()
-            }
         }
+
+        // Now TestMedium automatically implements Medium via the blanket implementation
 
         let medium = TestMedium::new();
         let heat_source = calc.calculate_heat_source(&source, &grid, &medium);

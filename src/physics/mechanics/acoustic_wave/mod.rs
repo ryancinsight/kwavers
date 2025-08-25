@@ -14,7 +14,12 @@ pub mod unified_solver;
 pub use unified_solver::{AcousticModelType, AcousticSolverConfig, AcousticWaveSolver};
 
 use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::medium::{
+    acoustic::AcousticProperties,
+    core::{ArrayAccess, CoreMedium},
+    HomogeneousMedium,
+    Medium,
+};
 use std::f64::consts::PI;
 
 /// Compute acoustic diffusivity from medium properties
@@ -100,7 +105,8 @@ mod tests {
         }
     }
 
-    impl Medium for HeterogeneousMediumMock {
+    // Implement component traits for HeterogeneousMediumMock
+    impl crate::medium::core::CoreMedium for HeterogeneousMediumMock {
         fn density(&self, x: f64, y: f64, z: f64, _grid: &Grid) -> f64 {
             if self.position_dependent {
                 1000.0 + x + y + z
@@ -121,9 +127,169 @@ mod tests {
             !self.position_dependent
         }
 
+        fn reference_frequency(&self) -> f64 {
+            1e6
+        }
+    }
+
+    impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
+        fn density_array(&self) -> &ndarray::Array3<f64> {
+            &self.density
+        }
+
+        fn sound_speed_array(&self) -> &ndarray::Array3<f64> {
+            &self.sound_speed
+        }
+    }
+
+    impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
+        fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 {
+            0.01
+        }
+
+        fn attenuation(&self, _x: f64, _y: f64, _z: f64, _frequency: f64, _grid: &Grid) -> f64 {
+            0.01
+        }
+
+        fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            5.0
+        }
+
+        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            3.5
+        }
+
+        fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4e-7
+        }
+
+        fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<crate::medium::absorption::TissueType> {
+            None
+        }
+    }
+
+    impl crate::medium::elastic::ElasticProperties for HeterogeneousMediumMock {
+        fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2.2e9
+        }
+
+        fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.0
+        }
+
+        fn shear_wave_speed(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.0
+        }
+
+        fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+            self.sound_speed(x, y, z, grid)
+        }
+    }
+
+    impl crate::medium::elastic::ElasticArrayAccess for HeterogeneousMediumMock {
+        fn lame_lambda_array(&self) -> ndarray::Array3<f64> {
+            self.density.clone()
+        }
+
+        fn lame_mu_array(&self) -> ndarray::Array3<f64> {
+            self.bubble_radius.clone()
+        }
+
+        fn shear_sound_speed_array(&self) -> ndarray::Array3<f64> {
+            ndarray::Array3::zeros((10, 10, 10))
+        }
+
+        fn shear_viscosity_coeff_array(&self) -> ndarray::Array3<f64> {
+            ndarray::Array3::from_elem((10, 10, 10), 1e-3)
+        }
+
+        fn bulk_viscosity_coeff_array(&self) -> ndarray::Array3<f64> {
+            ndarray::Array3::from_elem((10, 10, 10), 2e-3)
+        }
+    }
+
+    impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
+        fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            4180.0
+        }
+
+        fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            4180.0
+        }
+
+        fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.6
+        }
+
+        fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4e-7
+        }
+
+        fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            3e-4
+        }
+
+        fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4
+        }
+
+        fn gamma(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4
+        }
+    }
+
+    impl crate::medium::thermal::TemperatureState for HeterogeneousMediumMock {
+        fn update_temperature(&mut self, temperature: &ndarray::Array3<f64>) {
+            self.temperature.assign(temperature);
+        }
+
+        fn temperature(&self) -> &ndarray::Array3<f64> {
+            &self.temperature
+        }
+    }
+
+    impl crate::medium::optical::OpticalProperties for HeterogeneousMediumMock {
+        fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.1
+        }
+
+        fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.0
+        }
+
+        fn refractive_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.33
+        }
+
+        fn anisotropy_factor(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.9
+        }
+
+        fn reduced_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.1
+        }
+    }
+
+    impl crate::medium::viscous::ViscousProperties for HeterogeneousMediumMock {
+
         fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             1e-3
         }
+
+        fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1e-3
+        }
+
+        fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2e-3
+        }
+
+        fn kinematic_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1e-6
+        }
+    }
+
+    impl crate::medium::bubble::BubbleProperties for HeterogeneousMediumMock {
 
         fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             0.072
@@ -141,65 +307,12 @@ mod tests {
             1.4
         }
 
-        fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            4180.0
-        }
-
-        fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            0.6
-        }
-
-        fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 {
-            0.01
-        }
-
-        fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            3e-4
-        }
-
         fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             2e-9
         }
+    }
 
-        fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            1.4e-7
-        }
-
-        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            3.5
-        }
-
-        fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            0.1
-        }
-
-        fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            1.0
-        }
-
-        fn reference_frequency(&self) -> f64 {
-            1e6
-        }
-
-        fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            5.0
-        }
-
-        fn density_array(&self) -> &ndarray::Array3<f64> {
-            &self.density
-        }
-
-        fn sound_speed_array(&self) -> &ndarray::Array3<f64> {
-            &self.sound_speed
-        }
-
-        fn update_temperature(&mut self, temperature: &ndarray::Array3<f64>) {
-            self.temperature.assign(temperature);
-        }
-
-        fn temperature(&self) -> &ndarray::Array3<f64> {
-            &self.temperature
-        }
+    impl crate::medium::bubble::BubbleState for HeterogeneousMediumMock {
 
         fn bubble_radius(&self) -> &ndarray::Array3<f64> {
             &self.bubble_radius
@@ -212,22 +325,6 @@ mod tests {
         fn update_bubble_state(&mut self, radius: &ndarray::Array3<f64>, velocity: &ndarray::Array3<f64>) {
             self.bubble_radius.assign(radius);
             self.bubble_velocity.assign(velocity);
-        }
-
-        fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            2.2e9
-        }
-
-        fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            0.0
-        }
-
-        fn lame_lambda_array(&self) -> ndarray::Array3<f64> {
-            self.density.clone() // Just reuse density array for testing
-        }
-
-        fn lame_mu_array(&self) -> ndarray::Array3<f64> {
-            self.bubble_radius.clone() // Just reuse bubble_radius array (zeros) for testing
         }
     }
 

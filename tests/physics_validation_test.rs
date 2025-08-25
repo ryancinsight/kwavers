@@ -4,7 +4,10 @@
 //! by comparing against analytical solutions and known results.
 
 use kwavers::{Grid, Time};
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::medium::{
+    core::CoreMedium,
+    homogeneous::HomogeneousMedium,
+};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
