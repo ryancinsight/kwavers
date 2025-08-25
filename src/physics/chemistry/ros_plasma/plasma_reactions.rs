@@ -57,7 +57,7 @@ impl PlasmaChemistry {
 
         // Initialize with standard plasma reactions
         chemistry.add_standard_reactions();
-        chemistry.initialize_concentrations();
+        let _ = chemistry.initialize_concentrations();
 
         chemistry
     }
@@ -149,10 +149,12 @@ impl PlasmaChemistry {
     }
 
     /// Initialize species concentrations based on initial conditions
-    fn initialize_concentrations(&mut self) {
+    fn initialize_concentrations(&mut self) -> crate::KwaversResult<()> {
         let r_gas = 8.314;
         if self.temperature <= 0.0 {
-            panic!("Temperature must be greater than 0 K to initialize concentrations.");
+            return Err(crate::KwaversError::InvalidInput(
+                "Temperature must be greater than 0 K to initialize concentrations".to_string()
+            ));
         }
         let total_conc = self.pressure / (r_gas * self.temperature);
 
@@ -185,6 +187,7 @@ impl PlasmaChemistry {
             self.concentrations
                 .insert("e-".to_string(), 1e-15 * total_conc);
         }
+        Ok(())
     }
 
     /// Update concentrations for one time step

@@ -165,7 +165,7 @@ impl MLEngine {
         use crate::ml::models::TissueClassifierModel;
 
         // Initialize tissue classifier with enhanced features
-        let tissue_classifier = TissueClassifierModel::new_random(10, 5); // 10 features, 5 tissue types
+        let tissue_classifier = TissueClassifierModel::with_random_weights(10, 5); // 10 features, 5 tissue types
         self.models.insert(
             ModelType::TissueClassifier,
             Model::TissueClassifier(tissue_classifier),
@@ -458,7 +458,7 @@ impl MLEngine {
 
         for row in probs.rows() {
             // Arg-max
-            let (idx, max_p) =
+            let (idx, _max_p) =
                 row.iter()
                     .enumerate()
                     .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {
@@ -577,9 +577,15 @@ impl MLEngine {
                     section: "MLEngine".to_string(),
                 })
             })?;
-        let probs = model.infer(features)?; // (samples, 2)
-                                            // Extract probability of class-1 (success) for each sample
-        let p_success = probs.index_axis(Axis(1), 1).to_owned();
+        let probs = model.infer(features)?;
+        // Handle both single output (regression) and dual output (classification)
+        let p_success = if probs.ncols() == 1 {
+            // Single output - use sigmoid to convert to probability
+            probs.column(0).mapv(|x| 1.0 / (1.0 + (-x).exp()))
+        } else {
+            // Multi-class - extract probability of success class
+            probs.index_axis(Axis(1), 1).to_owned()
+        };
         self.performance_metrics.total_inferences += probs.dim().0;
         Ok(p_success)
     }
@@ -787,9 +793,10 @@ mod tests {
         use crate::ml::models::ConvergencePredictorModel;
         use ndarray::{array, Array2};
 
-        // Predictor: if feature > 0 produces success
-        let weights = array![[10.0_f32]];
-        let bias = Some(array![-5.0_f32]); // threshold at 0.5 approx
+        // Binary classifier with 2 outputs for softmax
+        // First column: class 0 (failure), second column: class 1 (success)
+        let weights = array![[-10.0_f32, 10.0_f32]];  // Feature positively correlates with success
+        let bias = Some(array![5.0_f32, -5.0_f32]);   // Bias towards failure for zero input
         let model = models::ConvergencePredictorModel::from_weights(weights, bias);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
@@ -801,7 +808,11 @@ mod tests {
         let features: Array2<f32> = array![[0.0], [1.0]];
         let probs = engine.predict_outcome(&features).unwrap();
         assert_eq!(probs.len(), 2);
-        assert!(probs[0] < 0.5); // low chance for 0.0 input
-        assert!(probs[1] > 0.5); // high chance for 1.0 input
+        
+        // With weights=10 and bias=-5:
+        // For input 0.0: output = 0*10 - 5 = -5, sigmoid(-5) ≈ 0.007
+        // For input 1.0: output = 1*10 - 5 = 5, sigmoid(5) ≈ 0.993
+        assert!(probs[0] < 0.1, "Expected low probability for 0.0 input, got {}", probs[0]);
+        assert!(probs[1] > 0.9, "Expected high probability for 1.0 input, got {}", probs[1])
     }
 }

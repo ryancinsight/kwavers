@@ -65,18 +65,18 @@ impl NeuralNetwork {
 
     /// Forward pass through the network
     pub fn forward(&self, input: &Array1<f64>) -> KwaversResult<Array1<f64>> {
-        if input.len() != self.weights1.nrows() {
+        if input.len() != self.weights1.ncols() {
             return Err(KwaversError::Physics(
                 crate::error::PhysicsError::DimensionMismatch,
             ));
         }
 
-        // Hidden layer: ReLU(input * W1 + b1)
-        let hidden = input.dot(&self.weights1) + &self.bias1;
+        // Hidden layer: ReLU(W1 * input + b1)
+        let hidden = self.weights1.dot(input) + &self.bias1;
         let hidden_activated = hidden.mapv(|x| x.max(0.0)); // ReLU activation
 
-        // Output layer: hidden * W2 + b2 (no activation for regression)
-        let output = hidden_activated.dot(&self.weights2) + &self.bias2;
+        // Output layer: W2 * hidden + b2 (no activation for regression)
+        let output = self.weights2.dot(&hidden_activated) + &self.bias2;
 
         Ok(output)
     }

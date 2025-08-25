@@ -20,7 +20,7 @@
 //! - **Comprehensive**: Tests all major features
 
 use crate::grid::Grid;
-use crate::medium::{core::CoreMedium, HomogeneousMedium, Medium};
+use crate::medium::{core::CoreMedium, HomogeneousMedium};
 use crate::solver::pstd::{PstdConfig, PstdSolver};
 use crate::source::Source;
 use crate::{ConfigError, KwaversError, KwaversResult};

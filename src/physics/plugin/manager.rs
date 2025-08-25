@@ -182,6 +182,11 @@ impl PluginManager {
         self.plugins.len()
     }
 
+    /// Get iterator over plugins
+    pub fn plugins(&self) -> impl Iterator<Item = &Box<dyn PhysicsPlugin>> {
+        self.plugins.iter()
+    }
+
     /// Resolve plugin dependencies and determine execution order
     fn resolve_dependencies(&mut self) -> KwaversResult<()> {
         let n = self.plugins.len();

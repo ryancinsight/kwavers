@@ -3,7 +3,6 @@
 //! Single Source of Truth (SSOT) for all physical constants used in simulations.
 //! All values are in SI units unless otherwise specified.
 
-use std::f64::consts::PI;
 
 // ============================================================================
 // Fundamental Physical Constants

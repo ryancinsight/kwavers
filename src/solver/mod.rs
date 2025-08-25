@@ -27,10 +27,10 @@ pub mod time_reversal;
 pub mod workspace;
 
 // The new plugin-based architecture - the primary solver
-pub mod plugin_based_solver;
+pub mod plugin_based;
+pub use plugin_based::PluginBasedSolver;
 
-// Re-export the main solver type for convenience
-pub use plugin_based_solver::PluginBasedSolver;
+
 
 // Re-export commonly used types from submodules
 pub use amr::{AMRConfig, AMRManager};
