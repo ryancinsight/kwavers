@@ -76,6 +76,7 @@ impl Default for SourceConfig {
 }
 
 /// Factory for creating sources
+#[derive(Debug)]
 pub struct SourceFactory;
 
 impl SourceFactory {

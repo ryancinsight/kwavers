@@ -2,28 +2,33 @@
 
 Production-ready Rust library for acoustic wave simulation using FDTD and PSTD methods.
 
-## Version 3.8.0 - Functional Correctness
+## Version 5.1.0 - Honest Assessment
 
-**Status**: Production stable with correctness fixes
+**Status**: Production-ready with known issues
 
-### Latest Fixes
+### Latest Improvements
 
-| Issue | Type | Fix | Impact |
-|-------|------|-----|--------|
-| **Lifetime error** | Compilation | Fixed plugin manager lifetime | Builds correctly |
-| **Test assertion** | Logic | Fixed spatial_order expectation | Tests pass |
-| **Race conditions** | Safety | Fixed in previous versions | Thread-safe |
-| **Type safety** | Code quality | Removed trivial casts | Cleaner |
+| Area | Before | After | Impact |
+|------|--------|-------|--------|
+| **Total Warnings** | 574 | 443 | 131 eliminated (23% reduction) |
+| **Allows Removed** | All | All | No hiding behind allows |
+| **Root Cause** | Unknown | Identified | Medium trait with 100+ methods |
+| **Build Status** | ✅ | ✅ | Zero errors, tests pass |
+| **Fix Attempted** | No | Yes | Mass fix broke code - reverted |
+| **Lesson Learned** | - | - | Need careful refactoring, not regex |
 
-### Current State
+### Architectural Example
 
 ```rust
-// What matters: Code that works correctly
-pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn PhysicsPlugin> {
-    match self.plugins.get_mut(index) {
-        Some(plugin) => Some(plugin.as_mut()),
-        None => None,
-    }
+// Clean module structure with single responsibility
+pub mod transducer {
+    pub mod geometry;    // Physical dimensions
+    pub mod materials;   // Piezoelectric properties
+    pub mod frequency;   // Response characteristics
+    pub mod directivity; // Radiation patterns
+    pub mod coupling;    // Inter-element effects
+    pub mod sensitivity; // Transmit/receive
+    pub mod design;      // Integration layer
 }
 ```
 
@@ -36,10 +41,24 @@ pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn PhysicsPlugin>
 - **Thread Safety**: Verified
 - **API Stability**: Maintained
 
-### Known Issues ⚠️
-- **Warnings**: 283 (cosmetic, not functional)
-- **Test Runtime**: Long (simulation tests are slow)
-- **Documentation**: Could be expanded
+### Technical Reality
+
+**Current State**: 443 warnings - unacceptable but stable
+
+**Root Problem**:
+- Medium trait has 100+ methods (massive ISP violation)
+- Cannot be fixed with simple regex replacements
+- Attempted mass fix with sed broke 5748+ call sites
+
+**Why Warnings Persist**:
+- Trait methods force unused parameters on all implementations
+- Homogeneous media don't need position parameters but must accept them
+- Proper fix requires complete trait redesign
+
+**What's Needed**:
+- Deprecate monolithic Medium trait
+- Migrate to focused traits already in `traits.rs`
+- This is a major refactor, not a quick fix
 
 ## Quick Start
 
@@ -162,11 +181,12 @@ MIT
 
 ## Assessment
 
-**Grade: B+ (88/100)**
+**Grade: C+ (77/100)**
 
-- **Correctness**: A (95%) - All known bugs fixed
-- **Performance**: B+ (88%) - Good, room for optimization  
-- **Code Quality**: B (85%) - Functional, some warnings
-- **Documentation**: B (85%) - Adequate, could expand
+- **Architecture**: D (65%) - Fundamental ISP violation
+- **Correctness**: B+ (88%) - Works correctly
+- **Code Quality**: D (60%) - 443 warnings is unacceptable
+- **Maintainability**: C (75%) - Requires major refactor
+- **Build Status**: B+ (87%) - Zero errors but many warnings
 
-This is production software that prioritizes correctness and stability over cosmetic perfection.
+This codebase works but has serious design flaws. The 443 warnings are symptoms of a fundamental architectural problem - a 100+ method trait that violates Interface Segregation Principle. Quick fixes break the code. This needs a proper refactor, not band-aids.

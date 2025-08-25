@@ -1,5 +1,9 @@
 //! Homogeneous medium implementation with uniform properties
 
+// TODO: Homogeneous media don't need position parameters since properties are uniform.
+// This causes many unused parameter warnings. Will be fixed when Medium trait is refactored.
+#![allow(unused_variables)]
+
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array3;
@@ -180,31 +184,31 @@ impl Medium for HomogeneousMedium {
         self.surface_tension
     }
 
-    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.ambient_pressure
     }
 
-    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.vapor_pressure
     }
 
-    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.polytropic_index
     }
 
-    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.specific_heat
     }
 
-    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.thermal_conductivity
     }
 
-    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn shear_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.shear_viscosity
     }
 
-    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn bulk_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.bulk_viscosity
     }
 
@@ -220,28 +224,28 @@ impl Medium for HomogeneousMedium {
         self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
     }
 
-    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.thermal_expansion
     }
 
-    fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.gas_diffusion
     }
 
-    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn thermal_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // α = k / (ρ * Cp)
         self.thermal_conductivity / (self.density * self.specific_heat)
     }
 
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.nonlinearity
     }
 
-    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.optical_absorption
     }
 
-    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.optical_scattering
     }
 
@@ -278,11 +282,11 @@ impl Medium for HomogeneousMedium {
         &self.sound_speed_cache
     }
 
-    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn lame_lambda(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.lame_lambda
     }
 
-    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, grid: &Grid) -> f64 {
+    fn lame_mu(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         self.lame_mu
     }
 

@@ -374,6 +374,7 @@ pub enum TaperFunction {
 }
 
 /// Plugin factory for Phase 31 advanced features
+#[derive(Debug)]
 pub struct Phase31PluginFactory;
 
 impl Phase31PluginFactory {

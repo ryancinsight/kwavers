@@ -3,6 +3,7 @@
 //! This module provides automated benchmarking capabilities for all major
 //! components of the Kwavers simulation framework.
 //!
+
 //! ## Design Principles
 //! - **Automated**: Run all benchmarks with a single command
 //! - **Reproducible**: Consistent results across runs

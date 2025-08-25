@@ -5,6 +5,7 @@ use crate::grid::Grid;
 use std::f64::consts::PI;
 
 /// Dispersion analysis for numerical methods
+#[derive(Debug)]
 pub struct DispersionAnalysis;
 
 impl DispersionAnalysis {

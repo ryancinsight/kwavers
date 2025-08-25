@@ -392,7 +392,7 @@ impl CPMLBoundary {
         thickness: f64,
         m: f64,
         sigma_max: f64,
-        dx: f64,
+        _dx: f64,
         config: &CPMLConfig,
         dt: f64,
         // Mutable slices to operate on directly

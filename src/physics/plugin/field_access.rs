@@ -188,13 +188,7 @@ impl<'a> DirectPluginFieldAccess<'a> {
         Ok(self.fields.index_axis_mut(ndarray::Axis(0), index))
     }
 
-    /// Get the raw fields array (for legacy compatibility)
-    ///
-    /// **WARNING**: This bypasses access control. Use only when necessary.
-    #[deprecated(since = "1.6.0", note = "Use get_field/get_field_mut for safe access")]
-    pub fn raw_fields(&mut self) -> &mut Array4<f64> {
-        self.fields
-    }
+
 }
 
 #[cfg(test)]

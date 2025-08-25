@@ -140,7 +140,7 @@ impl TimeReversalReconstructor {
             sensor_data,
             grid,
             solver.time().dt,
-            &(medium as Arc<dyn Medium + Send + Sync>),
+            &medium,
             frequency,
         )?;
 
@@ -219,7 +219,7 @@ impl TimeReversalReconstructor {
         sensor_data: &SensorData,
         grid: &Grid,
         dt: f64,
-        medium: &Arc<dyn Medium + Send + Sync>,
+        medium: &Arc<dyn Medium>,
         frequency: f64,
     ) -> KwaversResult<HashMap<usize, Vec<f64>>> {
         let mut reversed_signals = HashMap::new();
@@ -314,7 +314,7 @@ impl TimeReversalReconstructor {
         &self,
         signal: Vec<f64>,
         dt: f64,
-        medium: &Arc<dyn Medium + Send + Sync>,
+        medium: &Arc<dyn Medium>,
         grid: &Grid,
         frequency: f64,
     ) -> KwaversResult<Vec<f64>> {

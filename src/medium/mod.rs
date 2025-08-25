@@ -1,4 +1,11 @@
 // src/medium/mod.rs
+
+// TODO: Refactor Medium trait to follow Interface Segregation Principle
+// The current Medium trait has 100+ methods which violates ISP.
+// This causes unused parameter warnings in implementations.
+// Temporary allow until we can break this into focused traits without breaking API.
+#![allow(unused_variables)]
+
 use crate::grid::Grid;
 use ndarray::{Array3, Zip}; // Added Zip
 use std::fmt::Debug;
@@ -78,12 +85,12 @@ pub trait Medium: Debug + Sync + Send {
         2.5 * self.shear_viscosity(x, y, z, grid)
     }
 
-    fn specific_heat_ratio(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn specific_heat_ratio(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // Default gamma for liquids
         1.1
     }
 
-    fn specific_heat_capacity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // Default Cp for water
         4180.0 // J/(kg·K)
     }
@@ -91,13 +98,13 @@ pub trait Medium: Debug + Sync + Send {
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
 
     // Acoustic attenuation coefficient
-    fn attenuation(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
+    fn attenuation(&self, _x: f64, _y: f64, _z: f64, frequency: f64, _grid: &Grid) -> f64 {
         // Default power law absorption
         0.0022 * frequency.powf(1.05) // Np/m for water
     }
 
     // Nonlinearity parameter (B/A)
-    fn nonlinearity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn nonlinearity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         3.5 // Default B/A for water
     }
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
@@ -109,7 +116,7 @@ pub trait Medium: Debug + Sync + Send {
 
     /// Get the nonlinearity parameter (beta or B/A) for the medium
     /// This parameter characterizes the degree of nonlinear wave distortion
-    fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn nonlinearity_parameter(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         // Default B/A parameter for water-like media
         5.0
     }
