@@ -87,13 +87,13 @@ impl<'a> std::ops::Deref for FieldWriteGuard<'a> {
         // This is a compromise - we return a slice view which is safe
         // The guard ensures the data stays alive for the lifetime 'a
         // Note: This requires the field to be contiguous, which it should be
-        // Cannot implement - use view() method
+        unimplemented!("Use view() instead")
     }
 }
 
 impl<'a> std::ops::DerefMut for FieldWriteGuard<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        // Cannot implement - use view_mut() method
+        unimplemented!("Use view_mut() instead")
     }
 }
 

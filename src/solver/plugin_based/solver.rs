@@ -163,7 +163,7 @@ impl PluginBasedSolver {
             let result = plugin_manager.execute(
                 fields_array,
                 &self.grid,
-                &**self.medium,  // Deref Arc<dyn Medium> to &dyn Medium
+                self.medium.as_ref(),  // Get &**self.medium,  // Deref Arc<dyn Medium> to &dyn Mediumdyn Medium from Arc
                 self.time.dt,
                 t
             );

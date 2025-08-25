@@ -57,7 +57,7 @@ impl PlasmaChemistry {
 
         // Initialize with standard plasma reactions
         chemistry.add_standard_reactions();
-        chemistry.initialize_concentrations();
+        let _ = chemistry.initialize_concentrations();
 
         chemistry
     }
@@ -187,6 +187,7 @@ impl PlasmaChemistry {
             self.concentrations
                 .insert("e-".to_string(), 1e-15 * total_conc);
         }
+        Ok(())
     }
 
     /// Update concentrations for one time step
