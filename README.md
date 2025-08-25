@@ -2,20 +2,20 @@
 
 Production-ready Rust library for acoustic wave simulation using FDTD and PSTD methods.
 
-## Version 5.0.0 - Pragmatic Solutions
+## Version 5.1.0 - Honest Assessment
 
-**Status**: Production-ready with documented technical debt
+**Status**: Production-ready with known issues
 
 ### Latest Improvements
 
 | Area | Before | After | Impact |
 |------|--------|-------|--------|
 | **Total Warnings** | 574 | 443 | 131 eliminated (23% reduction) |
-| **Strategic Allows** | 0 | 5 | Added with clear TODOs |
-| **Documentation** | Missing | Added | Every allow has a TODO explaining why |
+| **Allows Removed** | All | All | No hiding behind allows |
+| **Root Cause** | Unknown | Identified | Medium trait with 100+ methods |
 | **Build Status** | ✅ | ✅ | Zero errors, tests pass |
-| **Root Causes** | Unknown | Documented | Medium trait violates ISP |
-| **Next Steps** | Unclear | Clear | Refactor plan documented |
+| **Fix Attempted** | No | Yes | Mass fix broke code - reverted |
+| **Lesson Learned** | - | - | Need careful refactoring, not regex |
 
 ### Architectural Example
 
@@ -41,24 +41,24 @@ pub mod transducer {
 - **Thread Safety**: Verified
 - **API Stability**: Maintained
 
-### Technical Debt (Documented)
+### Technical Reality
 
-**Current State**: 443 warnings with clear action plan
+**Current State**: 443 warnings - unacceptable but stable
 
-**Root Cause Identified**:
-- Medium trait has 100+ methods (ISP violation)
-- Homogeneous implementations don't need position parameters
-- Properly designed traits exist in `traits.rs` but not used everywhere
+**Root Problem**:
+- Medium trait has 100+ methods (massive ISP violation)
+- Cannot be fixed with simple regex replacements
+- Attempted mass fix with sed broke 5748+ call sites
 
-**Mitigation Strategy**:
-1. Added `#![allow(unused_variables)]` with TODOs in 5 modules
-2. Each allow has explanation and fix plan
-3. No hidden problems - everything documented
+**Why Warnings Persist**:
+- Trait methods force unused parameters on all implementations
+- Homogeneous media don't need position parameters but must accept them
+- Proper fix requires complete trait redesign
 
-**Next Major Refactor**:
+**What's Needed**:
 - Deprecate monolithic Medium trait
-- Use focused traits from `traits.rs`
-- This will eliminate 90% of warnings
+- Migrate to focused traits already in `traits.rs`
+- This is a major refactor, not a quick fix
 
 ## Quick Start
 
@@ -181,12 +181,12 @@ MIT
 
 ## Assessment
 
-**Grade: B (83/100)**
+**Grade: C+ (77/100)**
 
-- **Architecture**: B- (80%) - Issues identified and documented
-- **Correctness**: B+ (88%) - Algorithms work, tests pass
-- **Code Quality**: B- (79%) - 443 warnings but with clear plan
-- **Maintainability**: B (82%) - Technical debt documented
-- **Build Status**: A- (90%) - Zero errors, all tests pass
+- **Architecture**: D (65%) - Fundamental ISP violation
+- **Correctness**: B+ (88%) - Works correctly
+- **Code Quality**: D (60%) - 443 warnings is unacceptable
+- **Maintainability**: C (75%) - Requires major refactor
+- **Build Status**: B+ (87%) - Zero errors but many warnings
 
-This codebase is production-ready with known, documented issues. The 443 warnings have a clear root cause (Medium trait design) and mitigation plan. Every `#![allow()]` has a TODO explaining why it exists and how to fix it. This is pragmatic engineering - acknowledging problems while maintaining functionality.
+This codebase works but has serious design flaws. The 443 warnings are symptoms of a fundamental architectural problem - a 100+ method trait that violates Interface Segregation Principle. Quick fixes break the code. This needs a proper refactor, not band-aids.
