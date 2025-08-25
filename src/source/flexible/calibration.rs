@@ -63,6 +63,12 @@ struct KalmanState {
     measurement_noise: DMatrix<f64>,
 }
 
+impl Default for CalibrationManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CalibrationManager {
     /// Create a new calibration manager
     pub fn new() -> Self {

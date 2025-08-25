@@ -14,13 +14,13 @@ pub struct TissueClassifierModel {
 
 impl TissueClassifierModel {
     /// Create a *randomly initialised* classifier with the given dimensionality.
-    pub fn new_random(features: usize, classes: usize) -> Self {
+    pub fn with_random_weights(features: usize, classes: usize) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Array2::from_shape_fn((features, classes), |_| rng.gen_range(-0.05..0.05));
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
         let metadata = ModelMetadata {
-            name: "RandomTissueClassifier".to_string(),
+            name: "TissueClassifier".to_string(),
             version: "0.1.0".to_string(),
             input_shape: vec![features],
             output_shape: vec![classes],
@@ -105,7 +105,7 @@ pub struct ParameterOptimizerModel {
 
 impl ParameterOptimizerModel {
     /// Create a randomly initialized parameter optimizer
-    pub fn new_random(features: usize, outputs: usize) -> Self {
+    pub fn with_random_weights(features: usize, outputs: usize) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Array2::from_shape_fn((features, outputs), |_| rng.gen_range(-0.1..0.1));
         let engine = InferenceEngine::from_weights(weights, None, 64, false);
@@ -195,7 +195,7 @@ pub struct AnomalyDetectorModel {
 
 impl AnomalyDetectorModel {
     /// Create a randomly initialized anomaly detector
-    pub fn new_random(features: usize) -> Self {
+    pub fn with_random_weights(features: usize) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Array2::from_shape_fn((features, 1), |_| rng.gen_range(-0.05..0.05));
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
@@ -285,7 +285,7 @@ pub struct ConvergencePredictorModel {
 
 impl ConvergencePredictorModel {
     /// Create a randomly initialized convergence predictor
-    pub fn new_random(features: usize) -> Self {
+    pub fn with_random_weights(features: usize) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Array2::from_shape_fn((features, 1), |_| rng.gen_range(-0.1..0.1));
         let engine = InferenceEngine::from_weights(weights, None, 64, false);

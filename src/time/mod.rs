@@ -23,7 +23,7 @@ impl Time {
         Self { dt, n_steps, t_max }
     }
 
-    pub fn new_from_grid_and_duration(
+    pub fn from_grid_and_duration(
         dx: f64,
         dy: f64,
         dz: f64,

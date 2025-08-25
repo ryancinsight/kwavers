@@ -17,7 +17,7 @@ use crate::{
     physics::field_mapping::UnifiedFieldType,
     recorder::Recorder,
     sensor::SensorData,
-    solver::plugin_based_solver::PluginBasedSolver,
+    solver::plugin_based::PluginBasedSolver,
 };
 use log::{debug, info};
 use ndarray::Array3;
@@ -445,7 +445,7 @@ impl TimeReversalReconstructor {
             // which will automatically provide the correct amplitude for each time step
 
             // Advance solver one step
-            solver.step(step, step as f64 * solver.time().dt)?;
+            solver.step()?;
 
             // Track maximum amplitude at each point
             // Get pressure field using proper API

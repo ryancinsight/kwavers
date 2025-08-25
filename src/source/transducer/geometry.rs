@@ -65,7 +65,7 @@ impl ElementGeometry {
         let fill_factor = width / pitch;
 
         // Validate aspect ratio (Hunt et al., 1983)
-        if aspect_ratio < super::MIN_ASPECT_RATIO || aspect_ratio > super::MAX_ASPECT_RATIO {
+        if !(super::MIN_ASPECT_RATIO..=super::MAX_ASPECT_RATIO).contains(&aspect_ratio) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "aspect_ratio".to_string(),
                 value: aspect_ratio.to_string(),
@@ -79,7 +79,7 @@ impl ElementGeometry {
 
         // Validate kerf ratio
         let kerf_ratio = kerf / width;
-        if kerf_ratio < super::MIN_KERF_RATIO || kerf_ratio > super::MAX_KERF_RATIO {
+        if !(super::MIN_KERF_RATIO..=super::MAX_KERF_RATIO).contains(&kerf_ratio) {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "kerf_ratio".to_string(),
                 value: kerf_ratio.to_string(),

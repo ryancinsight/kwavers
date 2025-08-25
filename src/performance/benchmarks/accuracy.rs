@@ -3,7 +3,7 @@
 //! Tests numerical methods against known solutions with varying parameters
 
 use crate::{
-    medium::{acoustic::AcousticProperties, core::CoreMedium, Medium},
+    medium::acoustic::AcousticProperties,
     Grid, HomogeneousMedium,
 };
 use ndarray::Array3;

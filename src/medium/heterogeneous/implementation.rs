@@ -12,7 +12,7 @@ use crate::medium::{
     viscous::ViscousProperties,
 };
 use log::debug;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Medium with spatially varying properties
 #[derive(Debug, Clone)]

@@ -165,7 +165,7 @@ impl MLEngine {
         use crate::ml::models::TissueClassifierModel;
 
         // Initialize tissue classifier with enhanced features
-        let tissue_classifier = TissueClassifierModel::new_random(10, 5); // 10 features, 5 tissue types
+        let tissue_classifier = TissueClassifierModel::with_random_weights(10, 5); // 10 features, 5 tissue types
         self.models.insert(
             ModelType::TissueClassifier,
             Model::TissueClassifier(tissue_classifier),
@@ -458,7 +458,7 @@ impl MLEngine {
 
         for row in probs.rows() {
             // Arg-max
-            let (idx, max_p) =
+            let (idx, _max_p) =
                 row.iter()
                     .enumerate()
                     .fold((0usize, f32::MIN), |(max_i, max_p), (i, &p)| {

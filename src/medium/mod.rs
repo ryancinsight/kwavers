@@ -1,7 +1,5 @@
 // src/medium/mod.rs
 
-use crate::grid::Grid;
-use ndarray::{Array3, Zip};
 use std::fmt::Debug;
 
 // Module declarations

@@ -6,7 +6,7 @@ use kwavers::{
     error::KwaversResult,
     grid::Grid,
     medium::{core::CoreMedium, HomogeneousMedium, Medium},
-    solver::plugin_based_solver::PluginBasedSolver,
+    solver::plugin_based::PluginBasedSolver,
     source::NullSource,
 };
 use std::sync::Arc;
@@ -58,7 +58,7 @@ fn main() -> KwaversResult<()> {
     // Register acoustic wave plugin
     use kwavers::physics::plugin::acoustic_wave_plugin::AcousticWavePlugin;
     let acoustic_plugin = Box::new(AcousticWavePlugin::new(0.95)); // CFL number
-    solver.register_plugin(acoustic_plugin)?;
+    solver.add_plugin(acoustic_plugin)?;
     
     println!("\nSimulation parameters:");
     println!("  Time step: {:.2} ns", dt * 1e9);
@@ -71,7 +71,7 @@ fn main() -> KwaversResult<()> {
     // Run simulation
     println!("\nRunning simulation...");
     for step in 0..num_steps {
-        solver.step(step, step as f64 * dt)?;
+        solver.step()?;
         
         if step % 20 == 0 {
             println!("  Step {}/{}", step, num_steps);

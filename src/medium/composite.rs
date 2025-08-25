@@ -3,9 +3,7 @@
 //! This module provides a composite trait that combines all medium properties,
 //! serving as a migration path from the monolithic Medium trait.
 
-use crate::grid::Grid;
 use crate::medium::{
-    absorption::TissueType,
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
@@ -14,7 +12,6 @@ use crate::medium::{
     thermal::{TemperatureState, ThermalProperties},
     viscous::ViscousProperties,
 };
-use ndarray::Array3;
 use std::fmt::Debug;
 
 /// Composite trait combining all medium properties

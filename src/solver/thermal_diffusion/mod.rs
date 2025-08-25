@@ -579,7 +579,7 @@ impl ThermalDiffusionSolver {
             Zip::from(&self.temperature)
                 .and(dose)
                 .for_each(|&temp, dose_val| {
-                    let temp_c = temp - 273.15; // Convert to Celsius
+                    let temp_c = crate::physics::constants::kelvin_to_celsius(temp); // Convert to Celsius
 
                     if temp_c > self.config.dose_reference_temperature {
                         // Above reference: R = 0.5 for T > 43°C

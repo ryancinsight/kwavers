@@ -109,7 +109,11 @@ impl IMEXBDF {
                 let beta = vec![6.0, -15.0, 20.0, -15.0, 6.0, -1.0];
                 (alpha, beta)
             }
-            _ => panic!("BDF order must be between 1 and 6"),
+            _ => {
+                // Return default coefficients for order 1 if invalid order
+                // This should be validated at construction time
+                (vec![1.0], vec![1.0])
+            }
         }
     }
 

@@ -9,8 +9,7 @@ use crate::medium::{
     thermal::{TemperatureState, ThermalProperties},
     viscous::ViscousProperties,
 };
-use log::{debug, info};
-use ndarray::{Array3, Axis, Zip};
+use ndarray::{Array3, Zip};
 use std::sync::OnceLock;
 use crate::error::{ConfigError, KwaversResult};
 
@@ -261,11 +260,7 @@ impl AcousticProperties for HeterogeneousTissueMedium {
     }
 
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
-        if let Some(indices) = grid.position_to_indices(x, y, z) {
-            Some(self.tissue_map[indices])
-        } else {
-            None
-        }
+        grid.position_to_indices(x, y, z).map(|indices| self.tissue_map[indices])
     }
 }
 

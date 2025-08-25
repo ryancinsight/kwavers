@@ -56,7 +56,7 @@ impl Config {
         use crate::error::ConfigError;
 
         debug!("Loading config from {}", filename);
-        let contents = fs::read_to_string(filename).map_err(|e| ConfigError::FileNotFound {
+        let contents = fs::read_to_string(filename).map_err(|_e| ConfigError::FileNotFound {
             path: filename.to_string(),
         })?;
 
@@ -89,7 +89,7 @@ impl Config {
             message: format!("Failed to serialize config: {}", e),
         })?;
 
-        fs::write(filename, contents).map_err(|e| ConfigError::FileNotFound {
+        fs::write(filename, contents).map_err(|_e| ConfigError::FileNotFound {
             path: filename.to_string(),
         })?;
 

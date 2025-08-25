@@ -9,7 +9,7 @@ use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
     physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
-    solver::plugin_based_solver::PluginBasedSolver,
+    solver::plugin_based::PluginBasedSolver,
     source::NullSource,
     time::Time,
 };
@@ -57,7 +57,7 @@ fn main() -> KwaversResult<()> {
     
     // Register acoustic plugin (uses finite differences internally)
     let fdtd_plugin = Box::new(AcousticWavePlugin::new(0.5));
-    fdtd_solver.register_plugin(fdtd_plugin)?;
+    fdtd_solver.add_plugin(fdtd_plugin)?;
     fdtd_solver.initialize()?;
     
     println!("   ✓ FDTD solver initialized");
@@ -88,7 +88,7 @@ fn main() -> KwaversResult<()> {
     // Run a few steps to demonstrate
     println!("\nRunning demonstration (FDTD):");
     for step in 0..10 {
-        fdtd_solver.step(step, step as f64 * dt)?;
+        fdtd_solver.step()?;
         if step % 5 == 0 {
             println!("  Step {}: t = {:.2} μs", step, step as f64 * dt * 1e6);
         }

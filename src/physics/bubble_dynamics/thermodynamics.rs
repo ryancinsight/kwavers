@@ -128,7 +128,7 @@ impl ThermodynamicsCalculator {
         const B: f64 = 1730.63;
         const C: f64 = 233.426;
 
-        let t_celsius = temperature - 273.15;
+        let t_celsius = crate::physics::constants::kelvin_to_celsius(temperature);
 
         if !(1.0..=100.0).contains(&t_celsius) {
             // Fall back to Wagner equation outside valid range
@@ -188,7 +188,7 @@ impl ThermodynamicsCalculator {
     ///
     /// Magnus formula for vapor pressure calculation
     fn buck_equation(&self, temperature: f64) -> f64 {
-        let t_celsius = temperature - 273.15;
+        let t_celsius = crate::physics::constants::kelvin_to_celsius(temperature);
 
         // Buck (1981) coefficients
         let (a, b, c) = if t_celsius > 0.0 {

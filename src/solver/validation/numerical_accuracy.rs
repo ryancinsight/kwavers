@@ -5,7 +5,7 @@
 //! Currently disabled to focus on core compilation fixes.
 
 use crate::grid::Grid;
-use crate::medium::{core::CoreMedium, HomogeneousMedium, Medium};
+use crate::medium::{core::CoreMedium, HomogeneousMedium};
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone)]
