@@ -1,6 +1,9 @@
 // benches/validation_benchmarks.rs
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kwavers::{medium::homogeneous::HomogeneousMedium, Grid, Medium};
+use kwavers::{
+    medium::{core::CoreMedium, homogeneous::HomogeneousMedium, Medium},
+    Grid,
+};
 
 fn system_validation_benchmark(c: &mut Criterion) {
     c.bench_function("validation_pipeline", |b| {

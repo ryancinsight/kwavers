@@ -2,7 +2,7 @@
 
 use crate::grid::Grid;
 use crate::medium::{
-    absorption::power_law_absorption,
+    absorption::PowerLawAbsorption,
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
@@ -196,12 +196,13 @@ impl AcousticProperties for HeterogeneousMedium {
         frequency: f64,
     ) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        power_law_absorption(
-            frequency,
-            self.alpha0[[ix, iy, iz]],
-            self.delta[[ix, iy, iz]],
-            self.reference_frequency,
-        )
+        let absorption = PowerLawAbsorption {
+            alpha_0: self.alpha0[[ix, iy, iz]],
+            y: self.delta[[ix, iy, iz]],
+            f_ref: self.reference_frequency,
+            dispersion_correction: false,
+        };
+        absorption.absorption_at_frequency(frequency)
     }
 
     fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

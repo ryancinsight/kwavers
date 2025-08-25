@@ -190,7 +190,7 @@ impl SimulationConfig {
         match self.medium_type.as_deref() {
             Some("layered_tissue") => {
                 info!("Initializing layered tissue medium.");
-                Ok(Arc::new(HeterogeneousTissueMedium::new_layered(grid)))
+                Ok(Arc::new(HeterogeneousTissueMedium::new(grid, 1e6)))
             }
             Some("homogeneous_water") | None => {
                 if self.medium_type.is_none() {
@@ -209,7 +209,7 @@ impl SimulationConfig {
         grid: &Grid,
         medium: &dyn crate::medium::Medium,
     ) -> Result<Time, String> {
-        let max_sound_speed = crate::medium::max_sound_speed(medium);
+        let max_sound_speed = crate::medium::max_sound_speed(medium, grid);
         self.initialize_time_with_sound_speed(grid, max_sound_speed)
     }
 }

@@ -4,7 +4,10 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use kwavers::{Grid, Time};
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::medium::{
+    core::CoreMedium,
+    homogeneous::HomogeneousMedium,
+};
 use ndarray::Array3;
 
 fn grid_creation_benchmark(c: &mut Criterion) {

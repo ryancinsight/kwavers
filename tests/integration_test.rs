@@ -3,7 +3,10 @@
 //! These tests verify that the library components work together correctly.
 
 use kwavers::{Grid, Time};
-use kwavers::medium::homogeneous::HomogeneousMedium;
+use kwavers::medium::{
+    core::CoreMedium,
+    homogeneous::HomogeneousMedium,
+};
 
 #[test]
 fn test_grid_creation() {

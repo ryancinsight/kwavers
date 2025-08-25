@@ -2,6 +2,7 @@
 pub mod bubble_dynamics;
 pub mod cavitation_control;
 pub mod chemistry;
+pub mod constants;  // Physical constants (SSOT)
 pub mod phase_modulation;
 // composable module removed - use plugin system instead
 pub mod field_indices; // Unified field indices (SSOT)
@@ -39,6 +40,9 @@ pub use wave_propagation::{
     AttenuationCalculator, Polarization, PropagationCoefficients, WaveMode,
     WavePropagationCalculator,
 };
+
+// Re-export commonly used constants
+pub use constants::*;
 
 /// Functional programming utilities for physics calculations
 ///

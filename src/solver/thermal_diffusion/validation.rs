@@ -22,7 +22,14 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use crate::{grid::Grid, medium::HomogeneousMedium};
+    use crate::{
+        grid::Grid,
+        medium::{
+            core::CoreMedium,
+            thermal::ThermalProperties,
+            HomogeneousMedium,
+        },
+    };
     use approx::assert_relative_eq;
     use ndarray::Array3;
 
