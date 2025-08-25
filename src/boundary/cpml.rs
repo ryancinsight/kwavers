@@ -829,10 +829,14 @@ mod tests {
     fn test_cpml_creation() {
         let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let dt = 1e-6;
+        // Use CFL-stable time step
         let sound_speed = 1500.0;
+        let dt = 0.9 * grid.dx.min(grid.dy).min(grid.dz) / (sound_speed * 3.0_f64.sqrt());
 
         let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed);
+        if let Err(e) = &cpml {
+            eprintln!("CPML creation failed: {:?}", e);
+        }
         assert!(cpml.is_ok());
     }
 
@@ -849,7 +853,7 @@ mod tests {
             grazing_angle_absorption: false,
         };
 
-        let dt = 1e-6;
+        let dt = 0.9 * grid.dx.min(grid.dy).min(grid.dz) / (sound_speed * 3.0_f64.sqrt());
         let sound_speed = 1500.0;
         let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
 
@@ -874,7 +878,7 @@ mod tests {
     fn test_memory_update() {
         let grid = Grid::new(30, 30, 30, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let dt = 1e-6;
+        let dt = 0.9 * grid.dx.min(grid.dy).min(grid.dz) / (sound_speed * 3.0_f64.sqrt());
         let sound_speed = 1500.0;
 
         let mut cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
@@ -895,7 +899,7 @@ mod tests {
     fn test_invalid_component_debug() {
         let grid = Grid::new(30, 30, 30, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let dt = 1e-6;
+        let dt = 0.9 * grid.dx.min(grid.dy).min(grid.dz) / (sound_speed * 3.0_f64.sqrt());
         let sound_speed = 1500.0;
 
         let mut cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
@@ -909,7 +913,7 @@ mod tests {
     fn test_fma_optimization() {
         let grid = Grid::new(30, 30, 30, 1e-3, 1e-3, 1e-3);
         let config = CPMLConfig::default();
-        let dt = 1e-6;
+        let dt = 0.9 * grid.dx.min(grid.dy).min(grid.dz) / (sound_speed * 3.0_f64.sqrt());
         let sound_speed = 1500.0;
 
         let cpml = CPMLBoundary::new(config, &grid, dt, sound_speed).unwrap();
