@@ -129,16 +129,22 @@ impl FieldRegistry {
         &mut self,
         field_type: UnifiedFieldType,
     ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
-        let metadata = self.get_metadata(field_type)?;
+        // Get metadata info without borrowing self
+        let idx = field_type as usize;
+        let (metadata_index, is_active) = self.fields
+            .get(idx)
+            .and_then(|opt| opt.as_ref())
+            .map(|m| (m.index, m.active))
+            .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
         
-        if !metadata.active {
+        if !is_active {
             return Err(FieldError::Inactive(field_type.name().to_string()));
         }
 
         let data = self.data.as_mut()
             .ok_or(FieldError::DataNotInitialized)?;
 
-        Ok(data.index_axis_mut(Axis(0), metadata.index))
+        Ok(data.index_axis_mut(Axis(0), metadata_index))
     }
 
     /// Set a specific field with dimension validation
