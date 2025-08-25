@@ -9,8 +9,7 @@ use crate::medium::{
     thermal::{TemperatureState, ThermalProperties},
     viscous::ViscousProperties,
 };
-use log::{debug, info};
-use ndarray::{Array3, Axis, Zip};
+use ndarray::{Array3, Zip};
 use std::sync::OnceLock;
 use crate::error::{ConfigError, KwaversResult};
 

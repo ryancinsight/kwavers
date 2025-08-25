@@ -316,12 +316,12 @@ impl FieldRegistry {
         let mut new_data = Array4::zeros((num_fields, nx, ny, nz));
 
         // Copy existing data if present
-        if let Some(old_data) = &self.data {
-            let min_fields = old_data.shape()[0].min(num_fields);
+        if let Some(existing_data) = &self.data {
+            let min_fields = existing_data.shape()[0].min(num_fields);
             for i in 0..min_fields {
                 new_data
                     .index_axis_mut(ndarray::Axis(0), i)
-                    .assign(&old_data.index_axis(ndarray::Axis(0), i));
+                    .assign(&existing_data.index_axis(ndarray::Axis(0), i));
             }
         }
 

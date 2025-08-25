@@ -93,7 +93,7 @@ impl GpuContext {
 
     /// Create new GPU context synchronously using pollster runtime
     /// This is a thin wrapper around the async constructor for compatibility
-    pub fn new_sync() -> KwaversResult<Self> {
+    pub fn blocking() -> KwaversResult<Self> {
         pollster::block_on(Self::new())
     }
 

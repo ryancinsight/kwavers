@@ -16,8 +16,7 @@ pub use unified_solver::{AcousticModelType, AcousticSolverConfig, AcousticWaveSo
 use crate::grid::Grid;
 use crate::medium::{
     acoustic::AcousticProperties,
-    core::{ArrayAccess, CoreMedium},
-    HomogeneousMedium,
+    core::CoreMedium,
     Medium,
 };
 use std::f64::consts::PI;

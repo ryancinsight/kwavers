@@ -26,13 +26,8 @@ use crate::{
     error::KwaversResult,
     grid::Grid,
     medium::{
-        acoustic::AcousticProperties,
-        bubble::{BubbleProperties, BubbleState},
-        core::{ArrayAccess, CoreMedium},
-        elastic::{ElasticArrayAccess, ElasticProperties},
-        optical::OpticalProperties,
+        core::CoreMedium,
         thermal::{TemperatureState, ThermalProperties},
-        viscous::ViscousProperties,
         Medium,
     },
 };
@@ -386,6 +381,15 @@ impl ThermalCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::medium::{
+        core::{ArrayAccess, CoreMedium},
+        acoustic::AcousticProperties,
+        elastic::{ElasticProperties, ElasticArrayAccess},
+        optical::OpticalProperties,
+        viscous::ViscousProperties,
+        bubble::{BubbleProperties, BubbleState},
+        thermal::{ThermalProperties, TemperatureState},
+    };
 
     #[test]
     fn test_optical_heating() {
