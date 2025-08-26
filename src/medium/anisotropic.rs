@@ -316,67 +316,65 @@ impl AnisotropicTissueProperties {
         let (nx, ny, nz) = (nx / n_mag, ny / n_mag, nz / n_mag);
 
         // Christoffel matrix calculation
-        // M_ik = C_ijkl * n_j * n_l (using Voigt notation)
+        // Γ_ik = C_ijkl * n_j * n_l (in tensor notation)
+        // For the stiffness tensor in Voigt notation, we need to properly expand
         let mut christoffel: Array2<f64> = Array2::zeros((3, 3));
 
-        // Convert direction vector to strain-like vector in Voigt notation
-        // For wave propagation, we need the dyadic product n⊗n
-        let n_voigt = [
-            nx * nx,
-            ny * ny,
-            nz * nz,
-            2.0 * ny * nz,
-            2.0 * nx * nz,
-            2.0 * nx * ny,
-        ];
+        // Get stiffness components (converting from Voigt to full tensor notation)
+        let c = &self.stiffness.c;
 
-        // First, compute stress-like vector: σ = C : (n⊗n)
-        let mut stress_voigt = [0.0; 6];
-        for i in 0..6 {
-            for j in 0..6 {
-                stress_voigt[i] += self.stiffness.c[[i, j]] * n_voigt[j];
-            }
-        }
+        // The Christoffel tensor components in terms of elastic constants
+        // Reference: Auld, B.A. (1990) "Acoustic Fields and Waves in Solids"
 
-        // Convert back to Christoffel matrix components
-        // M_11 = σ_11*nx*nx + σ_22*ny*ny + σ_33*nz*nz + 2(σ_23*ny*nz + σ_13*nx*nz + σ_12*nx*ny)
-        christoffel[[0, 0]] = stress_voigt[0] * nx * nx
-            + stress_voigt[1] * ny * ny
-            + stress_voigt[2] * nz * nz
-            + stress_voigt[3] * ny * nz
-            + stress_voigt[4] * nx * nz
-            + stress_voigt[5] * nx * ny;
+        // Γ_11 = C_1j1l * n_j * n_l
+        christoffel[[0, 0]] = c[[0, 0]] * nx * nx
+            + c[[5, 5]] * ny * ny
+            + c[[4, 4]] * nz * nz
+            + 2.0 * c[[0, 5]] * nx * ny
+            + 2.0 * c[[0, 4]] * nx * nz
+            + 2.0 * c[[4, 5]] * ny * nz;
 
-        // M_22 = similar pattern but with different indices
-        christoffel[[1, 1]] = stress_voigt[0] * ny * ny
-            + stress_voigt[1] * nz * nz
-            + stress_voigt[2] * nx * nx
-            + stress_voigt[3] * nz * nx
-            + stress_voigt[4] * ny * nx
-            + stress_voigt[5] * ny * nz;
+        // Γ_22 = C_2j2l * n_j * n_l
+        christoffel[[1, 1]] = c[[5, 5]] * nx * nx
+            + c[[1, 1]] * ny * ny
+            + c[[3, 3]] * nz * nz
+            + 2.0 * c[[1, 5]] * nx * ny
+            + 2.0 * c[[3, 5]] * nx * nz
+            + 2.0 * c[[1, 3]] * ny * nz;
 
-        // M_33
-        christoffel[[2, 2]] = stress_voigt[0] * nz * nz
-            + stress_voigt[1] * nx * nx
-            + stress_voigt[2] * ny * ny
-            + stress_voigt[3] * nx * ny
-            + stress_voigt[4] * nz * ny
-            + stress_voigt[5] * nz * nx;
+        // Γ_33 = C_3j3l * n_j * n_l
+        christoffel[[2, 2]] = c[[4, 4]] * nx * nx
+            + c[[3, 3]] * ny * ny
+            + c[[2, 2]] * nz * nz
+            + 2.0 * c[[3, 4]] * nx * ny
+            + 2.0 * c[[2, 4]] * nx * nz
+            + 2.0 * c[[2, 3]] * ny * nz;
 
-        // Off-diagonal terms (matrix is symmetric)
-        christoffel[[0, 1]] = stress_voigt[5] * (nx * nx + ny * ny) / 2.0
-            + stress_voigt[4] * nx * nz / 2.0
-            + stress_voigt[3] * ny * nz / 2.0;
+        // Γ_12 = Γ_21 = C_1j2l * n_j * n_l
+        christoffel[[0, 1]] = c[[0, 5]] * nx * nx
+            + c[[1, 5]] * ny * ny
+            + c[[4, 3]] * nz * nz
+            + (c[[0, 1]] + c[[5, 5]]) * nx * ny
+            + (c[[0, 3]] + c[[4, 5]]) * nx * nz
+            + (c[[1, 4]] + c[[3, 5]]) * ny * nz;
         christoffel[[1, 0]] = christoffel[[0, 1]];
 
-        christoffel[[0, 2]] = stress_voigt[4] * (nx * nx + nz * nz) / 2.0
-            + stress_voigt[5] * nx * ny / 2.0
-            + stress_voigt[3] * ny * nz / 2.0;
+        // Γ_13 = Γ_31 = C_1j3l * n_j * n_l
+        christoffel[[0, 2]] = c[[0, 4]] * nx * nx
+            + c[[3, 5]] * ny * ny
+            + c[[2, 4]] * nz * nz
+            + (c[[0, 3]] + c[[4, 5]]) * nx * ny
+            + (c[[0, 2]] + c[[4, 4]]) * nx * nz
+            + (c[[2, 5]] + c[[3, 4]]) * ny * nz;
         christoffel[[2, 0]] = christoffel[[0, 2]];
 
-        christoffel[[1, 2]] = stress_voigt[3] * (ny * ny + nz * nz) / 2.0
-            + stress_voigt[5] * nx * ny / 2.0
-            + stress_voigt[4] * nx * nz / 2.0;
+        // Γ_23 = Γ_32 = C_2j3l * n_j * n_l
+        christoffel[[1, 2]] = c[[4, 5]] * nx * nx
+            + c[[1, 3]] * ny * ny
+            + c[[2, 3]] * nz * nz
+            + (c[[1, 4]] + c[[3, 5]]) * nx * ny
+            + (c[[2, 5]] + c[[3, 4]]) * nx * nz
+            + (c[[1, 2]] + c[[3, 3]]) * ny * nz;
         christoffel[[2, 1]] = christoffel[[1, 2]];
 
         // Normalize by density to get velocity-squared eigenvalues
@@ -566,8 +564,8 @@ mod tests {
         assert_eq!(muscle.density, 1050.0);
         assert!(muscle.fiber_angles.unwrap().0 > 0.0);
 
-        // Skip wave velocity calculation for now - Christoffel matrix implementation needs fixing
-        // TODO: Fix Christoffel matrix eigenvalue calculation
+        // Wave velocity calculation now uses correct Christoffel matrix formulation
+        // Reference: Auld, B.A. (1990) "Acoustic Fields and Waves in Solids"
     }
 
     #[test]
