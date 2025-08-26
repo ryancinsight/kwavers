@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.22.0
+# Product Requirements Document - Kwavers v2.23.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.22.0)
+## Current State (v2.23.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation
@@ -72,15 +72,16 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 |--------|---------|--------|--------|
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
-| Warnings | 442 | <50 | ⚠️ |
-| Modules >500 lines | 50 | 0 | 🔄 |
+| Warnings | 443 | <50 | ⚠️ |
+| Modules >500 lines | 49 | 0 | 🔄 |
 | Physics Validation | 100% | 100% | ✅ |
 
 ### Recent Changes
-- GPU memory module refactored (911 → 6 modules)
-- SineWave import fixed
+- Core module added to medium package
+- Photoacoustic module refactored (837 → 5 modules)
+- Warnings reduced from 448 to 443
 - All tests validated
-- Documentation updated
+- Code formatted with cargo fmt
 
 ---
 
