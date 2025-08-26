@@ -4,7 +4,7 @@
 //! photoacoustic imaging.
 
 use crate::error::KwaversResult;
-use ndarray::{Array3, ArrayView2, ArrayView3};
+use ndarray::{Array3, ArrayView2};
 
 use super::config::PhotoacousticConfig;
 use super::filters::Filters;

@@ -4,7 +4,7 @@
 //! reconstruction algorithms.
 
 use crate::error::KwaversResult;
-use ndarray::{Array2, Array3, ArrayView2};
+use ndarray::Array2;
 
 /// Utility functions for photoacoustic reconstruction
 pub struct Utils;
@@ -37,28 +37,6 @@ impl Utils {
         } else {
             0.0
         }
-    }
-
-    /// Propagate time-reversed signals (placeholder implementation)
-    pub fn propagate_time_reversed_signals(
-        &self,
-        data: &mut Array3<f64>,
-        _sound_speed: f64,
-    ) -> KwaversResult<()> {
-        // Time reversal implementation
-        // This would involve solving the wave equation backward in time
-        // For now, just reverse the time axis
-        let (nx, ny, nt) = data.dim();
-        for i in 0..nx {
-            for j in 0..ny {
-                for t in 0..nt / 2 {
-                    let temp = data[[i, j, t]];
-                    data[[i, j, t]] = data[[i, j, nt - 1 - t]];
-                    data[[i, j, nt - 1 - t]] = temp;
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Build forward model matrix for model-based reconstruction
@@ -103,64 +81,5 @@ impl Utils {
         }
 
         Ok(forward_model)
-    }
-
-    /// Solve regularized least squares problem
-    pub fn solve_regularized_least_squares(
-        &self,
-        forward_model: &Array2<f64>,
-        sensor_data: ArrayView2<f64>,
-        regularization_parameter: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        // Simplified least squares solution
-        // Actual implementation would use proper linear algebra solver
-
-        let (n_measurements, n_voxels) = forward_model.dim();
-        let grid_size = [(n_voxels as f64).cbrt() as usize; 3];
-
-        // Flatten sensor data
-        let y = sensor_data.as_slice().unwrap();
-
-        // Solve (A^T A + λI)x = A^T y
-        let at = forward_model.t();
-        let ata = at.dot(forward_model);
-        let aty = at.dot(&ndarray::Array1::from_vec(y.to_vec()));
-
-        // Add regularization
-        let mut ata_reg = ata;
-        for i in 0..n_voxels {
-            ata_reg[[i, i]] += regularization_parameter;
-        }
-
-        // Simple iterative solver (Jacobi method)
-        let mut x = ndarray::Array1::zeros(n_voxels);
-        for _iter in 0..50 {
-            let mut x_new = x.clone();
-            for i in 0..n_voxels {
-                let mut sum = aty[i];
-                for j in 0..n_voxels {
-                    if i != j {
-                        sum -= ata_reg[[i, j]] * x[j];
-                    }
-                }
-                if ata_reg[[i, i]] != 0.0 {
-                    x_new[i] = sum / ata_reg[[i, i]];
-                }
-            }
-            x = x_new;
-        }
-
-        // Reshape to 3D
-        let mut reconstruction = Array3::zeros((grid_size[0], grid_size[1], grid_size[2]));
-        for (idx, val) in x.iter().enumerate() {
-            let k = idx % grid_size[2];
-            let j = (idx / grid_size[2]) % grid_size[1];
-            let i = idx / (grid_size[1] * grid_size[2]);
-            if i < grid_size[0] && j < grid_size[1] && k < grid_size[2] {
-                reconstruction[[i, j, k]] = *val;
-            }
-        }
-
-        Ok(reconstruction)
     }
 }

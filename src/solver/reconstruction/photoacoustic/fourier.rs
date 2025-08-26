@@ -8,7 +8,7 @@
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3, ArrayView2, Zip};
+use ndarray::{Array1, Array2, Array3, ArrayView2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 

@@ -4,8 +4,7 @@
 //! operations for solving the inverse problems in photoacoustic imaging.
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
-use std::cmp::Ordering;
+use ndarray::{Array1, Array2, ArrayView1};
 
 /// Linear algebra solver with various regularization methods
 pub struct LinearSolver {

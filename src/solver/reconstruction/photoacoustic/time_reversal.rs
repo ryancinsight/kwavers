@@ -9,7 +9,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array2, Array3, ArrayView2, Zip};
+use ndarray::{Array3, ArrayView2, Zip};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 

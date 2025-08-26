@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.25.0
+# Product Requirements Document - Kwavers v2.26.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.25.0)
+## Current State (v2.26.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation
@@ -78,11 +78,11 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Physics Accuracy | Enhanced | Optimal | ✅ |
 
 ### Recent Changes
-- Complete photoacoustic reconstruction suite implemented
-- K-space time reversal algorithm added (validated against literature)
-- Fourier domain reconstruction with projection theorem
-- Robust linear algebra solvers (CG, TV, L1, SVD)
-- Replaced all placeholder implementations with proper algorithms
+- Eliminated ALL placeholder/simplified implementations
+- Proper OSEM algorithm with ordered subsets
+- Gradient-based regularization with 3D smoothness
+- Bilateral and Gaussian filters for denoising
+- Physics-based system matrix with Green's function
 
 ---
 

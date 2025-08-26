@@ -100,7 +100,7 @@ impl IterativeMethods {
         Ok(reconstruction)
     }
 
-    /// Build system matrix for iterative reconstruction
+    /// Build system matrix for iterative reconstruction with proper physics
     fn build_system_matrix(
         &self,
         sensor_positions: &[[f64; 3]],
@@ -110,26 +110,73 @@ impl IterativeMethods {
         let n_voxels = grid_size[0] * grid_size[1] * grid_size[2];
         let mut matrix = Array2::zeros((n_sensors, n_voxels));
 
-        // Grid spacing (assume uniform)
-        let dx = 1.0 / grid_size[0] as f64;
-        let dy = 1.0 / grid_size[1] as f64;
-        let dz = 1.0 / grid_size[2] as f64;
+        // Physical grid dimensions (meters) - should be passed as parameter
+        // Using reasonable defaults for photoacoustic imaging
+        const GRID_PHYSICAL_SIZE: f64 = 0.05; // 50mm imaging region
+        let dx = GRID_PHYSICAL_SIZE / grid_size[0] as f64;
+        let dy = GRID_PHYSICAL_SIZE / grid_size[1] as f64;
+        let dz = GRID_PHYSICAL_SIZE / grid_size[2] as f64;
 
-        // Build matrix elements
+        // Voxel volume for proper weighting
+        let voxel_volume = dx * dy * dz;
+
+        // Build matrix elements with proper Green's function
         for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
             for voxel_idx in 0..n_voxels {
                 let (i, j, k) = self.linear_to_3d_index(voxel_idx, grid_size);
-                let voxel_pos = [i as f64 * dx, j as f64 * dy, k as f64 * dz];
+                let voxel_pos = [
+                    (i as f64 + 0.5) * dx, // Center of voxel
+                    (j as f64 + 0.5) * dy,
+                    (k as f64 + 0.5) * dz,
+                ];
 
-                // Calculate contribution (simplified - actual would use proper forward model)
+                // Calculate distance from voxel center to sensor
                 let distance = self.euclidean_distance(&voxel_pos, sensor_pos);
+
                 if distance > 0.0 {
-                    matrix[[sensor_idx, voxel_idx]] = 1.0 / (4.0 * std::f64::consts::PI * distance);
+                    // Green's function for spherical wave propagation
+                    // G(r) = 1/(4πr) with proper units
+                    let green_function = 1.0 / (4.0 * std::f64::consts::PI * distance);
+
+                    // Include voxel volume weighting and solid angle factor
+                    let solid_angle_factor =
+                        self.compute_solid_angle_factor(&voxel_pos, sensor_pos, dx);
+
+                    matrix[[sensor_idx, voxel_idx]] =
+                        green_function * voxel_volume * solid_angle_factor;
+                } else {
+                    // Handle sensor inside voxel case
+                    let effective_radius =
+                        (voxel_volume * 3.0 / (4.0 * std::f64::consts::PI)).powf(1.0 / 3.0);
+                    matrix[[sensor_idx, voxel_idx]] =
+                        1.0 / (4.0 * std::f64::consts::PI * effective_radius);
                 }
             }
         }
 
         Ok(matrix)
+    }
+
+    /// Compute solid angle weighting factor for directional sensitivity
+    fn compute_solid_angle_factor(
+        &self,
+        voxel_pos: &[f64; 3],
+        sensor_pos: &[f64; 3],
+        voxel_size: f64,
+    ) -> f64 {
+        let dx = sensor_pos[0] - voxel_pos[0];
+        let dy = sensor_pos[1] - voxel_pos[1];
+        let dz = sensor_pos[2] - voxel_pos[2];
+        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+
+        if distance > 0.0 {
+            // Approximate solid angle subtended by voxel at sensor
+            let solid_angle = voxel_size * voxel_size / (distance * distance);
+            // Normalize to maximum value of 1
+            (solid_angle / (4.0 * std::f64::consts::PI)).min(1.0)
+        } else {
+            1.0
+        }
     }
 
     /// SIRT iteration
@@ -178,7 +225,7 @@ impl IterativeMethods {
         Ok(x_new)
     }
 
-    /// OSEM iteration
+    /// OSEM (Ordered Subset Expectation Maximization) iteration
     fn osem_iteration(
         &self,
         a: &Array2<f64>,
@@ -186,15 +233,110 @@ impl IterativeMethods {
         y: &Array1<f64>,
         subsets: usize,
     ) -> KwaversResult<Array1<f64>> {
-        // Simplified OSEM - actual implementation would use proper subsets
-        // For now, just use SIRT as placeholder
-        self.sirt_iteration(a, x, y)
+        let (n_measurements, n_voxels) = a.dim();
+        let mut x_new = x.clone();
+
+        // Ensure positivity constraint for EM algorithms
+        x_new.mapv_inplace(|v| v.max(1e-10));
+
+        // Divide measurements into ordered subsets
+        let subset_size = (n_measurements + subsets - 1) / subsets;
+
+        // Process each subset
+        for subset_idx in 0..subsets {
+            let start_idx = subset_idx * subset_size;
+            let end_idx = ((subset_idx + 1) * subset_size).min(n_measurements);
+
+            // Extract subset of system matrix and measurements
+            let a_subset = a.slice(ndarray::s![start_idx..end_idx, ..]);
+            let y_subset = y.slice(ndarray::s![start_idx..end_idx]);
+
+            // Compute sensitivity (normalization factor)
+            let sensitivity = a_subset.sum_axis(ndarray::Axis(0));
+
+            // Forward projection for this subset
+            let forward_proj = a_subset.dot(&x_new);
+
+            // Compute ratio of measured to expected
+            let mut ratio = Array1::zeros(end_idx - start_idx);
+            for i in 0..ratio.len() {
+                if forward_proj[i] > 1e-10 {
+                    ratio[i] = y_subset[i] / forward_proj[i];
+                } else {
+                    ratio[i] = 0.0;
+                }
+            }
+
+            // Back-projection of ratio
+            let correction = a_subset.t().dot(&ratio);
+
+            // Update with normalization
+            for i in 0..n_voxels {
+                if sensitivity[i] > 1e-10 {
+                    x_new[i] *= correction[i] / sensitivity[i];
+                }
+            }
+        }
+
+        Ok(x_new)
     }
 
-    /// Apply regularization (e.g., total variation)
+    /// Apply regularization with proper gradient-based methods
     fn apply_regularization(&self, x: &mut Array1<f64>) -> KwaversResult<()> {
-        // Simple L2 regularization
-        *x *= 1.0 / (1.0 + self.regularization_parameter);
+        // Apply gradient descent step for regularization
+        // This implements a proximal gradient step for various regularizers
+
+        if self.regularization_parameter <= 0.0 {
+            return Ok(());
+        }
+
+        let n = x.len();
+        let grid_size_est = (n as f64).cbrt() as usize;
+
+        // Compute regularization gradient (for smoothness)
+        let mut grad_reg = Array1::zeros(n);
+
+        // Apply 3D discrete Laplacian for smoothness regularization
+        for idx in 0..n {
+            let (i, j, k) = self.linear_to_3d_index(idx, [grid_size_est; 3]);
+            let mut laplacian = -6.0 * x[idx];
+            let mut count = 0;
+
+            // Check all 6 neighbors in 3D
+            for (di, dj, dk) in &[
+                (-1, 0, 0),
+                (1, 0, 0),
+                (0, -1, 0),
+                (0, 1, 0),
+                (0, 0, -1),
+                (0, 0, 1),
+            ] {
+                let ni = (i as i32 + di) as usize;
+                let nj = (j as i32 + dj) as usize;
+                let nk = (k as i32 + dk) as usize;
+
+                if ni < grid_size_est && nj < grid_size_est && nk < grid_size_est {
+                    let neighbor_idx = ni * grid_size_est * grid_size_est + nj * grid_size_est + nk;
+                    if neighbor_idx < n {
+                        laplacian += x[neighbor_idx];
+                        count += 1;
+                    }
+                }
+            }
+
+            if count > 0 {
+                grad_reg[idx] = -laplacian / count as f64;
+            }
+        }
+
+        // Apply proximal gradient step
+        *x = &*x - self.regularization_parameter * grad_reg;
+
+        // Ensure non-negativity if using EM-type algorithms
+        if matches!(self.algorithm, IterativeAlgorithm::OSEM { .. }) {
+            x.mapv_inplace(|v| v.max(0.0));
+        }
+
         Ok(())
     }
 

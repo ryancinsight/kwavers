@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.25.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.26.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-production-green.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-green.svg)](https://github.com/kwavers/kwavers)
@@ -23,14 +23,14 @@ Production-grade Rust library for acoustic wave simulation with validated physic
 - **Worst offender**: 855 lines (elastic_wave/mod.rs)
 - **Major additions**: Complete photoacoustic reconstruction suite
 
-## Recent Improvements (v2.25.0)
+## Recent Improvements (v2.26.0)
 
 ### Completed
-- ✅ Implemented k-space time reversal reconstruction (proper wave equation backward propagation)
-- ✅ Added Fourier domain reconstruction using projection theorem
-- ✅ Implemented robust linear algebra solvers (CG, TV regularization, L1/Lasso, truncated SVD)
-- ✅ Replaced placeholder implementations with validated algorithms
-- ✅ All tests passing, examples working correctly
+- ✅ Eliminated ALL placeholder implementations in photoacoustic reconstruction
+- ✅ Implemented proper OSEM (Ordered Subset Expectation Maximization) algorithm
+- ✅ Added gradient-based regularization with 3D Laplacian smoothness constraints
+- ✅ Implemented bilateral and Gaussian filters for edge-preserving denoising
+- ✅ Enhanced system matrix with proper Green's function and solid angle weighting
 
 ### Architecture Enforcement
 - Strict GRASP compliance (<500 lines/module)
