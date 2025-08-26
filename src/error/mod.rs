@@ -64,6 +64,12 @@ pub enum KwaversError {
     Validation(ValidationError),
     /// Invalid input parameters
     InvalidInput(String),
+    /// Invalid parameter error
+    InvalidParameter(String),
+    /// Numerical error (computation issues)
+    NumericalError(String),
+    /// Invalid state error
+    InvalidState(String),
     /// IO errors
     Io(String),
     /// Concurrency errors
@@ -89,20 +95,21 @@ impl fmt::Display for KwaversError {
             Self::Field(e) => write!(f, "Field error: {}", e),
             Self::System(e) => write!(f, "System error: {}", e),
             Self::Composite(e) => write!(f, "Multiple errors: {}", e),
-            Self::Validation(e) => write!(f, "Validation error: {:?}", e),
+            Self::Validation(e) => write!(f, "Validation error: {}", e),
             Self::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
-            Self::Io(msg) => write!(f, "I/O error: {}", msg),
+            Self::InvalidParameter(msg) => write!(f, "Invalid parameter: {}", msg),
+            Self::NumericalError(msg) => write!(f, "Numerical error: {}", msg),
+            Self::InvalidState(msg) => write!(f, "Invalid state: {}", msg),
+            Self::Io(msg) => write!(f, "IO error: {}", msg),
             Self::ConcurrencyError {
                 operation,
                 resource,
                 reason,
-            } => {
-                write!(
-                    f,
-                    "Concurrency error in {} on {}: {}",
-                    operation, resource, reason
-                )
-            }
+            } => write!(
+                f,
+                "Concurrency error during '{}' on '{}': {}",
+                operation, resource, reason
+            ),
             Self::NotImplemented(feature) => write!(f, "Not implemented: {}", feature),
         }
     }
@@ -123,6 +130,9 @@ impl StdError for KwaversError {
             Self::Composite(e) => Some(e),
             Self::Validation(e) => Some(e),
             Self::InvalidInput(_) => None,
+            Self::InvalidParameter(_) => None,
+            Self::NumericalError(_) => None,
+            Self::InvalidState(_) => None,
             Self::Io(_) => None,
             Self::ConcurrencyError { .. } => None,
             Self::NotImplemented(_) => None,
