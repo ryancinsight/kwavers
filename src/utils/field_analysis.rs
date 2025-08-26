@@ -531,7 +531,7 @@ impl FieldAnalyzer {
 mod tests {
     use super::*;
     use crate::grid::Grid;
-    use approx::assert_abs_diff_eq;
+
     use ndarray::Array3;
 
     #[test]

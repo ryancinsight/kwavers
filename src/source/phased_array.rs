@@ -530,7 +530,7 @@ impl PhasedArrayTransducer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::medium::homogeneous::HomogeneousMedium;
+
     use crate::signal::SineWave;
 
     use crate::utils::test_helpers::{create_default_test_grid, create_test_medium};

@@ -9,7 +9,7 @@
 use crate::grid::Grid;
 use crate::solver::amr::{AMRConfig, AMRManager, InterpolationScheme, WaveletType};
 use crate::solver::pstd::PstdSolver;
-use ndarray::{Array3, ArrayView3};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 // Numerical method constants
@@ -178,10 +178,10 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
-                    let r = (((i as f64 - n as f64 / 2.0).powi(2)
+                    let r = ((i as f64 - n as f64 / 2.0).powi(2)
                         + (j as f64 - n as f64 / 2.0).powi(2)
                         + (k as f64 - n as f64 / 2.0).powi(2))
-                    .sqrt());
+                    .sqrt();
                     acoustic_state[[i, j, k]] = (-r.powi(2) / 10.0).exp();
                     thermal_state[[i, j, k]] = 300.0 + 10.0 * (-r.powi(2) / 20.0).exp();
                 }

@@ -3,11 +3,8 @@
 //! This example demonstrates validation of numerical methods against
 //! known analytical solutions in physics.
 
-use kwavers::{
-    medium::{acoustic::AcousticProperties, core::CoreMedium, Medium},
-    Grid, HomogeneousMedium,
-};
-use ndarray::{s, Array3};
+use kwavers::{medium::acoustic::AcousticProperties, Grid, HomogeneousMedium};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 fn main() {

@@ -4,8 +4,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
-use kwavers::{Grid, Time};
-use ndarray::Array3;
+use kwavers::Grid;
 
 fn grid_creation_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("grid_creation");
@@ -63,8 +62,6 @@ fn medium_evaluation_benchmark(c: &mut Criterion) {
 
     let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 1e-3, 0.072, &grid);
-
-    use kwavers::medium::Medium;
 
     group.bench_function("density_lookup", |b| {
         b.iter(|| medium.density(black_box(32e-3), black_box(32e-3), black_box(32e-3), &grid));

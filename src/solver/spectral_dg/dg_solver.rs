@@ -210,19 +210,19 @@ impl DGSolver {
     }
 
     /// Perform one time step using DG method
-    pub fn solve_step(
-        &mut self,
-        field: &mut Array3<f64>,
-        dt: f64,
-    ) -> KwaversResult<()> {
+    pub fn solve_step(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
         // Project to DG basis if not already done
         if self.modal_coefficients.is_none() {
             self.project_to_dg(field)?;
         }
 
         // Get coefficients and compute dimensions
-        let coeffs_shape = self.modal_coefficients.as_ref()
-            .ok_or_else(|| KwaversError::InvalidState("Modal coefficients not initialized".to_string()))?
+        let coeffs_shape = self
+            .modal_coefficients
+            .as_ref()
+            .ok_or_else(|| {
+                KwaversError::InvalidState("Modal coefficients not initialized".to_string())
+            })?
             .raw_dim();
         let n_elements = coeffs_shape[0];
         let wave_speed = 1500.0; // Example wave speed
@@ -232,22 +232,22 @@ impl DGSolver {
 
         // Volume integral: -M^{-1} * S * f(u)
         let mass_inv = matrix_inverse(&self.mass_matrix)?;
-        
+
         // Extract coefficients for computation
         let coeffs_copy = self.modal_coefficients.as_ref().unwrap().clone();
-        
+
         for elem in 0..n_elements {
             // Compute flux within element
             for node in 0..self.n_nodes {
                 let u = coeffs_copy[(elem, node, 0)];
                 let flux = wave_speed * u;
-                
+
                 // Apply stiffness matrix
                 for i in 0..self.n_nodes {
                     rhs[(elem, i, 0)] -= self.stiffness_matrix[(i, node)] * flux;
                 }
             }
-            
+
             // Apply mass matrix inverse
             for i in 0..self.n_nodes {
                 let mut temp = 0.0;
@@ -263,27 +263,27 @@ impl DGSolver {
             // Get states at interface
             let left_state = coeffs_copy[(elem, self.n_nodes - 1, 0)];
             let right_state = coeffs_copy[(elem + 1, 0, 0)];
-            
+
             // Compute numerical flux
             let flux_star = self.compute_numerical_flux(left_state, right_state, wave_speed)?;
-            
+
             // Add surface contribution
             let left_flux = wave_speed * left_state;
             let right_flux = wave_speed * right_state;
-            
+
             // Left element contribution
-            rhs[(elem, self.n_nodes - 1, 0)] += 
+            rhs[(elem, self.n_nodes - 1, 0)] +=
                 self.lift_matrix[(self.n_nodes - 1, 1)] * (flux_star - left_flux);
-            
-            // Right element contribution  
-            rhs[(elem + 1, 0, 0)] -= 
-                self.lift_matrix[(0, 0)] * (flux_star - right_flux);
+
+            // Right element contribution
+            rhs[(elem + 1, 0, 0)] -= self.lift_matrix[(0, 0)] * (flux_star - right_flux);
         }
 
         // Take ownership of coefficients to avoid borrow issues
-        let mut coeffs = self.modal_coefficients.take()
-            .ok_or_else(|| KwaversError::InvalidState("Modal coefficients not initialized".to_string()))?;
-        
+        let mut coeffs = self.modal_coefficients.take().ok_or_else(|| {
+            KwaversError::InvalidState("Modal coefficients not initialized".to_string())
+        })?;
+
         // Apply limiter if needed
         if self.config.use_limiter {
             // Apply limiter inline to avoid borrow issues
@@ -302,32 +302,30 @@ impl DGSolver {
 
                     // Apply limiter to higher-order modes
                     for mode in 1..self.n_nodes {
-                        let limited = apply_limiter(
-                            self.config.limiter_type,
-                            delta_minus,
-                            delta_plus,
-                        );
-                        
+                        let limited =
+                            apply_limiter(self.config.limiter_type, delta_minus, delta_plus);
+
                         // Scale higher-order coefficients
                         if limited.abs() < coeffs[(elem, mode, var)].abs() {
-                            coeffs[(elem, mode, var)] *= limited / (coeffs[(elem, mode, var)] + 1e-10);
+                            coeffs[(elem, mode, var)] *=
+                                limited / (coeffs[(elem, mode, var)] + 1e-10);
                         }
                     }
                 }
             }
         }
-        
+
         // Update solution (forward Euler for simplicity)
         for elem in 0..n_elements {
             for node in 0..self.n_nodes {
                 coeffs[(elem, node, 0)] += dt * rhs[(elem, node, 0)];
             }
         }
-        
+
         // Reconstruct field from modal coefficients
         let reconstructed = self.reconstruct_field(&coeffs)?;
         *field = reconstructed;
-        
+
         // Put coefficients back
         self.modal_coefficients = Some(coeffs);
 
@@ -432,7 +430,7 @@ impl DGOperations for DGSolver {
 
     fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         // Project field onto modal basis
-        let mut coeffs = field.clone();
+        let coeffs = field.clone();
         // Implementation would go here
         Ok(coeffs)
     }

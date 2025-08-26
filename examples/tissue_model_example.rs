@@ -7,7 +7,7 @@ use kwavers::{
     boundary::pml::{PMLBoundary, PMLConfig},
     error::KwaversResult,
     grid::Grid,
-    medium::{heterogeneous::HeterogeneousMedium, HomogeneousMedium, Medium},
+    medium::{HomogeneousMedium, Medium},
     physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
     solver::plugin_based::PluginBasedSolver,
     source::NullSource,

@@ -201,7 +201,7 @@ pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
     let ph_factor = if ph < 3.0 {
         0.5 // Reduced at very low pH
     } else if ph > 11.0 {
-        1.5 // Enhanced at high pH
+        1.5 // Increased at high pH
     } else {
         1.0
     };

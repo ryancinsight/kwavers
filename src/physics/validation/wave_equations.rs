@@ -3,12 +3,12 @@
 //! Validates basic wave propagation against analytical solutions
 //! Reference: Pierce (1989) - "Acoustics: An Introduction"
 
-use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::constants::physics::SOUND_SPEED_WATER;
 use crate::grid::Grid;
 use crate::physics::field_indices;
 use crate::physics::state::PhysicsState;
 
-use ndarray::{s, Array3};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 // Wave simulation constants
@@ -27,7 +27,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0); // CFL condition
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(grid.clone());
+        let state = PhysicsState::new(grid.clone());
 
         // Initialize Gaussian pulse
         let x0 = nx as f64 * dx / 2.0;
@@ -103,7 +103,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut state = PhysicsState::new(grid.clone());
+        let state = PhysicsState::new(grid.clone());
 
         // Initialize standing wave (first mode)
         let mut initial_pressure = Array3::zeros((nx, 1, 1));
@@ -159,7 +159,7 @@ mod tests {
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
         let grid = Grid::new(n, n, n, dx, dx, dx);
-        let mut state = PhysicsState::new(grid.clone());
+        let state = PhysicsState::new(grid.clone());
 
         // Point source at center
         let center = n / 2;

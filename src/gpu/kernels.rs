@@ -29,12 +29,12 @@ pub enum KernelType {
 /// GPU kernel optimization level
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptimizationLevel {
-    /// Basic optimization (memory coalescing)
-    Basic,
-    /// Moderate optimization (shared memory, loop unrolling)
-    Moderate,
-    /// Aggressive optimization (register blocking, texture memory)
-    Aggressive,
+    /// Level 1 optimization (memory coalescing)
+    Level1,
+    /// Level 2 optimization (shared memory, loop unrolling)
+    Level2,
+    /// Level 3 optimization (register blocking, texture memory)
+    Level3,
 }
 
 /// GPU kernel configuration
@@ -52,7 +52,7 @@ impl Default for KernelConfig {
     fn default() -> Self {
         Self {
             kernel_type: KernelType::AcousticWave,
-            optimization_level: OptimizationLevel::Moderate,
+            optimization_level: OptimizationLevel::Level2,
             block_size: (16, 16, 4),
             grid_size: (1, 1, 1),
             shared_memory_size: 0,
@@ -140,12 +140,12 @@ impl KernelManager {
 
         // Calculate shared memory requirements
         let shared_memory_size = match (kernel_type, self.optimization_level) {
-            (KernelType::AcousticWave, OptimizationLevel::Aggressive) => {
+            (KernelType::AcousticWave, OptimizationLevel::Level3) => {
                 // Shared memory for pressure and velocity fields
                 (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 4 * 8
                 // 4 fields * 8 bytes
             }
-            (KernelType::ThermalDiffusion, OptimizationLevel::Aggressive) => {
+            (KernelType::ThermalDiffusion, OptimizationLevel::Level3) => {
                 // Shared memory for temperature field with halo
                 (block_size.0 + 2) * (block_size.1 + 2) * (block_size.2 + 2) * 8
                 // 8 bytes per element
@@ -167,15 +167,15 @@ impl KernelManager {
     fn calculate_cuda_block_size(&self, nx: usize, ny: usize, nz: usize) -> (u32, u32, u32) {
         // Optimize for warp size (32) and memory coalescing
         match self.optimization_level {
-            OptimizationLevel::Basic => (32, 4, 1),
-            OptimizationLevel::Moderate => {
+            OptimizationLevel::Level1 => (32, 4, 1),
+            OptimizationLevel::Level2 => {
                 if nz >= 8 {
                     (16, 8, 2)
                 } else {
                     (32, 8, 1)
                 }
             }
-            OptimizationLevel::Aggressive => {
+            OptimizationLevel::Level3 => {
                 // Adaptive block size based on grid dimensions
                 if nx >= 128 && ny >= 128 && nz >= 64 {
                     (16, 16, 4) // Large grids
@@ -192,9 +192,9 @@ impl KernelManager {
     fn calculate_opencl_block_size(&self, _nx: usize, _ny: usize, _nz: usize) -> (u32, u32, u32) {
         // OpenCL work group size optimization
         match self.optimization_level {
-            OptimizationLevel::Basic => (16, 16, 1),
-            OptimizationLevel::Moderate => (16, 16, 2),
-            OptimizationLevel::Aggressive => (16, 16, 4),
+            OptimizationLevel::Level1 => (16, 16, 1),
+            OptimizationLevel::Level2 => (16, 16, 2),
+            OptimizationLevel::Level3 => (16, 16, 4),
         }
     }
 
@@ -274,7 +274,7 @@ impl KernelManager {
     /// Generate optimized CUDA thermal diffusion kernel
     fn generate_cuda_thermal_kernel(&self, config: &KernelConfig) -> String {
         let optimization_code = match config.optimization_level {
-            OptimizationLevel::Aggressive => {
+            OptimizationLevel::Level3 => {
                 r#"
                 // Use shared memory for thermal diffusion
                 extern __shared__ double shared_temp[];
@@ -293,7 +293,7 @@ impl KernelManager {
                 double temp_zp1 = shared_temp[shared_idx + (blockDim.x + 2) * (blockDim.y + 2)];
                 "#
             }
-            OptimizationLevel::Moderate => {
+            OptimizationLevel::Level2 => {
                 r#"
                 // Use register blocking with proper boundary checks
                 double temp_center = temperature[idx];
@@ -602,10 +602,10 @@ fn boundary(@builtin(global_invocation_id) global_id: vec3<u32>) {
             .filter_map(|(kernel_type, kernel)| {
                 if let Some(metrics) = &kernel.performance_metrics {
                     if !metrics.meets_targets()
-                        && kernel.config.optimization_level != OptimizationLevel::Aggressive
+                        && kernel.config.optimization_level != OptimizationLevel::Level3
                     {
                         let new_config = KernelConfig {
-                            optimization_level: OptimizationLevel::Aggressive,
+                            optimization_level: OptimizationLevel::Level3,
                             ..kernel.config.clone()
                         };
                         return Some((*kernel_type, new_config));
@@ -635,21 +635,21 @@ mod tests {
     fn test_kernel_config_default() {
         let config = KernelConfig::default();
         assert_eq!(config.kernel_type, KernelType::AcousticWave);
-        assert_eq!(config.optimization_level, OptimizationLevel::Moderate);
+        assert_eq!(config.optimization_level, OptimizationLevel::Level2);
         assert_eq!(config.block_size, (16, 16, 4));
     }
 
     #[test]
     fn test_kernel_manager_creation() {
-        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level2);
         assert_eq!(manager.backend, GpuBackend::Cuda);
-        assert_eq!(manager.optimization_level, OptimizationLevel::Moderate);
+        assert_eq!(manager.optimization_level, OptimizationLevel::Level2);
         assert!(manager.kernels.is_empty());
     }
 
     #[test]
     fn test_cuda_block_size_calculation() {
-        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Aggressive);
+        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level3);
 
         // Large grid
         let block_size = manager.calculate_cuda_block_size(256, 256, 128);
@@ -662,14 +662,14 @@ mod tests {
 
     #[test]
     fn test_opencl_block_size_calculation() {
-        let manager = KernelManager::new(GpuBackend::OpenCL, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::OpenCL, OptimizationLevel::Level2);
         let block_size = manager.calculate_opencl_block_size(128, 128, 64);
         assert_eq!(block_size, (16, 16, 2));
     }
 
     #[test]
     fn test_kernel_config_generation() {
-        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level2);
         let grid = Grid {
             nx: 64,
             ny: 64,
@@ -690,7 +690,7 @@ mod tests {
 
     #[test]
     fn test_cuda_acoustic_kernel_generation() {
-        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level2);
         let config = KernelConfig::default();
 
         let source = manager.generate_cuda_acoustic_kernel(&config);
@@ -702,7 +702,7 @@ mod tests {
 
     #[test]
     fn test_cuda_thermal_kernel_generation() {
-        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Basic);
+        let manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level1);
         let config = KernelConfig::default();
 
         let source = manager.generate_cuda_thermal_kernel(&config);
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn test_wgsl_acoustic_kernel_generation() {
-        let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Level2);
         let config = KernelConfig::default();
 
         let source = manager.generate_wgsl_acoustic_kernel(&config);
@@ -725,7 +725,7 @@ mod tests {
 
     #[test]
     fn test_wgsl_thermal_kernel_generation() {
-        let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Moderate);
+        let manager = KernelManager::new(GpuBackend::WebGPU, OptimizationLevel::Level2);
         let config = KernelConfig::default();
 
         let source = manager.generate_wgsl_thermal_kernel(&config);
@@ -749,9 +749,9 @@ mod tests {
     #[test]
     fn test_optimization_level_progression() {
         let levels = vec![
-            OptimizationLevel::Basic,
-            OptimizationLevel::Moderate,
-            OptimizationLevel::Aggressive,
+            OptimizationLevel::Level1,
+            OptimizationLevel::Level2,
+            OptimizationLevel::Level3,
         ];
 
         for level in levels {
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn test_performance_metrics_integration() {
-        let mut manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Moderate);
+        let mut manager = KernelManager::new(GpuBackend::Cuda, OptimizationLevel::Level2);
 
         // First, we need to compile a kernel to add it to the manager
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
@@ -771,7 +771,7 @@ mod tests {
             grid_size: (10, 1, 1),
             shared_memory_size: 0,
             kernel_type: KernelType::AcousticWave,
-            optimization_level: OptimizationLevel::Moderate,
+            optimization_level: OptimizationLevel::Level2,
             registers_per_thread: 32,
         };
 

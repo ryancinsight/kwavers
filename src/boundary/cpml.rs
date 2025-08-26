@@ -252,7 +252,7 @@ impl CPMLBoundary {
 
     /// Compute C-PML profiles based on configuration
     ///
-    /// Optimized for cubic grids: When dimensions are identical (nx==ny==nz and dx==dy==dz),
+    /// For cubic grids: When dimensions are identical (nx==ny==nz and dx==dy==dz),
     /// profiles are computed once and reused, reducing initialization time by ~66%.
     fn compute_profiles(&mut self, grid: &Grid, sound_speed: f64) -> KwaversResult<()> {
         let thickness = self.config.thickness as f64;
@@ -467,7 +467,7 @@ impl CPMLBoundary {
 
         // Coordinate stretching profile
         let kappa = if config.grazing_angle_absorption {
-            // Enhanced profile for grazing angles
+            // Profile for grazing angles
             1.0 + (config.kappa_max - 1.0) * d.powf(m + 1.0)
         } else {
             1.0 + (config.kappa_max - 1.0) * d_m
