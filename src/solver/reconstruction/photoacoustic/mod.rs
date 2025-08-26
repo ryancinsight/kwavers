@@ -18,7 +18,10 @@
 mod algorithms;
 mod config;
 mod filters;
+mod fourier;
 mod iterative;
+mod linear_algebra;
+mod time_reversal;
 mod utils;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
@@ -50,20 +53,10 @@ impl Reconstructor for PhotoacousticReconstructor {
                 self.filtered_back_projection(sensor_data.view(), sensor_positions)
             }
             PhotoacousticAlgorithm::TimeReversal => {
-                // Time reversal needs 3D data, so we create a simple 3D array from 2D
-                let (n_sensors, n_time) = sensor_data.dim();
-                let mut data_3d = Array3::zeros((n_sensors, n_time, 1));
-                for i in 0..n_sensors {
-                    for j in 0..n_time {
-                        data_3d[[i, j, 0]] = sensor_data[[i, j]];
-                    }
-                }
-                self.time_reversal_reconstruction(data_3d.view(), self.config.sound_speed)
+                self.time_reversal_reconstruction(sensor_data.view(), sensor_positions, _grid)
             }
             PhotoacousticAlgorithm::FourierDomain => {
-                // Fourier domain reconstruction not yet implemented
-                // Return zeros for now
-                Ok(Array3::zeros(self.config.grid_size))
+                self.fourier_domain_reconstruction(sensor_data.view(), sensor_positions)
             }
             PhotoacousticAlgorithm::Iterative { .. } => self.iterative_reconstruction(
                 sensor_data.view(),

@@ -8,7 +8,10 @@ use ndarray::{Array3, ArrayView2, ArrayView3};
 
 use super::config::PhotoacousticConfig;
 use super::filters::Filters;
+use super::fourier::FourierReconstructor;
 use super::iterative::{IterativeAlgorithm, IterativeMethods};
+use super::linear_algebra::LinearSolver;
+use super::time_reversal::TimeReversal;
 use super::utils::Utils;
 
 /// Photoacoustic reconstruction algorithms
@@ -37,6 +40,7 @@ pub struct PhotoacousticReconstructor {
     pub(crate) config: PhotoacousticConfig,
     filters: Filters,
     iterative: IterativeMethods,
+    linear_solver: LinearSolver,
     utils: Utils,
 }
 
@@ -46,6 +50,7 @@ impl PhotoacousticReconstructor {
         Self {
             filters: Filters::new(&config),
             iterative: IterativeMethods::new(&config),
+            linear_solver: LinearSolver::new(),
             utils: Utils::new(),
             config,
         }
@@ -157,19 +162,34 @@ impl PhotoacousticReconstructor {
     /// Time reversal reconstruction
     pub fn time_reversal_reconstruction(
         &self,
-        sensor_data: ArrayView3<f64>,
-        sound_speed: f64,
+        sensor_data: ArrayView2<f64>,
+        sensor_positions: &[[f64; 3]],
+        grid: &crate::grid::Grid,
     ) -> KwaversResult<Array3<f64>> {
-        // Time reversal reconstruction
-        // This is a placeholder - actual implementation would involve
-        // running the wave equation backward in time
-        let mut reconstruction = sensor_data.to_owned();
+        // Use proper k-space time reversal implementation
+        let time_reversal = TimeReversal::new(
+            self.config.grid_size,
+            self.config.sound_speed,
+            self.config.sampling_frequency,
+            sensor_data.nrows(),
+        );
 
-        // Apply time reversal processing
-        self.utils
-            .propagate_time_reversed_signals(&mut reconstruction, sound_speed)?;
+        time_reversal.reconstruct(sensor_data, sensor_positions, grid)
+    }
 
-        Ok(reconstruction)
+    /// Fourier domain reconstruction
+    pub fn fourier_domain_reconstruction(
+        &self,
+        sensor_data: ArrayView2<f64>,
+        sensor_positions: &[[f64; 3]],
+    ) -> KwaversResult<Array3<f64>> {
+        let fourier = FourierReconstructor::new(
+            self.config.grid_size,
+            self.config.sound_speed,
+            self.config.sampling_frequency,
+        );
+
+        fourier.reconstruct(sensor_data, sensor_positions)
     }
 
     /// Iterative reconstruction using SIRT/ART/OSEM
@@ -197,11 +217,40 @@ impl PhotoacousticReconstructor {
             self.config.sampling_frequency,
         )?;
 
-        // Solve regularized least squares problem
-        self.utils.solve_regularized_least_squares(
-            &forward_model,
-            sensor_data,
-            self.config.regularization_parameter,
-        )
+        // Flatten sensor data
+        let b = sensor_data.as_slice().unwrap();
+        let b = ndarray::ArrayView1::from(b);
+
+        // Solve using robust linear algebra with regularization
+        let solution = if self.config.regularization_parameter > 0.0 {
+            // Use Total Variation regularization for better edge preservation
+            self.linear_solver.solve_tv_regularized(
+                &forward_model,
+                b,
+                self.config.regularization_parameter,
+                self.config.grid_size,
+            )?
+        } else {
+            // Use truncated SVD for unregularized case
+            self.linear_solver.solve_truncated_svd(
+                &forward_model,
+                b,
+                0.01, // Truncation threshold
+            )?
+        };
+
+        // Reshape to 3D
+        let [nx, ny, nz] = self.config.grid_size;
+        let mut reconstruction = Array3::zeros((nx, ny, nz));
+        for (idx, val) in solution.iter().enumerate() {
+            let k = idx % nz;
+            let j = (idx / nz) % ny;
+            let i = idx / (ny * nz);
+            if i < nx && j < ny && k < nz {
+                reconstruction[[i, j, k]] = *val;
+            }
+        }
+
+        Ok(reconstruction)
     }
 }
