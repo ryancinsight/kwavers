@@ -1,5 +1,6 @@
 //! Homogeneous medium implementation with uniform properties
 
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::{
     acoustic::AcousticProperties,
@@ -191,12 +192,23 @@ impl CoreMedium for HomogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn density_array(&self) -> &Array3<f64> {
-        &self.density_cache
+    fn get_density_array(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), self.density))
     }
 
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        &self.sound_speed_cache
+    fn get_sound_speed_array(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Ok(Array3::from_elem(
+            (grid.nx, grid.ny, grid.nz),
+            self.sound_speed,
+        ))
+    }
+
+    fn density_array(&self) -> Array3<f64> {
+        self.density_cache.clone()
+    }
+
+    fn sound_speed_array(&self) -> Array3<f64> {
+        self.sound_speed_cache.clone()
     }
 }
 

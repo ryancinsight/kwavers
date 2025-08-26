@@ -11,7 +11,7 @@ categories = ["science", "simulation", "medical"]
 
 [dependencies]
 # Core numerical computing
-ndarray = "0.15"
+ndarray = "0.16"
 rayon = { version = "1.5" }
 rustfft = "6.0"
 num-complex = "0.4"

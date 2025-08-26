@@ -431,7 +431,7 @@ impl MLEngine {
             })?;
 
         // Flatten 3-D field into (cells, features = 1)
-        let flat_f32: Vec<f32> = field_data.mapv(|v| v as f32).into_raw_vec();
+        let (flat_f32, _offset) = field_data.mapv(|v| v as f32).into_raw_vec_and_offset();
         let cells = flat_f32.len();
         let input = Array2::from_shape_vec((cells, 1), flat_f32).map_err(|e| {
             KwaversError::System(crate::error::SystemError::MemoryAllocation {
