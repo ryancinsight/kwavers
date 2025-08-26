@@ -191,12 +191,8 @@ impl HeterogeneousHandler {
             SmoothingMethod::None => (density.clone(), sound_speed.clone()),
             SmoothingMethod::Gaussian => self.apply_gaussian_smoothing(density, sound_speed)?,
             SmoothingMethod::Tanh => self.apply_tanh_smoothing(density, sound_speed)?,
-            SmoothingMethod::Polynomial => {
-                self.apply_polynomial_smoothing(density, sound_speed)?
-            }
-            SmoothingMethod::SpectralFilter => {
-                self.apply_spectral_filter(density, sound_speed)?
-            }
+            SmoothingMethod::Polynomial => self.apply_polynomial_smoothing(density, sound_speed)?,
+            SmoothingMethod::SpectralFilter => self.apply_spectral_filter(density, sound_speed)?,
         };
 
         self.density_smooth = Some(density_smooth);

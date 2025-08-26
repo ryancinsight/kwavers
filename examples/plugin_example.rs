@@ -89,10 +89,7 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         let mut pressure = fields.index_axis_mut(ndarray::Axis(0), 0);
         pressure.mapv_inplace(|p| p * (-alpha * dt).exp());
 
-        println!(
-            "Applied absorption: α = {} at f = {} Hz",
-            alpha, freq_hz
-        );
+        println!("Applied absorption: α = {} at f = {} Hz", alpha, freq_hz);
         Ok(())
     }
 }
@@ -179,7 +176,7 @@ impl PhysicsPlugin for StatisticsPlugin {
 
         Ok(())
     }
-    
+
     fn diagnostics(&self) -> HashMap<String, f64> {
         let mut metrics = HashMap::new();
         metrics.insert("max_pressure".to_string(), self.max_pressure);
@@ -252,12 +249,12 @@ fn main() -> KwaversResult<()> {
 
     // Demonstrate plugin execution (simplified to avoid hanging)
     println!("  Simulating 10 time steps...");
-    
+
     // In a full implementation, this would execute:
     // for step in 0..10 {
     //     plugin_manager.execute(&mut fields, &grid, &medium, dt, t)?;
     // }
-    
+
     // For demonstration, we'll just show the concept
     println!("  Step 0: simulation running...");
     println!("  Step 3: simulation running...");

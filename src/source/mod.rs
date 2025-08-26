@@ -14,7 +14,6 @@ pub mod matrix_array;
 pub mod phased_array;
 pub mod transducer;
 
-
 /// Efficient source trait using mask-based approach
 pub trait Source: Debug + Sync + Send {
     /// Create a source mask on the grid (1.0 at source locations, 0.0 elsewhere)
@@ -162,7 +161,7 @@ pub struct CompositeSource {
 
 impl CompositeSource {
     pub fn new(sources: Vec<Box<dyn Source>>) -> Self {
-        Self { 
+        Self {
             sources,
             null_signal: NullSignal,
         }
@@ -260,7 +259,6 @@ impl Source for NullSource {
     }
 }
 
-
 /// Time-varying signal wrapper for sources with pre-computed values
 #[derive(Debug, Clone)]
 struct TimeVaryingSignal {
@@ -272,7 +270,11 @@ struct TimeVaryingSignal {
 impl TimeVaryingSignal {
     fn new(values: Vec<f64>, dt: f64) -> Self {
         // Estimate base frequency from signal using FFT or zero-crossing
-        let base_frequency = if dt > 0.0 { 1.0 / (dt * values.len() as f64) } else { 0.0 };
+        let base_frequency = if dt > 0.0 {
+            1.0 / (dt * values.len() as f64)
+        } else {
+            0.0
+        };
         Self {
             values,
             dt,

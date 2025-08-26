@@ -24,11 +24,7 @@ mod tests {
     use super::super::*;
     use crate::{
         grid::Grid,
-        medium::{
-            core::CoreMedium,
-            thermal::ThermalProperties,
-            HomogeneousMedium,
-        },
+        medium::{core::CoreMedium, thermal::ThermalProperties, HomogeneousMedium},
     };
     use approx::assert_relative_eq;
     use ndarray::Array3;
@@ -53,8 +49,8 @@ mod tests {
             1000.0, // density [kg/m³]
             1500.0, // sound speed [m/s] (not used for thermal)
             0.0,    // absorption coefficient
-            0.0,    // scattering coefficient  
-            &grid
+            0.0,    // scattering coefficient
+            &grid,
         );
 
         // Configure for standard diffusion
@@ -259,7 +255,10 @@ mod tests {
         );
 
         // Verify temperature is reasonable and moving towards steady state
-        assert!(average_temperature > t_a, "Temperature should be above arterial");
+        assert!(
+            average_temperature > t_a,
+            "Temperature should be above arterial"
+        );
         assert!(
             average_temperature < expected_temperature,
             "Temperature should not exceed theoretical steady state"

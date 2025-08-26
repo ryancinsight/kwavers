@@ -387,7 +387,8 @@ impl BeamformingMatrixOperations {
                 if time_sample < max_time_samples {
                     let matrix_row = sensor_idx * max_time_samples + time_sample;
                     let matrix_col = grid_idx;
-                    let weight = crate::constants::numerical::BEAMFORMING_DISTANCE_WEIGHT / distance; // Distance weighting
+                    let weight =
+                        crate::constants::numerical::BEAMFORMING_DISTANCE_WEIGHT / distance; // Distance weighting
 
                     triplets.push((matrix_row, matrix_col, weight));
                 }
@@ -444,9 +445,9 @@ impl BeamformingMatrixOperations {
                 let distance = Self::euclidean_distance(&sensor_pos, &voxel_pos);
 
                 // Weight based on distance and solid angle
-                let weight = crate::constants::numerical::BEAMFORMING_DISTANCE_WEIGHT 
-                    / (crate::constants::numerical::SPHERICAL_SPREADING_SCALE 
-                       * distance.powi(crate::constants::numerical::SPHERICAL_SPREADING_POWER));
+                let weight = crate::constants::numerical::BEAMFORMING_DISTANCE_WEIGHT
+                    / (crate::constants::numerical::SPHERICAL_SPREADING_SCALE
+                        * distance.powi(crate::constants::numerical::SPHERICAL_SPREADING_POWER));
 
                 if weight > 1e-12 {
                     triplets.push((sensor_idx, voxel_idx, weight));

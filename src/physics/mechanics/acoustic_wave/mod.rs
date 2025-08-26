@@ -89,7 +89,7 @@ mod tests {
 
     impl HeterogeneousMediumMock {
         fn new(position_dependent: bool) -> Self {
-            Self { 
+            Self {
                 position_dependent,
                 density: ndarray::Array3::ones((10, 10, 10)) * 1000.0,
                 sound_speed: ndarray::Array3::ones((10, 10, 10)) * 1500.0,
@@ -138,7 +138,14 @@ mod tests {
     }
 
     impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
-        fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 {
+        fn absorption_coefficient(
+            &self,
+            _x: f64,
+            _y: f64,
+            _z: f64,
+            _grid: &Grid,
+            _frequency: f64,
+        ) -> f64 {
             0.01
         }
 
@@ -158,7 +165,13 @@ mod tests {
             1.4e-7
         }
 
-        fn tissue_type(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> Option<crate::medium::absorption::TissueType> {
+        fn tissue_type(
+            &self,
+            _x: f64,
+            _y: f64,
+            _z: f64,
+            _grid: &Grid,
+        ) -> Option<crate::medium::absorption::TissueType> {
             None
         }
     }
@@ -267,7 +280,6 @@ mod tests {
     }
 
     impl crate::medium::viscous::ViscousProperties for HeterogeneousMediumMock {
-
         fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             1e-3
         }
@@ -286,7 +298,6 @@ mod tests {
     }
 
     impl crate::medium::bubble::BubbleProperties for HeterogeneousMediumMock {
-
         fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
             0.072
         }
@@ -309,7 +320,6 @@ mod tests {
     }
 
     impl crate::medium::bubble::BubbleState for HeterogeneousMediumMock {
-
         fn bubble_radius(&self) -> &ndarray::Array3<f64> {
             &self.bubble_radius
         }
@@ -318,7 +328,11 @@ mod tests {
             &self.bubble_velocity
         }
 
-        fn update_bubble_state(&mut self, radius: &ndarray::Array3<f64>, velocity: &ndarray::Array3<f64>) {
+        fn update_bubble_state(
+            &mut self,
+            radius: &ndarray::Array3<f64>,
+            velocity: &ndarray::Array3<f64>,
+        ) {
             self.bubble_radius.assign(radius);
             self.bubble_velocity.assign(velocity);
         }

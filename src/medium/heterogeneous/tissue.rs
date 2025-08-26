@@ -1,3 +1,4 @@
+use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::{
     absorption::{tissue_specific, TissueType},
@@ -11,7 +12,6 @@ use crate::medium::{
 };
 use ndarray::{Array3, Zip};
 use std::sync::OnceLock;
-use crate::error::{ConfigError, KwaversResult};
 
 /// Configuration for setting tissue in a specific region
 #[derive(Debug, Clone)]
@@ -166,7 +166,13 @@ impl HeterogeneousTissueMedium {
     }
 
     /// Get tissue properties at a specific point
-    fn get_tissue_properties(&self, x: f64, y: f64, z: f64, grid: &Grid) -> &'static tissue_specific::TissueProperties {
+    fn get_tissue_properties(
+        &self,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+    ) -> &'static tissue_specific::TissueProperties {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
             let tissue = self.tissue_map[indices];
             tissue_specific::tissue_database()
@@ -260,7 +266,8 @@ impl AcousticProperties for HeterogeneousTissueMedium {
     }
 
     fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
-        grid.position_to_indices(x, y, z).map(|indices| self.tissue_map[indices])
+        grid.position_to_indices(x, y, z)
+            .map(|indices| self.tissue_map[indices])
     }
 }
 
@@ -322,21 +329,23 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 let density_arr = self.density_array();
-                Zip::indexed(&mut arr).and(density_arr).for_each(|(i, j, k), val, &rho| {
-                    let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
-                    if rho > 0.0 && props.lame_mu > 0.0 {
-                        *val = (props.lame_mu / rho).sqrt();
-                    } else {
-                        *val = 0.0;
-                    }
-                });
+                Zip::indexed(&mut arr)
+                    .and(density_arr)
+                    .for_each(|(i, j, k), val, &rho| {
+                        let tissue = self.tissue_map[[i, j, k]];
+                        let props = tissue_specific::tissue_database()
+                            .get(&tissue)
+                            .unwrap_or_else(|| {
+                                tissue_specific::tissue_database()
+                                    .get(&TissueType::SoftTissue)
+                                    .unwrap()
+                            });
+                        if rho > 0.0 && props.lame_mu > 0.0 {
+                            *val = (props.lame_mu / rho).sqrt();
+                        } else {
+                            *val = 0.0;
+                        }
+                    });
                 arr
             })
             .clone()
@@ -350,7 +359,8 @@ impl ThermalProperties for HeterogeneousTissueMedium {
     }
 
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_tissue_properties(x, y, z, grid).thermal_conductivity
+        self.get_tissue_properties(x, y, z, grid)
+            .thermal_conductivity
     }
 
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -425,7 +435,8 @@ impl BubbleProperties for HeterogeneousTissueMedium {
     }
 
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_tissue_properties(x, y, z, grid).gas_diffusion_coefficient
+        self.get_tissue_properties(x, y, z, grid)
+            .gas_diffusion_coefficient
     }
 }
 

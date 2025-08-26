@@ -1,38 +1,43 @@
 //! # Visualization Module - Phase 11
 //!
-//! This module provides comprehensive 3D visualization and real-time interaction capabilities
-//! for Kwavers simulation results. It implements GPU-accelerated volume rendering, interactive
-//! parameter controls, and multi-platform support including web and VR.
+//! Core visualization and rendering infrastructure for the acoustic simulation library.
 //!
 //! ## Features
-//! - **Real-Time 3D Visualization**: GPU-accelerated volume rendering for pressure, temperature, and optical fields
-//! - **Interactive Controls**: Live parameter adjustment during simulation execution
-//! - **Multi-Field Display**: Simultaneous visualization of multiple simulation fields
+//! - **Real-time Rendering**: GPU-accelerated visualization of acoustic fields
+//! - **Multiple Backends**: Support for OpenGL, Vulkan, and WebGPU
+//! - **Adaptive Quality**: Dynamic quality adjustment based on performance
+//! - **Interactive Controls**: Real-time parameter adjustment and view manipulation
+//! - **Data Export**: High-quality image and video export capabilities
 //! - **Web Support**: WebGL-based rendering for browser deployment
 //! - **VR Integration**: Immersive 3D visualization for complex simulations
-//! - **Performance Optimization**: 60+ FPS rendering for 128³ grids
+//! - **Performance Optimization**: High FPS rendering for medium-sized grids
 //!
 //! ## Architecture
 //! ```text
-//! ┌─────────────────────────────────────────────────────────────┐
-//! │                  Visualization Engine                       │
-//! ├─────────────────┬─────────────────┬─────────────────────────┤
-//! │   3D Renderer   │   UI Controls   │   Data Pipeline         │
-//! │   - Volume      │   - Parameters  │   - Field Extraction    │
-//! │   - Isosurface  │   - Real-time   │   - GPU Transfer        │
-//! │   - Multi-field │   - Validation  │   - Memory Management   │
-//! └─────────────────┴─────────────────┴─────────────────────────┘
+//! VisualizationEngine
+//! ├── GPUContext (wgpu/WebGPU)
+//! ├── DataPipeline (CPU->GPU transfer)
+//! ├── VolumeRenderer (3D rendering)
+//! └── ControlInterface (egui-based)
 //! ```
 
-use crate::error::KwaversResult;
-use crate::gpu::GpuContext;
+use crate::error::KwaversError;
 use crate::grid::Grid;
-use log::{debug, info};
+use crate::KwaversResult;
+use log::{info, warn};
 use ndarray::{Array3, Array4};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-// Conditional imports based on features
+// Constants for visualization
+const DEFAULT_TARGET_FPS: f64 = 60.0;
+const LOW_TARGET_FPS: f64 = 30.0;
+const DEFAULT_MAX_TEXTURE_SIZE: usize = 512;
+const MEDIUM_GRID_SIZE: usize = 128;
+const MILLISECONDS_PER_SECOND: f64 = 1000.0;
+
+// Module structure
 #[cfg(feature = "gpu-visualization")]
 pub mod controls;
 #[cfg(feature = "gpu-visualization")]
@@ -79,8 +84,8 @@ pub enum ColorScheme {
     Custom,
 }
 
-/// Rendering quality levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Render quality settings
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RenderQuality {
     /// Low quality for real-time interaction (>60 FPS)
     Low,
@@ -88,15 +93,13 @@ pub enum RenderQuality {
     Medium,
     /// High quality for final visualization (<30 FPS)
     High,
-    /// Ultra quality for publication (no FPS constraint)
-    Ultra,
 }
 
 /// Visualization configuration
 #[derive(Debug, Clone)]
 pub struct VisualizationConfig {
     /// Target frame rate (FPS)
-    pub target_fps: f32,
+    pub target_fps: f64,
     /// Rendering quality level
     pub quality: RenderQuality,
     /// Color scheme for field visualization
@@ -112,11 +115,11 @@ pub struct VisualizationConfig {
 impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
-            target_fps: 60.0,
+            target_fps: DEFAULT_TARGET_FPS,
             quality: RenderQuality::Medium,
             color_scheme: ColorScheme::Viridis,
             enable_transparency: true,
-            max_texture_size: 512,
+            max_texture_size: DEFAULT_MAX_TEXTURE_SIZE,
             enable_profiling: true,
         }
     }
@@ -140,7 +143,7 @@ pub struct VisualizationMetrics {
 /// Main visualization engine for Phase 11
 pub struct VisualizationEngine {
     config: VisualizationConfig,
-    gpu_context: Option<Arc<GpuContext>>,
+    gpu_context: Option<Arc<crate::gpu::GpuContext>>,
     metrics: Arc<Mutex<VisualizationMetrics>>,
     last_frame_time: Instant,
 
@@ -185,7 +188,10 @@ impl VisualizationEngine {
     }
 
     /// Initialize GPU context for hardware acceleration
-    pub async fn initialize_gpu(&mut self, gpu_context: Arc<GpuContext>) -> KwaversResult<()> {
+    pub async fn initialize_gpu(
+        &mut self,
+        gpu_context: Arc<crate::gpu::GpuContext>,
+    ) -> KwaversResult<()> {
         info!("Initializing GPU acceleration for visualization");
         self.gpu_context = Some(gpu_context.clone());
 
@@ -222,12 +228,14 @@ impl VisualizationEngine {
                 // Transfer field data to GPU
                 let transfer_start = Instant::now();
                 pipeline.upload_field(field, field_type).await?;
-                let transfer_time = transfer_start.elapsed().as_secs_f32() * 1000.0;
+                let transfer_time =
+                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
                 // Render the field
-                let render_start = Instant::now();
+                let render_start = tokio::time::Instant::now();
                 renderer.render_volume(field_type, grid).await?;
-                let render_time = render_start.elapsed().as_secs_f32() * 1000.0;
+                let render_time =
+                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
                 // Update metrics
                 self.update_metrics(render_time, transfer_time);
@@ -270,12 +278,14 @@ impl VisualizationEngine {
                         pipeline.upload_field(&field, field_type).await?;
                     }
                 }
-                let transfer_time = transfer_start.elapsed().as_secs_f32() * 1000.0;
+                let transfer_time =
+                    transfer_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
                 // Render all fields with transparency blending
                 let render_start = Instant::now();
                 renderer.render_multi_volume(field_types, grid).await?;
-                let render_time = render_start.elapsed().as_secs_f32() * 1000.0;
+                let render_time =
+                    render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
                 // Update metrics
                 self.update_metrics(render_time, transfer_time);
@@ -315,15 +325,15 @@ impl VisualizationEngine {
 
     /// Get current visualization metrics
     pub fn get_metrics(&self) -> VisualizationMetrics {
-        self.metrics.lock()
+        self.metrics
+            .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone()
     }
 
     /// Check if performance targets are met
     pub fn meets_performance_targets(&self) -> bool {
-        let metrics = self.metrics.lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let metrics = self.metrics.lock().unwrap_or_else(|e| e.into_inner());
         metrics.fps >= self.config.target_fps * 0.9 // 90% of target FPS
     }
 
@@ -455,18 +465,18 @@ mod tests {
     fn test_visualization_config_default() {
         let config = VisualizationConfig::default();
 
-        assert_eq!(config.target_fps, 60.0);
+        assert_eq!(config.target_fps, DEFAULT_TARGET_FPS);
         assert_eq!(config.quality, RenderQuality::Medium);
         assert_eq!(config.color_scheme, ColorScheme::Viridis);
         assert!(config.enable_transparency);
-        assert_eq!(config.max_texture_size, 512);
+        assert_eq!(config.max_texture_size, DEFAULT_MAX_TEXTURE_SIZE);
         assert!(config.enable_profiling);
     }
 
     #[test]
     fn test_visualization_engine_creation() {
         let config = VisualizationConfig::default();
-        let engine = VisualizationEngine::new(config);
+        let engine = VisualizationEngine::create(config);
 
         assert!(engine.is_ok());
 
@@ -481,7 +491,7 @@ mod tests {
     #[test]
     fn test_visualization_metrics() {
         let config = VisualizationConfig::default();
-        let engine = VisualizationEngine::new(config).unwrap();
+        let engine = VisualizationEngine::create(config).unwrap();
 
         let metrics = engine.get_metrics();
         assert_eq!(metrics.fps, 0.0);
@@ -493,10 +503,10 @@ mod tests {
     #[test]
     fn test_performance_targets() {
         let config = VisualizationConfig {
-            target_fps: 30.0,
+            target_fps: LOW_TARGET_FPS,
             ..Default::default()
         };
-        let engine = VisualizationEngine::new(config).unwrap();
+        let engine = VisualizationEngine::create(config).unwrap();
 
         // Should not meet targets initially (0 FPS)
         assert!(!engine.meets_performance_targets());
@@ -505,7 +515,7 @@ mod tests {
     #[test]
     fn test_parameter_update() {
         let config = VisualizationConfig::default();
-        let mut engine = VisualizationEngine::new(config).unwrap();
+        let mut engine = VisualizationEngine::create(config).unwrap();
 
         let result = engine.update_parameter("frequency", 2.0);
         assert!(result.is_ok());
@@ -514,7 +524,7 @@ mod tests {
     #[test]
     fn test_render_field_without_gpu() {
         let config = VisualizationConfig::default();
-        let mut engine = VisualizationEngine::new(config).unwrap();
+        let mut engine = VisualizationEngine::create(config).unwrap();
 
         let grid = create_test_grid();
         let field = create_test_field();
@@ -527,7 +537,7 @@ mod tests {
     #[test]
     fn test_render_multi_field_without_gpu() {
         let config = VisualizationConfig::default();
-        let mut engine = VisualizationEngine::new(config).unwrap();
+        let mut engine = VisualizationEngine::create(config).unwrap();
 
         let grid = create_test_grid();
         let fields = Array4::zeros((32, 32, 32, 3));
@@ -558,7 +568,7 @@ mod tests {
     fn test_visualization_config_custom() {
         let config = VisualizationConfig {
             target_fps: 120.0,
-            quality: RenderQuality::Ultra,
+            quality: RenderQuality::High,
             color_scheme: ColorScheme::Plasma,
             enable_transparency: false,
             max_texture_size: 1024,
@@ -566,7 +576,7 @@ mod tests {
         };
 
         assert_eq!(config.target_fps, 120.0);
-        assert_eq!(config.quality, RenderQuality::Ultra);
+        assert_eq!(config.quality, RenderQuality::High);
         assert_eq!(config.color_scheme, ColorScheme::Plasma);
         assert!(!config.enable_transparency);
         assert_eq!(config.max_texture_size, 1024);

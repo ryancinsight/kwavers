@@ -22,15 +22,7 @@
 //! 4. **Welch, A. J., & van Gemert, M. J. (2011)**. "Optical-Thermal Response of
 //!    Laser-Irradiated Tissue" (2nd ed.). Springer. ISBN: 978-90-481-8830-7
 
-use crate::{
-    error::KwaversResult,
-    grid::Grid,
-    medium::{
-
-
-        Medium,
-    },
-};
+use crate::{error::KwaversResult, grid::Grid, medium::Medium};
 use ndarray::{Array3, Zip};
 
 /// Heat source types
@@ -98,11 +90,11 @@ impl Default for ThermalConfig {
     fn default() -> Self {
         Self {
             bioheat: true,
-            perfusion_rate: 0.5e-3,    // 0.5 mL/mL/s typical tissue
-            blood_temperature: 310.15, // 37°C
+            perfusion_rate: crate::constants::thermal::BLOOD_PERFUSION_RATE * 1e-3, // Convert to mL/mL/s
+            blood_temperature: crate::constants::thermal::BODY_TEMPERATURE,
             hyperbolic: false,
-            relaxation_time: 20.0,         // 20s for biological tissue
-            reference_temperature: 316.15, // 43°C
+            relaxation_time: 20.0, // 20s for biological tissue - tissue-specific
+            reference_temperature: 316.15, // 43°C - critical temperature for thermal damage
         }
     }
 }
@@ -168,6 +160,7 @@ impl ThermalCalculator {
                         let rho = medium.density(x, y, z, grid);
                         let c = medium.sound_speed(x, y, z, grid);
 
+                        // Heat generation: Q = 2αfp²/(ρc) from acoustic absorption
                         *q_val = 2.0 * alpha * frequency * p * p / (rho * c);
                     },
                 );
@@ -316,17 +309,20 @@ impl ThermalCalculator {
     /// Update cumulative thermal dose (CEM43)
     fn update_thermal_dose(&mut self, dt: f64) {
         let t_ref = self.config.reference_temperature;
-        const R: f64 = 0.5; // For T > 43°C
-        const R_LOW: f64 = 0.25; // For T < 43°C
+        // Sapareto-Dewey thermal damage model constant for T > 43°C
+        const THERMAL_DAMAGE_R_FACTOR: f64 = 0.5;
+        // Sapareto-Dewey thermal damage model constant for T < 43°C
+        const THERMAL_DAMAGE_R_FACTOR_LOW: f64 = 0.25;
 
         Zip::from(&mut self.thermal_dose)
             .and(&self.temperature)
             .for_each(|dose, &t| {
                 if t > t_ref {
-                    *dose += dt * R.powf(t - t_ref) / 60.0; // Convert to minutes
-                } else if t > 310.15 {
-                    // Above 37°C
-                    *dose += dt * R_LOW.powf(t_ref - t) / 60.0;
+                    *dose += dt * THERMAL_DAMAGE_R_FACTOR.powf(t - t_ref) / 60.0;
+                // Convert to minutes
+                } else if t > crate::constants::thermal::BODY_TEMPERATURE {
+                    // Above body temperature
+                    *dose += dt * THERMAL_DAMAGE_R_FACTOR_LOW.powf(t_ref - t) / 60.0;
                 }
             });
     }
@@ -382,13 +378,13 @@ impl ThermalCalculator {
 mod tests {
     use super::*;
     use crate::medium::{
-        core::{ArrayAccess, CoreMedium},
         acoustic::AcousticProperties,
-        elastic::{ElasticProperties, ElasticArrayAccess},
-        optical::OpticalProperties,
-        viscous::ViscousProperties,
         bubble::{BubbleProperties, BubbleState},
-        thermal::{ThermalProperties, TemperatureState},
+        core::{ArrayAccess, CoreMedium},
+        elastic::{ElasticArrayAccess, ElasticProperties},
+        optical::OpticalProperties,
+        thermal::{TemperatureState, ThermalProperties},
+        viscous::ViscousProperties,
     };
 
     #[test]
@@ -472,7 +468,13 @@ mod tests {
             fn acoustic_diffusivity(&self, _: f64, _: f64, _: f64, _: &Grid) -> f64 {
                 1.4e-7
             }
-            fn tissue_type(&self, _: f64, _: f64, _: f64, _: &Grid) -> Option<crate::medium::absorption::TissueType> {
+            fn tissue_type(
+                &self,
+                _: f64,
+                _: f64,
+                _: f64,
+                _: &Grid,
+            ) -> Option<crate::medium::absorption::TissueType> {
                 None
             }
         }

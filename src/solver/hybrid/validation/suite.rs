@@ -51,7 +51,7 @@ impl HybridValidationSuite {
         } else {
             summary.tests_failed += 1;
         }
-        
+
         summary.pass_rate = if summary.total_tests > 0 {
             summary.tests_passed as f64 / summary.total_tests as f64
         } else {
@@ -66,19 +66,19 @@ impl HybridValidationSuite {
         // Test that error decreases with grid refinement
         let mut errors = Vec::new();
         let grid_sizes = vec![32, 64, 128];
-        
+
         for size in grid_sizes {
             let error = self.compute_error_for_grid_size(size)?;
             errors.push(error);
         }
-        
+
         // Check if errors decrease monotonically
         for i in 1..errors.len() {
-            if errors[i] >= errors[i-1] {
+            if errors[i] >= errors[i - 1] {
                 return Ok(false);
             }
         }
-        
+
         Ok(true)
     }
 
@@ -87,7 +87,7 @@ impl HybridValidationSuite {
         // Test against analytical solution or reference
         let computed = self.compute_solution()?;
         let reference = self.get_reference_solution()?;
-        
+
         let error = self.compute_relative_error(&computed, &reference)?;
         Ok(error < self.config.error_tolerance)
     }
@@ -97,7 +97,7 @@ impl HybridValidationSuite {
         // Test CFL condition and numerical stability
         let max_eigenvalue = self.compute_max_eigenvalue()?;
         let dt = self.compute_time_step()?;
-        
+
         let cfl = max_eigenvalue * dt;
         Ok(cfl < crate::constants::numerical::CFL_SAFETY_FACTOR)
     }

@@ -2,7 +2,6 @@
 //!
 //! Models transmit and receive sensitivity characteristics.
 
-
 /// Transducer sensitivity parameters
 ///
 /// Based on IEC 61102 standard for ultrasound transducers
@@ -22,20 +21,14 @@ pub struct TransducerSensitivity {
 
 impl TransducerSensitivity {
     /// Calculate sensitivity from transducer parameters
-    pub fn from_parameters(
-        coupling: f64,
-        area: f64,
-        impedance: f64,
-        frequency: f64,
-    ) -> Self {
+    pub fn from_parameters(coupling: f64, area: f64, impedance: f64, frequency: f64) -> Self {
         // Transmit sensitivity: pressure per volt at 1 meter
         // S_t = k * sqrt(2 * Z * P_elec / A) / r
         let electrical_power = 1.0; // 1W reference
         let distance = 1.0; // 1m reference
-        
-        let transmit_sensitivity = coupling
-            * (2.0 * impedance * electrical_power / area).sqrt()
-            / distance;
+
+        let transmit_sensitivity =
+            coupling * (2.0 * impedance * electrical_power / area).sqrt() / distance;
 
         // Receive sensitivity: voltage per pascal
         // S_r = k * A / (Z * c)
@@ -94,10 +87,8 @@ impl TransducerSensitivity {
         let geometric_factor = 1.0 / (target_distance * target_distance);
 
         // Signal level
-        let signal = self.round_trip_sensitivity
-            * reflection_coeff
-            * attenuation_factor
-            * geometric_factor;
+        let signal =
+            self.round_trip_sensitivity * reflection_coeff * attenuation_factor * geometric_factor;
 
         // Noise level (thermal noise model)
         let noise = 1e-6; // Typical noise floor in V
@@ -109,10 +100,10 @@ impl TransducerSensitivity {
     pub fn validate_sensitivity(&self, min_snr_db: f64) -> bool {
         // Check at typical imaging depth (10 cm)
         let typical_snr = self.calculate_snr(
-            0.1,    // 10 cm
-            0.01,   // 1% reflection
-            0.5,    // 0.5 dB/cm/MHz
-            3e6,    // 3 MHz
+            0.1,  // 10 cm
+            0.01, // 1% reflection
+            0.5,  // 0.5 dB/cm/MHz
+            3e6,  // 3 MHz
         );
 
         typical_snr >= min_snr_db

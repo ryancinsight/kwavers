@@ -53,9 +53,9 @@ impl FDCoefficients {
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
     pub fn second_derivative_center(order: SpatialOrder) -> f64 {
         match order {
-            SpatialOrder::Second => -2.0,            // 3-point stencil
-            SpatialOrder::Fourth => -5.0 / 2.0,      // 5-point stencil
-            SpatialOrder::Sixth => -49.0 / 18.0,     // 7-point stencil
+            SpatialOrder::Second => -2.0,        // 3-point stencil
+            SpatialOrder::Fourth => -5.0 / 2.0,  // 5-point stencil
+            SpatialOrder::Sixth => -49.0 / 18.0, // 7-point stencil
         }
     }
 }

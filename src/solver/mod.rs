@@ -16,10 +16,9 @@ pub mod validation;
 
 // Re-export field indices from the single source of truth
 pub use crate::physics::field_indices::{
-    PRESSURE_IDX as P_IDX, VX_IDX, VY_IDX, VZ_IDX,
-    STRESS_XX_IDX as SXX_IDX, STRESS_YY_IDX as SYY_IDX, STRESS_ZZ_IDX as SZZ_IDX,
-    STRESS_XY_IDX as SXY_IDX, STRESS_XZ_IDX as SXZ_IDX, STRESS_YZ_IDX as SYZ_IDX,
-    TOTAL_FIELDS
+    PRESSURE_IDX as P_IDX, STRESS_XX_IDX as SXX_IDX, STRESS_XY_IDX as SXY_IDX,
+    STRESS_XZ_IDX as SXZ_IDX, STRESS_YY_IDX as SYY_IDX, STRESS_YZ_IDX as SYZ_IDX,
+    STRESS_ZZ_IDX as SZZ_IDX, TOTAL_FIELDS, VX_IDX, VY_IDX, VZ_IDX,
 };
 pub mod reconstruction;
 pub mod thermal_diffusion;
@@ -29,8 +28,6 @@ pub mod workspace;
 // The new plugin-based architecture - the primary solver
 pub mod plugin_based;
 pub use plugin_based::PluginBasedSolver;
-
-
 
 // Re-export commonly used types from submodules
 pub use amr::{AMRConfig, AMRManager};

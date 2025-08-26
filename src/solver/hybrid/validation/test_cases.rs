@@ -19,10 +19,10 @@ pub struct TestResult {
 pub trait ValidationTestCase {
     /// Test name
     fn name(&self) -> &str;
-    
+
     /// Run the test
     fn run(&self) -> KwaversResult<TestResult>;
-    
+
     /// Check if results are within bounds
     fn check_bounds(&self, result: &TestResult, bounds: &super::ErrorBounds) -> bool;
 }

@@ -27,12 +27,7 @@ impl DirectivityPattern {
     /// Calculate directivity for rectangular element
     ///
     /// Uses sinc function model for rectangular aperture
-    pub fn rectangular_element(
-        width: f64,
-        height: f64,
-        frequency: f64,
-        num_points: usize,
-    ) -> Self {
+    pub fn rectangular_element(width: f64, height: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = 1540.0 / frequency; // Assume tissue
         let k = 2.0 * PI / wavelength;
 
@@ -170,8 +165,7 @@ impl DirectivityPattern {
             // Asymptotic expansion for large x
             let inv_x = 1.0 / x;
             let phase = x - 3.0 * PI / 4.0;
-            (2.0 / (PI * x)).sqrt() * phase.cos()
-                * (1.0 - 0.1875 * inv_x * inv_x)
+            (2.0 / (PI * x)).sqrt() * phase.cos() * (1.0 - 0.1875 * inv_x * inv_x)
         }
     }
 

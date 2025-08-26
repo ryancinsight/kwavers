@@ -73,29 +73,16 @@ impl<'a> FieldWriteGuard<'a> {
     pub fn view_mut(&mut self) -> ArrayViewMut3<f64> {
         self.guard.index_axis_mut(Axis(0), self.field_index)
     }
-    
+
     /// Get an immutable view
     pub fn view(&self) -> ArrayView3<f64> {
         self.guard.index_axis(Axis(0), self.field_index)
     }
 }
 
-impl<'a> std::ops::Deref for FieldWriteGuard<'a> {
-    type Target = Array3<f64>;
-
-    fn deref(&self) -> &Self::Target {
-        // This is a compromise - we return a slice view which is safe
-        // The guard ensures the data stays alive for the lifetime 'a
-        // Note: This requires the field to be contiguous, which it should be
-        unimplemented!("Use view() instead")
-    }
-}
-
-impl<'a> std::ops::DerefMut for FieldWriteGuard<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unimplemented!("Use view_mut() instead")
-    }
-}
+// Note: FieldWriteGuard does not implement Deref/DerefMut directly
+// because it cannot safely return a &mut Array3<f64> without owning the data.
+// Use view_mut() method instead for mutable access.
 
 impl PhysicsState {
     /// Create a new physics state with the given grid
@@ -292,8 +279,6 @@ impl PhysicsState {
         &self.grid
     }
 }
-
-
 
 /// Trait for types that provide access to physics state
 pub trait HasPhysicsState {

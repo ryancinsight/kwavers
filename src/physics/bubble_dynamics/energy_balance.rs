@@ -97,7 +97,8 @@ impl EnergyBalanceCalculator {
 
         // Temperature difference
         let bubble_temperature = ThermodynamicTemperature::new::<kelvin>(state.temperature);
-        let delta_t_k = bubble_temperature.get::<kelvin>() - self.ambient_temperature.get::<kelvin>();
+        let delta_t_k =
+            bubble_temperature.get::<kelvin>() - self.ambient_temperature.get::<kelvin>();
 
         // Heat transfer rate: Q = h * A * ΔT
         let area = Area::new::<square_meter>(state.surface_area());

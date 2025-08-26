@@ -795,8 +795,8 @@ mod tests {
 
         // Binary classifier with 2 outputs for softmax
         // First column: class 0 (failure), second column: class 1 (success)
-        let weights = array![[-10.0_f32, 10.0_f32]];  // Feature positively correlates with success
-        let bias = Some(array![5.0_f32, -5.0_f32]);   // Bias towards failure for zero input
+        let weights = array![[-10.0_f32, 10.0_f32]]; // Feature positively correlates with success
+        let bias = Some(array![5.0_f32, -5.0_f32]); // Bias towards failure for zero input
         let model = models::ConvergencePredictorModel::from_weights(weights, bias);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
@@ -808,11 +808,19 @@ mod tests {
         let features: Array2<f32> = array![[0.0], [1.0]];
         let probs = engine.predict_outcome(&features).unwrap();
         assert_eq!(probs.len(), 2);
-        
+
         // With weights=10 and bias=-5:
         // For input 0.0: output = 0*10 - 5 = -5, sigmoid(-5) ≈ 0.007
         // For input 1.0: output = 1*10 - 5 = 5, sigmoid(5) ≈ 0.993
-        assert!(probs[0] < 0.1, "Expected low probability for 0.0 input, got {}", probs[0]);
-        assert!(probs[1] > 0.9, "Expected high probability for 1.0 input, got {}", probs[1])
+        assert!(
+            probs[0] < 0.1,
+            "Expected low probability for 0.0 input, got {}",
+            probs[0]
+        );
+        assert!(
+            probs[1] > 0.9,
+            "Expected high probability for 1.0 input, got {}",
+            probs[1]
+        )
     }
 }

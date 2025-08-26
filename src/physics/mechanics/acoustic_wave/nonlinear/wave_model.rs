@@ -1,5 +1,5 @@
 //! Nonlinear wave model implementation
-//! 
+//!
 //! This module contains the core NonlinearWave struct and its basic implementation.
 
 use crate::constants::{performance, stability};
@@ -126,7 +126,7 @@ impl NonlinearWave {
             performance::CHUNK_SIZE_SMALL
         };
 
-        let use_chunked_processing = 
+        let use_chunked_processing =
             grid.nx * grid.ny * grid.nz > performance::CHUNKED_PROCESSING_THRESHOLD;
 
         Self {
@@ -147,7 +147,7 @@ impl NonlinearWave {
             // Stability parameters
             max_pressure: stability::PRESSURE_LIMIT,
             stability_threshold: 0.5, // Default CFL stability threshold
-            cfl_safety_factor: 0.9, // Default CFL safety factor
+            cfl_safety_factor: 0.9,   // Default CFL safety factor
             clamp_gradients: false,
 
             // Iterator optimization
@@ -183,11 +183,9 @@ impl NonlinearWave {
         let mut k_squared = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
         // Use iterators for better performance
-        k_squared
-            .indexed_iter_mut()
-            .for_each(|((i, j, k), val)| {
-                *val = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
-            });
+        k_squared.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            *val = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+        });
 
         self.k_squared = Some(k_squared);
     }
@@ -228,7 +226,7 @@ impl NonlinearWave {
         let max_c = self.max_sound_speed;
         let min_dx = self.dx.min(self.dy).min(self.dz);
         let cfl_number = max_c * self.dt / min_dx;
-        
+
         cfl_number <= self.stability_threshold * self.cfl_safety_factor
     }
 
@@ -245,7 +243,7 @@ impl NonlinearWave {
     pub fn get_stable_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
         let max_c = self.max_sound_speed;
         let min_dx = self.dx.min(self.dy).min(self.dz);
-        
+
         self.cfl_safety_factor * self.stability_threshold * min_dx / max_c
     }
 
@@ -267,7 +265,7 @@ impl NonlinearWave {
         if self.call_count == 0 {
             0.0
         } else {
-            (self.nonlinear_time + self.fft_time + self.source_time + self.combination_time) 
+            (self.nonlinear_time + self.fft_time + self.source_time + self.combination_time)
                 / self.call_count as f64
         }
     }

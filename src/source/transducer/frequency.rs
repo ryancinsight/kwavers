@@ -77,21 +77,15 @@ impl FrequencyResponse {
             let delta = normalized_freq - 1.0;
 
             // Mason model response
-            let mechanical_term = Complex64::new(
-                1.0,
-                2.0 * delta * mechanical_q,
-            );
-            let electrical_term = Complex64::new(
-                1.0,
-                2.0 * delta * electrical_q,
-            );
+            let mechanical_term = Complex64::new(1.0, 2.0 * delta * mechanical_q);
+            let electrical_term = Complex64::new(1.0, 2.0 * delta * electrical_q);
 
             // Combined response
             let response = coupling.powi(2) / (mechanical_term * electrical_term);
-            
+
             magnitude[i] = response.norm();
             phase[i] = response.arg();
-            
+
             // Electrical impedance (simplified model)
             let z0 = 50.0; // Nominal impedance
             impedance[i] = z0 * electrical_term;
@@ -194,7 +188,8 @@ impl FrequencyResponse {
     /// Calculate sensitivity roll-off at a given frequency
     pub fn sensitivity_at_frequency(&self, frequency: f64) -> f64 {
         // Linear interpolation in the magnitude response
-        let idx = self.frequencies
+        let idx = self
+            .frequencies
             .iter()
             .position(|&f| f >= frequency)
             .unwrap_or(self.frequencies.len() - 1);
@@ -226,10 +221,10 @@ impl FrequencyResponse {
         let z0 = 50.0; // Reference impedance
         let center_idx = self.frequencies.len() / 2;
         let z = self.impedance[center_idx];
-        
+
         let reflection_coeff = (z - z0) / (z + z0);
         let transmission = 1.0 - reflection_coeff.norm().powi(2);
-        
+
         -10.0 * transmission.log10()
     }
 }

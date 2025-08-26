@@ -146,7 +146,10 @@ impl MemoryPool {
     /// Find suitable buffer from available pool
     fn find_suitable_buffer(&mut self, required_size: usize) -> Option<GpuBuffer> {
         // Find buffer with size >= required_size
-        let position = self.available_buffers.iter().position(|b| b.size_bytes >= required_size)?;
+        let position = self
+            .available_buffers
+            .iter()
+            .position(|b| b.size_bytes >= required_size)?;
         let mut buffer = self.available_buffers.remove(position);
         buffer.last_access_time = Instant::now();
         buffer.access_count += 1;

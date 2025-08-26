@@ -5,8 +5,8 @@
 
 use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::grid::Grid;
-use crate::physics::state::PhysicsState;
 use crate::physics::field_indices;
+use crate::physics::state::PhysicsState;
 
 use ndarray::{s, Array3};
 use std::f64::consts::PI;
@@ -39,7 +39,9 @@ mod tests {
             let amplitude = ((-(x - x0).powi(2)) / (2.0 * sigma.powi(2))).exp();
             initial_pressure[[i, 0, 0]] = amplitude;
         }
-        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
+        state
+            .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
+            .unwrap();
 
         // Propagate using simple time stepping
         // Note: RK4 solver requires a field and RHS function, not PhysicsState
@@ -48,16 +50,24 @@ mod tests {
 
         for _ in 0..steps {
             // Simple wave propagation update (simplified for testing)
-            let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap().to_owned();
+            let pressure = state
+                .get_field(field_indices::PRESSURE_IDX)
+                .unwrap()
+                .to_owned();
             let mut new_pressure = pressure.clone();
-            
+
             // Apply simple wave equation update (d²p/dt² = c² ∇²p)
-            for i in 1..nx-1 {
-                let d2p_dx2 = (pressure[[i+1, 0, 0]] - 2.0 * pressure[[i, 0, 0]] + pressure[[i-1, 0, 0]]) / (dx * dx);
-                new_pressure[[i, 0, 0]] += dt * dt * SOUND_SPEED_WATER * SOUND_SPEED_WATER * d2p_dx2;
+            for i in 1..nx - 1 {
+                let d2p_dx2 = (pressure[[i + 1, 0, 0]] - 2.0 * pressure[[i, 0, 0]]
+                    + pressure[[i - 1, 0, 0]])
+                    / (dx * dx);
+                new_pressure[[i, 0, 0]] +=
+                    dt * dt * SOUND_SPEED_WATER * SOUND_SPEED_WATER * d2p_dx2;
             }
-            
-            state.update_field(field_indices::PRESSURE_IDX, &new_pressure).unwrap();
+
+            state
+                .update_field(field_indices::PRESSURE_IDX, &new_pressure)
+                .unwrap();
         }
 
         // Verify wave has propagated
@@ -102,7 +112,9 @@ mod tests {
             let k = PI / (nx as f64 * dx); // Wave number for first mode
             initial_pressure[[i, 0, 0]] = (k * x).sin();
         }
-        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
+        state
+            .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
+            .unwrap();
 
         // Should oscillate in place with rigid boundaries
         let period = 2.0 * PI / (SOUND_SPEED_WATER * PI / (nx as f64 * dx));
@@ -114,13 +126,18 @@ mod tests {
         // Simple time stepping for standing wave test
         for _ in 0..steps {
             // Get current pressure field
-            let pressure_field = state.get_field(field_indices::PRESSURE_IDX).unwrap().to_owned();
+            let pressure_field = state
+                .get_field(field_indices::PRESSURE_IDX)
+                .unwrap()
+                .to_owned();
             // Apply rigid boundary conditions
             let pressure_guard = state.get_field(field_indices::PRESSURE_IDX).unwrap();
             let mut pressure = pressure_guard.to_owned();
             pressure[[0, 0, 0]] = 0.0;
             pressure[[nx - 1, 0, 0]] = 0.0;
-            state.update_field(field_indices::PRESSURE_IDX, &pressure).unwrap();
+            state
+                .update_field(field_indices::PRESSURE_IDX, &pressure)
+                .unwrap();
         }
 
         let pressure_field = state.get_field(field_indices::PRESSURE_IDX).unwrap();
@@ -148,7 +165,9 @@ mod tests {
         let center = n / 2;
         let mut initial_pressure = Array3::zeros((n, n, n));
         initial_pressure[[center, center, center]] = 1.0;
-        state.update_field(field_indices::PRESSURE_IDX, &initial_pressure).unwrap();
+        state
+            .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
+            .unwrap();
 
         // Simple time stepping for spherical spreading test
         let steps = 20;

@@ -8,7 +8,6 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::Array4;
 
-
 /// Strategy for executing plugins
 pub trait ExecutionStrategy: Send + Sync {
     /// Execute a collection of plugins

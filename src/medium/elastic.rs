@@ -4,7 +4,7 @@
 //! including Lamé parameters and wave speeds.
 
 use crate::grid::Grid;
-use crate::medium::core::{CoreMedium, ArrayAccess};
+use crate::medium::core::{ArrayAccess, CoreMedium};
 use ndarray::{Array3, Zip};
 
 /// Trait for elastic medium properties

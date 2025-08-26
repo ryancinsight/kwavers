@@ -32,7 +32,7 @@ impl ElementCoupling {
             for j in 0..num_elements {
                 if i != j {
                     let distance = ((i as f64 - j as f64) * pitch).abs();
-                    
+
                     // Acoustic coupling decreases with distance
                     let acoustic_factor = (-k * distance).exp() / (k * distance + 1.0);
                     acoustic_coupling[[i, j]] = acoustic_factor * 0.1; // Typical 10% max coupling

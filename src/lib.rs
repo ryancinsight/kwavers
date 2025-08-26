@@ -19,14 +19,9 @@
     unused_macros
 )]
 // Warn about code quality issues (will fix incrementally)
-#![warn(
-    missing_debug_implementations,
-)]
+#![warn(missing_debug_implementations)]
 // Warn about potentially unnecessary casts
-#![warn(
-    trivial_casts,
-    trivial_numeric_casts,
-)]
+#![warn(trivial_casts, trivial_numeric_casts)]
 // Warn about unsafe code but allow it for performance-critical sections
 #![warn(unsafe_code)]
 // Allow certain patterns during refactoring

@@ -87,118 +87,124 @@ impl PhysicsPlugin for FdtdPlugin {
                 crate::error::PhysicsError::InvalidFieldDimensions {
                     expected: "at least 4 field components".to_string(),
                     actual: format!("{} components", fields.dim().0),
-                }
+                },
             ));
         }
-        
+
         // Extract field slices
         let pressure_idx = UnifiedFieldType::Pressure.index();
         let vx_idx = UnifiedFieldType::VelocityX.index();
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
-        
+
         // Update pressure field using velocity divergence
         {
             let vx = fields.index_axis(ndarray::Axis(0), vx_idx).to_owned();
             let vy = fields.index_axis(ndarray::Axis(0), vy_idx).to_owned();
             let vz = fields.index_axis(ndarray::Axis(0), vz_idx).to_owned();
-            
+
             let mut pressure = fields.index_axis_mut(ndarray::Axis(0), pressure_idx);
             let (nx, ny, nz) = pressure.dim();
-            
+
             // Apply FDTD update for pressure
-            for i in 1..nx-1 {
-                for j in 1..ny-1 {
-                    for k in 1..nz-1 {
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
                         // Compute velocity divergence using central differences
-                        let dvx_dx = (vx[[i+1, j, k]] - vx[[i-1, j, k]]) / (2.0 * grid.dx);
-                        let dvy_dy = (vy[[i, j+1, k]] - vy[[i, j-1, k]]) / (2.0 * grid.dy);
-                        let dvz_dz = (vz[[i, j, k+1]] - vz[[i, j, k-1]]) / (2.0 * grid.dz);
-                        
+                        let dvx_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * grid.dx);
+                        let dvy_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * grid.dy);
+                        let dvz_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * grid.dz);
+
                         let divergence = dvx_dx + dvy_dy + dvz_dz;
-                        
+
                         // Get medium properties at this point
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
                         let rho = medium.density(x, y, z, grid);
                         let c = medium.sound_speed(x, y, z, grid);
-                        
+
                         // Update pressure
                         pressure[[i, j, k]] -= dt * rho * c * c * divergence;
                     }
                 }
             }
         }
-        
+
         // Update velocity fields using pressure gradient
         {
             let pressure = fields.index_axis(ndarray::Axis(0), pressure_idx).to_owned();
-            
+
             // Update vx
             {
                 let mut vx = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
                 let (nx, ny, nz) = vx.dim();
-                
-                for i in 1..nx-1 {
+
+                for i in 1..nx - 1 {
                     for j in 0..ny {
                         for k in 0..nz {
-                            let dp_dx = (pressure[[i+1.min(nx-1), j, k]] - pressure[[i.saturating_sub(1), j, k]]) / (2.0 * grid.dx);
-                            
+                            let dp_dx = (pressure[[i + 1.min(nx - 1), j, k]]
+                                - pressure[[i.saturating_sub(1), j, k]])
+                                / (2.0 * grid.dx);
+
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
-                            
+
                             vx[[i, j, k]] -= dt * dp_dx / rho;
                         }
                     }
                 }
             }
-            
+
             // Update vy
             {
                 let mut vy = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
                 let (nx, ny, nz) = vy.dim();
-                
+
                 for i in 0..nx {
-                    for j in 1..ny-1 {
+                    for j in 1..ny - 1 {
                         for k in 0..nz {
-                            let dp_dy = (pressure[[i, j+1.min(ny-1), k]] - pressure[[i, j.saturating_sub(1), k]]) / (2.0 * grid.dy);
-                            
+                            let dp_dy = (pressure[[i, j + 1.min(ny - 1), k]]
+                                - pressure[[i, j.saturating_sub(1), k]])
+                                / (2.0 * grid.dy);
+
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
-                            
+
                             vy[[i, j, k]] -= dt * dp_dy / rho;
                         }
                     }
                 }
             }
-            
+
             // Update vz
             {
                 let mut vz = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
                 let (nx, ny, nz) = vz.dim();
-                
+
                 for i in 0..nx {
                     for j in 0..ny {
-                        for k in 1..nz-1 {
-                            let dp_dz = (pressure[[i, j, k+1.min(nz-1)]] - pressure[[i, j, k.saturating_sub(1)]]) / (2.0 * grid.dz);
-                            
+                        for k in 1..nz - 1 {
+                            let dp_dz = (pressure[[i, j, k + 1.min(nz - 1)]]
+                                - pressure[[i, j, k.saturating_sub(1)]])
+                                / (2.0 * grid.dz);
+
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
-                            
+
                             vz[[i, j, k]] -= dt * dp_dz / rho;
                         }
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
 

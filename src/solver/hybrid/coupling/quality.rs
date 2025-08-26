@@ -149,22 +149,30 @@ impl QualityMonitor {
     fn calculate_phase_error(&self, interpolated: &Array3<f64>, target: &Array3<f64>) -> f64 {
         // Phase error calculation using cross-correlation peak shift
         // This measures the phase difference between the interpolated and target fields
-        
+
         // Find the peak locations in both fields
         let interp_peak_idx = interpolated
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|(_, a), (_, b)| {
+                a.abs()
+                    .partial_cmp(&b.abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|(idx, _)| idx)
             .unwrap_or(0);
-            
+
         let target_peak_idx = target
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|(_, a), (_, b)| {
+                a.abs()
+                    .partial_cmp(&b.abs())
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|(idx, _)| idx)
             .unwrap_or(0);
-        
+
         // Calculate phase shift as normalized position difference
         let total_size = interpolated.len();
         if total_size > 0 {

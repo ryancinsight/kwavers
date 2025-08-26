@@ -42,7 +42,8 @@ impl NiftiReader {
         }
 
         // Load the NIFTI file
-        let nifti_object = ReaderOptions::new().read_file(path)
+        let nifti_object = ReaderOptions::new()
+            .read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         // Get header for dimensions
@@ -151,7 +152,8 @@ impl NiftiReader {
         }
 
         // Load the NIFTI object
-        let nifti_object = ReaderOptions::new().read_file(path)
+        let nifti_object = ReaderOptions::new()
+            .read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         // Get header
@@ -168,7 +170,8 @@ impl NiftiReader {
         let path = path.as_ref();
 
         // Load only the header
-        let nifti_object = ReaderOptions::new().read_file(path)
+        let nifti_object = ReaderOptions::new()
+            .read_file(path)
             .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
 
         let header = nifti_object.header();

@@ -3,7 +3,6 @@
 //! This module defines the core reaction types and rate calculations
 //! following SOLID principles with clear separation of concerns.
 
-
 /// Represents a chemical reaction with its kinetic parameters
 #[derive(Debug, Clone)]
 pub struct ChemicalReaction {
@@ -44,8 +43,13 @@ pub enum ReactionType {
 /// Temperature dependence model for reactions
 #[derive(Debug, Clone)]
 pub enum TemperatureDependence {
-    Arrhenius { activation_energy: f64, pre_exponential: f64 },
-    PowerLaw { exponent: f64 },
+    Arrhenius {
+        activation_energy: f64,
+        pre_exponential: f64,
+    },
+    PowerLaw {
+        exponent: f64,
+    },
     Constant,
 }
 

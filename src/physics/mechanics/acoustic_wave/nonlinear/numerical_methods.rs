@@ -52,8 +52,11 @@ impl NonlinearWave {
                     nx: pressure.shape()[0],
                     ny: pressure.shape()[1],
                     nz: pressure.shape()[2],
-                    reason: format!("Must match grid dimensions [{}, {}, {}]", grid.nx, grid.ny, grid.nz),
-                }
+                    reason: format!(
+                        "Must match grid dimensions [{}, {}, {}]",
+                        grid.nx, grid.ny, grid.nz
+                    ),
+                },
             ));
         }
 
@@ -74,19 +77,22 @@ impl NonlinearWave {
 
         // Combine terms
         let start_combination = Instant::now();
-        let mut new_pressure = linear_term + nonlinear_term * self.nonlinearity_scaling + source_contribution;
-        
+        let mut new_pressure =
+            linear_term + nonlinear_term * self.nonlinearity_scaling + source_contribution;
+
         // Apply stability constraints if needed
         if self.clamp_gradients {
             self.apply_stability_constraints(&mut new_pressure);
         }
-        
+
         self.combination_time += start_combination.elapsed().as_secs_f64();
 
         debug!(
             "Step {}: max pressure = {:.2e} Pa, update time = {:.3} ms",
             time_step,
-            new_pressure.iter().fold(0.0_f64, |max, &val| max.max(val.abs())),
+            new_pressure
+                .iter()
+                .fold(0.0_f64, |max, &val| max.max(val.abs())),
             start_total.elapsed().as_secs_f64() * 1000.0
         );
 
@@ -182,25 +188,25 @@ impl NonlinearWave {
                     } else {
                         1.0
                     };
-                    *r = p * Complex::new(sinc_factor * (-c.powi(2) * k2 * self.dt.powi(2)), 0.0).exp();
+                    *r = p * Complex::new(sinc_factor * (-c.powi(2) * k2 * self.dt.powi(2)), 0.0)
+                        .exp();
                 });
         } else {
             // Compute k-squared on the fly
-            result_k
-                .indexed_iter_mut()
-                .for_each(|((i, j, k), val)| {
-                    let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
-                    let k_mag = k_mag_sq.sqrt();
-                    
-                    let sinc_factor = if k_mag > numerical::EPSILON {
-                        (c * k_mag * self.dt / 2.0).sin() / (c * k_mag * self.dt / 2.0)
-                    } else {
-                        1.0
-                    };
-                    
-                    *val = pressure_k[(i, j, k)] * 
-                        Complex::new(sinc_factor * (-c.powi(2) * k_mag_sq * self.dt.powi(2)), 0.0).exp();
-                });
+            result_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
+                let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+                let k_mag = k_mag_sq.sqrt();
+
+                let sinc_factor = if k_mag > numerical::EPSILON {
+                    (c * k_mag * self.dt / 2.0).sin() / (c * k_mag * self.dt / 2.0)
+                } else {
+                    1.0
+                };
+
+                *val = pressure_k[(i, j, k)]
+                    * Complex::new(sinc_factor * (-c.powi(2) * k_mag_sq * self.dt.powi(2)), 0.0)
+                        .exp();
+            });
         }
 
         // Transform back to spatial domain
@@ -235,23 +241,17 @@ impl NonlinearWave {
         let mut grad_y_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
         let mut grad_z_k = Array3::<Complex<f64>>::zeros(field_k.raw_dim());
 
-        grad_x_k
-            .indexed_iter_mut()
-            .for_each(|((i, j, k), val)| {
-                *val = field_k[(i, j, k)] * Complex::new(0.0, kx[i]);
-            });
+        grad_x_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            *val = field_k[(i, j, k)] * Complex::new(0.0, kx[i]);
+        });
 
-        grad_y_k
-            .indexed_iter_mut()
-            .for_each(|((i, j, k), val)| {
-                *val = field_k[(i, j, k)] * Complex::new(0.0, ky[j]);
-            });
+        grad_y_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            *val = field_k[(i, j, k)] * Complex::new(0.0, ky[j]);
+        });
 
-        grad_z_k
-            .indexed_iter_mut()
-            .for_each(|((i, j, k), val)| {
-                *val = field_k[(i, j, k)] * Complex::new(0.0, kz[k]);
-            });
+        grad_z_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
+            *val = field_k[(i, j, k)] * Complex::new(0.0, kz[k]);
+        });
 
         // Transform back to spatial domain
         Ok((
@@ -296,12 +296,10 @@ impl NonlinearWave {
             let ky = grid.compute_ky();
             let kz = grid.compute_kz();
 
-            laplacian_k
-                .indexed_iter_mut()
-                .for_each(|((i, j, k), val)| {
-                    let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
-                    *val = field_k[(i, j, k)] * Complex::new(-k_mag_sq, 0.0);
-                });
+            laplacian_k.indexed_iter_mut().for_each(|((i, j, k), val)| {
+                let k_mag_sq = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+                *val = field_k[(i, j, k)] * Complex::new(-k_mag_sq, 0.0);
+            });
         }
 
         // Transform back to spatial domain
@@ -340,10 +338,10 @@ impl NonlinearWave {
     pub fn compute_adaptive_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
         let max_c = self.max_sound_speed;
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
-        
+
         // CFL condition for PSTD
         let dt_cfl = self.cfl_safety_factor * min_dx / (f64::consts::PI * max_c);
-        
+
         // Additional constraint for nonlinear terms
         let dt_nonlinear = if self.nonlinearity_scaling > 0.0 {
             let beta = 1.0 + 3.5 / 2.0; // Using default B/A = 3.5
@@ -351,7 +349,7 @@ impl NonlinearWave {
         } else {
             f64::INFINITY
         };
-        
+
         dt_cfl.min(dt_nonlinear)
     }
 }

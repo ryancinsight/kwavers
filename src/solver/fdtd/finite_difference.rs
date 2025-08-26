@@ -28,7 +28,7 @@ impl FiniteDifference {
         }
 
         let mut coefficients = HashMap::new();
-        
+
         // Central difference coefficients for first derivative
         // These are the coefficients for (f(x+ih) - f(x-ih)) terms
         coefficients.insert(2, vec![0.5]); // 2nd order: 1/(2h) * [f(x+h) - f(x-h)]
@@ -82,13 +82,16 @@ impl FiniteDifference {
                         let offset = idx + 1;
                         match axis {
                             0 => {
-                                val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                                val +=
+                                    coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                             }
                             1 => {
-                                val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                                val +=
+                                    coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                             }
                             2 => {
-                                val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                                val +=
+                                    coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                             }
                             _ => unreachable!(),
                         }
@@ -228,13 +231,13 @@ mod tests {
     fn test_finite_difference_creation() {
         let fd = FiniteDifference::new(2);
         assert!(fd.is_ok());
-        
+
         let fd = FiniteDifference::new(4);
         assert!(fd.is_ok());
-        
+
         let fd = FiniteDifference::new(6);
         assert!(fd.is_ok());
-        
+
         let fd = FiniteDifference::new(3);
         assert!(fd.is_err());
     }
@@ -242,7 +245,7 @@ mod tests {
     #[test]
     fn test_derivative_linear_field() {
         let fd = FiniteDifference::new(2).unwrap();
-        
+
         // Create a linear field (derivative should be constant)
         let mut field = Array3::zeros((10, 10, 10));
         for i in 0..10 {

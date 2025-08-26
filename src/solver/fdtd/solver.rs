@@ -4,7 +4,7 @@
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
 use crate::boundary::cpml::CPMLBoundary;
-use crate::error::{ValidationError, KwaversError, KwaversResult};
+use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use log::info;
 use ndarray::{Array3, Zip};
@@ -66,16 +66,9 @@ impl FdtdSolver {
         max_sound_speed: f64,
     ) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
-        self.cpml_boundary = Some(CPMLBoundary::new(
-            config,
-            &self.grid,
-            dt,
-            max_sound_speed,
-        )?);
+        self.cpml_boundary = Some(CPMLBoundary::new(config, &self.grid, dt, max_sound_speed)?);
         Ok(())
     }
-
-
 
     /// Update pressure field using velocity divergence
     pub fn update_pressure(
@@ -138,7 +131,7 @@ impl FdtdSolver {
             cpml.update_acoustic_memory(&grad_x, 0);
             cpml.update_acoustic_memory(&grad_y, 1);
             cpml.update_acoustic_memory(&grad_z, 2);
-            
+
             // Apply C-PML to gradients
             cpml.apply_cpml_gradient(&mut grad_x, 0);
             cpml.apply_cpml_gradient(&mut grad_y, 1);
@@ -190,7 +183,8 @@ impl FdtdSolver {
                     for i in 0..nx - 1 {
                         for j in 0..ny {
                             for k in 0..nz {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i + 1, j, k]]);
+                                interpolated[[i, j, k]] =
+                                    0.5 * (field[[i, j, k]] + field[[i + 1, j, k]]);
                             }
                         }
                     }
@@ -205,7 +199,8 @@ impl FdtdSolver {
                     for i in 0..nx {
                         for j in 0..ny - 1 {
                             for k in 0..nz {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i, j + 1, k]]);
+                                interpolated[[i, j, k]] =
+                                    0.5 * (field[[i, j, k]] + field[[i, j + 1, k]]);
                             }
                         }
                     }
@@ -220,7 +215,8 @@ impl FdtdSolver {
                     for i in 0..nx {
                         for j in 0..ny {
                             for k in 0..nz - 1 {
-                                interpolated[[i, j, k]] = 0.5 * (field[[i, j, k]] + field[[i, j, k + 1]]);
+                                interpolated[[i, j, k]] =
+                                    0.5 * (field[[i, j, k]] + field[[i, j, k + 1]]);
                             }
                         }
                     }

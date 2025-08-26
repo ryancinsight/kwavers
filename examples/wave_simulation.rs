@@ -21,7 +21,7 @@ fn main() -> KwaversResult<()> {
 
     // Create homogeneous medium (water)
     let medium = Arc::new(HomogeneousMedium::water(&grid));
-    
+
     // Access properties through the Medium trait
     let sound_speed = medium.sound_speed(0.0, 0.0, 0.0, &grid);
     let density = medium.density(0.0, 0.0, 0.0, &grid);
@@ -32,7 +32,7 @@ fn main() -> KwaversResult<()> {
     let num_steps = 100;
     let total_time = dt * num_steps as f64;
 
-    // For now, use a null source (no source) 
+    // For now, use a null source (no source)
     // In a real application, you would implement a proper source
     let source = Box::new(NullSource::new());
     println!("Source: Using null source for demonstration");
@@ -40,26 +40,20 @@ fn main() -> KwaversResult<()> {
     // Create time configuration
     use kwavers::time::Time;
     let time = Time::new(dt, num_steps);
-    
+
     // Create boundary (using PML for absorption)
     use kwavers::boundary::pml::{PMLBoundary, PMLConfig};
     let pml_config = PMLConfig::default();
     let boundary: Box<dyn kwavers::boundary::Boundary> = Box::new(PMLBoundary::new(pml_config)?);
-    
+
     // Create solver
-    let mut solver = PluginBasedSolver::new(
-        grid.clone(), 
-        time,
-        medium.clone(), 
-        boundary,
-        source
-    );
-    
+    let mut solver = PluginBasedSolver::new(grid.clone(), time, medium.clone(), boundary, source);
+
     // Register acoustic wave plugin
     use kwavers::physics::plugin::acoustic_wave_plugin::AcousticWavePlugin;
     let acoustic_plugin = Box::new(AcousticWavePlugin::new(0.95)); // CFL number
     solver.add_plugin(acoustic_plugin)?;
-    
+
     println!("\nSimulation parameters:");
     println!("  Time step: {:.2} ns", dt * 1e9);
     println!("  Steps: {}", num_steps);
@@ -72,7 +66,7 @@ fn main() -> KwaversResult<()> {
     println!("\nRunning simulation...");
     for step in 0..num_steps {
         solver.step()?;
-        
+
         if step % 20 == 0 {
             println!("  Step {}/{}", step, num_steps);
         }

@@ -2,13 +2,13 @@
 //!
 //! This module contains implementations of various traits for the NonlinearWave struct.
 
-use crate::physics::traits::AcousticWaveModel;
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
 use crate::KwaversResult;
-use ndarray::{Array3, Array4, Axis};
 use log::info;
+use ndarray::{Array3, Array4, Axis};
 
 use super::wave_model::NonlinearWave;
 
@@ -25,20 +25,21 @@ impl AcousticWaveModel for NonlinearWave {
     ) {
         // Extract pressure field from the 4D array (assuming index 0 is pressure)
         const PRESSURE_IDX: usize = 0;
-        
+
         // Get a view of the current pressure field
         let pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-        
+
         // Create source term array
         let source_mask = source.create_mask(grid);
         let amplitude = source.amplitude(t);
         let source_term = source_mask * amplitude;
-        
+
         // Update using the nonlinear wave equation
         match self.update_wave(&pressure, &source_term, medium, grid, (t / dt) as usize) {
             Ok(new_pressure) => {
                 // Update the pressure field in the 4D array
-                fields.index_axis_mut(Axis(0), PRESSURE_IDX)
+                fields
+                    .index_axis_mut(Axis(0), PRESSURE_IDX)
                     .assign(&new_pressure);
             }
             Err(e) => {
@@ -52,11 +53,26 @@ impl AcousticWaveModel for NonlinearWave {
         info!("  Total calls: {}", self.call_count);
         if self.call_count > 0 {
             info!("  Average times per call:");
-            info!("    Nonlinear term: {:.3} ms", self.nonlinear_time * 1000.0 / self.call_count as f64);
-            info!("    FFT operations: {:.3} ms", self.fft_time * 1000.0 / self.call_count as f64);
-            info!("    Source term: {:.3} ms", self.source_time * 1000.0 / self.call_count as f64);
-            info!("    Combination: {:.3} ms", self.combination_time * 1000.0 / self.call_count as f64);
-            info!("    Total: {:.3} ms", self.get_average_update_time() * 1000.0);
+            info!(
+                "    Nonlinear term: {:.3} ms",
+                self.nonlinear_time * 1000.0 / self.call_count as f64
+            );
+            info!(
+                "    FFT operations: {:.3} ms",
+                self.fft_time * 1000.0 / self.call_count as f64
+            );
+            info!(
+                "    Source term: {:.3} ms",
+                self.source_time * 1000.0 / self.call_count as f64
+            );
+            info!(
+                "    Combination: {:.3} ms",
+                self.combination_time * 1000.0 / self.call_count as f64
+            );
+            info!(
+                "    Total: {:.3} ms",
+                self.get_average_update_time() * 1000.0
+            );
         }
     }
 
@@ -80,8 +96,11 @@ impl NonlinearWave {
                 crate::error::PhysicsError::InvalidParameter {
                     parameter: "timestep".to_string(),
                     value: self.dt,
-                    reason: format!("Must be <= {} for stability", self.get_stable_timestep(medium, grid)),
-                }
+                    reason: format!(
+                        "Must be <= {} for stability",
+                        self.get_stable_timestep(medium, grid)
+                    ),
+                },
             ));
         }
 
@@ -94,15 +113,18 @@ impl NonlinearWave {
         let min_wavelength = sound_speed / self.source_frequency;
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let points_per_wavelength = min_wavelength / min_dx;
-        
+
         const MIN_POINTS_PER_WAVELENGTH: f64 = 4.0;
         if points_per_wavelength < MIN_POINTS_PER_WAVELENGTH {
             return Err(crate::error::KwaversError::Physics(
                 crate::error::PhysicsError::InvalidParameter {
                     parameter: "grid_resolution".to_string(),
                     value: points_per_wavelength,
-                    reason: format!("Minimum {:.1} points/wavelength required, got {:.1}", MIN_POINTS_PER_WAVELENGTH, points_per_wavelength),
-                }
+                    reason: format!(
+                        "Minimum {:.1} points/wavelength required, got {:.1}",
+                        MIN_POINTS_PER_WAVELENGTH, points_per_wavelength
+                    ),
+                },
             ));
         }
 
@@ -114,7 +136,7 @@ impl NonlinearWave {
                         parameter: "multi_frequency".to_string(),
                         value: "invalid".to_string(),
                         constraint: "Configuration must be valid".to_string(),
-                    }
+                    },
                 ));
             }
         }

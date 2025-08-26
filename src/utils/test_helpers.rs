@@ -11,10 +11,14 @@ use ndarray::Array3;
 ///
 /// This function provides a consistent grid for testing across modules
 pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
-    Grid::new(nx, ny, nz, 
-              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION, 
-              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION, 
-              crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION)
+    Grid::new(
+        nx,
+        ny,
+        nz,
+        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+    )
 }
 
 /// Create a standard test grid with default dimensions (32x32x32)
@@ -29,7 +33,7 @@ pub fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
         crate::constants::physics::SOUND_SPEED_WATER,
         0.1,
         1.0,
-        grid
+        grid,
     )
 }
 

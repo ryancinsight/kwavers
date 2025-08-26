@@ -5,7 +5,7 @@ pub mod fft_operations;
 pub mod field_analysis;
 pub mod format;
 pub mod iterators;
-pub mod kwave;  // Modular k-Wave utilities
+pub mod kwave; // Modular k-Wave utilities
 pub mod linear_algebra;
 pub mod sparse_matrix;
 pub mod spectral;
@@ -127,9 +127,12 @@ pub fn warm_fft_cache(grid: &Grid) {
     let dummy_field = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
     let dummy_fft = fft_3d(&dummy_field, 0, grid);
     let dummy_ifft = ifft_3d(&dummy_fft, grid);
-    
+
     // Verify FFT operations are working correctly
-    debug!("FFT warmup verification: field dimensions {:?}", dummy_ifft.dim());
+    debug!(
+        "FFT warmup verification: field dimensions {:?}",
+        dummy_ifft.dim()
+    );
 
     debug!("FFT/IFFT cache warm-up complete");
 }

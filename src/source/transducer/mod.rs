@@ -10,22 +10,25 @@
 //! - Kino (1987): "Acoustic Waves: Devices, Imaging, and Analog Signal Processing"
 //! - Hunt et al. (1983): "Ultrasound transducers for pulse-echo medical imaging"
 
+pub mod coupling;
+pub mod design;
+pub mod directivity;
+pub mod frequency;
 pub mod geometry;
 pub mod materials;
-pub mod frequency;
-pub mod directivity;
-pub mod coupling;
 pub mod sensitivity;
-pub mod design;
 
 // Re-export main types for convenience
-pub use geometry::ElementGeometry;
-pub use materials::{PiezoMaterial, PiezoType, BackingLayer, BackingMaterial, MatchingLayer, AcousticLens, LensMaterial};
-pub use frequency::FrequencyResponse;
-pub use directivity::DirectivityPattern;
 pub use coupling::ElementCoupling;
-pub use sensitivity::TransducerSensitivity;
 pub use design::TransducerDesign;
+pub use directivity::DirectivityPattern;
+pub use frequency::FrequencyResponse;
+pub use geometry::ElementGeometry;
+pub use materials::{
+    AcousticLens, BackingLayer, BackingMaterial, LensMaterial, MatchingLayer, PiezoMaterial,
+    PiezoType,
+};
+pub use sensitivity::TransducerSensitivity;
 
 // Design constants based on literature
 /// Typical piezoelectric coupling coefficient (PZT-5H)
