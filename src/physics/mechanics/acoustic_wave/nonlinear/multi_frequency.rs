@@ -48,8 +48,9 @@ impl MultiFrequencyConfig {
     ///
     /// A new MultiFrequencyConfig instance
     pub fn new(frequencies: Vec<f64>, weights: Option<Vec<f64>>) -> Self {
-        let weights = weights.unwrap_or_else(|| vec![1.0 / frequencies.len() as f64; frequencies.len()]);
-        
+        let weights =
+            weights.unwrap_or_else(|| vec![1.0 / frequencies.len() as f64; frequencies.len()]);
+
         Self {
             frequencies,
             weights,
@@ -71,7 +72,7 @@ impl MultiFrequencyConfig {
         let frequencies: Vec<f64> = (1..=num_harmonics)
             .map(|n| fundamental * n as f64)
             .collect();
-        
+
         Self {
             frequencies,
             weights: vec![1.0 / num_harmonics as f64; num_harmonics],
@@ -93,9 +94,8 @@ impl MultiFrequencyConfig {
     ///
     /// A MultiFrequencyConfig for broadband simulation
     pub fn broadband(min_freq: f64, max_freq: f64, num_points: usize) -> Self {
-        let frequencies: Vec<f64> = Array1::linspace(min_freq, max_freq, num_points)
-            .to_vec();
-        
+        let frequencies: Vec<f64> = Array1::linspace(min_freq, max_freq, num_points).to_vec();
+
         Self {
             frequencies: frequencies.clone(),
             weights: vec![1.0 / num_points as f64; num_points],
@@ -111,7 +111,7 @@ impl MultiFrequencyConfig {
     ///
     /// `true` if the configuration is valid, `false` otherwise
     pub fn validate(&self) -> bool {
-        !self.frequencies.is_empty() 
+        !self.frequencies.is_empty()
             && self.frequencies.len() == self.weights.len()
             && self.frequencies.iter().all(|&f| f > 0.0)
             && self.weights.iter().all(|&w| w >= 0.0)
@@ -124,7 +124,10 @@ impl MultiFrequencyConfig {
     ///
     /// The fundamental frequency [Hz], or None if no frequencies are configured
     pub fn fundamental_frequency(&self) -> Option<f64> {
-        self.frequencies.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).copied()
+        self.frequencies
+            .iter()
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .copied()
     }
 
     /// Gets the bandwidth of the configured frequencies.
@@ -136,8 +139,14 @@ impl MultiFrequencyConfig {
         if self.frequencies.is_empty() {
             0.0
         } else {
-            let min = self.frequencies.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-            let max = self.frequencies.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+            let min = self
+                .frequencies
+                .iter()
+                .fold(f64::INFINITY, |a, &b| a.min(b));
+            let max = self
+                .frequencies
+                .iter()
+                .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
             max - min
         }
     }

@@ -27,8 +27,8 @@ pub mod ros_plasma;
 // Re-export commonly used types from submodules
 pub use parameters::{ChemicalMetrics, ChemicalUpdateParams};
 pub use reactions::{
-    ChemicalReaction, ChemicalReactionConfig, LightDependence, PressureDependence,
-    ReactionRate, ReactionType, Species, TemperatureDependence,
+    ChemicalReaction, ChemicalReactionConfig, LightDependence, PressureDependence, ReactionRate,
+    ReactionType, Species, TemperatureDependence,
 };
 pub use ros_plasma::{ROSConcentrations, ROSSpecies, SonochemicalYield, SonochemistryModel};
 
@@ -144,7 +144,8 @@ impl ChemicalModel {
             params.medium,
             params.frequency,
         );
-        self.metrics.set_computation_time(radical_start.elapsed().as_secs_f64() * 1000.0);
+        self.metrics
+            .set_computation_time(radical_start.elapsed().as_secs_f64() * 1000.0);
 
         // Update reaction kinetics if enabled
         if self.enable_kinetics {
@@ -158,7 +159,8 @@ impl ChemicalModel {
                     params.medium,
                 );
                 let kinetics_time = kinetics_start.elapsed().as_secs_f64() * 1000.0;
-                self.metrics.set_computation_time(self.metrics.computation_time_ms + kinetics_time);
+                self.metrics
+                    .set_computation_time(self.metrics.computation_time_ms + kinetics_time);
             }
         }
 
@@ -176,7 +178,8 @@ impl ChemicalModel {
                     params.medium,
                 );
                 let photo_time = photo_start.elapsed().as_secs_f64() * 1000.0;
-                self.metrics.set_computation_time(self.metrics.computation_time_ms + photo_time);
+                self.metrics
+                    .set_computation_time(self.metrics.computation_time_ms + photo_time);
             }
         }
 
@@ -193,7 +196,10 @@ impl ChemicalModel {
         // Return a simple map with the main radical concentration
         // This is a placeholder - the actual implementation would track multiple species
         let mut map = HashMap::new();
-        map.insert("OH".to_string(), self.radical_initiation.radical_concentration.clone());
+        map.insert(
+            "OH".to_string(),
+            self.radical_initiation.radical_concentration.clone(),
+        );
         map
     }
 
@@ -345,7 +351,7 @@ mod tests {
     fn test_reaction_config() {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
         let mut model = ChemicalModel::new(&grid, true, false).unwrap();
-        
+
         let config = ChemicalReactionConfig {
             reaction_type: ReactionType::Dissociation,
             temperature_dependence: TemperatureDependence::Constant,
@@ -354,7 +360,7 @@ mod tests {
             rate_constant: DEFAULT_REACTION_RATE,
             activation_energy: 0.0,
         };
-        
+
         model.add_reaction_config("test_reaction".to_string(), config);
         assert_eq!(model.reactions.len(), 1);
     }

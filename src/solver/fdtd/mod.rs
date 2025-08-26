@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn test_derivative_computation() {
         use super::finite_difference::FiniteDifference;
-        
+
         let fd = FiniteDifference::new(2).unwrap();
 
         // Create a linear field (derivative should be constant)
@@ -169,8 +169,6 @@ mod tests {
         assert!(dt > 0.0);
         assert!(dt < 1e-3); // Should be smaller than spatial step
     }
-
-
 }
 
 #[cfg(test)]

@@ -70,14 +70,14 @@ impl ConservationEnforcer {
         // Momentum conservation for acoustic waves: ρ₀ ∂v/∂t = -∇p
         // Since we're working with pressure fields, we ensure momentum flux continuity
         // at interfaces by matching pressure gradients weighted by density
-        
+
         // For now, we enforce pressure continuity which implicitly conserves momentum
         // in the weak sense for acoustic waves with matched impedance
-        
+
         fields.zip_mut_with(target, |field_val, &target_val| {
             *field_val = SYMMETRIC_CORRECTION_FACTOR * (*field_val + target_val);
         });
-        
+
         Ok(())
     }
 

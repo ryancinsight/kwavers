@@ -10,8 +10,7 @@ use crate::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Node in the octree structure
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct OctreeNode {
     /// Node index in the octree
     index: usize,
@@ -78,7 +77,6 @@ impl OctreeNode {
     }
 }
 
-
 /// Octree for adaptive mesh refinement
 #[derive(Debug)]
 pub struct Octree {
@@ -103,7 +101,7 @@ impl Octree {
     pub fn max_level(&self) -> usize {
         self.max_level
     }
-    
+
     /// Check if coarsening maintains balance
     pub fn check_coarsen_balance(&mut self, node_id: usize) -> bool {
         // Check refinement level - production code would verify 2:1 balance

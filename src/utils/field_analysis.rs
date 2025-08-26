@@ -447,7 +447,8 @@ impl FieldAnalyzer {
     fn calculate_total_power(&self, field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<f64> {
         let volume_element = grid.dx * grid.dy * grid.dz;
         // Acoustic impedance Z = ρc where ρ is density and c is sound speed
-        let impedance = crate::constants::physics::DENSITY_WATER * crate::constants::physics::SOUND_SPEED_WATER;
+        let impedance =
+            crate::constants::physics::DENSITY_WATER * crate::constants::physics::SOUND_SPEED_WATER;
 
         let power = field
             .iter()
@@ -470,7 +471,8 @@ impl FieldAnalyzer {
         let focal_radius = 2.0 * (self.config.sound_speed / self.config.frequency); // 2 wavelengths
         let mut focal_power = 0.0;
         let volume_element = grid.dx * grid.dy * grid.dz;
-        let impedance = crate::constants::physics::DENSITY_WATER * crate::constants::physics::SOUND_SPEED_WATER;
+        let impedance =
+            crate::constants::physics::DENSITY_WATER * crate::constants::physics::SOUND_SPEED_WATER;
 
         Zip::indexed(field).for_each(|(i, j, k), &pressure| {
             let pos = [

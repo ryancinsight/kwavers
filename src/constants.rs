@@ -5,7 +5,7 @@ use std::f64::consts::PI;
 /// Common numerical constants
 pub mod numerical {
     use std::f64::consts::PI;
-    
+
     /// Default CFL safety factor for stability
     /// For 3D FDTD: max stable value is 1/sqrt(3) ≈ 0.577
     /// Using 0.5 for safety margin (Taflove & Hagness, 2005)
@@ -20,50 +20,51 @@ pub mod numerical {
     pub const DEFAULT_SPATIAL_RESOLUTION: f64 = 1e-3;
     /// Interpolation factor for symmetric corrections
     pub const SYMMETRIC_CORRECTION_FACTOR: f64 = 0.5;
-    
+
     // Core numerical constants
     pub const EPSILON: f64 = 1e-10;
     pub const MAX_ITERATIONS: usize = 1000;
     pub const CONVERGENCE_TOLERANCE: f64 = 1e-6;
-    
+
     // Finite difference coefficients
     pub const FD2_CENTRAL_COEFF: f64 = 0.5;
     pub const FD2_FORWARD_COEFF: [f64; 3] = [-1.5, 2.0, -0.5];
     pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5];
     pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;
     pub const THIRD_ORDER_DIFF_COEFF: f64 = 1.0;
-    
+
     // Fourth-order coefficients
     pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0 / 12.0, -2.0 / 3.0, 0.0, 2.0 / 3.0, -1.0 / 12.0];
-    pub const FD4_LAPLACIAN_COEFF: [f64; 5] = [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
-    
+    pub const FD4_LAPLACIAN_COEFF: [f64; 5] =
+        [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
+
     // FFT scaling
     pub const FFT_FORWARD_SCALE: f64 = 1.0;
     pub const FFT_INVERSE_SCALE_2D: f64 = 1.0;
     pub const FFT_INVERSE_SCALE_3D: f64 = 1.0;
     pub const FFT_K_SCALING: f64 = 2.0 * PI;
-    
+
     // WENO scheme
     pub const WENO_WEIGHT_0: f64 = 0.1;
     pub const WENO_WEIGHT_1: f64 = 0.6;
     pub const WENO_WEIGHT_2: f64 = 0.3;
     pub const WENO_EPSILON: f64 = 1e-6;
     pub const STENCIL_COEFF_1_4: f64 = 0.25;
-    
+
     // Artificial viscosity
     pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
     pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
     pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
     pub const MAX_VISCOSITY_LIMIT: f64 = 2.0;
-    
+
     // PML parameters
     pub const PML_ALPHA_MAX: f64 = 0.0;
     pub const PML_POLYNOMIAL_ORDER: f64 = 2.0;
     pub const PML_SIGMA_OPTIMAL: f64 = 0.8;
-    
+
     // Pressure limits for numerical stability
     pub const MAX_PRESSURE_CLAMP: f64 = 1e9; // Pa - Maximum pressure for clamping in nonlinear simulations
-    
+
     // Numerical thresholds
     pub const INTERPOLATION_ERROR_THRESHOLD: f64 = 1e-6;
     pub const CONSERVATION_ERROR_THRESHOLD: f64 = 1e-10;
@@ -71,7 +72,7 @@ pub mod numerical {
     pub const AMPLITUDE_THRESHOLD: f64 = 1e-10;
     pub const BEAM_PATTERN_THRESHOLD: f64 = 1e-10;
     pub const WEIGHT_SUM_THRESHOLD: f64 = 1e-12;
-    
+
     // Beamforming and sparse matrix constants
     pub const BEAMFORMING_DISTANCE_WEIGHT: f64 = 1.0; // Numerator for distance weighting
     pub const SPHERICAL_SPREADING_POWER: i32 = 2; // Power for spherical spreading (1/r²)
@@ -184,7 +185,7 @@ pub mod optics {
     pub const SPEED_OF_LIGHT: f64 = 299792458.0; // m/s
     pub const PLANCK_CONSTANT: f64 = 6.62607015e-34; // J·s
     pub const PHOTON_ENERGY_CONVERSION: f64 = 1.602176634e-19; // J/eV
-    
+
     // Refractive indices
     pub const WATER_REFRACTIVE_INDEX: f64 = 1.333; // Water at 20°C, 589nm
     pub const GLASS_REFRACTIVE_INDEX: f64 = 1.5; // Typical borosilicate glass

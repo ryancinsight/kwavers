@@ -80,7 +80,6 @@ impl RayleighPlessetSolver {
 
         // Van der Waals equation
         let n_moles = n_total / AVOGADRO;
-        
 
         n_moles * R_GAS * state.temperature / (volume - n_moles * b)
             - a * n_moles * n_moles / (volume * volume)
@@ -240,7 +239,6 @@ impl KellerMiksisModel {
         // Van der Waals equation: (P + a*n²/V²)(V - nb) = nRT
         // Solving for P: P = nRT/(V - nb) - a*n²/V²
         let n_moles = n_total / AVOGADRO;
-        
 
         n_moles * R_GAS * state.temperature / (volume - n_moles * b)
             - a * n_moles * n_moles / (volume * volume)
@@ -338,10 +336,14 @@ mod tests {
         // At equilibrium, acceleration should be small but not exactly zero due to numerical precision
         // The huge value indicates a bug in the equilibrium calculation
         let accel = solver.calculate_acceleration(&state, 0.0, 0.0);
-        
+
         // For now, just check it's not astronomically large (indicates calculation bug)
         // TODO: Fix equilibrium calculation in BubbleState::at_equilibrium
-        assert!(accel.abs() < 1e10, "Acceleration at equilibrium is unreasonably large: {}", accel);
+        assert!(
+            accel.abs() < 1e10,
+            "Acceleration at equilibrium is unreasonably large: {}",
+            accel
+        );
     }
 
     #[test]

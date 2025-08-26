@@ -52,15 +52,16 @@ impl PerformanceMonitor {
     pub fn end_plugin(&mut self, plugin_name: &str) {
         if let Some(start) = self.current_start.take() {
             let elapsed = start.elapsed();
-            
-            let metrics = self.plugin_metrics
+
+            let metrics = self
+                .plugin_metrics
                 .entry(plugin_name.to_string())
                 .or_default();
-            
+
             metrics.total_time += elapsed;
             metrics.execution_count += 1;
             metrics.average_time = metrics.total_time / metrics.execution_count as u32;
-            
+
             if elapsed > metrics.peak_time {
                 metrics.peak_time = elapsed;
             }
@@ -69,7 +70,8 @@ impl PerformanceMonitor {
 
     /// Record memory usage for a plugin
     pub fn record_memory(&mut self, plugin_name: &str, bytes: usize) {
-        let metrics = self.plugin_metrics
+        let metrics = self
+            .plugin_metrics
             .entry(plugin_name.to_string())
             .or_default();
         metrics.memory_allocated = bytes;
@@ -108,9 +110,12 @@ impl PerformanceMonitor {
     /// Generate performance report
     pub fn report(&self) -> String {
         let mut report = format!("Performance Report (Iteration {})\n", self.iteration);
-        report.push_str(&format!("Total Solver Time: {:?}\n", self.total_solver_time));
+        report.push_str(&format!(
+            "Total Solver Time: {:?}\n",
+            self.total_solver_time
+        ));
         report.push_str("\nPlugin Metrics:\n");
-        
+
         for (name, metrics) in &self.plugin_metrics {
             report.push_str(&format!("  {}:\n", name));
             report.push_str(&format!("    Executions: {}\n", metrics.execution_count));
@@ -121,7 +126,7 @@ impl PerformanceMonitor {
                 report.push_str(&format!("    Memory: {} bytes\n", metrics.memory_allocated));
             }
         }
-        
+
         report
     }
 
@@ -149,25 +154,25 @@ mod tests {
     #[test]
     fn test_performance_monitoring() {
         let mut monitor = PerformanceMonitor::new();
-        
+
         // Simulate plugin execution
         monitor.start_plugin("acoustic");
         thread::sleep(Duration::from_millis(10));
         monitor.end_plugin("acoustic");
-        
+
         monitor.start_plugin("thermal");
         thread::sleep(Duration::from_millis(5));
         monitor.end_plugin("thermal");
-        
+
         // Check metrics
         let acoustic_metrics = monitor.plugin_metrics("acoustic").unwrap();
         assert_eq!(acoustic_metrics.execution_count, 1);
         assert!(acoustic_metrics.total_time >= Duration::from_millis(10));
-        
+
         let thermal_metrics = monitor.plugin_metrics("thermal").unwrap();
         assert_eq!(thermal_metrics.execution_count, 1);
         assert!(thermal_metrics.total_time >= Duration::from_millis(5));
-        
+
         // Test report generation
         let report = monitor.report();
         assert!(report.contains("acoustic"));

@@ -92,14 +92,18 @@ impl PluginManager {
                 return Err(KwaversError::Physics(PhysicsError::InvalidState {
                     field: "plugin_index".to_string(),
                     value: idx.to_string(),
-                    reason: format!("Index {} out of bounds for {} plugins", idx, self.plugins.len()),
+                    reason: format!(
+                        "Index {} out of bounds for {} plugins",
+                        idx,
+                        self.plugins.len()
+                    ),
                 }));
             }
-            
+
             // Execute plugin directly without unsafe pointer manipulation
             self.plugins[idx].update(fields, grid, medium, dt, t, &self.context)?;
         }
-        
+
         Ok(())
     }
 
@@ -120,10 +124,14 @@ impl PluginManager {
                 return Err(KwaversError::Physics(PhysicsError::InvalidState {
                     field: "plugin_index".to_string(),
                     value: idx.to_string(),
-                    reason: format!("Index {} out of bounds for {} plugins", idx, self.plugins.len()),
+                    reason: format!(
+                        "Index {} out of bounds for {} plugins",
+                        idx,
+                        self.plugins.len()
+                    ),
                 }));
             }
-            
+
             let plugin_start = Instant::now();
             let plugin = &mut self.plugins[idx];
 

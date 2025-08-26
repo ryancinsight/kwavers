@@ -175,7 +175,10 @@ impl<'a> DirectPluginFieldAccess<'a> {
     }
 
     /// Get a mutable view of a field
-    pub fn get_field_mut(&mut self, field: UnifiedFieldType) -> KwaversResult<ArrayViewMut3<'_, f64>> {
+    pub fn get_field_mut(
+        &mut self,
+        field: UnifiedFieldType,
+    ) -> KwaversResult<ArrayViewMut3<'_, f64>> {
         let index = field.index();
         if !self.writable_indices.contains(&index) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
@@ -187,8 +190,6 @@ impl<'a> DirectPluginFieldAccess<'a> {
 
         Ok(self.fields.index_axis_mut(ndarray::Axis(0), index))
     }
-
-
 }
 
 #[cfg(test)]

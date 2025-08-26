@@ -5,7 +5,7 @@ use kwavers::medium::homogeneous::HomogeneousMedium;
 use kwavers::physics::plugin::PluginManager;
 use kwavers::solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers::solver::pstd::{PstdConfig, PstdPlugin};
-use ndarray::{Array4, Zip, s};
+use ndarray::{s, Array4, Zip};
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;
@@ -227,7 +227,7 @@ fn test_wave_propagation() {
             center_pressure.is_finite(),
             "FDTD: Simulation should complete without NaN/Inf"
         );
-        
+
         // Note: Wave propagation is not working correctly yet
         // This is a known issue that needs further investigation
     }
@@ -269,13 +269,13 @@ fn test_wave_propagation() {
                 .expect("Failed to execute plugins");
         }
 
-        // Check that simulation completed without NaN or infinity  
+        // Check that simulation completed without NaN or infinity
         let center_pressure = fields_pstd[[0, center, center, center]];
         assert!(
             center_pressure.is_finite(),
             "PSTD: Simulation should complete without NaN/Inf"
         );
-        
+
         // Note: Wave propagation is not working correctly yet
         // This is a known issue that needs further investigation
     }

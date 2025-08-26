@@ -24,8 +24,7 @@ pub use output::OutputConfig;
 pub use simulation::{MediumConfig, SimulationConfig};
 pub use source::SourceConfig;
 
-#[derive(Debug, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     pub simulation: SimulationConfig,
     pub source: SourceConfig,
@@ -48,7 +47,6 @@ struct TomlSerializeHelper<'a> {
     source: &'a SourceConfig,
     output: &'a OutputConfig,
 }
-
 
 impl Config {
     /// Load configuration from TOML file - parses ONCE for efficiency

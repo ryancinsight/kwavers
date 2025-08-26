@@ -271,8 +271,10 @@ impl InteractiveControls {
     /// Undo last parameter change
     pub fn undo_last_change(&mut self) -> KwaversResult<()> {
         if let Some(last_change) = self.parameter_history.pop() {
-            self.current_values
-                .insert(last_change.parameter_name.clone(), last_change.previous_value);
+            self.current_values.insert(
+                last_change.parameter_name.clone(),
+                last_change.previous_value,
+            );
             info!("Undid change to parameter: {}", last_change.parameter_name);
             Ok(())
         } else {

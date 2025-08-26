@@ -2,11 +2,11 @@
 //!
 //! Complete transducer design combining all components.
 
-use crate::error::{ConfigError, KwaversError, KwaversResult};
 use super::{
-    ElementGeometry, FrequencyResponse, PiezoMaterial, BackingLayer,
-    MatchingLayer, DirectivityPattern, TransducerSensitivity
+    BackingLayer, DirectivityPattern, ElementGeometry, FrequencyResponse, MatchingLayer,
+    PiezoMaterial, TransducerSensitivity,
 };
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Complete transducer design specification
 #[derive(Debug, Clone)]
@@ -45,7 +45,7 @@ impl TransducerDesign {
         let pitch = aperture / num_elements as f64;
         let kerf = pitch * 0.1; // 10% kerf
         let width = pitch - kerf;
-        
+
         // Height depends on focusing
         let height = if focal_length.is_some() {
             aperture / 4.0 // Smaller for focused
@@ -79,12 +79,7 @@ impl TransducerDesign {
         )?;
 
         // Calculate directivity pattern
-        let directivity = DirectivityPattern::rectangular_element(
-            width,
-            height,
-            frequency,
-            180,
-        );
+        let directivity = DirectivityPattern::rectangular_element(width, height, frequency, 180);
 
         // Calculate sensitivity
         let sensitivity = TransducerSensitivity::from_parameters(
@@ -108,7 +103,10 @@ impl TransducerDesign {
     /// Validate complete design
     pub fn validate(&self) -> KwaversResult<()> {
         // Check mode separation
-        if !self.geometry.validate_mode_separation(self.piezo.sound_speed) {
+        if !self
+            .geometry
+            .validate_mode_separation(self.piezo.sound_speed)
+        {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "mode_separation".to_string(),
                 value: "insufficient".to_string(),

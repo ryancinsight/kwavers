@@ -76,7 +76,7 @@ mod tests {
         for _ in 0..n_steps {
             // Create density array from the medium
             let density_array = Array3::from_elem((nx, ny, nz), density);
-            
+
             solver
                 .update_velocity(
                     &mut velocity_x,
@@ -90,7 +90,7 @@ mod tests {
             // Create density and sound speed arrays from the medium
             let density_array = Array3::from_elem((nx, ny, nz), density);
             let sound_speed_array = Array3::from_elem((nx, ny, nz), sound_speed);
-            
+
             solver
                 .update_pressure(
                     &mut pressure,
@@ -240,7 +240,9 @@ mod tests {
             }
 
             // Compute derivative using the finite difference operator
-            let deriv = solver.fd_operator.compute_derivative(&field.view(), 0, grid.dx)?;
+            let deriv = solver
+                .fd_operator
+                .compute_derivative(&field.view(), 0, grid.dx)?;
 
             // Check accuracy in the interior, away from boundaries
             let margin = order / 2 + 3; // Extra margin for boundary effects

@@ -136,13 +136,8 @@ impl TimeReversalReconstructor {
         // Prepare time-reversed signals
         // Need to handle medium trait bounds properly
         let medium = solver.medium().clone();
-        let reversed_signals = self.prepare_reversed_signals(
-            sensor_data,
-            grid,
-            solver.time().dt,
-            &medium,
-            frequency,
-        )?;
+        let reversed_signals =
+            self.prepare_reversed_signals(sensor_data, grid, solver.time().dt, &medium, frequency)?;
 
         // Initialize reconstruction field
         let mut reconstruction = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));

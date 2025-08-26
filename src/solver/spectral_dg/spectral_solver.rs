@@ -33,7 +33,7 @@ impl SpectralSolver {
     pub fn new(order: usize, grid: Arc<Grid>) -> Self {
         Self::with_wave_speed(order, grid, crate::constants::physics::SOUND_SPEED_WATER)
     }
-    
+
     /// Create a new spectral solver with specified wave speed
     pub fn with_wave_speed(order: usize, grid: Arc<Grid>, wave_speed: f64) -> Self {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);

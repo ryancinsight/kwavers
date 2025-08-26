@@ -2,7 +2,7 @@
 //!
 //! This module contains stub interfaces for future GPU acceleration support.
 //! Currently, all GPU functionality returns NotImplemented errors.
-//! 
+//!
 //! To use GPU acceleration in the future:
 //! - Enable the `gpu` feature in Cargo.toml
 //! - Implement the actual GPU kernels

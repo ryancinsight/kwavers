@@ -38,25 +38,33 @@ impl Default for Grid {
 
 impl Grid {
     /// Creates a new grid with specified dimensions and spacing.
-    /// 
+    ///
     /// # Panics
     /// Panics if dimensions or spacing are not positive.
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
-        Self::create(nx, ny, nz, dx, dy, dz)
-            .expect("Invalid grid parameters")
+        Self::create(nx, ny, nz, dx, dy, dz).expect("Invalid grid parameters")
     }
 
     /// Creates a new grid with specified dimensions and spacing, returning an error if invalid.
-    pub fn create(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
+    pub fn create(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+    ) -> KwaversResult<Self> {
         if nx == 0 || ny == 0 || nz == 0 {
-            return Err(KwaversError::InvalidInput(
-                format!("Grid dimensions must be positive, got nx={}, ny={}, nz={}", nx, ny, nz)
-            ));
+            return Err(KwaversError::InvalidInput(format!(
+                "Grid dimensions must be positive, got nx={}, ny={}, nz={}",
+                nx, ny, nz
+            )));
         }
         if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
-            return Err(KwaversError::InvalidInput(
-                format!("Grid spacing must be positive, got dx={}, dy={}, dz={}", dx, dy, dz)
-            ));
+            return Err(KwaversError::InvalidInput(format!(
+                "Grid spacing must be positive, got dx={}, dy={}, dz={}",
+                dx, dy, dz
+            )));
         }
 
         let grid = Self {
@@ -110,7 +118,7 @@ impl Grid {
     /// Compute k-space wavenumbers in x-direction
     pub fn compute_kx(&self) -> Array1<f64> {
         let dk = 2.0 * PI / (self.nx as f64 * self.dx);
-        
+
         Array1::from_iter((0..self.nx).map(|i| {
             let idx = if i <= self.nx / 2 {
                 i as f64
@@ -124,7 +132,7 @@ impl Grid {
     /// Compute k-space wavenumbers in y-direction
     pub fn compute_ky(&self) -> Array1<f64> {
         let dk = 2.0 * PI / (self.ny as f64 * self.dy);
-        
+
         Array1::from_iter((0..self.ny).map(|j| {
             let idx = if j <= self.ny / 2 {
                 j as f64
@@ -138,7 +146,7 @@ impl Grid {
     /// Compute k-space wavenumbers in z-direction
     pub fn compute_kz(&self) -> Array1<f64> {
         let dk = 2.0 * PI / (self.nz as f64 * self.dz);
-        
+
         Array1::from_iter((0..self.nz).map(|k| {
             let idx = if k <= self.nz / 2 {
                 k as f64
@@ -193,8 +201,6 @@ impl Grid {
             self.dz * (self.nz.saturating_sub(1)) as f64,
         )
     }
-
-
 
     /// Generates a 1D array of the physical coordinates of the grid points along the x-axis.
     ///

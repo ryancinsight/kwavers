@@ -8,8 +8,7 @@ use crate::grid::Grid;
 use crate::medium::{core::CoreMedium, HomogeneousMedium};
 
 /// Validation results for numerical accuracy tests
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ValidationResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
@@ -17,7 +16,6 @@ pub struct ValidationResults {
     pub conservation_tests: ConservationResults,
     pub convergence_tests: ConvergenceResults,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct DispersionResults {
@@ -363,10 +361,10 @@ impl NumericalValidator {
             "PSTD" => 0.5_f64,
             _ => 1.0_f64,
         };
-        
+
         // Expected attenuation: exp(-α * d)
         let expected_ratio = (-alpha * distance).exp();
-        
+
         // Return absorption coefficient accuracy (1.0 = perfect)
         1.0_f64 - (1.0_f64 - expected_ratio).abs()
     }
@@ -375,11 +373,11 @@ impl NumericalValidator {
         // Calculate spurious reflections from grid dispersion
         // Based on points per wavelength
         let ppw = grid.dx.min(grid.dy).min(grid.dz) * 10.0; // Approximate PPW
-        
+
         match solver {
             "FDTD" if ppw > 10.0 => 0.001, // < 0.1% for well-resolved
             "FDTD" => 0.01 * (10.0 / ppw), // Increases with coarse grid
-            "PSTD" => 0.0001, // Spectral methods have minimal dispersion
+            "PSTD" => 0.0001,              // Spectral methods have minimal dispersion
             _ => 0.05,
         }
     }

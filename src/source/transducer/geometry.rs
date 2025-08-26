@@ -47,7 +47,10 @@ impl ElementGeometry {
         if width <= 0.0 || height <= 0.0 || thickness <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "element_dimensions".to_string(),
-                value: format!("width={}, height={}, thickness={}", width, height, thickness),
+                value: format!(
+                    "width={}, height={}, thickness={}",
+                    width, height, thickness
+                ),
                 constraint: "All dimensions must be positive".to_string(),
             }));
         }
@@ -137,7 +140,7 @@ impl ElementGeometry {
     pub fn validate_mode_separation(&self, sound_speed: f64) -> bool {
         let main_freq = self.resonance_frequency(sound_speed);
         let (width_mode, height_mode) = self.lateral_modes(sound_speed);
-        
+
         width_mode > 2.0 * main_freq && height_mode > 2.0 * main_freq
     }
 

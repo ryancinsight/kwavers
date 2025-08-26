@@ -315,11 +315,10 @@ impl RefinementStrategy {
                                 let nj = (j as i32 + dj) as usize;
                                 let nk = (k as i32 + dk) as usize;
 
-                                if ni < nx && nj < ny && nk < nz
-                                    && indicator[[ni, nj, nk]] > 0.5 {
-                                        has_marked_neighbor = true;
-                                        break;
-                                    }
+                                if ni < nx && nj < ny && nk < nz && indicator[[ni, nj, nk]] > 0.5 {
+                                    has_marked_neighbor = true;
+                                    break;
+                                }
                             }
                             if has_marked_neighbor {
                                 break;

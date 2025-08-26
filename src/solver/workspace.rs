@@ -105,10 +105,12 @@ impl WorkspacePool {
         #[cfg(not(feature = "parallel"))]
         let mut pool = match self.workspaces.lock() {
             Ok(p) => p,
-            Err(e) => return Err(KwaversError::System(SystemError::ResourceExhausted {
-                resource: "workspace pool".to_string(),
-                reason: format!("Failed to acquire lock: {}", e),
-            })),
+            Err(e) => {
+                return Err(KwaversError::System(SystemError::ResourceExhausted {
+                    resource: "workspace pool".to_string(),
+                    reason: format!("Failed to acquire lock: {}", e),
+                }))
+            }
         };
 
         let workspace = if let Some(ws) = pool.pop() {

@@ -4,8 +4,7 @@
 //! These tests verify that both solvers run without crashing and produce output.
 
 use kwavers::{
-    Grid, HomogeneousMedium, PluginManager,
-    FdtdConfig, FdtdPlugin, PstdConfig, PstdPlugin
+    FdtdConfig, FdtdPlugin, Grid, HomogeneousMedium, PluginManager, PstdConfig, PstdPlugin,
 };
 use ndarray::{Array3, Array4};
 
@@ -17,7 +16,7 @@ fn test_plane_wave_propagation() {
 
     // Simple initial condition
     let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    initial_pressure[[grid.nx/2, grid.ny/2, grid.nz/2]] = 1e6;
+    initial_pressure[[grid.nx / 2, grid.ny / 2, grid.nz / 2]] = 1e6;
 
     // Run with FDTD - just verify it doesn't crash
     let fdtd_result = run_fdtd_simulation(&grid, &medium, &initial_pressure);
@@ -40,9 +39,9 @@ fn test_standing_wave_analytical() {
     let mut initial_pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
     for i in 0..grid.nx {
         let value = (i as f64 * 0.2).sin() * 1e5;
-        initial_pressure[[i, grid.ny/2, grid.nz/2]] = value;
+        initial_pressure[[i, grid.ny / 2, grid.nz / 2]] = value;
     }
-    
+
     // Just run both solvers and ensure they complete
     let _ = run_fdtd_simulation(&grid, &medium, &initial_pressure);
     let _ = run_pstd_simulation(&grid, &medium, &initial_pressure);
@@ -53,10 +52,10 @@ fn test_standing_wave_analytical() {
 fn test_dispersion_characteristics() {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
     let medium = HomogeneousMedium::water(&grid);
-    
+
     // Uniform pressure field
     let initial_pressure = Array3::ones((grid.nx, grid.ny, grid.nz)) * 1e5;
-    
+
     // Both solvers should handle this without crashing
     let _ = run_fdtd_simulation(&grid, &medium, &initial_pressure);
     let _ = run_pstd_simulation(&grid, &medium, &initial_pressure);

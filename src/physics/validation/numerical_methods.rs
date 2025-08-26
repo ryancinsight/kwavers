@@ -50,15 +50,15 @@ mod tests {
         }
 
         // Propagate one wavelength
-        use crate::source::NullSource;
-        use crate::medium::HomogeneousMedium;
         use crate::boundary::pml::{PMLBoundary, PMLConfig};
-        
+        use crate::medium::HomogeneousMedium;
+        use crate::source::NullSource;
+
         let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let pml_config = PMLConfig::default();
         let mut boundary = PMLBoundary::new(pml_config).unwrap();
-        
+
         let dt = solver.get_timestep();
         let steps = (wavelength / (1500.0 * dt)) as usize;
         let initial = pressure.clone();
@@ -67,7 +67,9 @@ mod tests {
         for _ in 0..steps {
             // PSTD solver has pressure field directly
             solver.pressure = pressure.clone();
-            solver.step(&medium, &source, &mut boundary, &grid, time, dt).unwrap();
+            solver
+                .step(&medium, &source, &mut boundary, &grid, time, dt)
+                .unwrap();
             pressure = solver.pressure.clone();
             time += dt;
         }
@@ -264,7 +266,7 @@ mod tests {
         // The AMR manager uses internal wavelet-based refinement criteria
         // which are applied during the refine() method call
         assert_eq!(amr.octree().max_level(), 3);
-        
+
         // Test that mesh adaptation can be triggered (though actual refinement
         // depends on the field gradients exceeding thresholds)
         let adaptation_result = amr.adapt_mesh(&field, 0.1);

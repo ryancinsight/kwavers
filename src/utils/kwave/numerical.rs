@@ -32,7 +32,7 @@ impl NumericalUtils {
                     operation: "apply_window".to_string(),
                     expected: format!("length {}", signal.len()),
                     actual: format!("length {}", window.len()),
-                }
+                },
             ));
         }
         Ok(signal * window)
@@ -51,7 +51,9 @@ impl NumericalUtils {
     pub fn pad_array(arr: &Array1<f64>, target_size: usize) -> Array1<f64> {
         let mut padded = Array1::zeros(target_size);
         let copy_size = arr.len().min(target_size);
-        padded.slice_mut(ndarray::s![..copy_size]).assign(&arr.slice(ndarray::s![..copy_size]));
+        padded
+            .slice_mut(ndarray::s![..copy_size])
+            .assign(&arr.slice(ndarray::s![..copy_size]));
         padded
     }
 }

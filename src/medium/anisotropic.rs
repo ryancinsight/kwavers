@@ -250,10 +250,10 @@ impl AnisotropicTissueProperties {
         // Adjusted from Gennisson et al. (2010) for numerical stability
         // Ensuring positive definiteness: c11 > c12, (c11-c12)/2 > 0
         let c11 = 15e9; // Pa - transverse stiffness
-        let c12 = 7e9;  // Pa - coupling coefficient (must be < c11)
-        let c13 = 9e9;  // Pa - transverse-longitudinal coupling
+        let c12 = 7e9; // Pa - coupling coefficient (must be < c11)
+        let c13 = 9e9; // Pa - transverse-longitudinal coupling
         let c33 = 25e9; // Pa - longitudinal stiffness (along fibers)
-        let c44 = 3e9;  // Pa - shear modulus
+        let c44 = 3e9; // Pa - shear modulus
 
         let stiffness = StiffnessTensor::transversely_isotropic(c11, c12, c13, c33, c44).unwrap();
 
@@ -561,11 +561,11 @@ mod tests {
     fn test_muscle_anisotropy() {
         let muscle = AnisotropicTissueProperties::muscle(PI / 4.0);
         assert!(muscle.fiber_angles.is_some());
-        
+
         // Basic property checks
         assert_eq!(muscle.density, 1050.0);
         assert!(muscle.fiber_angles.unwrap().0 > 0.0);
-        
+
         // Skip wave velocity calculation for now - Christoffel matrix implementation needs fixing
         // TODO: Fix Christoffel matrix eigenvalue calculation
     }

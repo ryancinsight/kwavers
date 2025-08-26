@@ -65,9 +65,9 @@ impl Default for ThermalDiffusionConfig {
     fn default() -> Self {
         Self {
             enable_bioheat: true,
-            perfusion_rate: 0.5e-3,       // 0.5 mL/g/min typical tissue
-            blood_density: 1050.0,        // kg/m³
-            blood_specific_heat: 3840.0,  // J/(kg·K)
+            perfusion_rate: 0.5e-3,      // 0.5 mL/g/min typical tissue
+            blood_density: 1050.0,       // kg/m³
+            blood_specific_heat: 3840.0, // J/(kg·K)
             arterial_temperature: crate::constants::temperature::BODY_TEMPERATURE_K, // 37°C in Kelvin
             enable_hyperbolic: false,
             relaxation_time: 20.0, // 20s for tissue
@@ -574,7 +574,8 @@ impl ThermalDiffusionSolver {
     /// Update cumulative thermal dose using CEM43 formulation
     fn update_thermal_dose(&mut self, dt: f64) -> KwaversResult<()> {
         if let Some(ref mut dose) = self.thermal_dose {
-            let t_ref = self.config.dose_reference_temperature + crate::constants::temperature::WATER_FREEZING_K; // Convert to Kelvin
+            let t_ref = self.config.dose_reference_temperature
+                + crate::constants::temperature::WATER_FREEZING_K; // Convert to Kelvin
 
             Zip::from(&self.temperature)
                 .and(dose)

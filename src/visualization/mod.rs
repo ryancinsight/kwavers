@@ -315,15 +315,15 @@ impl VisualizationEngine {
 
     /// Get current visualization metrics
     pub fn get_metrics(&self) -> VisualizationMetrics {
-        self.metrics.lock()
+        self.metrics
+            .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone()
     }
 
     /// Check if performance targets are met
     pub fn meets_performance_targets(&self) -> bool {
-        let metrics = self.metrics.lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let metrics = self.metrics.lock().unwrap_or_else(|e| e.into_inner());
         metrics.fps >= self.config.target_fps * 0.9 // 90% of target FPS
     }
 

@@ -91,8 +91,7 @@ impl FieldValidationConfig {
 ///
 /// This structure centralizes all validation limits and thresholds, providing
 /// a single source of truth for numerical bounds and stability criteria.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ValidationConfig {
     /// Pressure field validation
     pub pressure: PressureValidation,
@@ -198,7 +197,6 @@ pub struct TimeStepValidation {
     /// Maximum simulation time [s]
     pub max_simulation_time: f64,
 }
-
 
 impl Default for PressureValidation {
     fn default() -> Self {

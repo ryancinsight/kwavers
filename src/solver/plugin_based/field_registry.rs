@@ -72,7 +72,7 @@ impl FieldRegistry {
         description: String,
     ) -> KwaversResult<()> {
         let idx = field_type as usize;
-        
+
         // Check if already registered
         if idx < self.fields.len() && self.fields[idx].is_some() {
             return Ok(());
@@ -100,10 +100,7 @@ impl FieldRegistry {
     }
 
     /// Register multiple fields at once
-    pub fn register_fields(
-        &mut self,
-        fields: &[(UnifiedFieldType, String)],
-    ) -> KwaversResult<()> {
+    pub fn register_fields(&mut self, fields: &[(UnifiedFieldType, String)]) -> KwaversResult<()> {
         for (field_type, description) in fields {
             self.register_field(*field_type, description.clone())?;
         }
@@ -111,15 +108,17 @@ impl FieldRegistry {
     }
 
     /// Get a field view (zero-copy, read-only)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
+    pub fn get_field(
+        &self,
+        field_type: UnifiedFieldType,
+    ) -> Result<ArrayView3<'_, f64>, FieldError> {
         let metadata = self.get_metadata(field_type)?;
-        
+
         if !metadata.active {
             return Err(FieldError::Inactive(field_type.name().to_string()));
         }
 
-        let data = self.data.as_ref()
-            .ok_or(FieldError::DataNotInitialized)?;
+        let data = self.data.as_ref().ok_or(FieldError::DataNotInitialized)?;
 
         Ok(data.index_axis(Axis(0), metadata.index))
     }
@@ -131,18 +130,18 @@ impl FieldRegistry {
     ) -> Result<ArrayViewMut3<'_, f64>, FieldError> {
         // Get metadata info without borrowing self
         let idx = field_type as usize;
-        let (metadata_index, is_active) = self.fields
+        let (metadata_index, is_active) = self
+            .fields
             .get(idx)
             .and_then(|opt| opt.as_ref())
             .map(|m| (m.index, m.active))
             .ok_or_else(|| FieldError::NotRegistered(field_type.name().to_string()))?;
-        
+
         if !is_active {
             return Err(FieldError::Inactive(field_type.name().to_string()));
         }
 
-        let data = self.data.as_mut()
-            .ok_or(FieldError::DataNotInitialized)?;
+        let data = self.data.as_mut().ok_or(FieldError::DataNotInitialized)?;
 
         Ok(data.index_axis_mut(Axis(0), metadata_index))
     }
@@ -160,7 +159,8 @@ impl FieldRegistry {
                 field: field_type.name().to_string(),
                 expected: self.grid_dims,
                 actual: actual_dims,
-            }.into());
+            }
+            .into());
         }
 
         let mut field_view = self.get_field_mut(field_type)?;
@@ -215,7 +215,7 @@ impl FieldRegistry {
     }
 
     // Private helper methods
-    
+
     fn get_metadata(&self, field_type: UnifiedFieldType) -> Result<&FieldMetadata, FieldError> {
         self.fields
             .get(field_type as usize)
@@ -258,15 +258,16 @@ mod tests {
         let mut registry = FieldRegistry::new(&grid);
 
         // Register fields
-        registry.register_field(
-            UnifiedFieldType::Pressure,
-            "Pressure field".to_string()
-        ).unwrap();
+        registry
+            .register_field(UnifiedFieldType::Pressure, "Pressure field".to_string())
+            .unwrap();
 
-        registry.register_field(
-            UnifiedFieldType::Temperature,
-            "Temperature field".to_string()
-        ).unwrap();
+        registry
+            .register_field(
+                UnifiedFieldType::Temperature,
+                "Temperature field".to_string(),
+            )
+            .unwrap();
 
         // Build the registry
         registry.build().unwrap();

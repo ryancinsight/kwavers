@@ -2,7 +2,6 @@
 //!
 //! Implements beam width and directivity calculations
 
-
 /// Beam pattern calculations
 #[derive(Debug)]
 pub struct BeamPatterns;

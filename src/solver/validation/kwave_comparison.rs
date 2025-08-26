@@ -177,7 +177,7 @@ impl KWaveValidator {
             solver.update_velocity(&medium, &self.grid, dt)?;
             time += dt;
         }
-        
+
         // Get the final pressure field from the solver
         let final_pressure = solver.get_pressure().clone();
 

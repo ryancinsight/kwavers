@@ -301,8 +301,7 @@ impl AcousticLens {
     /// Calculate focal length in the medium
     pub fn focal_length(&self, medium_sound_speed: f64) -> f64 {
         let speed_ratio = medium_sound_speed / self.sound_speed;
-        self.radius_of_curvature * medium_sound_speed
-            / (medium_sound_speed - self.sound_speed)
+        self.radius_of_curvature * medium_sound_speed / (medium_sound_speed - self.sound_speed)
     }
 
     /// Calculate f-number (focal length / aperture)

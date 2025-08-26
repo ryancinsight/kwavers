@@ -3,10 +3,10 @@
 //! Implements the Principle of Least Privilege by restricting plugin access
 //! to only the fields they need.
 
+use super::field_registry::FieldRegistry;
 use crate::error::FieldError;
 use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{ArrayView3, ArrayViewMut3};
-use super::field_registry::FieldRegistry;
 
 /// Field provider for plugins with restricted access
 pub struct FieldProvider<'a> {
@@ -24,7 +24,10 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Get a field view (zero-copy, read-only)
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Result<ArrayView3<'_, f64>, FieldError> {
+    pub fn get_field(
+        &self,
+        field_type: UnifiedFieldType,
+    ) -> Result<ArrayView3<'_, f64>, FieldError> {
         self.check_permission(field_type)?;
         self.registry.get_field(field_type)
     }
@@ -75,14 +78,12 @@ mod tests {
         let mut registry = FieldRegistry::new(&grid);
 
         // Register multiple fields
-        registry.register_field(
-            UnifiedFieldType::Pressure,
-            "Pressure".to_string()
-        ).unwrap();
-        registry.register_field(
-            UnifiedFieldType::Temperature,
-            "Temperature".to_string()
-        ).unwrap();
+        registry
+            .register_field(UnifiedFieldType::Pressure, "Pressure".to_string())
+            .unwrap();
+        registry
+            .register_field(UnifiedFieldType::Temperature, "Temperature".to_string())
+            .unwrap();
         registry.build().unwrap();
 
         // Create provider with limited access
@@ -91,10 +92,10 @@ mod tests {
 
         // Should access allowed field
         assert!(provider.has_field(UnifiedFieldType::Pressure));
-        
+
         // Should not access disallowed field
         assert!(!provider.has_field(UnifiedFieldType::Temperature));
-        
+
         // Should fail to get disallowed field
         assert!(provider.get_field(UnifiedFieldType::Temperature).is_err());
     }

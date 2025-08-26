@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-7.2.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.14.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-beta-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-mostly%20passing-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -17,7 +17,8 @@ Production-grade Rust library for acoustic wave simulation with plugin architect
 - **No panics** - Robust error handling throughout
 
 ### ⚠️ Known Issues (Non-Critical)
-- **435 warnings** - Mostly unused variables in trait implementations
+- **436 warnings** - Mostly unused variables in trait implementations
+- **4 large modules** - Exceed 500 lines, violate GRASP principle
 - **Complex physics edge cases** - Christoffel matrix eigenvalues need work
 - **Bubble dynamics** - Equilibrium calculation needs refinement
 
@@ -121,4 +122,4 @@ MIT
 
 ---
 
-**Grade: B+ (87%)** - Solid beta software ready for real use with known limitations in edge cases.
+**Grade: B (82%)** - Solid beta software ready for real use with structural improvements needed.

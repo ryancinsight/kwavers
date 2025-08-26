@@ -1,8 +1,7 @@
 //! Physical constants and standard values
-//! 
+//!
 //! Single Source of Truth (SSOT) for all physical constants used in simulations.
 //! All values are in SI units unless otherwise specified.
-
 
 // ============================================================================
 // Fundamental Physical Constants

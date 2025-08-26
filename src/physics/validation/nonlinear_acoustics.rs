@@ -3,7 +3,9 @@
 //! Reference: Hamilton & Blackstock (1998) - "Nonlinear Acoustics"
 
 use crate::grid::Grid;
-use crate::physics::mechanics::acoustic_wave::kuznetsov::config::{AcousticEquationMode, KuznetsovConfig};
+use crate::physics::mechanics::acoustic_wave::kuznetsov::config::{
+    AcousticEquationMode, KuznetsovConfig,
+};
 use crate::physics::mechanics::acoustic_wave::kuznetsov::solver::KuznetsovWave;
 use crate::physics::traits::AcousticWaveModel;
 use ndarray::{Array3, Array4};
@@ -30,7 +32,8 @@ mod tests {
             equation_mode: AcousticEquationMode::FullKuznetsov,
             cfl_factor: 0.5,
             nonlinearity_coefficient: BETA_WATER,
-            acoustic_diffusivity: ATTENUATION_WATER * 1500.0_f64.powi(3) / (2.0 * std::f64::consts::PI * std::f64::consts::PI * frequency.powi(2)),
+            acoustic_diffusivity: ATTENUATION_WATER * 1500.0_f64.powi(3)
+                / (2.0 * std::f64::consts::PI * std::f64::consts::PI * frequency.powi(2)),
             use_k_space_correction: false,
             k_space_correction_order: 2,
             spatial_order: 4,
@@ -43,7 +46,8 @@ mod tests {
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
+        let mut solver =
+            KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 
         // Initialize sinusoidal wave
         let wavelength = 1500.0 / frequency;
@@ -53,7 +57,7 @@ mod tests {
         // Initialize fields array (4D: [field_type, x, y, z])
         let mut fields = Array4::zeros((1, nx, 1, 1)); // Single field for pressure
         let prev_pressure = Array3::zeros((nx, 1, 1));
-        
+
         // Initialize pressure field with sinusoidal wave
         for i in 0..nx {
             let x = i as f64 * dx;
@@ -61,11 +65,11 @@ mod tests {
         }
 
         // Create a null source and medium for testing
-        use crate::source::NullSource;
         use crate::medium::HomogeneousMedium;
+        use crate::source::NullSource;
         let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
-        
+
         // Calculate time step
         let dt = 0.5 * dx / 1500.0; // CFL condition
         let mut t = 0.0;
@@ -76,7 +80,7 @@ mod tests {
             solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
             t += dt;
         }
-        
+
         // Extract pressure for analysis
         let mut pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
@@ -141,7 +145,8 @@ mod tests {
         };
 
         let grid = Grid::new(nx, 1, 1, dx, dx, dx);
-        let mut solver = KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
+        let mut solver =
+            KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 
         // Initialize sine wave
         let wavelength = 1500.0 / frequency;
@@ -150,18 +155,18 @@ mod tests {
         // Initialize fields array (4D: [field_type, x, y, z])
         let mut fields = Array4::zeros((1, nx, 1, 1));
         let prev_pressure = Array3::zeros((nx, 1, 1));
-        
+
         for i in 0..nx / 4 {
             let x = i as f64 * dx;
             fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
         }
 
         // Create a null source and medium for testing
-        use crate::source::NullSource;
         use crate::medium::HomogeneousMedium;
+        use crate::source::NullSource;
         let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
-        
+
         // Calculate time step
         let dt = 0.5 * dx / 1500.0; // CFL condition
         let mut t = 0.0;
@@ -175,7 +180,7 @@ mod tests {
             solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
             t += dt;
         }
-        
+
         // Extract pressure for analysis
         let mut pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {

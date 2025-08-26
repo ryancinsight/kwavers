@@ -84,7 +84,7 @@ impl TransferOperators {
         // Generate based on interface normal direction
         // Generate interface point indices based on geometry
         let grid_size = (geometry.num_points as f64).sqrt() as usize;
-        
+
         match geometry.normal_direction {
             0 => {
                 // X-normal interface
