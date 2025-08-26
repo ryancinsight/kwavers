@@ -59,7 +59,7 @@ impl MLModel for TissueClassifierModel {
         let (batch, features) = input.dim();
         let input_3d = input
             .clone()
-            .into_shape((batch, features, 1))
+            .into_shape_with_order((batch, features, 1))
             .map_err(|e| {
                 KwaversError::System(crate::error::SystemError::MemoryAllocation {
                     requested_bytes: batch * features * std::mem::size_of::<f32>(),
@@ -150,7 +150,7 @@ impl MLModel for ParameterOptimizerModel {
         let (batch, features) = input.dim();
         let input_3d = input
             .clone()
-            .into_shape((batch, features, 1))
+            .into_shape_with_order((batch, features, 1))
             .map_err(|e| {
                 KwaversError::System(crate::error::SystemError::MemoryAllocation {
                     requested_bytes: batch * features * std::mem::size_of::<f32>(),
@@ -240,7 +240,7 @@ impl MLModel for AnomalyDetectorModel {
         let (batch, features) = input.dim();
         let input_3d = input
             .clone()
-            .into_shape((batch, features, 1))
+            .into_shape_with_order((batch, features, 1))
             .map_err(|e| {
                 KwaversError::System(crate::error::SystemError::MemoryAllocation {
                     requested_bytes: batch * features * std::mem::size_of::<f32>(),
@@ -330,7 +330,7 @@ impl MLModel for ConvergencePredictorModel {
         let (batch, features) = input.dim();
         let input_3d = input
             .clone()
-            .into_shape((batch, features, 1))
+            .into_shape_with_order((batch, features, 1))
             .map_err(|e| {
                 KwaversError::System(crate::error::SystemError::MemoryAllocation {
                     requested_bytes: batch * features * std::mem::size_of::<f32>(),

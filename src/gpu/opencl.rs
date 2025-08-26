@@ -3,15 +3,15 @@
 //! This module provides cross-platform GPU acceleration using wgpu.
 //! It supports OpenCL, Vulkan, Metal, and WebGPU backends for maximum compatibility.
 
-use crate::error::{KwaversResult, KwaversError, MemoryTransferDirection};
-use crate::gpu::{GpuDevice, GpuBackend, GpuFieldOps};
+use crate::error::{KwaversError, KwaversResult, MemoryTransferDirection};
+use crate::gpu::{GpuBackend, GpuDevice, GpuFieldOps};
 use crate::grid::Grid;
 use ndarray::Array3;
 
-#[cfg(feature = "wgpu")]
-use wgpu::{Device, Queue, ComputePipeline};
 #[cfg(feature = "gpu")]
 use wgpu::util::DeviceExt;
+#[cfg(feature = "wgpu")]
+use wgpu::{ComputePipeline, Device, Queue};
 
 /// WebGPU-based GPU context
 pub struct WebGpuContext {
@@ -57,10 +57,12 @@ impl WebGpuContext {
                     None,
                 )
                 .await
-                .map_err(|e| KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
-                    device_id: 0,
-                    reason: format!("Failed to create WebGPU device: {:?}", e),
-                }))?;
+                .map_err(|e| {
+                    KwaversError::Gpu(crate::error::GpuError::DeviceInitialization {
+                        device_id: 0,
+                        reason: format!("Failed to create WebGPU device: {:?}", e),
+                    })
+                })?;
 
             Ok(Self {
                 device,
@@ -71,10 +73,12 @@ impl WebGpuContext {
         }
         #[cfg(not(feature = "wgpu"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "WebGPU".to_string(),
-                reason: "WebGPU support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "WebGPU".to_string(),
+                    reason: "WebGPU support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -92,7 +96,8 @@ impl WebGpuContext {
             Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::HostToDevice,
                 size_bytes: array.len() * std::mem::size_of::<f64>(),
-                reason: "Array is not in standard layout - cannot safely access as slice".to_string(),
+                reason: "Array is not in standard layout - cannot safely access as slice"
+                    .to_string(),
             }))
         }
     }
@@ -113,7 +118,8 @@ impl WebGpuContext {
             Err(KwaversError::Gpu(crate::error::GpuError::MemoryTransfer {
                 direction: MemoryTransferDirection::DeviceToHost,
                 size_bytes,
-                reason: "Array is not in standard layout - cannot safely access as mutable slice".to_string(),
+                reason: "Array is not in standard layout - cannot safely access as mutable slice"
+                    .to_string(),
             }))
         }
     }
@@ -141,29 +147,45 @@ impl GpuFieldOps for WebGpuContext {
             let velocity_z_slice = Self::get_safe_slice(velocity_z)?;
 
             // Create GPU buffers
-            let pressure_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Pressure Buffer"),
-                contents: bytemuck::cast_slice(pressure_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            });
+            let pressure_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Pressure Buffer"),
+                        contents: bytemuck::cast_slice(pressure_slice),
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
 
-            let velocity_x_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Velocity X Buffer"),
-                contents: bytemuck::cast_slice(velocity_x_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            });
+            let velocity_x_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Velocity X Buffer"),
+                        contents: bytemuck::cast_slice(velocity_x_slice),
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
 
-            let velocity_y_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Velocity Y Buffer"),
-                contents: bytemuck::cast_slice(velocity_y_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            });
+            let velocity_y_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Velocity Y Buffer"),
+                        contents: bytemuck::cast_slice(velocity_y_slice),
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
 
-            let velocity_z_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Velocity Z Buffer"),
-                contents: bytemuck::cast_slice(velocity_z_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            });
+            let velocity_z_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Velocity Z Buffer"),
+                        contents: bytemuck::cast_slice(velocity_z_slice),
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
 
             // Create parameter buffer
             let params = AcousticParams {
@@ -179,68 +201,72 @@ impl GpuFieldOps for WebGpuContext {
                 _padding: [0; 3],
             };
 
-            let params_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Acoustic Parameters"),
-                contents: bytemuck::cast_slice(&[params]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+            let params_buffer = self
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Acoustic Parameters"),
+                    contents: bytemuck::cast_slice(&[params]),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
 
             // Create bind group
-            let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Acoustic Bind Group Layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: false },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: wgpu::ShaderStages::COMPUTE,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
+            let bind_group_layout =
+                self.device
+                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                        label: Some("Acoustic Bind Group Layout"),
+                        entries: &[
+                            wgpu::BindGroupLayoutEntry {
+                                binding: 0,
+                                visibility: wgpu::ShaderStages::COMPUTE,
+                                ty: wgpu::BindingType::Buffer {
+                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                            wgpu::BindGroupLayoutEntry {
+                                binding: 1,
+                                visibility: wgpu::ShaderStages::COMPUTE,
+                                ty: wgpu::BindingType::Buffer {
+                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                            wgpu::BindGroupLayoutEntry {
+                                binding: 2,
+                                visibility: wgpu::ShaderStages::COMPUTE,
+                                ty: wgpu::BindingType::Buffer {
+                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                            wgpu::BindGroupLayoutEntry {
+                                binding: 3,
+                                visibility: wgpu::ShaderStages::COMPUTE,
+                                ty: wgpu::BindingType::Buffer {
+                                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                            wgpu::BindGroupLayoutEntry {
+                                binding: 4,
+                                visibility: wgpu::ShaderStages::COMPUTE,
+                                ty: wgpu::BindingType::Buffer {
+                                    ty: wgpu::BufferBindingType::Uniform,
+                                    has_dynamic_offset: false,
+                                    min_binding_size: None,
+                                },
+                                count: None,
+                            },
+                        ],
+                    });
 
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Acoustic Bind Group"),
@@ -271,16 +297,20 @@ impl GpuFieldOps for WebGpuContext {
 
             // Create compute pipeline if not exists
             if self.acoustic_pipeline.is_none() {
-                return Err(KwaversError::Gpu(crate::error::GpuError::KernelCompilation {
-                    kernel_name: "acoustic_update_compute".to_string(),
-                    reason: "Acoustic compute pipeline not initialized".to_string(),
-                }));
+                return Err(KwaversError::Gpu(
+                    crate::error::GpuError::KernelCompilation {
+                        kernel_name: "acoustic_update_compute".to_string(),
+                        reason: "Acoustic compute pipeline not initialized".to_string(),
+                    },
+                ));
             }
 
             // Execute compute shader
-            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Acoustic Update Command Encoder"),
-            });
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Acoustic Update Command Encoder"),
+                });
 
             {
                 let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -305,7 +335,13 @@ impl GpuFieldOps for WebGpuContext {
             });
 
             // Copy results back to staging buffer
-            encoder.copy_buffer_to_buffer(&pressure_buffer, 0, &staging_buffer, 0, (grid_size * std::mem::size_of::<f64>()) as u64);
+            encoder.copy_buffer_to_buffer(
+                &pressure_buffer,
+                0,
+                &staging_buffer,
+                0,
+                (grid_size * std::mem::size_of::<f64>()) as u64,
+            );
 
             self.queue.submit(std::iter::once(encoder.finish()));
 
@@ -315,10 +351,12 @@ impl GpuFieldOps for WebGpuContext {
         }
         #[cfg(not(feature = "wgpu"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "WebGPU".to_string(),
-                reason: "WebGPU support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "WebGPU".to_string(),
+                    reason: "WebGPU support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -339,17 +377,23 @@ impl GpuFieldOps for WebGpuContext {
             let heat_source_slice = Self::get_safe_slice(heat_source)?;
 
             // Create GPU buffers for thermal computation
-            let _temperature_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Temperature Buffer"),
-                contents: bytemuck::cast_slice(temperature_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            });
+            let _temperature_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Temperature Buffer"),
+                        contents: bytemuck::cast_slice(temperature_slice),
+                        usage: wgpu::BufferUsages::STORAGE
+                            | wgpu::BufferUsages::COPY_DST
+                            | wgpu::BufferUsages::COPY_SRC,
+                    });
 
-            let _heat_source_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Heat Source Buffer"),
-                contents: bytemuck::cast_slice(heat_source_slice),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            });
+            let _heat_source_buffer =
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Heat Source Buffer"),
+                        contents: bytemuck::cast_slice(heat_source_slice),
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    });
 
             // Implementation would continue with thermal kernel execution
             // For now, return success as implementation is not complete
@@ -357,10 +401,12 @@ impl GpuFieldOps for WebGpuContext {
         }
         #[cfg(not(feature = "wgpu"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "WebGPU".to_string(),
-                reason: "WebGPU support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "WebGPU".to_string(),
+                    reason: "WebGPU support not compiled".to_string(),
+                },
+            ))
         }
     }
 
@@ -380,10 +426,12 @@ impl GpuFieldOps for WebGpuContext {
         }
         #[cfg(not(feature = "wgpu"))]
         {
-            Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-                backend: "WebGPU".to_string(),
-                reason: "WebGPU support not compiled".to_string(),
-            }))
+            Err(KwaversError::Gpu(
+                crate::error::GpuError::BackendNotAvailable {
+                    backend: "WebGPU".to_string(),
+                    reason: "WebGPU support not compiled".to_string(),
+                },
+            ))
         }
     }
 }
@@ -418,12 +466,15 @@ pub async fn detect_wgpu_devices() -> KwaversResult<Vec<GpuDevice>> {
         ..Default::default()
     });
 
-    let adapters: Vec<_> = instance.enumerate_adapters(wgpu::Backends::all()).into_iter().collect();
+    let adapters: Vec<_> = instance
+        .enumerate_adapters(wgpu::Backends::all())
+        .into_iter()
+        .collect();
     let mut devices = Vec::new();
 
     for (i, adapter) in adapters.iter().enumerate() {
         let info = adapter.get_info();
-        
+
         devices.push(GpuDevice {
             id: i as u32,
             name: format!("{} ({})", info.name, info.backend.to_str()),
@@ -435,7 +486,7 @@ pub async fn detect_wgpu_devices() -> KwaversResult<Vec<GpuDevice>> {
                 wgpu::Backend::BrowserWebGpu => GpuBackend::WebGPU,
                 _ => GpuBackend::WebGPU,
             },
-            memory_size: 0, // Not easily available from wgpu
+            memory_size: 0,   // Not easily available from wgpu
             compute_units: 0, // Not easily available from wgpu
             max_work_group_size: adapter.limits().max_compute_workgroup_size_x,
         });
@@ -465,19 +516,23 @@ pub fn detect_wgpu_devices_sync() -> KwaversResult<Vec<GpuDevice>> {
 /// Allocate WebGPU memory
 #[cfg(feature = "wgpu")]
 pub fn allocate_wgpu_memory(size: usize) -> KwaversResult<usize> {
-    Err(KwaversError::Gpu(crate::error::GpuError::MemoryAllocation {
-        requested_bytes: size,
-        available_bytes: 0,
-        reason: "WebGPU memory allocation not implemented".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::MemoryAllocation {
+            requested_bytes: size,
+            available_bytes: 0,
+            reason: "WebGPU memory allocation not implemented".to_string(),
+        },
+    ))
 }
 
 #[cfg(not(feature = "wgpu"))]
 pub fn allocate_wgpu_memory(_size: usize) -> KwaversResult<usize> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "WebGPU".to_string(),
-        reason: "WebGPU support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU support not compiled".to_string(),
+        },
+    ))
 }
 
 /// Host to device memory transfer (bytes)
@@ -492,10 +547,12 @@ pub fn host_to_device_bytes(_host_data: &[u8], _device_buffer: usize) -> Kwavers
     }
     #[cfg(not(feature = "wgpu"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "WebGPU".to_string(),
-            reason: "WebGPU support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "WebGPU".to_string(),
+                reason: "WebGPU support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -511,10 +568,12 @@ pub fn host_to_device_wgpu(_host_data: &[f64], _device_buffer: usize) -> Kwavers
 
 #[cfg(not(feature = "wgpu"))]
 pub fn host_to_device_wgpu(_host_data: &[f64], _device_buffer: usize) -> KwaversResult<()> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "WebGPU".to_string(),
-        reason: "WebGPU support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU support not compiled".to_string(),
+        },
+    ))
 }
 
 /// Device to host memory transfer (bytes)
@@ -529,10 +588,12 @@ pub fn device_to_host_bytes(_device_buffer: usize, _host_data: &mut [u8]) -> Kwa
     }
     #[cfg(not(feature = "wgpu"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "WebGPU".to_string(),
-            reason: "WebGPU support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "WebGPU".to_string(),
+                reason: "WebGPU support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -548,10 +609,12 @@ pub fn device_to_host_wgpu(_device_buffer: usize, _host_data: &mut [f64]) -> Kwa
 
 #[cfg(not(feature = "wgpu"))]
 pub fn device_to_host_wgpu(_device_buffer: usize, _host_data: &mut [f64]) -> KwaversResult<()> {
-    Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-        backend: "WebGPU".to_string(),
-        reason: "WebGPU support not compiled".to_string(),
-    }))
+    Err(KwaversError::Gpu(
+        crate::error::GpuError::BackendNotAvailable {
+            backend: "WebGPU".to_string(),
+            reason: "WebGPU support not compiled".to_string(),
+        },
+    ))
 }
 
 /// WebGPU compute shader for acoustic wave update
@@ -625,39 +688,49 @@ pub fn launch_webgpu_kernel(
     #[cfg(feature = "wgpu")]
     {
         // WebGPU types would be imported here if needed
-        
+
         // Validate input dimensions first
         if _grid_size.0 == 0 || _grid_size.1 == 0 || _grid_size.2 == 0 {
-            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
-                operation: "grid dimensions".to_string(),
-                reason: format!("all grid dimensions must be > 0, got ({}, {}, {})", 
-                    _grid_size.0, _grid_size.1, _grid_size.2),
-            }));
+            return Err(KwaversError::Gpu(
+                crate::error::GpuError::InvalidOperation {
+                    operation: "grid dimensions".to_string(),
+                    reason: format!(
+                        "all grid dimensions must be > 0, got ({}, {}, {})",
+                        _grid_size.0, _grid_size.1, _grid_size.2
+                    ),
+                },
+            ));
         }
-        
+
         if _block_size.0 == 0 || _block_size.1 == 0 || _block_size.2 == 0 {
-            return Err(KwaversError::Gpu(crate::error::GpuError::InvalidOperation {
-                operation: "block dimensions".to_string(),
-                reason: format!("all block dimensions must be > 0, got ({}, {}, {})", 
-                    _block_size.0, _block_size.1, _block_size.2),
-            }));
+            return Err(KwaversError::Gpu(
+                crate::error::GpuError::InvalidOperation {
+                    operation: "block dimensions".to_string(),
+                    reason: format!(
+                        "all block dimensions must be > 0, got ({}, {}, {})",
+                        _block_size.0, _block_size.1, _block_size.2
+                    ),
+                },
+            ));
         }
-        
+
         // Calculate total workgroups
         let workgroups_x = (_grid_size.0 + _block_size.0 - 1) / _block_size.0;
         let workgroups_y = (_grid_size.1 + _block_size.1 - 1) / _block_size.1;
         let workgroups_z = (_grid_size.2 + _block_size.2 - 1) / _block_size.2;
-        
+
         // Note: Actual dispatch would happen here with a real device and queue
         // For now, we validate the parameters and return success
         Ok(())
     }
     #[cfg(not(feature = "wgpu"))]
     {
-        Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "WebGPU".to_string(),
-            reason: "WebGPU support not compiled".to_string(),
-        }))
+        Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "WebGPU".to_string(),
+                reason: "WebGPU support not compiled".to_string(),
+            },
+        ))
     }
 }
 
@@ -673,9 +746,11 @@ pub fn dispatch_compute_kernel(
     {
         log::debug!(
             "Dispatching kernel '{}' with workgroups {:?} and workgroup size {:?}",
-            kernel_name, num_workgroups, workgroup_size
+            kernel_name,
+            num_workgroups,
+            workgroup_size
         );
-        
+
         // In a real implementation, this would:
         // 1. Get the compute pipeline for the kernel
         // 2. Create bind groups for the buffers
@@ -684,23 +759,29 @@ pub fn dispatch_compute_kernel(
         // 5. Set the pipeline and bind groups
         // 6. Dispatch the workgroups
         // 7. End the pass and submit
-        
+
         // For now, just log the dispatch
         log::info!(
             "WebGPU kernel dispatch: {} ({}x{}x{} workgroups of size {}x{}x{})",
             kernel_name,
-            num_workgroups.0, num_workgroups.1, num_workgroups.2,
-            workgroup_size.0, workgroup_size.1, workgroup_size.2
+            num_workgroups.0,
+            num_workgroups.1,
+            num_workgroups.2,
+            workgroup_size.0,
+            workgroup_size.1,
+            workgroup_size.2
         );
     }
-    
+
     #[cfg(not(feature = "wgpu"))]
     {
-        return Err(KwaversError::Gpu(crate::error::GpuError::BackendNotAvailable {
-            backend: "WebGPU".to_string(),
-            reason: "WebGPU feature not enabled".to_string(),
-        }));
+        return Err(KwaversError::Gpu(
+            crate::error::GpuError::BackendNotAvailable {
+                backend: "WebGPU".to_string(),
+                reason: "WebGPU feature not enabled".to_string(),
+            },
+        ));
     }
-    
+
     Ok(())
 }
