@@ -2,10 +2,6 @@
 //!
 //! Reference: Pierce (1989) Section 1.9 - Energy Conservation
 
-use crate::grid::Grid;
-use crate::physics::state::PhysicsState;
-use ndarray::Array3;
-
 // Physical constants for conservation tests
 const SOUND_SPEED: f64 = 1500.0; // m/s
 const DENSITY: f64 = 1000.0; // kg/m³

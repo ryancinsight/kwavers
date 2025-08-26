@@ -5,7 +5,7 @@
 use kwavers::{
     error::KwaversResult,
     grid::Grid,
-    medium::{core::CoreMedium, HomogeneousMedium, Medium},
+    medium::{core::CoreMedium, HomogeneousMedium},
     solver::plugin_based::PluginBasedSolver,
     source::NullSource,
 };

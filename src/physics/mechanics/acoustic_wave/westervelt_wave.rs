@@ -305,7 +305,7 @@ impl AcousticWaveModel for WesterveltWave {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
                     let _rho = rho_arr[[i, j, k]].max(1e-9);
                     let _c = c_arr[[i, j, k]].max(1e-9);
-                    // Enhanced nonlinearity implementation using Westervelt equation
+                    // Westervelt equation nonlinearity implementation
                     // Nonlinear term: (β/ρc⁴) * ∂²(p²)/∂t²
                     let beta = _b_a_arr; // Nonlinearity parameter (assuming homogeneous)
                     let rho = _rho;
@@ -565,11 +565,6 @@ impl AcousticWaveModel for WesterveltWave {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::grid::Grid;
-    use crate::medium::homogeneous::HomogeneousMedium;
-    use crate::source::NullSource;
-    use ndarray::Array4;
 
     #[test]
     #[ignore = "ViscoelasticWave not yet implemented"]

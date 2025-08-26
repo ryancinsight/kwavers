@@ -333,15 +333,14 @@ mod tests {
         let solver = RayleighPlessetSolver::new(params.clone());
         let state = BubbleState::at_equilibrium(&params);
 
-        // At equilibrium, acceleration should be small but not exactly zero due to numerical precision
-        // The huge value indicates a bug in the equilibrium calculation
+        // At equilibrium, acceleration should be negligible
         let accel = solver.calculate_acceleration(&state, 0.0, 0.0);
 
-        // For now, just check it's not astronomically large (indicates calculation bug)
-        // TODO: Fix equilibrium calculation in BubbleState::at_equilibrium
+        // Verify equilibrium is properly established (should be < 1% of g)
+        const GRAVITY_ACCEL: f64 = 9.81;
         assert!(
-            accel.abs() < 1e10,
-            "Acceleration at equilibrium is unreasonably large: {}",
+            accel.abs() < 0.01 * GRAVITY_ACCEL,
+            "Acceleration at equilibrium should be negligible: {} m/s²",
             accel
         );
     }

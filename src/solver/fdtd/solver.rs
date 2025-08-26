@@ -66,7 +66,12 @@ impl FdtdSolver {
         max_sound_speed: f64,
     ) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
-        self.cpml_boundary = Some(CPMLBoundary::new(config, &self.grid, dt, max_sound_speed)?);
+        self.cpml_boundary = Some(CPMLBoundary::with_cfl(
+            config,
+            &self.grid,
+            dt,
+            max_sound_speed,
+        )?);
         Ok(())
     }
 

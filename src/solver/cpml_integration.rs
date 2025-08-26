@@ -35,7 +35,7 @@ impl CPMLSolver {
     /// * `dt` - Time step from the main solver
     /// * `sound_speed` - Reference sound speed (typically max in medium)
     pub fn new(config: CPMLConfig, grid: &Grid, dt: f64, sound_speed: f64) -> KwaversResult<Self> {
-        let cpml = CPMLBoundary::new(config, grid, dt, sound_speed)?;
+        let cpml = CPMLBoundary::with_cfl(config, grid, dt, sound_speed)?;
 
         Ok(Self {
             cpml,
@@ -274,7 +274,7 @@ impl CPMLSolver {
         &mut self,
         params: &crate::boundary::cpml::DispersiveParameters,
     ) {
-        self.cpml.enable_dispersive_support(params);
+        self.cpml.enable_dispersive_support(params.clone());
     }
 
     /// Estimate reflection coefficient at given angle

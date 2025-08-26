@@ -6,7 +6,6 @@
 //! - Royer & Dieulesaint (2000) - "Elastic Waves in Solids"
 
 use ndarray::Array3;
-use std::f64::consts::PI;
 
 // Test-specific tissue properties structure
 #[derive(Debug, Clone)]

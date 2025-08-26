@@ -226,6 +226,7 @@ pub mod physics {
     pub const DENSITY_TISSUE: f64 = 1050.0; // kg/m³
     pub const SOUND_SPEED_TISSUE: f64 = 1540.0; // m/s
     pub const TISSUE_ATTENUATION: f64 = 0.5; // dB/cm/MHz
+    pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 40e6; // Hz (40 MHz)
     pub const TISSUE_NONLINEARITY: f64 = 6.0; // B/A parameter
 
     // Ultrasound parameters

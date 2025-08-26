@@ -790,7 +790,6 @@ mod tests {
 
     #[test]
     fn test_outcome_predictor() {
-        use crate::ml::models::ConvergencePredictorModel;
         use ndarray::{array, Array2};
 
         // Binary classifier with 2 outputs for softmax

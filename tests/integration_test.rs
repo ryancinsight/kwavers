@@ -36,7 +36,7 @@ fn test_medium_creation() {
     );
 
     // Test that medium properties are set correctly
-    use kwavers::medium::Medium;
+
     assert_eq!(medium.density(0.0, 0.0, 0.0, &grid), 1000.0);
     assert_eq!(medium.sound_speed(0.0, 0.0, 0.0, &grid), 1500.0);
     assert!(medium.is_homogeneous());

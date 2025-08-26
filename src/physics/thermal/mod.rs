@@ -390,7 +390,7 @@ mod tests {
     #[test]
     fn test_optical_heating() {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
-        let mut calc = ThermalCalculator::new(&grid, 310.15); // 37°C
+        let calc = ThermalCalculator::new(&grid, 310.15); // 37°C
 
         // Create optical source
         let fluence = Array3::from_elem((10, 10, 10), 1000.0); // 1000 W/m²

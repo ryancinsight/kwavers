@@ -10,7 +10,7 @@ use log::debug;
 use num_complex::Complex;
 use std::sync::Arc;
 
-/// Optimized 3D inverse FFT implementation with cache-friendly algorithms
+/// 3D inverse FFT implementation with cache-friendly algorithms
 #[derive(Debug, Clone)]
 pub struct Ifft3d {
     padded_nx: usize,

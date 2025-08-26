@@ -658,7 +658,6 @@ pub fn make_annular_array(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
 
     #[test]
     fn test_bowl_transducer_creation() {

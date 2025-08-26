@@ -9,7 +9,7 @@
 use crate::grid::Grid;
 use crate::solver::amr::{AMRConfig, AMRManager, InterpolationScheme, WaveletType};
 use crate::solver::pstd::PstdSolver;
-use ndarray::{Array3, ArrayView3};
+use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 // Numerical method constants
@@ -17,6 +17,23 @@ const CFL_NUMBER: f64 = 0.3;
 const PPW_MINIMUM: usize = 6; // Points per wavelength
 const DISPERSION_TOLERANCE: f64 = 0.01; // 1% phase error
 const AMR_REFINEMENT_RATIO: usize = 2;
+
+/// Compute 1D Laplacian using second-order central differences
+fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
+    let n = field.len();
+    let mut laplacian = Array1::zeros(n);
+    let dx2_inv = 1.0 / (dx * dx);
+
+    for i in 1..n - 1 {
+        laplacian[i] = (field[i + 1] - 2.0 * field[i] + field[i - 1]) * dx2_inv;
+    }
+
+    // Neumann boundary conditions (zero gradient)
+    laplacian[0] = (field[1] - field[0]) * dx2_inv;
+    laplacian[n - 1] = (field[n - 2] - field[n - 1]) * dx2_inv;
+
+    laplacian
+}
 
 #[cfg(test)]
 mod tests {
@@ -178,10 +195,10 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 for k in 0..n {
-                    let r = (((i as f64 - n as f64 / 2.0).powi(2)
+                    let r = ((i as f64 - n as f64 / 2.0).powi(2)
                         + (j as f64 - n as f64 / 2.0).powi(2)
                         + (k as f64 - n as f64 / 2.0).powi(2))
-                    .sqrt());
+                    .sqrt();
                     acoustic_state[[i, j, k]] = (-r.powi(2) / 10.0).exp();
                     thermal_state[[i, j, k]] = 300.0 + 10.0 * (-r.powi(2) / 20.0).exp();
                 }
@@ -191,18 +208,50 @@ mod tests {
         let initial_acoustic_energy: f64 = acoustic_state.iter().map(|x| x * x).sum();
         let initial_thermal_energy: f64 = thermal_state.iter().sum();
 
-        // Simplified multirate evolution
+        // Multirate evolution with proper time stepping
+        let dt_slow = dt_thermal;
         for slow_step in 0..steps_slow {
             // Multiple fast steps per slow step
             let fast_per_slow = (time_scale_ratio as usize).max(1);
 
             for _ in 0..fast_per_slow {
-                // Fast acoustic update (simplified)
-                acoustic_state *= 0.9999; // Artificial damping for stability
+                // Acoustic wave propagation using proper wave equation
+                // ∂²p/∂t² = c²∇²p with finite difference approximation
+                let acoustic_3d = acoustic_state.view();
+                let acoustic_1d = Array1::from_iter(acoustic_3d.iter().cloned());
+                let laplacian_1d = compute_laplacian_1d(&acoustic_1d, dx);
+                let c_squared = ACOUSTIC_SPEED * ACOUSTIC_SPEED;
+                let dt_fast = dt_acoustic;
+
+                // Update acoustic state
+                let mut idx = 0;
+                for i in 0..n {
+                    for j in 0..n {
+                        for k in 0..n {
+                            acoustic_state[[i, j, k]] += dt_fast * c_squared * laplacian_1d[idx];
+                            idx += 1;
+                        }
+                    }
+                }
             }
 
-            // Slow thermal update
-            thermal_state *= 0.999; // Simplified diffusion
+            // Thermal diffusion using heat equation
+            // ∂T/∂t = α∇²T with proper diffusion coefficient
+            let thermal_3d = thermal_state.view();
+            let thermal_1d = Array1::from_iter(thermal_3d.iter().cloned());
+            let thermal_laplacian = compute_laplacian_1d(&thermal_1d, dx);
+
+            // Update thermal state
+            let mut idx = 0;
+            for i in 0..n {
+                for j in 0..n {
+                    for k in 0..n {
+                        thermal_state[[i, j, k]] +=
+                            dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian[idx];
+                        idx += 1;
+                    }
+                }
+            }
         }
 
         let final_acoustic_energy: f64 = acoustic_state.iter().map(|x| x * x).sum();

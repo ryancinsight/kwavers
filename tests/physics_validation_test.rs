@@ -4,8 +4,7 @@
 //! by comparing against analytical solutions and known results.
 
 use kwavers::medium::{core::CoreMedium, homogeneous::HomogeneousMedium};
-use kwavers::{Grid, Time};
-use ndarray::Array3;
+use kwavers::Grid;
 use std::f64::consts::PI;
 
 #[test]
@@ -118,8 +117,6 @@ fn test_homogeneous_medium_properties() {
     let density = 1500.0;
     let sound_speed = 2000.0;
     let medium = HomogeneousMedium::new(density, sound_speed, 0.001, 0.072, &grid);
-
-    use kwavers::medium::Medium;
 
     // Test at multiple points
     let test_points = vec![
