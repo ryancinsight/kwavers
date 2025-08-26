@@ -201,7 +201,7 @@ impl KWaveValidator {
         let pml_config = CPMLConfig::default();
         let sound_speed = 1500.0; // Reference sound speed in water
         let dt = 1e-6; // Default time step
-        let cpml = CPMLBoundary::new(pml_config, &self.grid, dt, sound_speed)?;
+        let cpml = CPMLBoundary::with_cfl(pml_config, &self.grid, dt, sound_speed)?;
 
         // Create plane wave
         let medium = HomogeneousMedium::new(998.0, sound_speed, 0.0, 0.0, &self.grid); // Water density at room temperature

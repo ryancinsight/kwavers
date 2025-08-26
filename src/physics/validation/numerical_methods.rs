@@ -17,7 +17,6 @@ const CFL_NUMBER: f64 = 0.3;
 const PPW_MINIMUM: usize = 6; // Points per wavelength
 const DISPERSION_TOLERANCE: f64 = 0.01; // 1% phase error
 const AMR_REFINEMENT_RATIO: usize = 2;
-const SOUND_SPEED_WATER: f64 = 1500.0; // m/s
 
 /// Compute 1D Laplacian using second-order central differences
 fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
@@ -209,7 +208,8 @@ mod tests {
         let initial_acoustic_energy: f64 = acoustic_state.iter().map(|x| x * x).sum();
         let initial_thermal_energy: f64 = thermal_state.iter().sum();
 
-        // Simplified multirate evolution
+        // Multirate evolution with proper time stepping
+        let dt_slow = dt_thermal;
         for slow_step in 0..steps_slow {
             // Multiple fast steps per slow step
             let fast_per_slow = (time_scale_ratio as usize).max(1);
@@ -217,16 +217,41 @@ mod tests {
             for _ in 0..fast_per_slow {
                 // Acoustic wave propagation using proper wave equation
                 // ∂²p/∂t² = c²∇²p with finite difference approximation
-                let laplacian = compute_laplacian_1d(&acoustic_state, 1.0);
-                let c_squared = SOUND_SPEED_WATER * SOUND_SPEED_WATER;
-                let dt_fast = dt_slow / (fast_per_slow as f64);
-                acoustic_state = acoustic_state + dt_fast * c_squared * laplacian;
+                let acoustic_3d = acoustic_state.view();
+                let acoustic_1d = Array1::from_iter(acoustic_3d.iter().cloned());
+                let laplacian_1d = compute_laplacian_1d(&acoustic_1d, dx);
+                let c_squared = ACOUSTIC_SPEED * ACOUSTIC_SPEED;
+                let dt_fast = dt_acoustic;
+
+                // Update acoustic state
+                let mut idx = 0;
+                for i in 0..n {
+                    for j in 0..n {
+                        for k in 0..n {
+                            acoustic_state[[i, j, k]] += dt_fast * c_squared * laplacian_1d[idx];
+                            idx += 1;
+                        }
+                    }
+                }
             }
 
             // Thermal diffusion using heat equation
             // ∂T/∂t = α∇²T with proper diffusion coefficient
-            let thermal_laplacian = compute_laplacian_1d(&thermal_state, 1.0);
-            thermal_state = thermal_state + dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian;
+            let thermal_3d = thermal_state.view();
+            let thermal_1d = Array1::from_iter(thermal_3d.iter().cloned());
+            let thermal_laplacian = compute_laplacian_1d(&thermal_1d, dx);
+
+            // Update thermal state
+            let mut idx = 0;
+            for i in 0..n {
+                for j in 0..n {
+                    for k in 0..n {
+                        thermal_state[[i, j, k]] +=
+                            dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian[idx];
+                        idx += 1;
+                    }
+                }
+            }
         }
 
         let final_acoustic_energy: f64 = acoustic_state.iter().map(|x| x * x).sum();

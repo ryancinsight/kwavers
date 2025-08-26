@@ -6,6 +6,7 @@ use crate::grid::Grid;
 use ndarray::Array1;
 
 /// CPML absorption and stretching profiles
+#[derive(Clone)]
 pub struct CPMLProfiles {
     pub sigma_x: Array1<f64>,
     pub sigma_y: Array1<f64>,
@@ -49,7 +50,7 @@ impl CPMLProfiles {
         sound_speed: f64,
     ) -> KwaversResult<()> {
         // Compute profiles for each direction
-        self.compute_profile_1d(
+        Self::compute_profile_1d(
             &mut self.sigma_x,
             &mut self.kappa_x,
             &mut self.alpha_x,
@@ -58,7 +59,7 @@ impl CPMLProfiles {
             config,
             sound_speed,
         );
-        self.compute_profile_1d(
+        Self::compute_profile_1d(
             &mut self.sigma_y,
             &mut self.kappa_y,
             &mut self.alpha_y,
@@ -67,7 +68,7 @@ impl CPMLProfiles {
             config,
             sound_speed,
         );
-        self.compute_profile_1d(
+        Self::compute_profile_1d(
             &mut self.sigma_z,
             &mut self.kappa_z,
             &mut self.alpha_z,
@@ -80,7 +81,6 @@ impl CPMLProfiles {
     }
 
     fn compute_profile_1d(
-        &self,
         sigma: &mut Array1<f64>,
         kappa: &mut Array1<f64>,
         alpha: &mut Array1<f64>,
