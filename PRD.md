@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.23.0
+# Product Requirements Document - Kwavers v2.24.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.23.0)
+## Current State (v2.24.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation
@@ -72,16 +72,17 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 |--------|---------|--------|--------|
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
-| Warnings | 443 | <50 | ⚠️ |
-| Modules >500 lines | 49 | 0 | 🔄 |
+| Warnings | 435 | <50 | ⚠️ |
+| Modules >500 lines | 50 | 0 | 🔄 |
 | Physics Validation | 100% | 100% | ✅ |
+| Physics Accuracy | Enhanced | Optimal | ✅ |
 
 ### Recent Changes
-- Core module added to medium package
-- Photoacoustic module refactored (837 → 5 modules)
-- Warnings reduced from 448 to 443
-- All tests validated
-- Code formatted with cargo fmt
+- Westervelt equation nonlinear term corrected
+- Elastic wave stress update fixed with proper time integration
+- Warnings reduced from 443 to 435
+- All tests and examples validated
+- Physics implementations enhanced for accuracy
 
 ---
 

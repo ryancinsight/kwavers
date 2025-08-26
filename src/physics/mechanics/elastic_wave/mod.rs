@@ -205,6 +205,12 @@ pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,
     pub vz_fft: &'a Complex3D,
+    pub sxx_fft: &'a Complex3D,
+    pub syy_fft: &'a Complex3D,
+    pub szz_fft: &'a Complex3D,
+    pub sxy_fft: &'a Complex3D,
+    pub sxz_fft: &'a Complex3D,
+    pub syz_fft: &'a Complex3D,
     pub kx: &'a Array3<f64>,
     pub ky: &'a Array3<f64>,
     pub kz: &'a Array3<f64>,
@@ -542,16 +548,33 @@ impl ElasticWave {
             .into());
         }
 
-        // Stress update in k-space
-        let txx_fft =
-            params.vx_fft * &(params.kx * params.lame_lambda + 2.0 * params.kx * params.lame_mu);
-        let tyy_fft =
-            params.vy_fft * &(params.ky * params.lame_lambda + 2.0 * params.ky * params.lame_mu);
-        let tzz_fft =
-            params.vz_fft * &(params.kz * params.lame_lambda + 2.0 * params.kz * params.lame_mu);
-        let txy_fft = (params.vx_fft * params.ky + params.vy_fft * params.kx) * params.lame_mu;
-        let txz_fft = (params.vx_fft * params.kz + params.vz_fft * params.kx) * params.lame_mu;
-        let tyz_fft = (params.vy_fft * params.kz + params.vz_fft * params.ky) * params.lame_mu;
+        // Stress update in k-space using time integration
+        // σ_new = σ_old + dt * (λ∇·v + μ(∇v + ∇v^T))
+        let dt_complex = Complex::new(params.dt, 0.0);
+        let div_v =
+            params.vx_fft * params.kx + params.vy_fft * params.ky + params.vz_fft * params.kz;
+
+        let txx_fft = params.sxx_fft
+            + dt_complex
+                * (&div_v * params.lame_lambda
+                    + Complex::new(2.0, 0.0) * params.vx_fft * params.kx * params.lame_mu);
+        let tyy_fft = params.syy_fft
+            + dt_complex
+                * (&div_v * params.lame_lambda
+                    + Complex::new(2.0, 0.0) * params.vy_fft * params.ky * params.lame_mu);
+        let tzz_fft = params.szz_fft
+            + dt_complex
+                * (&div_v * params.lame_lambda
+                    + Complex::new(2.0, 0.0) * params.vz_fft * params.kz * params.lame_mu);
+        let txy_fft = params.sxy_fft
+            + dt_complex
+                * ((params.vx_fft * params.ky + params.vy_fft * params.kx) * params.lame_mu);
+        let txz_fft = params.sxz_fft
+            + dt_complex
+                * ((params.vx_fft * params.kz + params.vz_fft * params.kx) * params.lame_mu);
+        let tyz_fft = params.syz_fft
+            + dt_complex
+                * ((params.vy_fft * params.kz + params.vz_fft * params.ky) * params.lame_mu);
 
         let stress_update_time = start_time.elapsed().as_secs_f64();
 
@@ -687,6 +710,12 @@ impl AcousticWaveModel for ElasticWave {
             vx_fft: &vx_fft,
             vy_fft: &vy_fft,
             vz_fft: &vz_fft,
+            sxx_fft: &sxx_fft,
+            syy_fft: &syy_fft,
+            szz_fft: &szz_fft,
+            sxy_fft: &sxy_fft,
+            sxz_fft: &sxz_fft,
+            syz_fft: &syz_fft,
             kx: &self.kx,
             ky: &self.ky,
             kz: &self.kz,

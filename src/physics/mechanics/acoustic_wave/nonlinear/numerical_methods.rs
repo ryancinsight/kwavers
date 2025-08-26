@@ -130,7 +130,9 @@ impl NonlinearWave {
         // Compute pressure gradients using spectral differentiation
         let (grad_x, grad_y, grad_z) = self.compute_spectral_gradient(pressure, grid)?;
 
-        // Compute nonlinear term: (β/ρ₀c₀⁴) * p * ∇²p
+        // Compute nonlinear term for Westervelt equation
+        // The full nonlinear term includes both (∇p)² and p∇²p terms
+        // N = (β/ρ₀c₀⁴) * [p * ∇²p + (∇p)²]
         // where β = 1 + B/2A is the nonlinearity parameter
         let beta = 1.0 + nonlinearity / 2.0;
         let prefactor = beta / (density * sound_speed.powi(4));
@@ -138,8 +140,11 @@ impl NonlinearWave {
         // Compute Laplacian
         let laplacian = self.compute_spectral_laplacian(pressure, grid)?;
 
-        // Nonlinear term
-        let nonlinear = pressure * laplacian * prefactor;
+        // Compute gradient squared term: (∇p)² = (∂p/∂x)² + (∂p/∂y)² + (∂p/∂z)²
+        let grad_squared = &grad_x * &grad_x + &grad_y * &grad_y + &grad_z * &grad_z;
+
+        // Full nonlinear term
+        let nonlinear = (pressure * laplacian + grad_squared) * prefactor;
 
         Ok(nonlinear)
     }
