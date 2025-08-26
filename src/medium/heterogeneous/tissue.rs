@@ -211,40 +211,86 @@ impl CoreMedium for HeterogeneousTissueMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousTissueMedium {
-    fn density_array(&self) -> &Array3<f64> {
-        self.density_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database()
-                    .get(&tissue)
-                    .unwrap_or_else(|| {
-                        tissue_specific::tissue_database()
-                            .get(&TissueType::SoftTissue)
-                            .unwrap()
-                    });
-                *val = props.density;
-            });
-            arr
-        })
+    fn get_density_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Ok(self
+            .density_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.density;
+                });
+                arr
+            })
+            .clone())
     }
 
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        self.sound_speed_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = tissue_specific::tissue_database()
-                    .get(&tissue)
-                    .unwrap_or_else(|| {
-                        tissue_specific::tissue_database()
-                            .get(&TissueType::SoftTissue)
-                            .unwrap()
-                    });
-                *val = props.sound_speed;
-            });
-            arr
-        })
+    fn get_sound_speed_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+        Ok(self
+            .sound_speed_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.sound_speed;
+                });
+                arr
+            })
+            .clone())
+    }
+
+    fn density_array(&self) -> Array3<f64> {
+        self.density_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.density;
+                });
+                arr
+            })
+            .clone()
+    }
+
+    fn sound_speed_array(&self) -> Array3<f64> {
+        self.sound_speed_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue_specific::tissue_database()
+                        .get(&tissue)
+                        .unwrap_or_else(|| {
+                            tissue_specific::tissue_database()
+                                .get(&TissueType::SoftTissue)
+                                .unwrap()
+                        });
+                    *val = props.sound_speed;
+                });
+                arr
+            })
+            .clone()
     }
 }
 
@@ -330,7 +376,7 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 let density_arr = self.density_array();
                 Zip::indexed(&mut arr)
-                    .and(density_arr)
+                    .and(&density_arr)
                     .for_each(|(i, j, k), val, &rho| {
                         let tissue = self.tissue_map[[i, j, k]];
                         let props = tissue_specific::tissue_database()

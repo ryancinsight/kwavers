@@ -384,8 +384,8 @@ impl AcousticWaveSolver {
                 .and(pressure)
                 .and(prev)
                 .and(history)
-                .and(density)
-                .and(sound_speed)
+                .and(&density)
+                .and(&sound_speed)
                 .for_each(|nl, &p, &p_prev, &p_hist, &rho, &c| {
                     let p_squared = p * p;
                     let p_prev_squared = p_prev * p_prev;
@@ -441,8 +441,8 @@ impl AcousticWaveSolver {
         Zip::from(&mut rhs)
             .and(&laplacian)
             .and(&grad)
-            .and(density)
-            .and(sound_speed)
+            .and(&density)
+            .and(&sound_speed)
             .and(source_term)
             .for_each(|r, &lap, &g, &rho, &c, &s| {
                 let linear = c * c * lap;

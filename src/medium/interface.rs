@@ -34,7 +34,7 @@ pub fn find_interfaces<M: CoreMedium + ArrayAccess + ?Sized>(
     grid: &Grid,
     threshold: f64,
 ) -> Vec<InterfacePoint> {
-    find_interfaces_from_array(medium.density_array(), grid, threshold)
+    find_interfaces_from_array(&medium.density_array(), grid, threshold)
 }
 
 /// Find interfaces using point-wise access (less efficient fallback)
