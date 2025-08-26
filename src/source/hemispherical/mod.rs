@@ -27,7 +27,7 @@ pub use validation::{ArrayValidator, PerformanceMetrics};
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::signal::{Signal, SineSignal};
+use crate::signal::{Signal, SineWave};
 use crate::source::Source;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -50,7 +50,7 @@ impl HemisphericalArray {
         let elements = ElementPlacement::generate_elements(&geometry, num_elements)?;
         let steering = SteeringController::new(frequency);
         let validator = ArrayValidator::new();
-        let signal = Arc::new(SineSignal::new(frequency, 1.0, 0.0));
+        let signal = Arc::new(SineWave::new(frequency, 1.0, 0.0));
 
         Ok(Self {
             geometry,

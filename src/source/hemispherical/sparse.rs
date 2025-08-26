@@ -1,6 +1,5 @@
 //! Sparse array optimization
 
-use super::constants::*;
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Sparse array optimizer

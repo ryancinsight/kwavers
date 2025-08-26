@@ -1,7 +1,5 @@
 //! Element configuration and state management
 
-use crate::error::KwaversResult;
-
 /// Element configuration for hemispherical arrays
 #[derive(Debug, Clone)]
 pub struct ElementConfiguration {
