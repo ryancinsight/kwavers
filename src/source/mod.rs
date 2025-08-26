@@ -8,7 +8,7 @@ use std::fmt::Debug;
 pub mod apodization;
 pub mod flexible;
 pub mod focused_transducer;
-pub mod hemispherical_array;
+pub mod hemispherical;
 pub mod linear_array;
 pub mod matrix_array;
 pub mod phased_array;

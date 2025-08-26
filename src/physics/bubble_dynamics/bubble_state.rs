@@ -276,11 +276,15 @@ impl BubbleState {
     /// Create bubble state at exact mechanical equilibrium
     /// This ensures zero acceleration for validation tests
     pub fn at_equilibrium(params: &BubbleParameters) -> Self {
-        // At equilibrium: p_internal = p0 + 2σ/r0 - pv
-        // This accounts for ambient pressure, surface tension, and vapor pressure
+        // At equilibrium, the internal pressure must balance external forces:
+        // p_internal = p_ambient + p_laplace
+        // where p_laplace = 2σ/r0 (Laplace pressure)
+        // and p_internal = p_gas + p_vapor
+
+        // Total internal pressure at equilibrium
         let equilibrium_pressure = params.p0 + 2.0 * params.sigma / params.r0;
 
-        // Calculate gas pressure (excluding vapor)
+        // Gas pressure is internal pressure minus vapor pressure
         let gas_pressure = equilibrium_pressure - params.pv;
 
         // Estimate molecule count for this pressure
