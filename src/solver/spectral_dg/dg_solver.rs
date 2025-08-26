@@ -159,7 +159,7 @@ impl DGSolver {
         right_state: f64,
         wave_speed: f64,
     ) -> KwaversResult<f64> {
-        // Simple flux computation - extend for systems
+        // Numerical flux computation for scalar conservation law
         let left_flux = wave_speed * left_state;
         let right_flux = wave_speed * right_state;
 
@@ -419,7 +419,7 @@ impl Clone for DGSolver {
 
 impl DGOperations for DGSolver {
     fn compute_flux(&self, left_state: f64, right_state: f64, normal: f64) -> f64 {
-        // Simple upwind flux
+        // Upwind flux computation for numerical stability
         let wave_speed = 1500.0;
         if wave_speed * normal > 0.0 {
             wave_speed * left_state * normal
@@ -446,7 +446,7 @@ impl DGSolver {
     pub fn apply_shock_detector(&self, field: &Array3<f64>) -> Array3<bool> {
         let mut shock_cells = Array3::from_elem(field.raw_dim(), false);
 
-        // Simple gradient-based shock detector
+        // Gradient-based shock detection using jump discontinuities
         for i in 1..field.shape()[0] - 1 {
             for j in 1..field.shape()[1] - 1 {
                 for k in 1..field.shape()[2] - 1 {

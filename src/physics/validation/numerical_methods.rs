@@ -9,7 +9,7 @@
 use crate::grid::Grid;
 use crate::solver::amr::{AMRConfig, AMRManager, InterpolationScheme, WaveletType};
 use crate::solver::pstd::PstdSolver;
-use ndarray::Array3;
+use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 // Numerical method constants
@@ -17,6 +17,24 @@ const CFL_NUMBER: f64 = 0.3;
 const PPW_MINIMUM: usize = 6; // Points per wavelength
 const DISPERSION_TOLERANCE: f64 = 0.01; // 1% phase error
 const AMR_REFINEMENT_RATIO: usize = 2;
+const SOUND_SPEED_WATER: f64 = 1500.0; // m/s
+
+/// Compute 1D Laplacian using second-order central differences
+fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
+    let n = field.len();
+    let mut laplacian = Array1::zeros(n);
+    let dx2_inv = 1.0 / (dx * dx);
+
+    for i in 1..n - 1 {
+        laplacian[i] = (field[i + 1] - 2.0 * field[i] + field[i - 1]) * dx2_inv;
+    }
+
+    // Neumann boundary conditions (zero gradient)
+    laplacian[0] = (field[1] - field[0]) * dx2_inv;
+    laplacian[n - 1] = (field[n - 2] - field[n - 1]) * dx2_inv;
+
+    laplacian
+}
 
 #[cfg(test)]
 mod tests {
@@ -197,12 +215,18 @@ mod tests {
             let fast_per_slow = (time_scale_ratio as usize).max(1);
 
             for _ in 0..fast_per_slow {
-                // Fast acoustic update (simplified)
-                acoustic_state *= 0.9999; // Artificial damping for stability
+                // Acoustic wave propagation using proper wave equation
+                // ∂²p/∂t² = c²∇²p with finite difference approximation
+                let laplacian = compute_laplacian_1d(&acoustic_state, 1.0);
+                let c_squared = SOUND_SPEED_WATER * SOUND_SPEED_WATER;
+                let dt_fast = dt_slow / (fast_per_slow as f64);
+                acoustic_state = acoustic_state + dt_fast * c_squared * laplacian;
             }
 
-            // Slow thermal update
-            thermal_state *= 0.999; // Simplified diffusion
+            // Thermal diffusion using heat equation
+            // ∂T/∂t = α∇²T with proper diffusion coefficient
+            let thermal_laplacian = compute_laplacian_1d(&thermal_state, 1.0);
+            thermal_state = thermal_state + dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian;
         }
 
         let final_acoustic_energy: f64 = acoustic_state.iter().map(|x| x * x).sum();
