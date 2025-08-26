@@ -39,12 +39,23 @@ impl FDCoefficients {
         }
     }
 
-    /// Get coefficients for second derivative
-    pub fn second_derivative(order: SpatialOrder) -> Vec<f64> {
+    /// Get off-center pair coefficients for second derivative
+    /// Returns coefficients for symmetric pairs at offsets 1..=N
+    pub fn second_derivative_pairs(order: SpatialOrder) -> Vec<f64> {
         match order {
             SpatialOrder::Second => vec![1.0],
             SpatialOrder::Fourth => vec![4.0 / 3.0, -1.0 / 12.0],
             SpatialOrder::Sixth => vec![3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0],
+        }
+    }
+
+    /// Get the center coefficient for second derivative
+    /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
+    pub fn second_derivative_center(order: SpatialOrder) -> f64 {
+        match order {
+            SpatialOrder::Second => -2.0,            // 3-point stencil
+            SpatialOrder::Fourth => -5.0 / 2.0,      // 5-point stencil
+            SpatialOrder::Sixth => -49.0 / 18.0,     // 7-point stencil
         }
     }
 }
@@ -160,7 +171,8 @@ pub fn laplacian(
     let (nx, ny, nz) = field.dim();
     let mut lap = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::second_derivative(order);
+    let coeffs = FDCoefficients::second_derivative_pairs(order);
+    let center_coeff = FDCoefficients::second_derivative_center(order);
     let stencil_size = coeffs.len();
 
     let dx2_inv = 1.0 / (grid.dx * grid.dx);
@@ -171,9 +183,9 @@ pub fn laplacian(
     for k in stencil_size..nz - stencil_size {
         for j in stencil_size..ny - stencil_size {
             for i in stencil_size..nx - stencil_size {
-                let mut d2f_dx2 = -2.0 * field[[i, j, k]];
-                let mut d2f_dy2 = -2.0 * field[[i, j, k]];
-                let mut d2f_dz2 = -2.0 * field[[i, j, k]];
+                let mut d2f_dx2 = center_coeff * field[[i, j, k]];
+                let mut d2f_dy2 = center_coeff * field[[i, j, k]];
+                let mut d2f_dz2 = center_coeff * field[[i, j, k]];
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
@@ -301,7 +313,8 @@ pub fn transverse_laplacian(
     let (nx, ny, nz) = field.dim();
     let mut lap = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::second_derivative(order);
+    let coeffs = FDCoefficients::second_derivative_pairs(order);
+    let center_coeff = FDCoefficients::second_derivative_center(order);
     let stencil_size = coeffs.len();
 
     let dx2_inv = 1.0 / (grid.dx * grid.dx);
@@ -311,8 +324,8 @@ pub fn transverse_laplacian(
     for k in 0..nz {
         for j in stencil_size..ny - stencil_size {
             for i in stencil_size..nx - stencil_size {
-                let mut d2f_dx2 = -2.0 * field[[i, j, k]];
-                let mut d2f_dy2 = -2.0 * field[[i, j, k]];
+                let mut d2f_dx2 = center_coeff * field[[i, j, k]];
+                let mut d2f_dy2 = center_coeff * field[[i, j, k]];
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
