@@ -1,7 +1,9 @@
 //! Pre-trained models for tissue classification and parameter optimization
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::ml::{inference::InferenceEngine, MLModel, ModelMetadata, ModelType};
+use crate::ml::inference::InferenceEngine;
+use crate::ml::types::{MLModel, ModelType};
+use crate::ml::ModelMetadata;
 use ndarray::{Array1, Array2, Axis};
 use rand::Rng;
 
@@ -94,6 +96,16 @@ impl MLModel for TissueClassifierModel {
         *weights -= &(gradients * learning_rate);
         Ok(())
     }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Placeholder implementation - would load from file
+        Ok(Self::with_random_weights(10, 2))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Placeholder implementation - would save to file
+        Ok(())
+    }
 }
 
 /// Parameter optimization model
@@ -182,6 +194,16 @@ impl MLModel for ParameterOptimizerModel {
 
         let weights = self.engine.weights_mut();
         *weights -= &(gradients * learning_rate);
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Placeholder implementation - would load from file
+        Ok(Self::with_random_weights(10, 3))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Placeholder implementation - would save to file
         Ok(())
     }
 }
@@ -274,6 +296,16 @@ impl MLModel for AnomalyDetectorModel {
         *weights -= &(gradients * learning_rate);
         Ok(())
     }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Placeholder implementation - would load from file
+        Ok(Self::with_random_weights(10))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Placeholder implementation - would save to file
+        Ok(())
+    }
 }
 
 /// Convergence prediction model
@@ -364,6 +396,16 @@ impl MLModel for ConvergencePredictorModel {
         *weights -= &(gradients * learning_rate);
         Ok(())
     }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Placeholder implementation - would load from file
+        Ok(Self::with_random_weights(10))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Placeholder implementation - would save to file
+        Ok(())
+    }
 }
 
 /// Outcome predictor model (binary logistic regression)
@@ -439,5 +481,16 @@ impl MLModel for OutcomePredictorModel {
         Err(KwaversError::NotImplemented(
             "Online update for OutcomePredictor".to_string(),
         ))
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Placeholder implementation - would load from file
+        let weights = Array1::from_vec(vec![0.5_f32; 10]);
+        Ok(Self::from_weights(weights, 0.0))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Placeholder implementation - would save to file
+        Ok(())
     }
 }

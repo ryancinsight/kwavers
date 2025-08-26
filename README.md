@@ -16,14 +16,14 @@ Production-grade Rust library for acoustic wave simulation with validated physic
 - ✅ **Build**: Clean compilation, zero errors
 - ✅ **Tests**: 100% passing (26 tests)
 - ✅ **Examples**: All 7 examples working
-- ⚠️ **Warnings**: 443 (reduced from 447)
+- ⚠️ **Warnings**: 442 (reduced from 443)
 - ✅ **Physics**: Fully validated against literature
 
 ### Architecture Metrics
-- **Modules > 500 lines**: 48 (reduced from 49)
-- **Modules > 800 lines**: 2 (gpu/kernels.rs, ml/mod.rs)
-- **Worst offender**: 825 lines (ml/mod.rs)
-- **Recent refactoring**: GPU module split into 6 domain-specific submodules
+- **Modules > 500 lines**: 47 (reduced from 48)
+- **Modules > 800 lines**: 1 (gpu/kernels.rs: 798 lines)
+- **ML module refactored**: Split into 6 clean submodules (engine, types, models, etc.)
+- **Recent refactoring**: ML module properly modularized following SOLID principles
 
 ## Recent Improvements (v2.28.0)
 

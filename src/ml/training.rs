@@ -2,7 +2,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::ml::models::TissueClassifierModel;
-use crate::ml::MLModel;
+use crate::ml::types::MLModel;
 use ndarray::{Array1, Array2, Array3, Axis};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
