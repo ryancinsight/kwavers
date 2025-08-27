@@ -29,7 +29,7 @@ fn main() -> KwaversResult<()> {
     let sound_speed = 1500.0; // Water sound speed
 
     // Time configuration
-    let dt = grid.cfl_timestep(sound_speed, 0.5); // Conservative CFL
+    let dt = grid.cfl_timestep(sound_speed); // Conservative CFL
     let time = Time::new(dt, 100);
 
     // Boundary conditions

@@ -28,7 +28,7 @@ fn main() -> KwaversResult<()> {
     println!("Medium: Water (c={} m/s, ρ={} kg/m³)", sound_speed, density);
 
     // Calculate time step using CFL condition
-    let dt = grid.cfl_timestep(sound_speed, 0.95);
+    let dt = grid.cfl_timestep(sound_speed);
     let num_steps = 100;
     let total_time = dt * num_steps as f64;
 

@@ -77,7 +77,7 @@ pub mod iterators {
             let j = (self.current / self.grid.nz) % self.grid.ny;
             let i = self.current / (self.grid.ny * self.grid.nz);
 
-            let (x, y, z) = self.grid.coordinates(i, j, k);
+            let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
 
             let properties = MediumProperties {
                 density: CoreMedium::density(self.medium, x, y, z, self.grid),
@@ -153,7 +153,7 @@ pub mod iterators {
                 return false;
             }
 
-            let (x, y, z) = self.grid.coordinates(i, j, k);
+            let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
             let center_density = self.medium.density(x, y, z, self.grid);
 
             // Check all 6 neighbors
@@ -167,7 +167,7 @@ pub mod iterators {
             ];
 
             neighbors.iter().any(|&(ni, nj, nk)| {
-                let (nx, ny, nz) = self.grid.coordinates(ni, nj, nk);
+                let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
                 let neighbor_density = self.medium.density(nx, ny, nz, self.grid);
                 ((neighbor_density - center_density).abs() / center_density) > self.threshold
             })
@@ -186,7 +186,7 @@ pub mod iterators {
                 self.current += 1;
 
                 if self.is_interface(i, j, k) {
-                    let (x, y, z) = self.grid.coordinates(i, j, k);
+                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                     return Some(InterfacePoint {
                         indices: (i, j, k),
                         position: (x, y, z),
@@ -202,7 +202,7 @@ pub mod iterators {
 
     impl<'a> InterfaceIterator<'a> {
         fn calculate_density_jump(&self, i: usize, j: usize, k: usize) -> f64 {
-            let (x, y, z) = self.grid.coordinates(i, j, k);
+            let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
             let center = self.medium.density(x, y, z, self.grid);
 
             let mut max_jump = 0.0;
@@ -218,7 +218,7 @@ pub mod iterators {
                         let nk = (k as i32 + dk) as usize;
 
                         if ni < self.grid.nx && nj < self.grid.ny && nk < self.grid.nz {
-                            let (nx, ny, nz) = self.grid.coordinates(ni, nj, nk);
+                            let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
                             let neighbor = self.medium.density(nx, ny, nz, self.grid);
                             max_jump = f64::max(max_jump, (neighbor - center).abs());
                         }
@@ -230,12 +230,12 @@ pub mod iterators {
         }
 
         fn calculate_normal(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
-            let (x, y, z) = self.grid.coordinates(i, j, k);
+            let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
 
             // Calculate gradient using central differences
             let dx = if i > 0 && i < self.grid.nx - 1 {
-                let (x1, _, _) = self.grid.coordinates(i + 1, j, k);
-                let (x0, _, _) = self.grid.coordinates(i - 1, j, k);
+                let (x1, _, _) = self.grid.indices_to_coordinates(i + 1, j, k);
+                let (x0, _, _) = self.grid.indices_to_coordinates(i - 1, j, k);
                 let d1 = self.medium.density(x1, y, z, self.grid);
                 let d0 = self.medium.density(x0, y, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dx)
@@ -244,8 +244,8 @@ pub mod iterators {
             };
 
             let dy = if j > 0 && j < self.grid.ny - 1 {
-                let (_, y1, _) = self.grid.coordinates(i, j + 1, k);
-                let (_, y0, _) = self.grid.coordinates(i, j - 1, k);
+                let (_, y1, _) = self.grid.indices_to_coordinates(i, j + 1, k);
+                let (_, y0, _) = self.grid.indices_to_coordinates(i, j - 1, k);
                 let d1 = self.medium.density(x, y1, z, self.grid);
                 let d0 = self.medium.density(x, y0, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dy)
@@ -254,8 +254,8 @@ pub mod iterators {
             };
 
             let dz = if k > 0 && k < self.grid.nz - 1 {
-                let (_, _, z1) = self.grid.coordinates(i, j, k + 1);
-                let (_, _, z0) = self.grid.coordinates(i, j, k - 1);
+                let (_, _, z1) = self.grid.indices_to_coordinates(i, j, k + 1);
+                let (_, _, z0) = self.grid.indices_to_coordinates(i, j, k - 1);
                 let d1 = self.medium.density(x, y, z1, self.grid);
                 let d0 = self.medium.density(x, y, z0, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dz)
@@ -305,7 +305,7 @@ pub mod iterators {
                     let j = (idx / self.grid.nz) % self.grid.ny;
                     let i = idx / (self.grid.ny * self.grid.nz);
 
-                    let (x, y, z) = self.grid.coordinates(i, j, k);
+                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
 
                     let properties = MediumProperties {
                         density: self.medium.density(x, y, z, self.grid),
@@ -339,7 +339,7 @@ pub mod iterators {
                     let j = (idx / self.grid.nz) % self.grid.ny;
                     let i = idx / (self.grid.ny * self.grid.nz);
 
-                    let (x, y, z) = self.grid.coordinates(i, j, k);
+                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
 
                     let properties = MediumProperties {
                         density: self.medium.density(x, y, z, self.grid),

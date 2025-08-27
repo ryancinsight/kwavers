@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.31.0
+# Product Requirements Document - Kwavers v2.32.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.31.0)
+## Current State (v2.32.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -78,23 +78,30 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 |--------|---------|--------|--------|
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
-| Warnings | 446 | <50 | ⚠️ |
-| Modules >500 lines | 45 | 0 | 🔄 |
+| Warnings | 448 | <50 | ⚠️ |
+| Modules >500 lines | 43 | 0 | 🔄 |
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.31.0)
-- **Naming Violations Fixed**: 
-  - Replaced `new_stress`/`new_velocity` with `updated_stress`/`updated_velocity`
-  - Renamed `temp_x/y/z` to `workspace_x/y/z` in FFT modules
-  - Removed TODO comments indicating incomplete implementations
-- **Module Structure Improvements**:
-  - Created `source/focused/` directory with proper separation (bowl, geometry, pressure_field, validation)
-  - Began refactoring 786-line focused_transducer.rs into modular components
-- **Code Quality**:
-  - Fixed all compilation errors from refactoring
-  - All 21 tests passing in 12.074s
-  - Applied cargo fix and fmt for consistency
+### Recent Changes (v2.32.0)
+- **Major Domain-Driven Modularization**:
+  - **Grid Module**: Refactored 752-line monolith into 5 domain modules:
+    - `structure.rs`: Core grid definition
+    - `coordinates.rs`: Position conversions
+    - `kspace.rs`: K-space operations
+    - `field_ops.rs`: Field array operations
+    - `stability.rs`: CFL and stability calculations
+  - **CUDA Module**: Refactored 760-line monolith into 5 domain modules:
+    - `context.rs`: Device context management
+    - `memory.rs`: Memory allocation and transfers
+    - `kernels.rs`: CUDA kernel source code
+    - `field_ops.rs`: Field update operations
+    - `device.rs`: Device detection and properties
+- **Architecture Improvements**:
+  - Enforced proper domain/feature-based organization
+  - Added compatibility methods for seamless migration
+  - All 21 tests passing in 11.939s
+  - Fixed example code to use updated APIs
 
 ---
 

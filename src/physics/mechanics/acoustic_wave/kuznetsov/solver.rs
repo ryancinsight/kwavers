@@ -134,7 +134,7 @@ impl KuznetsovWave {
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
-                    let (x, y, z) = self.grid.coordinates(i, j, k);
+                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                     let source_term = source.get_source_term(t, x, y, z, &self.grid);
                     rhs[[i, j, k]] += source_term;
                 }
