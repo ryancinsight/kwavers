@@ -100,34 +100,49 @@ impl GpuMemoryManager {
             BufferHandle::Cuda(_) => {
                 #[cfg(feature = "cuda")]
                 {
-                    // Would call cudaFree
-                    Ok(())
+                    // CUDA memory deallocation not yet implemented
+                    Err(KwaversError::NotImplemented(
+                        "CUDA memory deallocation".to_string(),
+                    ))
                 }
                 #[cfg(not(feature = "cuda"))]
                 {
-                    Ok(())
+                    Err(KwaversError::Config(ConfigError::MissingParameter {
+                        parameter: "CUDA support".to_string(),
+                        section: "features".to_string(),
+                    }))
                 }
             }
             BufferHandle::OpenCL(_) => {
                 #[cfg(feature = "opencl")]
                 {
-                    // Would call clReleaseMemObject
-                    Ok(())
+                    // OpenCL memory deallocation not yet implemented
+                    Err(KwaversError::NotImplemented(
+                        "OpenCL memory deallocation".to_string(),
+                    ))
                 }
                 #[cfg(not(feature = "opencl"))]
                 {
-                    Ok(())
+                    Err(KwaversError::Config(ConfigError::MissingParameter {
+                        parameter: "OpenCL support".to_string(),
+                        section: "features".to_string(),
+                    }))
                 }
             }
             BufferHandle::WebGpu(_) => {
                 #[cfg(feature = "webgpu")]
                 {
-                    // Would drop wgpu buffer
-                    Ok(())
+                    // WebGPU memory deallocation not yet implemented
+                    Err(KwaversError::NotImplemented(
+                        "WebGPU memory deallocation".to_string(),
+                    ))
                 }
                 #[cfg(not(feature = "webgpu"))]
                 {
-                    Ok(())
+                    Err(KwaversError::Config(ConfigError::MissingParameter {
+                        parameter: "WebGPU support".to_string(),
+                        section: "features".to_string(),
+                    }))
                 }
             }
         }

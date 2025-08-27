@@ -6,6 +6,9 @@ use std::f64::consts::PI;
 pub mod numerical {
     use std::f64::consts::PI;
 
+    /// Factor of 2 used in various calculations
+    pub const TWO: f64 = 2.0;
+
     /// Default CFL safety factor for stability
     /// For 3D FDTD: max stable value is 1/sqrt(3) ≈ 0.577
     /// Using 0.5 for safety margin (Taflove & Hagness, 2005)
@@ -298,6 +301,19 @@ pub mod cfl {
 }
 
 // Numerical constants have been moved to the first numerical module above
+
+/// Elastic mechanics constants
+pub mod elastic {
+    /// Factor for converting Lamé parameters to stiffness tensor diagonal terms
+    /// C11 = C22 = C33 = λ + 2μ
+    pub const LAME_TO_STIFFNESS_FACTOR: f64 = 2.0;
+
+    /// Factor for Bond transformation matrix elements
+    pub const BOND_TRANSFORM_FACTOR: f64 = 2.0;
+
+    /// Tolerance for stiffness tensor symmetry check
+    pub const SYMMETRY_TOLERANCE: f64 = 1e-10;
+}
 
 /// Material constants
 pub mod material {

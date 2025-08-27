@@ -10,6 +10,10 @@
 //! - Aristizabal, S., et al. (2018). "Shear wave vibrometry in ex vivo
 //!   porcine lens." J Biomech 75: 19-25.
 
+use crate::constants::elastic::{
+    BOND_TRANSFORM_FACTOR, LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE,
+};
+
 use crate::Grid;
 use crate::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use ndarray::{Array2, Array3, Array4};
@@ -42,9 +46,9 @@ impl StiffnessTensor {
         let mut c = Array2::zeros((6, 6));
 
         // Diagonal terms
-        c[[0, 0]] = lambda + 2.0 * mu; // C11
-        c[[1, 1]] = lambda + 2.0 * mu; // C22
-        c[[2, 2]] = lambda + 2.0 * mu; // C33
+        c[[0, 0]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C11
+        c[[1, 1]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C22
+        c[[2, 2]] = lambda + LAME_TO_STIFFNESS_FACTOR * mu; // C33
         c[[3, 3]] = mu; // C44
         c[[4, 4]] = mu; // C55
         c[[5, 5]] = mu; // C66
@@ -124,7 +128,7 @@ impl StiffnessTensor {
         // Verify symmetry
         for i in 0..6 {
             for j in i + 1..6 {
-                if (c[[i, j]] - c[[j, i]]).abs() > 1e-10 {
+                if (c[[i, j]] - c[[j, i]]).abs() > SYMMETRY_TOLERANCE {
                     return Err(KwaversError::Validation(ValidationError::FieldValidation {
                         field: "stiffness_tensor".to_string(),
                         value: "asymmetric".to_string(),
@@ -178,23 +182,23 @@ impl StiffnessTensor {
         bond[[0, 0]] = r[0][0] * r[0][0];
         bond[[0, 1]] = r[0][1] * r[0][1];
         bond[[0, 2]] = r[0][2] * r[0][2];
-        bond[[0, 3]] = 2.0 * r[0][1] * r[0][2];
-        bond[[0, 4]] = 2.0 * r[0][0] * r[0][2];
-        bond[[0, 5]] = 2.0 * r[0][0] * r[0][1];
+        bond[[0, 3]] = BOND_TRANSFORM_FACTOR * r[0][1] * r[0][2];
+        bond[[0, 4]] = BOND_TRANSFORM_FACTOR * r[0][0] * r[0][2];
+        bond[[0, 5]] = BOND_TRANSFORM_FACTOR * r[0][0] * r[0][1];
 
         bond[[1, 0]] = r[1][0] * r[1][0];
         bond[[1, 1]] = r[1][1] * r[1][1];
         bond[[1, 2]] = r[1][2] * r[1][2];
-        bond[[1, 3]] = 2.0 * r[1][1] * r[1][2];
-        bond[[1, 4]] = 2.0 * r[1][0] * r[1][2];
-        bond[[1, 5]] = 2.0 * r[1][0] * r[1][1];
+        bond[[1, 3]] = BOND_TRANSFORM_FACTOR * r[1][1] * r[1][2];
+        bond[[1, 4]] = BOND_TRANSFORM_FACTOR * r[1][0] * r[1][2];
+        bond[[1, 5]] = BOND_TRANSFORM_FACTOR * r[1][0] * r[1][1];
 
         bond[[2, 0]] = r[2][0] * r[2][0];
         bond[[2, 1]] = r[2][1] * r[2][1];
         bond[[2, 2]] = r[2][2] * r[2][2];
-        bond[[2, 3]] = 2.0 * r[2][1] * r[2][2];
-        bond[[2, 4]] = 2.0 * r[2][0] * r[2][2];
-        bond[[2, 5]] = 2.0 * r[2][0] * r[2][1];
+        bond[[2, 3]] = BOND_TRANSFORM_FACTOR * r[2][1] * r[2][2];
+        bond[[2, 4]] = BOND_TRANSFORM_FACTOR * r[2][0] * r[2][2];
+        bond[[2, 5]] = BOND_TRANSFORM_FACTOR * r[2][0] * r[2][1];
 
         // Shear components (23, 13, 12)
         bond[[3, 0]] = r[1][0] * r[2][0];

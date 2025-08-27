@@ -40,7 +40,7 @@ fn main() -> KwaversResult<()> {
 
     // Time configuration
     let max_sound_speed = 1600.0; // Maximum in tissue
-    let dt = grid.cfl_timestep(max_sound_speed, 0.5);
+    let dt = grid.cfl_timestep(max_sound_speed);
     let time = Time::new(dt, 200);
 
     println!("\nTiming:");

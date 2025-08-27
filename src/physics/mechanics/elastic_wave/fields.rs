@@ -13,22 +13,22 @@ pub type Complex3D = Array3<Complex<f64>>;
 /// Follows SOLID principles with single responsibility
 #[derive(Debug)]
 pub struct StressFields {
-    /// Normal stress components
-    pub txx: Complex3D,
-    pub tyy: Complex3D,
-    pub tzz: Complex3D,
+    /// Normal stress components (real values for time-domain)
+    pub txx: Array3<f64>,
+    pub tyy: Array3<f64>,
+    pub tzz: Array3<f64>,
     /// Shear stress components (symmetric tensor)
-    pub txy: Complex3D,
-    pub txz: Complex3D,
-    pub tyz: Complex3D,
+    pub txy: Array3<f64>,
+    pub txz: Array3<f64>,
+    pub tyz: Array3<f64>,
 }
 
 /// Velocity field components in 3D elastic media
 #[derive(Debug)]
 pub struct VelocityFields {
-    pub vx: Complex3D,
-    pub vy: Complex3D,
-    pub vz: Complex3D,
+    pub vx: Array3<f64>,
+    pub vy: Array3<f64>,
+    pub vz: Array3<f64>,
 }
 
 impl StressFields {
@@ -46,12 +46,12 @@ impl StressFields {
 
     /// Reset all fields to zero
     pub fn reset(&mut self) {
-        self.txx.fill(Complex::new(0.0, 0.0));
-        self.tyy.fill(Complex::new(0.0, 0.0));
-        self.tzz.fill(Complex::new(0.0, 0.0));
-        self.txy.fill(Complex::new(0.0, 0.0));
-        self.txz.fill(Complex::new(0.0, 0.0));
-        self.tyz.fill(Complex::new(0.0, 0.0));
+        self.txx.fill(0.0);
+        self.tyy.fill(0.0);
+        self.tzz.fill(0.0);
+        self.txy.fill(0.0);
+        self.txz.fill(0.0);
+        self.tyz.fill(0.0);
     }
 }
 
@@ -67,8 +67,8 @@ impl VelocityFields {
 
     /// Reset all fields to zero
     pub fn reset(&mut self) {
-        self.vx.fill(Complex::new(0.0, 0.0));
-        self.vy.fill(Complex::new(0.0, 0.0));
-        self.vz.fill(Complex::new(0.0, 0.0));
+        self.vx.fill(0.0);
+        self.vy.fill(0.0);
+        self.vz.fill(0.0);
     }
 }

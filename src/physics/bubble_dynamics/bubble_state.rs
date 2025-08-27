@@ -187,6 +187,10 @@ pub struct BubbleParameters {
     /// Default is air (79% N2, 21% O2)
     pub gas_composition: HashMap<GasType, f64>,
 
+    // Acoustic forcing parameters
+    pub driving_frequency: f64, // Driving frequency [Hz]
+    pub driving_amplitude: f64, // Pressure amplitude [Pa]
+
     // Numerical parameters
     pub use_compressibility: bool, // Use Keller-Miksis
     pub use_thermal_effects: bool, // Include heat transfer
@@ -215,6 +219,8 @@ impl Default for BubbleParameters {
             gas_species: GasSpecies::Air,
             initial_gas_pressure: 101325.0,
             gas_composition,
+            driving_frequency: 26.5e3, // 26.5 kHz (typical medical ultrasound)
+            driving_amplitude: 1e5,    // 100 kPa acoustic pressure
             use_compressibility: true,
             use_thermal_effects: true,
             use_mass_transfer: true,

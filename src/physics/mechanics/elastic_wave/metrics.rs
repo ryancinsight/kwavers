@@ -55,6 +55,11 @@ impl ElasticWaveMetrics {
         self.fft_time += duration;
     }
 
+    /// Add to inverse FFT timing
+    pub fn add_ifft_time(&mut self, duration: Duration) {
+        self.fft_time += duration; // Count both FFT and IFFT in same metric
+    }
+
     /// Add to update timing
     pub fn add_update_time(&mut self, duration: Duration) {
         self.update_time += duration;

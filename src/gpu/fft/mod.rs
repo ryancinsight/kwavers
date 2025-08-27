@@ -15,11 +15,8 @@ pub mod transpose;
 #[cfg(feature = "cuda")]
 pub mod cuda;
 
-#[cfg(feature = "opencl")]
-pub mod opencl;
-
-#[cfg(feature = "webgpu")]
-pub mod webgpu;
+// OpenCL and WebGPU FFT implementations are not yet available
+// These will be implemented when the respective backends are fully developed
 
 // Re-export main types
 pub use kernels::FftKernel;
@@ -55,17 +52,24 @@ pub fn create_fft_backend() -> KwaversResult<Box<dyn GpuFftBackend>> {
         return Ok(Box::new(cuda::CudaFftBackend::new()?));
     }
 
+    // OpenCL and WebGPU backends not yet implemented
     #[cfg(feature = "opencl")]
     {
-        return Ok(Box::new(opencl::OpenClFftBackend::new()?));
+        use crate::error::KwaversError;
+        return Err(KwaversError::NotImplemented(
+            "OpenCL FFT backend not yet implemented".to_string(),
+        ));
     }
 
     #[cfg(feature = "webgpu")]
     {
-        return Ok(Box::new(webgpu::WebGpuFftBackend::new()?));
+        use crate::error::KwaversError;
+        return Err(KwaversError::NotImplemented(
+            "WebGPU FFT backend not yet implemented".to_string(),
+        ));
     }
 
-    #[cfg(not(any(feature = "cuda", feature = "opencl", feature = "webgpu")))]
+    #[cfg(not(feature = "cuda"))]
     {
         use crate::error::KwaversError;
         Err(KwaversError::Config(
