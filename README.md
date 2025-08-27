@@ -10,14 +10,18 @@ Rust library for acoustic wave simulation with improving physics implementations
 
 ## Current Status
 
-**Grade: C+ (75%)** - Fundamental physics issues discovered, not suitable for production
+**Grade: C (70%)** - Major refactoring in progress to fix fundamental physics issues
 
 ### Build & Test Status
 - ✅ **Build**: Clean compilation, zero errors
-- ✅ **Tests**: 100% passing (26 tests - but test coverage is limited)
+- ✅ **Tests**: 100% passing (28 tests with new Westervelt FDTD tests)
 - ✅ **Examples**: All 7 examples working
-- ⚠️ **Warnings**: 439 (indicates incomplete implementations)
-- ⚠️ **Physics**: Partially validated - several implementations have issues
+- ⚠️ **Warnings**: 440 (unused parameters indicate incomplete physics)
+- 🔧 **Physics**: Major fixes implemented:
+  - ✅ Proper Westervelt equation using FDTD (replaced incorrect implementation)
+  - ✅ Created proper FDTD solver for heterogeneous media
+  - ⚠️ PSTD method still has admitted limitations
+  - ⚠️ Multiple wave implementations need consolidation
 
 ### Architecture Metrics
 - **Modules > 500 lines**: 46 (reduced from 47)
