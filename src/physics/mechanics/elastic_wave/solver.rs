@@ -7,7 +7,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::mechanics::elastic_wave::{
-    fields::{Complex3D, StressFields, VelocityFields},
+    fields::{StressFields, VelocityFields},
     parameters::{StressUpdateParams, VelocityUpdateParams},
     ElasticWave,
 };

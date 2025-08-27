@@ -5,6 +5,7 @@
 
 pub mod acoustic_simulation_plugins;
 pub mod acoustic_wave_plugin;
+pub mod elastic_wave_plugin;
 pub mod execution;
 pub mod factory;
 pub mod field_access;

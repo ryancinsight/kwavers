@@ -4,8 +4,6 @@
 //! - Mechanics: for cavitation damage and erosion
 //! - Optics: for sonoluminescence light emission
 
-// Bubble dynamics module implements complex multi-physics equations
-// Parameters are defined for complete physical models even when simplified versions are used
 //! - Chemistry: for ROS generation and sonochemistry
 //!
 //! Based on the Keller-Miksis equation and extended models from literature

@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.32.0
+# Product Requirements Document - Kwavers v2.33.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.32.0)
+## Current State (v2.33.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -83,7 +83,11 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.32.0)
+### Recent Changes (v2.33.0)
+- **Complete Physics Implementations**:
+  - **Bubble Dynamics**: Added full time-dependent acoustic forcing with proper phase tracking
+  - **Elastic Wave Plugin**: Integrated complete elastic wave propagation with P-waves, S-waves, and mode conversion
+  - **Parameter Utilization**: All parameters now actively used - no simplified models
 - **Major Domain-Driven Modularization**:
   - **Grid Module**: Refactored 752-line monolith into 5 domain modules:
     - `structure.rs`: Core grid definition
