@@ -171,5 +171,4 @@ mod tests {
     }
 }
 
-#[cfg(test)]
-mod validation_tests;
+// Tests moved to individual modules

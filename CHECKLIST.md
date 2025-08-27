@@ -68,15 +68,15 @@
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| Westervelt equation implemented incorrectly | CRITICAL | Not Fixed |
-| PSTD has "fundamental limitations" for heterogeneous media | CRITICAL | Admitted in docs |
-| 5 different wave implementations (DRY violation) | HIGH | Not Fixed |
-| k-space correction ignored medium properties | CRITICAL | Fixed |
-| Stability checks used stale cached values | CRITICAL | Fixed |
-| Nonlinearity coefficient assumed homogeneous | HIGH | Fixed |
-| 439 warnings indicate incomplete code | MEDIUM | Ongoing |
-| Limited test coverage (only 26 tests) | HIGH | Not Fixed |
-| 46 modules exceed 500 lines | HIGH | Not Fixed |
+| PSTD admits failure but used in 30 files | CRITICAL | Not Fixed |
+| Orphaned fixes.rs with critical bug fixes | CRITICAL | Deleted |
+| 46 modules exceed 500 lines (max: 791) | CRITICAL | Not Fixed |
+| 5 duplicate wave implementations | HIGH | Not Fixed |
+| ~435 unused parameters (each a bug) | HIGH | Partial |
+| Functions use cached values not medium | HIGH | Partial |
+| Test files with wrong naming convention | MEDIUM | Fixed |
+| No analytical validation tests | HIGH | Not Fixed |
+| Westervelt FDTD created correctly | GOOD | Fixed |
 
 ---
 
