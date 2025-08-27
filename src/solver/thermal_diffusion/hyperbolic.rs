@@ -27,6 +27,7 @@ impl Default for HyperbolicParameters {
 }
 
 /// Hyperbolic heat transfer solver
+#[derive(Debug)]
 pub struct CattaneoVernotte {
     params: HyperbolicParameters,
     /// Heat flux components

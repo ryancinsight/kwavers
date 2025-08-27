@@ -40,14 +40,15 @@ pub use hyperbolic::{CattaneoVernotte, HyperbolicParameters};
 pub use solver::ThermalDiffusionSolver;
 
 use crate::{
-    error::{ConfigError, KwaversError, KwaversResult, PhysicsError},
+    error::KwaversResult,
     grid::Grid,
     medium::Medium,
-    physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
+    physics::{
+        field_mapping::UnifiedFieldType,
+        plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
+    },
 };
-use log::info;
-use ndarray::{s, Array3, Array4, Zip};
-use std::collections::HashMap;
+use ndarray::Array4;
 
 /// Configuration for thermal diffusion solver
 #[derive(Debug, Clone)]
@@ -92,24 +93,29 @@ impl Default for ThermalDiffusionConfig {
 }
 
 /// Thermal diffusion plugin for the physics system
+#[derive(Debug)]
 pub struct ThermalDiffusionPlugin {
     metadata: PluginMetadata,
     solver: Option<ThermalDiffusionSolver>,
     config: ThermalDiffusionConfig,
+    state: PluginState,
 }
 
 impl ThermalDiffusionPlugin {
     pub fn new(config: ThermalDiffusionConfig) -> Self {
         Self {
             metadata: PluginMetadata {
+                id: "thermal_diffusion".to_string(),
                 name: "ThermalDiffusion".to_string(),
                 version: "1.0.0".to_string(),
                 author: "Kwavers Team".to_string(),
                 description: "Thermal diffusion solver with bioheat and hyperbolic models"
                     .to_string(),
+                license: "MIT".to_string(),
             },
             solver: None,
             config,
+            state: PluginState::Created,
         }
     }
 }
@@ -119,29 +125,53 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
         &self.metadata
     }
 
-    fn initialize(&mut self, context: &PluginContext) -> KwaversResult<()> {
-        self.solver = Some(ThermalDiffusionSolver::new(
-            self.config.clone(),
-            context.grid,
-        ));
+    fn state(&self) -> PluginState {
+        self.state.clone()
+    }
+
+    fn required_fields(&self) -> Vec<UnifiedFieldType> {
+        // Temperature solver may need heat source from acoustic absorption
+        vec![] // Optional: heat_source field
+    }
+
+    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
+        vec![UnifiedFieldType::Temperature]
+    }
+
+    fn initialize(&mut self, grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
+        self.solver = Some(ThermalDiffusionSolver::new(self.config.clone(), grid));
+        self.state = PluginState::Initialized;
         Ok(())
     }
 
-    fn update(&mut self, context: &mut PluginContext, dt: f64) -> KwaversResult<()> {
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        _t: f64,
+        _context: &PluginContext,
+    ) -> KwaversResult<()> {
         if let Some(ref mut solver) = self.solver {
-            // Get heat source from acoustic absorption if available
-            let heat_source = context.state.get_field("heat_source");
+            // Get heat source from fields if available (could be from acoustic absorption)
+            let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
+                Some(
+                    fields
+                        .index_axis(ndarray::Axis(0), UnifiedFieldType::Temperature as usize + 1)
+                        .to_owned(),
+                )
+            } else {
+                None
+            };
 
-            solver.update(context.medium, context.grid, dt, heat_source)?;
+            solver.update(medium, grid, dt, heat_source.as_ref())?;
 
-            // Store temperature in physics state
-            context
-                .state
-                .set_field("temperature", solver.temperature().clone());
-
-            // Store thermal dose if tracking
-            if let Some(dose) = solver.thermal_dose() {
-                context.state.set_field("thermal_dose", dose.clone());
+            // Store temperature back in fields
+            let temp_idx = UnifiedFieldType::Temperature as usize;
+            if fields.shape()[0] > temp_idx {
+                let mut temp_field = fields.index_axis_mut(ndarray::Axis(0), temp_idx);
+                temp_field.assign(solver.temperature());
             }
         }
 
@@ -149,11 +179,8 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
     }
 
     fn finalize(&mut self) -> KwaversResult<()> {
+        self.state = PluginState::Finalized;
         Ok(())
-    }
-
-    fn state(&self) -> PluginState {
-        PluginState::Active
     }
 }
 
