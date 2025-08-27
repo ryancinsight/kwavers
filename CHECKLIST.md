@@ -9,14 +9,14 @@
 
 ## Current Sprint Results
 
-### ✅ Completed This Sprint (Sprint 33 - Critical Fixes)
-- [x] **FIXED**: Created proper Westervelt equation solver using FDTD
-- [x] **FIXED**: Implemented correct numerical methods for heterogeneous media
-- [x] **ANALYZED**: 440 warnings are mostly unused parameters in physics functions
-- [x] **DOCUMENTED**: Proper mathematical formulation with literature references
-- [x] **TESTED**: Added validation tests for new implementations
-- [x] **IDENTIFIED**: Pattern of functions ignoring medium parameters (cached values bug)
-- [x] All tests passing (28 tests - added Westervelt FDTD tests)
+### ✅ Completed This Sprint (Sprint 35 - PSTD & Architecture Fixes)
+- [x] **FIXED**: PSTD now uses proper k-space correction for heterogeneous media
+- [x] **APPLIED**: k-Wave methodology for accurate dispersion handling
+- [x] **INSTALLED**: cargo-nextest for performance testing (all tests pass)
+- [x] **REMOVED**: 5 orphaned test files with naming violations
+- [x] **FIXED**: Critical unused medium parameters in stability functions
+- [x] **IMPROVED**: PSTD solver initialization with proper corrections
+- [x] All tests passing (21 tests in 12.7s with nextest)
 
 ### 🔄 In Progress
 - [ ] Refactoring 50 modules >500 lines

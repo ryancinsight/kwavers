@@ -6,6 +6,7 @@ use crate::boundary::Boundary;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::solver::kspace_correction::{compute_kspace_correction, KSpaceCorrectionConfig};
 use crate::source::Source;
 use ndarray::{Array3, Zip};
 
@@ -31,8 +32,15 @@ impl PstdSolver {
             ));
         }
 
-        let spectral = SpectralOperations::new(grid);
+        let mut spectral = SpectralOperations::new(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
+
+        // Initialize k-space correction for proper dispersion handling
+        // This is critical for heterogeneous media accuracy
+        let kspace_config = KSpaceCorrectionConfig::default();
+        let dt = 0.3 * grid.dx.min(grid.dy).min(grid.dz) / 1500.0; // Estimate dt
+        let kappa = compute_kspace_correction(grid, &kspace_config, dt, 1500.0);
+        spectral.set_kspace_correction(kappa);
 
         Ok(Self {
             config,

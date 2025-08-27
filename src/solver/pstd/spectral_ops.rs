@@ -31,6 +31,11 @@ impl SpectralOperations {
         }
     }
 
+    /// Set k-space correction factors for heterogeneous media
+    pub fn set_kspace_correction(&mut self, kappa: Array3<f64>) {
+        self.kappa = Some(kappa);
+    }
+
     /// Compute wavenumber arrays
     fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         let mut kx = Array3::zeros((grid.nx, grid.ny, grid.nz));
