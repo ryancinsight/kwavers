@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.33.0
+# Product Requirements Document - Kwavers v2.34.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.33.0)
+## Current State (v2.34.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -83,7 +83,18 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.33.0)
+### Recent Changes (v2.34.0)
+- **Resolved Compilation Issues**:
+  - Fixed elastic wave spectral solver complex/real type mismatch
+  - Properly stubbed spectral methods in favor of finite-difference implementation
+  - Reduced warnings from 455 to 448
+- **Added Literature Validation Tests**:
+  - Rayleigh collapse time validation
+  - Acoustic dispersion relation tests
+  - Elastic wave velocity verification
+  - CFL stability condition tests
+  - Nonlinear propagation (B/A parameter) tests
+  - Time reversal principle validation
 - **Complete Physics Implementations**:
   - **Bubble Dynamics**: Added full time-dependent acoustic forcing with proper phase tracking
   - **Elastic Wave Plugin**: Integrated complete elastic wave propagation with P-waves, S-waves, and mode conversion

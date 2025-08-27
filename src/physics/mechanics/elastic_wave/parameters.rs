@@ -3,8 +3,11 @@
 //! This module defines parameter containers that reduce coupling between
 //! components following SOLID principles.
 
-use crate::physics::mechanics::elastic_wave::fields::Complex3D;
 use ndarray::Array3;
+use num_complex::Complex;
+
+/// Type alias for complex 3D arrays used in spectral methods
+pub type Complex3D = Array3<Complex<f64>>;
 
 /// Parameters for stress update operations
 /// Follows SOLID principles by reducing parameter coupling

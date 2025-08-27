@@ -13,8 +13,6 @@ use crate::physics::mechanics::elastic_wave::{
 use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
 use crate::source::Source;
 use ndarray::{Array3, Array4};
-use std::any::Any;
-use std::collections::HashMap;
 
 /// Elastic wave physics plugin
 #[derive(Debug)]
