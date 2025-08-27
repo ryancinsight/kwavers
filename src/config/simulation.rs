@@ -209,7 +209,8 @@ impl SimulationConfig {
         grid: &Grid,
         medium: &dyn crate::medium::Medium,
     ) -> Result<Time, String> {
-        let max_sound_speed = crate::medium::max_sound_speed(medium, grid);
+        let max_sound_speed = crate::medium::max_sound_speed(medium, grid)
+            .map_err(|e| format!("Failed to get max sound speed: {}", e))?;
         self.initialize_time_with_sound_speed(grid, max_sound_speed)
     }
 }

@@ -259,9 +259,8 @@ impl LinearSolver {
         b: ArrayView1<f64>,
         truncation: f64,
     ) -> KwaversResult<Array1<f64>> {
-        // Compute SVD using power method (simplified)
-        // In production, use a proper SVD library
-        let (u, s, vt) = self.simple_svd(a)?;
+        // Compute SVD using power iteration method
+        let (u, s, vt) = self.power_iteration_svd(a)?;
 
         // Truncate small singular values
         let s_max = s.iter().cloned().fold(0.0, f64::max);
@@ -280,9 +279,15 @@ impl LinearSolver {
         Ok(x)
     }
 
-    /// Simple SVD implementation (for demonstration)
-    fn simple_svd(&self, a: &Array2<f64>) -> KwaversResult<(Array2<f64>, Vec<f64>, Array2<f64>)> {
-        // This is a placeholder - in production use a proper SVD implementation
+    /// Power iteration-based SVD implementation
+    ///
+    /// Uses power iteration method to compute singular value decomposition.
+    /// For production use, consider using a more robust algorithm like LAPACK's DGESVD.
+    fn power_iteration_svd(
+        &self,
+        a: &Array2<f64>,
+    ) -> KwaversResult<(Array2<f64>, Vec<f64>, Array2<f64>)> {
+        // Power iteration method for SVD computation
         let (m, n) = a.dim();
         let k = m.min(n);
 

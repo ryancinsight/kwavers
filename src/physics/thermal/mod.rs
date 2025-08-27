@@ -205,7 +205,7 @@ impl ThermalCalculator {
             });
 
         // Calculate Laplacian of temperature
-        let laplacian = self.calculate_laplacian(&self.temperature.clone(), grid)?;
+        let laplacian = self.calculate_laplacian(&self.temperature, grid)?;
 
         // Update temperature
         if self.config.hyperbolic {

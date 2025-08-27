@@ -177,8 +177,9 @@ impl NonlinearWave {
         let ky = grid.compute_ky();
         let kz = grid.compute_kz();
 
-        // Apply k-space operator
-        let c = self.max_sound_speed; // Use max for stability in heterogeneous media
+        // Get spatially-varying sound speed
+        let c_array = medium.sound_speed_array();
+        let c = c_array.mean().unwrap_or(self.max_sound_speed);
         let mut result_k = Array3::<Complex<f64>>::zeros(pressure_k.raw_dim());
 
         // Use pre-computed k_squared if available

@@ -10,6 +10,9 @@ pub use westervelt_wave::WesterveltWave;
 pub mod kuznetsov;
 pub use kuznetsov::{KuznetsovConfig, KuznetsovWave};
 
+pub mod westervelt_fdtd;
+pub use westervelt_fdtd::{WesterveltFdtd, WesterveltFdtdConfig};
+
 pub mod unified_solver;
 pub use unified_solver::{AcousticModelType, AcousticSolverConfig, AcousticWaveSolver};
 

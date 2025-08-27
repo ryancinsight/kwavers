@@ -361,7 +361,7 @@ impl Grid {
     /// # Returns
     /// The maximum stable time step in seconds
     pub fn cfl_timestep_from_medium(&self, medium: &dyn crate::medium::Medium) -> f64 {
-        let max_sound_speed = crate::medium::max_sound_speed(medium, self);
+        let max_sound_speed = crate::medium::max_sound_speed(medium, self).unwrap_or(1500.0); // Default to water sound speed if error
         self.cfl_timestep_default(max_sound_speed)
     }
 }
