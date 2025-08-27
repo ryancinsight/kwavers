@@ -9,16 +9,14 @@
 
 ## Current Sprint Results
 
-### ✅ Completed This Sprint
-- [x] Fixed critical bug: k-space correction ignoring medium properties
-- [x] Fixed critical bug: stability check using cached instead of actual values
-- [x] Corrected Westervelt documentation (was incorrectly labeled viscoelastic)
-- [x] Fixed spatially-varying nonlinearity coefficient usage
-- [x] Removed unnecessary clones violating zero-copy principle
-- [x] Fixed underscored variables indicating incomplete implementations
-- [x] Reduced warnings from 442 to 439
-- [x] Updated documentation with honest assessment
-- [x] All tests passing (26 tests - but limited coverage)
+### ✅ Completed This Sprint (Sprint 32)
+- [x] Validated Westervelt equation - found incorrect implementation
+- [x] Identified 5 different wave implementations (DRY violation)
+- [x] Discovered PSTD method admits "fundamental limitations" for heterogeneous media
+- [x] Attempted thermal diffusion refactoring (reverted due to trait changes)
+- [x] Documented critical physics implementation issues
+- [x] Warnings remain at 439 (indicating incomplete implementations)
+- [x] All tests passing (26 tests - insufficient coverage)
 
 ### 🔄 In Progress
 - [ ] Refactoring 50 modules >500 lines
@@ -70,13 +68,15 @@
 
 | Issue | Severity | Status |
 |-------|----------|--------|
+| Westervelt equation implemented incorrectly | CRITICAL | Not Fixed |
+| PSTD has "fundamental limitations" for heterogeneous media | CRITICAL | Admitted in docs |
+| 5 different wave implementations (DRY violation) | HIGH | Not Fixed |
 | k-space correction ignored medium properties | CRITICAL | Fixed |
 | Stability checks used stale cached values | CRITICAL | Fixed |
-| Westervelt labeled as viscoelastic (wrong physics) | HIGH | Fixed |
 | Nonlinearity coefficient assumed homogeneous | HIGH | Fixed |
-| Many functions have unused parameters | MEDIUM | Partial |
 | 439 warnings indicate incomplete code | MEDIUM | Ongoing |
 | Limited test coverage (only 26 tests) | HIGH | Not Fixed |
+| 46 modules exceed 500 lines | HIGH | Not Fixed |
 
 ---
 

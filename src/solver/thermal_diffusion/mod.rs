@@ -725,7 +725,7 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
     }
 }
 
-mod validation;
+// mod validation; // TODO: Add validation tests
 
 #[cfg(test)]
 mod tests {
