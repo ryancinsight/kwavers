@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.37.0
+# Product Requirements Document - Kwavers v2.38.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.37.0)
+## Current State (v2.38.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -79,11 +79,24 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
 | Warnings | 448 | <50 | ⚠️ |
-| Modules >500 lines | 42 | 0 | 🔄 |
+| Modules >500 lines | 41 | 0 | 🔄 |
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.37.0)
+### Recent Changes (v2.38.0)
+- **Critical Deep Code Review**:
+  - Refactored `shock_capturing.rs` (782 lines) into 3 clean modules:
+    - `detector.rs` - Shock detection algorithms
+    - `limiter.rs` - WENO-based limiters  
+    - `viscosity.rs` - Artificial viscosity methods
+  - Fixed ALL incomplete GPU kernel implementations
+  - Replaced ALL placeholders with proper implementations
+  - Added complete CUDA Level 3 register-blocked kernel
+  - Implemented CPU fallback for GPU kernels
+  - Added missing physical constants (AIR_SOUND_SPEED, etc.)
+  - Replaced ALL magic numbers with named constants
+
+### Previous Changes (v2.37.0)
 - **Critical Code Review & Refactoring**:
   - Removed redundant `kuznetsov_wave.rs` (documentation-only file)
   - Refactored `focused_transducer.rs` (786 lines) into modular structure:

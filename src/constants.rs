@@ -52,6 +52,14 @@ pub mod numerical {
     pub const WENO_WEIGHT_1: f64 = 0.6;
     pub const WENO_WEIGHT_2: f64 = 0.3;
     pub const WENO_EPSILON: f64 = 1e-6;
+    pub const WENO5_WEIGHT_0: f64 = 0.1;
+    pub const WENO5_WEIGHT_1: f64 = 0.6;
+    pub const WENO5_WEIGHT_2: f64 = 0.3;
+    pub const WENO7_WEIGHT_0: f64 = 0.05;
+    pub const WENO7_WEIGHT_1: f64 = 0.45;
+    pub const WENO7_WEIGHT_2: f64 = 0.45;
+    pub const WENO7_WEIGHT_3: f64 = 0.05;
+    pub const SHOCK_DETECTION_THRESHOLD: f64 = 0.1;
     pub const STENCIL_COEFF_1_4: f64 = 0.25;
 
     // Artificial viscosity
@@ -215,6 +223,8 @@ pub mod physics {
     pub const WATER_DENSITY: f64 = 1000.0; // kg/m³
     pub const WATER_SOUND_SPEED: f64 = 1500.0; // m/s
     pub const WATER_ATTENUATION: f64 = 0.0022; // Np/m/MHz
+    pub const AIR_SOUND_SPEED: f64 = 343.0; // m/s at 20°C
+    pub const AIR_DENSITY: f64 = 1.225; // kg/m³ at sea level
     pub const WATER_NONLINEARITY: f64 = 3.5; // B/A parameter
     pub const WATER_THERMAL_CONDUCTIVITY: f64 = 0.6; // W/(m·K)
     pub const WATER_SPECIFIC_HEAT: f64 = 4180.0; // J/(kg·K)
