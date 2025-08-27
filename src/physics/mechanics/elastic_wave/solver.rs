@@ -29,7 +29,7 @@ impl ElasticWave {
         let ny = self.ky.shape()[0];
         let nz = self.kz.shape()[0];
 
-        let mut new_stress = StressFields::new(nx, ny, nz);
+        let mut updated_stress = StressFields::new(nx, ny, nz);
 
         // Spectral derivatives for strain computation
         for k in 0..nz {
@@ -58,25 +58,25 @@ impl ElasticWave {
                     let div_v = dvx_dx + dvy_dy + dvz_dz;
 
                     // Update normal stresses
-                    new_stress.txx[[i, j, k]] = params.sxx_fft[[i, j, k]]
+                    updated_stress.txx[[i, j, k]] = params.sxx_fft[[i, j, k]]
                         + params.dt * (lambda * div_v + 2.0 * mu * dvx_dx);
-                    new_stress.tyy[[i, j, k]] = params.syy_fft[[i, j, k]]
+                    updated_stress.tyy[[i, j, k]] = params.syy_fft[[i, j, k]]
                         + params.dt * (lambda * div_v + 2.0 * mu * dvy_dy);
-                    new_stress.tzz[[i, j, k]] = params.szz_fft[[i, j, k]]
+                    updated_stress.tzz[[i, j, k]] = params.szz_fft[[i, j, k]]
                         + params.dt * (lambda * div_v + 2.0 * mu * dvz_dz);
 
                     // Update shear stresses
-                    new_stress.txy[[i, j, k]] =
+                    updated_stress.txy[[i, j, k]] =
                         params.sxy_fft[[i, j, k]] + params.dt * mu * (dvx_dy + dvy_dx);
-                    new_stress.txz[[i, j, k]] =
+                    updated_stress.txz[[i, j, k]] =
                         params.sxz_fft[[i, j, k]] + params.dt * mu * (dvx_dz + dvz_dx);
-                    new_stress.tyz[[i, j, k]] =
+                    updated_stress.tyz[[i, j, k]] =
                         params.syz_fft[[i, j, k]] + params.dt * mu * (dvy_dz + dvz_dy);
                 }
             }
         }
 
-        Ok(new_stress)
+        Ok(updated_stress)
     }
 
     /// Update velocity fields using spectral method
@@ -88,7 +88,7 @@ impl ElasticWave {
         let ny = self.ky.shape()[0];
         let nz = self.kz.shape()[0];
 
-        let mut new_velocity = VelocityFields::new(nx, ny, nz);
+        let mut updated_velocity = VelocityFields::new(nx, ny, nz);
 
         // Spectral derivatives for force computation
         for k in 0..nz {
@@ -117,17 +117,17 @@ impl ElasticWave {
                     let dtzz_dz = Complex::new(0.0, kz) * params.tzz_fft[[i, j, k]];
 
                     // Newton's second law: dv/dt = F/m = (∇·σ)/ρ
-                    new_velocity.vx[[i, j, k]] = params.vx_fft[[i, j, k]]
+                    updated_velocity.vx[[i, j, k]] = params.vx_fft[[i, j, k]]
                         + (params.dt / rho) * (dtxx_dx + dtxy_dy + dtxz_dz);
-                    new_velocity.vy[[i, j, k]] = params.vy_fft[[i, j, k]]
+                    updated_velocity.vy[[i, j, k]] = params.vy_fft[[i, j, k]]
                         + (params.dt / rho) * (dtxy_dx + dtyy_dy + dtyz_dz);
-                    new_velocity.vz[[i, j, k]] = params.vz_fft[[i, j, k]]
+                    updated_velocity.vz[[i, j, k]] = params.vz_fft[[i, j, k]]
                         + (params.dt / rho) * (dtxz_dx + dtyz_dy + dtzz_dz);
                 }
             }
         }
 
-        Ok(new_velocity)
+        Ok(updated_velocity)
     }
 }
 

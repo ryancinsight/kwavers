@@ -4,8 +4,8 @@
 //! - Mechanics: for cavitation damage and erosion
 //! - Optics: for sonoluminescence light emission
 
-// TODO: Bubble dynamics has complex equations with many parameters not always used
-#![allow(unused_variables)]
+// Bubble dynamics module implements complex multi-physics equations
+// Parameters are defined for complete physical models even when simplified versions are used
 //! - Chemistry: for ROS generation and sonochemistry
 //!
 //! Based on the Keller-Miksis equation and extended models from literature

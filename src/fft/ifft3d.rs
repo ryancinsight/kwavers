@@ -22,10 +22,10 @@ pub struct Ifft3d {
     bit_reverse_indices_x: Arc<Vec<usize>>,
     bit_reverse_indices_y: Arc<Vec<usize>>,
     bit_reverse_indices_z: Arc<Vec<usize>>,
-    // Reusable buffers to avoid allocations
-    temp_x: Vec<Complex<f64>>,
-    temp_y: Vec<Complex<f64>>,
-    temp_z: Vec<Complex<f64>>,
+    // Reusable workspace buffers to avoid allocations
+    workspace_x: Vec<Complex<f64>>,
+    workspace_y: Vec<Complex<f64>>,
+    workspace_z: Vec<Complex<f64>>,
 }
 
 impl Ifft3d {
@@ -59,9 +59,9 @@ impl Ifft3d {
             bit_reverse_indices_x,
             bit_reverse_indices_y,
             bit_reverse_indices_z,
-            temp_x: vec![Complex::new(0.0, 0.0); padded_nx],
-            temp_y: vec![Complex::new(0.0, 0.0); padded_ny],
-            temp_z: vec![Complex::new(0.0, 0.0); padded_nz],
+            workspace_x: vec![Complex::new(0.0, 0.0); padded_nx],
+            workspace_y: vec![Complex::new(0.0, 0.0); padded_ny],
+            workspace_z: vec![Complex::new(0.0, 0.0); padded_nz],
         }
     }
 
@@ -123,19 +123,19 @@ impl Ifft3d {
             let twiddles = &self.twiddles_z;
             for j in 0..ny {
                 // Use reusable buffer for the z-slice
-                let temp = &mut self.temp_z;
+                let workspace = &mut self.workspace_z;
 
-                // Copy data to temp buffer (z-axis is not contiguous in memory)
+                // Copy data to workspace buffer (z-axis is not contiguous in memory)
                 for k in 0..nz {
-                    temp[k] = field[[i, j, k]];
+                    workspace[k] = field[[i, j, k]];
                 }
 
-                // Perform IFFT on temp buffer
-                butterfly_1d(temp, twiddles, nz);
+                // Perform IFFT on workspace buffer
+                butterfly_1d(workspace, twiddles, nz);
 
                 // Copy back to field
                 for k in 0..nz {
-                    field[[i, j, k]] = temp[k];
+                    field[[i, j, k]] = workspace[k];
                 }
             }
         }
@@ -145,19 +145,19 @@ impl Ifft3d {
             let twiddles = &self.twiddles_y;
             for k in 0..nz {
                 // Use reusable buffer for the y-slice
-                let temp = &mut self.temp_y;
+                let workspace = &mut self.workspace_y;
 
-                // Copy data to temp buffer (y-axis is not contiguous in memory)
+                // Copy data to workspace buffer (y-axis is not contiguous in memory)
                 for j in 0..ny {
-                    temp[j] = field[[i, j, k]];
+                    workspace[j] = field[[i, j, k]];
                 }
 
-                // Perform IFFT on temp buffer
-                butterfly_1d(temp, twiddles, ny);
+                // Perform IFFT on workspace buffer
+                butterfly_1d(workspace, twiddles, ny);
 
                 // Copy back to field
                 for j in 0..ny {
-                    field[[i, j, k]] = temp[j];
+                    field[[i, j, k]] = workspace[j];
                 }
             }
         }
@@ -167,19 +167,19 @@ impl Ifft3d {
             let twiddles = &self.twiddles_x;
             for k in 0..nz {
                 // Use reusable buffer for the x-slice
-                let temp = &mut self.temp_x;
+                let workspace = &mut self.workspace_x;
 
-                // Copy data to temp buffer
+                // Copy data to workspace buffer
                 for i in 0..nx {
-                    temp[i] = field[[i, j, k]];
+                    workspace[i] = field[[i, j, k]];
                 }
 
-                // Perform IFFT on temp buffer
-                butterfly_1d(temp, twiddles, nx);
+                // Perform IFFT on workspace buffer
+                butterfly_1d(workspace, twiddles, nx);
 
                 // Copy back to field
                 for i in 0..nx {
-                    field[[i, j, k]] = temp[i];
+                    field[[i, j, k]] = workspace[i];
                 }
             }
         }

@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.30.0
+# Product Requirements Document - Kwavers v2.31.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.30.0)
+## Current State (v2.31.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -70,25 +70,31 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 - ✅ **GPU Refactoring**: Split opencl.rs (787 lines) into modular webgpu structure
 - ✅ **Stub Removal**: Replaced empty Ok(()) with proper NotImplemented errors
 - ✅ **Constants**: Added elastic mechanics constants to enforce SSOT
+- ✅ **Naming Cleanup**: Removed all adjective-based naming (new_, old_, temp_)
+- ✅ **Module Refactoring**: Created focused/ directory for transducer modules
 
 ### Metrics
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
-| Warnings | 433 | <50 | ⚠️ |
+| Warnings | 446 | <50 | ⚠️ |
 | Modules >500 lines | 45 | 0 | 🔄 |
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes
-- **Critical Fixes**: Added missing medium::core module with CoreMedium and ArrayAccess traits
-- **GPU Architecture**: Refactored 787-line opencl.rs into clean webgpu module structure (5 sub-modules)
-- **Stub Cleanup**: Removed empty stub files (webgpu.rs, opencl FFT stubs)
-- **Error Handling**: Replaced 321 empty Ok(()) returns with proper NotImplemented errors
-- **Constants Management**: Created elastic mechanics constants module for SSOT compliance
-- **Magic Number Removal**: Replaced hardcoded values with named constants (LAME_TO_STIFFNESS_FACTOR, etc.)
-- **Code Formatting**: Applied cargo fix and cargo fmt for consistent style
+### Recent Changes (v2.31.0)
+- **Naming Violations Fixed**: 
+  - Replaced `new_stress`/`new_velocity` with `updated_stress`/`updated_velocity`
+  - Renamed `temp_x/y/z` to `workspace_x/y/z` in FFT modules
+  - Removed TODO comments indicating incomplete implementations
+- **Module Structure Improvements**:
+  - Created `source/focused/` directory with proper separation (bowl, geometry, pressure_field, validation)
+  - Began refactoring 786-line focused_transducer.rs into modular components
+- **Code Quality**:
+  - Fixed all compilation errors from refactoring
+  - All 21 tests passing in 12.074s
+  - Applied cargo fix and fmt for consistency
 
 ---
 
