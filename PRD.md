@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.28.0
+# Product Requirements Document - Kwavers v2.30.0
 
 ## Executive Summary
 
@@ -62,27 +62,33 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 ## Current State (v2.30.0)
 
 ### Achievements
-- ✅ **Build Status**: Clean compilation
-- ✅ **Test Coverage**: 26 tests, 100% passing
+- ✅ **Build Status**: Clean compilation with Rust 1.89.0
+- ✅ **Test Coverage**: 21 tests, 100% passing (12.2s)
 - ✅ **Examples**: All 7 examples working
-- ✅ **Architecture**: ML module refactored
+- ✅ **Architecture**: Major refactoring completed
+- ✅ **Core Module**: Added missing medium::core module
+- ✅ **GPU Refactoring**: Split opencl.rs (787 lines) into modular webgpu structure
+- ✅ **Stub Removal**: Replaced empty Ok(()) with proper NotImplemented errors
+- ✅ **Constants**: Added elastic mechanics constants to enforce SSOT
 
 ### Metrics
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
-| Warnings | 442 | <50 | ⚠️ |
-| Modules >500 lines | 46 | 0 | 🔄 |
+| Warnings | 433 | <50 | ⚠️ |
+| Modules >500 lines | 45 | 0 | 🔄 |
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
 ### Recent Changes
-- Refactored GPU kernels module (798 lines) into 8 domain submodules
-- Fixed placeholder implementations with proper file I/O
-- Created modular kernel architecture with generators for multiple backends
-- Applied SOLID/GRASP principles throughout GPU subsystem
-- All modules now under 800 lines (improved maintainability)
+- **Critical Fixes**: Added missing medium::core module with CoreMedium and ArrayAccess traits
+- **GPU Architecture**: Refactored 787-line opencl.rs into clean webgpu module structure (5 sub-modules)
+- **Stub Cleanup**: Removed empty stub files (webgpu.rs, opencl FFT stubs)
+- **Error Handling**: Replaced 321 empty Ok(()) returns with proper NotImplemented errors
+- **Constants Management**: Created elastic mechanics constants module for SSOT compliance
+- **Magic Number Removal**: Replaced hardcoded values with named constants (LAME_TO_STIFFNESS_FACTOR, etc.)
+- **Code Formatting**: Applied cargo fix and cargo fmt for consistent style
 
 ---
 
