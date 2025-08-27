@@ -158,7 +158,7 @@ __global__ void acoustic_wave_kernel(
         // Level 2: Use shared memory for better cache utilization
         format!(
             r#"
-__global__ void acoustic_wave_kernel_optimized(
+__global__ void acoustic_wave_kernel_shared_memory(
     const float* __restrict__ pressure,
     const float* __restrict__ velocity_x,
     const float* __restrict__ velocity_y,

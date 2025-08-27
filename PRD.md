@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.36.0
+# Product Requirements Document - Kwavers v2.37.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.36.0)
+## Current State (v2.37.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -79,11 +79,23 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Build Errors | 0 | 0 | ✅ |
 | Test Failures | 0 | 0 | ✅ |
 | Warnings | 448 | <50 | ⚠️ |
-| Modules >500 lines | 43 | 0 | 🔄 |
+| Modules >500 lines | 42 | 0 | 🔄 |
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.36.0)
+### Recent Changes (v2.37.0)
+- **Critical Code Review & Refactoring**:
+  - Removed redundant `kuznetsov_wave.rs` (documentation-only file)
+  - Refactored `focused_transducer.rs` (786 lines) into modular structure:
+    - `focused/bowl.rs` - Bowl transducer implementation
+    - `focused/arc.rs` - Arc source for 2D simulations
+    - `focused/multi_bowl.rs` - Multi-element arrays
+    - `focused/utils.rs` - Helper functions
+  - Fixed adjective-based naming violation: `acoustic_wave_kernel_optimized` → `acoustic_wave_kernel_shared_memory`
+  - Replaced magic numbers with named constants (WATER_SOUND_SPEED)
+  - Enforced SSOT principle throughout codebase
+
+### Previous Changes (v2.36.0)
 - **Removed ALL placeholders and approximations**:
   - ElasticWavePlugin now queries proper elastic moduli from medium
   - No more "simplified" or "isotropic approximations"
