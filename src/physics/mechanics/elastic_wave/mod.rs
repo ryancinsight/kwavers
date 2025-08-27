@@ -9,6 +9,7 @@ pub mod mode_conversion;
 pub mod parameters;
 pub mod properties;
 pub mod solver;
+pub mod spectral_fields;
 pub mod tests;
 
 use crate::error::{KwaversResult, PhysicsError};

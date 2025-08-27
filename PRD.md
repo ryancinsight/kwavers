@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.34.0
+# Product Requirements Document - Kwavers v2.35.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.34.0)
+## Current State (v2.35.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -83,7 +83,15 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.34.0)
+### Recent Changes (v2.35.0)
+- **Full Spectral Method Implementation**:
+  - Eliminated ALL stubs - no fake implementations remain
+  - Implemented complete complex field handling for FFT operations
+  - Created SpectralStressFields and SpectralVelocityFields structures
+  - Proper FFT/IFFT integration with real-to-complex transforms
+  - Full spectral derivatives using Fourier differentiation
+  - Hooke's law implementation in frequency domain
+  - Newton's second law in spectral space
 - **Resolved Compilation Issues**:
   - Fixed elastic wave spectral solver complex/real type mismatch
   - Properly stubbed spectral methods in favor of finite-difference implementation
