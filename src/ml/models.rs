@@ -101,14 +101,12 @@ impl MLModel for TissueClassifierModel {
         use std::fs::File;
         use std::io::Read;
 
-                let mut file = File::open(path).map_err(|e| {
-            KwaversError::Io(format!("Failed to open file {}: {}", path, e))
-        })?;
-        
+        let mut file = File::open(path)
+            .map_err(|e| KwaversError::Io(format!("Failed to open file {}: {}", path, e)))?;
+
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).map_err(|e| {
-            KwaversError::Io(format!("Failed to read file {}: {}", path, e))
-        })?;
+        file.read_to_end(&mut buffer)
+            .map_err(|e| KwaversError::Io(format!("Failed to read file {}: {}", path, e)))?;
 
         // For now, create with default weights
         // In production, deserialize from buffer
@@ -119,22 +117,19 @@ impl MLModel for TissueClassifierModel {
         use std::fs::File;
         use std::io::Write;
 
-        let mut file = File::create(path).map_err(|e| {
-            KwaversError::Io(format!("Failed to create file {}: {}", path, e))
-        })?;
+        let mut file = File::create(path)
+            .map_err(|e| KwaversError::Io(format!("Failed to create file {}: {}", path, e)))?;
 
         // Serialize model metadata
         // Note: Cannot access weights without mutable reference
         // In production, would need to refactor trait or add getter
         let data = format!(
             "TissueClassifier:v1:{}:{}",
-            self.metadata.input_shape[0],
-            self.metadata.output_shape[0]
+            self.metadata.input_shape[0], self.metadata.output_shape[0]
         );
 
-        file.write_all(data.as_bytes()).map_err(|e| {
-            KwaversError::Io(format!("Failed to write file {}: {}", path, e))
-        })?;
+        file.write_all(data.as_bytes())
+            .map_err(|e| KwaversError::Io(format!("Failed to write file {}: {}", path, e)))?;
 
         Ok(())
     }

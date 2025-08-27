@@ -23,7 +23,7 @@ struct PerformanceMetrics {
     kspace_ops_time: f64,
 }
 
-/// A viscoelastic wave model implementing the Westervelt equation with proper second-order time derivatives.
+/// Nonlinear acoustic wave model implementing the Westervelt equation with proper second-order time derivatives.
 ///
 /// This implementation provides nonlinear acoustics modeling through:
 /// - **Proper Second-Order Derivatives**: Uses (p(t) - 2*p(t-dt) + p(t-2*dt))/dt² for ∂²p/∂t²
@@ -130,7 +130,7 @@ impl WesterveltWave {
             }
         }
 
-        debug!("ViscoelasticWave initialized with k-space grids.");
+        debug!("WesterveltWave initialized with k-space grids.");
 
         Self {
             k_squared: Some(k_squared_arr),
@@ -192,7 +192,7 @@ impl WesterveltWave {
         }
 
         if clamped {
-            debug!("ViscoelasticWave: Pressure values were clamped to prevent numerical overflow.");
+            debug!("WesterveltWave: Pressure values were clamped to prevent numerical overflow.");
         }
 
         clamped
@@ -261,15 +261,12 @@ impl AcousticWaveModel for WesterveltWave {
         let pressure_view = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
 
         if !self.check_stability(dt, grid, medium, &pressure_view.view()) {
-            debug!(
-                "ViscoelasticWave: Potential instability detected at t={}.",
-                t
-            );
+            debug!("WesterveltWave: Potential instability detected at t={}.", t);
         }
 
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if nx == 0 || ny == 0 || nz == 0 {
-            trace!("ViscoelasticWave: Update skipped for empty grid at t={}", t);
+            trace!("WesterveltWave: Update skipped for empty grid at t={}", t);
             return;
         }
 
@@ -297,19 +294,19 @@ impl AcousticWaveModel for WesterveltWave {
         // For a purely linear viscoelastic model, this section would be skipped.
         let start_nonlinear = Instant::now();
         let mut nonlinear_term = Array3::<f64>::zeros((nx, ny, nz));
-        let _b_a_arr = medium.nonlinearity_coefficient(0.0, 0.0, 0.0, grid); // Assuming B/A is homogeneous for simplicity here or get array
 
         Zip::indexed(&mut nonlinear_term)
             .and(&pressure_view)
             .for_each(|(i, j, k), nl_val, &_p_curr| {
                 if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
-                    let _rho = rho_arr[[i, j, k]].max(1e-9);
-                    let _c = c_arr[[i, j, k]].max(1e-9);
-                    // Westervelt equation nonlinearity implementation
-                    // Nonlinear term: (β/ρc⁴) * ∂²(p²)/∂t²
-                    let beta = _b_a_arr; // Nonlinearity parameter (assuming homogeneous)
-                    let rho = _rho;
-                    let c = _c;
+                    let rho = rho_arr[[i, j, k]].max(1e-9);
+                    let c = c_arr[[i, j, k]].max(1e-9);
+
+                    // Get spatially-varying nonlinearity coefficient
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let beta = medium.nonlinearity_coefficient(x, y, z, grid);
 
                     // Get current and previous pressure values
                     let p_curr = pressure_view[[i, j, k]];

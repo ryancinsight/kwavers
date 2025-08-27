@@ -223,8 +223,11 @@ impl NonlinearWave {
     ///
     /// `true` if the configuration is stable, `false` otherwise
     pub fn is_stable(&self, medium: &dyn Medium, grid: &Grid) -> bool {
-        let max_c = self.max_sound_speed;
-        let min_dx = self.dx.min(self.dy).min(self.dz);
+        // Get actual maximum sound speed from the medium
+        let c_array = medium.sound_speed_array();
+        let max_c = c_array.iter().fold(0.0f64, |acc, &x| acc.max(x));
+
+        let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let cfl_number = max_c * self.dt / min_dx;
 
         cfl_number <= self.stability_threshold * self.cfl_safety_factor

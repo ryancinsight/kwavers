@@ -6,18 +6,18 @@
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Examples](https://img.shields.io/badge/examples-working-green.svg)](https://github.com/kwavers/kwavers)
 
-Production-grade Rust library for acoustic wave simulation with validated physics and enforced architecture.
+Rust library for acoustic wave simulation with improving physics implementations and evolving architecture.
 
 ## Current Status
 
-**Grade: A++ (99.9%)** - Production-ready with continually improving architecture
+**Grade: B+ (85%)** - Functional but requires significant improvements for production use
 
 ### Build & Test Status
 - ✅ **Build**: Clean compilation, zero errors
-- ✅ **Tests**: 100% passing (26 tests)
+- ✅ **Tests**: 100% passing (26 tests - but test coverage is limited)
 - ✅ **Examples**: All 7 examples working
-- ⚠️ **Warnings**: 442 (mostly unused variables)
-- ✅ **Physics**: Fully validated against literature
+- ⚠️ **Warnings**: 439 (indicates incomplete implementations)
+- ⚠️ **Physics**: Partially validated - several implementations have issues
 
 ### Architecture Metrics
 - **Modules > 500 lines**: 46 (reduced from 47)
