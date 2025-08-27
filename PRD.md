@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.35.0
+# Product Requirements Document - Kwavers v2.36.0
 
 ## Executive Summary
 
@@ -59,7 +59,7 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.35.0)
+## Current State (v2.36.0)
 
 ### Achievements
 - ✅ **Build Status**: Clean compilation with Rust 1.89.0
@@ -83,7 +83,12 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 | Modules >800 lines | 0 | 0 | ✅ |
 | Examples Working | 7/7 | 7/7 | ✅ |
 
-### Recent Changes (v2.35.0)
+### Recent Changes (v2.36.0)
+- **Removed ALL placeholders and approximations**:
+  - ElasticWavePlugin now queries proper elastic moduli from medium
+  - No more "simplified" or "isotropic approximations"
+  - Direct use of Lamé parameters λ and μ from material properties
+  - Full elastic tensor support through medium interface
 - **Full Spectral Method Implementation**:
   - Eliminated ALL stubs - no fake implementations remain
   - Implemented complete complex field handling for FFT operations

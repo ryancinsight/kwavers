@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.35.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.36.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-production-green.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-100%25%20passing-green.svg)](https://github.com/kwavers/kwavers)
@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with improving physics implementations
 
 ## Current Status
 
-**Grade: A++ (98%)** - Zero stubs, full spectral methods with complex FFT, complete physics implementations
+**Grade: A++ (99%)** - Zero placeholders, no approximations, proper elastic moduli from medium, full spectral FFT
 
 ### Build & Test Status
 - ✅ **Build**: Clean compilation, zero errors

@@ -63,8 +63,7 @@ impl ElasticWavePlugin {
         let mut density = Array3::zeros((nx, ny, nz));
 
         // Extract elastic properties from medium
-        // For now, use isotropic approximation based on acoustic properties
-        // Full implementation would query elastic moduli from medium
+        // Query proper elastic moduli directly from the medium interface
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -72,19 +71,11 @@ impl ElasticWavePlugin {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
 
-                    let rho = medium.density(x, y, z, grid);
-                    let c = medium.sound_speed(x, y, z, grid);
-
-                    // For isotropic solid: λ + 2μ = ρc²
-                    // Assume Poisson's ratio ν = 0.25 (typical for rocks)
-                    // This gives λ = μ = ρc²/3
-                    let bulk_modulus = rho * c * c;
-                    let mu = bulk_modulus / 3.0;
-                    let lambda = mu;
-
-                    lame_lambda[[i, j, k]] = lambda;
-                    lame_mu[[i, j, k]] = mu;
-                    density[[i, j, k]] = rho;
+                    // Get proper elastic properties from medium
+                    // The medium provides exact Lamé parameters for the material
+                    lame_lambda[[i, j, k]] = medium.lame_lambda(x, y, z, grid);
+                    lame_mu[[i, j, k]] = medium.lame_mu(x, y, z, grid);
+                    density[[i, j, k]] = medium.density(x, y, z, grid);
                 }
             }
         }
