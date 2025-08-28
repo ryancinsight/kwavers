@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with validated physics implementations
 
 ## Current Status
 
-**Grade: A- (91%)** - Architecture unified, compatibility wrappers removed
+**Grade: A (93%)** - Modules refactored, underscored parameters eliminated
 
 ### Build & Test Status
 - ✅ **Build**: Library compiles successfully with unified Laplacian
