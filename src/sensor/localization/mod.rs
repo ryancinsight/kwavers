@@ -10,7 +10,7 @@ use crate::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 
 // Re-export main types
-pub use algorithms::{LocalizationAlgorithm, LocalizationMethod};
+pub use algorithms::{LocalizationMethod, LocalizationProcessor as AlgorithmProcessor};
 pub use array::{ArrayGeometry, SensorArray};
 pub use beamforming::Beamformer;
 pub use tdoa::{TDOAMeasurement, TDOAProcessor};
@@ -108,8 +108,8 @@ impl LocalizationProcessor {
 
     /// Localize source from measurements
     pub fn localize(&self, measurements: &[f64]) -> KwaversResult<LocalizationResult> {
-        let algorithm = LocalizationAlgorithm::from_method(self.config.method);
-        algorithm.localize(&self.sensor_array, measurements, &self.config)
+        let processor = AlgorithmProcessor::from_method(self.config.method);
+        processor.localize(&self.sensor_array, measurements, &self.config)
     }
 
     /// Update configuration

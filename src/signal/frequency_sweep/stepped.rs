@@ -72,6 +72,18 @@ impl Signal for SteppedSweep {
     fn duration(&self) -> Option<f64> {
         Some(self.duration)
     }
+
+    fn frequency(&self, t: f64) -> f64 {
+        self.instantaneous_frequency(t)
+    }
+
+    fn phase(&self, t: f64) -> f64 {
+        FrequencySweep::phase(self, t)
+    }
+
+    fn clone_box(&self) -> Box<dyn Signal> {
+        Box::new(self.clone())
+    }
 }
 
 impl FrequencySweep for SteppedSweep {

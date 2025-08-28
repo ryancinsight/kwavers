@@ -2,9 +2,10 @@
 
 use super::{LocalizationConfig, LocalizationResult, Position, SensorArray};
 use crate::error::KwaversResult;
+use serde::{Deserialize, Serialize};
 
 /// Localization method
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum LocalizationMethod {
     TDOA,        // Time Difference of Arrival
     TOA,         // Time of Arrival
@@ -36,12 +37,12 @@ pub trait LocalizationAlgorithm {
     ) -> Position;
 }
 
-/// Main algorithm implementation
-pub struct LocalizationAlgorithm {
+/// Main algorithm processor
+pub struct LocalizationProcessor {
     method: LocalizationMethod,
 }
 
-impl LocalizationAlgorithm {
+impl LocalizationProcessor {
     /// Create from method
     pub fn from_method(method: LocalizationMethod) -> Self {
         Self { method }

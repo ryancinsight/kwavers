@@ -43,12 +43,24 @@ impl Signal for HyperbolicSweep {
             return 0.0;
         }
 
-        let phase = self.phase(t);
+        let phase = FrequencySweep::phase(self, t);
         self.amplitude * phase.sin()
     }
 
     fn duration(&self) -> Option<f64> {
         Some(self.duration)
+    }
+
+    fn frequency(&self, t: f64) -> f64 {
+        self.instantaneous_frequency(t)
+    }
+
+    fn phase(&self, t: f64) -> f64 {
+        FrequencySweep::phase(self, t)
+    }
+
+    fn clone_box(&self) -> Box<dyn Signal> {
+        Box::new(self.clone())
     }
 }
 

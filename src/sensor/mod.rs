@@ -6,8 +6,8 @@ pub mod localization;
 pub mod passive_acoustic_mapping; // NEW: Multi-lateration localization system
 
 pub use localization::{
-    ArrayGeometry as LocalizationArrayGeometry, LocalizationResult, MultiLaterationSolver,
-    Sensor as LocalizationSensor, SensorArray,
+    array::Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry,
+    LocalizationResult, SensorArray,
 };
 pub use passive_acoustic_mapping::{
     ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin,
