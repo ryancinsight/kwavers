@@ -186,7 +186,7 @@ mod tests {
 
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
-        assert!(handler.initialize(&medium).is_ok());
+        assert!(handler.initialize(&medium, &grid).is_ok());
         assert!(handler.density().is_some());
         assert!(handler.sound_speed().is_some());
         assert!(handler.interface_mask().is_some());

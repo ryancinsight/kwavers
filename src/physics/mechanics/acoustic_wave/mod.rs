@@ -131,25 +131,19 @@ mod tests {
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
-        fn get_density_array(
-            &self,
-            _grid: &Grid,
-        ) -> crate::error::KwaversResult<ndarray::Array3<f64>> {
-            Ok(self.density.clone())
-        }
-
-        fn get_sound_speed_array(
-            &self,
-            _grid: &Grid,
-        ) -> crate::error::KwaversResult<ndarray::Array3<f64>> {
-            Ok(self.sound_speed.clone())
-        }
-
-        fn density_array(&self) -> ndarray::Array3<f64> {
+        fn get_density_array(&self, _grid: &Grid) -> ndarray::Array3<f64> {
             self.density.clone()
         }
 
-        fn sound_speed_array(&self) -> ndarray::Array3<f64> {
+        fn get_sound_speed_array(&self, _grid: &Grid) -> ndarray::Array3<f64> {
+            self.sound_speed.clone()
+        }
+
+        fn density_array(&self, _grid: &Grid) -> ndarray::Array3<f64> {
+            self.density.clone()
+        }
+
+        fn sound_speed_array(&self, _grid: &Grid) -> ndarray::Array3<f64> {
             self.sound_speed.clone()
         }
     }
