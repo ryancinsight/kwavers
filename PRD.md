@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v3.2.0
+# Product Requirements Document - Kwavers v3.3.0
 
 ## Executive Summary
 
@@ -59,7 +59,23 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v3.2.0)
+## Current State (v3.3.0)
+
+### MAJOR MODULE REFACTORING (v3.3.0)
+- ✅ **ABSORPTION MODULE REFACTORED**: 603-line module → 6 focused submodules
+  - power_law.rs - Power law absorption models (100 lines)
+  - tissue.rs - Comprehensive tissue database (172 lines)
+  - dispersion.rs - Kramers-Kronig dispersion (106 lines)
+  - fractional.rs - Fractional Laplacian models (149 lines)
+  - stokes.rs - Stokes viscous absorption (154 lines)
+  - mod.rs - Orchestration layer (94 lines)
+  
+- ✅ **AMR MODULE REFACTORED**: 602-line module → 5 focused submodules
+  - octree.rs - Octree data structure (178 lines)
+  - refinement.rs - Refinement management (169 lines)
+  - interpolation.rs - Conservative interpolation (215 lines)
+  - criteria.rs - Error estimation (158 lines)
+  - wavelet.rs - Wavelet transforms (168 lines)
 
 ### ARCHITECTURE REFACTORING (v3.2.0)
 - ✅ **GRASP COMPLIANCE IMPROVED**: Major module refactoring

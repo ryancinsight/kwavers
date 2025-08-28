@@ -30,7 +30,7 @@ pub mod plugin_based;
 pub use plugin_based::PluginBasedSolver;
 
 // Re-export commonly used types from submodules
-pub use amr::{AMRConfig, AMRManager};
+pub use amr::{AMRSolver, MemoryStats};
 pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
 pub use pstd::PstdConfig;

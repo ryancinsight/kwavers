@@ -19,7 +19,7 @@ pub mod thermal;
 pub mod viscous;
 
 // Re-export types from submodules
-pub use absorption::{AcousticDiffusivity, PowerLawAbsorption, TissueType};
+pub use absorption::{PowerLawAbsorption, TissueType};
 pub use anisotropic::{AnisotropyType, ChristoffelEquation, MuscleFiberModel, StiffnessTensor};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;

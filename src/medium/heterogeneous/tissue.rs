@@ -1,7 +1,7 @@
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::{
-    absorption::{tissue_specific, TissueType},
+    absorption::{tissue, TissueType},
     acoustic::AcousticProperties,
     bubble::{BubbleProperties, BubbleState},
     core::{ArrayAccess, CoreMedium},
@@ -172,20 +172,14 @@ impl HeterogeneousTissueMedium {
         y: f64,
         z: f64,
         grid: &Grid,
-    ) -> &'static tissue_specific::TissueProperties {
+    ) -> &'static tissue::TissueProperties {
         if let Some(indices) = grid.position_to_indices(x, y, z) {
-            let tissue = self.tissue_map[indices];
-            tissue_specific::tissue_database()
-                .get(&tissue)
-                .unwrap_or_else(|| {
-                    tissue_specific::tissue_database()
-                        .get(&TissueType::SoftTissue)
-                        .unwrap()
-                })
+            let tissue_type = self.tissue_map[indices];
+            tissue::TISSUE_PROPERTIES
+                .get(&tissue_type)
+                .unwrap_or_else(|| &tissue::TISSUE_PROPERTIES[&TissueType::SoftTissue])
         } else {
-            tissue_specific::tissue_database()
-                .get(&TissueType::SoftTissue)
-                .unwrap()
+            &tissue::TISSUE_PROPERTIES[&TissueType::SoftTissue]
         }
     }
 }
@@ -217,13 +211,11 @@ impl ArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        &tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                     *val = props.density;
                 });
                 arr
@@ -237,13 +229,11 @@ impl ArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        &tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                     *val = props.sound_speed;
                 });
                 arr
@@ -302,13 +292,11 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        &tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                     *val = props.lame_lambda;
                 });
                 arr
@@ -322,13 +310,11 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        &tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                     *val = props.lame_mu;
                 });
                 arr
@@ -342,13 +328,11 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
-                    let props = tissue_specific::tissue_database()
-                        .get(&tissue)
-                        .unwrap_or_else(|| {
-                            tissue_specific::tissue_database()
-                                .get(&TissueType::SoftTissue)
-                                .unwrap()
-                        });
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        &tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
                     if props.density > 0.0 && props.lame_mu > 0.0 {
                         *val = (props.lame_mu / props.density).sqrt();
                     } else {

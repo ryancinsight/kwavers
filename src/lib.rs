@@ -89,13 +89,7 @@ pub use time::Time;
 // Solver exports
 pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
 pub use error::{ConfigError, ValidationError};
-pub use solver::amr::{
-    feature_refinement::{
-        CurvatureCriterion, FeatureCriterion, FeatureType, GradientCriterion, LoadBalancer,
-        LoadBalancingStrategy, PredictiveCriterion, RefinementCriterion,
-    },
-    AMRConfig, AMRManager, InterpolationScheme, WaveletType,
-};
+pub use solver::amr::{AMRSolver, MemoryStats};
 pub use solver::plugin_based::PluginBasedSolver;
 pub use solver::reconstruction::photoacoustic::PhotoacousticReconstructor;
 pub use solver::reconstruction::seismic::{

@@ -7,6 +7,31 @@ use log::debug;
 use ndarray::Array3;
 use std::sync::OnceLock;
 
+/// Spatial bounds for a region
+#[derive(Debug, Clone, Copy)]
+pub struct Bounds {
+    /// Minimum coordinates [x, y, z]
+    pub min: [f64; 3],
+    /// Maximum coordinates [x, y, z]
+    pub max: [f64; 3],
+}
+
+impl Bounds {
+    /// Create new bounds
+    pub fn new(min: [f64; 3], max: [f64; 3]) -> Self {
+        Self { min, max }
+    }
+
+    /// Get the center point
+    pub fn center(&self) -> [f64; 3] {
+        [
+            (self.min[0] + self.max[0]) / 2.0,
+            (self.min[1] + self.max[1]) / 2.0,
+            (self.min[2] + self.max[2]) / 2.0,
+        ]
+    }
+}
+
 /// Dimension selector for coordinate generation
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dimension {
@@ -126,5 +151,17 @@ impl Grid {
     #[inline]
     pub fn max_spacing(&self) -> f64 {
         self.dx.max(self.dy).max(self.dz)
+    }
+
+    /// Get the spatial bounds of the grid
+    pub fn bounds(&self) -> Bounds {
+        Bounds::new(
+            [0.0, 0.0, 0.0],
+            [
+                self.nx as f64 * self.dx,
+                self.ny as f64 * self.dy,
+                self.nz as f64 * self.dz,
+            ],
+        )
     }
 }

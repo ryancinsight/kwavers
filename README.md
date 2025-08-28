@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-compile-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -18,19 +18,19 @@ Rust library for acoustic wave simulation with validated physics implementations
   - ✅ Complete trait implementations for all types
   - ⚠️ Test execution hangs due to resource contention (known issue)
   - ✅ Physics implementations validated against literature
-- ⚠️ **Warnings**: 505 (legitimate unused parameters in trait implementations)
+- ⚠️ **Warnings**: 505 (mostly legitimate unused parameters)
   - Mostly unused variables in trait implementations  
   - All adjective-based naming violations eliminated
   - Core module properly implemented for medium traits
   - All magic numbers replaced with named constants
-- ✅ **Latest Achievements (v3.2.0)**:
-  - **GRASP COMPLIANCE**: Refactored 610-line performance/optimization module!
-  - **MODULAR ARCHITECTURE**: Split into 6 focused modules (simd, cache, parallel, memory, gpu, config)
+- ✅ **Latest Achievements (v3.3.0)**:
+  - **MASSIVE REFACTORING**: Refactored TWO major modules (absorption: 603→6 modules, AMR: 602→5 modules)!
+  - **COMPLETE TISSUE DATABASE**: Added comprehensive tissue properties with all physical parameters
   - **Physics Validation**: Westervelt, Rayleigh-Plesset, CPML validated
   - **Clean Code**: No stub implementations (unimplemented!/todo!)
   - **Trait Compliance**: ArrayAccess trait properly implemented across all medium types
 - ⚠️ **Remaining Issues**:
-  - 14 modules still exceed 500 lines (refactored performance/optimization)
+  - 12 modules still exceed 500 lines (refactored absorption & AMR)
   - Test execution hangs need investigation
   - Underscored parameters are legitimate (e.g., position unused in homogeneous media)
 - ⚠️ **k-Wave Compatibility Status**:

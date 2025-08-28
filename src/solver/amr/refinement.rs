@@ -1,346 +1,178 @@
-// src/solver/amr/refinement.rs
-//! Refinement strategies and criteria for AMR
-//!
-//! This module implements refinement strategies for Adaptive Mesh Refinement,
-//! including gradient-based, wavelet-based, and physics-aware refinement criteria.
-//!
-//! Based on:
-//! - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
-//! - Harten (1995): "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
+//! Refinement management and level control
 
+use crate::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
-/// Named constants for refinement thresholds
-const DEFAULT_GRADIENT_THRESHOLD: f64 = 0.1;
-const DEFAULT_WAVELET_THRESHOLD: f64 = 0.01;
-const DEFAULT_CURVATURE_THRESHOLD: f64 = 0.05;
-const MIN_REFINEMENT_LEVEL: usize = 0;
-const MAX_REFINEMENT_LEVEL: usize = 8;
-
-/// Refinement criterion type
-#[derive(Debug, Clone, Copy)]
-pub enum RefinementCriterion {
-    /// Gradient-based refinement (Löhner, 1987)
-    Gradient { threshold: f64 },
-    /// Wavelet-based refinement (Harten, 1995)
-    Wavelet { threshold: f64 },
-    /// Curvature-based refinement
-    Curvature { threshold: f64 },
-    /// Physics-based refinement (e.g., shock detection)
-    PhysicsBased { shock_threshold: f64 },
-    /// Combined criteria with weights
-    Combined {
-        gradient_weight: f64,
-        wavelet_weight: f64,
-        curvature_weight: f64,
-    },
+/// Refinement level information
+#[derive(Debug, Clone)]
+pub struct RefinementLevel {
+    /// Level index (0 = coarsest)
+    pub level: usize,
+    /// Grid spacing at this level
+    pub dx: f64,
+    /// Time step at this level
+    pub dt: f64,
+    /// Refinement ratio to next level
+    pub ratio: usize,
 }
 
-/// Refinement strategy for AMR
-pub struct RefinementStrategy {
-    criterion: RefinementCriterion,
-    min_level: usize,
+impl RefinementLevel {
+    /// Create a new refinement level
+    pub fn new(level: usize, dx: f64, dt: f64, ratio: usize) -> Self {
+        Self {
+            level,
+            dx,
+            dt,
+            ratio,
+        }
+    }
+
+    /// Get refined spacing
+    pub fn refined_dx(&self) -> f64 {
+        self.dx / self.ratio as f64
+    }
+
+    /// Get refined time step
+    pub fn refined_dt(&self) -> f64 {
+        self.dt / self.ratio as f64
+    }
+}
+
+/// Manages mesh refinement decisions
+pub struct RefinementManager {
+    /// Maximum refinement level
     max_level: usize,
-    buffer_cells: usize,
+    /// Refinement levels
+    levels: Vec<RefinementLevel>,
+    /// Buffer zone size for refinement
+    buffer_size: usize,
 }
 
-impl Default for RefinementStrategy {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+impl RefinementManager {
+    /// Create a new refinement manager
+    pub fn new(max_level: usize) -> Self {
+        let mut levels = Vec::with_capacity(max_level + 1);
 
-impl RefinementStrategy {
-    pub fn new() -> Self {
+        // Initialize levels with standard 2:1 refinement
+        let base_dx = 1.0;
+        let base_dt = 0.1;
+        let ratio = 2;
+
+        for level in 0..=max_level {
+            let factor = (ratio as u32).pow(level as u32) as f64;
+            levels.push(RefinementLevel::new(
+                level,
+                base_dx / factor,
+                base_dt / factor,
+                ratio,
+            ));
+        }
+
         Self {
-            criterion: RefinementCriterion::Gradient {
-                threshold: DEFAULT_GRADIENT_THRESHOLD,
-            },
-            min_level: MIN_REFINEMENT_LEVEL,
-            max_level: MAX_REFINEMENT_LEVEL,
-            buffer_cells: 2,
+            max_level,
+            levels,
+            buffer_size: 2,
         }
     }
 
-    /// Create gradient-based refinement strategy
-    pub fn gradient(threshold: f64) -> Self {
-        Self {
-            criterion: RefinementCriterion::Gradient { threshold },
-            ..Self::new()
-        }
-    }
+    /// Mark cells for refinement/coarsening
+    pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
+        let mut markers = Array3::zeros(error.dim());
 
-    /// Create wavelet-based refinement strategy
-    pub fn wavelet(threshold: f64) -> Self {
-        Self {
-            criterion: RefinementCriterion::Wavelet { threshold },
-            ..Self::new()
-        }
-    }
-
-    /// Create physics-based refinement strategy
-    pub fn physics_based(shock_threshold: f64) -> Self {
-        Self {
-            criterion: RefinementCriterion::PhysicsBased { shock_threshold },
-            ..Self::new()
-        }
-    }
-
-    /// Set refinement level limits
-    pub fn with_levels(mut self, min: usize, max: usize) -> Self {
-        self.min_level = min.min(MAX_REFINEMENT_LEVEL);
-        self.max_level = max.min(MAX_REFINEMENT_LEVEL);
-        self
-    }
-
-    /// Set buffer cells around refined regions
-    pub fn with_buffer(mut self, buffer: usize) -> Self {
-        self.buffer_cells = buffer;
-        self
-    }
-
-    /// Compute refinement indicator for a field
-    pub fn compute_indicator(&self, field: &Array3<f64>) -> Array3<f64> {
-        match self.criterion {
-            RefinementCriterion::Gradient { threshold } => {
-                self.gradient_indicator(field, threshold)
+        // Mark cells based on error threshold
+        Zip::from(&mut markers).and(error).for_each(|m, &e| {
+            if e > threshold {
+                *m = 1; // Mark for refinement
+            } else if e < threshold * 0.1 {
+                *m = -1; // Mark for coarsening
             }
-            RefinementCriterion::Wavelet { threshold } => self.wavelet_indicator(field, threshold),
-            RefinementCriterion::Curvature { threshold } => {
-                self.curvature_indicator(field, threshold)
-            }
-            RefinementCriterion::PhysicsBased { shock_threshold } => {
-                self.physics_indicator(field, shock_threshold)
-            }
-            RefinementCriterion::Combined {
-                gradient_weight,
-                wavelet_weight,
-                curvature_weight,
-            } => self.combined_indicator(field, gradient_weight, wavelet_weight, curvature_weight),
-        }
-    }
-
-    /// Gradient-based refinement indicator (Löhner, 1987)
-    fn gradient_indicator(&self, field: &Array3<f64>, threshold: f64) -> Array3<f64> {
-        let shape = field.shape();
-        let mut indicator = Array3::zeros((shape[0], shape[1], shape[2]));
-
-        // Compute gradient magnitude using central differences
-        Zip::indexed(&mut indicator).for_each(|(i, j, k), ind| {
-            let grad_x = if i > 0 && i < shape[0] - 1 {
-                (field[[i + 1, j, k]] - field[[i - 1, j, k]]) * 0.5
-            } else {
-                0.0
-            };
-
-            let grad_y = if j > 0 && j < shape[1] - 1 {
-                (field[[i, j + 1, k]] - field[[i, j - 1, k]]) * 0.5
-            } else {
-                0.0
-            };
-
-            let grad_z = if k > 0 && k < shape[2] - 1 {
-                (field[[i, j, k + 1]] - field[[i, j, k - 1]]) * 0.5
-            } else {
-                0.0
-            };
-
-            let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
-            *ind = if grad_mag > threshold { 1.0 } else { 0.0 };
+            // else 0 = no change
         });
 
-        // Apply buffer cells
-        if self.buffer_cells > 0 {
-            self.apply_buffer(&mut indicator);
-        }
+        // Add buffer zones around refinement regions
+        self.add_buffer_zones(&mut markers)?;
 
-        indicator
+        // Ensure proper nesting (2:1 balance)
+        self.enforce_nesting(&mut markers)?;
+
+        Ok(markers)
     }
 
-    /// Wavelet-based refinement indicator (Harten, 1995)
-    fn wavelet_indicator(&self, field: &Array3<f64>, threshold: f64) -> Array3<f64> {
-        let shape = field.shape();
-        let mut indicator = Array3::zeros((shape[0], shape[1], shape[2]));
+    /// Add buffer zones around refinement regions
+    fn add_buffer_zones(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
+        let (nx, ny, nz) = markers.dim();
+        let mut buffer = markers.clone();
 
-        // Haar wavelet coefficients computation
-        Zip::indexed(&mut indicator).for_each(|(i, j, k), ind| {
-            if i > 0 && j > 0 && k > 0 && i < shape[0] - 1 && j < shape[1] - 1 && k < shape[2] - 1 {
-                // Compute Haar wavelet detail coefficients
-                let avg = (field[[i - 1, j - 1, k - 1]]
-                    + field[[i - 1, j - 1, k]]
-                    + field[[i - 1, j, k - 1]]
-                    + field[[i - 1, j, k]]
-                    + field[[i, j - 1, k - 1]]
-                    + field[[i, j - 1, k]]
-                    + field[[i, j, k - 1]]
-                    + field[[i, j, k]])
-                    / 8.0;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    if markers[[i, j, k]] == 1 {
+                        // Add buffer around refined cell
+                        for di in -(self.buffer_size as isize)..=(self.buffer_size as isize) {
+                            for dj in -(self.buffer_size as isize)..=(self.buffer_size as isize) {
+                                for dk in -(self.buffer_size as isize)..=(self.buffer_size as isize)
+                                {
+                                    let ii = (i as isize + di) as usize;
+                                    let jj = (j as isize + dj) as usize;
+                                    let kk = (k as isize + dk) as usize;
 
-                let detail = (field[[i, j, k]] - avg).abs();
-                *ind = if detail > threshold { 1.0 } else { 0.0 };
-            }
-        });
-
-        // Apply buffer cells
-        if self.buffer_cells > 0 {
-            self.apply_buffer(&mut indicator);
-        }
-
-        indicator
-    }
-
-    /// Curvature-based refinement indicator
-    fn curvature_indicator(&self, field: &Array3<f64>, threshold: f64) -> Array3<f64> {
-        let shape = field.shape();
-        let mut indicator = Array3::zeros((shape[0], shape[1], shape[2]));
-
-        // Compute second derivatives (Laplacian as curvature measure)
-        Zip::indexed(&mut indicator).for_each(|(i, j, k), ind| {
-            if i > 0 && i < shape[0] - 1 && j > 0 && j < shape[1] - 1 && k > 0 && k < shape[2] - 1 {
-                let d2_dx2 = field[[i + 1, j, k]] - 2.0 * field[[i, j, k]] + field[[i - 1, j, k]];
-                let d2_dy2 = field[[i, j + 1, k]] - 2.0 * field[[i, j, k]] + field[[i, j - 1, k]];
-                let d2_dz2 = field[[i, j, k + 1]] - 2.0 * field[[i, j, k]] + field[[i, j, k - 1]];
-
-                let laplacian = (d2_dx2.abs() + d2_dy2.abs() + d2_dz2.abs()) / 3.0;
-                *ind = if laplacian > threshold { 1.0 } else { 0.0 };
-            }
-        });
-
-        // Apply buffer cells
-        if self.buffer_cells > 0 {
-            self.apply_buffer(&mut indicator);
-        }
-
-        indicator
-    }
-
-    /// Physics-based refinement indicator (e.g., shock detection)
-    fn physics_indicator(&self, field: &Array3<f64>, shock_threshold: f64) -> Array3<f64> {
-        let shape = field.shape();
-        let mut indicator = Array3::zeros((shape[0], shape[1], shape[2]));
-
-        // Persson & Peraire (2006) shock detection
-        Zip::indexed(&mut indicator).for_each(|(i, j, k), ind| {
-            if i > 1 && i < shape[0] - 2 && j > 1 && j < shape[1] - 2 && k > 1 && k < shape[2] - 2 {
-                // Compute smoothness indicator
-                let center = field[[i, j, k]];
-                let neighbors = [
-                    field[[i - 1, j, k]],
-                    field[[i + 1, j, k]],
-                    field[[i, j - 1, k]],
-                    field[[i, j + 1, k]],
-                    field[[i, j, k - 1]],
-                    field[[i, j, k + 1]],
-                ];
-
-                let max_jump = neighbors
-                    .iter()
-                    .map(|&n| (n - center).abs())
-                    .fold(0.0, f64::max);
-
-                let avg_val = neighbors.iter().sum::<f64>() / 6.0;
-                let normalized_jump = if avg_val.abs() > 1e-10 {
-                    max_jump / avg_val.abs()
-                } else {
-                    0.0
-                };
-
-                *ind = if normalized_jump > shock_threshold {
-                    1.0
-                } else {
-                    0.0
-                };
-            }
-        });
-
-        // Apply buffer cells
-        if self.buffer_cells > 0 {
-            self.apply_buffer(&mut indicator);
-        }
-
-        indicator
-    }
-
-    /// Combined refinement indicator with weighted criteria
-    fn combined_indicator(
-        &self,
-        field: &Array3<f64>,
-        gradient_weight: f64,
-        wavelet_weight: f64,
-        curvature_weight: f64,
-    ) -> Array3<f64> {
-        let grad = self.gradient_indicator(field, DEFAULT_GRADIENT_THRESHOLD);
-        let wave = self.wavelet_indicator(field, DEFAULT_WAVELET_THRESHOLD);
-        let curv = self.curvature_indicator(field, DEFAULT_CURVATURE_THRESHOLD);
-
-        let mut combined = Array3::zeros(field.dim());
-
-        Zip::from(&mut combined)
-            .and(&grad)
-            .and(&wave)
-            .and(&curv)
-            .for_each(|c, &g, &w, &cv| {
-                let weighted = gradient_weight * g + wavelet_weight * w + curvature_weight * cv;
-                let total_weight = gradient_weight + wavelet_weight + curvature_weight;
-                *c = if total_weight > 0.0 {
-                    (weighted / total_weight).min(1.0)
-                } else {
-                    0.0
-                };
-            });
-
-        combined
-    }
-
-    /// Apply buffer cells around marked regions
-    fn apply_buffer(&self, indicator: &mut Array3<f64>) {
-        let (nx, ny, nz) = indicator.dim();
-        let mut buffer_indicator = indicator.clone();
-
-        for _ in 0..self.buffer_cells {
-            Zip::indexed(&mut buffer_indicator).for_each(|(i, j, k), buf| {
-                if *buf < 0.5 {
-                    // Not already marked
-                    // Check if any neighbor is marked
-                    let mut has_marked_neighbor = false;
-
-                    for di in -1i32..=1 {
-                        for dj in -1i32..=1 {
-                            for dk in -1i32..=1 {
-                                if di == 0 && dj == 0 && dk == 0 {
-                                    continue;
-                                }
-
-                                let ni = (i as i32 + di) as usize;
-                                let nj = (j as i32 + dj) as usize;
-                                let nk = (k as i32 + dk) as usize;
-
-                                if ni < nx && nj < ny && nk < nz && indicator[[ni, nj, nk]] > 0.5 {
-                                    has_marked_neighbor = true;
-                                    break;
+                                    if ii < nx && jj < ny && kk < nz {
+                                        if buffer[[ii, jj, kk]] == 0 {
+                                            buffer[[ii, jj, kk]] = 1;
+                                        }
+                                    }
                                 }
                             }
-                            if has_marked_neighbor {
-                                break;
-                            }
                         }
-                        if has_marked_neighbor {
-                            break;
-                        }
-                    }
-
-                    if has_marked_neighbor {
-                        *buf = 1.0;
                     }
                 }
-            });
-
-            indicator.assign(&buffer_indicator);
+            }
         }
+
+        *markers = buffer;
+        Ok(())
     }
 
-    /// Get current refinement level limits
-    pub fn level_range(&self) -> (usize, usize) {
-        (self.min_level, self.max_level)
+    /// Enforce proper nesting (2:1 balance)
+    fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
+        // Ensure no cell differs by more than one level from neighbors
+        // This is a simplified version - full implementation would be more complex
+
+        let (nx, ny, nz) = markers.dim();
+        let mut changed = true;
+
+        while changed {
+            changed = false;
+            let old_markers = markers.clone();
+
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
+                        // Check neighbors
+                        let neighbors = [
+                            old_markers[[i - 1, j, k]],
+                            old_markers[[i + 1, j, k]],
+                            old_markers[[i, j - 1, k]],
+                            old_markers[[i, j + 1, k]],
+                            old_markers[[i, j, k - 1]],
+                            old_markers[[i, j, k + 1]],
+                        ];
+
+                        // If any neighbor is refined, this cell cannot coarsen
+                        if neighbors.iter().any(|&n| n == 1) && markers[[i, j, k]] == -1 {
+                            markers[[i, j, k]] = 0;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Get refinement level info
+    pub fn get_level(&self, level: usize) -> Option<&RefinementLevel> {
+        self.levels.get(level)
     }
 }

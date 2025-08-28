@@ -1,4 +1,3 @@
-// src/solver/amr/mod.rs
 //! Adaptive Mesh Refinement (AMR) Module
 //!
 //! This module implements adaptive mesh refinement for efficient simulation
@@ -14,589 +13,102 @@
 //! 1. **Berger, M. J., & Oliger, J. (1984)**. "Adaptive mesh refinement for
 //!    hyperbolic partial differential equations." *Journal of Computational
 //!    Physics*, 53(3), 484-512. DOI: 10.1016/0021-9991(84)90073-1
-//!    - Original AMR algorithm
-//!    - Conservative interpolation techniques
 //!
-//! 2. **Berger, M. J., & Colella, P. (1989)**. "Local adaptive mesh refinement
-//!    for shock hydrodynamics." *Journal of Computational Physics*, 82(1), 64-84.
-//!    DOI: 10.1016/0021-9991(89)90035-1
-//!    - Extension to conservation laws
-//!    - Proper nesting and synchronization
-//!
-//! 3. **Vasilyev, O. V., & Kevlahan, N. K. R. (2005)**. "An adaptive multilevel
+//! 2. **Vasilyev, O. V., & Kevlahan, N. K. R. (2005)**. "An adaptive multilevel
 //!    wavelet collocation method for elliptic problems." *Journal of Computational
 //!    Physics*, 206(2), 412-431. DOI: 10.1016/j.jcp.2004.12.013
-//!    - Wavelet-based error estimation
-//!    - Adaptive grid generation
 //!
-//! 4. **Popinet, S. (2003)**. "Gerris: a tree-based adaptive solver for the
+//! 3. **Popinet, S. (2003)**. "Gerris: a tree-based adaptive solver for the
 //!    incompressible Euler equations in complex geometries." *Journal of
-//!    Computational Physics*, 190(2), 572-600. DOI: 10.1016/S0021-9991(03)00298-5
-//!    - Octree-based refinement
-//!    - Efficient tree traversal algorithms
-//!
-//! 5. **Domingues, M. O., Gomes, S. M., Roussel, O., & Schneider, K. (2008)**.
-//!    "An adaptive multiresolution scheme with local time stepping for evolutionary
-//!    PDEs." *Journal of Computational Physics*, 227(8), 3758-3780.
-//!    DOI: 10.1016/j.jcp.2007.11.046
-//!    - Multiresolution analysis
-//!    - Local time stepping with AMR
-//!
-//! ## Design Principles
-//! - **SOLID**: Modular components with clear interfaces
-//! - **DRY**: Shared refinement logic across dimensions
-//! - **KISS**: Simple octree structure with efficient operations
-//! - **YAGNI**: Only essential AMR features implemented
-//! - **Clean**: Clear abstractions for refinement criteria
+//!    Computational Physics*, 190(2), 572-600.
 
-pub mod error_estimator;
-pub mod feature_refinement;
+pub mod criteria;
 pub mod interpolation;
-pub mod local_operations;
 pub mod octree;
 pub mod refinement;
 pub mod wavelet;
 
+#[cfg(test)]
+pub mod tests;
+
+pub use criteria::{ErrorEstimator, RefinementCriterion};
+pub use interpolation::{ConservativeInterpolator, InterpolationScheme};
+pub use octree::{Octree, OctreeNode};
+pub use refinement::{RefinementLevel, RefinementManager};
+pub use wavelet::{WaveletBasis, WaveletTransform};
+
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::Array3;
-use std::collections::HashMap;
 
-/// AMR configuration parameters
-#[derive(Debug, Clone)]
-pub struct AMRConfig {
-    /// Maximum refinement level (0 = coarsest)
-    pub max_level: usize,
-    /// Minimum refinement level
-    pub min_level: usize,
-    /// Error threshold for refinement
-    pub refine_threshold: f64,
-    /// Error threshold for coarsening
-    pub coarsen_threshold: f64,
-    /// Refinement ratio (typically 2)
-    pub refinement_ratio: usize,
-    /// Buffer cells around refined regions
-    pub buffer_cells: usize,
-    /// Wavelet type for error estimation
-    pub wavelet_type: WaveletType,
+/// Adaptive Mesh Refinement solver
+pub struct AMRSolver {
+    /// Octree structure for spatial refinement
+    octree: Octree,
+    /// Refinement manager
+    refinement: RefinementManager,
     /// Interpolation scheme
-    pub interpolation_scheme: InterpolationScheme,
-}
-
-impl Default for AMRConfig {
-    fn default() -> Self {
-        Self {
-            max_level: 5,
-            min_level: 0,
-            refine_threshold: 1e-3,
-            coarsen_threshold: 1e-4,
-            refinement_ratio: 2,
-            buffer_cells: 2,
-            wavelet_type: WaveletType::Daubechies4,
-            interpolation_scheme: InterpolationScheme::Conservative,
-        }
-    }
-}
-
-/// Wavelet types for error estimation
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum WaveletType {
-    /// Haar wavelet (simplest, discontinuous)
-    Haar,
-    /// Daubechies 4 wavelet (smooth, compact support)
-    Daubechies4,
-    /// Daubechies 6 wavelet (smoother, wider support)
-    Daubechies6,
-    /// Coiflet 6 wavelet (symmetric-like)
-    Coiflet6,
-}
-
-// Use unified InterpolationScheme from interpolation module
-pub use interpolation::InterpolationScheme;
-
-/// Cell refinement level and status
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CellStatus {
-    /// Refinement level (0 = coarsest)
-    pub level: usize,
-    /// Whether this cell is active (leaf node)
-    pub is_active: bool,
-    /// Whether this cell needs refinement
-    pub needs_refinement: bool,
-    /// Whether this cell can be coarsened
-    pub can_coarsen: bool,
-}
-
-/// Adaptive Mesh Refinement manager
-pub struct AMRManager {
-    /// Configuration parameters
-    config: AMRConfig,
-    /// Octree structure for spatial hierarchy
-    octree: octree::Octree,
+    interpolator: ConservativeInterpolator,
     /// Error estimator
-    error_estimator: error_estimator::ErrorEstimator,
-    /// Cell status for each grid point
-    cell_status: HashMap<(usize, usize, usize), CellStatus>,
-    /// Refinement history for adaptation
-    refinement_history: Vec<RefinementEvent>,
-    /// Dynamic refinement criteria
-    criteria: Vec<Box<dyn feature_refinement::RefinementCriterion>>,
-    /// Criterion weights
-    criterion_weights: Vec<f64>,
-    /// Load balancer for parallel execution
-    load_balancer: Option<feature_refinement::LoadBalancer>,
-    /// Memory limit (bytes)
-    memory_limit: Option<usize>,
-    /// Current memory usage estimate
-    memory_usage: usize,
+    estimator: ErrorEstimator,
 }
 
-/// Refinement event for history tracking
-#[derive(Debug, Clone)]
-struct RefinementEvent {
-    /// Simulation time
-    time: f64,
-    /// Number of cells refined
-    cells_refined: usize,
-    /// Number of cells coarsened
-    cells_coarsened: usize,
-    /// Maximum error before refinement
-    max_error: f64,
-}
+impl AMRSolver {
+    /// Create a new AMR solver
+    pub fn new(grid: &Grid, max_level: usize) -> KwaversResult<Self> {
+        let octree = Octree::new(grid.bounds(), max_level)?;
+        let refinement = RefinementManager::new(max_level);
+        let interpolator = ConservativeInterpolator::new();
+        let estimator = ErrorEstimator::new();
 
-impl AMRManager {
-    /// Create a new AMR manager with given configuration
-    pub fn new(config: AMRConfig, base_grid: &Grid) -> Self {
-        let octree =
-            octree::Octree::new(base_grid.nx, base_grid.ny, base_grid.nz, config.max_level);
-
-        let error_estimator = error_estimator::ErrorEstimator::new(
-            config.wavelet_type,
-            config.refine_threshold,
-            config.coarsen_threshold,
-        );
-
-        Self {
-            config,
+        Ok(Self {
             octree,
-            error_estimator,
-            cell_status: HashMap::new(),
-            refinement_history: Vec::new(),
-            criteria: Vec::new(),
-            criterion_weights: Vec::new(),
-            load_balancer: None,
-            memory_limit: None,
-            memory_usage: 0,
-        }
-    }
-
-    /// Add a refinement criterion with weight
-    pub fn add_criterion(
-        &mut self,
-        criterion: Box<dyn feature_refinement::RefinementCriterion>,
-        weight: f64,
-    ) {
-        self.criteria.push(criterion);
-        self.criterion_weights.push(weight);
-    }
-
-    /// Set memory limit for refinement
-    pub fn set_memory_limit(&mut self, limit_mb: usize) {
-        self.memory_limit = Some(limit_mb * 1024 * 1024);
-    }
-
-    /// Set load balancing strategy
-    pub fn set_load_balancing(&mut self, strategy: feature_refinement::LoadBalancingStrategy) {
-        self.load_balancer = Some(feature_refinement::LoadBalancer::new(strategy));
-    }
-
-    /// Get reference to the octree
-    pub fn octree(&self) -> &octree::Octree {
-        &self.octree
-    }
-
-    /// Get the interpolation scheme
-    pub fn interpolation_scheme(&self) -> InterpolationScheme {
-        self.config.interpolation_scheme
-    }
-
-    /// Adapt the mesh based on current solution
-    pub fn adapt_mesh(
-        &mut self,
-        solution: &Array3<f64>,
-        time: f64,
-    ) -> KwaversResult<AdaptationResult> {
-        // Use dynamic criteria if available, otherwise fall back to wavelet-based
-        let error_field = if !self.criteria.is_empty() {
-            self.evaluate_criteria(solution)?
-        } else {
-            self.error_estimator.estimate_error(solution)?
-        };
-
-        // Mark cells for refinement/coarsening
-        let (refine_cells, coarsen_cells) = self.mark_cells(&error_field)?;
-
-        // Apply buffer zone around refined regions
-        let refine_cells = self.apply_buffer_zone(refine_cells);
-
-        // Apply memory limit if set
-        let refine_cells = if let Some(limit) = self.memory_limit {
-            self.apply_memory_limit(refine_cells, limit)?
-        } else {
-            refine_cells
-        };
-
-        // Update octree structure
-        let cells_refined = self.refine_cells(&refine_cells)?;
-        let cells_coarsened = self.coarsen_cells(&coarsen_cells)?;
-
-        // Update memory usage estimate
-        self.memory_usage = self.estimate_memory_usage();
-
-        // Compact octree if memory efficiency is low
-        if self.octree.memory_efficiency() < 0.75 {
-            self.octree.compact();
-        }
-
-        // Record refinement event
-        let max_error = error_field.iter().cloned().fold(0.0, f64::max);
-        self.refinement_history.push(RefinementEvent {
-            time,
-            cells_refined,
-            cells_coarsened,
-            max_error,
-        });
-
-        Ok(AdaptationResult {
-            cells_refined,
-            cells_coarsened,
-            max_error,
-            total_active_cells: self.count_active_cells(),
+            refinement,
+            interpolator,
+            estimator,
         })
     }
 
-    /// Evaluate all dynamic criteria
-    fn evaluate_criteria(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        use rayon::prelude::*;
+    /// Adapt the mesh based on error estimates
+    pub fn adapt_mesh(&mut self, field: &Array3<f64>, threshold: f64) -> KwaversResult<()> {
+        // Estimate error using wavelets
+        let error = self.estimator.estimate_error(field)?;
 
-        let total_weight: f64 = self.criterion_weights.iter().sum();
+        // Mark cells for refinement/coarsening
+        let markers = self.refinement.mark_cells(&error, threshold)?;
 
-        if total_weight > 0.0 {
-            // Create refinement field using parallel computation
-            let dim = field.dim();
-            let criteria = &self.criteria;
-            let weights = &self.criterion_weights;
+        // Update octree structure
+        self.octree.update_refinement(&markers)?;
 
-            // Collect indices and compute in parallel
-            let values: Vec<_> = (0..dim.0)
-                .into_par_iter()
-                .flat_map(|i| {
-                    (0..dim.1).into_par_iter().flat_map(move |j| {
-                        (0..dim.2).into_par_iter().map(move |k| {
-                            let val = criteria
-                                .iter()
-                                .zip(weights)
-                                .map(|(criterion, &weight)| {
-                                    weight * criterion.evaluate(field, (i, j, k))
-                                })
-                                .sum::<f64>()
-                                / total_weight;
-                            ((i, j, k), val)
-                        })
-                    })
-                })
-                .collect();
+        // Interpolate field to new mesh
+        self.interpolator
+            .interpolate_to_refined(&self.octree, field)?;
 
-            // Build the result array
-            let mut refinement_field = Array3::zeros(dim);
-            for ((i, j, k), val) in values {
-                refinement_field[[i, j, k]] = val;
-            }
-
-            Ok(refinement_field)
-        } else {
-            Ok(Array3::zeros(field.dim()))
-        }
+        Ok(())
     }
 
-    /// Apply memory limit to refinement
-    fn apply_memory_limit(
-        &self,
-        cells: Vec<(usize, usize, usize)>,
-        limit: usize,
-    ) -> KwaversResult<Vec<(usize, usize, usize)>> {
-        let cell_size = std::mem::size_of::<f64>() * 8; // Assuming 8 fields per cell
-        let mut refined_cells = Vec::new();
-        let mut current_usage = self.memory_usage;
-
-        for cell in cells {
-            let additional_memory = cell_size * 7; // Octree refinement creates 7 new cells
-            if current_usage + additional_memory <= limit {
-                refined_cells.push(cell);
-                current_usage += additional_memory;
-            } else {
-                break;
-            }
-        }
-
-        Ok(refined_cells)
-    }
-
-    /// Estimate current memory usage
-    fn estimate_memory_usage(&self) -> usize {
-        // Estimate based on active cells
-        self.count_active_cells() * std::mem::size_of::<f64>() * 8
-    }
-
-    /// Interpolate field to refined mesh
-    pub fn interpolate_to_refined(&self, coarse_field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        interpolation::interpolate_to_refined(
-            coarse_field,
-            &self.octree,
-            self.config.interpolation_scheme,
-        )
-    }
-
-    /// Restrict field to coarse mesh (conservative)
-    pub fn restrict_to_coarse(&self, fine_field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        interpolation::restrict_to_coarse(
-            fine_field,
-            &self.octree,
-            self.config.interpolation_scheme,
-        )
+    /// Get the refined mesh
+    pub fn get_refined_mesh(&self) -> &Octree {
+        &self.octree
     }
 
     /// Get memory usage statistics
     pub fn memory_stats(&self) -> MemoryStats {
-        let total_cells = self.octree.total_cells();
-        let active_cells = self.count_active_cells();
-        let uniform_cells = self.octree.base_cells();
-
         MemoryStats {
-            total_cells,
-            active_cells,
-            compression_ratio: uniform_cells as f64 / active_cells as f64,
-            memory_saved_percent: (1.0 - active_cells as f64 / uniform_cells as f64) * 100.0,
+            nodes: self.octree.node_count(),
+            leaves: self.octree.leaf_count(),
+            memory_bytes: self.octree.memory_usage(),
         }
     }
-
-    /// Mark cells for refinement or coarsening
-    fn mark_cells(
-        &self,
-        error_field: &Array3<f64>,
-    ) -> KwaversResult<(Vec<(usize, usize, usize)>, Vec<(usize, usize, usize)>)> {
-        let mut refine_cells = Vec::new();
-        let mut coarsen_cells = Vec::new();
-
-        for ((i, j, k), &error) in error_field.indexed_iter() {
-            let status = self
-                .cell_status
-                .get(&(i, j, k))
-                .copied()
-                .unwrap_or(CellStatus {
-                    level: 0,
-                    is_active: true,
-                    needs_refinement: false,
-                    can_coarsen: false,
-                });
-
-            if status.is_active {
-                if error > self.config.refine_threshold && status.level < self.config.max_level {
-                    refine_cells.push((i, j, k));
-                } else if error < self.config.coarsen_threshold
-                    && status.level > self.config.min_level
-                {
-                    coarsen_cells.push((i, j, k));
-                }
-            }
-        }
-
-        Ok((refine_cells, coarsen_cells))
-    }
-
-    /// Apply buffer zone around cells marked for refinement using efficient BFS algorithm
-    fn apply_buffer_zone(
-        &self,
-        refine_cells: Vec<(usize, usize, usize)>,
-    ) -> Vec<(usize, usize, usize)> {
-        use std::collections::{HashSet, VecDeque};
-
-        let buffer = self.config.buffer_cells;
-        if buffer == 0 {
-            return refine_cells;
-        }
-
-        // Initialize BFS queue with initial cells and their distance (0)
-        let mut queue: VecDeque<((usize, usize, usize), usize)> =
-            refine_cells.into_iter().map(|cell| (cell, 0)).collect();
-
-        // Track visited cells to avoid duplicates
-        let mut visited: HashSet<(usize, usize, usize)> =
-            queue.iter().map(|(cell, _)| *cell).collect();
-
-        // BFS to expand buffer zone level by level
-        while let Some(((i, j, k), level)) = queue.pop_front() {
-            if level >= buffer {
-                continue;
-            }
-
-            // Add 6-connected neighbors (face-adjacent cells)
-            for (di, dj, dk) in [
-                (1, 0, 0),
-                (-1, 0, 0),
-                (0, 1, 0),
-                (0, -1, 0),
-                (0, 0, 1),
-                (0, 0, -1),
-            ] {
-                let ni_i32 = i as i32 + di;
-                let nj_i32 = j as i32 + dj;
-                let nk_i32 = k as i32 + dk;
-
-                // Check bounds
-                if ni_i32 >= 0 && nj_i32 >= 0 && nk_i32 >= 0 {
-                    let next_cell = (ni_i32 as usize, nj_i32 as usize, nk_i32 as usize);
-
-                    // Check if cell is valid and not already visited
-                    if self
-                        .octree
-                        .is_valid_cell(next_cell.0, next_cell.1, next_cell.2)
-                        && visited.insert(next_cell)
-                    {
-                        queue.push_back((next_cell, level + 1));
-                    }
-                }
-            }
-        }
-
-        // Convert HashSet back to Vec
-        visited.into_iter().collect()
-    }
-
-    /// Refine specified cells
-    fn refine_cells(&mut self, cells: &[(usize, usize, usize)]) -> KwaversResult<usize> {
-        let mut refined_count = 0;
-
-        for &(i, j, k) in cells {
-            if self.octree.refine_cell(i, j, k)? {
-                refined_count += 1;
-
-                // Update cell status
-                self.cell_status.insert(
-                    (i, j, k),
-                    CellStatus {
-                        level: self.octree.get_level(i, j, k).unwrap_or(0) as usize,
-                        is_active: false,
-                        needs_refinement: false,
-                        can_coarsen: false,
-                    },
-                );
-
-                // Mark children as active
-                // Get children of the refined cell
-                let children_coords = self.octree.get_children_coords(i, j, k);
-                for child_coord in children_coords {
-                    let child_level = self
-                        .octree
-                        .get_level(child_coord.0, child_coord.1, child_coord.2)
-                        .unwrap_or(0);
-                    self.cell_status.insert(
-                        child_coord,
-                        CellStatus {
-                            level: child_level as usize,
-                            is_active: true,
-                            needs_refinement: false,
-                            can_coarsen: false,
-                        },
-                    );
-                }
-            }
-        }
-
-        Ok(refined_count)
-    }
-
-    /// Coarsen specified cells
-    fn coarsen_cells(&mut self, cells: &[(usize, usize, usize)]) -> KwaversResult<usize> {
-        let mut coarsened_count = 0;
-
-        // Group cells by parent for coarsening
-        let mut parents = HashMap::new();
-        for &cell in cells {
-            if let Some(parent) = self.octree.get_parent(cell.0, cell.1, cell.2) {
-                parents.entry(parent).or_insert_with(Vec::new).push(cell);
-            }
-        }
-
-        // Coarsen if all children of a parent can be coarsened
-        for (parent, children) in parents {
-            if children.len() == 8 && self.octree.coarsen_cell(parent.0, parent.1, parent.2)? {
-                coarsened_count += 8;
-
-                // Update cell status
-                self.cell_status.insert(
-                    parent,
-                    CellStatus {
-                        level: self
-                            .octree
-                            .get_level(parent.0, parent.1, parent.2)
-                            .unwrap_or(0) as usize,
-                        is_active: true,
-                        needs_refinement: false,
-                        can_coarsen: false,
-                    },
-                );
-
-                // Remove children status
-                for child in children {
-                    self.cell_status.remove(&child);
-                }
-            }
-        }
-
-        Ok(coarsened_count)
-    }
-
-    /// Count active (leaf) cells
-    fn count_active_cells(&self) -> usize {
-        self.cell_status
-            .values()
-            .filter(|status| status.is_active)
-            .count()
-    }
-}
-
-/// Result of mesh adaptation
-#[derive(Debug, Clone)]
-pub struct AdaptationResult {
-    /// Number of cells refined
-    pub cells_refined: usize,
-    /// Number of cells coarsened
-    pub cells_coarsened: usize,
-    /// Maximum error in the field
-    pub max_error: f64,
-    /// Total active cells after adaptation
-    pub total_active_cells: usize,
 }
 
 /// Memory usage statistics
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
-    /// Total cells in octree
-    pub total_cells: usize,
-    /// Active (leaf) cells
-    pub active_cells: usize,
-    /// Compression ratio vs uniform grid
-    pub compression_ratio: f64,
-    /// Percentage of memory saved
-    pub memory_saved_percent: f64,
+    /// Number of octree nodes
+    pub nodes: usize,
+    /// Number of leaf nodes
+    pub leaves: usize,
+    /// Total memory usage in bytes
+    pub memory_bytes: usize,
 }
-
-// Re-export key types
-pub use self::error_estimator::ErrorEstimator;
-pub use self::interpolation::{interpolate_to_refined, restrict_to_coarse};
-pub use self::local_operations::{adapt_all_fields, adapt_field_to_octree, LocalAMRResult};
-pub use self::octree::{Octree, OctreeNode};
-
-#[cfg(test)]
-mod tests;
