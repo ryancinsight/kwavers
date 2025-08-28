@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-compile-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -18,19 +18,19 @@ Rust library for acoustic wave simulation with validated physics implementations
   - ✅ Complete trait implementations for all types
   - ⚠️ Test execution hangs due to resource contention (known issue)
   - ✅ Physics implementations validated against literature
-- ⚠️ **Warnings**: 500 (legitimate unused parameters in trait implementations)
+- ⚠️ **Warnings**: 505 (legitimate unused parameters in trait implementations)
   - Mostly unused variables in trait implementations  
   - All adjective-based naming violations eliminated
   - Core module properly implemented for medium traits
   - All magic numbers replaced with named constants
-- ✅ **Latest Achievements (v3.1.0)**:
-  - **ALL TESTS PASS**: Fixed ML dimension mismatch - 100% test success!
-  - **GRASP COMPLIANCE**: Refactored 611-line unified_solver into proper submodules
+- ✅ **Latest Achievements (v3.2.0)**:
+  - **GRASP COMPLIANCE**: Refactored 610-line performance/optimization module!
+  - **MODULAR ARCHITECTURE**: Split into 6 focused modules (simd, cache, parallel, memory, gpu, config)
   - **Physics Validation**: Westervelt, Rayleigh-Plesset, CPML validated
   - **Clean Code**: No stub implementations (unimplemented!/todo!)
   - **Trait Compliance**: ArrayAccess trait properly implemented across all medium types
 - ⚠️ **Remaining Issues**:
-  - 24 modules still exceed 500 lines (refactored unified_solver)
+  - 14 modules still exceed 500 lines (refactored performance/optimization)
   - Test execution hangs need investigation
   - Underscored parameters are legitimate (e.g., position unused in homogeneous media)
 - ⚠️ **k-Wave Compatibility Status**:
