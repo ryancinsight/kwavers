@@ -186,7 +186,8 @@ impl AcousticWaveSolver {
         let start = Instant::now();
 
         // Update cached sound speed if needed
-        self.update_max_sound_speed(medium, grid);
+        let grid = self.grid.clone();
+        self.update_max_sound_speed(medium, &grid);
 
         // Check stability
         self.check_stability(dt)?;
@@ -270,7 +271,8 @@ impl AcousticWaveSolver {
         }
 
         // Compute nonlinear term: (β/ρ₀c₀⁴) * ∂²p²/∂t²
-        let nonlinear_term = self.compute_westervelt_nonlinearity(pressure, medium, grid, dt)?;
+        let nonlinear_term =
+            self.compute_westervelt_nonlinearity(pressure, medium, &self.grid, dt)?;
 
         // Linear propagation in k-space (do this after computing nonlinear term to avoid borrow issues)
         // For now, inline the linear update to avoid borrow checker issues
@@ -322,26 +324,26 @@ impl AcousticWaveSolver {
 
         // Compute all RK4 stages first (before borrowing workspace mutably)
         // k1 = f(y_n, t_n)
-        let k1 = self.compute_kuznetsov_rhs(&pressure_clone, medium, grid, source_term)?;
+        let k1 = self.compute_kuznetsov_rhs(&pressure_clone, medium, &self.grid, source_term)?;
 
         // k2 = f(y_n + dt/2 * k1, t_n + dt/2)
         let mut temp = pressure_clone.clone();
         Zip::from(&mut temp)
             .and(&k1)
             .for_each(|t, &k| *t += 0.5 * dt * k);
-        let k2 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
+        let k2 = self.compute_kuznetsov_rhs(&temp, medium, &self.grid, source_term)?;
 
         // k3 = f(y_n + dt/2 * k2, t_n + dt/2)
         temp.assign(&pressure_clone);
         Zip::from(&mut temp)
             .and(&k2)
             .for_each(|t, &k| *t += 0.5 * dt * k);
-        let k3 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
+        let k3 = self.compute_kuznetsov_rhs(&temp, medium, &self.grid, source_term)?;
 
         // k4 = f(y_n + dt * k3, t_n + dt)
         temp.assign(&pressure_clone);
         Zip::from(&mut temp).and(&k3).for_each(|t, &k| *t += dt * k);
-        let k4 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
+        let k4 = self.compute_kuznetsov_rhs(&temp, medium, &self.grid, source_term)?;
 
         // Store in workspace if available (for potential debugging/analysis)
         if let Some(workspace) = self.rk4_workspace.as_mut() {

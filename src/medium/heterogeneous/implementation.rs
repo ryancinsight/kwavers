@@ -1,6 +1,5 @@
 //! Heterogeneous medium implementation with spatially varying properties
 
-use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::{
     absorption::PowerLawAbsorption,

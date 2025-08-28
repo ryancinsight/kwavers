@@ -116,6 +116,11 @@ impl SensorData {
         self.data.iter()
     }
 
+    /// Get data for a specific sensor
+    pub fn get_data(&self, sensor_id: usize) -> Option<&Vec<f64>> {
+        self.data.get(&sensor_id)
+    }
+
     /// Add sensor data
     pub fn add_sensor_data(
         &mut self,

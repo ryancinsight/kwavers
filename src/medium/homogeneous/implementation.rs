@@ -1,6 +1,5 @@
 //! Homogeneous medium implementation with uniform properties
 
-use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::{
     acoustic::AcousticProperties,

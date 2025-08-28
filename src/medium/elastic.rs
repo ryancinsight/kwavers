@@ -5,7 +5,7 @@
 
 use crate::grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Trait for elastic medium properties
 pub trait ElasticProperties: CoreMedium {
@@ -51,7 +51,7 @@ pub trait ElasticArrayAccess: ElasticProperties + ArrayAccess {
     fn shear_sound_speed_array(&self) -> Array3<f64> {
         let mu_arr = self.lame_mu_array();
         let shape = mu_arr.dim();
-        let mut s_speed_arr = Array3::zeros(shape);
+        let s_speed_arr = Array3::zeros(shape);
         // Implementation will be provided by specific types
         s_speed_arr
     }

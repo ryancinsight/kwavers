@@ -63,7 +63,7 @@ impl TimeReversalConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> KwaversResult<()> {
         if self.iterations == 0 {
-            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+            return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "iterations".to_string(),
                 value: self.iterations.to_string(),
                 min: "1".to_string(),
@@ -72,7 +72,7 @@ impl TimeReversalConfig {
         }
 
         if self.tolerance <= 0.0 || self.tolerance >= 1.0 {
-            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+            return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "tolerance".to_string(),
                 value: self.tolerance.to_string(),
                 min: "0.0".to_string(),
@@ -101,7 +101,7 @@ impl TimeReversalConfig {
         }
 
         if self.max_amplification <= 0.0 {
-            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+            return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "max_amplification".to_string(),
                 value: self.max_amplification.to_string(),
                 min: "0.0".to_string(),
@@ -110,7 +110,7 @@ impl TimeReversalConfig {
         }
 
         if self.reference_sound_speed <= 0.0 {
-            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+            return Err(KwaversError::Validation(ValidationError::RangeValidation {
                 field: "reference_sound_speed".to_string(),
                 value: self.reference_sound_speed.to_string(),
                 min: "0.0".to_string(),

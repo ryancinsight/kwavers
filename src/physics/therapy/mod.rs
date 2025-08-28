@@ -51,7 +51,7 @@ use crate::{
     error::KwaversResult,
     grid::Grid,
     medium::Medium,
-    physics::thermal::{HeatSource, ThermalCalculator, ThermalConfig},
+    physics::thermal::{ThermalCalculator, ThermalConfig},
 };
 use ndarray::{Array3, Zip};
 use std::sync::Arc;
@@ -123,12 +123,14 @@ impl TherapyCalculator {
         grid: &Grid,
     ) -> KwaversResult<()> {
         // Calculate thermal effects if applicable
-        if let Some(ref mut thermal_calc) = self.thermal {
+        if self.thermal.is_some() {
             // Calculate heat source from acoustic absorption
             let heat_source = self.calculate_heat_source(pressure, medium, grid)?;
 
             // Update temperature
-            thermal_calc.step(temperature, &heat_source, dt, medium, grid)?;
+            if let Some(ref mut thermal_calc) = self.thermal {
+                thermal_calc.update(&heat_source, medium.as_ref(), grid, dt)?;
+            }
 
             // Update thermal dose
             self.metrics.thermal_dose += TreatmentMetrics::calculate_thermal_dose(temperature, dt);
