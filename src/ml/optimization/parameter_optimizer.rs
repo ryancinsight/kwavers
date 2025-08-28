@@ -2,7 +2,6 @@
 
 use super::convergence_predictor::ConvergencePredictor;
 use super::neural_network::NeuralNetwork;
-use crate::error::KwaversResult;
 use ndarray::Array1;
 use std::collections::VecDeque;
 

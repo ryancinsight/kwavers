@@ -1,7 +1,5 @@
 //! Pattern recognition for simulation data
 
-use ndarray::Array3;
-
 /// Pattern recognizer for simulation data
 pub struct PatternRecognizer {
     feature_extractor: FeatureExtractor,

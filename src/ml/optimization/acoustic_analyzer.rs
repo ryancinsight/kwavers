@@ -1,7 +1,5 @@
 //! Acoustic event analysis using ML
 
-use ndarray::Array3;
-
 /// Acoustic event analyzer
 pub struct AcousticEventAnalyzer {
     frequency_threshold: f64,

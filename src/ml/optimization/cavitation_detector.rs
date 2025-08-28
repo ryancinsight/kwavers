@@ -1,7 +1,5 @@
 //! Cavitation detection using ML techniques
 
-use ndarray::Array3;
-
 /// Cavitation detector using machine learning
 pub struct CavitationDetector {
     threshold: f64,
