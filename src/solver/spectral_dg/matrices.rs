@@ -185,11 +185,13 @@ pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
             }
         }
 
-        // Check for singularity
-        if aug[(k, k)].abs() < 1e-14 {
-            return Err(KwaversError::NumericalError(
-                "Matrix is singular or nearly singular".to_string(),
-            ));
+        // Check for singularity with better tolerance
+        if aug[(k, k)].abs() < 1e-12 {
+            return Err(KwaversError::NumericalError(format!(
+                "Matrix is singular or nearly singular at pivot {}: value = {}",
+                k,
+                aug[(k, k)]
+            )));
         }
 
         // Forward elimination
