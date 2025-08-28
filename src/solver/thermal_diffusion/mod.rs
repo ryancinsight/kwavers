@@ -188,6 +188,7 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
 mod tests {
     use super::*;
     use crate::medium::HomogeneousMedium;
+    use ndarray::Array3;
 
     #[test]
     fn test_thermal_diffusion_creation() {

@@ -90,7 +90,7 @@ impl ArtificialViscosity {
                             // Total viscosity with shock indicator weighting
                             let q_total =
                                 (q_vnr + q_linear + q_quadratic) * shock_indicator[[i, j, k]];
-                            
+
                             // Limit maximum viscosity to prevent over-dissipation
                             viscosity[[i, j, k]] = q_total.min(self.max_viscosity * rho * c * c);
                         }
@@ -122,26 +122,30 @@ impl ArtificialViscosity {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
                         // Compute viscous stress gradients
-                        let visc_flux_x = (viscosity[[i + 1, j, k]] * 
-                                          (velocity_component[[i + 1, j, k]] - velocity_component[[i, j, k]]) -
-                                          viscosity[[i - 1, j, k]] * 
-                                          (velocity_component[[i, j, k]] - velocity_component[[i - 1, j, k]])) /
-                                          (grid.dx * grid.dx);
+                        let visc_flux_x = (viscosity[[i + 1, j, k]]
+                            * (velocity_component[[i + 1, j, k]] - velocity_component[[i, j, k]])
+                            - viscosity[[i - 1, j, k]]
+                                * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i - 1, j, k]]))
+                            / (grid.dx * grid.dx);
 
-                        let visc_flux_y = (viscosity[[i, j + 1, k]] * 
-                                          (velocity_component[[i, j + 1, k]] - velocity_component[[i, j, k]]) -
-                                          viscosity[[i, j - 1, k]] * 
-                                          (velocity_component[[i, j, k]] - velocity_component[[i, j - 1, k]])) /
-                                          (grid.dy * grid.dy);
+                        let visc_flux_y = (viscosity[[i, j + 1, k]]
+                            * (velocity_component[[i, j + 1, k]] - velocity_component[[i, j, k]])
+                            - viscosity[[i, j - 1, k]]
+                                * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i, j - 1, k]]))
+                            / (grid.dy * grid.dy);
 
-                        let visc_flux_z = (viscosity[[i, j, k + 1]] * 
-                                          (velocity_component[[i, j, k + 1]] - velocity_component[[i, j, k]]) -
-                                          viscosity[[i, j, k - 1]] * 
-                                          (velocity_component[[i, j, k]] - velocity_component[[i, j, k - 1]])) /
-                                          (grid.dz * grid.dz);
+                        let visc_flux_z = (viscosity[[i, j, k + 1]]
+                            * (velocity_component[[i, j, k + 1]] - velocity_component[[i, j, k]])
+                            - viscosity[[i, j, k - 1]]
+                                * (velocity_component[[i, j, k]]
+                                    - velocity_component[[i, j, k - 1]]))
+                            / (grid.dz * grid.dz);
 
                         // Update momentum with viscous flux
-                        momentum_component[[i, j, k]] += dt * (visc_flux_x + visc_flux_y + visc_flux_z);
+                        momentum_component[[i, j, k]] +=
+                            dt * (visc_flux_x + visc_flux_y + visc_flux_z);
                     }
                 }
             }
@@ -178,7 +182,9 @@ mod tests {
             }
         }
 
-        let viscosity = visc.compute_viscosity(&velocity, &density, &sound_speed, &shock_indicator, &grid).unwrap();
+        let viscosity = visc
+            .compute_viscosity(&velocity, &density, &sound_speed, &shock_indicator, &grid)
+            .unwrap();
 
         // Should have non-zero viscosity at compression region
         assert!(viscosity[[5, 5, 5]] > 0.0);

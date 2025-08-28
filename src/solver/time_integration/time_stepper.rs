@@ -289,7 +289,15 @@ impl TimeStepper for AdamsBashforth {
                     );
                 }
             }
-            _ => unreachable!("Order validated in new()"),
+            _ => {
+                return Err(crate::KwaversError::Config(
+                    crate::ConfigError::InvalidValue {
+                        parameter: "order".to_string(),
+                        value: self.config.order.to_string(),
+                        constraint: "1, 2, 3, or 4".to_string(),
+                    },
+                ));
+            }
         }
 
         // Update history

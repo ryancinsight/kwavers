@@ -63,18 +63,20 @@ impl ShockDetector {
     }
 
     /// Apply modal decay shock detection
-    fn apply_modal_decay_detection(&self, field: &Array3<f64>, grid: &Grid, shock_mask: &mut Array3<bool>) {
+    fn apply_modal_decay_detection(
+        &self,
+        field: &Array3<f64>,
+        grid: &Grid,
+        shock_mask: &mut Array3<bool>,
+    ) {
         let (nx, ny, nz) = field.dim();
-        
+
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let grad_x =
-                        (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let grad_y =
-                        (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let grad_z =
-                        (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let grad_x = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
+                    let grad_y = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
+                    let grad_z = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
 
                     let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
                     let field_mag = field[[i, j, k]].abs() + EPSILON;
@@ -90,7 +92,7 @@ impl ShockDetector {
     /// Apply jump-based shock detection
     fn apply_jump_detection(&self, field: &Array3<f64>, shock_mask: &mut Array3<bool>) {
         let (nx, ny, nz) = field.dim();
-        
+
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {

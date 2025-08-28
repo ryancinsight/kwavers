@@ -47,6 +47,9 @@ pub mod numerical {
     pub const FFT_INVERSE_SCALE_3D: f64 = 1.0;
     pub const FFT_K_SCALING: f64 = 2.0 * PI;
 
+    // Heterogeneous media
+    pub const HETEROGENEOUS_SMOOTHING_FACTOR: f64 = 0.5;
+
     // WENO scheme
     pub const WENO_WEIGHT_0: f64 = 0.1;
     pub const WENO_WEIGHT_1: f64 = 0.6;

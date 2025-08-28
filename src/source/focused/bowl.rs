@@ -3,7 +3,7 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use crate::{
-    constants::physical::WATER_SOUND_SPEED,
+    constants::medium_properties::WATER_SOUND_SPEED,
     error::{KwaversError, KwaversResult, ValidationError},
     grid::Grid,
 };
@@ -62,11 +62,11 @@ impl Default for BowlConfig {
 pub struct BowlTransducer {
     pub(crate) config: BowlConfig,
     /// Discretized element positions
-    element_positions: Vec<[f64; 3]>,
+    pub(crate) element_positions: Vec<[f64; 3]>,
     /// Element normals for directivity
-    element_normals: Vec<[f64; 3]>,
+    pub(crate) element_normals: Vec<[f64; 3]>,
     /// Element areas for weighting
-    element_areas: Vec<f64>,
+    pub(crate) element_areas: Vec<f64>,
 }
 
 impl BowlTransducer {

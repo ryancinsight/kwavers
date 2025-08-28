@@ -32,7 +32,7 @@ pub struct HomogeneousMedium {
     absorption_power: f64,
     thermal_expansion: f64,
     gas_diffusion: f64,
-    nonlinearity: f64,
+    pub(crate) nonlinearity: f64,
     optical_absorption: f64,
     optical_scattering: f64,
     reference_frequency: f64,

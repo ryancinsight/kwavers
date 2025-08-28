@@ -36,11 +36,11 @@ impl AcousticWaveModel for NonlinearWave {
 
         // Update using the nonlinear wave equation
         match self.update_wave(&pressure, &source_term, medium, grid, (t / dt) as usize) {
-            Ok(new_pressure) => {
+            Ok(updated_pressure) => {
                 // Update the pressure field in the 4D array
                 fields
                     .index_axis_mut(Axis(0), PRESSURE_IDX)
-                    .assign(&new_pressure);
+                    .assign(&updated_pressure);
             }
             Err(e) => {
                 log::error!("Error updating wave field: {:?}", e);

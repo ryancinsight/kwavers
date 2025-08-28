@@ -444,11 +444,11 @@ mod tests {
         }
 
         impl ArrayAccess for TestMedium {
-            fn density_array(&self) -> &Array3<f64> {
-                &self.density_field
+            fn density_array(&self) -> Array3<f64> {
+                self.density_field.clone()
             }
-            fn sound_speed_array(&self) -> &Array3<f64> {
-                &self.sound_speed_field
+            fn sound_speed_array(&self) -> Array3<f64> {
+                self.sound_speed_field.clone()
             }
         }
 

@@ -261,16 +261,16 @@ impl PerformanceOptimizer {
         gpu_context: &mut dyn std::any::Any,
         kernels: Vec<Box<dyn std::any::Any>>,
     ) -> KwaversResult<()> {
-        use crate::gpu::GpuContext;
+        use crate::gpu::GpuBackend;
 
         info!("Fusing {} GPU kernels", kernels.len());
 
         // Downcast GPU context
-        let context = gpu_context.downcast_mut::<GpuContext>().ok_or_else(|| {
+        let context = gpu_context.downcast_mut::<GpuBackend>().ok_or_else(|| {
             KwaversError::Config(crate::error::ConfigError::InvalidValue {
                 parameter: "gpu_context".to_string(),
                 value: "invalid type".to_string(),
-                constraint: "Expected GpuContext".to_string(),
+                constraint: "Expected GpuBackend".to_string(),
             })
         })?;
 
@@ -362,7 +362,7 @@ impl PerformanceOptimizer {
     #[cfg(feature = "gpu")]
     pub fn setup_multi_gpu(
         &mut self,
-        gpu_contexts: Vec<Arc<crate::gpu::GpuContext>>,
+        gpu_contexts: Vec<Arc<crate::gpu::GpuBackend>>,
     ) -> KwaversResult<()> {
         if !self.config.multi_gpu || gpu_contexts.len() <= 1 {
             return Ok(());
@@ -389,9 +389,9 @@ impl PerformanceOptimizer {
     #[cfg(feature = "gpu")]
     pub fn distribute_work_multi_gpu<T: Send + Sync>(
         &mut self,
-        gpu_contexts: &[Arc<crate::gpu::GpuContext>],
+        gpu_contexts: &[Arc<crate::gpu::GpuBackend>],
         work_items: Vec<T>,
-        process_fn: impl Fn(&crate::gpu::GpuContext, &[T]) -> KwaversResult<()> + Send + Sync,
+        process_fn: impl Fn(&crate::gpu::GpuBackend, &[T]) -> KwaversResult<()> + Send + Sync,
     ) -> KwaversResult<()> {
         let num_gpus = gpu_contexts.len();
         let items_per_gpu = (work_items.len() + num_gpus - 1) / num_gpus;

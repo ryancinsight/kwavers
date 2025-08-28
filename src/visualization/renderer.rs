@@ -5,7 +5,7 @@
 //! and multi-field visualization with real-time performance.
 
 use crate::error::{KwaversError, KwaversResult};
-use crate::gpu::GpuContext;
+// GPU support removed - was fake implementation
 use crate::grid::Grid;
 use crate::visualization::{ColorScheme, FieldType, RenderQuality, VisualizationConfig};
 use log::{debug, info, warn};
@@ -14,9 +14,9 @@ use std::sync::Arc;
 #[cfg(feature = "gpu-visualization")]
 use {nalgebra::Matrix4, std::collections::HashMap, wgpu::*};
 
-/// GPU-accelerated 3D renderer for scientific visualization
+/// 3D renderer for scientific visualization
 pub struct Renderer3D {
-    gpu_context: Arc<GpuContext>,
+    // gpu_context: Arc<GpuContext>, // Removed - was fake
     config: VisualizationConfig,
 
     #[cfg(feature = "gpu-visualization")]
@@ -77,7 +77,7 @@ impl Renderer3D {
     /// Create a 3D renderer with GPU acceleration
     pub async fn create(
         config: &VisualizationConfig,
-        gpu_context: Arc<GpuContext>,
+        // gpu_context removed - using wgpu directly
     ) -> KwaversResult<Self> {
         info!("Initializing GPU-accelerated 3D renderer");
 

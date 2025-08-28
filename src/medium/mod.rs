@@ -20,7 +20,7 @@ pub mod viscous;
 
 // Re-export types from submodules
 pub use absorption::{AcousticDiffusivity, PowerLawAbsorption, TissueType};
-pub use anisotropic::{AnisotropicTissueProperties, AnisotropyType, StiffnessTensor};
+pub use anisotropic::{AnisotropyType, ChristoffelEquation, MuscleFiberModel, StiffnessTensor};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
 pub use homogeneous::HomogeneousMedium;
 

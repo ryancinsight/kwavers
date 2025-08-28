@@ -1,26 +1,13 @@
-//! GPU Compute Kernels Module
-//!
-//! This module provides high-performance GPU kernels for acoustic wave propagation,
-//! thermal diffusion, and FFT operations.
+//! GPU compute kernels for acoustic simulation
 
-mod acoustic;
-mod boundary;
-mod config;
-mod generator;
-mod manager;
-mod thermal;
-mod transforms;
-mod types;
+pub mod fdtd;
+pub mod pml;
+pub mod pressure;
 
-// Re-export key types
-pub use acoustic::AcousticKernel;
-pub use boundary::BoundaryKernel;
-pub use config::{KernelConfig, OptimizationLevel};
-pub use generator::{CudaKernelGenerator, OpenCLKernelGenerator, WebGPUKernelGenerator};
-pub use manager::KernelManager;
-pub use thermal::ThermalKernel;
-pub use transforms::{FFTKernel, TransformDirection};
-pub use types::{CompiledKernel, KernelType};
+/// Workgroup size for compute shaders
+pub const WORKGROUP_SIZE: u32 = 8;
 
-#[cfg(test)]
-mod tests;
+/// Calculate workgroup count for dimension
+pub fn workgroup_count(size: u32) -> u32 {
+    (size + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE
+}

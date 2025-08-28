@@ -14,7 +14,6 @@ use crate::physics::mechanics::elastic_wave::{
 };
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::utils::{fft_3d_array as fft_3d, ifft_3d_array as ifft_3d};
 use log::{debug, info};
 use ndarray::{Array3, Array4, Axis};
 use num_complex::Complex;

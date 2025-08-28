@@ -1,82 +1,118 @@
 //! GPU backend abstraction
-//!
-//! This module defines the GPU backend types and selection logic,
-//! following SOLID principles with clear separation of concerns.
 
-use crate::error::{GpuError, KwaversResult};
+use super::{ComputePipeline, GpuBuffer, GpuDevice};
+use crate::KwaversResult;
+use ndarray::Array3;
+use std::sync::Arc;
 
-/// GPU backend type following SSOT principle
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum GpuBackend {
-    /// NVIDIA CUDA backend
-    Cuda,
-    /// OpenCL backend (cross-platform)
-    OpenCL,
-    /// WebGPU backend (future-proof)
-    WebGpu,
+/// GPU backend for acoustic simulations
+pub struct GpuBackend {
+    device: Arc<GpuDevice>,
+    pipelines: Vec<ComputePipeline>,
 }
 
 impl GpuBackend {
-    /// Select the best available backend
-    pub fn auto_select() -> KwaversResult<Self> {
-        // Try CUDA first (typically fastest)
-        if Self::cuda_available() {
-            return Ok(Self::Cuda);
+    /// Create GPU backend
+    pub async fn create() -> KwaversResult<Self> {
+        let device = Arc::new(GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?);
+
+        Ok(Self {
+            device,
+            pipelines: Vec::new(),
+        })
+    }
+
+    /// Create with specific power preference
+    pub async fn create_with_preference(preference: wgpu::PowerPreference) -> KwaversResult<Self> {
+        let device = Arc::new(GpuDevice::create(preference).await?);
+
+        Ok(Self {
+            device,
+            pipelines: Vec::new(),
+        })
+    }
+
+    /// Transfer field to GPU
+    pub fn upload_field(&self, field: &Array3<f64>) -> KwaversResult<GpuBuffer> {
+        let data: Vec<f32> = field.iter().map(|&x| x as f32).collect();
+
+        GpuBuffer::create_with_data(
+            self.device.device(),
+            &data,
+            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        )
+    }
+
+    /// Download field from GPU
+    pub async fn download_field(
+        &self,
+        buffer: &GpuBuffer,
+        shape: (usize, usize, usize),
+    ) -> KwaversResult<Array3<f64>> {
+        let data = buffer
+            .read_to_vec::<f32>(self.device.device(), self.device.queue())
+            .await?;
+
+        let array = Array3::from_shape_vec(shape, data.iter().map(|&x| x as f64).collect())
+            .map_err(|e| {
+                crate::KwaversError::Config(crate::ConfigError::InvalidValue {
+                    parameter: "shape".to_string(),
+                    value: format!("{} elements", data.len()),
+                    constraint: format!("{:?} shape required: {}", shape, e),
+                })
+            })?;
+
+        Ok(array)
+    }
+
+    /// Compile compute shader
+    pub fn compile_shader(
+        &mut self,
+        name: &str,
+        source: &str,
+        entry_point: &str,
+    ) -> KwaversResult<usize> {
+        let pipeline = ComputePipeline::create(self.device.device(), name, source, entry_point)?;
+
+        self.pipelines.push(pipeline);
+        Ok(self.pipelines.len() - 1)
+    }
+
+    /// Execute compute pipeline
+    pub fn dispatch(
+        &self,
+        pipeline_index: usize,
+        workgroups: (u32, u32, u32),
+        buffers: &[&GpuBuffer],
+    ) -> KwaversResult<()> {
+        if pipeline_index >= self.pipelines.len() {
+            return Err(crate::KwaversError::Config(
+                crate::ConfigError::InvalidValue {
+                    parameter: "pipeline_index".to_string(),
+                    value: pipeline_index.to_string(),
+                    constraint: format!("0..{}", self.pipelines.len()),
+                },
+            ));
         }
 
-        // Fall back to OpenCL
-        if Self::opencl_available() {
-            return Ok(Self::OpenCL);
-        }
-
-        // WebGPU as last resort
-        if Self::webgpu_available() {
-            return Ok(Self::WebGpu);
-        }
-
-        Err(GpuError::NoDeviceFound.into())
+        let pipeline = &self.pipelines[pipeline_index];
+        pipeline.dispatch(
+            self.device.device(),
+            self.device.queue(),
+            workgroups,
+            buffers,
+        )
     }
 
-    /// Check if CUDA is available
-    fn cuda_available() -> bool {
-        // This would check for CUDA runtime
-        cfg!(feature = "cuda") && std::env::var("CUDA_PATH").is_ok()
+    /// Get device info
+    pub fn device_info(&self) -> &super::DeviceInfo {
+        self.device.info()
     }
 
-    /// Check if OpenCL is available
-    fn opencl_available() -> bool {
-        cfg!(feature = "opencl")
-    }
-
-    /// Check if WebGPU is available
-    fn webgpu_available() -> bool {
-        cfg!(feature = "webgpu")
-    }
-
-    /// Get backend name for display
-    pub fn name(&self) -> &'static str {
-        match self {
-            Self::Cuda => "CUDA",
-            Self::OpenCL => "OpenCL",
-            Self::WebGpu => "WebGPU",
-        }
-    }
-}
-
-/// Get the GPU float type string for kernel generation
-pub fn gpu_float_type_str() -> &'static str {
-    if cfg!(feature = "gpu-f64") {
-        "double"
-    } else {
-        "float"
-    }
-}
-
-/// Get the GPU float type size
-pub fn gpu_float_size() -> usize {
-    if cfg!(feature = "gpu-f64") {
-        8
-    } else {
-        4
+    /// Check if operation fits in memory
+    pub fn can_fit(&self, bytes: usize) -> bool {
+        // Conservative estimate - use 80% of max buffer size
+        let max_size = self.device.limits().max_buffer_size as usize;
+        bytes < (max_size * 4) / 5
     }
 }

@@ -5,7 +5,7 @@
 pub mod amr;
 pub mod cpml_integration;
 pub mod fdtd;
-pub mod heterogeneous_handler;
+pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
 pub mod kspace_correction;

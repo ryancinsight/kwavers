@@ -38,6 +38,14 @@ pub enum NumericalError {
         method: String,
         reason: String,
     },
+    ConvergenceFailed {
+        method: String,
+        iterations: usize,
+        error: f64,
+    },
+    NotImplemented {
+        feature: String,
+    },
 }
 
 impl fmt::Display for NumericalError {
@@ -91,6 +99,20 @@ impl fmt::Display for NumericalError {
             }
             Self::SolverFailed { method, reason } => {
                 write!(f, "Solver '{}' failed: {}", method, reason)
+            }
+            Self::ConvergenceFailed {
+                method,
+                iterations,
+                error,
+            } => {
+                write!(
+                    f,
+                    "Method '{}' failed to converge after {} iterations (error: {:.2e})",
+                    method, iterations, error
+                )
+            }
+            Self::NotImplemented { feature } => {
+                write!(f, "Feature not implemented: {}", feature)
             }
         }
     }
