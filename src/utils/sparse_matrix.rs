@@ -559,17 +559,17 @@ impl SparseMatrixAnalyzer {
             let av = matrix
                 .multiply_vector(v.view())
                 .unwrap_or_else(|_| Array1::zeros(n));
-            let new_eigenvalue = v.dot(&av);
+            let updated_eigenvalue = v.dot(&av);
             let norm = av.dot(&av).sqrt();
 
             if norm > 1e-12 {
                 v = av / norm;
             }
 
-            if (new_eigenvalue - eigenvalue).abs() < tolerance {
+            if (updated_eigenvalue - eigenvalue).abs() < tolerance {
                 break;
             }
-            eigenvalue = new_eigenvalue;
+            eigenvalue = updated_eigenvalue;
         }
 
         eigenvalue.abs()

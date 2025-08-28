@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.48.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.49.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-library%20only-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-running!-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with improving physics implementations
 
 ## Current Status
 
-**Grade: B (83%)** - Architecture improving, SOLID principles applied
+**Grade: B (85%)** - Major architectural improvements, naming violations fixed
 
 ### Build & Test Status
 - ✅ **Build**: Library compiles successfully
@@ -19,22 +19,21 @@ Rust library for acoustic wave simulation with improving physics implementations
   - ❌ Bulk execution hangs (resource contention)
   - 25 tests pass before timeout
   - 1 test fails (ML optimization)
-- ⚠️ **Warnings**: 463 (reduced from 466)
-  - 204 unused variables (many legitimate for trait compliance)
-  - Debug traits added where needed
-  - Other warnings being addressed
-- ✅ **Latest Achievements (v2.48.0)**:
-  - **MAJOR REFACTOR**: Split 744-line heterogeneous_handler.rs into 5 proper modules
-  - Applied SOLID principles - Single Responsibility achieved
-  - Clean module structure with separation of concerns
-  - Debug traits added systematically
-  - Proper domain-based organization
+- ⚠️ **Warnings**: 461 (reduced from 466)
+  - Steady progress on warning reduction
+  - Debug traits systematically added
+  - Naming violations eliminated
+- ✅ **Latest Achievements (v2.49.0)**:
+  - **SECOND MAJOR REFACTOR**: Split 723-line phased_array.rs into 5 modules
+  - **NAMING COMPLIANCE**: Removed ALL adjective-based naming violations
+  - Clean separation: config, element, beamforming, crosstalk, transducer
+  - Added physics validation and literature references
+  - Proper domain organization with clear interfaces
 - ❌ **Remaining Architecture Issues**:
-  - 38 modules > 500 lines (1 refactored)
-  - 498 functions with underscored parameters
-  - Test resource contention causes hangs
-  - No benchmarks
-  - Most physics unvalidated
+  - 37 modules > 500 lines (2 refactored successfully)
+  - Test resource contention still causes hangs
+  - No benchmarks yet
+  - Physics validation incomplete
 - ⚠️ **k-Wave Compatibility Status**:
   - ✅ k-space correction for heterogeneous media
   - ✅ Thermal diffusion with bioheat equation

@@ -231,19 +231,19 @@ impl FieldRegistry {
         }
 
         let (nx, ny, nz) = self.grid_dims;
-        let mut new_data = Array4::zeros((self.fields.len(), nx, ny, nz));
+        let mut resized_data = Array4::zeros((self.fields.len(), nx, ny, nz));
 
         // Copy existing data if present
         if let Some(existing_data) = &self.data {
-            let min_fields = existing_data.shape()[0].min(new_data.shape()[0]);
+            let min_fields = existing_data.shape()[0].min(resized_data.shape()[0]);
             for i in 0..min_fields {
-                new_data
+                resized_data
                     .index_axis_mut(Axis(0), i)
                     .assign(&existing_data.index_axis(Axis(0), i));
             }
         }
 
-        self.data = Some(new_data);
+        self.data = Some(resized_data);
         Ok(())
     }
 }

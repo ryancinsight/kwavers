@@ -77,12 +77,12 @@ impl NonlinearWave {
 
         // Combine terms
         let start_combination = Instant::now();
-        let mut new_pressure =
+        let mut updated_pressure =
             linear_term + nonlinear_term * self.nonlinearity_scaling + source_contribution;
 
         // Apply stability constraints if needed
         if self.clamp_gradients {
-            self.apply_stability_constraints(&mut new_pressure);
+            self.apply_stability_constraints(&mut updated_pressure);
         }
 
         self.combination_time += start_combination.elapsed().as_secs_f64();
@@ -90,13 +90,13 @@ impl NonlinearWave {
         debug!(
             "Step {}: max pressure = {:.2e} Pa, update time = {:.3} ms",
             time_step,
-            new_pressure
+            updated_pressure
                 .iter()
                 .fold(0.0_f64, |max, &val| max.max(val.abs())),
             start_total.elapsed().as_secs_f64() * 1000.0
         );
 
-        Ok(new_pressure)
+        Ok(updated_pressure)
     }
 
     /// Computes the nonlinear term for the acoustic wave equation.
