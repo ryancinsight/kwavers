@@ -56,7 +56,7 @@ egui-wgpu = { version = "0.29", optional = true }
 egui-winit = { version = "0.29", optional = true }
 three-d = { version = "0.17", optional = true }
 winit = { version = "0.30", optional = true }
-pollster = { version = "0.3", optional = true }
+
 futures = { version = "0.3", optional = true }
 
 # WebGL and WASM support
@@ -101,7 +101,9 @@ libm = "0.2"
 # GPU acceleration dependencies  
 cudarc = { version = "0.11", features = ["cuda-12050"], optional = true }
 wgpu = { version = "22.0", features = ["wgsl"], optional = true }
-bytemuck = { version = "1.14", features = ["derive"], optional = true }
+bytemuck = { version = "1.19", features = ["derive"], optional = true }
+pollster = { version = "0.4", optional = true }
+flume = { version = "0.11", optional = true }
 
 # AI/ML Integration
 ort = { version = "2.0.0-rc.2", optional = true }
@@ -118,7 +120,7 @@ mockall = "0.11"
 default = []
 strict = []  # Enable strict compilation without unused code warnings
 parallel = ["ndarray/rayon"]
-gpu = ["dep:cudarc"]
+gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster", "dep:flume"]
 ml = ["dep:candle-core", "dep:candle-nn", "dep:ort"]
 plotting = ["dep:plotly", "dep:plotters", "dep:plotters-backend", "dep:plotters-bitmap", "dep:resvg"]
 full = ["parallel", "gpu", "ml", "plotting", "advanced-visualization", "vr-support"]

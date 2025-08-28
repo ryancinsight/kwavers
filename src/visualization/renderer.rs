@@ -77,7 +77,7 @@ impl Renderer3D {
     /// Create a 3D renderer with GPU acceleration
     pub async fn create(
         config: &VisualizationConfig,
-        gpu_context: Arc<GpuContext>,
+        // gpu_context removed - using wgpu directly
     ) -> KwaversResult<Self> {
         info!("Initializing GPU-accelerated 3D renderer");
 
