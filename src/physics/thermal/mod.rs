@@ -444,6 +444,12 @@ mod tests {
         }
 
         impl ArrayAccess for TestMedium {
+            fn get_density_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+                Ok(self.density_field.clone())
+            }
+            fn get_sound_speed_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+                Ok(self.sound_speed_field.clone())
+            }
             fn density_array(&self) -> Array3<f64> {
                 self.density_field.clone()
             }
