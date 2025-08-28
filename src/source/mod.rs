@@ -7,7 +7,7 @@ use std::fmt::Debug;
 
 pub mod apodization;
 pub mod flexible;
-pub mod focused_transducer;
+pub mod focused;
 pub mod hemispherical;
 pub mod linear_array;
 pub mod matrix_array;
@@ -47,7 +47,7 @@ pub use apodization::{
     Apodization, BlackmanApodization, GaussianApodization, HammingApodization, HanningApodization,
     RectangularApodization,
 };
-pub use focused_transducer::{
+pub use focused::{
     make_annular_array, make_bowl, ApodizationType, ArcConfig, ArcSource, BowlConfig,
     BowlTransducer, MultiBowlArray,
 };

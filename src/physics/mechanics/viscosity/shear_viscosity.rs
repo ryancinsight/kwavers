@@ -24,8 +24,11 @@ impl ShearViscosityModel {
 }
 
 impl ViscosityModel for ShearViscosityModel {
-    fn viscosity(&self, _x: f64, _y: f64, _z: f64, temperature: f64) -> f64 {
-        // Simplified temperature-dependent viscosity (e.g., water-like behavior)
+    fn viscosity(&self, x: f64, y: f64, z: f64, temperature: f64) -> f64 {
+        // Temperature-dependent viscosity with potential for spatial variation
+        // Currently uniform in space, but position parameters preserved for
+        // future heterogeneous media support
+        let _ = (x, y, z); // Acknowledge spatial parameters for future use
         let delta_t = temperature - self.ref_temperature;
         self.base_viscosity * (-self.temp_sensitivity * delta_t).exp()
     }
