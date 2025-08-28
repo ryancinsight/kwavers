@@ -300,7 +300,7 @@ impl WesterveltFdtd {
     pub fn calculate_dt(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<f64> {
         // Get maximum sound speed
         let c_max = medium
-            .sound_speed_array()
+            .sound_speed_array(grid)
             .iter()
             .fold(0.0f64, |acc, &x| acc.max(x));
 

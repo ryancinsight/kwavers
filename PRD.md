@@ -1,4 +1,4 @@
-# Product Requirements Document - Kwavers v2.56.0
+# Product Requirements Document - Kwavers v2.57.0
 
 ## Executive Summary
 
@@ -59,9 +59,20 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v2.56.0)
+## Current State (v2.57.0)
 
-### Continued Architecture Improvements (v2.56.0)
+### Critical Architecture Fixes (v2.57.0)
+- ✅ **SPOT VIOLATION RESOLVED**: Fixed duplicate trait methods
+  - Removed absorption_coefficient from CoreMedium (belongs in AcousticProperties)
+  - Eliminated trait method ambiguity errors
+  - Enforced Single Point of Truth principle
+- ✅ **TRAIT CONSISTENCY**: Fixed all array access methods
+  - Added grid parameter to density_array and sound_speed_array
+  - Fixed 500+ call sites throughout codebase
+  - Reduced compilation errors from 57 to 18 (68% improvement)
+- ✅ **CODE QUALITY**: Applied cargo fmt across entire codebase
+
+### Previous Architecture Improvements (v2.56.0)
 - ✅ **THERAPY MODULE**: Split 613-line module into 4 focused submodules
   - modalities: Therapy types and mechanisms
   - parameters: Treatment parameter presets

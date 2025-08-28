@@ -181,18 +181,6 @@ impl CoreMedium for HomogeneousMedium {
         self.sound_speed
     }
 
-    fn absorption_coefficient(
-        &self,
-        _x: f64,
-        _y: f64,
-        _z: f64,
-        _grid: &Grid,
-        frequency: f64,
-    ) -> f64 {
-        // Power law absorption: α = α₀ * (f/f₀)^y
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
-    }
-
     fn is_homogeneous(&self) -> bool {
         true
     }

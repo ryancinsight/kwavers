@@ -186,7 +186,7 @@ impl AcousticWaveSolver {
         let start = Instant::now();
 
         // Update cached sound speed if needed
-        self.update_max_sound_speed(medium);
+        self.update_max_sound_speed(medium, grid);
 
         // Check stability
         self.check_stability(dt)?;
@@ -270,7 +270,7 @@ impl AcousticWaveSolver {
         }
 
         // Compute nonlinear term: (β/ρ₀c₀⁴) * ∂²p²/∂t²
-        let nonlinear_term = self.compute_westervelt_nonlinearity(pressure, medium, dt)?;
+        let nonlinear_term = self.compute_westervelt_nonlinearity(pressure, medium, grid, dt)?;
 
         // Linear propagation in k-space (do this after computing nonlinear term to avoid borrow issues)
         // For now, inline the linear update to avoid borrow checker issues
@@ -322,26 +322,26 @@ impl AcousticWaveSolver {
 
         // Compute all RK4 stages first (before borrowing workspace mutably)
         // k1 = f(y_n, t_n)
-        let k1 = self.compute_kuznetsov_rhs(&pressure_clone, medium, source_term)?;
+        let k1 = self.compute_kuznetsov_rhs(&pressure_clone, medium, grid, source_term)?;
 
         // k2 = f(y_n + dt/2 * k1, t_n + dt/2)
         let mut temp = pressure_clone.clone();
         Zip::from(&mut temp)
             .and(&k1)
             .for_each(|t, &k| *t += 0.5 * dt * k);
-        let k2 = self.compute_kuznetsov_rhs(&temp, medium, source_term)?;
+        let k2 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
 
         // k3 = f(y_n + dt/2 * k2, t_n + dt/2)
         temp.assign(&pressure_clone);
         Zip::from(&mut temp)
             .and(&k2)
             .for_each(|t, &k| *t += 0.5 * dt * k);
-        let k3 = self.compute_kuznetsov_rhs(&temp, medium, source_term)?;
+        let k3 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
 
         // k4 = f(y_n + dt * k3, t_n + dt)
         temp.assign(&pressure_clone);
         Zip::from(&mut temp).and(&k3).for_each(|t, &k| *t += dt * k);
-        let k4 = self.compute_kuznetsov_rhs(&temp, medium, source_term)?;
+        let k4 = self.compute_kuznetsov_rhs(&temp, medium, grid, source_term)?;
 
         // Store in workspace if available (for potential debugging/analysis)
         if let Some(workspace) = self.rk4_workspace.as_mut() {
@@ -369,12 +369,13 @@ impl AcousticWaveSolver {
         &self,
         pressure: &Array3<f64>,
         medium: &dyn Medium,
+        grid: &Grid,
         dt: f64,
     ) -> KwaversResult<Array3<f64>> {
         // Requires pressure history for ∂²p²/∂t²
         if let (Some(ref prev), Some(ref history)) = (&self.prev_pressure, &self.pressure_history) {
-            let density = medium.density_array();
-            let sound_speed = medium.sound_speed_array();
+            let density = medium.density_array(grid);
+            let sound_speed = medium.sound_speed_array(grid);
             let beta = self.config.nonlinearity_scaling;
 
             let mut nonlinear = Array3::zeros(pressure.dim());
@@ -405,10 +406,11 @@ impl AcousticWaveSolver {
         &self,
         pressure: &Array3<f64>,
         medium: &dyn Medium,
+        grid: &Grid,
         source_term: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let density = medium.density_array();
-        let sound_speed = medium.sound_speed_array();
+        let density = medium.density_array(grid);
+        let sound_speed = medium.sound_speed_array(grid);
 
         // Compute Laplacian in k-space
         let mut pressure_complex = Array3::<Complex<f64>>::zeros(pressure.dim());
@@ -567,8 +569,8 @@ impl AcousticWaveSolver {
     }
 
     /// Update cached maximum sound speed from medium
-    fn update_max_sound_speed(&mut self, medium: &dyn Medium) {
-        let sound_speed = medium.sound_speed_array();
+    fn update_max_sound_speed(&mut self, medium: &dyn Medium, grid: &Grid) {
+        let sound_speed = medium.sound_speed_array(grid);
         self.max_sound_speed = sound_speed.iter().fold(0.0f64, |max, &c| max.max(c));
     }
 

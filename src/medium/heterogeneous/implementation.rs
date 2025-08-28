@@ -166,17 +166,6 @@ impl CoreMedium for HeterogeneousMedium {
         self.sound_speed[[ix, iy, iz]].max(100.0)
     }
 
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        let absorption = PowerLawAbsorption {
-            alpha_0: self.alpha0[[ix, iy, iz]],
-            y: self.delta[[ix, iy, iz]],
-            f_ref: self.reference_frequency,
-            dispersion_correction: false,
-        };
-        absorption.absorption_at_frequency(frequency)
-    }
-
     fn is_homogeneous(&self) -> bool {
         false
     }

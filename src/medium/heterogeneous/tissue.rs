@@ -200,12 +200,6 @@ impl CoreMedium for HeterogeneousTissueMedium {
         self.get_tissue_properties(x, y, z, grid).sound_speed
     }
 
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let props = self.get_tissue_properties(x, y, z, grid);
-        // Power law absorption: α = α₀ * (f/f₀)^δ
-        props.alpha0 * (frequency / self.reference_frequency).powf(props.delta)
-    }
-
     fn is_homogeneous(&self) -> bool {
         false
     }
