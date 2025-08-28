@@ -51,7 +51,10 @@ impl RecorderStatistics {
         println!("Cavitation events: {}", self.total_cavitation_events);
         println!("Sonoluminescence events: {}", self.total_sl_events);
         println!("Thermal events: {}", self.total_thermal_events);
-        println!("Pressure range: {:.2e} to {:.2e} Pa", self.min_pressure, self.max_pressure);
+        println!(
+            "Pressure range: {:.2e} to {:.2e} Pa",
+            self.min_pressure, self.max_pressure
+        );
         println!("Max temperature: {:.2} K", self.max_temperature);
         println!("Max light intensity: {:.2e} W/m²", self.max_light_intensity);
     }
