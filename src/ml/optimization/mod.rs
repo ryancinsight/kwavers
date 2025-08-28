@@ -1,4 +1,4 @@
-//! Advanced AI/ML optimization algorithms for intelligent simulation control
+//! AI/ML optimization algorithms for intelligent simulation control
 //!
 //! This module provides:
 //! - Neural network-based parameter optimization

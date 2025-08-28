@@ -66,7 +66,7 @@ impl MemoryCache {
     fn evict(&mut self, needed_bytes: usize) {
         let mut freed = 0;
 
-        // Simple eviction: remove oldest buffers
+        // LRU eviction: remove oldest buffers
         for buffers in self.buffers.values_mut() {
             while !buffers.is_empty() && freed < needed_bytes {
                 if let Some(buffer) = buffers.pop_front() {

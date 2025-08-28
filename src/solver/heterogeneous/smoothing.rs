@@ -230,7 +230,7 @@ impl Smoother {
 
     /// Cubic interpolation at a point
     fn cubic_interpolate(&self, field: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
-        // Simple cubic interpolation using surrounding points
+        // Cubic interpolation using surrounding points
         let points = [
             field[[i - 2, j, k]],
             field[[i - 1, j, k]],

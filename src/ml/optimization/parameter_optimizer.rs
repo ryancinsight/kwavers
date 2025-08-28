@@ -15,7 +15,7 @@ pub struct OptimizationExperience {
     pub done: bool,
 }
 
-/// Advanced parameter optimizer using deep reinforcement learning
+/// Parameter optimizer using deep reinforcement learning
 pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,
