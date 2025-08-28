@@ -10,7 +10,7 @@ use std::f64::consts::PI;
 /// Multi-element bowl array (makeMultiBowl equivalent)
 pub struct MultiBowlArray {
     /// Individual bowl transducers
-    bowls: Vec<BowlTransducer>,
+    pub(crate) bowls: Vec<BowlTransducer>,
     /// Relative amplitudes for each bowl
     amplitudes: Vec<f64>,
     /// Relative phases for each bowl

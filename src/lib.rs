@@ -42,8 +42,7 @@ pub mod constants;
 pub mod error;
 pub mod factory;
 pub mod fft;
-#[cfg(feature = "gpu")]
-pub mod gpu;
+
 pub mod grid;
 pub mod io;
 pub mod log;
@@ -121,12 +120,7 @@ pub use solver::fdtd::{FdtdConfig, FdtdPlugin, FdtdSolver};
 pub use solver::pstd::{PstdConfig, PstdPlugin, PstdSolver};
 
 // Re-export GPU-related items only when feature enabled
-#[cfg(feature = "gpu")]
-pub use gpu::fft_kernels::{GpuFft, GpuFftPlan};
-#[cfg(feature = "gpu")]
-pub use gpu::memory::GpuMemoryManager;
-#[cfg(feature = "gpu")]
-pub use gpu::{GpuBackend, GpuContext};
+
 pub use physics::chemistry::ChemicalModel;
 pub use physics::mechanics::acoustic_wave::NonlinearWave;
 pub use physics::mechanics::elastic_wave::{

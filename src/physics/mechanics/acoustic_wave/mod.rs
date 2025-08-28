@@ -131,12 +131,12 @@ mod tests {
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
-        fn density_array(&self) -> &ndarray::Array3<f64> {
-            &self.density
+        fn density_array(&self) -> ndarray::Array3<f64> {
+            self.density.clone()
         }
 
-        fn sound_speed_array(&self) -> &ndarray::Array3<f64> {
-            &self.sound_speed
+        fn sound_speed_array(&self) -> ndarray::Array3<f64> {
+            self.sound_speed.clone()
         }
     }
 

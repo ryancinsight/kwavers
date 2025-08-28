@@ -12,7 +12,6 @@ pub mod composite;
 pub mod config;
 pub mod context;
 pub mod field;
-pub mod gpu;
 pub mod grid;
 pub mod io;
 pub mod medium;
@@ -25,7 +24,7 @@ pub use composite::CompositeError;
 pub use config::ConfigError;
 pub use context::ErrorContext;
 pub use field::FieldError;
-pub use gpu::GpuError;
+
 pub use grid::GridError;
 pub use io::DataError;
 pub use medium::MediumError;
@@ -46,8 +45,7 @@ pub enum KwaversError {
     Medium(MediumError),
     /// Physics simulation errors
     Physics(PhysicsError),
-    /// GPU acceleration errors
-    Gpu(GpuError),
+
     /// Data I/O and format errors
     Data(DataError),
     /// Configuration errors
@@ -88,7 +86,7 @@ impl fmt::Display for KwaversError {
             Self::Grid(e) => write!(f, "Grid error: {}", e),
             Self::Medium(e) => write!(f, "Medium error: {}", e),
             Self::Physics(e) => write!(f, "Physics error: {}", e),
-            Self::Gpu(e) => write!(f, "GPU error: {}", e),
+
             Self::Data(e) => write!(f, "Data error: {}", e),
             Self::Config(e) => write!(f, "Configuration error: {}", e),
             Self::Numerical(e) => write!(f, "Numerical error: {}", e),
@@ -121,7 +119,7 @@ impl StdError for KwaversError {
             Self::Grid(e) => Some(e),
             Self::Medium(e) => Some(e),
             Self::Physics(e) => Some(e),
-            Self::Gpu(e) => Some(e),
+
             Self::Data(e) => Some(e),
             Self::Config(e) => Some(e),
             Self::Numerical(e) => Some(e),
@@ -147,12 +145,6 @@ pub type KwaversResult<T> = Result<T, KwaversError>;
 impl From<PhysicsError> for KwaversError {
     fn from(error: PhysicsError) -> Self {
         Self::Physics(error)
-    }
-}
-
-impl From<GpuError> for KwaversError {
-    fn from(error: GpuError) -> Self {
-        Self::Gpu(error)
     }
 }
 
