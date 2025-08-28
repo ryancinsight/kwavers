@@ -3,7 +3,7 @@
 //! This module provides tools for validating the accuracy and correctness
 //! of numerical solvers.
 
-pub mod kwave_comparison;
+pub mod kwave;
 pub mod numerical_accuracy;
 
 pub use numerical_accuracy::{
@@ -11,4 +11,8 @@ pub use numerical_accuracy::{
     NumericalValidator, StabilityResults, ValidationResults,
 };
 
-pub use kwave_comparison::{KWaveTestCase, KWaveValidator, ValidationReport};
+pub use kwave::{
+    test_cases::KWaveTestCase,
+    validator::KWaveValidator,
+    report::ValidationReport,
+};

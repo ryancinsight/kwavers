@@ -14,14 +14,14 @@
 //!    power law absorption using a k-space pseudospectral method." *The Journal
 //!    of the Acoustical Society of America*, 131(6), 4324-4336. DOI: 10.1121/1.4712021
 
-pub mod test_cases;
-pub mod validator;
-pub mod report;
 pub mod analytical;
 pub mod comparison;
+pub mod report;
+pub mod test_cases;
+pub mod validator;
 
-pub use test_cases::{KWaveTestCase, ReferenceSource};
-pub use validator::KWaveValidator;
-pub use report::{TestResult, ValidationReport};
 pub use analytical::AnalyticalSolutions;
 pub use comparison::ComparisonMetrics;
+pub use report::{TestResult, ValidationReport};
+pub use test_cases::{KWaveTestCase, ReferenceSource};
+pub use validator::KWaveValidator;

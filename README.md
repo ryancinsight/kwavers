@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.42.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.43.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-library%20only-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-broken-red.svg)](https://github.com/kwavers/kwavers)
@@ -10,21 +10,22 @@ Rust library for acoustic wave simulation with improving physics implementations
 
 ## Current Status
 
-**Grade: C (72%)** - Removed fake code, but major issues remain
+**Grade: C+ (75%)** - Architecture improving, but still major issues
 
 ### Build & Test Status
-- ✅ **Build**: Library compiles after fake GPU removal
-- ❌ **Tests**: Only 7 test files (added CFL test)
-- ❌ **Warnings**: 465 persist
-- ✅ **Actions Taken**:
-  - ✅ Deleted all fake GPU implementations (WebGPU/CUDA/OpenCL)
-  - ✅ Added physics validation test with literature reference
-  - ✅ Started refactoring 768-line module
-- ❌ **Remaining Issues**:
-  - ❌ 40 modules > 500 lines
-  - ❌ Need 100+ test files
+- ✅ **Build**: Library compiles successfully
+- ❌ **Tests**: Only 8 test files (need 100+)
+- ⚠️ **Warnings**: 467 (still excessive)
+- ✅ **Major Achievements**:
+  - ✅ Refactored 768-line module into 5 focused modules
+  - ✅ Added energy conservation & reciprocity tests
+  - ✅ Removed all fake GPU implementations
+  - ✅ Proper domain separation in validation/kwave/
+- ❌ **Critical Issues**:
+  - ❌ 39 modules still > 500 lines
+  - ❌ Tests don't compile
   - ❌ No performance benchmarks
-  - ❌ Most physics unvalidated
+  - ❌ Most physics still unvalidated
 - ⚠️ **k-Wave Compatibility Status**:
   - ✅ k-space correction for heterogeneous media
   - ✅ Thermal diffusion with bioheat equation
