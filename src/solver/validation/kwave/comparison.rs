@@ -3,6 +3,7 @@
 use ndarray::{Array3, Zip};
 
 /// Comparison metrics for field validation
+#[derive(Debug)]
 pub struct ComparisonMetrics;
 
 impl ComparisonMetrics {
