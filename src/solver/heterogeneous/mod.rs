@@ -1,18 +1,18 @@
-//! Heterogeneous media solver components
+//! Heterogeneous media handling with Gibbs phenomenon mitigation
 //!
-//! This module provides specialized handling for wave propagation in heterogeneous media
-//! with proper domain separation following SOLID principles.
+//! This module implements state-of-the-art techniques for handling sharp interfaces
+//! in heterogeneous media, preventing spurious oscillations (Gibbs phenomenon).
+//!
+//! # References
+//! - Tabei et al. (2002). "A k-space method for coupled first-order acoustic propagation equations." JASA
+//! - Pinton et al. (2009). "A heterogeneous nonlinear attenuating full-wave model of ultrasound." IEEE UFFC
 
 pub mod config;
 pub mod handler;
+pub mod interface_detection;
+pub mod pressure_velocity_split;
 pub mod smoothing;
-pub mod splitting;
-pub mod density_scaling;
-pub mod kspace_correction;
 
-pub use config::HeterogeneousConfig;
+pub use config::{HeterogeneousConfig, SmoothingMethod};
 pub use handler::HeterogeneousHandler;
-pub use smoothing::SmoothingMethod;
-pub use splitting::PressureVelocitySplit;
-pub use density_scaling::DensityScaler;
-pub use kspace_correction::KSpaceCorrector;
+pub use pressure_velocity_split::PressureVelocitySplit;

@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.47.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.48.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-library%20only-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-running!-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with improving physics implementations
 
 ## Current Status
 
-**Grade: B- (81%)** - Tests work individually, architecture issues remain
+**Grade: B (83%)** - Architecture improving, SOLID principles applied
 
 ### Build & Test Status
 - ✅ **Build**: Library compiles successfully
@@ -19,17 +19,18 @@ Rust library for acoustic wave simulation with improving physics implementations
   - ❌ Bulk execution hangs (resource contention)
   - 25 tests pass before timeout
   - 1 test fails (ML optimization)
-- ⚠️ **Warnings**: 466 remain
+- ⚠️ **Warnings**: 463 (reduced from 466)
   - 204 unused variables (many legitimate for trait compliance)
-  - 156 missing Debug traits (confirmed)
-  - 106 other warnings
-- ✅ **Recent Achievements**:
-  - ALL GPU fake code removed
-  - Test infrastructure fixed
-  - Tests run individually without issues
-  - cargo nextest integrated
-- ❌ **Critical Architecture Issues**:
-  - 39 modules > 500 lines (unchanged)
+  - Debug traits added where needed
+  - Other warnings being addressed
+- ✅ **Latest Achievements (v2.48.0)**:
+  - **MAJOR REFACTOR**: Split 744-line heterogeneous_handler.rs into 5 proper modules
+  - Applied SOLID principles - Single Responsibility achieved
+  - Clean module structure with separation of concerns
+  - Debug traits added systematically
+  - Proper domain-based organization
+- ❌ **Remaining Architecture Issues**:
+  - 38 modules > 500 lines (1 refactored)
   - 498 functions with underscored parameters
   - Test resource contention causes hangs
   - No benchmarks
