@@ -3,7 +3,10 @@
 /// Volume rendering uniforms
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "gpu-visualization", derive(bytemuck::Pod, bytemuck::Zeroable))]
+#[cfg_attr(
+    feature = "gpu-visualization",
+    derive(bytemuck::Pod, bytemuck::Zeroable)
+)]
 pub struct VolumeUniforms {
     /// View matrix
     pub view_matrix: [[f32; 4]; 4],

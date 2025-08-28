@@ -2,7 +2,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::visualization::{VisualizationConfig, FieldType, ColorScheme};
+use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use ndarray::{Array3, Zip};
 
 /// Volume renderer for 3D fields
@@ -21,7 +21,7 @@ impl VolumeRenderer {
             ray_marcher: RayMarcher::new(config.ray_samples),
         })
     }
-    
+
     /// Render with draft quality
     pub fn render_draft(
         &self,
@@ -31,7 +31,7 @@ impl VolumeRenderer {
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 32)
     }
-    
+
     /// Render with production quality
     pub fn render_production(
         &self,
@@ -41,7 +41,7 @@ impl VolumeRenderer {
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 128)
     }
-    
+
     /// Render with publication quality
     pub fn render_publication(
         &self,
@@ -51,7 +51,7 @@ impl VolumeRenderer {
     ) -> KwaversResult<Vec<u8>> {
         self.render_internal(field, field_type, grid, 256)
     }
-    
+
     /// Internal rendering implementation
     fn render_internal(
         &self,
@@ -62,7 +62,7 @@ impl VolumeRenderer {
     ) -> KwaversResult<Vec<u8>> {
         let (nx, ny, nz) = field.dim();
         let mut image = vec![0u8; nx * ny * 4]; // RGBA
-        
+
         // Simple maximum intensity projection for now
         for i in 0..nx {
             for j in 0..ny {
@@ -70,7 +70,7 @@ impl VolumeRenderer {
                 for k in 0..nz {
                     max_val = max_val.max(field[[i, j, k]].abs());
                 }
-                
+
                 let color = self.transfer_function.map_value(max_val);
                 let idx = (j * nx + i) * 4;
                 image[idx] = (color[0] * 255.0) as u8;
@@ -79,10 +79,10 @@ impl VolumeRenderer {
                 image[idx + 3] = 255;
             }
         }
-        
+
         Ok(image)
     }
-    
+
     /// Get memory usage
     pub fn memory_usage(&self) -> usize {
         std::mem::size_of::<Self>()
@@ -104,17 +104,17 @@ impl TransferFunction {
             ColorScheme::Magma => Self::magma_colormap(),
             ColorScheme::Turbo => Self::turbo_colormap(),
         };
-        
+
         Self { color_map }
     }
-    
+
     /// Map a value to a color
     fn map_value(&self, value: f32) -> [f32; 4] {
         let idx = ((value.clamp(0.0, 1.0) * (self.color_map.len() - 1) as f32) as usize)
             .min(self.color_map.len() - 1);
         self.color_map[idx]
     }
-    
+
     /// Viridis colormap
     fn viridis_colormap() -> Vec<[f32; 4]> {
         vec![
@@ -131,22 +131,22 @@ impl TransferFunction {
             [0.993, 0.906, 0.144, 1.0],
         ]
     }
-    
+
     /// Plasma colormap
     fn plasma_colormap() -> Vec<[f32; 4]> {
         Self::viridis_colormap() // Placeholder
     }
-    
+
     /// Inferno colormap
     fn inferno_colormap() -> Vec<[f32; 4]> {
         Self::viridis_colormap() // Placeholder
     }
-    
+
     /// Magma colormap
     fn magma_colormap() -> Vec<[f32; 4]> {
         Self::viridis_colormap() // Placeholder
     }
-    
+
     /// Turbo colormap
     fn turbo_colormap() -> Vec<[f32; 4]> {
         Self::viridis_colormap() // Placeholder
@@ -163,18 +163,13 @@ impl RayMarcher {
     fn new(samples: usize) -> Self {
         Self { samples }
     }
-    
+
     /// March a ray through the volume
-    fn march_ray(
-        &self,
-        origin: [f32; 3],
-        direction: [f32; 3],
-        volume: &Array3<f64>,
-    ) -> f32 {
+    fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {
         // Simplified ray marching
         let mut accumulated = 0.0;
         let step = 1.0 / self.samples as f32;
-        
+
         for i in 0..self.samples {
             let t = i as f32 * step;
             let pos = [
@@ -182,19 +177,19 @@ impl RayMarcher {
                 origin[1] + t * direction[1],
                 origin[2] + t * direction[2],
             ];
-            
+
             // Sample volume at position (with bounds checking)
             if pos[0] >= 0.0 && pos[1] >= 0.0 && pos[2] >= 0.0 {
                 let ix = pos[0] as usize;
                 let iy = pos[1] as usize;
                 let iz = pos[2] as usize;
-                
+
                 if ix < volume.dim().0 && iy < volume.dim().1 && iz < volume.dim().2 {
                     accumulated += volume[[ix, iy, iz]].abs() as f32 * step;
                 }
             }
         }
-        
+
         accumulated
     }
 }

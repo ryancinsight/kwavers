@@ -25,3 +25,15 @@ pub const TISSUE_REDUCED_SCATTERING: f64 = TISSUE_SCATTERING * (1.0 - TISSUE_ANI
 pub const GRUNEISEN_TISSUE: f64 = 0.12;
 pub const GRUNEISEN_WATER: f64 = 0.11;
 pub const GRUNEISEN_BLOOD: f64 = 0.13;
+
+/// Tissue absorption coefficient [1/m]
+pub const TISSUE_ABSORPTION_COEFFICIENT: f64 = TISSUE_ABSORPTION;
+
+/// Tissue diffusion coefficient [m²/s]
+pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 1.0 / (3.0 * TISSUE_REDUCED_SCATTERING);
+
+/// Default polarization factor
+pub const DEFAULT_POLARIZATION_FACTOR: f64 = 1.0;
+
+/// Laplacian center coefficient
+pub const LAPLACIAN_CENTER_COEFF: f64 = -6.0;

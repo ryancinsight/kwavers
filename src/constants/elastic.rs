@@ -10,7 +10,8 @@ pub const TISSUE_POISSON_RATIO: f64 = 0.499; // Nearly incompressible
 pub const TISSUE_SHEAR_MODULUS: f64 = TISSUE_YOUNGS_MODULUS / (2.0 * (1.0 + TISSUE_POISSON_RATIO));
 
 /// Bulk modulus for soft tissue [Pa]
-pub const TISSUE_BULK_MODULUS: f64 = TISSUE_YOUNGS_MODULUS / (3.0 * (1.0 - 2.0 * TISSUE_POISSON_RATIO));
+pub const TISSUE_BULK_MODULUS: f64 =
+    TISSUE_YOUNGS_MODULUS / (3.0 * (1.0 - 2.0 * TISSUE_POISSON_RATIO));
 
 /// Lamé parameters
 pub const TISSUE_LAME_LAMBDA: f64 = TISSUE_BULK_MODULUS - 2.0 * TISSUE_SHEAR_MODULUS / 3.0;

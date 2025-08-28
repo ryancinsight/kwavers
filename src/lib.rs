@@ -42,6 +42,8 @@ pub mod constants;
 pub mod error;
 pub mod factory;
 pub mod fft;
+#[cfg(feature = "gpu")]
+pub mod gpu;
 
 pub mod grid;
 pub mod io;

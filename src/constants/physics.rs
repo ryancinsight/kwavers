@@ -55,3 +55,13 @@ pub const NONLINEARITY_COEFFICIENT_OFFSET: f64 = 1.0;
 
 /// Grid center factor
 pub const GRID_CENTER_FACTOR: f64 = 0.5;
+
+/// Water properties (duplicates for compatibility)
+pub const DENSITY_WATER: f64 = 998.2;
+pub const SOUND_SPEED_WATER: f64 = 1482.0;
+
+/// Tissue sound speed
+pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
+
+/// Default sampling frequency
+pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 100e6;

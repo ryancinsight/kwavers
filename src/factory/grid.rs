@@ -52,14 +52,14 @@ impl GridConfig {
         }
 
         // Check minimum grid spacing
-        if self.dx < constants::grid::MIN_GRID_SPACING
-            || self.dy < constants::grid::MIN_GRID_SPACING
-            || self.dz < constants::grid::MIN_GRID_SPACING
+        if self.dx < constants::stability::MIN_DX
+            || self.dy < constants::stability::MIN_DX
+            || self.dz < constants::stability::MIN_DX
         {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),
-                constraint: format!("Spacing must be >= {}", constants::grid::MIN_GRID_SPACING),
+                constraint: format!("Spacing must be >= {}", constants::stability::MIN_DX),
             }
             .into());
         }

@@ -38,10 +38,11 @@ pub const FD2_FORWARD_COEFF: [f64; 3] = [-1.5, 2.0, -0.5];
 pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5];
 
 /// Fourth-order central difference coefficients
-pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0/12.0, -2.0/3.0, 0.0, 2.0/3.0, -1.0/12.0];
+pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0 / 12.0, -2.0 / 3.0, 0.0, 2.0 / 3.0, -1.0 / 12.0];
 
 /// Fourth-order Laplacian coefficients
-pub const FD4_LAPLACIAN_COEFF: [f64; 5] = [-1.0/12.0, 4.0/3.0, -5.0/2.0, 4.0/3.0, -1.0/12.0];
+pub const FD4_LAPLACIAN_COEFF: [f64; 5] =
+    [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
 
 /// FFT k-space scaling factor
 pub const FFT_K_SCALING: f64 = 2.0 * PI;
@@ -56,3 +57,27 @@ pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;
 
 /// Third order differential coefficient  
 pub const THIRD_ORDER_DIFF_COEFF: f64 = 1.0;
+
+/// Symmetric correction factor
+pub const SYMMETRIC_CORRECTION_FACTOR: f64 = 0.5;
+
+/// Heterogeneous smoothing factor
+pub const HETEROGENEOUS_SMOOTHING_FACTOR: f64 = 0.1;
+
+/// WENO scheme constants
+pub const WENO_EPSILON: f64 = 1e-6;
+pub const WENO_WEIGHT_0: f64 = 0.1;
+pub const WENO_WEIGHT_1: f64 = 0.6;
+pub const WENO_WEIGHT_2: f64 = 0.3;
+
+/// Shock detection threshold
+pub const SHOCK_DETECTION_THRESHOLD: f64 = 0.1;
+
+/// Stencil coefficient
+pub const STENCIL_COEFF_1_4: f64 = 0.25;
+
+/// Viscosity coefficients
+pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
+pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
+pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
+pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;

@@ -16,7 +16,7 @@ impl RenderPipeline {
             // Would create actual pipeline here
             unimplemented!("GPU render pipeline not yet implemented")
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {})
@@ -38,7 +38,7 @@ impl ComputePipeline {
             // Would create actual pipeline here
             unimplemented!("GPU compute pipeline not yet implemented")
         }
-        
+
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {})
