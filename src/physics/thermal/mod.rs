@@ -23,24 +23,39 @@ pub use source::{HeatSource, ThermalSource};
 pub struct ThermalConfig {
     /// Enable Pennes bioheat equation
     pub use_bioheat: bool,
+    /// Alias for use_bioheat (compatibility)
+    pub bioheat: bool,
     /// Blood temperature (K)
     pub blood_temperature: f64,
     /// Blood perfusion rate (kg/m³/s)
     pub blood_perfusion: f64,
+    /// Alias for blood_perfusion
+    pub perfusion_rate: f64,
     /// Blood specific heat (J/kg/K)
     pub blood_specific_heat: f64,
     /// Thermal diffusivity (m²/s)
     pub thermal_diffusivity: f64,
+    /// Enable hyperbolic heat equation
+    pub hyperbolic: bool,
+    /// Relaxation time for hyperbolic model (s)
+    pub relaxation_time: f64,
+    /// Reference temperature for dose calculation (K)
+    pub reference_temperature: f64,
 }
 
 impl Default for ThermalConfig {
     fn default() -> Self {
         Self {
             use_bioheat: true,
+            bioheat: true,
             blood_temperature: 310.0, // 37°C
             blood_perfusion: 0.5,
+            perfusion_rate: 0.5,
             blood_specific_heat: 3617.0,
             thermal_diffusivity: 1.4e-7,
+            hyperbolic: false,
+            relaxation_time: 20.0,
+            reference_temperature: 316.15, // 43°C
         }
     }
 }

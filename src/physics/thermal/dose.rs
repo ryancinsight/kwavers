@@ -15,7 +15,7 @@ impl ThermalDose {
             let t_celsius = t - constants::CELSIUS_TO_KELVIN;
 
             if t_celsius > constants::CEM43_REFERENCE_TEMP {
-                let r = if t_celsius > 43.0 { 0.5 } else { 0.25 };
+                let r: f64 = if t_celsius > 43.0 { 0.5 } else { 0.25 };
                 *d = time_minutes * r.powf(t_celsius - constants::CEM43_REFERENCE_TEMP);
             }
         });

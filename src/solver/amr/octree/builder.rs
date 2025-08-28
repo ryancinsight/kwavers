@@ -168,15 +168,15 @@ impl OctreeBuilder {
                 for i in i_min..i_max.min(field.shape()[0]) {
                     if i > 0 && i < field.shape()[0] - 1 {
                         let grad_x = (field[[i + 1, j, k]] - field[[i - 1, j, k]]).abs() / 2.0;
-                        max_gradient = max_gradient.max(grad_x);
+                        max_gradient = f64::max(max_gradient, grad_x);
                     }
                     if j > 0 && j < field.shape()[1] - 1 {
                         let grad_y = (field[[i, j + 1, k]] - field[[i, j - 1, k]]).abs() / 2.0;
-                        max_gradient = max_gradient.max(grad_y);
+                        max_gradient = f64::max(max_gradient, grad_y);
                     }
                     if k > 0 && k < field.shape()[2] - 1 {
                         let grad_z = (field[[i, j, k + 1]] - field[[i, j, k - 1]]).abs() / 2.0;
-                        max_gradient = max_gradient.max(grad_z);
+                        max_gradient = f64::max(max_gradient, grad_z);
                     }
                 }
             }

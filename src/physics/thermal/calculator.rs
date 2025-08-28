@@ -7,6 +7,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Thermal calculator for temperature evolution
+#[derive(Debug)]
 pub struct ThermalCalculator {
     state: ThermalState,
     config: ThermalConfig,
@@ -138,5 +139,38 @@ impl ThermalCalculator {
     /// Get thermal state
     pub fn state(&self) -> &ThermalState {
         &self.state
+    }
+
+    /// Calculate heat source from acoustic intensity - USING all parameters
+    pub fn calculate_heat_source(
+        &mut self,
+        intensity: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> Array3<f64> {
+        // Heat generation = absorption * intensity
+        // Q = α * I where α is absorption coefficient
+        // Using 1 MHz as default frequency for now
+        use crate::medium::AcousticProperties;
+        let absorption = medium.absorption_coefficient(0.0, 0.0, 0.0, grid, 1e6);
+        intensity * absorption
+    }
+
+    /// Update temperature with heat source - USING all parameters
+    pub fn update_temperature(
+        &mut self,
+        heat_source: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        self.update(heat_source, medium, grid, dt)
+    }
+
+    /// Get thermal dose field
+    pub fn thermal_dose(&self) -> Array3<f64> {
+        // Calculate CEM43 thermal dose
+        use super::dose::ThermalDose;
+        ThermalDose::cem43(&self.state.temperature, 1.0 / 60.0) // Convert to minutes
     }
 }

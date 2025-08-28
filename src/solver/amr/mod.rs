@@ -485,7 +485,7 @@ impl AMRManager {
                 self.cell_status.insert(
                     (i, j, k),
                     CellStatus {
-                        level: self.octree.get_level(i, j, k),
+                        level: self.octree.get_level(i, j, k).unwrap_or(0) as usize,
                         is_active: false,
                         needs_refinement: false,
                         can_coarsen: false,
@@ -496,13 +496,14 @@ impl AMRManager {
                 // Get children of the refined cell
                 let children_coords = self.octree.get_children_coords(i, j, k);
                 for child_coord in children_coords {
-                    let child_level =
-                        self.octree
-                            .get_level(child_coord.0, child_coord.1, child_coord.2);
+                    let child_level = self
+                        .octree
+                        .get_level(child_coord.0, child_coord.1, child_coord.2)
+                        .unwrap_or(0);
                     self.cell_status.insert(
                         child_coord,
                         CellStatus {
-                            level: child_level,
+                            level: child_level as usize,
                             is_active: true,
                             needs_refinement: false,
                             can_coarsen: false,
@@ -536,7 +537,10 @@ impl AMRManager {
                 self.cell_status.insert(
                     parent,
                     CellStatus {
-                        level: self.octree.get_level(parent.0, parent.1, parent.2),
+                        level: self
+                            .octree
+                            .get_level(parent.0, parent.1, parent.2)
+                            .unwrap_or(0) as usize,
                         is_active: true,
                         needs_refinement: false,
                         can_coarsen: false,

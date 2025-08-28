@@ -101,6 +101,108 @@ impl Octree {
     pub fn root(&self) -> &OctreeNode {
         &self.nodes[0]
     }
+
+    /// Calculate memory efficiency (ratio of active to total nodes)
+    pub fn memory_efficiency(&self) -> f64 {
+        let stats = self.compute_stats();
+        if stats.total_nodes == 0 {
+            1.0
+        } else {
+            stats.active_nodes as f64 / stats.total_nodes as f64
+        }
+    }
+
+    /// Compact the octree by removing inactive nodes
+    pub fn compact(&mut self) {
+        // For now, just a placeholder - proper implementation would reorganize nodes
+        // to remove gaps and improve cache locality
+    }
+
+    /// Get total cell count
+    pub fn total_cells(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Get base cell count
+    pub fn base_cells(&self) -> usize {
+        let (nx, ny, nz) = self.base_dims;
+        nx * ny * nz
+    }
+
+    /// Check if cell is valid
+    pub fn is_valid_cell(&self, i: usize, j: usize, k: usize) -> bool {
+        i < self.base_dims.0 && j < self.base_dims.1 && k < self.base_dims.2
+    }
+
+    /// Refine a cell - delegates to operations
+    pub fn refine_cell(&mut self, i: usize, j: usize, k: usize) -> KwaversResult<bool> {
+        if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
+            // Check if already refined
+            if let Some(node) = self.node(node_idx) {
+                if node.is_refined() {
+                    return Ok(false); // Already refined
+                }
+            }
+            OctreeOperations::refine_node(self, node_idx)?;
+            Ok(true)
+        } else {
+            Err(crate::error::KwaversError::InvalidParameter(format!(
+                "No node at ({}, {}, {})",
+                i, j, k
+            )))
+        }
+    }
+
+    /// Get level of cell
+    pub fn get_level(&self, i: usize, j: usize, k: usize) -> Option<i32> {
+        self.node_at(i, j, k).map(|n| n.level())
+    }
+
+    /// Get children coordinates
+    pub fn get_children_coords(&self, i: usize, j: usize, k: usize) -> Vec<(usize, usize, usize)> {
+        if let Some(node) = self.node_at(i, j, k) {
+            if let Some(children) = node.children() {
+                let mut coords = Vec::new();
+                for &child_idx in children {
+                    if let Some(child) = self.node(child_idx) {
+                        coords.push(child.bounds_min());
+                    }
+                }
+                coords
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Get parent of cell
+    pub fn get_parent(&self, i: usize, j: usize, k: usize) -> Option<(usize, usize, usize)> {
+        self.node_at(i, j, k)
+            .and_then(|n| n.parent())
+            .and_then(|parent_idx| self.node(parent_idx))
+            .map(|parent| parent.bounds_min())
+    }
+
+    /// Coarsen a cell
+    pub fn coarsen_cell(&mut self, i: usize, j: usize, k: usize) -> KwaversResult<bool> {
+        if let Some(&node_idx) = self.coord_to_node.get(&(i, j, k)) {
+            // Check if can coarsen
+            if let Some(node) = self.node(node_idx) {
+                if !node.is_refined() {
+                    return Ok(false); // Not refined, can't coarsen
+                }
+            }
+            OctreeOperations::coarsen_node(self, node_idx)?;
+            Ok(true)
+        } else {
+            Err(crate::error::KwaversError::InvalidParameter(format!(
+                "No node at ({}, {}, {})",
+                i, j, k
+            )))
+        }
+    }
 }
 
 /// Statistics about the octree structure

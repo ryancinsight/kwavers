@@ -97,7 +97,7 @@ impl OctreeOperations {
         }
 
         if iteration >= MAX_ITERATIONS {
-            return Err(KwaversError::Convergence(
+            return Err(KwaversError::NumericalError(
                 "Octree balancing did not converge".to_string(),
             ));
         }

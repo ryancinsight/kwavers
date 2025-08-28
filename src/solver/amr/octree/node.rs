@@ -116,4 +116,9 @@ impl OctreeNode {
     pub fn children(&self) -> Option<&[usize; 8]> {
         self.children.as_ref()
     }
+
+    /// Get parent index
+    pub fn parent(&self) -> Option<usize> {
+        self.parent
+    }
 }
