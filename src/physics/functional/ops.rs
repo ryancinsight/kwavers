@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_sparse_kernel() {
-        let field = Array3::ones((5, 5, 5));
+        let field = Array3::from_elem((5, 5, 5), 1.0);
         let mut kernel = Array3::zeros((3, 3, 3));
         kernel[[1, 1, 1]] = 2.0; // Only center element is non-zero
 
@@ -393,7 +393,7 @@ mod tests {
 
     #[test]
     fn test_windowed_operation() {
-        let field = Array3::ones((5, 5, 5));
+        let field = Array3::from_elem((5, 5, 5), 1.0);
         let result = windowed_operation(&field, (3, 3, 3), |window| window.iter().sum::<f64>());
 
         // Center point should have full 3x3x3 = 27 neighbors

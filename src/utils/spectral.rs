@@ -98,7 +98,7 @@ pub fn compute_kspace_correction_factors(
     grid: &Grid,
     correction_type: CorrectionType,
 ) -> Array3<f64> {
-    let mut correction = Array3::ones(kx.dim());
+    let mut correction = Array3::from_elem(kx.dim(), 1.0);
 
     match correction_type {
         CorrectionType::Liu1997 => {
@@ -170,7 +170,7 @@ pub fn apply_antialiasing_filter(
     k_max_squared: f64,
     filter_type: FilterType,
 ) -> Array3<f64> {
-    let mut filter = Array3::ones(k_squared.dim());
+    let mut filter = Array3::from_elem(k_squared.dim(), 1.0);
 
     match filter_type {
         FilterType::Smooth => {

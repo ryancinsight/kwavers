@@ -156,7 +156,7 @@ impl BubbleStateFields {
             pressure: Array3::from_elem(shape, 101325.0),
             velocity: Array3::zeros(shape),
             is_collapsing: Array3::zeros(shape),
-            compression_ratio: Array3::ones(shape),
+            compression_ratio: Array3::from_elem(shape, 1.0),
         }
     }
 }

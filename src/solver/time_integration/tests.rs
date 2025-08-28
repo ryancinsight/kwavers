@@ -67,7 +67,7 @@ mod tests {
 
         // Test on simple exponential decay
         let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0);
-        let mut field = Array3::ones((8, 8, 8));
+        let mut field = Array3::from_elem((8, 8, 8), 1.0);
         let dt = 0.01;
 
         let rhs_fn = |f: &Array3<f64>| -> KwaversResult<Array3<f64>> {
@@ -92,7 +92,7 @@ mod tests {
         let mut stepper = AdamsBashforth::new(config);
 
         let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
-        let mut field = Array3::ones((4, 4, 4));
+        let mut field = Array3::from_elem((4, 4, 4), 1.0);
         let dt = 0.01;
 
         let rhs_fn = |f: &Array3<f64>| -> KwaversResult<Array3<f64>> { Ok(f.mapv(|v| -v)) };
@@ -126,7 +126,7 @@ mod tests {
         );
 
         let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0);
-        let field = Array3::ones((8, 8, 8));
+        let field = Array3::from_elem((8, 8, 8), 1.0);
 
         let rhs_fn = |f: &Array3<f64>| -> KwaversResult<Array3<f64>> { Ok(f.mapv(|v| -v)) };
 
@@ -166,7 +166,7 @@ mod tests {
             frequency: 1.0,
         };
 
-        let field = Array3::ones((10, 10, 10));
+        let field = Array3::from_elem((10, 10, 10), 1.0);
         let max_dt = analyzer.compute_stable_dt(&physics, &field, &grid).unwrap();
 
         assert!(max_dt > 0.0);
@@ -183,8 +183,8 @@ mod tests {
         let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
 
         let mut fields = HashMap::new();
-        fields.insert("fast".to_string(), Array3::ones((4, 4, 4)));
-        fields.insert("slow".to_string(), Array3::ones((4, 4, 4)) * 2.0);
+        fields.insert("fast".to_string(), Array3::from_elem((4, 4, 4), 1.0));
+        fields.insert("slow".to_string(), Array3::from_elem((4, 4, 4), 1.0) * 2.0);
 
         let mut physics_components: HashMap<String, Box<dyn PhysicsComponent>> = HashMap::new();
         physics_components.insert(
@@ -224,7 +224,7 @@ mod tests {
         let mut integrator = MultiRateTimeIntegrator::new(config, &grid);
 
         let mut fields = HashMap::new();
-        fields.insert("component1".to_string(), Array3::ones((4, 4, 4)));
+        fields.insert("component1".to_string(), Array3::from_elem((4, 4, 4), 1.0));
 
         let mut physics_components: HashMap<String, Box<dyn PhysicsComponent>> = HashMap::new();
         physics_components.insert(

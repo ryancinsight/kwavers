@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_chunked_iterator() {
-        let field: Array3<f64> = Array3::ones((2, 2, 2));
+        let field: Array3<f64> = Array3::from_elem((2, 2, 2), 1.0);
         let chunks: Vec<_> = field.chunked_iter(3).collect();
 
         assert_eq!(chunks.len(), 3); // 8 elements / 3 = 3 chunks (last partial)

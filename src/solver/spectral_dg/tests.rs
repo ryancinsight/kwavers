@@ -166,7 +166,7 @@ mod integration_tests {
         solver.update_config(new_config.clone());
 
         // Verify that adaptive switching is disabled
-        let field = Array3::ones((32, 32, 32));
+        let field = Array3::from_elem((32, 32, 32), 1.0);
         let dt = 0.001;
         let _result = solver
             .solve(&field, dt, &Grid::new(32, 32, 32, 1.0, 1.0, 1.0))

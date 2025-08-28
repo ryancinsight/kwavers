@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_generic_transform() {
-        let field = Array3::ones((4, 4, 4));
+        let field = Array3::from_elem((4, 4, 4), 1.0);
         let transform = Array3Transform::new()
             .then(|f| f.mapv(|x: f64| x * 2.0))
             .then(|f| f.mapv(|x: f64| x + 1.0));

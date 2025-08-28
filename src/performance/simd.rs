@@ -168,8 +168,8 @@ mod tests {
 
     #[test]
     fn test_simd_addition() {
-        let a = Array3::ones((10, 10, 10));
-        let b = Array3::ones((10, 10, 10)) * 2.0;
+        let a = Array3::from_elem((10, 10, 10), 1.0);
+        let b = Array3::from_elem((10, 10, 10), 1.0) * 2.0;
         let mut out = Array3::zeros((10, 10, 10));
 
         SimdOps::add_fields(&a, &b, &mut out);
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_simd_scaling() {
-        let field = Array3::ones((10, 10, 10)) * 2.0;
+        let field = Array3::from_elem((10, 10, 10), 1.0) * 2.0;
         let mut out = Array3::zeros((10, 10, 10));
 
         SimdOps::scale_field(&field, 3.0, &mut out);

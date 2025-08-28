@@ -37,7 +37,7 @@ impl DomainAnalyzer {
     fn compute_homogeneity(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
         // Simplified homogeneity computation
         // In production, this would analyze actual medium properties
-        let mut homogeneity = Array3::ones((grid.nx, grid.ny, grid.nz));
+        let mut homogeneity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
         // Check density variations
         {
@@ -56,13 +56,13 @@ impl DomainAnalyzer {
     fn compute_smoothness(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
         // Simplified smoothness computation
         // In production, compute actual gradients
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz)), 0.5)
     }
 
     /// Estimate spectral content
     fn estimate_spectral_content(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
         // Simplified spectral estimation
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz)), 0.5)
     }
 }
 

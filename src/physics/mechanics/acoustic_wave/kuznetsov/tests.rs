@@ -37,7 +37,7 @@ mod tests {
     fn test_numerical_methods() {
         // Test that numerical methods produce correct dimensions
         let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001);
-        let field = ndarray::Array3::ones((16, 16, 16));
+        let field = ndarray::Array3::from_elem((16, 16, 16), 1.0);
 
         // Test Laplacian
         let laplacian = numerical::compute_laplacian(&field, &grid);

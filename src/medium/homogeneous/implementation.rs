@@ -193,7 +193,7 @@ impl CoreMedium for HomogeneousMedium {
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
     fn get_density_array(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), self.density))
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz)), self.density)
     }
 
     fn get_sound_speed_array(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {

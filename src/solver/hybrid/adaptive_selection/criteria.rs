@@ -39,19 +39,19 @@ impl SelectionCriteria {
             + self.frequency_weight
             + self.material_weight
             + self.efficiency_weight;
-        
+
         if (total - 1.0).abs() > 1e-6 {
             return Err(format!("Weights must sum to 1.0, got {}", total));
         }
-        
+
         if self.switch_threshold < 0.0 || self.switch_threshold > 1.0 {
             return Err("Switch threshold must be between 0 and 1".to_string());
         }
-        
+
         if self.hysteresis_factor < 0.0 || self.hysteresis_factor > 0.5 {
             return Err("Hysteresis factor must be between 0 and 0.5".to_string());
         }
-        
+
         Ok(())
     }
 }

@@ -94,9 +94,9 @@ mod tests {
         fn new(position_dependent: bool) -> Self {
             Self {
                 position_dependent,
-                density: ndarray::Array3::ones((10, 10, 10)) * 1000.0,
-                sound_speed: ndarray::Array3::ones((10, 10, 10)) * 1500.0,
-                temperature: ndarray::Array3::ones((10, 10, 10)) * 310.0,
+                density: ndarray::Array3::from_elem((10, 10, 10), 1000.0),
+                sound_speed: ndarray::Array3::from_elem((10, 10, 10), 1500.0),
+                temperature: ndarray::Array3::from_elem((10, 10, 10), 310.0),
                 bubble_radius: ndarray::Array3::zeros((10, 10, 10)),
                 bubble_velocity: ndarray::Array3::zeros((10, 10, 10)),
             }

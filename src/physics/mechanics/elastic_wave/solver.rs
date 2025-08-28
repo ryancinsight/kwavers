@@ -173,10 +173,10 @@ impl AcousticWaveModel for ElasticWave {
         // Get material properties
         let density = medium
             .get_density_array(grid)
-            .unwrap_or_else(|_| Array3::ones((nx, ny, nz)) * 1000.0);
+            .unwrap_or_else(|_| Array3::from_elem((nx, ny, nz), 1.0) * 1000.0);
         let sound_speed = medium
             .get_sound_speed_array(grid)
-            .unwrap_or_else(|_| Array3::ones((nx, ny, nz)) * 1500.0);
+            .unwrap_or_else(|_| Array3::from_elem((nx, ny, nz), 1.0) * 1500.0);
 
         // Convert to elastic parameters
         let mut lambda = Array3::zeros((nx, ny, nz));
