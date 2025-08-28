@@ -171,11 +171,8 @@ mod tests {
         assert!(octree.coarsen_cell(ci, cj, ck).unwrap());
         assert_eq!(octree.total_cells(), 17); // Nodes not removed, just marked
 
-        // Test statistics - stats() method not implemented yet
-        // TODO: Implement proper statistics tracking
-        // let stats = octree.stats();
-        // assert_eq!(stats.active_nodes, 15); // 7 from first refinement + 8 leaves
-        // assert_eq!(stats.max_level_used, 1);
+        // Statistics tracking not yet implemented in octree
+        // This would track active nodes and maximum level used
     }
 
     /// Test wavelet transforms

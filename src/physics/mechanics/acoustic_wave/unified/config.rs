@@ -51,7 +51,7 @@ impl Default for AcousticSolverConfig {
             k_space_correction: true,
             k_space_order: 2,
             nonlinearity_scaling: 3.5, // B/A for water at 20°C
-            max_pressure: 1e7,          // 10 MPa
+            max_pressure: 1e7,         // 10 MPa
             cfl_safety_factor: 0.5,
             adaptive_time_stepping: false,
             min_dt: 1e-12,
@@ -69,7 +69,8 @@ impl AcousticSolverConfig {
                 value: self.k_space_order.to_string(),
                 min: "1".to_string(),
                 max: "2".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.cfl_safety_factor <= 0.0 || self.cfl_safety_factor > 1.0 {
@@ -78,7 +79,8 @@ impl AcousticSolverConfig {
                 value: self.cfl_safety_factor.to_string(),
                 min: "0.0 (exclusive)".to_string(),
                 max: "1.0".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         if self.adaptive_time_stepping && self.min_dt >= self.max_dt {
@@ -86,7 +88,8 @@ impl AcousticSolverConfig {
                 field: "adaptive_time_stepping".to_string(),
                 value: format!("min_dt={}, max_dt={}", self.min_dt, self.max_dt),
                 constraint: "min_dt must be less than max_dt".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())

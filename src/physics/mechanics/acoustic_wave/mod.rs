@@ -13,8 +13,8 @@ pub use kuznetsov::{KuznetsovConfig, KuznetsovWave};
 pub mod westervelt_fdtd;
 pub use westervelt_fdtd::{WesterveltFdtd, WesterveltFdtdConfig};
 
-pub mod unified_solver;
-pub use unified_solver::{AcousticModelType, AcousticSolverConfig, AcousticWaveSolver};
+pub mod unified;
+pub use unified::{AcousticModelType, AcousticSolverConfig, UnifiedAcousticSolver};
 
 use crate::grid::Grid;
 use crate::medium::Medium;
