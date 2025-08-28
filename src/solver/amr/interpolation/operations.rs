@@ -1,7 +1,8 @@
 // interpolation/operations.rs - Core interpolation operations
 
-use super::schemes::{InterpolationScheme, InterpolationType};
+use super::InterpolationScheme;
 use crate::error::KwaversResult;
+use crate::solver::amr::octree::Octree;
 use ndarray::{Array3, ArrayView3};
 
 /// Main interpolation operator
@@ -60,7 +61,7 @@ impl InterpolationOperator {
 
         let mut coarse = Array3::zeros((nx_c, ny_c, nz_c));
 
-        if self.scheme.preserve_conservation {
+        if self.scheme.preserves_conservation() {
             // Volume-weighted averaging for conservation
             for i in 0..nx_c {
                 for j in 0..ny_c {
@@ -137,9 +138,8 @@ pub struct Interpolator {
 }
 
 impl Interpolator {
-    /// Create interpolator with specified type
-    pub fn new(interpolation_type: InterpolationType) -> Self {
-        let scheme = InterpolationScheme::new(interpolation_type);
+    /// Create interpolator from scheme and octree
+    pub fn from_scheme(scheme: InterpolationScheme, _octree: &Octree) -> Self {
         Self {
             operator: InterpolationOperator::new(scheme),
         }

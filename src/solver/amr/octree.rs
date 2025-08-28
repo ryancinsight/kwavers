@@ -540,6 +540,11 @@ impl Octree {
     pub fn base_resolution(&self) -> (usize, usize, usize) {
         self.base_dims
     }
+
+    /// Get refinement ratio (always 2 for octree)
+    pub fn refinement_ratio(&self) -> usize {
+        2
+    }
 }
 
 /// Statistics about the octree structure

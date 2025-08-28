@@ -1,52 +1,62 @@
-// solver/amr/interpolation/mod.rs - Modular interpolation for AMR
+// solver/amr/interpolation/mod.rs - Unified interpolation for AMR
 
 pub mod coefficients;
 pub mod operations;
-pub mod schemes;
 pub mod spectral;
 pub mod validation;
 
-// Re-export main types
+use crate::error::KwaversResult;
+use crate::solver::amr::octree::Octree;
+use ndarray::Array3;
+
+// Single unified interpolation implementation
 pub use coefficients::InterpolationCoefficients;
 pub use operations::{InterpolationOperator, Interpolator};
-pub use schemes::{InterpolationScheme, InterpolationType};
 pub use spectral::SpectralInterpolator;
 pub use validation::InterpolationValidator;
 
-// Compatibility functions
-use crate::error::KwaversResult;
-use ndarray::Array3;
-
-/// Interpolate field to refined grid (compatibility wrapper)
-pub fn interpolate_to_refined(
-    field: &Array3<f64>,
-    _octree: &crate::solver::amr::octree::Octree,
-    scheme: crate::solver::amr::InterpolationScheme,
-) -> KwaversResult<Array3<f64>> {
-    let interpolation_type = match scheme {
-        crate::solver::amr::InterpolationScheme::Linear => InterpolationType::Linear,
-        crate::solver::amr::InterpolationScheme::Conservative => InterpolationType::Quadratic,
-        crate::solver::amr::InterpolationScheme::WENO5 => InterpolationType::Cubic,
-        crate::solver::amr::InterpolationScheme::Spectral => InterpolationType::Spectral,
-    };
-    let interpolator = Interpolator::new(interpolation_type);
-    // Default refinement ratio - would be determined from octree in production
-    interpolator.interpolate(field, 2)
+/// Unified interpolation scheme - single source of truth
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InterpolationScheme {
+    Linear,
+    Conservative,
+    WENO5,
+    Spectral,
 }
 
-/// Restrict field to coarse grid (compatibility wrapper)
+impl InterpolationScheme {
+    /// Get the order of accuracy
+    pub fn order(&self) -> usize {
+        match self {
+            Self::Linear => 1,
+            Self::Conservative => 2,
+            Self::WENO5 => 5,
+            Self::Spectral => 8,
+        }
+    }
+
+    /// Check if conservation is preserved
+    pub fn preserves_conservation(&self) -> bool {
+        matches!(self, Self::Conservative | Self::WENO5)
+    }
+}
+
+/// Interpolate field to refined grid - single implementation
+pub fn interpolate_to_refined(
+    field: &Array3<f64>,
+    octree: &Octree,
+    scheme: InterpolationScheme,
+) -> KwaversResult<Array3<f64>> {
+    let interpolator = Interpolator::from_scheme(scheme, octree);
+    interpolator.interpolate(field, octree.refinement_ratio())
+}
+
+/// Restrict field to coarse grid - single implementation
 pub fn restrict_to_coarse(
     field: &Array3<f64>,
-    _octree: &crate::solver::amr::octree::Octree,
-    scheme: crate::solver::amr::InterpolationScheme,
+    octree: &Octree,
+    scheme: InterpolationScheme,
 ) -> KwaversResult<Array3<f64>> {
-    let interpolation_type = match scheme {
-        crate::solver::amr::InterpolationScheme::Linear => InterpolationType::Linear,
-        crate::solver::amr::InterpolationScheme::Conservative => InterpolationType::Quadratic,
-        crate::solver::amr::InterpolationScheme::WENO5 => InterpolationType::Cubic,
-        crate::solver::amr::InterpolationScheme::Spectral => InterpolationType::Spectral,
-    };
-    let interpolator = Interpolator::new(interpolation_type);
-    // Default refinement ratio - would be determined from octree in production
-    interpolator.restrict(field, 2)
+    let interpolator = Interpolator::from_scheme(scheme, octree);
+    interpolator.restrict(field, octree.refinement_ratio())
 }

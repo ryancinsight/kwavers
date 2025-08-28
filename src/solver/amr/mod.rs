@@ -111,18 +111,8 @@ pub enum WaveletType {
     Coiflet6,
 }
 
-/// Interpolation schemes for refinement/coarsening
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum InterpolationScheme {
-    /// Linear interpolation (fast, non-conservative)
-    Linear,
-    /// Conservative interpolation (preserves integrals)
-    Conservative,
-    /// High-order WENO interpolation
-    WENO5,
-    /// Spectral interpolation (highest accuracy)
-    Spectral,
-}
+// Use unified InterpolationScheme from interpolation module
+pub use interpolation::InterpolationScheme;
 
 /// Cell refinement level and status
 #[derive(Debug, Clone, Copy, PartialEq)]
