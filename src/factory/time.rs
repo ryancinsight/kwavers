@@ -2,7 +2,7 @@
 //!
 //! Follows Information Expert pattern for time step validation
 
-use crate::constants::cfl;
+use crate::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::time::Time;
@@ -54,7 +54,7 @@ impl Default for TimeConfig {
         Self {
             dt: 1e-7, // Default time step
             num_steps: 1000,
-            cfl_factor: cfl::FDTD_DEFAULT,
+            cfl_factor: CFL_SAFETY_FACTOR,
         }
     }
 }
