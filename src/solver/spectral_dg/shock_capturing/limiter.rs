@@ -2,15 +2,14 @@
 //!
 //! Implements Weighted Essentially Non-Oscillatory (WENO) limiters for handling shocks.
 
-use crate::error::{KwaversError, KwaversResult, ConfigError, ValidationError};
+use crate::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use ndarray::Array3;
 
 use crate::constants::numerical::{
-    SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO_EPSILON, 
-    WENO_WEIGHT_0, WENO_WEIGHT_1, WENO_WEIGHT_2,
-    WENO5_WEIGHT_0, WENO5_WEIGHT_1, WENO5_WEIGHT_2,
-    WENO7_WEIGHT_0, WENO7_WEIGHT_1, WENO7_WEIGHT_2, WENO7_WEIGHT_3,
+    SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO5_WEIGHT_0, WENO5_WEIGHT_1, WENO5_WEIGHT_2,
+    WENO7_WEIGHT_0, WENO7_WEIGHT_1, WENO7_WEIGHT_2, WENO7_WEIGHT_3, WENO_EPSILON, WENO_WEIGHT_0,
+    WENO_WEIGHT_1, WENO_WEIGHT_2,
 };
 
 /// WENO-based shock limiter

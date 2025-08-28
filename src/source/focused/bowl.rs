@@ -3,7 +3,7 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use crate::{
-    constants::physical::WATER_SOUND_SPEED,
+    constants::medium_properties::WATER_SOUND_SPEED,
     error::{KwaversError, KwaversResult, ValidationError},
     grid::Grid,
 };

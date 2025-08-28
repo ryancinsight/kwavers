@@ -2,7 +2,7 @@
 //!
 //! Provides arc-shaped transducer geometry for 2D simulations.
 
-use crate::{constants::physical::WATER_SOUND_SPEED, error::KwaversResult, grid::Grid};
+use crate::{constants::medium_properties::WATER_SOUND_SPEED, error::KwaversResult, grid::Grid};
 use ndarray::{s, Array2, Array3, Zip};
 use std::f64::consts::PI;
 
