@@ -30,22 +30,21 @@ impl StorageBackend for FileStorage {
         self.shape = Some(shape);
         Ok(())
     }
-    
+
     fn store_field(&mut self, name: &str, field: &Array3<f64>, step: usize) -> KwaversResult<()> {
         let filename = self.base_path.join(format!("{}_{:06}.dat", name, step));
-        let mut file = File::create(&filename)
-            .map_err(|e| KwaversError::Io(e))?;
-        
+        let mut file = File::create(&filename).map_err(|e| KwaversError::Io(e.to_string()))?;
+
         // Write binary data
         for value in field.iter() {
             let bytes = value.to_le_bytes();
             file.write_all(&bytes)
-                .map_err(|e| KwaversError::Io(e))?;
+                .map_err(|e| KwaversError::Io(e.to_string()))?;
         }
-        
+
         Ok(())
     }
-    
+
     fn finalize(&mut self) -> KwaversResult<()> {
         // Write metadata
         let metadata_path = self.base_path.join("metadata.json");
@@ -53,12 +52,11 @@ impl StorageBackend for FileStorage {
             "shape": self.shape,
             "format": "binary_f64_le"
         });
-        
-        let mut file = File::create(metadata_path)
-            .map_err(|e| KwaversError::Io(e))?;
+
+        let mut file = File::create(metadata_path).map_err(|e| KwaversError::Io(e.to_string()))?;
         file.write_all(metadata.to_string().as_bytes())
-            .map_err(|e| KwaversError::Io(e))?;
-        
+            .map_err(|e| KwaversError::Io(e.to_string()))?;
+
         Ok(())
     }
 }

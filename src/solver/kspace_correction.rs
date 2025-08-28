@@ -87,7 +87,7 @@ pub fn compute_kspace_correction(
     c_ref: f64,
 ) -> Array3<f64> {
     if !config.enabled {
-        return Array3::ones((grid.nx, grid.ny, grid.nz));
+        return Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
     }
 
     match config.method {
@@ -114,7 +114,7 @@ fn compute_exact_dispersion_correction(
     c_ref: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::ones((grid.nx, grid.ny, grid.nz));
+    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
     for i in 0..grid.nx {
         for j in 0..grid.ny {
@@ -178,7 +178,7 @@ fn compute_kwave_correction(
     cfl: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::ones((grid.nx, grid.ny, grid.nz));
+    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
     for i in 0..grid.nx {
         for j in 0..grid.ny {
@@ -231,7 +231,7 @@ fn compute_liu_pstd_correction(
     c_ref: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::ones((grid.nx, grid.ny, grid.nz));
+    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
     // Liu's correction parameter
     let dx_min = grid.dx.min(grid.dy).min(grid.dz);
@@ -275,7 +275,7 @@ fn compute_liu_pstd_correction(
 /// This is the simplest correction that only accounts for spatial discretization.
 /// It does not account for temporal errors and is included for comparison.
 fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
-    let mut kappa = Array3::ones((grid.nx, grid.ny, grid.nz));
+    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
     for i in 0..grid.nx {
         for j in 0..grid.ny {

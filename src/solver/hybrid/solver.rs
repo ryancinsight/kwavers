@@ -68,7 +68,7 @@ impl HybridSolver {
 
         // Initialize domain decomposition
         let decomposer = DomainDecomposer::new();
-        let selector = AdaptiveSelector::new(config.selection_criteria.clone())?;
+        let selector = AdaptiveSelector::new(config.selection_criteria.clone());
         let coupling = CouplingInterface::new(
             grid,
             grid,
@@ -230,7 +230,7 @@ impl HybridSolver {
         let start = Instant::now();
 
         // Re-analyze field characteristics
-        self.selector.update_metrics(fields, &self.grid)?;
+        self.selector.update_metrics(fields);
 
         // Update decomposition if needed
         let new_regions = self.decomposer.decompose(&self.grid, medium)?;

@@ -37,7 +37,7 @@ impl DomainAnalyzer {
     fn compute_homogeneity(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
         // Simplified homogeneity computation
         // In production, this would analyze actual medium properties
-        let mut homogeneity = Array3::ones((grid.nx, grid.ny, grid.nz));
+        let mut homogeneity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
         // Check density variations
         {

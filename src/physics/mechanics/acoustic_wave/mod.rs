@@ -94,9 +94,9 @@ mod tests {
         fn new(position_dependent: bool) -> Self {
             Self {
                 position_dependent,
-                density: ndarray::Array3::ones((10, 10, 10)) * 1000.0,
-                sound_speed: ndarray::Array3::ones((10, 10, 10)) * 1500.0,
-                temperature: ndarray::Array3::ones((10, 10, 10)) * 310.0,
+                density: ndarray::Array3::from_elem((10, 10, 10), 1000.0),
+                sound_speed: ndarray::Array3::from_elem((10, 10, 10), 1500.0),
+                temperature: ndarray::Array3::from_elem((10, 10, 10), 310.0),
                 bubble_radius: ndarray::Array3::zeros((10, 10, 10)),
                 bubble_velocity: ndarray::Array3::zeros((10, 10, 10)),
             }
@@ -131,6 +131,20 @@ mod tests {
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
+        fn get_density_array(
+            &self,
+            _grid: &Grid,
+        ) -> crate::error::KwaversResult<ndarray::Array3<f64>> {
+            Ok(self.density.clone())
+        }
+
+        fn get_sound_speed_array(
+            &self,
+            _grid: &Grid,
+        ) -> crate::error::KwaversResult<ndarray::Array3<f64>> {
+            Ok(self.sound_speed.clone())
+        }
+
         fn density_array(&self) -> ndarray::Array3<f64> {
             self.density.clone()
         }
@@ -161,7 +175,7 @@ mod tests {
         }
 
         fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            3.5
+            5.0 // B/A for water
         }
 
         fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -222,11 +236,11 @@ mod tests {
 
     impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
         fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            4180.0
+            4180.0 // J/(kg·K) for water
         }
 
         fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            4180.0
+            4180.0 // J/(kg·K) for water
         }
 
         fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

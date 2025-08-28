@@ -19,7 +19,7 @@ impl MemoryStorage {
             shape: None,
         }
     }
-    
+
     /// Get stored data
     pub fn get_data(&self, name: &str) -> Option<&Vec<Array3<f64>>> {
         self.data.get(name)
@@ -31,7 +31,7 @@ impl StorageBackend for MemoryStorage {
         self.shape = Some(shape);
         Ok(())
     }
-    
+
     fn store_field(&mut self, name: &str, field: &Array3<f64>, _step: usize) -> KwaversResult<()> {
         self.data
             .entry(name.to_string())
@@ -39,7 +39,7 @@ impl StorageBackend for MemoryStorage {
             .push(field.clone());
         Ok(())
     }
-    
+
     fn finalize(&mut self) -> KwaversResult<()> {
         // No cleanup needed for memory storage
         Ok(())

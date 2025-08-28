@@ -247,7 +247,7 @@ mod tests {
     fn test_inplace_operations() {
         use inplace_ops::*;
 
-        let mut a = Array3::ones((10, 10, 10));
+        let mut a = Array3::from_elem((10, 10, 10), 1.0);
         let b = Array3::from_elem((10, 10, 10), 2.0);
         let c = Array3::from_elem((10, 10, 10), 3.0);
 

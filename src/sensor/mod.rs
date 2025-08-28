@@ -6,8 +6,8 @@ pub mod localization;
 pub mod passive_acoustic_mapping; // NEW: Multi-lateration localization system
 
 pub use localization::{
-    ArrayGeometry as LocalizationArrayGeometry, LocalizationResult, MultiLaterationSolver,
-    Sensor as LocalizationSensor, SensorArray,
+    array::Sensor as LocalizationSensor, ArrayGeometry as LocalizationArrayGeometry,
+    LocalizationResult, SensorArray,
 };
 pub use passive_acoustic_mapping::{
     ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin,
@@ -315,6 +315,14 @@ impl SensorStatisticsAccumulator {
 }
 
 impl Sensor {
+    /// Sample field values at sensor positions
+    pub fn sample(&self, field: &Array3<f64>) -> Vec<f64> {
+        self.positions
+            .iter()
+            .map(|&(i, j, k)| field[[i, j, k]])
+            .collect()
+    }
+
     /// Creates a new sensor with positions in meters, converted to grid indices.
     pub fn new(grid: &Grid, time: &Time, positions_meters: &[(f64, f64, f64)]) -> Self {
         let positions: Vec<(usize, usize, usize)> = positions_meters

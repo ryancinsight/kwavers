@@ -268,9 +268,13 @@ impl TherapyCalculator {
         let thermal = match modality {
             TherapyModality::HIFU => {
                 let config = ThermalConfig {
+                    use_bioheat: true,
                     bioheat: true,
-                    perfusion_rate: 0.5e-3,
                     blood_temperature: 310.15,
+                    blood_perfusion: 0.5e-3,
+                    perfusion_rate: 0.5e-3,
+                    blood_specific_heat: 3617.0,
+                    thermal_diffusivity: 1.4e-7,
                     hyperbolic: false,
                     relaxation_time: 20.0,
                     reference_temperature: 316.15, // 43°C
@@ -337,13 +341,8 @@ impl TherapyCalculator {
         let intensity = self.calculate_intensity(pressure);
 
         if let Some(thermal) = &mut self.thermal {
-            let heat_source = HeatSource::Acoustic {
-                pressure: pressure.clone(),
-                absorption,
-                frequency: self.parameters.frequency,
-            };
-
-            let heat = thermal.calculate_heat_source(&heat_source, grid, medium);
+            // Calculate heat source directly from intensity and absorption
+            let heat = thermal.calculate_heat_source(&intensity, grid, medium);
             thermal.update_temperature(&heat, grid, medium, dt)?;
 
             // Update metrics
@@ -430,13 +429,8 @@ impl TherapyCalculator {
 
         // Mild thermal effects
         if let Some(thermal) = &mut self.thermal {
-            let heat_source = HeatSource::Acoustic {
-                pressure: pressure.clone(),
-                absorption,
-                frequency: self.parameters.frequency,
-            };
-
-            let heat = thermal.calculate_heat_source(&heat_source, grid, medium);
+            // Calculate heat source directly from intensity and absorption
+            let heat = thermal.calculate_heat_source(&intensity, grid, medium);
             thermal.update_temperature(&heat, grid, medium, dt)?;
 
             // Ensure temperature stays in safe range (< 1°C increase)

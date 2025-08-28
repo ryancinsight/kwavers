@@ -28,7 +28,7 @@ impl SonoluminescenceDetector {
             events: Vec::new(),
         }
     }
-    
+
     /// Detect events in light and temperature fields
     pub fn detect(
         &mut self,
@@ -38,7 +38,9 @@ impl SonoluminescenceDetector {
         dt: f64,
     ) {
         for ((i, j, k), &intensity) in light.indexed_iter() {
-            if intensity > self.config.intensity_threshold {
+            // Use a default intensity threshold or derive from temperature
+            let intensity_threshold = 1e-6; // W/m^2 - typical SL detection threshold
+            if intensity > intensity_threshold {
                 let temp = temperature[[i, j, k]];
                 if temp > self.config.temperature_threshold {
                     self.events.push(SonoluminescenceEvent {
@@ -52,12 +54,12 @@ impl SonoluminescenceDetector {
             }
         }
     }
-    
+
     /// Get detected events
     pub fn events(&self) -> &[SonoluminescenceEvent] {
         &self.events
     }
-    
+
     /// Clear events
     pub fn clear(&mut self) {
         self.events.clear();

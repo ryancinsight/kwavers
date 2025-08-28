@@ -58,8 +58,8 @@ pub use pulse::{
 
 // Re-export frequency sweeps
 pub use frequency_sweep::{
-    HyperbolicFrequencySweep, LinearFrequencySweep, LogarithmicFrequencySweep,
-    PolynomialFrequencySweep, SteppedFrequencySweep, TransitionType,
+    ExponentialSweep, FrequencySweep, HyperbolicSweep, LinearChirp, LogarithmicSweep, SteppedSweep,
+    SweepConfig, SweepDirection, SweepType,
 };
 
 // Re-export modulation types

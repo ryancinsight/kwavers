@@ -23,6 +23,8 @@ pub enum SpatialOrder {
     Fourth,
     /// Sixth-order accurate (7-point stencil)
     Sixth,
+    /// Eighth-order accurate (9-point stencil)
+    Eighth,
 }
 
 /// Finite difference coefficients for different orders
@@ -36,6 +38,7 @@ impl FDCoefficients {
             SpatialOrder::Second => vec![0.5],
             SpatialOrder::Fourth => vec![2.0 / 3.0, -1.0 / 12.0],
             SpatialOrder::Sixth => vec![3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
+            SpatialOrder::Eighth => vec![4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
         }
     }
 
@@ -46,6 +49,7 @@ impl FDCoefficients {
             SpatialOrder::Second => vec![1.0],
             SpatialOrder::Fourth => vec![4.0 / 3.0, -1.0 / 12.0],
             SpatialOrder::Sixth => vec![3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0],
+            SpatialOrder::Eighth => vec![8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0, -1.0 / 560.0],
         }
     }
 
@@ -53,9 +57,10 @@ impl FDCoefficients {
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
     pub fn second_derivative_center(order: SpatialOrder) -> f64 {
         match order {
-            SpatialOrder::Second => -2.0,        // 3-point stencil
-            SpatialOrder::Fourth => -5.0 / 2.0,  // 5-point stencil
-            SpatialOrder::Sixth => -49.0 / 18.0, // 7-point stencil
+            SpatialOrder::Second => -2.0,          // 3-point stencil
+            SpatialOrder::Fourth => -5.0 / 2.0,    // 5-point stencil
+            SpatialOrder::Sixth => -49.0 / 18.0,   // 7-point stencil
+            SpatialOrder::Eighth => -205.0 / 72.0, // 9-point stencil
         }
     }
 }
@@ -163,43 +168,23 @@ pub fn divergence(
 /// Compute Laplacian of a scalar field
 ///
 /// Returns ∇²f = ∂²f/∂x² + ∂²f/∂y² + ∂²f/∂z²
+/// This is a compatibility wrapper for the unified Laplacian operator
 pub fn laplacian(
     field: ArrayView3<f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<Array3<f64>> {
-    let (nx, ny, nz) = field.dim();
-    let mut lap = Array3::zeros((nx, ny, nz));
+    use crate::utils::laplacian::{FiniteDifferenceOrder, LaplacianOperator};
 
-    let coeffs = FDCoefficients::second_derivative_pairs(order);
-    let center_coeff = FDCoefficients::second_derivative_center(order);
-    let stencil_size = coeffs.len();
+    let fd_order = match order {
+        SpatialOrder::Second => FiniteDifferenceOrder::Second,
+        SpatialOrder::Fourth => FiniteDifferenceOrder::Fourth,
+        SpatialOrder::Sixth => FiniteDifferenceOrder::Sixth,
+        SpatialOrder::Eighth => FiniteDifferenceOrder::Eighth,
+    };
 
-    let dx2_inv = 1.0 / (grid.dx * grid.dx);
-    let dy2_inv = 1.0 / (grid.dy * grid.dy);
-    let dz2_inv = 1.0 / (grid.dz * grid.dz);
-
-    // Compute Laplacian at interior points
-    for k in stencil_size..nz - stencil_size {
-        for j in stencil_size..ny - stencil_size {
-            for i in stencil_size..nx - stencil_size {
-                let mut d2f_dx2 = center_coeff * field[[i, j, k]];
-                let mut d2f_dy2 = center_coeff * field[[i, j, k]];
-                let mut d2f_dz2 = center_coeff * field[[i, j, k]];
-
-                for (s, &coeff) in coeffs.iter().enumerate() {
-                    let offset = s + 1;
-                    d2f_dx2 += coeff * (field[[i + offset, j, k]] + field[[i - offset, j, k]]);
-                    d2f_dy2 += coeff * (field[[i, j + offset, k]] + field[[i, j - offset, k]]);
-                    d2f_dz2 += coeff * (field[[i, j, k + offset]] + field[[i, j, k - offset]]);
-                }
-
-                lap[[i, j, k]] = d2f_dx2 * dx2_inv + d2f_dy2 * dy2_inv + d2f_dz2 * dz2_inv;
-            }
-        }
-    }
-
-    Ok(lap)
+    let operator = LaplacianOperator::with_order(grid, fd_order);
+    operator.apply(field)
 }
 
 /// Compute curl of a vector field
@@ -349,7 +334,7 @@ mod tests {
     #[test]
     fn test_laplacian_constant_field() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
-        let field = Array3::ones((10, 10, 10));
+        let field = Array3::from_elem((10, 10, 10), 1.0);
 
         let lap = laplacian(field.view(), &grid, SpatialOrder::Second).unwrap();
 
@@ -366,7 +351,7 @@ mod tests {
     #[test]
     fn test_divergence_uniform_flow() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
-        let vx = Array3::ones((10, 10, 10));
+        let vx = Array3::from_elem((10, 10, 10), 1.0);
         let vy = Array3::zeros((10, 10, 10));
         let vz = Array3::zeros((10, 10, 10));
 

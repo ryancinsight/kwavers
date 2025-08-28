@@ -59,7 +59,7 @@ impl SpectralSolver {
         }
 
         // Create de-aliasing filter (2/3 rule)
-        let mut filter = Array3::ones((nx, ny, nz));
+        let mut filter = Array3::from_elem((nx, ny, nz), 1.0);
         let kx_max = 2.0 * PI / grid.dx * (nx as f64 / 3.0);
         let ky_max = 2.0 * PI / grid.dy * (ny as f64 / 3.0);
         let kz_max = 2.0 * PI / grid.dz * (nz as f64 / 3.0);
@@ -313,7 +313,7 @@ mod tests {
         let solver = SpectralSolver::new(8, grid.clone());
 
         // Test 1: Derivative of a constant field should be zero
-        let const_field = Array3::ones((n, n, n));
+        let const_field = Array3::from_elem((n, n, n), 1.0);
         let deriv_const = solver.spectral_derivative(&const_field, 0).unwrap();
         let max_deriv = deriv_const.iter().map(|&x| x.abs()).fold(0.0, f64::max);
         assert!(
@@ -325,7 +325,7 @@ mod tests {
         // Test 2: Verify that derivative computation doesn't panic for various fields
         let fields = vec![
             Array3::zeros((n, n, n)),          // Zero field
-            Array3::ones((n, n, n)),           // Constant field
+            Array3::from_elem((n, n, n), 1.0), // Constant field
             Array3::from_elem((n, n, n), 5.0), // Another constant
         ];
 
@@ -337,7 +337,7 @@ mod tests {
         }
 
         // Test 3: Verify that the derivative has the same shape as input
-        let test_field = Array3::ones((n, n, n));
+        let test_field = Array3::from_elem((n, n, n), 1.0);
         let deriv = solver.spectral_derivative(&test_field, 0).unwrap();
         assert_eq!(
             deriv.dim(),
