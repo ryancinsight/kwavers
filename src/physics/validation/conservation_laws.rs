@@ -173,7 +173,7 @@ mod tests {
 
         // Update density using continuity equation
         for _ in 0..50 {
-            let mut new_density = density.clone();
+            let mut updated_density = density.clone();
 
             for i in 1..n - 1 {
                 for j in 1..n - 1 {
@@ -186,11 +186,11 @@ mod tests {
                         / (2.0 * dx);
 
                     // Update density
-                    new_density[[i, j, 0]] = density[[i, j, 0]] - dt * (flux_x + flux_y);
+                    updated_density[[i, j, 0]] = density[[i, j, 0]] - dt * (flux_x + flux_y);
                 }
             }
 
-            density = new_density;
+            density = updated_density;
         }
 
         let final_mass: f64 = density.sum() * dx * dx;
