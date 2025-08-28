@@ -35,7 +35,7 @@ fn test_water_absorption() {
     ];
 
     for (i, &f) in frequencies.iter().enumerate() {
-        let f_mhz = f / 1e6;
+        let f_mhz: f64 = f / 1e6;
         let alpha_db_per_cm = 0.0022 * f_mhz.powi(2);
         let alpha_np_per_m = alpha_db_per_cm * 0.115 / 0.01;
 
@@ -76,7 +76,7 @@ fn test_tissue_absorption() {
     let frequencies = [1e6, 3e6, 5e6, 10e6]; // Hz
 
     for &f in frequencies.iter() {
-        let f_mhz = f / 1e6;
+        let f_mhz: f64 = f / 1e6;
 
         // Calculate using power law
         let alpha_db = alpha_0_db * f_mhz.powf(power);
