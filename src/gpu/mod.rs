@@ -6,15 +6,12 @@
 pub mod backend;
 pub mod benchmarks;
 pub mod context;
-pub mod cuda;
 pub mod device;
 pub mod fft;
 pub mod kernels;
 pub mod memory;
 pub mod memory_manager;
-pub mod opencl;
 pub mod traits;
-pub mod webgpu;
 
 // Re-export key types for convenience
 pub use backend::{gpu_float_type_str, GpuBackend};
