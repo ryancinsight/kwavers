@@ -175,7 +175,7 @@ mod tests {
         }
 
         fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            crate::constants::medium_properties::WATER_NONLINEARITY
+            5.0 // B/A for water
         }
 
         fn acoustic_diffusivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -236,11 +236,11 @@ mod tests {
 
     impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
         fn specific_heat(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            crate::constants::medium_properties::WATER_SPECIFIC_HEAT
+            4180.0 // J/(kg·K) for water
         }
 
         fn specific_heat_capacity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            crate::constants::medium_properties::WATER_SPECIFIC_HEAT
+            4180.0 // J/(kg·K) for water
         }
 
         fn thermal_conductivity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

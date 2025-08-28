@@ -1,7 +1,7 @@
 // adaptive_selection/metrics.rs - Metrics for method selection
 
 use crate::grid::Grid;
-use ndarray::{Array3, ArrayView3};
+use ndarray::ArrayView3;
 
 /// Spectral analysis metrics for method selection
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl SpectralMetrics {
     fn compute_frequency_content(field: ArrayView3<f64>) -> f64 {
         // Simplified frequency content estimation
         // In production, would use FFT analysis
-        let variance = field.var();
+        let variance = field.var(0.0);
         variance.sqrt()
     }
 
@@ -102,8 +102,8 @@ impl MaterialMetrics {
 
     fn compute_homogeneity(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute coefficient of variation as measure of homogeneity
-        let density_cv = density.std() / density.mean().unwrap_or(1.0);
-        let speed_cv = sound_speed.std() / sound_speed.mean().unwrap_or(1.0);
+        let density_cv = density.std(0.0) / density.mean().unwrap_or(1.0);
+        let speed_cv = sound_speed.std(0.0) / sound_speed.mean().unwrap_or(1.0);
 
         1.0 - (density_cv + speed_cv) / 2.0
     }
@@ -133,7 +133,7 @@ impl MaterialMetrics {
 
                     if ni < nx && nj < ny && nk < nz {
                         let change = (density[[ni, nj, nk]] - center).abs() / center;
-                        max_change = max_change.max(change);
+                        max_change = f64::max(max_change, change);
                     }
                 }
             }
@@ -145,7 +145,7 @@ impl MaterialMetrics {
     fn compute_impedance_contrast(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute acoustic impedance variation
         let impedance = &density * &sound_speed;
-        impedance.std() / impedance.mean().unwrap_or(1.0)
+        impedance.std(0.0) / impedance.mean().unwrap_or(1.0)
     }
 }
 

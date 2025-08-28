@@ -56,13 +56,13 @@ impl DomainAnalyzer {
     fn compute_smoothness(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
         // Simplified smoothness computation
         // In production, compute actual gradients
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz)), 0.5)
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
     }
 
     /// Estimate spectral content
     fn estimate_spectral_content(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
         // Simplified spectral estimation
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz)), 0.5)
+        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
     }
 }
 

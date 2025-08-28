@@ -10,5 +10,5 @@ pub mod statistics;
 pub use analyzer::FieldAnalyzer;
 pub use criteria::SelectionCriteria;
 pub use metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
-pub use selector::AdaptiveMethodSelector;
+pub use selector::{AdaptiveMethodSelector, AdaptiveSelector};
 pub use statistics::SelectionStatistics;

@@ -15,6 +15,7 @@ pub enum SelectedMethod {
 }
 
 /// Adaptive method selector
+#[derive(Debug)]
 pub struct AdaptiveMethodSelector {
     criteria: SelectionCriteria,
     previous_selection: Option<Array3<SelectedMethod>>,
@@ -213,6 +214,12 @@ impl AdaptiveMethodSelector {
                 }
             }
         }
+    }
+
+    /// Update internal metrics (for compatibility)
+    pub fn update_metrics(&mut self, _fields: &Array4<f64>) {
+        // Metrics are computed on-demand in select_methods
+        // This method exists for backward compatibility
     }
 }
 

@@ -4,7 +4,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::solver::fdtd::FdtdSolver;
-use crate::solver::hybrid::adaptive_selection::{AdaptiveMethodSelector, AdaptiveSelector};
+use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
 use crate::solver::hybrid::config::{DecompositionStrategy, HybridConfig};
 use crate::solver::hybrid::coupling::CouplingInterface;
 use crate::solver::hybrid::domain_decomposition::{DomainDecomposer, DomainRegion, DomainType};
@@ -230,7 +230,7 @@ impl HybridSolver {
         let start = Instant::now();
 
         // Re-analyze field characteristics
-        self.selector.update_metrics(fields, &self.grid)?;
+        self.selector.update_metrics(fields);
 
         // Update decomposition if needed
         let new_regions = self.decomposer.decompose(&self.grid, medium)?;

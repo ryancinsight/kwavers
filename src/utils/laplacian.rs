@@ -2,7 +2,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
 /// Finite difference order for spatial derivatives
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -124,8 +124,17 @@ impl LaplacianOperator {
         let (nx, ny, nz) = input.dim();
 
         if input.dim() != output.dim() {
-            return Err(crate::error::KwaversError::Dimension(
-                "Input and output arrays must have same dimensions".to_string(),
+            return Err(crate::error::KwaversError::Grid(
+                crate::error::GridError::InvalidDimensions {
+                    nx: output.dim().0,
+                    ny: output.dim().1,
+                    nz: output.dim().2,
+                    reason: format!(
+                        "Output dimensions {:?} don't match input {:?}",
+                        output.dim(),
+                        input.dim()
+                    ),
+                },
             ));
         }
 
@@ -280,7 +289,7 @@ impl LaplacianOperator {
     fn apply_periodic_boundaries(
         &self,
         input: ArrayView3<f64>,
-        mut output: ArrayViewMut3<f64>,
+        output: ArrayViewMut3<f64>,
         radius: usize,
     ) {
         // Implement periodic wrapping for boundary regions

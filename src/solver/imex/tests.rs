@@ -16,7 +16,7 @@ mod tests {
     ) {
         let explicit_rhs = |_field: &Array3<f64>| -> KwaversResult<Array3<f64>> {
             // Non-stiff part: sin(t) - approximated as constant
-            Ok(Array3::from_elem((4, 4, 4)), 0.1)
+            Ok(Array3::from_elem((4, 4, 4), 0.1))
         };
 
         let implicit_rhs = |field: &Array3<f64>| -> KwaversResult<Array3<f64>> {

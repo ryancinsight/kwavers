@@ -23,6 +23,8 @@ pub enum SpatialOrder {
     Fourth,
     /// Sixth-order accurate (7-point stencil)
     Sixth,
+    /// Eighth-order accurate (9-point stencil)
+    Eighth,
 }
 
 /// Finite difference coefficients for different orders
@@ -36,6 +38,7 @@ impl FDCoefficients {
             SpatialOrder::Second => vec![0.5],
             SpatialOrder::Fourth => vec![2.0 / 3.0, -1.0 / 12.0],
             SpatialOrder::Sixth => vec![3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
+            SpatialOrder::Eighth => vec![4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
         }
     }
 
@@ -46,6 +49,7 @@ impl FDCoefficients {
             SpatialOrder::Second => vec![1.0],
             SpatialOrder::Fourth => vec![4.0 / 3.0, -1.0 / 12.0],
             SpatialOrder::Sixth => vec![3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0],
+            SpatialOrder::Eighth => vec![8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0, -1.0 / 560.0],
         }
     }
 
@@ -53,9 +57,10 @@ impl FDCoefficients {
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
     pub fn second_derivative_center(order: SpatialOrder) -> f64 {
         match order {
-            SpatialOrder::Second => -2.0,        // 3-point stencil
-            SpatialOrder::Fourth => -5.0 / 2.0,  // 5-point stencil
-            SpatialOrder::Sixth => -49.0 / 18.0, // 7-point stencil
+            SpatialOrder::Second => -2.0,          // 3-point stencil
+            SpatialOrder::Fourth => -5.0 / 2.0,    // 5-point stencil
+            SpatialOrder::Sixth => -49.0 / 18.0,   // 7-point stencil
+            SpatialOrder::Eighth => -205.0 / 72.0, // 9-point stencil
         }
     }
 }
