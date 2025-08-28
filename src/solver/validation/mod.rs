@@ -11,8 +11,4 @@ pub use numerical_accuracy::{
     NumericalValidator, StabilityResults, ValidationResults,
 };
 
-pub use kwave::{
-    test_cases::KWaveTestCase,
-    validator::KWaveValidator,
-    report::ValidationReport,
-};
+pub use kwave::{report::ValidationReport, test_cases::KWaveTestCase, validator::KWaveValidator};

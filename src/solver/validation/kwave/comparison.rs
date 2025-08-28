@@ -52,7 +52,10 @@ impl ComparisonMetrics {
     /// Peak signal-to-noise ratio in dB
     pub fn psnr(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         let mse = Self::rmse(computed, reference).powi(2);
-        let max_val = reference.iter().cloned().fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let max_val = reference
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
 
         if mse > 0.0 {
             20.0 * (max_val / mse.sqrt()).log10()
