@@ -93,7 +93,15 @@ impl FiniteDifference {
                                 val +=
                                     coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                             }
-                            _ => unreachable!(),
+                            _ => {
+                                return Err(crate::KwaversError::Config(
+                                    crate::ConfigError::InvalidValue {
+                                        parameter: "axis".to_string(),
+                                        value: axis.to_string(),
+                                        constraint: "0, 1, or 2".to_string(),
+                                    },
+                                ));
+                            }
                         }
                     }
 
@@ -184,7 +192,15 @@ impl FiniteDifference {
                     }
                 }
             }
-            _ => unreachable!(),
+            _ => {
+                return Err(crate::KwaversError::Config(
+                    crate::ConfigError::InvalidValue {
+                        parameter: "axis".to_string(),
+                        value: axis.to_string(),
+                        constraint: "0, 1, or 2".to_string(),
+                    },
+                ));
+            }
         }
 
         Ok(())

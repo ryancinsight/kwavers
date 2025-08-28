@@ -34,9 +34,9 @@ impl GpuDevice {
             .await
             .ok_or_else(|| {
                 KwaversError::Config(crate::ConfigError::InvalidValue {
-                    field: "gpu".to_string(),
+                    parameter: "gpu".to_string(),
                     value: "none".to_string(),
-                    expected: "GPU adapter not found".to_string(),
+                    constraint: "GPU adapter not found".to_string(),
                 })
             })?;
 
@@ -56,9 +56,9 @@ impl GpuDevice {
             .await
             .map_err(|e| {
                 KwaversError::Config(crate::ConfigError::InvalidValue {
-                    field: "gpu_device".to_string(),
+                    parameter: "gpu_device".to_string(),
                     value: format!("{:?}", e),
-                    expected: "Failed to create GPU device".to_string(),
+                    constraint: "Failed to create GPU device".to_string(),
                 })
             })?;
 

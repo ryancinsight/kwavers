@@ -70,9 +70,9 @@ impl ComputePipeline {
         if buffers.is_empty() {
             return Err(crate::KwaversError::Config(
                 crate::ConfigError::InvalidValue {
-                    field: "buffers".to_string(),
+                    parameter: "buffers".to_string(),
                     value: "empty".to_string(),
-                    expected: "At least one buffer required".to_string(),
+                    constraint: "At least one buffer required".to_string(),
                 },
             ));
         }

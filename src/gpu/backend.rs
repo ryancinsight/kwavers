@@ -55,10 +55,10 @@ impl GpuBackend {
 
         let array = Array3::from_shape_vec(shape, data.iter().map(|&x| x as f64).collect())
             .map_err(|e| {
-                crate::KwaversError::Dimension(crate::error::DimensionError::InvalidShape {
-                    expected: format!("{:?}", shape),
-                    actual: format!("{} elements", data.len()),
-                    context: format!("GPU download: {}", e),
+                crate::KwaversError::Config(crate::ConfigError::InvalidValue {
+                    parameter: "shape".to_string(),
+                    value: format!("{} elements", data.len()),
+                    constraint: format!("{:?} shape required: {}", shape, e),
                 })
             })?;
 
@@ -88,9 +88,9 @@ impl GpuBackend {
         if pipeline_index >= self.pipelines.len() {
             return Err(crate::KwaversError::Config(
                 crate::ConfigError::InvalidValue {
-                    field: "pipeline_index".to_string(),
+                    parameter: "pipeline_index".to_string(),
                     value: pipeline_index.to_string(),
-                    expected: format!("0..{}", self.pipelines.len()),
+                    constraint: format!("0..{}", self.pipelines.len()),
                 },
             ));
         }
