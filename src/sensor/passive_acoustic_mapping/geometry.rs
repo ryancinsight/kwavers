@@ -1,7 +1,5 @@
 //! Array geometry definitions for PAM
 
-use crate::error::KwaversResult;
-
 /// Array geometry types for different sensor configurations
 #[derive(Debug, Clone)]
 pub enum ArrayGeometry {

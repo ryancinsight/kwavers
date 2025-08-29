@@ -1,7 +1,7 @@
 //! PAM processing and mapping algorithms
 
-use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3, Axis};
+use crate::error::KwaversResult;
+use ndarray::Array3;
 use rustfft::{num_complex::Complex, FftPlanner};
 
 /// PAM configuration

@@ -1,7 +1,7 @@
 //! Beamforming algorithms for PAM
 
-use crate::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3, Axis};
+use crate::error::KwaversResult;
+use ndarray::{Array2, Array3, Axis};
 use std::f64::consts::PI;
 
 /// Beamforming methods for PAM
