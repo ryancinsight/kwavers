@@ -109,8 +109,18 @@ const CM_TO_M: f64 = 0.01;
 const MHZ_TO_HZ: f64 = 1e6;
 const MAX_TGC_GAIN: f64 = 100.0;
 
-/// Apply time gain compensation
+/// Apply time gain compensation with default sampling frequency
 fn apply_tgc(signal: &ndarray::Array1<f64>, frequency: f64) -> ndarray::Array1<f64> {
+    const DEFAULT_SAMPLING_FREQUENCY: f64 = 40e6; // 40 MHz default
+    apply_tgc_with_sampling(signal, frequency, DEFAULT_SAMPLING_FREQUENCY)
+}
+
+/// Apply time gain compensation with configurable sampling frequency
+fn apply_tgc_with_sampling(
+    signal: &ndarray::Array1<f64>,
+    frequency: f64,
+    sampling_frequency: f64,
+) -> ndarray::Array1<f64> {
     let n = signal.len();
     let mut compensated = signal.clone();
 
@@ -119,9 +129,9 @@ fn apply_tgc(signal: &ndarray::Array1<f64>, frequency: f64) -> ndarray::Array1<f
         TISSUE_ATTENUATION_COEFFICIENT * frequency / MHZ_TO_HZ * (10.0 * CM_TO_M) / DB_TO_NEPER;
 
     for i in 0..n {
-        // Depth in meters
-        let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * 40e6); // TODO: Make sampling freq configurable
-                                                                  // Compensation factor (round-trip attenuation)
+        // Depth in meters (round-trip time to distance conversion)
+        let depth = i as f64 * SOUND_SPEED_TISSUE / (2.0 * sampling_frequency);
+        // Compensation factor (round-trip attenuation)
         let gain = (2.0 * alpha_np * depth).exp();
         compensated[i] *= gain.min(MAX_TGC_GAIN);
     }
