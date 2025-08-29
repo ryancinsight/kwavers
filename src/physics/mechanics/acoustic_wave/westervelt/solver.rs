@@ -1,5 +1,6 @@
 //! Main Westervelt equation solver implementation
 
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
@@ -116,7 +117,7 @@ impl AcousticWaveModel for WesterveltWave {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    ) {
+    ) -> KwaversResult<()> {
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.increment_calls();
@@ -134,7 +135,7 @@ impl AcousticWaveModel for WesterveltWave {
 
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         if nx == 0 || ny == 0 || nz == 0 {
-            return;
+            return Ok(());
         }
 
         // Get medium properties
@@ -227,6 +228,8 @@ impl AcousticWaveModel for WesterveltWave {
             .index_axis(Axis(0), UnifiedFieldType::Pressure.index())
             .to_owned();
         self.update_pressure_history(&updated_pressure);
+
+        Ok(())
     }
 
     fn report_performance(&self) {

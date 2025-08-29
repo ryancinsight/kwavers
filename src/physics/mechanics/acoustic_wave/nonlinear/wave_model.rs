@@ -190,28 +190,6 @@ impl NonlinearWave {
         self.k_squared = Some(k_squared);
     }
 
-    /// Updates the maximum sound speed cache.
-    ///
-    /// This method should be called whenever the medium properties change.
-    pub fn update_max_sound_speed(&mut self, medium: &dyn Medium, grid: &Grid) {
-        // Calculate maximum sound speed by sampling the medium
-        let mut max_c = 0.0;
-        for i in 0..grid.nx {
-            for j in 0..grid.ny {
-                for k in 0..grid.nz {
-                    let x = i as f64 * grid.dx;
-                    let y = j as f64 * grid.dy;
-                    let z = k as f64 * grid.dz;
-                    let c = medium.sound_speed(x, y, z, grid);
-                    if c > max_c {
-                        max_c = c;
-                    }
-                }
-            }
-        }
-        self.max_sound_speed = max_c;
-    }
-
     /// Checks if the current configuration is stable.
     ///
     /// # Arguments

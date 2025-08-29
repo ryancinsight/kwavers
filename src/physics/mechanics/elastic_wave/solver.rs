@@ -143,7 +143,7 @@ impl AcousticWaveModel for ElasticWave {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    ) {
+    ) -> KwaversResult<()> {
         let start = Instant::now();
 
         // Get field dimensions
@@ -276,6 +276,8 @@ impl AcousticWaveModel for ElasticWave {
         // Update metrics
         self.metrics.increment_steps();
         self.metrics.add_update_time(start.elapsed());
+
+        Ok(())
     }
 
     fn report_performance(&self) {

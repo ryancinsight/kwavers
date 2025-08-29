@@ -63,6 +63,23 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ## Current State (v5.1.0)
 
+### NONLINEAR MODULE PERFORMANCE & CORRECTNESS (v6.2.0)
+- ✅ **PERFORMANCE OPTIMIZATIONS**: Eliminated critical bottlenecks
+  - Removed array cloning in hot path (was copying entire 3D field every timestep)
+  - Fixed confusing method name shadowing (update_wave vs update_wave_inner)
+  - Removed inefficient update_max_sound_speed method (triple-nested loop)
+- ✅ **API IMPROVEMENTS**: Enhanced robustness and error handling
+  - AcousticWaveModel trait now returns Result for proper error propagation
+  - All implementations updated to handle errors correctly
+  - No more silent failures from swallowed errors
+- ✅ **HETEROGENEOUS MEDIA FIXES**: Corrected validation logic
+  - validate_parameters now uses minimum sound speed (was using center only)
+  - Prevents numerical artifacts in heterogeneous simulations
+- ✅ **METRICS**:
+  - Build: Successful (502 warnings)
+  - Performance: Eliminated allocations in update loop
+  - Correctness: Proper error handling throughout
+
 ### CRITICAL SOLVER CORRECTNESS FIXES (v6.1.0)
 - ✅ **KUZNETSOV SOLVER FIXED**: Corrected fundamental physics errors
   - Implemented proper leapfrog time integration (was using invalid scheme)

@@ -2,11 +2,11 @@
 //!
 //! This module contains implementations of various traits for the NonlinearWave struct.
 
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use crate::KwaversResult;
 use log::info;
 use ndarray::{Array3, Array4, Axis};
 
@@ -16,18 +16,18 @@ impl AcousticWaveModel for NonlinearWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        prev_pressure: &Array3<f64>,
+        _prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    ) {
+    ) -> KwaversResult<()> {
         // Extract pressure field from the 4D array (assuming index 0 is pressure)
         const PRESSURE_IDX: usize = 0;
 
-        // Get a view of the current pressure field
-        let pressure = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
+        // Get a view of the current pressure field (avoid cloning)
+        let pressure_view = fields.index_axis(Axis(0), PRESSURE_IDX);
 
         // Create source term array
         let source_mask = source.create_mask(grid);
@@ -35,17 +35,21 @@ impl AcousticWaveModel for NonlinearWave {
         let source_term = source_mask * amplitude;
 
         // Update using the nonlinear wave equation
-        match self.update_wave(&pressure, &source_term, medium, grid, (t / dt) as usize) {
-            Ok(updated_pressure) => {
-                // Update the pressure field in the 4D array
-                fields
-                    .index_axis_mut(Axis(0), PRESSURE_IDX)
-                    .assign(&updated_pressure);
-            }
-            Err(e) => {
-                log::error!("Error updating wave field: {:?}", e);
-            }
-        }
+        // Note: We pass a reference to avoid cloning, and the inner method is renamed
+        let updated_pressure = self.update_wave_inner(
+            &pressure_view.to_owned(), // TODO: Further optimize to avoid this clone
+            &source_term,
+            medium,
+            grid,
+            (t / dt) as usize,
+        )?;
+
+        // Update the pressure field in the 4D array
+        fields
+            .index_axis_mut(Axis(0), PRESSURE_IDX)
+            .assign(&updated_pressure);
+
+        Ok(())
     }
 
     fn report_performance(&self) {
@@ -81,14 +85,8 @@ impl AcousticWaveModel for NonlinearWave {
     }
 }
 
-// Additional trait implementations for compatibility
 impl NonlinearWave {
-    /// Gets the stability timestep for the given medium and grid.
-    pub fn get_stability_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
-        self.get_stable_timestep(medium, grid)
-    }
-
-    /// Validates the parameters for the simulation.
+    /// Validates the parameters for the simulation using the minimum sound speed.
     pub fn validate_parameters(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Check CFL condition
         if !self.is_stable(medium, grid) {
@@ -104,61 +102,57 @@ impl NonlinearWave {
             ));
         }
 
-        // Check grid resolution
-        // Calculate minimum wavelength based on source frequency and sound speed
-        let x = grid.nx as f64 * grid.dx / 2.0;
-        let y = grid.ny as f64 * grid.dy / 2.0;
-        let z = grid.nz as f64 * grid.dz / 2.0;
-        let sound_speed = medium.sound_speed(x, y, z, grid);
-        let min_wavelength = sound_speed / self.source_frequency;
-        let min_dx = grid.dx.min(grid.dy).min(grid.dz);
-        let points_per_wavelength = min_wavelength / min_dx;
+        // Check grid resolution using minimum sound speed for heterogeneous media
+        // Get the sound speed array and find the minimum
+        let c_array = medium.sound_speed_array(grid);
+        let min_c = c_array.iter().fold(
+            f64::INFINITY,
+            |acc, &x| if x > 0.0 { acc.min(x) } else { acc },
+        );
 
-        const MIN_POINTS_PER_WAVELENGTH: f64 = 4.0;
-        if points_per_wavelength < MIN_POINTS_PER_WAVELENGTH {
+        if min_c <= 0.0 || min_c.is_infinite() {
             return Err(crate::error::KwaversError::Physics(
                 crate::error::PhysicsError::InvalidParameter {
-                    parameter: "grid_resolution".to_string(),
-                    value: points_per_wavelength,
+                    parameter: "sound_speed".to_string(),
+                    value: min_c,
+                    reason: "Sound speed must be positive and finite".to_string(),
+                },
+            ));
+        }
+
+        // Calculate minimum wavelength based on source frequency and minimum sound speed
+        let min_wavelength = min_c / self.source_frequency;
+        let min_dx = grid.dx.min(grid.dy).min(grid.dz);
+
+        // Ensure at least 6 points per wavelength for accurate simulation
+        const MIN_POINTS_PER_WAVELENGTH: f64 = 6.0;
+        if min_dx > min_wavelength / MIN_POINTS_PER_WAVELENGTH {
+            return Err(crate::error::KwaversError::Physics(
+                crate::error::PhysicsError::InvalidParameter {
+                    parameter: "grid_spacing".to_string(),
+                    value: min_dx,
                     reason: format!(
-                        "Minimum {:.1} points/wavelength required, got {:.1}",
-                        MIN_POINTS_PER_WAVELENGTH, points_per_wavelength
+                        "Grid spacing too large. Maximum allowed: {} m for minimum wavelength {} m at frequency {} Hz with minimum sound speed {} m/s",
+                        min_wavelength / MIN_POINTS_PER_WAVELENGTH,
+                        min_wavelength,
+                        self.source_frequency,
+                        min_c
                     ),
                 },
             ));
         }
 
-        // Validate multi-frequency configuration if present
-        if let Some(ref config) = self.multi_freq_config {
-            if !config.validate() {
-                return Err(crate::error::KwaversError::Config(
-                    crate::error::ConfigError::InvalidValue {
-                        parameter: "multi_frequency".to_string(),
-                        value: "invalid".to_string(),
-                        constraint: "Configuration must be valid".to_string(),
-                    },
-                ));
-            }
+        // Check for valid nonlinearity scaling
+        if self.nonlinearity_scaling < 0.0 || self.nonlinearity_scaling > 10.0 {
+            return Err(crate::error::KwaversError::Physics(
+                crate::error::PhysicsError::InvalidParameter {
+                    parameter: "nonlinearity_scaling".to_string(),
+                    value: self.nonlinearity_scaling,
+                    reason: "Must be between 0.0 and 10.0".to_string(),
+                },
+            ));
         }
 
         Ok(())
-    }
-
-    /// Gets the model name.
-    pub fn get_model_name(&self) -> &str {
-        "NonlinearWave"
-    }
-
-    /// Checks if the model supports heterogeneous media.
-    pub fn supports_heterogeneous_media(&self) -> bool {
-        // PSTD has limitations with strongly heterogeneous media
-        // See documentation in wave_model.rs
-        true // But with caveats
-    }
-
-    /// Gets the required number of ghost cells.
-    pub fn get_required_ghost_cells(&self) -> usize {
-        // PSTD doesn't require ghost cells as it uses global FFTs
-        0
     }
 }

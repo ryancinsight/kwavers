@@ -33,8 +33,8 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// Updated pressure field
-    pub fn update_wave(
+    /// Updated pressure field (internal implementation)
+    pub fn update_wave_inner(
         &mut self,
         pressure: &Array3<f64>,
         source: &Array3<f64>,

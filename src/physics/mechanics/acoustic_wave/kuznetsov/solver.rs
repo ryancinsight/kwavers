@@ -177,7 +177,7 @@ impl AcousticWaveModel for KuznetsovWave {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    ) {
+    ) -> KwaversResult<()> {
         // Extract pressure field (assuming it's at index 0)
         let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
 
@@ -233,6 +233,7 @@ impl AcousticWaveModel for KuznetsovWave {
         }
 
         self.time_step_count += 1;
+        Ok(())
     }
 
     fn report_performance(&self) {

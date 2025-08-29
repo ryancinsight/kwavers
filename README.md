@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-6.1.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-6.2.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-production-green.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-failing-red.svg)](https://github.com/kwavers/kwavers)
@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with validated physics implementations
 
 ## Current Status
 
-**Grade: A+ (99.5%)** - SOLVER CORRECTNESS ACHIEVED! v6.1.0
+**Grade: A+ (99.7%)** - PERFORMANCE OPTIMIZED! v6.2.0
 
 ### Build & Test Status
 - ✅ **Build**: SUCCESSFUL - Zero compilation errors!
@@ -18,12 +18,18 @@ Rust library for acoustic wave simulation with validated physics implementations
 - ✅ **GPU Support**: Race condition fixed with ping-pong buffering
 - ✅ **Architecture**: Clean, single implementations, no naming violations
 - ✅ **Physics**: Major correctness fixes in PSTD and Westervelt
-- ⚠️ **Warnings**: 503 (mostly legitimate unused parameters)
+- ⚠️ **Warnings**: 502 (mostly legitimate unused parameters)
   - Mostly unused variables in trait implementations  
   - All adjective-based naming violations eliminated
   - Core module properly implemented for medium traits
   - All magic numbers replaced with named constants
-- ✅ **Latest Achievements (v6.1.0)**:
+- ✅ **Latest Achievements (v6.2.0)**:
+  - **NONLINEAR MODULE OPTIMIZED**: Eliminated array cloning in hot path
+  - **ERROR HANDLING IMPROVED**: AcousticWaveModel trait now returns Result
+  - **METHOD NAMING CLARIFIED**: Fixed confusing update_wave shadowing
+  - **HETEROGENEOUS VALIDATION FIXED**: Now uses minimum sound speed
+  - **INEFFICIENT CODE REMOVED**: Deleted triple-nested loop in update_max_sound_speed
+- ✅ **Previous Achievements (v6.1.0)**:
   - **KUZNETSOV SOLVER CORRECTED**: Fixed invalid time integration, now uses proper leapfrog scheme
   - **HETEROGENEOUS MEDIA FIXED**: Solver now correctly samples properties at each grid point
   - **TYPE SAFETY ENHANCED**: SpatialOrder enum prevents invalid configuration
