@@ -111,22 +111,20 @@ impl VisualizationConfig {
         if self.target_fps <= 0.0 {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::OutOfRange {
-                    field: "target_fps".to_string(),
-                    value: self.target_fps.to_string(),
-                    min: "0.0".to_string(),
-                    max: "unlimited".to_string(),
-                },
+                    value: self.target_fps,
+                    min: 0.0,
+                    max: unlimited,
+                }, /* field: target_fps */
             ));
         }
 
         if self.max_texture_size == 0 {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::OutOfRange {
-                    field: "max_texture_size".to_string(),
-                    value: self.max_texture_size.to_string(),
-                    min: "1".to_string(),
-                    max: "unlimited".to_string(),
-                },
+                    value: self.max_texture_size,
+                    min: 1,
+                    max: unlimited,
+                }, /* field: max_texture_size */
             ));
         }
 

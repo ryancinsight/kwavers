@@ -90,9 +90,9 @@ impl WesterveltWave {
     pub fn performance_summary(&self) -> String {
         let metrics = self.metrics.lock().unwrap();
         format!(
-            "WesterveltWave Performance: {} calls, {:.2} ms avg",
-            metrics.num_calls(),
-            metrics.total_time()
+            "WesterveltWave Performance: {} calls, {:.2} ms total",
+            metrics.call_count,
+            metrics.total_time() * 1000.0
         )
     }
 }
@@ -151,9 +151,22 @@ impl AcousticWaveModel for WesterveltWave {
         // Get medium properties
         let rho_arr = medium.density_array(grid);
         let c_arr = medium.sound_speed_array(grid);
+        // Get viscosity arrays from ElasticArrayAccess trait
+        use crate::medium::elastic::ElasticArrayAccess;
         let eta_s_arr = medium.shear_viscosity_coeff_array();
         let eta_b_arr = medium.bulk_viscosity_coeff_array();
-        let b_over_a_arr = medium.nonlinearity_coefficient_array(grid);
+        // Create nonlinearity coefficient array
+        let mut b_over_a_arr = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    b_over_a_arr[[i, j, k]] = medium.nonlinearity_coefficient(x, y, z, grid);
+                }
+            }
+        }
 
         // Compute Laplacian using spectral methods
         let start = Instant::now();
@@ -191,7 +204,8 @@ impl AcousticWaveModel for WesterveltWave {
 
         {
             let mut metrics = self.metrics.lock().unwrap();
-            metrics.record_damping(start.elapsed());
+            // Record damping computation time as part of nonlinear time
+            metrics.record_nonlinear(start.elapsed());
         }
 
         // Add source term
@@ -214,18 +228,25 @@ impl AcousticWaveModel for WesterveltWave {
         let start = Instant::now();
         let pressure_next = &mut self.pressure_buffers[next_idx];
 
-        // Use Zip for efficient, vectorizable computation
-        Zip::from(pressure_next)
-            .and(pressure_current)
-            .and(pressure_previous)
-            .and(&c_arr)
-            .and(&laplacian)
-            .and(&nonlinear_term)
-            .and(&damping_term)
-            .and(&src_term)
-            .for_each(|p_next, &p_curr, &p_prev, &c, &lap, &nl, &damp, &src| {
+        // Use parallel iteration for efficient computation
+        use rayon::prelude::*;
+        let dt2 = dt * dt;
+        pressure_next
+            .as_slice_mut()
+            .unwrap()
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(idx, p_next)| {
+                let p_curr = pressure_current.as_slice().unwrap()[idx];
+                let p_prev = pressure_previous.as_slice().unwrap()[idx];
+                let c = c_arr.as_slice().unwrap()[idx];
+                let lap = laplacian.as_slice().unwrap()[idx];
+                let nl = nonlinear_term.as_slice().unwrap()[idx];
+                let damp = damping_term.as_slice().unwrap()[idx];
+                let src = src_term.as_slice().unwrap()[idx];
+
                 let c2 = c * c;
-                let update = dt * dt * (c2 * lap + nl + damp + src);
+                let update = dt2 * (c2 * lap + nl + damp + src);
                 *p_next = 2.0 * p_curr - p_prev + update;
             });
 

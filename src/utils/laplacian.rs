@@ -124,18 +124,11 @@ impl LaplacianOperator {
         let (nx, ny, nz) = input.dim();
 
         if input.dim() != output.dim() {
-            return Err(crate::error::KwaversError::Grid(
-                crate::error::GridError::TooSmall {
-                    nx: output.dim().0,
-                    ny: output.dim().1,
-                    nz: output.dim().2,
-                    reason: format!(
-                        "Output dimensions {:?} don't match input {:?}",
-                        output.dim(),
-                        input.dim()
-                    ),
-                },
-            ));
+            return Err(crate::error::KwaversError::InvalidInput(format!(
+                "Output dimensions {:?} don't match input {:?}",
+                output.dim(),
+                input.dim()
+            )));
         }
 
         let radius = self.config.order.stencil_radius();

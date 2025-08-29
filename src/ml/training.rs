@@ -44,11 +44,10 @@ impl TrainingPipeline {
         if label_samples != samples {
             return Err(KwaversError::Validation(
                 crate::error::ValidationError::OutOfRange {
-                    field: "labels.samples".to_string(),
-                    value: label_samples.to_string(),
-                    min: samples.to_string(),
-                    max: samples.to_string(),
-                },
+                    value: label_samples,
+                    min: samples,
+                    max: samples,
+                }, /* field: labels.samples */
             ));
         }
 

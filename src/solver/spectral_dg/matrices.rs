@@ -150,7 +150,7 @@ pub fn compute_lift_matrix(
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     let n = a.nrows();
     if n != a.ncols() {
-        return Err(KwaversError::InvalidParameter(
+        return Err(KwaversError::InvalidInput(
             "Matrix must be square for inversion".to_string(),
         ));
     }

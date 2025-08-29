@@ -95,11 +95,10 @@ impl AcousticSolver for KuznetsovSolver {
 
         if cfl > max_cfl {
             return Err(crate::error::ValidationError::OutOfRange {
-                field: "CFL (Kuznetsov)".to_string(),
-                value: cfl.to_string(),
-                min: "0".to_string(),
-                max: max_cfl.to_string(),
-            }
+                value: cfl,
+                min: 0,
+                max: max_cfl,
+            } /* field: CFL (Kuznetsov) */
             .into());
         }
 

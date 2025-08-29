@@ -28,7 +28,9 @@ impl PstdSolver {
         let validation = config.validate();
         if !validation.is_valid {
             return Err(crate::error::KwaversError::Validation(
-                crate::error::ValidationError::StateValidation,
+                crate::error::ValidationError::ConstraintViolation {
+                    message: "Invalid PSTD solver state".to_string(),
+                },
             ));
         }
 
