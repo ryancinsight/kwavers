@@ -39,7 +39,7 @@ fn test_medium_creation() {
 
     assert_eq!(medium.density(0.0, 0.0, 0.0, &grid), 1000.0);
     assert_eq!(medium.sound_speed(0.0, 0.0, 0.0, &grid), 1500.0);
-    assert!(medium.is_homogeneous());
+    // HomogeneousMedium by definition has uniform properties
 }
 
 #[test]

@@ -199,4 +199,16 @@ impl Grid {
         let min_dx = self.dx.min(self.dy).min(self.dz);
         0.5 * min_dx / sound_speed
     }
+
+    /// Get CFL timestep (alias for compatibility)
+    #[inline]
+    pub fn cfl_timestep(&self, sound_speed: f64) -> f64 {
+        self.cfl_timestep_default(sound_speed)
+    }
+
+    /// Create a zero-initialized field with grid dimensions
+    #[inline]
+    pub fn create_field(&self) -> ndarray::Array3<f64> {
+        ndarray::Array3::zeros((self.nx, self.ny, self.nz))
+    }
 }

@@ -8,9 +8,11 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    medium::{ElasticProperties, SimpleMedium},
-    physics::plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
-    solver::UnifiedFieldType,
+    medium::ElasticProperties,
+    physics::{
+        field_mapping::UnifiedFieldType,
+        plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
+    },
 };
 use ndarray::Array4;
 
@@ -107,6 +109,8 @@ struct TestElasticMedium {
     density: f64,
     lame_lambda: f64,
     lame_mu: f64,
+    bubble_radius_field: ndarray::Array3<f64>,
+    bubble_velocity_field: ndarray::Array3<f64>,
 }
 
 impl TestElasticMedium {
@@ -115,6 +119,8 @@ impl TestElasticMedium {
             density,
             lame_lambda,
             lame_mu,
+            bubble_radius_field: ndarray::Array3::zeros((1, 1, 1)),
+            bubble_velocity_field: ndarray::Array3::zeros((1, 1, 1)),
         }
     }
 
@@ -137,10 +143,6 @@ impl CoreMedium for TestElasticMedium {
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         self.p_wave_speed(x, y, z, grid)
     }
-
-    fn absorption(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
-    }
 }
 
 impl ElasticProperties for TestElasticMedium {
@@ -155,28 +157,27 @@ impl ElasticProperties for TestElasticMedium {
 
 // Implement other required traits with defaults
 impl ArrayAccess for TestElasticMedium {
-    fn get_field_arrays(
-        &self,
-        grid: &Grid,
-    ) -> (
-        ndarray::Array3<f64>,
-        ndarray::Array3<f64>,
-        ndarray::Array3<f64>,
-    ) {
+    fn density_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
         let shape = (grid.nx, grid.ny, grid.nz);
-        (
-            ndarray::Array3::from_elem(shape, self.density),
-            ndarray::Array3::from_elem(shape, self.sound_speed(0.0, 0.0, 0.0, grid)),
-            ndarray::Array3::zeros(shape),
-        )
+        ndarray::Array3::from_elem(shape, self.density)
+    }
+
+    fn sound_speed_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
+        let shape = (grid.nx, grid.ny, grid.nz);
+        ndarray::Array3::from_elem(shape, self.sound_speed(0.0, 0.0, 0.0, grid))
     }
 }
 
 impl AcousticProperties for TestElasticMedium {
-    fn bulk_modulus(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let rho = self.density(x, y, z, grid);
-        let c = self.sound_speed(x, y, z, grid);
-        rho * c * c
+    fn absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+        _frequency: f64,
+    ) -> f64 {
+        0.0 // No absorption in test medium
     }
 
     fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -185,12 +186,13 @@ impl AcousticProperties for TestElasticMedium {
 }
 
 impl ElasticArrayAccess for TestElasticMedium {
-    fn get_elastic_arrays(&self, grid: &Grid) -> (ndarray::Array3<f64>, ndarray::Array3<f64>) {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        (
-            ndarray::Array3::from_elem(shape, self.lame_lambda),
-            ndarray::Array3::from_elem(shape, self.lame_mu),
-        )
+    fn lame_lambda_array(&self) -> ndarray::Array3<f64> {
+        // Note: This is a simplified test implementation
+        ndarray::Array3::from_elem((10, 10, 10), self.lame_lambda)
+    }
+
+    fn lame_mu_array(&self) -> ndarray::Array3<f64> {
+        ndarray::Array3::from_elem((10, 10, 10), self.lame_mu)
     }
 }
 
@@ -218,42 +220,63 @@ impl TemperatureState for TestElasticMedium {
 }
 
 impl OpticalProperties for TestElasticMedium {
-    fn refractive_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        1.33 // Water
+    fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        0.01 // 1/m
     }
 
-    fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
+    fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        10.0 // 1/m
+    }
+
+    fn refractive_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        1.33 // Water
     }
 }
 
 impl ViscousProperties for TestElasticMedium {
-    fn dynamic_viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.001 // Pa·s (water at 20°C)
-    }
-
-    fn kinematic_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.dynamic_viscosity(x, y, z, grid) / self.density(x, y, z, grid)
     }
 }
 
 impl BubbleProperties for TestElasticMedium {
-    fn has_bubbles(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> bool {
-        false
+    fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        0.0728 // N/m for water
     }
 
-    fn bubble_density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
+    fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        101325.0 // Pa (1 atm)
     }
 
-    fn bubble_radius(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
+    fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        2338.0 // Pa for water at 20°C
+    }
+
+    fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        1.4 // Air
+    }
+
+    fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        2e-9 // m²/s for air in water
     }
 }
 
 impl BubbleState for TestElasticMedium {
-    fn bubble_void_fraction(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        0.0
+    fn bubble_radius(&self) -> &ndarray::Array3<f64> {
+        &self.bubble_radius_field
+    }
+
+    fn bubble_velocity(&self) -> &ndarray::Array3<f64> {
+        &self.bubble_velocity_field
+    }
+
+    fn update_bubble_state(
+        &mut self,
+        radius: &ndarray::Array3<f64>,
+        velocity: &ndarray::Array3<f64>,
+    ) {
+        self.bubble_radius_field = radius.clone();
+        self.bubble_velocity_field = velocity.clone();
     }
 }
 
