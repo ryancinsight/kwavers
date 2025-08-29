@@ -1,6 +1,6 @@
 // thermal/calculator.rs - Thermal field calculator
 
-use super::{constants, ThermalConfig, ThermalState};
+use super::{ThermalConfig, ThermalState};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;

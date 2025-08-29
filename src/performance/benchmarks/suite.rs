@@ -13,7 +13,7 @@
 use crate::medium::HomogeneousMedium;
 use crate::performance::profiling::PerformanceProfiler;
 use crate::physics::mechanics::acoustic_wave::KuznetsovWave;
-use crate::solver::amr::AMRManager;
+use crate::solver::amr::AMRSolver;
 use crate::{Grid, KwaversResult};
 use ndarray::{s, Array3, Array4};
 use std::collections::HashMap;
@@ -337,23 +337,10 @@ impl BenchmarkSuite {
 
     /// Benchmark AMR
     fn benchmark_amr(&mut self, grid_size: usize) -> KwaversResult<()> {
-        use crate::solver::amr::{AMRConfig, InterpolationScheme, WaveletType};
-
         let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
 
-        // Configure AMR
-        let amr_config = AMRConfig {
-            max_level: 3,
-            min_level: 0,
-            refine_threshold: 0.1,
-            coarsen_threshold: 0.01,
-            refinement_ratio: 2,
-            buffer_cells: 2,
-            wavelet_type: WaveletType::Daubechies4,
-            interpolation_scheme: InterpolationScheme::Conservative,
-        };
-
-        let mut amr_manager = AMRManager::new(amr_config, &grid);
+        // Create AMR solver
+        let mut amr_solver = AMRSolver::new(&grid, 3)?;
         let mut field = grid.create_field();
 
         // Create sharp feature for refinement
@@ -363,29 +350,26 @@ impl BenchmarkSuite {
         let start = Instant::now();
 
         for _ in 0..self.config.iterations {
-            amr_manager.adapt_mesh(&field, 0.0)?;
+            amr_solver.adapt_mesh(&field, 0.1)?;
         }
 
         let runtime = start.elapsed() / self.config.iterations as u32;
 
         // Get refinement statistics
-        let memory_stats = amr_manager.memory_stats();
+        let memory_stats = amr_solver.memory_stats();
         let total_cells = grid_size * grid_size * grid_size;
-        let compression_ratio = total_cells as f64 / memory_stats.active_cells as f64;
+        let compression_ratio = total_cells as f64 / memory_stats.leaves.max(1) as f64;
 
         let mut metrics = HashMap::new();
         metrics.insert("compression_ratio".to_string(), compression_ratio);
-        metrics.insert(
-            "refined_cells".to_string(),
-            memory_stats.active_cells as f64,
-        );
+        metrics.insert("refined_cells".to_string(), memory_stats.leaves as f64);
 
         self.results.push(BenchmarkResult {
             name: "AMR".to_string(),
             grid_size,
             runtime,
             grid_updates_per_second: 0.0, // Not applicable for AMR
-            memory_mb: memory_stats.active_cells as f64 * std::mem::size_of::<f64>() as f64 / 1e6,
+            memory_mb: memory_stats.memory_bytes as f64 / 1e6,
             metrics,
         });
 

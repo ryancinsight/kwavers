@@ -52,14 +52,14 @@ impl GridConfig {
         }
 
         // Check minimum grid spacing
-        if self.dx < constants::grid::MIN_GRID_SPACING
-            || self.dy < constants::grid::MIN_GRID_SPACING
-            || self.dz < constants::grid::MIN_GRID_SPACING
+        if self.dx < constants::stability::MIN_DX
+            || self.dy < constants::stability::MIN_DX
+            || self.dz < constants::stability::MIN_DX
         {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),
-                constraint: format!("Spacing must be >= {}", constants::grid::MIN_GRID_SPACING),
+                constraint: format!("Spacing must be >= {}", constants::stability::MIN_DX),
             }
             .into());
         }
@@ -74,9 +74,9 @@ impl Default for GridConfig {
             nx: 128,
             ny: 128,
             nz: 128,
-            dx: constants::grid::DEFAULT_GRID_SPACING,
-            dy: constants::grid::DEFAULT_GRID_SPACING,
-            dz: constants::grid::DEFAULT_GRID_SPACING,
+            dx: 1e-4, // 0.1mm default spacing
+            dy: 1e-4,
+            dz: 1e-4,
         }
     }
 }
@@ -119,7 +119,7 @@ impl GridFactory {
 
         // Calculate reasonable grid size based on wavelength
         let size = ((wavelength * 10.0) / spacing) as usize;
-        let size = size.max(constants::grid::MIN_GRID_POINTS);
+        let size = size.max(16); // Minimum 16 points per dimension
 
         let config = GridConfig {
             nx: size,

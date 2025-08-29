@@ -171,12 +171,8 @@ impl AcousticWaveModel for ElasticWave {
         // Currently using real fields with finite-difference implementation
 
         // Get material properties
-        let density = medium
-            .get_density_array(grid)
-            .unwrap_or_else(|_| Array3::from_elem((nx, ny, nz), 1.0) * 1000.0);
-        let sound_speed = medium
-            .get_sound_speed_array(grid)
-            .unwrap_or_else(|_| Array3::from_elem((nx, ny, nz), 1.0) * 1500.0);
+        let density = medium.get_density_array(grid);
+        let sound_speed = medium.get_sound_speed_array(grid);
 
         // Convert to elastic parameters
         let mut lambda = Array3::zeros((nx, ny, nz));

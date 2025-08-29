@@ -1,6 +1,5 @@
 //! Heterogeneous medium implementation with spatially varying properties
 
-use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::{
     absorption::PowerLawAbsorption,
@@ -177,19 +176,19 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn get_density_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
-        Ok(self.density.clone())
-    }
-
-    fn get_sound_speed_array(&self, _grid: &Grid) -> KwaversResult<Array3<f64>> {
-        Ok(self.sound_speed.clone())
-    }
-
-    fn density_array(&self) -> Array3<f64> {
+    fn get_density_array(&self, _grid: &Grid) -> Array3<f64> {
         self.density.clone()
     }
 
-    fn sound_speed_array(&self) -> Array3<f64> {
+    fn get_sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
+        self.sound_speed.clone()
+    }
+
+    fn density_array(&self, _grid: &Grid) -> Array3<f64> {
+        self.density.clone()
+    }
+
+    fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
         self.sound_speed.clone()
     }
 }

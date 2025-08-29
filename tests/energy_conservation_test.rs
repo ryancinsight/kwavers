@@ -48,9 +48,9 @@ fn test_energy_conservation_in_closed_domain() {
 
     // Initialize fields with a Gaussian pulse
     let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let mut velocity_x = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let mut velocity_y = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let mut velocity_z = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let velocity_x = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let velocity_y = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let velocity_z = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
     // Add initial energy (Gaussian pressure pulse)
     let center_x = grid.nx / 2;

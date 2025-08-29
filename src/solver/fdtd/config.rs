@@ -1,6 +1,6 @@
 //! FDTD solver configuration
 
-use crate::constants::cfl;
+use crate::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::error::ValidationError;
 use crate::ValidationResult;
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ impl Default for FdtdConfig {
         Self {
             spatial_order: 4,
             staggered_grid: true,
-            cfl_factor: cfl::FDTD_DEFAULT,
+            cfl_factor: CFL_SAFETY_FACTOR,
             subgridding: false,
             subgrid_factor: 2,
         }

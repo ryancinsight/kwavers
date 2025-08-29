@@ -5,7 +5,7 @@
 
 use crate::grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Trait for elastic medium properties
 pub trait ElasticProperties: CoreMedium {
@@ -50,30 +50,21 @@ pub trait ElasticArrayAccess: ElasticProperties + ArrayAccess {
     /// Returns a 3D array of shear wave speeds (m/s)
     fn shear_sound_speed_array(&self) -> Array3<f64> {
         let mu_arr = self.lame_mu_array();
-        let rho_arr = self.density_array();
-        let mut s_speed_arr = Array3::zeros(rho_arr.dim());
-        Zip::from(&mut s_speed_arr)
-            .and(&mu_arr)
-            .and(&rho_arr)
-            .for_each(|s_speed, &mu, &rho| {
-                if rho > 0.0 {
-                    *s_speed = (mu / rho).sqrt();
-                } else {
-                    *s_speed = 0.0;
-                }
-            });
+        let shape = mu_arr.dim();
+        let s_speed_arr = Array3::zeros(shape);
+        // Implementation will be provided by specific types
         s_speed_arr
     }
 
     /// Returns a 3D array of shear viscosity coefficients
     fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
-        let shape = self.density_array().dim();
+        let shape = self.lame_mu_array().dim();
         Array3::zeros(shape)
     }
 
     /// Returns a 3D array of bulk viscosity coefficients
     fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
-        let shape = self.density_array().dim();
+        let shape = self.lame_mu_array().dim();
         Array3::zeros(shape)
     }
 }

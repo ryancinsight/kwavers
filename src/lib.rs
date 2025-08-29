@@ -42,6 +42,8 @@ pub mod constants;
 pub mod error;
 pub mod factory;
 pub mod fft;
+#[cfg(feature = "gpu")]
+pub mod gpu;
 
 pub mod grid;
 pub mod io;
@@ -81,21 +83,13 @@ pub use error::{KwaversError, KwaversResult};
 pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
-pub use sensor::{
-    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin, Sensor, SensorData,
-};
+pub use sensor::{ArrayGeometry, BeamformingMethod, PAMConfig, PAMPlugin, Sensor, SensorData};
 pub use source::Source;
 pub use time::Time;
 // Solver exports
 pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
 pub use error::{ConfigError, ValidationError};
-pub use solver::amr::{
-    feature_refinement::{
-        CurvatureCriterion, FeatureCriterion, FeatureType, GradientCriterion, LoadBalancer,
-        LoadBalancingStrategy, PredictiveCriterion, RefinementCriterion,
-    },
-    AMRConfig, AMRManager, InterpolationScheme, WaveletType,
-};
+pub use solver::amr::{AMRSolver, MemoryStats};
 pub use solver::plugin_based::PluginBasedSolver;
 pub use solver::reconstruction::photoacoustic::PhotoacousticReconstructor;
 pub use solver::reconstruction::seismic::{

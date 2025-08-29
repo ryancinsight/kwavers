@@ -224,7 +224,7 @@ impl NonlinearWave {
     /// `true` if the configuration is stable, `false` otherwise
     pub fn is_stable(&self, medium: &dyn Medium, grid: &Grid) -> bool {
         // Get actual maximum sound speed from the medium
-        let c_array = medium.sound_speed_array();
+        let c_array = medium.sound_speed_array(grid);
         let max_c = c_array.iter().fold(0.0f64, |acc, &x| acc.max(x));
 
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
@@ -245,7 +245,7 @@ impl NonlinearWave {
     /// The recommended time step size [s]
     pub fn get_stable_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
         // Get actual maximum sound speed from the medium
-        let c_array = medium.sound_speed_array();
+        let c_array = medium.sound_speed_array(grid);
         let max_c = c_array.iter().fold(0.0f64, |acc, &x| acc.max(x));
 
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);

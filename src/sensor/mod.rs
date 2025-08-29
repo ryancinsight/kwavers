@@ -10,7 +10,8 @@ pub use localization::{
     LocalizationResult, SensorArray,
 };
 pub use passive_acoustic_mapping::{
-    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin,
+    ArrayGeometry, BeamformingConfig, BeamformingMethod, PAMConfig, PAMPlugin,
+    PassiveAcousticMapper,
 };
 
 use crate::grid::Grid;
@@ -114,6 +115,11 @@ impl SensorData {
     /// Get data iterator
     pub fn data_iter(&self) -> impl Iterator<Item = (&usize, &Vec<f64>)> {
         self.data.iter()
+    }
+
+    /// Get data for a specific sensor
+    pub fn get_data(&self, sensor_id: usize) -> Option<&Vec<f64>> {
+        self.data.get(&sensor_id)
     }
 
     /// Add sensor data

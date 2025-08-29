@@ -14,7 +14,11 @@ pub mod stencil;
 
 // Re-export commonly used utilities
 pub use self::fft_operations::{fft_3d_array, ifft_3d_array};
-pub use self::field_analysis::FieldAnalyzer;
+pub use self::field_analysis::{
+    calculate_beam_pattern, calculate_beam_width, calculate_directivity, calculate_field_metrics,
+    calculate_intensity, calculate_mechanical_index, calculate_thermal_index, find_focal_plane,
+    find_focus, find_peak_pressure, BeamPatternConfig, FarFieldMethod, FieldMetrics,
+};
 pub use self::sparse_matrix::CompressedSparseRowMatrix;
 pub use self::stencil::{Stencil, StencilValue};
 

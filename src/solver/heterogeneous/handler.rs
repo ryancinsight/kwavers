@@ -56,10 +56,10 @@ impl HeterogeneousHandler {
     }
 
     /// Initialize with medium properties
-    pub fn initialize(&mut self, medium: &dyn Medium) -> KwaversResult<()> {
+    pub fn initialize(&mut self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Get medium properties as arrays
-        let density = medium.density_array();
-        let sound_speed = medium.sound_speed_array();
+        let density = medium.density_array(grid);
+        let sound_speed = medium.sound_speed_array(grid);
 
         // Detect interfaces
         self.interface_mask = Some(self.detector.detect(&density, &sound_speed)?);
@@ -186,7 +186,7 @@ mod tests {
 
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
-        assert!(handler.initialize(&medium).is_ok());
+        assert!(handler.initialize(&medium, &grid).is_ok());
         assert!(handler.density().is_some());
         assert!(handler.sound_speed().is_some());
         assert!(handler.interface_mask().is_some());

@@ -2,7 +2,6 @@
 
 use super::{constants::*, FrequencySweep, SweepDirection};
 use crate::signal::Signal;
-use std::f64::consts::PI;
 
 /// Linear frequency sweep (chirp signal)
 ///

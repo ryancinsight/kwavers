@@ -2,7 +2,7 @@
 //!
 //! Follows Creator pattern - responsible for creating medium objects
 
-use crate::constants::physics;
+use crate::constants::acoustic;
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::{homogeneous::HomogeneousMedium, Medium};
@@ -96,8 +96,8 @@ impl Default for MediumConfig {
     fn default() -> Self {
         Self {
             medium_type: MediumType::Homogeneous {
-                density: physics::DENSITY_WATER,
-                sound_speed: physics::SOUND_SPEED_WATER,
+                density: acoustic::WATER_DENSITY,
+                sound_speed: acoustic::WATER_SOUND_SPEED,
                 mu_a: 0.0,
                 mu_s_prime: 0.0,
             },
@@ -141,8 +141,8 @@ impl MediumFactory {
     pub fn create_water(grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         let config = MediumConfig {
             medium_type: MediumType::Homogeneous {
-                density: physics::DENSITY_WATER,
-                sound_speed: physics::SOUND_SPEED_WATER,
+                density: acoustic::WATER_DENSITY,
+                sound_speed: acoustic::WATER_SOUND_SPEED,
                 mu_a: 0.0,
                 mu_s_prime: 0.0,
             },
@@ -155,8 +155,8 @@ impl MediumFactory {
     pub fn create_tissue(grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         let config = MediumConfig {
             medium_type: MediumType::Homogeneous {
-                density: physics::DENSITY_TISSUE,
-                sound_speed: physics::SOUND_SPEED_TISSUE,
+                density: acoustic::TISSUE_DENSITY,
+                sound_speed: acoustic::TISSUE_SOUND_SPEED,
                 mu_a: 0.01,      // Typical tissue absorption
                 mu_s_prime: 1.0, // Typical tissue scattering
             },

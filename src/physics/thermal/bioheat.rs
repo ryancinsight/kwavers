@@ -1,6 +1,5 @@
 // thermal/bioheat.rs - Pennes bioheat equation solver
 
-use super::constants;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;

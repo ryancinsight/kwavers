@@ -137,7 +137,8 @@ mod tests {
         use models::ParameterOptimizerModel;
 
         // Create a simple optimizer model
-        let weights = array![[0.5_f32], [0.3_f32], [-0.2_f32]];
+        // Create a model with 1 input and 3 outputs
+        let weights = array![[0.5_f32, 0.3_f32, -0.2_f32]];
         let model = ParameterOptimizerModel::from_weights(weights, None);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();

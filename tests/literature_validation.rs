@@ -118,8 +118,8 @@ fn test_elastic_wave_velocities() {
     let lambda = rho * vp * vp - 2.0 * mu;
 
     // Verify relationships
-    let vp_calc = ((lambda + 2.0 * mu) / rho).sqrt();
-    let vs_calc = (mu / rho).sqrt();
+    let vp_calc = ((lambda + 2.0 * mu) / rho as f64).sqrt();
+    let vs_calc = (mu / rho as f64).sqrt();
 
     assert!((vp_calc - vp).abs() < 1.0, "P-wave velocity mismatch");
     assert!((vs_calc - vs).abs() < 1.0, "S-wave velocity mismatch");

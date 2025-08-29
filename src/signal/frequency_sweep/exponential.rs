@@ -2,7 +2,6 @@
 
 use super::{constants::*, FrequencySweep};
 use crate::signal::Signal;
-use std::f64::consts::E;
 
 /// Exponential frequency sweep
 ///

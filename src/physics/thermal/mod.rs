@@ -6,7 +6,6 @@ pub mod dose;
 pub mod properties;
 pub mod source;
 
-use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::Array3;
 use serde::{Deserialize, Serialize};

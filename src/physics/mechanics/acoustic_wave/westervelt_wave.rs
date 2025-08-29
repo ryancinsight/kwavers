@@ -156,7 +156,7 @@ impl WesterveltWave {
         current_pressure: &ArrayView3<f64>,
     ) -> bool {
         let c_max = medium
-            .sound_speed_array()
+            .sound_speed_array(grid)
             .iter()
             .fold(0.0f64, |acc, &x| acc.max(x));
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
@@ -271,8 +271,8 @@ impl AcousticWaveModel for WesterveltWave {
         }
 
         // --- Get spatially varying medium properties ---
-        let rho_arr = medium.density_array();
-        let c_arr = medium.sound_speed_array();
+        let rho_arr = medium.density_array(grid);
+        let c_arr = medium.sound_speed_array(grid);
         // Viscoelastic specific properties
         let eta_s_arr = medium.shear_viscosity_coeff_array(); // Shear viscosity
         let eta_b_arr = medium.bulk_viscosity_coeff_array(); // Bulk viscosity

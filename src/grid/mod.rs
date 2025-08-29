@@ -18,7 +18,7 @@ pub use coordinates::CoordinateSystem;
 pub use field_ops::{FieldOperations, FieldStatistics};
 pub use kspace::KSpaceCalculator;
 pub use stability::StabilityCalculator;
-pub use structure::{Dimension, Grid};
+pub use structure::{Bounds, Dimension, Grid};
 
 // Extension methods for Grid to provide convenient access and compatibility
 impl Grid {
