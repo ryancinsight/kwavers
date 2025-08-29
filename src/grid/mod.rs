@@ -12,13 +12,21 @@ pub mod field_ops;
 pub mod kspace;
 pub mod stability;
 pub mod structure;
+pub mod structure_proper;  // New robust implementation
+pub mod migration;        // Migration helpers
 
 // Re-export main types for convenience
 pub use coordinates::CoordinateSystem;
 pub use field_ops::{FieldOperations, FieldStatistics};
 pub use kspace::KSpaceCalculator;
 pub use stability::StabilityCalculator;
-pub use structure::{Bounds, Dimension, Grid};
+
+// Use the new proper Grid by default
+pub use structure_proper::{Bounds, Dimension, Grid};
+
+// Keep old Grid available for migration
+pub use structure::Grid as LegacyGrid;
+pub use migration::{GridCompat, SolverCache};
 
 // Extension methods for Grid to provide convenient access and compatibility
 impl Grid {
@@ -77,13 +85,17 @@ impl Grid {
     /// Convert indices to coordinates (compatibility - overloaded method)
     #[inline]
     pub fn indices_to_coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
-        (i as f64 * self.dx, j as f64 * self.dy, k as f64 * self.dz)
+        (
+            i as f64 * self.dx_meters(),
+            j as f64 * self.dy_meters(),
+            k as f64 * self.dz_meters()
+        )
     }
 
     /// Get grid dimensions (compatibility)
     #[inline]
     pub fn dimensions(&self) -> (usize, usize, usize) {
-        (self.nx, self.ny, self.nz)
+        self.dim()
     }
 
     /// Compute kx array (compatibility)
@@ -125,7 +137,7 @@ impl Grid {
     /// Get grid spacing (compatibility)
     #[inline]
     pub fn spacing(&self) -> (f64, f64, f64) {
-        (self.dx, self.dy, self.dz)
+        self.spacing_meters()
     }
 
     /// Get x coordinates (compatibility)
