@@ -10,7 +10,8 @@ pub use localization::{
     LocalizationResult, SensorArray,
 };
 pub use passive_acoustic_mapping::{
-    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin,
+    ArrayGeometry, BeamformingConfig, BeamformingMethod, PAMConfig, PAMPlugin,
+    PassiveAcousticMapper,
 };
 
 use crate::grid::Grid;

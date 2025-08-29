@@ -83,9 +83,7 @@ pub use error::{KwaversError, KwaversResult};
 pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
-pub use sensor::{
-    ArrayGeometry, BeamformingMethod, PAMConfig, PassiveAcousticMappingPlugin, Sensor, SensorData,
-};
+pub use sensor::{ArrayGeometry, BeamformingMethod, PAMConfig, PAMPlugin, Sensor, SensorData};
 pub use source::Source;
 pub use time::Time;
 // Solver exports

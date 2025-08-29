@@ -13,13 +13,13 @@
 //! 3. **Coviello et al. (2015)**: "Passive acoustic mapping utilizing optimal beamforming
 //!    in ultrasound therapy monitoring", J. Acoust. Soc. Am.
 
-pub mod geometry;
 pub mod beamforming;
+pub mod geometry;
 pub mod mapping;
 pub mod plugin;
 
-pub use geometry::{ArrayGeometry, ArrayElement};
-pub use beamforming::{BeamformingMethod, BeamformingConfig, Beamformer};
+pub use beamforming::{Beamformer, BeamformingConfig, BeamformingMethod};
+pub use geometry::{ArrayElement, ArrayGeometry};
 pub use mapping::{PAMConfig, PAMProcessor};
 pub use plugin::PAMPlugin;
 
@@ -37,27 +37,31 @@ impl PassiveAcousticMapper {
     pub fn new(config: PAMConfig, geometry: ArrayGeometry) -> KwaversResult<Self> {
         let beamformer = Beamformer::new(geometry, config.beamforming.clone())?;
         let processor = PAMProcessor::new(config)?;
-        
+
         Ok(Self {
             processor,
             beamformer,
         })
     }
-    
+
     /// Process sensor data to create PAM image
-    pub fn process(&mut self, sensor_data: &Array3<f64>, sample_rate: f64) -> KwaversResult<Array3<f64>> {
+    pub fn process(
+        &mut self,
+        sensor_data: &Array3<f64>,
+        sample_rate: f64,
+    ) -> KwaversResult<Array3<f64>> {
         // Beamform the data
         let beamformed = self.beamformer.beamform(sensor_data, sample_rate)?;
-        
+
         // Process to extract cavitation map
         self.processor.process(&beamformed)
     }
-    
+
     /// Get the current configuration
     pub fn config(&self) -> &PAMConfig {
         self.processor.config()
     }
-    
+
     /// Update configuration
     pub fn set_config(&mut self, config: PAMConfig) -> KwaversResult<()> {
         self.processor.set_config(config.clone())?;
