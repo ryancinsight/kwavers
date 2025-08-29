@@ -31,7 +31,7 @@ impl TransferStatistics {
         self.transfer_time_ms += duration_ms;
         self.num_transfers += 1;
         self.last_transfer_time = Instant::now();
-        
+
         // Calculate bandwidth in GB/s
         if duration_ms > 0.0 {
             let gb = bytes as f32 / 1_073_741_824.0; // 1024^3
@@ -39,7 +39,7 @@ impl TransferStatistics {
             self.bandwidth_gb_per_sec = gb / seconds;
         }
     }
-    
+
     /// Get average transfer size
     pub fn average_transfer_size(&self) -> usize {
         if self.num_transfers > 0 {
@@ -48,7 +48,7 @@ impl TransferStatistics {
             0
         }
     }
-    
+
     /// Get average transfer time
     pub fn average_transfer_time_ms(&self) -> f32 {
         if self.num_transfers > 0 {

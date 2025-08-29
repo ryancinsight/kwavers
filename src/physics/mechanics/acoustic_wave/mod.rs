@@ -108,7 +108,8 @@ pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
         return 0.0;
     }
 
-    let alpha = crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, frequency);
+    let alpha =
+        crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, frequency);
     let c = medium.sound_speed(x, y, z, grid);
     let omega = 2.0 * PI * frequency;
 

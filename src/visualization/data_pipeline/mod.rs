@@ -4,14 +4,14 @@
 //! data to GPU for visualization, with support for various processing operations.
 
 mod operations;
+mod processing;
 mod statistics;
 mod transfer;
-mod processing;
 
 pub use operations::ProcessingOperation;
+pub use processing::{ProcessingConfig, ProcessingStage};
 pub use statistics::TransferStatistics;
 pub use transfer::DataPipeline;
-pub use processing::{ProcessingConfig, ProcessingStage};
 
 // Re-export core types
 pub use transfer::{TransferMode, TransferOptions};

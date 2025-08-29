@@ -56,13 +56,15 @@ impl HybridSolver {
     pub fn update_fields(&mut self, _fields: &mut Array4<f64>, dt: f64) -> KwaversResult<()> {
         // Validate inputs
         if dt <= 0.0 {
-            return Err(KwaversError::InvalidInput("Time step must be positive".to_string()));
+            return Err(KwaversError::InvalidInput(
+                "Time step must be positive".to_string(),
+            ));
         }
-        
+
         // Field update implementation
         // This coordinates PSTD and FDTD updates based on domain decomposition
         // Currently simplified for compilation
-        
+
         Ok(())
     }
     /// Create a new hybrid solver
@@ -177,10 +179,17 @@ impl HybridSolver {
             region.start.2..region.end.2,
         ]);
 
-        // Apply PSTD update
-        // Note: This would need proper integration with PSTD solver's update method
-        debug!("Applying PSTD to region {:?}", region);
-
+        // Apply PSTD update to the region
+        // Convert region view to owned array for PSTD solver
+        let mut region_array = region_fields.to_owned();
+        
+        // Update using PSTD solver
+        self.pstd_solver.update_fields(&mut region_array, medium, dt, t)?;
+        
+        // Copy results back
+        region_fields.assign(&region_array);
+        
+        debug!("Applied PSTD to region {:?}", region);
         Ok(())
     }
 
@@ -201,10 +210,17 @@ impl HybridSolver {
             region.start.2..region.end.2,
         ]);
 
-        // Apply FDTD update
-        // Note: This would need proper integration with FDTD solver's update method
-        debug!("Applying FDTD to region {:?}", region);
-
+        // Apply FDTD update to the region
+        // Convert region view to owned array for FDTD solver
+        let mut region_array = region_fields.to_owned();
+        
+        // Update using FDTD solver
+        self.fdtd_solver.update_fields(&mut region_array, medium, dt, t)?;
+        
+        // Copy results back
+        region_fields.assign(&region_array);
+        
+        debug!("Applied FDTD to region {:?}", region);
         Ok(())
     }
 

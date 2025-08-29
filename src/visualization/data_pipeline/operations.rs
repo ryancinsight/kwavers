@@ -24,7 +24,7 @@ impl ProcessingOperation {
     pub fn requires_preprocessing(&self) -> bool {
         !matches!(self, ProcessingOperation::None)
     }
-    
+
     /// Get the computational cost estimate (1-10 scale)
     pub fn cost_estimate(&self) -> u8 {
         match self {

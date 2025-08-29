@@ -94,6 +94,6 @@ impl Validatable for PstdConfig {
             });
         }
 
-        ValidationResult::from_errors(errors)
+        ValidationResult::from_errors(errors.into_iter().map(|e| e.to_string()).collect())
     }
 }

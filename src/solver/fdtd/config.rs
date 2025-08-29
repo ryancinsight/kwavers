@@ -66,7 +66,7 @@ impl FdtdConfig {
         if errors.is_empty() {
             ValidationResult::success()
         } else {
-            ValidationResult::failure(errors)
+            ValidationResult::from_errors(errors.into_iter().map(|e| e.to_string()).collect())
         }
     }
 }

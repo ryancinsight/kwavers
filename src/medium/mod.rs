@@ -318,7 +318,13 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(self.medium, x, y, z, self.grid),
+                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                            self.medium,
+                            x,
+                            y,
+                            z,
+                            self.grid,
+                        ),
                         position: (x, y, z),
                         indices: (i, j, k),
                     };
@@ -353,7 +359,13 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(self.medium, x, y, z, self.grid),
+                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                            self.medium,
+                            x,
+                            y,
+                            z,
+                            self.grid,
+                        ),
                         position: (x, y, z),
                         indices: (i, j, k),
                     };
