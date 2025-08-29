@@ -4,8 +4,9 @@ pub mod nonlinear; // This will now refer to the new subdirectory
 // Re-export NonlinearWave from the new structure.
 pub use nonlinear::NonlinearWave;
 
+pub mod westervelt;
 pub mod westervelt_wave;
-pub use westervelt_wave::WesterveltWave;
+pub use westervelt::WesterveltWave;
 
 pub mod kuznetsov;
 pub use kuznetsov::{KuznetsovConfig, KuznetsovWave};

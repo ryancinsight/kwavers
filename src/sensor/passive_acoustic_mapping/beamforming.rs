@@ -11,8 +11,8 @@ pub enum BeamformingMethod {
     DelayAndSum,
     /// Time exposure acoustics (TEA)
     TimeExposureAcoustics,
-    /// Robust Capon beamforming
-    RobustCapon { diagonal_loading: f64 },
+    /// Capon beamforming with diagonal loading
+    CaponDiagonalLoading { diagonal_loading: f64 },
     /// MUSIC algorithm
     Music { num_sources: usize },
     /// Eigenspace-based minimum variance
@@ -71,8 +71,8 @@ impl Beamformer {
             BeamformingMethod::TimeExposureAcoustics => {
                 self.time_exposure_acoustics(sensor_data, sample_rate)
             }
-            BeamformingMethod::RobustCapon { diagonal_loading } => {
-                self.robust_capon(sensor_data, sample_rate, diagonal_loading)
+            BeamformingMethod::CaponDiagonalLoading { diagonal_loading } => {
+                self.capon_diagonal_loading(sensor_data, sample_rate, diagonal_loading)
             }
             BeamformingMethod::Music { num_sources } => {
                 self.music_algorithm(sensor_data, sample_rate, num_sources)
@@ -148,8 +148,8 @@ impl Beamformer {
         Ok(result)
     }
 
-    /// Robust Capon beamforming with diagonal loading
-    fn robust_capon(
+    /// Capon beamforming with diagonal loading
+    fn capon_diagonal_loading(
         &self,
         sensor_data: &Array3<f64>,
         sample_rate: f64,
