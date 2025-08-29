@@ -90,6 +90,7 @@ pub mod boundary_stencils;
 pub mod config;
 pub mod finite_difference;
 pub mod interpolation;
+pub mod metrics;
 pub mod plugin;
 pub mod solver;
 pub mod staggered_grid;

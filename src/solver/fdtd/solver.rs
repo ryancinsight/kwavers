@@ -6,12 +6,14 @@
 use crate::boundary::cpml::CPMLBoundary;
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
+use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{Array3, Zip};
-use std::collections::HashMap;
+use std::time::Instant;
 
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;
+use super::metrics::FdtdMetrics;
 use super::staggered_grid::StaggeredGrid;
 
 /// FDTD solver for acoustic wave propagation
@@ -26,7 +28,7 @@ pub struct FdtdSolver {
     /// Finite difference operator
     pub(crate) fd_operator: FiniteDifference,
     /// Performance metrics
-    metrics: HashMap<String, f64>,
+    metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
 }
@@ -53,7 +55,7 @@ impl FdtdSolver {
             grid: grid.clone(),
             staggered: StaggeredGrid::default(),
             fd_operator,
-            metrics: HashMap::new(),
+            metrics: FdtdMetrics::new(),
             cpml_boundary: None,
         })
     }
@@ -250,12 +252,8 @@ impl FdtdSolver {
         let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
 
         // Use theoretically sound CFL limits for guaranteed stability
-        let cfl_limit = match self.config.spatial_order {
-            2 => 1.0 / (3.0_f64).sqrt(), // Theoretical limit: 1/√3 ≈ 0.577
-            4 => 0.50,                   // Conservative value for 4th-order
-            6 => 0.40,                   // Conservative value for 6th-order
-            _ => 1.0 / (3.0_f64).sqrt(), // Default to 2nd-order limit
-        };
+        let spatial_order = SpatialOrder::from_usize(self.config.spatial_order);
+        let cfl_limit = spatial_order.cfl_limit();
 
         self.config.cfl_factor * cfl_limit * min_dx / max_sound_speed
     }
@@ -267,28 +265,12 @@ impl FdtdSolver {
     }
 
     /// Get performance metrics
-    pub fn get_metrics(&self) -> &HashMap<String, f64> {
+    pub fn get_metrics(&self) -> &FdtdMetrics {
         &self.metrics
     }
 
     /// Merge metrics from another solver instance
-    pub fn merge_metrics(&mut self, other_metrics: &HashMap<String, f64>) {
-        for (key, value) in other_metrics {
-            // For most metrics, we'll take the maximum value
-            // This can be customized based on the metric type
-            if key.contains("time") || key.contains("elapsed") {
-                // For time-based metrics, accumulate
-                let current = self.metrics.get(key).copied().unwrap_or(0.0);
-                self.metrics.insert(key.clone(), current + value);
-            } else if key.contains("count") || key.contains("calls") {
-                // For counters, accumulate
-                let current = self.metrics.get(key).copied().unwrap_or(0.0);
-                self.metrics.insert(key.clone(), current + value);
-            } else {
-                // For other metrics (like errors, norms), take the maximum
-                let current = self.metrics.get(key).copied().unwrap_or(0.0);
-                self.metrics.insert(key.clone(), current.max(*value));
-            }
-        }
+    pub fn merge_metrics(&mut self, other_metrics: &FdtdMetrics) {
+        self.metrics.merge(other_metrics);
     }
 }

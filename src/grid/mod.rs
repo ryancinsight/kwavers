@@ -1,11 +1,7 @@
 //! Grid module for spatial discretization
 //!
-//! This module provides a domain-driven structure for grid operations:
-//! - `structure`: Core grid definition and properties
-//! - `coordinates`: Coordinate generation and position conversions
-//! - `kspace`: K-space operations for spectral methods
-//! - `field_ops`: Field array creation and manipulation
-//! - `stability`: Numerical stability and CFL conditions
+//! This module provides the core grid structures and utilities for
+//! defining computational domains and spatial discretization.
 
 pub mod coordinates;
 pub mod field_ops;
@@ -13,78 +9,73 @@ pub mod kspace;
 pub mod stability;
 pub mod structure;
 
-// Re-export main types for convenience
+// Re-exports for convenience
 pub use coordinates::CoordinateSystem;
-pub use field_ops::{FieldOperations, FieldStatistics};
 pub use kspace::KSpaceCalculator;
-pub use stability::StabilityCalculator;
-
 pub use structure::{Bounds, Dimension, Grid};
 
-// Extension methods for Grid to provide convenient access and compatibility
+// Extension methods for Grid (compatibility layer)
 impl Grid {
-    /// Create a zero-initialized field
+    /// Get minimum spacing
     #[inline]
-    pub fn create_field(&self) -> ndarray::Array3<f64> {
-        FieldOperations::create_field(self)
+    pub fn min_spacing(&self) -> f64 {
+        self.dx.min(self.dy).min(self.dz)
     }
 
-    /// Convert position to indices
+    /// Get maximum spacing
     #[inline]
-    pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
-        CoordinateSystem::position_to_indices(self, x, y, z)
+    pub fn max_spacing(&self) -> f64 {
+        self.dx.max(self.dy).max(self.dz)
     }
 
-    /// Get CFL timestep
+    /// Get physical dimensions of the domain
     #[inline]
-    pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {
-        StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
-    }
-
-    /// Get CFL timestep with default safety factor (compatibility)
-    #[inline]
-    pub fn cfl_timestep_default(&self, max_sound_speed: f64) -> f64 {
-        StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
-    }
-
-    /// Get coordinates for a dimension (compatibility)
-    #[inline]
-    pub fn coordinates(&self, dim: Dimension) -> ndarray::Array1<f64> {
-        CoordinateSystem::generate_coordinate_vector(self, dim)
-    }
-
-    /// Get k-squared array (compatibility)
-    #[inline]
-    pub fn k_squared(&self) -> &ndarray::Array3<f64> {
-        KSpaceCalculator::get_k_squared_cached(self)
-    }
-
-    /// Generate k-space arrays (compatibility)
-    #[inline]
-    pub fn generate_k(
-        &self,
-    ) -> (
-        ndarray::Array1<f64>,
-        ndarray::Array1<f64>,
-        ndarray::Array1<f64>,
-    ) {
+    pub fn physical_size(&self) -> (f64, f64, f64) {
         (
-            KSpaceCalculator::generate_kx(self),
-            KSpaceCalculator::generate_ky(self),
-            KSpaceCalculator::generate_kz(self),
+            self.nx as f64 * self.dx,
+            self.ny as f64 * self.dy,
+            self.nz as f64 * self.dz,
         )
     }
 
-    /// Convert indices to coordinates (compatibility - overloaded method)
+    /// Get grid volume
     #[inline]
-    pub fn indices_to_coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
-        (i as f64 * self.dx, j as f64 * self.dy, k as f64 * self.dz)
+    pub fn volume(&self) -> f64 {
+        let (lx, ly, lz) = self.physical_size();
+        lx * ly * lz
     }
 
-    /// Get grid dimensions (compatibility)
+    /// Get cell volume
     #[inline]
-    pub fn dimensions(&self) -> (usize, usize, usize) {
-        (self.nx, self.ny, self.nz)
+    pub fn cell_volume(&self) -> f64 {
+        self.dx * self.dy * self.dz
+    }
+
+    /// Check if a point is inside the grid
+    #[inline]
+    pub fn contains_point(&self, x: f64, y: f64, z: f64) -> bool {
+        let (lx, ly, lz) = self.physical_size();
+        x >= 0.0 && x <= lx && y >= 0.0 && y <= ly && z >= 0.0 && z <= lz
+    }
+
+    /// Get the bounds of the grid
+    #[inline]
+    pub fn bounds(&self) -> Bounds {
+        let (lx, ly, lz) = self.physical_size();
+        Bounds::new([0.0, 0.0, 0.0], [lx, ly, lz])
+    }
+
+    /// Convert coordinates to indices (nearest neighbor)
+    #[inline]
+    pub fn coordinates_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
+        if !self.contains_point(x, y, z) {
+            return None;
+        }
+        Some(
+            ((x / self.dx) as usize,
+             (y / self.dy) as usize,
+             (z / self.dz) as usize)
+        )
     }
 
     /// Compute kx array (compatibility)
@@ -123,27 +114,24 @@ impl Grid {
         KSpaceCalculator::generate_kz(self)
     }
 
-    /// Get grid spacing (compatibility)
-    #[inline]
-    pub fn spacing(&self) -> (f64, f64, f64) {
-        (self.dx, self.dy, self.dz)
-    }
-
     /// Get x coordinates (compatibility)
     #[inline]
     pub fn x_coordinates(&self) -> ndarray::Array1<f64> {
-        CoordinateSystem::generate_x_vector(self)
+        use crate::grid::coordinates::generate_x_vector;
+        generate_x_vector(self)
     }
 
     /// Get y coordinates (compatibility)
     #[inline]
     pub fn y_coordinates(&self) -> ndarray::Array1<f64> {
-        CoordinateSystem::generate_y_vector(self)
+        use crate::grid::coordinates::generate_y_vector;
+        generate_y_vector(self)
     }
 
     /// Get z coordinates (compatibility)
     #[inline]
     pub fn z_coordinates(&self) -> ndarray::Array1<f64> {
-        CoordinateSystem::generate_z_vector(self)
+        use crate::grid::coordinates::generate_z_vector;
+        generate_z_vector(self)
     }
 }
