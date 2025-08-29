@@ -38,6 +38,18 @@ impl FdtdPlugin {
             solver,
         })
     }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 impl crate::physics::plugin::Plugin for FdtdPlugin {
@@ -220,5 +232,17 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
     fn reset(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Initialized;
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

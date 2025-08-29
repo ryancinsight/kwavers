@@ -33,6 +33,18 @@ impl PAMPlugin {
             state: PluginState::Created,
         })
     }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
 impl fmt::Debug for PAMPlugin {
@@ -41,6 +53,18 @@ impl fmt::Debug for PAMPlugin {
             .field("metadata", &self.metadata)
             .field("state", &self.state)
             .finish()
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
@@ -110,5 +134,17 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
         }
 
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
