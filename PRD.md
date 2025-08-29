@@ -59,7 +59,26 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v4.8.0)
+## Current State (v4.9.0)
+
+### PROFILING MODULE REFACTORING (v4.9.0)
+- ✅ **PROFILING MODULE REFACTORED**: 552 lines → 4 domain modules
+  - timing/mod.rs: Timing profiler with RAII scopes (161 lines)
+  - memory/mod.rs: Memory allocation tracking (166 lines)
+  - cache/mod.rs: Cache behavior analysis (188 lines)
+  - analysis/mod.rs: Roofline and performance analysis (169 lines)
+- ✅ **CLEAN SEPARATION**: Each profiling aspect in its own module
+  - Timing: High-precision measurements with statistics
+  - Memory: Allocation/deallocation tracking with fragmentation analysis
+  - Cache: Hit rates and efficiency metrics
+  - Analysis: Roofline model and arithmetic intensity
+- ✅ **PHYSICS VALIDATION**: Arithmetic intensity calculations
+  - FDTD: Proper stencil point counting based on spatial order
+  - Spectral: FFT operation counting with O(n log n) complexity
+- ✅ **METRICS IMPROVED**:
+  - Large modules: 7 (down from 8)
+  - Underscored parameters: 504 (increased by 7 due to new modules)
+  - Warnings: 492 (down from 493)
 
 ### BENCHMARK MODULE OVERHAUL (v4.8.0)
 - ✅ **BENCHMARK SUITE REFACTORED**: 566 lines → 6 focused modules

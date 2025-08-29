@@ -65,19 +65,6 @@ pub(crate) mod mocks {
             1e6
         }
 
-        fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            // B/A parameter for nonlinear acoustics
-            // Water: 5.0, Tissue: 6-9, Fat: 10
-            if self.position_dependent {
-                let (ix, iy, _iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
-                // Vary B/A based on position to simulate tissue heterogeneity
-                let normalized_x = ix as f64 / grid.nx as f64;
-                let normalized_y = iy as f64 / grid.ny as f64;
-                5.0 + 2.0 * normalized_x + 1.5 * normalized_y.sin()
-            } else {
-                5.0 // Water value
-            }
-        }
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
@@ -91,7 +78,7 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
-        fn absorption(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
+        fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
             // Power law absorption: α = α₀ * f^y
             const ALPHA_0: f64 = 0.5; // dB/cm/MHz
             const POWER_LAW_EXPONENT: f64 = 1.1;
@@ -109,11 +96,27 @@ pub(crate) mod mocks {
         }
 
         fn attenuation(&self, x: f64, y: f64, z: f64, frequency: f64, grid: &Grid) -> f64 {
-            self.absorption(x, y, z, frequency, grid)
+            self.absorption_coefficient(x, y, z, grid, frequency)
         }
 
         fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            self.nonlinearity_coefficient(x, y, z, grid)
+            // B/A parameter for nonlinear acoustics
+            // Water: 5.0, Tissue: 6-9, Fat: 10
+            if self.position_dependent {
+                let (ix, iy, _iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
+                // Vary B/A based on position to simulate tissue heterogeneity
+                let normalized_x = ix as f64 / grid.nx as f64;
+                let normalized_y = iy as f64 / grid.ny as f64;
+                5.0 + 2.0 * normalized_x + 1.5 * normalized_y.sin()
+            } else {
+                5.0 // Water value
+            }
+        }
+        
+        fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+            // Beta = 1 + B/(2A)
+            let b_over_a = self.nonlinearity_parameter(x, y, z, grid);
+            1.0 + b_over_a / 2.0
         }
 
         fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -256,17 +259,7 @@ pub(crate) mod mocks {
             }
         }
 
-        fn temperature(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            310.15 // 37°C body temperature
-        }
 
-        fn perfusion_rate(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            0.0 // No perfusion in this mock
-        }
-
-        fn metabolic_heat_rate(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            0.0 // No metabolic heat in this mock
-        }
     }
 
     // Additional trait implementations omitted for brevity
