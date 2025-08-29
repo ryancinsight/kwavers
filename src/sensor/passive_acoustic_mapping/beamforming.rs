@@ -217,8 +217,8 @@ impl Beamformer {
                 + (pos[2] - focal_point[2]).powi(2))
             .sqrt();
 
-            // Assume sound speed of 1500 m/s
-            let delay = distance / 1500.0;
+            // Use water sound speed as default
+            let delay = distance / crate::constants::acoustic::WATER_SOUND_SPEED;
             delays.push(delay);
         }
 
