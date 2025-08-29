@@ -218,15 +218,15 @@ impl WesterveltFdtd {
         let nonlinear_term = self.calculate_nonlinear_term(dt, grid);
 
         // Create new pressure array
-        let mut pressure_new = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut pressure_updated = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Update pressure using Westervelt equation
-        Zip::indexed(&mut pressure_new)
+        Zip::indexed(&mut pressure_updated)
             .and(&self.pressure)
             .and(&self.pressure_prev)
             .and(&self.laplacian)
             .and(&nonlinear_term)
-            .for_each(|(i, j, k), p_new, &p, &p_prev, &lap, &nl| {
+            .for_each(|(i, j, k), p_updated, &p, &p_prev, &lap, &nl| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -256,11 +256,11 @@ impl WesterveltFdtd {
                 };
 
                 // Update equation: p^{n+1} = 2p^n - p^{n-1} + linear + nonlinear + absorption
-                *p_new = 2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term;
+                *p_updated = 2.0 * p - p_prev + linear_term - nl_coeff * nl - absorption_term;
 
                 // Clamp pressure to prevent instability
-                if p_new.abs() > self.config.max_pressure {
-                    *p_new = p_new.signum() * self.config.max_pressure;
+                if p_updated.abs() > self.config.max_pressure {
+                    *p_updated = p_updated.signum() * self.config.max_pressure;
                 }
             });
 
@@ -276,7 +276,7 @@ impl WesterveltFdtd {
                     let j = ((position.1 / grid.dy).round() as usize).min(grid.ny - 1);
                     let k = ((position.2 / grid.dz).round() as usize).min(grid.nz - 1);
 
-                    pressure_new[[i, j, k]] += amplitude * dt;
+                    pressure_updated[[i, j, k]] += amplitude * dt;
                 }
             }
         }
@@ -286,7 +286,7 @@ impl WesterveltFdtd {
             self.pressure_prev2 = Some(self.pressure_prev.clone());
         }
         self.pressure_prev = self.pressure.clone();
-        self.pressure = pressure_new;
+        self.pressure = pressure_updated;
 
         Ok(())
     }

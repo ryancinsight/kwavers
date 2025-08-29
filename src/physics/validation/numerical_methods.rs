@@ -185,8 +185,8 @@ mod tests {
 
         // Verify stability of multirate scheme
         let n = 32;
-        let steps_fast = 1000;
-        let steps_slow = (steps_fast as f64 / time_scale_ratio) as usize;
+        let steps_acoustic = 1000;
+        let steps_thermal = (steps_acoustic as f64 / time_scale_ratio) as usize;
 
         let mut acoustic_state = Array3::zeros((n, n, n));
         let mut thermal_state = Array3::zeros((n, n, n));
@@ -210,7 +210,7 @@ mod tests {
 
         // Multirate evolution with proper time stepping
         let dt_slow = dt_thermal;
-        for slow_step in 0..steps_slow {
+        for slow_step in 0..steps_thermal {
             // Multiple fast steps per slow step
             let fast_per_slow = (time_scale_ratio as usize).max(1);
 
@@ -221,14 +221,15 @@ mod tests {
                 let acoustic_1d = Array1::from_iter(acoustic_3d.iter().cloned());
                 let laplacian_1d = compute_laplacian_1d(&acoustic_1d, dx);
                 let c_squared = ACOUSTIC_SPEED * ACOUSTIC_SPEED;
-                let dt_fast = dt_acoustic;
+                let dt_acoustic_step = dt_acoustic;
 
                 // Update acoustic state
                 let mut idx = 0;
                 for i in 0..n {
                     for j in 0..n {
                         for k in 0..n {
-                            acoustic_state[[i, j, k]] += dt_fast * c_squared * laplacian_1d[idx];
+                            acoustic_state[[i, j, k]] +=
+                                dt_acoustic_step * c_squared * laplacian_1d[idx];
                             idx += 1;
                         }
                     }

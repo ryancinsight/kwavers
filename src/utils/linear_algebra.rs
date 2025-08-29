@@ -119,9 +119,9 @@ impl LinearAlgebra {
 
         // QR iterations for eigenvalue computation
         for _ in 0..tolerance::MAX_ITERATIONS {
-            let (q_new, r) = Self::qr_decomposition(&a)?;
-            a = r.dot(&q_new);
-            q = q.dot(&q_new);
+            let (q_iteration, r) = Self::qr_decomposition(&a)?;
+            a = r.dot(&q_iteration);
+            q = q.dot(&q_iteration);
 
             // Check for convergence using off-diagonal norm
             let mut converged = true;
