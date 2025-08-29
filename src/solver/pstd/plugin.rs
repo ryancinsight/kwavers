@@ -40,7 +40,7 @@ impl PstdPlugin {
     }
 }
 
-impl PhysicsPlugin for PstdPlugin {
+impl crate::physics::plugin::Plugin for PstdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

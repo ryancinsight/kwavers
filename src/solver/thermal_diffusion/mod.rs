@@ -120,7 +120,7 @@ impl ThermalDiffusionPlugin {
     }
 }
 
-impl PhysicsPlugin for ThermalDiffusionPlugin {
+impl crate::physics::plugin::Plugin for ThermalDiffusionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

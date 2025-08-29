@@ -44,7 +44,7 @@ impl fmt::Debug for PAMPlugin {
     }
 }
 
-impl PhysicsPlugin for PAMPlugin {
+impl crate::physics::plugin::Plugin for PAMPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

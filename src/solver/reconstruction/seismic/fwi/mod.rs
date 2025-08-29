@@ -110,28 +110,14 @@ impl FullWaveformInversion {
     }
 }
 
-impl Reconstructor for FullWaveformInversion {
-    fn reconstruct(
-        &mut self,
-        measurements: &Array3<f64>,
-        grid: &Grid,
-    ) -> KwaversResult<Array3<f64>> {
-        // Convert 3D measurements to 2D seismic data format
-        let seismic_data = measurements.mean_axis(ndarray::Axis(2)).unwrap();
-
-        // Run FWI iterations
-        for _ in 0..self.config.max_iterations {
-            self.iterate(&seismic_data)?;
-        }
-
-        Ok(self.velocity_model.clone())
+impl FullWaveformInversion {
+    /// Get configuration
+    pub fn get_config(&self) -> &SeismicImagingConfig {
+        &self.config
     }
 
-    fn get_config(&self) -> &ReconstructionConfig {
-        &self.config.base_config
-    }
-
-    fn set_config(&mut self, config: ReconstructionConfig) {
-        self.config.base_config = config;
+    /// Set configuration
+    pub fn set_config(&mut self, config: SeismicImagingConfig) {
+        self.config = config;
     }
 }

@@ -40,7 +40,7 @@ impl FdtdPlugin {
     }
 }
 
-impl PhysicsPlugin for FdtdPlugin {
+impl crate::physics::plugin::Plugin for FdtdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

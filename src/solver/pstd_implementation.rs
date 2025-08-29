@@ -363,7 +363,7 @@ fn sinc(x: f64) -> f64 {
 }
 
 // PhysicsPlugin trait implementation
-impl PhysicsPlugin for PstdSolver {
+impl crate::physics::plugin::Plugin for PstdSolver {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

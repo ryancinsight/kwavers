@@ -85,14 +85,14 @@ impl WavefieldModeler {
                 }
             }
 
-                        // Y boundaries
+            // Y boundaries
             for ii in 0..nx {
                 for k in 0..nz {
                     wavefield[[ii, i, k]] *= (-damping).exp();
                     wavefield[[ii, ny - 1 - i, k]] *= (-damping).exp();
                 }
             }
-            
+
             // Z boundaries
             for ii in 0..nx {
                 for j in 0..ny {

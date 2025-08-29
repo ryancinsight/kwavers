@@ -13,7 +13,7 @@ pub trait ExecutionStrategy: Send + Sync {
     /// Execute a collection of plugins
     fn execute(
         &self,
-        plugins: &mut [Box<dyn PhysicsPlugin>],
+        plugins: &mut [Box<dyn Plugin>],
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
@@ -30,7 +30,7 @@ pub struct SequentialStrategy;
 impl ExecutionStrategy for SequentialStrategy {
     fn execute(
         &self,
-        plugins: &mut [Box<dyn PhysicsPlugin>],
+        plugins: &mut [Box<dyn Plugin>],
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
@@ -42,6 +42,41 @@ impl ExecutionStrategy for SequentialStrategy {
             plugin.update(fields, grid, medium, dt, t, context)?;
         }
         Ok(())
+    }
+}
+
+/// Plugin executor that manages plugin execution
+#[derive(Debug)]
+pub struct PluginExecutor {
+    strategy: Box<dyn ExecutionStrategy>,
+}
+
+impl PluginExecutor {
+    /// Create a new plugin executor with sequential strategy
+    pub fn new() -> Self {
+        Self {
+            strategy: Box::new(SequentialStrategy),
+        }
+    }
+
+    /// Create with a specific strategy
+    pub fn with_strategy(strategy: Box<dyn ExecutionStrategy>) -> Self {
+        Self { strategy }
+    }
+
+    /// Execute plugins
+    pub fn execute(
+        &self,
+        plugins: &mut [Box<dyn Plugin>],
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()> {
+        self.strategy
+            .execute(plugins, fields, grid, medium, dt, t, context)
     }
 }
 
@@ -76,7 +111,7 @@ impl Default for ParallelStrategy {
 impl ExecutionStrategy for ParallelStrategy {
     fn execute(
         &self,
-        plugins: &mut [Box<dyn PhysicsPlugin>],
+        plugins: &mut [Box<dyn Plugin>],
         fields: &mut Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,

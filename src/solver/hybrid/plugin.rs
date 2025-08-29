@@ -33,7 +33,7 @@ impl HybridPlugin {
     }
 }
 
-impl PhysicsPlugin for HybridPlugin {
+impl crate::physics::plugin::Plugin for HybridPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

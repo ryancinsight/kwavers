@@ -119,7 +119,7 @@ impl AcousticWavePlugin {
     }
 }
 
-impl PhysicsPlugin for AcousticWavePlugin {
+impl Plugin for AcousticWavePlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }

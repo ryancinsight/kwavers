@@ -18,13 +18,14 @@ pub mod transducer_field;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::Array3;
+use crate::physics::field_mapping::UnifiedFieldType;
+use ndarray::{Array3, Array4};
 use std::any::Any;
 use std::fmt::Debug;
 
 pub use acoustic_wave_plugin::AcousticWavePlugin;
 pub use elastic_wave_plugin::ElasticWavePlugin;
-pub use execution::PluginExecutor;
+pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
 pub use factory::PluginFactory;
 pub use kzk_solver::{FrequencyOperator, KzkSolverPlugin};
 pub use manager::PluginManager;
@@ -77,18 +78,6 @@ pub type FieldAccessor = PluginFields;
 
 /// Core trait that all plugins must implement
 pub trait Plugin: Debug + Send + Sync {
-    /// Initialize the plugin with configuration
-    fn initialize(&mut self, config: &PluginConfig) -> KwaversResult<()>;
-
-    /// Execute the plugin's main functionality
-    fn execute(
-        &mut self,
-        fields: &mut PluginFields,
-        grid: &Grid,
-        medium: &dyn Medium,
-        time_step: f64,
-    ) -> KwaversResult<()>;
-
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
 
@@ -98,6 +87,43 @@ pub trait Plugin: Debug + Send + Sync {
     /// Set plugin state
     fn set_state(&mut self, state: PluginState);
 
+    /// Get required fields for this plugin
+    fn required_fields(&self) -> Vec<UnifiedFieldType>;
+
+    /// Get fields provided by this plugin
+    fn provided_fields(&self) -> Vec<UnifiedFieldType>;
+
+    /// Update the plugin with current fields
+    fn update(
+        &mut self,
+        fields: &mut Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        t: f64,
+        context: &PluginContext,
+    ) -> KwaversResult<()>;
+
+    /// Initialize the plugin with configuration
+    fn initialize(&mut self, config: &PluginConfig) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    /// Finalize the plugin
+    fn finalize(&mut self) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    /// Reset plugin state
+    fn reset(&mut self) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    /// Get diagnostic information
+    fn diagnostics(&self) -> String {
+        format!("Plugin: {:?}", self.metadata())
+    }
+
     /// Get plugin priority
     fn priority(&self) -> PluginPriority {
         PluginPriority::Normal
@@ -106,11 +132,6 @@ pub trait Plugin: Debug + Send + Sync {
     /// Check if plugin is compatible with another plugin
     fn is_compatible_with(&self, other: &dyn Plugin) -> bool {
         true
-    }
-
-    /// Clean up resources when plugin is stopped
-    fn cleanup(&mut self) -> KwaversResult<()> {
-        Ok(())
     }
 
     /// Convert to Any for downcasting
