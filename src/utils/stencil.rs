@@ -125,8 +125,8 @@ fn gradient_3d_order2<T: StencilValue>(
 fn gradient_3d_order4<T: StencilValue>(
     input: ArrayView3<T>,
     mut grad_x: ArrayViewMut3<T>,
-    grad_y: ArrayViewMut3<T>,
-    grad_z: ArrayViewMut3<T>,
+    mut grad_y: ArrayViewMut3<T>,
+    mut grad_z: ArrayViewMut3<T>,
     dx_inv: f64,
     dy_inv: f64,
     dz_inv: f64,
@@ -150,7 +150,31 @@ fn gradient_3d_order4<T: StencilValue>(
         }
     }
 
-    // Similar for Y and Z...
+    // Y-gradient (interior points only for 4th order)
+    for i in 0..nx {
+        for j in 2..ny - 2 {
+            for k in 0..nz {
+                let val = input[[i, j + 2, k]].mul_f64(C2)
+                    + input[[i, j + 1, k]].mul_f64(C1)
+                    + input[[i, j - 1, k]].mul_f64(-C1)
+                    + input[[i, j - 2, k]].mul_f64(-C2);
+                grad_y[[i, j, k]] = val.mul_f64(dy_inv);
+            }
+        }
+    }
+
+    // Z-gradient (interior points only for 4th order)
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 2..nz - 2 {
+                let val = input[[i, j, k + 2]].mul_f64(C2)
+                    + input[[i, j, k + 1]].mul_f64(C1)
+                    + input[[i, j, k - 1]].mul_f64(-C1)
+                    + input[[i, j, k - 2]].mul_f64(-C2);
+                grad_z[[i, j, k]] = val.mul_f64(dz_inv);
+            }
+        }
+    }
 }
 
 /// Generic stencil application with compile-time optimization

@@ -215,7 +215,7 @@ impl LinearSolver {
         let mut t = 1.0;
 
         for _iter in 0..self.max_iterations {
-            let x_old = x.clone();
+            let x_previous = x.clone();
 
             // Gradient step
             let gradient = ata.dot(&y) - &atb;
@@ -225,9 +225,9 @@ impl LinearSolver {
             x = self.soft_threshold(&x_grad, lambda * step_size);
 
             // FISTA momentum update
-            let t_new = (1.0 + (1.0_f64 + 4.0 * t * t).sqrt()) / 2.0;
-            y = &x + ((t - 1.0) / t_new) * (&x - &x_old);
-            t = t_new;
+            let t_next = (1.0 + (1.0_f64 + 4.0 * t * t).sqrt()) / 2.0;
+            y = &x + ((t - 1.0) / t_next) * (&x - &x_previous);
+            t = t_next;
 
             // Check convergence
             let residual = a.dot(&x) - &b;

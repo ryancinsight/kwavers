@@ -1,6 +1,6 @@
 //! Focus finding and beam width calculations
 
-use crate::error::KwaversResult;
+use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 use ndarray::{Array1, ArrayView3};
 
@@ -73,7 +73,13 @@ pub fn find_focal_plane(
                     }
                 }
             }
-            _ => unreachable!(),
+            _ => {
+                // Invalid axis - return error
+                return Err(KwaversError::InvalidInput(format!(
+                    "Invalid axis {} for focus finding, expected 0, 1, or 2",
+                    axis
+                )));
+            }
         }
 
         if slice_energy > max_energy {

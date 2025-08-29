@@ -127,7 +127,7 @@ impl<'a> SnellLawCalculator<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::optics::{
+    use crate::constants::optical::{
         GLASS_REFRACTIVE_INDEX, SPEED_OF_LIGHT, WATER_REFRACTIVE_INDEX,
     };
     use crate::physics::wave_propagation::{InterfaceType, MediumProperties};

@@ -6,6 +6,12 @@ pub const VACUUM_REFRACTIVE_INDEX: f64 = 1.0;
 /// Refractive index of water at 20°C
 pub const WATER_REFRACTIVE_INDEX: f64 = 1.333;
 
+/// Glass refractive index (typical optical glass)
+pub const GLASS_REFRACTIVE_INDEX: f64 = 1.52;
+
+/// Speed of light in vacuum (m/s)
+pub const SPEED_OF_LIGHT: f64 = 299_792_458.0;
+
 /// Refractive index of tissue (average)
 pub const TISSUE_REFRACTIVE_INDEX: f64 = 1.4;
 
