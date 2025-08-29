@@ -76,7 +76,7 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
         let focus_target = (0.0, 0.0, depth);
         array.set_beamforming(BeamformingMode::Focus {
             target: focus_target,
-        })?;
+        });
 
         let delays = array.element_delays();
         let max_delay = delays.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
@@ -131,7 +131,7 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
         let theta = angle_deg.to_radians();
         let phi = 0.0; // Steering in x-z plane
 
-        array.set_beamforming(BeamformingMode::Steer { theta, phi })?;
+        array.set_beamforming(BeamformingMode::Steer { theta, phi });
 
         let delays = array.element_delays();
         let delay_gradient = (delays[delays.len() - 1] - delays[0]) / (delays.len() - 1) as f64;
@@ -212,7 +212,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     }
     array.set_beamforming(BeamformingMode::Custom {
         delays: dual_focus_delays.clone(),
-    })?;
+    });
     println!(
         "    Applied {} custom delays for dual focus",
         dual_focus_delays.len()
@@ -229,7 +229,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     }
     array.set_beamforming(BeamformingMode::Custom {
         delays: gaussian_delays.clone(),
-    })?;
+    });
     println!("    Applied Gaussian-weighted linear phase pattern");
 
     // Pattern 3: Sinusoidal phase pattern
@@ -274,7 +274,7 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
         let focus_target = (0.0, 0.0, 50e-3);
         array.set_beamforming(BeamformingMode::Focus {
             target: focus_target,
-        })?;
+        });
 
         // Calculate source term at focus point
         let source_at_focus =

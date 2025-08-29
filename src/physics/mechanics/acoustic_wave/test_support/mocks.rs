@@ -266,6 +266,67 @@ pub(crate) mod mocks {
         }
     }
 
-    // Additional trait implementations omitted for brevity
-    // but would include OpticalProperties, ViscousProperties, BubbleProperties
+    impl crate::medium::viscous::ViscousProperties for HeterogeneousMediumMock {
+        fn viscosity(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.001 // Pa·s (water at 20°C)
+        }
+    }
+
+    impl crate::medium::optical::OpticalProperties for HeterogeneousMediumMock {
+        fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.01 // 1/m
+        }
+
+        fn optical_scattering_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            10.0 // 1/m
+        }
+    }
+
+    impl crate::medium::thermal::TemperatureState for HeterogeneousMediumMock {
+        fn temperature(&self) -> Array3<f64> {
+            self.density.clone() // Return a clone for test
+        }
+
+        fn update_temperature(&mut self, _new_temperature: &Array3<f64>) {
+            // No-op for test
+        }
+    }
+
+    impl crate::medium::bubble::BubbleProperties for HeterogeneousMediumMock {
+        fn surface_tension(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            0.0728 // N/m for water
+        }
+
+        fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            101325.0 // Pa (1 atm)
+        }
+
+        fn vapor_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2338.0 // Pa for water at 20°C
+        }
+
+        fn polytropic_index(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            1.4 // Air
+        }
+
+        fn gas_diffusion_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            2e-9 // m²/s for air in water
+        }
+    }
+
+    impl crate::medium::bubble::BubbleState for HeterogeneousMediumMock {
+        fn bubble_radius(&self) -> &Array3<f64> {
+            &self.bubble_radius
+        }
+
+        fn bubble_velocity(&self) -> &Array3<f64> {
+            &self.bubble_radius // Reuse for simplicity
+        }
+
+        fn update_bubble_state(&mut self, _radius: &Array3<f64>, _velocity: &Array3<f64>) {
+            // No-op for test
+        }
+    }
+
+    impl crate::medium::composite::Medium for HeterogeneousMediumMock {}
 }
