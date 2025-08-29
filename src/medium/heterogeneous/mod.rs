@@ -1,5 +1,6 @@
 //! Heterogeneous medium module with spatially varying properties
 
+pub mod constants;
 pub mod implementation;
 pub mod tissue;
 

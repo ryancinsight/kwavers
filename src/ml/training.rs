@@ -43,7 +43,7 @@ impl TrainingPipeline {
         let (label_samples, _, _) = labels.dim();
         if label_samples != samples {
             return Err(KwaversError::Validation(
-                crate::error::ValidationError::RangeValidation {
+                crate::error::ValidationError::OutOfRange {
                     field: "labels.samples".to_string(),
                     value: label_samples.to_string(),
                     min: samples.to_string(),

@@ -125,7 +125,7 @@ impl LaplacianOperator {
 
         if input.dim() != output.dim() {
             return Err(crate::error::KwaversError::Grid(
-                crate::error::GridError::InvalidDimensions {
+                crate::error::GridError::TooSmall {
                     nx: output.dim().0,
                     ny: output.dim().1,
                     nz: output.dim().2,

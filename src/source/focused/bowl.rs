@@ -175,7 +175,7 @@ impl BowlTransducer {
 
     /// Generate source distribution on grid
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut source = grid.create_field();
+        let mut source = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let omega = 2.0 * PI * self.config.frequency;
 
         // Calculate phase delays for focusing

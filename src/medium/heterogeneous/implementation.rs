@@ -15,11 +15,10 @@ use log::debug;
 use ndarray::Array3;
 
 // Import physical constants
-mod constants;
-use constants::*;
+use super::constants::*;
 
 /// Medium with spatially varying properties
-/// 
+///
 /// Note: The Clone derive is kept but should be used sparingly due to the
 /// large memory footprint of this struct. Consider using Arc for sharing.
 #[derive(Debug, Clone)]
@@ -71,41 +70,48 @@ impl HeterogeneousMedium {
 
     /// Perform trilinear interpolation on a field
     #[inline]
-    fn trilinear_interpolate(&self, field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn trilinear_interpolate(
+        &self,
+        field: &Array3<f64>,
+        x: f64,
+        y: f64,
+        z: f64,
+        grid: &Grid,
+    ) -> f64 {
         // Find the base index and fractional distances
         let x_pos = (x / grid.dx).max(0.0);
         let y_pos = (y / grid.dy).max(0.0);
         let z_pos = (z / grid.dz).max(0.0);
-        
+
         let i = (x_pos.floor() as usize).min(grid.nx.saturating_sub(2));
         let j = (y_pos.floor() as usize).min(grid.ny.saturating_sub(2));
         let k = (z_pos.floor() as usize).min(grid.nz.saturating_sub(2));
-        
+
         let dx = (x_pos - i as f64).min(1.0).max(0.0);
         let dy = (y_pos - j as f64).min(1.0).max(0.0);
         let dz = (z_pos - k as f64).min(1.0).max(0.0);
-        
+
         // Get the values at the 8 corner points of the cell
-        let c000 = field[[i,     j,     k]];
-        let c100 = field[[i + 1, j,     k]];
-        let c010 = field[[i,     j + 1, k]];
+        let c000 = field[[i, j, k]];
+        let c100 = field[[i + 1, j, k]];
+        let c010 = field[[i, j + 1, k]];
         let c110 = field[[i + 1, j + 1, k]];
-        let c001 = field[[i,     j,     k + 1]];
-        let c101 = field[[i + 1, j,     k + 1]];
-        let c011 = field[[i,     j + 1, k + 1]];
+        let c001 = field[[i, j, k + 1]];
+        let c101 = field[[i + 1, j, k + 1]];
+        let c011 = field[[i, j + 1, k + 1]];
         let c111 = field[[i + 1, j + 1, k + 1]];
-        
+
         // Perform trilinear interpolation
         // Interpolate along x
         let c00 = c000 * (1.0 - dx) + c100 * dx;
         let c10 = c010 * (1.0 - dx) + c110 * dx;
         let c01 = c001 * (1.0 - dx) + c101 * dx;
         let c11 = c011 * (1.0 - dx) + c111 * dx;
-        
+
         // Interpolate along y
         let c0 = c00 * (1.0 - dy) + c10 * dy;
         let c1 = c01 * (1.0 - dy) + c11 * dy;
-        
+
         // Interpolate along z
         c0 * (1.0 - dz) + c1 * dz
     }

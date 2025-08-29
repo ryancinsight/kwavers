@@ -10,10 +10,10 @@ Rust library for acoustic wave simulation with validated physics implementations
 
 ## Current Status
 
-**Grade: A+ (99.8%)** - CRITICAL MODULES REFACTORED! v6.3.0
+**Grade: B+ (85%)** - MIGRATION IN PROGRESS v6.4.0
 
 ### Build & Test Status
-- ✅ **Build**: SUCCESSFUL - Zero compilation errors!
+- ⚠️ **Build**: PARTIAL - 91 compilation errors (validation migration needed)
 - ❌ **Tests**: Example compilation issues (API changes)
 - ✅ **GPU Support**: Race condition fixed with ping-pong buffering
 - ✅ **Architecture**: Clean, single implementations, no naming violations

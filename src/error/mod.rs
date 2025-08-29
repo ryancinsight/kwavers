@@ -36,7 +36,7 @@ pub use validation::ValidationError;
 use thiserror::Error;
 
 /// Main error type for kwavers operations
-/// 
+///
 /// This enum uses thiserror for automatic, correct implementations of
 /// Display and Error traits, preserving the full error chain.
 #[derive(Debug, Error)]
@@ -44,56 +44,56 @@ pub enum KwaversError {
     /// Grid-related errors
     #[error(transparent)]
     Grid(#[from] GridError),
-    
+
     /// Medium-related errors
     #[error(transparent)]
     Medium(#[from] MediumError),
-    
+
     /// Physics simulation errors
     #[error(transparent)]
     Physics(#[from] PhysicsError),
-    
+
     /// Data I/O and format errors
     #[error(transparent)]
     Data(#[from] DataError),
-    
+
     /// Configuration errors
     #[error(transparent)]
     Config(#[from] ConfigError),
-    
+
     /// Numerical computation errors
     #[error(transparent)]
     Numerical(#[from] NumericalError),
-    
+
     /// Field registry errors
     #[error(transparent)]
     Field(#[from] FieldError),
-    
+
     /// System errors
     #[error(transparent)]
     System(#[from] SystemError),
-    
+
     /// Validation errors
     #[error(transparent)]
     Validation(#[from] ValidationError),
-    
+
     /// Standard I/O errors
     #[error("I/O error")]
     Io(#[from] std::io::Error),
-    
+
     /// NIFTI format errors
     #[cfg(feature = "nifti")]
     #[error("NIFTI format error")]
     Nifti(#[from] nifti::error::NiftiError),
-    
+
     /// Feature not yet implemented
     #[error("Feature not yet implemented: {0}")]
     NotImplemented(String),
-    
+
     /// GPU computation errors
     #[error("GPU error: {0}")]
     GpuError(String),
-    
+
     /// Invalid input (for backward compatibility, prefer specific error types)
     #[error("Invalid input: {0}")]
     InvalidInput(String),

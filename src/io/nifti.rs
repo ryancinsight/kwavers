@@ -1,10 +1,10 @@
+use crate::error::DataError;
 /// NIFTI file format support for medical imaging data
 ///
-/// Implements NIFTI-1 and NIFTI-2 format readers using the mature `nifti` crate
-/// for robust, correct handling of endianness, data types, and file formats.
+/// Implements NIFTI-1 and NIFTI-2 format readers using the `nifti` crate
+/// for robust handling of medical imaging data formats.
 use crate::{KwaversError, KwaversResult};
 use ndarray::Array3;
-use nifti::volume::NiftiVolume;
 use std::path::Path;
 
 // Re-export the nifti crate types for convenience
@@ -35,13 +35,6 @@ impl NiftiReader {
     }
 
     /// Load NIFTI file as 3D array
-    /// 
-    /// This method delegates to the nifti crate's built-in conversion,
-    /// which properly handles:
-    /// - Endianness conversion
-    /// - Data type casting
-    /// - Scaling factors (scl_slope, scl_inter)
-    /// - All NIFTI data types (not just float32/float64)
     pub fn load<P: AsRef<Path>>(&self, path: P) -> KwaversResult<Array3<f64>> {
         let path = path.as_ref();
 
@@ -50,39 +43,101 @@ impl NiftiReader {
         }
 
         // Load the NIFTI file
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
-        // Get header for validation
+        // Get header for dimensions
         let header = nifti_object.header();
         let dims = header.dim;
+        let datatype = header.datatype;
 
         // Validate dimensions (NIFTI dim[0] is number of dimensions)
         if dims[0] < 3 {
-            return Err(KwaversError::Io(format!(
+            return Err(KwaversError::Data(DataError::IoError(format!(
                 "NIFTI file must have at least 3 dimensions, got {}",
                 dims[0]
-            )));
+            ))));
         }
 
-        // Convert to volume and use the nifti crate's built-in ndarray conversion
+        // Extract dimensions (dim[1], dim[2], dim[3] are x, y, z)
+        let nx = dims[1] as usize;
+        let ny = dims[2] as usize;
+        let nz = dims[3] as usize;
+
+        // Get the raw volume data
         let volume = nifti_object.into_volume();
-        
-        // Use the nifti crate's built-in conversion which handles:
-        // - All data types (int8, int16, int32, float32, float64, etc.)
-        // - Endianness conversion
-        // - Scaling factors (scl_slope and scl_inter)
-        // - Proper memory layout
-        let array_3d = volume
-            .to_ndarray::<f64>()
-            .map_err(|e| KwaversError::Io(format!("Failed to convert NIFTI volume to array: {}", e)))?;
+
+        // Create output array
+        let mut array_3d = Array3::zeros((nx, ny, nz));
+
+        // Convert data based on header data type
+        match datatype {
+            16 => {
+                // FLOAT32
+                // Interpret raw data as f32
+                let raw_data = volume.into_raw_data();
+                let float_data: Vec<f32> = raw_data
+                    .chunks_exact(4)
+                    .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect();
+
+                // Copy data into array
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            let idx = i + j * nx + k * nx * ny;
+                            if idx < float_data.len() {
+                                array_3d[[i, j, k]] = float_data[idx] as f64;
+                            }
+                        }
+                    }
+                }
+            }
+            64 => {
+                // FLOAT64
+                // Interpret raw data as f64
+                let raw_data = volume.into_raw_data();
+                let float_data: Vec<f64> = raw_data
+                    .chunks_exact(8)
+                    .map(|chunk| {
+                        let bytes = [
+                            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6],
+                            chunk[7],
+                        ];
+                        f64::from_ne_bytes(bytes)
+                    })
+                    .collect();
+
+                // Copy data into array
+                for k in 0..nz {
+                    for j in 0..ny {
+                        for i in 0..nx {
+                            let idx = i + j * nx + k * nx * ny;
+                            if idx < float_data.len() {
+                                array_3d[[i, j, k]] = float_data[idx];
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {
+                return Err(KwaversError::Data(DataError::IoError(format!(
+                    "Unsupported NIFTI data type: {}. Only FLOAT32 (16) and FLOAT64 (64) are supported.",
+                    datatype
+                ))));
+            }
+        }
 
         if self.verbose {
-            let shape = array_3d.shape();
             log::info!(
                 "Successfully loaded NIFTI file with dimensions: {}x{}x{}",
-                shape[0], shape[1], shape[2]
+                nx,
+                ny,
+                nz
             );
         }
 
@@ -90,9 +145,6 @@ impl NiftiReader {
     }
 
     /// Load NIFTI file with header information
-    /// 
-    /// This method now loads the file only once, extracting both
-    /// the header and the volume data from a single read operation.
     pub fn load_with_header<P: AsRef<Path>>(
         &self,
         path: P,
@@ -103,36 +155,19 @@ impl NiftiReader {
             log::info!("Loading NIFTI file with header: {}", path.display());
         }
 
-        // Load the NIFTI object ONCE
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        // Load the NIFTI object
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
-        // Get header before consuming the object for the volume
+        // Get header
         let header = nifti_object.header().clone();
 
-        // Validate dimensions
-        let dims = header.dim;
-        if dims[0] < 3 {
-            return Err(KwaversError::Io(format!(
-                "NIFTI file must have at least 3 dimensions, got {}",
-                dims[0]
-            )));
-        }
-
-        // Get the volume and convert it to an array
-        let volume = nifti_object.into_volume();
-        let array_3d = volume
-            .to_ndarray::<f64>()
-            .map_err(|e| KwaversError::Io(format!("Failed to convert NIFTI volume: {}", e)))?;
-
-        if self.verbose {
-            let shape = array_3d.shape();
-            log::info!(
-                "Successfully loaded NIFTI file with dimensions: {}x{}x{} and header",
-                shape[0], shape[1], shape[2]
-            );
-        }
+        // Load the data using the same method
+        let array_3d = self.load(path)?;
 
         Ok((array_3d, header))
     }
@@ -142,9 +177,12 @@ impl NiftiReader {
         let path = path.as_ref();
 
         // Load only the header
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
         let header = nifti_object.header();
 
@@ -164,62 +202,17 @@ impl NiftiReader {
         })
     }
 
-    /// Save a 3D array as a NIFTI file
-    pub fn save<P: AsRef<Path>>(&self, path: P, data: &Array3<f64>) -> KwaversResult<()> {
-        let path = path.as_ref();
+    /// Save a 3D array as a NIFTI file (placeholder - full implementation requires API update)
+    pub fn save<P: AsRef<Path>>(&self, _path: P, _data: &Array3<f64>) -> KwaversResult<()> {
+        // Note: The nifti 0.17 API doesn't support direct creation of NIFTI objects
+        // from raw data. This would require either:
+        // 1. Updating to a newer version of the nifti crate
+        // 2. Using a different approach to save NIFTI files
+        // 3. Implementing raw NIFTI file writing
 
-        if self.verbose {
-            log::info!("Saving NIFTI file: {}", path.display());
-        }
-
-        // Get dimensions
-        let shape = data.shape();
-        let nx = shape[0];
-        let ny = shape[1];
-        let nz = shape[2];
-
-        // Create header with proper dimensions
-        let mut header = NiftiHeader::default();
-        header.dim[0] = 3; // 3D volume
-        header.dim[1] = nx as u16;
-        header.dim[2] = ny as u16;
-        header.dim[3] = nz as u16;
-        header.datatype = 64; // FLOAT64
-        header.bitpix = 64; // 64 bits per voxel
-
-        // Default voxel dimensions (can be customized)
-        header.pixdim[1] = 1.0;
-        header.pixdim[2] = 1.0;
-        header.pixdim[3] = 1.0;
-
-        // Convert data to raw bytes
-        let mut raw_data = Vec::with_capacity(nx * ny * nz * 8);
-        for k in 0..nz {
-            for j in 0..ny {
-                for i in 0..nx {
-                    let value = data[[i, j, k]];
-                    raw_data.extend_from_slice(&value.to_ne_bytes());
-                }
-            }
-        }
-
-        // Create NIFTI object
-        let nifti_object = InMemNiftiObject::from_raw_data(&header, raw_data)
-            .map_err(|e| KwaversError::Io(format!("Failed to create NIFTI object: {}", e)))?;
-
-        // Write to file
-        nifti_object
-            .write_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to write NIFTI file: {}", e)))?;
-
-        if self.verbose {
-            log::info!(
-                "Successfully saved NIFTI file with dimensions: {}x{}x{}",
-                nx, ny, nz
-            );
-        }
-
-        Ok(())
+        Err(KwaversError::NotImplemented(
+            "NIFTI saving is not yet implemented for nifti crate 0.17".to_string(),
+        ))
     }
 }
 

@@ -12,21 +12,15 @@ pub enum ValidationError {
         value: String,
         constraint: String,
     },
-    
+
     /// Range validation failed
     #[error("Value {value} is out of range [{min}, {max}]")]
-    OutOfRange {
-        value: f64,
-        min: f64,
-        max: f64,
-    },
-    
+    OutOfRange { value: f64, min: f64, max: f64 },
+
     /// Required field is missing
     #[error("Required field '{field}' is missing")]
-    MissingField {
-        field: String,
-    },
-    
+    MissingField { field: String },
+
     /// Invalid format
     #[error("Invalid format for '{field}': expected {expected}, got {actual}")]
     InvalidFormat {
@@ -34,10 +28,8 @@ pub enum ValidationError {
         expected: String,
         actual: String,
     },
-    
+
     /// Constraint violation
     #[error("Constraint violation: {message}")]
-    ConstraintViolation {
-        message: String,
-    },
+    ConstraintViolation { message: String },
 }

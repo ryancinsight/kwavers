@@ -258,7 +258,7 @@ impl PstdSolver {
         let cfl = max_sound_speed * dt / dx_min;
 
         if cfl > self.cfl_safety_factor {
-            return Err(crate::error::ValidationError::RangeValidation {
+            return Err(crate::error::ValidationError::OutOfRange {
                 field: "CFL".to_string(),
                 value: cfl.to_string(),
                 min: "0".to_string(),

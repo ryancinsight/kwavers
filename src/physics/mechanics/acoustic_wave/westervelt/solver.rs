@@ -75,9 +75,7 @@ impl WesterveltWave {
         let cfl = max_c * dt / min_dx;
 
         // Check pressure bounds
-        let max_p = pressure
-            .iter()
-            .fold(0.0_f64, |acc, &x| acc.max(x.abs()));
+        let max_p = pressure.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
 
         cfl < 0.5 && max_p < self.max_pressure
     }
@@ -189,8 +187,7 @@ impl AcousticWaveModel for WesterveltWave {
 
         // Compute damping/viscoelastic term
         let start = Instant::now();
-        let damping_term =
-            compute_viscoelastic_term(&laplacian, &eta_s_arr, &eta_b_arr, &rho_arr);
+        let damping_term = compute_viscoelastic_term(&laplacian, &eta_s_arr, &eta_b_arr, &rho_arr);
 
         {
             let mut metrics = self.metrics.lock().unwrap();
@@ -216,7 +213,7 @@ impl AcousticWaveModel for WesterveltWave {
         // Update pressure field using ndarray::Zip for better performance
         let start = Instant::now();
         let pressure_next = &mut self.pressure_buffers[next_idx];
-        
+
         // Use Zip for efficient, vectorizable computation
         Zip::from(pressure_next)
             .and(pressure_current)

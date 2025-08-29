@@ -59,7 +59,7 @@ impl<'a> ChemicalUpdateParams<'a> {
         let pressure_shape = pressure.dim();
 
         if pressure_shape != grid_shape {
-            return Err(crate::error::GridError::InvalidDimensions {
+            return Err(crate::error::GridError::TooSmall {
                 nx: pressure_shape.0,
                 ny: pressure_shape.1,
                 nz: pressure_shape.2,

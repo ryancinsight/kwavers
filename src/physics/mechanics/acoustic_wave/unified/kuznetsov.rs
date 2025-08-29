@@ -94,7 +94,7 @@ impl AcousticSolver for KuznetsovSolver {
         let max_cfl = self.config.cfl_safety_factor * 0.7; // More restrictive due to diffusion
 
         if cfl > max_cfl {
-            return Err(crate::error::ValidationError::RangeValidation {
+            return Err(crate::error::ValidationError::OutOfRange {
                 field: "CFL (Kuznetsov)".to_string(),
                 value: cfl.to_string(),
                 min: "0".to_string(),

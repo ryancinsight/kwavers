@@ -4,7 +4,7 @@
 /// following SSOT and SOLID principles.
 pub mod nifti;
 
-pub use nifti::{load_nifti, load_nifti_with_header, NiftiHeader, NiftiInfo, NiftiReader};
+pub use nifti::{NiftiHeader, NiftiInfo, NiftiReader};
 
 // Re-export output functions for backward compatibility
 mod output;

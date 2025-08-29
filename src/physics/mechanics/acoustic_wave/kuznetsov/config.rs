@@ -172,22 +172,20 @@ impl KuznetsovConfig {
     pub fn validate(&self, grid: &Grid) -> Result<(), KwaversError> {
         // Check CFL factor
         if self.cfl_factor <= 0.0 || self.cfl_factor > MAX_CFL_FACTOR {
-            return Err(KwaversError::Validation(ValidationError::RangeValidation {
-                field: "cfl_factor".to_string(),
-                value: self.cfl_factor.to_string(),
-                min: "0.0".to_string(),
-                max: MAX_CFL_FACTOR.to_string(),
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.cfl_factor,
+                min: 0.0,
+                max: MAX_CFL_FACTOR,
             }));
         }
 
         // Check grid spacing
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         if min_dx <= MIN_GRID_SPACING {
-            return Err(KwaversError::Validation(ValidationError::RangeValidation {
-                field: "grid_spacing".to_string(),
-                value: min_dx.to_string(),
-                min: MIN_GRID_SPACING.to_string(),
-                max: "inf".to_string(),
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: min_dx,
+                min: MIN_GRID_SPACING,
+                max: f64::INFINITY,
             }));
         }
 
@@ -195,11 +193,10 @@ impl KuznetsovConfig {
         if self.nonlinearity_coefficient < 0.0
             || self.nonlinearity_coefficient > MAX_NONLINEARITY_COEFFICIENT
         {
-            return Err(KwaversError::Validation(ValidationError::RangeValidation {
-                field: "nonlinearity_coefficient".to_string(),
-                value: self.nonlinearity_coefficient.to_string(),
-                min: "0.0".to_string(),
-                max: MAX_NONLINEARITY_COEFFICIENT.to_string(),
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.nonlinearity_coefficient,
+                min: 0.0,
+                max: MAX_NONLINEARITY_COEFFICIENT,
             }));
         }
 

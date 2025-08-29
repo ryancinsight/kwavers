@@ -69,7 +69,7 @@ pub mod validators {
         field_name: &str,
     ) -> ValidationResult {
         if value < min || value > max {
-            ValidationResult::failure(vec![ValidationError::RangeValidation {
+            ValidationResult::failure(vec![ValidationError::OutOfRange {
                 field: field_name.to_string(),
                 value: value.to_string(),
                 min: min.to_string(),
@@ -86,7 +86,7 @@ pub mod validators {
         field_name: &str,
     ) -> ValidationResult {
         if value <= T::default() {
-            ValidationResult::failure(vec![ValidationError::RangeValidation {
+            ValidationResult::failure(vec![ValidationError::OutOfRange {
                 field: field_name.to_string(),
                 value: value.to_string(),
                 min: "0".to_string(),

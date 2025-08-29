@@ -71,11 +71,11 @@ impl Grid {
         if !self.contains_point(x, y, z) {
             return None;
         }
-        Some(
-            ((x / self.dx) as usize,
-             (y / self.dy) as usize,
-             (z / self.dz) as usize)
-        )
+        Some((
+            (x / self.dx) as usize,
+            (y / self.dy) as usize,
+            (z / self.dz) as usize,
+        ))
     }
 
     /// Compute kx array (compatibility)
@@ -117,21 +117,18 @@ impl Grid {
     /// Get x coordinates (compatibility)
     #[inline]
     pub fn x_coordinates(&self) -> ndarray::Array1<f64> {
-        use crate::grid::coordinates::generate_x_vector;
-        generate_x_vector(self)
+        CoordinateSystem::generate_x_vector(self)
     }
 
     /// Get y coordinates (compatibility)
     #[inline]
     pub fn y_coordinates(&self) -> ndarray::Array1<f64> {
-        use crate::grid::coordinates::generate_y_vector;
-        generate_y_vector(self)
+        CoordinateSystem::generate_y_vector(self)
     }
 
     /// Get z coordinates (compatibility)
     #[inline]
     pub fn z_coordinates(&self) -> ndarray::Array1<f64> {
-        use crate::grid::coordinates::generate_z_vector;
-        generate_z_vector(self)
+        CoordinateSystem::generate_z_vector(self)
     }
 }

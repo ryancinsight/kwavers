@@ -44,7 +44,7 @@ impl MultiBowlArray {
     /// applying both amplitude scaling and phase shifts. The phase shifts
     /// are crucial for beam steering and complex field synthesis.
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut combined_source = grid.create_field();
+        let mut combined_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {
