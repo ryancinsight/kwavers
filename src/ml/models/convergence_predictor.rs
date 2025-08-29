@@ -16,17 +16,17 @@ impl ConvergencePredictorModel {
         // Simplified loading
         Ok(Self::new())
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
-    
+
     /// Run inference
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
-    
+
     pub fn new() -> Self {
         Self {
             metadata: ModelMetadata {
@@ -48,7 +48,7 @@ impl MLModel for ConvergencePredictorModel {
         Ok(variance.insert_axis(ndarray::Axis(1)))
     }
 
-    fn accuracy(&self) -> f32 {
+    fn accuracy(&self) -> f64 {
         self.metadata.accuracy
     }
 

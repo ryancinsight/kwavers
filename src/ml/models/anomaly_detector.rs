@@ -17,17 +17,17 @@ impl AnomalyDetectorModel {
         // Simplified loading
         Ok(Self::new(3.0))
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
-    
+
     /// Run inference
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
-    
+
     pub fn new(threshold: f32) -> Self {
         Self {
             threshold,
@@ -49,7 +49,7 @@ impl MLModel for AnomalyDetectorModel {
         Ok(input.mapv(|x| if x.abs() > self.threshold { 1.0 } else { 0.0 }))
     }
 
-    fn accuracy(&self) -> f32 {
+    fn accuracy(&self) -> f64 {
         self.metadata.accuracy
     }
 

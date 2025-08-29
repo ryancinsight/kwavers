@@ -38,7 +38,7 @@ impl MLModel for OutcomePredictorModel {
         Ok(output)
     }
 
-    fn accuracy(&self) -> f32 {
+    fn accuracy(&self) -> f64 {
         self.metadata.accuracy
     }
 

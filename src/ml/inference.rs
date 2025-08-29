@@ -67,12 +67,12 @@ impl InferenceEngine {
         // Convert 2D to 3D for infer_batch
         let input_3d = input.clone().insert_axis(ndarray::Axis(2));
         let output_3d = self.infer_batch(&input_3d)?;
-        
+
         // Convert back to 2D
         let (batch, classes, _) = output_3d.dim();
         Ok(output_3d.into_shape((batch, classes)).unwrap())
     }
-    
+
     /// Run inference on a 3-D tensor with shape *(batch, features, 1)* (the
     /// last singleton dimension makes it easy to keep compatibility with the
     /// rest of the code-base that mostly works with 3-D data).  The method

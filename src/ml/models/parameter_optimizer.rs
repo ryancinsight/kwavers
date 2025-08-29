@@ -18,17 +18,17 @@ impl ParameterOptimizerModel {
         // Simplified loading
         Ok(Self::new(128, 64))
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
-    
+
     /// Run inference
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
-    
+
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
         use rand::Rng;
         let mut rng = rand::thread_rng();
@@ -53,7 +53,7 @@ impl MLModel for ParameterOptimizerModel {
         self.engine.forward(input)
     }
 
-    fn accuracy(&self) -> f32 {
+    fn accuracy(&self) -> f64 {
         self.metadata.accuracy
     }
 

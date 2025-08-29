@@ -181,7 +181,7 @@ impl HybridSolver {
 
         // Apply PSTD update to the region
         // Convert region view to owned array for PSTD solver
-        let mut region_array = region_fields.to_owned();
+        let region_array = region_fields.to_owned();
 
         // Update using PSTD solver
         // TODO: Implement PSTD region update
@@ -213,7 +213,7 @@ impl HybridSolver {
 
         // Apply FDTD update to the region
         // Convert region view to owned array for FDTD solver
-        let mut region_array = region_fields.to_owned();
+        let region_array = region_fields.to_owned();
 
         // Update using FDTD solver
         // TODO: Implement FDTD region update
@@ -238,7 +238,7 @@ impl HybridSolver {
         // Apply blended approach in transition regions
         // This uses weighted averaging between PSTD and FDTD solutions
 
-        let mut pstd_fields = fields
+        let pstd_fields = fields
             .slice(s![
                 ..,
                 region.start.0..region.end.0,
@@ -247,7 +247,7 @@ impl HybridSolver {
             ])
             .to_owned();
 
-        let mut fdtd_fields = pstd_fields.clone();
+        let fdtd_fields = pstd_fields.clone();
 
         // Apply both solvers
         // TODO: Coordinate PSTD and FDTD solvers properly

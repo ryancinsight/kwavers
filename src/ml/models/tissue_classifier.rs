@@ -18,12 +18,12 @@ impl TissueClassifierModel {
         // Simplified loading - real implementation would deserialize weights
         Ok(Self::with_random_weights(128, 10))
     }
-    
+
     /// Create from weights
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
         let (features, classes) = weights.dim();
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
-        
+
         let metadata = ModelMetadata {
             name: "TissueClassifier".to_string(),
             version: "1.0.0".to_string(),
@@ -32,20 +32,20 @@ impl TissueClassifierModel {
             accuracy: 0.0_f64,
             inference_time_ms: 0.0_f64,
         };
-        
+
         Self { engine, metadata }
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
-    
-    /// Run inference 
+
+    /// Run inference
     pub fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.predict(input)
     }
-    
+
     /// Create a classifier with random weights
     pub fn with_random_weights(features: usize, classes: usize) -> Self {
         use rand::Rng;
@@ -87,7 +87,7 @@ impl MLModel for TissueClassifierModel {
         self.engine.forward(input)
     }
 
-    fn accuracy(&self) -> f32 {
+    fn accuracy(&self) -> f64 {
         self.metadata.accuracy
     }
 
