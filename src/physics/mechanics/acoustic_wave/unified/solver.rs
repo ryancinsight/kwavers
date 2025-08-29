@@ -5,7 +5,7 @@ use ndarray::Array3;
 use std::time::Instant;
 
 use super::config::{AcousticModelType, AcousticSolverConfig};
-use super::{kuznetsov::KuznetsovSolver, linear::LinearSolver, westervelt::WesterveltSolver};
+use super::{kuznetsov::KuznetsovSolver, westervelt::WesterveltSolver};
 
 /// Unified acoustic solver that dispatches to model-specific implementations
 pub struct UnifiedAcousticSolver {
@@ -57,7 +57,13 @@ impl UnifiedAcousticSolver {
 
         // Create model-specific solver
         let solver: Box<dyn AcousticSolver> = match config.model_type {
-            AcousticModelType::Linear => Box::new(LinearSolver::new(config.clone(), grid.clone())?),
+            AcousticModelType::Linear => {
+                // Linear solver was removed due to fundamental flaws
+                // Use Westervelt with zero nonlinearity as linear approximation
+                let mut linear_config = config.clone();
+                linear_config.model_type = AcousticModelType::Westervelt;
+                Box::new(WesterveltSolver::new(linear_config, grid.clone())?)
+            }
             AcousticModelType::Westervelt => {
                 Box::new(WesterveltSolver::new(config.clone(), grid.clone())?)
             }

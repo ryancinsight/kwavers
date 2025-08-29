@@ -71,7 +71,10 @@ fn test_acoustic_dispersion_relation() {
     let c = 1500.0; // Sound speed in water
 
     // Generate k-space
-    let (kx, ky, kz) = grid.generate_k();
+    use kwavers::grid::KSpaceCalculator;
+    let kx = KSpaceCalculator::generate_kx(&grid);
+    let ky = KSpaceCalculator::generate_ky(&grid);
+    let kz = KSpaceCalculator::generate_kz(&grid);
 
     // Test dispersion relation: ω = c*k
     for i in 1..10 {

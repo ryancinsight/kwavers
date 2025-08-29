@@ -221,7 +221,7 @@ impl DGSolver {
             .modal_coefficients
             .as_ref()
             .ok_or_else(|| {
-                KwaversError::InvalidState("Modal coefficients not initialized".to_string())
+                KwaversError::InvalidInput("Modal coefficients not initialized".to_string())
             })?
             .raw_dim();
         let n_elements = coeffs_shape[0];
@@ -281,7 +281,7 @@ impl DGSolver {
 
         // Take ownership of coefficients to avoid borrow issues
         let mut coeffs = self.modal_coefficients.take().ok_or_else(|| {
-            KwaversError::InvalidState("Modal coefficients not initialized".to_string())
+            KwaversError::InvalidInput("Modal coefficients not initialized".to_string())
         })?;
 
         // Apply limiter if needed

@@ -59,16 +59,10 @@ impl<'a> ChemicalUpdateParams<'a> {
         let pressure_shape = pressure.dim();
 
         if pressure_shape != grid_shape {
-            return Err(crate::error::GridError::InvalidDimensions {
-                nx: pressure_shape.0,
-                ny: pressure_shape.1,
-                nz: pressure_shape.2,
-                reason: format!(
-                    "Pressure array shape {:?} doesn't match grid {:?}",
-                    pressure_shape, grid_shape
-                ),
-            }
-            .into());
+            return Err(crate::KwaversError::InvalidInput(format!(
+                "Pressure array shape {:?} doesn't match grid {:?}",
+                pressure_shape, grid_shape
+            )));
         }
 
         Ok(Self {

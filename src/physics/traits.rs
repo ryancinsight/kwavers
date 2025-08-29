@@ -1,4 +1,5 @@
 // src/physics/traits.rs
+use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::source::Source;
@@ -32,7 +33,7 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
         medium: &dyn Medium,
         dt: f64,
         t: f64,
-    );
+    ) -> KwaversResult<()>;
 
     /// Reports performance metrics of the wave model.
     ///

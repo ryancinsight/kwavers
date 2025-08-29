@@ -204,6 +204,11 @@ impl PhasedArrayTransducer {
         self.beamformer
             .calculate_focal_zone(self.config.aperture_size(), focal_distance)
     }
+
+    /// Get the delays for each element
+    pub fn element_delays(&self) -> Vec<f64> {
+        self.elements.iter().map(|e| e.phase_delay).collect()
+    }
 }
 
 impl Source for PhasedArrayTransducer {

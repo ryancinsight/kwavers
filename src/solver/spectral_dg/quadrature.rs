@@ -17,7 +17,7 @@ const NEWTON_TOLERANCE: f64 = 1e-14;
 /// Returns nodes on [-1, 1] and corresponding weights for integration
 pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<f64>)> {
     if n < 2 {
-        return Err(KwaversError::InvalidParameter(
+        return Err(KwaversError::InvalidInput(
             "Gauss-Lobatto quadrature requires at least 2 nodes".to_string(),
         ));
     }
@@ -98,7 +98,7 @@ fn legendre_poly_deriv(n: usize, x: f64) -> (f64, f64) {
 /// Generate Gauss-Legendre quadrature nodes and weights
 pub fn gauss_legendre_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<f64>)> {
     if n < 1 {
-        return Err(KwaversError::InvalidParameter(
+        return Err(KwaversError::InvalidInput(
             "Gauss-Legendre quadrature requires at least 1 node".to_string(),
         ));
     }

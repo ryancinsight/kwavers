@@ -194,10 +194,6 @@ impl CoreMedium for HeterogeneousTissueMedium {
         self.get_tissue_properties(x, y, z, grid).sound_speed
     }
 
-    fn is_homogeneous(&self) -> bool {
-        false
-    }
-
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
@@ -239,14 +235,6 @@ impl ArrayAccess for HeterogeneousTissueMedium {
                 arr
             })
             .clone()
-    }
-
-    fn get_density_array(&self, grid: &Grid) -> Array3<f64> {
-        self.density_array(grid)
-    }
-
-    fn get_sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
-        self.sound_speed_array(grid)
     }
 }
 

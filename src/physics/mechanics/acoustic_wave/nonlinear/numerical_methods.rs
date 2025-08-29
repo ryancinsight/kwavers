@@ -33,8 +33,8 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// Updated pressure field
-    pub fn update_wave(
+    /// Updated pressure field (internal implementation)
+    pub fn update_wave_inner(
         &mut self,
         pressure: &Array3<f64>,
         source: &Array3<f64>,
@@ -47,17 +47,15 @@ impl NonlinearWave {
 
         // Validate inputs
         if pressure.shape() != [grid.nx, grid.ny, grid.nz] {
-            return Err(crate::error::KwaversError::Grid(
-                crate::error::GridError::InvalidDimensions {
-                    nx: pressure.shape()[0],
-                    ny: pressure.shape()[1],
-                    nz: pressure.shape()[2],
-                    reason: format!(
-                        "Must match grid dimensions [{}, {}, {}]",
-                        grid.nx, grid.ny, grid.nz
-                    ),
-                },
-            ));
+            return Err(crate::error::KwaversError::InvalidInput(format!(
+                "Pressure array shape [{}, {}, {}] doesn't match grid dimensions [{}, {}, {}]",
+                pressure.shape()[0],
+                pressure.shape()[1],
+                pressure.shape()[2],
+                grid.nx,
+                grid.ny,
+                grid.nz
+            )));
         }
 
         // Compute nonlinear term

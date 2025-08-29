@@ -150,7 +150,7 @@ pub fn compute_lift_matrix(
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     let n = a.nrows();
     if n != a.ncols() {
-        return Err(KwaversError::InvalidParameter(
+        return Err(KwaversError::InvalidInput(
             "Matrix must be square for inversion".to_string(),
         ));
     }
@@ -187,11 +187,12 @@ pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
 
         // Check for singularity with better tolerance
         if aug[(k, k)].abs() < 1e-12 {
-            return Err(KwaversError::NumericalError(format!(
-                "Matrix is singular or nearly singular at pivot {}: value = {}",
-                k,
-                aug[(k, k)]
-            )));
+            return Err(KwaversError::Numerical(
+                crate::error::NumericalError::SingularMatrix {
+                    operation: format!("Gaussian elimination at pivot {}", k),
+                    condition_number: aug[(k, k)].abs(),
+                },
+            ));
         }
 
         // Forward elimination

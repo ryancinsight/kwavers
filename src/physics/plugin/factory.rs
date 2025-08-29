@@ -91,7 +91,9 @@ where
             })?
             .validate();
         if !config.downcast_ref::<C>().unwrap().validate().is_valid {
-            return Err(KwaversError::Validation(ValidationError::StateValidation));
+            return Err(KwaversError::InvalidInput(
+                "Invalid plugin state".to_string(),
+            ));
         }
         Ok(())
     }

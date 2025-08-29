@@ -142,7 +142,7 @@ impl ArcSource {
     /// Extend 2D source to 3D (uniform in z-direction)
     pub fn generate_source_3d(&self, grid: &Grid, time: f64) -> Array3<f64> {
         let source_2d = self.generate_source_2d(grid.nx, grid.ny, grid.dx, time);
-        let mut source_3d = grid.create_field();
+        let mut source_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         // Copy 2D pattern to all z-slices
         for iz in 0..grid.nz {

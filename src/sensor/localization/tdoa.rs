@@ -57,7 +57,7 @@ impl TDOAProcessor {
         // Full implementation would solve hyperbolic equations
 
         if self.measurements.len() < 3 {
-            return Err(crate::error::KwaversError::InvalidParameter(
+            return Err(crate::error::KwaversError::InvalidInput(
                 "Need at least 3 TDOA measurements for 3D localization".to_string(),
             ));
         }

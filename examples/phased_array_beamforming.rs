@@ -62,7 +62,7 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
     let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
 
     // Create phased array transducer
-    let mut array = PhasedArrayTransducer::new(array_config.clone(), signal, &medium, &grid)?;
+    let mut array = PhasedArrayTransducer::create(array_config.clone(), signal, &medium, &grid)?;
 
     println!("Array Configuration:");
     println!("  Elements: {}", array_config.num_elements);
@@ -74,9 +74,9 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
 
     for &depth in &focus_depths {
         let focus_target = (0.0, 0.0, depth);
-        array.set_beamforming_mode(BeamformingMode::Focus {
+        array.set_beamforming(BeamformingMode::Focus {
             target: focus_target,
-        })?;
+        });
 
         let delays = array.element_delays();
         let max_delay = delays.iter().fold(0.0_f64, |acc, &x| acc.max(x.abs()));
@@ -122,7 +122,7 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
     };
 
     let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-    let mut array = PhasedArrayTransducer::new(array_config, signal, &medium, &grid)?;
+    let mut array = PhasedArrayTransducer::create(array_config, signal, &medium, &grid)?;
 
     // Test different steering angles
     let steering_angles: [f64; 4] = [0.0, 15.0, 30.0, 45.0]; // degrees
@@ -131,7 +131,7 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
         let theta = angle_deg.to_radians();
         let phi = 0.0; // Steering in x-z plane
 
-        array.set_beamforming_mode(BeamformingMode::Steer { theta, phi })?;
+        array.set_beamforming(BeamformingMode::Steer { theta, phi });
 
         let delays = array.element_delays();
         let delay_gradient = (delays[delays.len() - 1] - delays[0]) / (delays.len() - 1) as f64;
@@ -184,7 +184,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     };
 
     let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-    let mut array = PhasedArrayTransducer::new(array_config.clone(), signal, &medium, &grid)?;
+    let mut array = PhasedArrayTransducer::create(array_config.clone(), signal, &medium, &grid)?;
 
     // Pattern 1: Dual focus (split beam)
     println!("  Pattern 1: Dual Focus (Split Beam)");
@@ -210,9 +210,9 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
         };
         dual_focus_delays.push(delay);
     }
-    array.set_beamforming_mode(BeamformingMode::Custom {
+    array.set_beamforming(BeamformingMode::Custom {
         delays: dual_focus_delays.clone(),
-    })?;
+    });
     println!(
         "    Applied {} custom delays for dual focus",
         dual_focus_delays.len()
@@ -227,9 +227,9 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
         let gaussian_weight = (-0.5 * (element_pos / 8.0).powi(2)).exp(); // Gaussian envelope
         gaussian_delays.push(linear_phase * gaussian_weight);
     }
-    array.set_beamforming_mode(BeamformingMode::Custom {
+    array.set_beamforming(BeamformingMode::Custom {
         delays: gaussian_delays.clone(),
-    })?;
+    });
     println!("    Applied Gaussian-weighted linear phase pattern");
 
     // Pattern 3: Sinusoidal phase pattern
@@ -239,7 +239,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
         let phase = 2.0 * std::f64::consts::PI * i as f64 / array_config.num_elements as f64;
         sinusoidal_delays.push((phase * 2.0).sin() * 0.5); // Sinusoidal pattern
     }
-    array.set_beamforming_mode(BeamformingMode::Custom {
+    array.set_beamforming(BeamformingMode::Custom {
         delays: sinusoidal_delays,
     })?;
     println!("    Applied sinusoidal phase pattern for side lobe control");
@@ -268,13 +268,13 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
         };
 
         let signal = Arc::new(SineWave::new(2.5e6, 1.0, 0.0));
-        let mut array = PhasedArrayTransducer::new(array_config, signal, &medium, &grid)?;
+        let mut array = PhasedArrayTransducer::create(array_config, signal, &medium, &grid)?;
 
         // Set focus at 50mm depth
         let focus_target = (0.0, 0.0, 50e-3);
-        array.set_beamforming_mode(BeamformingMode::Focus {
+        array.set_beamforming(BeamformingMode::Focus {
             target: focus_target,
-        })?;
+        });
 
         // Calculate source term at focus point
         let source_at_focus =

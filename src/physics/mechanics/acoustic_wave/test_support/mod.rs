@@ -30,7 +30,7 @@ pub mod tests {
 
         // Test case 1: Zero absorption should give zero diffusivity
         let alpha = 0.0;
-        let c = 1500.0;
+        let c: f64 = 1500.0;
         let freq = 1e6;
         let omega = 2.0 * PI * freq;
         let expected = 2.0 * alpha * c.powi(3) / (omega * omega);
@@ -38,7 +38,7 @@ pub mod tests {
 
         // Test case 2: Non-zero values
         let alpha = 0.5; // Np/m
-        let c = 1500.0; // m/s
+        let c: f64 = 1500.0; // m/s
         let freq = 1e6; // Hz
         let omega = 2.0 * PI * freq;
         let diffusivity = 2.0 * alpha * c.powi(3) / (omega * omega);
@@ -54,6 +54,7 @@ pub mod tests {
         );
 
         // Test case 3: Verify frequency scaling
+        let c: f64 = 1500.0; // Redefine for this test case
         let freq2 = 2e6;
         let omega2 = 2.0 * PI * freq2;
         let diffusivity2 = 2.0 * alpha * c.powi(3) / (omega2 * omega2);

@@ -5,7 +5,6 @@
 
 pub mod config;
 pub mod kuznetsov;
-pub mod linear;
 pub mod solver;
 pub mod westervelt;
 
@@ -14,5 +13,4 @@ pub use solver::UnifiedAcousticSolver;
 
 // Re-export model-specific solvers for direct use
 pub use kuznetsov::KuznetsovSolver;
-pub use linear::LinearSolver;
 pub use westervelt::WesterveltSolver;

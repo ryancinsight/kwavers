@@ -180,10 +180,6 @@ impl CoreMedium for HomogeneousMedium {
         self.sound_speed
     }
 
-    fn is_homogeneous(&self) -> bool {
-        true
-    }
-
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
@@ -191,20 +187,12 @@ impl CoreMedium for HomogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn get_density_array(&self, grid: &Grid) -> Array3<f64> {
+    fn density_array(&self, grid: &Grid) -> Array3<f64> {
         Array3::from_elem((grid.nx, grid.ny, grid.nz), self.density)
     }
 
-    fn get_sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.sound_speed)
-    }
-
-    fn density_array(&self, grid: &Grid) -> Array3<f64> {
-        self.get_density_array(grid)
-    }
-
     fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
-        self.get_sound_speed_array(grid)
+        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.sound_speed)
     }
 }
 
@@ -363,7 +351,6 @@ mod tests {
         assert_eq!(water.density(0.0, 0.0, 0.0, &grid), 998.0);
         assert_eq!(water.sound_speed(0.0, 0.0, 0.0, &grid), 1482.0);
         assert_eq!(water.viscosity(0.0, 0.0, 0.0, &grid), 1.0e-3);
-        assert!(water.is_homogeneous());
     }
 
     #[test]
@@ -383,6 +370,5 @@ mod tests {
 
         assert_eq!(air.density(0.0, 0.0, 0.0, &grid), 1.204);
         assert_eq!(air.sound_speed(0.0, 0.0, 0.0, &grid), 343.0);
-        assert!(air.is_homogeneous());
     }
 }

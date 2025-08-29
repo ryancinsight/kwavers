@@ -1,7 +1,8 @@
+use crate::error::DataError;
 /// NIFTI file format support for medical imaging data
 ///
-/// Implements NIFTI-1 and NIFTI-2 format readers using the mature `nifti` crate
-/// for robust, correct handling of endianness, data types, and file formats.
+/// Implements NIFTI-1 and NIFTI-2 format readers using the `nifti` crate
+/// for robust handling of medical imaging data formats.
 use crate::{KwaversError, KwaversResult};
 use ndarray::Array3;
 use std::path::Path;
@@ -42,9 +43,12 @@ impl NiftiReader {
         }
 
         // Load the NIFTI file
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
         // Get header for dimensions
         let header = nifti_object.header();
@@ -53,10 +57,10 @@ impl NiftiReader {
 
         // Validate dimensions (NIFTI dim[0] is number of dimensions)
         if dims[0] < 3 {
-            return Err(KwaversError::Io(format!(
+            return Err(KwaversError::Data(DataError::IoError(format!(
                 "NIFTI file must have at least 3 dimensions, got {}",
                 dims[0]
-            )));
+            ))));
         }
 
         // Extract dimensions (dim[1], dim[2], dim[3] are x, y, z)
@@ -121,10 +125,10 @@ impl NiftiReader {
                 }
             }
             _ => {
-                return Err(KwaversError::Io(format!(
+                return Err(KwaversError::Data(DataError::IoError(format!(
                     "Unsupported NIFTI data type: {}. Only FLOAT32 (16) and FLOAT64 (64) are supported.",
                     datatype
-                )));
+                ))));
             }
         }
 
@@ -152,9 +156,12 @@ impl NiftiReader {
         }
 
         // Load the NIFTI object
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
         // Get header
         let header = nifti_object.header().clone();
@@ -170,68 +177,73 @@ impl NiftiReader {
         let path = path.as_ref();
 
         // Load only the header
-        let nifti_object = ReaderOptions::new()
-            .read_file(path)
-            .map_err(|e| KwaversError::Io(format!("Failed to load NIFTI file: {}", e)))?;
+        let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
+            KwaversError::Data(DataError::IoError(format!(
+                "Failed to load NIFTI file: {}",
+                e
+            )))
+        })?;
 
         let header = nifti_object.header();
 
         // Convert description from Vec<u8> to String
         let description = String::from_utf8(header.descrip.clone())
-            .unwrap_or_else(|_| "Invalid UTF-8 description".to_string());
+            .unwrap_or_else(|_| String::from("(invalid UTF-8)"));
 
         Ok(NiftiInfo {
             dimensions: [
                 header.dim[1] as usize,
                 header.dim[2] as usize,
-                if header.dim[0] >= 3 {
-                    header.dim[3] as usize
-                } else {
-                    1
-                },
+                header.dim[3] as usize,
             ],
-            voxel_size: [header.pixdim[1], header.pixdim[2], header.pixdim[3]],
-            data_type: header.datatype,
+            voxel_dimensions: [
+                header.pixdim[1] as f64,
+                header.pixdim[2] as f64,
+                header.pixdim[3] as f64,
+            ],
+            datatype: header.datatype,
             description,
         })
     }
+
+    /// Save a 3D array as a NIFTI file (placeholder - full implementation requires API update)
+    pub fn save<P: AsRef<Path>>(&self, _path: P, _data: &Array3<f64>) -> KwaversResult<()> {
+        // Note: The nifti 0.17 API doesn't support direct creation of NIFTI objects
+        // from raw data. This would require either:
+        // 1. Updating to a newer version of the nifti crate
+        // 2. Using a different approach to save NIFTI files
+        // 3. Implementing raw NIFTI file writing
+
+        Err(KwaversError::NotImplemented(
+            "NIFTI saving is not yet implemented for nifti crate 0.17".to_string(),
+        ))
+    }
 }
 
-/// Information about a NIFTI file
+/// Basic information about a NIFTI file
 #[derive(Debug, Clone)]
 pub struct NiftiInfo {
-    /// Volume dimensions [nx, ny, nz]
+    /// Dimensions of the volume [x, y, z]
     pub dimensions: [usize; 3],
-    /// Voxel size [dx, dy, dz] in mm
-    pub voxel_size: [f32; 3],
-    /// NIFTI data type code
-    pub data_type: i16,
-    /// File description
+    /// Voxel dimensions in mm [x, y, z]
+    pub voxel_dimensions: [f64; 3],
+    /// Data type code
+    pub datatype: i16,
+    /// Description field
     pub description: String,
-}
-
-/// Convenience function to load a NIFTI file
-pub fn load_nifti<P: AsRef<Path>>(path: P) -> KwaversResult<Array3<f64>> {
-    NiftiReader::new().load(path)
-}
-
-/// Convenience function to load a NIFTI file with header
-pub fn load_nifti_with_header<P: AsRef<Path>>(
-    path: P,
-) -> KwaversResult<(Array3<f64>, NiftiHeader)> {
-    NiftiReader::new().load_with_header(path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::Array3;
 
     #[test]
     fn test_nifti_reader_creation() {
         let reader = NiftiReader::new();
         assert!(!reader.verbose);
 
-        let reader_verbose = NiftiReader::new().with_verbose(true);
-        assert!(reader_verbose.verbose);
+        let verbose_reader = NiftiReader::new().with_verbose(true);
+        assert!(verbose_reader.verbose);
     }
 }

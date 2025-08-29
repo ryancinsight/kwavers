@@ -209,7 +209,21 @@ impl SimulationConfig {
         grid: &Grid,
         medium: &dyn crate::medium::Medium,
     ) -> Result<Time, String> {
-        let max_sound_speed = crate::medium::max_sound_speed(medium, grid);
+        // Calculate max sound speed by sampling the grid
+        let mut max_sound_speed = 0.0;
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let speed = medium.sound_speed(x, y, z, grid);
+                    if speed > max_sound_speed {
+                        max_sound_speed = speed;
+                    }
+                }
+            }
+        }
         self.initialize_time_with_sound_speed(grid, max_sound_speed)
     }
 }

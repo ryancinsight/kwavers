@@ -64,22 +64,20 @@ impl AcousticSolverConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> KwaversResult<()> {
         if self.k_space_order != 1 && self.k_space_order != 2 {
-            return Err(ValidationError::RangeValidation {
-                field: "k_space_order".to_string(),
-                value: self.k_space_order.to_string(),
-                min: "1".to_string(),
-                max: "2".to_string(),
-            }
+            return Err(ValidationError::OutOfRange {
+                value: self.k_space_order as f64,
+                min: 1.0,
+                max: 2.0,
+            } /* field: k_space_order */
             .into());
         }
 
         if self.cfl_safety_factor <= 0.0 || self.cfl_safety_factor > 1.0 {
-            return Err(ValidationError::RangeValidation {
-                field: "cfl_safety_factor".to_string(),
-                value: self.cfl_safety_factor.to_string(),
-                min: "0.0 (exclusive)".to_string(),
-                max: "1.0".to_string(),
-            }
+            return Err(ValidationError::OutOfRange {
+                value: self.cfl_safety_factor,
+                min: 0.0, // exclusive
+                max: 1.0,
+            } /* field: cfl_safety_factor */
             .into());
         }
 

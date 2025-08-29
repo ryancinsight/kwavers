@@ -95,12 +95,11 @@ impl AcousticSolver for WesterveltSolver {
         let max_cfl = self.config.cfl_safety_factor * 0.8; // 80% of linear CFL
 
         if cfl > max_cfl {
-            return Err(crate::error::ValidationError::RangeValidation {
-                field: "CFL (Westervelt)".to_string(),
-                value: cfl.to_string(),
-                min: "0".to_string(),
-                max: max_cfl.to_string(),
-            }
+            return Err(crate::error::ValidationError::OutOfRange {
+                value: cfl,
+                min: 0.0,
+                max: max_cfl,
+            } /* field: CFL (Westervelt) */
             .into());
         }
 

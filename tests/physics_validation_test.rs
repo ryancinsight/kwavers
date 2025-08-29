@@ -128,7 +128,6 @@ fn test_homogeneous_medium_properties() {
     for (x, y, z) in test_points {
         assert_eq!(medium.density(x, y, z, &grid), density);
         assert_eq!(medium.sound_speed(x, y, z, &grid), sound_speed);
-        assert!(medium.is_homogeneous());
     }
 }
 

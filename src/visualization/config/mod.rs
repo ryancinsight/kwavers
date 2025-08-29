@@ -110,23 +110,21 @@ impl VisualizationConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.target_fps <= 0.0 {
             return Err(crate::error::KwaversError::Validation(
-                crate::error::ValidationError::RangeValidation {
-                    field: "target_fps".to_string(),
-                    value: self.target_fps.to_string(),
-                    min: "0.0".to_string(),
-                    max: "unlimited".to_string(),
-                },
+                crate::error::ValidationError::OutOfRange {
+                    value: self.target_fps,
+                    min: 0.0,
+                    max: unlimited,
+                }, /* field: target_fps */
             ));
         }
 
         if self.max_texture_size == 0 {
             return Err(crate::error::KwaversError::Validation(
-                crate::error::ValidationError::RangeValidation {
-                    field: "max_texture_size".to_string(),
-                    value: self.max_texture_size.to_string(),
-                    min: "1".to_string(),
-                    max: "unlimited".to_string(),
-                },
+                crate::error::ValidationError::OutOfRange {
+                    value: self.max_texture_size,
+                    min: 1,
+                    max: unlimited,
+                }, /* field: max_texture_size */
             ));
         }
 

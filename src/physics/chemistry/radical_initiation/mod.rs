@@ -13,7 +13,7 @@ impl RadicalInitiation {
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing RadicalInitiation");
         Self {
-            radical_concentration: grid.create_field(),
+            radical_concentration: Array3::zeros((grid.nx, grid.ny, grid.nz)),
         }
     }
 
