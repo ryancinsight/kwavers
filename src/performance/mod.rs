@@ -48,5 +48,5 @@ pub use profiling::{
 
 // Re-export benchmarking functionality
 pub use benchmarks::{
-    AccuracyResult, BenchmarkConfig, BenchmarkReport, BenchmarkSuite, OutputFormat,
+    BenchmarkConfig, BenchmarkReport, BenchmarkResult, BenchmarkRunner, OutputFormat,
 };
