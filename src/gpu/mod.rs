@@ -6,7 +6,6 @@
 pub mod buffers;
 pub mod compute;
 pub mod fdtd;
-pub mod fdtd_proper;  // Proper implementation with ping-pong buffering
 pub mod kernels;
 pub mod kspace;
 pub mod pipeline;
@@ -14,7 +13,6 @@ pub mod pipeline;
 pub use buffers::{BufferManager, GpuBuffer};
 pub use compute::GpuCompute;
 pub use fdtd::FdtdGpu;
-pub use fdtd_proper::{ProperFdtdGpu, GpuFdtdConfig, GpuPrecision};  // Export proper implementation
 pub use kspace::KSpaceGpu;
 pub use pipeline::{ComputePipeline, PipelineLayout};
 

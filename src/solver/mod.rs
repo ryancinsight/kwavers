@@ -5,14 +5,13 @@
 pub mod amr;
 pub mod cpml_integration;
 pub mod fdtd;
-pub mod fdtd_proper;      // Optimized FDTD with ghost cells
 pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
 pub mod kspace_correction;
-pub mod pstd;
-pub mod pstd_solver;      // New proper PSTD solver
-pub mod pstd_proper;      // Optimized PSTD with cached FFTs
+pub mod pstd; // PSTD solver modules
+pub mod pstd_implementation; // Optimized PSTD implementation
+pub mod pstd_solver; // Legacy PSTD solver
 pub mod spectral_dg;
 pub mod time_integration;
 pub mod validation;
@@ -35,11 +34,9 @@ pub use plugin_based::PluginBasedSolver;
 // Re-export commonly used types from submodules
 pub use amr::{AMRSolver, MemoryStats};
 pub use fdtd::FdtdConfig;
-pub use fdtd_proper::{ProperFdtdPlugin, FdtdConfig as ProperFdtdConfig, MetricType};
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
-pub use pstd::PstdConfig;
-pub use pstd_solver::PstdSolver;     // Export new PSTD solver
-pub use pstd_proper::{ProperPstdPlugin, PstdConfig as ProperPstdConfig};
+pub use pstd_implementation::{PstdConfig, PstdSolver};
+pub use pstd_solver::PstdSolver as LegacyPstdSolver; // Legacy PSTD solver
 
 use serde::Serialize;
 use std::collections::HashMap;

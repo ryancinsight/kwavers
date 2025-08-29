@@ -95,63 +95,93 @@ impl WesterveltFdtd {
 
     /// Calculate the Laplacian using finite differences
     fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
-        let pressure = self.pressure.clone(); // Clone to avoid borrow issues
+        // Use raw pointers to avoid expensive clone
+        let pressure_ptr = self.pressure.as_ptr();
+        let laplacian_ptr = self.laplacian.as_mut_ptr();
+
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let dx2_inv = 1.0 / (grid.dx * grid.dx);
-        let dy2_inv = 1.0 / (grid.dy * grid.dy);
-        let dz2_inv = 1.0 / (grid.dz * grid.dz);
+        let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
+        let dx2_inv = 1.0 / (dx * dx);
+        let dy2_inv = 1.0 / (dy * dy);
+        let dz2_inv = 1.0 / (dz * dz);
 
         match self.config.spatial_order {
             2 => {
                 // Second-order accurate
-                for i in 1..nx - 1 {
-                    for j in 1..ny - 1 {
-                        for k in 1..nz - 1 {
-                            self.laplacian[[i, j, k]] = (pressure[[i + 1, j, k]]
-                                - 2.0 * pressure[[i, j, k]]
-                                + pressure[[i - 1, j, k]])
-                                * dx2_inv
-                                + (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
-                                    + pressure[[i, j - 1, k]])
-                                    * dy2_inv
-                                + (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
-                                    + pressure[[i, j, k - 1]])
-                                    * dz2_inv;
+                // Safe because we only read from pressure and write to laplacian
+                unsafe {
+                    for i in 1..nx - 1 {
+                        for j in 1..ny - 1 {
+                            for k in 1..nz - 1 {
+                                let idx = i + j * nx + k * nx * ny;
+                                let idx_xm = (i - 1) + j * nx + k * nx * ny;
+                                let idx_xp = (i + 1) + j * nx + k * nx * ny;
+                                let idx_ym = i + (j - 1) * nx + k * nx * ny;
+                                let idx_yp = i + (j + 1) * nx + k * nx * ny;
+                                let idx_zm = i + j * nx + (k - 1) * nx * ny;
+                                let idx_zp = i + j * nx + (k + 1) * nx * ny;
+
+                                let p = *pressure_ptr.add(idx);
+                                let px_m = *pressure_ptr.add(idx_xm);
+                                let px_p = *pressure_ptr.add(idx_xp);
+                                let py_m = *pressure_ptr.add(idx_ym);
+                                let py_p = *pressure_ptr.add(idx_yp);
+                                let pz_m = *pressure_ptr.add(idx_zm);
+                                let pz_p = *pressure_ptr.add(idx_zp);
+
+                                *laplacian_ptr.add(idx) = (px_p - 2.0 * p + px_m) * dx2_inv
+                                    + (py_p - 2.0 * p + py_m) * dy2_inv
+                                    + (pz_p - 2.0 * p + pz_m) * dz2_inv;
+                            }
                         }
                     }
                 }
             }
             4 => {
-                // Fourth-order accurate
+                // Fourth-order accurate stencil coefficients
                 const C0: f64 = -1.0 / 12.0;
                 const C1: f64 = 4.0 / 3.0;
                 const C2: f64 = -5.0 / 2.0;
 
-                for i in 2..nx - 2 {
-                    for j in 2..ny - 2 {
-                        for k in 2..nz - 2 {
-                            let d2_dx2 = (C0 * pressure[[i - 2, j, k]]
-                                + C1 * pressure[[i - 1, j, k]]
-                                + C2 * pressure[[i, j, k]]
-                                + C1 * pressure[[i + 1, j, k]]
-                                + C0 * pressure[[i + 2, j, k]])
-                                * dx2_inv;
+                unsafe {
+                    for i in 2..nx - 2 {
+                        for j in 2..ny - 2 {
+                            for k in 2..nz - 2 {
+                                let idx = i + j * nx + k * nx * ny;
 
-                            let d2_dy2 = (C0 * pressure[[i, j - 2, k]]
-                                + C1 * pressure[[i, j - 1, k]]
-                                + C2 * pressure[[i, j, k]]
-                                + C1 * pressure[[i, j + 1, k]]
-                                + C0 * pressure[[i, j + 2, k]])
-                                * dy2_inv;
+                                // X-direction stencil
+                                let p_xm2 = *pressure_ptr.add((i - 2) + j * nx + k * nx * ny);
+                                let p_xm1 = *pressure_ptr.add((i - 1) + j * nx + k * nx * ny);
+                                let p_c = *pressure_ptr.add(idx);
+                                let p_xp1 = *pressure_ptr.add((i + 1) + j * nx + k * nx * ny);
+                                let p_xp2 = *pressure_ptr.add((i + 2) + j * nx + k * nx * ny);
 
-                            let d2_dz2 = (C0 * pressure[[i, j, k - 2]]
-                                + C1 * pressure[[i, j, k - 1]]
-                                + C2 * pressure[[i, j, k]]
-                                + C1 * pressure[[i, j, k + 1]]
-                                + C0 * pressure[[i, j, k + 2]])
-                                * dz2_inv;
+                                let d2_dx2 =
+                                    (C0 * p_xm2 + C1 * p_xm1 + C2 * p_c + C1 * p_xp1 + C0 * p_xp2)
+                                        * dx2_inv;
 
-                            self.laplacian[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
+                                // Y-direction stencil
+                                let p_ym2 = *pressure_ptr.add(i + (j - 2) * nx + k * nx * ny);
+                                let p_ym1 = *pressure_ptr.add(i + (j - 1) * nx + k * nx * ny);
+                                let p_yp1 = *pressure_ptr.add(i + (j + 1) * nx + k * nx * ny);
+                                let p_yp2 = *pressure_ptr.add(i + (j + 2) * nx + k * nx * ny);
+
+                                let d2_dy2 =
+                                    (C0 * p_ym2 + C1 * p_ym1 + C2 * p_c + C1 * p_yp1 + C0 * p_yp2)
+                                        * dy2_inv;
+
+                                // Z-direction stencil
+                                let p_zm2 = *pressure_ptr.add(i + j * nx + (k - 2) * nx * ny);
+                                let p_zm1 = *pressure_ptr.add(i + j * nx + (k - 1) * nx * ny);
+                                let p_zp1 = *pressure_ptr.add(i + j * nx + (k + 1) * nx * ny);
+                                let p_zp2 = *pressure_ptr.add(i + j * nx + (k + 2) * nx * ny);
+
+                                let d2_dz2 =
+                                    (C0 * p_zm2 + C1 * p_zm1 + C2 * p_c + C1 * p_zp1 + C0 * p_zp2)
+                                        * dz2_inv;
+
+                                *laplacian_ptr.add(idx) = d2_dx2 + d2_dy2 + d2_dz2;
+                            }
                         }
                     }
                 }
