@@ -78,11 +78,7 @@ impl Grid {
     /// Convert indices to coordinates (compatibility - overloaded method)
     #[inline]
     pub fn indices_to_coordinates(&self, i: usize, j: usize, k: usize) -> (f64, f64, f64) {
-        (
-            i as f64 * self.dx,
-            j as f64 * self.dy,
-            k as f64 * self.dz,
-        )
+        (i as f64 * self.dx, j as f64 * self.dy, k as f64 * self.dz)
     }
 
     /// Get grid dimensions (compatibility)

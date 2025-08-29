@@ -290,8 +290,10 @@ impl PstdSolver {
                     let propagator = 2.0 * (c * k_mag * dt).cos();
 
                     // Apply propagator with k-space correction
-                    *p_next = Complex::new(filter * (propagator * p_curr.re - p_prev.re), 
-                                         filter * (propagator * p_curr.im - p_prev.im));
+                    *p_next = Complex::new(
+                        filter * (propagator * p_curr.re - p_prev.re),
+                        filter * (propagator * p_curr.im - p_prev.im),
+                    );
                 });
         } else {
             // Serial version
