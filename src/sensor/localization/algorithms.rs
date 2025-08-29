@@ -12,7 +12,7 @@ pub enum LocalizationMethod {
     Beamforming, // Beamforming-based
     MUSIC,       // Multiple Signal Classification
     ESPRIT,      // Estimation of Signal Parameters via Rotational Invariance
-    SRP_PHAT,    // Steered Response Power with Phase Transform
+    SrpPhat,     // Steered Response Power with Phase Transform
 }
 
 /// Base trait for localization algorithms

@@ -206,23 +206,25 @@ impl IterativeMethods {
         x: &Array1<f64>,
         y: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let mut x_new = x.clone();
+        let mut x_updated = x.clone();
 
         // Process each equation sequentially
         for (i, row) in a.rows().into_iter().enumerate() {
-            let ax_i = row.dot(&x_new);
+            let ax_i = row.dot(&x_updated);
             let residual = y[i] - ax_i;
             let row_norm_sq = row.dot(&row);
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
-                Zip::from(&mut x_new).and(&row).for_each(|x_val, &a_val| {
-                    *x_val += update_factor * a_val;
-                });
+                Zip::from(&mut x_updated)
+                    .and(&row)
+                    .for_each(|x_val, &a_val| {
+                        *x_val += update_factor * a_val;
+                    });
             }
         }
 
-        Ok(x_new)
+        Ok(x_updated)
     }
 
     /// OSEM (Ordered Subset Expectation Maximization) iteration
@@ -234,10 +236,10 @@ impl IterativeMethods {
         subsets: usize,
     ) -> KwaversResult<Array1<f64>> {
         let (n_measurements, n_voxels) = a.dim();
-        let mut x_new = x.clone();
+        let mut x_updated = x.clone();
 
         // Ensure positivity constraint for EM algorithms
-        x_new.mapv_inplace(|v| v.max(1e-10));
+        x_updated.mapv_inplace(|v| v.max(1e-10));
 
         // Divide measurements into ordered subsets
         let subset_size = (n_measurements + subsets - 1) / subsets;
@@ -255,7 +257,7 @@ impl IterativeMethods {
             let sensitivity = a_subset.sum_axis(ndarray::Axis(0));
 
             // Forward projection for this subset
-            let forward_proj = a_subset.dot(&x_new);
+            let forward_proj = a_subset.dot(&x_updated);
 
             // Compute ratio of measured to expected
             let mut ratio = Array1::zeros(end_idx - start_idx);
@@ -273,12 +275,12 @@ impl IterativeMethods {
             // Update with normalization
             for i in 0..n_voxels {
                 if sensitivity[i] > 1e-10 {
-                    x_new[i] *= correction[i] / sensitivity[i];
+                    x_updated[i] *= correction[i] / sensitivity[i];
                 }
             }
         }
 
-        Ok(x_new)
+        Ok(x_updated)
     }
 
     /// Apply regularization with proper gradient-based methods

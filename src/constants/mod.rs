@@ -9,7 +9,7 @@ pub mod elastic;
 pub mod medium_properties;
 pub mod numerical;
 pub mod optical;
-pub mod optics;
+
 pub mod performance;
 pub mod physics;
 pub mod stability;
