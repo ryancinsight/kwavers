@@ -183,6 +183,21 @@ impl CoreMedium for HomogeneousMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
+
+    fn absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+        frequency: f64,
+    ) -> f64 {
+        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
+    }
+
+    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+        self.nonlinearity
+    }
 }
 
 // Array-based access
@@ -193,6 +208,16 @@ impl ArrayAccess for HomogeneousMedium {
 
     fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
         Array3::from_elem((grid.nx, grid.ny, grid.nz), self.sound_speed)
+    }
+
+    fn absorption_array(&self, grid: &Grid, frequency: f64) -> Array3<f64> {
+        let alpha = self.absorption_alpha
+            * (frequency / self.reference_frequency).powf(self.absorption_power);
+        Array3::from_elem((grid.nx, grid.ny, grid.nz), alpha)
+    }
+
+    fn nonlinearity_array(&self, grid: &Grid) -> Array3<f64> {
+        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.nonlinearity)
     }
 }
 
