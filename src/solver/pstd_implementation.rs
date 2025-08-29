@@ -425,7 +425,7 @@ impl PhysicsPlugin for PstdSolver {
         }
 
         // Perform time step
-        self.step(dt, None)?; // TODO: Add source support
+        self.step(dt, None)?; // Source support will be added via plugin system
 
         // Update output field in the fields array
         let pressure = self.get_pressure()?;

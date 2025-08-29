@@ -241,7 +241,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     }
     array.set_beamforming(BeamformingMode::Custom {
         delays: sinusoidal_delays,
-    })?;
+    });
     println!("    Applied sinusoidal phase pattern for side lobe control");
 
     Ok(())

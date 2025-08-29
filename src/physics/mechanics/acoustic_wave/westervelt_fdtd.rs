@@ -264,7 +264,7 @@ impl WesterveltFdtd {
                 // Get medium properties
                 let c = medium.sound_speed(x, y, z, grid);
                 let rho = medium.density(x, y, z, grid);
-                let beta = medium.nonlinearity_coefficient(x, y, z, grid);
+                let beta = crate::medium::core::CoreMedium::nonlinearity_coefficient(medium, x, y, z, grid);
 
                 // Linear wave propagation term
                 let linear_term = (c * dt).powi(2) * lap;
@@ -275,7 +275,7 @@ impl WesterveltFdtd {
                 // Absorption term (if enabled)
                 let absorption_term = if self.config.enable_absorption {
                     if let Some(ref p_prev2) = self.pressure_prev2 {
-                        let alpha = medium.absorption_coefficient(x, y, z, grid, 1e6); // 1 MHz reference
+                        let alpha = crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, 1e6); // 1 MHz reference
                         let delta = 2.0 * alpha * c.powi(3) / (2.0 * std::f64::consts::PI).powi(2);
                         delta * dt / c.powi(2) * (p - 2.0 * p_prev + p_prev2[[i, j, k]]) / (dt * dt)
                     } else {

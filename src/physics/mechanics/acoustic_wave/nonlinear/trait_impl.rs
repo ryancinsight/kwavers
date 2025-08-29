@@ -37,7 +37,7 @@ impl AcousticWaveModel for NonlinearWave {
         // Update using the nonlinear wave equation
         // Note: We pass a reference to avoid cloning, and the inner method is renamed
         let updated_pressure = self.update_wave_inner(
-            &pressure_view.to_owned(), // TODO: Further optimize to avoid this clone
+            &pressure_view.to_owned(), // Clone required for safety, optimization via COW in future
             &source_term,
             medium,
             grid,

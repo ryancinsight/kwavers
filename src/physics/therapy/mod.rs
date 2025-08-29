@@ -170,7 +170,7 @@ impl TherapyCalculator {
 
                 let rho = medium.density(x, y, z, grid);
                 let c = medium.sound_speed(x, y, z, grid);
-                let alpha = medium.absorption_coefficient(x, y, z, grid, self.parameters.frequency);
+                let alpha = crate::medium::core::CoreMedium::absorption_coefficient(medium.as_ref(), x, y, z, grid, self.parameters.frequency);
 
                 // Acoustic intensity
                 let intensity = p * p / (2.0 * rho * c);

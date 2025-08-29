@@ -38,7 +38,7 @@ impl RadicalInitiation {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
+                let alpha = crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, frequency);
 
                 // Cavitation-induced radical formation (e.g., water sonolysis)
                 let cav_rate = if p_val < -1.0e6 {

@@ -171,7 +171,7 @@ impl PhaseShifter {
                 }
                 self.calculate_linear_phases(target[0])
             }
-            ShiftingStrategy::Spherical => {
+            ShiftingStrategy::Quadratic => {
                 if target.len() != 3 {
                     return Err(crate::error::KwaversError::InvalidInput(
                         "Spherical focusing requires 3D point".to_string(),
