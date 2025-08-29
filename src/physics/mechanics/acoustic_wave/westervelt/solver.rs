@@ -6,7 +6,7 @@ use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use ndarray::{Array3, Array4, Axis, Zip};
+use ndarray::{Array3, Array4, Axis};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -135,16 +135,17 @@ impl AcousticWaveModel for WesterveltWave {
         let pressure_field = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
         self.pressure_buffers[curr_idx].assign(&pressure_field);
 
-        // References to the buffers for this iteration
-        let pressure_current = &self.pressure_buffers[curr_idx];
-        let pressure_previous = if prev_pressure.shape() == pressure_current.shape() {
-            prev_pressure
+        // Clone the pressure data we need to avoid borrow conflicts
+        let pressure_current = self.pressure_buffers[curr_idx].clone();
+        let pressure_previous = if prev_pressure.shape() == self.pressure_buffers[curr_idx].shape()
+        {
+            prev_pressure.to_owned()
         } else {
-            &self.pressure_buffers[prev_idx]
+            self.pressure_buffers[prev_idx].clone()
         };
 
         // Check stability
-        if !self.check_stability(dt, grid, medium, pressure_current) {
+        if !self.check_stability(dt, grid, medium, &pressure_current) {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
 
@@ -171,9 +172,9 @@ impl AcousticWaveModel for WesterveltWave {
         // Compute Laplacian using spectral methods
         let start = Instant::now();
         let laplacian = if let Some(k_squared) = &self.k_squared {
-            compute_laplacian_spectral(pressure_current, k_squared, grid)
+            compute_laplacian_spectral(&pressure_current, k_squared)
         } else {
-            compute_laplacian_fd(pressure_current, grid)
+            compute_laplacian_fd(&pressure_current, grid)
         };
 
         {
@@ -183,15 +184,17 @@ impl AcousticWaveModel for WesterveltWave {
 
         // Compute nonlinear term
         let start = Instant::now();
-        let nonlinear_term = compute_nonlinear_term(
-            pressure_current,
-            pressure_previous,
-            &b_over_a_arr,
-            &rho_arr,
-            &c_arr,
+        let mut nonlinear_term = compute_nonlinear_term(
+            &pressure_current,
+            &pressure_previous,
+            None, // No pressure history for now
+            medium,
+            grid,
             dt,
-            self.nonlinearity_scaling,
         );
+
+        // Apply nonlinearity scaling
+        nonlinear_term *= self.nonlinearity_scaling;
 
         {
             let mut metrics = self.metrics.lock().unwrap();
@@ -200,7 +203,15 @@ impl AcousticWaveModel for WesterveltWave {
 
         // Compute damping/viscoelastic term
         let start = Instant::now();
-        let damping_term = compute_viscoelastic_term(&laplacian, &eta_s_arr, &eta_b_arr, &rho_arr);
+        let damping_term = compute_viscoelastic_term(
+            &pressure_current,
+            &pressure_previous,
+            &eta_s_arr,
+            &eta_b_arr,
+            &rho_arr,
+            grid,
+            dt,
+        );
 
         {
             let mut metrics = self.metrics.lock().unwrap();

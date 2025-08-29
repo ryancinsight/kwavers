@@ -9,7 +9,6 @@ use crate::grid::Grid;
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
 use ndarray::{Array3, Zip};
-use std::time::Instant;
 
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;

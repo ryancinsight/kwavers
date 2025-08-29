@@ -23,7 +23,7 @@ use crate::{
         plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
     },
 };
-use ndarray::{s, Array3, Array4, ArrayView3, ArrayViewMut3};
+use ndarray::{s, Array3, Array4};
 use num_complex::Complex;
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -419,7 +419,7 @@ impl PhysicsPlugin for PstdSolver {
         context: &PluginContext,
     ) -> KwaversResult<()> {
         if self.state != PluginState::Initialized {
-            return Err(KwaversError::InvalidState(
+            return Err(KwaversError::InvalidInput(
                 "PSTD solver not initialized".to_string(),
             ));
         }

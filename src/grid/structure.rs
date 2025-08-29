@@ -3,7 +3,6 @@
 //! This module defines the core grid structure for spatial discretization.
 
 use crate::error::grid::GridError;
-use crate::error::{KwaversError, KwaversResult};
 use log::debug;
 use ndarray::Array3;
 use std::sync::OnceLock;

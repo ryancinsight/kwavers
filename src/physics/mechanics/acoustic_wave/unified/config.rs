@@ -65,9 +65,9 @@ impl AcousticSolverConfig {
     pub fn validate(&self) -> KwaversResult<()> {
         if self.k_space_order != 1 && self.k_space_order != 2 {
             return Err(ValidationError::OutOfRange {
-                value: self.k_space_order,
-                min: 1,
-                max: 2,
+                value: self.k_space_order as f64,
+                min: 1.0,
+                max: 2.0,
             } /* field: k_space_order */
             .into());
         }

@@ -260,7 +260,7 @@ impl PstdSolver {
         if cfl > self.cfl_safety_factor {
             return Err(crate::error::ValidationError::OutOfRange {
                 value: cfl,
-                min: 0,
+                min: 0.0,
                 max: self.cfl_safety_factor,
             } /* field: CFL */
             .into());

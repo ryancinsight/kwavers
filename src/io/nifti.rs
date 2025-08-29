@@ -196,7 +196,11 @@ impl NiftiReader {
                 header.dim[2] as usize,
                 header.dim[3] as usize,
             ],
-            voxel_dimensions: [header.pixdim[1], header.pixdim[2], header.pixdim[3]],
+            voxel_dimensions: [
+                header.pixdim[1] as f64,
+                header.pixdim[2] as f64,
+                header.pixdim[3] as f64,
+            ],
             datatype: header.datatype,
             description,
         })

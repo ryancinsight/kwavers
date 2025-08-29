@@ -105,13 +105,10 @@ impl StaggeredInterpolation {
                     }
                 }))
             }
-            _ => Err(crate::error::KwaversError::Grid(
-                crate::error::GridError::ValidationFailed {
-                    field: "axis".to_string(),
-                    value: axis.to_string(),
-                    constraint: "must be 0, 1, or 2".to_string(),
-                },
-            )),
+            _ => Err(crate::error::KwaversError::InvalidInput(format!(
+                "axis must be 0, 1, or 2, got {}",
+                axis
+            ))),
         }
     }
 
@@ -205,13 +202,10 @@ impl StaggeredInterpolation {
                     }
                 }))
             }
-            _ => Err(crate::error::KwaversError::Grid(
-                crate::error::GridError::ValidationFailed {
-                    field: "axis".to_string(),
-                    value: axis.to_string(),
-                    constraint: "must be 0, 1, or 2".to_string(),
-                },
-            )),
+            _ => Err(crate::error::KwaversError::InvalidInput(format!(
+                "axis must be 0, 1, or 2, got {}",
+                axis
+            ))),
         }
     }
 }

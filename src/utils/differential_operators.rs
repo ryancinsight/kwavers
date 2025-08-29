@@ -258,8 +258,28 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
     let mut fft = crate::fft::Fft3d::new(nx, ny, nz);
     fft.process(&mut field_complex, grid);
 
-    // Get k-space grid
-    let k_squared = grid.k_squared();
+    // Compute k-space grid
+    use crate::grid::KSpaceCalculator;
+    let kx_1d = KSpaceCalculator::generate_kx(grid);
+    let ky_1d = KSpaceCalculator::generate_ky(grid);
+    let kz_1d = KSpaceCalculator::generate_kz(grid);
+
+    // Create 3D k-arrays
+    let mut kx = Array3::zeros((nx, ny, nz));
+    let mut ky = Array3::zeros((nx, ny, nz));
+    let mut kz = Array3::zeros((nx, ny, nz));
+
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                kx[[i, j, k]] = kx_1d[i];
+                ky[[i, j, k]] = ky_1d[j];
+                kz[[i, j, k]] = kz_1d[k];
+            }
+        }
+    }
+
+    let k_squared = crate::utils::spectral::compute_k_squared(&kx, &ky, &kz);
 
     // Apply Laplacian in k-space: ∇²f = -k²F
     for i in 0..nx {

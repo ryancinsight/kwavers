@@ -3,7 +3,7 @@
 //! This module implements spatial derivatives using finite difference schemes
 //! of various orders (2nd, 4th, 6th) for the FDTD method.
 
-use crate::error::{GridError, KwaversError, KwaversResult};
+use crate::error::{KwaversError, KwaversResult};
 use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 
@@ -20,11 +20,10 @@ impl FiniteDifference {
     /// Create a new finite difference operator
     pub fn new(spatial_order: usize) -> KwaversResult<Self> {
         if ![2, 4, 6].contains(&spatial_order) {
-            return Err(KwaversError::Grid(GridError::ValidationFailed {
-                field: "spatial_order".to_string(),
-                value: spatial_order.to_string(),
-                constraint: "must be 2, 4, or 6".to_string(),
-            }));
+            return Err(KwaversError::InvalidInput(format!(
+                "spatial_order must be 2, 4, or 6, got {}",
+                spatial_order
+            )));
         }
 
         let mut coefficients = HashMap::new();
@@ -54,11 +53,10 @@ impl FiniteDifference {
         spacing: f64,
     ) -> KwaversResult<Array3<f64>> {
         if axis > 2 {
-            return Err(KwaversError::Grid(GridError::ValidationFailed {
-                field: "axis".to_string(),
-                value: axis.to_string(),
-                constraint: "must be 0, 1, or 2".to_string(),
-            }));
+            return Err(KwaversError::InvalidInput(format!(
+                "axis must be 0, 1, or 2, got {}",
+                axis
+            )));
         }
 
         let (nx, ny, nz) = field.dim();

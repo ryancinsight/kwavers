@@ -187,11 +187,12 @@ pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
 
         // Check for singularity with better tolerance
         if aug[(k, k)].abs() < 1e-12 {
-            return Err(KwaversError::NumericalError(format!(
-                "Matrix is singular or nearly singular at pivot {}: value = {}",
-                k,
-                aug[(k, k)]
-            )));
+            return Err(KwaversError::Numerical(
+                crate::error::NumericalError::SingularMatrix {
+                    operation: format!("Gaussian elimination at pivot {}", k),
+                    condition_number: aug[(k, k)].abs(),
+                },
+            ));
         }
 
         // Forward elimination

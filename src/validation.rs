@@ -69,10 +69,10 @@ pub mod validators {
         field_name: &str,
     ) -> ValidationResult {
         if value < min || value > max {
-            ValidationResult::failure(vec![ValidationError::OutOfRange {
-                value: value as f64,
-                min: min as f64,
-                max: max as f64,
+            ValidationResult::failure(vec![ValidationError::FieldValidation {
+                field: field_name.to_string(),
+                value: value.to_string(),
+                constraint: format!("must be between {} and {}", min, max),
             }])
         } else {
             ValidationResult::success()

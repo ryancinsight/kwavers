@@ -97,7 +97,7 @@ impl AcousticSolver for WesterveltSolver {
         if cfl > max_cfl {
             return Err(crate::error::ValidationError::OutOfRange {
                 value: cfl,
-                min: 0,
+                min: 0.0,
                 max: max_cfl,
             } /* field: CFL (Westervelt) */
             .into());
