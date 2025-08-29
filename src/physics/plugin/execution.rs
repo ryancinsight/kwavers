@@ -2,7 +2,7 @@
 //!
 //! This module provides different execution strategies for running plugins.
 
-use super::{PhysicsPlugin, PluginContext};
+use super::{Plugin, PluginContext, PluginFields};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;

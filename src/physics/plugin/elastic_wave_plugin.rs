@@ -10,7 +10,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::mechanics::elastic_wave::{
     ElasticStressFields, ElasticVelocityFields, ElasticWave,
 };
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{Plugin, PluginConfig, PluginContext, PluginFields, PluginMetadata, PluginState};
 use crate::source::Source;
 use ndarray::{Array3, Array4};
 

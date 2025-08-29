@@ -2,7 +2,7 @@
 
 use super::{MLModel, ModelMetadata};
 use crate::error::KwaversResult;
-use ndarray::Array2;
+use ndarray::{Array1, Array2};
 
 /// Anomaly detection model
 #[derive(Debug)]
@@ -16,6 +16,12 @@ impl AnomalyDetectorModel {
     pub fn load(path: &std::path::Path) -> KwaversResult<Self> {
         // Simplified loading
         Ok(Self::new(3.0))
+    }
+
+    /// Create model from weights
+    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
+        let _ = (weights, bias); // TODO: Use weights and bias
+        Self::new(3.0) // Default threshold
     }
 
     /// Get metadata

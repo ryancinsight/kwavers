@@ -2,7 +2,7 @@
 
 use super::{MLModel, ModelMetadata};
 use crate::error::KwaversResult;
-use ndarray::Array2;
+use ndarray::{Array1, Array2};
 
 /// Convergence prediction model
 #[derive(Debug)]
@@ -15,6 +15,12 @@ impl ConvergencePredictorModel {
     pub fn load(path: &std::path::Path) -> KwaversResult<Self> {
         // Simplified loading
         Ok(Self::new())
+    }
+
+    /// Create model from weights
+    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
+        let _ = (weights, bias); // TODO: Use weights
+        Self::new()
     }
 
     /// Get metadata

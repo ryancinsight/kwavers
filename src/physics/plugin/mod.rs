@@ -1,334 +1,184 @@
-// src/physics/plugin/mod.rs
-//! Plugin architecture for extensible physics
+//! Plugin system for acoustic simulations
 //!
-//! This module provides a flexible plugin system for physics simulations
+//! This module provides a flexible plugin architecture for extending
+//! simulation capabilities without modifying core code.
 
-pub mod acoustic_simulation_plugins;
 pub mod acoustic_wave_plugin;
 pub mod elastic_wave_plugin;
 pub mod execution;
 pub mod factory;
 pub mod field_access;
+pub mod kzk_solver;
 pub mod manager;
 pub mod metadata;
-
-// Re-export core types
-pub use execution::{ExecutionStrategy, SequentialStrategy};
-pub use factory::{PluginFactory, PluginRegistry, TypedPluginFactory};
-pub use field_access::{DirectPluginFieldAccess, PluginFieldAccess};
-pub use manager::PluginManager;
-pub use metadata::{PluginConfig, PluginMetadata, PluginState};
+pub mod mixed_domain;
+pub mod seismic_imaging;
+pub mod transducer_field;
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use crate::physics::field_mapping::UnifiedFieldType;
-use ndarray::Array4;
-use std::collections::HashMap;
+use ndarray::Array3;
+use std::any::Any;
 use std::fmt::Debug;
 
+pub use acoustic_wave_plugin::AcousticWavePlugin;
+pub use elastic_wave_plugin::ElasticWavePlugin;
+pub use execution::PluginExecutor;
+pub use factory::PluginFactory;
+pub use kzk_solver::{FrequencyOperator, KzkSolverPlugin};
+pub use manager::PluginManager;
+pub use metadata::PluginMetadata;
+pub use mixed_domain::{DomainSelection, MixedDomainPropagationPlugin};
+pub use seismic_imaging::{
+    BoundaryType, ConvergenceCriteria, FwiParameters, ImagingCondition, MigrationAperture,
+    RegularizationParameters, RtmSettings, SeismicImagingPlugin, StorageStrategy,
+};
+pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
+
+/// State of a plugin
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PluginState {
+    /// Plugin is created but not initialized
+    Created,
+    /// Plugin is initialized and ready
+    Initialized,
+    /// Plugin is actively processing
+    Active,
+    /// Plugin is paused
+    Paused,
+    /// Plugin encountered an error
+    Error,
+    /// Plugin is stopped
+    Stopped,
+}
+
+/// Priority levels for plugin execution
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PluginPriority {
+    /// Lowest priority - executed last
+    Low = 0,
+    /// Normal priority - default
+    Normal = 1,
+    /// High priority - executed early
+    High = 2,
+    /// Critical priority - executed first
+    Critical = 3,
+}
+
 /// Context passed to plugins during execution
-#[derive(Debug, Clone)]
-pub struct PluginContext {
-    /// Simulation metadata
-    pub metadata: HashMap<String, String>,
-    /// Current simulation step
-    pub step: usize,
-    /// Total number of steps
-    pub total_steps: usize,
-}
+pub type PluginContext = PluginFields;
 
-impl Default for PluginContext {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// Alias for physics-specific plugins
+pub type PhysicsPlugin = dyn Plugin;
 
-impl PluginContext {
-    /// Create a new plugin context
-    pub fn new() -> Self {
-        Self {
-            metadata: HashMap::new(),
-            step: 0,
-            total_steps: 0,
-        }
-    }
+/// Field accessor for plugins
+pub type FieldAccessor = PluginFields;
 
-    /// Update the current step
-    pub fn set_step(&mut self, step: usize) {
-        self.step = step;
-    }
+/// Core trait that all plugins must implement
+pub trait Plugin: Debug + Send + Sync {
+    /// Initialize the plugin with configuration
+    fn initialize(&mut self, config: &PluginConfig) -> KwaversResult<()>;
 
-    /// Set total steps
-    pub fn set_total_steps(&mut self, total: usize) {
-        self.total_steps = total;
-    }
-}
+    /// Execute the plugin's main functionality
+    fn execute(
+        &mut self,
+        fields: &mut PluginFields,
+        grid: &Grid,
+        medium: &dyn Medium,
+        time_step: f64,
+    ) -> KwaversResult<()>;
 
-/// Core plugin trait with lifecycle management
-pub trait PhysicsPlugin: Debug + Send + Sync {
     /// Get plugin metadata
     fn metadata(&self) -> &PluginMetadata;
-    /// Get stability constraints for time stepping
-    fn stability_constraints(&self) -> f64 {
-        1.0 // Default stable timestep multiplier
-    }
 
     /// Get current plugin state
     fn state(&self) -> PluginState;
 
-    /// Get the list of field types this plugin requires as input
-    fn required_fields(&self) -> Vec<UnifiedFieldType>;
+    /// Set plugin state
+    fn set_state(&mut self, state: PluginState);
 
-    /// Get the list of field types this plugin provides as output
-    fn provided_fields(&self) -> Vec<UnifiedFieldType>;
+    /// Get plugin priority
+    fn priority(&self) -> PluginPriority {
+        PluginPriority::Normal
+    }
 
-    /// Initialize the plugin
-    ///
-    /// This method is called once before the simulation starts.
-    /// Plugins should perform any necessary setup here.
-    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()>;
+    /// Check if plugin is compatible with another plugin
+    fn is_compatible_with(&self, other: &dyn Plugin) -> bool {
+        true
+    }
 
-    /// Update the physics for one time step
-    ///
-    /// This is the main computational method where the plugin performs its physics calculations.
-    /// The plugin should read from required fields and write to provided fields.
-    fn update(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-        context: &PluginContext,
-    ) -> KwaversResult<()>;
-
-    /// Finalize the plugin
-    ///
-    /// This method is called once after the simulation ends.
-    /// Plugins should perform any necessary cleanup here.
-    fn finalize(&mut self) -> KwaversResult<()> {
+    /// Clean up resources when plugin is stopped
+    fn cleanup(&mut self) -> KwaversResult<()> {
         Ok(())
     }
 
-    /// Get plugin-specific diagnostics
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        HashMap::new()
-    }
+    /// Convert to Any for downcasting
+    fn as_any(&self) -> &dyn Any;
 
-    /// Reset plugin state
-    fn reset(&mut self) -> KwaversResult<()> {
-        Ok(())
-    }
+    /// Convert to mutable Any for downcasting
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-/// Plugin handle for type-safe access
-pub struct PluginHandle<T: PhysicsPlugin + 'static> {
-    plugin: Box<T>,
-    id: String,
+/// Configuration for plugins
+#[derive(Debug, Clone)]
+pub struct PluginConfig {
+    /// Plugin-specific parameters
+    pub parameters: std::collections::HashMap<String, ConfigValue>,
+    /// Enable debug output
+    pub debug: bool,
+    /// Maximum memory usage in bytes
+    pub max_memory: Option<usize>,
+    /// Number of threads to use
+    pub num_threads: Option<usize>,
 }
 
-impl<T: PhysicsPlugin + 'static> PluginHandle<T> {
-    /// Create a new plugin handle
-    pub fn new(plugin: T) -> Self {
-        let id = plugin.metadata().id.clone();
+/// Configuration value types
+#[derive(Debug, Clone)]
+pub enum ConfigValue {
+    Bool(bool),
+    Integer(i64),
+    Float(f64),
+    String(String),
+    Array(Vec<f64>),
+}
+
+/// Container for fields that plugins can access and modify
+#[derive(Debug)]
+pub struct PluginFields {
+    /// Pressure field
+    pub pressure: Array3<f64>,
+    /// Velocity field (optional)
+    pub velocity: Option<Array3<f64>>,
+    /// Temperature field (optional)
+    pub temperature: Option<Array3<f64>>,
+    /// Additional custom fields
+    pub custom: std::collections::HashMap<String, Array3<f64>>,
+}
+
+impl PluginFields {
+    /// Create new plugin fields container
+    pub fn new(pressure: Array3<f64>) -> Self {
         Self {
-            plugin: Box::new(plugin),
-            id,
+            pressure,
+            velocity: None,
+            temperature: None,
+            custom: std::collections::HashMap::new(),
         }
     }
 
-    /// Get reference to the plugin
-    pub fn plugin(&self) -> &T {
-        &self.plugin
+    /// Add a custom field
+    pub fn add_custom(&mut self, name: String, field: Array3<f64>) {
+        self.custom.insert(name, field);
     }
 
-    /// Get mutable reference to the plugin
-    pub fn plugin_mut(&mut self) -> &mut T {
-        &mut self.plugin
+    /// Get a custom field
+    pub fn get_custom(&self, name: &str) -> Option<&Array3<f64>> {
+        self.custom.get(name)
     }
 
-    /// Get the plugin ID
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
-    /// Convert to dynamic plugin
-    pub fn into_dynamic(self) -> Box<dyn PhysicsPlugin> {
-        self.plugin
-    }
-}
-
-/// Composite plugin that combines multiple plugins
-pub struct CompositePlugin {
-    metadata: PluginMetadata,
-    state: PluginState,
-    plugins: Vec<Box<dyn PhysicsPlugin>>,
-}
-
-impl CompositePlugin {
-    /// Create a new composite plugin
-    pub fn new(metadata: PluginMetadata) -> Self {
-        Self {
-            metadata,
-            state: PluginState::Created,
-            plugins: Vec::new(),
-        }
-    }
-
-    /// Add a plugin to the composite
-    pub fn add_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) {
-        self.plugins.push(plugin);
-    }
-
-    /// Get the number of sub-plugins
-    pub fn plugin_count(&self) -> usize {
-        self.plugins.len()
-    }
-
-    /// Get a reference to a sub-plugin
-    pub fn get_plugin(&self, index: usize) -> Option<&dyn PhysicsPlugin> {
-        self.plugins.get(index).map(|p| p.as_ref())
-    }
-}
-
-impl Debug for CompositePlugin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CompositePlugin")
-            .field("metadata", &self.metadata)
-            .field("state", &self.state)
-            .field("plugin_count", &self.plugins.len())
-            .finish()
-    }
-}
-
-impl PhysicsPlugin for CompositePlugin {
-    fn metadata(&self) -> &PluginMetadata {
-        &self.metadata
-    }
-
-    fn state(&self) -> PluginState {
-        self.state
-    }
-
-    fn required_fields(&self) -> Vec<UnifiedFieldType> {
-        let mut fields = Vec::new();
-        let mut provided = std::collections::HashSet::new();
-
-        // Collect all provided fields
-        for plugin in &self.plugins {
-            for field in plugin.provided_fields() {
-                provided.insert(field);
-            }
-        }
-
-        // Collect required fields that aren't provided internally
-        for plugin in &self.plugins {
-            for field in plugin.required_fields() {
-                if !provided.contains(&field) && !fields.contains(&field) {
-                    fields.push(field);
-                }
-            }
-        }
-
-        fields
-    }
-
-    fn provided_fields(&self) -> Vec<UnifiedFieldType> {
-        let mut fields = Vec::new();
-        for plugin in &self.plugins {
-            for field in plugin.provided_fields() {
-                if !fields.contains(&field) {
-                    fields.push(field);
-                }
-            }
-        }
-        fields
-    }
-
-    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
-        for plugin in &mut self.plugins {
-            plugin.initialize(grid, medium)?;
-        }
-        self.state = PluginState::Initialized;
-        Ok(())
-    }
-
-    fn update(
-        &mut self,
-        fields: &mut Array4<f64>,
-        grid: &Grid,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
-        context: &PluginContext,
-    ) -> KwaversResult<()> {
-        self.state = PluginState::Running;
-        for plugin in &mut self.plugins {
-            plugin.update(fields, grid, medium, dt, t, context)?;
-        }
-        Ok(())
-    }
-
-    fn finalize(&mut self) -> KwaversResult<()> {
-        for plugin in &mut self.plugins {
-            plugin.finalize()?;
-        }
-        self.state = PluginState::Finalized;
-        Ok(())
-    }
-
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        let mut diagnostics = HashMap::new();
-        for (i, plugin) in self.plugins.iter().enumerate() {
-            for (key, value) in plugin.diagnostics() {
-                diagnostics.insert(format!("{}_{}", i, key), value);
-            }
-        }
-        diagnostics
-    }
-}
-
-/// Visitor pattern for plugin inspection
-pub trait PluginVisitor {
-    /// Visit a plugin
-    fn visit(&mut self, plugin: &dyn PhysicsPlugin);
-
-    /// Visit all plugins in a manager
-    fn visit_all(&mut self, plugins: &[Box<dyn PhysicsPlugin>]) {
-        for plugin in plugins {
-            self.visit(plugin.as_ref());
-        }
-    }
-}
-
-/// Metadata collector visitor
-pub struct MetadataCollector {
-    metadata: Vec<PluginMetadata>,
-}
-
-impl Default for MetadataCollector {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl MetadataCollector {
-    /// Create a new metadata collector
-    pub fn new() -> Self {
-        Self {
-            metadata: Vec::new(),
-        }
-    }
-
-    /// Get collected metadata
-    pub fn metadata(&self) -> &[PluginMetadata] {
-        &self.metadata
-    }
-}
-
-impl PluginVisitor for MetadataCollector {
-    fn visit(&mut self, plugin: &dyn PhysicsPlugin) {
-        self.metadata.push(plugin.metadata().clone());
+    /// Get a mutable custom field
+    pub fn get_custom_mut(&mut self, name: &str) -> Option<&mut Array3<f64>> {
+        self.custom.get_mut(name)
     }
 }

@@ -3,7 +3,7 @@
 use super::{MLModel, ModelMetadata};
 use crate::error::KwaversResult;
 use crate::ml::inference::InferenceEngine;
-use ndarray::Array2;
+use ndarray::{Array1, Array2};
 
 /// Parameter optimization model
 #[derive(Debug)]
@@ -17,6 +17,12 @@ impl ParameterOptimizerModel {
     pub fn load(path: &std::path::Path) -> KwaversResult<Self> {
         // Simplified loading
         Ok(Self::new(128, 64))
+    }
+
+    /// Create model from weights
+    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
+        let _ = (weights, bias); // TODO: Use weights and bias
+        Self::new(128, 64) // Default dimensions for now
     }
 
     /// Get metadata
