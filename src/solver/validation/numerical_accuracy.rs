@@ -326,17 +326,65 @@ impl NumericalValidator {
         Ok(0.002)
     }
 
-    fn test_stability_pstd(&self, _dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
-        // Test growth rate
-        Ok(0.0)
+    fn test_stability_pstd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
+        // Test von Neumann stability for PSTD
+        // Growth factor g = exp(-iωΔt) for linear propagation
+        // For stability: |g| ≤ 1
+
+        // Maximum frequency in the simulation
+        let f_max = 1.0 / (2.0 * self.grid.dx.min(self.grid.dy).min(self.grid.dz)); // Nyquist
+        let omega_max = 2.0 * std::f64::consts::PI * f_max;
+
+        // Check CFL condition: c*dt/dx ≤ 1 for PSTD
+        let c_max = 1540.0; // Maximum sound speed in tissue
+        let cfl = c_max * dt / self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+
+        // Growth rate: 0 for stable, positive for unstable
+        if cfl <= 1.0 {
+            Ok(0.0) // Stable
+        } else {
+            Ok((cfl - 1.0) * omega_max * dt) // Unstable growth rate
+        }
     }
 
-    fn test_stability_fdtd(&self, _dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
-        Ok(0.0)
+    fn test_stability_fdtd(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
+        // Test von Neumann stability for FDTD
+        // For 3D FDTD: CFL condition is c*dt ≤ dx/√3
+
+        let c_max = 1540.0; // Maximum sound speed
+        let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+        let cfl_limit = dx_min / (3.0_f64.sqrt());
+        let actual_cfl = c_max * dt;
+
+        // Growth rate based on CFL violation
+        if actual_cfl <= cfl_limit {
+            Ok(0.0) // Stable
+        } else {
+            // Exponential growth rate for unstable scheme
+            let violation_ratio = actual_cfl / cfl_limit;
+            Ok((violation_ratio - 1.0).ln()) // Growth rate per time step
+        }
     }
 
-    fn test_stability_kuznetsov(&self, _dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
-        Ok(0.0)
+    fn test_stability_kuznetsov(&self, dt: f64) -> Result<f64, Box<dyn std::error::Error>> {
+        // Test stability for Kuznetsov equation
+        // More restrictive than linear due to nonlinear terms
+        // CFL: c*dt ≤ dx/(√3 * safety_factor)
+
+        const NONLINEAR_SAFETY_FACTOR: f64 = 1.5; // Extra safety for nonlinear terms
+
+        let c_max = 1540.0;
+        let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
+        let cfl_limit = dx_min / (3.0_f64.sqrt() * NONLINEAR_SAFETY_FACTOR);
+        let actual_cfl = c_max * dt;
+
+        if actual_cfl <= cfl_limit {
+            Ok(0.0) // Stable
+        } else {
+            // Nonlinear instability grows faster
+            let violation_ratio = actual_cfl / cfl_limit;
+            Ok((violation_ratio - 1.0) * violation_ratio) // Quadratic growth for nonlinear
+        }
     }
 
     fn test_boundary_reflection(

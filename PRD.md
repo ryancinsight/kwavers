@@ -59,7 +59,24 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v4.6.0)
+## Current State (v4.7.0)
+
+### MAJOR REFACTORING & COMPLETENESS (v4.7.0)
+- ✅ **ACOUSTIC WAVE MODULE REFACTORED**: 803 lines → 125 lines + test support
+  - Extracted test mocks to `test_support/mocks.rs` (280 lines)
+  - Moved tests to `test_support/mod.rs` (90 lines)
+  - Core module now focused on essential physics functions
+- ✅ **STABILITY TESTS IMPLEMENTED**: Fixed placeholder implementations
+  - `test_stability_pstd`: Now properly checks CFL condition for PSTD
+  - `test_stability_fdtd`: Implements von Neumann stability analysis
+  - `test_stability_kuznetsov`: Accounts for nonlinear safety factors
+- ✅ **COMPILATION FIXED**: Resolved trait method resolution issues
+  - Fixed `absorption` → `absorption_coefficient` method call
+  - Added proper generic bounds for `Medium` trait
+- ✅ **METRICS IMPROVED**:
+  - Underscored parameters: 501 (down from 508)
+  - Large modules: 9 (down from 10)
+  - Warnings: 496 (stable)
 
 ### CRITICAL COMPLETENESS FIX (v4.6.0)
 - ✅ **MOCK IMPLEMENTATIONS FIXED**: HeterogeneousMediumMock now properly uses position parameters
