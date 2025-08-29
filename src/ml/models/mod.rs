@@ -25,22 +25,14 @@ pub trait MLModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>>;
 
     /// Get model accuracy metric
-    fn accuracy(&self) -> f32;
+    fn accuracy(&self) -> f64;
 
     /// Get model name
     fn name(&self) -> &str;
 }
 
-/// Model metadata
-#[derive(Debug, Clone)]
-pub struct ModelMetadata {
-    pub name: String,
-    pub version: String,
-    pub input_shape: Vec<usize>,
-    pub output_shape: Vec<usize>,
-    pub accuracy: f32,
-    pub inference_time_ms: f32,
-}
+// Re-export ModelMetadata from types
+pub use crate::ml::types::ModelMetadata;
 
 /// Model type enumeration
 #[derive(Debug, Clone, Copy)]

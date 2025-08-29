@@ -18,8 +18,8 @@ impl OutcomePredictorModel {
                 version: "1.0.0".to_string(),
                 input_shape: vec![20],
                 output_shape: vec![3],
-                accuracy: 0.88,
-                inference_time_ms: 1.0,
+                accuracy: 0.88_f64,
+                inference_time_ms: 1.0_f64,
             },
         }
     }
