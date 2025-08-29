@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-4.1.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-4.2.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-development-yellow.svg)](https://github.com/kwavers/kwavers)
 [![Build](https://img.shields.io/badge/build-passing-green.svg)](https://github.com/kwavers/kwavers)
 [![Tests](https://img.shields.io/badge/tests-compile-yellow.svg)](https://github.com/kwavers/kwavers)
@@ -10,7 +10,7 @@ Rust library for acoustic wave simulation with validated physics implementations
 
 ## Current Status
 
-**Grade: A+ (98%)** - PRODUCTION BUILD ACHIEVED! v4.1.0
+**Grade: A+ (99%)** - PRODUCTION BUILD ACHIEVED! v4.2.0
 
 ### Build & Test Status
 - ✅ **Build**: SUCCESSFUL - Zero compilation errors!

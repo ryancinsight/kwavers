@@ -3,7 +3,6 @@
 //! Validates that the numerical methods correctly handle wave dispersion.
 //! Reference: Trefethen, "Finite Difference and Spectral Methods", 1996
 
-use kwavers::constants::numerical::{FD2_CENTRAL_COEFF, FD4_CENTRAL_COEFF};
 use std::f64::consts::PI;
 
 /// Calculate numerical dispersion relation for FDTD
@@ -153,7 +152,7 @@ fn test_anisotropic_dispersion() {
     // Test different propagation angles
     let angles = [0.0, PI / 4.0, PI / 2.0]; // Axial, diagonal, axial
 
-    let mut max_anisotropy = 0.0;
+    let mut max_anisotropy: f64 = 0.0;
 
     for theta in angles {
         let kx = 2.0 * PI * theta.cos() / wavelength;

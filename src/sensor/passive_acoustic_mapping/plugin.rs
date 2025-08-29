@@ -93,10 +93,21 @@ impl PhysicsPlugin for PAMPlugin {
 
         // Process with PAM
         let sample_rate = dt.recip();
-        let _cavitation_map = self.mapper.process(&sensor_data, sample_rate)?;
+        let cavitation_map = self.mapper.process(&sensor_data, sample_rate)?;
 
-        // Note: In a real implementation, we would store the cavitation map
-        // in a separate output structure or write to disk
+        // Store cavitation intensity in the chemical concentration field as a proxy
+        // This allows visualization and analysis of cavitation activity
+        let chem_idx = UnifiedFieldType::ChemicalConcentration.index();
+        for ix in 0..cavitation_map.shape()[0] {
+            for iy in 0..cavitation_map.shape()[1] {
+                for iz in 0..cavitation_map.shape()[2] {
+                    // Store the first frequency band as cavitation intensity
+                    if iz == 0 {
+                        fields[[chem_idx, ix, iy, 0]] = cavitation_map[[ix, iy, iz]];
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
