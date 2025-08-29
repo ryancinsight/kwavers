@@ -78,6 +78,8 @@ pub enum KwaversError {
     },
     /// Feature not yet implemented
     NotImplemented(String),
+    /// GPU computation errors
+    GpuError(String),
 }
 
 impl fmt::Display for KwaversError {
@@ -109,6 +111,7 @@ impl fmt::Display for KwaversError {
                 operation, resource, reason
             ),
             Self::NotImplemented(feature) => write!(f, "Not implemented: {}", feature),
+            Self::GpuError(msg) => write!(f, "GPU error: {}", msg),
         }
     }
 }
@@ -134,6 +137,7 @@ impl StdError for KwaversError {
             Self::Io(_) => None,
             Self::ConcurrencyError { .. } => None,
             Self::NotImplemented(_) => None,
+            Self::GpuError(_) => None,
         }
     }
 }
