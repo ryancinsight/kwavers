@@ -6,15 +6,15 @@
 pub mod amplitude;
 pub mod frequency;
 pub mod phase;
-pub mod quadrature;
 pub mod pulse_width;
+pub mod quadrature;
 
 // Re-export main types
 pub use amplitude::AmplitudeModulation;
 pub use frequency::FrequencyModulation;
 pub use phase::PhaseModulation;
-pub use quadrature::QuadratureAmplitudeModulation;
 pub use pulse_width::PulseWidthModulation;
+pub use quadrature::QuadratureAmplitudeModulation;
 
 use crate::error::KwaversResult;
 
@@ -22,7 +22,7 @@ use crate::error::KwaversResult;
 pub trait Modulation {
     /// Apply modulation to a carrier signal
     fn modulate(&self, carrier: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>>;
-    
+
     /// Demodulate a modulated signal
     fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>>;
 }
@@ -42,10 +42,10 @@ pub struct ModulationParams {
 pub mod constants {
     /// Maximum modulation index for stable AM
     pub const MAX_AM_INDEX: f64 = 1.0;
-    
+
     /// Typical FM deviation for broadcast radio (Hz)
     pub const FM_BROADCAST_DEVIATION: f64 = 75e3;
-    
+
     /// Carson's bandwidth rule factor
     pub const CARSON_BANDWIDTH_FACTOR: f64 = 2.0;
 }

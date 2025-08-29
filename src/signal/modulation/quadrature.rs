@@ -19,7 +19,7 @@ impl Modulation for QuadratureAmplitudeModulation {
     fn modulate(&self, _carrier: &[f64], _t: &[f64]) -> KwaversResult<Vec<f64>> {
         todo!("QAM modulation requires I/Q components")
     }
-    
+
     fn demodulate(&self, _signal: &[f64], _t: &[f64]) -> KwaversResult<Vec<f64>> {
         todo!("QAM demodulation implementation")
     }
