@@ -29,3 +29,6 @@ pub const MIN_DENSITY: f64 = 0.1;
 
 /// Maximum allowed density [kg/m³]
 pub const MAX_DENSITY: f64 = 10000.0;
+
+/// Maximum allowed pressure [Pa]
+pub const PRESSURE_LIMIT: f64 = 1e9; // 1 GPa

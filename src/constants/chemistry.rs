@@ -25,3 +25,6 @@ pub const SUPEROXIDE_WEIGHT: f64 = 32.00;
 pub const SINGLET_OXYGEN_WEIGHT: f64 = 32.00;
 pub const NITRIC_OXIDE_WEIGHT: f64 = 30.01;
 pub const PEROXYNITRITE_WEIGHT: f64 = 62.00;
+
+/// Base photochemical reaction rate [1/s]
+pub const BASE_PHOTOCHEMICAL_RATE: f64 = 1e-3;

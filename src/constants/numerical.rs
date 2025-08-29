@@ -81,3 +81,12 @@ pub const LINEAR_VISCOSITY_COEFF: f64 = 0.06;
 pub const QUADRATIC_VISCOSITY_COEFF: f64 = 1.5;
 pub const VON_NEUMANN_RICHTMYER_COEFF: f64 = 2.0;
 pub const MAX_VISCOSITY_LIMIT: f64 = 0.1;
+
+/// Maximum pressure clamp value [Pa]
+pub const MAX_PRESSURE_CLAMP: f64 = 1e8; // 100 MPa
+
+/// Error thresholds
+pub const INTERPOLATION_ERROR_THRESHOLD: f64 = 1e-6;
+pub const CONSERVATION_ERROR_THRESHOLD: f64 = 1e-8;
+pub const ENERGY_THRESHOLD: f64 = 1e-10;
+pub const AMPLITUDE_THRESHOLD: f64 = 1e-12;

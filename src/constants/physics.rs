@@ -65,3 +65,12 @@ pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
 
 /// Default sampling frequency
 pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 100e6;
+
+/// Default ultrasound frequency [Hz]
+pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6; // 1 MHz
+
+/// Standard pressure amplitude [Pa]
+pub const STANDARD_PRESSURE_AMPLITUDE: f64 = 1e6; // 1 MPa
+
+/// Standard beam width [m]
+pub const STANDARD_BEAM_WIDTH: f64 = 0.01; // 10 mm

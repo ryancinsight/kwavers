@@ -23,3 +23,13 @@ pub const DEFAULT_THREAD_POOL_SIZE: usize = 4;
 
 /// Memory alignment for SIMD
 pub const SIMD_ALIGNMENT: usize = 32;
+
+/// Grid size thresholds for chunking strategies
+pub const LARGE_GRID_THRESHOLD: usize = 1000000;  // 1M points
+pub const MEDIUM_GRID_THRESHOLD: usize = 100000;   // 100K points
+pub const CHUNKED_PROCESSING_THRESHOLD: usize = 10000; // 10K points
+
+/// Chunk sizes for different grid sizes
+pub const CHUNK_SIZE_LARGE: usize = 1024;
+pub const CHUNK_SIZE_MEDIUM: usize = 512;
+pub const CHUNK_SIZE_SMALL: usize = 256;

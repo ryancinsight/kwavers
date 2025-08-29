@@ -82,11 +82,11 @@ impl Default for ThermalDiffusionConfig {
             perfusion_rate: 0.5e-3,      // 0.5 mL/g/min typical tissue
             blood_density: 1050.0,       // kg/m³
             blood_specific_heat: 3840.0, // J/(kg·K)
-            arterial_temperature: crate::constants::temperature::BODY_TEMPERATURE_K, // 37°C in Kelvin
+            arterial_temperature: 310.15, // 37°C in Kelvin
             enable_hyperbolic: false,
             relaxation_time: 20.0, // 20s for tissue
             track_thermal_dose: true,
-            dose_reference_temperature: crate::constants::temperature::THERMAL_DOSE_REFERENCE_C, // 43°C reference
+            dose_reference_temperature: 43.0, // 43°C reference for CEM43
             spatial_order: 4,
         }
     }

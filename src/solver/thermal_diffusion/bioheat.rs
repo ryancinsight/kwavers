@@ -27,7 +27,7 @@ impl Default for BioheatParameters {
             perfusion_rate: 0.5e-3,      // 0.5 mL/g/min typical tissue
             blood_density: 1050.0,       // kg/m³
             blood_specific_heat: 3840.0, // J/(kg·K)
-            arterial_temperature: crate::constants::temperature::BODY_TEMPERATURE_K,
+            arterial_temperature: 310.15, // 37°C in Kelvin
         }
     }
 }
