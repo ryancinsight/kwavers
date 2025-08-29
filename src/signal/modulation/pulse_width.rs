@@ -33,7 +33,26 @@ impl Modulation for PulseWidthModulation {
             .collect())
     }
 
-    fn demodulate(&self, _signal: &[f64], _t: &[f64]) -> KwaversResult<Vec<f64>> {
-        todo!("PWM demodulation implementation")
+    fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
+        // PWM demodulation using low-pass filtering (simplified)
+        if signal.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let period = 1.0 / self.params.carrier_freq;
+        let samples_per_period = (self.params.sample_rate * period) as usize;
+
+        let mut demodulated = Vec::with_capacity(signal.len());
+
+        // Simple moving average as low-pass filter
+        for i in 0..signal.len() {
+            let start = i.saturating_sub(samples_per_period / 2);
+            let end = (i + samples_per_period / 2).min(signal.len());
+
+            let avg: f64 = signal[start..end].iter().sum::<f64>() / (end - start) as f64;
+            demodulated.push(avg);
+        }
+
+        Ok(demodulated)
     }
 }

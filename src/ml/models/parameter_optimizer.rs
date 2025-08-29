@@ -1,0 +1,47 @@
+//! Parameter optimization model
+
+use super::{MLModel, ModelMetadata};
+use crate::error::KwaversResult;
+use crate::ml::inference::InferenceEngine;
+use ndarray::Array2;
+
+/// Parameter optimization model
+#[derive(Debug)]
+pub struct ParameterOptimizerModel {
+    engine: InferenceEngine,
+    metadata: ModelMetadata,
+}
+
+impl ParameterOptimizerModel {
+    pub fn new(input_dim: usize, output_dim: usize) -> Self {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let weights = Array2::from_shape_fn((input_dim, output_dim), |_| rng.gen_range(-0.1..0.1));
+
+        Self {
+            engine: InferenceEngine::from_weights(weights, None, 32, false),
+            metadata: ModelMetadata {
+                name: "ParameterOptimizer".to_string(),
+                version: "1.0.0".to_string(),
+                input_shape: vec![input_dim],
+                output_shape: vec![output_dim],
+                accuracy: 0.0,
+                inference_time_ms: 0.0,
+            },
+        }
+    }
+}
+
+impl MLModel for ParameterOptimizerModel {
+    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        self.engine.forward(input)
+    }
+
+    fn accuracy(&self) -> f32 {
+        self.metadata.accuracy
+    }
+
+    fn name(&self) -> &str {
+        &self.metadata.name
+    }
+}
