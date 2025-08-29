@@ -165,10 +165,6 @@ impl CoreMedium for HeterogeneousMedium {
         self.sound_speed[[ix, iy, iz]].max(100.0)
     }
 
-    fn is_homogeneous(&self) -> bool {
-        false
-    }
-
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
@@ -176,14 +172,6 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn get_density_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.density.clone()
-    }
-
-    fn get_sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.sound_speed.clone()
-    }
-
     fn density_array(&self, _grid: &Grid) -> Array3<f64> {
         self.density.clone()
     }

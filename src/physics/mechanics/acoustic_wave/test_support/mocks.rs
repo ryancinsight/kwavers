@@ -67,11 +67,11 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
-        fn get_density_array(&self, _grid: &Grid) -> Array3<f64> {
+        fn density_array(&self, _grid: &Grid) -> Array3<f64> {
             self.density.clone()
         }
 
-        fn get_sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
+        fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
             self.sound_speed.clone()
         }
     }
