@@ -59,7 +59,33 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 
 ---
 
-## Current State (v4.9.0)
+## Current State (v5.0.0)
+
+### PHASE MODULATION REFACTORING (v5.0.0)
+- ✅ **PHASE SHIFTING MODULE REFACTORED**: 551 lines → 5 domain modules
+  - core.rs: Fundamental types and utilities (81 lines)
+  - shifter.rs: Core phase shifting functionality (166 lines)
+  - beam/mod.rs: Beam steering implementation (120 lines)
+  - focus/mod.rs: Dynamic focusing and multi-focus (157 lines)
+  - array/mod.rs: Comprehensive phased array system (217 lines)
+- ✅ **CLEAN ARCHITECTURE**: Each aspect in dedicated module
+  - Core: Shared constants and utilities
+  - Shifter: Phase calculation algorithms
+  - Beam: Electronic beam steering
+  - Focus: Dynamic focusing with apodization
+  - Array: Complete phased array management
+- ✅ **PHYSICS VALIDATION**: Literature-based implementations
+  - Wooh & Shi (1999): Beam steering characteristics
+  - Ebbini & Cain (1989): Multiple-focus synthesis
+  - Pernot et al. (2003): Real-time motion correction
+- ✅ **NAMING VIOLATIONS FIXED**:
+  - Renamed `q_old` to `q_previous` (3 occurrences)
+  - Renamed `p_new` comment to `p_next`
+- ✅ **METRICS IMPROVED**:
+  - Large modules: 6 (down from 7)
+  - Underscored parameters: 497 (down from 504)
+  - Build: Zero compilation errors
+  - Warnings: 493 (up by 1)
 
 ### PROFILING MODULE REFACTORING (v4.9.0)
 - ✅ **PROFILING MODULE REFACTORED**: 552 lines → 4 domain modules

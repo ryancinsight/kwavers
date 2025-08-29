@@ -168,7 +168,7 @@ impl AcousticWaveModel for KuznetsovWave {
         let rhs = self.compute_rhs(&pressure.to_owned(), source, medium, t, dt);
 
         // Time integration using explicit Euler (can be upgraded to RK4)
-        // ∂²p/∂t² = rhs  =>  p_new = p + dt * p_dot + 0.5 * dt² * rhs
+        // ∂²p/∂t² = rhs  =>  p_next = p + dt * p_dot + 0.5 * dt² * rhs
         // Currently using forward Euler for second-order equation
         // This should be replaced with a proper time integration scheme
 

@@ -84,9 +84,10 @@ impl CattaneoVernotte {
                         (temperature[[i + 1, j, k]] - temperature[[i - 1, j, k]]) / (2.0 * grid.dx);
 
                     // Cattaneo-Vernotte equation for heat flux
-                    let q_old = self.heat_flux_x[[i, j, k]];
-                    self.heat_flux_x[[i, j, k]] =
-                        (q_old - dt / tau * (q_old + k_thermal * grad_t)) / (1.0 + dt / tau);
+                    let q_previous = self.heat_flux_x[[i, j, k]];
+                    self.heat_flux_x[[i, j, k]] = (q_previous
+                        - dt / tau * (q_previous + k_thermal * grad_t))
+                        / (1.0 + dt / tau);
                 }
             }
         }
@@ -103,9 +104,10 @@ impl CattaneoVernotte {
                     let grad_t =
                         (temperature[[i, j + 1, k]] - temperature[[i, j - 1, k]]) / (2.0 * grid.dy);
 
-                    let q_old = self.heat_flux_y[[i, j, k]];
-                    self.heat_flux_y[[i, j, k]] =
-                        (q_old - dt / tau * (q_old + k_thermal * grad_t)) / (1.0 + dt / tau);
+                    let q_previous = self.heat_flux_y[[i, j, k]];
+                    self.heat_flux_y[[i, j, k]] = (q_previous
+                        - dt / tau * (q_previous + k_thermal * grad_t))
+                        / (1.0 + dt / tau);
                 }
             }
         }
@@ -121,9 +123,10 @@ impl CattaneoVernotte {
                     let grad_t =
                         (temperature[[i, j, k + 1]] - temperature[[i, j, k - 1]]) / (2.0 * grid.dz);
 
-                    let q_old = self.heat_flux_z[[i, j, k]];
-                    self.heat_flux_z[[i, j, k]] =
-                        (q_old - dt / tau * (q_old + k_thermal * grad_t)) / (1.0 + dt / tau);
+                    let q_previous = self.heat_flux_z[[i, j, k]];
+                    self.heat_flux_z[[i, j, k]] = (q_previous
+                        - dt / tau * (q_previous + k_thermal * grad_t))
+                        / (1.0 + dt / tau);
                 }
             }
         }

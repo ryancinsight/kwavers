@@ -64,7 +64,6 @@ pub(crate) mod mocks {
         fn reference_frequency(&self) -> f64 {
             1e6
         }
-
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
@@ -78,7 +77,14 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
-        fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+        fn absorption_coefficient(
+            &self,
+            x: f64,
+            y: f64,
+            z: f64,
+            grid: &Grid,
+            frequency: f64,
+        ) -> f64 {
             // Power law absorption: α = α₀ * f^y
             const ALPHA_0: f64 = 0.5; // dB/cm/MHz
             const POWER_LAW_EXPONENT: f64 = 1.1;
@@ -112,7 +118,7 @@ pub(crate) mod mocks {
                 5.0 // Water value
             }
         }
-        
+
         fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             // Beta = 1 + B/(2A)
             let b_over_a = self.nonlinearity_parameter(x, y, z, grid);
@@ -258,8 +264,6 @@ pub(crate) mod mocks {
                 WATER_EXPANSION
             }
         }
-
-
     }
 
     // Additional trait implementations omitted for brevity
