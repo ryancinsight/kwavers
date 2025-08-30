@@ -155,8 +155,6 @@ impl KzkSolverPlugin {
         field: &Array3<f64>,
         propagation_distance: f64,
     ) -> KwaversResult<Array3<f64>> {
-        
-
         // Retarded time: τ = t - z/c
         // This shifts the time window to follow the wave
         const SOUND_SPEED: f64 = 1500.0; // m/s nominal

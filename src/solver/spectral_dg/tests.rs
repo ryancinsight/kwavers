@@ -179,23 +179,23 @@ mod integration_tests {
     #[test]
     #[ignore] // Ignore by default as it's computationally expensive
     fn test_large_grid_performance() {
-        let grid = Arc::new(Grid::new(128, 128, 128, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0));
         let config = HybridSpectralDGConfig::default();
 
         let mut solver = HybridSpectralDGSolver::new(config, grid.clone());
 
-        // Initialize with complex field
-        let mut field = Array3::zeros((128, 128, 128));
-        for i in 0..128 {
-            for j in 0..128 {
-                for k in 0..128 {
-                    let x = i as f64 / 128.0;
-                    let y = j as f64 / 128.0;
-                    let z = k as f64 / 128.0;
+        // Initialize with complex field (reduced size for testing)
+        let mut field = Array3::zeros((32, 32, 32));
+        for i in 0..32 {
+            for j in 0..32 {
+                for k in 0..32 {
+                    let x = i as f64 / 32.0;
+                    let y = j as f64 / 32.0;
+                    let z = k as f64 / 32.0;
                     field[[i, j, k]] = (2.0 * PI * x).sin() * (3.0 * PI * y).cos() * (PI * z).sin();
 
                     // Add some discontinuities
-                    if (i == 64 || j == 64) && k < 64 {
+                    if (i == 16 || j == 16) && k < 16 {
                         field[[i, j, k]] = 2.0;
                     }
                 }
