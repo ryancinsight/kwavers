@@ -225,8 +225,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        HashMap::new()
+    fn diagnostics(&self) -> String {
+        format!("FDTD Plugin - State: {:?}", self.state)
     }
 
     fn reset(&mut self) -> KwaversResult<()> {

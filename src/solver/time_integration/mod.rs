@@ -34,7 +34,7 @@ pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperTyp
 
 use crate::error::{KwaversError, ValidationError};
 use crate::grid::Grid;
-use crate::physics::plugin::PhysicsPlugin;
+use crate::physics::plugin::crate::physics::plugin::Plugin;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -88,7 +88,7 @@ impl MultiRateTimeIntegrator {
     pub fn advance(
         &mut self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         global_time: f64,
         target_time: f64,
         grid: &Grid,
@@ -144,7 +144,7 @@ impl MultiRateTimeIntegrator {
     fn compute_component_time_steps(
         &self,
         fields: &HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
         physics_components

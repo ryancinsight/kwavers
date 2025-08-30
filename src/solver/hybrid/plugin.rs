@@ -31,18 +31,6 @@ impl HybridPlugin {
 
         Ok(Self { solver, metadata })
     }
-
-    fn set_state(&mut self, state: PluginState) {
-        self.state = state;
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
 }
 
 impl crate::physics::plugin::Plugin for HybridPlugin {
@@ -95,17 +83,13 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        let mut diagnostics = HashMap::new();
+    fn diagnostics(&self) -> String {
         let metrics = self.solver.metrics();
-
-        diagnostics.insert("pstd_fraction".to_string(), metrics.pstd_fraction());
-        diagnostics.insert(
-            "total_time_ms".to_string(),
-            metrics.total_time().as_millis() as f64,
-        );
-
-        diagnostics
+        format!(
+            "Hybrid Plugin - PSTD fraction: {:.2}%, Total time: {:.2}ms",
+            metrics.pstd_fraction() * 100.0,
+            metrics.total_time().as_millis()
+        )
     }
 
     fn set_state(&mut self, state: PluginState) {

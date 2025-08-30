@@ -104,8 +104,8 @@ pub trait Plugin: Debug + Send + Sync {
         context: &PluginContext,
     ) -> KwaversResult<()>;
 
-    /// Initialize the plugin with configuration
-    fn initialize(&mut self, config: &PluginConfig) -> KwaversResult<()> {
+    /// Initialize the plugin
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         Ok(())
     }
 

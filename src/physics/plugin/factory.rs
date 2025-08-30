@@ -29,7 +29,7 @@ pub trait PluginFactory: Send + Sync {
 pub struct TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: Clone + 'static,
+    C: Clone + Send + Sync + 'static,
     P: Plugin + 'static,
 {
     create_fn: F,
@@ -40,7 +40,7 @@ where
 impl<F, C, P> TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: Clone + 'static,
+    C: Clone + Send + Sync + 'static,
     P: Plugin + 'static,
 {
     pub fn new(metadata: PluginMetadata, create_fn: F) -> Self {
@@ -55,7 +55,7 @@ where
 impl<F, C, P> PluginFactory for TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: Clone + 'static,
+    C: Clone + Send + Sync + 'static,
     P: Plugin + 'static,
 {
     fn create(

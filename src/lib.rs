@@ -106,7 +106,7 @@ pub use validation::{Validatable, ValidationResult};
 pub use physics::field_mapping::{
     FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
 };
-pub use physics::plugin::{PhysicsPlugin, PluginContext, PluginManager, PluginMetadata};
+pub use physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata};
 pub use physics::state::{field_indices, PhysicsState};
 
 // Re-export spectral-DG components
