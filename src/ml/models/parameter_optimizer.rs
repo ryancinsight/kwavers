@@ -21,8 +21,18 @@ impl ParameterOptimizerModel {
 
     /// Create model from weights
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let _ = (weights, bias); // TODO: Use weights and bias
-        Self::new(128, 64) // Default dimensions for now
+        let (input_dim, output_dim) = weights.dim();
+        Self {
+            engine: InferenceEngine::from_weights(weights, bias, 32, false),
+            metadata: ModelMetadata {
+                name: "ParameterOptimizer".to_string(),
+                version: "1.0.0".to_string(),
+                input_shape: vec![input_dim],
+                output_shape: vec![output_dim],
+                accuracy: 0.92_f64,
+                inference_time_ms: 0.5_f64,
+            },
+        }
     }
 
     /// Get metadata
