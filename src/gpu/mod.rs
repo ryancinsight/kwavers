@@ -5,6 +5,7 @@
 
 pub mod buffers;
 pub mod compute;
+pub mod compute_kernels_impl;
 pub mod fdtd;
 pub mod kernels;
 pub mod kspace;

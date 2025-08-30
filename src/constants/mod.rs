@@ -12,6 +12,7 @@ pub mod optical;
 
 pub mod performance;
 pub mod physics;
+pub mod physics_constants;
 pub mod stability;
 pub mod thermal;
 pub mod thermodynamics;
