@@ -4,7 +4,7 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 /// Dispersion model for frequency-dependent phase velocity
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DispersionModel {
     /// Reference sound speed [m/s]
     c0: f64,
@@ -56,6 +56,7 @@ impl DispersionModel {
 }
 
 /// Dispersion correction in k-space
+#[derive(Debug))]
 pub struct DispersionCorrection {
     model: DispersionModel,
 }

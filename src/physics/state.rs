@@ -13,7 +13,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct PhysicsState {
     /// Main 4D field array containing all physics quantities
     fields: Arc<RwLock<Array4<f64>>>,
@@ -28,6 +28,7 @@ pub struct PhysicsState {
 
 /// RAII guard for read-only field access
 /// This struct owns the data it needs to avoid unsafe transmutes
+#[derive(Debug))]
 pub struct FieldReadGuard<'a> {
     data: Array3<f64>,
     _guard: RwLockReadGuard<'a, Array4<f64>>,
@@ -63,6 +64,7 @@ impl<'a> std::ops::Deref for FieldReadGuard<'a> {
 }
 
 /// RAII guard for mutable field access
+#[derive(Debug))]
 pub struct FieldWriteGuard<'a> {
     guard: RwLockWriteGuard<'a, Array4<f64>>,
     field_index: usize,
@@ -266,7 +268,7 @@ impl PhysicsState {
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {
-                        field[[i, j, k]] = init_fn(i, j, k);
+                        field[[i, j, k] = init_fn(i, j, k);
                     }
                 }
             }
@@ -314,7 +316,7 @@ mod tests {
             .initialize_field(field_indices::TEMPERATURE_IDX, 293.15)
             .unwrap();
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert!((temp.view()[[5, 5, 5]] - 293.15).abs() < 1e-10);
+        assert!((temp.view()[[5, 5, 5] - 293.15).abs() < 1e-10);
     }
 
     #[test]
@@ -324,7 +326,7 @@ mod tests {
 
         // Create test data
         let mut test_data = Array3::zeros((5, 5, 5));
-        test_data[[2, 2, 2]] = 100.0;
+        test_data[[2, 2, 2] = 100.0;
 
         // Update field
         state
@@ -333,7 +335,7 @@ mod tests {
 
         // Verify update
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(pressure.view()[[2, 2, 2]], 100.0);
+        assert_eq!(pressure.view()[[2, 2, 2], 100.0);
     }
 
     #[test]
@@ -352,14 +354,14 @@ mod tests {
         // Test zero-copy write
         state
             .with_field_mut(field_indices::TEMPERATURE_IDX, |mut field| {
-                field[[5, 5, 5]] = 300.0;
+                field[[5, 5, 5] = 300.0;
             })
             .unwrap();
 
         // Verify the write
         state
             .with_field(field_indices::TEMPERATURE_IDX, |field| {
-                assert_eq!(field[[5, 5, 5]], 300.0);
+                assert_eq!(field[[5, 5, 5], 300.0);
             })
             .unwrap();
     }
@@ -376,17 +378,17 @@ mod tests {
 
         // Test read guard deref
         let guard = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(guard[[0, 0, 0]], 101325.0);
+        assert_eq!(guard[[0, 0, 0], 101325.0);
 
         // Test write guard deref
         let mut guard = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
         let mut view = guard.view_mut();
-        view[[0, 0, 0]] = 273.15;
+        view[[0, 0, 0] = 273.15;
         drop(view);
         drop(guard);
 
         // Verify write
         let guard = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert_eq!(guard[[0, 0, 0]], 273.15);
+        assert_eq!(guard[[0, 0, 0], 273.15);
     }
 }

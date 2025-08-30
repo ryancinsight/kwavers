@@ -10,6 +10,7 @@ use crate::solver::reconstruction::{
 use ndarray::{Array2, Array3};
 
 /// Arc/Circular array reconstruction
+#[derive(Debug))]
 pub struct ArcRecon {
     /// Arc center position
     center: [f64; 3],
@@ -60,7 +61,7 @@ impl Reconstructor for ArcRecon {
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {

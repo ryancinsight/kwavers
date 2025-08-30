@@ -7,6 +7,7 @@ use super::config::AcousticSolverConfig;
 use super::solver::AcousticSolver;
 
 /// Kuznetsov equation solver
+#[derive(Debug))]
 pub struct KuznetsovSolver {
     config: AcousticSolverConfig,
     grid: Grid,
@@ -55,7 +56,7 @@ impl AcousticSolver for KuznetsovSolver {
                     let z = k as f64 * grid.dz;
 
                     let c = medium.sound_speed(x, y, z, grid);
-                    linear_term[[i, j, k]] = c * c * laplacian[[i, j, k]];
+                    linear_term[[i, j, k] = c * c * laplacian[[i, j, k];
                 }
             }
         }
@@ -114,12 +115,12 @@ fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                laplacian[[i, j, k]] = (field[[i + 1, j, k]] - 2.0 * field[[i, j, k]]
-                    + field[[i - 1, j, k]])
+                laplacian[[i, j, k] = (field[[i + 1, j, k] - 2.0 * field[[i, j, k]
+                    + field[[i - 1, j, k])
                     / (grid.dx * grid.dx)
-                    + (field[[i, j + 1, k]] - 2.0 * field[[i, j, k]] + field[[i, j - 1, k]])
+                    + (field[[i, j + 1, k] - 2.0 * field[[i, j, k] + field[[i, j - 1, k])
                         / (grid.dy * grid.dy)
-                    + (field[[i, j, k + 1]] - 2.0 * field[[i, j, k]] + field[[i, j, k - 1]])
+                    + (field[[i, j, k + 1] - 2.0 * field[[i, j, k] + field[[i, j, k - 1])
                         / (grid.dz * grid.dz);
             }
         }
@@ -151,8 +152,8 @@ fn compute_nonlinear_term(
                 let c = medium.sound_speed(x, y, z, grid);
 
                 // Simplified: use pressure squared as proxy
-                nonlinear[[i, j, k]] =
-                    -beta / (2.0 * rho * c.powi(4)) * pressure[[i, j, k]].powi(2);
+                nonlinear[[i, j, k] =
+                    -beta / (2.0 * rho * c.powi(4)) * pressure[[i, j, k].powi(2);
             }
         }
     }

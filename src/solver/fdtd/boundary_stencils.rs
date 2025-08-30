@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 /// High-order forward difference coefficients
 /// These maintain the same order of accuracy as the interior stencils
+#[derive(Debug))]
 pub struct BoundaryStencils {
     /// Forward difference coefficients for each order
     forward_coeffs: HashMap<usize, Vec<f64>>,
@@ -128,13 +129,13 @@ impl BoundaryStencils {
         for (offset, &coeff) in coeffs.iter().enumerate() {
             match axis {
                 0 if i + offset < nx => {
-                    val += coeff * field[[i + offset, j, k]];
+                    val += coeff * field[[i + offset, j, k];
                 }
                 1 if j + offset < ny => {
-                    val += coeff * field[[i, j + offset, k]];
+                    val += coeff * field[[i, j + offset, k];
                 }
                 2 if k + offset < nz => {
-                    val += coeff * field[[i, j, k + offset]];
+                    val += coeff * field[[i, j, k + offset];
                 }
                 _ => {}
             }
@@ -164,13 +165,13 @@ impl BoundaryStencils {
         for (offset, &coeff) in coeffs.iter().enumerate() {
             match axis {
                 0 if i >= offset => {
-                    val += coeff * field[[i - offset, j, k]];
+                    val += coeff * field[[i - offset, j, k];
                 }
                 1 if j >= offset => {
-                    val += coeff * field[[i, j - offset, k]];
+                    val += coeff * field[[i, j - offset, k];
                 }
                 2 if k >= offset => {
-                    val += coeff * field[[i, j, k - offset]];
+                    val += coeff * field[[i, j, k - offset];
                 }
                 _ => {}
             }

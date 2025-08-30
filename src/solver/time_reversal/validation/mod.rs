@@ -9,6 +9,7 @@ use crate::{
 };
 
 /// Validator for time-reversal inputs
+#[derive(Debug))]
 pub struct InputValidator;
 
 impl InputValidator {

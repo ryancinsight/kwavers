@@ -6,6 +6,7 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 /// GPU backend for acoustic simulations
+#[derive(Debug))]
 pub struct GpuBackend {
     device: Arc<GpuDevice>,
     pipelines: Vec<ComputePipeline>,

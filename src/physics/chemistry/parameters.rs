@@ -10,7 +10,7 @@ use ndarray::Array3;
 
 /// Parameters for chemical update operations
 /// Groups related parameters following SOLID principles
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ChemicalUpdateParams<'a> {
     pub pressure: &'a Array3<f64>,
     pub light: &'a Array3<f64>,

@@ -4,7 +4,7 @@ use super::ProcessingOperation;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 
 /// Processing configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ProcessingConfig {
     pub normalize_range: (f32, f32),
     pub log_epsilon: f32,
@@ -24,6 +24,7 @@ impl Default for ProcessingConfig {
 }
 
 /// Processing stage for data transformation
+#[derive(Debug))]
 pub struct ProcessingStage {
     config: ProcessingConfig,
 }
@@ -79,10 +80,10 @@ impl ProcessingStage {
         for i in 1..shape.0 - 1 {
             for j in 1..shape.1 - 1 {
                 for k in 1..shape.2 - 1 {
-                    let dx = (data[[i + 1, j, k]] - data[[i - 1, j, k]]) / 2.0;
-                    let dy = (data[[i, j + 1, k]] - data[[i, j - 1, k]]) / 2.0;
-                    let dz = (data[[i, j, k + 1]] - data[[i, j, k - 1]]) / 2.0;
-                    gradient[[i, j, k]] = (dx * dx + dy * dy + dz * dz).sqrt();
+                    let dx = (data[[i + 1, j, k] - data[[i - 1, j, k]) / 2.0;
+                    let dy = (data[[i, j + 1, k] - data[[i, j - 1, k]) / 2.0;
+                    let dz = (data[[i, j, k + 1] - data[[i, j, k - 1]) / 2.0;
+                    gradient[[i, j, k] = (dx * dx + dy * dy + dz * dz).sqrt();
                 }
             }
         }
@@ -108,13 +109,13 @@ impl ProcessingStage {
                                 let ii = (i as i32 + di) as usize;
                                 let jj = (j as i32 + dj) as usize;
                                 let kk = (k as i32 + dk) as usize;
-                                sum += data[[ii, jj, kk]];
+                                sum += data[[ii, jj, kk];
                                 count += 1;
                             }
                         }
                     }
 
-                    smoothed[[i, j, k]] = sum / count as f64;
+                    smoothed[[i, j, k] = sum / count as f64;
                 }
             }
         }

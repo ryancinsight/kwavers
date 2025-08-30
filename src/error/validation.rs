@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 /// Validation errors for input parameters and configurations
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error))]
 pub enum ValidationError {
     /// Field validation failed
     #[error("Field '{field}' validation failed: value '{value}' {constraint}")]

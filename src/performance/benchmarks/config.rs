@@ -5,7 +5,7 @@
 use std::fmt;
 
 /// Output format for benchmark results
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum OutputFormat {
     /// Console output
     Console,
@@ -18,7 +18,7 @@ pub enum OutputFormat {
 }
 
 /// Benchmark configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BenchmarkConfig {
     /// Grid sizes to test
     pub grid_sizes: Vec<usize>,

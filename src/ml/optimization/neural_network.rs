@@ -5,7 +5,7 @@ use ndarray::{Array1, Array2, Axis};
 use rand::Rng;
 
 /// Neural network for parameter optimization
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct NeuralNetwork {
     weights1: Array2<f64>,
     bias1: Array1<f64>,

@@ -39,7 +39,7 @@ impl Sensor {
 }
 
 /// Array geometry types
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize))]
 pub enum ArrayGeometry {
     Linear,
     Planar,
@@ -49,7 +49,7 @@ pub enum ArrayGeometry {
 }
 
 /// Sensor array for localization
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SensorArray {
     /// Array sensors
     pub sensors: Vec<Sensor>,

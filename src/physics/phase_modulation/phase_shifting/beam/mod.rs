@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use crate::physics::phase_modulation::phase_shifting::core::*;
 
 /// Beam steering controller
+#[derive(Debug))]
 pub struct BeamSteering {
     /// Array element positions
     element_positions: Array2<f64>,

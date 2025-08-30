@@ -62,7 +62,7 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 let x = i as f64 * dx;
-                pressure[[i, j, 0]] = (k * x).sin();
+                pressure[[i, j, 0] = (k * x).sin();
             }
         }
 
@@ -97,8 +97,8 @@ mod tests {
 
         for i in n / 4..3 * n / 4 {
             // Avoid boundaries
-            let expected = initial[[i, n / 2, 0]];
-            let actual = pressure[[i, n / 2, 0]];
+            let expected = initial[[i, n / 2, 0];
+            let actual = pressure[[i, n / 2, 0];
 
             // Cross-correlation for phase
             let phase_shift = (actual * expected).acos();
@@ -199,8 +199,8 @@ mod tests {
                         + (j as f64 - n as f64 / 2.0).powi(2)
                         + (k as f64 - n as f64 / 2.0).powi(2))
                     .sqrt();
-                    acoustic_state[[i, j, k]] = (-r.powi(2) / 10.0).exp();
-                    thermal_state[[i, j, k]] = 300.0 + 10.0 * (-r.powi(2) / 20.0).exp();
+                    acoustic_state[[i, j, k] = (-r.powi(2) / 10.0).exp();
+                    thermal_state[[i, j, k] = 300.0 + 10.0 * (-r.powi(2) / 20.0).exp();
                 }
             }
         }
@@ -228,7 +228,7 @@ mod tests {
                 for i in 0..n {
                     for j in 0..n {
                         for k in 0..n {
-                            acoustic_state[[i, j, k]] +=
+                            acoustic_state[[i, j, k] +=
                                 dt_acoustic_step * c_squared * laplacian_1d[idx];
                             idx += 1;
                         }
@@ -247,7 +247,7 @@ mod tests {
             for i in 0..n {
                 for j in 0..n {
                     for k in 0..n {
-                        thermal_state[[i, j, k]] +=
+                        thermal_state[[i, j, k] +=
                             dt_slow * THERMAL_DIFFUSIVITY * thermal_laplacian[idx];
                         idx += 1;
                     }
@@ -296,7 +296,7 @@ mod tests {
                         + (j as i32 - center as i32).pow(2)
                         + (k as i32 - center as i32).pow(2)) as f64)
                         .sqrt();
-                    field[[i, j, k]] = (PI * r / feature_width as f64).cos();
+                    field[[i, j, k] = (PI * r / feature_width as f64).cos();
                 }
             }
         }
@@ -322,9 +322,9 @@ mod tests {
         let mut field = Array3::zeros((n, 1, 1));
         for i in 0..n {
             if i < n / 2 {
-                field[[i, 0, 0]] = 1.0;
+                field[[i, 0, 0] = 1.0;
             } else {
-                field[[i, 0, 0]] = 0.1;
+                field[[i, 0, 0] = 0.1;
             }
         }
 
@@ -332,9 +332,9 @@ mod tests {
         for _ in 0..2 {
             let mut smoothed = field.clone();
             for i in 1..n - 1 {
-                smoothed[[i, 0, 0]] = 0.25 * field[[i - 1, 0, 0]]
-                    + 0.5 * field[[i, 0, 0]]
-                    + 0.25 * field[[i + 1, 0, 0]];
+                smoothed[[i, 0, 0] = 0.25 * field[[i - 1, 0, 0]
+                    + 0.5 * field[[i, 0, 0]
+                    + 0.25 * field[[i + 1, 0, 0];
             }
             field = smoothed;
         }
@@ -345,11 +345,11 @@ mod tests {
         for i in 2..n - 2 {
             // Modal decay indicator
             let local_vals = vec![
-                field[[i - 2, 0, 0]],
-                field[[i - 1, 0, 0]],
-                field[[i, 0, 0]],
-                field[[i + 1, 0, 0]],
-                field[[i + 2, 0, 0]],
+                field[[i - 2, 0, 0],
+                field[[i - 1, 0, 0],
+                field[[i, 0, 0],
+                field[[i + 1, 0, 0],
+                field[[i + 2, 0, 0],
             ];
 
             // Compute local polynomial coefficients (simplified)
@@ -357,7 +357,7 @@ mod tests {
             let variance = local_vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / 5.0;
 
             // High variance indicates discontinuity
-            smoothness[[i, 0, 0]] = variance.sqrt();
+            smoothness[[i, 0, 0] = variance.sqrt();
         }
 
         // Find shock location
@@ -365,8 +365,8 @@ mod tests {
         let mut shock_location = 0;
 
         for i in 0..n {
-            if smoothness[[i, 0, 0]] > max_indicator {
-                max_indicator = smoothness[[i, 0, 0]];
+            if smoothness[[i, 0, 0] > max_indicator {
+                max_indicator = smoothness[[i, 0, 0];
                 shock_location = i;
             }
         }

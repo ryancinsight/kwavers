@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, ArrayView1, ArrayView2};
 
 /// Compressed Sparse Row matrix format
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CompressedSparseRowMatrix {
     /// Number of rows
     pub rows: usize,
@@ -43,8 +43,8 @@ impl CompressedSparseRowMatrix {
         for i in 0..rows {
             row_pointers[i] = values.len();
             for j in 0..cols {
-                if dense[[i, j]].abs() > threshold {
-                    values.push(dense[[i, j]]);
+                if dense[[i, j].abs() > threshold {
+                    values.push(dense[[i, j]);
                     col_indices.push(j);
                 }
             }
@@ -78,7 +78,7 @@ impl CompressedSparseRowMatrix {
         for i in 0..self.rows {
             let mut sum = 0.0;
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
-                sum += self.values[j] * x[self.col_indices[j]];
+                sum += self.values[j] * x[self.col_indices[j];
             }
             y[i] = sum;
         }
@@ -109,7 +109,7 @@ impl CompressedSparseRowMatrix {
 
         for i in 0..self.rows {
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
-                dense[[i, self.col_indices[j]]] = self.values[j];
+                dense[[i, self.col_indices[j]] = self.values[j];
             }
         }
 

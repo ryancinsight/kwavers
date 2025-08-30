@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Comparison tests between FDTD and PSTD solvers
 //!
 //! Note: PSTD currently uses finite differences (not spectral methods) for stability.

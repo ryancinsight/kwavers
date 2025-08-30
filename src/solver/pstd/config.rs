@@ -40,7 +40,7 @@ pub struct PstdConfig {
 }
 
 /// k-space correction method
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize))]
 pub enum CorrectionMethod {
     None,
     Sinc,

@@ -52,7 +52,7 @@ use std::collections::HashMap;
 ///
 /// Manages different time steps for different physics components
 /// while maintaining stability and accuracy.
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct MultiRateTimeIntegrator {
     /// Configuration for multi-rate integration
     config: MultiRateConfig,
@@ -210,7 +210,7 @@ impl MultiRateTimeIntegrator {
 }
 
 /// Statistics for multi-rate time stepping
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TimeSteppingStatistics {
     /// Total number of global time steps
     pub total_steps: usize,

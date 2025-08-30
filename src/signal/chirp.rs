@@ -8,7 +8,7 @@ use crate::signal::{
 };
 use std::fmt::Debug;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ChirpSignal {
     amplitude: Box<dyn Amplitude>,
     frequency: Box<dyn Frequency>,

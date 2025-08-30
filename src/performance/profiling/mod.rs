@@ -18,7 +18,7 @@ use crate::grid::Grid;
 use std::time::Duration;
 
 /// Comprehensive performance profiler
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PerformanceProfiler {
     /// Timing profiler
     pub timing: TimingProfiler,
@@ -75,7 +75,7 @@ impl PerformanceProfiler {
 }
 
 /// Comprehensive profile report
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ProfileReport {
     /// Timing summaries
     pub timing_summaries: Vec<TimingSummary>,

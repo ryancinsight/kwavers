@@ -3,7 +3,8 @@
 use ndarray::Array3;
 
 /// Detailed metrics for adaptive selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
+#[derive(Debug))]
 pub struct DetailedMetrics {
     pub smoothness: f64,
     pub discontinuities: usize,
@@ -11,7 +12,8 @@ pub struct DetailedMetrics {
 }
 
 /// Quality metrics for method selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
+#[derive(Debug))]
 pub struct QualityMetrics {
     pub accuracy_score: f64,
     pub efficiency_score: f64,

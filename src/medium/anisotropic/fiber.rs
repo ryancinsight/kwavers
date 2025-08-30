@@ -48,7 +48,7 @@ impl FiberOrientation {
 }
 
 /// Muscle fiber model for anisotropic wave propagation
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct MuscleFiberModel {
     /// Fiber orientations at each grid point
     fiber_field: Array3<FiberOrientation>,
@@ -88,7 +88,7 @@ impl MuscleFiberModel {
                     let azimuth = y.atan2(x) + helix_angle;
                     let elevation = (z / pitch).atan();
 
-                    fiber_field[[i, j, k]] = FiberOrientation::from_angles(azimuth, elevation);
+                    fiber_field[[i, j, k] = FiberOrientation::from_angles(azimuth, elevation);
                 }
             }
         }
@@ -102,7 +102,7 @@ impl MuscleFiberModel {
 
     /// Get fiber orientation at specific location
     pub fn orientation_at(&self, i: usize, j: usize, k: usize) -> &FiberOrientation {
-        &self.fiber_field[[i, j, k]]
+        &self.fiber_field[[i, j, k]
     }
 
     /// Calculate local stiffness enhancement along fiber direction

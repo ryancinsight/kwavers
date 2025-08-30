@@ -113,7 +113,7 @@ pub mod iterators {
 
     impl<'a> ExactSizeIterator for MediumPropertyIterator<'a> {}
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone))]
     pub struct MediumProperties {
         pub density: f64,
         pub sound_speed: f64,
@@ -273,7 +273,7 @@ pub mod iterators {
         }
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone))]
     pub struct InterfacePoint {
         pub indices: (usize, usize, usize),
         pub position: (f64, f64, f64),

@@ -9,7 +9,7 @@ pub mod optimization;
 pub mod regularization;
 pub mod wavefield;
 
-use self::gradient::GradientComputer;
+use self::gradient::GradientCalculator;
 use self::optimization::{ConjugateGradient, LineSearch};
 use self::regularization::Regularizer;
 use self::wavefield::WavefieldModeler;
@@ -17,15 +17,17 @@ use self::wavefield::WavefieldModeler;
 use super::config::SeismicImagingConfig;
 use super::misfit::{MisfitFunction, MisfitType};
 use crate::error::KwaversResult;
+use crate::grid::Grid;
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor
+#[derive(Debug))]
 pub struct FullWaveformInversion {
     config: SeismicImagingConfig,
     /// Current velocity model
     velocity_model: Array3<f64>,
     /// Gradient computer
-    gradient_computer: GradientComputer,
+    gradient_computer: GradientCalculator,
     /// Optimizer
     optimizer: ConjugateGradient,
     /// Line search
@@ -41,36 +43,42 @@ pub struct FullWaveformInversion {
 impl FullWaveformInversion {
     pub fn new(config: SeismicImagingConfig) -> Self {
         let shape = (config.nx, config.ny, config.nz);
+        let grid = Grid::new(config.nx, config.ny, config.nz, 1.0, 1.0, 1.0);
         Self {
-            config,
             velocity_model: Array3::zeros(shape),
-            gradient_computer: GradientComputer::new(),
+            gradient_computer: GradientCalculator::new(100, 0.001),
             optimizer: ConjugateGradient::new(),
             line_search: LineSearch::new(),
             regularizer: Regularizer::new(),
-            wavefield_modeler: WavefieldModeler::new(),
+            wavefield_modeler: WavefieldModeler::new(grid, 0.001, vec![1.0; 100]),
             misfit_function: MisfitFunction::new(MisfitType::L2Norm),
+            config,
         }
     }
 
     /// Main FWI iteration
-    pub fn iterate(&mut self, observed_data: &Array2<f64>) -> KwaversResult<()> {
+    pub fn iterate(&mut self, observed_data: &Array3<f64>) -> KwaversResult<()> {
         // 1. Forward modeling
         let synthetic_data = self.wavefield_modeler.forward_model(&self.velocity_model)?;
 
-        // 2. Compute residual
-        let residual = observed_data - &synthetic_data;
+        // 2. Compute residual (extract surface data)
+        let mut residual = Array2::zeros((synthetic_data.shape()[0], synthetic_data.shape()[2]));
+        for i in 0..synthetic_data.shape()[0] {
+            for t in 0..synthetic_data.shape()[2] {
+                residual[[i, t] = observed_data[[i, 0, t] - synthetic_data[[i, 0, t];
+            }
+        }
 
         // 3. Compute gradient via adjoint method
         let adjoint_source = self.misfit_function.adjoint_source(&residual);
         let adjoint_wavefield = self.wavefield_modeler.adjoint_model(&adjoint_source)?;
-        let forward_wavefield = self.wavefield_modeler.get_forward_wavefield()?;
+        let forward_wavefield = self.wavefield_modeler.get_wavefield().clone();
 
-        let mut gradient = self.gradient_computer.compute_adjoint_gradient(
+        let mut gradient = self.gradient_computer.compute_gradient(
             &forward_wavefield,
             &adjoint_wavefield,
-            self.config.dt,
-        );
+            &self.velocity_model,
+        )?;
 
         // 4. Apply regularization
         self.regularizer

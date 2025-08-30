@@ -1,7 +1,7 @@
 //! Dispersive media support for CPML
 
 /// Parameters for dispersive media in CPML
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DispersiveParameters {
     /// Number of relaxation mechanisms
     pub num_mechanisms: usize,

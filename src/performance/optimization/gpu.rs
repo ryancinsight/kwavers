@@ -3,6 +3,7 @@
 use crate::error::{KwaversError, KwaversResult};
 
 /// GPU optimizer for accelerated computation
+#[derive(Debug))]
 pub struct GpuOptimizer {
     num_streams: usize,
     kernel_fusion_enabled: bool,
@@ -74,6 +75,7 @@ impl GpuOptimizer {
 }
 
 /// GPU buffer handle
+#[derive(Debug))]
 pub struct GpuBuffer {
     _id: usize,
     _size: usize,

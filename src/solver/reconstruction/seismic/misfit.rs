@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Zip};
 
 /// Type of misfit function for FWI
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum MisfitType {
     /// L2 norm (least squares)
     L2Norm,
@@ -21,6 +21,7 @@ pub enum MisfitType {
 }
 
 /// Misfit function calculator
+#[derive(Debug))]
 pub struct MisfitFunction {
     misfit_type: MisfitType,
 }
@@ -220,7 +221,7 @@ impl MisfitFunction {
 
                 // Gradient of normalized cross-correlation
                 for j in 0..adjoint.shape()[1] {
-                    adjoint[[i, j]] = obs_trace[j] / (obs_norm * syn_norm)
+                    adjoint[[i, j] = obs_trace[j] / (obs_norm * syn_norm)
                         - correlation * syn_trace[j] / (syn_norm * syn_norm);
                 }
             }

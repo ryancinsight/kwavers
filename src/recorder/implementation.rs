@@ -18,7 +18,7 @@ use super::statistics::RecorderStatistics;
 use super::traits::RecorderTrait;
 
 /// Main recorder implementation
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct Recorder {
     pub sensor: Sensor,
     pub filename: String,
@@ -72,7 +72,7 @@ impl Recorder {
 
         for (t, sensor_data) in self.pressure_sensor_data.iter().enumerate() {
             for (s, &value) in sensor_data.iter().enumerate() {
-                data[[s, t]] = value;
+                data[[s, t] = value;
             }
         }
 
@@ -91,7 +91,7 @@ impl Recorder {
 
         for (t, sensor_data) in self.light_sensor_data.iter().enumerate() {
             for (s, &value) in sensor_data.iter().enumerate() {
-                data[[s, t]] = value;
+                data[[s, t] = value;
             }
         }
 
@@ -201,7 +201,7 @@ impl Recorder {
 
         for ((i, j, k), &pressure) in pressure_field.indexed_iter() {
             if pressure < self.cavitation_threshold {
-                let radius = bubble_field[[i, j, k]];
+                let radius = bubble_field[[i, j, k];
                 self.cavitation_events.push(CavitationEvent {
                     time_step: step,
                     time,
@@ -209,7 +209,7 @@ impl Recorder {
                     pressure,
                     bubble_radius: radius,
                 });
-                self.cavitation_map[[i, j, k]] += 1.0;
+                self.cavitation_map[[i, j, k] += 1.0;
                 self.statistics.total_cavitation_events += 1;
             }
         }
@@ -247,7 +247,7 @@ impl Recorder {
             for event in events {
                 self.sl_events.push(event.clone());
                 let (i, j, k) = event.position;
-                self.sl_intensity_map[[i, j, k]] += event.photon_count;
+                self.sl_intensity_map[[i, j, k] += event.photon_count;
                 self.statistics.total_sl_events += 1;
             }
         }
@@ -272,8 +272,8 @@ impl Recorder {
                     position: [i, j, k],
                     temperature,
                 });
-                self.max_temperature_map[[i, j, k]] =
-                    self.max_temperature_map[[i, j, k]].max(temperature);
+                self.max_temperature_map[[i, j, k] =
+                    self.max_temperature_map[[i, j, k].max(temperature);
                 self.statistics.total_thermal_events += 1;
             }
         }

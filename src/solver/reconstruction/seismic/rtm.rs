@@ -18,6 +18,7 @@ use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
 
 /// Reverse Time Migration reconstructor
 /// Creates subsurface images by cross-correlating forward and backward wavefields
+#[derive(Debug))]
 pub struct ReverseTimeMigration {
     config: SeismicImagingConfig,
     /// Velocity model for migration
@@ -133,7 +134,7 @@ impl ReverseTimeMigration {
         for t in (0..n_time_steps).rev() {
             // Apply receiver data as sources
             for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
-                pressure[rec_pos] += shot_data[[rec_idx, t]];
+                pressure[rec_pos] += shot_data[[rec_idx, t];
             }
 
             // Update wavefield
@@ -168,28 +169,28 @@ impl ReverseTimeMigration {
             for j in 2..(ny - 2) {
                 for k in 2..(nz - 2) {
                     // 4th-order finite differences
-                    let d2p_dx2 = (FD_COEFF_2 * pressure[[i - 2, j, k]]
-                        + FD_COEFF_1 * pressure[[i - 1, j, k]]
-                        + FD_COEFF_0 * pressure[[i, j, k]]
-                        + FD_COEFF_1 * pressure[[i + 1, j, k]]
-                        + FD_COEFF_2 * pressure[[i + 2, j, k]])
+                    let d2p_dx2 = (FD_COEFF_2 * pressure[[i - 2, j, k]
+                        + FD_COEFF_1 * pressure[[i - 1, j, k]
+                        + FD_COEFF_0 * pressure[[i, j, k]
+                        + FD_COEFF_1 * pressure[[i + 1, j, k]
+                        + FD_COEFF_2 * pressure[[i + 2, j, k])
                         / (grid.dx * grid.dx);
 
-                    let d2p_dy2 = (FD_COEFF_2 * pressure[[i, j - 2, k]]
-                        + FD_COEFF_1 * pressure[[i, j - 1, k]]
-                        + FD_COEFF_0 * pressure[[i, j, k]]
-                        + FD_COEFF_1 * pressure[[i, j + 1, k]]
-                        + FD_COEFF_2 * pressure[[i, j + 2, k]])
+                    let d2p_dy2 = (FD_COEFF_2 * pressure[[i, j - 2, k]
+                        + FD_COEFF_1 * pressure[[i, j - 1, k]
+                        + FD_COEFF_0 * pressure[[i, j, k]
+                        + FD_COEFF_1 * pressure[[i, j + 1, k]
+                        + FD_COEFF_2 * pressure[[i, j + 2, k])
                         / (grid.dy * grid.dy);
 
-                    let d2p_dz2 = (FD_COEFF_2 * pressure[[i, j, k - 2]]
-                        + FD_COEFF_1 * pressure[[i, j, k - 1]]
-                        + FD_COEFF_0 * pressure[[i, j, k]]
-                        + FD_COEFF_1 * pressure[[i, j, k + 1]]
-                        + FD_COEFF_2 * pressure[[i, j, k + 2]])
+                    let d2p_dz2 = (FD_COEFF_2 * pressure[[i, j, k - 2]
+                        + FD_COEFF_1 * pressure[[i, j, k - 1]
+                        + FD_COEFF_0 * pressure[[i, j, k]
+                        + FD_COEFF_1 * pressure[[i, j, k + 1]
+                        + FD_COEFF_2 * pressure[[i, j, k + 2])
                         / (grid.dz * grid.dz);
 
-                    laplacian[[i, j, k]] = d2p_dx2 + d2p_dy2 + d2p_dz2;
+                    laplacian[[i, j, k] = d2p_dx2 + d2p_dy2 + d2p_dz2;
                 }
             }
         }
@@ -312,13 +313,13 @@ impl ReverseTimeMigration {
         for i in 1..(nx - 1) {
             for j in 1..(ny - 1) {
                 for k in 1..(nz - 1) {
-                    laplacian[[i, j, k]] = field[[i + 1, j, k]]
-                        + field[[i - 1, j, k]]
-                        + field[[i, j + 1, k]]
-                        + field[[i, j - 1, k]]
-                        + field[[i, j, k + 1]]
-                        + field[[i, j, k - 1]]
-                        - 6.0 * field[[i, j, k]];
+                    laplacian[[i, j, k] = field[[i + 1, j, k]
+                        + field[[i - 1, j, k]
+                        + field[[i, j + 1, k]
+                        + field[[i, j - 1, k]
+                        + field[[i, j, k + 1]
+                        + field[[i, j, k - 1]
+                        - 6.0 * field[[i, j, k];
                 }
             }
         }
@@ -420,7 +421,7 @@ impl Reconstructor for ReverseTimeMigration {
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {

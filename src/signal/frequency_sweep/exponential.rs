@@ -6,7 +6,7 @@ use crate::signal::Signal;
 /// Exponential frequency sweep
 ///
 /// Frequency varies exponentially with time
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ExponentialSweep {
     start_frequency: f64,
     stop_frequency: f64,

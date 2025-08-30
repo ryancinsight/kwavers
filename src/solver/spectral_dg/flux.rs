@@ -6,7 +6,7 @@
 use crate::KwaversResult;
 
 /// Numerical flux type
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum FluxType {
     /// Local Lax-Friedrichs (Rusanov) flux
     LaxFriedrichs,
@@ -19,7 +19,7 @@ pub enum FluxType {
 }
 
 /// Limiter type for shock capturing
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum LimiterType {
     /// No limiting
     None,

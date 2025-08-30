@@ -12,7 +12,7 @@ pub fn find_focus(pressure_field: ArrayView3<f64>, grid: &Grid) -> KwaversResult
     for ix in 0..grid.nx {
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
-                let p = pressure_field[[ix, iy, iz]].abs();
+                let p = pressure_field[[ix, iy, iz].abs();
                 if p > max_pressure {
                     max_pressure = p;
                     focus_indices = [ix, iy, iz];
@@ -55,21 +55,21 @@ pub fn find_focal_plane(
             0 => {
                 for iy in 0..grid.ny {
                     for iz in 0..grid.nz {
-                        slice_energy += pressure_field[[slice, iy, iz]].powi(2);
+                        slice_energy += pressure_field[[slice, iy, iz].powi(2);
                     }
                 }
             }
             1 => {
                 for ix in 0..grid.nx {
                     for iz in 0..grid.nz {
-                        slice_energy += pressure_field[[ix, slice, iz]].powi(2);
+                        slice_energy += pressure_field[[ix, slice, iz].powi(2);
                     }
                 }
             }
             2 => {
                 for ix in 0..grid.nx {
                     for iy in 0..grid.ny {
-                        slice_energy += pressure_field[[ix, iy, slice]].powi(2);
+                        slice_energy += pressure_field[[ix, iy, slice].powi(2);
                     }
                 }
             }
@@ -122,7 +122,7 @@ pub fn calculate_beam_width(
                 for ix in 0..grid.nx {
                     for iy in 0..grid.ny {
                         max_pressure =
-                            f64::max(max_pressure, pressure_field[[ix, iy, slice]].abs());
+                            f64::max(max_pressure, pressure_field[[ix, iy, slice].abs());
                     }
                 }
 
@@ -134,12 +134,12 @@ pub fn calculate_beam_width(
                     let mut left = grid.nx / 2;
                     let mut right = grid.nx / 2;
 
-                    while left > 0 && pressure_field[[left, center_y, slice]].abs() > threshold {
+                    while left > 0 && pressure_field[[left, center_y, slice].abs() > threshold {
                         left -= 1;
                     }
 
                     while right < grid.nx - 1
-                        && pressure_field[[right, center_y, slice]].abs() > threshold
+                        && pressure_field[[right, center_y, slice].abs() > threshold
                     {
                         right += 1;
                     }

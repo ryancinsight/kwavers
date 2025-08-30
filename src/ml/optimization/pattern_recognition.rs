@@ -1,17 +1,20 @@
 //! Pattern recognition for simulation data
 
 /// Pattern recognizer for simulation data
+#[derive(Debug))]
 pub struct PatternRecognizer {
     feature_extractor: FeatureExtractor,
 }
 
 /// Extracted simulation patterns
+#[derive(Debug))]
 pub struct SimulationPatterns {
     pub temporal_patterns: Vec<TemporalPattern>,
     pub spatial_patterns: Vec<SpatialPattern>,
 }
 
 /// Pattern summary statistics
+#[derive(Debug))]
 pub struct PatternSummary {
     pub pattern_count: usize,
     pub dominant_frequency: f64,
@@ -21,6 +24,12 @@ pub struct PatternSummary {
 struct FeatureExtractor;
 struct TemporalPattern;
 struct SpatialPattern;
+
+impl Default for PatternRecognizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl PatternRecognizer {
     /// Create a new pattern recognizer

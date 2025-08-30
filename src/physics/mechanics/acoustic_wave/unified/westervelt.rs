@@ -7,6 +7,7 @@ use super::config::AcousticSolverConfig;
 use super::solver::AcousticSolver;
 
 /// Westervelt equation solver
+#[derive(Debug))]
 pub struct WesterveltSolver {
     config: AcousticSolverConfig,
     grid: Grid,
@@ -75,7 +76,7 @@ impl AcousticSolver for WesterveltSolver {
                         let c = medium.sound_speed(x, y, z, grid);
 
                         let nonlinear_factor = beta / (2.0 * rho * c.powi(4));
-                        pressure[[i, j, k]] += dt * nonlinear_factor * d2p2_dt2[[i, j, k]];
+                        pressure[[i, j, k] += dt * nonlinear_factor * d2p2_dt2[[i, j, k];
                     }
                 }
             }

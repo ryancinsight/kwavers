@@ -4,6 +4,7 @@ use super::constants;
 use ndarray::{Array3, Zip};
 
 /// Thermal dose using CEM43 model
+#[derive(Debug))]
 pub struct ThermalDose;
 
 impl ThermalDose {
@@ -25,6 +26,7 @@ impl ThermalDose {
 }
 
 /// Thermal dose calculator with accumulation
+#[derive(Debug))]
 pub struct ThermalDoseCalculator {
     accumulated_dose: Array3<f64>,
 }

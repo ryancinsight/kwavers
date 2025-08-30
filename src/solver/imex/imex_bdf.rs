@@ -7,7 +7,7 @@ use ndarray::{Array3, Zip};
 use std::collections::VecDeque;
 
 /// Configuration for IMEX-BDF schemes
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct IMEXBDFConfig {
     /// Order of the BDF method (1-6)
     pub order: usize,
@@ -28,7 +28,7 @@ impl Default for IMEXBDFConfig {
 }
 
 /// IMEX-BDF scheme
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct IMEXBDF {
     config: IMEXBDFConfig,
     /// BDF coefficients for implicit part

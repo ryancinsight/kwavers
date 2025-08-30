@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Test result for a single test case
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TestResult {
     pub name: String,
     pub passed: bool,

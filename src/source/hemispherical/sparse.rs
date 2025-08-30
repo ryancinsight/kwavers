@@ -3,7 +3,7 @@
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Sparse array optimizer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SparseArrayOptimizer {
     /// Density factor (0.0-1.0)
     density_factor: f64,
@@ -56,7 +56,7 @@ impl SparseArrayOptimizer {
 }
 
 /// Element selection strategy
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 enum SelectionStrategy {
     /// Optimize for power delivery
     PowerOptimal,
@@ -65,7 +65,7 @@ enum SelectionStrategy {
 }
 
 /// Element selection state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElementSelection {
     /// Element index
     pub index: usize,

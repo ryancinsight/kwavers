@@ -26,6 +26,7 @@ pub trait PluginFactory: Send + Sync {
 }
 
 /// Type-safe plugin factory implementation
+#[derive(Debug))]
 pub struct TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
@@ -92,6 +93,7 @@ where
 }
 
 /// Registry for plugin factories
+#[derive(Debug))]
 pub struct PluginRegistry {
     factories: HashMap<String, Arc<dyn PluginFactory>>,
     metadata_cache: HashMap<String, PluginMetadata>,

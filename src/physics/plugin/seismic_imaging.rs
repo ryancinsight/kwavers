@@ -7,7 +7,7 @@ use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
 /// Full Waveform Inversion Parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FwiParameters {
     /// Maximum number of iterations
     pub max_iterations: usize,
@@ -20,7 +20,7 @@ pub struct FwiParameters {
 }
 
 /// Regularization parameters for inversion
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RegularizationParameters {
     /// Tikhonov regularization weight
     pub tikhonov_weight: f64,
@@ -31,7 +31,7 @@ pub struct RegularizationParameters {
 }
 
 /// Convergence criteria for iterative methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConvergenceCriteria {
     /// Maximum iterations
     pub max_iterations: usize,
@@ -42,7 +42,7 @@ pub struct ConvergenceCriteria {
 }
 
 /// Reverse Time Migration Settings
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RtmSettings {
     /// Imaging condition type
     pub imaging_condition: ImagingCondition,
@@ -52,21 +52,21 @@ pub struct RtmSettings {
     pub boundary_conditions: BoundaryType,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum ImagingCondition {
     CrossCorrelation,
     Deconvolution,
     ExcitationTime,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum StorageStrategy {
     FullStorage,
     Checkpointing,
     OnTheFly,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum BoundaryType {
     Absorbing,
     RandomBoundary,
@@ -74,7 +74,7 @@ pub enum BoundaryType {
 }
 
 /// Migration aperture control
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MigrationAperture {
     /// Maximum opening angle in degrees
     pub max_angle: f64,
@@ -86,6 +86,7 @@ pub struct MigrationAperture {
 
 /// Seismic Imaging Plugin
 /// Provides RTM and FWI capabilities for subsurface imaging
+#[derive(Debug))]
 pub struct SeismicImagingPlugin {
     metadata: PluginMetadata,
     state: PluginState,
@@ -95,6 +96,12 @@ pub struct SeismicImagingPlugin {
     rtm_settings: Option<RtmSettings>,
     /// Migration aperture
     aperture: Option<MigrationAperture>,
+}
+
+impl Default for SeismicImagingPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SeismicImagingPlugin {

@@ -1,7 +1,7 @@
 //! Optimization configuration
 
 /// Performance optimization configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct OptimizationConfig {
     /// Enable SIMD vectorization
     pub enable_simd: bool,
@@ -43,7 +43,7 @@ impl Default for OptimizationConfig {
 }
 
 /// SIMD instruction set level
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SimdLevel {
     /// No SIMD
     None,

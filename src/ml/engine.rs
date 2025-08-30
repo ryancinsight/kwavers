@@ -16,6 +16,7 @@ use super::{
 };
 
 /// Main ML engine for simulation intelligence
+#[derive(Debug))]
 pub struct MLEngine {
     pub(crate) models: HashMap<ModelType, Model>,
     pub(crate) performance_metrics: PerformanceMetrics,
@@ -48,6 +49,12 @@ impl MLEngine {
             ModelType::AnomalyDetector => Model::AnomalyDetector(AnomalyDetectorModel::load(path)?),
             ModelType::ConvergencePredictor => {
                 Model::ConvergencePredictor(ConvergencePredictorModel::load(path)?)
+            }
+            ModelType::OutcomePredictor => {
+                // OutcomePredictor not yet implemented in Model enum
+                return Err(crate::error::KwaversError::NotImplemented(
+                    "OutcomePredictor model loading not yet implemented".to_string(),
+                ));
             }
         };
 
@@ -265,7 +272,7 @@ impl MLEngine {
         let output = model.infer(features)?;
 
         // Return probability of convergence (assuming binary classification)
-        Ok(output[[0, 1]])
+        Ok(output[[0, 1])
     }
 
     /// Predict outcome probabilities for multiple samples

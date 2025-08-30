@@ -28,7 +28,7 @@ const MIN_SWITCHING_PERIOD: f64 = 1e-6;
 const DEFAULT_CORRELATION_LENGTH: f64 = 0.001; // 1mm
 
 /// Phase distribution types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum PhaseDistribution {
     Uniform,    // Uniform random distribution
     Discrete,   // Discrete phase states (e.g., 0, π/2, π, 3π/2)
@@ -39,7 +39,7 @@ pub enum PhaseDistribution {
 }
 
 /// Randomization schemes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum RandomizationScheme {
     Temporal,       // Time-varying phase randomization
     Spatial,        // Spatially-varying phase randomization
@@ -49,6 +49,7 @@ pub enum RandomizationScheme {
 }
 
 /// Phase randomizer for standing wave suppression
+#[derive(Debug))]
 pub struct PhaseRandomizer {
     scheme: RandomizationScheme,
     distribution: PhaseDistribution,
@@ -242,6 +243,7 @@ impl PhaseRandomizer {
 }
 
 /// Temporal phase randomization controller
+#[derive(Debug))]
 pub struct TemporalRandomization {
     randomizer: PhaseRandomizer,
     update_rate: f64,
@@ -304,6 +306,7 @@ impl TemporalRandomization {
 }
 
 /// Spatial phase randomization for multi-element arrays
+#[derive(Debug))]
 pub struct SpatialRandomization {
     randomizer: PhaseRandomizer,
     element_positions: Array2<f64>,
@@ -376,6 +379,7 @@ impl SpatialRandomization {
 }
 
 /// Phase shift keying for cavitation control
+#[derive(Debug))]
 pub struct PhaseShiftKeying {
     num_states: usize,
     current_state: usize,

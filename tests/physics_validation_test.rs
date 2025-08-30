@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Physics validation tests for Kwavers
 //!
 //! These tests verify that the physics implementations are correct

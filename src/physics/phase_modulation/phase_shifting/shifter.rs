@@ -8,6 +8,7 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Phase shifter for beam control
+#[derive(Debug))]
 pub struct PhaseShifter {
     strategy: ShiftingStrategy,
     element_positions: Array2<f64>,
@@ -177,7 +178,7 @@ impl PhaseShifter {
                         "Spherical focusing requires 3D point".to_string(),
                     ));
                 }
-                self.calculate_spherical_phases(&[target[0], target[1], target[2]])
+                self.calculate_spherical_phases(&[target[0], target[1], target[2])
             }
             _ => Err(crate::error::KwaversError::NotImplemented(format!(
                 "Strategy {:?} not yet implemented",

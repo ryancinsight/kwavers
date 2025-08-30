@@ -10,7 +10,7 @@ use rand::Rng;
 /// will swap this out with an ONNX-accelerated back-end, but the current
 /// implementation already provides *real* predictions ensuring we avoid any
 /// placeholders.
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct InferenceEngine {
     /// Weight matrix with shape (features, classes).
     weights: Array2<f32>,
@@ -70,7 +70,7 @@ impl InferenceEngine {
 
         // Convert back to 2D
         let (batch, classes, _) = output_3d.dim();
-        Ok(output_3d.into_shape((batch, classes)).unwrap())
+        Ok(output_3d.into_shape_with_order((batch, classes)).unwrap())
     }
 
     /// Run inference on a 3-D tensor with shape *(batch, features, 1)* (the
@@ -135,13 +135,13 @@ mod tests {
     #[test]
     fn test_softmax_inference() {
         // 2-feature, 2-class identity model
-        let weights = array![[5.0, 0.0], [0.0, 5.0]]; // high positive ensures clear decision
+        let weights = array![[5.0, 0.0], [0.0, 5.0]; // high positive ensures clear decision
         let engine = InferenceEngine::from_weights(weights, None, 1, false);
 
         // Sample #1 should belong to class-0, sample #2 to class-1.
         let input = array![
-            [[1.0_f32], [0.0]], // class 0
-            [[0.0], [1.0]]      // class 1
+            [[1.0_f32], [0.0], // class 0
+            [[0.0], [1.0]      // class 1
         ];
 
         let output = engine.infer_batch(&input).unwrap();

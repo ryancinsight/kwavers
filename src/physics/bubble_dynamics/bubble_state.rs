@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::f64::consts::PI;
 
 /// Gas type enumeration for composition specification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 pub enum GasType {
     N2,  // Nitrogen
     O2,  // Oxygen
@@ -72,7 +72,7 @@ impl GasType {
 }
 
 /// Complete state of a single bubble
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BubbleState {
     // Geometric properties
     pub radius: f64,            // Current radius [m]
@@ -101,7 +101,7 @@ pub struct BubbleState {
 }
 
 /// Gas species in bubble
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum GasSpecies {
     Air,
     Argon,
@@ -162,7 +162,7 @@ impl GasSpecies {
 }
 
 /// Physical parameters for bubble dynamics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BubbleParameters {
     // Equilibrium properties
     pub r0: f64, // Equilibrium radius [m]

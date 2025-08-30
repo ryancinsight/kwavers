@@ -6,7 +6,7 @@ use ndarray::Array1;
 use std::collections::VecDeque;
 
 /// Experience tuple for reinforcement learning
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct OptimizationExperience {
     pub state: Array1<f64>,
     pub action: Array1<f64>,
@@ -16,6 +16,7 @@ pub struct OptimizationExperience {
 }
 
 /// Parameter optimizer using deep reinforcement learning
+#[derive(Debug))]
 pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,

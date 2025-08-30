@@ -9,7 +9,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Cattaneo-Vernotte model parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HyperbolicParameters {
     /// Thermal relaxation time [s]
     pub relaxation_time: f64,
@@ -27,7 +27,7 @@ impl Default for HyperbolicParameters {
 }
 
 /// Hyperbolic heat transfer solver
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct CattaneoVernotte {
     params: HyperbolicParameters,
     /// Heat flux components
@@ -81,11 +81,11 @@ impl CattaneoVernotte {
 
                     let k_thermal = medium.thermal_conductivity(x, y, z, grid);
                     let grad_t =
-                        (temperature[[i + 1, j, k]] - temperature[[i - 1, j, k]]) / (2.0 * grid.dx);
+                        (temperature[[i + 1, j, k] - temperature[[i - 1, j, k]) / (2.0 * grid.dx);
 
                     // Cattaneo-Vernotte equation for heat flux
-                    let q_previous = self.heat_flux_x[[i, j, k]];
-                    self.heat_flux_x[[i, j, k]] = (q_previous
+                    let q_previous = self.heat_flux_x[[i, j, k];
+                    self.heat_flux_x[[i, j, k] = (q_previous
                         - dt / tau * (q_previous + k_thermal * grad_t))
                         / (1.0 + dt / tau);
                 }
@@ -102,10 +102,10 @@ impl CattaneoVernotte {
 
                     let k_thermal = medium.thermal_conductivity(x, y, z, grid);
                     let grad_t =
-                        (temperature[[i, j + 1, k]] - temperature[[i, j - 1, k]]) / (2.0 * grid.dy);
+                        (temperature[[i, j + 1, k] - temperature[[i, j - 1, k]) / (2.0 * grid.dy);
 
-                    let q_previous = self.heat_flux_y[[i, j, k]];
-                    self.heat_flux_y[[i, j, k]] = (q_previous
+                    let q_previous = self.heat_flux_y[[i, j, k];
+                    self.heat_flux_y[[i, j, k] = (q_previous
                         - dt / tau * (q_previous + k_thermal * grad_t))
                         / (1.0 + dt / tau);
                 }
@@ -121,10 +121,10 @@ impl CattaneoVernotte {
 
                     let k_thermal = medium.thermal_conductivity(x, y, z, grid);
                     let grad_t =
-                        (temperature[[i, j, k + 1]] - temperature[[i, j, k - 1]]) / (2.0 * grid.dz);
+                        (temperature[[i, j, k + 1] - temperature[[i, j, k - 1]) / (2.0 * grid.dz);
 
-                    let q_previous = self.heat_flux_z[[i, j, k]];
-                    self.heat_flux_z[[i, j, k]] = (q_previous
+                    let q_previous = self.heat_flux_z[[i, j, k];
+                    self.heat_flux_z[[i, j, k] = (q_previous
                         - dt / tau * (q_previous + k_thermal * grad_t))
                         / (1.0 + dt / tau);
                 }
@@ -142,14 +142,14 @@ impl CattaneoVernotte {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let div_x = (self.heat_flux_x[[i + 1, j, k]] - self.heat_flux_x[[i - 1, j, k]])
+                    let div_x = (self.heat_flux_x[[i + 1, j, k] - self.heat_flux_x[[i - 1, j, k])
                         / (2.0 * grid.dx);
-                    let div_y = (self.heat_flux_y[[i, j + 1, k]] - self.heat_flux_y[[i, j - 1, k]])
+                    let div_y = (self.heat_flux_y[[i, j + 1, k] - self.heat_flux_y[[i, j - 1, k])
                         / (2.0 * grid.dy);
-                    let div_z = (self.heat_flux_z[[i, j, k + 1]] - self.heat_flux_z[[i, j, k - 1]])
+                    let div_z = (self.heat_flux_z[[i, j, k + 1] - self.heat_flux_z[[i, j, k - 1])
                         / (2.0 * grid.dz);
 
-                    div[[i, j, k]] = div_x + div_y + div_z;
+                    div[[i, j, k] = div_x + div_y + div_z;
                 }
             }
         }

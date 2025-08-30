@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RadicalInitiation {
     pub radical_concentration: Array3<f64>, // General radical concentration (e.g., H•, OH• precursors)
 }

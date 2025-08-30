@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Energy conservation validation test
 //!
 //! Validates that numerical methods conserve energy in lossless media.

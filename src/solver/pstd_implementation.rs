@@ -32,7 +32,7 @@ use std::f64::consts::PI;
 const DEFAULT_CFL_SAFETY_FACTOR: f64 = 0.8; // PSTD allows higher CFL than FDTD
 
 /// Spatial discretization order for k-space correction
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum KSpaceOrder {
     /// No correction
     None,
@@ -43,7 +43,7 @@ pub enum KSpaceOrder {
 }
 
 /// PSTD solver configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PstdConfig {
     /// K-space correction order
     pub k_space_order: KSpaceOrder,
@@ -77,7 +77,7 @@ impl PstdConfig {
 }
 
 /// PSTD solver plugin with optimizations
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PstdSolver {
     /// Plugin metadata
     metadata: PluginMetadata,
@@ -257,7 +257,7 @@ impl PstdSolver {
         // Extract real part
         Ok(Array3::from_shape_fn(
             (self.nx, self.ny, self.nz),
-            |(i, j, k)| self.p_work[[i, j, k]].re,
+            |(i, j, k)| self.p_work[[i, j, k].re,
         ))
     }
 
@@ -298,15 +298,15 @@ impl PstdSolver {
         } else {
             // Serial version
             for ((i, j, k), p_next) in p_next_k.indexed_iter_mut() {
-                let k2 = self.k_squared[[i, j, k]];
+                let k2 = self.k_squared[[i, j, k];
                 let k_mag = k2.sqrt();
                 let c = self.max_sound_speed; // Simplified for homogeneous
 
                 let propagator = 2.0 * (c * k_mag * dt).cos();
-                let filter = self.k_filter[[i, j, k]];
+                let filter = self.k_filter[[i, j, k];
 
                 *p_next =
-                    filter * (propagator * self.p_curr_k[[i, j, k]] - self.p_prev_k[[i, j, k]]);
+                    filter * (propagator * self.p_curr_k[[i, j, k] - self.p_prev_k[[i, j, k]);
             }
         }
 

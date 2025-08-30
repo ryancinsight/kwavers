@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Parameter types supported by the interactive control system
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq))]
 pub enum ParameterType {
     /// Floating point parameter with range
     Float { min: f64, max: f64, step: f64 },
@@ -20,7 +20,7 @@ pub enum ParameterType {
 }
 
 /// Parameter definition for the control system
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ParameterDefinition {
     pub name: String,
     pub display_name: String,
@@ -32,7 +32,7 @@ pub struct ParameterDefinition {
 }
 
 /// Parameter value storage
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq))]
 pub enum ParameterValue {
     Float(f64),
     Integer(i64),

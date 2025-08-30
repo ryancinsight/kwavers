@@ -15,7 +15,7 @@ use super::nonlinear::{compute_nonlinear_term, compute_viscoelastic_term};
 use super::spectral::{compute_laplacian_spectral, initialize_kspace_grids};
 
 /// Westervelt equation solver with proper second-order time derivatives
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct WesterveltWave {
     // Precomputed k-space grids
     k_squared: Option<Array3<f64>>,
@@ -82,8 +82,8 @@ impl WesterveltWave {
 
     /// Initialize pressure buffers from the field
     fn initialize_buffers(&mut self, initial_pressure: &Array3<f64>) {
-        self.pressure_buffers[self.buffer_indices[1]].assign(initial_pressure);
-        self.pressure_buffers[self.buffer_indices[2]].assign(initial_pressure);
+        self.pressure_buffers[self.buffer_indices[1].assign(initial_pressure);
+        self.pressure_buffers[self.buffer_indices[2].assign(initial_pressure);
     }
 
     /// Get performance summary
@@ -164,7 +164,7 @@ impl AcousticWaveModel for WesterveltWave {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    b_over_a_arr[[i, j, k]] =
+                    b_over_a_arr[[i, j, k] =
                         crate::medium::core::CoreMedium::nonlinearity_coefficient(
                             medium, x, y, z, grid,
                         );
@@ -302,12 +302,12 @@ fn compute_laplacian_fd(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                laplacian[[i, j, k]] = (field[[i + 1, j, k]] - 2.0 * field[[i, j, k]]
-                    + field[[i - 1, j, k]])
+                laplacian[[i, j, k] = (field[[i + 1, j, k] - 2.0 * field[[i, j, k]
+                    + field[[i - 1, j, k])
                     * dx2_inv
-                    + (field[[i, j + 1, k]] - 2.0 * field[[i, j, k]] + field[[i, j - 1, k]])
+                    + (field[[i, j + 1, k] - 2.0 * field[[i, j, k] + field[[i, j - 1, k])
                         * dy2_inv
-                    + (field[[i, j, k + 1]] - 2.0 * field[[i, j, k]] + field[[i, j, k - 1]])
+                    + (field[[i, j, k + 1] - 2.0 * field[[i, j, k] + field[[i, j, k - 1])
                         * dz2_inv;
             }
         }

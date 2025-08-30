@@ -5,7 +5,7 @@
 use crate::grid::Grid;
 
 /// Performance bound type
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum PerformanceBound {
     /// Memory bandwidth bound
     MemoryBound,
@@ -18,7 +18,7 @@ pub enum PerformanceBound {
 }
 
 /// Roofline analysis for performance modeling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RooflineAnalysis {
     /// Peak computational performance (GFLOPS)
     pub peak_performance: f64,
@@ -118,7 +118,7 @@ pub fn estimate_spectral_intensity(grid: &Grid) -> f64 {
 }
 
 /// Performance analyzer for comprehensive analysis
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PerformanceAnalyzer {
     roofline: RooflineAnalysis,
     grid: Grid,

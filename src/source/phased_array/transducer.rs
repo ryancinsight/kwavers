@@ -13,7 +13,7 @@ use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PhasedArrayTransducer {
     /// Array configuration
     config: PhasedArrayConfig,
@@ -162,7 +162,7 @@ impl PhasedArrayTransducer {
             let z = k as f64 * grid.dz;
 
             for (element, &signal) in self.elements.iter().zip(element_signals.iter()) {
-                let distance = Self::distance_to_element(&element, x, y, z);
+                let distance = Self::distance_to_element(element, x, y, z);
 
                 if distance > 0.0 {
                     // Calculate propagation delay
@@ -220,7 +220,7 @@ impl Source for PhasedArrayTransducer {
             if let Some((i, j, k)) =
                 grid.position_to_indices(element.position.0, element.position.1, element.position.2)
             {
-                mask[[i, j, k]] = element.amplitude_weight;
+                mask[[i, j, k] = element.amplitude_weight;
             }
         }
 
@@ -244,7 +244,7 @@ impl Source for PhasedArrayTransducer {
         let mut total_pressure = 0.0;
 
         for element in &self.elements {
-            let distance = Self::distance_to_element(&element, x, y, z);
+            let distance = Self::distance_to_element(element, x, y, z);
 
             if distance > 0.0 {
                 let propagation_time = distance / self.sound_speed;

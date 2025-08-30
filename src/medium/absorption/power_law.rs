@@ -76,6 +76,7 @@ impl PowerLawAbsorption {
 }
 
 /// Power law model implementation
+#[derive(Debug))]
 pub struct PowerLawModel {
     config: PowerLawAbsorption,
 }

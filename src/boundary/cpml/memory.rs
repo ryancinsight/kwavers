@@ -5,7 +5,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// CPML memory variables for field updates
-#[derive(Clone)]
+#[derive(Clone, Debug))]
 pub struct CPMLMemory {
     pub psi_vx_x: Array3<f64>,
     pub psi_vy_y: Array3<f64>,

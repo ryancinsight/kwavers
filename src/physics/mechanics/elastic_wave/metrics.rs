@@ -7,7 +7,7 @@ use std::time::Duration;
 
 /// Performance and physics metrics for elastic wave simulations
 /// Follows SSOT principle - single source of simulation metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElasticWaveMetrics {
     pub total_steps: usize,
     pub fft_time: Duration,

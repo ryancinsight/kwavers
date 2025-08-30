@@ -1,7 +1,7 @@
 //! Array geometry definitions for PAM
 
 /// Array geometry types for different sensor configurations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum ArrayGeometry {
     /// Linear array (1D)
     Linear {
@@ -38,7 +38,7 @@ pub enum ArrayGeometry {
 }
 
 /// Single array element
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ArrayElement {
     pub position: [f64; 3],
     pub sensitivity: f64,
@@ -46,7 +46,7 @@ pub struct ArrayElement {
 }
 
 /// Directivity pattern for array elements
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DirectivityPattern {
     pub beam_width: f64,
     pub orientation: [f64; 3],

@@ -5,7 +5,7 @@
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Configuration for time-reversal reconstruction
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TimeReversalConfig {
     /// Whether to apply frequency filtering during reconstruction
     pub apply_frequency_filter: bool,

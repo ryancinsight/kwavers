@@ -12,7 +12,7 @@ pub const MEDIUM_GRID_SIZE: usize = 128;
 pub const MILLISECONDS_PER_SECOND: f64 = 1000.0;
 
 /// Color mapping schemes for scientific visualization
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum ColorScheme {
     /// Viridis (perceptually uniform)
     Viridis,
@@ -29,7 +29,7 @@ pub enum ColorScheme {
 }
 
 /// Render quality settings
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum RenderQuality {
     /// Low quality for real-time interaction (>60 FPS)
     Low,
@@ -40,7 +40,7 @@ pub enum RenderQuality {
 }
 
 /// Visualization configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct VisualizationConfig {
     /// Target frames per second
     pub target_fps: f64,

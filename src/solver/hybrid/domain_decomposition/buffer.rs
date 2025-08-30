@@ -12,7 +12,7 @@ pub struct BufferZones {
 }
 
 /// Type of blending function for buffer zones
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize))]
 pub enum BlendType {
     /// Linear blending
     Linear,
@@ -32,7 +32,7 @@ impl Default for BufferZones {
 }
 
 /// Overlap region between adjacent domains
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct OverlapRegion {
     /// First domain index
     pub domain1: usize,

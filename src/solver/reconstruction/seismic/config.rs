@@ -36,7 +36,7 @@ pub struct SeismicImagingConfig {
 }
 
 /// RTM imaging conditions based on established literature
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum RtmImagingCondition {
     /// Zero-lag cross-correlation (Claerbout, 1985)
     /// I(x) = ∫ S(x,t) * R(x,t) dt

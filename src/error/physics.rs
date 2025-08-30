@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fmt;
 
 /// Physics-related errors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum PhysicsError {
     /// Invalid physical parameter
     InvalidParameter {

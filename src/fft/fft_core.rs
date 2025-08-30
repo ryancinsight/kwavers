@@ -4,7 +4,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 use std::f64::consts::PI;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum FftDirection {
     Forward,
     Inverse,

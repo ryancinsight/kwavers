@@ -11,7 +11,7 @@ use super::{DEFAULT_GAUSSIAN_Q, MIN_PULSE_WIDTH};
 /// s(t) = A * exp(-((t-t0)/(τ/Q))²) * sin(2πf₀t + φ)
 ///
 /// Where Q controls the bandwidth (higher Q = narrower bandwidth)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GaussianPulse {
     center_frequency: f64,
     center_time: f64,

@@ -12,7 +12,7 @@ pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
 pub const STEFAN_BOLTZMANN: f64 = 5.670374419e-8; // W/(m²·K⁴)
 
 /// Blackbody radiation model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BlackbodyModel {
     /// Emissivity factor (0-1)
     pub emissivity: f64,
@@ -139,8 +139,8 @@ pub fn calculate_blackbody_emission(
 ) -> Array3<f64> {
     // Use zip and map for zero-copy iteration
     Array3::from_shape_fn(temperature_field.dim(), |(i, j, k)| {
-        let temp = temperature_field[[i, j, k]];
-        let radius = bubble_radius_field[[i, j, k]];
+        let temp = temperature_field[[i, j, k];
+        let radius = bubble_radius_field[[i, j, k];
 
         if radius > 0.0 && temp > 0.0 {
             // Surface area of bubble

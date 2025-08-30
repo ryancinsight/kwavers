@@ -11,6 +11,7 @@ use log::trace;
 use ndarray::{Array3, Array4, Axis};
 
 /// C-PML solver integration for acoustic wave propagation
+#[derive(Debug))]
 pub struct CPMLSolver {
     /// C-PML boundary instance
     cpml: CPMLBoundary,
@@ -94,8 +95,8 @@ impl CPMLSolver {
         for i in 1..self.nx - 1 {
             for j in 0..self.ny {
                 for k in 0..self.nz {
-                    self.grad_x[[i, j, k]] =
-                        (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
+                    self.grad_x[[i, j, k] =
+                        (pressure[[i + 1, j, k] - pressure[[i - 1, j, k]) / (2.0 * grid.dx);
                 }
             }
         }
@@ -104,8 +105,8 @@ impl CPMLSolver {
         for i in 0..self.nx {
             for j in 1..self.ny - 1 {
                 for k in 0..self.nz {
-                    self.grad_y[[i, j, k]] =
-                        (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
+                    self.grad_y[[i, j, k] =
+                        (pressure[[i, j + 1, k] - pressure[[i, j - 1, k]) / (2.0 * grid.dy);
                 }
             }
         }
@@ -114,8 +115,8 @@ impl CPMLSolver {
         for i in 0..self.nx {
             for j in 0..self.ny {
                 for k in 1..self.nz - 1 {
-                    self.grad_z[[i, j, k]] =
-                        (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    self.grad_z[[i, j, k] =
+                        (pressure[[i, j, k + 1] - pressure[[i, j, k - 1]) / (2.0 * grid.dz);
                 }
             }
         }
@@ -130,10 +131,10 @@ impl CPMLSolver {
         for j in 0..self.ny {
             for k in 0..self.nz {
                 // Left boundary
-                self.grad_x[[0, j, k]] = (pressure[[1, j, k]] - pressure[[0, j, k]]) / grid.dx;
+                self.grad_x[[0, j, k] = (pressure[[1, j, k] - pressure[[0, j, k]) / grid.dx;
                 // Right boundary
                 let i = self.nx - 1;
-                self.grad_x[[i, j, k]] = (pressure[[i, j, k]] - pressure[[i - 1, j, k]]) / grid.dx;
+                self.grad_x[[i, j, k] = (pressure[[i, j, k] - pressure[[i - 1, j, k]) / grid.dx;
             }
         }
 
@@ -141,10 +142,10 @@ impl CPMLSolver {
         for i in 0..self.nx {
             for k in 0..self.nz {
                 // Bottom boundary
-                self.grad_y[[i, 0, k]] = (pressure[[i, 1, k]] - pressure[[i, 0, k]]) / grid.dy;
+                self.grad_y[[i, 0, k] = (pressure[[i, 1, k] - pressure[[i, 0, k]) / grid.dy;
                 // Top boundary
                 let j = self.ny - 1;
-                self.grad_y[[i, j, k]] = (pressure[[i, j, k]] - pressure[[i, j - 1, k]]) / grid.dy;
+                self.grad_y[[i, j, k] = (pressure[[i, j, k] - pressure[[i, j - 1, k]) / grid.dy;
             }
         }
 
@@ -152,10 +153,10 @@ impl CPMLSolver {
         for i in 0..self.nx {
             for j in 0..self.ny {
                 // Front boundary
-                self.grad_z[[i, j, 0]] = (pressure[[i, j, 1]] - pressure[[i, j, 0]]) / grid.dz;
+                self.grad_z[[i, j, 0] = (pressure[[i, j, 1] - pressure[[i, j, 0]) / grid.dz;
                 // Back boundary
                 let k = self.nz - 1;
-                self.grad_z[[i, j, k]] = (pressure[[i, j, k]] - pressure[[i, j, k - 1]]) / grid.dz;
+                self.grad_z[[i, j, k] = (pressure[[i, j, k] - pressure[[i, j, k - 1]) / grid.dz;
             }
         }
     }
@@ -178,7 +179,7 @@ impl CPMLSolver {
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
                         let rho = medium.density(x, y, z, grid);
-                        vx[[i, j, k]] -= dt * self.grad_x[[i, j, k]] / rho;
+                        vx[[i, j, k] -= dt * self.grad_x[[i, j, k] / rho;
                     }
                 }
             }
@@ -193,7 +194,7 @@ impl CPMLSolver {
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
                         let rho = medium.density(x, y, z, grid);
-                        vy[[i, j, k]] -= dt * self.grad_y[[i, j, k]] / rho;
+                        vy[[i, j, k] -= dt * self.grad_y[[i, j, k] / rho;
                     }
                 }
             }
@@ -208,7 +209,7 @@ impl CPMLSolver {
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
                         let rho = medium.density(x, y, z, grid);
-                        vz[[i, j, k]] -= dt * self.grad_z[[i, j, k]] / rho;
+                        vz[[i, j, k] -= dt * self.grad_z[[i, j, k] / rho;
                     }
                 }
             }
@@ -227,11 +228,11 @@ impl CPMLSolver {
         for i in 1..self.nx - 1 {
             for j in 1..self.ny - 1 {
                 for k in 1..self.nz - 1 {
-                    let dvx_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let dvy_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let dvz_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let dvx_dx = (vx[[i + 1, j, k] - vx[[i - 1, j, k]) / (2.0 * grid.dx);
+                    let dvy_dy = (vy[[i, j + 1, k] - vy[[i, j - 1, k]) / (2.0 * grid.dy);
+                    let dvz_dz = (vz[[i, j, k + 1] - vz[[i, j, k - 1]) / (2.0 * grid.dz);
 
-                    div_v[[i, j, k]] = dvx_dx + dvy_dy + dvz_dz;
+                    div_v[[i, j, k] = dvx_dx + dvy_dy + dvz_dz;
                 }
             }
         }
@@ -258,7 +259,7 @@ impl CPMLSolver {
                     let rho = medium.density(x, y, z, grid);
                     let c = medium.sound_speed(x, y, z, grid);
                     let rho_c2 = rho * c * c;
-                    pressure[[i, j, k]] -= dt * rho_c2 * div_v[[i, j, k]];
+                    pressure[[i, j, k] -= dt * rho_c2 * div_v[[i, j, k];
                 }
             }
         }
@@ -319,7 +320,7 @@ mod tests {
             for j in 0..32 {
                 for k in 0..32 {
                     // Linear gradient in x
-                    pressure[[i, j, k]] = i as f64;
+                    pressure[[i, j, k] = i as f64;
                 }
             }
         }
@@ -331,7 +332,7 @@ mod tests {
         for i in 1..31 {
             for j in 0..32 {
                 for k in 0..32 {
-                    assert!((solver.grad_x[[i, j, k]] - expected_grad).abs() < 1e-10);
+                    assert!((solver.grad_x[[i, j, k] - expected_grad).abs() < 1e-10);
                 }
             }
         }

@@ -225,7 +225,7 @@ mod tests {
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
-                        rhs[[i, j, k]] = 0.5 * (field[[i + 1, j, k]] - field[[i - 1, j, k]]);
+                        rhs[[i, j, k] = 0.5 * (field[[i + 1, j, k] - field[[i - 1, j, k]);
                     }
                 }
             }

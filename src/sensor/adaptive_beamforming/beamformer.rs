@@ -5,6 +5,7 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
 /// Adaptive beamformer - single unified implementation
+#[derive(Debug))]
 pub struct AdaptiveBeamformer {
     num_elements: usize,
     weights: Array1<Complex64>,

@@ -4,6 +4,7 @@
 use ndarray::{Array3, Zip};
 
 /// Line search methods for step size selection
+#[derive(Debug))]
 pub struct LineSearch {
     /// Armijo constant for sufficient decrease
     c1: f64,
@@ -11,6 +12,12 @@ pub struct LineSearch {
     c2: f64,
     /// Maximum iterations
     max_iterations: usize,
+}
+
+impl Default for LineSearch {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LineSearch {
@@ -58,11 +65,18 @@ impl LineSearch {
 }
 
 /// Conjugate gradient optimizer
+#[derive(Debug))]
 pub struct ConjugateGradient {
     /// Previous gradient for beta computation
     previous_gradient: Option<Array3<f64>>,
     /// Previous search direction
     previous_direction: Option<Array3<f64>>,
+}
+
+impl Default for ConjugateGradient {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConjugateGradient {
@@ -106,6 +120,7 @@ impl ConjugateGradient {
 }
 
 /// L-BFGS optimizer for large-scale problems
+#[derive(Debug))]
 pub struct Lbfgs {
     /// Number of stored vector pairs
     memory_size: usize,

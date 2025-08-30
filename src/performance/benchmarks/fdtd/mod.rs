@@ -36,7 +36,7 @@ pub fn benchmark_fdtd(
 
     // Add initial perturbation
     let center = grid_size / 2;
-    pressure[[center, center, center]] = 1.0;
+    pressure[[center, center, center] = 1.0;
 
     // Get medium arrays
     let density = medium.density_array(&grid);
@@ -55,7 +55,7 @@ pub fn benchmark_fdtd(
     for _ in 0..iterations {
         // Reset fields
         pressure.fill(0.0);
-        pressure[[center, center, center]] = 1.0;
+        pressure[[center, center, center] = 1.0;
         vx.fill(0.0);
         vy.fill(0.0);
         vz.fill(0.0);

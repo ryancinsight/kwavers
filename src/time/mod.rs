@@ -2,7 +2,7 @@
 use log::debug;
 use ndarray::Array1;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct Time {
     pub dt: f64,        // Time step (seconds)
     pub n_steps: usize, // Number of time steps

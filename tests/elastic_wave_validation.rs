@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Validation tests for elastic wave propagation
 //!
 //! Tests P-wave and S-wave propagation against analytical solutions
@@ -11,7 +12,7 @@ use kwavers::{
     medium::ElasticProperties,
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
+        plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
     },
 };
 use ndarray::Array4;

@@ -10,13 +10,14 @@ use crate::KwaversResult;
 use ndarray::{s, Array3, Zip};
 
 /// Discontinuity detector using multiple detection strategies
+#[derive(Debug))]
 pub struct DiscontinuityDetector {
     threshold: f64,
     detection_method: DetectionMethod,
 }
 
 /// Available detection methods
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum DetectionMethod {
     /// Gradient-based detection
     Gradient,
@@ -83,19 +84,19 @@ impl DiscontinuityDetector {
         for i in 1..nx - 1 {
             for j in 0..ny {
                 for k in 0..nz {
-                    let grad_x = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * dx);
-                    let second_deriv = (field[[i + 1, j, k]] - 2.0 * field[[i, j, k]]
-                        + field[[i - 1, j, k]])
+                    let grad_x = (field[[i + 1, j, k] - field[[i - 1, j, k]) / (2.0 * dx);
+                    let second_deriv = (field[[i + 1, j, k] - 2.0 * field[[i, j, k]
+                        + field[[i - 1, j, k])
                         / (dx * dx);
 
                     // Detect based on normalized gradient and curvature
-                    let field_scale = field[[i, j, k]].abs().max(1.0);
+                    let field_scale = field[[i, j, k].abs().max(1.0);
                     let grad_indicator = grad_x.abs() / field_scale;
                     let curv_indicator = second_deriv.abs() * dx * dx / field_scale;
 
                     // Use a combination that's less sensitive to smooth functions
                     if grad_indicator > self.threshold && curv_indicator > self.threshold * 0.1 {
-                        discontinuity_mask[[i, j, k]] = true;
+                        discontinuity_mask[[i, j, k] = true;
                     }
                 }
             }
@@ -105,17 +106,17 @@ impl DiscontinuityDetector {
         for i in 0..nx {
             for j in 1..ny - 1 {
                 for k in 0..nz {
-                    let grad_y = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * dy);
-                    let second_deriv = (field[[i, j + 1, k]] - 2.0 * field[[i, j, k]]
-                        + field[[i, j - 1, k]])
+                    let grad_y = (field[[i, j + 1, k] - field[[i, j - 1, k]) / (2.0 * dy);
+                    let second_deriv = (field[[i, j + 1, k] - 2.0 * field[[i, j, k]
+                        + field[[i, j - 1, k])
                         / (dy * dy);
 
-                    let field_scale = field[[i, j, k]].abs().max(1.0);
+                    let field_scale = field[[i, j, k].abs().max(1.0);
                     let grad_indicator = grad_y.abs() / field_scale;
                     let curv_indicator = second_deriv.abs() * dy * dy / field_scale;
 
                     if grad_indicator > self.threshold && curv_indicator > self.threshold * 0.1 {
-                        discontinuity_mask[[i, j, k]] = true;
+                        discontinuity_mask[[i, j, k] = true;
                     }
                 }
             }
@@ -125,17 +126,17 @@ impl DiscontinuityDetector {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 1..nz - 1 {
-                    let grad_z = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * dz);
-                    let second_deriv = (field[[i, j, k + 1]] - 2.0 * field[[i, j, k]]
-                        + field[[i, j, k - 1]])
+                    let grad_z = (field[[i, j, k + 1] - field[[i, j, k - 1]) / (2.0 * dz);
+                    let second_deriv = (field[[i, j, k + 1] - 2.0 * field[[i, j, k]
+                        + field[[i, j, k - 1])
                         / (dz * dz);
 
-                    let field_scale = field[[i, j, k]].abs().max(1.0);
+                    let field_scale = field[[i, j, k].abs().max(1.0);
                     let grad_indicator = grad_z.abs() / field_scale;
                     let curv_indicator = second_deriv.abs() * dz * dz / field_scale;
 
                     if grad_indicator > self.threshold && curv_indicator > self.threshold * 0.1 {
-                        discontinuity_mask[[i, j, k]] = true;
+                        discontinuity_mask[[i, j, k] = true;
                     }
                 }
             }
@@ -164,9 +165,9 @@ impl DiscontinuityDetector {
                     if coeff.abs() > self.threshold {
                         let idx = (i - coeffs.len() / 2) * 2; // Map back to spatial index
                         if idx < nx {
-                            discontinuity_mask[[idx, j, k]] = true;
+                            discontinuity_mask[[idx, j, k] = true;
                             if idx + 1 < nx {
-                                discontinuity_mask[[idx + 1, j, k]] = true;
+                                discontinuity_mask[[idx + 1, j, k] = true;
                             }
                         }
                     }
@@ -184,9 +185,9 @@ impl DiscontinuityDetector {
                     if coeff.abs() > self.threshold {
                         let idx = (j - coeffs.len() / 2) * 2;
                         if idx < ny {
-                            discontinuity_mask[[i, idx, k]] = true;
+                            discontinuity_mask[[i, idx, k] = true;
                             if idx + 1 < ny {
-                                discontinuity_mask[[i, idx + 1, k]] = true;
+                                discontinuity_mask[[i, idx + 1, k] = true;
                             }
                         }
                     }
@@ -204,9 +205,9 @@ impl DiscontinuityDetector {
                     if coeff.abs() > self.threshold {
                         let idx = (k - coeffs.len() / 2) * 2;
                         if idx < nz {
-                            discontinuity_mask[[i, j, idx]] = true;
+                            discontinuity_mask[[i, j, idx] = true;
                             if idx + 1 < nz {
-                                discontinuity_mask[[i, j, idx + 1]] = true;
+                                discontinuity_mask[[i, j, idx + 1] = true;
                             }
                         }
                     }
@@ -263,14 +264,14 @@ impl DiscontinuityDetector {
                                 let ii = (i as i32 + di) as usize;
                                 let jj = (j as i32 + dj) as usize;
                                 let kk = (k as i32 + dk) as usize;
-                                if mask[[ii, jj, kk]] {
+                                if mask[[ii, jj, kk] {
                                     count += 1;
                                 }
                             }
                         }
                     }
                     // If more than half of neighbors are discontinuous, mark as discontinuous
-                    smoothed[[i, j, k]] = count > 13; // 13 out of 27
+                    smoothed[[i, j, k] = count > 13; // 13 out of 27
                 }
             }
         }
@@ -326,7 +327,7 @@ mod tests {
                     let x = i as f64 / 32.0;
                     let y = j as f64 / 32.0;
                     let z = k as f64 / 32.0;
-                    field[[i, j, k]] =
+                    field[[i, j, k] =
                         (2.0 * PI * x).sin() * (2.0 * PI * y).cos() * (2.0 * PI * z).sin();
                 }
             }
@@ -347,7 +348,7 @@ mod tests {
         for i in 0..32 {
             for j in 0..32 {
                 for k in 0..32 {
-                    field[[i, j, k]] = if i < 16 { 0.0 } else { 1.0 };
+                    field[[i, j, k] = if i < 16 { 0.0 } else { 1.0 };
                 }
             }
         }
@@ -357,7 +358,7 @@ mod tests {
         // Check that discontinuity is detected around x=16
         for j in 1..31 {
             for k in 1..31 {
-                assert!(mask[[15, j, k]] || mask[[16, j, k]]);
+                assert!(mask[[15, j, k] || mask[[16, j, k]);
             }
         }
     }

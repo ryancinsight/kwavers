@@ -122,7 +122,7 @@ impl InterfaceGeometry {
 }
 
 /// Domain information for coupling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DomainInfo {
     /// Domain region indices
     pub region: DomainRegion,
@@ -131,7 +131,7 @@ pub struct DomainInfo {
 }
 
 /// Local grid properties at interface
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LocalGridProperties {
     /// Grid spacing
     pub spacing: (f64, f64, f64),

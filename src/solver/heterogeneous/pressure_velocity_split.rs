@@ -7,7 +7,7 @@ use crate::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Pressure-velocity split handler for heterogeneous media
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PressureVelocitySplit {
     grid: Grid,
     /// Split coefficient for pressure equation
@@ -105,13 +105,13 @@ impl PressureVelocitySplit {
                 for k in 1..nz - 1 {
                     // Central differences with interface weighting
                     let dvx_dx =
-                        (velocity[[i + 1, j, k]] - velocity[[i - 1, j, k]]) / (2.0 * self.grid.dx);
+                        (velocity[[i + 1, j, k] - velocity[[i - 1, j, k]) / (2.0 * self.grid.dx);
                     let dvy_dy =
-                        (velocity[[i, j + 1, k]] - velocity[[i, j - 1, k]]) / (2.0 * self.grid.dy);
+                        (velocity[[i, j + 1, k] - velocity[[i, j - 1, k]) / (2.0 * self.grid.dy);
                     let dvz_dz =
-                        (velocity[[i, j, k + 1]] - velocity[[i, j, k - 1]]) / (2.0 * self.grid.dz);
+                        (velocity[[i, j, k + 1] - velocity[[i, j, k - 1]) / (2.0 * self.grid.dz);
 
-                    div[[i, j, k]] = dvx_dx + dvy_dy + dvz_dz;
+                    div[[i, j, k] = dvx_dx + dvy_dy + dvz_dz;
                 }
             }
         }
@@ -129,10 +129,10 @@ impl PressureVelocitySplit {
                 for k in 1..nz - 1 {
                     // Central differences for gradient
                     let dp_dx =
-                        (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * self.grid.dx);
+                        (pressure[[i + 1, j, k] - pressure[[i - 1, j, k]) / (2.0 * self.grid.dx);
 
                     // For simplicity, storing magnitude (should be vector in full implementation)
-                    grad[[i, j, k]] = dp_dx;
+                    grad[[i, j, k] = dp_dx;
                 }
             }
         }

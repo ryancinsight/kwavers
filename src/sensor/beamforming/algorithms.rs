@@ -3,7 +3,7 @@
 use ndarray::{Array1, Array2};
 
 /// Beamforming algorithm types with literature-based implementations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum BeamformingAlgorithm {
     /// Delay-and-Sum (conventional beamforming)
     DelaySum,

@@ -9,7 +9,7 @@ use ndarray::{Array3, Array4};
 use crate::constants::numerical::EPSILON;
 
 /// Shock detector with multiple indicators
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ShockDetector {
     /// Base threshold for shock detection
     threshold: f64,
@@ -74,15 +74,15 @@ impl ShockDetector {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let grad_x = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let grad_y = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let grad_z = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let grad_x = (field[[i + 1, j, k] - field[[i - 1, j, k]) / (2.0 * grid.dx);
+                    let grad_y = (field[[i, j + 1, k] - field[[i, j - 1, k]) / (2.0 * grid.dy);
+                    let grad_z = (field[[i, j, k + 1] - field[[i, j, k - 1]) / (2.0 * grid.dz);
 
                     let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
-                    let field_mag = field[[i, j, k]].abs() + EPSILON;
+                    let field_mag = field[[i, j, k].abs() + EPSILON;
 
                     if grad_mag / field_mag > self.threshold {
-                        shock_mask[[i, j, k]] = true;
+                        shock_mask[[i, j, k] = true;
                     }
                 }
             }
@@ -97,15 +97,15 @@ impl ShockDetector {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Check jumps across cell interfaces
-                    let jump_x = (field[[i + 1, j, k]] - field[[i, j, k]]).abs();
-                    let jump_y = (field[[i, j + 1, k]] - field[[i, j, k]]).abs();
-                    let jump_z = (field[[i, j, k + 1]] - field[[i, j, k]]).abs();
+                    let jump_x = (field[[i + 1, j, k] - field[[i, j, k]).abs();
+                    let jump_y = (field[[i, j + 1, k] - field[[i, j, k]).abs();
+                    let jump_z = (field[[i, j, k + 1] - field[[i, j, k]).abs();
 
                     let max_jump = jump_x.max(jump_y).max(jump_z);
-                    let field_scale = field[[i, j, k]].abs() + EPSILON;
+                    let field_scale = field[[i, j, k].abs() + EPSILON;
 
                     if max_jump / field_scale > self.threshold * 10.0 {
-                        shock_mask[[i, j, k]] = true;
+                        shock_mask[[i, j, k] = true;
                     }
                 }
             }
@@ -128,7 +128,7 @@ impl ShockDetector {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Compute local entropy
-                    let s_center = pressure[[i, j, k]] / density[[i, j, k]].powf(gamma);
+                    let s_center = pressure[[i, j, k] / density[[i, j, k].powf(gamma);
 
                     // Check entropy in all directions
                     let mut max_entropy_jump = 0.0;
@@ -145,14 +145,14 @@ impl ShockDetector {
                         let nj = (j as i32 + dj) as usize;
                         let nk = (k as i32 + dk) as usize;
 
-                        let s_neighbor = pressure[[ni, nj, nk]] / density[[ni, nj, nk]].powf(gamma);
+                        let s_neighbor = pressure[[ni, nj, nk] / density[[ni, nj, nk].powf(gamma);
                         let entropy_jump =
                             (s_center - s_neighbor).abs() / s_center.abs().max(EPSILON);
                         max_entropy_jump = f64::max(max_entropy_jump, entropy_jump);
                     }
 
                     // Entropy should decrease across shocks
-                    indicator[[i, j, k]] = (max_entropy_jump / self.threshold).min(1.0);
+                    indicator[[i, j, k] = (max_entropy_jump / self.threshold).min(1.0);
                 }
             }
         }
@@ -174,33 +174,33 @@ impl ShockDetector {
             for j in 2..ny - 2 {
                 for k in 2..nz - 2 {
                     // Compute pressure jump indicator (Ducros et al.)
-                    let p_center = pressure[[i, j, k]];
+                    let p_center = pressure[[i, j, k];
 
                     // Second derivatives for detecting discontinuities
-                    let d2p_dx2 = (pressure[[i + 1, j, k]] - 2.0 * p_center
-                        + pressure[[i - 1, j, k]])
+                    let d2p_dx2 = (pressure[[i + 1, j, k] - 2.0 * p_center
+                        + pressure[[i - 1, j, k])
                         / (grid.dx * grid.dx);
-                    let d2p_dy2 = (pressure[[i, j + 1, k]] - 2.0 * p_center
-                        + pressure[[i, j - 1, k]])
+                    let d2p_dy2 = (pressure[[i, j + 1, k] - 2.0 * p_center
+                        + pressure[[i, j - 1, k])
                         / (grid.dy * grid.dy);
-                    let d2p_dz2 = (pressure[[i, j, k + 1]] - 2.0 * p_center
-                        + pressure[[i, j, k - 1]])
+                    let d2p_dz2 = (pressure[[i, j, k + 1] - 2.0 * p_center
+                        + pressure[[i, j, k - 1])
                         / (grid.dz * grid.dz);
 
                     // First derivatives
                     let dp_dx =
-                        (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) / (2.0 * grid.dx);
+                        (pressure[[i + 1, j, k] - pressure[[i - 1, j, k]) / (2.0 * grid.dx);
                     let dp_dy =
-                        (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) / (2.0 * grid.dy);
+                        (pressure[[i, j + 1, k] - pressure[[i, j - 1, k]) / (2.0 * grid.dy);
                     let dp_dz =
-                        (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) / (2.0 * grid.dz);
+                        (pressure[[i, j, k + 1] - pressure[[i, j, k - 1]) / (2.0 * grid.dz);
 
                     // Ducros sensor
                     let laplacian = d2p_dx2 + d2p_dy2 + d2p_dz2;
                     let grad_mag = (dp_dx * dp_dx + dp_dy * dp_dy + dp_dz * dp_dz).sqrt();
 
                     let sensor = laplacian.abs() / (grad_mag + EPSILON * p_center.abs());
-                    indicator[[i, j, k]] = (sensor / self.threshold).min(1.0);
+                    indicator[[i, j, k] = (sensor / self.threshold).min(1.0);
                 }
             }
         }
@@ -222,16 +222,16 @@ impl ShockDetector {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     let dvx_dx =
-                        (velocity[[0, i + 1, j, k]] - velocity[[0, i - 1, j, k]]) / (2.0 * grid.dx);
+                        (velocity[[0, i + 1, j, k] - velocity[[0, i - 1, j, k]) / (2.0 * grid.dx);
                     let dvy_dy =
-                        (velocity[[1, i, j + 1, k]] - velocity[[1, i, j - 1, k]]) / (2.0 * grid.dy);
+                        (velocity[[1, i, j + 1, k] - velocity[[1, i, j - 1, k]) / (2.0 * grid.dy);
                     let dvz_dz =
-                        (velocity[[2, i, j, k + 1]] - velocity[[2, i, j, k - 1]]) / (2.0 * grid.dz);
+                        (velocity[[2, i, j, k + 1] - velocity[[2, i, j, k - 1]) / (2.0 * grid.dz);
 
                     let divergence = dvx_dx + dvy_dy + dvz_dz;
 
                     // Strong compression indicates shock
-                    indicator[[i, j, k]] = (-divergence).max(0.0);
+                    indicator[[i, j, k] = (-divergence).max(0.0);
                 }
             }
         }

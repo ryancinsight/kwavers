@@ -20,7 +20,7 @@ const STAINLESS_STEEL_316_DENSITY: f64 = 7850.0; // kg/m³
 const DEFAULT_FATIGUE_EXPONENT: f64 = 3.0;
 const DEFAULT_EROSION_RESISTANCE: f64 = 1.0;
 /// Cavitation damage model
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct CavitationDamage {
     /// Accumulated damage field (dimensionless damage parameter)
     pub damage_field: Array3<f64>,
@@ -37,7 +37,7 @@ pub struct CavitationDamage {
 }
 
 /// Material properties for damage calculation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MaterialProperties {
     /// Yield strength [Pa]
     pub yield_strength: f64,
@@ -68,7 +68,7 @@ impl Default for MaterialProperties {
 }
 
 /// Damage calculation parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DamageParameters {
     /// Minimum impact pressure for damage [Pa]
     pub threshold_pressure: f64,
@@ -124,9 +124,9 @@ impl CavitationDamage {
         for ((i, j, k), &is_collapsing) in bubble_states.is_collapsing.indexed_iter() {
             if is_collapsing > 0.5 {
                 // Bubble is collapsing - calculate impact
-                let r = bubble_states.radius[[i, j, k]];
-                let v = bubble_states.velocity[[i, j, k]].abs();
-                let p_internal = bubble_states.pressure[[i, j, k]];
+                let r = bubble_states.radius[[i, j, k];
+                let v = bubble_states.velocity[[i, j, k].abs();
+                let p_internal = bubble_states.pressure[[i, j, k];
 
                 // Water hammer pressure from bubble collapse
                 let p_hammer = rho_l * c_l * v;
@@ -138,17 +138,17 @@ impl CavitationDamage {
                 let p_impact = p_hammer.max(p_jet).max(p_internal);
 
                 if p_impact > self.params.threshold_pressure {
-                    self.impact_pressure[[i, j, k]] = p_impact;
-                    self.impact_count[[i, j, k]] += 1;
+                    self.impact_pressure[[i, j, k] = p_impact;
+                    self.impact_count[[i, j, k] += 1;
 
                     // Calculate damage increment
                     let damage_increment =
-                        self.calculate_damage_increment(p_impact, r, self.impact_count[[i, j, k]]);
+                        self.calculate_damage_increment(p_impact, r, self.impact_count[[i, j, k]);
 
-                    self.damage_field[[i, j, k]] += damage_increment * dt;
+                    self.damage_field[[i, j, k] += damage_increment * dt;
 
                     // Calculate erosion rate
-                    self.erosion_rate[[i, j, k]] = self.calculate_erosion_rate(p_impact, r, v);
+                    self.erosion_rate[[i, j, k] = self.calculate_erosion_rate(p_impact, r, v);
                 }
             }
         }
@@ -244,7 +244,7 @@ impl CavitationDamage {
 
         for ((i, j, k), &rate) in self.erosion_rate.indexed_iter() {
             if rate > 0.0 {
-                depth[[i, j, k]] = rate * time / self.material.density;
+                depth[[i, j, k] = rate * time / self.material.density;
             }
         }
 
@@ -258,21 +258,21 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
     let mut intensity = Array3::zeros(shape);
 
     for ((i, j, k), &r) in bubble_states.radius.indexed_iter() {
-        let v = bubble_states.velocity[[i, j, k]];
-        let compression = bubble_states.compression_ratio[[i, j, k]];
+        let v = bubble_states.velocity[[i, j, k];
+        let compression = bubble_states.compression_ratio[[i, j, k];
 
         // Cavitation intensity based on collapse energy
         let collapse_energy = IMPACT_ENERGY_COEFFICIENT * liquid_density * v.powi(2) * r.powi(3);
         let compression_factor = compression.powf(COMPRESSION_FACTOR_EXPONENT);
 
-        intensity[[i, j, k]] = collapse_energy * compression_factor;
+        intensity[[i, j, k] = collapse_energy * compression_factor;
     }
 
     intensity
 }
 
 /// Predict erosion patterns
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ErosionPattern;
 
 impl ErosionPattern {
@@ -286,14 +286,14 @@ impl ErosionPattern {
         let mut potential = Array3::zeros(shape);
 
         for ((i, j, k), &damage) in damage_field.indexed_iter() {
-            let v = flow_velocity[[i, j, k]];
-            let n = surface_normal[[i, j, k]];
+            let v = flow_velocity[[i, j, k];
+            let n = surface_normal[[i, j, k];
 
             // Erosion enhanced by flow and surface orientation
             let flow_factor = 1.0 + 0.1 * v;
             let angle_factor = n.abs(); // Normal impact most damaging
 
-            potential[[i, j, k]] = damage * flow_factor * angle_factor;
+            potential[[i, j, k] = damage * flow_factor * angle_factor;
         }
 
         potential
@@ -317,17 +317,17 @@ mod tests {
 
         // Create test bubble state
         let mut states = BubbleStateFields::new((10, 10, 10));
-        states.is_collapsing[[5, 5, 5]] = 1.0;
-        states.radius[[5, 5, 5]] = 1e-6;
-        states.velocity[[5, 5, 5]] = -100.0;
-        states.pressure[[5, 5, 5]] = 1e9;
+        states.is_collapsing[[5, 5, 5] = 1.0;
+        states.radius[[5, 5, 5] = 1e-6;
+        states.velocity[[5, 5, 5] = -100.0;
+        states.pressure[[5, 5, 5] = 1e9;
 
         // Update damage
         damage.update_damage(&states, (1000.0, 1500.0), 1e-6);
 
         // Check that damage occurred
-        assert!(damage.damage_field[[5, 5, 5]] > 0.0);
-        assert!(damage.impact_count[[5, 5, 5]] > 0);
+        assert!(damage.damage_field[[5, 5, 5] > 0.0);
+        assert!(damage.impact_count[[5, 5, 5] > 0);
     }
 
     #[test]

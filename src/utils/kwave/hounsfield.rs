@@ -3,7 +3,7 @@
 //! Based on Mast (2000) empirical relationships for medical imaging
 
 /// Hounsfield unit conversions for CT data
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct HounsfieldUnits;
 
 impl HounsfieldUnits {

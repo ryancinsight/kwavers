@@ -60,7 +60,7 @@ impl Default for ThermalConfig {
 }
 
 /// Thermal field state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ThermalState {
     pub temperature: Array3<f64>,
     pub heat_flux: (Array3<f64>, Array3<f64>, Array3<f64>),

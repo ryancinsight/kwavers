@@ -12,7 +12,7 @@ use crate::constants::numerical::{
 };
 
 /// Artificial viscosity for shock stabilization
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ArtificialViscosity {
     /// Von Neumann-Richtmyer coefficient
     c_vnr: f64,
@@ -69,16 +69,16 @@ impl ArtificialViscosity {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Only apply where shocks are detected
-                    if shock_indicator[[i, j, k]] > 0.1 {
+                    if shock_indicator[[i, j, k] > 0.1 {
                         // Compute velocity divergence
-                        let div_v = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * grid.dx)
-                            + (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * grid.dy)
-                            + (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * grid.dz);
+                        let div_v = (vx[[i + 1, j, k] - vx[[i - 1, j, k]) / (2.0 * grid.dx)
+                            + (vy[[i, j + 1, k] - vy[[i, j - 1, k]) / (2.0 * grid.dy)
+                            + (vz[[i, j, k + 1] - vz[[i, j, k - 1]) / (2.0 * grid.dz);
 
                         if div_v < 0.0 {
                             // Compression - shock forming
-                            let c = sound_speed[[i, j, k]];
-                            let rho = density[[i, j, k]];
+                            let c = sound_speed[[i, j, k];
+                            let rho = density[[i, j, k];
 
                             // Von Neumann-Richtmyer viscosity
                             let q_vnr = self.c_vnr * rho * dx * dx * div_v.powi(2);
@@ -89,10 +89,10 @@ impl ArtificialViscosity {
 
                             // Total viscosity with shock indicator weighting
                             let q_total =
-                                (q_vnr + q_linear + q_quadratic) * shock_indicator[[i, j, k]];
+                                (q_vnr + q_linear + q_quadratic) * shock_indicator[[i, j, k];
 
                             // Limit maximum viscosity to prevent over-dissipation
-                            viscosity[[i, j, k]] = q_total.min(self.max_viscosity * rho * c * c);
+                            viscosity[[i, j, k] = q_total.min(self.max_viscosity * rho * c * c);
                         }
                     }
                 }
@@ -122,29 +122,29 @@ impl ArtificialViscosity {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
                         // Compute viscous stress gradients
-                        let visc_flux_x = (viscosity[[i + 1, j, k]]
-                            * (velocity_component[[i + 1, j, k]] - velocity_component[[i, j, k]])
-                            - viscosity[[i - 1, j, k]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i - 1, j, k]]))
+                        let visc_flux_x = (viscosity[[i + 1, j, k]
+                            * (velocity_component[[i + 1, j, k] - velocity_component[[i, j, k])
+                            - viscosity[[i - 1, j, k]
+                                * (velocity_component[[i, j, k]
+                                    - velocity_component[[i - 1, j, k]))
                             / (grid.dx * grid.dx);
 
-                        let visc_flux_y = (viscosity[[i, j + 1, k]]
-                            * (velocity_component[[i, j + 1, k]] - velocity_component[[i, j, k]])
-                            - viscosity[[i, j - 1, k]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i, j - 1, k]]))
+                        let visc_flux_y = (viscosity[[i, j + 1, k]
+                            * (velocity_component[[i, j + 1, k] - velocity_component[[i, j, k])
+                            - viscosity[[i, j - 1, k]
+                                * (velocity_component[[i, j, k]
+                                    - velocity_component[[i, j - 1, k]))
                             / (grid.dy * grid.dy);
 
-                        let visc_flux_z = (viscosity[[i, j, k + 1]]
-                            * (velocity_component[[i, j, k + 1]] - velocity_component[[i, j, k]])
-                            - viscosity[[i, j, k - 1]]
-                                * (velocity_component[[i, j, k]]
-                                    - velocity_component[[i, j, k - 1]]))
+                        let visc_flux_z = (viscosity[[i, j, k + 1]
+                            * (velocity_component[[i, j, k + 1] - velocity_component[[i, j, k])
+                            - viscosity[[i, j, k - 1]
+                                * (velocity_component[[i, j, k]
+                                    - velocity_component[[i, j, k - 1]))
                             / (grid.dz * grid.dz);
 
                         // Update momentum with viscous flux
-                        momentum_component[[i, j, k]] +=
+                        momentum_component[[i, j, k] +=
                             dt * (visc_flux_x + visc_flux_y + visc_flux_z);
                     }
                 }
@@ -174,9 +174,9 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    velocity[[0, i, j, k]] = -(i as f64 - 5.0) * 10.0; // Converging in x
+                    velocity[[0, i, j, k] = -(i as f64 - 5.0) * 10.0; // Converging in x
                     if i == 5 {
-                        shock_indicator[[i, j, k]] = 1.0; // Shock at center
+                        shock_indicator[[i, j, k] = 1.0; // Shock at center
                     }
                 }
             }
@@ -187,8 +187,8 @@ mod tests {
             .unwrap();
 
         // Should have non-zero viscosity at compression region
-        assert!(viscosity[[5, 5, 5]] > 0.0);
+        assert!(viscosity[[5, 5, 5] > 0.0);
         // Should have zero viscosity away from shock
-        assert_eq!(viscosity[[0, 0, 0]], 0.0);
+        assert_eq!(viscosity[[0, 0, 0], 0.0);
     }
 }

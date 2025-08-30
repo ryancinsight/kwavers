@@ -6,7 +6,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, Zip};
 
 /// Conservation validation results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservationMetrics {
     pub energy_error: f64,
     pub mass_error: f64,
@@ -66,19 +66,19 @@ pub fn validate_mass_conservation(
         for j in 1..grid.ny - 1 {
             for k in 1..grid.nz - 1 {
                 // Time derivative
-                let drho_dt = (density[[i, j, k]] - density_previous[[i, j, k]]) * dt_inv;
+                let drho_dt = (density[[i, j, k] - density_previous[[i, j, k]) * dt_inv;
 
                 // Divergence of mass flux
-                let div_flux = (density[[i + 1, j, k]] * velocity_x[[i + 1, j, k]]
-                    - density[[i - 1, j, k]] * velocity_x[[i - 1, j, k]])
+                let div_flux = (density[[i + 1, j, k] * velocity_x[[i + 1, j, k]
+                    - density[[i - 1, j, k] * velocity_x[[i - 1, j, k])
                     * 0.5
                     * dx_inv
-                    + (density[[i, j + 1, k]] * velocity_y[[i, j + 1, k]]
-                        - density[[i, j - 1, k]] * velocity_y[[i, j - 1, k]])
+                    + (density[[i, j + 1, k] * velocity_y[[i, j + 1, k]
+                        - density[[i, j - 1, k] * velocity_y[[i, j - 1, k])
                         * 0.5
                         * dy_inv
-                    + (density[[i, j, k + 1]] * velocity_z[[i, j, k + 1]]
-                        - density[[i, j, k - 1]] * velocity_z[[i, j, k - 1]])
+                    + (density[[i, j, k + 1] * velocity_z[[i, j, k + 1]
+                        - density[[i, j, k - 1] * velocity_z[[i, j, k - 1])
                         * 0.5
                         * dz_inv;
 
@@ -118,21 +118,21 @@ pub fn validate_momentum_conservation(
     for i in 1..grid.nx - 1 {
         for j in 1..grid.ny - 1 {
             for k in 1..grid.nz - 1 {
-                let rho = density[[i, j, k]];
+                let rho = density[[i, j, k];
 
                 // X-momentum
-                let dvx_dt = (velocity_x[[i, j, k]] - velocity_x_previous[[i, j, k]]) * dt_inv;
-                let dpx_dx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) * 0.5 * dx_inv;
+                let dvx_dt = (velocity_x[[i, j, k] - velocity_x_previous[[i, j, k]) * dt_inv;
+                let dpx_dx = (pressure[[i + 1, j, k] - pressure[[i - 1, j, k]) * 0.5 * dx_inv;
                 max_error_x = max_error_x.max((rho * dvx_dt + dpx_dx).abs());
 
                 // Y-momentum
-                let dvy_dt = (velocity_y[[i, j, k]] - velocity_y_previous[[i, j, k]]) * dt_inv;
-                let dpy_dy = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) * 0.5 * dy_inv;
+                let dvy_dt = (velocity_y[[i, j, k] - velocity_y_previous[[i, j, k]) * dt_inv;
+                let dpy_dy = (pressure[[i, j + 1, k] - pressure[[i, j - 1, k]) * 0.5 * dy_inv;
                 max_error_y = max_error_y.max((rho * dvy_dt + dpy_dy).abs());
 
                 // Z-momentum
-                let dvz_dt = (velocity_z[[i, j, k]] - velocity_z_previous[[i, j, k]]) * dt_inv;
-                let dpz_dz = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) * 0.5 * dz_inv;
+                let dvz_dt = (velocity_z[[i, j, k] - velocity_z_previous[[i, j, k]) * dt_inv;
+                let dpz_dz = (pressure[[i, j, k + 1] - pressure[[i, j, k - 1]) * 0.5 * dz_inv;
                 max_error_z = max_error_z.max((rho * dvz_dt + dpz_dz).abs());
             }
         }

@@ -39,7 +39,7 @@ use thiserror::Error;
 ///
 /// This enum uses thiserror for automatic, correct implementations of
 /// Display and Error traits, preserving the full error chain.
-#[derive(Debug, Error)]
+#[derive(Debug, Error))]
 pub enum KwaversError {
     /// Grid-related errors
     #[error(transparent)]
@@ -93,6 +93,10 @@ pub enum KwaversError {
     /// GPU computation errors
     #[error("GPU error: {0}")]
     GpuError(String),
+
+    /// Array shape errors
+    #[error("Shape error: {0}")]
+    ShapeError(String),
 
     /// Invalid input (for backward compatibility, prefer specific error types)
     #[error("Invalid input: {0}")]

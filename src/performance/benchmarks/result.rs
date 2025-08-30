@@ -7,7 +7,7 @@ use std::fmt;
 use std::time::Duration;
 
 /// Individual benchmark result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BenchmarkResult {
     /// Name of the benchmark
     pub name: String,
@@ -112,7 +112,7 @@ impl fmt::Display for BenchmarkResult {
 }
 
 /// Benchmark report containing multiple results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BenchmarkReport {
     /// All benchmark results
     pub results: Vec<BenchmarkResult>,

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Integration tests for Kwavers
 //!
 //! These tests verify that the library components work together correctly.

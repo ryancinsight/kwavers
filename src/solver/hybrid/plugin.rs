@@ -9,7 +9,7 @@ use crate::solver::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
 
 /// Hybrid solver plugin for integration with physics pipeline
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct HybridPlugin {
     solver: HybridSolver,
     metadata: PluginMetadata,

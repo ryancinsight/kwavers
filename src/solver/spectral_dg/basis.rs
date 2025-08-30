@@ -7,7 +7,7 @@ use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Basis function type for DG
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum BasisType {
     /// Legendre polynomials (modal basis)
     Legendre,

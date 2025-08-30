@@ -7,7 +7,7 @@ use ndarray::{s, Array2, Array3, Zip};
 use std::f64::consts::PI;
 
 /// Configuration for an arc source (2D focused transducer)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ArcConfig {
     /// Radius of curvature (m)
     pub radius: f64,
@@ -46,6 +46,7 @@ impl Default for ArcConfig {
 }
 
 /// Arc source for 2D simulations (makeArc equivalent)
+#[derive(Debug))]
 pub struct ArcSource {
     config: ArcConfig,
     /// Discretized element positions

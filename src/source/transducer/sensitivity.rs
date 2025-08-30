@@ -5,7 +5,7 @@
 /// Transducer sensitivity parameters
 ///
 /// Based on IEC 61102 standard for ultrasound transducers
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransducerSensitivity {
     /// Transmit sensitivity (Pa/V at 1m)
     pub transmit_sensitivity: f64,

@@ -15,6 +15,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 /// Spectral solver using FFT-based methods
+#[derive(Debug))]
 pub struct SpectralSolver {
     order: usize,
     grid: Arc<Grid>,
@@ -51,9 +52,9 @@ impl SpectralSolver {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    kx[[i, j, k]] = kx_1d[i];
-                    ky[[i, j, k]] = ky_1d[j];
-                    kz[[i, j, k]] = kz_1d[k];
+                    kx[[i, j, k] = kx_1d[i];
+                    ky[[i, j, k] = ky_1d[j];
+                    kz[[i, j, k] = kz_1d[k];
                 }
             }
         }
@@ -67,11 +68,11 @@ impl SpectralSolver {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    if kx[[i, j, k]].abs() > kx_max
-                        || ky[[i, j, k]].abs() > ky_max
-                        || kz[[i, j, k]].abs() > kz_max
+                    if kx[[i, j, k].abs() > kx_max
+                        || ky[[i, j, k].abs() > ky_max
+                        || kz[[i, j, k].abs() > kz_max
                     {
-                        filter[[i, j, k]] = 0.0;
+                        filter[[i, j, k] = 0.0;
                     }
                 }
             }
@@ -101,7 +102,7 @@ impl SpectralSolver {
                 let mut slice: Vec<Complex<f64>> = field_hat.slice(s![.., j, k]).to_vec();
                 fft.process(&mut slice);
                 for (i, val) in slice.into_iter().enumerate() {
-                    field_hat[[i, j, k]] = val;
+                    field_hat[[i, j, k] = val;
                 }
             }
         }
@@ -113,7 +114,7 @@ impl SpectralSolver {
                 let mut slice: Vec<Complex<f64>> = field_hat.slice(s![i, .., k]).to_vec();
                 fft.process(&mut slice);
                 for (j, val) in slice.into_iter().enumerate() {
-                    field_hat[[i, j, k]] = val;
+                    field_hat[[i, j, k] = val;
                 }
             }
         }
@@ -125,7 +126,7 @@ impl SpectralSolver {
                 let mut slice: Vec<Complex<f64>> = field_hat.slice(s![i, j, ..]).to_vec();
                 fft.process(&mut slice);
                 for (k, val) in slice.into_iter().enumerate() {
-                    field_hat[[i, j, k]] = val;
+                    field_hat[[i, j, k] = val;
                 }
             }
         }

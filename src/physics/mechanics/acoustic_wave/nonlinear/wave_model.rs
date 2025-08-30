@@ -45,7 +45,7 @@ use super::multi_frequency::MultiFrequencyConfig;
 ///
 /// For weakly heterogeneous media (variations < 10%), the errors are typically acceptable.
 /// For strongly heterogeneous media, consider using alternative methods.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct NonlinearWave {
     // Performance metrics
     /// Time spent in the nonlinear term calculation part of the update, in seconds.

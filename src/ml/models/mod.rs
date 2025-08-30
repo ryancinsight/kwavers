@@ -16,26 +16,11 @@ pub use outcome_predictor::OutcomePredictorModel;
 pub use parameter_optimizer::ParameterOptimizerModel;
 pub use tissue_classifier::TissueClassifierModel;
 
-use crate::error::KwaversResult;
-use ndarray::Array2;
-
-/// Common trait for all ML models
-pub trait MLModel {
-    /// Run inference on input data
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>>;
-
-    /// Get model accuracy metric
-    fn accuracy(&self) -> f64;
-
-    /// Get model name
-    fn name(&self) -> &str;
-}
-
-// Re-export ModelMetadata from types
-pub use crate::ml::types::ModelMetadata;
+// Re-export MLModel and ModelMetadata from types
+pub use crate::ml::types::{MLModel, ModelMetadata};
 
 /// Model type enumeration
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum ModelType {
     TissueClassifier,
     ParameterOptimizer,

@@ -61,7 +61,7 @@ mod tests {
         // Initialize pressure field with sinusoidal wave
         for i in 0..nx {
             let x = i as f64 * dx;
-            fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
+            fields[[0, i, 0, 0] = amplitude * (k * x).sin();
         }
 
         // Create a null source and medium for testing
@@ -84,7 +84,7 @@ mod tests {
         // Extract pressure for analysis
         let mut pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
-            pressure[[i, 0, 0]] = fields[[0, i, 0, 0]];
+            pressure[[i, 0, 0] = fields[[0, i, 0, 0];
         }
 
         // FFT to extract harmonics
@@ -158,7 +158,7 @@ mod tests {
 
         for i in 0..nx / 4 {
             let x = i as f64 * dx;
-            fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
+            fields[[0, i, 0, 0] = amplitude * (k * x).sin();
         }
 
         // Create a null source and medium for testing
@@ -184,13 +184,13 @@ mod tests {
         // Extract pressure for analysis
         let mut pressure = Array3::zeros((nx, 1, 1));
         for i in 0..nx {
-            pressure[[i, 0, 0]] = fields[[0, i, 0, 0]];
+            pressure[[i, 0, 0] = fields[[0, i, 0, 0];
         }
 
         // Check for steepening (increased gradient)
         let mut max_gradient: f64 = 0.0;
         for i in 1..nx - 1 {
-            let gradient = (pressure[[i + 1, 0, 0]] - pressure[[i - 1, 0, 0]]).abs() / (2.0 * dx);
+            let gradient = (pressure[[i + 1, 0, 0] - pressure[[i - 1, 0, 0]).abs() / (2.0 * dx);
             max_gradient = max_gradient.max(gradient);
         }
 

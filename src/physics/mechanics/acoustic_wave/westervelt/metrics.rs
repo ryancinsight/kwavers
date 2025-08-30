@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 /// Performance metrics for tracking computational costs
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone))]
 pub struct PerformanceMetrics {
     pub call_count: u64,
     pub nonlinear_time: f64,

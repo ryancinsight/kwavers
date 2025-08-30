@@ -9,6 +9,7 @@ use ndarray::{Array3, Array4};
 use std::fmt;
 
 /// PAM plugin for passive acoustic mapping
+#[derive(Debug))]
 pub struct PAMPlugin {
     mapper: super::PassiveAcousticMapper,
     metadata: PluginMetadata,
@@ -50,7 +51,7 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
     }
 
     fn state(&self) -> PluginState {
-        self.state.clone()
+        self.state
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -86,7 +87,7 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
         for ix in 0..shape[1] {
             for iy in 0..shape[2] {
                 for iz in 0..shape[3] {
-                    sensor_data[[ix, iy, iz]] = fields[[pressure_idx, ix, iy, iz]];
+                    sensor_data[[ix, iy, iz] = fields[[pressure_idx, ix, iy, iz];
                 }
             }
         }
@@ -103,7 +104,7 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
                 for iz in 0..cavitation_map.shape()[2] {
                     // Store the first frequency band as cavitation intensity
                     if iz == 0 {
-                        fields[[chem_idx, ix, iy, 0]] = cavitation_map[[ix, iy, iz]];
+                        fields[[chem_idx, ix, iy, 0] = cavitation_map[[ix, iy, iz];
                     }
                 }
             }

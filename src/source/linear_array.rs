@@ -7,7 +7,7 @@ use ndarray::Array3;
 use rayon::prelude::*;
 use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct LinearArray {
     length: f64,
     num_elements: usize,
@@ -134,8 +134,8 @@ impl Source for LinearArray {
         // Use the create_mask method for efficient computation
         if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {
             let mask = self.create_mask(grid);
-            if mask[[i, j, k]] > 0.0 {
-                mask[[i, j, k]] * self.amplitude(t)
+            if mask[[i, j, k] > 0.0 {
+                mask[[i, j, k] * self.amplitude(t)
             } else {
                 0.0
             }

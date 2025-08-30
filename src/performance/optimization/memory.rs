@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use std::alloc::{alloc, dealloc, Layout};
 
 /// Prefetch strategy for memory access
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum PrefetchStrategy {
     /// No prefetching
     None,
@@ -17,11 +17,18 @@ pub enum PrefetchStrategy {
 }
 
 /// Bandwidth optimizer for memory transfers
+#[derive(Debug))]
 pub struct BandwidthOptimizer {
     /// Maximum bandwidth in GB/s
     max_bandwidth: f64,
     /// Current utilization percentage
     utilization: f64,
+}
+
+impl Default for BandwidthOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BandwidthOptimizer {
@@ -42,6 +49,7 @@ impl BandwidthOptimizer {
 }
 
 /// Memory optimizer for efficient memory management
+#[derive(Debug))]
 pub struct MemoryOptimizer {
     prefetch_distance: usize,
     alignment: usize,
@@ -133,6 +141,7 @@ impl MemoryOptimizer {
 }
 
 /// Memory pool for efficient allocation
+#[derive(Debug))]
 pub struct MemoryPool {
     buffer: Vec<u8>,
     offset: usize,
@@ -152,7 +161,7 @@ impl MemoryPool {
     /// Allocate from the pool
     pub fn allocate(&mut self, size: usize) -> Option<*mut u8> {
         // Align the offset
-        let aligned_offset = (self.offset + self.alignment - 1) / self.alignment * self.alignment;
+        let aligned_offset = self.offset.div_ceil(self.alignment) * self.alignment;
 
         if aligned_offset + size > self.buffer.len() {
             return None;

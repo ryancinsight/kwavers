@@ -10,7 +10,7 @@ use super::{DEFAULT_RISE_TIME_FRACTION, MIN_PULSE_WIDTH};
 /// Implements a rectangular pulse with smooth transitions:
 /// - Rise time: transition from 0 to full amplitude
 /// - Fall time: transition from full amplitude to 0
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RectangularPulse {
     center_frequency: f64,
     start_time: f64,

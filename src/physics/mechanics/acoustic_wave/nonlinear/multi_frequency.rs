@@ -10,7 +10,7 @@ use ndarray::Array1;
 /// - Harmonic generation studies
 /// - Broadband acoustic simulations
 /// - Frequency-dependent absorption modeling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MultiFrequencyConfig {
     /// Array of frequencies to simulate [Hz]
     pub frequencies: Vec<f64>,

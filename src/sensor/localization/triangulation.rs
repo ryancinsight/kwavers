@@ -4,12 +4,13 @@ use super::{Position, SensorArray};
 use crate::error::KwaversResult;
 
 /// Triangulator for position estimation
+#[derive(Debug))]
 pub struct Triangulator {
     method: TriangulationMethod,
 }
 
 /// Triangulation methods
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum TriangulationMethod {
     LeastSquares,
     WeightedLeastSquares,

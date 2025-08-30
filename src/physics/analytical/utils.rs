@@ -25,7 +25,7 @@ pub const DISPERSION_CORRECTION_FOURTH_ORDER: f64 = 0.001;
 pub const SUB_GRID_SEARCH_STEPS: u32 = 10;
 
 /// Test utilities for physics validation
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PhysicsTestUtils;
 
 impl PhysicsTestUtils {
@@ -53,7 +53,7 @@ impl PhysicsTestUtils {
 
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    field[[i, j, k]] = value;
+                    field[[i, j, k] = value;
                 }
             }
         }
@@ -142,13 +142,13 @@ impl PhysicsTestUtils {
                     for k in 0..grid.nz {
                         // Linear interpolation for sub-grid accuracy
                         let interpolated_value = if i_floor + 1 < grid.nx {
-                            field2[[i_floor, j, k]] * (1.0 - i_frac)
-                                + field2[[i_floor + 1, j, k]] * i_frac
+                            field2[[i_floor, j, k] * (1.0 - i_frac)
+                                + field2[[i_floor + 1, j, k] * i_frac
                         } else {
-                            field2[[i_floor, j, k]]
+                            field2[[i_floor, j, k]
                         };
 
-                        correlation += field1[[i, j, k]] * interpolated_value;
+                        correlation += field1[[i, j, k] * interpolated_value;
                         count += 1;
                     }
                 }

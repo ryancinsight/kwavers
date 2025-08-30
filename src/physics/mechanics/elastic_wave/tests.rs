@@ -29,7 +29,7 @@ mod tests {
         let mut fields = Array4::<f64>::zeros((crate::solver::TOTAL_FIELDS, 32, 32, 32));
 
         // Set initial conditions
-        fields[[UnifiedFieldType::VelocityX.index(), 16, 16, 16]] = 1.0;
+        fields[[UnifiedFieldType::VelocityX.index(), 16, 16, 16] = 1.0;
 
         let prev_pressure = Array3::<f64>::zeros((32, 32, 32));
 

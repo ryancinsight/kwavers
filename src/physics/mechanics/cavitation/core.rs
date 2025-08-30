@@ -13,7 +13,7 @@ use crate::physics::traits::CavitationModelBehavior;
 use ndarray::{Array3, Zip};
 
 /// Core cavitation model implementing the Rayleigh-Plesset equation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CavitationModel {
     /// Physics state container
     state: PhysicsState,
@@ -219,7 +219,7 @@ mod tests {
 
         // Check that bubble radius was updated
         let radius = model.bubble_radius().unwrap();
-        assert!(radius[[5, 5, 5]] > 0.0);
+        assert!(radius[[5, 5, 5] > 0.0);
     }
 
     #[test]
@@ -230,18 +230,18 @@ mod tests {
 
         // Create varying pressure field
         let mut pressure = Array3::zeros((5, 5, 5));
-        pressure[[2, 2, 2]] = 50000.0; // Low pressure to induce growth
+        pressure[[2, 2, 2] = 50000.0; // Low pressure to induce growth
 
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         // Run multiple time steps
-        let initial_radius = model.bubble_radius().unwrap()[[2, 2, 2]];
+        let initial_radius = model.bubble_radius().unwrap()[[2, 2, 2];
         for _ in 0..10 {
             model
                 .update_cavitation(&pressure, &grid, &medium, 1e-7, 0.0)
                 .unwrap();
         }
-        let final_radius = model.bubble_radius().unwrap()[[2, 2, 2]];
+        let final_radius = model.bubble_radius().unwrap()[[2, 2, 2];
 
         // Bubble should grow under low pressure
         assert!(final_radius > initial_radius);

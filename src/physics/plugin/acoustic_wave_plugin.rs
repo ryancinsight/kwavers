@@ -11,7 +11,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{Array3, Array4};
 
 /// Acoustic wave propagation plugin
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct AcousticWavePlugin {
     metadata: PluginMetadata,
     state: PluginState,
@@ -65,16 +65,16 @@ impl AcousticWavePlugin {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let dvx_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) * 0.5 * dx_inv;
-                    let dvy_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) * 0.5 * dy_inv;
-                    let dvz_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) * 0.5 * dz_inv;
+                    let dvx_dx = (vx[[i + 1, j, k] - vx[[i - 1, j, k]) * 0.5 * dx_inv;
+                    let dvy_dy = (vy[[i, j + 1, k] - vy[[i, j - 1, k]) * 0.5 * dy_inv;
+                    let dvz_dz = (vz[[i, j, k + 1] - vz[[i, j, k - 1]) * 0.5 * dz_inv;
 
                     let divergence = dvx_dx + dvy_dy + dvz_dz;
 
-                    let rho = self.density.as_ref().unwrap()[[i, j, k]];
-                    let c = self.sound_speed.as_ref().unwrap()[[i, j, k]];
+                    let rho = self.density.as_ref().unwrap()[[i, j, k];
+                    let c = self.sound_speed.as_ref().unwrap()[[i, j, k];
 
-                    pressure[[i, j, k]] -= dt * rho * c * c * divergence;
+                    pressure[[i, j, k] -= dt * rho * c * c * divergence;
                 }
             }
         }
@@ -100,19 +100,19 @@ impl AcousticWavePlugin {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let rho_inv = 1.0 / self.density.as_ref().unwrap()[[i, j, k]];
+                    let rho_inv = 1.0 / self.density.as_ref().unwrap()[[i, j, k];
 
                     // Update vx
-                    let dp_dx = (pressure[[i + 1, j, k]] - pressure[[i - 1, j, k]]) * 0.5 * dx_inv;
-                    vx[[i, j, k]] -= dt * rho_inv * dp_dx;
+                    let dp_dx = (pressure[[i + 1, j, k] - pressure[[i - 1, j, k]) * 0.5 * dx_inv;
+                    vx[[i, j, k] -= dt * rho_inv * dp_dx;
 
                     // Update vy
-                    let dp_dy = (pressure[[i, j + 1, k]] - pressure[[i, j - 1, k]]) * 0.5 * dy_inv;
-                    vy[[i, j, k]] -= dt * rho_inv * dp_dy;
+                    let dp_dy = (pressure[[i, j + 1, k] - pressure[[i, j - 1, k]) * 0.5 * dy_inv;
+                    vy[[i, j, k] -= dt * rho_inv * dp_dy;
 
                     // Update vz
-                    let dp_dz = (pressure[[i, j, k + 1]] - pressure[[i, j, k - 1]]) * 0.5 * dz_inv;
-                    vz[[i, j, k]] -= dt * rho_inv * dp_dz;
+                    let dp_dz = (pressure[[i, j, k + 1] - pressure[[i, j, k - 1]) * 0.5 * dz_inv;
+                    vz[[i, j, k] -= dt * rho_inv * dp_dz;
                 }
             }
         }

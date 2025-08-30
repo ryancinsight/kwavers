@@ -28,8 +28,8 @@ pub fn compute_nonlinear_term(
         .and(prev_pressure)
         .for_each(|(i, j, k), nl_val, &p_curr, &p_prev| {
             if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
-                let rho = rho_arr[[i, j, k]].max(1e-9);
-                let c = c_arr[[i, j, k]].max(1e-9);
+                let rho = rho_arr[[i, j, k].max(1e-9);
+                let c = c_arr[[i, j, k].max(1e-9);
 
                 // Get spatially-varying nonlinearity coefficient
                 let x = i as f64 * grid.dx;
@@ -44,7 +44,7 @@ pub fn compute_nonlinear_term(
 
                 let term = if let Some(p_history) = pressure_history {
                     // Full second-order accuracy with pressure history
-                    let p_prev_prev = p_history[[i, j, k]];
+                    let p_prev_prev = p_history[[i, j, k];
                     let d2p_dt2 = (p_curr - 2.0 * p_prev + p_prev_prev) / (dt * dt);
                     let dp_dt = (p_curr - p_prev) / dt;
 
@@ -96,22 +96,22 @@ pub fn compute_viscoelastic_term(
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                let laplacian_dp_dt = (dp_dt[[i + 1, j, k]] - 2.0 * dp_dt[[i, j, k]]
-                    + dp_dt[[i - 1, j, k]])
+                let laplacian_dp_dt = (dp_dt[[i + 1, j, k] - 2.0 * dp_dt[[i, j, k]
+                    + dp_dt[[i - 1, j, k])
                     * dx2_inv
-                    + (dp_dt[[i, j + 1, k]] - 2.0 * dp_dt[[i, j, k]] + dp_dt[[i, j - 1, k]])
+                    + (dp_dt[[i, j + 1, k] - 2.0 * dp_dt[[i, j, k] + dp_dt[[i, j - 1, k])
                         * dy2_inv
-                    + (dp_dt[[i, j, k + 1]] - 2.0 * dp_dt[[i, j, k]] + dp_dt[[i, j, k - 1]])
+                    + (dp_dt[[i, j, k + 1] - 2.0 * dp_dt[[i, j, k] + dp_dt[[i, j, k - 1])
                         * dz2_inv;
 
-                let eta_s = eta_s_arr[[i, j, k]];
-                let eta_b = eta_b_arr[[i, j, k]];
-                let rho = rho_arr[[i, j, k]].max(1e-9);
+                let eta_s = eta_s_arr[[i, j, k];
+                let eta_b = eta_b_arr[[i, j, k];
+                let rho = rho_arr[[i, j, k].max(1e-9);
 
                 // Viscoelastic damping coefficient
                 let visc_coeff = (4.0 * eta_s / 3.0 + eta_b) / rho;
 
-                damping_term[[i, j, k]] = visc_coeff * laplacian_dp_dt;
+                damping_term[[i, j, k] = visc_coeff * laplacian_dp_dt;
             }
         }
     }

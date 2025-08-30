@@ -1,13 +1,14 @@
 //! Cavitation detection using ML techniques
 
 /// Cavitation detector using machine learning
+#[derive(Debug))]
 pub struct CavitationDetector {
     threshold: f64,
     sensitivity: f64,
 }
 
 /// Detected cavitation event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CavitationEvent {
     pub time: f64,
     pub position: [f64; 3],
@@ -16,7 +17,7 @@ pub struct CavitationEvent {
 }
 
 /// Type of cavitation event
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum CavitationEventType {
     Inception,
     StableOscillation,

@@ -44,7 +44,7 @@ use crate::source::Source;
 use ndarray::{Array3, Zip};
 
 /// Configuration for Westervelt FDTD solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct WesterveltFdtdConfig {
     /// Spatial discretization order (2, 4, or 6)
     pub spatial_order: usize,
@@ -68,6 +68,7 @@ impl Default for WesterveltFdtdConfig {
 }
 
 /// Westervelt equation solver using FDTD
+#[derive(Debug))]
 pub struct WesterveltFdtd {
     config: WesterveltFdtdConfig,
     /// Current pressure field p^n
@@ -281,7 +282,7 @@ impl WesterveltFdtd {
                             medium, x, y, z, grid, 1e6,
                         ); // 1 MHz reference
                         let delta = 2.0 * alpha * c.powi(3) / (2.0 * std::f64::consts::PI).powi(2);
-                        delta * dt / c.powi(2) * (p - 2.0 * p_prev + p_prev2[[i, j, k]]) / (dt * dt)
+                        delta * dt / c.powi(2) * (p - 2.0 * p_prev + p_prev2[[i, j, k]) / (dt * dt)
                     } else {
                         0.0
                     }
@@ -310,17 +311,33 @@ impl WesterveltFdtd {
                     let j = ((position.1 / grid.dy).round() as usize).min(grid.ny - 1);
                     let k = ((position.2 / grid.dz).round() as usize).min(grid.nz - 1);
 
-                    pressure_updated[[i, j, k]] += amplitude * dt;
+                    pressure_updated[[i, j, k] += amplitude * dt;
                 }
             }
         }
 
-        // Update pressure history
+        // Update pressure history using rotation (zero-copy)
         if self.config.enable_absorption {
-            self.pressure_prev2 = Some(self.pressure_prev.clone());
+            // Rotate: prev2 <- prev <- current <- new
+            if let Some(mut prev2) = self.pressure_prev2.take() {
+                // Reuse prev2 allocation for new pressure
+                std::mem::swap(&mut prev2, &mut self.pressure_prev);
+                std::mem::swap(&mut self.pressure_prev, &mut self.pressure);
+                std::mem::swap(&mut self.pressure, &mut pressure_updated);
+                self.pressure_prev2 = Some(pressure_updated);
+            } else {
+                // First iteration with absorption
+                self.pressure_prev2 = Some(std::mem::replace(
+                    &mut self.pressure_prev,
+                    std::mem::replace(&mut self.pressure, pressure_updated),
+                ));
+            }
+        } else {
+            // Simple rotation without prev2
+            std::mem::swap(&mut self.pressure_prev, &mut self.pressure);
+            std::mem::swap(&mut self.pressure, &mut pressure_updated);
+            // pressure_updated now contains old pressure_prev (can be dropped)
         }
-        self.pressure_prev = self.pressure.clone();
-        self.pressure = pressure_updated;
 
         Ok(())
     }
@@ -364,7 +381,8 @@ mod tests {
     fn test_linear_wave_propagation() {
         // Test that with β=0 (no nonlinearity), we get linear wave propagation
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-        let mut medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        use crate::constants::materials::{WATER_DENSITY, WATER_SOUND_SPEED};
+        let mut medium = HomogeneousMedium::from_minimal(WATER_DENSITY, WATER_SOUND_SPEED, &grid);
         // Set nonlinearity to zero for linear test
         medium.nonlinearity = 0.0;
 
@@ -379,7 +397,7 @@ mod tests {
                     let r2 = ((i as i32 - center.0 as i32).pow(2)
                         + (j as i32 - center.1 as i32).pow(2)
                         + (k as i32 - center.2 as i32).pow(2)) as f64;
-                    solver.pressure[[i, j, k]] = (-(r2 / 100.0)).exp();
+                    solver.pressure[[i, j, k] = (-(r2 / 100.0)).exp();
                 }
             }
         }

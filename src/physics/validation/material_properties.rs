@@ -8,7 +8,7 @@
 use ndarray::Array3;
 
 // Test-specific tissue properties structure
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TissueProperties {
     pub density: Array3<f64>,
     pub sound_speed: Array3<f64>,
@@ -135,19 +135,19 @@ mod tests {
         for i in 0..nx {
             if i < nx / 3 {
                 // Water
-                properties.density[[i, 0, 0]] = 1000.0;
-                properties.sound_speed[[i, 0, 0]] = 1500.0;
-                properties.attenuation[[i, 0, 0]] = 0.0022;
+                properties.density[[i, 0, 0] = 1000.0;
+                properties.sound_speed[[i, 0, 0] = 1500.0;
+                properties.attenuation[[i, 0, 0] = 0.0022;
             } else if i < 2 * nx / 3 {
                 // Liver
-                properties.density[[i, 0, 0]] = LIVER_DENSITY;
-                properties.sound_speed[[i, 0, 0]] = LIVER_SOUND_SPEED;
-                properties.attenuation[[i, 0, 0]] = LIVER_ATTENUATION_COEFF;
+                properties.density[[i, 0, 0] = LIVER_DENSITY;
+                properties.sound_speed[[i, 0, 0] = LIVER_SOUND_SPEED;
+                properties.attenuation[[i, 0, 0] = LIVER_ATTENUATION_COEFF;
             } else {
                 // Bone
-                properties.density[[i, 0, 0]] = BONE_DENSITY;
-                properties.sound_speed[[i, 0, 0]] = BONE_P_WAVE_SPEED;
-                properties.attenuation[[i, 0, 0]] = 10.0; // High attenuation
+                properties.density[[i, 0, 0] = BONE_DENSITY;
+                properties.sound_speed[[i, 0, 0] = BONE_P_WAVE_SPEED;
+                properties.attenuation[[i, 0, 0] = 10.0; // High attenuation
             }
         }
 

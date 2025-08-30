@@ -62,7 +62,7 @@ pub use phased_array::{
 // No need to re-export them from self
 
 /// Point source implementation
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PointSource {
     position: (f64, f64, f64),
     signal: std::sync::Arc<dyn Signal>,
@@ -99,7 +99,7 @@ impl Source for PointSource {
 }
 
 /// Time-varying source for time-reversal reconstruction
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct TimeVaryingSource {
     position: (usize, usize, usize),
     signal_values: Vec<f64>,
@@ -153,7 +153,7 @@ impl Source for TimeVaryingSource {
 }
 
 /// Composite source that combines multiple sources
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct CompositeSource {
     sources: Vec<Box<dyn Source>>,
     null_signal: NullSignal,
@@ -200,7 +200,7 @@ impl Source for CompositeSource {
 }
 
 /// Null signal for sources with no signal
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 struct NullSignal;
 
 impl Signal for NullSignal {
@@ -222,7 +222,7 @@ impl Signal for NullSignal {
 }
 
 /// Null source implementation for testing
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct NullSource {
     null_signal: NullSignal,
 }
@@ -260,7 +260,7 @@ impl Source for NullSource {
 }
 
 /// Time-varying signal wrapper for sources with pre-computed values
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 struct TimeVaryingSignal {
     values: Vec<f64>,
     dt: f64,

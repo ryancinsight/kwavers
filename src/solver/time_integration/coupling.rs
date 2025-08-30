@@ -23,7 +23,7 @@ pub trait TimeCoupling: Send + Sync + Debug {
 }
 
 /// Subcycling strategy for multi-rate integration
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct SubcyclingStrategy {
     /// Maximum allowed subcycles
     max_subcycles: usize,
@@ -83,7 +83,7 @@ impl TimeCoupling for SubcyclingStrategy {
 /// Averaging strategy for multi-rate integration
 ///
 /// This strategy uses time-averaged coupling between components
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct AveragingStrategy {
     /// Interpolation order
     interpolation_order: usize,
@@ -156,7 +156,7 @@ impl TimeCoupling for AveragingStrategy {
 }
 
 /// Predictor-corrector strategy for multi-rate integration
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PredictorCorrectorStrategy {
     /// Number of corrector iterations
     corrector_iterations: usize,

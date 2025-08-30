@@ -14,6 +14,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Time reversal reconstruction algorithm
+#[derive(Debug))]
 pub struct TimeReversal {
     grid_size: [usize; 3],
     sound_speed: f64,
@@ -44,7 +45,7 @@ impl TimeReversal {
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let (n_time, n_sensors) = sensor_data.dim();
@@ -80,7 +81,7 @@ impl TimeReversal {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    k_squared[[i, j, k]] = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
+                    k_squared[[i, j, k] = kx[i].powi(2) + ky[j].powi(2) + kz[k].powi(2);
                 }
             }
         }
@@ -191,7 +192,7 @@ impl TimeReversal {
             let iz = i % nz;
             let iy = (i / nz) % ny;
             let ix = i / (ny * nz);
-            result[[ix, iy, iz]] = *val;
+            result[[ix, iy, iz] = *val;
         }
 
         Ok(result)
@@ -216,7 +217,7 @@ impl TimeReversal {
             let iz = i % nz;
             let iy = (i / nz) % ny;
             let ix = i / (ny * nz);
-            result[[ix, iy, iz]] = val.re * norm;
+            result[[ix, iy, iz] = val.re * norm;
         }
 
         Ok(result)
@@ -227,7 +228,7 @@ impl TimeReversal {
         &self,
         pressure: &mut Array3<f64>,
         sensor_values: &ndarray::ArrayView1<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
     ) -> KwaversResult<()> {
         for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
@@ -237,7 +238,7 @@ impl TimeReversal {
             let k = ((sensor_pos[2] / grid.dz) as usize).min(self.grid_size[2] - 1);
 
             // Inject sensor value (additive for multiple sensors at same location)
-            pressure[[i, j, k]] += sensor_values[sensor_idx];
+            pressure[[i, j, k] += sensor_values[sensor_idx];
         }
 
         Ok(())

@@ -89,7 +89,7 @@ mod tests {
 
         for ((i, j, k), &val) in recovered.indexed_iter() {
             assert!(
-                (val - original[[i, j, k]]).abs() < 1e-10,
+                (val - original[[i, j, k]).abs() < 1e-10,
                 "FFT-IFFT identity failed at ({}, {}, {})",
                 i,
                 j,

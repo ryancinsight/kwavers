@@ -26,7 +26,7 @@ use crate::constants::bubble_dynamics::{MAX_RADIUS, MIN_RADIUS};
 use crate::error::{KwaversResult, PhysicsError};
 
 /// Configuration for adaptive bubble integration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AdaptiveBubbleConfig {
     /// Maximum time step (limited by acoustic period)
     pub dt_max: f64,
@@ -65,6 +65,7 @@ impl Default for AdaptiveBubbleConfig {
 }
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
+#[derive(Debug))]
 pub struct AdaptiveBubbleIntegrator<'a> {
     solver: &'a KellerMiksisModel,
     config: AdaptiveBubbleConfig,
@@ -316,7 +317,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
 }
 
 /// Integration statistics for monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct IntegrationStatistics {
     pub total_substeps: usize,
     pub rejected_steps: usize,

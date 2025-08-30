@@ -18,7 +18,7 @@ use log::{debug, info};
 use std::collections::HashMap;
 
 /// Controller for multi-rate time integration
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct MultiRateController {
     config: MultiRateConfig,
     /// Total number of global steps taken

@@ -6,7 +6,7 @@ use super::SimulationConfig;
 use crate::error::{ConfigError, KwaversResult};
 
 /// Validation configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ValidationConfig {
     pub enable_validation: bool,
     pub strict_mode: bool,
@@ -29,7 +29,7 @@ impl Default for ValidationConfig {
 }
 
 /// Configuration validator
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ConfigValidator;
 
 impl ConfigValidator {

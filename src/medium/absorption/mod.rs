@@ -42,12 +42,13 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Main absorption calculator that orchestrates different models
+#[derive(Debug))]
 pub struct AbsorptionCalculator {
     model: AbsorptionModel,
 }
 
 /// Absorption model selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum AbsorptionModel {
     /// Power law absorption
     PowerLaw(PowerLawAbsorption),

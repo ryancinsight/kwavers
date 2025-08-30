@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Convergence prediction model
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ConvergencePredictorModel {
     metadata: ModelMetadata,
 }
@@ -48,7 +48,15 @@ impl ConvergencePredictorModel {
 }
 
 impl MLModel for ConvergencePredictorModel {
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
+
+    fn model_type(&self) -> crate::ml::types::ModelType {
+        crate::ml::types::ModelType::ConvergencePredictor
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Simplified convergence prediction based on variance
         let variance = input.var_axis(ndarray::Axis(1), 0.0);
         Ok(variance.insert_axis(ndarray::Axis(1)))
@@ -58,7 +66,15 @@ impl MLModel for ConvergencePredictorModel {
         self.metadata.accuracy
     }
 
-    fn name(&self) -> &str {
-        &self.metadata.name
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        Ok(Self::new())
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        Ok(())
     }
 }

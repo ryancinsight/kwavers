@@ -15,7 +15,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 
 /// Spatial accuracy order for finite difference schemes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SpatialOrder {
     /// Second-order accurate (3-point stencil)
     Second,
@@ -28,7 +28,7 @@ pub enum SpatialOrder {
 }
 
 /// Finite difference coefficients for different orders
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct FDCoefficients;
 
 impl FDCoefficients {
@@ -88,9 +88,9 @@ pub fn gradient(
                 let mut sum = 0.0;
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                    sum += coeff * (field[[i + offset, j, k] - field[[i - offset, j, k]);
                 }
-                grad_x[[i, j, k]] = sum / grid.dx;
+                grad_x[[i, j, k] = sum / grid.dx;
             }
         }
     }
@@ -102,9 +102,9 @@ pub fn gradient(
                 let mut sum = 0.0;
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                    sum += coeff * (field[[i, j + offset, k] - field[[i, j - offset, k]);
                 }
-                grad_y[[i, j, k]] = sum / grid.dy;
+                grad_y[[i, j, k] = sum / grid.dy;
             }
         }
     }
@@ -116,9 +116,9 @@ pub fn gradient(
                 let mut sum = 0.0;
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                    sum += coeff * (field[[i, j, k + offset] - field[[i, j, k - offset]);
                 }
-                grad_z[[i, j, k]] = sum / grid.dz;
+                grad_z[[i, j, k] = sum / grid.dz;
             }
         }
     }
@@ -152,12 +152,12 @@ pub fn divergence(
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    dvx_dx += coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
-                    dvy_dy += coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
-                    dvz_dz += coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
+                    dvx_dx += coeff * (vx[[i + offset, j, k] - vx[[i - offset, j, k]);
+                    dvy_dy += coeff * (vy[[i, j + offset, k] - vy[[i, j - offset, k]);
+                    dvz_dz += coeff * (vz[[i, j, k + offset] - vz[[i, j, k - offset]);
                 }
 
-                div[[i, j, k]] = dvx_dx / grid.dx + dvy_dy / grid.dy + dvz_dz / grid.dz;
+                div[[i, j, k] = dvx_dx / grid.dx + dvy_dy / grid.dy + dvz_dz / grid.dz;
             }
         }
     }
@@ -218,17 +218,17 @@ pub fn curl(
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    dvz_dy += coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
-                    dvy_dz += coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
-                    dvx_dz += coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
-                    dvz_dx += coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
-                    dvy_dx += coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
-                    dvx_dy += coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
+                    dvz_dy += coeff * (vz[[i, j + offset, k] - vz[[i, j - offset, k]);
+                    dvy_dz += coeff * (vy[[i, j, k + offset] - vy[[i, j, k - offset]);
+                    dvx_dz += coeff * (vx[[i, j, k + offset] - vx[[i, j, k - offset]);
+                    dvz_dx += coeff * (vz[[i + offset, j, k] - vz[[i - offset, j, k]);
+                    dvy_dx += coeff * (vy[[i + offset, j, k] - vy[[i - offset, j, k]);
+                    dvx_dy += coeff * (vx[[i, j + offset, k] - vx[[i, j - offset, k]);
                 }
 
-                curl_x[[i, j, k]] = dvz_dy / grid.dy - dvy_dz / grid.dz;
-                curl_y[[i, j, k]] = dvx_dz / grid.dz - dvz_dx / grid.dx;
-                curl_z[[i, j, k]] = dvy_dx / grid.dx - dvx_dy / grid.dy;
+                curl_x[[i, j, k] = dvz_dy / grid.dy - dvy_dz / grid.dz;
+                curl_y[[i, j, k] = dvx_dz / grid.dz - dvz_dx / grid.dx;
+                curl_z[[i, j, k] = dvy_dx / grid.dx - dvx_dy / grid.dy;
             }
         }
     }
@@ -249,7 +249,7 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                field_complex[[i, j, k]] = Complex::new(field[[i, j, k]], 0.0);
+                field_complex[[i, j, k] = Complex::new(field[[i, j, k], 0.0);
             }
         }
     }
@@ -272,9 +272,9 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                kx[[i, j, k]] = kx_1d[i];
-                ky[[i, j, k]] = ky_1d[j];
-                kz[[i, j, k]] = kz_1d[k];
+                kx[[i, j, k] = kx_1d[i];
+                ky[[i, j, k] = ky_1d[j];
+                kz[[i, j, k] = kz_1d[k];
             }
         }
     }
@@ -285,7 +285,7 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                field_complex[[i, j, k]] *= -k_squared[[i, j, k]];
+                field_complex[[i, j, k] *= -k_squared[[i, j, k];
             }
         }
     }
@@ -299,7 +299,7 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
-                result[[i, j, k]] = field_complex[[i, j, k]].re;
+                result[[i, j, k] = field_complex[[i, j, k].re;
             }
         }
     }
@@ -329,16 +329,16 @@ pub fn transverse_laplacian(
     for k in 0..nz {
         for j in stencil_size..ny - stencil_size {
             for i in stencil_size..nx - stencil_size {
-                let mut d2f_dx2 = center_coeff * field[[i, j, k]];
-                let mut d2f_dy2 = center_coeff * field[[i, j, k]];
+                let mut d2f_dx2 = center_coeff * field[[i, j, k];
+                let mut d2f_dy2 = center_coeff * field[[i, j, k];
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    d2f_dx2 += coeff * (field[[i + offset, j, k]] + field[[i - offset, j, k]]);
-                    d2f_dy2 += coeff * (field[[i, j + offset, k]] + field[[i, j - offset, k]]);
+                    d2f_dx2 += coeff * (field[[i + offset, j, k] + field[[i - offset, j, k]);
+                    d2f_dy2 += coeff * (field[[i, j + offset, k] + field[[i, j - offset, k]);
                 }
 
-                lap[[i, j, k]] = d2f_dx2 * dx2_inv + d2f_dy2 * dy2_inv;
+                lap[[i, j, k] = d2f_dx2 * dx2_inv + d2f_dy2 * dy2_inv;
             }
         }
     }
@@ -362,7 +362,7 @@ mod tests {
         for k in 1..9 {
             for j in 1..9 {
                 for i in 1..9 {
-                    assert_abs_diff_eq!(lap[[i, j, k]], 0.0, epsilon = 1e-10);
+                    assert_abs_diff_eq!(lap[[i, j, k], 0.0, epsilon = 1e-10);
                 }
             }
         }
@@ -381,7 +381,7 @@ mod tests {
         for k in 1..9 {
             for j in 1..9 {
                 for i in 1..9 {
-                    assert_abs_diff_eq!(div[[i, j, k]], 0.0, epsilon = 1e-10);
+                    assert_abs_diff_eq!(div[[i, j, k], 0.0, epsilon = 1e-10);
                 }
             }
         }

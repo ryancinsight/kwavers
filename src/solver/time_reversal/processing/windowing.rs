@@ -34,7 +34,7 @@ pub fn apply_spatial_window(
                 let wy = tukey_window(j, ny, alpha);
                 let wz = tukey_window(k, nz, alpha);
 
-                field[[i, j, k]] *= wx * wy * wz;
+                field[[i, j, k] *= wx * wy * wz;
             }
         }
     }

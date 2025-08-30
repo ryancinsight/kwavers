@@ -11,7 +11,7 @@ use crate::constants::numerical::{
 };
 
 /// WENO-based shock limiter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct WENOLimiter {
     /// WENO order (3, 5, or 7)
     order: usize,
@@ -77,32 +77,32 @@ impl WENOLimiter {
         for i in 2..nx - 2 {
             for j in 2..ny - 2 {
                 for k in 2..nz - 2 {
-                    if shock_indicator[[i, j, k]] > 0.5 {
+                    if shock_indicator[[i, j, k] > 0.5 {
                         // Apply WENO3 in each direction
                         let weno_x = self.weno3_stencil(&[
-                            field[[i - 2, j, k]],
-                            field[[i - 1, j, k]],
-                            field[[i, j, k]],
-                            field[[i + 1, j, k]],
-                            field[[i + 2, j, k]],
+                            field[[i - 2, j, k],
+                            field[[i - 1, j, k],
+                            field[[i, j, k],
+                            field[[i + 1, j, k],
+                            field[[i + 2, j, k],
                         ]);
                         let weno_y = self.weno3_stencil(&[
-                            field[[i, j - 2, k]],
-                            field[[i, j - 1, k]],
-                            field[[i, j, k]],
-                            field[[i, j + 1, k]],
-                            field[[i, j + 2, k]],
+                            field[[i, j - 2, k],
+                            field[[i, j - 1, k],
+                            field[[i, j, k],
+                            field[[i, j + 1, k],
+                            field[[i, j + 2, k],
                         ]);
                         let weno_z = self.weno3_stencil(&[
-                            field[[i, j, k - 2]],
-                            field[[i, j, k - 1]],
-                            field[[i, j, k]],
-                            field[[i, j, k + 1]],
-                            field[[i, j, k + 2]],
+                            field[[i, j, k - 2],
+                            field[[i, j, k - 1],
+                            field[[i, j, k],
+                            field[[i, j, k + 1],
+                            field[[i, j, k + 2],
                         ]);
 
                         // Average the limited values
-                        limited_field[[i, j, k]] = (weno_x + weno_y + weno_z) / 3.0;
+                        limited_field[[i, j, k] = (weno_x + weno_y + weno_z) / 3.0;
                     }
                 }
             }
@@ -181,7 +181,7 @@ impl WENOLimiter {
         let indices: Vec<(usize, usize, usize)> = (0..nx)
             .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
             .filter(|&(i, j, k)| {
-                i >= 2 && i < nx - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+                i >= 2 && i < nx - 2 && shock_indicator[[i, j, k] > self.shock_threshold
             })
             .collect();
 
@@ -189,14 +189,14 @@ impl WENOLimiter {
         for (i, j, k) in indices {
             // Extract stencil values
             let v = [
-                field[[i.saturating_sub(2), j, k]],
-                field[[i.saturating_sub(1), j, k]],
-                field[[i, j, k]],
-                field[[i.min(nx - 1).saturating_add(1), j, k]],
-                field[[(i + 2).min(nx - 1), j, k]],
+                field[[i.saturating_sub(2), j, k],
+                field[[i.saturating_sub(1), j, k],
+                field[[i, j, k],
+                field[[i.min(nx - 1).saturating_add(1), j, k],
+                field[[(i + 2).min(nx - 1), j, k],
             ];
 
-            field[[i, j, k]] = self.compute_weno5_value(&v);
+            field[[i, j, k] = self.compute_weno5_value(&v);
         }
 
         Ok(())
@@ -215,7 +215,7 @@ impl WENOLimiter {
         let indices: Vec<(usize, usize, usize)> = (0..nx)
             .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
             .filter(|&(i, j, k)| {
-                j >= 2 && j < ny - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+                j >= 2 && j < ny - 2 && shock_indicator[[i, j, k] > self.shock_threshold
             })
             .collect();
 
@@ -223,14 +223,14 @@ impl WENOLimiter {
         for (i, j, k) in indices {
             // Extract stencil values
             let v = [
-                field[[i, j.saturating_sub(2), k]],
-                field[[i, j.saturating_sub(1), k]],
-                field[[i, j, k]],
-                field[[i, j.min(ny - 1).saturating_add(1), k]],
-                field[[i, (j + 2).min(ny - 1), k]],
+                field[[i, j.saturating_sub(2), k],
+                field[[i, j.saturating_sub(1), k],
+                field[[i, j, k],
+                field[[i, j.min(ny - 1).saturating_add(1), k],
+                field[[i, (j + 2).min(ny - 1), k],
             ];
 
-            field[[i, j, k]] = self.compute_weno5_value(&v);
+            field[[i, j, k] = self.compute_weno5_value(&v);
         }
 
         Ok(())
@@ -249,7 +249,7 @@ impl WENOLimiter {
         let indices: Vec<(usize, usize, usize)> = (0..nx)
             .flat_map(|i| (0..ny).flat_map(move |j| (0..nz).map(move |k| (i, j, k))))
             .filter(|&(i, j, k)| {
-                k >= 2 && k < nz - 2 && shock_indicator[[i, j, k]] > self.shock_threshold
+                k >= 2 && k < nz - 2 && shock_indicator[[i, j, k] > self.shock_threshold
             })
             .collect();
 
@@ -257,14 +257,14 @@ impl WENOLimiter {
         for (i, j, k) in indices {
             // Extract stencil values
             let v = [
-                field[[i, j, k.saturating_sub(2)]],
-                field[[i, j, k.saturating_sub(1)]],
-                field[[i, j, k]],
-                field[[i, j, k.min(nz - 1).saturating_add(1)]],
-                field[[i, j, (k + 2).min(nz - 1)]],
+                field[[i, j, k.saturating_sub(2)],
+                field[[i, j, k.saturating_sub(1)],
+                field[[i, j, k],
+                field[[i, j, k.min(nz - 1).saturating_add(1)],
+                field[[i, j, (k + 2).min(nz - 1)],
             ];
 
-            field[[i, j, k]] = self.compute_weno5_value(&v);
+            field[[i, j, k] = self.compute_weno5_value(&v);
         }
 
         Ok(())
@@ -316,21 +316,21 @@ impl WENOLimiter {
         for i in 4..nx - 4 {
             for j in 4..ny - 4 {
                 for k in 4..nz - 4 {
-                    if shock_indicator[[i, j, k]] > 0.5 {
+                    if shock_indicator[[i, j, k] > 0.5 {
                         // Apply WENO7 in each direction
                         let weno_x = self.weno7_stencil(&[
-                            field[[i - 4, j, k]],
-                            field[[i - 3, j, k]],
-                            field[[i - 2, j, k]],
-                            field[[i - 1, j, k]],
-                            field[[i, j, k]],
-                            field[[i + 1, j, k]],
-                            field[[i + 2, j, k]],
-                            field[[i + 3, j, k]],
-                            field[[i + 4, j, k]],
+                            field[[i - 4, j, k],
+                            field[[i - 3, j, k],
+                            field[[i - 2, j, k],
+                            field[[i - 1, j, k],
+                            field[[i, j, k],
+                            field[[i + 1, j, k],
+                            field[[i + 2, j, k],
+                            field[[i + 3, j, k],
+                            field[[i + 4, j, k],
                         ]);
 
-                        limited_field[[i, j, k]] = weno_x;
+                        limited_field[[i, j, k] = weno_x;
                     }
                 }
             }

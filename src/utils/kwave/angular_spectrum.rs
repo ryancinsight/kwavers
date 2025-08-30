@@ -9,6 +9,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Angular spectrum propagation method for forward/backward propagation
+#[derive(Debug))]
 pub struct AngularSpectrum {
     /// Grid dimensions
     nx: usize,
@@ -36,8 +37,8 @@ impl AngularSpectrum {
 
         for i in 0..nx {
             for j in 0..ny {
-                kx[[i, j]] = kx_1d[i];
-                ky[[i, j]] = ky_1d[j];
+                kx[[i, j] = kx_1d[i];
+                ky[[i, j] = ky_1d[j];
             }
         }
 
@@ -115,8 +116,8 @@ impl AngularSpectrum {
         for i in 0..self.nx {
             for j in 0..self.ny {
                 let idx = i * self.ny + j;
-                let kx = self.kx[[i, j]];
-                let ky = self.ky[[i, j]];
+                let kx = self.kx[[i, j];
+                let ky = self.ky[[i, j];
                 let kz_sq = k * k - kx * kx - ky * ky;
 
                 if kz_sq > 0.0 {
@@ -142,7 +143,7 @@ impl AngularSpectrum {
         for i in 0..self.nx {
             for j in 0..self.ny {
                 let idx = i * self.ny + j;
-                result[[i, j]] = complex_field[idx].re / (self.nx * self.ny) as f64;
+                result[[i, j] = complex_field[idx].re / (self.nx * self.ny) as f64;
             }
         }
 

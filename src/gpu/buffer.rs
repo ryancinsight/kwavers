@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use wgpu::util::DeviceExt;
 
 /// Buffer usage flags
+#[derive(Debug))]
 pub struct BufferUsage;
 
 impl BufferUsage {
@@ -15,6 +16,7 @@ impl BufferUsage {
 }
 
 /// GPU buffer wrapper
+#[derive(Debug))]
 pub struct GpuBuffer {
     buffer: wgpu::Buffer,
     size: usize,

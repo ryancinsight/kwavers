@@ -18,7 +18,7 @@ const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 ///
 /// This implementation uses a polynomial grading of the absorption profile
 /// with optional backing by a theoretical model for automatic parameter selection.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PMLBoundary {
     // thickness: usize, // Removed
     // sigma_max_acoustic: f64, // Removed
@@ -35,11 +35,13 @@ pub struct PMLBoundary {
     /// Pre-computed combined damping factors for optimization
     acoustic_damping_3d: Option<Array3<f64>>,
     light_damping_3d: Option<Array3<f64>>,
+    /// Configuration for this PML boundary
+    config: PMLConfig,
 }
 
 /// Configuration for PML boundary layer
 /// Follows SOLID principles by grouping related parameters together
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PMLConfig {
     pub thickness: usize,
     pub sigma_max_acoustic: f64,
@@ -113,22 +115,77 @@ impl PMLBoundary {
     pub fn new(config: PMLConfig) -> KwaversResult<Self> {
         config.validate()?;
 
-        // Create damping profiles based on configuration
-        let acoustic_profile =
-            Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_acoustic, 2);
-        let light_profile =
-            Self::damping_profile(config.thickness, 100, 1.0, config.sigma_max_light, 2);
-
+        // Create empty damping profiles - will be initialized on first use
         Ok(Self {
-            acoustic_damping_x: acoustic_profile.clone(),
-            acoustic_damping_y: acoustic_profile.clone(),
-            acoustic_damping_z: acoustic_profile.clone(),
-            light_damping_x: light_profile.clone(),
-            light_damping_y: light_profile.clone(),
-            light_damping_z: light_profile,
+            acoustic_damping_x: Vec::new(),
+            acoustic_damping_y: Vec::new(),
+            acoustic_damping_z: Vec::new(),
+            light_damping_x: Vec::new(),
+            light_damping_y: Vec::new(),
+            light_damping_z: Vec::new(),
             acoustic_damping_3d: None,
             light_damping_3d: None,
+            config,
         })
+    }
+
+    /// Initialize damping profiles for the given grid
+    fn initialize_for_grid(&mut self, grid: &Grid) {
+        // Only initialize if not already done or grid size changed
+        if self.acoustic_damping_x.len() != grid.nx {
+            self.acoustic_damping_x = Self::damping_profile(
+                self.config.thickness,
+                grid.nx,
+                grid.dx,
+                self.config.sigma_max_acoustic,
+                2,
+            );
+        }
+        if self.acoustic_damping_y.len() != grid.ny {
+            self.acoustic_damping_y = Self::damping_profile(
+                self.config.thickness,
+                grid.ny,
+                grid.dy,
+                self.config.sigma_max_acoustic,
+                2,
+            );
+        }
+        if self.acoustic_damping_z.len() != grid.nz {
+            self.acoustic_damping_z = Self::damping_profile(
+                self.config.thickness,
+                grid.nz,
+                grid.dz,
+                self.config.sigma_max_acoustic,
+                2,
+            );
+        }
+        if self.light_damping_x.len() != grid.nx {
+            self.light_damping_x = Self::damping_profile(
+                self.config.thickness,
+                grid.nx,
+                grid.dx,
+                self.config.sigma_max_light,
+                2,
+            );
+        }
+        if self.light_damping_y.len() != grid.ny {
+            self.light_damping_y = Self::damping_profile(
+                self.config.thickness,
+                grid.ny,
+                grid.dy,
+                self.config.sigma_max_light,
+                2,
+            );
+        }
+        if self.light_damping_z.len() != grid.nz {
+            self.light_damping_z = Self::damping_profile(
+                self.config.thickness,
+                grid.nz,
+                grid.dz,
+                self.config.sigma_max_light,
+                2,
+            );
+        }
     }
 
     /// Create with default configuration
@@ -212,6 +269,9 @@ impl PMLBoundary {
 
     /// Precomputes the 3D damping factors for acoustic fields to avoid repeated calculations
     fn precompute_acoustic_damping_3d(&mut self, grid: &Grid) {
+        // Ensure damping profiles are initialized for this grid
+        self.initialize_for_grid(grid);
+
         if self.acoustic_damping_3d.is_none() {
             trace!("Precomputing 3D acoustic damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -228,6 +288,9 @@ impl PMLBoundary {
 
     /// Precomputes the 3D damping factors for light fields to avoid repeated calculations
     fn precompute_light_damping_3d(&mut self, grid: &Grid) {
+        // Ensure damping profiles are initialized for this grid
+        self.initialize_for_grid(grid);
+
         if self.light_damping_3d.is_none() {
             trace!("Precomputing 3D light damping factors");
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));

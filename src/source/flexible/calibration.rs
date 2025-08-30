@@ -8,7 +8,7 @@ use nalgebra::{DMatrix, DVector};
 use ndarray::{Array1, Array2, Array3};
 
 /// Calibration data storage
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CalibrationData {
     /// Time-dependent geometry snapshots
     pub geometry_history: Vec<GeometrySnapshot>,
@@ -19,7 +19,7 @@ pub struct CalibrationData {
 }
 
 /// Geometry snapshot at a specific time
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GeometrySnapshot {
     /// Timestamp
     pub timestamp: f64,
@@ -30,7 +30,7 @@ pub struct GeometrySnapshot {
 }
 
 /// Calibration quality metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct QualityMetrics {
     /// Position uncertainty (meters)
     pub position_uncertainty: f64,
@@ -41,6 +41,7 @@ pub struct QualityMetrics {
 }
 
 /// Calibration manager for flexible arrays
+#[derive(Debug))]
 pub struct CalibrationManager {
     /// Stored calibration data
     pub data: CalibrationData,
@@ -51,7 +52,7 @@ pub struct CalibrationManager {
 }
 
 /// Kalman filter state for position tracking
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 struct KalmanState {
     /// State estimate (positions and velocities)
     state: DVector<f64>,
@@ -91,7 +92,7 @@ impl CalibrationManager {
     pub fn self_calibrate(
         &mut self,
         pressure_field: &Array3<f64>,
-        known_reflectors: &[[f64; 3]],
+        known_reflectors: &[[f64; 3],
         frequency: f64,
         sound_speed: f64,
     ) -> KwaversResult<Array2<f64>> {
@@ -118,7 +119,7 @@ impl CalibrationManager {
     pub fn triangulate_position(
         &self,
         measurements: &[f64],
-        reflectors: &[[f64; 3]],
+        reflectors: &[[f64; 3],
     ) -> KwaversResult<[f64; 3]> {
         // Proper least-squares triangulation using overdetermined system
         // Based on: Fang, B.T. (1990) "Simple solutions for hyperbolic and related position fixes"
@@ -170,7 +171,7 @@ impl CalibrationManager {
                 },
             ))?;
 
-        Ok([solution[0], solution[1], solution[2]])
+        Ok([solution[0], solution[1], solution[2])
     }
 
     /// Process external tracking data with proper Kalman filtering
@@ -311,7 +312,7 @@ impl CalibrationManager {
         let mut filtered = Array2::zeros((num_elements, 3));
         for i in 0..num_elements {
             for j in 0..3 {
-                filtered[[i, j]] = kalman.state[i * 6 + j];
+                filtered[[i, j] = kalman.state[i * 6 + j];
             }
         }
 
@@ -338,7 +339,7 @@ impl CalibrationManager {
         for i in min_separation..(nx - min_separation) {
             for j in min_separation..(ny - min_separation) {
                 for k in min_separation..(nz - min_separation) {
-                    let val = pressure_field[[i, j, k]].abs();
+                    let val = pressure_field[[i, j, k].abs();
 
                     if val > threshold {
                         // Check if local maximum
@@ -350,7 +351,7 @@ impl CalibrationManager {
                                         continue;
                                     }
                                     let neighbor =
-                                        pressure_field[[i + di - 1, j + dj - 1, k + dk - 1]].abs();
+                                        pressure_field[[i + di - 1, j + dj - 1, k + dk - 1].abs();
                                     if neighbor > val {
                                         is_max = false;
                                         break;
@@ -379,8 +380,8 @@ impl CalibrationManager {
     /// Match detected peaks to known reflectors
     fn match_reflectors(
         &self,
-        peaks: &[[f64; 3]],
-        reflectors: &[[f64; 3]],
+        peaks: &[[f64; 3],
+        reflectors: &[[f64; 3],
     ) -> KwaversResult<Vec<(usize, usize)>> {
         let mut correspondences = Vec::new();
 
@@ -412,7 +413,7 @@ impl CalibrationManager {
     fn estimate_positions(
         &self,
         correspondences: &[(usize, usize)],
-        reflectors: &[[f64; 3]],
+        reflectors: &[[f64; 3],
     ) -> KwaversResult<Array2<f64>> {
         let num_elements = correspondences.len();
         let mut positions = Array2::zeros((num_elements, 3));
@@ -422,9 +423,9 @@ impl CalibrationManager {
             if reflector_idx < reflectors.len() {
                 // Initial estimate: use reflector position
                 // In a full implementation, this would use the acoustic path geometry
-                positions[[i, 0]] = reflectors[reflector_idx][0];
-                positions[[i, 1]] = reflectors[reflector_idx][1];
-                positions[[i, 2]] = reflectors[reflector_idx][2];
+                positions[[i, 0] = reflectors[reflector_idx][0];
+                positions[[i, 1] = reflectors[reflector_idx][1];
+                positions[[i, 2] = reflectors[reflector_idx][2];
             }
         }
 

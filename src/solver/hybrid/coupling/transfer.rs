@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Transfer operators for field coupling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransferOperators {
     /// Operators for each field type
     operators: HashMap<String, TransferOperator>,
@@ -15,7 +15,7 @@ pub struct TransferOperators {
 }
 
 /// Individual transfer operator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransferOperator {
     /// Interpolation weights
     pub weights: Vec<f64>,
@@ -149,7 +149,7 @@ impl TransferOperators {
             .enumerate()
         {
             if idx < operator.weights.len() {
-                target[[ti, tj, tk]] += source[[si, sj, sk]] * operator.weights[idx];
+                target[[ti, tj, tk] += source[[si, sj, sk] * operator.weights[idx];
             }
         }
 

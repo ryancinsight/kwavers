@@ -144,7 +144,7 @@ pub fn compute_kspace_correction_factors(
 }
 
 /// Type of k-space correction to apply
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum CorrectionType {
     /// No correction
     None,
@@ -202,7 +202,7 @@ pub fn apply_antialiasing_filter(
 }
 
 /// Type of anti-aliasing filter
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum FilterType {
     /// No filtering
     None,
@@ -314,12 +314,12 @@ mod tests {
         assert_eq!(kz.dim(), (8, 8, 8));
 
         // Check DC component
-        assert_eq!(kx[[0, 0, 0]], 0.0);
-        assert_eq!(ky[[0, 0, 0]], 0.0);
-        assert_eq!(kz[[0, 0, 0]], 0.0);
+        assert_eq!(kx[[0, 0, 0], 0.0);
+        assert_eq!(ky[[0, 0, 0], 0.0);
+        assert_eq!(kz[[0, 0, 0], 0.0);
 
         // Check symmetry
-        assert!((kx[[1, 0, 0]] + kx[[7, 0, 0]]).abs() < 1e-10);
+        assert!((kx[[1, 0, 0] + kx[[7, 0, 0]).abs() < 1e-10);
     }
 
     #[test]

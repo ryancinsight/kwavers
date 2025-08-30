@@ -13,6 +13,7 @@ pub trait BeamformingAlgorithm {
 }
 
 /// Delay and sum beamforming
+#[derive(Debug))]
 pub struct DelayAndSum;
 
 impl BeamformingAlgorithm for DelayAndSum {
@@ -26,6 +27,7 @@ impl BeamformingAlgorithm for DelayAndSum {
 }
 
 /// Minimum variance distortionless response
+#[derive(Debug))]
 pub struct MinimumVariance;
 
 impl BeamformingAlgorithm for MinimumVariance {

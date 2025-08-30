@@ -34,12 +34,12 @@ mod tests {
                         + ((k as f64 - center as f64) * dx).powi(2))
                     .sqrt();
 
-                    state.pressure[[i, j, k]] = 1e6 * (-r.powi(2) / (2.0 * sigma.powi(2))).exp();
+                    state.pressure[[i, j, k] = 1e6 * (-r.powi(2) / (2.0 * sigma.powi(2))).exp();
 
                     // Initialize velocity from pressure gradient
                     if i > 0 && i < n - 1 {
-                        state.velocity_x[[i, j, k]] = -(state.pressure[[i + 1, j, k]]
-                            - state.pressure[[i - 1, j, k]])
+                        state.velocity_x[[i, j, k] = -(state.pressure[[i + 1, j, k]
+                            - state.pressure[[i - 1, j, k])
                             / (2.0 * dx * IMPEDANCE);
                     }
                 }
@@ -55,14 +55,14 @@ mod tests {
             for i in 1..n - 1 {
                 for j in 1..n - 1 {
                     for k in 1..n - 1 {
-                        state.velocity_x[[i, j, k]] -= dt / DENSITY
-                            * (state.pressure[[i + 1, j, k]] - state.pressure[[i - 1, j, k]])
+                        state.velocity_x[[i, j, k] -= dt / DENSITY
+                            * (state.pressure[[i + 1, j, k] - state.pressure[[i - 1, j, k])
                             / (2.0 * dx);
-                        state.velocity_y[[i, j, k]] -= dt / DENSITY
-                            * (state.pressure[[i, j + 1, k]] - state.pressure[[i, j - 1, k]])
+                        state.velocity_y[[i, j, k] -= dt / DENSITY
+                            * (state.pressure[[i, j + 1, k] - state.pressure[[i, j - 1, k])
                             / (2.0 * dx);
-                        state.velocity_z[[i, j, k]] -= dt / DENSITY
-                            * (state.pressure[[i, j, k + 1]] - state.pressure[[i, j, k - 1]])
+                        state.velocity_z[[i, j, k] -= dt / DENSITY
+                            * (state.pressure[[i, j, k + 1] - state.pressure[[i, j, k - 1])
                             / (2.0 * dx);
                     }
                 }
@@ -72,15 +72,15 @@ mod tests {
             for i in 1..n - 1 {
                 for j in 1..n - 1 {
                     for k in 1..n - 1 {
-                        let div_v = (state.velocity_x[[i + 1, j, k]]
-                            - state.velocity_x[[i - 1, j, k]])
+                        let div_v = (state.velocity_x[[i + 1, j, k]
+                            - state.velocity_x[[i - 1, j, k])
                             / (2.0 * dx)
-                            + (state.velocity_y[[i, j + 1, k]] - state.velocity_y[[i, j - 1, k]])
+                            + (state.velocity_y[[i, j + 1, k] - state.velocity_y[[i, j - 1, k])
                                 / (2.0 * dx)
-                            + (state.velocity_z[[i, j, k + 1]] - state.velocity_z[[i, j, k - 1]])
+                            + (state.velocity_z[[i, j, k + 1] - state.velocity_z[[i, j, k - 1])
                                 / (2.0 * dx);
 
-                        state.pressure[[i, j, k]] -= dt * DENSITY * SOUND_SPEED.powi(2) * div_v;
+                        state.pressure[[i, j, k] -= dt * DENSITY * SOUND_SPEED.powi(2) * div_v;
                     }
                 }
             }
@@ -120,8 +120,8 @@ mod tests {
                     .sqrt();
 
                     if r < 5.0 {
-                        state.velocity_x[[i, j, k]] = velocity_0;
-                        state.pressure[[i, j, k]] = IMPEDANCE * velocity_0;
+                        state.velocity_x[[i, j, k] = velocity_0;
+                        state.pressure[[i, j, k] = IMPEDANCE * velocity_0;
                     }
                 }
             }
@@ -162,9 +162,9 @@ mod tests {
             for j in 0..n {
                 let x = i as f64 * dx;
                 let y = j as f64 * dx;
-                velocity_x[[i, j, 0]] =
+                velocity_x[[i, j, 0] =
                     10.0 * (2.0 * std::f64::consts::PI * y / (n as f64 * dx)).sin();
-                velocity_y[[i, j, 0]] =
+                velocity_y[[i, j, 0] =
                     -10.0 * (2.0 * std::f64::consts::PI * x / (n as f64 * dx)).sin();
             }
         }
@@ -178,15 +178,15 @@ mod tests {
             for i in 1..n - 1 {
                 for j in 1..n - 1 {
                     // Compute flux divergence
-                    let flux_x = (density[[i + 1, j, 0]] * velocity_x[[i + 1, j, 0]]
-                        - density[[i - 1, j, 0]] * velocity_x[[i - 1, j, 0]])
+                    let flux_x = (density[[i + 1, j, 0] * velocity_x[[i + 1, j, 0]
+                        - density[[i - 1, j, 0] * velocity_x[[i - 1, j, 0])
                         / (2.0 * dx);
-                    let flux_y = (density[[i, j + 1, 0]] * velocity_y[[i, j + 1, 0]]
-                        - density[[i, j - 1, 0]] * velocity_y[[i, j - 1, 0]])
+                    let flux_y = (density[[i, j + 1, 0] * velocity_y[[i, j + 1, 0]
+                        - density[[i, j - 1, 0] * velocity_y[[i, j - 1, 0])
                         / (2.0 * dx);
 
                     // Update density
-                    updated_density[[i, j, 0]] = density[[i, j, 0]] - dt * (flux_x + flux_y);
+                    updated_density[[i, j, 0] = density[[i, j, 0] - dt * (flux_x + flux_y);
                 }
             }
 
@@ -212,9 +212,9 @@ mod tests {
         for i in 0..state.velocity_x.shape()[0] {
             for j in 0..state.velocity_x.shape()[1] {
                 for k in 0..state.velocity_x.shape()[2] {
-                    let v_squared = state.velocity_x[[i, j, k]].powi(2)
-                        + state.velocity_y[[i, j, k]].powi(2)
-                        + state.velocity_z[[i, j, k]].powi(2);
+                    let v_squared = state.velocity_x[[i, j, k].powi(2)
+                        + state.velocity_y[[i, j, k].powi(2)
+                        + state.velocity_z[[i, j, k].powi(2);
                     energy += 0.5 * DENSITY * v_squared * dv;
                 }
             }
@@ -224,7 +224,7 @@ mod tests {
         for i in 0..state.pressure.shape()[0] {
             for j in 0..state.pressure.shape()[1] {
                 for k in 0..state.pressure.shape()[2] {
-                    energy += state.pressure[[i, j, k]].powi(2)
+                    energy += state.pressure[[i, j, k].powi(2)
                         / (2.0 * DENSITY * SOUND_SPEED.powi(2))
                         * dv;
                 }
@@ -241,7 +241,7 @@ mod tests {
         for i in 0..state.velocity_x.shape()[0] {
             for j in 0..state.velocity_x.shape()[1] {
                 for k in 0..state.velocity_x.shape()[2] {
-                    momentum_x += DENSITY * state.velocity_x[[i, j, k]] * dv;
+                    momentum_x += DENSITY * state.velocity_x[[i, j, k] * dv;
                 }
             }
         }

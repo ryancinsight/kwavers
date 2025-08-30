@@ -9,7 +9,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// ML model types supported by the system
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 pub enum ModelType {
     /// Tissue classification model
     TissueClassifier,
@@ -19,10 +19,12 @@ pub enum ModelType {
     AnomalyDetector,
     /// Convergence prediction model
     ConvergencePredictor,
+    /// Outcome prediction model
+    OutcomePredictor,
 }
 
 /// ML framework backend
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum MLBackend {
     /// ONNX Runtime for cross-platform inference
     ONNX,
@@ -35,7 +37,7 @@ pub enum MLBackend {
 }
 
 /// Type-safe model enum to avoid unsafe downcasts
-#[derive(Debug)]
+#[derive(Debug))]
 pub enum Model {
     /// Tissue classification model
     TissueClassifier(TissueClassifierModel),
@@ -90,7 +92,7 @@ pub struct PerformanceMetrics {
 }
 
 /// Configuration for ML models
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MLConfig {
     pub backend: MLBackend,
     pub model_cache_size_mb: usize,
@@ -114,7 +116,7 @@ impl Default for MLConfig {
 }
 
 /// Inference precision mode
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum InferencePrecision {
     /// Full 32-bit floating point
     Float32,
@@ -127,7 +129,7 @@ pub enum InferencePrecision {
 }
 
 /// Model metadata information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ModelMetadata {
     pub name: String,
     pub version: String,
@@ -145,8 +147,21 @@ pub trait MLModel {
     /// Get model type
     fn model_type(&self) -> ModelType;
 
-    /// Run inference
+    /// Run inference (alias for predict)
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>>;
+
+    /// Run inference on input data
+    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        self.infer(input)
+    }
+
+    /// Get model accuracy metric
+    fn accuracy(&self) -> f64;
+
+    /// Get model name
+    fn name(&self) -> &str {
+        self.metadata().name.as_str()
+    }
 
     /// Update model weights with gradients
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()>;

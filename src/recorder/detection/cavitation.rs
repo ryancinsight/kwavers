@@ -3,14 +3,14 @@
 use ndarray::Array3;
 
 /// Cavitation detector
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct CavitationDetector {
     threshold: f64,
     detected_regions: Vec<CavitationRegion>,
 }
 
 /// Detected cavitation region
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CavitationRegion {
     pub center: (usize, usize, usize),
     pub volume: f64,

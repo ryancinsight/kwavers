@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Type of solver optimal for a domain region
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize))]
 pub enum DomainType {
     /// Pseudospectral method optimal
     PSTD,
@@ -14,7 +14,7 @@ pub enum DomainType {
 }
 
 /// Domain region with associated solver type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DomainRegion {
     /// Starting indices (inclusive)
     pub start: (usize, usize, usize),

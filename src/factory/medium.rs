@@ -9,13 +9,13 @@ use crate::medium::{homogeneous::HomogeneousMedium, Medium};
 use std::collections::HashMap;
 
 /// Medium configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MediumConfig {
     pub medium_type: MediumType,
     pub properties: HashMap<String, f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum MediumType {
     Homogeneous {
         density: f64,
@@ -107,7 +107,7 @@ impl Default for MediumConfig {
 }
 
 /// Factory for creating media
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct MediumFactory;
 
 impl MediumFactory {

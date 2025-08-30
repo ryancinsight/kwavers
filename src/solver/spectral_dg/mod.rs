@@ -30,7 +30,7 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 /// Configuration for the Hybrid Spectral-DG solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HybridSpectralDGConfig {
     /// Threshold for discontinuity detection
     pub discontinuity_threshold: f64,
@@ -57,6 +57,7 @@ impl Default for HybridSpectralDGConfig {
 }
 
 /// Main Hybrid Spectral-DG solver
+#[derive(Debug))]
 pub struct HybridSpectralDGSolver {
     config: HybridSpectralDGConfig,
     detector: DiscontinuityDetector,

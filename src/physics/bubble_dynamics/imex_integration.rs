@@ -29,7 +29,7 @@ use crate::constants::thermodynamics::{
 };
 
 /// Configuration for IMEX bubble integration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BubbleIMEXConfig {
     /// Relative tolerance for implicit solver
     pub rtol: f64,
@@ -59,6 +59,7 @@ impl Default for BubbleIMEXConfig {
 }
 
 /// IMEX integrator for bubble dynamics
+#[derive(Debug))]
 pub struct BubbleIMEXIntegrator {
     solver: Arc<KellerMiksisModel>,
     config: BubbleIMEXConfig,

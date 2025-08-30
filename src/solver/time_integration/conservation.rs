@@ -9,7 +9,7 @@ use ndarray::{Array3, Zip};
 use std::collections::HashMap;
 
 /// Conservation quantities for monitoring
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservedQuantities {
     /// Total mass
     pub mass: f64,
@@ -22,7 +22,7 @@ pub struct ConservedQuantities {
 }
 
 /// History of conserved quantities
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservationHistory {
     /// Time points
     pub times: Vec<f64>,
@@ -53,7 +53,7 @@ impl ConservationHistory {
 }
 
 /// Conservation monitor for multi-rate integration
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ConservationMonitor {
     /// Grid for spatial integration
     grid: Grid,
@@ -64,7 +64,7 @@ pub struct ConservationMonitor {
 }
 
 /// Conservation error at a time step
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservationError {
     /// Time at which error was measured
     pub time: f64,

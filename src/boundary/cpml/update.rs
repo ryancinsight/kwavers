@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, Array4};
 
 /// CPML field updater
-#[derive(Clone)]
+#[derive(Clone, Debug))]
 pub struct CPMLUpdater {
     // Pre-computed update coefficients can be stored here
 }
@@ -75,11 +75,11 @@ impl CPMLUpdater {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     // Update memory variable ψ_x
-                    memory.psi_vx_x[[i, j, k]] = b_x * memory.psi_vx_x[[i, j, k]]
-                        + a_x * (fields[[1, i + 1, j, k]] - fields[[1, i, j, k]]) / grid.dx;
+                    memory.psi_vx_x[[i, j, k] = b_x * memory.psi_vx_x[[i, j, k]
+                        + a_x * (fields[[1, i + 1, j, k] - fields[[1, i, j, k]) / grid.dx;
 
                     // Apply to velocity field
-                    fields[[1, i, j, k]] += dt * memory.psi_vx_x[[i, j, k]];
+                    fields[[1, i, j, k] += dt * memory.psi_vx_x[[i, j, k];
                 }
             }
         }
@@ -101,11 +101,11 @@ impl CPMLUpdater {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
                     // Update memory variable
-                    memory.psi_vx_x[[idx, j, k]] = b_x * memory.psi_vx_x[[idx, j, k]]
-                        + a_x * (fields[[1, i, j, k]] - fields[[1, i - 1, j, k]]) / grid.dx;
+                    memory.psi_vx_x[[idx, j, k] = b_x * memory.psi_vx_x[[idx, j, k]
+                        + a_x * (fields[[1, i, j, k] - fields[[1, i - 1, j, k]) / grid.dx;
 
                     // Apply to velocity field
-                    fields[[1, i, j, k]] += dt * memory.psi_vx_x[[idx, j, k]];
+                    fields[[1, i, j, k] += dt * memory.psi_vx_x[[idx, j, k];
                 }
             }
         }
@@ -138,9 +138,9 @@ impl CPMLUpdater {
 
             for i in 0..grid.nx {
                 for k in 0..grid.nz {
-                    memory.psi_vy_y[[i, j, k]] = b_y * memory.psi_vy_y[[i, j, k]]
-                        + a_y * (fields[[2, i, j + 1, k]] - fields[[2, i, j, k]]) / grid.dy;
-                    fields[[2, i, j, k]] += dt * memory.psi_vy_y[[i, j, k]];
+                    memory.psi_vy_y[[i, j, k] = b_y * memory.psi_vy_y[[i, j, k]
+                        + a_y * (fields[[2, i, j + 1, k] - fields[[2, i, j, k]) / grid.dy;
+                    fields[[2, i, j, k] += dt * memory.psi_vy_y[[i, j, k];
                 }
             }
         }
@@ -160,9 +160,9 @@ impl CPMLUpdater {
 
             for i in 0..grid.nx {
                 for k in 0..grid.nz {
-                    memory.psi_vy_y[[i, idx, k]] = b_y * memory.psi_vy_y[[i, idx, k]]
-                        + a_y * (fields[[2, i, j, k]] - fields[[2, i, j - 1, k]]) / grid.dy;
-                    fields[[2, i, j, k]] += dt * memory.psi_vy_y[[i, idx, k]];
+                    memory.psi_vy_y[[i, idx, k] = b_y * memory.psi_vy_y[[i, idx, k]
+                        + a_y * (fields[[2, i, j, k] - fields[[2, i, j - 1, k]) / grid.dy;
+                    fields[[2, i, j, k] += dt * memory.psi_vy_y[[i, idx, k];
                 }
             }
         }
@@ -194,9 +194,9 @@ impl CPMLUpdater {
 
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
-                    memory.psi_vz_z[[i, j, k]] = b_z * memory.psi_vz_z[[i, j, k]]
-                        + a_z * (fields[[3, i, j, k + 1]] - fields[[3, i, j, k]]) / grid.dz;
-                    fields[[3, i, j, k]] += dt * memory.psi_vz_z[[i, j, k]];
+                    memory.psi_vz_z[[i, j, k] = b_z * memory.psi_vz_z[[i, j, k]
+                        + a_z * (fields[[3, i, j, k + 1] - fields[[3, i, j, k]) / grid.dz;
+                    fields[[3, i, j, k] += dt * memory.psi_vz_z[[i, j, k];
                 }
             }
         }
@@ -216,9 +216,9 @@ impl CPMLUpdater {
 
             for i in 0..grid.nx {
                 for j in 0..grid.ny {
-                    memory.psi_vz_z[[i, j, idx]] = b_z * memory.psi_vz_z[[i, j, idx]]
-                        + a_z * (fields[[3, i, j, k]] - fields[[3, i, j, k - 1]]) / grid.dz;
-                    fields[[3, i, j, k]] += dt * memory.psi_vz_z[[i, j, idx]];
+                    memory.psi_vz_z[[i, j, idx] = b_z * memory.psi_vz_z[[i, j, idx]
+                        + a_z * (fields[[3, i, j, k] - fields[[3, i, j, k - 1]) / grid.dz;
+                    fields[[3, i, j, k] += dt * memory.psi_vz_z[[i, j, idx];
                 }
             }
         }
@@ -271,7 +271,7 @@ impl CPMLUpdater {
         for i in 0..thickness.min(nx) {
             for j in 0..ny {
                 for k in 0..nz {
-                    memory.psi_p_x[[i, j, k]] += gradient[[i, j, k]] * profiles.sigma_x[i];
+                    memory.psi_p_x[[i, j, k] += gradient[[i, j, k] * profiles.sigma_x[i];
                 }
             }
         }
@@ -289,7 +289,7 @@ impl CPMLUpdater {
         for i in 0..nx {
             for j in 0..thickness.min(ny) {
                 for k in 0..nz {
-                    memory.psi_p_y[[i, j, k]] += gradient[[i, j, k]] * profiles.sigma_y[j];
+                    memory.psi_p_y[[i, j, k] += gradient[[i, j, k] * profiles.sigma_y[j];
                 }
             }
         }
@@ -307,7 +307,7 @@ impl CPMLUpdater {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..thickness.min(nz) {
-                    memory.psi_p_z[[i, j, k]] += gradient[[i, j, k]] * profiles.sigma_z[k];
+                    memory.psi_p_z[[i, j, k] += gradient[[i, j, k] * profiles.sigma_z[k];
                 }
             }
         }
@@ -325,7 +325,7 @@ impl CPMLUpdater {
         for i in 0..thickness.min(nx) {
             for j in 0..ny {
                 for k in 0..nz {
-                    gradient[[i, j, k]] += memory.psi_p_x[[i, j, k]] / profiles.kappa_x[i];
+                    gradient[[i, j, k] += memory.psi_p_x[[i, j, k] / profiles.kappa_x[i];
                 }
             }
         }
@@ -343,7 +343,7 @@ impl CPMLUpdater {
         for i in 0..nx {
             for j in 0..thickness.min(ny) {
                 for k in 0..nz {
-                    gradient[[i, j, k]] += memory.psi_p_y[[i, j, k]] / profiles.kappa_y[j];
+                    gradient[[i, j, k] += memory.psi_p_y[[i, j, k] / profiles.kappa_y[j];
                 }
             }
         }
@@ -361,7 +361,7 @@ impl CPMLUpdater {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..thickness.min(nz) {
-                    gradient[[i, j, k]] += memory.psi_p_z[[i, j, k]] / profiles.kappa_z[k];
+                    gradient[[i, j, k] += memory.psi_p_z[[i, j, k] / profiles.kappa_z[k];
                 }
             }
         }

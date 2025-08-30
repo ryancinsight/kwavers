@@ -14,7 +14,7 @@ use crate::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
 /// Frequency-dependent tissue properties
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FrequencyDependentProperties {
     /// Reference sound speed at low frequency (m/s)
     pub c0: f64,
@@ -120,7 +120,7 @@ impl FrequencyDependentProperties {
 }
 
 /// Tissue-specific frequency-dependent models
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct TissueFrequencyModels;
 
 impl TissueFrequencyModels {
@@ -169,6 +169,7 @@ impl TissueFrequencyModels {
 }
 
 /// Dispersion correction for frequency-dependent media
+#[derive(Debug))]
 pub struct DispersionCorrection {
     /// Reference frequency for dispersion calculation
     _reference_frequency: f64,
@@ -197,7 +198,7 @@ impl DispersionCorrection {
         (0..nx).for_each(|i| {
             (0..ny).for_each(|j| {
                 (0..nz).for_each(|k| {
-                    let k_mag = k_vec[[i, j, k]];
+                    let k_mag = k_vec[[i, j, k];
                     if k_mag > 0.0 {
                         // Frequency from wavenumber
                         let freq = k_mag * self.properties.c0 / (2.0 * std::f64::consts::PI);
@@ -214,7 +215,7 @@ impl DispersionCorrection {
                             phase_shift.cos(),
                             phase_shift.sin(),
                         );
-                        spectrum[[i, j, k]] *= correction;
+                        spectrum[[i, j, k] *= correction;
                     }
                 });
             });

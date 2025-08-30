@@ -3,7 +3,7 @@
 use crate::error::KwaversResult;
 
 /// Memory access pattern types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum AccessPattern {
     /// Sequential access pattern
     Sequential,
@@ -16,6 +16,7 @@ pub enum AccessPattern {
 }
 
 /// Cache optimizer for improving memory access patterns
+#[derive(Debug))]
 pub struct CacheOptimizer {
     block_size: usize,
     l1_cache_size: usize,

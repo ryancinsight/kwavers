@@ -32,6 +32,7 @@ impl TDOAMeasurement {
 }
 
 /// TDOA processor for hyperbolic localization
+#[derive(Debug))]
 pub struct TDOAProcessor {
     measurements: Vec<TDOAMeasurement>,
     sound_speed: f64,

@@ -5,7 +5,7 @@ use crate::grid::Bounds;
 use ndarray::Array3;
 
 /// Octree node for spatial subdivision
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct OctreeNode {
     /// Node bounds
     pub bounds: Bounds,
@@ -18,7 +18,7 @@ pub struct OctreeNode {
 }
 
 /// Node data stored at each octree node
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum NodeData {
     /// Leaf node with field values
     Leaf(Vec<f64>),
@@ -64,36 +64,36 @@ impl OctreeNode {
         Ok([
             // Bottom layer (z = min)
             OctreeNode::new(
-                Bounds::new([min[0], min[1], min[2]], [mid[0], mid[1], mid[2]]),
+                Bounds::new([min[0], min[1], min[2], [mid[0], mid[1], mid[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([mid[0], min[1], min[2]], [max[0], mid[1], mid[2]]),
+                Bounds::new([mid[0], min[1], min[2], [max[0], mid[1], mid[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([min[0], mid[1], min[2]], [mid[0], max[1], mid[2]]),
+                Bounds::new([min[0], mid[1], min[2], [mid[0], max[1], mid[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([mid[0], mid[1], min[2]], [max[0], max[1], mid[2]]),
+                Bounds::new([mid[0], mid[1], min[2], [max[0], max[1], mid[2]),
                 self.level + 1,
             ),
             // Top layer (z = mid)
             OctreeNode::new(
-                Bounds::new([min[0], min[1], mid[2]], [mid[0], mid[1], max[2]]),
+                Bounds::new([min[0], min[1], mid[2], [mid[0], mid[1], max[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([mid[0], min[1], mid[2]], [max[0], mid[1], max[2]]),
+                Bounds::new([mid[0], min[1], mid[2], [max[0], mid[1], max[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([min[0], mid[1], mid[2]], [mid[0], max[1], max[2]]),
+                Bounds::new([min[0], mid[1], mid[2], [mid[0], max[1], max[2]),
                 self.level + 1,
             ),
             OctreeNode::new(
-                Bounds::new([mid[0], mid[1], mid[2]], [max[0], max[1], max[2]]),
+                Bounds::new([mid[0], mid[1], mid[2], [max[0], max[1], max[2]),
                 self.level + 1,
             ),
         ])
@@ -107,6 +107,7 @@ impl OctreeNode {
 }
 
 /// Octree structure for adaptive mesh refinement
+#[derive(Debug))]
 pub struct Octree {
     /// Root node
     root: OctreeNode,

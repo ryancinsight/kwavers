@@ -5,6 +5,7 @@
 use std::f64::consts::PI;
 
 /// Collection of analytical solutions
+#[derive(Debug))]
 pub struct AnalyticalSolutions;
 
 impl AnalyticalSolutions {

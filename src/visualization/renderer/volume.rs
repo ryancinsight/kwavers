@@ -6,6 +6,7 @@ use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use ndarray::{Array3, Zip};
 
 /// Volume renderer for 3D fields
+#[derive(Debug))]
 pub struct VolumeRenderer {
     config: VisualizationConfig,
     transfer_function: TransferFunction,
@@ -68,7 +69,7 @@ impl VolumeRenderer {
             for j in 0..ny {
                 let mut max_val = 0.0;
                 for k in 0..nz {
-                    max_val = max_val.max(field[[i, j, k]].abs());
+                    max_val = max_val.max(field[[i, j, k].abs());
                 }
 
                 let color = self.transfer_function.map_value(max_val);
@@ -185,7 +186,7 @@ impl RayMarcher {
                 let iz = pos[2] as usize;
 
                 if ix < volume.dim().0 && iy < volume.dim().1 && iz < volume.dim().2 {
-                    accumulated += volume[[ix, iy, iz]].abs() as f32 * step;
+                    accumulated += volume[[ix, iy, iz].abs() as f32 * step;
                 }
             }
         }

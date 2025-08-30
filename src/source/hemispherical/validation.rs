@@ -4,12 +4,18 @@ use super::constants::*;
 use crate::error::KwaversResult;
 
 /// Array validator for safety and performance checks
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ArrayValidator {
     /// Maximum allowed pressure (Pa)
     max_pressure: f64,
     /// Maximum temperature rise (K)
     max_temp_rise: f64,
+}
+
+impl Default for ArrayValidator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ArrayValidator {
@@ -43,7 +49,7 @@ impl ArrayValidator {
 }
 
 /// Performance metrics for array evaluation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PerformanceMetrics {
     /// Peak pressure at focus (Pa)
     pub peak_pressure: f64,

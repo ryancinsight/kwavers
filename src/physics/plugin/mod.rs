@@ -27,7 +27,7 @@ pub use acoustic_wave_plugin::AcousticWavePlugin;
 pub use elastic_wave_plugin::ElasticWavePlugin;
 pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
 pub use factory::PluginFactory;
-pub use kzk_solver::{FrequencyOperator, KzkSolverPlugin};
+pub use kzk_solver::KzkSolverPlugin;
 pub use manager::PluginManager;
 pub use metadata::PluginMetadata;
 pub use mixed_domain::{DomainSelection, MixedDomainPropagationPlugin};
@@ -38,7 +38,7 @@ pub use seismic_imaging::{
 pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
 
 /// State of a plugin
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum PluginState {
     /// Plugin is created but not initialized
     Created,
@@ -55,7 +55,7 @@ pub enum PluginState {
 }
 
 /// Priority levels for plugin execution
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord))]
 pub enum PluginPriority {
     /// Lowest priority - executed last
     Low = 0,
@@ -69,12 +69,6 @@ pub enum PluginPriority {
 
 /// Context passed to plugins during execution
 pub type PluginContext = PluginFields;
-
-/// Alias for physics-specific plugins
-pub type PhysicsPlugin = dyn Plugin;
-
-/// Field accessor for plugins
-pub type FieldAccessor = PluginFields;
 
 /// Core trait that all plugins must implement
 pub trait Plugin: Debug + Send + Sync {
@@ -148,7 +142,7 @@ pub trait Plugin: Debug + Send + Sync {
 }
 
 /// Configuration for plugins
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PluginConfig {
     /// Plugin-specific parameters
     pub parameters: std::collections::HashMap<String, ConfigValue>,
@@ -161,7 +155,7 @@ pub struct PluginConfig {
 }
 
 /// Configuration value types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum ConfigValue {
     Bool(bool),
     Integer(i64),
@@ -171,7 +165,7 @@ pub enum ConfigValue {
 }
 
 /// Container for fields that plugins can access and modify
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PluginFields {
     /// Pressure field
     pub pressure: Array3<f64>,

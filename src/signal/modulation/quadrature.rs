@@ -4,7 +4,7 @@ use super::{Modulation, ModulationParams};
 use crate::error::KwaversResult;
 
 /// QAM implementation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct QuadratureAmplitudeModulation {
     params: ModulationParams,
 }

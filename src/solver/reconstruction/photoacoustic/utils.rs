@@ -7,6 +7,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Utility functions for photoacoustic reconstruction
+#[derive(Debug))]
 pub struct Utils;
 
 impl Utils {
@@ -42,7 +43,7 @@ impl Utils {
     /// Build forward model matrix for model-based reconstruction
     pub fn build_forward_model(
         &self,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid_size: [usize; 3],
         sound_speed: f64,
         sampling_frequency: f64,
@@ -74,7 +75,7 @@ impl Utils {
 
                 if time_idx < n_time_samples {
                     let row_idx = sensor_idx * n_time_samples + time_idx;
-                    forward_model[[row_idx, voxel_idx]] =
+                    forward_model[[row_idx, voxel_idx] =
                         1.0 / (4.0 * std::f64::consts::PI * distance.max(1e-10));
                 }
             }

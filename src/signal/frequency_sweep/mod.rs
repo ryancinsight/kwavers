@@ -40,14 +40,14 @@ pub trait FrequencySweep: Signal + Debug {
 }
 
 /// Sweep direction
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SweepDirection {
     Upward,
     Downward,
 }
 
 /// Sweep type for configuration
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SweepType {
     Linear,
     Logarithmic,
@@ -57,7 +57,7 @@ pub enum SweepType {
 }
 
 /// Configuration for frequency sweeps
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SweepConfig {
     pub start_frequency: f64,
     pub stop_frequency: f64,
@@ -81,6 +81,7 @@ impl Default for SweepConfig {
 }
 
 /// Factory for creating frequency sweeps
+#[derive(Debug))]
 pub struct SweepFactory;
 
 impl SweepFactory {

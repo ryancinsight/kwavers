@@ -33,7 +33,7 @@ use ndarray::Array3;
 use std::sync::Arc;
 
 /// Hemispherical array transducer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HemisphericalArray {
     geometry: HemisphereGeometry,
     elements: Vec<ElementConfiguration>,
@@ -99,7 +99,7 @@ impl Source for HemisphericalArray {
                 element.position[2],
             ) {
                 if i < grid.nx && j < grid.ny && k < grid.nz {
-                    mask[[i, j, k]] = element.amplitude;
+                    mask[[i, j, k] = element.amplitude;
                 }
             }
         }

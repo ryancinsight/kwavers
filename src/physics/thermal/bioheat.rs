@@ -6,6 +6,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Pennes bioheat equation
+#[derive(Debug))]
 pub struct PennesEquation {
     blood_perfusion: f64,
     blood_temperature: f64,
@@ -35,6 +36,7 @@ impl PennesEquation {
 }
 
 /// Bioheat solver for tissue heating
+#[derive(Debug))]
 pub struct BioheatSolver {
     equation: PennesEquation,
     metabolic_heat: f64,
@@ -77,25 +79,25 @@ impl BioheatSolver {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
                     // Laplacian
-                    let laplacian = (temperature[[i + 1, j, k]] - 2.0 * temperature[[i, j, k]]
-                        + temperature[[i - 1, j, k]])
+                    let laplacian = (temperature[[i + 1, j, k] - 2.0 * temperature[[i, j, k]
+                        + temperature[[i - 1, j, k])
                         / dx2
-                        + (temperature[[i, j + 1, k]] - 2.0 * temperature[[i, j, k]]
-                            + temperature[[i, j - 1, k]])
+                        + (temperature[[i, j + 1, k] - 2.0 * temperature[[i, j, k]
+                            + temperature[[i, j - 1, k])
                             / dy2
-                        + (temperature[[i, j, k + 1]] - 2.0 * temperature[[i, j, k]]
-                            + temperature[[i, j, k - 1]])
+                        + (temperature[[i, j, k + 1] - 2.0 * temperature[[i, j, k]
+                            + temperature[[i, j, k - 1])
                             / dz2;
 
                     // Perfusion cooling
                     let perfusion = self.equation.blood_perfusion
                         * self.equation.blood_specific_heat
-                        * (temperature[[i, j, k]] - self.equation.blood_temperature)
+                        * (temperature[[i, j, k] - self.equation.blood_temperature)
                         / (rho * cp);
 
                     // Total update
-                    update[[i, j, k]] = alpha * laplacian - perfusion
-                        + (heat_source[[i, j, k]] + self.metabolic_heat) / (rho * cp);
+                    update[[i, j, k] = alpha * laplacian - perfusion
+                        + (heat_source[[i, j, k] + self.metabolic_heat) / (rho * cp);
                 }
             }
         }

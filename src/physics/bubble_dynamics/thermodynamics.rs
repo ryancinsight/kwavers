@@ -46,7 +46,7 @@ pub mod constants {
 use constants::*;
 
 /// Vapor pressure model selection
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum VaporPressureModel {
     /// Antoine equation (fast, good accuracy)
     Antoine,
@@ -61,7 +61,7 @@ pub enum VaporPressureModel {
 }
 
 /// Thermodynamics calculator for bubble dynamics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ThermodynamicsCalculator {
     model: VaporPressureModel,
     /// Enthalpy of vaporization [J/mol]
@@ -319,7 +319,7 @@ impl ThermodynamicsCalculator {
 }
 
 /// Mass transfer model for bubble dynamics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MassTransferModel {
     thermo: ThermodynamicsCalculator,
     /// Accommodation coefficient (typically 0.04-1.0)

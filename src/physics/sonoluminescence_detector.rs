@@ -37,7 +37,7 @@ pub mod constants {
 }
 
 /// Sonoluminescence event data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SonoluminescenceEvent {
     /// Time of event (s)
     pub time: f64,
@@ -62,7 +62,7 @@ pub struct SonoluminescenceEvent {
 }
 
 /// Sonoluminescence detector configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DetectorConfig {
     /// Enable spectral analysis
     pub spectral_analysis: bool,
@@ -95,7 +95,7 @@ impl Default for DetectorConfig {
 }
 
 /// Sonoluminescence detector and analyzer
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct SonoluminescenceDetector {
     /// Detector configuration
     config: DetectorConfig,
@@ -154,10 +154,10 @@ impl SonoluminescenceDetector {
             for j in 0..ny {
                 for k in 0..nz {
                     // Get state at this point
-                    let temperature = bubble_states.temperature[[i, j, k]];
-                    let pressure = bubble_states.pressure[[i, j, k]];
-                    let radius = bubble_states.radius[[i, j, k]];
-                    let radius_0 = initial_radius[[i, j, k]];
+                    let temperature = bubble_states.temperature[[i, j, k];
+                    let pressure = bubble_states.pressure[[i, j, k];
+                    let radius = bubble_states.radius[[i, j, k];
+                    let radius_0 = initial_radius[[i, j, k];
 
                     // Skip if no bubble present
                     if radius_0 == 0.0 {
@@ -437,7 +437,7 @@ impl SonoluminescenceDetector {
 }
 
 /// Statistics about sonoluminescence events
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone))]
 pub struct SonoluminescenceStatistics {
     /// Total number of events detected
     pub total_events: usize,

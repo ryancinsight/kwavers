@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Specific errors for grid creation and validation
-#[derive(Debug, Clone, Error, Serialize, Deserialize)]
+#[derive(Debug, Clone, Error, Serialize, Deserialize))]
 pub enum GridError {
     /// Grid dimensions must be positive
     #[error("Grid dimensions must be positive, got nx={nx}, ny={ny}, nz={nz}")]

@@ -8,21 +8,21 @@ use crate::physics::plugin::PluginManager;
 use std::collections::HashMap;
 
 /// Physics configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhysicsConfig {
     pub models: Vec<PhysicsModelConfig>,
     pub frequency: f64,
     pub parameters: HashMap<String, f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhysicsModelConfig {
     pub model_type: PhysicsModelType,
     pub enabled: bool,
     pub parameters: HashMap<String, f64>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum PhysicsModelType {
     AcousticWave,
     ThermalDiffusion,
@@ -84,7 +84,7 @@ impl Default for PhysicsConfig {
 }
 
 /// Factory for creating physics models
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PhysicsFactory;
 
 impl PhysicsFactory {

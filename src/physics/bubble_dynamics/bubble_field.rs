@@ -11,6 +11,7 @@ use rand_distr::{LogNormal, Normal, Uniform};
 use std::collections::HashMap;
 
 /// Single bubble or bubble cloud field
+#[derive(Debug))]
 pub struct BubbleField {
     /// Bubble states indexed by grid position
     pub bubbles: HashMap<(usize, usize, usize), BubbleState>,
@@ -66,8 +67,8 @@ impl BubbleField {
     ) {
         // Update each bubble
         for ((i, j, k), state) in self.bubbles.iter_mut() {
-            let p_acoustic = pressure_field[[*i, *j, *k]];
-            let dp_dt = dp_dt_field[[*i, *j, *k]];
+            let p_acoustic = pressure_field[[*i, *j, *k];
+            let dp_dt = dp_dt_field[[*i, *j, *k];
 
             // Use adaptive integration (no Mutex needed anymore)
             if let Err(e) =
@@ -109,12 +110,12 @@ impl BubbleField {
         let mut fields = BubbleStateFields::new(shape);
 
         for ((i, j, k), state) in &self.bubbles {
-            fields.radius[[*i, *j, *k]] = state.radius;
-            fields.temperature[[*i, *j, *k]] = state.temperature;
-            fields.pressure[[*i, *j, *k]] = state.pressure_internal;
-            fields.velocity[[*i, *j, *k]] = state.wall_velocity;
-            fields.is_collapsing[[*i, *j, *k]] = state.is_collapsing as i32 as f64;
-            fields.compression_ratio[[*i, *j, *k]] = state.compression_ratio;
+            fields.radius[[*i, *j, *k] = state.radius;
+            fields.temperature[[*i, *j, *k] = state.temperature;
+            fields.pressure[[*i, *j, *k] = state.pressure_internal;
+            fields.velocity[[*i, *j, *k] = state.wall_velocity;
+            fields.is_collapsing[[*i, *j, *k] = state.is_collapsing as i32 as f64;
+            fields.compression_ratio[[*i, *j, *k] = state.compression_ratio;
         }
 
         fields
@@ -139,6 +140,7 @@ impl BubbleField {
 }
 
 /// Bubble state fields for interfacing with physics modules
+#[derive(Debug))]
 pub struct BubbleStateFields {
     pub radius: Array3<f64>,
     pub temperature: Array3<f64>,
@@ -172,6 +174,7 @@ pub struct BubbleFieldStats {
 }
 
 /// Bubble cloud with size distribution
+#[derive(Debug))]
 pub struct BubbleCloud {
     /// Base bubble field
     pub field: BubbleField,
@@ -182,7 +185,7 @@ pub struct BubbleCloud {
 }
 
 /// Size distribution types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum SizeDistribution {
     Uniform { min: f64, max: f64 },
     LogNormal { mean: f64, std_dev: f64 },
@@ -190,7 +193,7 @@ pub enum SizeDistribution {
 }
 
 /// Spatial distribution types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum SpatialDistribution {
     Uniform,
     Gaussian {

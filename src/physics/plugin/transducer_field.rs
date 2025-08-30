@@ -9,7 +9,7 @@ use ndarray::{Array2, Array3};
 use std::collections::HashMap;
 
 /// Transducer geometry definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransducerGeometry {
     /// Element positions [x, y, z] in meters
     pub element_positions: Array2<f64>,
@@ -24,6 +24,7 @@ pub struct TransducerGeometry {
 }
 
 /// Multi-Element Transducer Field Calculator Plugin
+#[derive(Debug))]
 pub struct TransducerFieldCalculatorPlugin {
     metadata: PluginMetadata,
     state: PluginState,

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! CFL stability condition validation test
 //!
 //! Validates that the CFL condition is properly enforced for numerical stability.

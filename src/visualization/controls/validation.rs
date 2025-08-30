@@ -4,7 +4,7 @@ use super::parameter::{ParameterType, ParameterValue};
 use crate::error::KwaversResult;
 
 /// Result of parameter validation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub message: Option<String>,
@@ -41,6 +41,7 @@ impl ValidationResult {
 }
 
 /// Parameter validator
+#[derive(Debug))]
 pub struct ParameterValidator;
 
 impl ParameterValidator {

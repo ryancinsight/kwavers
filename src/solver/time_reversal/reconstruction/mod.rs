@@ -23,6 +23,7 @@ use super::{
 };
 
 /// Time-reversal reconstructor
+#[derive(Debug))]
 pub struct TimeReversalReconstructor {
     config: TimeReversalConfig,
     frequency_filter: FrequencyFilter,

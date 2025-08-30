@@ -8,7 +8,7 @@ use crate::error::KwaversResult;
 use std::f64::consts::PI;
 
 /// Fresnel coefficients for reflection and transmission
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FresnelCoefficients {
     /// Reflection amplitude coefficient
     pub reflection_amplitude: f64,
@@ -28,7 +28,33 @@ pub struct FresnelCoefficients {
     pub tp: f64,
 }
 
+impl FresnelCoefficients {
+    /// Calculate Fresnel coefficients directly
+    pub fn calculate(n1: f64, n2: f64, incident_angle: f64) -> KwaversResult<Self> {
+        let calc = FresnelCalculator::new(n1, n2);
+        // Calculate transmitted angle using Snell's law
+        let sin_t = n1 * incident_angle.sin() / n2;
+        let transmitted_angle = if sin_t <= 1.0 {
+            sin_t.asin()
+        } else {
+            // Total internal reflection
+            return Ok(Self {
+                reflection_amplitude: 1.0,
+                transmission_amplitude: 0.0,
+                reflection_phase: 0.0,
+                transmission_phase: 0.0,
+                rs: 1.0,
+                ts: 0.0,
+                rp: 1.0,
+                tp: 0.0,
+            });
+        };
+        calc.calculate(incident_angle, transmitted_angle, Polarization::Unpolarized)
+    }
+}
+
 /// Fresnel equation calculator
+#[derive(Debug))]
 pub struct FresnelCalculator {
     /// Refractive index of medium 1
     n1: f64,

@@ -6,7 +6,7 @@ use crate::ml::inference::InferenceEngine;
 use ndarray::{Array1, Array2};
 
 /// Parameter optimization model
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ParameterOptimizerModel {
     engine: InferenceEngine,
     metadata: ModelMetadata,
@@ -55,7 +55,15 @@ impl ParameterOptimizerModel {
 }
 
 impl MLModel for ParameterOptimizerModel {
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
+
+    fn model_type(&self) -> crate::ml::types::ModelType {
+        crate::ml::types::ModelType::ParameterOptimizer
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         self.engine.forward(input)
     }
 
@@ -63,7 +71,15 @@ impl MLModel for ParameterOptimizerModel {
         self.metadata.accuracy
     }
 
-    fn name(&self) -> &str {
-        &self.metadata.name
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        Ok(Self::new(128, 64))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        Ok(())
     }
 }

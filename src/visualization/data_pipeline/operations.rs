@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Data processing operations for visualization
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize))]
 pub enum ProcessingOperation {
     /// No processing, direct transfer
     None,

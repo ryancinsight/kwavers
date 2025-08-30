@@ -50,7 +50,7 @@ impl Position {
 }
 
 /// Localization result with uncertainty
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LocalizationResult {
     /// Estimated position
     pub position: Position,
@@ -92,6 +92,7 @@ impl Default for LocalizationConfig {
 }
 
 /// Main localization processor
+#[derive(Debug))]
 pub struct LocalizationProcessor {
     config: LocalizationConfig,
     sensor_array: SensorArray,

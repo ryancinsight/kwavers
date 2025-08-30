@@ -14,7 +14,7 @@ use ndarray::{Array3, Zip};
 use std::sync::OnceLock;
 
 /// Configuration for setting tissue in a specific region
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TissueRegion {
     pub tissue_type: TissueType,
     pub x_min: f64,
@@ -78,7 +78,7 @@ impl TissueRegion {
 }
 
 /// A heterogeneous medium composed of multiple tissue types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HeterogeneousTissueMedium {
     /// 3D array of tissue types
     pub tissue_map: Array3<TissueType>,
@@ -143,7 +143,7 @@ impl HeterogeneousTissueMedium {
         for i in i_min..=i_max {
             for j in j_min..=j_max {
                 for k in k_min..=k_max {
-                    self.tissue_map[[i, j, k]] = region.tissue_type;
+                    self.tissue_map[[i, j, k] = region.tissue_type;
                 }
             }
         }
@@ -215,9 +215,9 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
+                    let tissue = self.tissue_map[[i, j, k];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -233,9 +233,9 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
+                    let tissue = self.tissue_map[[i, j, k];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -306,9 +306,9 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
+                    let tissue = self.tissue_map[[i, j, k];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -324,9 +324,9 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
+                    let tissue = self.tissue_map[[i, j, k];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -342,9 +342,9 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
+                    let tissue = self.tissue_map[[i, j, k];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });

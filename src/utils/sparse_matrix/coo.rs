@@ -3,7 +3,7 @@
 use super::csr::CompressedSparseRowMatrix;
 
 /// Coordinate format sparse matrix (triplet format)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CoordinateMatrix {
     /// Number of rows
     pub rows: usize,

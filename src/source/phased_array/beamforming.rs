@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 /// Beamforming algorithms for phased array control
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum BeamformingMode {
     /// Focus at specific point (x, y, z) [m]
     Focus { target: (f64, f64, f64) },
@@ -18,7 +18,7 @@ pub enum BeamformingMode {
 }
 
 /// Beamforming calculator
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct BeamformingCalculator {
     sound_speed: f64,
     frequency: f64,

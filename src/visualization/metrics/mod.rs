@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 const METRIC_HISTORY_SIZE: usize = 60;
 
 /// Performance metrics for visualization
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct VisualizationMetrics {
     /// Current frames per second
     pub fps: f64,
@@ -34,6 +34,7 @@ impl Default for VisualizationMetrics {
 }
 
 /// Metrics tracker for performance monitoring
+#[derive(Debug))]
 pub struct MetricsTracker {
     /// History of render times
     render_times: VecDeque<f32>,

@@ -32,7 +32,7 @@ use std::f64::consts::PI;
 const SOFT_TISSUE_DIFFUSIVITY_APPROXIMATION_FACTOR: f64 = 2.0;
 
 /// Spatial discretization order for numerical schemes
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum SpatialOrder {
     /// Second-order accurate spatial discretization
     Second,

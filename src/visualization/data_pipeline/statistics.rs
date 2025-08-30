@@ -3,7 +3,7 @@
 use std::time::Instant;
 
 /// Data transfer statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransferStatistics {
     pub total_bytes_transferred: usize,
     pub transfer_time_ms: f32,

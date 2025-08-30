@@ -3,7 +3,7 @@
 use crate::physics::sonoluminescence_detector::DetectorConfig;
 
 /// Configuration for recorder setup
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RecorderConfig {
     pub filename: String,
     pub record_pressure: bool,

@@ -5,9 +5,15 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Outcome prediction model
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct OutcomePredictorModel {
     metadata: ModelMetadata,
+}
+
+impl Default for OutcomePredictorModel {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl OutcomePredictorModel {
@@ -26,14 +32,22 @@ impl OutcomePredictorModel {
 }
 
 impl MLModel for OutcomePredictorModel {
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
+
+    fn model_type(&self) -> crate::ml::types::ModelType {
+        crate::ml::types::ModelType::OutcomePredictor
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Simplified outcome prediction
         let mean = input.mean_axis(ndarray::Axis(1)).unwrap();
         let mut output = Array2::zeros((input.nrows(), 3));
         for (i, &m) in mean.iter().enumerate() {
-            output[[i, 0]] = m.max(0.0).min(1.0);
-            output[[i, 1]] = (1.0 - m).max(0.0).min(1.0);
-            output[[i, 2]] = (m * 0.5).max(0.0).min(1.0);
+            output[[i, 0] = m.max(0.0).min(1.0);
+            output[[i, 1] = (1.0 - m).max(0.0).min(1.0);
+            output[[i, 2] = (m * 0.5).max(0.0).min(1.0);
         }
         Ok(output)
     }
@@ -42,7 +56,15 @@ impl MLModel for OutcomePredictorModel {
         self.metadata.accuracy
     }
 
-    fn name(&self) -> &str {
-        &self.metadata.name
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        Ok(Self::new())
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        Ok(())
     }
 }

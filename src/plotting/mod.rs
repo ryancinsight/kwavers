@@ -57,7 +57,7 @@ mod plotting_impl {
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
         let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
         let z: Vec<Vec<f64>> = (0..ny)
-            .map(|j| (0..nx).map(|i| slice[[i, j]]).collect())
+            .map(|j| (0..nx).map(|i| slice[[i, j]).collect())
             .collect();
 
         let trace =
@@ -97,7 +97,7 @@ mod plotting_impl {
                     x.push(i as f64 * grid.dx);
                     y.push(j as f64 * grid.dy);
                     z.push(k as f64 * grid.dz);
-                    values.push(pressure[[i, j, k]]);
+                    values.push(pressure[[i, j, k]);
                 }
             }
         }
@@ -162,7 +162,7 @@ mod plotting_impl {
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
         let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
         let z: Vec<Vec<f64>> = (0..ny)
-            .map(|j| (0..nx).map(|i| diff[[i, j]]).collect())
+            .map(|j| (0..nx).map(|i| diff[[i, j]).collect())
             .collect();
 
         let trace =
@@ -192,7 +192,7 @@ mod plotting_impl {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    writeln!(file, "{},{},{},{}", i, j, k, data[[i, j, k]])?;
+                    writeln!(file, "{},{},{},{}", i, j, k, data[[i, j, k])?;
                 }
             }
         }

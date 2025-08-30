@@ -16,7 +16,7 @@ use crate::constants::chemistry::{
 };
 
 /// Enumeration of reactive oxygen species
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 pub enum ROSSpecies {
     /// Hydroxyl radical (•OH) - most reactive
     HydroxylRadical,
@@ -113,7 +113,7 @@ impl ROSSpecies {
 }
 
 /// Container for ROS concentrations in the simulation
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct ROSConcentrations {
     /// Concentration fields for each ROS species (mol/m³)
     pub fields: HashMap<ROSSpecies, Array3<f64>>,
@@ -255,18 +255,18 @@ impl ROSConcentrations {
                 for i in 1..self.shape.0 - 1 {
                     for j in 1..self.shape.1 - 1 {
                         for k in 1..self.shape.2 - 1 {
-                            let center_val = conc[[i, j, k]];
+                            let center_val = conc[[i, j, k];
 
                             // Compute Laplacian using neighboring values
-                            let laplacian = (conc[[i + 1, j, k]] - 2.0 * center_val
-                                + conc[[i - 1, j, k]])
+                            let laplacian = (conc[[i + 1, j, k] - 2.0 * center_val
+                                + conc[[i - 1, j, k])
                                 * dx2_inv
-                                + (conc[[i, j + 1, k]] - 2.0 * center_val + conc[[i, j - 1, k]])
+                                + (conc[[i, j + 1, k] - 2.0 * center_val + conc[[i, j - 1, k])
                                     * dy2_inv
-                                + (conc[[i, j, k + 1]] - 2.0 * center_val + conc[[i, j, k - 1]])
+                                + (conc[[i, j, k + 1] - 2.0 * center_val + conc[[i, j, k - 1])
                                     * dz2_inv;
 
-                            new_conc[[i, j, k]] = center_val + d * laplacian * dt;
+                            new_conc[[i, j, k] = center_val + d * laplacian * dt;
                         }
                     }
                 }
@@ -302,10 +302,10 @@ impl ROSConcentrations {
                 // Solve tridiagonal system for each line
                 // Use Crank-Nicolson discretization
                 for i in 1..shape.0 - 1 {
-                    let rhs = conc[[i, j, k]]
+                    let rhs = conc[[i, j, k]
                         + alpha
-                            * (conc[[i + 1, j, k]] - 2.0 * conc[[i, j, k]] + conc[[i - 1, j, k]]);
-                    temp[[i, j, k]] = rhs / (1.0 + 2.0 * alpha);
+                            * (conc[[i + 1, j, k] - 2.0 * conc[[i, j, k] + conc[[i - 1, j, k]);
+                    temp[[i, j, k] = rhs / (1.0 + 2.0 * alpha);
                 }
             }
         }
@@ -379,17 +379,17 @@ mod tests {
 
         // Set some concentration
         if let Some(oh) = ros.get_mut(ROSSpecies::HydroxylRadical) {
-            oh[[5, 5, 5]] = 1e-6; // 1 μM
+            oh[[5, 5, 5] = 1e-6; // 1 μM
         }
 
         // Update total
         ros.update_total();
-        assert!(ros.total_ros[[5, 5, 5]] > 0.0);
+        assert!(ros.total_ros[[5, 5, 5] > 0.0);
 
         // Test decay
         ros.apply_decay(1e-9); // 1 ns
         if let Some(oh) = ros.get(ROSSpecies::HydroxylRadical) {
-            assert!(oh[[5, 5, 5]] < 1e-6); // Should have decayed
+            assert!(oh[[5, 5, 5] < 1e-6); // Should have decayed
         }
     }
 

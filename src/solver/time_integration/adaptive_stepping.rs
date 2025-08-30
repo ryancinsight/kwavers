@@ -9,7 +9,7 @@ use ndarray::{Array3, Zip};
 /// Adaptive time stepper wrapper
 ///
 /// Wraps any time stepper to provide adaptive time step control
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct AdaptiveTimeStepper<T: TimeStepper> {
     /// Base time stepper
     base_stepper: T,
@@ -137,7 +137,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
 }
 
 /// Richardson extrapolation error estimator
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct RichardsonErrorEstimator {
     /// Order of the method
     order: usize,
@@ -190,14 +190,14 @@ impl ErrorEstimatorTrait for RichardsonErrorEstimator {
 }
 
 /// Embedded Runge-Kutta error estimator
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct EmbeddedRKErrorEstimator {
     /// Norm type for error computation
     norm_type: ErrorNorm,
 }
 
 /// Error norm types
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum ErrorNorm {
     /// L-infinity norm (maximum)
     LInfinity,

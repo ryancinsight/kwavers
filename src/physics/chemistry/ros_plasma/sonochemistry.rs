@@ -11,7 +11,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Sonochemical yield parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SonochemicalYield {
     /// OH radical yield per collapse (molecules)
     pub oh_yield: f64,
@@ -24,7 +24,7 @@ pub struct SonochemicalYield {
 }
 
 /// Integrated sonochemistry model
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct SonochemistryModel {
     /// ROS concentration fields
     pub ros_concentrations: ROSConcentrations,
@@ -124,7 +124,7 @@ impl SonochemistryModel {
                     // Simple thermal dissociation
                     for (species, rate) in generation_rates {
                         if let Some(conc) = self.ros_concentrations.get_mut(species) {
-                            conc[[i, j, k]] += rate * dt;
+                            conc[[i, j, k] += rate * dt;
                         }
                     }
                 }
@@ -165,7 +165,7 @@ impl SonochemistryModel {
                 let transferred_amount = bubble_conc * bubble_volume * transfer_fraction;
                 let liquid_concentration = transferred_amount / shell_volume;
 
-                liquid_conc[[i, j, k]] += liquid_concentration;
+                liquid_conc[[i, j, k] += liquid_concentration;
             }
         }
     }
@@ -179,11 +179,11 @@ impl SonochemistryModel {
                     // Get local concentrations
                     let mut local_conc = HashMap::new();
                     for (species, field) in &self.ros_concentrations.fields {
-                        local_conc.insert(*species, field[[i, j, k]]);
+                        local_conc.insert(*species, field[[i, j, k]);
                     }
 
                     // Update kinetics solver conditions
-                    self.radical_kinetics.ph = self.ph_field[[i, j, k]];
+                    self.radical_kinetics.ph = self.ph_field[[i, j, k];
 
                     // Calculate reaction rates
                     let rate_changes = self.radical_kinetics.calculate_rates(&local_conc);
@@ -191,7 +191,7 @@ impl SonochemistryModel {
                     // Apply changes
                     for (species, rate) in rate_changes {
                         if let Some(field) = self.ros_concentrations.get_mut(species) {
-                            field[[i, j, k]] = (field[[i, j, k]] + rate * dt).max(0.0);
+                            field[[i, j, k] = (field[[i, j, k] + rate * dt).max(0.0);
                         }
                     }
                 }
@@ -253,10 +253,10 @@ impl SonochemistryModel {
         ) {
             for ((i, j, k), ph) in self.ph_field.indexed_iter_mut() {
                 // H2O2 is weakly acidic
-                let h2o2_effect = -0.1 * h2o2[[i, j, k]] / 1e-3; // pH change per mM
+                let h2o2_effect = -0.1 * h2o2[[i, j, k] / 1e-3; // pH change per mM
 
                 // OH consumes H+ (increases pH)
-                let oh_effect = 0.5 * oh[[i, j, k]] / 1e-6; // pH change per μM
+                let oh_effect = 0.5 * oh[[i, j, k] / 1e-6; // pH change per μM
 
                 *ph = (*ph + (h2o2_effect + oh_effect) * dt).clamp(2.0, 12.0);
             }
@@ -265,7 +265,7 @@ impl SonochemistryModel {
 }
 
 /// Bubble state for sonochemistry calculations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BubbleState {
     pub radius: f64,
     pub temperature: f64,
@@ -312,7 +312,7 @@ mod tests {
         );
 
         // Set one bubble to collapsing with high temperature
-        bubble_states[[5, 5, 5]] = BubbleState {
+        bubble_states[[5, 5, 5] = BubbleState {
             radius: 0.5e-6,
             temperature: 5000.0,
             pressure_internal: 1e9,
@@ -325,7 +325,7 @@ mod tests {
         model.update_ros_generation(&bubble_states, 1e-9, (1e-4, 1e-4, 1e-4));
 
         // Check that ROS was generated
-        assert!(model.ros_concentrations.total_ros[[5, 5, 5]] > 0.0);
+        assert!(model.ros_concentrations.total_ros[[5, 5, 5] > 0.0);
 
         // Check yields
         let yields = model.total_yield();
@@ -341,13 +341,13 @@ mod tests {
             .ros_concentrations
             .get_mut(ROSSpecies::HydrogenPeroxide)
         {
-            h2o2[[1, 1, 1]] = 1e-3; // 1 mM
+            h2o2[[1, 1, 1] = 1e-3; // 1 mM
         }
 
         // Update pH
-        let initial_ph = model.ph_field[[1, 1, 1]];
+        let initial_ph = model.ph_field[[1, 1, 1];
         model.update_ph(1.0);
-        let final_ph = model.ph_field[[1, 1, 1]];
+        let final_ph = model.ph_field[[1, 1, 1];
 
         assert!(final_ph < initial_ph); // Should become more acidic
     }

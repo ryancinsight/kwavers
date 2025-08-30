@@ -16,7 +16,7 @@ use crate::constants::optical::{
 use crate::physics::traits::LightDiffusionModelTrait;
 use std::time::Instant;
 
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     pub emission_spectrum: Array3<f64>,
@@ -114,22 +114,22 @@ impl LightDiffusionModelTrait for LightDiffusion {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let center_val = light_field[[i, j, k]];
+                    let center_val = light_field[[i, j, k];
 
                     // Source term from sonoluminescence
-                    let source_term = self.emission_spectrum[[i, j, k]];
+                    let source_term = self.emission_spectrum[[i, j, k];
 
-                    let laplacian_phi = (light_field[[i + 1, j, k]]
+                    let laplacian_phi = (light_field[[i + 1, j, k]
                         + LAPLACIAN_CENTER_COEFF * center_val
-                        + light_field[[i - 1, j, k]])
+                        + light_field[[i - 1, j, k])
                         * dx2_inv
-                        + (light_field[[i, j + 1, k]]
+                        + (light_field[[i, j + 1, k]
                             + LAPLACIAN_CENTER_COEFF * center_val
-                            + light_field[[i, j - 1, k]])
+                            + light_field[[i, j - 1, k])
                             * dy2_inv
-                        + (light_field[[i, j, k + 1]]
+                        + (light_field[[i, j, k + 1]
                             + LAPLACIAN_CENTER_COEFF * center_val
-                            + light_field[[i, j, k - 1]])
+                            + light_field[[i, j, k - 1])
                             * dz2_inv;
 
                     // Update using diffusion equation: ∂φ/∂t = D∇²φ - μₐφ + S
@@ -139,7 +139,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
                             + source_term);
 
                     // Ensure non-negative values (physical constraint)
-                    updated_field[[i, j, k]] = update.max(0.0);
+                    updated_field[[i, j, k] = update.max(0.0);
                 }
             }
         }

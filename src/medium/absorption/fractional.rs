@@ -7,7 +7,7 @@ use num_complex::Complex;
 ///
 /// Implements the fractional wave equation:
 /// ∂²p/∂t² = c² ∇²p - τ ∂^(y+1)/∂t^(y+1) ∇²p
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FractionalLaplacian {
     /// Power law exponent
     y: f64,
@@ -55,6 +55,7 @@ impl FractionalLaplacian {
 }
 
 /// Fractional derivative calculator
+#[derive(Debug))]
 pub struct FractionalDerivative {
     /// Fractional order
     order: f64,

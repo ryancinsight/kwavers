@@ -12,7 +12,7 @@ use crate::KwaversResult;
 use ndarray::Array3;
 
 /// Heterogeneous media handler
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct HeterogeneousHandler {
     config: HeterogeneousConfig,
     grid: Grid,

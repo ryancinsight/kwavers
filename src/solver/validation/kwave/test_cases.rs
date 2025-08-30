@@ -3,7 +3,7 @@
 //! Standard test cases for validation against k-Wave toolbox
 
 /// k-Wave validation test case
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct KWaveTestCase {
     /// Test case name
     pub name: String,
@@ -16,7 +16,7 @@ pub struct KWaveTestCase {
 }
 
 /// Source of reference solution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum ReferenceSource {
     /// Analytical solution
     Analytical,

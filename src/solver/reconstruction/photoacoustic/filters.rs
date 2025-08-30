@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use super::config::PhotoacousticConfig;
 
 /// Filter operations for photoacoustic reconstruction
+#[derive(Debug))]
 pub struct Filters {
     filter_type: FilterType,
 }
@@ -44,7 +45,7 @@ impl Filters {
             )?;
 
             for (i, val) in filtered_signal.iter().enumerate() {
-                filtered[[i, sensor_idx]] = *val;
+                filtered[[i, sensor_idx] = *val;
             }
         }
 
@@ -105,7 +106,7 @@ impl Filters {
             let analytic = self.hilbert_transform_1d(signal.to_owned())?;
 
             for (i, val) in analytic.iter().enumerate() {
-                envelope[[i, sensor_idx]] = val.norm();
+                envelope[[i, sensor_idx] = val.norm();
             }
         }
 
@@ -294,13 +295,13 @@ impl Filters {
                     for ki in 0..kernel.len() {
                         let ii = (i as i32 + ki as i32 - KERNEL_RADIUS as i32) as usize;
                         if ii < nx {
-                            sum += image[[ii, j, k]] * kernel[ki];
+                            sum += image[[ii, j, k] * kernel[ki];
                             weight_sum += kernel[ki];
                         }
                     }
 
                     if weight_sum > 0.0 {
-                        temp1[[i, j, k]] = sum / weight_sum;
+                        temp1[[i, j, k] = sum / weight_sum;
                     }
                 }
             }
@@ -317,13 +318,13 @@ impl Filters {
                     for kj in 0..kernel.len() {
                         let jj = (j as i32 + kj as i32 - KERNEL_RADIUS as i32) as usize;
                         if jj < ny {
-                            sum += temp1[[i, jj, k]] * kernel[kj];
+                            sum += temp1[[i, jj, k] * kernel[kj];
                             weight_sum += kernel[kj];
                         }
                     }
 
                     if weight_sum > 0.0 {
-                        temp2[[i, j, k]] = sum / weight_sum;
+                        temp2[[i, j, k] = sum / weight_sum;
                     }
                 }
             }
@@ -339,13 +340,13 @@ impl Filters {
                     for kk in 0..kernel.len() {
                         let zz = (k as i32 + kk as i32 - KERNEL_RADIUS as i32) as usize;
                         if zz < nz {
-                            sum += temp2[[i, j, zz]] * kernel[kk];
+                            sum += temp2[[i, j, zz] * kernel[kk];
                             weight_sum += kernel[kk];
                         }
                     }
 
                     if weight_sum > 0.0 {
-                        filtered[[i, j, k]] = sum / weight_sum;
+                        filtered[[i, j, k] = sum / weight_sum;
                     }
                 }
             }
@@ -399,7 +400,7 @@ impl Filters {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let center_val = image[[i, j, k]];
+                    let center_val = image[[i, j, k];
                     let mut sum = 0.0;
                     let mut weight_sum = 0.0;
 
@@ -412,7 +413,7 @@ impl Filters {
                                 let kk = (k as i32 + dk) as usize;
 
                                 if ii < nx && jj < ny && kk < nz {
-                                    let neighbor_val = image[[ii, jj, kk]];
+                                    let neighbor_val = image[[ii, jj, kk];
 
                                     // Spatial weight
                                     let spatial_dist2 = (di * di + dj * dj + dk * dk) as f64;
@@ -435,7 +436,7 @@ impl Filters {
                     }
 
                     if weight_sum > 0.0 {
-                        filtered[[i, j, k]] = sum / weight_sum;
+                        filtered[[i, j, k] = sum / weight_sum;
                     }
                 }
             }

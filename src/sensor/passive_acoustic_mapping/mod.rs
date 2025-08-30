@@ -27,6 +27,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Main PAM interface
+#[derive(Debug))]
 pub struct PassiveAcousticMapper {
     processor: PAMProcessor,
     beamformer: Beamformer,

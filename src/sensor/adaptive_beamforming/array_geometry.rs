@@ -9,6 +9,7 @@ pub struct ElementPosition {
 }
 
 /// Array geometry configuration
+#[derive(Debug))]
 pub struct ArrayGeometry {
     pub elements: Vec<ElementPosition>,
     pub reference_element: usize,

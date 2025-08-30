@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use std::collections::HashMap;
 
 /// Configuration for the control panel
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ControlPanelConfig {
     pub title: String,
     pub width: f32,
@@ -30,6 +30,7 @@ impl Default for ControlPanelConfig {
 }
 
 /// Control panel UI component
+#[derive(Debug))]
 pub struct ControlPanel {
     config: ControlPanelConfig,
     controls: InteractiveControls,

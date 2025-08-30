@@ -15,7 +15,7 @@ use super::time_reversal::TimeReversal;
 use super::utils::Utils;
 
 /// Photoacoustic reconstruction algorithms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum PhotoacousticAlgorithm {
     /// Universal back-projection
     UniversalBackProjection,
@@ -36,6 +36,7 @@ pub enum PhotoacousticAlgorithm {
 }
 
 /// Main photoacoustic reconstructor
+#[derive(Debug))]
 pub struct PhotoacousticReconstructor {
     pub(crate) config: PhotoacousticConfig,
     filters: Filters,
@@ -62,7 +63,7 @@ impl PhotoacousticReconstructor {
     pub fn universal_back_projection(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid_size: [usize; 3],
         sound_speed: f64,
         sampling_frequency: f64,
@@ -114,7 +115,7 @@ impl PhotoacousticReconstructor {
 
                         if time_idx < n_samples {
                             // Get sensor data at this time
-                            let sensor_value = processed_data[[time_idx, sensor_idx]];
+                            let sensor_value = processed_data[[time_idx, sensor_idx];
 
                             // Apply spherical spreading compensation
                             let weight = self.utils.calculate_back_projection_weight(
@@ -127,7 +128,7 @@ impl PhotoacousticReconstructor {
                         }
                     }
 
-                    reconstruction[[i, j, k]] = value / n_sensors as f64;
+                    reconstruction[[i, j, k] = value / n_sensors as f64;
                 }
             }
         }
@@ -144,7 +145,7 @@ impl PhotoacousticReconstructor {
     pub fn filtered_back_projection(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         // Apply FBP filter
         let filtered_data = self.filters.apply_fbp_filter(&sensor_data.to_owned())?;
@@ -163,7 +164,7 @@ impl PhotoacousticReconstructor {
     pub fn time_reversal_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &crate::grid::Grid,
     ) -> KwaversResult<Array3<f64>> {
         // Use proper k-space time reversal implementation
@@ -181,7 +182,7 @@ impl PhotoacousticReconstructor {
     pub fn fourier_domain_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         let fourier = FourierReconstructor::new(
             self.config.grid_size,
@@ -196,7 +197,7 @@ impl PhotoacousticReconstructor {
     pub fn iterative_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid_size: [usize; 3],
     ) -> KwaversResult<Array3<f64>> {
         self.iterative
@@ -207,7 +208,7 @@ impl PhotoacousticReconstructor {
     pub fn model_based_reconstruction(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         // Build forward model
         let forward_model = self.utils.build_forward_model(
@@ -247,7 +248,7 @@ impl PhotoacousticReconstructor {
             let j = (idx / nz) % ny;
             let i = idx / (ny * nz);
             if i < nx && j < ny && k < nz {
-                reconstruction[[i, j, k]] = *val;
+                reconstruction[[i, j, k] = *val;
             }
         }
 

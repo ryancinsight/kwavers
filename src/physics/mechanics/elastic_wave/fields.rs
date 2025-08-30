@@ -11,7 +11,7 @@ pub type Complex3D = Array3<Complex<f64>>;
 
 /// Stress field components in 3D elastic media
 /// Follows SOLID principles with single responsibility
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct StressFields {
     /// Normal stress components (real values for time-domain)
     pub txx: Array3<f64>,
@@ -24,7 +24,7 @@ pub struct StressFields {
 }
 
 /// Velocity field components in 3D elastic media
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct VelocityFields {
     pub vx: Array3<f64>,
     pub vy: Array3<f64>,

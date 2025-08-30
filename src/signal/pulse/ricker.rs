@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 /// Second derivative of Gaussian function
 ///
 /// Reference: Ricker, N. (1953). "The form and laws of propagation of seismic wavelets"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RickerWavelet {
     peak_frequency: f64,
     peak_time: f64,

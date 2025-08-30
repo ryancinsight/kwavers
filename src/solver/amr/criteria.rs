@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Refinement criterion types
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum RefinementCriterion {
     /// Gradient-based criterion
     Gradient,
@@ -19,10 +19,17 @@ pub enum RefinementCriterion {
 }
 
 /// Error estimator for adaptive refinement
+#[derive(Debug))]
 pub struct ErrorEstimator {
     criterion: RefinementCriterion,
     /// Smoothing parameter for noise reduction
     smoothing: f64,
+}
+
+impl Default for ErrorEstimator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ErrorEstimator {
@@ -54,11 +61,11 @@ impl ErrorEstimator {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let dx = field[[i + 1, j, k]] - field[[i - 1, j, k]];
-                    let dy = field[[i, j + 1, k]] - field[[i, j - 1, k]];
-                    let dz = field[[i, j, k + 1]] - field[[i, j, k - 1]];
+                    let dx = field[[i + 1, j, k] - field[[i - 1, j, k];
+                    let dy = field[[i, j + 1, k] - field[[i, j - 1, k];
+                    let dz = field[[i, j, k + 1] - field[[i, j, k - 1];
 
-                    error[[i, j, k]] = (dx * dx + dy * dy + dz * dz).sqrt();
+                    error[[i, j, k] = (dx * dx + dy * dy + dz * dz).sqrt();
                 }
             }
         }
@@ -80,11 +87,11 @@ impl ErrorEstimator {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let d2x = field[[i + 1, j, k]] - 2.0 * field[[i, j, k]] + field[[i - 1, j, k]];
-                    let d2y = field[[i, j + 1, k]] - 2.0 * field[[i, j, k]] + field[[i, j - 1, k]];
-                    let d2z = field[[i, j, k + 1]] - 2.0 * field[[i, j, k]] + field[[i, j, k - 1]];
+                    let d2x = field[[i + 1, j, k] - 2.0 * field[[i, j, k] + field[[i - 1, j, k];
+                    let d2y = field[[i, j + 1, k] - 2.0 * field[[i, j, k] + field[[i, j - 1, k];
+                    let d2z = field[[i, j, k + 1] - 2.0 * field[[i, j, k] + field[[i, j, k - 1];
 
-                    error[[i, j, k]] = (d2x.abs() + d2y.abs() + d2z.abs()) / 3.0;
+                    error[[i, j, k] = (d2x.abs() + d2y.abs() + d2z.abs()) / 3.0;
                 }
             }
         }
@@ -135,13 +142,13 @@ impl ErrorEstimator {
                                 let jj = (j as isize + dj) as usize;
                                 let kk = (k as isize + dk) as usize;
 
-                                sum += smooth[[ii, jj, kk]];
+                                sum += smooth[[ii, jj, kk];
                                 count += 1;
                             }
                         }
                     }
 
-                    field[[i, j, k]] = (1.0 - self.smoothing) * field[[i, j, k]]
+                    field[[i, j, k] = (1.0 - self.smoothing) * field[[i, j, k]
                         + self.smoothing * (sum / count as f64);
                 }
             }

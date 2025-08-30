@@ -21,7 +21,7 @@ use ndarray::{Array1, Array2, Array3};
 use std::collections::HashMap;
 
 /// Configuration for sensor setup
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SensorConfig {
     pub positions: Vec<(f64, f64, f64)>, // Positions in meters
     pub record_pressure: bool,
@@ -59,7 +59,7 @@ impl Default for SensorConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct Sensor {
     positions: Vec<(usize, usize, usize)>, // Grid indices
     pressure_data: Array2<f64>,            // Pressure time series
@@ -68,7 +68,7 @@ pub struct Sensor {
 }
 
 /// Sensor data collection for time-reversal reconstruction
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SensorData {
     /// Map from sensor ID to recorded data
     data: HashMap<usize, Vec<f64>>,
@@ -77,7 +77,7 @@ pub struct SensorData {
 }
 
 /// Information about a single sensor
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SensorInfo {
     /// Sensor ID
     id: usize,
@@ -146,6 +146,7 @@ impl Default for SensorData {
 }
 
 /// Iterator adapter for sensor data processing
+#[derive(Debug))]
 pub struct SensorDataIterator<'a> {
     data: &'a SensorData,
     sensors: Vec<&'a SensorInfo>,
@@ -269,7 +270,7 @@ impl SensorData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SensorStatistics {
     pub mean: f64,
     pub variance: f64,
@@ -325,7 +326,7 @@ impl Sensor {
     pub fn sample(&self, field: &Array3<f64>) -> Vec<f64> {
         self.positions
             .iter()
-            .map(|&(i, j, k)| field[[i, j, k]])
+            .map(|&(i, j, k)| field[[i, j, k])
             .collect()
     }
 
@@ -384,8 +385,8 @@ impl Sensor {
     ) {
         debug!("Recording sensor data at step {}", time_step);
         for (i, &(ix, iy, iz)) in self.positions.iter().enumerate() {
-            self.pressure_data[[i, time_step]] = pressure_field[[ix, iy, iz]];
-            self.light_data[[i, time_step]] = light_field[[ix, iy, iz]];
+            self.pressure_data[[i, time_step] = pressure_field[[ix, iy, iz];
+            self.light_data[[i, time_step] = light_field[[ix, iy, iz];
         }
     }
 

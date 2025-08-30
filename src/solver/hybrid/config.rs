@@ -6,7 +6,7 @@ use crate::solver::pstd::PstdConfig;
 use serde::{Deserialize, Serialize};
 
 /// Domain decomposition strategy
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize))]
 pub enum DecompositionStrategy {
     /// Static decomposition based on initial conditions
     Static,
@@ -81,7 +81,7 @@ impl Default for CouplingInterfaceConfig {
 }
 
 /// Interpolation scheme for coupling interfaces
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize))]
 pub enum InterpolationScheme {
     /// Linear interpolation
     Linear,

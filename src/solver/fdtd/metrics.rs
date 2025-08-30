@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 /// Dedicated struct for FDTD performance metrics
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone))]
 pub struct FdtdMetrics {
     /// Time spent updating pressure field
     pub update_pressure_time: Duration,

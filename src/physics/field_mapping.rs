@@ -9,7 +9,7 @@ use std::fmt;
 
 /// Unified field type enum that maps directly to field indices
 /// Uses repr(usize) for O(1) array indexing instead of HashMap lookups
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 #[repr(usize)]
 pub enum UnifiedFieldType {
     Pressure = 0,
@@ -163,6 +163,7 @@ impl fmt::Display for UnifiedFieldType {
 }
 
 /// Type-safe field accessor to prevent index confusion
+#[derive(Debug))]
 pub struct FieldAccessor<'a> {
     fields: &'a ndarray::Array4<f64>,
 }
@@ -194,6 +195,7 @@ impl<'a> FieldAccessor<'a> {
 }
 
 /// Type-safe mutable field accessor
+#[derive(Debug))]
 pub struct FieldAccessorMut<'a> {
     fields: &'a mut ndarray::Array4<f64>,
 }

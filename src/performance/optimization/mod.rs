@@ -6,6 +6,7 @@ pub mod gpu;
 pub mod memory;
 pub mod parallel;
 pub mod simd;
+pub mod simd_stencil;
 
 pub use cache::{AccessPattern, CacheOptimizer};
 pub use config::{OptimizationConfig, SimdLevel};
@@ -17,7 +18,7 @@ pub use simd::SimdOptimizer;
 use crate::error::KwaversResult;
 
 /// Stencil kernel for finite difference computations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StencilKernel {
     /// Stencil coefficients
     pub coefficients: Vec<f64>,
@@ -55,6 +56,7 @@ impl StencilKernel {
 }
 
 /// Main optimization orchestrator
+#[derive(Debug))]
 pub struct PerformanceOptimizer {
     config: OptimizationConfig,
     simd: SimdOptimizer,

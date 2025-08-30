@@ -6,6 +6,7 @@
 use ndarray::Array3;
 
 /// Lazy field iterator that applies transformations on demand
+#[derive(Debug))]
 pub struct LazyFieldIterator<'a, T, F, U> {
     field: &'a Array3<T>,
     transform: F,
@@ -45,7 +46,7 @@ where
         let j = (self.index / shape.2) % shape.1;
         let i = self.index / (shape.1 * shape.2);
 
-        let value = (self.transform)(&self.field[[i, j, k]]);
+        let value = (self.transform)(&self.field[[i, j, k]);
         self.index += 1;
 
         Some(((i, j, k), value))
@@ -67,6 +68,7 @@ where
 }
 
 /// Chunked lazy iterator for processing fields in chunks
+#[derive(Debug))]
 pub struct ChunkedFieldIterator<'a, T> {
     field: &'a Array3<T>,
     chunk_size: usize,
@@ -108,7 +110,7 @@ impl<'a, T> Iterator for ChunkedFieldIterator<'a, T> {
             let j = (linear_idx / shape.2) % shape.1;
             let i = linear_idx / (shape.1 * shape.2);
 
-            chunk.push(((i, j, k), &self.field[[i, j, k]]));
+            chunk.push(((i, j, k), &self.field[[i, j, k]));
         }
 
         self.current_chunk += 1;

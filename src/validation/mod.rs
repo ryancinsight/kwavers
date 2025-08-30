@@ -4,7 +4,7 @@
 pub use crate::solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};
 
 /// Validation result struct (legacy compatibility)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
@@ -64,7 +64,7 @@ mod constants {
 }
 
 /// Physics validation results (extends ValidationReport)
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct PhysicsValidation {
     pub test_name: String,
     pub passed: bool,
@@ -161,7 +161,7 @@ pub fn validate_all(
     let mut reports = Vec::new();
 
     // CFL validation
-    let c_max = crate::medium::core::max_sound_speed(medium, grid);
+    let c_max = crate::medium::core::max_sound_speed_pointwise(medium, grid);
     reports.push(validate_cfl_condition(grid, dt, c_max));
 
     // Dispersion validation

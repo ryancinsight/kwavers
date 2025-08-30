@@ -31,6 +31,7 @@ use crate::grid::Grid;
 use ndarray::Array4;
 
 /// Main CPML boundary struct that coordinates all components
+#[derive(Debug)]
 pub struct CPMLBoundary {
     config: CPMLConfig,
     profiles: CPMLProfiles,

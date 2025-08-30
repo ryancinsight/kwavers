@@ -8,6 +8,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
+#[derive(Debug))]
 pub struct MultiBowlArray {
     /// Individual bowl transducers
     pub(crate) bowls: Vec<BowlTransducer>,
@@ -107,7 +108,7 @@ impl MultiBowlArray {
 }
 
 /// Apodization types for multi-element arrays
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum ApodizationType {
     /// Uniform weighting (no apodization)
     Uniform,

@@ -10,7 +10,7 @@ use ndarray::{Array3, Zip};
 use std::collections::VecDeque;
 
 /// Configuration for Runge-Kutta 4 method
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RK4Config {
     /// Stability safety factor
     pub safety_factor: f64,
@@ -38,7 +38,7 @@ impl TimeStepperConfig for RK4Config {
 }
 
 /// 4th-order Runge-Kutta time stepper
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct RungeKutta4 {
     config: RK4Config,
     /// Temporary storage for intermediate stages
@@ -137,7 +137,7 @@ impl TimeStepper for RungeKutta4 {
 }
 
 /// Configuration for Adams-Bashforth methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AdamsBashforthConfig {
     /// Order of the method (2 or 3)
     pub order: usize,
@@ -192,7 +192,7 @@ impl TimeStepperConfig for AdamsBashforthConfig {
 /// historical fields, which can consume several gigabytes of RAM for a
 /// high-resolution 3D grid (e.g., 512^3). Consider using a single-step
 /// method like `RungeKutta4` if memory is a concern.
-#[derive(Debug)]
+#[derive(Debug, Debug))]
 pub struct AdamsBashforth {
     config: AdamsBashforthConfig,
     /// History of previous RHS evaluations

@@ -4,7 +4,7 @@ use ndarray::Array1;
 use num_complex::Complex64;
 
 /// Weighting scheme for beamforming
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum WeightingScheme {
     Uniform,
     Hamming,
@@ -12,6 +12,7 @@ pub enum WeightingScheme {
 }
 
 /// Weight calculator
+#[derive(Debug))]
 pub struct WeightCalculator {
     scheme: WeightingScheme,
 }

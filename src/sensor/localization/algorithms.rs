@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 
 /// Localization method
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize))]
 pub enum LocalizationMethod {
     TDOA,        // Time Difference of Arrival
     TOA,         // Time of Arrival
@@ -38,6 +38,7 @@ pub trait LocalizationAlgorithm {
 }
 
 /// Main algorithm processor
+#[derive(Debug))]
 pub struct LocalizationProcessor {
     method: LocalizationMethod,
 }

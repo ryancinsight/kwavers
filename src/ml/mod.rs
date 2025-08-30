@@ -45,7 +45,7 @@ mod tests {
         let field = Array3::from_shape_vec((2, 2, 1), vec![0.1, 0.2, 0.8, 0.9]).unwrap();
 
         // Create a simple classifier model
-        let weights = array![[1.0_f32, -1.0_f32]];
+        let weights = array![[1.0_f32, -1.0_f32];
         let model = TissueClassifierModel::from_weights(weights, None);
 
         // Create engine and register model
@@ -72,7 +72,7 @@ mod tests {
         let field = Array3::from_shape_vec((2, 2, 1), vec![0.1, 0.2, 0.8, 0.9]).unwrap();
 
         // Build classifier with identity-like weights
-        let weights = array![[5.0_f32, -5.0_f32]];
+        let weights = array![[5.0_f32, -5.0_f32];
         let model = TissueClassifierModel::from_weights(weights, None);
 
         // Create engine and register model
@@ -105,7 +105,7 @@ mod tests {
         use models::ConvergencePredictorModel;
 
         // Binary classifier with 2 outputs for softmax
-        let weights = array![[-10.0_f32, 10.0_f32]];
+        let weights = array![[-10.0_f32, 10.0_f32];
         let bias = Some(array![5.0_f32, -5.0_f32]);
         let model = ConvergencePredictorModel::from_weights(weights, bias);
 
@@ -115,7 +115,7 @@ mod tests {
             Model::ConvergencePredictor(model),
         );
 
-        let features: Array2<f32> = array![[0.0], [1.0]];
+        let features: Array2<f32> = array![[0.0], [1.0];
         let probs = engine.predict_outcome(&features).unwrap();
         assert_eq!(probs.len(), 2);
 
@@ -138,7 +138,7 @@ mod tests {
 
         // Create a simple optimizer model
         // Create a model with 1 input and 3 outputs
-        let weights = array![[0.5_f32, 0.3_f32, -0.2_f32]];
+        let weights = array![[0.5_f32, 0.3_f32, -0.2_f32];
         let model = ParameterOptimizerModel::from_weights(weights, None);
 
         let mut engine = MLEngine::new(MLBackend::Native).unwrap();
@@ -147,7 +147,7 @@ mod tests {
             Model::ParameterOptimizer(model),
         );
 
-        let state = array![[1.0_f32]];
+        let state = array![[1.0_f32];
         let params = engine.optimize_parameters(&state).unwrap();
         assert_eq!(params.len(), 3); // Should return 3 parameters
     }
@@ -157,7 +157,7 @@ mod tests {
         use models::AnomalyDetectorModel;
 
         // Create anomaly detector
-        let weights = array![[2.0_f32]];
+        let weights = array![[2.0_f32];
         let bias = Some(array![-1.0_f32]);
         let model = AnomalyDetectorModel::from_weights(weights, bias);
 

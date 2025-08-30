@@ -3,7 +3,7 @@
 use crate::physics::sonoluminescence_detector::SonoluminescenceEvent;
 
 /// Event representing cavitation activity
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CavitationEvent {
     pub time_step: usize,
     pub time: f64,
@@ -13,7 +13,7 @@ pub struct CavitationEvent {
 }
 
 /// Event representing significant thermal activity
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ThermalEvent {
     pub time_step: usize,
     pub time: f64,

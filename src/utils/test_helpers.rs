@@ -47,7 +47,7 @@ pub fn create_test_field(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
                 let x = i as f64 / nx as f64;
                 let y = j as f64 / ny as f64;
                 let z = k as f64 / nz as f64;
-                field[[i, j, k]] = (x * x + y * y + z * z).sqrt();
+                field[[i, j, k] = (x * x + y * y + z * z).sqrt();
             }
         }
     }

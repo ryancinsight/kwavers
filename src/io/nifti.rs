@@ -11,6 +11,7 @@ use std::path::Path;
 pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject, ReaderOptions};
 
 /// NIFTI file reader with proper endianness and format handling
+#[derive(Debug))]
 pub struct NiftiReader {
     /// Enable verbose logging
     verbose: bool,
@@ -82,7 +83,7 @@ impl NiftiReader {
                 let raw_data = volume.into_raw_data();
                 let float_data: Vec<f32> = raw_data
                     .chunks_exact(4)
-                    .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .map(|chunk| f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]))
                     .collect();
 
                 // Copy data into array
@@ -91,7 +92,7 @@ impl NiftiReader {
                         for i in 0..nx {
                             let idx = i + j * nx + k * nx * ny;
                             if idx < float_data.len() {
-                                array_3d[[i, j, k]] = float_data[idx] as f64;
+                                array_3d[[i, j, k] = float_data[idx] as f64;
                             }
                         }
                     }
@@ -118,7 +119,7 @@ impl NiftiReader {
                         for i in 0..nx {
                             let idx = i + j * nx + k * nx * ny;
                             if idx < float_data.len() {
-                                array_3d[[i, j, k]] = float_data[idx];
+                                array_3d[[i, j, k] = float_data[idx];
                             }
                         }
                     }
@@ -221,7 +222,7 @@ impl NiftiReader {
 }
 
 /// Basic information about a NIFTI file
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct NiftiInfo {
     /// Dimensions of the volume [x, y, z]
     pub dimensions: [usize; 3],

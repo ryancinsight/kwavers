@@ -43,7 +43,7 @@ const EXTREME_PRESSURE_THRESHOLD: f64 = 100e6; // 100 MPa
 const DEFAULT_REACTION_RATE: f64 = 1e-3; // Default rate constant
 
 /// State of the chemical model
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq))]
 pub enum ChemicalModelState {
     Initialized,
     Ready,
@@ -59,7 +59,7 @@ pub enum ChemicalModelState {
 /// - CUPID: Composable sub-models, predictable behavior
 /// - GRASP: Information expert pattern for validation
 /// - SSOT: Single source of truth for chemical state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ChemicalModel {
     radical_initiation: RadicalInitiation,
     kinetics: Option<ReactionKinetics>,

@@ -7,6 +7,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2, ArrayView1};
 
 /// Linear algebra solver with various regularization methods
+#[derive(Debug))]
 pub struct LinearSolver {
     max_iterations: usize,
     tolerance: f64,
@@ -123,7 +124,7 @@ impl LinearSolver {
             x = self.tv_proximal(&x_grad, lambda * step_size, shape)?;
 
             // Check convergence
-            let residual = a.dot(&x) - &b;
+            let residual = a.dot(&x) - b;
             if residual.dot(&residual).sqrt() < self.tolerance {
                 break;
             }
@@ -230,7 +231,7 @@ impl LinearSolver {
             t = t_next;
 
             // Check convergence
-            let residual = a.dot(&x) - &b;
+            let residual = a.dot(&x) - b;
             if residual.dot(&residual).sqrt() < self.tolerance {
                 break;
             }
@@ -312,7 +313,7 @@ impl LinearSolver {
 
             // Store in V
             for j in 0..n {
-                v[[j, i]] = vi[j];
+                v[[j, i] = vi[j];
             }
         }
 
@@ -323,7 +324,7 @@ impl LinearSolver {
                 let vi = v.column(i);
                 let ui = a.dot(&vi) / s[i];
                 for j in 0..m {
-                    u[[j, i]] = ui[j];
+                    u[[j, i] = ui[j];
                 }
             }
         }

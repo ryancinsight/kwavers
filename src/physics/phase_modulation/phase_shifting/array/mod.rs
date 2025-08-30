@@ -13,6 +13,7 @@ use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;
 use crate::physics::phase_modulation::phase_shifting::shifter::PhaseShifter;
 
 /// Phased array system
+#[derive(Debug))]
 pub struct PhaseArray {
     /// Array element positions
     element_positions: Array2<f64>,
@@ -46,7 +47,7 @@ impl PhaseArray {
     pub fn configure_linear(num_elements: usize, spacing: f64, frequency: f64) -> Self {
         let mut positions = Array2::zeros((num_elements, 3));
         for i in 0..num_elements {
-            positions[[i, 0]] = i as f64 * spacing - (num_elements - 1) as f64 * spacing / 2.0;
+            positions[[i, 0] = i as f64 * spacing - (num_elements - 1) as f64 * spacing / 2.0;
         }
         Self::new(positions, frequency)
     }
@@ -59,8 +60,8 @@ impl PhaseArray {
         let mut idx = 0;
         for j in 0..ny {
             for i in 0..nx {
-                positions[[idx, 0]] = i as f64 * dx - (nx - 1) as f64 * dx / 2.0;
-                positions[[idx, 1]] = j as f64 * dy - (ny - 1) as f64 * dy / 2.0;
+                positions[[idx, 0] = i as f64 * dx - (nx - 1) as f64 * dx / 2.0;
+                positions[[idx, 1] = j as f64 * dy - (ny - 1) as f64 * dy / 2.0;
                 idx += 1;
             }
         }
@@ -83,8 +84,8 @@ impl PhaseArray {
             let radius = (ring + 1) as f64 * ring_spacing;
             for elem in 0..elements_per_ring {
                 let angle = 2.0 * PI * elem as f64 / elements_per_ring as f64;
-                positions[[idx, 0]] = radius * angle.cos();
-                positions[[idx, 1]] = radius * angle.sin();
+                positions[[idx, 0] = radius * angle.cos();
+                positions[[idx, 1] = radius * angle.sin();
                 idx += 1;
             }
         }
@@ -204,7 +205,7 @@ impl PhaseArray {
 }
 
 /// Performance metrics for phased array
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PerformanceMetrics {
     /// Element spacing to wavelength ratio
     pub element_spacing_ratio: f64,

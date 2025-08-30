@@ -12,7 +12,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// Seismic imaging method types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SeismicMethod {
     /// Full waveform inversion
     FullWaveformInversion,
@@ -23,7 +23,7 @@ pub enum SeismicMethod {
 }
 
 /// Seismic imaging configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SeismicConfig {
     /// Imaging method
     pub method: SeismicMethod,
@@ -74,15 +74,15 @@ pub fn apply_laplacian_filter(image: &Array3<f64>, grid: &Grid) -> Array3<f64> {
     for i in 1..nx - 1 {
         for j in 1..ny - 1 {
             for k in 1..nz - 1 {
-                let laplacian = (image[[i + 1, j, k]] - 2.0 * image[[i, j, k]]
-                    + image[[i - 1, j, k]])
+                let laplacian = (image[[i + 1, j, k] - 2.0 * image[[i, j, k]
+                    + image[[i - 1, j, k])
                     / (grid.dx * grid.dx)
-                    + (image[[i, j + 1, k]] - 2.0 * image[[i, j, k]] + image[[i, j - 1, k]])
+                    + (image[[i, j + 1, k] - 2.0 * image[[i, j, k] + image[[i, j - 1, k])
                         / (grid.dy * grid.dy)
-                    + (image[[i, j, k + 1]] - 2.0 * image[[i, j, k]] + image[[i, j, k - 1]])
+                    + (image[[i, j, k + 1] - 2.0 * image[[i, j, k] + image[[i, j, k - 1])
                         / (grid.dz * grid.dz);
 
-                filtered[[i, j, k]] = -laplacian; // Negative for sharpening
+                filtered[[i, j, k] = -laplacian; // Negative for sharpening
             }
         }
     }

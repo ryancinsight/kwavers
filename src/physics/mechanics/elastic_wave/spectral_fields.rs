@@ -7,7 +7,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 
 /// Complex-valued stress field components for spectral methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SpectralStressFields {
     /// Normal stress components in frequency domain
     pub txx: Array3<Complex<f64>>,
@@ -70,7 +70,7 @@ impl SpectralStressFields {
 }
 
 /// Complex-valued velocity field components for spectral methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SpectralVelocityFields {
     /// Velocity components in frequency domain
     pub vx: Array3<Complex<f64>>,
