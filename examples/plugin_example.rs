@@ -6,11 +6,15 @@
 //! 3. Adapt existing components as plugins
 
 use kwavers::{
-    physics::{PhysicsPlugin, PluginContext, PluginManager, PluginMetadata, UnifiedFieldType},
+    medium::Medium,
+    physics::{
+        plugin::{Plugin, PluginContext, PluginManager, PluginMetadata, PluginState},
+        UnifiedFieldType,
+    },
     Grid, HomogeneousMedium, KwaversResult,
 };
 use ndarray::Array4;
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
 /// Custom plugin for modeling frequency-dependent absorption
 #[derive(Debug)]
@@ -41,13 +45,17 @@ impl FrequencyAbsorptionPlugin {
     }
 }
 
-impl PhysicsPlugin for FrequencyAbsorptionPlugin {
+impl Plugin for FrequencyAbsorptionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
 
-    fn state(&self) -> kwavers::physics::plugin::PluginState {
-        kwavers::physics::plugin::PluginState::Created
+    fn state(&self) -> PluginState {
+        PluginState::Created
+    }
+
+    fn set_state(&mut self, _state: PluginState) {
+        // State management would go here
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -92,6 +100,14 @@ impl PhysicsPlugin for FrequencyAbsorptionPlugin {
         println!("Applied absorption: α = {} at f = {} Hz", alpha, freq_hz);
         Ok(())
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 /// Custom plugin for monitoring simulation statistics
@@ -121,13 +137,17 @@ impl StatisticsPlugin {
     }
 }
 
-impl PhysicsPlugin for StatisticsPlugin {
+impl Plugin for StatisticsPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
 
-    fn state(&self) -> kwavers::physics::plugin::PluginState {
-        kwavers::physics::plugin::PluginState::Created
+    fn state(&self) -> PluginState {
+        PluginState::Created
+    }
+
+    fn set_state(&mut self, _state: PluginState) {
+        // State management would go here
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -177,12 +197,19 @@ impl PhysicsPlugin for StatisticsPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        let mut metrics = HashMap::new();
-        metrics.insert("max_pressure".to_string(), self.max_pressure);
-        metrics.insert("min_pressure".to_string(), self.min_pressure);
-        metrics.insert("update_count".to_string(), self.update_count as f64);
-        metrics
+    fn diagnostics(&self) -> String {
+        format!(
+            "Statistics: max_pressure={:.3e}, min_pressure={:.3e}, updates={}",
+            self.max_pressure, self.min_pressure, self.update_count
+        )
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

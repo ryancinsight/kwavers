@@ -161,7 +161,7 @@ pub fn validate_all(
     let mut reports = Vec::new();
 
     // CFL validation
-    let c_max = crate::medium::core::max_sound_speed(medium, grid);
+    let c_max = crate::medium::core::max_sound_speed_pointwise(medium, grid);
     reports.push(validate_cfl_condition(grid, dt, c_max));
 
     // Dispersion validation
