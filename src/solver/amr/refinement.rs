@@ -116,10 +116,8 @@ impl RefinementManager {
                                     let jj = (j as isize + dj) as usize;
                                     let kk = (k as isize + dk) as usize;
 
-                                    if ii < nx && jj < ny && kk < nz {
-                                        if buffer[[ii, jj, kk]] == 0 {
-                                            buffer[[ii, jj, kk]] = 1;
-                                        }
+                                    if ii < nx && jj < ny && kk < nz && buffer[[ii, jj, kk]] == 0 {
+                                        buffer[[ii, jj, kk]] = 1;
                                     }
                                 }
                             }
@@ -159,7 +157,7 @@ impl RefinementManager {
                         ];
 
                         // If any neighbor is refined, this cell cannot coarsen
-                        if neighbors.iter().any(|&n| n == 1) && markers[[i, j, k]] == -1 {
+                        if neighbors.contains(&1) && markers[[i, j, k]] == -1 {
                             markers[[i, j, k]] = 0;
                             changed = true;
                         }

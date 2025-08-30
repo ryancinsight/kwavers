@@ -138,7 +138,7 @@ impl crate::physics::plugin::Plugin for ThermalDiffusionPlugin {
     }
 
     fn state(&self) -> PluginState {
-        self.state.clone()
+        self.state
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {

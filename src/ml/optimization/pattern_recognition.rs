@@ -22,6 +22,12 @@ struct FeatureExtractor;
 struct TemporalPattern;
 struct SpatialPattern;
 
+impl Default for PatternRecognizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PatternRecognizer {
     /// Create a new pattern recognizer
     pub fn new() -> Self {

@@ -10,6 +10,12 @@ pub struct ParallelOptimizer {
     chunk_size: usize,
 }
 
+impl Default for ParallelOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParallelOptimizer {
     /// Create a new parallel optimizer
     pub fn new() -> Self {

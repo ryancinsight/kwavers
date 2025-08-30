@@ -13,6 +13,12 @@ pub struct LineSearch {
     max_iterations: usize,
 }
 
+impl Default for LineSearch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LineSearch {
     pub fn new() -> Self {
         Self {
@@ -63,6 +69,12 @@ pub struct ConjugateGradient {
     previous_gradient: Option<Array3<f64>>,
     /// Previous search direction
     previous_direction: Option<Array3<f64>>,
+}
+
+impl Default for ConjugateGradient {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConjugateGradient {

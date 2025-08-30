@@ -123,7 +123,7 @@ impl LinearSolver {
             x = self.tv_proximal(&x_grad, lambda * step_size, shape)?;
 
             // Check convergence
-            let residual = a.dot(&x) - &b;
+            let residual = a.dot(&x) - b;
             if residual.dot(&residual).sqrt() < self.tolerance {
                 break;
             }
@@ -230,7 +230,7 @@ impl LinearSolver {
             t = t_next;
 
             // Check convergence
-            let residual = a.dot(&x) - &b;
+            let residual = a.dot(&x) - b;
             if residual.dot(&residual).sqrt() < self.tolerance {
                 break;
             }

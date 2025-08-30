@@ -97,6 +97,12 @@ pub struct SeismicImagingPlugin {
     aperture: Option<MigrationAperture>,
 }
 
+impl Default for SeismicImagingPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SeismicImagingPlugin {
     /// Create new seismic imaging plugin
     pub fn new() -> Self {

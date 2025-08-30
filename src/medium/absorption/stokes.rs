@@ -94,10 +94,7 @@ impl StokesAbsorption {
         let gamma = p.specific_heat_p / p.specific_heat_v;
         let thermal_term = p.thermal_conductivity * (gamma - 1.0).powi(2) / p.specific_heat_p;
 
-        let alpha = omega.powi(2) / (2.0 * p.density * p.sound_speed.powi(3))
-            * (viscous_term + thermal_term);
-
-        alpha
+        omega.powi(2) / (2.0 * p.density * p.sound_speed.powi(3)) * (viscous_term + thermal_term)
     }
 
     /// Calculate relaxation absorption (for frequencies where relaxation occurs)

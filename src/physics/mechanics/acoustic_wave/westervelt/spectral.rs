@@ -59,8 +59,8 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
     let laplacian_k = &field_k * &k_squared.mapv(|k2| Complex::new(-k2, 0.0));
 
     // Transform back to real space
-    let laplacian_real = ifft_3d_array(&laplacian_k);
-    laplacian_real
+
+    ifft_3d_array(&laplacian_k)
 }
 
 /// Apply k-space correction for heterogeneous media

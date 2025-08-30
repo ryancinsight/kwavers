@@ -12,6 +12,12 @@ pub struct ArrayValidator {
     max_temp_rise: f64,
 }
 
+impl Default for ArrayValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrayValidator {
     /// Create new validator
     pub fn new() -> Self {

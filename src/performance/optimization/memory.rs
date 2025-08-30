@@ -24,6 +24,12 @@ pub struct BandwidthOptimizer {
     utilization: f64,
 }
 
+impl Default for BandwidthOptimizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BandwidthOptimizer {
     /// Create a new bandwidth optimizer
     pub fn new() -> Self {
@@ -152,7 +158,7 @@ impl MemoryPool {
     /// Allocate from the pool
     pub fn allocate(&mut self, size: usize) -> Option<*mut u8> {
         // Align the offset
-        let aligned_offset = (self.offset + self.alignment - 1) / self.alignment * self.alignment;
+        let aligned_offset = self.offset.div_ceil(self.alignment) * self.alignment;
 
         if aligned_offset + size > self.buffer.len() {
             return None;

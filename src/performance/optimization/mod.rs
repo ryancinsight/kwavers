@@ -6,6 +6,7 @@ pub mod gpu;
 pub mod memory;
 pub mod parallel;
 pub mod simd;
+pub mod simd_stencil;
 
 pub use cache::{AccessPattern, CacheOptimizer};
 pub use config::{OptimizationConfig, SimdLevel};

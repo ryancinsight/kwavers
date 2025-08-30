@@ -1,129 +1,186 @@
 //! Wavefield modeling for FWI
-//! Based on Virieux (1986): "P-SV wave propagation in heterogeneous media"
+//!
+//! Implements forward and adjoint wavefield propagation using finite differences.
+//!
+//! ## Literature Reference
+//! - Virieux, J., & Operto, S. (2009). "An overview of full-waveform inversion
+//!   in exploration geophysics." Geophysics, 74(6), WCC1-WCC26.
 
 use crate::error::KwaversResult;
-use ndarray::{Array2, Array3};
+use crate::grid::Grid;
+use ndarray::{Array2, Array3, Zip};
 
-/// Wavefield modeling for forward and adjoint problems
+/// Wavefield modeling for seismic FWI
 pub struct WavefieldModeler {
-    /// Stored forward wavefield for gradient computation
-    forward_wavefield: Option<Array3<f64>>,
-    /// PML boundary width
-    pml_width: usize,
+    /// Spatial grid
+    grid: Grid,
+    /// Time step
+    dt: f64,
+    /// Source wavelet
+    source_wavelet: Vec<f64>,
+    /// Current wavefield
+    wavefield: Array3<f64>,
+    /// Previous wavefield (for time stepping)
+    wavefield_prev: Array3<f64>,
 }
 
 impl WavefieldModeler {
-    pub fn new() -> Self {
+    /// Create new wavefield modeler
+    pub fn new(grid: Grid, dt: f64, source_wavelet: Vec<f64>) -> Self {
+        let wavefield = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let wavefield_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
+
         Self {
-            forward_wavefield: None,
-            pml_width: 20,
+            grid,
+            dt,
+            source_wavelet,
+            wavefield,
+            wavefield_prev,
         }
     }
 
-    /// Forward wavefield modeling
-    /// Solves: (1/v²)∂²u/∂t² - ∇²u = f
-    pub fn forward_model(&mut self, velocity_model: &Array3<f64>) -> KwaversResult<Array2<f64>> {
-        let (nx, ny, _nz) = velocity_model.dim();
+    /// Forward modeling with given velocity model
+    pub fn forward_model(&mut self, velocity_model: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+        let nt = self.source_wavelet.len();
+        let mut seismogram = Array3::zeros((self.grid.nx, self.grid.ny, nt));
 
-        // TODO: Implement actual wavefield modeling
-        // This should:
-        // 1. Initialize wavefield arrays
-        // 2. Apply finite difference stencil
-        // 3. Time stepping with stability
-        // 4. Apply PML boundaries
-        // 5. Record at receiver locations
+        // Reset wavefields
+        self.wavefield.fill(0.0);
+        self.wavefield_prev.fill(0.0);
 
-        // Store wavefield for gradient computation
-        self.forward_wavefield = Some(Array3::zeros(velocity_model.dim()));
+        // Time stepping loop
+        for it in 0..nt {
+            // Apply source
+            if it < self.source_wavelet.len() {
+                // Add source at center of domain (simplified)
+                let cx = self.grid.nx / 2;
+                let cy = self.grid.ny / 2;
+                let cz = self.grid.nz / 2;
+                self.wavefield[[cx, cy, cz]] += self.source_wavelet[it];
+            }
 
-        // Return synthetic seismogram
-        Ok(Array2::zeros((nx, ny)))
-    }
+            // Update wavefield using finite differences
+            let next = self.apply_stencil(&self.wavefield, &self.wavefield_prev, velocity_model);
 
-    /// Adjoint wavefield modeling
-    /// Solves backward in time with residual as source
-    pub fn adjoint_model(&self, adjoint_source: &Array2<f64>) -> KwaversResult<Array3<f64>> {
-        // TODO: Implement adjoint modeling
-        // This should:
-        // 1. Initialize from final time
-        // 2. Propagate backward in time
-        // 3. Inject adjoint source at receivers
-        // 4. Apply same PML boundaries
-
-        let (nx, ny) = adjoint_source.dim();
-        Ok(Array3::zeros((nx, ny, 100)))
-    }
-
-    /// Get stored forward wavefield
-    pub fn get_forward_wavefield(&self) -> KwaversResult<Array3<f64>> {
-        self.forward_wavefield
-            .as_ref()
-            .map(|w| w.clone())
-            .ok_or_else(|| {
-                crate::error::KwaversError::InvalidInput(
-                    "Forward wavefield not computed".to_string(),
-                )
-            })
-    }
-
-    /// Apply PML boundary conditions
-    /// Based on Berenger (1994): "A perfectly matched layer"
-    fn apply_pml(&self, wavefield: &mut Array3<f64>) {
-        let (nx, ny, nz) = wavefield.dim();
-        let width = self.pml_width;
-        let max_damping = 3.0;
-
-        // Apply damping in boundary regions
-        for i in 0..width {
-            let damping = max_damping * ((width - i) as f64 / width as f64).powi(2);
-
-            // X boundaries
-            for j in 0..ny {
-                for k in 0..nz {
-                    wavefield[[i, j, k]] *= (-damping).exp();
-                    wavefield[[nx - 1 - i, j, k]] *= (-damping).exp();
+            // Record at surface (z=0)
+            for i in 0..self.grid.nx {
+                for j in 0..self.grid.ny {
+                    seismogram[[i, j, it]] = next[[i, j, 0]];
                 }
             }
 
-            // Y boundaries
-            for ii in 0..nx {
-                for k in 0..nz {
-                    wavefield[[ii, i, k]] *= (-damping).exp();
-                    wavefield[[ii, ny - 1 - i, k]] *= (-damping).exp();
-                }
-            }
-
-            // Z boundaries
-            for ii in 0..nx {
-                for j in 0..ny {
-                    wavefield[[ii, j, i]] *= (-damping).exp();
-                    wavefield[[ii, j, nz - 1 - i]] *= (-damping).exp();
-                }
-            }
+            // Update time levels
+            self.wavefield_prev.assign(&self.wavefield);
+            self.wavefield.assign(&next);
         }
+
+        Ok(seismogram)
+    }
+
+    /// Adjoint modeling for gradient computation
+    pub fn adjoint_model(&mut self, adjoint_source: &Array2<f64>) -> KwaversResult<Array3<f64>> {
+        let nt = adjoint_source.shape()[1];
+        let mut adjoint_wavefield = Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
+
+        // Reset wavefields
+        self.wavefield.fill(0.0);
+        self.wavefield_prev.fill(0.0);
+
+        // Backward time stepping
+        for it in (0..nt).rev() {
+            // Inject adjoint source at receivers (surface)
+            for i in 0..self.grid.nx {
+                for j in 0..self.grid.ny {
+                    if i < adjoint_source.shape()[0] {
+                        self.wavefield[[i, j, 0]] += adjoint_source[[i, it]];
+                    }
+                }
+            }
+
+            // Apply adjoint stencil (same as forward for acoustic case)
+            let velocity_model = Array3::ones((self.grid.nx, self.grid.ny, self.grid.nz)) * 1500.0; // Placeholder
+            let next = self.apply_stencil(&self.wavefield, &self.wavefield_prev, &velocity_model);
+
+            // Accumulate adjoint wavefield
+            adjoint_wavefield = adjoint_wavefield + &next;
+
+            // Update time levels
+            self.wavefield_prev.assign(&self.wavefield);
+            self.wavefield.assign(&next);
+        }
+
+        Ok(adjoint_wavefield)
     }
 
     /// Apply finite difference stencil for wave equation
-    /// 4th order accurate in space, 2nd order in time
-    fn apply_fd_stencil(
+    /// ∂²u/∂t² = v² ∇²u
+    fn apply_stencil(
         &self,
         current: &Array3<f64>,
         previous: &Array3<f64>,
         velocity: &Array3<f64>,
-        dt: f64,
-        dx: f64,
     ) -> Array3<f64> {
-        let (nx, ny, nz) = current.dim();
-        let next = Array3::zeros((nx, ny, nz));
+        let mut next = Array3::zeros(current.dim());
+        let dt2 = self.dt * self.dt;
+        let dx2 = self.grid.dx * self.grid.dx;
+        let dy2 = self.grid.dy * self.grid.dy;
+        let dz2 = self.grid.dz * self.grid.dz;
 
-        // Finite difference coefficients for 4th order
-        const C0: f64 = -5.0 / 2.0;
-        const C1: f64 = 4.0 / 3.0;
-        const C2: f64 = -1.0 / 12.0;
+        // Apply 2nd-order central difference stencil
+        Zip::indexed(&mut next)
+            .and(current)
+            .and(previous)
+            .and(velocity)
+            .for_each(|(i, j, k), next_val, &curr, &prev, &vel| {
+                if i > 0
+                    && i < self.grid.nx - 1
+                    && j > 0
+                    && j < self.grid.ny - 1
+                    && k > 0
+                    && k < self.grid.nz - 1
+                {
+                    // Laplacian using central differences
+                    let laplacian = (current[[i + 1, j, k]] - 2.0 * curr + current[[i - 1, j, k]])
+                        / dx2
+                        + (current[[i, j + 1, k]] - 2.0 * curr + current[[i, j - 1, k]]) / dy2
+                        + (current[[i, j, k + 1]] - 2.0 * curr + current[[i, j, k - 1]]) / dz2;
 
-        // TODO: Implement actual stencil application
-        // Avoiding boundary regions that need special treatment
+                    // Time stepping: u^{n+1} = 2u^n - u^{n-1} + (v*dt)^2 * ∇²u^n
+                    *next_val = 2.0 * curr - prev + vel * vel * dt2 * laplacian;
+                } else {
+                    // Apply absorbing boundary (simplified)
+                    *next_val = curr * 0.95; // Damping at boundaries
+                }
+            });
 
         next
+    }
+
+    /// Get current wavefield state
+    pub fn get_wavefield(&self) -> &Array3<f64> {
+        &self.wavefield
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_wavefield_propagation() {
+        let grid = Grid::new(32, 32, 32, 10.0, 10.0, 10.0);
+        let dt = 0.001;
+        let source = vec![1.0; 100]; // Simple spike
+
+        let mut modeler = WavefieldModeler::new(grid, dt, source);
+        let velocity = Array3::ones((32, 32, 32)) * 1500.0;
+
+        let result = modeler.forward_model(&velocity);
+        assert!(result.is_ok());
+
+        // Check that energy propagates
+        let seismogram = result.unwrap();
+        let total_energy: f64 = seismogram.iter().map(|x| x * x).sum();
+        assert!(total_energy > 0.0);
     }
 }

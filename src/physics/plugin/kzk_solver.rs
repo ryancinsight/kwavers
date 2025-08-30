@@ -34,6 +34,12 @@ pub struct KzkSolverPlugin {
     max_frequency: f64,
 }
 
+impl Default for KzkSolverPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KzkSolverPlugin {
     /// Create new KZK solver plugin
     pub fn new() -> Self {
