@@ -106,14 +106,17 @@ impl GpuBuffer {
 pub struct BufferManager {
     buffers: HashMap<String, GpuBuffer>,
     total_memory: u64,
+    max_memory: u64,
 }
 
 impl BufferManager {
     /// Create a new buffer manager
-    pub fn new(_device: &wgpu::Device) -> Self {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let limits = device.limits();
         Self {
             buffers: HashMap::new(),
             total_memory: 0,
+            max_memory: limits.max_buffer_size as u64,
         }
     }
 
