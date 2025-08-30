@@ -38,8 +38,7 @@ pub trait Medium:
 }
 
 /// Blanket implementation for any type satisfying all requirements
-impl<T> Medium for T
-where
+impl<T> Medium for T where
     T: CoreMedium
         + ArrayAccess
         + AcousticProperties
@@ -53,6 +52,6 @@ where
         + ViscousProperties
         + Debug
         + Send
-        + Sync,
+        + Sync
 {
 }

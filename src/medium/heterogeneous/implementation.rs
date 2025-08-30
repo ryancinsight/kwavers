@@ -236,21 +236,6 @@ impl CoreMedium for HeterogeneousMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
-
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        let absorption = PowerLawAbsorption {
-            alpha_0: self.alpha0[[ix, iy, iz]],
-            y: self.delta[[ix, iy, iz]],
-            f_ref: self.reference_frequency,
-            dispersion_correction: false,
-        };
-        absorption.absorption_at_frequency(frequency)
-    }
-
-    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_field_value(&self.b_a, x, y, z, grid)
-    }
 }
 
 // Array-based access
@@ -363,7 +348,7 @@ impl ThermalField for HeterogeneousMedium {
         self.temperature = temperature.clone();
     }
 
-    fn thermal_field(&self) -> &Array3<f64> {
+    fn thermal_field(&self) -> Array3<f64> {
         self.temperature.clone()
     }
 }

@@ -39,8 +39,8 @@ pub fn benchmark_fdtd(
     pressure[[center, center, center]] = 1.0;
 
     // Get medium arrays
-    let density = medium.density_array(&grid);
-    let sound_speed = medium.sound_speed_array(&grid);
+    let density = medium.density_array();
+    let sound_speed = medium.sound_speed_array();
 
     let dt = 0.5e-6; // Fixed time step for benchmarking
 

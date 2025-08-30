@@ -68,7 +68,7 @@ impl WesterveltWave {
     ) -> bool {
         // CFL condition check
         let max_c = medium
-            .sound_speed_array(grid)
+            .sound_speed_array()
             .iter()
             .fold(0.0_f64, |acc, &x| acc.max(x));
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
@@ -150,8 +150,8 @@ impl AcousticWaveModel for WesterveltWave {
         }
 
         // Get medium properties
-        let rho_arr = medium.density_array(grid);
-        let c_arr = medium.sound_speed_array(grid);
+        let rho_arr = medium.density_array();
+        let c_arr = medium.sound_speed_array();
         // Get viscosity arrays from ElasticArrayAccess trait
         use crate::medium::elastic::ElasticArrayAccess;
         let eta_s_arr = medium.shear_viscosity_coeff_array();
@@ -165,7 +165,7 @@ impl AcousticWaveModel for WesterveltWave {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
                     b_over_a_arr[[i, j, k]] =
-                        crate::medium::core::CoreMedium::nonlinearity_coefficient(
+                        crate::medium::AcousticProperties::nonlinearity_coefficient(
                             medium, x, y, z, grid,
                         );
                 }

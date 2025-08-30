@@ -264,7 +264,7 @@ impl WesterveltFdtd {
                 // Get medium properties
                 let c = medium.sound_speed(x, y, z, grid);
                 let rho = medium.density(x, y, z, grid);
-                let beta = crate::medium::core::CoreMedium::nonlinearity_coefficient(
+                let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(
                     medium, x, y, z, grid,
                 );
 
@@ -277,7 +277,7 @@ impl WesterveltFdtd {
                 // Absorption term (if enabled)
                 let absorption_term = if self.config.enable_absorption {
                     if let Some(ref p_prev2) = self.pressure_prev2 {
-                        let alpha = crate::medium::core::CoreMedium::absorption_coefficient(
+                        let alpha = crate::medium::AcousticProperties::absorption_coefficient(
                             medium, x, y, z, grid, 1e6,
                         ); // 1 MHz reference
                         let delta = 2.0 * alpha * c.powi(3) / (2.0 * std::f64::consts::PI).powi(2);
@@ -334,7 +334,7 @@ impl WesterveltFdtd {
     pub fn calculate_dt(&self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<f64> {
         // Get maximum sound speed
         let c_max = medium
-            .sound_speed_array(grid)
+            .sound_speed_array()
             .iter()
             .fold(0.0f64, |acc, &x| acc.max(x));
 

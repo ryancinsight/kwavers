@@ -104,7 +104,7 @@ impl NonlinearWave {
 
         // Check grid resolution using minimum sound speed for heterogeneous media
         // Get the sound speed array and find the minimum
-        let c_array = medium.sound_speed_array(grid);
+        let c_array = medium.sound_speed_array();
         let min_c = c_array.iter().fold(
             f64::INFINITY,
             |acc, &x| if x > 0.0 { acc.min(x) } else { acc },

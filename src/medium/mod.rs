@@ -310,7 +310,7 @@ pub mod iterators {
                     let properties = MediumProperties {
                         density: CoreMedium::density(self.medium, x, y, z, self.grid),
                         sound_speed: CoreMedium::sound_speed(self.medium, x, y, z, self.grid),
-                        absorption: CoreMedium::absorption_coefficient(
+                        absorption: AcousticProperties::absorption_coefficient(
                             self.medium,
                             x,
                             y,
@@ -318,7 +318,7 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                        nonlinearity: AcousticProperties::nonlinearity_coefficient(
                             self.medium,
                             x,
                             y,
@@ -351,7 +351,7 @@ pub mod iterators {
                     let properties = MediumProperties {
                         density: CoreMedium::density(self.medium, x, y, z, self.grid),
                         sound_speed: CoreMedium::sound_speed(self.medium, x, y, z, self.grid),
-                        absorption: CoreMedium::absorption_coefficient(
+                        absorption: AcousticProperties::absorption_coefficient(
                             self.medium,
                             x,
                             y,
@@ -359,7 +359,7 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                        nonlinearity: AcousticProperties::nonlinearity_coefficient(
                             self.medium,
                             x,
                             y,

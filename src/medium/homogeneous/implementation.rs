@@ -183,21 +183,6 @@ impl CoreMedium for HomogeneousMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
-
-    fn absorption_coefficient(
-        &self,
-        _x: f64,
-        _y: f64,
-        _z: f64,
-        _grid: &Grid,
-        frequency: f64,
-    ) -> f64 {
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
-    }
-
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.nonlinearity
-    }
 }
 
 // Array-based access
@@ -291,7 +276,7 @@ impl ThermalField for HomogeneousMedium {
         self.temperature = temperature.clone();
     }
 
-    fn thermal_field(&self) -> &Array3<f64> {
+    fn thermal_field(&self) -> Array3<f64> {
         self.temperature.clone()
     }
 }

@@ -41,7 +41,7 @@ impl DomainAnalyzer {
 
         // Check density variations
         {
-            let density = medium.density_array(grid);
+            let density = medium.density_array();
             let mean = density.mean().unwrap_or(1.0);
             for ((i, j, k), val) in density.indexed_iter() {
                 let variation = (val - mean).abs() / mean;

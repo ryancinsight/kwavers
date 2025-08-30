@@ -3,7 +3,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::medium::Medium;
+use crate::medium::{AcousticProperties, CoreMedium, Medium};
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;
@@ -285,7 +285,8 @@ impl TransducerFieldCalculatorPlugin {
 
         // Nonlinearity parameter B/A for the medium
         use crate::medium::CoreMedium;
-        let beta = 1.0 + CoreMedium::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid) / 2.0;
+        let beta =
+            1.0 + AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid) / 2.0;
 
         // Generate nonlinear source term from fundamental field
         // For second harmonic: S₂ = β/(2ρ₀c₄) * (∂p₁/∂t)²
@@ -319,8 +320,14 @@ impl TransducerFieldCalculatorPlugin {
                     };
 
                     // Propagate harmonic with frequency-dependent attenuation
-                    let alpha =
-                        CoreMedium::absorption_coefficient(medium, x, y, z, grid, harmonic_freq);
+                    let alpha = AcousticProperties::absorption_coefficient(
+                        medium,
+                        x,
+                        y,
+                        z,
+                        grid,
+                        harmonic_freq,
+                    );
                     let attenuation = (-alpha * z).exp();
 
                     // Account for beam divergence at harmonic frequency
