@@ -32,13 +32,13 @@ impl AmplitudeController {
     pub fn update(&mut self, dt: f64) -> f64 {
         let max_change = self.ramp_rate * dt;
         let diff = self.target_amplitude - self.current_amplitude;
-        
+
         if diff.abs() <= max_change {
             self.current_amplitude = self.target_amplitude;
         } else {
             self.current_amplitude += diff.signum() * max_change;
         }
-        
+
         // Apply filtering for smooth transitions
         self.filter.filter(self.current_amplitude)
     }

@@ -47,5 +47,5 @@ pub trait ThermalField: ThermalProperties {
     fn update_thermal_field(&mut self, temperature: &Array3<f64>);
 
     /// Get the current thermal field
-    fn thermal_field(&self) -> Array3<f64>;
+    fn thermal_field(&self) -> &Array3<f64>;
 }

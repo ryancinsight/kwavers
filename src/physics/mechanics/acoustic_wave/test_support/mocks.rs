@@ -291,8 +291,8 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::thermal::ThermalField for HeterogeneousMediumMock {
-        fn thermal_field(&self) -> Array3<f64> {
-            self.density.clone() // Return clone for test
+        fn thermal_field(&self) -> &Array3<f64> {
+            &self.density // Return reference for test
         }
 
         fn update_thermal_field(&mut self, _new_temperature: &Array3<f64>) {

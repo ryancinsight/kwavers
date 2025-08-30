@@ -367,8 +367,8 @@ impl ThermalField for HeterogeneousTissueMedium {
         self.temperature = temperature.clone();
     }
 
-    fn thermal_field(&self) -> Array3<f64> {
-        self.temperature.clone()
+    fn thermal_field(&self) -> &Array3<f64> {
+        &self.temperature
     }
 }
 

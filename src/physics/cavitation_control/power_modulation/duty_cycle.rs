@@ -33,13 +33,13 @@ impl DutyCycleController {
     pub fn update(&mut self, dt: f64) -> f64 {
         let max_change = self.adjustment_rate * dt;
         let diff = self.target_duty_cycle - self.current_duty_cycle;
-        
+
         if diff.abs() <= max_change {
             self.current_duty_cycle = self.target_duty_cycle;
         } else {
             self.current_duty_cycle += diff.signum() * max_change;
         }
-        
+
         self.current_duty_cycle
     }
 
@@ -57,10 +57,14 @@ impl DutyCycleController {
     pub fn set_limits(&mut self, min: f64, max: f64) {
         self.min_duty_cycle = min.max(MIN_DUTY_CYCLE);
         self.max_duty_cycle = max.min(MAX_DUTY_CYCLE);
-        
+
         // Ensure current values are within new limits
-        self.current_duty_cycle = self.current_duty_cycle.clamp(self.min_duty_cycle, self.max_duty_cycle);
-        self.target_duty_cycle = self.target_duty_cycle.clamp(self.min_duty_cycle, self.max_duty_cycle);
+        self.current_duty_cycle = self
+            .current_duty_cycle
+            .clamp(self.min_duty_cycle, self.max_duty_cycle);
+        self.target_duty_cycle = self
+            .target_duty_cycle
+            .clamp(self.min_duty_cycle, self.max_duty_cycle);
     }
 
     /// Calculate average power for current duty cycle

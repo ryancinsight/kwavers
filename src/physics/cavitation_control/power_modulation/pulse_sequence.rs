@@ -1,6 +1,5 @@
 //! Pulse sequence generation for power modulation
 
-use super::constants::*;
 
 /// Descriptor for a single pulse in a sequence
 #[derive(Debug, Clone)]
@@ -49,7 +48,7 @@ impl PulseSequenceGenerator {
         frequency: f64,
     ) -> Self {
         let mut generator = Self::new();
-        
+
         for _ in 0..num_pulses {
             generator.add_pulse(PulseDescriptor {
                 amplitude,
@@ -58,7 +57,7 @@ impl PulseSequenceGenerator {
                 frequency,
             });
         }
-        
+
         generator
     }
 
@@ -73,11 +72,11 @@ impl PulseSequenceGenerator {
         // Check if we need to advance to next pulse
         if let Some(current_pulse) = self.sequence.get(self.current_index) {
             let pulse_end_time = current_pulse.duration + current_pulse.delay;
-            
+
             if self.current_time >= pulse_end_time {
                 self.current_time -= pulse_end_time;
                 self.current_index += 1;
-                
+
                 // Handle sequence repeat or end
                 if self.current_index >= self.sequence.len() {
                     if self.repeat {
@@ -111,9 +110,6 @@ impl PulseSequenceGenerator {
 
     /// Get total sequence duration
     pub fn total_duration(&self) -> f64 {
-        self.sequence
-            .iter()
-            .map(|p| p.duration + p.delay)
-            .sum()
+        self.sequence.iter().map(|p| p.duration + p.delay).sum()
     }
 }

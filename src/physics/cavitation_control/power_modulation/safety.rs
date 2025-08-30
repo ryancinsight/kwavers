@@ -26,7 +26,7 @@ impl SafetyLimiter {
     pub fn limit(&mut self, amplitude: f64) -> f64 {
         // Clamp to maximum amplitude
         let clamped = amplitude.clamp(0.0, self.max_amplitude);
-        
+
         // Apply rate limiting
         let max_change = self.max_rate / 1000.0; // Convert to per-millisecond
         let limited = if (clamped - self.last_output).abs() > max_change {
@@ -38,7 +38,7 @@ impl SafetyLimiter {
         } else {
             clamped
         };
-        
+
         self.last_output = limited;
         limited
     }

@@ -348,8 +348,8 @@ impl ThermalField for HeterogeneousMedium {
         self.temperature = temperature.clone();
     }
 
-    fn thermal_field(&self) -> Array3<f64> {
-        self.temperature.clone()
+    fn thermal_field(&self) -> &Array3<f64> {
+        &self.temperature
     }
 }
 

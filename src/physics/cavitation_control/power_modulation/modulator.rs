@@ -67,14 +67,15 @@ impl PowerModulator {
             ModulationScheme::DutyCycleControl => {
                 let period = 1.0 / self.control.prf;
                 let phase = (self.time % period) / period;
-                
+
                 // Smooth transition using cosine taper
                 let transition_width = 0.05; // 5% of period for transition
-                
+
                 if phase < self.control.duty_cycle - transition_width {
                     1.0
                 } else if phase < self.control.duty_cycle {
-                    let t = (phase - (self.control.duty_cycle - transition_width)) / transition_width;
+                    let t =
+                        (phase - (self.control.duty_cycle - transition_width)) / transition_width;
                     0.5 * (1.0 + (PI * t).cos())
                 } else if phase < self.control.duty_cycle + transition_width {
                     let t = (phase - self.control.duty_cycle) / transition_width;
@@ -91,7 +92,7 @@ impl PowerModulator {
                 let burst_period = 0.1; // 10 Hz burst rate
                 let burst_duration = 0.02; // 20ms bursts
                 let burst_phase = (self.time % burst_period) / burst_period;
-                
+
                 if burst_phase < burst_duration / burst_period {
                     let pulse_phase = (self.time * self.control.prf) % 1.0;
                     if pulse_phase < self.control.duty_cycle {
@@ -107,7 +108,7 @@ impl PowerModulator {
             ModulationScheme::Ramped => {
                 // Linear ramp up and down
                 let ramp_duration = self.control.ramp_time;
-                
+
                 if self.time < ramp_duration {
                     self.time / ramp_duration
                 } else {
@@ -124,7 +125,7 @@ impl PowerModulator {
         // Apply amplitude control and filtering
         let scaled = envelope * self.control.amplitude;
         let filtered = self.amplitude_filter.filter(scaled);
-        
+
         // Apply safety limiting
         self.safety_limiter.limit(filtered)
     }
@@ -145,7 +146,9 @@ impl PowerModulator {
     pub fn get_effective_duty_cycle(&self) -> f64 {
         match self.scheme {
             ModulationScheme::Continuous => 1.0,
-            ModulationScheme::Pulsed | ModulationScheme::DutyCycleControl => self.control.duty_cycle,
+            ModulationScheme::Pulsed | ModulationScheme::DutyCycleControl => {
+                self.control.duty_cycle
+            }
             ModulationScheme::BurstMode => {
                 // Approximate duty cycle for burst mode
                 let burst_duty = 0.02 / 0.1; // burst_duration / burst_period
