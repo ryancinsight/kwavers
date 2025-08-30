@@ -62,9 +62,7 @@ pub mod time;
 pub mod utils;
 pub mod validation;
 
-// GPU acceleration with wgpu-rs
-#[cfg(feature = "gpu")]
-pub mod gpu;
+// GPU acceleration with wgpu-rs (already declared above)
 
 // Phase 11: Visualization & Real-Time Interaction
 #[cfg(all(

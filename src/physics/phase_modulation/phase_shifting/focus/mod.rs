@@ -10,7 +10,7 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 use crate::physics::phase_modulation::phase_shifting::core::{
-    calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE,
+    calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
 };
 
 /// Dynamic focusing controller
@@ -87,7 +87,7 @@ impl DynamicFocusing {
             return Ok(());
         }
 
-        let wavelength = calculate_wavelength(self.frequency);
+        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
 
         self.phase_distribution.fill(0.0);
@@ -160,7 +160,7 @@ impl DynamicFocusing {
 
     /// Calculate intensity at a point
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
-        let wavelength = calculate_wavelength(self.frequency);
+        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
 
         let mut sum_real = 0.0;

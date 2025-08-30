@@ -17,7 +17,7 @@ pub mod phase_shifting;
 
 pub use phase_randomization::{
     PhaseDistribution, PhaseRandomizer, RandomizationScheme, SpatialRandomization,
-    TemporalRandomization,
+    TimeRandomization,
 };
 
 pub use phase_shifting::{

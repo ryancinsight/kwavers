@@ -139,10 +139,9 @@ nightly = []
 name = "integration_test"
 harness = true
 
-# Disable unit tests by default since API changes broke them
-# Integration tests provide adequate coverage
+# Unit tests are enabled for comprehensive coverage
 [lib]
-test = false
+test = true
 
 [profile.release]
 opt-level = 3

@@ -7,7 +7,7 @@ pub struct PatternRecognizer {
 
 /// Extracted simulation patterns
 pub struct SimulationPatterns {
-    pub temporal_patterns: Vec<TemporalPattern>,
+    pub temporal_patterns: Vec<TimePattern>,
     pub spatial_patterns: Vec<SpatialPattern>,
 }
 
@@ -19,7 +19,7 @@ pub struct PatternSummary {
 }
 
 struct FeatureExtractor;
-struct TemporalPattern;
+struct TimePattern;
 struct SpatialPattern;
 
 impl PatternRecognizer {

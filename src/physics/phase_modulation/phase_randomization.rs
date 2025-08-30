@@ -241,15 +241,15 @@ impl PhaseRandomizer {
     }
 }
 
-/// Temporal phase randomization controller
-pub struct TemporalRandomization {
+/// Time-domain phase randomization controller
+pub struct TimeRandomization {
     randomizer: PhaseRandomizer,
     update_rate: f64,
     phase_history: Vec<Array1<f64>>,
     max_history: usize,
 }
 
-impl TemporalRandomization {
+impl TimeRandomization {
     pub fn new(num_elements: usize, update_rate: f64, distribution: PhaseDistribution) -> Self {
         let randomizer =
             PhaseRandomizer::new(RandomizationScheme::Temporal, distribution, num_elements);
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_temporal_coherence() {
-        let mut temporal = TemporalRandomization::new(4, 100.0, PhaseDistribution::Binary);
+        let mut temporal = TimeRandomization::new(4, 100.0, PhaseDistribution::Binary);
 
         // Update multiple times
         for _ in 0..10 {

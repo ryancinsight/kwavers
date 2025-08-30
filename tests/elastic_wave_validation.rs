@@ -143,11 +143,18 @@ impl CoreMedium for TestElasticMedium {
     fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         self.p_wave_speed(x, y, z, grid)
     }
-    
-    fn absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid, _frequency: f64) -> f64 {
+
+    fn absorption_coefficient(
+        &self,
+        _x: f64,
+        _y: f64,
+        _z: f64,
+        _grid: &Grid,
+        _frequency: f64,
+    ) -> f64 {
         0.0 // No absorption in test medium
     }
-    
+
     fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         3.5 // Default B/A for water-like media
     }
@@ -174,12 +181,12 @@ impl ArrayAccess for TestElasticMedium {
         let shape = (grid.nx, grid.ny, grid.nz);
         ndarray::Array3::from_elem(shape, self.sound_speed(0.0, 0.0, 0.0, grid))
     }
-    
+
     fn absorption_array(&self, grid: &Grid, _frequency: f64) -> ndarray::Array3<f64> {
         let shape = (grid.nx, grid.ny, grid.nz);
         ndarray::Array3::zeros(shape) // No absorption in test
     }
-    
+
     fn nonlinearity_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
         let shape = (grid.nx, grid.ny, grid.nz);
         ndarray::Array3::from_elem(shape, 3.5) // Default B/A
@@ -201,7 +208,7 @@ impl AcousticProperties for TestElasticMedium {
     fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         3.5 // Default B/A for water-like media
     }
-    
+
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Acoustic diffusivity = thermal diffusivity / c²
         let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
@@ -236,7 +243,7 @@ impl ThermalProperties for TestElasticMedium {
         let cp = self.specific_heat(x, y, z, grid);
         k / (rho * cp)
     }
-    
+
     fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         2.07e-4 // 1/K for water at 20°C
     }
@@ -247,7 +254,7 @@ impl TemperatureState for TestElasticMedium {
         // Return uniform temperature field for test
         ndarray::Array3::from_elem((10, 10, 10), 293.15) // 20°C
     }
-    
+
     fn update_temperature(&mut self, _temperature: &ndarray::Array3<f64>) {
         // No-op for test medium
     }

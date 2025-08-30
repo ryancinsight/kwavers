@@ -4,7 +4,7 @@
 
 use super::core::{
     calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
-    MIN_FOCAL_DISTANCE, PHASE_QUANTIZATION_LEVELS,
+    MIN_FOCAL_DISTANCE, PHASE_QUANTIZATION_LEVELS, SPEED_OF_SOUND,
 };
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};
@@ -23,7 +23,7 @@ pub struct PhaseShifter {
 impl PhaseShifter {
     /// Create a new phase shifter
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
-        let wavelength = calculate_wavelength(operating_frequency);
+        let wavelength = calculate_wavelength(operating_frequency, SPEED_OF_SOUND);
         let num_elements = element_positions.nrows();
         let phase_offsets = Array1::zeros(num_elements);
 

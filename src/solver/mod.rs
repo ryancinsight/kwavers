@@ -9,9 +9,7 @@ pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
 pub mod kspace_correction;
-pub mod pstd; // PSTD solver modules
-pub mod pstd_implementation; // Optimized PSTD implementation
-pub mod pstd_solver; // Legacy PSTD solver
+pub mod pstd; // PSTD solver module
 pub mod spectral_dg;
 pub mod time_integration;
 pub mod validation;
@@ -35,8 +33,7 @@ pub use plugin_based::PluginBasedSolver;
 pub use amr::{AMRSolver, MemoryStats};
 pub use fdtd::FdtdConfig;
 pub use imex::{IMEXIntegrator, IMEXSchemeType};
-pub use pstd_implementation::{PstdConfig, PstdSolver};
-pub use pstd_solver::PstdSolver as LegacyPstdSolver; // Legacy PSTD solver
+pub use pstd::{PstdConfig, PstdSolver};
 
 use serde::Serialize;
 use std::collections::HashMap;
