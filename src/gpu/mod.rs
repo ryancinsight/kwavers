@@ -5,11 +5,12 @@
 
 pub mod buffers;
 pub mod compute;
-pub mod compute_kernels_impl;
+pub mod compute_manager;
 pub mod fdtd;
 pub mod kernels;
 pub mod kspace;
 pub mod pipeline;
+pub mod shaders;
 
 pub use buffers::{BufferManager, GpuBuffer};
 pub use compute::GpuCompute;
