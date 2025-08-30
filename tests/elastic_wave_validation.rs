@@ -23,9 +23,9 @@ fn test_p_wave_velocity() {
     let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001);
 
     // Steel properties (typical values)
-    let density = 7850.0; // kg/m³
-    let youngs_modulus = 200e9; // Pa
-    let poisson_ratio = 0.3;
+    let density = 7850.0_f64; // kg/m³
+    let youngs_modulus = 200e9_f64; // Pa
+    let poisson_ratio = 0.3_f64;
 
     // Calculate Lamé parameters from Young's modulus and Poisson's ratio
     let lame_mu = youngs_modulus / (2.0 * (1.0 + poisson_ratio));
@@ -53,9 +53,9 @@ fn test_s_wave_velocity() {
     let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001);
 
     // Granite properties (typical values)
-    let density = 2700.0; // kg/m³
-    let lame_mu = 30e9; // Pa (shear modulus)
-    let lame_lambda = 25e9; // Pa
+    let density = 2700.0_f64; // kg/m³
+    let lame_mu = 30e9_f64; // Pa (shear modulus)
+    let lame_lambda = 25e9_f64; // Pa
 
     // Theoretical S-wave velocity: c_s = sqrt(μ/ρ)
     let theoretical_cs = (lame_mu / density).sqrt();

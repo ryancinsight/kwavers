@@ -9,7 +9,8 @@ use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
-use crate::physics::phase_modulation::phase_shifting::core::*;
+use crate::physics::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
+use crate::source::transducer::MAX_STEERING_ANGLE;
 
 /// Beam steering controller
 pub struct BeamSteering {
