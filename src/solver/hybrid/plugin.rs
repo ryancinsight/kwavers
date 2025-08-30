@@ -60,7 +60,18 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
         t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        self.solver.update(fields, medium, dt, t)
+        // Create dummy source and boundary for now
+        // This is a limitation of the plugin architecture that needs redesign
+        use crate::boundary::pml::PMLBoundary;
+        use crate::source::NullSource;
+
+        let source = NullSource::new();
+        use crate::boundary::pml::PMLConfig;
+        let pml_config = PMLConfig::default();
+        let mut boundary = PMLBoundary::new(pml_config)?;
+
+        self.solver
+            .update(fields, medium, &source, &mut boundary, dt, t)
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {

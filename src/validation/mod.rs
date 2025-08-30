@@ -128,13 +128,21 @@ pub fn validate_absorption_model(
     let alpha_impl =
         AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
 
-    let error = (alpha_impl - alpha_np_m).abs() / alpha_np_m;
+    // Compare with measured value if provided
+    let measurement_error = if measured_alpha > 0.0 {
+        (alpha_impl - measured_alpha).abs() / measured_alpha
+    } else {
+        0.0
+    };
+
+    let theory_error = (alpha_impl - alpha_np_m).abs() / alpha_np_m;
+    let total_error = theory_error.max(measurement_error);
 
     PhysicsValidation {
         test_name: "Power Law Absorption (Szabo)".to_string(),
-        passed: error < 0.05, // 5% error threshold
-        error_l2: error,
-        error_linf: error,
+        passed: total_error < 0.05, // 5% error threshold
+        error_l2: theory_error,
+        error_linf: total_error,
         reference: "Szabo (1994) J. Acoust. Soc. Am. 96(1)".to_string(),
     }
 }
