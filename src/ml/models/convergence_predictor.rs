@@ -18,8 +18,9 @@ impl ConvergencePredictorModel {
     }
 
     /// Create model from weights
-    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let _ = (weights, bias); // TODO: Use weights
+    pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
+        // Weights not used in simplified predictor
+        // Real implementation would store and use weights
         Self::new()
     }
 

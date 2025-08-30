@@ -43,16 +43,16 @@ impl SimdCapability {
                 return Self::Sse42;
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             // NEON is mandatory on AArch64
             return Self::Neon;
         }
-        
+
         Self::Swar
     }
-    
+
     /// Vector width in f64 elements
     #[inline]
     pub const fn vector_width(&self) -> usize {
@@ -79,13 +79,13 @@ impl SimdAuto {
             capability: SimdCapability::detect(),
         }
     }
-    
+
     /// Add arrays in-place: out = a + b
     #[inline]
     pub fn add_inplace(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         debug_assert_eq!(a.shape(), b.shape());
         debug_assert_eq!(a.shape(), out.shape());
-        
+
         match self.capability {
             SimdCapability::Avx512 => self.add_avx512(a, b, out),
             SimdCapability::Avx2 => self.add_avx2(a, b, out),
@@ -94,7 +94,7 @@ impl SimdAuto {
             SimdCapability::Swar => self.add_swar(a, b, out),
         }
     }
-    
+
     /// Multiply array by scalar in-place
     #[inline]
     pub fn scale_inplace(&self, array: &mut Array3<f64>, scalar: f64) {
@@ -106,14 +106,20 @@ impl SimdAuto {
             SimdCapability::Swar => self.scale_swar(array, scalar),
         }
     }
-    
+
     /// Fused multiply-add in-place: out = a * b + c
     #[inline]
-    pub fn fma_inplace(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
+    pub fn fma_inplace(
+        &self,
+        a: &Array3<f64>,
+        b: &Array3<f64>,
+        c: &Array3<f64>,
+        out: &mut Array3<f64>,
+    ) {
         debug_assert_eq!(a.shape(), b.shape());
         debug_assert_eq!(a.shape(), c.shape());
         debug_assert_eq!(a.shape(), out.shape());
-        
+
         match self.capability {
             SimdCapability::Avx512 => self.fma_avx512(a, b, c, out),
             SimdCapability::Avx2 => self.fma_avx2(a, b, c, out),
@@ -122,20 +128,20 @@ impl SimdAuto {
             SimdCapability::Swar => self.fma_swar(a, b, c, out),
         }
     }
-    
+
     // AVX-512 implementations
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     #[inline]
     fn add_avx512(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         use std::arch::x86_64::*;
-        
+
         let a_slice = a.as_slice().unwrap();
         let b_slice = b.as_slice().unwrap();
         let out_slice = out.as_slice_mut().unwrap();
-        
+
         let chunks = a_slice.len() / 8;
         let remainder = a_slice.len() % 8;
-        
+
         // SAFETY: AVX-512 is available (checked in detect())
         unsafe {
             for i in 0..chunks {
@@ -146,34 +152,34 @@ impl SimdAuto {
                 _mm512_storeu_pd(&mut out_slice[idx], vr);
             }
         }
-        
+
         // Handle remainder
         let remainder_start = chunks * 8;
         for i in remainder_start..a_slice.len() {
             out_slice[i] = a_slice[i] + b_slice[i];
         }
     }
-    
+
     #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
     #[inline]
     fn add_avx512(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         self.add_swar(a, b, out); // Fallback
     }
-    
+
     // AVX2 implementations
     #[cfg(target_arch = "x86_64")]
     #[inline]
     fn add_avx2(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         if is_x86_feature_detected!("avx2") {
             use std::arch::x86_64::*;
-            
+
             let a_slice = a.as_slice().unwrap();
             let b_slice = b.as_slice().unwrap();
             let out_slice = out.as_slice_mut().unwrap();
-            
+
             let chunks = a_slice.len() / 4;
             let remainder = a_slice.len() % 4;
-            
+
             // SAFETY: AVX2 is available (runtime check)
             unsafe {
                 for i in 0..chunks {
@@ -184,7 +190,7 @@ impl SimdAuto {
                     _mm256_storeu_pd(&mut out_slice[idx], vr);
                 }
             }
-            
+
             // Handle remainder
             let remainder_start = chunks * 4;
             for i in remainder_start..a_slice.len() {
@@ -194,27 +200,27 @@ impl SimdAuto {
             self.add_swar(a, b, out);
         }
     }
-    
+
     #[cfg(not(target_arch = "x86_64"))]
     #[inline]
     fn add_avx2(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         self.add_swar(a, b, out);
     }
-    
+
     // SSE4.2 implementations
     #[cfg(target_arch = "x86_64")]
     #[inline]
     fn add_sse42(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         if is_x86_feature_detected!("sse4.2") {
             use std::arch::x86_64::*;
-            
+
             let a_slice = a.as_slice().unwrap();
             let b_slice = b.as_slice().unwrap();
             let out_slice = out.as_slice_mut().unwrap();
-            
+
             let chunks = a_slice.len() / 2;
             let remainder = a_slice.len() % 2;
-            
+
             // SAFETY: SSE4.2 is available (runtime check)
             unsafe {
                 for i in 0..chunks {
@@ -225,7 +231,7 @@ impl SimdAuto {
                     _mm_storeu_pd(&mut out_slice[idx], vr);
                 }
             }
-            
+
             // Handle remainder
             if remainder > 0 {
                 let idx = chunks * 2;
@@ -235,26 +241,26 @@ impl SimdAuto {
             self.add_swar(a, b, out);
         }
     }
-    
+
     #[cfg(not(target_arch = "x86_64"))]
     #[inline]
     fn add_sse42(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         self.add_swar(a, b, out);
     }
-    
+
     // NEON implementations
     #[cfg(target_arch = "aarch64")]
     #[inline]
     fn add_neon(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         use std::arch::aarch64::*;
-        
+
         let a_slice = a.as_slice().unwrap();
         let b_slice = b.as_slice().unwrap();
         let out_slice = out.as_slice_mut().unwrap();
-        
+
         let chunks = a_slice.len() / 2;
         let remainder = a_slice.len() % 2;
-        
+
         // SAFETY: NEON is mandatory on AArch64
         unsafe {
             for i in 0..chunks {
@@ -265,20 +271,20 @@ impl SimdAuto {
                 vst1q_f64(&mut out_slice[idx], vr);
             }
         }
-        
+
         // Handle remainder
         if remainder > 0 {
             let idx = chunks * 2;
             out_slice[idx] = a_slice[idx] + b_slice[idx];
         }
     }
-    
+
     #[cfg(not(target_arch = "aarch64"))]
     #[inline]
     fn add_neon(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         self.add_swar(a, b, out);
     }
-    
+
     // SWAR (SIMD Within A Register) fallback
     #[inline]
     fn add_swar(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
@@ -288,18 +294,18 @@ impl SimdAuto {
             .and(b.view())
             .for_each(|o, &a, &b| *o = a + b);
     }
-    
+
     // Scale implementations follow similar pattern
     #[cfg(target_arch = "x86_64")]
     #[inline]
     fn scale_avx2(&self, array: &mut Array3<f64>, scalar: f64) {
         if is_x86_feature_detected!("avx2") {
             use std::arch::x86_64::*;
-            
+
             let slice = array.as_slice_mut().unwrap();
             let chunks = slice.len() / 4;
             let remainder = slice.len() % 4;
-            
+
             // SAFETY: AVX2 is available (runtime check)
             unsafe {
                 let vs = _mm256_set1_pd(scalar);
@@ -310,7 +316,7 @@ impl SimdAuto {
                     _mm256_storeu_pd(&mut slice[idx], vr);
                 }
             }
-            
+
             // Handle remainder
             let remainder_start = chunks * 4;
             for i in remainder_start..slice.len() {
@@ -320,55 +326,55 @@ impl SimdAuto {
             self.scale_swar(array, scalar);
         }
     }
-    
+
     #[cfg(not(target_arch = "x86_64"))]
     #[inline]
     fn scale_avx2(&self, array: &mut Array3<f64>, scalar: f64) {
         self.scale_swar(array, scalar);
     }
-    
+
     // Stub implementations for other scale variants
     #[inline]
     fn scale_avx512(&self, array: &mut Array3<f64>, scalar: f64) {
         self.scale_avx2(array, scalar); // Delegate to AVX2 for now
     }
-    
+
     #[inline]
     fn scale_sse42(&self, array: &mut Array3<f64>, scalar: f64) {
         self.scale_swar(array, scalar);
     }
-    
+
     #[inline]
     fn scale_neon(&self, array: &mut Array3<f64>, scalar: f64) {
         self.scale_swar(array, scalar);
     }
-    
+
     #[inline]
     fn scale_swar(&self, array: &mut Array3<f64>, scalar: f64) {
         array.mapv_inplace(|x| x * scalar);
     }
-    
+
     // FMA implementations
     #[inline]
     fn fma_avx512(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
         self.fma_swar(a, b, c, out); // Delegate for now
     }
-    
+
     #[inline]
     fn fma_avx2(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
         self.fma_swar(a, b, c, out);
     }
-    
+
     #[inline]
     fn fma_sse42(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
         self.fma_swar(a, b, c, out);
     }
-    
+
     #[inline]
     fn fma_neon(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
         self.fma_swar(a, b, c, out);
     }
-    
+
     #[inline]
     fn fma_swar(&self, a: &Array3<f64>, b: &Array3<f64>, c: &Array3<f64>, out: &mut Array3<f64>) {
         Zip::from(out.view_mut())
@@ -399,40 +405,40 @@ pub fn simd() -> &'static SimdAuto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_simd_detection() {
         let capability = SimdCapability::detect();
         println!("Detected SIMD capability: {:?}", capability);
         assert!(capability.vector_width() > 0);
     }
-    
+
     #[test]
     fn test_add_inplace() {
         let simd = SimdAuto::new();
         let a = Array3::from_elem((4, 4, 4), 1.0);
         let b = Array3::from_elem((4, 4, 4), 2.0);
         let mut out = Array3::zeros((4, 4, 4));
-        
+
         simd.add_inplace(&a, &b, &mut out);
-        
+
         for &val in out.iter() {
             assert!((val - 3.0).abs() < 1e-10);
         }
     }
-    
+
     #[test]
     fn test_scale_inplace() {
         let simd = SimdAuto::new();
         let mut array = Array3::from_elem((4, 4, 4), 2.0);
-        
+
         simd.scale_inplace(&mut array, 3.0);
-        
+
         for &val in array.iter() {
             assert!((val - 6.0).abs() < 1e-10);
         }
     }
-    
+
     #[test]
     fn test_fma_inplace() {
         let simd = SimdAuto::new();
@@ -440,9 +446,9 @@ mod tests {
         let b = Array3::from_elem((4, 4, 4), 3.0);
         let c = Array3::from_elem((4, 4, 4), 1.0);
         let mut out = Array3::zeros((4, 4, 4));
-        
+
         simd.fma_inplace(&a, &b, &c, &mut out);
-        
+
         for &val in out.iter() {
             assert!((val - 7.0).abs() < 1e-10); // 2 * 3 + 1 = 7
         }

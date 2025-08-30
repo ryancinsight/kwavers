@@ -19,9 +19,10 @@ impl AnomalyDetectorModel {
     }
 
     /// Create model from weights
-    pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let _ = (weights, bias); // TODO: Use weights and bias
-        Self::new(3.0) // Default threshold
+    pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
+        // Weights not used in simplified anomaly detector
+        // Real implementation would store and use weights for neural network
+        Self::new(3.0) // Standard 3-sigma threshold
     }
 
     /// Get metadata
