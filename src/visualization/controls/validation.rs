@@ -41,6 +41,7 @@ impl ValidationResult {
 }
 
 /// Parameter validator
+#[derive(Debug)]
 pub struct ParameterValidator;
 
 impl ParameterValidator {

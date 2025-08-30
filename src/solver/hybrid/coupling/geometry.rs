@@ -6,7 +6,7 @@ use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use serde::{Deserialize, Serialize};
 
 /// Interface geometry description
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct InterfaceGeometry {
     /// Interface normal direction (0=x, 1=y, 2=z)
     pub normal_direction: usize,

@@ -11,7 +11,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// PSTD solver plugin
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PstdPlugin {
     metadata: PluginMetadata,
     state: PluginState,

@@ -7,7 +7,7 @@ use crate::KwaversResult;
 use ndarray::Array3;
 
 /// Interface detector for heterogeneous media
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct InterfaceDetector {
     /// Detection threshold (relative change)
     threshold: f64,

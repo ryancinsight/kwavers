@@ -11,7 +11,7 @@ pub type Complex3D = Array3<Complex<f64>>;
 
 /// Parameters for stress update operations
 /// Follows SOLID principles by reducing parameter coupling
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,
@@ -33,7 +33,7 @@ pub struct StressUpdateParams<'a> {
 
 /// Parameters for velocity update operations
 /// Follows SOLID principles by reducing parameter coupling
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct VelocityUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,

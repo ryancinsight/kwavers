@@ -29,7 +29,7 @@ impl Default for ValidationConfig {
 }
 
 /// Configuration validator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ConfigValidator;
 
 impl ConfigValidator {

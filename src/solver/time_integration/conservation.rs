@@ -53,7 +53,7 @@ impl ConservationHistory {
 }
 
 /// Conservation monitor for multi-rate integration
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ConservationMonitor {
     /// Grid for spatial integration
     grid: Grid,

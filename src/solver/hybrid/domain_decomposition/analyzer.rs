@@ -6,7 +6,7 @@ use crate::medium::Medium;
 use ndarray::Array3;
 
 /// Analyzes domain characteristics for solver selection
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct DomainAnalyzer {
     /// Threshold for considering a region homogeneous
     homogeneity_threshold: f64,
@@ -73,6 +73,7 @@ impl Default for DomainAnalyzer {
 }
 
 /// Quality metrics for domain characterization
+#[derive(Debug)]
 pub struct QualityMetrics {
     /// Homogeneity map (0=heterogeneous, 1=homogeneous)
     pub homogeneity: Array3<f64>,

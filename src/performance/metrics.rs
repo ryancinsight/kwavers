@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 /// Performance metrics tracker
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct PerformanceMetrics {
     /// Plugin execution times
     plugin_times: HashMap<String, Duration>,

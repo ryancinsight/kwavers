@@ -35,7 +35,7 @@ pub struct TimeScale {
 ///
 /// This component analyzes the system to identify different time scales
 /// and determine appropriate sub-cycling ratios.
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct TimeScaleSeparator {
     /// Grid reference
     grid: Grid,

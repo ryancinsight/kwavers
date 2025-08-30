@@ -9,6 +9,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Angular spectrum propagation method for forward/backward propagation
+#[derive(Debug)]
 pub struct AngularSpectrum {
     /// Grid dimensions
     nx: usize,

@@ -199,7 +199,7 @@ impl ImplicitSolver for ImplicitSolverType {
 }
 
 /// Main IMEX time integrator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct IMEXIntegrator {
     /// Configuration
     config: IMEXConfig,

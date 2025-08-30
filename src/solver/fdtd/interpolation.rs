@@ -11,7 +11,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// High-order interpolation schemes for staggered grids
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct StaggeredInterpolation;
 
 impl StaggeredInterpolation {

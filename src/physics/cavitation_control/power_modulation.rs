@@ -69,6 +69,7 @@ impl Default for PowerControl {
 }
 
 /// Power modulator for controlling ultrasound output
+#[derive(Debug)]
 pub struct PowerModulator {
     scheme: ModulationScheme,
     control: PowerControl,
@@ -212,6 +213,7 @@ impl PowerModulator {
 }
 
 /// Amplitude controller with smooth transitions
+#[derive(Debug)]
 pub struct AmplitudeController {
     target_amplitude: f64,
     current_amplitude: f64,
@@ -258,6 +260,7 @@ impl AmplitudeController {
 }
 
 /// Duty cycle controller for pulsed operation
+#[derive(Debug)]
 pub struct DutyCycleController {
     target_duty_cycle: f64,
     current_duty_cycle: f64,
@@ -378,6 +381,7 @@ impl SafetyLimiter {
 }
 
 /// Pulse sequence generator for complex modulation patterns
+#[derive(Debug)]
 pub struct PulseSequenceGenerator {
     sequence: Vec<PulseDescriptor>,
     current_index: usize,

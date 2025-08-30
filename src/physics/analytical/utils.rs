@@ -25,7 +25,7 @@ pub const DISPERSION_CORRECTION_FOURTH_ORDER: f64 = 0.001;
 pub const SUB_GRID_SEARCH_STEPS: u32 = 10;
 
 /// Test utilities for physics validation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PhysicsTestUtils;
 
 impl PhysicsTestUtils {

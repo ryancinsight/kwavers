@@ -7,7 +7,7 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 /// Spectral operations handler
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SpectralOperations {
     pub kx: Array3<f64>,
     pub ky: Array3<f64>,

@@ -34,6 +34,7 @@ impl Default for VisualizationMetrics {
 }
 
 /// Metrics tracker for performance monitoring
+#[derive(Debug)]
 pub struct MetricsTracker {
     /// History of render times
     render_times: VecDeque<f32>,

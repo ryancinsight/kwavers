@@ -20,6 +20,7 @@ use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// PSTD solver for acoustic wave propagation
+#[derive(Debug)]
 pub struct PstdSolver {
     /// Computational grid
     grid: Grid,

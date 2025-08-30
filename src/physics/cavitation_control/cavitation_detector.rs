@@ -84,6 +84,7 @@ pub trait CavitationDetector {
 }
 
 /// Spectral-based cavitation detector
+#[derive(Debug)]
 pub struct SpectralDetector {
     fundamental_freq: f64,
     sample_rate: f64,
@@ -310,6 +311,7 @@ impl CavitationDetector for SpectralDetector {
 }
 
 /// Broadband emissions detector
+#[derive(Debug)]
 pub struct BroadbandDetector {
     sample_rate: f64,
     noise_floor: f64,
@@ -368,6 +370,7 @@ impl BroadbandDetector {
 }
 
 /// Subharmonic-specific detector
+#[derive(Debug)]
 pub struct SubharmonicDetector {
     fundamental_freq: f64,
     sample_rate: f64,

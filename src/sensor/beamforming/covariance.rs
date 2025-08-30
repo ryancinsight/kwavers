@@ -3,6 +3,7 @@
 use ndarray::Array2;
 
 /// Covariance matrix estimator
+#[derive(Debug)]
 pub struct CovarianceEstimator;
 
 impl CovarianceEstimator {
@@ -14,6 +15,7 @@ impl CovarianceEstimator {
 }
 
 /// Spatial smoothing for coherent sources
+#[derive(Debug)]
 pub struct SpatialSmoothing;
 
 impl SpatialSmoothing {

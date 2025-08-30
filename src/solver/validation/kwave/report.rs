@@ -13,7 +13,7 @@ pub struct TestResult {
 }
 
 /// Validation report containing all test results
-#[derive(Debug, Default)]
+#[derive(Debug, Default]
 pub struct ValidationReport {
     results: Vec<TestResult>,
 }

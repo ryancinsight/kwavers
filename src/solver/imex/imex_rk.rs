@@ -37,7 +37,7 @@ impl Default for IMEXRKConfig {
 }
 
 /// IMEX Runge-Kutta scheme
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct IMEXRK {
     config: IMEXRKConfig,
     /// Explicit RK coefficients (a_ij)

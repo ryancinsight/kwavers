@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Configuration for validation tests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ValidationConfig {
     /// Maximum allowed error tolerance
     pub error_tolerance: f64,

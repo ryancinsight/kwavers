@@ -9,6 +9,7 @@ use ndarray::{Array3, Array4};
 use std::fmt;
 
 /// PAM plugin for passive acoustic mapping
+#[derive(Debug)]
 pub struct PAMPlugin {
     mapper: super::PassiveAcousticMapper,
     metadata: PluginMetadata,

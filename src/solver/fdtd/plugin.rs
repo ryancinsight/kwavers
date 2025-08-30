@@ -11,7 +11,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// FDTD solver plugin
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct FdtdPlugin {
     metadata: PluginMetadata,
     state: PluginState,

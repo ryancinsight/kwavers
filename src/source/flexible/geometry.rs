@@ -98,7 +98,7 @@ impl GeometryState {
 }
 
 /// Deformation state tracking
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize]
 pub struct DeformationState {
     /// Curvature radius (m), None if flat
     pub curvature_radius: Option<f64>,

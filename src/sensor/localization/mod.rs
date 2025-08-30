@@ -17,7 +17,7 @@ pub use tdoa::{TDOAMeasurement, TDOAProcessor};
 pub use triangulation::Triangulator;
 
 /// Position in 3D space
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -65,7 +65,7 @@ pub struct LocalizationResult {
 }
 
 /// Localization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct LocalizationConfig {
     /// Speed of sound in medium [m/s]
     pub sound_speed: f64,
@@ -92,6 +92,7 @@ impl Default for LocalizationConfig {
 }
 
 /// Main localization processor
+#[derive(Debug)]
 pub struct LocalizationProcessor {
     config: LocalizationConfig,
     sensor_array: SensorArray,

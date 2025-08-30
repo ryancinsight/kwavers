@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 /// Focal point specification
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy]
 pub struct FocalPoint {
     /// Position in 3D space (m)
     pub position: [f64; 3],

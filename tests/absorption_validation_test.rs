@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Power law absorption validation test
 //!
 //! Validates that the power law absorption model correctly implements

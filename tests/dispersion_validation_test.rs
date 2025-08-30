@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Numerical dispersion validation test
 //!
 //! Validates that the numerical methods correctly handle wave dispersion.

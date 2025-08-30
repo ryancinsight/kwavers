@@ -7,6 +7,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Utility functions for photoacoustic reconstruction
+#[derive(Debug)]
 pub struct Utils;
 
 impl Utils {

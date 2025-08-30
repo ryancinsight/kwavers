@@ -12,6 +12,7 @@ pub enum SteeringVectorMethod {
 }
 
 /// Steering vector computation
+#[derive(Debug)]
 pub struct SteeringVector;
 
 impl SteeringVector {

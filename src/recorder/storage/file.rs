@@ -8,6 +8,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 /// File storage backend
+#[derive(Debug)]
 pub struct FileStorage {
     base_path: PathBuf,
     files: Vec<File>,

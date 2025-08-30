@@ -9,6 +9,7 @@ pub trait HeatSource {
 }
 
 /// Thermal source from acoustic absorption
+#[derive(Debug)]
 pub struct ThermalSource {
     absorption_coefficient: f64,
     intensity: Array3<f64>,

@@ -7,6 +7,7 @@ use super::config::AcousticSolverConfig;
 use super::solver::AcousticSolver;
 
 /// Kuznetsov equation solver
+#[derive(Debug)]
 pub struct KuznetsovSolver {
     config: AcousticSolverConfig,
     grid: Grid,

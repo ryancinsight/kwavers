@@ -6,7 +6,7 @@ use crate::utils::linear_algebra::LinearAlgebra;
 use ndarray::Array2;
 
 /// Beamforming processor for array algorithms
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct BeamformingProcessor {
     pub config: BeamformingConfig,
     sensor_positions: Vec<[f64; 3]>,

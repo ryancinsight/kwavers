@@ -11,6 +11,7 @@ use crate::grid::Grid;
 use ndarray::{Array2, Array3, Zip};
 
 /// Wavefield modeling for seismic FWI
+#[derive(Debug)]
 pub struct WavefieldModeler {
     /// Spatial grid
     grid: Grid,

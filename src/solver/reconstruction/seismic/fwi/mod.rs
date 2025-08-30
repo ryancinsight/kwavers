@@ -21,6 +21,7 @@ use crate::grid::Grid;
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor
+#[derive(Debug)]
 pub struct FullWaveformInversion {
     config: SeismicImagingConfig,
     /// Current velocity model

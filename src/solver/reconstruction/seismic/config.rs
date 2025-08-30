@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::constants::*;
 
 /// Seismic imaging configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct SeismicImagingConfig {
     /// Base reconstruction configuration
     pub base_config: ReconstructionConfig,
@@ -64,7 +64,7 @@ pub enum RtmImagingCondition {
 }
 
 /// Anisotropy parameters for VTI media
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct AnisotropyParameters {
     /// Thomsen parameter epsilon
     pub epsilon: f64,

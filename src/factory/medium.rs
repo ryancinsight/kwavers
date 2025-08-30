@@ -107,7 +107,7 @@ impl Default for MediumConfig {
 }
 
 /// Factory for creating media
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct MediumFactory;
 
 impl MediumFactory {

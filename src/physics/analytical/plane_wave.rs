@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Plane wave analytical solutions
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PlaneWaveSolution;
 
 impl PlaneWaveSolution {

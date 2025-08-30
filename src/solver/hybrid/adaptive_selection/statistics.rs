@@ -4,7 +4,7 @@ use super::selector::SelectedMethod;
 use ndarray::Array3;
 
 /// Statistics for method selection
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct SelectionStatistics {
     pub spectral_count: usize,
     pub fd_count: usize,

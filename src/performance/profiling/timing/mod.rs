@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// Timing scope for RAII-based profiling
+#[derive(Debug)]
 pub struct TimingScope {
     name: String,
     start: Instant,

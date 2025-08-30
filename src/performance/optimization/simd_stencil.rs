@@ -8,6 +8,7 @@ use ndarray::{ArrayView3, ArrayViewMut3};
 use std::arch::x86_64::*;
 
 /// SIMD-optimized Laplacian computation
+#[derive(Debug)]
 pub struct SimdLaplacian {
     /// Grid spacing squared
     dx2_inv: f64,
@@ -186,6 +187,7 @@ impl SimdLaplacian {
 }
 
 /// SWAR (SIMD Within A Register) fallback for non-x86 architectures
+#[derive(Debug)]
 pub struct SwarLaplacian {
     dx2_inv: f64,
     dy2_inv: f64,

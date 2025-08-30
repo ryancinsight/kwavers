@@ -2,16 +2,16 @@
 //!
 //! Implements aberration correction methods for transcranial ultrasound.
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AberrationCorrector;
 pub enum CorrectionMethod {
     TimeReversal,
     AdaptiveFocusing,
     PhaseConjugation,
 }
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct TimeReversal;
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AdaptiveFocusing;
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PhaseConjugation;

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Validation tests for elastic wave propagation
 //!
 //! Tests P-wave and S-wave propagation against analytical solutions

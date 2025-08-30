@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use crate::medium::{core::CoreMedium, HomogeneousMedium};
 
 /// Validation results for numerical accuracy tests
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct ValidationResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
@@ -117,6 +117,7 @@ impl Default for ConvergenceResults {
 }
 
 /// Comprehensive numerical accuracy validator
+#[derive(Debug)]
 pub struct NumericalValidator {
     grid: Grid,
     medium: HomogeneousMedium,

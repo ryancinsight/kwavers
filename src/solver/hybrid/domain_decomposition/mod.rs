@@ -40,7 +40,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 
 /// Main domain decomposer that coordinates analysis and partitioning
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct DomainDecomposer {
     analyzer: DomainAnalyzer,
     partitioner: DomainPartitioner,

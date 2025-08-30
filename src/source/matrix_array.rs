@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct MatrixArray {
     width: f64,
     height: f64,

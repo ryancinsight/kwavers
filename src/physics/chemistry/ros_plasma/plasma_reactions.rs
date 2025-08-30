@@ -33,7 +33,7 @@ impl PlasmaReaction {
 }
 
 /// Plasma chemistry model
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PlasmaChemistry {
     /// List of plasma reactions
     pub reactions: Vec<PlasmaReaction>,

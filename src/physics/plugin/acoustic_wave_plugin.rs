@@ -11,7 +11,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{Array3, Array4};
 
 /// Acoustic wave propagation plugin
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AcousticWavePlugin {
     metadata: PluginMetadata,
     state: PluginState,

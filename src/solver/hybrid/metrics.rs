@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 /// Performance metrics for hybrid solver
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct HybridMetrics {
     /// Time spent in PSTD regions
     pub pstd_time: Duration,
@@ -51,7 +51,7 @@ impl HybridMetrics {
 }
 
 /// Efficiency metrics for method selection
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct EfficiencyMetrics {
     /// Computational efficiency score (0-1)
     pub efficiency_score: f64,
@@ -64,7 +64,7 @@ pub struct EfficiencyMetrics {
 }
 
 /// Validation results for solution quality
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct ValidationResults {
     /// Solution quality score (0-1)
     pub quality_score: f64,

@@ -18,7 +18,7 @@ use super::statistics::RecorderStatistics;
 use super::traits::RecorderTrait;
 
 /// Main recorder implementation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct Recorder {
     pub sensor: Sensor,
     pub filename: String,

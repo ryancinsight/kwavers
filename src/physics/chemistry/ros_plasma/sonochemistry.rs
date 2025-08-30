@@ -24,7 +24,7 @@ pub struct SonochemicalYield {
 }
 
 /// Integrated sonochemistry model
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SonochemistryModel {
     /// ROS concentration fields
     pub ros_concentrations: ROSConcentrations,

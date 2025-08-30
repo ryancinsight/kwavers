@@ -90,6 +90,7 @@ pub struct ControlOutput {
 pub use crate::physics::cavitation_control::cavitation_detector::CavitationMetrics;
 
 /// Main feedback controller
+#[derive(Debug)]
 pub struct FeedbackController {
     config: FeedbackConfig,
     pid_controller: PIDController,

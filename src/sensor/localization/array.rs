@@ -4,7 +4,7 @@ use super::Position;
 use serde::{Deserialize, Serialize};
 
 /// Individual sensor in array
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct Sensor {
     /// Sensor ID
     pub id: usize,

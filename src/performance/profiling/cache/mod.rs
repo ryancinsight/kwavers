@@ -5,7 +5,7 @@
 use std::sync::{Arc, Mutex};
 
 /// Cache statistics
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct CacheStatistics {
     /// L1 cache hits
     pub l1_hits: usize,

@@ -11,6 +11,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Array3, Zip};
 
 /// Gradient calculator for FWI
+#[derive(Debug)]
 pub struct GradientCalculator {
     /// Number of time steps
     nt: usize,

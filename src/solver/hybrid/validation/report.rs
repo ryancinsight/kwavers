@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Validation report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ValidationReport {
     /// Test name
     pub test_name: String,
@@ -14,7 +14,7 @@ pub struct ValidationReport {
 }
 
 /// Validation summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ValidationSummary {
     /// Total tests run
     pub total_tests: usize,

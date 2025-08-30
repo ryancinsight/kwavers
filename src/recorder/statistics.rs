@@ -1,7 +1,7 @@
 // recorder/statistics.rs - Recording statistics
 
 /// Statistics collected during recording
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct RecorderStatistics {
     pub total_snapshots: usize,
     pub total_cavitation_events: usize,

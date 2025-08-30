@@ -113,7 +113,7 @@ impl ROSSpecies {
 }
 
 /// Container for ROS concentrations in the simulation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ROSConcentrations {
     /// Concentration fields for each ROS species (mol/m³)
     pub fields: HashMap<ROSSpecies, Array3<f64>>,

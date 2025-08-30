@@ -158,6 +158,7 @@ impl BubbleParameters {
 }
 
 /// Convert dimensional to dimensionless parameters
+#[derive(Debug)]
 pub struct DimensionlessParameters {
     /// Reynolds number
     pub reynolds: f64,

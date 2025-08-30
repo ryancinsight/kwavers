@@ -23,7 +23,7 @@ pub struct InterfaceCoupling {
 }
 
 /// Main coupling interface between PSTD and FDTD domains
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct CouplingInterface {
     /// Interface geometry
     geometry: InterfaceGeometry,

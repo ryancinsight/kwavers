@@ -5,7 +5,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Dispersion analysis for numerical methods
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct DispersionAnalysis;
 
 impl DispersionAnalysis {

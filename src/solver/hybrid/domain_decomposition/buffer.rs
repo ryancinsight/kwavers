@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Buffer zones for smooth transitions between domains
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct BufferZones {
     /// Width of buffer zone in grid points
     pub width: usize,

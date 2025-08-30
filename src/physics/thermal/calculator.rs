@@ -7,7 +7,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Thermal calculator for temperature evolution
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ThermalCalculator {
     state: ThermalState,
     config: ThermalConfig,

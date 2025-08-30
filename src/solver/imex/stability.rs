@@ -19,7 +19,7 @@ pub struct StabilityRegion {
 }
 
 /// IMEX stability analyzer
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct IMEXStabilityAnalyzer {
     /// Number of test points for stability region
     n_test_points: usize,

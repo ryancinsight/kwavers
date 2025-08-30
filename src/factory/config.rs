@@ -24,7 +24,7 @@ pub struct SimulationConfig {
 
 /// Builder for simulation configuration
 /// Follows Builder pattern for complex object construction
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ConfigBuilder {
     config: SimulationConfig,
 }

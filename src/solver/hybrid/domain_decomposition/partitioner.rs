@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 
 /// Partitions domain into regions for different solvers
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct DomainPartitioner {
     /// Minimum region size to avoid excessive fragmentation
     min_region_size: usize,

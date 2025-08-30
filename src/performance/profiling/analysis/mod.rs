@@ -118,7 +118,7 @@ pub fn estimate_spectral_intensity(grid: &Grid) -> f64 {
 }
 
 /// Performance analyzer for comprehensive analysis
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PerformanceAnalyzer {
     roofline: RooflineAnalysis,
     grid: Grid,

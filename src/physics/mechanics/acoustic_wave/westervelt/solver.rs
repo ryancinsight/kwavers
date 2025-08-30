@@ -15,7 +15,7 @@ use super::nonlinear::{compute_nonlinear_term, compute_viscoelastic_term};
 use super::spectral::{compute_laplacian_spectral, initialize_kspace_grids};
 
 /// Westervelt equation solver with proper second-order time derivatives
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct WesterveltWave {
     // Precomputed k-space grids
     k_squared: Option<Array3<f64>>,

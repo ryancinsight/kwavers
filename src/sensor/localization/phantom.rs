@@ -4,6 +4,7 @@ pub use super::calibration::CentroidPhantom;
 
 /// Phantom target for calibration
 #[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PhantomTarget {
     /// Target position [x, y, z] in meters
     pub position: [f64; 3],

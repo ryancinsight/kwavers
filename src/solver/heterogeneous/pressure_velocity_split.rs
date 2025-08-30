@@ -7,7 +7,7 @@ use crate::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Pressure-velocity split handler for heterogeneous media
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PressureVelocitySplit {
     grid: Grid,
     /// Split coefficient for pressure equation

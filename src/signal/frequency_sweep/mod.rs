@@ -81,6 +81,7 @@ impl Default for SweepConfig {
 }
 
 /// Factory for creating frequency sweeps
+#[derive(Debug)]
 pub struct SweepFactory;
 
 impl SweepFactory {

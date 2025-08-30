@@ -15,7 +15,7 @@ use crate::source::Source;
 use ndarray::{Array3, Array4, Zip};
 
 /// Main Kuznetsov wave solver
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct KuznetsovWave {
     config: KuznetsovConfig,
     grid: Grid,

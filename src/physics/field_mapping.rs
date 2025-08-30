@@ -163,6 +163,7 @@ impl fmt::Display for UnifiedFieldType {
 }
 
 /// Type-safe field accessor to prevent index confusion
+#[derive(Debug)]
 pub struct FieldAccessor<'a> {
     fields: &'a ndarray::Array4<f64>,
 }
@@ -194,6 +195,7 @@ impl<'a> FieldAccessor<'a> {
 }
 
 /// Type-safe mutable field accessor
+#[derive(Debug)]
 pub struct FieldAccessorMut<'a> {
     fields: &'a mut ndarray::Array4<f64>,
 }

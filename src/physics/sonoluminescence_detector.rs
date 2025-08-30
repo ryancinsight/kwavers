@@ -95,7 +95,7 @@ impl Default for DetectorConfig {
 }
 
 /// Sonoluminescence detector and analyzer
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SonoluminescenceDetector {
     /// Detector configuration
     config: DetectorConfig,

@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use log::debug;
 use ndarray::{Array3, Zip};
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct StreamingModel {
     pub velocity: Array3<f64>,
 }

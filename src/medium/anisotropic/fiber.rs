@@ -8,7 +8,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Fiber orientation in 3D space
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct FiberOrientation {
     /// Azimuthal angle (φ) in radians
     pub azimuth: f64,
@@ -48,7 +48,7 @@ impl FiberOrientation {
 }
 
 /// Muscle fiber model for anisotropic wave propagation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct MuscleFiberModel {
     /// Fiber orientations at each grid point
     fiber_field: Array3<FiberOrientation>,

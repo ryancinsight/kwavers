@@ -30,6 +30,7 @@ impl Default for ControlPanelConfig {
 }
 
 /// Control panel UI component
+#[derive(Debug)]
 pub struct ControlPanel {
     config: ControlPanelConfig,
     controls: InteractiveControls,

@@ -8,6 +8,7 @@ use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Phase shifter for beam control
+#[derive(Debug)]
 pub struct PhaseShifter {
     strategy: ShiftingStrategy,
     element_positions: Array2<f64>,

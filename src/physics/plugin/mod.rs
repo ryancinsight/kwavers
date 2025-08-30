@@ -165,7 +165,7 @@ pub enum ConfigValue {
 }
 
 /// Container for fields that plugins can access and modify
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PluginFields {
     /// Pressure field
     pub pressure: Array3<f64>,

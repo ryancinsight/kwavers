@@ -12,6 +12,7 @@ use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// Spectral operator for computing derivatives in Fourier space
+#[derive(Debug)]
 pub struct SpectralOperator {
     /// Grid dimensions
     nx: usize,

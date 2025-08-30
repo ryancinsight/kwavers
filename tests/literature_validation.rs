@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Literature validation tests for physics implementations
 //!
 //! These tests validate our implementations against known analytical solutions

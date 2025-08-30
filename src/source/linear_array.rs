@@ -7,7 +7,7 @@ use ndarray::Array3;
 use rayon::prelude::*;
 use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct LinearArray {
     length: f64,
     num_elements: usize,

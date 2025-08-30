@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use crate::physics::phase_modulation::phase_shifting::core::*;
 
 /// Dynamic focusing controller
+#[derive(Debug)]
 pub struct DynamicFocusing {
     /// Array element positions
     element_positions: Array2<f64>,

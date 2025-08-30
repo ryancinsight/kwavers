@@ -90,7 +90,7 @@ impl<'a> ChemicalUpdateParams<'a> {
 }
 
 /// Metrics for chemical model performance
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct ChemicalMetrics {
     pub total_reactions: usize,
     pub computation_time_ms: f64,

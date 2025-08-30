@@ -19,7 +19,7 @@ pub enum DecompositionStrategy {
 }
 
 /// Configuration for the hybrid PSTD/FDTD solver
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct HybridConfig {
     /// PSTD solver configuration
     pub pstd_config: PstdConfig,
@@ -58,7 +58,7 @@ impl Default for HybridConfig {
 }
 
 /// Configuration for coupling interface between PSTD and FDTD regions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct CouplingInterfaceConfig {
     /// Interpolation scheme for data exchange
     pub interpolation_scheme: InterpolationScheme,
@@ -92,7 +92,7 @@ pub enum InterpolationScheme {
 }
 
 /// Performance optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct OptimizationConfig {
     /// Enable cache optimization
     pub cache_optimization: bool,
@@ -115,7 +115,7 @@ impl Default for OptimizationConfig {
 }
 
 /// Validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ValidationConfig {
     /// Enable solution validation
     pub enable_validation: bool,

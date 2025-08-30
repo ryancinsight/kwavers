@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Power-law absorption model configuration
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize]
 pub struct PowerLawAbsorption {
     /// Absorption coefficient at 1 MHz [dB/(MHz^y cm)]
     pub alpha_0: f64,
@@ -76,6 +76,7 @@ impl PowerLawAbsorption {
 }
 
 /// Power law model implementation
+#[derive(Debug)]
 pub struct PowerLawModel {
     config: PowerLawAbsorption,
 }

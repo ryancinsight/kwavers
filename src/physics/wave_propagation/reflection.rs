@@ -5,6 +5,7 @@
 use std::f64::consts::PI;
 
 /// Reflection calculator
+#[derive(Debug)]
 pub struct ReflectionCalculator {
     /// Impedance of medium 1
     z1: f64,

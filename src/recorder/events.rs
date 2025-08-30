@@ -22,7 +22,7 @@ pub struct ThermalEvent {
 }
 
 /// Collection of all event types
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct EventCollection {
     pub cavitation_events: Vec<CavitationEvent>,
     pub thermal_events: Vec<ThermalEvent>,

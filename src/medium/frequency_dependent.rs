@@ -120,7 +120,7 @@ impl FrequencyDependentProperties {
 }
 
 /// Tissue-specific frequency-dependent models
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct TissueFrequencyModels;
 
 impl TissueFrequencyModels {
@@ -169,6 +169,7 @@ impl TissueFrequencyModels {
 }
 
 /// Dispersion correction for frequency-dependent media
+#[derive(Debug)]
 pub struct DispersionCorrection {
     /// Reference frequency for dispersion calculation
     _reference_frequency: f64,

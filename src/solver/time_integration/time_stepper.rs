@@ -38,7 +38,7 @@ impl TimeStepperConfig for RK4Config {
 }
 
 /// 4th-order Runge-Kutta time stepper
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct RungeKutta4 {
     config: RK4Config,
     /// Temporary storage for intermediate stages
@@ -192,7 +192,7 @@ impl TimeStepperConfig for AdamsBashforthConfig {
 /// historical fields, which can consume several gigabytes of RAM for a
 /// high-resolution 3D grid (e.g., 512^3). Consider using a single-step
 /// method like `RungeKutta4` if memory is a concern.
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AdamsBashforth {
     config: AdamsBashforthConfig,
     /// History of previous RHS evaluations

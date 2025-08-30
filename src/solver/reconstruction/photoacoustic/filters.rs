@@ -12,6 +12,7 @@ use std::f64::consts::PI;
 use super::config::PhotoacousticConfig;
 
 /// Filter operations for photoacoustic reconstruction
+#[derive(Debug)]
 pub struct Filters {
     filter_type: FilterType,
 }

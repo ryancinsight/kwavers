@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Outcome prediction model
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct OutcomePredictorModel {
     metadata: ModelMetadata,
 }

@@ -53,7 +53,7 @@ pub enum ScatteringRegime {
 }
 
 /// Unified scattering calculator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ScatteringCalculator {
     /// Wave frequency [Hz]
     frequency: f64,
@@ -211,7 +211,7 @@ impl ScatteringCalculator {
 }
 
 /// Volume scattering in inhomogeneous media
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct VolumeScattering {
     /// Scattering coefficient [1/m]
     pub scattering_coefficient: Array3<f64>,

@@ -16,6 +16,7 @@ pub struct PAMConfig {
 }
 
 /// PAM processor for cavitation mapping
+#[derive(Debug)]
 pub struct PAMProcessor {
     config: PAMConfig,
     fft_planner: FftPlanner<f64>,

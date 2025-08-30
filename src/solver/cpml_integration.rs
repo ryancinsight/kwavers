@@ -11,6 +11,7 @@ use log::trace;
 use ndarray::{Array3, Array4, Axis};
 
 /// C-PML solver integration for acoustic wave propagation
+#[derive(Debug)]
 pub struct CPMLSolver {
     /// C-PML boundary instance
     cpml: CPMLBoundary,

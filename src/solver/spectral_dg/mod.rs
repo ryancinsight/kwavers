@@ -57,6 +57,7 @@ impl Default for HybridSpectralDGConfig {
 }
 
 /// Main Hybrid Spectral-DG solver
+#[derive(Debug)]
 pub struct HybridSpectralDGSolver {
     config: HybridSpectralDGConfig,
     detector: DiscontinuityDetector,

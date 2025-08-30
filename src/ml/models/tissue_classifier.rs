@@ -6,7 +6,7 @@ use crate::ml::inference::InferenceEngine;
 use ndarray::{Array1, Array2};
 
 /// Tissue classification model for acoustic simulations
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct TissueClassifierModel {
     pub(crate) engine: InferenceEngine,
     metadata: ModelMetadata,

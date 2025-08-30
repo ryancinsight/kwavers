@@ -11,7 +11,7 @@ use super::{
 };
 
 /// Unified thermal diffusion solver
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ThermalDiffusionSolver {
     config: ThermalDiffusionConfig,
     temperature: Array3<f64>,

@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Configuration for flexible transducer arrays
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize]
 pub struct FlexibleTransducerConfig {
     /// Number of elements in the array
     pub num_elements: usize,

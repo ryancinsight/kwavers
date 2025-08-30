@@ -77,7 +77,7 @@ impl PstdConfig {
 }
 
 /// PSTD solver plugin with optimizations
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PstdSolver {
     /// Plugin metadata
     metadata: PluginMetadata,

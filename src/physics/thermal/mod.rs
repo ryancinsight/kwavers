@@ -18,7 +18,7 @@ pub use properties::{ThermalProperties, TissueProperties};
 pub use source::{HeatSource, ThermalSource};
 
 /// Thermal configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ThermalConfig {
     /// Enable Pennes bioheat equation
     pub use_bioheat: bool,

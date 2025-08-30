@@ -32,7 +32,7 @@ pub mod thresholds {
 }
 
 /// CEM43 thermal dose calculator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ThermalDoseCalculator {
     /// Cumulative thermal dose [equivalent minutes at 43°C]
     cumulative_dose: Array3<f64>,

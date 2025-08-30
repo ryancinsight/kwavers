@@ -11,7 +11,7 @@ use std::sync::OnceLock;
 const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
 
 /// Spatial bounds for a region
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy]
 pub struct Bounds {
     /// Minimum coordinates [x, y, z]
     pub min: [f64; 3],

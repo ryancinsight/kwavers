@@ -33,7 +33,7 @@ impl Default for BioheatParameters {
 }
 
 /// Pennes bioheat equation solver
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PennesBioheat {
     params: BioheatParameters,
 }

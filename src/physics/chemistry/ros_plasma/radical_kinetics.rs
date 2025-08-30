@@ -23,7 +23,7 @@ pub struct RadicalReaction {
 }
 
 /// Radical kinetics solver
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct RadicalKinetics {
     /// List of radical reactions
     pub reactions: Vec<RadicalReaction>,

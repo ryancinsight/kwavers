@@ -7,7 +7,7 @@
 //! - Pinkerton (1949): Simplified absorption model
 
 /// Water properties and attenuation models
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct WaterProperties;
 
 impl WaterProperties {

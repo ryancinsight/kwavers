@@ -82,7 +82,7 @@ impl Default for GridConfig {
 }
 
 /// Factory for creating grids
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct GridFactory;
 
 impl GridFactory {

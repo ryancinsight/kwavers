@@ -7,6 +7,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Bubble interaction calculator
+#[derive(Debug)]
 pub struct BubbleInteractions {
     /// Interaction cutoff distance [m]
     pub cutoff_distance: f64,
@@ -77,7 +78,7 @@ impl BubbleInteractions {
 }
 
 /// Calculate Bjerknes force between two bubbles
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct BjerknesForce;
 
 impl BjerknesForce {
@@ -128,7 +129,7 @@ pub enum InteractionType {
 }
 
 /// Collective effects in bubble clouds
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct CollectiveEffects;
 
 impl CollectiveEffects {

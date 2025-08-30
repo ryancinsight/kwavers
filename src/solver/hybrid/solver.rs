@@ -15,7 +15,7 @@ use ndarray::{s, Array4};
 use std::time::Instant;
 
 /// Hybrid PSTD/FDTD solver combining spectral and finite-difference methods
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct HybridSolver {
     /// Configuration
     config: HybridConfig,

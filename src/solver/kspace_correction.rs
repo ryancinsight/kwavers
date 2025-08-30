@@ -31,7 +31,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 /// K-space correction configuration
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy]
 pub struct KSpaceCorrectionConfig {
     /// Enable k-space correction
     pub enabled: bool,

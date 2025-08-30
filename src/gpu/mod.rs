@@ -34,6 +34,7 @@ pub struct GpuCapabilities {
 }
 
 /// Main GPU context for acoustic simulations
+#[derive(Debug)]
 pub struct GpuContext {
     device: wgpu::Device,
     queue: wgpu::Queue,

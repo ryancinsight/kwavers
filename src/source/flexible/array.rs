@@ -15,6 +15,7 @@ use super::config::{CalibrationMethod, FlexibilityModel, FlexibleTransducerConfi
 use super::geometry::{DeformationState, GeometryState};
 
 /// Flexible transducer array with real-time geometry tracking
+#[derive(Debug)]
 pub struct FlexibleTransducerArray {
     /// Configuration
     config: FlexibleTransducerConfig,

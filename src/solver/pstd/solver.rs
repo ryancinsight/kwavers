@@ -11,7 +11,7 @@ use crate::source::Source;
 use ndarray::{Array3, Zip};
 
 /// PSTD solver state
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PstdSolver {
     pub(crate) config: PstdConfig,
     pub(crate) spectral: SpectralOperations,

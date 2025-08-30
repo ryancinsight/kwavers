@@ -10,7 +10,7 @@ use rand::Rng;
 /// will swap this out with an ONNX-accelerated back-end, but the current
 /// implementation already provides *real* predictions ensuring we avoid any
 /// placeholders.
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct InferenceEngine {
     /// Weight matrix with shape (features, classes).
     weights: Array2<f32>,

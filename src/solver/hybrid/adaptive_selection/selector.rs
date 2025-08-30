@@ -15,7 +15,7 @@ pub enum SelectedMethod {
 }
 
 /// Adaptive method selector
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AdaptiveMethodSelector {
     criteria: SelectionCriteria,
     previous_selection: Option<Array3<SelectedMethod>>,

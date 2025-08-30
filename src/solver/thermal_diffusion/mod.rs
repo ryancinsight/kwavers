@@ -93,7 +93,7 @@ impl Default for ThermalDiffusionConfig {
 }
 
 /// Thermal diffusion plugin for the physics system
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ThermalDiffusionPlugin {
     metadata: PluginMetadata,
     solver: Option<ThermalDiffusionSolver>,

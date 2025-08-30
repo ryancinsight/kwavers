@@ -8,7 +8,7 @@ use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Christoffel equation solver for anisotropic wave propagation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ChristoffelEquation {
     /// Stiffness tensor
     stiffness: StiffnessTensor,

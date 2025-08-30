@@ -21,7 +21,7 @@ const SHOCK_FORMATION_COEFFICIENT: f64 = 1.2; // Goldberg number threshold
 const DIFFRACTION_COEFFICIENT: f64 = 0.5; // Fresnel number scaling
 
 /// KZK equation solver for nonlinear beam propagation
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct KzkSolverPlugin {
     metadata: PluginMetadata,
     state: PluginState,

@@ -40,7 +40,7 @@ impl Default for EmissionParameters {
 }
 
 /// Spectral field using Struct-of-Arrays for better performance
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SpectralField {
     /// Wavelength grid (shared for all spatial points)
     pub wavelengths: Array1<f64>,
@@ -114,7 +114,7 @@ impl SpectralField {
 }
 
 /// Main sonoluminescence emission calculator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SonoluminescenceEmission {
     /// Emission parameters
     pub params: EmissionParameters,

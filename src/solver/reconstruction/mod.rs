@@ -26,7 +26,7 @@ pub mod plane_recon;
 pub mod seismic;
 
 /// Reconstruction configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ReconstructionConfig {
     /// Speed of sound in medium (m/s)
     pub sound_speed: f64,
@@ -106,6 +106,7 @@ pub trait Reconstructor {
 
 /// Universal back-projection for arbitrary geometries
 /// Based on Xu & Wang (2005)
+#[derive(Debug)]
 pub struct UniversalBackProjection {
     /// Weight function for back-projection
     weight_function: WeightFunction,

@@ -54,6 +54,7 @@ impl FresnelCoefficients {
 }
 
 /// Fresnel equation calculator
+#[derive(Debug)]
 pub struct FresnelCalculator {
     /// Refractive index of medium 1
     n1: f64,

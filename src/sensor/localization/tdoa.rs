@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use serde::{Deserialize, Serialize};
 
 /// TDOA measurement between sensor pair
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct TDOAMeasurement {
     /// Sensor pair (reference sensor, measurement sensor)
     pub sensor_pair: (usize, usize),
@@ -32,6 +32,7 @@ impl TDOAMeasurement {
 }
 
 /// TDOA processor for hyperbolic localization
+#[derive(Debug)]
 pub struct TDOAProcessor {
     measurements: Vec<TDOAMeasurement>,
     sound_speed: f64,

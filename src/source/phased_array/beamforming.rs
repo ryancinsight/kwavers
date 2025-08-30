@@ -18,7 +18,7 @@ pub enum BeamformingMode {
 }
 
 /// Beamforming calculator
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct BeamformingCalculator {
     sound_speed: f64,
     frequency: f64,

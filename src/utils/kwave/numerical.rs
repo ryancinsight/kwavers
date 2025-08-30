@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use ndarray::Array1;
 
 /// Numerical utility functions
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct NumericalUtils;
 
 impl NumericalUtils {

@@ -12,7 +12,7 @@ use ndarray::Array3;
 ///
 /// Pre-allocates all temporary arrays needed for computation to avoid
 /// allocations in the hot loop.
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct KuznetsovWorkspace {
     /// Spectral operator for FFT-based derivatives
     pub spectral_op: SpectralOperator,

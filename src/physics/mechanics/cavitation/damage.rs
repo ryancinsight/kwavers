@@ -20,7 +20,7 @@ const STAINLESS_STEEL_316_DENSITY: f64 = 7850.0; // kg/m³
 const DEFAULT_FATIGUE_EXPONENT: f64 = 3.0;
 const DEFAULT_EROSION_RESISTANCE: f64 = 1.0;
 /// Cavitation damage model
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct CavitationDamage {
     /// Accumulated damage field (dimensionless damage parameter)
     pub damage_field: Array3<f64>,
@@ -272,7 +272,7 @@ pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f
 }
 
 /// Predict erosion patterns
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ErosionPattern;
 
 impl ErosionPattern {

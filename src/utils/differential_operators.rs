@@ -28,7 +28,7 @@ pub enum SpatialOrder {
 }
 
 /// Finite difference coefficients for different orders
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct FDCoefficients;
 
 impl FDCoefficients {

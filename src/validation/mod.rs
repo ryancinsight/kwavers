@@ -64,7 +64,7 @@ mod constants {
 }
 
 /// Physics validation results (extends ValidationReport)
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PhysicsValidation {
     pub test_name: String,
     pub passed: bool,

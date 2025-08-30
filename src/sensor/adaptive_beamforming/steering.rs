@@ -4,12 +4,14 @@ use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
 /// Steering vector for a given direction
+#[derive(Debug)]
 pub struct SteeringVector {
     pub direction: (f64, f64), // (azimuth, elevation)
     pub vector: Array1<Complex64>,
 }
 
 /// Collection of steering vectors
+#[derive(Debug)]
 pub struct SteeringMatrix {
     pub vectors: Array2<Complex64>,
     pub directions: Vec<(f64, f64)>,

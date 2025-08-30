@@ -13,7 +13,7 @@ use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct PhasedArrayTransducer {
     /// Array configuration
     config: PhasedArrayConfig,

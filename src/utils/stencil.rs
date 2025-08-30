@@ -196,6 +196,7 @@ pub trait Stencil<T: StencilValue, const N: usize> {
 }
 
 /// A 7-point stencil for 3D Laplacian
+#[derive(Debug)]
 pub struct Laplacian3D {
     pub dx_inv2: f64,
     pub dy_inv2: f64,
@@ -210,6 +211,7 @@ impl<T: StencilValue> Stencil<T, 7> for Laplacian3D {
 }
 
 /// Iterator-based stencil operations for maximum flexibility
+#[derive(Debug)]
 pub struct StencilIterator3D<'a, T> {
     array: ArrayView3<'a, T>,
     position: (usize, usize, usize),

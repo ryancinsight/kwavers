@@ -20,6 +20,7 @@ use super::{
 use super::{controls, data_pipeline, renderer};
 
 /// Main visualization engine
+#[derive(Debug)]
 pub struct VisualizationEngine {
     /// Configuration settings
     config: VisualizationConfig,

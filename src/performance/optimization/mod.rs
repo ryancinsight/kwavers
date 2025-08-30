@@ -56,6 +56,7 @@ impl StencilKernel {
 }
 
 /// Main optimization orchestrator
+#[derive(Debug)]
 pub struct PerformanceOptimizer {
     config: OptimizationConfig,
     simd: SimdOptimizer,

@@ -8,6 +8,7 @@ use crate::{Grid, KwaversResult};
 use std::time::Instant;
 
 /// Benchmark runner
+#[derive(Debug)]
 pub struct BenchmarkRunner {
     config: BenchmarkConfig,
     report: BenchmarkReport,

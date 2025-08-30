@@ -59,6 +59,7 @@ impl Default for BowlConfig {
 }
 
 /// Focused bowl transducer (makeBowl equivalent)
+#[derive(Debug)]
 pub struct BowlTransducer {
     pub(crate) config: BowlConfig,
     /// Discretized element positions

@@ -28,6 +28,7 @@ pub struct PhysicsState {
 
 /// RAII guard for read-only field access
 /// This struct owns the data it needs to avoid unsafe transmutes
+#[derive(Debug)]
 pub struct FieldReadGuard<'a> {
     data: Array3<f64>,
     _guard: RwLockReadGuard<'a, Array4<f64>>,
@@ -63,6 +64,7 @@ impl<'a> std::ops::Deref for FieldReadGuard<'a> {
 }
 
 /// RAII guard for mutable field access
+#[derive(Debug)]
 pub struct FieldWriteGuard<'a> {
     guard: RwLockWriteGuard<'a, Array4<f64>>,
     field_index: usize,

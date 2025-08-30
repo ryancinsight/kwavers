@@ -59,7 +59,7 @@ impl Default for SensorConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct Sensor {
     positions: Vec<(usize, usize, usize)>, // Grid indices
     pressure_data: Array2<f64>,            // Pressure time series
@@ -146,6 +146,7 @@ impl Default for SensorData {
 }
 
 /// Iterator adapter for sensor data processing
+#[derive(Debug)]
 pub struct SensorDataIterator<'a> {
     data: &'a SensorData,
     sensors: Vec<&'a SensorInfo>,

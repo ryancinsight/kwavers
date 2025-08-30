@@ -24,7 +24,7 @@ pub use output::OutputConfig;
 pub use simulation::{MediumConfig, SimulationConfig};
 pub use source::SourceConfig;
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default]
 pub struct Config {
     pub simulation: SimulationConfig,
     pub source: SourceConfig,

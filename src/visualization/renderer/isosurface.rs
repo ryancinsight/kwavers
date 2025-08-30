@@ -4,6 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Isosurface extractor using marching cubes algorithm
+#[derive(Debug)]
 pub struct IsosurfaceExtractor {
     edge_table: Vec<i32>,
     tri_table: Vec<Vec<i32>>,

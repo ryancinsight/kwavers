@@ -4,6 +4,7 @@ use ndarray::Array3;
 
 /// Frequency spectrum analysis
 #[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FrequencySpectrum {
     pub frequencies: Vec<f64>,
     pub amplitudes: Vec<f64>,
@@ -11,6 +12,7 @@ pub struct FrequencySpectrum {
 
 /// Statistical metrics for field analysis
 #[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StatisticalMetrics {
     pub mean: f64,
     pub variance: f64,

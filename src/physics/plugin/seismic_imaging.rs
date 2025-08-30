@@ -86,6 +86,7 @@ pub struct MigrationAperture {
 
 /// Seismic Imaging Plugin
 /// Provides RTM and FWI capabilities for subsurface imaging
+#[derive(Debug)]
 pub struct SeismicImagingPlugin {
     metadata: PluginMetadata,
     state: PluginState,

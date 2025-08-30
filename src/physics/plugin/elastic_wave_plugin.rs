@@ -15,7 +15,7 @@ use crate::source::Source;
 use ndarray::{Array3, Array4};
 
 /// Elastic wave physics plugin
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct ElasticWavePlugin {
     /// Plugin metadata
     metadata: PluginMetadata,

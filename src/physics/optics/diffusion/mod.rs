@@ -16,7 +16,7 @@ use crate::constants::optical::{
 use crate::physics::traits::LightDiffusionModelTrait;
 use std::time::Instant;
 
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     pub emission_spectrum: Array3<f64>,

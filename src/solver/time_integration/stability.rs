@@ -8,7 +8,7 @@ use crate::KwaversResult;
 use ndarray::Array3;
 
 /// Stability analyzer for time integration
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct StabilityAnalyzer {
     /// Safety factor for CFL condition
     safety_factor: f64,

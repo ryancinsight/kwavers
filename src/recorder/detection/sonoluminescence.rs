@@ -14,7 +14,7 @@ pub struct SonoluminescenceEvent {
 }
 
 /// Sonoluminescence detector
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SonoluminescenceDetector {
     config: DetectorConfig,
     events: Vec<SonoluminescenceEvent>,

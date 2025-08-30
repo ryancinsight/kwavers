@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Error metrics for validation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ErrorMetrics {
     /// L2 norm error
     pub l2_error: f64,
@@ -14,7 +14,7 @@ pub struct ErrorMetrics {
 }
 
 /// Performance metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct PerformanceMetrics {
     /// Computation time in seconds
     pub computation_time: f64,
@@ -25,7 +25,7 @@ pub struct PerformanceMetrics {
 }
 
 /// Error bounds for validation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct ErrorBounds {
     /// Maximum allowed L2 error
     pub max_l2_error: f64,

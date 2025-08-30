@@ -9,6 +9,7 @@ use ndarray::Array3;
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
+#[derive(Debug)]
 pub struct MixedDomainPropagationPlugin {
     metadata: PluginMetadata,
     state: PluginState,

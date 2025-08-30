@@ -82,7 +82,7 @@ impl Model {
 }
 
 /// Performance metrics for ML operations
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default]
 pub struct PerformanceMetrics {
     pub total_inferences: usize,
     pub total_optimizations: usize,

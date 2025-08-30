@@ -20,6 +20,7 @@ struct FieldMetadata {
 }
 
 /// Dynamic field registry for type-safe field management
+#[derive(Debug)]
 pub struct FieldRegistry {
     /// Registered fields indexed by UnifiedFieldType numeric value
     fields: Vec<Option<FieldMetadata>>,

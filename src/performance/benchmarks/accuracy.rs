@@ -8,6 +8,7 @@ use std::f64::consts::PI;
 
 /// Result of an accuracy benchmark
 #[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AccuracyResult {
     pub test_name: String,
     pub max_error: f64,

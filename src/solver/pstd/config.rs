@@ -5,7 +5,7 @@ use crate::validation::{Validatable, ValidationResult};
 use serde::{Deserialize, Serialize};
 
 /// PSTD solver configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize]
 pub struct PstdConfig {
     /// Enable k-space correction for improved accuracy
     pub use_kspace_correction: bool,

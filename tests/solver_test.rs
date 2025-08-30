@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Simple tests to verify FDTD and PSTD solvers are working correctly
 
 use kwavers::grid::Grid;

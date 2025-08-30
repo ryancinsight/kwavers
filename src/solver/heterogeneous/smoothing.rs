@@ -9,7 +9,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Smoothing processor for heterogeneous media
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct Smoother {
     method: SmoothingMethod,
     width: f64,

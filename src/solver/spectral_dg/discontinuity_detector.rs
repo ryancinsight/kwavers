@@ -10,6 +10,7 @@ use crate::KwaversResult;
 use ndarray::{s, Array3, Zip};
 
 /// Discontinuity detector using multiple detection strategies
+#[derive(Debug)]
 pub struct DiscontinuityDetector {
     threshold: f64,
     detection_method: DetectionMethod,

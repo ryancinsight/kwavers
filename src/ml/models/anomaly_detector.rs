@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Anomaly detection model
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct AnomalyDetectorModel {
     threshold: f32,
     metadata: ModelMetadata,

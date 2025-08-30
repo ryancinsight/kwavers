@@ -182,7 +182,7 @@ impl EmissionSpectrum {
 }
 
 /// Spectral analyzer for sonoluminescence
-#[derive(Debug)]
+#[derive(Debug, Debug)]
 pub struct SpectralAnalyzer {
     /// Spectral range
     pub range: SpectralRange,
