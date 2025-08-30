@@ -27,7 +27,7 @@ pub use acoustic_wave_plugin::AcousticWavePlugin;
 pub use elastic_wave_plugin::ElasticWavePlugin;
 pub use execution::{ExecutionStrategy, PluginExecutor, SequentialStrategy};
 pub use factory::PluginFactory;
-pub use kzk_solver::{FrequencyOperator, KzkSolverPlugin};
+pub use kzk_solver::KzkSolverPlugin;
 pub use manager::PluginManager;
 pub use metadata::PluginMetadata;
 pub use mixed_domain::{DomainSelection, MixedDomainPropagationPlugin};

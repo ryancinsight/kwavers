@@ -5,7 +5,7 @@
 use super::fresnel::FresnelCoefficients;
 use super::reflection::ReflectionCoefficients;
 use super::snell::SnellLawCalculator;
-use super::{Interface, MediumProperties, WaveMode};
+use super::{Interface, WaveMode};
 use crate::error::KwaversResult;
 
 /// Main wave propagation calculator
