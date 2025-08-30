@@ -115,14 +115,119 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         time_steps: usize,
     ) -> KwaversResult<Array3<f64>> {
-        // TODO: Implement KZK solver with operator splitting
-        // This should include:
-        // 1. Diffraction step (linear)
-        // 2. Absorption step (linear)
-        // 3. Nonlinearity step (nonlinear)
-        // 4. Proper time integration
+        use crate::medium::{AcousticProperties, CoreMedium};
+        
+        
 
-        Ok(initial_field.clone())
+        // Validate operators are initialized
+        let operators =
+            self.frequency_operators
+                .as_ref()
+                .ok_or(crate::error::KwaversError::Physics(
+                    crate::error::PhysicsError::InvalidParameter {
+                        parameter: "frequency_operators".to_string(),
+                        value: 0.0,
+                        reason: "KZK operators not initialized - call initialize_operators first"
+                            .to_string(),
+                    },
+                ))?;
+
+        // Working field (complex representation would be ideal, using real for now)
+        let mut field = initial_field.clone();
+
+        // Time step for operator splitting
+        let dz = grid.dz;
+
+        // Get medium properties at source plane
+        let density = CoreMedium::density(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = CoreMedium::sound_speed(medium, 0.0, 0.0, 0.0, grid);
+        let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid);
+
+        // Operator splitting: Strang splitting for second-order accuracy
+        // P(dz) = L(dz/2) * N(dz) * L(dz/2)
+        // where L = linear (diffraction + absorption), N = nonlinear
+
+        for _step in 0..time_steps {
+            // Step 1: Half-step linear propagation (diffraction + absorption)
+            self.apply_linear_step(&mut field, &operators, dz / 2.0)?;
+
+            // Step 2: Full nonlinear step
+            self.apply_nonlinear_step(&mut field, beta, density, c0, dz, grid)?;
+
+            // Step 3: Half-step linear propagation
+            self.apply_linear_step(&mut field, &operators, dz / 2.0)?;
+        }
+
+        Ok(field)
+    }
+
+    /// Apply linear propagation (diffraction + absorption)
+    fn apply_linear_step(
+        &self,
+        field: &mut Array3<f64>,
+        operators: &FrequencyOperator,
+        step_size: f64,
+    ) -> KwaversResult<()> {
+        
+
+        // Apply absorption and diffraction in frequency domain
+        // For each harmonic component
+        for (f_idx, _freq) in operators.frequencies.iter().enumerate() {
+            // Extract harmonic slice
+            let nx = field.shape()[0];
+            let ny = field.shape()[1];
+
+            for i in 0..nx {
+                for j in 0..ny {
+                    if f_idx < field.shape()[2] {
+                        // Apply absorption: multiply by exp(-alpha * dz)
+                        let absorption = operators.absorption_operator[[i, j, f_idx]];
+                        field[[i, j, f_idx]] *= absorption.powf(step_size);
+
+                        // Apply diffraction (simplified - full implementation needs FFT)
+                        let diffraction = operators.diffraction_operator[[i, j, f_idx]];
+                        field[[i, j, f_idx]] *= diffraction;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Apply nonlinear step using Burgers equation solution
+    fn apply_nonlinear_step(
+        &self,
+        field: &mut Array3<f64>,
+        beta: f64,
+        density: f64,
+        c0: f64,
+        step_size: f64,
+        grid: &Grid,
+    ) -> KwaversResult<()> {
+        use ndarray::Zip;
+
+        // Nonlinear parameter
+        let nonlinear_factor = beta / (2.0 * density * c0.powi(3));
+
+        // Apply nonlinear distortion
+        // Solution of inviscid Burgers equation: u_t + u*u_x = 0
+        // Using implicit solution: u(z) = u0 / (1 - u0 * beta * z / (2 * rho * c^3))
+
+        Zip::from(field.view_mut()).for_each(|p| {
+            let p0 = *p;
+            // Prevent shock singularity
+            let denominator = 1.0 - nonlinear_factor * p0 * step_size;
+            if denominator.abs() > 0.1 {
+                // Avoid division by small numbers
+                *p = p0 / denominator;
+            } else {
+                // Shock has formed - apply limiting
+                *p = p0.signum() * p0.abs().min(1.0 / (nonlinear_factor * step_size));
+            }
+        });
+
+        Ok(())
     }
 
     /// Calculate shock formation distance
