@@ -305,12 +305,12 @@ pub(crate) mod mocks {
         }
     }
 
-    impl crate::medium::thermal::TemperatureState for HeterogeneousMediumMock {
-        fn temperature(&self) -> &Array3<f64> {
+    impl crate::medium::thermal::ThermalField for HeterogeneousMediumMock {
+        fn thermal_field(&self) -> &Array3<f64> {
             &self.density // Return reference for test
         }
 
-        fn update_temperature(&mut self, _new_temperature: &Array3<f64>) {
+        fn update_thermal_field(&mut self, _new_temperature: &Array3<f64>) {
             // No-op for test
         }
     }

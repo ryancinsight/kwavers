@@ -7,7 +7,7 @@ use crate::medium::{
     core::{ArrayAccess, CoreMedium},
     elastic::{ElasticArrayAccess, ElasticProperties},
     optical::OpticalProperties,
-    thermal::{TemperatureState, ThermalProperties},
+    thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
 use ndarray::Array3;
@@ -287,14 +287,14 @@ impl ThermalProperties for HomogeneousMedium {
     }
 }
 
-// Temperature state management
-impl TemperatureState for HomogeneousMedium {
-    fn update_temperature(&mut self, temperature: &Array3<f64>) {
+// Thermal field management
+impl ThermalField for HomogeneousMedium {
+    fn update_thermal_field(&mut self, temperature: &Array3<f64>) {
         self.temperature = temperature.clone();
     }
 
-    fn temperature(&self) -> &Array3<f64> {
-        &self.temperature
+    fn thermal_field(&self) -> &Array3<f64> {
+        self.temperature.clone()
     }
 }
 

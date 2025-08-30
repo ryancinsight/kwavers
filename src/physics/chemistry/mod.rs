@@ -28,7 +28,7 @@ pub mod ros_plasma;
 pub use parameters::{ChemicalMetrics, ChemicalUpdateParams};
 pub use reactions::{
     ChemicalReaction, ChemicalReactionConfig, LightDependence, PressureDependence, ReactionRate,
-    ReactionType, Species, TemperatureDependence,
+    ReactionType, Species, ThermalDependence,
 };
 pub use ros_plasma::{ROSConcentrations, ROSSpecies, SonochemicalYield, SonochemistryModel};
 
@@ -355,7 +355,7 @@ mod tests {
 
         let config = ChemicalReactionConfig {
             reaction_type: ReactionType::Dissociation,
-            temperature_dependence: TemperatureDependence::Constant,
+            thermal_dependence: ThermalDependence::Constant,
             pressure_dependence: PressureDependence::Constant,
             light_dependence: LightDependence::None,
             rate_constant: DEFAULT_REACTION_RATE,

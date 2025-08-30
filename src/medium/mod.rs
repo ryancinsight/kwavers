@@ -7,7 +7,7 @@ pub mod absorption;
 pub mod acoustic;
 pub mod anisotropic;
 pub mod bubble;
-pub mod composite;
+
 pub mod core;
 pub mod elastic;
 pub mod frequency_dependent;
@@ -27,11 +27,11 @@ pub use homogeneous::HomogeneousMedium;
 // Re-export new modular traits
 pub use acoustic::AcousticProperties;
 pub use bubble::{BubbleProperties, BubbleState};
-pub use composite::{CompositeMedium, Medium};
+
 pub use core::{ArrayAccess, CoreMedium};
 pub use elastic::{ElasticArrayAccess, ElasticProperties};
 pub use optical::OpticalProperties;
-pub use thermal::{TemperatureState, ThermalProperties};
+pub use thermal::{ThermalField, ThermalProperties};
 pub use viscous::ViscousProperties;
 
 // Re-export utility functions and types

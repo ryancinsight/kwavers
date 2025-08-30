@@ -317,14 +317,14 @@ mod tests {
     fn test_progress_data_trait() {
         // Custom progress type for testing
         #[derive(Debug, Clone, Serialize)]
-        struct CustomProgress {
+        struct IterationProgress {
             iteration: usize,
             residual: f64,
         }
 
-        impl ProgressData for CustomProgress {}
+        impl ProgressData for IterationProgress {}
 
-        let progress = CustomProgress {
+        let progress = IterationProgress {
             iteration: 10,
             residual: 0.001,
         };

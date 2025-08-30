@@ -41,11 +41,11 @@ pub trait ThermalProperties: CoreMedium {
     }
 }
 
-/// Trait for temperature state management
-pub trait TemperatureState: ThermalProperties {
-    /// Update the temperature field
-    fn update_temperature(&mut self, temperature: &Array3<f64>);
+/// Trait for thermal field management
+pub trait ThermalField: ThermalProperties {
+    /// Update the thermal field
+    fn update_thermal_field(&mut self, temperature: &Array3<f64>);
 
-    /// Get the current temperature field
-    fn temperature(&self) -> &Array3<f64>;
+    /// Get the current thermal field
+    fn thermal_field(&self) -> &Array3<f64>;
 }
