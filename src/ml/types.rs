@@ -145,8 +145,21 @@ pub trait MLModel {
     /// Get model type
     fn model_type(&self) -> ModelType;
 
-    /// Run inference
+    /// Run inference (alias for predict)
     fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>>;
+
+    /// Run inference on input data
+    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+        self.infer(input)
+    }
+
+    /// Get model accuracy metric
+    fn accuracy(&self) -> f64;
+
+    /// Get model name
+    fn name(&self) -> &str {
+        self.metadata().name.as_str()
+    }
 
     /// Update model weights with gradients
     fn update(&mut self, gradients: &Array2<f32>) -> KwaversResult<()>;

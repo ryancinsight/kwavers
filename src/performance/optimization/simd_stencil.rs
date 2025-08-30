@@ -2,6 +2,8 @@
 //!
 //! Uses safe SIMD operations with architecture detection for portable performance.
 
+#![allow(unsafe_code)] // SIMD intrinsics require unsafe for performance
+
 use ndarray::{ArrayView3, ArrayViewMut3};
 use std::arch::x86_64::*;
 
