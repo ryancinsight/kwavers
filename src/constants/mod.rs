@@ -6,6 +6,7 @@ pub mod bubble_dynamics;
 pub mod cavitation;
 pub mod chemistry;
 pub mod elastic;
+pub mod materials;
 pub mod medium_properties;
 pub mod numerical;
 pub mod optical;

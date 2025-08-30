@@ -11,7 +11,7 @@ use kwavers::{
     medium::ElasticProperties,
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
+        plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
     },
 };
 use ndarray::Array4;

@@ -315,12 +315,28 @@ impl WesterveltFdtd {
             }
         }
 
-        // Update pressure history
+        // Update pressure history using rotation (zero-copy)
         if self.config.enable_absorption {
-            self.pressure_prev2 = Some(self.pressure_prev.clone());
+            // Rotate: prev2 <- prev <- current <- new
+            if let Some(mut prev2) = self.pressure_prev2.take() {
+                // Reuse prev2 allocation for new pressure
+                std::mem::swap(&mut prev2, &mut self.pressure_prev);
+                std::mem::swap(&mut self.pressure_prev, &mut self.pressure);
+                std::mem::swap(&mut self.pressure, &mut pressure_updated);
+                self.pressure_prev2 = Some(pressure_updated);
+            } else {
+                // First iteration with absorption
+                self.pressure_prev2 = Some(std::mem::replace(
+                    &mut self.pressure_prev,
+                    std::mem::replace(&mut self.pressure, pressure_updated),
+                ));
+            }
+        } else {
+            // Simple rotation without prev2
+            std::mem::swap(&mut self.pressure_prev, &mut self.pressure);
+            std::mem::swap(&mut self.pressure, &mut pressure_updated);
+            // pressure_updated now contains old pressure_prev (can be dropped)
         }
-        self.pressure_prev = self.pressure.clone();
-        self.pressure = pressure_updated;
 
         Ok(())
     }
@@ -364,7 +380,8 @@ mod tests {
     fn test_linear_wave_propagation() {
         // Test that with β=0 (no nonlinearity), we get linear wave propagation
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
-        let mut medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+        use crate::constants::materials::{WATER_DENSITY, WATER_SOUND_SPEED};
+        let mut medium = HomogeneousMedium::from_minimal(WATER_DENSITY, WATER_SOUND_SPEED, &grid);
         // Set nonlinearity to zero for linear test
         medium.nonlinearity = 0.0;
 
