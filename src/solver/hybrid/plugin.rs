@@ -4,10 +4,9 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::solver::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
-use std::collections::HashMap;
 
 /// Hybrid solver plugin for integration with physics pipeline
 #[derive(Debug)]
@@ -30,7 +29,11 @@ impl HybridPlugin {
             license: "MIT".to_string(),
         };
 
-        Ok(Self { solver, metadata, state: PluginState::Created })
+        Ok(Self {
+            solver,
+            metadata,
+            state: PluginState::Created,
+        })
     }
 }
 

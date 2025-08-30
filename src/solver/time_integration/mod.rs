@@ -20,6 +20,15 @@ pub mod multi_rate_controller;
 pub mod stability;
 pub mod time_scale_separation;
 pub mod time_stepper;
+
+/// Stability constraints for time stepping
+#[derive(Debug, Clone, Default)]
+pub struct StabilityConstraints {
+    /// Maximum stable time step
+    pub max_dt: Option<f64>,
+    /// CFL number constraint
+    pub cfl_number: Option<f64>,
+}
 pub mod traits;
 
 // Re-export main types

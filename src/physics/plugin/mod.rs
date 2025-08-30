@@ -124,6 +124,12 @@ pub trait Plugin: Debug + Send + Sync {
         format!("Plugin: {:?}", self.metadata())
     }
 
+    /// Get stability constraints for time stepping
+    fn stability_constraints(&self) -> crate::solver::time_integration::StabilityConstraints {
+        // Default: no constraints
+        crate::solver::time_integration::StabilityConstraints::default()
+    }
+
     /// Get plugin priority
     fn priority(&self) -> PluginPriority {
         PluginPriority::Normal

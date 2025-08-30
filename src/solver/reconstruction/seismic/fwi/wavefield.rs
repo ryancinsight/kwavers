@@ -114,7 +114,7 @@ impl WavefieldModeler {
         dx: f64,
     ) -> Array3<f64> {
         let (nx, ny, nz) = current.dim();
-        let mut next = Array3::zeros((nx, ny, nz));
+        let next = Array3::zeros((nx, ny, nz));
 
         // Finite difference coefficients for 4th order
         const C0: f64 = -5.0 / 2.0;

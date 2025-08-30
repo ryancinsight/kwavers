@@ -2,7 +2,7 @@
 //!
 //! This module provides different execution strategies for running plugins.
 
-use super::{Plugin, PluginContext, PluginFields};
+use super::{Plugin, PluginContext};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;

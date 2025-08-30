@@ -8,6 +8,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::performance::metrics::PerformanceMetrics;
 use crate::physics::field_mapping::UnifiedFieldType;
+use ndarray::Array3;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
@@ -39,7 +40,7 @@ impl PluginManager {
             plugins: Vec::new(),
             execution_order: Vec::new(),
             execution_strategy: Box::new(SequentialStrategy),
-            context: PluginContext::new(),
+            context: PluginContext::new(Array3::zeros((1, 1, 1))),
             performance_metrics: PerformanceMetrics::new(),
         }
     }

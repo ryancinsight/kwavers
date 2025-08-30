@@ -45,7 +45,7 @@ impl LineSearch {
         gradient: &Array3<f64>,
         initial_step: f64,
     ) -> f64 {
-        let mut alpha = initial_step;
+        let alpha = initial_step;
         let shrink_factor = 0.5;
 
         // TODO: Implement proper backtracking

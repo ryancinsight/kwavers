@@ -20,7 +20,7 @@ use crate::{
     medium::Medium,
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
+        plugin::{PluginContext, PluginMetadata, PluginState},
     },
 };
 use ndarray::{s, Array3, Array4};

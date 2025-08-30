@@ -1,7 +1,6 @@
 //! FDTD solver plugin implementation
 
 use ndarray::Array4;
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
@@ -9,7 +8,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// FDTD solver plugin
 #[derive(Debug)]

@@ -31,6 +31,18 @@ impl MisfitFunction {
         Self { misfit_type }
     }
 
+    /// Compute adjoint source from residual
+    pub fn adjoint_source(&self, residual: &Array2<f64>) -> Array2<f64> {
+        match self.misfit_type {
+            MisfitType::L2Norm => residual.clone(),
+            MisfitType::L1Norm => residual.mapv(|x| x.signum()),
+            MisfitType::Envelope => residual.clone(), // Simplified
+            MisfitType::Phase => residual.clone(),    // Simplified
+            MisfitType::Correlation => residual.clone(), // Simplified
+            MisfitType::Wasserstein => residual.clone(), // Simplified
+        }
+    }
+
     /// Compute misfit between observed and synthetic data
     pub fn compute(&self, observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         match self.misfit_type {

@@ -17,8 +17,6 @@ use self::wavefield::WavefieldModeler;
 use super::config::SeismicImagingConfig;
 use super::misfit::{MisfitFunction, MisfitType};
 use crate::error::KwaversResult;
-use crate::grid::Grid;
-use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor

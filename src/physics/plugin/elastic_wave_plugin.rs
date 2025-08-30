@@ -11,7 +11,7 @@ use crate::physics::mechanics::elastic_wave::{
     ElasticStressFields, ElasticVelocityFields, ElasticWave,
 };
 use crate::physics::plugin::{
-    Plugin, PluginConfig, PluginContext, PluginFields, PluginMetadata, PluginState,
+    Plugin, PluginContext, PluginMetadata, PluginState,
 };
 use crate::source::Source;
 use ndarray::{Array3, Array4};

@@ -28,7 +28,7 @@ impl GradientComputer {
         // Gradient = -∫ (∂²u_f/∂t²) * u_a dt
         // where u_f is forward wavefield, u_a is adjoint wavefield
 
-        let mut gradient = Array3::zeros(forward_wavefield.dim());
+        let gradient = Array3::zeros(forward_wavefield.dim());
 
         // TODO: Implement proper time integration
         // This requires:

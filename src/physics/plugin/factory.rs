@@ -2,7 +2,7 @@
 //!
 //! This module provides factory patterns for creating and managing plugins.
 
-use super::{Plugin, PluginConfig, PluginMetadata};
+use super::{Plugin, PluginMetadata};
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use std::any::Any;
@@ -80,16 +80,13 @@ where
     }
 
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()> {
-        config
-            .downcast_ref::<C>()
-            .ok_or_else(|| {
-                KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "config".to_string(),
-                    value: "unknown".to_string(),
-                    constraint: "Invalid configuration type".to_string(),
-                })
-            })?
-            ;
+        config.downcast_ref::<C>().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::FieldValidation {
+                field: "config".to_string(),
+                value: "unknown".to_string(),
+                constraint: "Invalid configuration type".to_string(),
+            })
+        })?;
         Ok(())
     }
 }
