@@ -64,6 +64,21 @@ pub(crate) mod mocks {
         fn reference_frequency(&self) -> f64 {
             1e6
         }
+
+        fn absorption_coefficient(
+            &self,
+            _x: f64,
+            _y: f64,
+            _z: f64,
+            _grid: &Grid,
+            _frequency: f64,
+        ) -> f64 {
+            0.01 // Test value
+        }
+
+        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+            3.5 // Test value
+        }
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
@@ -73,6 +88,14 @@ pub(crate) mod mocks {
 
         fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
             self.sound_speed.clone()
+        }
+
+        fn absorption_array(&self, _grid: &Grid, _frequency: f64) -> Array3<f64> {
+            Array3::from_elem(self.density.dim(), 0.01)
+        }
+
+        fn nonlinearity_array(&self, _grid: &Grid) -> Array3<f64> {
+            Array3::from_elem(self.density.dim(), 3.5)
         }
     }
 
@@ -184,7 +207,7 @@ pub(crate) mod mocks {
         fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             if self.position_dependent {
                 let mu = self.lame_mu(x, y, z, grid);
-                let rho = self.density(x, y, z, grid);
+                let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
                 if mu > 0.0 {
                     (mu / rho).sqrt()
                 } else {
@@ -196,7 +219,7 @@ pub(crate) mod mocks {
         }
 
         fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            self.sound_speed(x, y, z, grid)
+            crate::medium::core::CoreMedium::sound_speed(self, x, y, z, grid)
         }
     }
 
@@ -246,7 +269,7 @@ pub(crate) mod mocks {
 
         fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             let k = self.thermal_conductivity(x, y, z, grid);
-            let rho = self.density(x, y, z, grid);
+            let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
             let cp = self.specific_heat(x, y, z, grid);
             k / (rho * cp)
         }
@@ -283,8 +306,8 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::thermal::TemperatureState for HeterogeneousMediumMock {
-        fn temperature(&self) -> Array3<f64> {
-            self.density.clone() // Return a clone for test
+        fn temperature(&self) -> &Array3<f64> {
+            &self.density // Return reference for test
         }
 
         fn update_temperature(&mut self, _new_temperature: &Array3<f64>) {
@@ -327,6 +350,4 @@ pub(crate) mod mocks {
             // No-op for test
         }
     }
-
-    impl crate::medium::composite::Medium for HeterogeneousMediumMock {}
 }

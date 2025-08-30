@@ -4,7 +4,6 @@
 //! components that evolve at different time scales.
 
 use crate::grid::Grid;
-use crate::physics::plugin::PhysicsPlugin;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -16,7 +15,7 @@ pub trait TimeCoupling: Send + Sync + Debug {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -41,7 +40,7 @@ impl TimeCoupling for SubcyclingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -71,7 +70,7 @@ impl TimeCoupling for SubcyclingStrategy {
 
                     // Evaluate physics and update field
                     // Update physics component using plugin interface
-                    // PhysicsPlugin uses update method with fields array
+                    // crate::physics::plugin::Plugin uses update method with fields array
                     // This is a placeholder for proper field management
                 }
             }
@@ -103,7 +102,7 @@ impl TimeCoupling for AveragingStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -136,7 +135,7 @@ impl TimeCoupling for AveragingStrategy {
             // Subcycle this component
             for _ in 0..n_subcycles {
                 // Update physics component using plugin interface
-                // PhysicsPlugin uses update method with fields array
+                // crate::physics::plugin::Plugin uses update method with fields array
             }
         }
 
@@ -176,7 +175,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
     fn advance_coupled_system(
         &self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
         grid: &Grid,
@@ -219,7 +218,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                 // Use predicted values from other components
                 for _ in 0..n_subcycles {
                     // Update physics component using plugin interface
-                    // PhysicsPlugin uses update method with fields array
+                    // crate::physics::plugin::Plugin uses update method with fields array
                     // This is a placeholder for proper field management
                 }
             }

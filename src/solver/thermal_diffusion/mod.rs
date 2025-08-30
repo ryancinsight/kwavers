@@ -45,7 +45,7 @@ use crate::{
     medium::Medium,
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
+        plugin::{PluginContext, PluginMetadata, PluginState},
     },
 };
 use ndarray::Array4;
@@ -118,9 +118,21 @@ impl ThermalDiffusionPlugin {
             state: PluginState::Created,
         }
     }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
-impl PhysicsPlugin for ThermalDiffusionPlugin {
+impl crate::physics::plugin::Plugin for ThermalDiffusionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -181,6 +193,18 @@ impl PhysicsPlugin for ThermalDiffusionPlugin {
     fn finalize(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Finalized;
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 

@@ -58,19 +58,19 @@ pub struct DGSolver {
     /// Number of nodes per element
     n_nodes: usize,
     /// Quadrature nodes on reference element [-1, 1]
-    xi_nodes: Array1<f64>,
+    xi_nodes: Arc<Array1<f64>>,
     /// Quadrature weights
-    weights: Array1<f64>,
+    weights: Arc<Array1<f64>>,
     /// Vandermonde matrix for basis evaluation
-    vandermonde: Array2<f64>,
+    vandermonde: Arc<Array2<f64>>,
     /// Mass matrix M_ij = integral(phi_i * phi_j)
-    mass_matrix: Array2<f64>,
+    mass_matrix: Arc<Array2<f64>>,
     /// Stiffness matrix S_ij = integral(phi_i * dphi_j/dxi)
-    stiffness_matrix: Array2<f64>,
+    stiffness_matrix: Arc<Array2<f64>>,
     /// Differentiation matrix D = V * Dr * V^{-1}
-    diff_matrix: Array2<f64>,
+    diff_matrix: Arc<Array2<f64>>,
     /// Lift matrix for surface integrals
-    lift_matrix: Array2<f64>,
+    lift_matrix: Arc<Array2<f64>>,
     /// Modal coefficients for each element (n_elements x n_nodes x n_vars)
     modal_coefficients: Option<Array3<f64>>,
 }
@@ -103,13 +103,13 @@ impl DGSolver {
             config,
             grid,
             n_nodes,
-            xi_nodes,
-            weights,
-            vandermonde,
-            mass_matrix,
-            stiffness_matrix,
-            diff_matrix,
-            lift_matrix,
+            xi_nodes: Arc::new(xi_nodes),
+            weights: Arc::new(weights),
+            vandermonde: Arc::new(vandermonde),
+            mass_matrix: Arc::new(mass_matrix),
+            stiffness_matrix: Arc::new(stiffness_matrix),
+            diff_matrix: Arc::new(diff_matrix),
+            lift_matrix: Arc::new(lift_matrix),
             modal_coefficients: None,
         })
     }
@@ -405,14 +405,14 @@ impl Clone for DGSolver {
             config: self.config.clone(),
             grid: Arc::clone(&self.grid),
             n_nodes: self.n_nodes,
-            xi_nodes: self.xi_nodes.clone(),
-            weights: self.weights.clone(),
-            vandermonde: self.vandermonde.clone(),
-            mass_matrix: self.mass_matrix.clone(),
-            stiffness_matrix: self.stiffness_matrix.clone(),
-            diff_matrix: self.diff_matrix.clone(),
-            lift_matrix: self.lift_matrix.clone(),
-            modal_coefficients: self.modal_coefficients.clone(),
+            xi_nodes: Arc::clone(&self.xi_nodes),
+            weights: Arc::clone(&self.weights),
+            vandermonde: Arc::clone(&self.vandermonde),
+            mass_matrix: Arc::clone(&self.mass_matrix),
+            stiffness_matrix: Arc::clone(&self.stiffness_matrix),
+            diff_matrix: Arc::clone(&self.diff_matrix),
+            lift_matrix: Arc::clone(&self.lift_matrix),
+            modal_coefficients: self.modal_coefficients.clone(), // Still needs clone for Option<Array3>
         }
     }
 }

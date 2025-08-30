@@ -23,7 +23,7 @@ pub use westervelt::WesterveltWave;
 pub use westervelt_fdtd::{WesterveltFdtd, WesterveltFdtdConfig};
 
 use crate::grid::Grid;
-use crate::medium::{acoustic::AcousticProperties, core::CoreMedium, Medium};
+use crate::medium::{core::CoreMedium, Medium};
 use std::f64::consts::PI;
 
 // Physical constants
@@ -108,7 +108,8 @@ pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
         return 0.0;
     }
 
-    let alpha = medium.absorption_coefficient(x, y, z, grid, frequency);
+    let alpha =
+        crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, frequency);
     let c = medium.sound_speed(x, y, z, grid);
     let omega = 2.0 * PI * frequency;
 
@@ -172,7 +173,7 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
     z: f64,
     grid: &Grid,
 ) -> f64 {
-    let b_over_a = medium.nonlinearity_coefficient(x, y, z, grid);
+    let b_over_a = crate::medium::core::CoreMedium::nonlinearity_coefficient(medium, x, y, z, grid);
     1.0 + b_over_a / 2.0
 }
 

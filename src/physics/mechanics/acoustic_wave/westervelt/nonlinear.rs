@@ -35,7 +35,9 @@ pub fn compute_nonlinear_term(
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let beta = medium.nonlinearity_coefficient(x, y, z, grid);
+                let beta = crate::medium::core::CoreMedium::nonlinearity_coefficient(
+                    medium, x, y, z, grid,
+                );
 
                 // Calculate nonlinear coefficient
                 let nonlinear_coeff = beta / (rho * c.powi(4));

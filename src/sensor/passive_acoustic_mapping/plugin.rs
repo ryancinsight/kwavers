@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use ndarray::{Array3, Array4};
 use std::fmt;
 
@@ -44,7 +44,7 @@ impl fmt::Debug for PAMPlugin {
     }
 }
 
-impl PhysicsPlugin for PAMPlugin {
+impl crate::physics::plugin::Plugin for PAMPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -110,5 +110,17 @@ impl PhysicsPlugin for PAMPlugin {
         }
 
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

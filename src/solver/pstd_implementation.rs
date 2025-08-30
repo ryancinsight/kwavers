@@ -20,7 +20,7 @@ use crate::{
     medium::Medium,
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState},
+        plugin::{PluginContext, PluginMetadata, PluginState},
     },
 };
 use ndarray::{s, Array3, Array4};
@@ -363,7 +363,7 @@ fn sinc(x: f64) -> f64 {
 }
 
 // PhysicsPlugin trait implementation
-impl PhysicsPlugin for PstdSolver {
+impl crate::physics::plugin::Plugin for PstdSolver {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -425,7 +425,7 @@ impl PhysicsPlugin for PstdSolver {
         }
 
         // Perform time step
-        self.step(dt, None)?; // TODO: Add source support
+        self.step(dt, None)?; // Source support will be added via plugin system
 
         // Update output field in the fields array
         let pressure = self.get_pressure()?;
@@ -438,6 +438,18 @@ impl PhysicsPlugin for PstdSolver {
         }
 
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 

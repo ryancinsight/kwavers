@@ -164,7 +164,10 @@ impl AcousticWaveModel for WesterveltWave {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    b_over_a_arr[[i, j, k]] = medium.nonlinearity_coefficient(x, y, z, grid);
+                    b_over_a_arr[[i, j, k]] =
+                        crate::medium::core::CoreMedium::nonlinearity_coefficient(
+                            medium, x, y, z, grid,
+                        );
                 }
             }
         }

@@ -197,6 +197,15 @@ impl CoreMedium for HeterogeneousTissueMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
+
+    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
+        let props = self.get_tissue_properties(x, y, z, grid);
+        props.alpha0 * (frequency / self.reference_frequency).powf(props.delta)
+    }
+
+    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        self.get_tissue_properties(x, y, z, grid).b_a
+    }
 }
 
 // Array-based access
@@ -235,6 +244,24 @@ impl ArrayAccess for HeterogeneousTissueMedium {
                 arr
             })
             .clone()
+    }
+
+    fn absorption_array(&self, grid: &Grid, frequency: f64) -> Array3<f64> {
+        let mut arr = Array3::zeros(self.tissue_map.dim());
+        Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+            *val = CoreMedium::absorption_coefficient(self, x, y, z, grid, frequency);
+        });
+        arr
+    }
+
+    fn nonlinearity_array(&self, grid: &Grid) -> Array3<f64> {
+        let mut arr = Array3::zeros(self.tissue_map.dim());
+        Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+            *val = CoreMedium::nonlinearity_coefficient(self, x, y, z, grid);
+        });
+        arr
     }
 }
 

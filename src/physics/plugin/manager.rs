@@ -2,19 +2,20 @@
 //!
 //! This module provides the main plugin manager that coordinates plugin execution.
 
-use super::{ExecutionStrategy, PhysicsPlugin, PluginContext, SequentialStrategy};
+use super::{ExecutionStrategy, Plugin, PluginContext, SequentialStrategy};
 use crate::error::{KwaversError, KwaversResult, PhysicsError, ValidationError};
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::performance::metrics::PerformanceMetrics;
 use crate::physics::field_mapping::UnifiedFieldType;
+use ndarray::Array3;
 use ndarray::Array4;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 /// Plugin manager for orchestrating plugin lifecycle and execution
 pub struct PluginManager {
-    plugins: Vec<Box<dyn PhysicsPlugin>>,
+    plugins: Vec<Box<dyn Plugin>>,
     execution_order: Vec<usize>,
     execution_strategy: Box<dyn ExecutionStrategy>,
     context: PluginContext,
@@ -39,7 +40,7 @@ impl PluginManager {
             plugins: Vec::new(),
             execution_order: Vec::new(),
             execution_strategy: Box::new(SequentialStrategy),
-            context: PluginContext::new(),
+            context: PluginContext::new(Array3::zeros((1, 1, 1))),
             performance_metrics: PerformanceMetrics::new(),
         }
     }
@@ -50,7 +51,7 @@ impl PluginManager {
     }
 
     /// Add a plugin to the manager
-    pub fn add_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
+    pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Check for duplicate plugin IDs
         let new_id = plugin.metadata().id.clone();
         for existing in &self.plugins {
@@ -158,12 +159,12 @@ impl PluginManager {
     }
 
     /// Get plugin by index
-    pub fn get_plugin(&self, index: usize) -> Option<&dyn PhysicsPlugin> {
+    pub fn get_plugin(&self, index: usize) -> Option<&dyn Plugin> {
         self.plugins.get(index).map(|p| p.as_ref())
     }
 
     /// Get mutable plugin by index
-    pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn PhysicsPlugin> {
+    pub fn get_plugin_mut(&mut self, index: usize) -> Option<&mut dyn Plugin> {
         match self.plugins.get_mut(index) {
             Some(plugin) => Some(plugin.as_mut()),
             None => None,
@@ -191,7 +192,7 @@ impl PluginManager {
     }
 
     /// Get iterator over plugins
-    pub fn plugins(&self) -> impl Iterator<Item = &Box<dyn PhysicsPlugin>> {
+    pub fn plugins(&self) -> impl Iterator<Item = &Box<dyn Plugin>> {
         self.plugins.iter()
     }
 

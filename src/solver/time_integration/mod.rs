@@ -20,6 +20,15 @@ pub mod multi_rate_controller;
 pub mod stability;
 pub mod time_scale_separation;
 pub mod time_stepper;
+
+/// Stability constraints for time stepping
+#[derive(Debug, Clone, Default)]
+pub struct StabilityConstraints {
+    /// Maximum stable time step
+    pub max_dt: Option<f64>,
+    /// CFL number constraint
+    pub cfl_number: Option<f64>,
+}
 pub mod traits;
 
 // Re-export main types
@@ -34,7 +43,7 @@ pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperTyp
 
 use crate::error::{KwaversError, ValidationError};
 use crate::grid::Grid;
-use crate::physics::plugin::PhysicsPlugin;
+use crate::physics::plugin::Plugin;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
@@ -88,7 +97,7 @@ impl MultiRateTimeIntegrator {
     pub fn advance(
         &mut self,
         fields: &mut HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         global_time: f64,
         target_time: f64,
         grid: &Grid,
@@ -144,7 +153,7 @@ impl MultiRateTimeIntegrator {
     fn compute_component_time_steps(
         &self,
         fields: &HashMap<String, Array3<f64>>,
-        physics_components: &HashMap<String, Box<dyn PhysicsPlugin>>,
+        physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         grid: &Grid,
     ) -> KwaversResult<HashMap<String, f64>> {
         physics_components

@@ -2,7 +2,7 @@
 //!
 //! This module provides factory patterns for creating and managing plugins.
 
-use super::{PhysicsPlugin, PluginConfig, PluginMetadata};
+use super::{Plugin, PluginMetadata};
 use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use std::any::Any;
@@ -16,7 +16,7 @@ pub trait PluginFactory: Send + Sync {
         &self,
         config: Box<dyn Any + Send + Sync>,
         grid: &Grid,
-    ) -> KwaversResult<Box<dyn PhysicsPlugin>>;
+    ) -> KwaversResult<Box<dyn Plugin>>;
 
     /// Get the plugin metadata
     fn metadata(&self) -> &PluginMetadata;
@@ -29,8 +29,8 @@ pub trait PluginFactory: Send + Sync {
 pub struct TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: PluginConfig + Clone + 'static,
-    P: PhysicsPlugin + 'static,
+    C: Clone + Send + Sync + 'static,
+    P: Plugin + 'static,
 {
     create_fn: F,
     metadata: PluginMetadata,
@@ -40,8 +40,8 @@ where
 impl<F, C, P> TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: PluginConfig + Clone + 'static,
-    P: PhysicsPlugin + 'static,
+    C: Clone + Send + Sync + 'static,
+    P: Plugin + 'static,
 {
     pub fn new(metadata: PluginMetadata, create_fn: F) -> Self {
         Self {
@@ -55,14 +55,14 @@ where
 impl<F, C, P> PluginFactory for TypedPluginFactory<F, C, P>
 where
     F: Fn(C, &Grid) -> KwaversResult<P> + Send + Sync,
-    C: PluginConfig + Clone + 'static,
-    P: PhysicsPlugin + 'static,
+    C: Clone + Send + Sync + 'static,
+    P: Plugin + 'static,
 {
     fn create(
         &self,
         config: Box<dyn Any + Send + Sync>,
         grid: &Grid,
-    ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+    ) -> KwaversResult<Box<dyn Plugin>> {
         let config = config
             .downcast::<C>()
             .map_err(|_| ValidationError::FieldValidation {
@@ -80,21 +80,13 @@ where
     }
 
     fn validate_config(&self, config: &dyn Any) -> KwaversResult<()> {
-        config
-            .downcast_ref::<C>()
-            .ok_or_else(|| {
-                KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "config".to_string(),
-                    value: "unknown".to_string(),
-                    constraint: "Invalid configuration type".to_string(),
-                })
-            })?
-            .validate();
-        if !config.downcast_ref::<C>().unwrap().validate().is_valid {
-            return Err(KwaversError::InvalidInput(
-                "Invalid plugin state".to_string(),
-            ));
-        }
+        config.downcast_ref::<C>().ok_or_else(|| {
+            KwaversError::Validation(ValidationError::FieldValidation {
+                field: "config".to_string(),
+                value: "unknown".to_string(),
+                constraint: "Invalid configuration type".to_string(),
+            })
+        })?;
         Ok(())
     }
 }
@@ -141,7 +133,7 @@ impl PluginRegistry {
         id: &str,
         config: Box<dyn Any + Send + Sync>,
         grid: &Grid,
-    ) -> KwaversResult<Box<dyn PhysicsPlugin>> {
+    ) -> KwaversResult<Box<dyn Plugin>> {
         let factory = self
             .factories
             .get(id)

@@ -160,8 +160,14 @@ impl ThermalDiffusionSolver {
         dt: f64,
         external_source: Option<&Array3<f64>>,
     ) -> KwaversResult<()> {
-        // Store previous temperature
-        self.temperature_prev = Some(self.temperature.clone());
+        // Store previous temperature without cloning - use double buffering
+        if self.temperature_prev.is_none() {
+            self.temperature_prev = Some(Array3::zeros(self.temperature.raw_dim()));
+        }
+        // Copy current to previous (in-place)
+        if let Some(ref mut prev) = self.temperature_prev {
+            prev.assign(&self.temperature);
+        }
 
         if self.config.enable_hyperbolic {
             // Use hyperbolic heat transfer (Cattaneo-Vernotte)

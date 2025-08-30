@@ -35,7 +35,9 @@ impl MLEngine {
     /// Load a model from file
     pub fn load_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
         use crate::ml::types::MLModel;
+        use std::path::Path;
 
+        let path = Path::new(path);
         let model = match model_type {
             ModelType::TissueClassifier => {
                 Model::TissueClassifier(TissueClassifierModel::load(path)?)

@@ -11,6 +11,12 @@ use super::constants::*;
 pub struct SeismicImagingConfig {
     /// Base reconstruction configuration
     pub base_config: ReconstructionConfig,
+    /// Grid dimensions
+    pub nx: usize,
+    pub ny: usize,
+    pub nz: usize,
+    /// Time step
+    pub dt: f64,
     /// Number of FWI iterations
     pub fwi_iterations: usize,
     /// Convergence tolerance for FWI
@@ -79,6 +85,10 @@ impl Default for SeismicImagingConfig {
                 filter: crate::solver::reconstruction::FilterType::None,
                 interpolation: InterpolationMethod::Linear,
             },
+            nx: 100,
+            ny: 100,
+            nz: 100,
+            dt: DEFAULT_TIME_STEP,
             fwi_iterations: DEFAULT_FWI_ITERATIONS,
             fwi_tolerance: DEFAULT_FWI_TOLERANCE,
             regularization_lambda: DEFAULT_REGULARIZATION_LAMBDA,

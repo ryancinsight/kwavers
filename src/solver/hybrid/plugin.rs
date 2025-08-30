@@ -4,16 +4,16 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use crate::solver::hybrid::{HybridConfig, HybridSolver};
 use ndarray::Array4;
-use std::collections::HashMap;
 
 /// Hybrid solver plugin for integration with physics pipeline
 #[derive(Debug)]
 pub struct HybridPlugin {
     solver: HybridSolver,
     metadata: PluginMetadata,
+    state: PluginState,
 }
 
 impl HybridPlugin {
@@ -29,11 +29,15 @@ impl HybridPlugin {
             license: "MIT".to_string(),
         };
 
-        Ok(Self { solver, metadata })
+        Ok(Self {
+            solver,
+            metadata,
+            state: PluginState::Created,
+        })
     }
 }
 
-impl PhysicsPlugin for HybridPlugin {
+impl crate::physics::plugin::Plugin for HybridPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -83,16 +87,24 @@ impl PhysicsPlugin for HybridPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        let mut diagnostics = HashMap::new();
+    fn diagnostics(&self) -> String {
         let metrics = self.solver.metrics();
+        format!(
+            "Hybrid Plugin - PSTD fraction: {:.2}%, Total time: {:.2}ms",
+            metrics.pstd_fraction() * 100.0,
+            metrics.total_time().as_millis()
+        )
+    }
 
-        diagnostics.insert("pstd_fraction".to_string(), metrics.pstd_fraction());
-        diagnostics.insert(
-            "total_time_ms".to_string(),
-            metrics.total_time().as_millis() as f64,
-        );
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
 
-        diagnostics
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

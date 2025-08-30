@@ -1,7 +1,6 @@
 //! FDTD solver plugin implementation
 
 use ndarray::Array4;
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
@@ -9,7 +8,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// FDTD solver plugin
 #[derive(Debug)]
@@ -38,9 +37,21 @@ impl FdtdPlugin {
             solver,
         })
     }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }
 
-impl PhysicsPlugin for FdtdPlugin {
+impl crate::physics::plugin::Plugin for FdtdPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -213,12 +224,24 @@ impl PhysicsPlugin for FdtdPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        HashMap::new()
+    fn diagnostics(&self) -> String {
+        format!("FDTD Plugin - State: {:?}", self.state)
     }
 
     fn reset(&mut self) -> KwaversResult<()> {
         self.state = PluginState::Initialized;
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }

@@ -31,18 +31,3 @@ pub trait PluginConfig: Debug + Send + Sync {
     /// Clone the configuration as a boxed Any for type erasure
     fn clone_boxed(&self) -> Box<dyn Any + Send + Sync>;
 }
-
-/// Plugin lifecycle state
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum PluginState {
-    /// Plugin is created but not initialized
-    Created,
-    /// Plugin is initialized and ready to run
-    Initialized,
-    /// Plugin is currently processing
-    Running,
-    /// Plugin encountered an error
-    Error,
-    /// Plugin has been finalized
-    Finalized,
-}

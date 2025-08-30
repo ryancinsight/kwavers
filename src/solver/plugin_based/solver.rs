@@ -8,7 +8,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::plugin::{PhysicsPlugin, PluginManager};
+use crate::physics::plugin::{Plugin, PluginManager};
 use crate::recorder::RecorderTrait;
 use crate::source::Source;
 use crate::time::Time;
@@ -69,7 +69,7 @@ impl PluginBasedSolver {
     }
 
     /// Add a physics plugin
-    pub fn add_plugin(&mut self, plugin: Box<dyn PhysicsPlugin>) -> KwaversResult<()> {
+    pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Register required fields
         for field in plugin.required_fields() {
             self.field_registry

@@ -3,7 +3,7 @@
 //! This plugin implements acoustic wave physics following SOLID principles.
 //! It depends only on abstractions and is completely decoupled from the solver.
 
-use super::{PhysicsPlugin, PluginContext, PluginMetadata, PluginState};
+use super::{Plugin, PluginContext, PluginMetadata, PluginState};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
@@ -119,7 +119,7 @@ impl AcousticWavePlugin {
     }
 }
 
-impl PhysicsPlugin for AcousticWavePlugin {
+impl Plugin for AcousticWavePlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
@@ -212,5 +212,17 @@ impl PhysicsPlugin for AcousticWavePlugin {
         self.prev_pressure = None;
         self.state = PluginState::Finalized;
         Ok(())
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
