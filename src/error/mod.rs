@@ -94,6 +94,10 @@ pub enum KwaversError {
     #[error("GPU error: {0}")]
     GpuError(String),
 
+    /// Array shape errors
+    #[error("Shape error: {0}")]
+    ShapeError(String),
+
     /// Invalid input (for backward compatibility, prefer specific error types)
     #[error("Invalid input: {0}")]
     InvalidInput(String),
