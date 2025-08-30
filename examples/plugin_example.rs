@@ -6,7 +6,10 @@
 //! 3. Adapt existing components as plugins
 
 use kwavers::{
-    physics::{PhysicsPlugin, PluginContext, PluginManager, PluginMetadata, UnifiedFieldType},
+    physics::{
+        plugin::{Plugin, PluginContext, PluginState},
+        PluginManager, PluginMetadata, UnifiedFieldType,
+    },
     Grid, HomogeneousMedium, KwaversResult,
 };
 use ndarray::Array4;
@@ -41,13 +44,13 @@ impl FrequencyAbsorptionPlugin {
     }
 }
 
-impl PhysicsPlugin for FrequencyAbsorptionPlugin {
+impl Plugin for FrequencyAbsorptionPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
 
-    fn state(&self) -> kwavers::physics::plugin::PluginState {
-        kwavers::physics::plugin::PluginState::Created
+    fn state(&self) -> PluginState {
+        PluginState::Created
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -121,13 +124,13 @@ impl StatisticsPlugin {
     }
 }
 
-impl PhysicsPlugin for StatisticsPlugin {
+impl Plugin for StatisticsPlugin {
     fn metadata(&self) -> &PluginMetadata {
         &self.metadata
     }
 
-    fn state(&self) -> kwavers::physics::plugin::PluginState {
-        kwavers::physics::plugin::PluginState::Created
+    fn state(&self) -> PluginState {
+        PluginState::Created
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {

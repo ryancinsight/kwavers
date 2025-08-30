@@ -2,7 +2,10 @@
 //!
 //! Core phase shifting functionality for beam control.
 
-use super::core::*;
+use super::core::{
+    calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
+    MIN_FOCAL_DISTANCE, PHASE_QUANTIZATION_LEVELS,
+};
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
