@@ -70,12 +70,6 @@ pub enum PluginPriority {
 /// Context passed to plugins during execution
 pub type PluginContext = PluginFields;
 
-/// Alias for physics-specific plugins
-pub type PhysicsPlugin = dyn Plugin;
-
-/// Field accessor for plugins
-pub type FieldAccessor = PluginFields;
-
 /// Core trait that all plugins must implement
 pub trait Plugin: Debug + Send + Sync {
     /// Get plugin metadata

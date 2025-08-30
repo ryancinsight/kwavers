@@ -33,12 +33,11 @@ pub use field_mapping::{
     FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
 };
 pub use optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-pub use plugin::{PhysicsPlugin, PluginContext, PluginManager, PluginMetadata}; // NEW: Plugin exports
+pub use plugin::{Plugin, PluginContext, PluginManager, PluginMetadata};
 pub use state::PhysicsState;
 pub use traits::*;
 pub use wave_propagation::{
-    AttenuationCalculator, Polarization, PropagationCoefficients, WaveMode,
-    WavePropagationCalculator,
+    AttenuationCalculator, InterfaceCoefficients, Polarization, WaveMode, WavePropagationCalculator,
 };
 
 // Re-export commonly used constants
