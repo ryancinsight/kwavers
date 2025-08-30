@@ -1,6 +1,5 @@
 //! Pulse sequence generation for power modulation
 
-
 /// Descriptor for a single pulse in a sequence
 #[derive(Debug, Clone)]
 pub struct PulseDescriptor {

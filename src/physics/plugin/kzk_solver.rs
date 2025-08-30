@@ -55,13 +55,53 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         max_frequency: f64,
     ) -> KwaversResult<()> {
-        // TODO: Initialize frequency domain operators
-        // This should include:
-        // 1. Setting up frequency grid
-        // 2. Computing absorption operator
-        // 3. Computing diffraction operator
-        // 4. Precomputing propagation matrices
+        use crate::medium::AcousticProperties;
+        use std::f64::consts::PI;
 
+        // Set up frequency grid (up to 10th harmonic typically)
+        const NUM_HARMONICS: usize = 10;
+        let fundamental = max_frequency / NUM_HARMONICS as f64;
+        let mut frequencies = Vec::with_capacity(NUM_HARMONICS);
+        for n in 1..=NUM_HARMONICS {
+            frequencies.push(n as f64 * fundamental);
+        }
+
+        // Initialize operators
+        let shape = (grid.nx, grid.ny, NUM_HARMONICS);
+        let mut absorption_op = Array3::zeros(shape);
+        let mut diffraction_op = Array3::zeros(shape);
+
+        // Compute operators for each frequency
+        for (f_idx, &freq) in frequencies.iter().enumerate() {
+            let omega = 2.0 * PI * freq;
+            let k = omega / 1500.0; // Using nominal sound speed
+
+            // Absorption operator: exp(-alpha * dz)
+            for i in 0..grid.nx {
+                for j in 0..grid.ny {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = 0.0; // At source plane
+                    let alpha =
+                        AcousticProperties::absorption_coefficient(medium, x, y, z, grid, freq);
+                    absorption_op[[i, j, f_idx]] = (-alpha * grid.dz).exp();
+
+                    // Diffraction operator: exp(i * dz * (kx^2 + ky^2) / (2k))
+                    // Simplified for real computation
+                    let kx = 2.0 * PI * i as f64 / (grid.nx as f64 * grid.dx);
+                    let ky = 2.0 * PI * j as f64 / (grid.ny as f64 * grid.dy);
+                    diffraction_op[[i, j, f_idx]] = ((kx * kx + ky * ky) / (2.0 * k)).cos();
+                }
+            }
+        }
+
+        self.frequency_operators = Some(FrequencyOperator {
+            frequencies,
+            absorption_operator: absorption_op,
+            diffraction_operator: diffraction_op,
+        });
+
+        self.state = PluginState::Running;
         Ok(())
     }
 
@@ -92,11 +132,20 @@ impl KzkSolverPlugin {
         frequency: f64,
         medium: &dyn Medium,
     ) -> f64 {
-        // TODO: Implement shock formation distance calculation
-        // x_shock = rho * c^3 / (beta * omega * p0)
+        use crate::medium::{AcousticProperties, CoreMedium};
+        use std::f64::consts::PI;
 
-        const DEFAULT_SHOCK_DISTANCE: f64 = 1.0; // meters
-        DEFAULT_SHOCK_DISTANCE
+        // Get medium properties at origin
+        let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0); // Dummy grid for point evaluation
+        let density = CoreMedium::density(medium, 0.0, 0.0, 0.0, &grid);
+        let sound_speed = CoreMedium::sound_speed(medium, 0.0, 0.0, 0.0, &grid);
+        let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
+
+        // Shock formation distance: x_shock = ρc³/(βωp₀)
+        let omega = 2.0 * PI * frequency;
+        let x_shock = density * sound_speed.powi(3) / (beta * omega * source_pressure);
+
+        x_shock
     }
 
     /// Apply retarded time transformation
@@ -106,8 +155,22 @@ impl KzkSolverPlugin {
         field: &Array3<f64>,
         propagation_distance: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // TODO: Implement retarded time transformation
-        // tau = t - z/c
+        
+
+        // Retarded time: τ = t - z/c
+        // This shifts the time window to follow the wave
+        const SOUND_SPEED: f64 = 1500.0; // m/s nominal
+        let time_shift = propagation_distance / SOUND_SPEED;
+
+        // Store the shift for the moving window
+        self.retarded_time_window = Some(time_shift);
+
+        // For now, return the field as-is since actual shifting
+        // requires interpolation in the time domain
+        // In a full implementation, this would involve:
+        // 1. FFT to frequency domain
+        // 2. Apply phase shift exp(-i*omega*time_shift)
+        // 3. IFFT back to time domain
 
         Ok(field.clone())
     }
