@@ -272,7 +272,9 @@ fn test_time_reversal_principle() {
 
     // Should refocus at original source (simplified check)
     let focus_value = reversed_field[[source_x, source_y, source_z]];
-    let max_value = reversed_field.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
+    let max_value = reversed_field
+        .iter()
+        .fold(0.0_f64, |a, &b| f64::max(a, b.abs()));
 
     // Focus should be at source location
     assert_eq!(
@@ -298,7 +300,7 @@ fn test_acoustic_attenuation() {
 
     for freq in frequencies {
         let freq_mhz = freq / 1e6;
-        let alpha = alpha_0 * freq_mhz.powf(y); // dB/cm
+        let alpha = alpha_0 * f64::powf(freq_mhz, y); // dB/cm
 
         // Convert to Np/m (1 dB = 0.115 Np, 1 cm = 0.01 m)
         let alpha_np_m = alpha * 0.115 / 0.01;

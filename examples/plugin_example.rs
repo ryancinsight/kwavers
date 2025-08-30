@@ -13,7 +13,6 @@ use kwavers::{
     Grid, HomogeneousMedium, KwaversResult,
 };
 use ndarray::Array4;
-use std::collections::HashMap;
 
 /// Custom plugin for modeling frequency-dependent absorption
 #[derive(Debug)]
@@ -51,6 +50,18 @@ impl Plugin for FrequencyAbsorptionPlugin {
 
     fn state(&self) -> PluginState {
         PluginState::Created
+    }
+
+    fn set_state(&mut self, _state: PluginState) {
+        // State management would be implemented here
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
@@ -133,6 +144,18 @@ impl Plugin for StatisticsPlugin {
         PluginState::Created
     }
 
+    fn set_state(&mut self, _state: PluginState) {
+        // State management would be implemented here
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn required_fields(&self) -> Vec<UnifiedFieldType> {
         vec![UnifiedFieldType::Pressure]
     }
@@ -180,12 +203,11 @@ impl Plugin for StatisticsPlugin {
         Ok(())
     }
 
-    fn diagnostics(&self) -> HashMap<String, f64> {
-        let mut metrics = HashMap::new();
-        metrics.insert("max_pressure".to_string(), self.max_pressure);
-        metrics.insert("min_pressure".to_string(), self.min_pressure);
-        metrics.insert("update_count".to_string(), self.update_count as f64);
-        metrics
+    fn diagnostics(&self) -> String {
+        format!(
+            "StatisticsPlugin: max_pressure={:.3e}, min_pressure={:.3e}, update_count={}",
+            self.max_pressure, self.min_pressure, self.update_count
+        )
     }
 }
 

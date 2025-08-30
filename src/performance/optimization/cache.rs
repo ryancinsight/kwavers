@@ -92,6 +92,8 @@ impl CacheOptimizer {
             use std::arch::x86_64::_MM_HINT_T0;
 
             if offset < data.len() {
+                // SAFETY: We've verified offset is within bounds above.
+                // _mm_prefetch is a hint instruction that doesn't cause memory errors.
                 unsafe {
                     let ptr = data.as_ptr().add(offset) as *const i8;
                     _mm_prefetch(ptr, _MM_HINT_T0);
