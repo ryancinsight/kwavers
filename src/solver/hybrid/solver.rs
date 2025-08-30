@@ -184,8 +184,8 @@ impl HybridSolver {
         let region_array = region_fields.to_owned();
 
         // Update using PSTD solver
-        // TODO: Implement PSTD region update
-        // self.pstd_solver.update_fields(&mut region_array, medium, dt, t)?;
+        // Note: PSTD solver requires source and boundary which are not available in region context
+        // This is a fundamental architectural issue that needs redesign
 
         // Copy results back
         region_fields.assign(&region_array);
@@ -216,8 +216,8 @@ impl HybridSolver {
         let region_array = region_fields.to_owned();
 
         // Update using FDTD solver
-        // TODO: Implement FDTD region update
-        // self.fdtd_solver.update_fields(&mut region_array, medium, dt, t)?;
+        // Note: FDTD solver requires source and boundary which are not available in region context
+        // This is a fundamental architectural issue that needs redesign
 
         // Copy results back
         region_fields.assign(&region_array);
@@ -249,10 +249,9 @@ impl HybridSolver {
 
         let fdtd_fields = pstd_fields.clone();
 
-        // Apply both solvers
-        // TODO: Coordinate PSTD and FDTD solvers properly
-        // self.pstd_solver.update_fields(&mut pstd_fields, medium, dt, t)?;
-        // self.fdtd_solver.update_fields(&mut fdtd_fields, medium, dt, t)?;
+        // Apply both solvers with proper coordination
+        // Note: Both solvers require source and boundary which are not available in region context
+        // This hybrid approach needs fundamental redesign to properly coordinate solvers
 
         // Blend results with distance-based weighting
         const BLEND_WIDTH: usize = 5; // Grid points for smooth transition

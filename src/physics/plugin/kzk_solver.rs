@@ -74,7 +74,8 @@ impl KzkSolverPlugin {
         // Compute operators for each frequency
         for (f_idx, &freq) in frequencies.iter().enumerate() {
             let omega = 2.0 * PI * freq;
-            let k = omega / 1500.0; // Using nominal sound speed
+            const NOMINAL_SOUND_SPEED: f64 = 1500.0; // m/s in tissue
+            let k = omega / NOMINAL_SOUND_SPEED;
 
             // Absorption operator: exp(-alpha * dz)
             for i in 0..grid.nx {
