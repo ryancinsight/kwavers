@@ -210,7 +210,7 @@ impl CoreMedium for HeterogeneousTissueMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousTissueMedium {
-    fn density_array(&self, _grid: &Grid) -> Array3<f64> {
+    fn density_array(&self) -> &Array3<f64> {
         self.density_array
             .get_or_init(|| {
                 let mut arr = Array3::zeros(self.tissue_map.dim());

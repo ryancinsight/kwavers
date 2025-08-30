@@ -255,30 +255,20 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn density_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.density.clone()
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density
     }
 
-    fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.sound_speed.clone()
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed
     }
 
-    fn absorption_array(&self, _grid: &Grid, frequency: f64) -> Array3<f64> {
-        let mut absorption = Array3::zeros(self.alpha0.raw_dim());
-        for ((ix, iy, iz), alpha) in absorption.indexed_iter_mut() {
-            let power_law = PowerLawAbsorption {
-                alpha_0: self.alpha0[[ix, iy, iz]],
-                y: self.delta[[ix, iy, iz]],
-                f_ref: self.reference_frequency,
-                dispersion_correction: false,
-            };
-            *alpha = power_law.absorption_at_frequency(frequency);
-        }
-        absorption
+    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.density
     }
 
-    fn nonlinearity_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.b_a.clone()
+    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.sound_speed
     }
 }
 

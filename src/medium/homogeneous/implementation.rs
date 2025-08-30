@@ -202,22 +202,20 @@ impl CoreMedium for HomogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn density_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.density)
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density_cache
     }
 
-    fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.sound_speed)
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed_cache
     }
 
-    fn absorption_array(&self, grid: &Grid, frequency: f64) -> Array3<f64> {
-        let alpha = self.absorption_alpha
-            * (frequency / self.reference_frequency).powf(self.absorption_power);
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), alpha)
+    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.density_cache
     }
 
-    fn nonlinearity_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.nonlinearity)
+    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.sound_speed_cache
     }
 }
 
