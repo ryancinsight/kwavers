@@ -49,6 +49,12 @@ impl MLEngine {
             ModelType::ConvergencePredictor => {
                 Model::ConvergencePredictor(ConvergencePredictorModel::load(path)?)
             }
+            ModelType::OutcomePredictor => {
+                // OutcomePredictor not yet implemented in Model enum
+                return Err(crate::error::KwaversError::NotImplemented(
+                    "OutcomePredictor model loading not yet implemented".to_string(),
+                ));
+            }
         };
 
         self.models.insert(model_type, model);

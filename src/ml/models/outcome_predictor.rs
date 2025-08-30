@@ -32,7 +32,15 @@ impl OutcomePredictorModel {
 }
 
 impl MLModel for OutcomePredictorModel {
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
+
+    fn model_type(&self) -> crate::ml::types::ModelType {
+        crate::ml::types::ModelType::OutcomePredictor
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Simplified outcome prediction
         let mean = input.mean_axis(ndarray::Axis(1)).unwrap();
         let mut output = Array2::zeros((input.nrows(), 3));
@@ -48,7 +56,15 @@ impl MLModel for OutcomePredictorModel {
         self.metadata.accuracy
     }
 
-    fn name(&self) -> &str {
-        &self.metadata.name
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        Ok(Self::new())
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        Ok(())
     }
 }

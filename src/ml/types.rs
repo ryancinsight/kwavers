@@ -19,6 +19,8 @@ pub enum ModelType {
     AnomalyDetector,
     /// Convergence prediction model
     ConvergencePredictor,
+    /// Outcome prediction model
+    OutcomePredictor,
 }
 
 /// ML framework backend

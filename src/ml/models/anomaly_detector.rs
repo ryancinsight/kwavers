@@ -50,7 +50,15 @@ impl AnomalyDetectorModel {
 }
 
 impl MLModel for AnomalyDetectorModel {
-    fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
+    fn metadata(&self) -> &ModelMetadata {
+        &self.metadata
+    }
+
+    fn model_type(&self) -> crate::ml::types::ModelType {
+        crate::ml::types::ModelType::AnomalyDetector
+    }
+
+    fn infer(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Simple threshold-based anomaly detection
         Ok(input.mapv(|x| if x.abs() > self.threshold { 1.0 } else { 0.0 }))
     }
@@ -59,7 +67,18 @@ impl MLModel for AnomalyDetectorModel {
         self.metadata.accuracy
     }
 
-    fn name(&self) -> &str {
-        &self.metadata.name
+    fn update(&mut self, _gradients: &Array2<f32>) -> KwaversResult<()> {
+        // Threshold-based model doesn't use gradients
+        Ok(())
+    }
+
+    fn load(_path: &str) -> KwaversResult<Self> {
+        // Simplified load - would read from file in production
+        Ok(Self::new(1.5))
+    }
+
+    fn save(&self, _path: &str) -> KwaversResult<()> {
+        // Simplified save - would write to file in production
+        Ok(())
     }
 }

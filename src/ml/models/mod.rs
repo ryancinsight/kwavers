@@ -16,9 +16,6 @@ pub use outcome_predictor::OutcomePredictorModel;
 pub use parameter_optimizer::ParameterOptimizerModel;
 pub use tissue_classifier::TissueClassifierModel;
 
-use crate::error::KwaversResult;
-use ndarray::Array2;
-
 // Re-export MLModel and ModelMetadata from types
 pub use crate::ml::types::{MLModel, ModelMetadata};
 
