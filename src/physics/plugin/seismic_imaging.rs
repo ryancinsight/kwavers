@@ -131,7 +131,7 @@ impl SeismicImagingPlugin {
         // 3. Application of imaging condition
         // 4. Artifact suppression
 
-        Ok(Array3::zeros(grid.shape()))
+        Ok(Array3::zeros(grid.dimensions()))
     }
 
     /// Perform Full Waveform Inversion

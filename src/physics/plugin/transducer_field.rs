@@ -73,7 +73,7 @@ impl TransducerFieldCalculatorPlugin {
         // 3. Summation with appropriate weighting
         // 4. Application of apodization if specified
 
-        let sir = Array3::zeros(grid.shape());
+        let sir = Array3::zeros(grid.dimensions());
         self.sir_cache.insert(cache_key, sir.clone());
         Ok(sir)
     }
@@ -93,7 +93,7 @@ impl TransducerFieldCalculatorPlugin {
         // 3. Inverse 2D FFT at each z-plane
         // 4. Proper handling of evanescent waves
 
-        Ok(Array3::zeros(grid.shape()))
+        Ok(Array3::zeros(grid.dimensions()))
     }
 
     /// Calculate harmonic pressure field for nonlinear propagation
@@ -111,7 +111,7 @@ impl TransducerFieldCalculatorPlugin {
         // 2. Nonlinear source term computation
         // 3. Harmonic field propagation
 
-        Ok(Array3::zeros(grid.shape()))
+        Ok(Array3::zeros(grid.dimensions()))
     }
 
     /// Calculate heating rate from acoustic field

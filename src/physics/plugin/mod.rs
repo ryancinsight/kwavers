@@ -45,13 +45,13 @@ pub enum PluginState {
     /// Plugin is initialized and ready
     Initialized,
     /// Plugin is actively processing
-    Active,
+    Running,
     /// Plugin is paused
     Paused,
     /// Plugin encountered an error
     Error,
-    /// Plugin is stopped
-    Stopped,
+    /// Plugin has been finalized
+    Finalized,
 }
 
 /// Priority levels for plugin execution

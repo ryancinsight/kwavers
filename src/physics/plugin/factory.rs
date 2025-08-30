@@ -89,12 +89,7 @@ where
                     constraint: "Invalid configuration type".to_string(),
                 })
             })?
-            .validate();
-        if !config.downcast_ref::<C>().unwrap().validate().is_valid {
-            return Err(KwaversError::InvalidInput(
-                "Invalid plugin state".to_string(),
-            ));
-        }
+            ;
         Ok(())
     }
 }

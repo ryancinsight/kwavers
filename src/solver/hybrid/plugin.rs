@@ -14,6 +14,7 @@ use std::collections::HashMap;
 pub struct HybridPlugin {
     solver: HybridSolver,
     metadata: PluginMetadata,
+    state: PluginState,
 }
 
 impl HybridPlugin {
@@ -29,7 +30,7 @@ impl HybridPlugin {
             license: "MIT".to_string(),
         };
 
-        Ok(Self { solver, metadata })
+        Ok(Self { solver, metadata, state: PluginState::Created })
     }
 }
 

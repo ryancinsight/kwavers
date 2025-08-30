@@ -4,7 +4,7 @@
 //! components that evolve at different time scales.
 
 use crate::grid::Grid;
-use crate::physics::plugin::crate::physics::plugin::Plugin;
+use crate::physics::plugin::Plugin;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
