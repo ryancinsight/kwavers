@@ -357,10 +357,34 @@ impl TransducerFieldCalculatorPlugin {
         &self,
         pressure_field: &Array3<f64>,
         medium: &dyn Medium,
+        grid: &Grid,
+        frequency: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // TODO: Implement heating rate calculation
-        // Q = 2 * alpha * I where I = p^2 / (2 * rho * c)
+        // Heating rate: Q = 2 * alpha * I
+        // where I = p^2 / (2 * rho * c) is acoustic intensity
+        // Reference: Nyborg (1981) "Heat generation by ultrasound in a relaxing medium"
 
-        Ok(Array3::zeros(pressure_field.dim()))
+        use crate::medium::{AcousticProperties, CoreMedium};
+        use ndarray::Zip;
+
+        let mut heating = Array3::zeros(pressure_field.dim());
+
+        Zip::indexed(&mut heating)
+            .and(pressure_field)
+            .for_each(|(i, j, k), q, &p| {
+                let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                let density = CoreMedium::density(medium, x, y, z, grid);
+                let sound_speed = CoreMedium::sound_speed(medium, x, y, z, grid);
+                let alpha =
+                    AcousticProperties::absorption_coefficient(medium, x, y, z, grid, frequency);
+
+                // Acoustic intensity: I = p^2 / (2 * rho * c)
+                let intensity = (p * p) / (2.0 * density * sound_speed);
+
+                // Heating rate: Q = 2 * alpha * I
+                *q = 2.0 * alpha * intensity;
+            });
+
+        Ok(heating)
     }
 }
