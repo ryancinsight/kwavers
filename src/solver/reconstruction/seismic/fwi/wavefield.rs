@@ -11,7 +11,7 @@ use crate::grid::Grid;
 use ndarray::{Array2, Array3, Zip};
 
 /// Wavefield modeling for seismic FWI
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct WavefieldModeler {
     /// Spatial grid
     grid: Grid,
@@ -57,7 +57,7 @@ impl WavefieldModeler {
                 let cx = self.grid.nx / 2;
                 let cy = self.grid.ny / 2;
                 let cz = self.grid.nz / 2;
-                self.wavefield[[cx, cy, cz]] += self.source_wavelet[it];
+                self.wavefield[[cx, cy, cz] += self.source_wavelet[it];
             }
 
             // Update wavefield using finite differences
@@ -66,7 +66,7 @@ impl WavefieldModeler {
             // Record at surface (z=0)
             for i in 0..self.grid.nx {
                 for j in 0..self.grid.ny {
-                    seismogram[[i, j, it]] = next[[i, j, 0]];
+                    seismogram[[i, j, it] = next[[i, j, 0];
                 }
             }
 
@@ -93,7 +93,7 @@ impl WavefieldModeler {
             for i in 0..self.grid.nx {
                 for j in 0..self.grid.ny {
                     if i < adjoint_source.shape()[0] {
-                        self.wavefield[[i, j, 0]] += adjoint_source[[i, it]];
+                        self.wavefield[[i, j, 0] += adjoint_source[[i, it];
                     }
                 }
             }
@@ -141,10 +141,10 @@ impl WavefieldModeler {
                     && k < self.grid.nz - 1
                 {
                     // Laplacian using central differences
-                    let laplacian = (current[[i + 1, j, k]] - 2.0 * curr + current[[i - 1, j, k]])
+                    let laplacian = (current[[i + 1, j, k] - 2.0 * curr + current[[i - 1, j, k])
                         / dx2
-                        + (current[[i, j + 1, k]] - 2.0 * curr + current[[i, j - 1, k]]) / dy2
-                        + (current[[i, j, k + 1]] - 2.0 * curr + current[[i, j, k - 1]]) / dz2;
+                        + (current[[i, j + 1, k] - 2.0 * curr + current[[i, j - 1, k]) / dy2
+                        + (current[[i, j, k + 1] - 2.0 * curr + current[[i, j, k - 1]) / dz2;
 
                     // Time stepping: u^{n+1} = 2u^n - u^{n-1} + (v*dt)^2 * ∇²u^n
                     *next_val = 2.0 * curr - prev + vel * vel * dt2 * laplacian;

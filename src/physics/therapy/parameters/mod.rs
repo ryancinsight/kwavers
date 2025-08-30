@@ -5,7 +5,7 @@
 use super::modalities::TherapyModality;
 
 /// Therapy treatment parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TherapyParameters {
     /// Acoustic frequency [Hz]
     pub frequency: f64,

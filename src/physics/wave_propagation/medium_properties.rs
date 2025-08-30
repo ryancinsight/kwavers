@@ -6,7 +6,7 @@ use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
 use ndarray::Array2;
 
 /// Medium properties for wave propagation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MediumProperties {
     /// Wave speed [m/s]
     pub wave_speed: f64,

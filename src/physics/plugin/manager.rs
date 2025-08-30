@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 /// Plugin manager for orchestrating plugin lifecycle and execution
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PluginManager {
     plugins: Vec<Box<dyn Plugin>>,
     execution_order: Vec<usize>,

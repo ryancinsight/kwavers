@@ -10,7 +10,7 @@ use ndarray::{Array3, Zip};
 use std::arch::x86_64::*;
 
 /// SIMD-optimized field operations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SimdOps;
 
 impl SimdOps {
@@ -175,7 +175,7 @@ mod tests {
         SimdOps::add_fields(&a, &b, &mut out);
 
         // Should be 3.0 everywhere
-        assert!((out[[5, 5, 5]] - 3.0).abs() < 1e-10);
+        assert!((out[[5, 5, 5] - 3.0).abs() < 1e-10);
     }
 
     #[test]
@@ -186,14 +186,14 @@ mod tests {
         SimdOps::scale_field(&field, 3.0, &mut out);
 
         // Should be 6.0 everywhere
-        assert!((out[[5, 5, 5]] - 6.0).abs() < 1e-10);
+        assert!((out[[5, 5, 5] - 6.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_simd_norm() {
         let mut field = Array3::zeros((10, 10, 10));
-        field[[0, 0, 0]] = 3.0;
-        field[[0, 0, 1]] = 4.0;
+        field[[0, 0, 0] = 3.0;
+        field[[0, 0, 1] = 4.0;
 
         let norm = SimdOps::field_norm(&field);
 

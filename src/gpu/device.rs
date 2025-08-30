@@ -4,8 +4,8 @@ use crate::{KwaversError, KwaversResult};
 use std::sync::Arc;
 
 /// Information about a GPU device
-#[derive(Debug, Clone)]
-#[derive(Debug)]
+#[derive(Debug, Clone))]
+#[derive(Debug))]
 pub struct DeviceInfo {
     pub name: String,
     pub vendor: u32,
@@ -14,7 +14,7 @@ pub struct DeviceInfo {
 }
 
 /// GPU device wrapper
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GpuDevice {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,

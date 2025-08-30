@@ -9,7 +9,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 /// Control state for a single parameter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ControlState {
     pub definition: ParameterDefinition,
     pub current_value: ParameterValue,
@@ -49,7 +49,7 @@ impl ControlState {
 }
 
 /// State snapshot for saving/loading
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StateSnapshot {
     pub parameters: HashMap<String, ParameterValue>,
     pub timestamp: Instant,
@@ -83,7 +83,7 @@ impl StateSnapshot {
 }
 
 /// Interactive controls system with thread-safe state management
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct InteractiveControls {
     states: Arc<RwLock<HashMap<String, ControlState>>>,
     update_callbacks: Arc<RwLock<HashMap<String, Box<dyn Fn(&ParameterValue) + Send + Sync>>>>,

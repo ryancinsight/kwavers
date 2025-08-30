@@ -40,15 +40,15 @@ pub fn laplacian_3d<T: StencilValue>(
     for i in 1..nx - 1 {
         for j in 1..ny - 1 {
             for k in 1..nz - 1 {
-                let center = input[[i, j, k]];
+                let center = input[[i, j, k];
 
                 // Compute Laplacian with optimal memory access pattern
-                let lap_x = (input[[i + 1, j, k]] + input[[i - 1, j, k]]).mul_f64(dx_inv2);
-                let lap_y = (input[[i, j + 1, k]] + input[[i, j - 1, k]]).mul_f64(dy_inv2);
-                let lap_z = (input[[i, j, k + 1]] + input[[i, j, k - 1]]).mul_f64(dz_inv2);
+                let lap_x = (input[[i + 1, j, k] + input[[i - 1, j, k]).mul_f64(dx_inv2);
+                let lap_y = (input[[i, j + 1, k] + input[[i, j - 1, k]).mul_f64(dy_inv2);
+                let lap_z = (input[[i, j, k + 1] + input[[i, j, k - 1]).mul_f64(dz_inv2);
                 let center_term = center.mul_f64((dx_inv2 + dy_inv2 + dz_inv2) * -2.0);
 
-                output[[i, j, k]] = lap_x + lap_y + lap_z + center_term;
+                output[[i, j, k] = lap_x + lap_y + lap_z + center_term;
             }
         }
     }
@@ -77,7 +77,7 @@ pub fn gradient_3d<T: StencilValue>(
 }
 
 /// Stencil order for finite difference schemes
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum StencilOrder {
     Second,
     Fourth,
@@ -100,7 +100,7 @@ fn gradient_3d_order2<T: StencilValue>(
     let x_interior = s![1..nx - 1, .., ..];
     ndarray::Zip::indexed(&mut grad_x.slice_mut(x_interior)).for_each(|(i, j, k), grad| {
         let i = i + 1; // Adjust for slice offset
-        let diff = input[[i + 1, j, k]] + input[[i - 1, j, k]].mul_f64(-1.0);
+        let diff = input[[i + 1, j, k] + input[[i - 1, j, k].mul_f64(-1.0);
         *grad = diff.mul_f64(0.5 * dx_inv);
     });
 
@@ -108,7 +108,7 @@ fn gradient_3d_order2<T: StencilValue>(
     let y_interior = s![.., 1..ny - 1, ..];
     ndarray::Zip::indexed(&mut grad_y.slice_mut(y_interior)).for_each(|(i, j, k), grad| {
         let j = j + 1; // Adjust for slice offset
-        let diff = input[[i, j + 1, k]] + input[[i, j - 1, k]].mul_f64(-1.0);
+        let diff = input[[i, j + 1, k] + input[[i, j - 1, k].mul_f64(-1.0);
         *grad = diff.mul_f64(0.5 * dy_inv);
     });
 
@@ -116,7 +116,7 @@ fn gradient_3d_order2<T: StencilValue>(
     let z_interior = s![.., .., 1..nz - 1];
     ndarray::Zip::indexed(&mut grad_z.slice_mut(z_interior)).for_each(|(i, j, k), grad| {
         let k = k + 1; // Adjust for slice offset
-        let diff = input[[i, j, k + 1]] + input[[i, j, k - 1]].mul_f64(-1.0);
+        let diff = input[[i, j, k + 1] + input[[i, j, k - 1].mul_f64(-1.0);
         *grad = diff.mul_f64(0.5 * dz_inv);
     });
 }
@@ -141,11 +141,11 @@ fn gradient_3d_order4<T: StencilValue>(
     for i in 2..nx - 2 {
         for j in 0..ny {
             for k in 0..nz {
-                let val = input[[i + 2, j, k]].mul_f64(C2)
-                    + input[[i + 1, j, k]].mul_f64(C1)
-                    + input[[i - 1, j, k]].mul_f64(-C1)
-                    + input[[i - 2, j, k]].mul_f64(-C2);
-                grad_x[[i, j, k]] = val.mul_f64(dx_inv);
+                let val = input[[i + 2, j, k].mul_f64(C2)
+                    + input[[i + 1, j, k].mul_f64(C1)
+                    + input[[i - 1, j, k].mul_f64(-C1)
+                    + input[[i - 2, j, k].mul_f64(-C2);
+                grad_x[[i, j, k] = val.mul_f64(dx_inv);
             }
         }
     }
@@ -154,11 +154,11 @@ fn gradient_3d_order4<T: StencilValue>(
     for i in 0..nx {
         for j in 2..ny - 2 {
             for k in 0..nz {
-                let val = input[[i, j + 2, k]].mul_f64(C2)
-                    + input[[i, j + 1, k]].mul_f64(C1)
-                    + input[[i, j - 1, k]].mul_f64(-C1)
-                    + input[[i, j - 2, k]].mul_f64(-C2);
-                grad_y[[i, j, k]] = val.mul_f64(dy_inv);
+                let val = input[[i, j + 2, k].mul_f64(C2)
+                    + input[[i, j + 1, k].mul_f64(C1)
+                    + input[[i, j - 1, k].mul_f64(-C1)
+                    + input[[i, j - 2, k].mul_f64(-C2);
+                grad_y[[i, j, k] = val.mul_f64(dy_inv);
             }
         }
     }
@@ -167,11 +167,11 @@ fn gradient_3d_order4<T: StencilValue>(
     for i in 0..nx {
         for j in 0..ny {
             for k in 2..nz - 2 {
-                let val = input[[i, j, k + 2]].mul_f64(C2)
-                    + input[[i, j, k + 1]].mul_f64(C1)
-                    + input[[i, j, k - 1]].mul_f64(-C1)
-                    + input[[i, j, k - 2]].mul_f64(-C2);
-                grad_z[[i, j, k]] = val.mul_f64(dz_inv);
+                let val = input[[i, j, k + 2].mul_f64(C2)
+                    + input[[i, j, k + 1].mul_f64(C1)
+                    + input[[i, j, k - 1].mul_f64(-C1)
+                    + input[[i, j, k - 2].mul_f64(-C2);
+                grad_z[[i, j, k] = val.mul_f64(dz_inv);
             }
         }
     }
@@ -196,7 +196,7 @@ pub trait Stencil<T: StencilValue, const N: usize> {
 }
 
 /// A 7-point stencil for 3D Laplacian
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct Laplacian3D {
     pub dx_inv2: f64,
     pub dy_inv2: f64,
@@ -211,7 +211,7 @@ impl<T: StencilValue> Stencil<T, 7> for Laplacian3D {
 }
 
 /// Iterator-based stencil operations for maximum flexibility
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct StencilIterator3D<'a, T> {
     array: ArrayView3<'a, T>,
     position: (usize, usize, usize),
@@ -232,7 +232,7 @@ impl<'a, T: StencilValue> StencilIterator3D<'a, T> {
     #[inline(always)]
     pub fn center(&self) -> T {
         let (i, j, k) = self.position;
-        self.array[[i, j, k]]
+        self.array[[i, j, k]
     }
 
     /// Get neighboring values for a 7-point stencil
@@ -240,12 +240,12 @@ impl<'a, T: StencilValue> StencilIterator3D<'a, T> {
     pub fn neighbors_7point(&self) -> [T; 6] {
         let (i, j, k) = self.position;
         [
-            self.array[[i - 1, j, k]],
-            self.array[[i + 1, j, k]],
-            self.array[[i, j - 1, k]],
-            self.array[[i, j + 1, k]],
-            self.array[[i, j, k - 1]],
-            self.array[[i, j, k + 1]],
+            self.array[[i - 1, j, k],
+            self.array[[i + 1, j, k],
+            self.array[[i, j - 1, k],
+            self.array[[i, j + 1, k],
+            self.array[[i, j, k - 1],
+            self.array[[i, j, k + 1],
         ]
     }
 }
@@ -287,13 +287,13 @@ mod tests {
         let mut output = Array3::<f64>::zeros((5, 5, 5));
 
         // Set center value
-        input[[2, 2, 2]] = 1.0;
+        input[[2, 2, 2] = 1.0;
 
         laplacian_3d(input.view(), output.view_mut(), 1.0, 1.0, 1.0);
 
         // Check that Laplacian is computed correctly
-        assert_eq!(output[[2, 2, 2]], -6.0);
-        assert_eq!(output[[1, 2, 2]], 1.0);
-        assert_eq!(output[[3, 2, 2]], 1.0);
+        assert_eq!(output[[2, 2, 2], -6.0);
+        assert_eq!(output[[1, 2, 2], 1.0);
+        assert_eq!(output[[3, 2, 2], 1.0);
     }
 }

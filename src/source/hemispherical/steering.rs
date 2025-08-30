@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 /// Focal point specification
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct FocalPoint {
     /// Position in 3D space (m)
     pub position: [f64; 3],
@@ -20,7 +20,7 @@ pub struct FocalPoint {
 }
 
 /// Steering mode
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum SteeringMode {
     /// Geometric focusing
     Geometric,
@@ -31,7 +31,7 @@ pub enum SteeringMode {
 }
 
 /// Steering controller for phased arrays
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SteeringController {
     /// Operating frequency (Hz)
     frequency: f64,
@@ -97,7 +97,7 @@ impl SteeringController {
                 element.position[2],
             ) {
                 if ix < grid.nx && iy < grid.ny && iz < grid.nz {
-                    field[[ix, iy, iz]] += amplitude * signal.amplitude(time);
+                    field[[ix, iy, iz] += amplitude * signal.amplitude(time);
                 }
             }
         }

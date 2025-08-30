@@ -18,7 +18,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 /// Pre-allocated workspace for solver operations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SolverWorkspace {
     /// FFT workspace for complex operations
     pub fft_buffer: Array3<Complex<f64>>,
@@ -74,7 +74,7 @@ impl SolverWorkspace {
 }
 
 /// Thread-local workspace pool for parallel operations
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct WorkspacePool {
     /// Available workspaces
     workspaces: Arc<Mutex<Vec<SolverWorkspace>>>,
@@ -138,7 +138,7 @@ impl WorkspacePool {
 }
 
 /// RAII guard for workspace borrowing
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct WorkspaceGuard {
     workspace: Option<SolverWorkspace>,
     pool: Arc<Mutex<Vec<SolverWorkspace>>>,
@@ -255,14 +255,14 @@ mod tests {
 
         // Test add_inplace
         add_inplace(&mut a, &b);
-        assert_eq!(a[[0, 0, 0]], 3.0);
+        assert_eq!(a[[0, 0, 0], 3.0);
 
         // Test scale_inplace
         scale_inplace(&mut a, 2.0);
-        assert_eq!(a[[0, 0, 0]], 6.0);
+        assert_eq!(a[[0, 0, 0], 6.0);
 
         // Test fma_inplace: a = a * b + c = 6 * 2 + 3 = 15
         fma_inplace(&mut a, &b, &c);
-        assert_eq!(a[[0, 0, 0]], 15.0);
+        assert_eq!(a[[0, 0, 0], 15.0);
     }
 }

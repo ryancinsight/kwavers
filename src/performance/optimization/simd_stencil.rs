@@ -8,7 +8,7 @@ use ndarray::{ArrayView3, ArrayViewMut3};
 use std::arch::x86_64::*;
 
 /// SIMD-optimized Laplacian computation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SimdLaplacian {
     /// Grid spacing squared
     dx2_inv: f64,
@@ -55,19 +55,19 @@ impl SimdLaplacian {
                 let mut k = 1;
                 while k + 3 < nz - 1 {
                     // Load center values
-                    let center = _mm256_loadu_pd(&input[[i, j, k]]);
+                    let center = _mm256_loadu_pd(&input[[i, j, k]);
 
                     // X-direction stencil
-                    let xp = _mm256_loadu_pd(&input[[i + 1, j, k]]);
-                    let xm = _mm256_loadu_pd(&input[[i - 1, j, k]]);
+                    let xp = _mm256_loadu_pd(&input[[i + 1, j, k]);
+                    let xm = _mm256_loadu_pd(&input[[i - 1, j, k]);
                     let x_term = _mm256_mul_pd(
                         _mm256_add_pd(_mm256_add_pd(xp, xm), _mm256_mul_pd(center, neg_two)),
                         dx2_inv,
                     );
 
                     // Y-direction stencil
-                    let yp = _mm256_loadu_pd(&input[[i, j + 1, k]]);
-                    let ym = _mm256_loadu_pd(&input[[i, j - 1, k]]);
+                    let yp = _mm256_loadu_pd(&input[[i, j + 1, k]);
+                    let ym = _mm256_loadu_pd(&input[[i, j - 1, k]);
                     let y_term = _mm256_mul_pd(
                         _mm256_add_pd(_mm256_add_pd(yp, ym), _mm256_mul_pd(center, neg_two)),
                         dy2_inv,
@@ -76,8 +76,8 @@ impl SimdLaplacian {
                     // Z-direction stencil (scalar for now due to strided access)
                     let mut z_vals = [0.0; 4];
                     for dk in 0..4 {
-                        z_vals[dk] = (input[[i, j, k + dk + 1]] - 2.0 * input[[i, j, k + dk]]
-                            + input[[i, j, k + dk - 1]])
+                        z_vals[dk] = (input[[i, j, k + dk + 1] - 2.0 * input[[i, j, k + dk]
+                            + input[[i, j, k + dk - 1])
                             * self.dz2_inv;
                     }
                     let z_term = _mm256_loadu_pd(&z_vals[0]);
@@ -86,14 +86,14 @@ impl SimdLaplacian {
                     let result = _mm256_add_pd(_mm256_add_pd(x_term, y_term), z_term);
 
                     // Store result
-                    _mm256_storeu_pd(&mut output[[i, j, k]], result);
+                    _mm256_storeu_pd(&mut output[[i, j, k], result);
 
                     k += 4;
                 }
 
                 // Handle remaining elements
                 while k < nz - 1 {
-                    output[[i, j, k]] = self.compute_laplacian_point(&input, i, j, k);
+                    output[[i, j, k] = self.compute_laplacian_point(&input, i, j, k);
                     k += 1;
                 }
             }
@@ -114,19 +114,19 @@ impl SimdLaplacian {
                 let mut k = 1;
                 while k + 1 < nz - 1 {
                     // Process 2 elements at once
-                    let center = _mm_loadu_pd(&input[[i, j, k]]);
+                    let center = _mm_loadu_pd(&input[[i, j, k]);
 
                     // X-direction
-                    let xp = _mm_loadu_pd(&input[[i + 1, j, k]]);
-                    let xm = _mm_loadu_pd(&input[[i - 1, j, k]]);
+                    let xp = _mm_loadu_pd(&input[[i + 1, j, k]);
+                    let xm = _mm_loadu_pd(&input[[i - 1, j, k]);
                     let x_term = _mm_mul_pd(
                         _mm_add_pd(_mm_add_pd(xp, xm), _mm_mul_pd(center, neg_two)),
                         dx2_inv,
                     );
 
                     // Y-direction
-                    let yp = _mm_loadu_pd(&input[[i, j + 1, k]]);
-                    let ym = _mm_loadu_pd(&input[[i, j - 1, k]]);
+                    let yp = _mm_loadu_pd(&input[[i, j + 1, k]);
+                    let ym = _mm_loadu_pd(&input[[i, j - 1, k]);
                     let y_term = _mm_mul_pd(
                         _mm_add_pd(_mm_add_pd(yp, ym), _mm_mul_pd(center, neg_two)),
                         dy2_inv,
@@ -135,22 +135,22 @@ impl SimdLaplacian {
                     // Z-direction (scalar)
                     let mut z_vals = [0.0; 2];
                     for dk in 0..2 {
-                        z_vals[dk] = (input[[i, j, k + dk + 1]] - 2.0 * input[[i, j, k + dk]]
-                            + input[[i, j, k + dk - 1]])
+                        z_vals[dk] = (input[[i, j, k + dk + 1] - 2.0 * input[[i, j, k + dk]
+                            + input[[i, j, k + dk - 1])
                             * self.dz2_inv;
                     }
                     let z_term = _mm_loadu_pd(&z_vals[0]);
 
                     // Sum and store
                     let result = _mm_add_pd(_mm_add_pd(x_term, y_term), z_term);
-                    _mm_storeu_pd(&mut output[[i, j, k]], result);
+                    _mm_storeu_pd(&mut output[[i, j, k], result);
 
                     k += 2;
                 }
 
                 // Handle remainder
                 if k < nz - 1 {
-                    output[[i, j, k]] = self.compute_laplacian_point(&input, i, j, k);
+                    output[[i, j, k] = self.compute_laplacian_point(&input, i, j, k);
                 }
             }
         }
@@ -163,7 +163,7 @@ impl SimdLaplacian {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    output[[i, j, k]] = self.compute_laplacian_point(&input, i, j, k);
+                    output[[i, j, k] = self.compute_laplacian_point(&input, i, j, k);
                 }
             }
         }
@@ -178,16 +178,16 @@ impl SimdLaplacian {
         j: usize,
         k: usize,
     ) -> f64 {
-        let center = input[[i, j, k]];
+        let center = input[[i, j, k];
 
-        (input[[i + 1, j, k]] - 2.0 * center + input[[i - 1, j, k]]) * self.dx2_inv
-            + (input[[i, j + 1, k]] - 2.0 * center + input[[i, j - 1, k]]) * self.dy2_inv
-            + (input[[i, j, k + 1]] - 2.0 * center + input[[i, j, k - 1]]) * self.dz2_inv
+        (input[[i + 1, j, k] - 2.0 * center + input[[i - 1, j, k]) * self.dx2_inv
+            + (input[[i, j + 1, k] - 2.0 * center + input[[i, j - 1, k]) * self.dy2_inv
+            + (input[[i, j, k + 1] - 2.0 * center + input[[i, j, k - 1]) * self.dz2_inv
     }
 }
 
 /// SWAR (SIMD Within A Register) fallback for non-x86 architectures
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SwarLaplacian {
     dx2_inv: f64,
     dy2_inv: f64,
@@ -223,14 +223,14 @@ impl SwarLaplacian {
                     for i in i_block..i_end {
                         for j in j_block..j_end {
                             for k in k_block..k_end {
-                                let center = input[[i, j, k]];
+                                let center = input[[i, j, k];
 
                                 // Compute all differences at once
-                                let dx = input[[i + 1, j, k]] + input[[i - 1, j, k]] - 2.0 * center;
-                                let dy = input[[i, j + 1, k]] + input[[i, j - 1, k]] - 2.0 * center;
-                                let dz = input[[i, j, k + 1]] + input[[i, j, k - 1]] - 2.0 * center;
+                                let dx = input[[i + 1, j, k] + input[[i - 1, j, k] - 2.0 * center;
+                                let dy = input[[i, j + 1, k] + input[[i, j - 1, k] - 2.0 * center;
+                                let dz = input[[i, j, k + 1] + input[[i, j, k - 1] - 2.0 * center;
 
-                                output[[i, j, k]] =
+                                output[[i, j, k] =
                                     dx * self.dx2_inv + dy * self.dy2_inv + dz * self.dz2_inv;
                             }
                         }
@@ -263,8 +263,8 @@ mod tests {
             for j in 1..31 {
                 for k in 1..31 {
                     assert_relative_eq!(
-                        output_simd[[i, j, k]],
-                        output_scalar[[i, j, k]],
+                        output_simd[[i, j, k],
+                        output_scalar[[i, j, k],
                         epsilon = 1e-10
                     );
                 }

@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Test result for a single test case
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TestResult {
     pub name: String,
     pub passed: bool,
@@ -13,7 +13,7 @@ pub struct TestResult {
 }
 
 /// Validation report containing all test results
-#[derive(Debug, Default]
+#[derive(Debug, Default)]
 pub struct ValidationReport {
     results: Vec<TestResult>,
 }

@@ -2,13 +2,13 @@
 //!
 //! Implements various phase patterns for specialized beam profiles.
 
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PhasePattern;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SpiralPhase;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct VortexBeam;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct BesselBeam;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct AiryBeam;

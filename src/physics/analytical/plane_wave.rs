@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Plane wave analytical solutions
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PlaneWaveSolution;
 
 impl PlaneWaveSolution {
@@ -40,7 +40,7 @@ impl PlaneWaveSolution {
                     let z = k_idx as f64 * grid.dz;
 
                     let phase = k_corrected * (dir.0 * x + dir.1 * y + dir.2 * z) - omega * time;
-                    field[[i, j, k_idx]] = amplitude * phase.sin();
+                    field[[i, j, k_idx] = amplitude * phase.sin();
                 }
             }
         }

@@ -71,7 +71,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         F: FnMut(&Self::Item) -> U,
     {
         let shape = self.dim();
-        Array3::from_shape_fn(shape, |(i, j, k)| f(&self[[i, j, k]]))
+        Array3::from_shape_fn(shape, |(i, j, k)| f(&self[[i, j, k]))
     }
 
     fn filter_indices<'a, F>(
@@ -104,7 +104,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
 
         for ((i, j, k), val) in self.indexed_iter() {
             accumulator = f(&accumulator, val);
-            result[[i, j, k]] = accumulator.clone();
+            result[[i, j, k] = accumulator.clone();
         }
 
         result
@@ -190,7 +190,7 @@ where
                 let fk = (k + kk).wrapping_sub(hz);
 
                 if fi < nx && fj < ny && fk < nz {
-                    Some(combine(&field[[fi, fj, fk]], kval))
+                    Some(combine(&field[[fi, fj, fk], kval))
                 } else {
                     None
                 }
@@ -237,7 +237,7 @@ where
                     let fk = (k + kk).wrapping_sub(hz);
 
                     if fi < nx && fj < ny && fk < nz {
-                        Some(combine(&field[[fi, fj, fk]], kval))
+                        Some(combine(&field[[fi, fj, fk], kval))
                     } else {
                         None
                     }
@@ -366,10 +366,10 @@ mod tests {
     fn test_sparse_kernel() {
         let field = Array3::from_elem((5, 5, 5), 1.0);
         let mut kernel = Array3::zeros((3, 3, 3));
-        kernel[[1, 1, 1]] = 2.0; // Only center element is non-zero
+        kernel[[1, 1, 1] = 2.0; // Only center element is non-zero
 
         let result = apply_kernel(&field, &kernel, |f: &f64, k: &f64| f * k);
-        assert_abs_diff_eq!(result[[2, 2, 2]], 2.0);
+        assert_abs_diff_eq!(result[[2, 2, 2], 2.0);
     }
 
     #[test]
@@ -377,7 +377,7 @@ mod tests {
         let field = Array3::from_shape_fn((10, 10, 10), |(i, j, k)| (i + j + k) as f64);
         let result = field.par_map_field(|&x| x * 2.0);
 
-        assert_abs_diff_eq!(result[[5, 5, 5]], (5.0 + 5.0 + 5.0) * 2.0);
+        assert_abs_diff_eq!(result[[5, 5, 5], (5.0 + 5.0 + 5.0) * 2.0);
     }
 
     #[test]
@@ -397,6 +397,6 @@ mod tests {
         let result = windowed_operation(&field, (3, 3, 3), |window| window.iter().sum::<f64>());
 
         // Center point should have full 3x3x3 = 27 neighbors
-        assert_abs_diff_eq!(result[[2, 2, 2]], 27.0);
+        assert_abs_diff_eq!(result[[2, 2, 2], 27.0);
     }
 }

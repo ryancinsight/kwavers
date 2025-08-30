@@ -5,7 +5,7 @@ use ndarray::Array3;
 use serde::{Deserialize, Serialize};
 
 /// Interpolation schemes for inter-domain coupling
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize))]
 pub enum InterpolationScheme {
     /// Linear interpolation (2nd order)
     Linear,
@@ -26,14 +26,14 @@ impl Default for InterpolationScheme {
 }
 
 /// Manager for interpolation operations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct InterpolationManager {
     scheme: InterpolationScheme,
     adaptive_criteria: Option<AdaptiveInterpolationCriteria>,
 }
 
 /// Criteria for adaptive interpolation
-#[derive(Debug)]
+#[derive(Debug))]
 struct AdaptiveInterpolationCriteria {
     gradient_threshold: f64,
     smoothness_threshold: f64,
@@ -83,7 +83,7 @@ impl InterpolationManager {
     ) -> KwaversResult<Array3<f64>> {
         // Linear interpolation implementation
         let shape = source_field.shape();
-        let mut result = Array3::zeros([shape[0], shape[1], shape[2]]);
+        let mut result = Array3::zeros([shape[0], shape[1], shape[2]);
 
         // For now, return a copy of the source field
         // Full trilinear interpolation would require mapping target coordinates

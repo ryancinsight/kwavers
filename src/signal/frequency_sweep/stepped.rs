@@ -6,7 +6,7 @@ use crate::signal::Signal;
 /// Stepped frequency sweep
 ///
 /// Frequency changes in discrete steps
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SteppedSweep {
     start_frequency: f64,
     stop_frequency: f64,

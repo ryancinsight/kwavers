@@ -31,7 +31,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 /// K-space correction configuration
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct KSpaceCorrectionConfig {
     /// Enable k-space correction
     pub enabled: bool,
@@ -44,7 +44,7 @@ pub struct KSpaceCorrectionConfig {
 }
 
 /// Correction method selection
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum CorrectionMethod {
     /// Exact dispersion correction (most accurate)
     ExactDispersion,
@@ -152,11 +152,11 @@ fn compute_exact_dispersion_correction(
                             let correction = omega_phys / omega_num;
 
                             // Apply correction with limiting for stability
-                            kappa[[i, j, k]] =
+                            kappa[[i, j, k] =
                                 correction.min(max_correction).max(1.0 / max_correction);
                         } else {
                             // Near Nyquist frequency - apply maximum damping
-                            kappa[[i, j, k]] = 1.0 / max_correction;
+                            kappa[[i, j, k] = 1.0 / max_correction;
                         }
                     }
                 }
@@ -212,7 +212,7 @@ fn compute_kwave_correction(
                     let correction = spatial_correction * temporal_correction;
 
                     // Apply with stability limiting
-                    kappa[[i, j, k]] = correction.min(max_correction).max(1.0 / max_correction);
+                    kappa[[i, j, k] = correction.min(max_correction).max(1.0 / max_correction);
                 }
             }
         }
@@ -261,7 +261,7 @@ fn compute_liu_pstd_correction(
                         1.0 / sinc
                     };
 
-                    kappa[[i, j, k]] = correction.min(max_correction).max(1.0 / max_correction);
+                    kappa[[i, j, k] = correction.min(max_correction).max(1.0 / max_correction);
                 }
             }
         }
@@ -308,7 +308,7 @@ fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
                 };
 
                 // Combined correction (inverse of sinc to compensate)
-                kappa[[i, j, k]] = 1.0 / (sinc_x * sinc_y * sinc_z);
+                kappa[[i, j, k] = 1.0 / (sinc_x * sinc_y * sinc_z);
             }
         }
     }
@@ -376,7 +376,7 @@ mod tests {
         let kappa = compute_kspace_correction(&grid, &config, dt, c_ref);
 
         // Check DC component (should be 1.0)
-        assert!((kappa[[0, 0, 0]] - 1.0).abs() < 1e-10);
+        assert!((kappa[[0, 0, 0] - 1.0).abs() < 1e-10);
 
         // Check that correction factors are within bounds
         for val in kappa.iter() {
@@ -437,7 +437,7 @@ mod tests {
             let kappa = compute_kspace_correction(&grid, &config, dt, c_ref);
 
             // All methods should give unity at DC
-            assert!((kappa[[0, 0, 0]] - 1.0).abs() < 0.01);
+            assert!((kappa[[0, 0, 0] - 1.0).abs() < 0.01);
 
             // All corrections should be positive
             for val in kappa.iter() {

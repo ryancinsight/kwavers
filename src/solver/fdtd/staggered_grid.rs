@@ -4,7 +4,7 @@
 //! following Yee's scheme for enforcing divergence conditions.
 
 /// Staggered grid positions for Yee cell
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StaggeredGrid {
     /// Pressure at cell centers
     pub pressure_pos: (f64, f64, f64),
@@ -53,7 +53,7 @@ impl StaggeredGrid {
 }
 
 /// Field component types for staggered grid
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum FieldComponent {
     Pressure,
     VelocityX,

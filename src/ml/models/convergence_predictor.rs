@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Convergence prediction model
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ConvergencePredictorModel {
     metadata: ModelMetadata,
 }

@@ -10,7 +10,7 @@ use crate::error::{ConfigError, KwaversError, KwaversResult};
 /// Based on material data from:
 /// - Berlincourt et al. (1964): "Piezoelectric and Piezomagnetic Materials"
 /// - IEEE Standard 176-1987: "IEEE Standard on Piezoelectricity"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PiezoMaterial {
     /// Material type
     pub material_type: PiezoType,
@@ -33,7 +33,7 @@ pub struct PiezoMaterial {
 }
 
 /// Common piezoelectric material types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum PiezoType {
     /// Lead Zirconate Titanate (Navy Type I)
     PZT4,
@@ -126,7 +126,7 @@ impl PiezoMaterial {
 }
 
 /// Backing layer for damping and bandwidth control
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BackingLayer {
     /// Backing material type
     pub material: BackingMaterial,
@@ -139,7 +139,7 @@ pub struct BackingLayer {
 }
 
 /// Common backing materials
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum BackingMaterial {
     /// Tungsten-loaded epoxy
     TungstenEpoxy,
@@ -177,7 +177,7 @@ impl BackingLayer {
 }
 
 /// Matching layer for impedance matching
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MatchingLayer {
     /// Acoustic impedance (MRayl)
     pub acoustic_impedance: f64,
@@ -248,7 +248,7 @@ impl MatchingLayer {
 }
 
 /// Acoustic lens for beam focusing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AcousticLens {
     /// Lens material
     pub material: LensMaterial,
@@ -265,7 +265,7 @@ pub struct AcousticLens {
 }
 
 /// Common lens materials
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum LensMaterial {
     /// Silicone rubber (RTV)
     Silicone,

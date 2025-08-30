@@ -5,7 +5,7 @@
 use ndarray::{s, Array1};
 
 /// Wavelength range for spectral analysis
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SpectralRange {
     /// Minimum wavelength in meters
     pub lambda_min: f64,
@@ -78,7 +78,7 @@ impl SpectralRange {
 }
 
 /// Emission spectrum data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct EmissionSpectrum {
     /// Wavelengths in meters
     pub wavelengths: Array1<f64>,
@@ -182,7 +182,7 @@ impl EmissionSpectrum {
 }
 
 /// Spectral analyzer for sonoluminescence
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SpectralAnalyzer {
     /// Spectral range
     pub range: SpectralRange,

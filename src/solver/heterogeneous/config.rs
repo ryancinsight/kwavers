@@ -3,7 +3,7 @@
 use crate::constants::numerical::HETEROGENEOUS_SMOOTHING_FACTOR;
 
 /// Configuration for heterogeneous media handling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HeterogeneousConfig {
     /// Enable Gibbs phenomenon mitigation
     pub mitigate_gibbs: bool,
@@ -33,7 +33,7 @@ impl Default for HeterogeneousConfig {
 }
 
 /// Smoothing methods for interface treatment
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SmoothingMethod {
     /// No smoothing (for comparison)
     None,

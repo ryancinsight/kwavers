@@ -71,7 +71,7 @@ mod integration_tests {
         for i in 0..64 {
             for j in 0..64 {
                 for k in 0..64 {
-                    field[[i, j, k]] = if i < 32 { 0.0 } else { 1.0 };
+                    field[[i, j, k] = if i < 32 { 0.0 } else { 1.0 };
                 }
             }
         }
@@ -85,7 +85,7 @@ mod integration_tests {
             // Should detect discontinuity around x=32
             for j in 10..54 {
                 for k in 10..54 {
-                    let detected = mask[[31, j, k]] || mask[[32, j, k]];
+                    let detected = mask[[31, j, k] || mask[[32, j, k];
                     assert!(
                         detected,
                         "Failed to detect discontinuity at ({}, {}, {})",
@@ -117,13 +117,13 @@ mod integration_tests {
                     let x = i as f64 / 64.0;
                     if i < 20 {
                         // Smooth region
-                        field[[i, j, k]] = (4.0 * PI * x).sin();
+                        field[[i, j, k] = (4.0 * PI * x).sin();
                     } else if i < 40 {
                         // Discontinuous region
-                        field[[i, j, k]] = if (i + j + k) % 4 == 0 { 1.0 } else { -1.0 };
+                        field[[i, j, k] = if (i + j + k) % 4 == 0 { 1.0 } else { -1.0 };
                     } else {
                         // Another smooth region
-                        field[[i, j, k]] = (2.0 * PI * x).cos();
+                        field[[i, j, k] = (2.0 * PI * x).cos();
                     }
                 }
             }
@@ -192,11 +192,11 @@ mod integration_tests {
                     let x = i as f64 / 128.0;
                     let y = j as f64 / 128.0;
                     let z = k as f64 / 128.0;
-                    field[[i, j, k]] = (2.0 * PI * x).sin() * (3.0 * PI * y).cos() * (PI * z).sin();
+                    field[[i, j, k] = (2.0 * PI * x).sin() * (3.0 * PI * y).cos() * (PI * z).sin();
 
                     // Add some discontinuities
                     if (i == 64 || j == 64) && k < 64 {
-                        field[[i, j, k]] = 2.0;
+                        field[[i, j, k] = 2.0;
                     }
                 }
             }

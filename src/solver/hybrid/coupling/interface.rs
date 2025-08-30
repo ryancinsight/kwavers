@@ -8,7 +8,7 @@ use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use ndarray::{s, Array3, Array4};
 
 /// Interface coupling data for a single boundary
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfaceCoupling {
     /// Source domain information
     pub source_domain: super::DomainInfo,
@@ -23,7 +23,7 @@ pub struct InterfaceCoupling {
 }
 
 /// Main coupling interface between PSTD and FDTD domains
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct CouplingInterface {
     /// Interface geometry
     geometry: InterfaceGeometry,

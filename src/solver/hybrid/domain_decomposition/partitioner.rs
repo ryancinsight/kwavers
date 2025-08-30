@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 
 /// Partitions domain into regions for different solvers
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct DomainPartitioner {
     /// Minimum region size to avoid excessive fragmentation
     min_region_size: usize,
@@ -76,9 +76,9 @@ impl DomainPartitioner {
                         && j < metrics.homogeneity.dim().1
                         && k < metrics.homogeneity.dim().2
                     {
-                        sum += metrics.homogeneity[[i, j, k]] * 0.4
-                            + metrics.smoothness[[i, j, k]] * 0.4
-                            + metrics.spectral_content[[i, j, k]] * 0.2;
+                        sum += metrics.homogeneity[[i, j, k] * 0.4
+                            + metrics.smoothness[[i, j, k] * 0.4
+                            + metrics.spectral_content[[i, j, k] * 0.2;
                         count += 1;
                     }
                 }

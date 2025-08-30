@@ -1,7 +1,7 @@
 //! Steering vector calculations
 
 /// Steering vector calculation methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum SteeringVectorMethod {
     /// Far-field plane wave assumption
     PlaneWave,
@@ -12,7 +12,7 @@ pub enum SteeringVectorMethod {
 }
 
 /// Steering vector computation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SteeringVector;
 
 impl SteeringVector {

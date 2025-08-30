@@ -22,7 +22,7 @@ pub mod time_scale_separation;
 pub mod time_stepper;
 
 /// Stability constraints for time stepping
-#[derive(Debug, Clone, Default]
+#[derive(Debug, Clone, Default)]
 pub struct StabilityConstraints {
     /// Maximum stable time step
     pub max_dt: Option<f64>,
@@ -52,7 +52,7 @@ use std::collections::HashMap;
 ///
 /// Manages different time steps for different physics components
 /// while maintaining stability and accuracy.
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct MultiRateTimeIntegrator {
     /// Configuration for multi-rate integration
     config: MultiRateConfig,
@@ -210,7 +210,7 @@ impl MultiRateTimeIntegrator {
 }
 
 /// Statistics for multi-rate time stepping
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TimeSteppingStatistics {
     /// Total number of global time steps
     pub total_steps: usize,

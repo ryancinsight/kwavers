@@ -5,7 +5,7 @@ use ndarray::{Array2, Array3, Axis};
 use std::f64::consts::PI;
 
 /// Beamforming methods for PAM
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum BeamformingMethod {
     /// Delay-and-sum beamforming
     DelayAndSum,
@@ -20,7 +20,7 @@ pub enum BeamformingMethod {
 }
 
 /// Beamforming configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BeamformingConfig {
     pub method: BeamformingMethod,
     pub frequency_range: (f64, f64),
@@ -29,7 +29,7 @@ pub struct BeamformingConfig {
 }
 
 /// Apodization window types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum ApodizationType {
     None,
     Hamming,
@@ -39,7 +39,7 @@ pub enum ApodizationType {
 }
 
 /// Beamformer for PAM processing
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct Beamformer {
     element_positions: Vec<[f64; 3]>,
     config: BeamformingConfig,
@@ -110,8 +110,8 @@ impl Beamformer {
                     let delay_samples = (delay * sample_rate) as usize;
                     if delay_samples < nt {
                         for it in delay_samples..nt {
-                            output[[ix, iy, it - delay_samples]] +=
-                                sensor_data[[elem_idx, 0, it]] * weights[elem_idx];
+                            output[[ix, iy, it - delay_samples] +=
+                                sensor_data[[elem_idx, 0, it] * weights[elem_idx];
                         }
                     }
                 }
@@ -133,7 +133,7 @@ impl Beamformer {
         // Square and integrate
         let mut tea_output = Array3::zeros(das_output.dim());
         for ((ix, iy, it), &val) in das_output.indexed_iter() {
-            tea_output[[ix, iy, it]] = val * val;
+            tea_output[[ix, iy, it] = val * val;
         }
 
         // Time integration
@@ -143,7 +143,7 @@ impl Beamformer {
         let shape = tea_output.shape();
         let mut result = Array3::zeros((shape[0], shape[1], 1));
         for ((ix, iy), &val) in integrated.indexed_iter() {
-            result[[ix, iy, 0]] = val;
+            result[[ix, iy, 0] = val;
         }
 
         Ok(result)
@@ -167,7 +167,7 @@ impl Beamformer {
         for t in 0..n_samples {
             for i in 0..n_elements {
                 for j in 0..n_elements {
-                    covariance[[i, j]] += sensor_data[[i, 0, t]] * sensor_data[[j, 0, t]];
+                    covariance[[i, j] += sensor_data[[i, 0, t] * sensor_data[[j, 0, t];
                 }
             }
         }
@@ -175,7 +175,7 @@ impl Beamformer {
 
         // Apply diagonal loading for robustness
         for i in 0..n_elements {
-            covariance[[i, i]] += diagonal_loading;
+            covariance[[i, i] += diagonal_loading;
         }
 
         // For now, fall back to delay-and-sum with covariance weighting

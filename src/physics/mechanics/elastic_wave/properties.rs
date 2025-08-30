@@ -7,7 +7,7 @@ use crate::error::{KwaversResult, PhysicsError};
 
 /// Elastic material properties following SSOT principle
 /// Single source of truth for material property definitions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElasticProperties {
     /// Density (kg/m³)
     pub density: f64,
@@ -117,7 +117,7 @@ impl ElasticProperties {
 
 /// Anisotropic elastic properties using Voigt notation
 /// Follows SOLID principles with clear separation of concerns
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AnisotropicElasticProperties {
     /// Density (kg/m³)
     pub density: f64,

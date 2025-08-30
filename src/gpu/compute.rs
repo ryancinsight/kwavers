@@ -7,7 +7,7 @@ use ndarray::Array3;
 use wgpu::util::DeviceExt;
 
 /// GPU compute engine for accelerated wave propagation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GpuCompute {
     device: wgpu::Device,
     queue: wgpu::Queue,

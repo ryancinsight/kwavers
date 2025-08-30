@@ -8,7 +8,7 @@ use crate::medium::core::{ArrayAccess, CoreMedium};
 use ndarray::Array3;
 
 /// Interface point information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfacePoint {
     /// Position in world coordinates (x, y, z)
     pub position: (f64, f64, f64),
@@ -85,7 +85,7 @@ fn find_interfaces_from_array(
     for i in 1..(grid.nx - 1) {
         for j in 1..(grid.ny - 1) {
             for k in 1..(grid.nz - 1) {
-                let center_density = density_array[[i, j, k]];
+                let center_density = density_array[[i, j, k];
 
                 // Check neighbors for density jump
                 let neighbors = [
@@ -98,16 +98,16 @@ fn find_interfaces_from_array(
                 ];
 
                 for &(ni, nj, nk) in &neighbors {
-                    let neighbor_density = density_array[[ni, nj, nk]];
+                    let neighbor_density = density_array[[ni, nj, nk];
                     let relative_jump = (neighbor_density - center_density).abs() / center_density;
 
                     if relative_jump > threshold {
                         // Calculate normal using central differences
-                        let dx = (density_array[[i + 1, j, k]] - density_array[[i - 1, j, k]])
+                        let dx = (density_array[[i + 1, j, k] - density_array[[i - 1, j, k])
                             / (2.0 * grid.dx);
-                        let dy = (density_array[[i, j + 1, k]] - density_array[[i, j - 1, k]])
+                        let dy = (density_array[[i, j + 1, k] - density_array[[i, j - 1, k])
                             / (2.0 * grid.dy);
-                        let dz = (density_array[[i, j, k + 1]] - density_array[[i, j, k - 1]])
+                        let dz = (density_array[[i, j, k + 1] - density_array[[i, j, k - 1])
                             / (2.0 * grid.dz);
 
                         let norm = (dx * dx + dy * dy + dz * dz).sqrt();

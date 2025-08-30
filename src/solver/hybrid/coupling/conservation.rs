@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Conservation enforcer for interface coupling
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ConservationEnforcer {
     /// Interface geometry
     geometry: InterfaceGeometry,
@@ -113,7 +113,7 @@ impl ConservationEnforcer {
 }
 
 /// Conservation metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservationMetrics {
     /// Mass conservation error
     pub mass_error: f64,

@@ -39,7 +39,7 @@ use thiserror::Error;
 ///
 /// This enum uses thiserror for automatic, correct implementations of
 /// Display and Error traits, preserving the full error chain.
-#[derive(Debug, Error)]
+#[derive(Debug, Error))]
 pub enum KwaversError {
     /// Grid-related errors
     #[error(transparent)]

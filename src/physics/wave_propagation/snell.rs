@@ -7,7 +7,7 @@ use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use std::f64::consts::PI;
 
 /// Critical angles for wave propagation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CriticalAngles {
     /// Critical angle for total internal reflection [radians]
     pub total_internal_reflection: Option<f64>,
@@ -16,7 +16,7 @@ pub struct CriticalAngles {
 }
 
 /// Snell's law calculator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SnellLawCalculator<'a> {
     interface: &'a Interface,
     /// Ratio of wave speeds or refractive indices

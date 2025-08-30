@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 /// Reflection calculator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ReflectionCalculator {
     /// Impedance of medium 1
     z1: f64,
@@ -34,7 +34,7 @@ impl ReflectionCalculator {
 }
 
 /// Reflection coefficients
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ReflectionCoefficients {
     /// Amplitude reflection coefficient
     pub amplitude: f64,

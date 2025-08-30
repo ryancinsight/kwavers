@@ -1,7 +1,7 @@
 //! Element configuration and state management
 
 /// Element configuration for hemispherical arrays
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElementConfiguration {
     /// Position in 3D space (m)
     pub position: [f64; 3],
@@ -47,7 +47,7 @@ impl ElementConfiguration {
 }
 
 /// Element operational state
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ElementState {
     /// Element is active and transmitting
     Active,

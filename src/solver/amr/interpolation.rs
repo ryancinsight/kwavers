@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Interpolation scheme for refinement/coarsening
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum InterpolationScheme {
     /// Linear interpolation
     Linear,
@@ -16,7 +16,7 @@ pub enum InterpolationScheme {
 }
 
 /// Conservative interpolator for AMR
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ConservativeInterpolator {
     scheme: InterpolationScheme,
 }
@@ -81,33 +81,33 @@ impl ConservativeInterpolator {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let val = coarse[[i, j, k]];
+                    let val = coarse[[i, j, k];
 
                     // Direct injection
-                    fine[[2 * i, 2 * j, 2 * k]] = val;
+                    fine[[2 * i, 2 * j, 2 * k] = val;
 
                     // Linear interpolation for other points
                     if i < nx - 1 {
-                        fine[[2 * i + 1, 2 * j, 2 * k]] = 0.5 * (val + coarse[[i + 1, j, k]]);
+                        fine[[2 * i + 1, 2 * j, 2 * k] = 0.5 * (val + coarse[[i + 1, j, k]);
                     }
                     if j < ny - 1 {
-                        fine[[2 * i, 2 * j + 1, 2 * k]] = 0.5 * (val + coarse[[i, j + 1, k]]);
+                        fine[[2 * i, 2 * j + 1, 2 * k] = 0.5 * (val + coarse[[i, j + 1, k]);
                     }
                     if k < nz - 1 {
-                        fine[[2 * i, 2 * j, 2 * k + 1]] = 0.5 * (val + coarse[[i, j, k + 1]]);
+                        fine[[2 * i, 2 * j, 2 * k + 1] = 0.5 * (val + coarse[[i, j, k + 1]);
                     }
 
                     // Trilinear for interior points
                     if i < nx - 1 && j < ny - 1 && k < nz - 1 {
-                        fine[[2 * i + 1, 2 * j + 1, 2 * k + 1]] = 0.125
-                            * (coarse[[i, j, k]]
-                                + coarse[[i + 1, j, k]]
-                                + coarse[[i, j + 1, k]]
-                                + coarse[[i + 1, j + 1, k]]
-                                + coarse[[i, j, k + 1]]
-                                + coarse[[i + 1, j, k + 1]]
-                                + coarse[[i, j + 1, k + 1]]
-                                + coarse[[i + 1, j + 1, k + 1]]);
+                        fine[[2 * i + 1, 2 * j + 1, 2 * k + 1] = 0.125
+                            * (coarse[[i, j, k]
+                                + coarse[[i + 1, j, k]
+                                + coarse[[i, j + 1, k]
+                                + coarse[[i + 1, j + 1, k]
+                                + coarse[[i, j, k + 1]
+                                + coarse[[i + 1, j, k + 1]
+                                + coarse[[i, j + 1, k + 1]
+                                + coarse[[i + 1, j + 1, k + 1]);
                     }
                 }
             }
@@ -123,7 +123,7 @@ impl ConservativeInterpolator {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let val = coarse[[i, j, k]];
+                    let val = coarse[[i, j, k];
 
                     // Distribute value to 8 fine cells
                     for di in 0..2 {
@@ -134,7 +134,7 @@ impl ConservativeInterpolator {
                                 let fk = 2 * k + dk;
 
                                 if fi < fine.dim().0 && fj < fine.dim().1 && fk < fine.dim().2 {
-                                    fine[[fi, fj, fk]] = val;
+                                    fine[[fi, fj, fk] = val;
                                 }
                             }
                         }
@@ -170,7 +170,7 @@ impl ConservativeInterpolator {
                                 let fk = 2 * k + dk;
 
                                 if fi < fine.dim().0 && fj < fine.dim().1 && fk < fine.dim().2 {
-                                    sum += fine[[fi, fj, fk]];
+                                    sum += fine[[fi, fj, fk];
                                     count += 1;
                                 }
                             }
@@ -178,7 +178,7 @@ impl ConservativeInterpolator {
                     }
 
                     if count > 0 {
-                        coarse[[i, j, k]] = sum / count as f64;
+                        coarse[[i, j, k] = sum / count as f64;
                     }
                 }
             }

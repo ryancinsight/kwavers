@@ -21,7 +21,7 @@ use super::constants::*;
 ///
 /// Note: The Clone derive is kept but should be used sparingly due to the
 /// large memory footprint of this struct. Consider using Arc for sharing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HeterogeneousMedium {
     /// Whether to use trilinear interpolation for point queries
     pub use_trilinear_interpolation: bool,
@@ -92,14 +92,14 @@ impl HeterogeneousMedium {
         let dz = (z_pos - k as f64).min(1.0).max(0.0);
 
         // Get the values at the 8 corner points of the cell
-        let c000 = field[[i, j, k]];
-        let c100 = field[[i + 1, j, k]];
-        let c010 = field[[i, j + 1, k]];
-        let c110 = field[[i + 1, j + 1, k]];
-        let c001 = field[[i, j, k + 1]];
-        let c101 = field[[i + 1, j, k + 1]];
-        let c011 = field[[i, j + 1, k + 1]];
-        let c111 = field[[i + 1, j + 1, k + 1]];
+        let c000 = field[[i, j, k];
+        let c100 = field[[i + 1, j, k];
+        let c010 = field[[i, j + 1, k];
+        let c110 = field[[i + 1, j + 1, k];
+        let c001 = field[[i, j, k + 1];
+        let c101 = field[[i + 1, j, k + 1];
+        let c011 = field[[i, j + 1, k + 1];
+        let c111 = field[[i + 1, j + 1, k + 1];
 
         // Perform trilinear interpolation
         // Interpolate along x
@@ -123,7 +123,7 @@ impl HeterogeneousMedium {
             self.trilinear_interpolate(field, x, y, z, grid)
         } else {
             let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-            field[[ix, iy, iz]]
+            field[[ix, iy, iz]
         }
     }
 
@@ -240,8 +240,8 @@ impl CoreMedium for HeterogeneousMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         let absorption = PowerLawAbsorption {
-            alpha_0: self.alpha0[[ix, iy, iz]],
-            y: self.delta[[ix, iy, iz]],
+            alpha_0: self.alpha0[[ix, iy, iz],
+            y: self.delta[[ix, iy, iz],
             f_ref: self.reference_frequency,
             dispersion_correction: false,
         };
@@ -267,8 +267,8 @@ impl ArrayAccess for HeterogeneousMedium {
         let mut absorption = Array3::zeros(self.alpha0.raw_dim());
         for ((ix, iy, iz), alpha) in absorption.indexed_iter_mut() {
             let power_law = PowerLawAbsorption {
-                alpha_0: self.alpha0[[ix, iy, iz]],
-                y: self.delta[[ix, iy, iz]],
+                alpha_0: self.alpha0[[ix, iy, iz],
+                y: self.delta[[ix, iy, iz],
                 f_ref: self.reference_frequency,
                 dispersion_correction: false,
             };
@@ -287,8 +287,8 @@ impl AcousticProperties for HeterogeneousMedium {
     fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
         let absorption = PowerLawAbsorption {
-            alpha_0: self.alpha0[[ix, iy, iz]],
-            y: self.delta[[ix, iy, iz]],
+            alpha_0: self.alpha0[[ix, iy, iz],
+            y: self.delta[[ix, iy, iz],
             f_ref: self.reference_frequency,
             dispersion_correction: false,
         };
@@ -297,13 +297,13 @@ impl AcousticProperties for HeterogeneousMedium {
 
     fn nonlinearity_parameter(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.b_a[[ix, iy, iz]]
+        self.b_a[[ix, iy, iz]
     }
 
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        let thermal_diff = self.thermal_diffusivity[[ix, iy, iz]];
-        let sound_speed = self.sound_speed[[ix, iy, iz]];
+        let thermal_diff = self.thermal_diffusivity[[ix, iy, iz];
+        let sound_speed = self.sound_speed[[ix, iy, iz];
         thermal_diff / sound_speed
     }
 }
@@ -312,12 +312,12 @@ impl AcousticProperties for HeterogeneousMedium {
 impl ElasticProperties for HeterogeneousMedium {
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.lame_lambda[[ix, iy, iz]]
+        self.lame_lambda[[ix, iy, iz]
     }
 
     fn lame_mu(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.lame_mu[[ix, iy, iz]]
+        self.lame_mu[[ix, iy, iz]
     }
 }
 
@@ -348,22 +348,22 @@ impl ElasticArrayAccess for HeterogeneousMedium {
 impl ThermalProperties for HeterogeneousMedium {
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.specific_heat[[ix, iy, iz]].max(100.0)
+        self.specific_heat[[ix, iy, iz].max(100.0)
     }
 
     fn thermal_conductivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.thermal_conductivity[[ix, iy, iz]].max(0.01)
+        self.thermal_conductivity[[ix, iy, iz].max(0.01)
     }
 
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.thermal_diffusivity[[ix, iy, iz]].max(1e-9)
+        self.thermal_diffusivity[[ix, iy, iz].max(1e-9)
     }
 
     fn thermal_expansion(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.thermal_expansion[[ix, iy, iz]]
+        self.thermal_expansion[[ix, iy, iz]
     }
 }
 
@@ -382,12 +382,12 @@ impl TemperatureState for HeterogeneousMedium {
 impl OpticalProperties for HeterogeneousMedium {
     fn optical_absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.mu_a[[ix, iy, iz]].max(0.0)
+        self.mu_a[[ix, iy, iz].max(0.0)
     }
 
     fn optical_scattering_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.mu_s_prime[[ix, iy, iz]].max(0.0)
+        self.mu_s_prime[[ix, iy, iz].max(0.0)
     }
 }
 
@@ -395,17 +395,17 @@ impl OpticalProperties for HeterogeneousMedium {
 impl ViscousProperties for HeterogeneousMedium {
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.viscosity[[ix, iy, iz]].max(1e-6)
+        self.viscosity[[ix, iy, iz].max(1e-6)
     }
 
     fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.shear_viscosity_coeff[[ix, iy, iz]].max(1e-6)
+        self.shear_viscosity_coeff[[ix, iy, iz].max(1e-6)
     }
 
     fn bulk_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.bulk_viscosity_coeff[[ix, iy, iz]].max(1e-6)
+        self.bulk_viscosity_coeff[[ix, iy, iz].max(1e-6)
     }
 }
 
@@ -413,7 +413,7 @@ impl ViscousProperties for HeterogeneousMedium {
 impl BubbleProperties for HeterogeneousMedium {
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.surface_tension[[ix, iy, iz]].max(0.01)
+        self.surface_tension[[ix, iy, iz].max(0.01)
     }
 
     fn ambient_pressure(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -422,17 +422,17 @@ impl BubbleProperties for HeterogeneousMedium {
 
     fn vapor_pressure(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.vapor_pressure[[ix, iy, iz]].max(1.0)
+        self.vapor_pressure[[ix, iy, iz].max(1.0)
     }
 
     fn polytropic_index(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.polytropic_index[[ix, iy, iz]]
+        self.polytropic_index[[ix, iy, iz]
     }
 
     fn gas_diffusion_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        self.gas_diffusion_coeff[[ix, iy, iz]].max(1e-12)
+        self.gas_diffusion_coeff[[ix, iy, iz].max(1e-12)
     }
 }
 

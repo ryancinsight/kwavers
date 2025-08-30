@@ -3,7 +3,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 use rand::Rng;
 
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct HeterogeneityModel {
     pub sound_speed_var: Array3<f64>,
     base_speed: f64,

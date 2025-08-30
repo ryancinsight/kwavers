@@ -9,7 +9,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// ML model types supported by the system
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 pub enum ModelType {
     /// Tissue classification model
     TissueClassifier,
@@ -24,7 +24,7 @@ pub enum ModelType {
 }
 
 /// ML framework backend
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum MLBackend {
     /// ONNX Runtime for cross-platform inference
     ONNX,
@@ -37,7 +37,7 @@ pub enum MLBackend {
 }
 
 /// Type-safe model enum to avoid unsafe downcasts
-#[derive(Debug)]
+#[derive(Debug))]
 pub enum Model {
     /// Tissue classification model
     TissueClassifier(TissueClassifierModel),
@@ -82,7 +82,7 @@ impl Model {
 }
 
 /// Performance metrics for ML operations
-#[derive(Debug, Clone, Default]
+#[derive(Debug, Clone, Default)]
 pub struct PerformanceMetrics {
     pub total_inferences: usize,
     pub total_optimizations: usize,
@@ -92,7 +92,7 @@ pub struct PerformanceMetrics {
 }
 
 /// Configuration for ML models
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MLConfig {
     pub backend: MLBackend,
     pub model_cache_size_mb: usize,
@@ -116,7 +116,7 @@ impl Default for MLConfig {
 }
 
 /// Inference precision mode
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum InferencePrecision {
     /// Full 32-bit floating point
     Float32,
@@ -129,7 +129,7 @@ pub enum InferencePrecision {
 }
 
 /// Model metadata information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ModelMetadata {
     pub name: String,
     pub version: String,

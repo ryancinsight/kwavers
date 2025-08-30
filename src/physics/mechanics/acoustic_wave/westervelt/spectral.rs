@@ -39,10 +39,10 @@ pub fn initialize_kspace_grids(
                     2.0 * PI * (k as f64 - nz as f64) / (nz as f64 * grid.dz)
                 };
 
-                kx[[i, j, k]] = kx_val;
-                ky[[i, j, k]] = ky_val;
-                kz[[i, j, k]] = kz_val;
-                k_squared[[i, j, k]] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+                kx[[i, j, k] = kx_val;
+                ky[[i, j, k] = ky_val;
+                kz[[i, j, k] = kz_val;
+                k_squared[[i, j, k] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
             }
         }
     }
@@ -87,22 +87,22 @@ pub fn apply_kspace_correction(
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                let kx_val = kx[[i, j, k]];
-                let ky_val = ky[[i, j, k]];
-                let kz_val = kz[[i, j, k]];
+                let kx_val = kx[[i, j, k];
+                let ky_val = ky[[i, j, k];
+                let kz_val = kz[[i, j, k];
 
                 let k_squared = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
 
                 if k_squared > 1e-10 {
                     // Compute k · ∇ρ
-                    let k_dot_grad_rho = Complex::new(kx_val, 0.0) * rho_grad_x_k[[i, j, k]]
-                        + Complex::new(ky_val, 0.0) * rho_grad_y_k[[i, j, k]]
-                        + Complex::new(kz_val, 0.0) * rho_grad_z_k[[i, j, k]];
+                    let k_dot_grad_rho = Complex::new(kx_val, 0.0) * rho_grad_x_k[[i, j, k]
+                        + Complex::new(ky_val, 0.0) * rho_grad_y_k[[i, j, k]
+                        + Complex::new(kz_val, 0.0) * rho_grad_z_k[[i, j, k];
 
                     // Apply correction: p_k = p_k * (1 - i * k·∇ρ / k²)
                     let correction = Complex::new(1.0, 0.0)
                         - Complex::new(0.0, 1.0) * k_dot_grad_rho / k_squared;
-                    pressure_k[[i, j, k]] *= correction;
+                    pressure_k[[i, j, k] *= correction;
                 }
             }
         }
@@ -126,9 +126,9 @@ pub fn compute_density_gradients(
     for k in 1..nz - 1 {
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
-                grad_x[[i, j, k]] = (rho_arr[[i + 1, j, k]] - rho_arr[[i - 1, j, k]]) * dx_inv;
-                grad_y[[i, j, k]] = (rho_arr[[i, j + 1, k]] - rho_arr[[i, j - 1, k]]) * dy_inv;
-                grad_z[[i, j, k]] = (rho_arr[[i, j, k + 1]] - rho_arr[[i, j, k - 1]]) * dz_inv;
+                grad_x[[i, j, k] = (rho_arr[[i + 1, j, k] - rho_arr[[i - 1, j, k]) * dx_inv;
+                grad_y[[i, j, k] = (rho_arr[[i, j + 1, k] - rho_arr[[i, j - 1, k]) * dy_inv;
+                grad_z[[i, j, k] = (rho_arr[[i, j, k + 1] - rho_arr[[i, j, k - 1]) * dz_inv;
             }
         }
     }

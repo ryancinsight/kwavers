@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 
 /// Main simulation configuration
 /// Follows SSOT principle - single source of truth for configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SimulationConfig {
     /// Grid configuration
     pub grid: super::GridConfig,
@@ -24,7 +24,7 @@ pub struct SimulationConfig {
 
 /// Builder for simulation configuration
 /// Follows Builder pattern for complex object construction
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ConfigBuilder {
     config: SimulationConfig,
 }

@@ -3,7 +3,7 @@
 use crate::error::KwaversResult;
 
 /// Hybrid validation test suite
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct HybridValidationSuite {
     /// Test configuration
     config: super::ValidationConfig,

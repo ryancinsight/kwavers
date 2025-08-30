@@ -18,7 +18,7 @@ pub mod tolerance {
 }
 
 /// Pure Rust implementation of basic linear algebra operations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct LinearAlgebra;
 
 impl LinearAlgebra {
@@ -41,7 +41,7 @@ impl LinearAlgebra {
             // Find pivot
             let mut max_row = k;
             for i in k + 1..n {
-                if lu[[i, k]].abs() > lu[[max_row, k]].abs() {
+                if lu[[i, k].abs() > lu[[max_row, k].abs() {
                     max_row = i;
                 }
             }
@@ -50,14 +50,14 @@ impl LinearAlgebra {
             if max_row != k {
                 perm.swap(k, max_row);
                 for j in 0..n {
-                    let temp = lu[[k, j]];
-                    lu[[k, j]] = lu[[max_row, j]];
-                    lu[[max_row, j]] = temp;
+                    let temp = lu[[k, j];
+                    lu[[k, j] = lu[[max_row, j];
+                    lu[[max_row, j] = temp;
                 }
             }
 
             // Check for singular matrix
-            if lu[[k, k]].abs() < tolerance::RANK {
+            if lu[[k, k].abs() < tolerance::RANK {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "LU decomposition".to_string(),
                     condition_number: f64::INFINITY,
@@ -66,9 +66,9 @@ impl LinearAlgebra {
 
             // Elimination
             for i in k + 1..n {
-                lu[[i, k]] /= lu[[k, k]];
+                lu[[i, k] /= lu[[k, k];
                 for j in k + 1..n {
-                    lu[[i, j]] -= lu[[i, k]] * lu[[k, j]];
+                    lu[[i, j] -= lu[[i, k] * lu[[k, j];
                 }
             }
         }
@@ -76,7 +76,7 @@ impl LinearAlgebra {
         // Apply permutation to b
         let mut pb = Array1::zeros(n);
         for i in 0..n {
-            pb[i] = b[perm[i]];
+            pb[i] = b[perm[i];
         }
 
         // Forward substitution for Ly = Pb
@@ -84,7 +84,7 @@ impl LinearAlgebra {
         for i in 0..n {
             y[i] = pb[i];
             for j in 0..i {
-                y[i] -= lu[[i, j]] * y[j];
+                y[i] -= lu[[i, j] * y[j];
             }
         }
 
@@ -93,9 +93,9 @@ impl LinearAlgebra {
         for i in (0..n).rev() {
             x[i] = y[i];
             for j in i + 1..n {
-                x[i] -= lu[[i, j]] * x[j];
+                x[i] -= lu[[i, j] * x[j];
             }
-            x[i] /= lu[[i, i]];
+            x[i] /= lu[[i, i];
         }
 
         Ok(x)
@@ -126,7 +126,7 @@ impl LinearAlgebra {
             // Check for convergence using off-diagonal norm
             let mut converged = true;
             for i in 0..n - 1 {
-                if a[[i + 1, i]].abs() > tolerance::DEFAULT {
+                if a[[i + 1, i].abs() > tolerance::DEFAULT {
                     converged = false;
                     break;
                 }
@@ -138,7 +138,7 @@ impl LinearAlgebra {
         }
 
         // Extract eigenvalues from diagonal
-        let eigenvalues = Array1::from_iter((0..n).map(|i| a[[i, i]]));
+        let eigenvalues = Array1::from_iter((0..n).map(|i| a[[i, i]));
 
         Ok((eigenvalues, q))
     }
@@ -155,13 +155,13 @@ impl LinearAlgebra {
             // Orthogonalize against previous columns
             for i in 0..j {
                 let q_i = q.column(i);
-                r[[i, j]] = v.dot(&q_i);
-                v = v - r[[i, j]] * &q_i;
+                r[[i, j] = v.dot(&q_i);
+                v = v - r[[i, j] * &q_i;
             }
 
             // Normalize
-            r[[j, j]] = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
-            if r[[j, j]] < tolerance::RANK {
+            r[[j, j] = v.iter().map(|&x| x * x).sum::<f64>().sqrt();
+            if r[[j, j] < tolerance::RANK {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "QR decomposition".to_string(),
                     condition_number: f64::INFINITY,
@@ -169,7 +169,7 @@ impl LinearAlgebra {
             }
 
             for k in 0..m {
-                q[[k, j]] = v[k] / r[[j, j]];
+                q[[k, j] = v[k] / r[[j, j];
             }
         }
 
@@ -195,7 +195,7 @@ impl LinearAlgebra {
             let column = identity.column(i);
             let solution = Self::solve_linear_system(matrix, &column.to_owned())?;
             for j in 0..n {
-                inverse[[j, i]] = solution[j];
+                inverse[[j, i] = solution[j];
             }
         }
 
@@ -226,7 +226,7 @@ impl LinearAlgebra {
                 let v_col = v.column(i);
                 let u_col = matrix.dot(&v_col) / s[i];
                 for j in 0..m {
-                    u[[j, i]] = u_col[j];
+                    u[[j, i] = u_col[j];
                 }
             }
         }
@@ -317,10 +317,10 @@ mod tests {
 
         // Check A * A^(-1) = I
         let product = a.dot(&inv);
-        assert_abs_diff_eq!(product[[0, 0]], 1.0, epsilon = 1e-10);
-        assert_abs_diff_eq!(product[[1, 1]], 1.0, epsilon = 1e-10);
-        assert_abs_diff_eq!(product[[0, 1]], 0.0, epsilon = 1e-10);
-        assert_abs_diff_eq!(product[[1, 0]], 0.0, epsilon = 1e-10);
+        assert_abs_diff_eq!(product[[0, 0], 1.0, epsilon = 1e-10);
+        assert_abs_diff_eq!(product[[1, 1], 1.0, epsilon = 1e-10);
+        assert_abs_diff_eq!(product[[0, 1], 0.0, epsilon = 1e-10);
+        assert_abs_diff_eq!(product[[1, 0], 0.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
         let product = q.dot(&r);
         for i in 0..3 {
             for j in 0..2 {
-                assert_abs_diff_eq!(product[[i, j]], a[[i, j]], epsilon = 1e-10);
+                assert_abs_diff_eq!(product[[i, j], a[[i, j], epsilon = 1e-10);
             }
         }
     }

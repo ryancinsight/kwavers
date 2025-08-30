@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::constants::*;
 
 /// Seismic imaging configuration
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeismicImagingConfig {
     /// Base reconstruction configuration
     pub base_config: ReconstructionConfig,
@@ -36,7 +36,7 @@ pub struct SeismicImagingConfig {
 }
 
 /// RTM imaging conditions based on established literature
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum RtmImagingCondition {
     /// Zero-lag cross-correlation (Claerbout, 1985)
     /// I(x) = ∫ S(x,t) * R(x,t) dt
@@ -64,7 +64,7 @@ pub enum RtmImagingCondition {
 }
 
 /// Anisotropy parameters for VTI media
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnisotropyParameters {
     /// Thomsen parameter epsilon
     pub epsilon: f64,

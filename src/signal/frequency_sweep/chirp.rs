@@ -9,7 +9,7 @@ use crate::signal::Signal;
 /// f(t) = f₀ + (f₁ - f₀) * t / T
 ///
 /// Phase: φ(t) = 2π * [f₀*t + (f₁-f₀)*t²/(2T)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LinearChirp {
     start_frequency: f64,
     stop_frequency: f64,

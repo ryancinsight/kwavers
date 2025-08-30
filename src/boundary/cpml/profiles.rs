@@ -6,7 +6,7 @@ use crate::grid::Grid;
 use ndarray::Array1;
 
 /// CPML absorption and stretching profiles
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct CPMLProfiles {
     pub sigma_x: Array1<f64>,
     pub sigma_y: Array1<f64>,

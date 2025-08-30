@@ -6,7 +6,7 @@ use crate::ml::inference::InferenceEngine;
 use ndarray::{Array1, Array2};
 
 /// Parameter optimization model
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ParameterOptimizerModel {
     engine: InferenceEngine,
     metadata: ModelMetadata,

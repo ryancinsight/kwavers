@@ -136,7 +136,7 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    field[[i, j, k]] = i as f64; // Linear in x
+                    field[[i, j, k] = i as f64; // Linear in x
                 }
             }
         }
@@ -148,9 +148,9 @@ mod tests {
             for j in 1..9 {
                 for k in 1..9 {
                     assert!(
-                        (deriv[[i, j, k]] - 1.0).abs() < 1e-10,
+                        (deriv[[i, j, k] - 1.0).abs() < 1e-10,
                         "Expected derivative 1.0, got {}",
-                        deriv[[i, j, k]]
+                        deriv[[i, j, k]
                     );
                 }
             }

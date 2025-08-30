@@ -6,7 +6,7 @@ use std::f64::consts::PI;
 use super::DEFAULT_DUTY_CYCLE;
 
 /// Pulse train - periodic sequence of pulses
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PulseTrain {
     pulse_frequency: f64,
     carrier_frequency: f64,
@@ -16,7 +16,7 @@ pub struct PulseTrain {
     pulse_shape: PulseShape,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum PulseShape {
     Rectangular,
     Gaussian { q_factor: f64 },

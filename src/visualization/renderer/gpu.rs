@@ -4,7 +4,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::visualization::VisualizationConfig;
 
 /// GPU context for accelerated rendering
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GpuContext {
     #[cfg(feature = "gpu-visualization")]
     device: std::sync::Arc<wgpu::Device>,

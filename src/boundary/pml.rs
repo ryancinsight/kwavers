@@ -18,7 +18,7 @@ const PML_EXPONENTIAL_SCALING_FACTOR: f64 = 0.1;
 ///
 /// This implementation uses a polynomial grading of the absorption profile
 /// with optional backing by a theoretical model for automatic parameter selection.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PMLBoundary {
     // thickness: usize, // Removed
     // sigma_max_acoustic: f64, // Removed
@@ -41,7 +41,7 @@ pub struct PMLBoundary {
 
 /// Configuration for PML boundary layer
 /// Follows SOLID principles by grouping related parameters together
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PMLConfig {
     pub thickness: usize,
     pub sigma_max_acoustic: f64,

@@ -10,7 +10,7 @@ use super::{
 use ndarray::{s, Array1, Array3, Array4};
 
 /// Parameters for sonoluminescence emission
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct EmissionParameters {
     /// Enable blackbody radiation
     pub use_blackbody: bool,
@@ -40,7 +40,7 @@ impl Default for EmissionParameters {
 }
 
 /// Spectral field using Struct-of-Arrays for better performance
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SpectralField {
     /// Wavelength grid (shared for all spatial points)
     pub wavelengths: Array1<f64>,
@@ -84,7 +84,7 @@ impl SpectralField {
                     let spectrum = self.intensities.slice(s![i, j, k, ..]);
 
                     // Total intensity
-                    self.total_intensity[[i, j, k]] = spectrum.sum();
+                    self.total_intensity[[i, j, k] = spectrum.sum();
 
                     // Peak wavelength
                     if let Some(max_idx) = spectrum
@@ -93,13 +93,13 @@ impl SpectralField {
                         .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
                         .map(|(idx, _)| idx)
                     {
-                        self.peak_wavelength[[i, j, k]] = self.wavelengths[max_idx];
+                        self.peak_wavelength[[i, j, k] = self.wavelengths[max_idx];
                     }
 
                     // Color temperature (simplified Wien's law)
-                    if self.peak_wavelength[[i, j, k]] > 0.0 {
-                        self.color_temperature[[i, j, k]] =
-                            2.898e-3 / self.peak_wavelength[[i, j, k]];
+                    if self.peak_wavelength[[i, j, k] > 0.0 {
+                        self.color_temperature[[i, j, k] =
+                            2.898e-3 / self.peak_wavelength[[i, j, k];
                     }
                 }
             }
@@ -114,7 +114,7 @@ impl SpectralField {
 }
 
 /// Main sonoluminescence emission calculator
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SonoluminescenceEmission {
     /// Emission parameters
     pub params: EmissionParameters,
@@ -175,7 +175,7 @@ impl SonoluminescenceEmission {
 
         // Apply minimum temperature cutoff
         for ((i, j, k), emission) in self.emission_field.indexed_iter_mut() {
-            if temperature_field[[i, j, k]] < self.params.min_temperature {
+            if temperature_field[[i, j, k] < self.params.min_temperature {
                 *emission = 0.0;
             } else {
                 *emission *= self.params.opacity_factor;
@@ -248,15 +248,15 @@ impl SonoluminescenceEmission {
             for j in 0..shape.1 {
                 for k in 0..shape.2 {
                     let mut spectrum = self.calculate_spectrum_at_point(
-                        temperature_field[[i, j, k]],
-                        pressure_field[[i, j, k]],
-                        radius_field[[i, j, k]],
+                        temperature_field[[i, j, k],
+                        pressure_field[[i, j, k],
+                        radius_field[[i, j, k],
                     );
                     spectrum.time = time;
                     spectrum.position = Some((i, j, k));
                     // Assign spectrum intensities to the 4D array
                     for (idx, &intensity) in spectrum.intensities.iter().enumerate() {
-                        spectral_field.intensities[[i, j, k, idx]] = intensity;
+                        spectral_field.intensities[[i, j, k, idx] = intensity;
                     }
                 }
             }
@@ -289,7 +289,7 @@ impl SonoluminescenceEmission {
     /// Estimate color temperature from peak emission
     pub fn estimate_color_temperature(&self, temperature_field: &Array3<f64>) -> f64 {
         let (i, j, k) = self.peak_emission_location();
-        temperature_field[[i, j, k]]
+        temperature_field[[i, j, k]
     }
 
     /// Get spectral statistics from the spectral field
@@ -314,7 +314,7 @@ impl SonoluminescenceEmission {
 }
 
 /// Spectral statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SpectralStatistics {
     pub mean_peak_wavelength: f64,
     pub mean_color_temperature: f64,
@@ -323,7 +323,7 @@ pub struct SpectralStatistics {
 }
 
 /// Calculate sonoluminescence pulse characteristics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SonoluminescencePulse {
     /// Peak intensity (W/m³)
     pub peak_intensity: f64,
@@ -429,13 +429,13 @@ mod tests {
         let radius_field = Array3::from_elem(shape, 5e-6); // 5 μm
 
         // Set high temperature at center
-        temp_field[[5, 5, 5]] = 20000.0; // 20,000 K
+        temp_field[[5, 5, 5] = 20000.0; // 20,000 K
 
         // Calculate emission
         emission.calculate_emission(&temp_field, &pressure_field, &radius_field, 0.0);
 
         // Check that emission occurred at hot spot
-        assert!(emission.emission_field[[5, 5, 5]] > 0.0);
+        assert!(emission.emission_field[[5, 5, 5] > 0.0);
         assert_eq!(emission.peak_emission_location(), (5, 5, 5));
     }
 

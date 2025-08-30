@@ -10,7 +10,7 @@ use std::sync::Arc;
 const DEFAULT_MAX_AMPLIFICATION: f64 = 10.0;
 
 /// Amplitude corrector for time-reversal signals
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct AmplitudeCorrector {
     max_amplification: f64,
 }

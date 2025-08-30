@@ -9,7 +9,7 @@ use std::f64::consts::PI;
 ///
 /// Based on Rayleigh-Sommerfeld diffraction theory
 /// Reference: Kino (1987) Chapter 4 - Radiation and Reception
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DirectivityPattern {
     /// Angle vector (degrees)
     pub angles: Array1<f64>,

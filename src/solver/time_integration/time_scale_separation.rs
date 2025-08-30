@@ -17,7 +17,7 @@ use ndarray::{Array3, Array4, Axis};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TimeScale {
     /// Component name
     pub parameter: String,
@@ -35,7 +35,7 @@ pub struct TimeScale {
 ///
 /// This component analyzes the system to identify different time scales
 /// and determine appropriate sub-cycling ratios.
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct TimeScaleSeparator {
     /// Grid reference
     grid: Grid,
@@ -115,21 +115,21 @@ impl TimeScaleSeparator {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Gradient magnitude
-                    let dx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let dy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let dz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let dx = (field[[i + 1, j, k] - field[[i - 1, j, k]) / (2.0 * grid.dx);
+                    let dy = (field[[i, j + 1, k] - field[[i, j - 1, k]) / (2.0 * grid.dy);
+                    let dz = (field[[i, j, k + 1] - field[[i, j, k - 1]) / (2.0 * grid.dz);
                     let grad_mag = (dx * dx + dy * dy + dz * dz).sqrt();
                     grad_max = grad_max.max(grad_mag);
 
                     // Laplacian
-                    let d2x = (field[[i + 1, j, k]] - 2.0 * field[[i, j, k]]
-                        + field[[i - 1, j, k]])
+                    let d2x = (field[[i + 1, j, k] - 2.0 * field[[i, j, k]
+                        + field[[i - 1, j, k])
                         / (grid.dx * grid.dx);
-                    let d2y = (field[[i, j + 1, k]] - 2.0 * field[[i, j, k]]
-                        + field[[i, j - 1, k]])
+                    let d2y = (field[[i, j + 1, k] - 2.0 * field[[i, j, k]
+                        + field[[i, j - 1, k])
                         / (grid.dy * grid.dy);
-                    let d2z = (field[[i, j, k + 1]] - 2.0 * field[[i, j, k]]
-                        + field[[i, j, k - 1]])
+                    let d2z = (field[[i, j, k + 1] - 2.0 * field[[i, j, k]
+                        + field[[i, j, k - 1])
                         / (grid.dz * grid.dz);
                     let laplacian = (d2x + d2y + d2z).abs();
                     laplacian_max = laplacian_max.max(laplacian);

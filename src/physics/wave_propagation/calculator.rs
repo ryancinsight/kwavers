@@ -9,7 +9,7 @@ use super::{Interface, WaveMode};
 use crate::error::KwaversResult;
 
 /// Main wave propagation calculator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct WavePropagationCalculator {
     /// Wave mode
     mode: WaveMode,
@@ -76,7 +76,7 @@ impl WavePropagationCalculator {
 }
 
 /// Response at an interface
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfaceResponse {
     /// Incident angle [rad]
     pub incident_angle: f64,
@@ -89,7 +89,7 @@ pub struct InterfaceResponse {
 }
 
 /// Interface coefficients by mode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum InterfaceCoefficients {
     Acoustic(ReflectionCoefficients),
     Optical(FresnelCoefficients),

@@ -13,7 +13,7 @@ use crate::error::KwaversResult;
 // Remove duplicate constant definitions - they're now imported from constants module
 
 /// Rayleigh-Plesset equation solver (incompressible)
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct RayleighPlessetSolver {
     params: BubbleParameters,
     thermo_calc: ThermodynamicsCalculator,
@@ -93,7 +93,7 @@ impl RayleighPlessetSolver {
 }
 
 /// Keller-Miksis equation solver (compressible)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct KellerMiksisModel {
     params: BubbleParameters,
     thermo_calc: ThermodynamicsCalculator,

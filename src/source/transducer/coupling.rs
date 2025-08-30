@@ -8,7 +8,7 @@ use std::f64::consts::PI;
 /// Element coupling characteristics
 ///
 /// Based on Turnbull & Foster (1991): "Beam steering with pulsed two-dimensional transducer arrays"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElementCoupling {
     /// Acoustic crosstalk matrix
     pub acoustic_coupling: Array2<f64>,
@@ -35,14 +35,14 @@ impl ElementCoupling {
 
                     // Acoustic coupling decreases with distance
                     let acoustic_factor = (-k * distance).exp() / (k * distance + 1.0);
-                    acoustic_coupling[[i, j]] = acoustic_factor * 0.1; // Typical 10% max coupling
+                    acoustic_coupling[[i, j] = acoustic_factor * 0.1; // Typical 10% max coupling
 
                     // Electrical coupling (capacitive)
                     let electrical_factor = 1.0 / (1.0 + distance / pitch);
-                    electrical_coupling[[i, j]] = electrical_factor * 0.05; // Typical 5% max
+                    electrical_coupling[[i, j] = electrical_factor * 0.05; // Typical 5% max
 
                     // Mutual impedance
-                    mutual_impedance[[i, j]] = 50.0 * acoustic_factor; // Scaled by nominal impedance
+                    mutual_impedance[[i, j] = 50.0 * acoustic_factor; // Scaled by nominal impedance
                 }
             }
         }
@@ -60,7 +60,7 @@ impl ElementCoupling {
         let mut pattern = Array1::zeros(excitation.len());
 
         for i in 0..num_elements {
-            pattern[i] = excitation[i] * self.acoustic_coupling[[element_idx, i]];
+            pattern[i] = excitation[i] * self.acoustic_coupling[[element_idx, i];
         }
 
         pattern
@@ -74,7 +74,7 @@ impl ElementCoupling {
         for i in 0..n {
             for j in 0..n {
                 if i != j {
-                    max_crosstalk = max_crosstalk.max(self.acoustic_coupling[[i, j]]);
+                    max_crosstalk = max_crosstalk.max(self.acoustic_coupling[[i, j]);
                 }
             }
         }

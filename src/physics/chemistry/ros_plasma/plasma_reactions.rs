@@ -6,7 +6,7 @@ use super::ros_species::ROSSpecies;
 use std::collections::HashMap;
 
 /// Plasma reaction types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PlasmaReaction {
     /// Reaction name
     pub name: String,
@@ -33,7 +33,7 @@ impl PlasmaReaction {
 }
 
 /// Plasma chemistry model
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PlasmaChemistry {
     /// List of plasma reactions
     pub reactions: Vec<PlasmaReaction>,

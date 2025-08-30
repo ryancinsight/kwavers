@@ -23,7 +23,7 @@ const DEFAULT_BUBBLE_RADIUS: f64 = 5e-6; // m
 const ACCOMMODATION_COEFFICIENT: f64 = 0.04;
 
 /// Bubble parameters with SI units
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BubbleParameters {
     /// Initial bubble radius
     pub r0: Length,
@@ -52,7 +52,7 @@ pub struct BubbleParameters {
 }
 
 /// Gas composition for multi-species tracking
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GasComposition {
     /// Mole fractions of gas species
     pub mole_fractions: HashMap<String, f64>,
@@ -158,7 +158,7 @@ impl BubbleParameters {
 }
 
 /// Convert dimensional to dimensionless parameters
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DimensionlessParameters {
     /// Reynolds number
     pub reynolds: f64,

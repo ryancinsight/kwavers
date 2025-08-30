@@ -5,7 +5,7 @@
 use ndarray::{Array1, Array2};
 
 /// Cross-talk model for element coupling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CrosstalkModel {
     /// Coupling coefficient
     coefficient: f64,
@@ -34,18 +34,18 @@ impl CrosstalkModel {
         // Nearest-neighbor coupling
         for i in 0..n {
             if i > 0 {
-                matrix[[i, i - 1]] = coefficient;
+                matrix[[i, i - 1] = coefficient;
             }
             if i < n - 1 {
-                matrix[[i, i + 1]] = coefficient;
+                matrix[[i, i + 1] = coefficient;
             }
 
             // Second-nearest neighbor (weaker)
             if i > 1 {
-                matrix[[i, i - 2]] = coefficient * coefficient;
+                matrix[[i, i - 2] = coefficient * coefficient;
             }
             if i < n - 2 {
-                matrix[[i, i + 2]] = coefficient * coefficient;
+                matrix[[i, i + 2] = coefficient * coefficient;
             }
         }
 
@@ -62,7 +62,7 @@ impl CrosstalkModel {
         if element1 == element2 {
             0.0
         } else {
-            let coupling = self.coupling_matrix[[element1, element2]];
+            let coupling = self.coupling_matrix[[element1, element2];
             if coupling > 0.0 {
                 20.0 * coupling.log10()
             } else {
@@ -90,8 +90,8 @@ mod tests {
         for i in 0..5 {
             for j in 0..5 {
                 assert_eq!(
-                    model.coupling_matrix[[i, j]],
-                    model.coupling_matrix[[j, i]],
+                    model.coupling_matrix[[i, j],
+                    model.coupling_matrix[[j, i],
                     "Coupling matrix should be symmetric"
                 );
             }
@@ -105,7 +105,7 @@ mod tests {
         // Check diagonal elements are 1
         for i in 0..5 {
             assert_eq!(
-                model.coupling_matrix[[i, i]],
+                model.coupling_matrix[[i, i],
                 1.0,
                 "Diagonal elements should be 1"
             );

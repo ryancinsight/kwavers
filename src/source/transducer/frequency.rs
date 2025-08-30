@@ -13,7 +13,7 @@ use num_complex::Complex64;
 /// References:
 /// - Krimholtz et al. (1970): "New equivalent circuits for elementary piezoelectric transducers"
 /// - Mason (1948): "Electromechanical Transducers and Wave Filters"
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FrequencyResponse {
     /// Center frequency (Hz)
     pub center_frequency: f64,

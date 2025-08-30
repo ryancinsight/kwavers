@@ -7,7 +7,7 @@ use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 
 /// Grid configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GridConfig {
     pub nx: usize,
     pub ny: usize,
@@ -82,7 +82,7 @@ impl Default for GridConfig {
 }
 
 /// Factory for creating grids
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct GridFactory;
 
 impl GridFactory {

@@ -5,7 +5,7 @@ use ndarray::Array3;
 use rustfft::{num_complex::Complex, FftPlanner};
 
 /// PAM configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PAMConfig {
     pub beamforming: super::beamforming::BeamformingConfig,
     pub frequency_bands: Vec<(f64, f64)>,
@@ -16,7 +16,7 @@ pub struct PAMConfig {
 }
 
 /// PAM processor for cavitation mapping
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PAMProcessor {
     config: PAMConfig,
     fft_planner: FftPlanner<f64>,
@@ -44,7 +44,7 @@ impl PAMProcessor {
             for iy in 0..ny {
                 // Extract time series
                 let time_series: Vec<f64> =
-                    (0..nt).map(|it| beamformed_data[[ix, iy, it]]).collect();
+                    (0..nt).map(|it| beamformed_data[[ix, iy, it]).collect();
 
                 // Compute spectrum
                 let spectrum = self.compute_spectrum(&time_series)?;
@@ -55,7 +55,7 @@ impl PAMProcessor {
 
                     // Apply threshold
                     if power > self.config.threshold {
-                        cavitation_map[[ix, iy, band_idx]] = power;
+                        cavitation_map[[ix, iy, band_idx] = power;
                     }
                 }
 
@@ -117,7 +117,7 @@ impl PAMProcessor {
                 if harmonic_power > self.config.threshold * 0.5 {
                     // Store harmonic information
                     if harmonic - 2 < output.shape()[2] {
-                        output[[ix, iy, harmonic - 2]] += harmonic_power;
+                        output[[ix, iy, harmonic - 2] += harmonic_power;
                     }
                 }
             }

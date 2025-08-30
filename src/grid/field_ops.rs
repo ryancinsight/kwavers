@@ -6,7 +6,7 @@ use crate::grid::structure::Grid;
 use ndarray::{Array3, Array4};
 
 /// Field operations for grid-based arrays
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FieldOperations;
 
 impl FieldOperations {
@@ -41,24 +41,24 @@ impl FieldOperations {
         // X boundaries
         for j in 0..ny {
             for k in 0..nz {
-                field[[0, j, k]] = field[[nx - 1, j, k]];
-                field[[nx - 1, j, k]] = field[[0, j, k]];
+                field[[0, j, k] = field[[nx - 1, j, k];
+                field[[nx - 1, j, k] = field[[0, j, k];
             }
         }
 
         // Y boundaries
         for i in 0..nx {
             for k in 0..nz {
-                field[[i, 0, k]] = field[[i, ny - 1, k]];
-                field[[i, ny - 1, k]] = field[[i, 0, k]];
+                field[[i, 0, k] = field[[i, ny - 1, k];
+                field[[i, ny - 1, k] = field[[i, 0, k];
             }
         }
 
         // Z boundaries
         for i in 0..nx {
             for j in 0..ny {
-                field[[i, j, 0]] = field[[i, j, nz - 1]];
-                field[[i, j, nz - 1]] = field[[i, j, 0]];
+                field[[i, j, 0] = field[[i, j, nz - 1];
+                field[[i, j, nz - 1] = field[[i, j, 0];
             }
         }
     }
@@ -85,7 +85,7 @@ impl FieldOperations {
 }
 
 /// Statistics for a field array
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FieldStatistics {
     pub min: f64,
     pub max: f64,

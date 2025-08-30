@@ -5,7 +5,7 @@
 use std::sync::{Arc, Mutex};
 
 /// Cache statistics
-#[derive(Debug, Clone, Default]
+#[derive(Debug, Clone, Default)]
 pub struct CacheStatistics {
     /// L1 cache hits
     pub l1_hits: usize,
@@ -68,7 +68,7 @@ impl CacheStatistics {
 }
 
 /// Cache profile with detailed metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CacheProfile {
     /// Cache line size in bytes
     pub cache_line_size: usize,
@@ -128,7 +128,7 @@ impl Default for CacheProfile {
 }
 
 /// Cache profiler for analyzing memory access patterns
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CacheProfiler {
     profile: Arc<Mutex<CacheProfile>>,
 }

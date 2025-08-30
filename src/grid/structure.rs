@@ -11,7 +11,7 @@ use std::sync::OnceLock;
 const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
 
 /// Spatial bounds for a region
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct Bounds {
     /// Minimum coordinates [x, y, z]
     pub min: [f64; 3],
@@ -36,7 +36,7 @@ impl Bounds {
 }
 
 /// Dimension selector for coordinate generation
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq))]
 pub enum Dimension {
     X,
     Y,
@@ -44,7 +44,7 @@ pub enum Dimension {
 }
 
 /// Defines a 3D Cartesian grid for the simulation domain
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct Grid {
     /// Number of points in x-direction
     pub nx: usize,

@@ -37,7 +37,7 @@ mod tests {
         for i in 0..nx {
             let x = i as f64 * dx;
             let amplitude = ((-(x - x0).powi(2)) / (2.0 * sigma.powi(2))).exp();
-            initial_pressure[[i, 0, 0]] = amplitude;
+            initial_pressure[[i, 0, 0] = amplitude;
         }
         state
             .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
@@ -58,10 +58,10 @@ mod tests {
 
             // Apply simple wave equation update (d²p/dt² = c² ∇²p)
             for i in 1..nx - 1 {
-                let d2p_dx2 = (pressure[[i + 1, 0, 0]] - 2.0 * pressure[[i, 0, 0]]
-                    + pressure[[i - 1, 0, 0]])
+                let d2p_dx2 = (pressure[[i + 1, 0, 0] - 2.0 * pressure[[i, 0, 0]
+                    + pressure[[i - 1, 0, 0])
                     / (dx * dx);
-                new_pressure[[i, 0, 0]] +=
+                new_pressure[[i, 0, 0] +=
                     dt * dt * SOUND_SPEED_WATER * SOUND_SPEED_WATER * d2p_dx2;
             }
 
@@ -80,8 +80,8 @@ mod tests {
         let mut max_val = 0.0;
         let mut max_idx = 0;
         for i in 0..nx {
-            if pressure_view[[i, 0, 0]].abs() > max_val {
-                max_val = pressure_view[[i, 0, 0]].abs();
+            if pressure_view[[i, 0, 0].abs() > max_val {
+                max_val = pressure_view[[i, 0, 0].abs();
                 max_idx = i;
             }
         }
@@ -110,7 +110,7 @@ mod tests {
         for i in 0..nx {
             let x = i as f64 * dx;
             let k = PI / (nx as f64 * dx); // Wave number for first mode
-            initial_pressure[[i, 0, 0]] = (k * x).sin();
+            initial_pressure[[i, 0, 0] = (k * x).sin();
         }
         state
             .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
@@ -133,8 +133,8 @@ mod tests {
             // Apply rigid boundary conditions
             let pressure_guard = state.get_field(field_indices::PRESSURE_IDX).unwrap();
             let mut pressure = pressure_guard.to_owned();
-            pressure[[0, 0, 0]] = 0.0;
-            pressure[[nx - 1, 0, 0]] = 0.0;
+            pressure[[0, 0, 0] = 0.0;
+            pressure[[nx - 1, 0, 0] = 0.0;
             state
                 .update_field(field_indices::PRESSURE_IDX, &pressure)
                 .unwrap();
@@ -164,7 +164,7 @@ mod tests {
         // Point source at center
         let center = n / 2;
         let mut initial_pressure = Array3::zeros((n, n, n));
-        initial_pressure[[center, center, center]] = 1.0;
+        initial_pressure[[center, center, center] = 1.0;
         state
             .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
             .unwrap();
@@ -183,8 +183,8 @@ mod tests {
         let r2 = 10;
 
         let pressure_field = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        let amp1 = pressure_field[[center + r1, center, center]].abs();
-        let amp2 = pressure_field[[center + r2, center, center]].abs();
+        let amp1 = pressure_field[[center + r1, center, center].abs();
+        let amp2 = pressure_field[[center + r2, center, center].abs();
 
         // Should follow 1/r relationship
         let expected_ratio = r1 as f64 / r2 as f64;

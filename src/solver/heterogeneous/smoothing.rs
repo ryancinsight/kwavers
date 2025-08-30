@@ -9,7 +9,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Smoothing processor for heterogeneous media
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct Smoother {
     method: SmoothingMethod,
     width: f64,
@@ -62,11 +62,11 @@ impl Smoother {
         for i in kernel_size..self.grid.nx - kernel_size {
             for j in kernel_size..self.grid.ny - kernel_size {
                 for k in kernel_size..self.grid.nz - kernel_size {
-                    if interface_mask[[i, j, k]] {
+                    if interface_mask[[i, j, k] {
                         let (rho, c) =
                             self.convolve_3d(density, sound_speed, i, j, k, &kernel, kernel_size);
-                        density_smooth[[i, j, k]] = rho;
-                        sound_speed_smooth[[i, j, k]] = c;
+                        density_smooth[[i, j, k] = rho;
+                        sound_speed_smooth[[i, j, k] = c;
                     }
                 }
             }
@@ -88,7 +88,7 @@ impl Smoother {
         for i in 1..self.grid.nx - 1 {
             for j in 1..self.grid.ny - 1 {
                 for k in 1..self.grid.nz - 1 {
-                    if interface_mask[[i, j, k]] {
+                    if interface_mask[[i, j, k] {
                         // Use tanh transition between neighbors
                         let transition = |x: f64| 0.5 * (1.0 + (x / self.width).tanh());
 
@@ -98,8 +98,8 @@ impl Smoother {
                         let rho_avg = self.weighted_average(density, i, j, k, t);
                         let c_avg = self.weighted_average(sound_speed, i, j, k, t);
 
-                        density_smooth[[i, j, k]] = rho_avg;
-                        sound_speed_smooth[[i, j, k]] = c_avg;
+                        density_smooth[[i, j, k] = rho_avg;
+                        sound_speed_smooth[[i, j, k] = c_avg;
                     }
                 }
             }
@@ -121,13 +121,13 @@ impl Smoother {
         for i in 2..self.grid.nx - 2 {
             for j in 2..self.grid.ny - 2 {
                 for k in 2..self.grid.nz - 2 {
-                    if interface_mask[[i, j, k]] {
+                    if interface_mask[[i, j, k] {
                         // Cubic polynomial interpolation
                         let rho_smooth = self.cubic_interpolate(density, i, j, k);
                         let c_smooth = self.cubic_interpolate(sound_speed, i, j, k);
 
-                        density_smooth[[i, j, k]] = rho_smooth;
-                        sound_speed_smooth[[i, j, k]] = c_smooth;
+                        density_smooth[[i, j, k] = rho_smooth;
+                        sound_speed_smooth[[i, j, k] = c_smooth;
                     }
                 }
             }
@@ -196,8 +196,8 @@ impl Smoother {
 
                     let kernel_val = kernel[di * kernel_size * kernel_size + dj * kernel_size + dk];
 
-                    rho_sum += density[[ki, kj, kk]] * kernel_val;
-                    c_sum += sound_speed[[ki, kj, kk]] * kernel_val;
+                    rho_sum += density[[ki, kj, kk] * kernel_val;
+                    c_sum += sound_speed[[ki, kj, kk] * kernel_val;
                 }
             }
         }
@@ -214,14 +214,14 @@ impl Smoother {
         k: usize,
         weight: f64,
     ) -> f64 {
-        let center = field[[i, j, k]];
+        let center = field[[i, j, k];
         let neighbors = [
-            field[[i - 1, j, k]],
-            field[[i + 1, j, k]],
-            field[[i, j - 1, k]],
-            field[[i, j + 1, k]],
-            field[[i, j, k - 1]],
-            field[[i, j, k + 1]],
+            field[[i - 1, j, k],
+            field[[i + 1, j, k],
+            field[[i, j - 1, k],
+            field[[i, j + 1, k],
+            field[[i, j, k - 1],
+            field[[i, j, k + 1],
         ];
 
         let neighbor_avg = neighbors.iter().sum::<f64>() / neighbors.len() as f64;
@@ -232,11 +232,11 @@ impl Smoother {
     fn cubic_interpolate(&self, field: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
         // Cubic interpolation using surrounding points
         let points = [
-            field[[i - 2, j, k]],
-            field[[i - 1, j, k]],
-            field[[i, j, k]],
-            field[[i + 1, j, k]],
-            field[[i + 2, j, k]],
+            field[[i - 2, j, k],
+            field[[i - 1, j, k],
+            field[[i, j, k],
+            field[[i + 1, j, k],
+            field[[i + 2, j, k],
         ];
 
         // Cubic polynomial coefficients (simplified)

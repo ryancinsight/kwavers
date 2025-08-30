@@ -51,7 +51,7 @@ use crate::{
 use ndarray::Array4;
 
 /// Configuration for thermal diffusion solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ThermalDiffusionConfig {
     /// Enable Pennes bioheat equation terms
     pub enable_bioheat: bool,
@@ -93,7 +93,7 @@ impl Default for ThermalDiffusionConfig {
 }
 
 /// Thermal diffusion plugin for the physics system
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ThermalDiffusionPlugin {
     metadata: PluginMetadata,
     solver: Option<ThermalDiffusionSolver>,
@@ -237,7 +237,7 @@ mod tests {
 
         // Set initial hot spot
         let mut initial_temp = Array3::from_elem((16, 16, 16), 310.0); // Body temperature
-        initial_temp[[8, 8, 8]] = 320.0; // Hot spot
+        initial_temp[[8, 8, 8] = 320.0; // Hot spot
         solver.set_temperature(initial_temp);
 
         // Run diffusion
@@ -247,7 +247,7 @@ mod tests {
 
         // Check that heat has diffused
         let final_temp = solver.temperature();
-        assert!(final_temp[[8, 8, 8]] < 320.0); // Center cooled
-        assert!(final_temp[[7, 8, 8]] > 310.0); // Neighbors heated
+        assert!(final_temp[[8, 8, 8] < 320.0); // Center cooled
+        assert!(final_temp[[7, 8, 8] > 310.0); // Neighbors heated
     }
 }

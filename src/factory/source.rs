@@ -10,7 +10,7 @@ use crate::source::{PointSource, Source};
 use std::sync::Arc;
 
 /// Source configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SourceConfig {
     pub source_type: String,
     pub position: (f64, f64, f64),
@@ -76,7 +76,7 @@ impl Default for SourceConfig {
 }
 
 /// Factory for creating sources
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SourceFactory;
 
 impl SourceFactory {

@@ -1,7 +1,7 @@
 //! Interface properties and types for wave propagation
 
 /// Interface type between media
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum InterfaceType {
     /// Planar interface
     Planar,
@@ -14,7 +14,7 @@ pub enum InterfaceType {
 }
 
 /// Interface properties
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfaceProperties {
     /// Interface type
     pub interface_type: InterfaceType,

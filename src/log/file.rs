@@ -5,7 +5,7 @@ use std::fs::OpenOptions;
 use std::io::{self, Write};
 use std::sync::Mutex;
 
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct CombinedLogger {
     console: bool,
     file: Mutex<std::fs::File>,

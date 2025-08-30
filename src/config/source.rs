@@ -5,7 +5,7 @@ use crate::source::linear_array::LinearArray;
 use crate::source::Source;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SourceConfig {
     pub num_elements: usize,
     pub signal_type: String,

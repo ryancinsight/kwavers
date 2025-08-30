@@ -9,7 +9,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use log::{debug, info};
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
-#[derive(Clone)]
+#[derive(Clone))]
 struct FieldMetadata {
     /// Index in the Array4
     index: usize,
@@ -20,7 +20,7 @@ struct FieldMetadata {
 }
 
 /// Dynamic field registry for type-safe field management
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FieldRegistry {
     /// Registered fields indexed by UnifiedFieldType numeric value
     fields: Vec<Option<FieldMetadata>>,

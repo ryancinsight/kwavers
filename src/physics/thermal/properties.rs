@@ -13,7 +13,7 @@ pub trait ThermalProperties {
 }
 
 /// Tissue-specific thermal properties
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct TissueProperties {
     pub conductivity: f64,
     pub specific_heat: f64,

@@ -4,7 +4,7 @@
 use ndarray::{Array3, Zip};
 
 /// Regularization methods for FWI
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct Regularizer {
     /// Tikhonov regularization weight
     tikhonov_weight: f64,
@@ -62,17 +62,17 @@ impl Regularizer {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Compute TV gradient
-                    let dx = model[[i + 1, j, k]] - model[[i, j, k]];
-                    let dy = model[[i, j + 1, k]] - model[[i, j, k]];
-                    let dz = model[[i, j, k + 1]] - model[[i, j, k]];
+                    let dx = model[[i + 1, j, k] - model[[i, j, k];
+                    let dy = model[[i, j + 1, k] - model[[i, j, k];
+                    let dz = model[[i, j, k + 1] - model[[i, j, k];
 
                     let tv_norm = (dx * dx + dy * dy + dz * dz + epsilon).sqrt();
 
-                    gradient[[i, j, k]] += self.tv_weight
-                        * (3.0 * model[[i, j, k]]
-                            - model[[i + 1, j, k]]
-                            - model[[i, j + 1, k]]
-                            - model[[i, j, k + 1]])
+                    gradient[[i, j, k] += self.tv_weight
+                        * (3.0 * model[[i, j, k]
+                            - model[[i + 1, j, k]
+                            - model[[i, j + 1, k]
+                            - model[[i, j, k + 1])
                         / tv_norm;
                 }
             }
@@ -88,13 +88,13 @@ impl Regularizer {
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    laplacian[[i, j, k]] = gradient[[i + 1, j, k]]
-                        + gradient[[i - 1, j, k]]
-                        + gradient[[i, j + 1, k]]
-                        + gradient[[i, j - 1, k]]
-                        + gradient[[i, j, k + 1]]
-                        + gradient[[i, j, k - 1]]
-                        - 6.0 * gradient[[i, j, k]];
+                    laplacian[[i, j, k] = gradient[[i + 1, j, k]
+                        + gradient[[i - 1, j, k]
+                        + gradient[[i, j + 1, k]
+                        + gradient[[i, j - 1, k]
+                        + gradient[[i, j, k + 1]
+                        + gradient[[i, j, k - 1]
+                        - 6.0 * gradient[[i, j, k];
                 }
             }
         }

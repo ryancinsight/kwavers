@@ -18,7 +18,7 @@ pub use simd::SimdOptimizer;
 use crate::error::KwaversResult;
 
 /// Stencil kernel for finite difference computations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StencilKernel {
     /// Stencil coefficients
     pub coefficients: Vec<f64>,
@@ -56,7 +56,7 @@ impl StencilKernel {
 }
 
 /// Main optimization orchestrator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PerformanceOptimizer {
     config: OptimizationConfig,
     simd: SimdOptimizer,

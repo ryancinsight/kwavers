@@ -26,7 +26,7 @@ pub mod plane_recon;
 pub mod seismic;
 
 /// Reconstruction configuration
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReconstructionConfig {
     /// Speed of sound in medium (m/s)
     pub sound_speed: f64,
@@ -41,7 +41,7 @@ pub struct ReconstructionConfig {
 }
 
 /// Reconstruction algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum ReconstructionAlgorithm {
     /// Back-projection algorithm
     BackProjection,
@@ -60,7 +60,7 @@ pub enum ReconstructionAlgorithm {
 }
 
 /// Filter types for reconstruction
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize))]
 pub enum FilterType {
     /// No filtering
     None,
@@ -77,7 +77,7 @@ pub enum FilterType {
 }
 
 /// Interpolation methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum InterpolationMethod {
     /// Nearest neighbor
     NearestNeighbor,
@@ -95,7 +95,7 @@ pub trait Reconstructor {
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>, // [sensors x time_steps]
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>>;
@@ -106,13 +106,13 @@ pub trait Reconstructor {
 
 /// Universal back-projection for arbitrary geometries
 /// Based on Xu & Wang (2005)
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct UniversalBackProjection {
     /// Weight function for back-projection
     weight_function: WeightFunction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum WeightFunction {
     /// Uniform weighting
     Uniform,
@@ -132,7 +132,7 @@ impl UniversalBackProjection {
         &self,
         voxel_pos: [f64; 3],
         sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         config: &ReconstructionConfig,
     ) -> f64 {
         let mut value = 0.0;
@@ -150,7 +150,7 @@ impl UniversalBackProjection {
             let sample_idx = (time_delay / dt).round() as usize;
 
             if sample_idx < sensor_data.dim().1 {
-                let sensor_value = sensor_data[[sensor_idx, sample_idx]];
+                let sensor_value = sensor_data[[sensor_idx, sample_idx];
 
                 // Apply weighting
                 let weight = match self.weight_function {
@@ -171,7 +171,7 @@ impl Reconstructor for UniversalBackProjection {
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid: &Grid,
         config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
@@ -189,7 +189,7 @@ impl Reconstructor for UniversalBackProjection {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
 
-                    reconstructed[[i, j, k]] = self.compute_voxel_value(
+                    reconstructed[[i, j, k] = self.compute_voxel_value(
                         [x, y, z],
                         &filtered_data,
                         sensor_positions,
@@ -262,7 +262,7 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 
         // Store real part
         for (i, val) in complex_data.iter().enumerate() {
-            filtered[[sensor_idx, i]] = val.re / n as f64;
+            filtered[[sensor_idx, i] = val.re / n as f64;
         }
     }
 
@@ -290,7 +290,7 @@ fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResul
     for sensor_idx in 0..data.dim().0 {
         for i in 0..n {
             let window = 0.54 - 0.46 * (2.0 * PI * i as f64 / (n - 1) as f64).cos();
-            filtered[[sensor_idx, i]] *= window;
+            filtered[[sensor_idx, i] *= window;
         }
     }
 
@@ -305,7 +305,7 @@ fn apply_hann_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<A
     for sensor_idx in 0..data.dim().0 {
         for i in 0..n {
             let window = 0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos());
-            filtered[[sensor_idx, i]] *= window;
+            filtered[[sensor_idx, i] *= window;
         }
     }
 
@@ -328,7 +328,7 @@ pub fn interpolate_3d(
             let i = i.round() as usize;
             let j = j.round() as usize;
             let k = k.round() as usize;
-            field[[i.min(grid.nx - 1), j.min(grid.ny - 1), k.min(grid.nz - 1)]]
+            field[[i.min(grid.nx - 1), j.min(grid.ny - 1), k.min(grid.nz - 1)]
         }
         InterpolationMethod::Linear => trilinear_interpolation(field, i, j, k, grid),
         InterpolationMethod::Cubic => tricubic_interpolation(field, i, j, k, grid),
@@ -350,14 +350,14 @@ fn trilinear_interpolation(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &G
     let fy = y - j0 as f64;
     let fz = z - k0 as f64;
 
-    let v000 = field[[i0, j0, k0]];
-    let v001 = field[[i0, j0, k1]];
-    let v010 = field[[i0, j1, k0]];
-    let v011 = field[[i0, j1, k1]];
-    let v100 = field[[i1, j0, k0]];
-    let v101 = field[[i1, j0, k1]];
-    let v110 = field[[i1, j1, k0]];
-    let v111 = field[[i1, j1, k1]];
+    let v000 = field[[i0, j0, k0];
+    let v001 = field[[i0, j0, k1];
+    let v010 = field[[i0, j1, k0];
+    let v011 = field[[i0, j1, k1];
+    let v100 = field[[i1, j0, k0];
+    let v101 = field[[i1, j0, k1];
+    let v110 = field[[i1, j1, k0];
+    let v111 = field[[i1, j1, k1];
 
     let v00 = v000 * (1.0 - fx) + v100 * fx;
     let v01 = v001 * (1.0 - fx) + v101 * fx;

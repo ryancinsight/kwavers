@@ -20,7 +20,7 @@ use super::BubbleParameters;
 use crate::constants::thermodynamics::R_GAS;
 
 /// Energy balance calculator for bubble dynamics
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct EnergyBalanceCalculator {
     /// Thermal conductivity of the liquid
     thermal_conductivity: ThermalConductivity,

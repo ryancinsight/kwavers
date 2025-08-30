@@ -10,7 +10,7 @@ use crate::error::{ConfigError, KwaversError, KwaversResult};
 /// Based on:
 /// - Szabo (2014): Chapter 5 - Transducer Arrays
 /// - Shung (2015): Section 3.4 - Array Transducers
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElementGeometry {
     /// Element width (m)
     pub width: f64,

@@ -6,7 +6,7 @@ use crate::grid::structure::{Dimension, Grid};
 use ndarray::{Array1, Array3};
 
 /// Coordinate system operations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct CoordinateSystem;
 
 impl CoordinateSystem {
@@ -43,9 +43,9 @@ impl CoordinateSystem {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    x_coords[[i, j, k]] = i as f64 * grid.dx;
-                    y_coords[[i, j, k]] = j as f64 * grid.dy;
-                    z_coords[[i, j, k]] = k as f64 * grid.dz;
+                    x_coords[[i, j, k] = i as f64 * grid.dx;
+                    y_coords[[i, j, k] = j as f64 * grid.dy;
+                    z_coords[[i, j, k] = k as f64 * grid.dz;
                 }
             }
         }

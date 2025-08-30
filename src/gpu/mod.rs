@@ -19,7 +19,7 @@ pub use pipeline::{ComputePipeline, PipelineLayout};
 use crate::error::{KwaversError, KwaversResult};
 
 /// GPU device capabilities
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GpuCapabilities {
     /// Maximum buffer size in bytes
     pub max_buffer_size: u64,
@@ -34,7 +34,7 @@ pub struct GpuCapabilities {
 }
 
 /// Main GPU context for acoustic simulations
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GpuContext {
     device: wgpu::Device,
     queue: wgpu::Queue,

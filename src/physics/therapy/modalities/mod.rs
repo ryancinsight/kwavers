@@ -3,7 +3,7 @@
 //! Provides different ultrasound therapy modalities with their specific characteristics.
 
 /// Therapy modality types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum TherapyModality {
     /// High-Intensity Focused Ultrasound (thermal ablation)
     HIFU,
@@ -22,7 +22,7 @@ pub enum TherapyModality {
 }
 
 /// Therapy mechanism types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum TherapyMechanism {
     /// Thermal effects (hyperthermia, ablation)
     Thermal,

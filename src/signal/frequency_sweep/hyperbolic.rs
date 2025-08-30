@@ -6,7 +6,7 @@ use crate::signal::Signal;
 /// Hyperbolic frequency sweep
 ///
 /// Frequency varies hyperbolically with time
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HyperbolicSweep {
     start_frequency: f64,
     stop_frequency: f64,

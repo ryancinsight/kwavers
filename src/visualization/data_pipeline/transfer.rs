@@ -14,7 +14,7 @@ use std::time::Instant;
 use {std::sync::Mutex, wgpu::*};
 
 /// Transfer mode for data pipeline
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum TransferMode {
     /// Synchronous blocking transfer
     Blocking,
@@ -25,7 +25,7 @@ pub enum TransferMode {
 }
 
 /// Transfer options
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransferOptions {
     pub mode: TransferMode,
     pub use_staging: bool,
@@ -43,7 +43,7 @@ impl Default for TransferOptions {
 }
 
 /// GPU data pipeline for visualization
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DataPipeline {
     gpu_context: Arc<GpuContext>,
 

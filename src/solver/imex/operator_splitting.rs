@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Lie-Trotter splitting (first-order)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LieTrotterSplitting;
 
 impl LieTrotterSplitting {
@@ -50,7 +50,7 @@ impl OperatorSplitting for LieTrotterSplitting {
 }
 
 /// Strang splitting (second-order)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StrangSplitting;
 
 impl StrangSplitting {
@@ -98,7 +98,7 @@ impl OperatorSplitting for StrangSplitting {
 }
 
 /// Yoshida splitting (fourth-order)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct YoshidaSplitting {
     /// Yoshida coefficients
     w0: f64,
@@ -158,7 +158,7 @@ impl OperatorSplitting for YoshidaSplitting {
 }
 
 /// Recursive splitting for higher orders
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RecursiveSplitting {
     order: usize,
     coefficients: Vec<f64>,

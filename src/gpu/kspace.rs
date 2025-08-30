@@ -6,7 +6,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 
 /// GPU-accelerated k-space solver
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct KSpaceGpu {
     fft_pipeline: wgpu::ComputePipeline,
     propagate_pipeline: wgpu::ComputePipeline,

@@ -6,7 +6,7 @@ use crate::ValidationResult;
 use serde::{Deserialize, Serialize};
 
 /// FDTD solver configuration
-#[derive(Debug, Clone, Copy, Serialize, Deserialize]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FdtdConfig {
     /// Spatial derivative order (2, 4, or 6)
     pub spatial_order: usize,

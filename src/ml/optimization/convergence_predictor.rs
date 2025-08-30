@@ -3,7 +3,7 @@
 use ndarray::Array1;
 
 /// Convergence predictor using time series analysis
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ConvergencePredictor {
     history_size: usize,
     loss_history: Vec<f64>,

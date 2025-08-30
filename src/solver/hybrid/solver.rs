@@ -15,7 +15,7 @@ use ndarray::{s, Array4};
 use std::time::Instant;
 
 /// Hybrid PSTD/FDTD solver combining spectral and finite-difference methods
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct HybridSolver {
     /// Configuration
     config: HybridConfig,
@@ -281,8 +281,8 @@ impl HybridSolver {
                             region.start.0 + i,
                             region.start.1 + j,
                             region.start.2 + k,
-                        ]] = weight * pstd_fields[[field_idx, i, j, k]]
-                            + (1.0 - weight) * fdtd_fields[[field_idx, i, j, k]];
+                        ] = weight * pstd_fields[[field_idx, i, j, k]
+                            + (1.0 - weight) * fdtd_fields[[field_idx, i, j, k];
                     }
                 }
             }

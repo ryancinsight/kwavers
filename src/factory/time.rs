@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use crate::time::Time;
 
 /// Time configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TimeConfig {
     pub dt: f64,
     pub num_steps: usize,
@@ -60,7 +60,7 @@ impl Default for TimeConfig {
 }
 
 /// Factory for creating time configurations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct TimeFactory;
 
 impl TimeFactory {

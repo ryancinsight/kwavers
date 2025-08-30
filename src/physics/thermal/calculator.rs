@@ -7,7 +7,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Thermal calculator for temperature evolution
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ThermalCalculator {
     state: ThermalState,
     config: ThermalConfig,
@@ -80,17 +80,17 @@ impl ThermalCalculator {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    laplacian[[i, j, k]] = (self.state.temperature[[i + 1, j, k]]
-                        - 2.0 * self.state.temperature[[i, j, k]]
-                        + self.state.temperature[[i - 1, j, k]])
+                    laplacian[[i, j, k] = (self.state.temperature[[i + 1, j, k]
+                        - 2.0 * self.state.temperature[[i, j, k]
+                        + self.state.temperature[[i - 1, j, k])
                         / dx2
-                        + (self.state.temperature[[i, j + 1, k]]
-                            - 2.0 * self.state.temperature[[i, j, k]]
-                            + self.state.temperature[[i, j - 1, k]])
+                        + (self.state.temperature[[i, j + 1, k]
+                            - 2.0 * self.state.temperature[[i, j, k]
+                            + self.state.temperature[[i, j - 1, k])
                             / dy2
-                        + (self.state.temperature[[i, j, k + 1]]
-                            - 2.0 * self.state.temperature[[i, j, k]]
-                            + self.state.temperature[[i, j, k - 1]])
+                        + (self.state.temperature[[i, j, k + 1]
+                            - 2.0 * self.state.temperature[[i, j, k]
+                            + self.state.temperature[[i, j, k - 1])
                             / dz2;
                 }
             }

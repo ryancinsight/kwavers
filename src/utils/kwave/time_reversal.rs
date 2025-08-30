@@ -5,7 +5,7 @@
 use ndarray::{Array2, Array3};
 
 /// Time reversal processing utilities
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct TimeReversalUtils;
 
 impl TimeReversalUtils {

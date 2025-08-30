@@ -6,7 +6,7 @@ use ndarray::{Array2, ArrayView3};
 use std::f64::consts::PI;
 
 /// Beam pattern analysis configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BeamPatternConfig {
     /// Analysis frequency (Hz)
     pub frequency: f64,
@@ -19,7 +19,7 @@ pub struct BeamPatternConfig {
 }
 
 /// Far-field calculation methods
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum FarFieldMethod {
     /// Fresnel approximation
     Fresnel,
@@ -93,13 +93,13 @@ pub fn calculate_beam_pattern(
                         let phase = k * (x * dir_x + y * dir_y + z * dir_z);
 
                         // Add contribution
-                        let p = pressure_field[[ix, iy, iz]];
+                        let p = pressure_field[[ix, iy, iz];
                         pressure_complex += p * num_complex::Complex::from_polar(1.0, -phase);
                     }
                 }
             }
 
-            pattern[[i_theta, i_phi]] = pressure_complex.norm();
+            pattern[[i_theta, i_phi] = pressure_complex.norm();
         }
     }
 

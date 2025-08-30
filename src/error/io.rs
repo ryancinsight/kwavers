@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fmt;
 
 /// Data I/O errors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum DataError {
     /// I/O error
     IoError(String),

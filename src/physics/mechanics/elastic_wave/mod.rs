@@ -25,7 +25,7 @@ pub use fields::{StressFields as ElasticStressFields, VelocityFields as ElasticV
 
 /// Core elastic wave solver implementing spectral methods
 /// Follows SOLID principles with clear separation of concerns
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElasticWave {
     kx: Array3<f64>,
     ky: Array3<f64>,
@@ -94,10 +94,10 @@ impl ElasticWave {
         let dk = 2.0 * std::f64::consts::PI / (n as f64 * dx);
 
         for i in 0..n / 2 {
-            k[[i, 0, 0]] = i as f64 * dk;
+            k[[i, 0, 0] = i as f64 * dk;
         }
         for i in n / 2..n {
-            k[[i, 0, 0]] = (i as f64 - n as f64) * dk;
+            k[[i, 0, 0] = (i as f64 - n as f64) * dk;
         }
 
         k
@@ -148,7 +148,7 @@ impl ElasticWave {
                     // Check for significant jumps
                     for &neighbor in &neighbors {
                         if (neighbor - center).abs() / center > threshold {
-                            mask[[i, j, k]] = true;
+                            mask[[i, j, k] = true;
                             break;
                         }
                     }

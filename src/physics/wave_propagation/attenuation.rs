@@ -5,7 +5,7 @@
 use std::f64::consts::PI;
 
 /// Attenuation calculator for wave propagation in absorbing media
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AttenuationCalculator {
     /// Absorption coefficient [1/m] or [Np/m]
     absorption_coefficient: f64,

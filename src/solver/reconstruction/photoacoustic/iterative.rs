@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use super::config::PhotoacousticConfig;
 
 /// Iterative reconstruction algorithms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum IterativeAlgorithm {
     /// Simultaneous Iterative Reconstruction Technique
     SIRT,
@@ -21,7 +21,7 @@ pub enum IterativeAlgorithm {
 }
 
 /// Iterative reconstruction methods
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct IterativeMethods {
     algorithm: IterativeAlgorithm,
     iterations: usize,
@@ -57,7 +57,7 @@ impl IterativeMethods {
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid_size: [usize; 3],
     ) -> KwaversResult<Array3<f64>> {
         // Build system matrix A where y = Ax (y: measurements, x: image)
@@ -95,7 +95,7 @@ impl IterativeMethods {
         // Reshape to 3D
         for (idx, val) in x.iter().enumerate() {
             let (i, j, k) = self.linear_to_3d_index(idx, grid_size);
-            reconstruction[[i, j, k]] = *val;
+            reconstruction[[i, j, k] = *val;
         }
 
         Ok(reconstruction)
@@ -104,7 +104,7 @@ impl IterativeMethods {
     /// Build system matrix for iterative reconstruction with proper physics
     fn build_system_matrix(
         &self,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         grid_size: [usize; 3],
     ) -> KwaversResult<Array2<f64>> {
         let n_sensors = sensor_positions.len();
@@ -143,13 +143,13 @@ impl IterativeMethods {
                     let solid_angle_factor =
                         self.compute_solid_angle_factor(&voxel_pos, sensor_pos, dx);
 
-                    matrix[[sensor_idx, voxel_idx]] =
+                    matrix[[sensor_idx, voxel_idx] =
                         green_function * voxel_volume * solid_angle_factor;
                 } else {
                     // Handle sensor inside voxel case
                     let effective_radius =
                         (voxel_volume * 3.0 / (4.0 * std::f64::consts::PI)).powf(1.0 / 3.0);
-                    matrix[[sensor_idx, voxel_idx]] =
+                    matrix[[sensor_idx, voxel_idx] =
                         1.0 / (4.0 * std::f64::consts::PI * effective_radius);
                 }
             }

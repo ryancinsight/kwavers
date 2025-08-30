@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::fmt::Debug;
 
 /// Configuration for IMEX schemes
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct IMEXConfig {
     /// Whether to use adaptive stiffness detection
     pub adaptive_stiffness: bool,

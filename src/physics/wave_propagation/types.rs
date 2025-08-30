@@ -4,7 +4,7 @@ use super::interface::InterfaceType;
 use super::medium_properties::MediumProperties;
 
 /// Wave propagation mode
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum WaveMode {
     /// Acoustic pressure wave
     Acoustic,
@@ -13,7 +13,7 @@ pub enum WaveMode {
 }
 
 /// Polarization state for electromagnetic waves
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum Polarization {
     /// Transverse electric (s-polarized)
     TransverseElectric,
@@ -28,7 +28,7 @@ pub enum Polarization {
 }
 
 /// Interface configuration between two media
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct Interface {
     /// Properties of medium 1 (incident side)
     pub medium1: MediumProperties,

@@ -8,7 +8,7 @@ use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use rayon::prelude::*;
 
 /// Iterator for processing 3D grid points with spatial coordinates
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GridPointIterator<'a, T> {
     array: ArrayViewMut3<'a, T>,
     nx: usize,
@@ -28,7 +28,7 @@ where
     /// Get reference to element at position
     pub fn get(&self, i: usize, j: usize, k: usize) -> Option<&T> {
         if i < self.nx && j < self.ny && k < self.nz {
-            Some(&self.array[[i, j, k]])
+            Some(&self.array[[i, j, k])
         } else {
             None
         }
@@ -37,7 +37,7 @@ where
     /// Get mutable reference to element at position
     pub fn get_mut(&mut self, i: usize, j: usize, k: usize) -> Option<&mut T> {
         if i < self.nx && j < self.ny && k < self.nz {
-            Some(&mut self.array[[i, j, k]])
+            Some(&mut self.array[[i, j, k])
         } else {
             None
         }
@@ -54,7 +54,7 @@ where
                     let x = i as f64 * dx;
                     let y = j as f64 * dy;
                     let z = k as f64 * dz;
-                    processor(i, j, k, x, y, z, &mut self.array[[i, j, k]]);
+                    processor(i, j, k, x, y, z, &mut self.array[[i, j, k]);
                 }
             }
         }
@@ -62,7 +62,7 @@ where
 }
 
 /// Iterator for chunked processing with cache-friendly access patterns
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ChunkedProcessor<'a, T> {
     array: ArrayViewMut3<'a, T>,
     nx: usize,
@@ -100,7 +100,7 @@ where
     /// Get mutable reference to element at position
     pub fn get_mut(&mut self, i: usize, j: usize, k: usize) -> Option<&mut T> {
         if i < self.nx && j < self.ny && k < self.nz {
-            Some(&mut self.array[[i, j, k]])
+            Some(&mut self.array[[i, j, k])
         } else {
             None
         }
@@ -108,7 +108,7 @@ where
 }
 
 /// Iterator for computing gradients with central differences
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GradientComputer<'a> {
     array: ArrayView3<'a, f64>,
     nx: usize,
@@ -134,9 +134,9 @@ impl<'a> GradientComputer<'a> {
         (1..self.nx - 1).into_par_iter().for_each(|i| {
             for j in 1..self.ny - 1 {
                 for k in 1..self.nz - 1 {
-                    let grad_x = (self.array[[i + 1, j, k]] - self.array[[i - 1, j, k]]) * dx_inv;
-                    let grad_y = (self.array[[i, j + 1, k]] - self.array[[i, j - 1, k]]) * dy_inv;
-                    let grad_z = (self.array[[i, j, k + 1]] - self.array[[i, j, k - 1]]) * dz_inv;
+                    let grad_x = (self.array[[i + 1, j, k] - self.array[[i - 1, j, k]) * dx_inv;
+                    let grad_y = (self.array[[i, j + 1, k] - self.array[[i, j - 1, k]) * dy_inv;
+                    let grad_z = (self.array[[i, j, k + 1] - self.array[[i, j, k - 1]) * dz_inv;
 
                     processor(grad_x, grad_y, grad_z, i, j, k);
                 }
@@ -163,12 +163,12 @@ impl<'a> GradientComputer<'a> {
         for i in 1..self.nx - 1 {
             for j in 1..self.ny - 1 {
                 for k in 1..self.nz - 1 {
-                    grad_x[[i, j, k]] =
-                        (self.array[[i + 1, j, k]] - self.array[[i - 1, j, k]]) * dx_inv;
-                    grad_y[[i, j, k]] =
-                        (self.array[[i, j + 1, k]] - self.array[[i, j - 1, k]]) * dy_inv;
-                    grad_z[[i, j, k]] =
-                        (self.array[[i, j, k + 1]] - self.array[[i, j, k - 1]]) * dz_inv;
+                    grad_x[[i, j, k] =
+                        (self.array[[i + 1, j, k] - self.array[[i - 1, j, k]) * dx_inv;
+                    grad_y[[i, j, k] =
+                        (self.array[[i, j + 1, k] - self.array[[i, j - 1, k]) * dy_inv;
+                    grad_z[[i, j, k] =
+                        (self.array[[i, j, k + 1] - self.array[[i, j, k - 1]) * dz_inv;
                 }
             }
         }
@@ -191,7 +191,7 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    data[[i, j, k]] = (i * 100 + j * 10 + k) as f64;
+                    data[[i, j, k] = (i * 100 + j * 10 + k) as f64;
                 }
             }
         }
@@ -218,7 +218,7 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    array[[i, j, k]] = (i + j + k) as f64;
+                    array[[i, j, k] = (i + j + k) as f64;
                 }
             }
         }

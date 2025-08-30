@@ -11,7 +11,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 
 /// FDTD solver plugin
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct FdtdPlugin {
     metadata: PluginMetadata,
     state: PluginState,
@@ -122,9 +122,9 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
                         // Compute velocity divergence using central differences
-                        let dvx_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * grid.dx);
-                        let dvy_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * grid.dy);
-                        let dvz_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * grid.dz);
+                        let dvx_dx = (vx[[i + 1, j, k] - vx[[i - 1, j, k]) / (2.0 * grid.dx);
+                        let dvy_dy = (vy[[i, j + 1, k] - vy[[i, j - 1, k]) / (2.0 * grid.dy);
+                        let dvz_dz = (vz[[i, j, k + 1] - vz[[i, j, k - 1]) / (2.0 * grid.dz);
 
                         let divergence = dvx_dx + dvy_dy + dvz_dz;
 
@@ -136,7 +136,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                         let c = medium.sound_speed(x, y, z, grid);
 
                         // Update pressure
-                        pressure[[i, j, k]] -= dt * rho * c * c * divergence;
+                        pressure[[i, j, k] -= dt * rho * c * c * divergence;
                     }
                 }
             }
@@ -154,8 +154,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                 for i in 1..nx - 1 {
                     for j in 0..ny {
                         for k in 0..nz {
-                            let dp_dx = (pressure[[i + 1.min(nx - 1), j, k]]
-                                - pressure[[i.saturating_sub(1), j, k]])
+                            let dp_dx = (pressure[[i + 1.min(nx - 1), j, k]
+                                - pressure[[i.saturating_sub(1), j, k])
                                 / (2.0 * grid.dx);
 
                             let x = i as f64 * grid.dx;
@@ -163,7 +163,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
 
-                            vx[[i, j, k]] -= dt * dp_dx / rho;
+                            vx[[i, j, k] -= dt * dp_dx / rho;
                         }
                     }
                 }
@@ -177,8 +177,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                 for i in 0..nx {
                     for j in 1..ny - 1 {
                         for k in 0..nz {
-                            let dp_dy = (pressure[[i, j + 1.min(ny - 1), k]]
-                                - pressure[[i, j.saturating_sub(1), k]])
+                            let dp_dy = (pressure[[i, j + 1.min(ny - 1), k]
+                                - pressure[[i, j.saturating_sub(1), k])
                                 / (2.0 * grid.dy);
 
                             let x = i as f64 * grid.dx;
@@ -186,7 +186,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
 
-                            vy[[i, j, k]] -= dt * dp_dy / rho;
+                            vy[[i, j, k] -= dt * dp_dy / rho;
                         }
                     }
                 }
@@ -200,8 +200,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                 for i in 0..nx {
                     for j in 0..ny {
                         for k in 1..nz - 1 {
-                            let dp_dz = (pressure[[i, j, k + 1.min(nz - 1)]]
-                                - pressure[[i, j, k.saturating_sub(1)]])
+                            let dp_dz = (pressure[[i, j, k + 1.min(nz - 1)]
+                                - pressure[[i, j, k.saturating_sub(1)])
                                 / (2.0 * grid.dz);
 
                             let x = i as f64 * grid.dx;
@@ -209,7 +209,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let z = k as f64 * grid.dz;
                             let rho = medium.density(x, y, z, grid);
 
-                            vz[[i, j, k]] -= dt * dp_dz / rho;
+                            vz[[i, j, k] -= dt * dp_dz / rho;
                         }
                     }
                 }

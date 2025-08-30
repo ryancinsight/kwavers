@@ -4,7 +4,7 @@ use super::config::SimdLevel;
 use crate::error::KwaversResult;
 
 /// SIMD optimizer for vectorized operations
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SimdOptimizer {
     level: SimdLevel,
     vector_width: usize,

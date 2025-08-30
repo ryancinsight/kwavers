@@ -11,7 +11,7 @@ use super::{
 };
 
 /// Unified thermal diffusion solver
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ThermalDiffusionSolver {
     config: ThermalDiffusionConfig,
     temperature: Array3<f64>,
@@ -85,20 +85,20 @@ impl ThermalDiffusionSolver {
                 for i in 1..nx - 1 {
                     for j in 1..ny - 1 {
                         for k in 1..nz - 1 {
-                            let d2_dx2 = (self.temperature[[i + 1, j, k]]
-                                - 2.0 * self.temperature[[i, j, k]]
-                                + self.temperature[[i - 1, j, k]])
+                            let d2_dx2 = (self.temperature[[i + 1, j, k]
+                                - 2.0 * self.temperature[[i, j, k]
+                                + self.temperature[[i - 1, j, k])
                                 * dx2_inv;
-                            let d2_dy2 = (self.temperature[[i, j + 1, k]]
-                                - 2.0 * self.temperature[[i, j, k]]
-                                + self.temperature[[i, j - 1, k]])
+                            let d2_dy2 = (self.temperature[[i, j + 1, k]
+                                - 2.0 * self.temperature[[i, j, k]
+                                + self.temperature[[i, j - 1, k])
                                 * dy2_inv;
-                            let d2_dz2 = (self.temperature[[i, j, k + 1]]
-                                - 2.0 * self.temperature[[i, j, k]]
-                                + self.temperature[[i, j, k - 1]])
+                            let d2_dz2 = (self.temperature[[i, j, k + 1]
+                                - 2.0 * self.temperature[[i, j, k]
+                                + self.temperature[[i, j, k - 1])
                                 * dz2_inv;
 
-                            self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
+                            self.laplacian_workspace[[i, j, k] = d2_dx2 + d2_dy2 + d2_dz2;
                         }
                     }
                 }
@@ -116,28 +116,28 @@ impl ThermalDiffusionSolver {
                 for i in 2..nx - 2 {
                     for j in 2..ny - 2 {
                         for k in 2..nz - 2 {
-                            let d2_dx2 = (C0 * self.temperature[[i - 2, j, k]]
-                                + C1 * self.temperature[[i - 1, j, k]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i + 1, j, k]]
-                                + C0 * self.temperature[[i + 2, j, k]])
+                            let d2_dx2 = (C0 * self.temperature[[i - 2, j, k]
+                                + C1 * self.temperature[[i - 1, j, k]
+                                + C2 * self.temperature[[i, j, k]
+                                + C1 * self.temperature[[i + 1, j, k]
+                                + C0 * self.temperature[[i + 2, j, k])
                                 * dx2_inv;
 
-                            let d2_dy2 = (C0 * self.temperature[[i, j - 2, k]]
-                                + C1 * self.temperature[[i, j - 1, k]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i, j + 1, k]]
-                                + C0 * self.temperature[[i, j + 2, k]])
+                            let d2_dy2 = (C0 * self.temperature[[i, j - 2, k]
+                                + C1 * self.temperature[[i, j - 1, k]
+                                + C2 * self.temperature[[i, j, k]
+                                + C1 * self.temperature[[i, j + 1, k]
+                                + C0 * self.temperature[[i, j + 2, k])
                                 * dy2_inv;
 
-                            let d2_dz2 = (C0 * self.temperature[[i, j, k - 2]]
-                                + C1 * self.temperature[[i, j, k - 1]]
-                                + C2 * self.temperature[[i, j, k]]
-                                + C1 * self.temperature[[i, j, k + 1]]
-                                + C0 * self.temperature[[i, j, k + 2]])
+                            let d2_dz2 = (C0 * self.temperature[[i, j, k - 2]
+                                + C1 * self.temperature[[i, j, k - 1]
+                                + C2 * self.temperature[[i, j, k]
+                                + C1 * self.temperature[[i, j, k + 1]
+                                + C0 * self.temperature[[i, j, k + 2])
                                 * dz2_inv;
 
-                            self.laplacian_workspace[[i, j, k]] = d2_dx2 + d2_dy2 + d2_dz2;
+                            self.laplacian_workspace[[i, j, k] = d2_dx2 + d2_dy2 + d2_dz2;
                         }
                     }
                 }
@@ -221,7 +221,7 @@ impl ThermalDiffusionSolver {
                 let z = k as f64 * grid.dz;
 
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let source = external_source.map(|s| s[[i, j, k]]).unwrap_or(0.0);
+                let source = external_source.map(|s| s[[i, j, k]).unwrap_or(0.0);
 
                 *temp += dt * (alpha * lap + source);
             });

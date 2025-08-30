@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
 /// GPU buffer wrapper
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GpuBuffer {
     buffer: wgpu::Buffer,
     size: u64,
@@ -104,7 +104,7 @@ impl GpuBuffer {
 }
 
 /// Buffer manager for efficient GPU memory management
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct BufferManager {
     buffers: HashMap<String, GpuBuffer>,
     total_memory: u64,

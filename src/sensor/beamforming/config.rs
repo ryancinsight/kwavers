@@ -3,7 +3,7 @@
 use crate::constants::physics::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 /// Configuration for beamforming operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BeamformingConfig {
     /// Sound speed in medium (m/s)
     pub sound_speed: f64,

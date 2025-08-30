@@ -8,7 +8,7 @@ use crate::error::KwaversResult;
 use std::f64::consts::PI;
 
 /// Fresnel coefficients for reflection and transmission
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FresnelCoefficients {
     /// Reflection amplitude coefficient
     pub reflection_amplitude: f64,
@@ -54,7 +54,7 @@ impl FresnelCoefficients {
 }
 
 /// Fresnel equation calculator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FresnelCalculator {
     /// Refractive index of medium 1
     n1: f64,

@@ -2,18 +2,18 @@
 //!
 //! Implements phase encoding schemes for improved SNR and resolution.
 
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PhaseEncoder;
 pub enum EncodingScheme {
     Hadamard,
     Golay,
     Barker,
 }
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct HadamardEncoding;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct GolayEncoding;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct BarkerCode;
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PulseCompression;

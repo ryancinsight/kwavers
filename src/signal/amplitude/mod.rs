@@ -13,7 +13,7 @@ impl Clone for Box<dyn Amplitude> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConstantAmplitude {
     value: f64,
 }
@@ -34,7 +34,7 @@ impl Amplitude for ConstantAmplitude {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PowerModulation {
     base_amplitude: f64,
     modulation_freq: f64,  // Frequency of amplitude modulation (Hz)

@@ -9,7 +9,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use ndarray::{ArrayView3, ArrayViewMut3};
 
 /// Field provider for plugins with restricted access
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FieldProvider<'a> {
     registry: &'a mut FieldRegistry,
     allowed_fields: Vec<UnifiedFieldType>,

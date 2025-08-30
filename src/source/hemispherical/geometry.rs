@@ -6,7 +6,7 @@ use crate::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::PI;
 
 /// Hemisphere geometry definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HemisphereGeometry {
     /// Radius of hemisphere (m)
     pub radius: f64,
@@ -48,7 +48,7 @@ impl HemisphereGeometry {
 }
 
 /// Element placement algorithms
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ElementPlacement;
 
 impl ElementPlacement {

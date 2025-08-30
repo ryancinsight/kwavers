@@ -7,7 +7,7 @@ use ndarray::{Array1, Array3, Zip};
 use std::f64::consts::PI;
 
 /// K-space calculator for spectral methods
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct KSpaceCalculator;
 
 impl KSpaceCalculator {

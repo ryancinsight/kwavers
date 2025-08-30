@@ -7,7 +7,7 @@ use ndarray::{Array3, Zip};
 use num_complex::Complex;
 
 /// Spectral operations handler
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SpectralOperations {
     pub kx: Array3<f64>,
     pub ky: Array3<f64>,
@@ -49,9 +49,9 @@ impl SpectralOperations {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    kx[[i, j, k]] = kx_1d[i];
-                    ky[[i, j, k]] = ky_1d[j];
-                    kz[[i, j, k]] = kz_1d[k];
+                    kx[[i, j, k] = kx_1d[i];
+                    ky[[i, j, k] = ky_1d[j];
+                    kz[[i, j, k] = kz_1d[k];
                 }
             }
         }

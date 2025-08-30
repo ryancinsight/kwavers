@@ -7,7 +7,7 @@ use log::debug;
 use rustfft::{num_complex::Complex, FftPlanner};
 
 /// Frequency filter for time-reversal signals
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FrequencyFilter {
     fft_planner: FftPlanner<f64>,
 }

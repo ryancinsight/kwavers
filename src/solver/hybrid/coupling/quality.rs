@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 const MAX_HISTORY_SIZE: usize = 100;
 
 /// Quality monitor for interface coupling
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct QualityMonitor {
     /// Quality metrics history
     history: VecDeque<InterfaceQualityMetrics>,
@@ -15,7 +15,7 @@ pub struct QualityMonitor {
 }
 
 /// Interface quality metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfaceQualityMetrics {
     /// Interpolation error
     pub interpolation_error: f64,
@@ -34,7 +34,7 @@ pub struct InterfaceQualityMetrics {
 }
 
 /// Quality thresholds
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 struct QualityThresholds {
     max_interpolation_error: f64,
     max_conservation_error: f64,
@@ -223,7 +223,7 @@ impl QualityMonitor {
 }
 
 /// Interface quality summary
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct InterfaceQualitySummary {
     /// Average metrics over time window
     pub average_metrics: InterfaceQualityMetrics,

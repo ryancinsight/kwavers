@@ -3,7 +3,7 @@
 use crate::error::{KwaversResult, ValidationError};
 
 /// Type of acoustic model to use
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum AcousticModelType {
     /// Linear acoustic wave equation
     Linear,
@@ -14,7 +14,7 @@ pub enum AcousticModelType {
 }
 
 /// Configuration for the unified acoustic solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AcousticSolverConfig {
     /// Type of acoustic model to use
     pub model_type: AcousticModelType,

@@ -38,7 +38,7 @@ pub use seismic_imaging::{
 pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
 
 /// State of a plugin
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum PluginState {
     /// Plugin is created but not initialized
     Created,
@@ -55,7 +55,7 @@ pub enum PluginState {
 }
 
 /// Priority levels for plugin execution
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord))]
 pub enum PluginPriority {
     /// Lowest priority - executed last
     Low = 0,
@@ -142,7 +142,7 @@ pub trait Plugin: Debug + Send + Sync {
 }
 
 /// Configuration for plugins
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PluginConfig {
     /// Plugin-specific parameters
     pub parameters: std::collections::HashMap<String, ConfigValue>,
@@ -155,7 +155,7 @@ pub struct PluginConfig {
 }
 
 /// Configuration value types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum ConfigValue {
     Bool(bool),
     Integer(i64),
@@ -165,7 +165,7 @@ pub enum ConfigValue {
 }
 
 /// Container for fields that plugins can access and modify
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PluginFields {
     /// Pressure field
     pub pressure: Array3<f64>,

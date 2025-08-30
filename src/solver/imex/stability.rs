@@ -6,7 +6,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Stability region information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StabilityRegion {
     /// Maximum stable time step for explicit part
     pub explicit_dt_max: f64,
@@ -19,7 +19,7 @@ pub struct StabilityRegion {
 }
 
 /// IMEX stability analyzer
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct IMEXStabilityAnalyzer {
     /// Number of test points for stability region
     n_test_points: usize,

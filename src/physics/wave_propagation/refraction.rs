@@ -1,13 +1,13 @@
 //! Refraction calculations for wave propagation
 
 /// Refraction calculator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct RefractionCalculator {
     // Implementation details
 }
 
 /// Refraction angles
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RefractionAngles {
     /// Incident angle [radians]
     pub incident: f64,

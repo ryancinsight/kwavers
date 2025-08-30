@@ -1,14 +1,14 @@
 //! Acoustic event analysis using ML
 
 /// Acoustic event analyzer
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct AcousticEventAnalyzer {
     frequency_threshold: f64,
     amplitude_threshold: f64,
 }
 
 /// Detected acoustic event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct AcousticEvent {
     pub time: f64,
     pub frequency: f64,
@@ -17,7 +17,7 @@ pub struct AcousticEvent {
 }
 
 /// Type of acoustic event
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum AcousticEventType {
     Harmonic,
     Subharmonic,

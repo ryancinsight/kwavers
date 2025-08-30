@@ -9,7 +9,7 @@ use super::{
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 
 /// Complete transducer design specification
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransducerDesign {
     /// Element geometry
     pub geometry: ElementGeometry,

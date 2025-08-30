@@ -20,7 +20,7 @@ use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// PSTD solver for acoustic wave propagation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PstdSolver {
     /// Computational grid
     grid: Grid,
@@ -100,7 +100,7 @@ impl PstdSolver {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    sound_speed[[i, j, k]] = medium.sound_speed(x, y, z, grid);
+                    sound_speed[[i, j, k] = medium.sound_speed(x, y, z, grid);
                 }
             }
         }
@@ -123,19 +123,19 @@ impl PstdSolver {
             for j in 0..ny {
                 for i in 0..nx {
                     // Proper k-space indexing for FFT
-                    kx[[i, j, k]] = if i <= nx / 2 {
+                    kx[[i, j, k] = if i <= nx / 2 {
                         2.0 * PI * i as f64 / (nx as f64 * grid.dx)
                     } else {
                         2.0 * PI * (i as i32 - nx as i32) as f64 / (nx as f64 * grid.dx)
                     };
 
-                    ky[[i, j, k]] = if j <= ny / 2 {
+                    ky[[i, j, k] = if j <= ny / 2 {
                         2.0 * PI * j as f64 / (ny as f64 * grid.dy)
                     } else {
                         2.0 * PI * (j as i32 - ny as i32) as f64 / (ny as f64 * grid.dy)
                     };
 
-                    kz[[i, j, k]] = if k <= nz / 2 {
+                    kz[[i, j, k] = if k <= nz / 2 {
                         2.0 * PI * k as f64 / (nz as f64 * grid.dz)
                     } else {
                         2.0 * PI * (k as i32 - nz as i32) as f64 / (nz as f64 * grid.dz)
@@ -161,16 +161,16 @@ impl PstdSolver {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let kx_val = kx[[i, j, k]];
-                    let ky_val = ky[[i, j, k]];
-                    let kz_val = kz[[i, j, k]];
+                    let kx_val = kx[[i, j, k];
+                    let ky_val = ky[[i, j, k];
+                    let kz_val = kz[[i, j, k];
 
                     // Sinc correction for finite difference approximation
                     let sinc_x = sinc(kx_val * grid.dx / 2.0);
                     let sinc_y = sinc(ky_val * grid.dy / 2.0);
                     let sinc_z = sinc(kz_val * grid.dz / 2.0);
 
-                    filter[[i, j, k]] = match order {
+                    filter[[i, j, k] = match order {
                         1 => sinc_x * sinc_y * sinc_z,
                         2 => (sinc_x * sinc_y * sinc_z).powi(2),
                         _ => 1.0,
@@ -202,23 +202,23 @@ impl PstdSolver {
             for j in 0..ny {
                 for i in 0..nx {
                     // Get local sound speed (using cached value)
-                    let c = self.sound_speed_map[[i, j, k]];
+                    let c = self.sound_speed_map[[i, j, k];
 
                     // Calculate wavenumber magnitude
-                    let kx_val = self.kx[[i, j, k]];
-                    let ky_val = self.ky[[i, j, k]];
-                    let kz_val = self.kz[[i, j, k]];
+                    let kx_val = self.kx[[i, j, k];
+                    let ky_val = self.ky[[i, j, k];
+                    let kz_val = self.kz[[i, j, k];
                     let k_mag = (kx_val * kx_val + ky_val * ky_val + kz_val * kz_val).sqrt();
 
                     // Time evolution operator
                     let propagator = 2.0 * (c * k_mag * dt).cos();
 
                     // Apply propagation
-                    p_next_k[[i, j, k]] = propagator * p_curr_k[[i, j, k]] - p_prev_k[[i, j, k]];
+                    p_next_k[[i, j, k] = propagator * p_curr_k[[i, j, k] - p_prev_k[[i, j, k];
 
                     // Apply k-space filter if present
                     if let Some(ref filter) = self.k_filter {
-                        p_next_k[[i, j, k]] *= filter[[i, j, k]];
+                        p_next_k[[i, j, k] *= filter[[i, j, k];
                     }
                 }
             }

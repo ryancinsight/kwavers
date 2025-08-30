@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Stiffness metric information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StiffnessMetric {
     /// Stiffness ratio
     pub ratio: f64,
@@ -30,7 +30,7 @@ impl StiffnessMetric {
 }
 
 /// Stiffness detector
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StiffnessDetector {
     /// Threshold for stiffness detection
     threshold: f64,
@@ -41,7 +41,7 @@ pub struct StiffnessDetector {
 }
 
 /// Methods for stiffness detection
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum StiffnessMethod {
     /// Eigenvalue-based detection
     Eigenvalue,

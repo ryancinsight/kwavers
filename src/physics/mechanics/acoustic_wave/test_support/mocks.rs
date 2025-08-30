@@ -13,7 +13,7 @@ pub(crate) mod mocks {
     ///
     /// This mock properly implements position-dependent properties for testing
     /// heterogeneous acoustic propagation scenarios.
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug))]
     pub struct HeterogeneousMediumMock {
         pub position_dependent: bool,
         pub density: Array3<f64>,

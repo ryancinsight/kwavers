@@ -9,7 +9,7 @@ use crate::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Coupler for hybrid spectral-DG methods
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct HybridCoupler {
     conservation_tolerance: f64,
     /// Width of the transition zone between methods (in grid points)
@@ -56,35 +56,35 @@ impl HybridCoupler {
 
                         // Check all 6 neighbors
                         if i > 0 {
-                            sum += smooth_mask[[i - 1, j, k]];
+                            sum += smooth_mask[[i - 1, j, k];
                             count += 1.0;
                         }
                         if i < nx - 1 {
-                            sum += smooth_mask[[i + 1, j, k]];
+                            sum += smooth_mask[[i + 1, j, k];
                             count += 1.0;
                         }
                         if j > 0 {
-                            sum += smooth_mask[[i, j - 1, k]];
+                            sum += smooth_mask[[i, j - 1, k];
                             count += 1.0;
                         }
                         if j < ny - 1 {
-                            sum += smooth_mask[[i, j + 1, k]];
+                            sum += smooth_mask[[i, j + 1, k];
                             count += 1.0;
                         }
                         if k > 0 {
-                            sum += smooth_mask[[i, j, k - 1]];
+                            sum += smooth_mask[[i, j, k - 1];
                             count += 1.0;
                         }
                         if k < nz - 1 {
-                            sum += smooth_mask[[i, j, k + 1]];
+                            sum += smooth_mask[[i, j, k + 1];
                             count += 1.0;
                         }
 
                         // Include self
-                        sum += smooth_mask[[i, j, k]] * count;
+                        sum += smooth_mask[[i, j, k] * count;
                         count *= 2.0;
 
-                        temp_mask[[i, j, k]] = sum / count;
+                        temp_mask[[i, j, k] = sum / count;
                     }
                 }
             }
@@ -138,19 +138,19 @@ impl HybridCoupler {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // Check if we're at an interface (mask gradient is non-zero)
-                    let mask_grad_x = (mask[[i + 1, j, k]] - mask[[i - 1, j, k]]).abs();
-                    let mask_grad_y = (mask[[i, j + 1, k]] - mask[[i, j - 1, k]]).abs();
-                    let mask_grad_z = (mask[[i, j, k + 1]] - mask[[i, j, k - 1]]).abs();
+                    let mask_grad_x = (mask[[i + 1, j, k] - mask[[i - 1, j, k]).abs();
+                    let mask_grad_y = (mask[[i, j + 1, k] - mask[[i, j - 1, k]).abs();
+                    let mask_grad_z = (mask[[i, j, k + 1] - mask[[i, j, k - 1]).abs();
 
                     if mask_grad_x > 0.1 || mask_grad_y > 0.1 || mask_grad_z > 0.1 {
                         // Apply local smoothing
-                        let sum = field[[i - 1, j, k]]
-                            + field[[i + 1, j, k]]
-                            + field[[i, j - 1, k]]
-                            + field[[i, j + 1, k]]
-                            + field[[i, j, k - 1]]
-                            + field[[i, j, k + 1]];
-                        smoothed[[i, j, k]] = (field[[i, j, k]] + 0.1 * sum) / 1.6;
+                        let sum = field[[i - 1, j, k]
+                            + field[[i + 1, j, k]
+                            + field[[i, j - 1, k]
+                            + field[[i, j + 1, k]
+                            + field[[i, j, k - 1]
+                            + field[[i, j, k + 1];
+                        smoothed[[i, j, k] = (field[[i, j, k] + 0.1 * sum) / 1.6;
                     }
                 }
             }
@@ -223,7 +223,7 @@ mod tests {
         for i in 5..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    mask[[i, j, k]] = true;
+                    mask[[i, j, k] = true;
                 }
             }
         }
@@ -231,11 +231,11 @@ mod tests {
         let smooth_mask = coupler.create_transition_mask(&mask);
 
         // Check that transition is smooth
-        assert!(smooth_mask[[0, 5, 5]] < 0.3); // Far from interface (false region)
-        assert!(smooth_mask[[9, 5, 5]] > 0.7); // Far from interface (true region)
+        assert!(smooth_mask[[0, 5, 5] < 0.3); // Far from interface (false region)
+        assert!(smooth_mask[[9, 5, 5] > 0.7); // Far from interface (true region)
 
         // Check that there's a smooth transition around the interface
-        let transition_values: Vec<f64> = (3..8).map(|i| smooth_mask[[i, 5, 5]]).collect();
+        let transition_values: Vec<f64> = (3..8).map(|i| smooth_mask[[i, 5, 5]).collect();
         for i in 1..transition_values.len() {
             // Values should be monotonically increasing
             assert!(transition_values[i] >= transition_values[i - 1]);
@@ -273,7 +273,7 @@ mod tests {
         for i in 3..5 {
             for j in 0..5 {
                 for k in 0..5 {
-                    mask[[i, j, k]] = true;
+                    mask[[i, j, k] = true;
                 }
             }
         }
@@ -284,9 +284,9 @@ mod tests {
             .unwrap();
 
         // Check that spectral region uses solution1
-        assert!((coupled[[0, 2, 2]] - 1.0).abs() < 0.2);
+        assert!((coupled[[0, 2, 2] - 1.0).abs() < 0.2);
 
         // Check that DG region uses solution2
-        assert!((coupled[[4, 2, 2]] - 2.0).abs() < 0.2);
+        assert!((coupled[[4, 2, 2] - 2.0).abs() < 0.2);
     }
 }

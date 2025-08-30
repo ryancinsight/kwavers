@@ -8,7 +8,7 @@ use crate::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, ArrayView1};
 
 /// Solver configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SolverConfig {
     /// Maximum iterations
     pub max_iterations: usize,
@@ -29,7 +29,7 @@ impl Default for SolverConfig {
 }
 
 /// Preconditioner types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum Preconditioner {
     None,
     Jacobi,
@@ -37,7 +37,7 @@ pub enum Preconditioner {
 }
 
 /// Iterative solver for sparse systems
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct IterativeSolver {
     config: SolverConfig,
 }

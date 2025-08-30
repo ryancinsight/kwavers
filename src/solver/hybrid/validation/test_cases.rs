@@ -3,7 +3,7 @@
 use crate::error::KwaversResult;
 
 /// Test result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TestResult {
     /// Test name
     pub name: String,

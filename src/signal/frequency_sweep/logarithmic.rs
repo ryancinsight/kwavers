@@ -7,7 +7,7 @@ use crate::signal::Signal;
 ///
 /// Frequency varies logarithmically with time:
 /// f(t) = f₀ * (f₁/f₀)^(t/T)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LogarithmicSweep {
     start_frequency: f64,
     stop_frequency: f64,

@@ -7,7 +7,7 @@ use ndarray::{Array1, Array2};
 use serde::{Deserialize, Serialize};
 
 /// Geometry state of the flexible transducer array
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GeometryState {
     /// Current element positions [x, y, z] for each element
     pub element_positions: Array2<f64>,
@@ -30,14 +30,14 @@ impl GeometryState {
         // Initialize flat array along x-axis
         for i in 0..num_elements {
             let x = (i as f64 - (num_elements - 1) as f64 / 2.0) * spacing;
-            positions[[i, 0]] = x;
-            positions[[i, 1]] = 0.0;
-            positions[[i, 2]] = 0.0;
+            positions[[i, 0] = x;
+            positions[[i, 1] = 0.0;
+            positions[[i, 2] = 0.0;
 
             // All normals point in +z direction for flat array
-            normals[[i, 0]] = 0.0;
-            normals[[i, 1]] = 0.0;
-            normals[[i, 2]] = 1.0;
+            normals[[i, 0] = 0.0;
+            normals[[i, 1] = 0.0;
+            normals[[i, 2] = 1.0;
         }
 
         Self {
@@ -98,7 +98,7 @@ impl GeometryState {
 }
 
 /// Deformation state tracking
-#[derive(Debug, Clone, Default, Deserialize, Serialize]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct DeformationState {
     /// Curvature radius (m), None if flat
     pub curvature_radius: Option<f64>,

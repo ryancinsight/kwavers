@@ -19,7 +19,7 @@ pub trait ImplicitSolver: Debug + Send + Sync {
 }
 
 /// Linear solver for implicit equations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LinearSolver {
     tolerance: f64,
     max_iterations: usize,
@@ -89,7 +89,7 @@ impl ImplicitSolver for LinearSolver {
 }
 
 /// Newton solver for nonlinear implicit equations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct NonlinearSolver {
     tolerance: f64,
     max_iterations: usize,

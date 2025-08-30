@@ -8,7 +8,7 @@ use crate::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::Array1;
 
 /// Eigenvalue solver for sparse matrices
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct EigenvalueSolver {
     /// Maximum iterations
     max_iterations: usize,

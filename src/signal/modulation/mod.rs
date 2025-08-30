@@ -28,7 +28,7 @@ pub trait Modulation {
 }
 
 /// Modulation parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ModulationParams {
     /// Carrier frequency in Hz
     pub carrier_freq: f64,

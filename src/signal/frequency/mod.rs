@@ -13,7 +13,7 @@ impl Clone for Box<dyn Frequency> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConstantFrequency {
     value: f64,
 }
@@ -34,7 +34,7 @@ impl Frequency for ConstantFrequency {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LinearSweep {
     start_freq: f64,
     end_freq: f64,
@@ -68,7 +68,7 @@ impl Frequency for LinearSweep {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct QuadraticSweep {
     start_freq: f64,
     end_freq: f64,

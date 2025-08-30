@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Outcome prediction model
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct OutcomePredictorModel {
     metadata: ModelMetadata,
 }
@@ -45,9 +45,9 @@ impl MLModel for OutcomePredictorModel {
         let mean = input.mean_axis(ndarray::Axis(1)).unwrap();
         let mut output = Array2::zeros((input.nrows(), 3));
         for (i, &m) in mean.iter().enumerate() {
-            output[[i, 0]] = m.max(0.0).min(1.0);
-            output[[i, 1]] = (1.0 - m).max(0.0).min(1.0);
-            output[[i, 2]] = (m * 0.5).max(0.0).min(1.0);
+            output[[i, 0] = m.max(0.0).min(1.0);
+            output[[i, 1] = (1.0 - m).max(0.0).min(1.0);
+            output[[i, 2] = (m * 0.5).max(0.0).min(1.0);
         }
         Ok(output)
     }

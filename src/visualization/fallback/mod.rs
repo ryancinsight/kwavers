@@ -7,7 +7,7 @@ use log::{info, warn};
 use ndarray::Array3;
 
 /// Fallback renderer for CPU-based visualization
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FallbackRenderer {
     /// Whether fallback mode is active
     active: bool,
@@ -74,7 +74,7 @@ impl FallbackRenderer {
 
         for j in 0..ny.min(40) {
             for i in 0..nx.min(40) {
-                let val = slice[[i, j]];
+                let val = slice[[i, j];
                 let normalized = ((val - min_val) / (max_val - min_val) * 9.0) as usize;
                 let char_idx = normalized.min(9);
                 print!("{}", chars[char_idx]);

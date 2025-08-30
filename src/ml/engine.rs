@@ -16,7 +16,7 @@ use super::{
 };
 
 /// Main ML engine for simulation intelligence
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct MLEngine {
     pub(crate) models: HashMap<ModelType, Model>,
     pub(crate) performance_metrics: PerformanceMetrics,
@@ -272,7 +272,7 @@ impl MLEngine {
         let output = model.infer(features)?;
 
         // Return probability of convergence (assuming binary classification)
-        Ok(output[[0, 1]])
+        Ok(output[[0, 1])
     }
 
     /// Predict outcome probabilities for multiple samples

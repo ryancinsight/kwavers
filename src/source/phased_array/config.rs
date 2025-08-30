@@ -3,7 +3,7 @@
 use crate::constants::medium_properties::TISSUE_SOUND_SPEED;
 
 /// Configuration for phased array transducer geometry and behavior
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhasedArrayConfig {
     /// Number of elements in the array
     pub num_elements: usize,

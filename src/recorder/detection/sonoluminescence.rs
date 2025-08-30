@@ -4,7 +4,7 @@ use crate::physics::sonoluminescence_detector::DetectorConfig;
 use ndarray::Array3;
 
 /// Sonoluminescence event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SonoluminescenceEvent {
     pub location: (usize, usize, usize),
     pub intensity: f64,
@@ -14,7 +14,7 @@ pub struct SonoluminescenceEvent {
 }
 
 /// Sonoluminescence detector
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SonoluminescenceDetector {
     config: DetectorConfig,
     events: Vec<SonoluminescenceEvent>,
@@ -41,7 +41,7 @@ impl SonoluminescenceDetector {
             // Use a default intensity threshold or derive from temperature
             let intensity_threshold = 1e-6; // W/m^2 - typical SL detection threshold
             if intensity > intensity_threshold {
-                let temp = temperature[[i, j, k]];
+                let temp = temperature[[i, j, k];
                 if temp > self.config.temperature_threshold {
                     self.events.push(SonoluminescenceEvent {
                         location: (i, j, k),

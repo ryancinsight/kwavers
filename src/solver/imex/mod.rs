@@ -81,7 +81,7 @@ pub use stiffness_detection::{StiffnessDetector, StiffnessMetric};
 pub use traits::{IMEXConfig, IMEXScheme, OperatorSplitting, StiffnessIndicator};
 
 /// Enum wrapper for IMEX schemes
-#[derive(Debug)]
+#[derive(Debug))]
 pub enum IMEXSchemeType {
     RungeKutta(IMEXRK),
     BDF(IMEXBDF),
@@ -154,7 +154,7 @@ impl IMEXSchemeType {
 }
 
 /// Enum wrapper for implicit solvers
-#[derive(Debug)]
+#[derive(Debug))]
 pub enum ImplicitSolverType {
     Linear(LinearSolver),
     Newton(NonlinearSolver),
@@ -199,7 +199,7 @@ impl ImplicitSolver for ImplicitSolverType {
 }
 
 /// Main IMEX time integrator
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct IMEXIntegrator {
     /// Configuration
     config: IMEXConfig,

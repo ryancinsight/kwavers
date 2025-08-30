@@ -17,7 +17,7 @@ use crate::error::{KwaversResult, PhysicsError};
 use ndarray::Array2;
 
 /// Mode conversion configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ModeConversionConfig {
     /// Enable P-to-S wave conversion
     pub enable_p_to_s: bool,
@@ -48,7 +48,7 @@ impl Default for ModeConversionConfig {
 }
 
 /// Viscoelastic damping configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ViscoelasticConfig {
     /// Quality factor for P-waves
     pub q_p: f64,
@@ -80,7 +80,7 @@ impl Default for ViscoelasticConfig {
 
 /// Full stiffness tensor for anisotropic materials
 /// Uses Voigt notation for 6x6 symmetric matrix
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StiffnessTensor {
     /// 6x6 stiffness matrix in Voigt notation (Pa)
     pub c: Array2<f64>,
@@ -93,7 +93,7 @@ pub struct StiffnessTensor {
 }
 
 /// Material symmetry types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq))]
 pub enum MaterialSymmetry {
     Isotropic,
     Cubic,
@@ -118,20 +118,20 @@ impl StiffnessTensor {
         let mut c = Array2::zeros((6, 6));
 
         // Diagonal terms
-        c[[0, 0]] = lambda + 2.0 * mu; // C11
-        c[[1, 1]] = lambda + 2.0 * mu; // C22
-        c[[2, 2]] = lambda + 2.0 * mu; // C33
-        c[[3, 3]] = mu; // C44
-        c[[4, 4]] = mu; // C55
-        c[[5, 5]] = mu; // C66
+        c[[0, 0] = lambda + 2.0 * mu; // C11
+        c[[1, 1] = lambda + 2.0 * mu; // C22
+        c[[2, 2] = lambda + 2.0 * mu; // C33
+        c[[3, 3] = mu; // C44
+        c[[4, 4] = mu; // C55
+        c[[5, 5] = mu; // C66
 
         // Off-diagonal terms
-        c[[0, 1]] = lambda;
-        c[[1, 0]] = lambda; // C12
-        c[[0, 2]] = lambda;
-        c[[2, 0]] = lambda; // C13
-        c[[1, 2]] = lambda;
-        c[[2, 1]] = lambda; // C23
+        c[[0, 1] = lambda;
+        c[[1, 0] = lambda; // C12
+        c[[0, 2] = lambda;
+        c[[2, 0] = lambda; // C13
+        c[[1, 2] = lambda;
+        c[[2, 1] = lambda; // C23
 
         Ok(Self {
             c,
@@ -152,19 +152,19 @@ impl StiffnessTensor {
         let mut c = Array2::zeros((6, 6));
 
         // Hexagonal symmetry
-        c[[0, 0]] = c11;
-        c[[1, 1]] = c11;
-        c[[2, 2]] = c33;
-        c[[3, 3]] = c44;
-        c[[4, 4]] = c44;
-        c[[5, 5]] = (c11 - c12) / 2.0; // C66
+        c[[0, 0] = c11;
+        c[[1, 1] = c11;
+        c[[2, 2] = c33;
+        c[[3, 3] = c44;
+        c[[4, 4] = c44;
+        c[[5, 5] = (c11 - c12) / 2.0; // C66
 
-        c[[0, 1]] = c12;
-        c[[1, 0]] = c12;
-        c[[0, 2]] = c13;
-        c[[2, 0]] = c13;
-        c[[1, 2]] = c13;
-        c[[2, 1]] = c13;
+        c[[0, 1] = c12;
+        c[[1, 0] = c12;
+        c[[0, 2] = c13;
+        c[[2, 0] = c13;
+        c[[1, 2] = c13;
+        c[[2, 1] = c13;
 
         Ok(Self {
             c,
@@ -188,18 +188,18 @@ impl StiffnessTensor {
         // Check symmetry
         for i in 0..6 {
             for j in i + 1..6 {
-                if (self.c[[i, j]] - self.c[[j, i]]).abs() > 1e-10 {
+                if (self.c[[i, j] - self.c[[j, i]).abs() > 1e-10 {
                     return Err(PhysicsError::InvalidParameter {
                         parameter: format!("c[{},{}]", i, j),
-                        value: self.c[[i, j]],
+                        value: self.c[[i, j],
                         reason: format!(
                             "Stiffness matrix must be symmetric: c[{},{}]={} != c[{},{}]={}",
                             i,
                             j,
-                            self.c[[i, j]],
+                            self.c[[i, j],
                             j,
                             i,
-                            self.c[[j, i]]
+                            self.c[[j, i]
                         ),
                     }
                     .into());
@@ -234,21 +234,21 @@ impl StiffnessTensor {
         }
 
         // Check 1x1 minor
-        if matrix[[0, 0]] <= 0.0 {
+        if matrix[[0, 0] <= 0.0 {
             return false;
         }
 
         // Check 2x2 minor
-        let det2 = matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[0, 1]];
+        let det2 = matrix[[0, 0] * matrix[[1, 1] - matrix[[0, 1] * matrix[[0, 1];
         if det2 <= 0.0 {
             return false;
         }
 
         // Check 3x3 minor
-        let det3 = matrix[[0, 0]]
-            * (matrix[[1, 1]] * matrix[[2, 2]] - matrix[[1, 2]] * matrix[[1, 2]])
-            - matrix[[0, 1]] * (matrix[[0, 1]] * matrix[[2, 2]] - matrix[[0, 2]] * matrix[[1, 2]])
-            + matrix[[0, 2]] * (matrix[[0, 1]] * matrix[[1, 2]] - matrix[[0, 2]] * matrix[[1, 1]]);
+        let det3 = matrix[[0, 0]
+            * (matrix[[1, 1] * matrix[[2, 2] - matrix[[1, 2] * matrix[[1, 2])
+            - matrix[[0, 1] * (matrix[[0, 1] * matrix[[2, 2] - matrix[[0, 2] * matrix[[1, 2])
+            + matrix[[0, 2] * (matrix[[0, 1] * matrix[[1, 2] - matrix[[0, 2] * matrix[[1, 1]);
         if det3 <= 0.0 {
             return false;
         }
@@ -257,7 +257,7 @@ impl StiffnessTensor {
         // For now, we also check that diagonal elements are positive
         // and that the matrix satisfies basic physical constraints
         for i in 0..6 {
-            if matrix[[i, i]] <= 0.0 {
+            if matrix[[i, i] <= 0.0 {
                 return false;
             }
         }
@@ -265,7 +265,7 @@ impl StiffnessTensor {
         // Additional check: ensure the matrix satisfies thermodynamic stability
         // C11, C22, C33 > 0 (already checked above)
         // C11 + C22 + 2*C12 > 0 (bulk modulus constraint)
-        if matrix[[0, 0]] + matrix[[1, 1]] + 2.0 * matrix[[0, 1]] <= 0.0 {
+        if matrix[[0, 0] + matrix[[1, 1] + 2.0 * matrix[[0, 1] <= 0.0 {
             return false;
         }
 
@@ -288,9 +288,9 @@ mod tests {
 
         let tensor = StiffnessTensor::isotropic(lambda, mu, density).unwrap();
         assert_eq!(tensor.symmetry, MaterialSymmetry::Isotropic);
-        assert_eq!(tensor.c[[0, 0]], lambda + 2.0 * mu);
-        assert_eq!(tensor.c[[3, 3]], mu);
-        assert_eq!(tensor.c[[0, 1]], lambda);
+        assert_eq!(tensor.c[[0, 0], lambda + 2.0 * mu);
+        assert_eq!(tensor.c[[3, 3], mu);
+        assert_eq!(tensor.c[[0, 1], lambda);
     }
 
     #[test]

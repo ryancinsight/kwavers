@@ -7,7 +7,7 @@ pub trait Apodization: Debug + Sync + Send {
     fn weight(&self, position_idx: usize, total_elements: usize) -> f64;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HanningApodization;
 
 impl Apodization for HanningApodization {
@@ -21,7 +21,7 @@ impl Apodization for HanningApodization {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HammingApodization;
 
 impl Apodization for HammingApodization {
@@ -34,7 +34,7 @@ impl Apodization for HammingApodization {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BlackmanApodization;
 
 impl Apodization for BlackmanApodization {
@@ -49,7 +49,7 @@ impl Apodization for BlackmanApodization {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct GaussianApodization {
     sigma: f64, // Standard deviation for Gaussian spread
 }
@@ -72,7 +72,7 @@ impl Apodization for GaussianApodization {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RectangularApodization;
 
 impl Apodization for RectangularApodization {

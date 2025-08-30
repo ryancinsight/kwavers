@@ -7,7 +7,7 @@ use std::any::Any;
 use std::fmt::Debug;
 
 /// Metadata about a physics plugin
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PluginMetadata {
     /// Unique identifier for the plugin
     pub id: String,

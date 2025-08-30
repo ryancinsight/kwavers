@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 /// Memory event type
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum MemoryEventType {
     /// Memory allocation
     Allocation,
@@ -19,7 +19,7 @@ pub enum MemoryEventType {
 }
 
 /// Memory profiling event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MemoryEvent {
     /// Event timestamp
     pub timestamp: Instant,
@@ -54,7 +54,7 @@ impl MemoryEvent {
 }
 
 /// Memory usage profile
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MemoryProfile {
     /// Peak memory usage in bytes
     pub peak_usage: usize,
@@ -123,7 +123,7 @@ impl Default for MemoryProfile {
 }
 
 /// Memory profiler for tracking memory usage
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MemoryProfiler {
     profile: Arc<Mutex<MemoryProfile>>,
 }

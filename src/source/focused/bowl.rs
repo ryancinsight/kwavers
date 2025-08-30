@@ -12,7 +12,7 @@ use rayon::prelude::*;
 use std::f64::consts::PI;
 
 /// Configuration for a focused bowl transducer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BowlConfig {
     /// Radius of curvature (m)
     pub radius_of_curvature: f64,
@@ -59,7 +59,7 @@ impl Default for BowlConfig {
 }
 
 /// Focused bowl transducer (makeBowl equivalent)
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct BowlTransducer {
     pub(crate) config: BowlConfig,
     /// Discretized element positions
@@ -264,7 +264,7 @@ impl BowlTransducer {
         let normal = self.element_normals[element_idx];
 
         // Vector from element to target
-        let dir = [target[0] - pos[0], target[1] - pos[1], target[2] - pos[2]];
+        let dir = [target[0] - pos[0], target[1] - pos[1], target[2] - pos[2];
         let dir_mag = (dir[0].powi(2) + dir[1].powi(2) + dir[2].powi(2)).sqrt();
 
         if dir_mag > 0.0 {

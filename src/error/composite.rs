@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
 
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositeError {
     pub errors: Vec<String>,
 }

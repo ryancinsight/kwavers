@@ -3,7 +3,7 @@
 use std::f64::consts::PI;
 
 /// Individual transducer element with physics-based modeling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TransducerElement {
     /// Element ID
     pub id: usize,
@@ -56,7 +56,7 @@ impl TransducerElement {
 }
 
 /// Element sensitivity pattern modeling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ElementSensitivity {
     /// Main lobe width [rad]
     pub main_lobe_width: f64,

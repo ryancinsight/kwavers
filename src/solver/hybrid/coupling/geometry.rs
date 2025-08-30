@@ -6,7 +6,7 @@ use crate::solver::hybrid::domain_decomposition::DomainRegion;
 use serde::{Deserialize, Serialize};
 
 /// Interface geometry description
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceGeometry {
     /// Interface normal direction (0=x, 1=y, 2=z)
     pub normal_direction: usize,
@@ -122,7 +122,7 @@ impl InterfaceGeometry {
 }
 
 /// Domain information for coupling
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DomainInfo {
     /// Domain region indices
     pub region: DomainRegion,
@@ -131,7 +131,7 @@ pub struct DomainInfo {
 }
 
 /// Local grid properties at interface
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LocalGridProperties {
     /// Grid spacing
     pub spacing: (f64, f64, f64),

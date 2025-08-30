@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Stokes absorption parameters for viscous fluids
-#[derive(Debug, Clone, Copy, Serialize, Deserialize]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct StokesParameters {
     /// Dynamic viscosity [Pa·s]
     pub viscosity: f64,
@@ -37,7 +37,7 @@ impl Default for StokesParameters {
 }
 
 /// Stokes absorption model for viscous fluids
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StokesAbsorption {
     params: StokesParameters,
 }

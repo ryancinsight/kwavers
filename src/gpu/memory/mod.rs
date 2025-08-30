@@ -5,8 +5,8 @@
 use crate::KwaversResult;
 
 /// Memory statistics
-#[derive(Debug, Default)]
-#[derive(Debug)]
+#[derive(Debug, Default))]
+#[derive(Debug))]
 pub struct MemoryStats {
     pub allocated_bytes: usize,
     pub peak_bytes: usize,

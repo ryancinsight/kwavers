@@ -3,7 +3,7 @@
 use super::SensorArray;
 
 /// Trilateration solver
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct TrilaterationSolver<'a> {
     array: &'a SensorArray,
 }
@@ -16,8 +16,8 @@ impl<'a> TrilaterationSolver<'a> {
 }
 
 /// Trilateration result
-#[derive(Debug, Clone)]
-#[derive(Debug)]
+#[derive(Debug, Clone))]
+#[derive(Debug))]
 pub struct TrilaterationResult {
     /// Estimated position [x, y, z]
     pub position: [f64; 3],

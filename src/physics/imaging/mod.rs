@@ -7,7 +7,7 @@ pub mod seismic;
 pub mod ultrasound;
 
 /// Imaging modality types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ImagingModality {
     /// Photoacoustic imaging
     Photoacoustic,
@@ -28,7 +28,7 @@ pub enum ImagingModality {
 }
 
 /// Common imaging configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ImagingConfig {
     /// Selected modality
     pub modality: ImagingModality,
@@ -41,7 +41,7 @@ pub struct ImagingConfig {
 }
 
 /// Reconstruction methods
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ReconstructionMethod {
     /// Time reversal
     TimeReversal,

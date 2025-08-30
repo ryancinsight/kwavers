@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Tissue type enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize))]
 pub enum TissueType {
     Water,
     Blood,
@@ -22,7 +22,7 @@ pub enum TissueType {
 }
 
 /// Tissue absorption properties
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct TissueProperties {
     /// Absorption coefficient at 1 MHz [dB/(MHz^y cm)]
     pub alpha_0: f64,
@@ -177,7 +177,7 @@ pub static TISSUE_PROPERTIES: std::sync::LazyLock<HashMap<TissueType, TissueProp
     std::sync::LazyLock::new(tissue_properties);
 
 /// Tissue-specific absorption model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TissueAbsorption {
     tissue_type: TissueType,
     properties: TissueProperties,

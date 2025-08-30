@@ -11,7 +11,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Array3, Zip};
 
 /// Gradient calculator for FWI
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GradientCalculator {
     /// Number of time steps
     nt: usize,
@@ -66,15 +66,15 @@ impl GradientCalculator {
         for i in 1..wavefield.shape()[0] - 1 {
             for j in 1..wavefield.shape()[1] - 1 {
                 for k in 1..wavefield.shape()[2] - 1 {
-                    let laplacian = wavefield[[i + 1, j, k]]
-                        + wavefield[[i - 1, j, k]]
-                        + wavefield[[i, j + 1, k]]
-                        + wavefield[[i, j - 1, k]]
-                        + wavefield[[i, j, k + 1]]
-                        + wavefield[[i, j, k - 1]]
-                        - 6.0 * wavefield[[i, j, k]];
+                    let laplacian = wavefield[[i + 1, j, k]
+                        + wavefield[[i - 1, j, k]
+                        + wavefield[[i, j + 1, k]
+                        + wavefield[[i, j - 1, k]
+                        + wavefield[[i, j, k + 1]
+                        + wavefield[[i, j, k - 1]
+                        - 6.0 * wavefield[[i, j, k];
 
-                    derivative[[i, j, k]] = laplacian / (self.dt * self.dt);
+                    derivative[[i, j, k] = laplacian / (self.dt * self.dt);
                 }
             }
         }
@@ -91,7 +91,7 @@ impl GradientCalculator {
             let depth_scale = ((k + 1) as f64).sqrt();
             for i in 0..gradient.shape()[0] {
                 for j in 0..gradient.shape()[1] {
-                    preconditioned[[i, j, k]] *= depth_scale;
+                    preconditioned[[i, j, k] *= depth_scale;
                 }
             }
         }
@@ -134,6 +134,6 @@ mod tests {
         let preconditioned = calc.precondition_gradient(&gradient);
 
         // Deeper parts should have larger values after preconditioning
-        assert!(preconditioned[[16, 16, 31]] > preconditioned[[16, 16, 0]]);
+        assert!(preconditioned[[16, 16, 31] > preconditioned[[16, 16, 0]);
     }
 }

@@ -3,7 +3,7 @@
 use crate::error::{KwaversError, KwaversResult};
 
 /// Render pipeline for visualization
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct RenderPipeline {
     #[cfg(feature = "gpu-visualization")]
     pipeline: Option<wgpu::RenderPipeline>,
@@ -92,7 +92,7 @@ impl RenderPipeline {
 }
 
 /// Compute pipeline for GPU acceleration
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ComputePipeline {
     #[cfg(feature = "gpu-visualization")]
     pipeline: Option<wgpu::ComputePipeline>,

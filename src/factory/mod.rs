@@ -28,7 +28,7 @@ use crate::error::KwaversResult;
 
 /// Main simulation factory for creating complete simulation setups
 /// Follows Controller pattern from GRASP
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SimulationFactory;
 
 impl SimulationFactory {
@@ -55,7 +55,7 @@ impl SimulationFactory {
 }
 
 /// Container for all simulation components
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SimulationComponents {
     pub grid: crate::grid::Grid,
     pub medium: Box<dyn crate::medium::Medium>,

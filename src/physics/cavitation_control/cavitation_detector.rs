@@ -32,7 +32,7 @@ const SPECTRAL_WINDOW_SIZE: usize = 1024;
 const WINDOW_OVERLAP_RATIO: f64 = 0.5;
 
 /// Detection methods for cavitation
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum DetectionMethod {
     Subharmonic,   // f0/2, f0/3, etc.
     Ultraharmonic, // 3f0/2, 5f0/2, etc.
@@ -42,7 +42,7 @@ pub enum DetectionMethod {
 }
 
 /// Cavitation state classification
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum CavitationState {
     None,
     Stable,    // Stable cavitation (non-inertial)
@@ -51,7 +51,7 @@ pub enum CavitationState {
 }
 
 /// Cavitation metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct CavitationMetrics {
     pub state: CavitationState,
     pub intensity: f64,         // 0-1 normalized
@@ -84,7 +84,7 @@ pub trait CavitationDetector {
 }
 
 /// Spectral-based cavitation detector
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SpectralDetector {
     fundamental_freq: f64,
     sample_rate: f64,
@@ -311,7 +311,7 @@ impl CavitationDetector for SpectralDetector {
 }
 
 /// Broadband emissions detector
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct BroadbandDetector {
     sample_rate: f64,
     noise_floor: f64,
@@ -370,7 +370,7 @@ impl BroadbandDetector {
 }
 
 /// Subharmonic-specific detector
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct SubharmonicDetector {
     fundamental_freq: f64,
     sample_rate: f64,

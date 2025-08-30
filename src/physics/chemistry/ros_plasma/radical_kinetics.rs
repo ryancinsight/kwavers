@@ -6,7 +6,7 @@ use super::ros_species::ROSSpecies;
 use std::collections::HashMap;
 
 /// Radical reaction in aqueous phase
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RadicalReaction {
     /// Reaction name
     pub name: String,
@@ -23,7 +23,7 @@ pub struct RadicalReaction {
 }
 
 /// Radical kinetics solver
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct RadicalKinetics {
     /// List of radical reactions
     pub reactions: Vec<RadicalReaction>,

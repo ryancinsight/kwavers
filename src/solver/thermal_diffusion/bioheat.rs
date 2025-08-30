@@ -9,7 +9,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Pennes bioheat equation parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BioheatParameters {
     /// Blood perfusion rate [1/s]
     pub perfusion_rate: f64,
@@ -33,7 +33,7 @@ impl Default for BioheatParameters {
 }
 
 /// Pennes bioheat equation solver
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PennesBioheat {
     params: BioheatParameters,
 }
@@ -104,7 +104,7 @@ impl PennesBioheat {
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
 
                 // Add external source if provided
-                let ext_source = external_source.map(|s| s[[i, j, k]]).unwrap_or(0.0);
+                let ext_source = external_source.map(|s| s[[i, j, k]).unwrap_or(0.0);
 
                 // Update using forward Euler
                 *t += dt * (alpha * lap + perf + ext_source);

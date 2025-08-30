@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fmt;
 
 /// Configuration-related errors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize))]
 pub enum ConfigError {
     /// Missing required parameter
     MissingParameter { parameter: String, section: String },

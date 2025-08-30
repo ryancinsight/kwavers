@@ -33,7 +33,7 @@ const MAX_AMPLITUDE_RATE: f64 = 10.0;
 const MECHANICAL_INDEX_LIMIT: f64 = 1.9;
 
 /// Modulation schemes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ModulationScheme {
     Continuous,          // No modulation
     Pulsed,              // On/off pulsing
@@ -45,7 +45,7 @@ pub enum ModulationScheme {
 }
 
 /// Power control parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PowerControl {
     pub amplitude: f64,        // Current amplitude (0-1)
     pub duty_cycle: f64,       // Current duty cycle (0-1)
@@ -69,7 +69,7 @@ impl Default for PowerControl {
 }
 
 /// Power modulator for controlling ultrasound output
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PowerModulator {
     scheme: ModulationScheme,
     control: PowerControl,
@@ -213,7 +213,7 @@ impl PowerModulator {
 }
 
 /// Amplitude controller with smooth transitions
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct AmplitudeController {
     target_amplitude: f64,
     current_amplitude: f64,
@@ -260,7 +260,7 @@ impl AmplitudeController {
 }
 
 /// Duty cycle controller for pulsed operation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DutyCycleController {
     target_duty_cycle: f64,
     current_duty_cycle: f64,
@@ -381,7 +381,7 @@ impl SafetyLimiter {
 }
 
 /// Pulse sequence generator for complex modulation patterns
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PulseSequenceGenerator {
     sequence: Vec<PulseDescriptor>,
     current_index: usize,
@@ -389,7 +389,7 @@ pub struct PulseSequenceGenerator {
     repeat: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PulseDescriptor {
     pub amplitude: f64,
     pub duration: f64,

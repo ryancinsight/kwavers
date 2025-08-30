@@ -4,7 +4,7 @@ use crate::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Compute pipeline wrapper
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ComputePipeline {
     pipeline: wgpu::ComputePipeline,
     bind_group_layout: wgpu::BindGroupLayout,
@@ -89,7 +89,7 @@ impl ComputePipeline {
 }
 
 /// Pipeline layout manager
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PipelineLayout {
     layouts: HashMap<String, wgpu::PipelineLayout>,
 }

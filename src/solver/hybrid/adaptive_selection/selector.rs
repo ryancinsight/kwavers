@@ -7,7 +7,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, Array4};
 
 /// Method selection result
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum SelectedMethod {
     Spectral,
     FiniteDifference,
@@ -15,7 +15,7 @@ pub enum SelectedMethod {
 }
 
 /// Adaptive method selector
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct AdaptiveMethodSelector {
     criteria: SelectionCriteria,
     previous_selection: Option<Array3<SelectedMethod>>,
@@ -48,7 +48,7 @@ impl AdaptiveMethodSelector {
             for j in 0..ny {
                 for i in 0..nx {
                     let method = self.select_for_point(pressure_field, (i, j, k), grid, dt);
-                    selection[[i, j, k]] = method;
+                    selection[[i, j, k] = method;
                 }
             }
         }
@@ -117,7 +117,7 @@ impl AdaptiveMethodSelector {
                     let gj = (j + dj).saturating_sub(1).min(ny - 1);
                     let gk = (k + dk).saturating_sub(1).min(nz - 1);
 
-                    region[[di, dj, dk]] = field[[gi, gj, gk]];
+                    region[[di, dj, dk] = field[[gi, gj, gk];
                 }
             }
         }
@@ -206,11 +206,11 @@ impl AdaptiveMethodSelector {
         let threshold = self.criteria.hysteresis_factor;
 
         for ((i, j, k), current) in selection.indexed_iter_mut() {
-            if *current != previous[[i, j, k]] {
+            if *current != previous[[i, j, k] {
                 // Only switch if change is significant
                 // This is simplified - production would use actual score differences
                 if threshold > 0.5 {
-                    *current = previous[[i, j, k]];
+                    *current = previous[[i, j, k];
                 }
             }
         }

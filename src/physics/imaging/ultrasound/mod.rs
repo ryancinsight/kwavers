@@ -6,7 +6,7 @@ use ndarray::Array2;
 use num_complex::Complex;
 
 /// Ultrasound imaging mode
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum UltrasoundMode {
     /// Brightness mode (grayscale)
     BMode,
@@ -19,7 +19,7 @@ pub enum UltrasoundMode {
 }
 
 /// Ultrasound imaging configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct UltrasoundConfig {
     /// Imaging mode
     pub mode: UltrasoundMode,
@@ -73,7 +73,7 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
         for (i, &value) in compensated.iter().enumerate() {
             let log_value = 20.0 * (value.max(1e-10)).log10();
             let normalized = (log_value + config.dynamic_range) / config.dynamic_range;
-            image[[i, line_idx]] = normalized.max(0.0).min(1.0);
+            image[[i, line_idx] = normalized.max(0.0).min(1.0);
         }
     }
 
@@ -150,9 +150,9 @@ pub fn compute_doppler_shift(
     for i in 0..n_samples {
         for j in 0..n_pulses - 1 {
             // Phase difference between consecutive pulses
-            let phase_diff = (iq_data[[i, j + 1]] / iq_data[[i, j]]).arg();
+            let phase_diff = (iq_data[[i, j + 1] / iq_data[[i, j]).arg();
             // Convert to frequency shift
-            doppler[[i, j]] = phase_diff * prf / (2.0 * std::f64::consts::PI);
+            doppler[[i, j] = phase_diff * prf / (2.0 * std::f64::consts::PI);
         }
     }
 
@@ -167,9 +167,9 @@ pub fn compute_strain(displacement: &Array2<f64>, spatial_resolution: f64) -> Ar
     for line in 0..n_lines {
         for depth in 0..n_depth - 1 {
             // Spatial derivative of displacement
-            let gradient = (displacement[[depth + 1, line]] - displacement[[depth, line]])
+            let gradient = (displacement[[depth + 1, line] - displacement[[depth, line])
                 / spatial_resolution;
-            strain[[depth, line]] = gradient;
+            strain[[depth, line] = gradient;
         }
     }
 

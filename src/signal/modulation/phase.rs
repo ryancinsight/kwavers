@@ -4,7 +4,7 @@ use super::{Modulation, ModulationParams};
 use crate::error::KwaversResult;
 
 /// Phase modulation implementation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhaseModulation {
     params: ModulationParams,
 }

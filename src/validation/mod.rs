@@ -4,7 +4,7 @@
 pub use crate::solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};
 
 /// Validation result struct (legacy compatibility)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
@@ -64,7 +64,7 @@ mod constants {
 }
 
 /// Physics validation results (extends ValidationReport)
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PhysicsValidation {
     pub test_name: String,
     pub passed: bool,

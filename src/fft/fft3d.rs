@@ -10,7 +10,7 @@ use num_complex::Complex;
 use std::sync::Arc;
 
 /// 3D FFT implementation with cache-friendly algorithms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct Fft3d {
     padded_nx: usize,
     padded_ny: usize,
@@ -83,7 +83,7 @@ impl Fft3d {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    padded[[i, j, k]] = field[[i, j, k]];
+                    padded[[i, j, k] = field[[i, j, k];
                 }
             }
         }
@@ -95,7 +95,7 @@ impl Fft3d {
         for i in 0..grid.nx {
             for j in 0..grid.ny {
                 for k in 0..grid.nz {
-                    field[[i, j, k]] = padded[[i, j, k]];
+                    field[[i, j, k] = padded[[i, j, k];
                 }
             }
         }
@@ -124,7 +124,7 @@ impl Fft3d {
 
                 // Copy data to workspace buffer
                 for i in 0..nx {
-                    workspace[i] = field[[i, j, k]];
+                    workspace[i] = field[[i, j, k];
                 }
 
                 // Perform FFT on workspace buffer
@@ -132,7 +132,7 @@ impl Fft3d {
 
                 // Copy back to field
                 for i in 0..nx {
-                    field[[i, j, k]] = workspace[i];
+                    field[[i, j, k] = workspace[i];
                 }
             }
         }
@@ -146,7 +146,7 @@ impl Fft3d {
 
                 // Copy data to workspace buffer (y-axis is not contiguous in memory)
                 for j in 0..ny {
-                    workspace[j] = field[[i, j, k]];
+                    workspace[j] = field[[i, j, k];
                 }
 
                 // Perform FFT on workspace buffer
@@ -154,7 +154,7 @@ impl Fft3d {
 
                 // Copy back to field
                 for j in 0..ny {
-                    field[[i, j, k]] = workspace[j];
+                    field[[i, j, k] = workspace[j];
                 }
             }
         }
@@ -168,7 +168,7 @@ impl Fft3d {
 
                 // Copy data to workspace buffer (z-axis is not contiguous in memory)
                 for k in 0..nz {
-                    workspace[k] = field[[i, j, k]];
+                    workspace[k] = field[[i, j, k];
                 }
 
                 // Perform FFT on workspace buffer
@@ -176,7 +176,7 @@ impl Fft3d {
 
                 // Copy back to field
                 for k in 0..nz {
-                    field[[i, j, k]] = workspace[k];
+                    field[[i, j, k] = workspace[k];
                 }
             }
         }

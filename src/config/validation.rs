@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// This configuration type provides a simpler alternative to ValidationConfig
 /// for cases where only basic min/max limits are needed.
 /// Follows SSOT and DRY principles.
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldValidationConfig {
     /// Pressure field limits
     pub pressure: FieldLimits,
@@ -26,7 +26,7 @@ pub struct FieldValidationConfig {
 }
 
 /// Field validation limits with optional warning thresholds
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldLimits {
     pub min: f64,
     pub max: f64,
@@ -91,7 +91,7 @@ impl FieldValidationConfig {
 ///
 /// This structure centralizes all validation limits and thresholds, providing
 /// a single source of truth for numerical bounds and stability criteria.
-#[derive(Debug, Clone, Serialize, Deserialize, Default]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ValidationConfig {
     /// Pressure field validation
     pub pressure: PressureValidation,
@@ -110,7 +110,7 @@ pub struct ValidationConfig {
 }
 
 /// Pressure field validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PressureValidation {
     /// Minimum allowable pressure [Pa]
     pub min_pressure: f64,
@@ -123,7 +123,7 @@ pub struct PressureValidation {
 }
 
 /// Temperature field validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalValidation {
     /// Minimum allowable temperature [K]
     pub min_temperature: f64,
@@ -136,7 +136,7 @@ pub struct ThermalValidation {
 }
 
 /// Light field validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LightValidation {
     /// Minimum light intensity [W/m²]
     pub min_intensity: f64,
@@ -149,7 +149,7 @@ pub struct LightValidation {
 }
 
 /// Velocity field validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VelocityValidation {
     /// Maximum velocity magnitude [m/s]
     pub max_velocity: f64,
@@ -160,7 +160,7 @@ pub struct VelocityValidation {
 }
 
 /// Density field validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DensityValidation {
     /// Minimum density [kg/m³]
     pub min_density: f64,
@@ -171,7 +171,7 @@ pub struct DensityValidation {
 }
 
 /// Numerical stability validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StabilityValidation {
     /// CFL safety factor
     pub cfl_safety_factor: f64,
@@ -186,7 +186,7 @@ pub struct StabilityValidation {
 }
 
 /// Time step validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeStepValidation {
     /// Minimum time step [s]
     pub min_dt: f64,

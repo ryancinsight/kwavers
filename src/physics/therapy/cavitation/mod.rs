@@ -10,7 +10,7 @@ const WATER_VAPOR_PRESSURE: f64 = 2.34e3; // Pa at 20°C
 const ATMOSPHERIC_PRESSURE: f64 = 101325.0; // Pa
 
 /// Cavitation detector for therapy
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct TherapyCavitationDetector {
     /// Frequency [Hz]
     frequency: f64,
@@ -21,7 +21,7 @@ pub struct TherapyCavitationDetector {
 }
 
 /// Cavitation detection methods
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum CavitationDetectionMethod {
     /// Pressure threshold based
     PressureThreshold,

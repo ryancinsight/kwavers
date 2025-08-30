@@ -13,7 +13,7 @@ use ndarray::{Array1, Array3, Zip};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PhasedArrayTransducer {
     /// Array configuration
     config: PhasedArrayConfig,
@@ -220,7 +220,7 @@ impl Source for PhasedArrayTransducer {
             if let Some((i, j, k)) =
                 grid.position_to_indices(element.position.0, element.position.1, element.position.2)
             {
-                mask[[i, j, k]] = element.amplitude_weight;
+                mask[[i, j, k] = element.amplitude_weight;
             }
         }
 

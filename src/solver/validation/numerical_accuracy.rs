@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use crate::medium::{core::CoreMedium, HomogeneousMedium};
 
 /// Validation results for numerical accuracy tests
-#[derive(Debug, Clone, Default]
+#[derive(Debug, Clone, Default)]
 pub struct ValidationResults {
     pub dispersion_tests: DispersionResults,
     pub stability_tests: StabilityResults,
@@ -17,7 +17,7 @@ pub struct ValidationResults {
     pub convergence_tests: ConvergenceResults,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DispersionResults {
     pub pstd_phase_error: f64,
     pub fdtd_phase_error: f64,
@@ -38,7 +38,7 @@ impl Default for DispersionResults {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct StabilityResults {
     pub pstd_stable: bool,
     pub fdtd_stable: bool,
@@ -59,7 +59,7 @@ impl Default for StabilityResults {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BoundaryResults {
     pub reflection_coefficient: f64,
     pub absorption_coefficient: f64,
@@ -78,7 +78,7 @@ impl Default for BoundaryResults {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConservationResults {
     pub energy_conservation_error: f64,
     pub mass_conservation_error: f64,
@@ -97,7 +97,7 @@ impl Default for ConservationResults {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConvergenceResults {
     pub spatial_order: f64,
     pub temporal_order: f64,
@@ -117,7 +117,7 @@ impl Default for ConvergenceResults {
 }
 
 /// Comprehensive numerical accuracy validator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct NumericalValidator {
     grid: Grid,
     medium: HomogeneousMedium,

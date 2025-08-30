@@ -15,7 +15,7 @@ use crate::source::Source;
 use ndarray::{Array3, Array4, Zip};
 
 /// Main Kuznetsov wave solver
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct KuznetsovWave {
     config: KuznetsovConfig,
     grid: Grid,
@@ -78,7 +78,7 @@ impl KuznetsovWave {
                     let c0_squared = local_sound_speed * local_sound_speed;
 
                     // Add linear term with local sound speed
-                    rhs[[i, j, k]] += c0_squared * self.workspace.laplacian[[i, j, k]];
+                    rhs[[i, j, k] += c0_squared * self.workspace.laplacian[[i, j, k];
                 }
             }
         }
@@ -158,7 +158,7 @@ impl KuznetsovWave {
                 for i in 0..self.grid.nx {
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                     let source_term = source.get_source_term(t, x, y, z, &self.grid);
-                    rhs[[i, j, k]] += source_term;
+                    rhs[[i, j, k] += source_term;
                 }
             }
         }

@@ -11,7 +11,7 @@ use rayon::prelude::*;
 ///
 /// This structure supports transformations over any field type F,
 /// enabling reuse with Array2<T>, Array3<T>, or custom field types.
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FieldTransform<F> {
     transforms: Vec<Box<dyn Fn(F) -> F + Send + Sync>>,
 }
@@ -78,7 +78,7 @@ where
 }
 
 /// Reversible field transformation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ReversibleTransform<F> {
     forward: FieldTransform<F>,
     inverse: Box<dyn Fn(F) -> F + Send + Sync>,
@@ -135,14 +135,14 @@ where
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
-                        let sum = field[[i - 1, j, k]].clone()
-                            + field[[i + 1, j, k]].clone()
-                            + field[[i, j - 1, k]].clone()
-                            + field[[i, j + 1, k]].clone()
-                            + field[[i, j, k - 1]].clone()
-                            + field[[i, j, k + 1]].clone()
-                            + field[[i, j, k]].clone();
-                        result[[i, j, k]] = sum / 7.0;
+                        let sum = field[[i - 1, j, k].clone()
+                            + field[[i + 1, j, k].clone()
+                            + field[[i, j - 1, k].clone()
+                            + field[[i, j + 1, k].clone()
+                            + field[[i, j, k - 1].clone()
+                            + field[[i, j, k + 1].clone()
+                            + field[[i, j, k].clone();
+                        result[[i, j, k] = sum / 7.0;
                     }
                 }
             }
@@ -175,6 +175,6 @@ mod tests {
             .then(|f| f.mapv(|x: f64| x + 1.0));
 
         let result = transform.apply(field);
-        assert_abs_diff_eq!(result[[2, 2, 2]], 3.0);
+        assert_abs_diff_eq!(result[[2, 2, 2], 3.0);
     }
 }

@@ -13,7 +13,7 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Photoacoustic imaging configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhotoacousticConfig {
     /// Optical wavelength (m)
     pub wavelength: f64,
@@ -78,22 +78,22 @@ pub fn compute_fluence_diffusion(
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
-                    let d = diffusion_coeff[[i, j, k]];
-                    let mu_a = absorption[[i, j, k]];
+                    let d = diffusion_coeff[[i, j, k];
+                    let mu_a = absorption[[i, j, k];
 
                     // Laplacian using central differences
-                    let laplacian = (fluence_prev[[i + 1, j, k]] - 2.0 * fluence_prev[[i, j, k]]
-                        + fluence_prev[[i - 1, j, k]])
+                    let laplacian = (fluence_prev[[i + 1, j, k] - 2.0 * fluence_prev[[i, j, k]
+                        + fluence_prev[[i - 1, j, k])
                         / (grid.dx * grid.dx)
-                        + (fluence_prev[[i, j + 1, k]] - 2.0 * fluence_prev[[i, j, k]]
-                            + fluence_prev[[i, j - 1, k]])
+                        + (fluence_prev[[i, j + 1, k] - 2.0 * fluence_prev[[i, j, k]
+                            + fluence_prev[[i, j - 1, k])
                             / (grid.dy * grid.dy)
-                        + (fluence_prev[[i, j, k + 1]] - 2.0 * fluence_prev[[i, j, k]]
-                            + fluence_prev[[i, j, k - 1]])
+                        + (fluence_prev[[i, j, k + 1] - 2.0 * fluence_prev[[i, j, k]
+                            + fluence_prev[[i, j, k - 1])
                             / (grid.dz * grid.dz);
 
                     // Update equation: Φ = (S + D∇²Φ) / μₐ
-                    fluence[[i, j, k]] = (source[[i, j, k]] + d * laplacian) / (mu_a + 1e-10);
+                    fluence[[i, j, k] = (source[[i, j, k] + d * laplacian) / (mu_a + 1e-10);
                 }
             }
         }
@@ -117,7 +117,7 @@ pub fn compute_fluence_diffusion(
 /// The sensitivity matrix relates the initial pressure to the detected signals
 pub fn compute_sensitivity_matrix(
     grid: &Grid,
-    detector_positions: &[[f64; 3]],
+    detector_positions: &[[f64; 3],
     medium: &dyn Medium,
 ) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
@@ -144,7 +144,7 @@ pub fn compute_sensitivity_matrix(
 
                     // Sensitivity decreases with distance (spherical spreading)
                     // and depends on acoustic properties
-                    sensitivity[[i, j, k]] += 1.0 / (4.0 * PI * distance.max(grid.dx));
+                    sensitivity[[i, j, k] += 1.0 / (4.0 * PI * distance.max(grid.dx));
                 }
             }
         }

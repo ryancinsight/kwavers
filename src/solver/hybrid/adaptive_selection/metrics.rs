@@ -4,7 +4,7 @@ use crate::grid::Grid;
 use ndarray::ArrayView3;
 
 /// Spectral analysis metrics for method selection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct SpectralMetrics {
     pub smoothness: f64,
     pub frequency_content: f64,
@@ -34,9 +34,9 @@ impl SpectralMetrics {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let dx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * grid.dx);
-                    let dy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * grid.dy);
-                    let dz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * grid.dz);
+                    let dx = (field[[i + 1, j, k] - field[[i - 1, j, k]) / (2.0 * grid.dx);
+                    let dy = (field[[i, j + 1, k] - field[[i, j - 1, k]) / (2.0 * grid.dy);
+                    let dz = (field[[i, j, k + 1] - field[[i, j, k - 1]) / (2.0 * grid.dz);
 
                     total_gradient += (dx * dx + dy * dy + dz * dz).sqrt();
                     count += 1;
@@ -75,7 +75,7 @@ impl SpectralMetrics {
 }
 
 /// Material property metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MaterialMetrics {
     pub homogeneity: f64,
     pub interface_proximity: f64,
@@ -118,7 +118,7 @@ impl MaterialMetrics {
 
         // Check neighbors for large changes
         let mut max_change = 0.0;
-        let center = density[[i, j, k]];
+        let center = density[[i, j, k];
 
         for di in -1i32..=1 {
             for dj in -1i32..=1 {
@@ -132,7 +132,7 @@ impl MaterialMetrics {
                     let nk = (k as i32 + dk) as usize;
 
                     if ni < nx && nj < ny && nk < nz {
-                        let change = (density[[ni, nj, nk]] - center).abs() / center;
+                        let change = (density[[ni, nj, nk] - center).abs() / center;
                         max_change = f64::max(max_change, change);
                     }
                 }
@@ -150,7 +150,7 @@ impl MaterialMetrics {
 }
 
 /// Computational efficiency metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ComputationalMetrics {
     pub grid_resolution_quality: f64,
     pub stability_margin: f64,

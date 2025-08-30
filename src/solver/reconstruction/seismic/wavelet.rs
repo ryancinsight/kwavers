@@ -4,7 +4,7 @@ use super::constants::*;
 use std::f64::consts::PI;
 
 /// Ricker wavelet generator for seismic sources
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct RickerWavelet {
     /// Dominant frequency in Hz
     pub frequency: f64,
@@ -57,7 +57,7 @@ impl RickerWavelet {
 }
 
 /// Gaussian wavelet generator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct GaussianWavelet {
     /// Standard deviation in time domain
     pub sigma: f64,
@@ -90,7 +90,7 @@ impl GaussianWavelet {
 }
 
 /// Ormsby wavelet (trapezoidal bandpass filter)
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct OrmsbyWavelet {
     /// Low cut frequency
     pub f1: f64,

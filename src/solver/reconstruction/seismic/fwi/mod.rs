@@ -21,7 +21,7 @@ use crate::grid::Grid;
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FullWaveformInversion {
     config: SeismicImagingConfig,
     /// Current velocity model
@@ -65,7 +65,7 @@ impl FullWaveformInversion {
         let mut residual = Array2::zeros((synthetic_data.shape()[0], synthetic_data.shape()[2]));
         for i in 0..synthetic_data.shape()[0] {
             for t in 0..synthetic_data.shape()[2] {
-                residual[[i, t]] = observed_data[[i, 0, t]] - synthetic_data[[i, 0, t]];
+                residual[[i, t] = observed_data[[i, 0, t] - synthetic_data[[i, 0, t];
             }
         }
 

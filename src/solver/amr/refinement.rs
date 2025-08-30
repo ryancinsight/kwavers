@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Refinement level information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RefinementLevel {
     /// Level index (0 = coarsest)
     pub level: usize,
@@ -39,7 +39,7 @@ impl RefinementLevel {
 }
 
 /// Manages mesh refinement decisions
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct RefinementManager {
     /// Maximum refinement level
     max_level: usize,
@@ -107,7 +107,7 @@ impl RefinementManager {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    if markers[[i, j, k]] == 1 {
+                    if markers[[i, j, k] == 1 {
                         // Add buffer around refined cell
                         for di in -(self.buffer_size as isize)..=(self.buffer_size as isize) {
                             for dj in -(self.buffer_size as isize)..=(self.buffer_size as isize) {
@@ -117,8 +117,8 @@ impl RefinementManager {
                                     let jj = (j as isize + dj) as usize;
                                     let kk = (k as isize + dk) as usize;
 
-                                    if ii < nx && jj < ny && kk < nz && buffer[[ii, jj, kk]] == 0 {
-                                        buffer[[ii, jj, kk]] = 1;
+                                    if ii < nx && jj < ny && kk < nz && buffer[[ii, jj, kk] == 0 {
+                                        buffer[[ii, jj, kk] = 1;
                                     }
                                 }
                             }
@@ -149,17 +149,17 @@ impl RefinementManager {
                     for k in 1..nz - 1 {
                         // Check neighbors
                         let neighbors = [
-                            old_markers[[i - 1, j, k]],
-                            old_markers[[i + 1, j, k]],
-                            old_markers[[i, j - 1, k]],
-                            old_markers[[i, j + 1, k]],
-                            old_markers[[i, j, k - 1]],
-                            old_markers[[i, j, k + 1]],
+                            old_markers[[i - 1, j, k],
+                            old_markers[[i + 1, j, k],
+                            old_markers[[i, j - 1, k],
+                            old_markers[[i, j + 1, k],
+                            old_markers[[i, j, k - 1],
+                            old_markers[[i, j, k + 1],
                         ];
 
                         // If any neighbor is refined, this cell cannot coarsen
-                        if neighbors.contains(&1) && markers[[i, j, k]] == -1 {
-                            markers[[i, j, k]] = 0;
+                        if neighbors.contains(&1) && markers[[i, j, k] == -1 {
+                            markers[[i, j, k] = 0;
                             changed = true;
                         }
                     }

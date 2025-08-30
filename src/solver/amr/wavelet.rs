@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Wavelet basis functions
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum WaveletBasis {
     /// Haar wavelet (simplest)
     Haar,
@@ -15,7 +15,7 @@ pub enum WaveletBasis {
 }
 
 /// Wavelet transform for AMR
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct WaveletTransform {
     basis: WaveletBasis,
     levels: usize,
@@ -66,12 +66,12 @@ impl WaveletTransform {
                 for k in 0..nz {
                     let mut row = Vec::with_capacity(size);
                     for i in 0..size {
-                        row.push(data[[i, j, k]]);
+                        row.push(data[[i, j, k]);
                     }
 
                     let transformed = self.haar_1d_forward(&row);
                     for (i, val) in transformed.iter().enumerate() {
-                        data[[i, j, k]] = *val;
+                        data[[i, j, k] = *val;
                     }
                 }
             }

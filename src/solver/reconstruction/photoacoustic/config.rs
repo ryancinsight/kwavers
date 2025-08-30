@@ -6,7 +6,7 @@
 use super::algorithms::PhotoacousticAlgorithm;
 
 /// Configuration for photoacoustic reconstruction
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PhotoacousticConfig {
     /// Reconstruction algorithm to use
     pub algorithm: PhotoacousticAlgorithm,

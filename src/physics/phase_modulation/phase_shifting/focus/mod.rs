@@ -12,7 +12,7 @@ use std::f64::consts::PI;
 use crate::physics::phase_modulation::phase_shifting::core::*;
 
 /// Dynamic focusing controller
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DynamicFocusing {
     /// Array element positions
     element_positions: Array2<f64>,
@@ -50,7 +50,7 @@ impl DynamicFocusing {
             )));
         }
 
-        self.focal_points = vec![[x, y, z]];
+        self.focal_points = vec![[x, y, z];
         self.calculate_phase_distribution()?;
         Ok(())
     }
@@ -184,7 +184,7 @@ impl DynamicFocusing {
 }
 
 /// Apodization window types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ApodizationType {
     /// Uniform weighting
     Uniform,

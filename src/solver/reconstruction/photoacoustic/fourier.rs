@@ -13,7 +13,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FourierReconstructor {
     grid_size: [usize; 3],
     sound_speed: f64,
@@ -39,7 +39,7 @@ impl FourierReconstructor {
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         let (n_time, n_sensors) = sensor_data.dim();
         let [nx, ny, nz] = self.grid_size;
@@ -145,7 +145,7 @@ impl FourierReconstructor {
                     (k * sensor_pos[0] * theta.cos()).sin(),
                 );
 
-                angular_spectrum[[f_idx, angle_idx]] = complex_signal[f_idx] * projection_factor;
+                angular_spectrum[[f_idx, angle_idx] = complex_signal[f_idx] * projection_factor;
             }
         }
 
@@ -183,7 +183,7 @@ impl FourierReconstructor {
 
                 // Add contribution (with proper weighting for spherical integration)
                 let weight = theta.sin(); // Jacobian for spherical coordinates
-                k_space[[ix, iy, iz]] += angular_spectrum[[f_idx, angle_idx]] * weight;
+                k_space[[ix, iy, iz] += angular_spectrum[[f_idx, angle_idx] * weight;
             }
         }
 
@@ -211,7 +211,7 @@ impl FourierReconstructor {
                         0.0
                     };
 
-                    k_space[[ix, iy, iz]] *= window;
+                    k_space[[ix, iy, iz] *= window;
                 }
             }
         }
@@ -231,7 +231,7 @@ impl FourierReconstructor {
         for ix in 0..nx {
             for iy in 0..ny {
                 for iz in 0..nz {
-                    complex_data.push(k_space[[ix, iy, iz]]);
+                    complex_data.push(k_space[[ix, iy, iz]);
                 }
             }
         }
@@ -246,7 +246,7 @@ impl FourierReconstructor {
             let iz = idx % nz;
             let iy = (idx / nz) % ny;
             let ix = idx / (ny * nz);
-            result[[ix, iy, iz]] = val.re * norm;
+            result[[ix, iy, iz] = val.re * norm;
         }
 
         // Apply positivity constraint (pressure should be non-negative)

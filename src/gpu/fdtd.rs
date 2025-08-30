@@ -5,7 +5,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FdtdGpu {
     pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
@@ -193,7 +193,7 @@ impl FdtdGpu {
             let iz = i / (grid.nx * grid.ny);
             let iy = (i % (grid.nx * grid.ny)) / grid.nx;
             let ix = i % grid.nx;
-            result[[ix, iy, iz]] = val as f64;
+            result[[ix, iy, iz] = val as f64;
         }
 
         drop(data);

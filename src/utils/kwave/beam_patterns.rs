@@ -3,7 +3,7 @@
 //! Implements beam width and directivity calculations
 
 /// Beam pattern calculations
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct BeamPatterns;
 
 impl BeamPatterns {

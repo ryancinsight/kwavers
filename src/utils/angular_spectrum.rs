@@ -9,7 +9,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 
 /// Angular spectrum method for acoustic field calculations
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct AngularSpectrum {
     /// Grid dimensions
     pub nx: usize,
@@ -79,11 +79,11 @@ impl AngularSpectrum {
                     if kz_sq >= 0.0 {
                         let kz = kz_sq.sqrt();
                         let phase = Complex64::from_polar(1.0, kz * z_distance);
-                        spectrum[[i, j]] *= phase;
+                        spectrum[[i, j] *= phase;
                     } else {
                         // Evanescent waves decay exponentially
                         let kz = (-kz_sq).sqrt();
-                        spectrum[[i, j]] *= (-kz * z_distance).exp();
+                        spectrum[[i, j] *= (-kz * z_distance).exp();
                     }
                 }
             }
@@ -142,10 +142,10 @@ impl AngularSpectrum {
                 let kz_sq = self.k * self.k - kx * kx - ky * ky;
                 if kz_sq >= 0.0 {
                     let kz = kz_sq.sqrt();
-                    h[[i, j]] = Complex64::from_polar(1.0, kz * z_distance);
+                    h[[i, j] = Complex64::from_polar(1.0, kz * z_distance);
                 } else {
                     let kz = (-kz_sq).sqrt();
-                    h[[i, j]] = Complex64::from((-kz * z_distance).exp());
+                    h[[i, j] = Complex64::from((-kz * z_distance).exp());
                 }
             }
         }

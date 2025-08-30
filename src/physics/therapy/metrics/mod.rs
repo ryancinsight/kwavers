@@ -5,7 +5,7 @@
 use ndarray::Array3;
 
 /// Treatment outcome metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct TreatmentMetrics {
     /// Thermal dose (CEM43) [equivalent minutes]
     pub thermal_dose: f64,

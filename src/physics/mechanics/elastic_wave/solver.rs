@@ -36,42 +36,42 @@ impl ElasticWave {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let kx = self.kx[[i, 0, 0]];
-                    let ky = self.ky[[j, 0, 0]];
-                    let kz = self.kz[[k, 0, 0]];
+                    let kx = self.kx[[i, 0, 0];
+                    let ky = self.ky[[j, 0, 0];
+                    let kz = self.kz[[k, 0, 0];
 
                     // Velocity derivatives (strain rates) in frequency domain
-                    let dvx_dx = Complex::new(0.0, kx) * params.vx_fft[[i, j, k]];
-                    let dvy_dy = Complex::new(0.0, ky) * params.vy_fft[[i, j, k]];
-                    let dvz_dz = Complex::new(0.0, kz) * params.vz_fft[[i, j, k]];
+                    let dvx_dx = Complex::new(0.0, kx) * params.vx_fft[[i, j, k];
+                    let dvy_dy = Complex::new(0.0, ky) * params.vy_fft[[i, j, k];
+                    let dvz_dz = Complex::new(0.0, kz) * params.vz_fft[[i, j, k];
 
-                    let dvx_dy = Complex::new(0.0, ky) * params.vx_fft[[i, j, k]];
-                    let dvx_dz = Complex::new(0.0, kz) * params.vx_fft[[i, j, k]];
-                    let dvy_dx = Complex::new(0.0, kx) * params.vy_fft[[i, j, k]];
-                    let dvy_dz = Complex::new(0.0, kz) * params.vy_fft[[i, j, k]];
-                    let dvz_dx = Complex::new(0.0, kx) * params.vz_fft[[i, j, k]];
-                    let dvz_dy = Complex::new(0.0, ky) * params.vz_fft[[i, j, k]];
+                    let dvx_dy = Complex::new(0.0, ky) * params.vx_fft[[i, j, k];
+                    let dvx_dz = Complex::new(0.0, kz) * params.vx_fft[[i, j, k];
+                    let dvy_dx = Complex::new(0.0, kx) * params.vy_fft[[i, j, k];
+                    let dvy_dz = Complex::new(0.0, kz) * params.vy_fft[[i, j, k];
+                    let dvz_dx = Complex::new(0.0, kx) * params.vz_fft[[i, j, k];
+                    let dvz_dy = Complex::new(0.0, ky) * params.vz_fft[[i, j, k];
 
                     // Constitutive relations (Hooke's law)
-                    let lambda = params.lame_lambda[[i, j, k]];
-                    let mu = params.lame_mu[[i, j, k]];
+                    let lambda = params.lame_lambda[[i, j, k];
+                    let mu = params.lame_mu[[i, j, k];
 
                     let div_v = dvx_dx + dvy_dy + dvz_dz;
 
                     // Update normal stresses in frequency domain
-                    updated_stress.txx[[i, j, k]] = params.sxx_fft[[i, j, k]]
+                    updated_stress.txx[[i, j, k] = params.sxx_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * (lambda * div_v + 2.0 * mu * dvx_dx);
-                    updated_stress.tyy[[i, j, k]] = params.syy_fft[[i, j, k]]
+                    updated_stress.tyy[[i, j, k] = params.syy_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * (lambda * div_v + 2.0 * mu * dvy_dy);
-                    updated_stress.tzz[[i, j, k]] = params.szz_fft[[i, j, k]]
+                    updated_stress.tzz[[i, j, k] = params.szz_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * (lambda * div_v + 2.0 * mu * dvz_dz);
 
                     // Update shear stresses in frequency domain
-                    updated_stress.txy[[i, j, k]] = params.sxy_fft[[i, j, k]]
+                    updated_stress.txy[[i, j, k] = params.sxy_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * mu * (dvx_dy + dvy_dx);
-                    updated_stress.txz[[i, j, k]] = params.sxz_fft[[i, j, k]]
+                    updated_stress.txz[[i, j, k] = params.sxz_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * mu * (dvx_dz + dvz_dx);
-                    updated_stress.tyz[[i, j, k]] = params.syz_fft[[i, j, k]]
+                    updated_stress.tyz[[i, j, k] = params.syz_fft[[i, j, k]
                         + Complex::new(params.dt, 0.0) * mu * (dvy_dz + dvz_dy);
                 }
             }
@@ -96,34 +96,34 @@ impl ElasticWave {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let kx = self.kx[[i, 0, 0]];
-                    let ky = self.ky[[j, 0, 0]];
-                    let kz = self.kz[[k, 0, 0]];
+                    let kx = self.kx[[i, 0, 0];
+                    let ky = self.ky[[j, 0, 0];
+                    let kz = self.kz[[k, 0, 0];
 
-                    let rho = params.density[[i, j, k]];
+                    let rho = params.density[[i, j, k];
                     if rho <= 0.0 {
                         continue; // Skip invalid density points
                     }
 
                     // Stress divergence (force per unit volume) in frequency domain
-                    let dtxx_dx = Complex::new(0.0, kx) * params.txx_fft[[i, j, k]];
-                    let dtxy_dy = Complex::new(0.0, ky) * params.txy_fft[[i, j, k]];
-                    let dtxz_dz = Complex::new(0.0, kz) * params.txz_fft[[i, j, k]];
+                    let dtxx_dx = Complex::new(0.0, kx) * params.txx_fft[[i, j, k];
+                    let dtxy_dy = Complex::new(0.0, ky) * params.txy_fft[[i, j, k];
+                    let dtxz_dz = Complex::new(0.0, kz) * params.txz_fft[[i, j, k];
 
-                    let dtxy_dx = Complex::new(0.0, kx) * params.txy_fft[[i, j, k]];
-                    let dtyy_dy = Complex::new(0.0, ky) * params.tyy_fft[[i, j, k]];
-                    let dtyz_dz = Complex::new(0.0, kz) * params.tyz_fft[[i, j, k]];
+                    let dtxy_dx = Complex::new(0.0, kx) * params.txy_fft[[i, j, k];
+                    let dtyy_dy = Complex::new(0.0, ky) * params.tyy_fft[[i, j, k];
+                    let dtyz_dz = Complex::new(0.0, kz) * params.tyz_fft[[i, j, k];
 
-                    let dtxz_dx = Complex::new(0.0, kx) * params.txz_fft[[i, j, k]];
-                    let dtyz_dy = Complex::new(0.0, ky) * params.tyz_fft[[i, j, k]];
-                    let dtzz_dz = Complex::new(0.0, kz) * params.tzz_fft[[i, j, k]];
+                    let dtxz_dx = Complex::new(0.0, kx) * params.txz_fft[[i, j, k];
+                    let dtyz_dy = Complex::new(0.0, ky) * params.tyz_fft[[i, j, k];
+                    let dtzz_dz = Complex::new(0.0, kz) * params.tzz_fft[[i, j, k];
 
                     // Newton's second law in frequency domain
-                    updated_velocity.vx[[i, j, k]] = params.vx_fft[[i, j, k]]
+                    updated_velocity.vx[[i, j, k] = params.vx_fft[[i, j, k]
                         + Complex::new(params.dt / rho, 0.0) * (dtxx_dx + dtxy_dy + dtxz_dz);
-                    updated_velocity.vy[[i, j, k]] = params.vy_fft[[i, j, k]]
+                    updated_velocity.vy[[i, j, k] = params.vy_fft[[i, j, k]
                         + Complex::new(params.dt / rho, 0.0) * (dtxy_dx + dtyy_dy + dtyz_dz);
-                    updated_velocity.vz[[i, j, k]] = params.vz_fft[[i, j, k]]
+                    updated_velocity.vz[[i, j, k] = params.vz_fft[[i, j, k]
                         + Complex::new(params.dt / rho, 0.0) * (dtxz_dx + dtyz_dy + dtzz_dz);
                 }
             }
@@ -181,11 +181,11 @@ impl AcousticWaveModel for ElasticWave {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let rho = density[[i, j, k]];
-                    let c = sound_speed[[i, j, k]];
+                    let rho = density[[i, j, k];
+                    let c = sound_speed[[i, j, k];
                     // Assume fluid (mu = 0) for acoustic case
-                    lambda[[i, j, k]] = rho * c * c;
-                    mu[[i, j, k]] = 0.0;
+                    lambda[[i, j, k] = rho * c * c;
+                    mu[[i, j, k] = 0.0;
                 }
             }
         }

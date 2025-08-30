@@ -57,7 +57,7 @@ pub const KUZNETSOV_K_SPACE_CORRECTION_SECOND_ORDER: f64 = 0.05;
 pub const KUZNETSOV_K_SPACE_CORRECTION_FOURTH_ORDER: f64 = 0.01;
 
 /// Acoustic equation mode selector
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum AcousticEquationMode {
     /// Full Kuznetsov equation with all nonlinear and diffusive terms
     FullKuznetsov,
@@ -76,7 +76,7 @@ impl Default for AcousticEquationMode {
 }
 
 /// Configuration for Kuznetsov equation solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct KuznetsovConfig {
     /// Equation mode selector
     pub equation_mode: AcousticEquationMode,

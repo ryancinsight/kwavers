@@ -12,7 +12,7 @@ mod tests {
     use std::collections::HashMap;
 
     /// Mock physics component for testing
-    #[derive(Debug)]
+    #[derive(Debug))]
     struct MockPhysics {
         wave_speed: f64,
         frequency: f64,

@@ -42,7 +42,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// Adaptive Mesh Refinement solver
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct AMRSolver {
     /// Octree structure for spatial refinement
     octree: Octree,
@@ -104,7 +104,7 @@ impl AMRSolver {
 }
 
 /// Memory usage statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MemoryStats {
     /// Number of octree nodes
     pub nodes: usize,

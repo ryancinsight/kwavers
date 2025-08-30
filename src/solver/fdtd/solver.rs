@@ -16,7 +16,7 @@ use super::metrics::FdtdMetrics;
 use super::staggered_grid::StaggeredGrid;
 
 /// FDTD solver for acoustic wave propagation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug))]
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,
@@ -189,15 +189,15 @@ impl FdtdSolver {
                     for i in 0..nx - 1 {
                         for j in 0..ny {
                             for k in 0..nz {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i + 1, j, k]]);
+                                interpolated[[i, j, k] =
+                                    0.5 * (field[[i, j, k] + field[[i + 1, j, k]);
                             }
                         }
                     }
                     // Handle boundary
                     for j in 0..ny {
                         for k in 0..nz {
-                            interpolated[[nx - 1, j, k]] = field[[nx - 1, j, k]];
+                            interpolated[[nx - 1, j, k] = field[[nx - 1, j, k];
                         }
                     }
                 }
@@ -205,15 +205,15 @@ impl FdtdSolver {
                     for i in 0..nx {
                         for j in 0..ny - 1 {
                             for k in 0..nz {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i, j + 1, k]]);
+                                interpolated[[i, j, k] =
+                                    0.5 * (field[[i, j, k] + field[[i, j + 1, k]);
                             }
                         }
                     }
                     // Handle boundary
                     for i in 0..nx {
                         for k in 0..nz {
-                            interpolated[[i, ny - 1, k]] = field[[i, ny - 1, k]];
+                            interpolated[[i, ny - 1, k] = field[[i, ny - 1, k];
                         }
                     }
                 }
@@ -221,15 +221,15 @@ impl FdtdSolver {
                     for i in 0..nx {
                         for j in 0..ny {
                             for k in 0..nz - 1 {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i, j, k + 1]]);
+                                interpolated[[i, j, k] =
+                                    0.5 * (field[[i, j, k] + field[[i, j, k + 1]);
                             }
                         }
                     }
                     // Handle boundary
                     for i in 0..nx {
                         for j in 0..ny {
-                            interpolated[[i, j, nz - 1]] = field[[i, j, nz - 1]];
+                            interpolated[[i, j, nz - 1] = field[[i, j, nz - 1];
                         }
                     }
                 }

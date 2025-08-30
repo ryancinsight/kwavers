@@ -5,7 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::Array2;
 
 /// Beamformer for source localization
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct Beamformer {
     steering_vectors: Array2<f64>,
     frequency: f64,

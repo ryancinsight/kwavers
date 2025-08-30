@@ -36,7 +36,7 @@ impl Reconstructor for PhotoacousticReconstructor {
     fn reconstruct(
         &self,
         sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
+        sensor_positions: &[[f64; 3],
         _grid: &crate::grid::Grid,
         _config: &crate::solver::reconstruction::ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
@@ -83,7 +83,7 @@ mod tests {
     fn test_photoacoustic_reconstructor_creation() {
         let config = PhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
-            sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+            sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
             grid_size: [100, 100, 100],
             sound_speed: 1500.0,
             sampling_frequency: 10e6,
@@ -99,7 +99,7 @@ mod tests {
     fn test_universal_back_projection() {
         let config = PhotoacousticConfig {
             algorithm: PhotoacousticAlgorithm::UniversalBackProjection,
-            sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+            sensor_positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
             grid_size: [10, 10, 10],
             sound_speed: 1500.0,
             sampling_frequency: 10e6,

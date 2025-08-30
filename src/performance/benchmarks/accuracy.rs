@@ -7,8 +7,8 @@ use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Result of an accuracy benchmark
-#[derive(Debug, Clone)]
-#[derive(Debug)]
+#[derive(Debug, Clone))]
+#[derive(Debug))]
 pub struct AccuracyResult {
     pub test_name: String,
     pub max_error: f64,
@@ -45,14 +45,14 @@ pub fn benchmark_fd_convergence() -> Vec<AccuracyResult> {
         // Initialize field
         for i in 0..nx {
             let x = i as f64 * dx;
-            field[[i, 0, 0]] = (k * x).sin();
-            laplacian_analytical[[i, 0, 0]] = -k * k * (k * x).sin();
+            field[[i, 0, 0] = (k * x).sin();
+            laplacian_analytical[[i, 0, 0] = -k * k * (k * x).sin();
         }
 
         // Compute numerical Laplacian
         for i in 1..nx - 1 {
-            laplacian_numerical[[i, 0, 0]] =
-                (field[[i + 1, 0, 0]] - 2.0 * field[[i, 0, 0]] + field[[i - 1, 0, 0]]) / (dx * dx);
+            laplacian_numerical[[i, 0, 0] =
+                (field[[i + 1, 0, 0] - 2.0 * field[[i, 0, 0] + field[[i - 1, 0, 0]) / (dx * dx);
         }
 
         // Compute errors (skip boundaries)
@@ -62,7 +62,7 @@ pub fn benchmark_fd_convergence() -> Vec<AccuracyResult> {
         let count = (nx - 2) as f64;
 
         for i in 1..nx - 1 {
-            let error = (laplacian_numerical[[i, 0, 0]] - laplacian_analytical[[i, 0, 0]]).abs();
+            let error = (laplacian_numerical[[i, 0, 0] - laplacian_analytical[[i, 0, 0]).abs();
             let relative_error = error / k.powi(2);
 
             max_error = max_error.max(relative_error);
@@ -126,8 +126,8 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
         // At t=-dt: p = sin(kx)cos(-ωdt) = sin(kx)cos(ωdt)
         for i in 0..nx {
             let x = i as f64 * dx;
-            p_curr[[i, 0, 0]] = (k * x).sin();
-            p_prev[[i, 0, 0]] = (k * x).sin() * (omega * dt).cos();
+            p_curr[[i, 0, 0] = (k * x).sin();
+            p_prev[[i, 0, 0] = (k * x).sin() * (omega * dt).cos();
         }
 
         // Time stepping
@@ -138,14 +138,14 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
 
             for i in 1..nx - 1 {
                 let d2p_dx2 =
-                    p_curr[[i + 1, 0, 0]] - 2.0 * p_curr[[i, 0, 0]] + p_curr[[i - 1, 0, 0]];
-                p_next[[i, 0, 0]] =
-                    2.0 * p_curr[[i, 0, 0]] - p_prev[[i, 0, 0]] + c2_dt2_dx2 * d2p_dx2;
+                    p_curr[[i + 1, 0, 0] - 2.0 * p_curr[[i, 0, 0] + p_curr[[i - 1, 0, 0];
+                p_next[[i, 0, 0] =
+                    2.0 * p_curr[[i, 0, 0] - p_prev[[i, 0, 0] + c2_dt2_dx2 * d2p_dx2;
             }
 
             // Fixed boundaries (Dirichlet)
-            p_next[[0, 0, 0]] = 0.0;
-            p_next[[nx - 1, 0, 0]] = 0.0;
+            p_next[[0, 0, 0] = 0.0;
+            p_next[[nx - 1, 0, 0] = 0.0;
 
             p_prev = p_curr;
             p_curr = p_next;
@@ -162,7 +162,7 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
             for i in 0..5.min(nx) {
                 let x = i as f64 * dx;
                 let analytical = (k * x - omega * final_time).sin();
-                let numerical = p_curr[[i, 0, 0]];
+                let numerical = p_curr[[i, 0, 0];
                 println!(
                     "  x[{}] = {:.6}: numerical = {:.6}, analytical = {:.6}, error = {:.6}",
                     i,
@@ -178,7 +178,7 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
             let x = i as f64 * dx;
             // Standing wave: p(x,t) = sin(kx)cos(ωt)
             let analytical = (k * x).sin() * (omega * final_time).cos();
-            let numerical = p_curr[[i, 0, 0]];
+            let numerical = p_curr[[i, 0, 0];
             let error = (numerical - analytical).abs();
 
             max_error = max_error.max(error);

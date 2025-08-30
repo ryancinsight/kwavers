@@ -78,7 +78,7 @@ pub trait AdaptiveTimeStepperTrait: TimeStepper {
 }
 
 /// Configuration for multi-rate time integration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct MultiRateConfig {
     /// Maximum number of subcycles allowed
     pub max_subcycles: usize,
@@ -114,7 +114,7 @@ impl Default for MultiRateConfig {
 }
 
 /// Available time stepper types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash))]
 pub enum TimeStepperType {
     /// 4th-order Runge-Kutta
     RungeKutta4,

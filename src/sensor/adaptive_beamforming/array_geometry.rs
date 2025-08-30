@@ -1,7 +1,7 @@
 // adaptive_beamforming/array_geometry.rs - Array geometry definitions
 
 /// Element position in 3D space
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct ElementPosition {
     pub x: f64,
     pub y: f64,
@@ -9,7 +9,7 @@ pub struct ElementPosition {
 }
 
 /// Array geometry configuration
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ArrayGeometry {
     pub elements: Vec<ElementPosition>,
     pub reference_element: usize,

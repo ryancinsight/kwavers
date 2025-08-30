@@ -16,7 +16,7 @@ pub trait PolarizationModel: Debug + Send + Sync {
     );
 }
 
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct LinearPolarization {
     polarization_factor: f64, // Polarization strength (0 to 1)
 }

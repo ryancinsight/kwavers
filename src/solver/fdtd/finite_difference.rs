@@ -8,7 +8,7 @@ use ndarray::{Array3, ArrayView3};
 use std::collections::HashMap;
 
 /// Finite difference operator
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FiniteDifference {
     /// Spatial order (2, 4, or 6)
     spatial_order: usize,
@@ -81,15 +81,15 @@ impl FiniteDifference {
                         match axis {
                             0 => {
                                 val +=
-                                    coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                                    coeff * (field[[i + offset, j, k] - field[[i - offset, j, k]);
                             }
                             1 => {
                                 val +=
-                                    coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                                    coeff * (field[[i, j + offset, k] - field[[i, j - offset, k]);
                             }
                             2 => {
                                 val +=
-                                    coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                                    coeff * (field[[i, j, k + offset] - field[[i, j, k - offset]);
                             }
                             _ => {
                                 return Err(crate::KwaversError::Config(
@@ -103,7 +103,7 @@ impl FiniteDifference {
                         }
                     }
 
-                    deriv[[i, j, k]] = val / spacing;
+                    deriv[[i, j, k] = val / spacing;
                 }
             }
         }
@@ -134,18 +134,18 @@ impl FiniteDifference {
                 // Left boundary (i = 0)
                 for j in 0..ny {
                     for k in 0..nz {
-                        deriv[[0, j, k]] = (forward_coeffs[0] * field[[0, j, k]]
-                            + forward_coeffs[1] * field[[1, j, k]]
-                            + forward_coeffs[2] * field[[2, j, k]])
+                        deriv[[0, j, k] = (forward_coeffs[0] * field[[0, j, k]
+                            + forward_coeffs[1] * field[[1, j, k]
+                            + forward_coeffs[2] * field[[2, j, k])
                             / spacing;
                     }
                 }
                 // Right boundary (i = nx-1)
                 for j in 0..ny {
                     for k in 0..nz {
-                        deriv[[nx - 1, j, k]] = (backward_coeffs[0] * field[[nx - 3, j, k]]
-                            + backward_coeffs[1] * field[[nx - 2, j, k]]
-                            + backward_coeffs[2] * field[[nx - 1, j, k]])
+                        deriv[[nx - 1, j, k] = (backward_coeffs[0] * field[[nx - 3, j, k]
+                            + backward_coeffs[1] * field[[nx - 2, j, k]
+                            + backward_coeffs[2] * field[[nx - 1, j, k])
                             / spacing;
                     }
                 }
@@ -154,18 +154,18 @@ impl FiniteDifference {
                 // Bottom boundary (j = 0)
                 for i in 0..nx {
                     for k in 0..nz {
-                        deriv[[i, 0, k]] = (forward_coeffs[0] * field[[i, 0, k]]
-                            + forward_coeffs[1] * field[[i, 1, k]]
-                            + forward_coeffs[2] * field[[i, 2, k]])
+                        deriv[[i, 0, k] = (forward_coeffs[0] * field[[i, 0, k]
+                            + forward_coeffs[1] * field[[i, 1, k]
+                            + forward_coeffs[2] * field[[i, 2, k])
                             / spacing;
                     }
                 }
                 // Top boundary (j = ny-1)
                 for i in 0..nx {
                     for k in 0..nz {
-                        deriv[[i, ny - 1, k]] = (backward_coeffs[0] * field[[i, ny - 3, k]]
-                            + backward_coeffs[1] * field[[i, ny - 2, k]]
-                            + backward_coeffs[2] * field[[i, ny - 1, k]])
+                        deriv[[i, ny - 1, k] = (backward_coeffs[0] * field[[i, ny - 3, k]
+                            + backward_coeffs[1] * field[[i, ny - 2, k]
+                            + backward_coeffs[2] * field[[i, ny - 1, k])
                             / spacing;
                     }
                 }
@@ -174,18 +174,18 @@ impl FiniteDifference {
                 // Front boundary (k = 0)
                 for i in 0..nx {
                     for j in 0..ny {
-                        deriv[[i, j, 0]] = (forward_coeffs[0] * field[[i, j, 0]]
-                            + forward_coeffs[1] * field[[i, j, 1]]
-                            + forward_coeffs[2] * field[[i, j, 2]])
+                        deriv[[i, j, 0] = (forward_coeffs[0] * field[[i, j, 0]
+                            + forward_coeffs[1] * field[[i, j, 1]
+                            + forward_coeffs[2] * field[[i, j, 2])
                             / spacing;
                     }
                 }
                 // Back boundary (k = nz-1)
                 for i in 0..nx {
                     for j in 0..ny {
-                        deriv[[i, j, nz - 1]] = (backward_coeffs[0] * field[[i, j, nz - 3]]
-                            + backward_coeffs[1] * field[[i, j, nz - 2]]
-                            + backward_coeffs[2] * field[[i, j, nz - 1]])
+                        deriv[[i, j, nz - 1] = (backward_coeffs[0] * field[[i, j, nz - 3]
+                            + backward_coeffs[1] * field[[i, j, nz - 2]
+                            + backward_coeffs[2] * field[[i, j, nz - 1])
                             / spacing;
                     }
                 }
@@ -265,7 +265,7 @@ mod tests {
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
-                    field[[i, j, k]] = i as f64; // Linear in x
+                    field[[i, j, k] = i as f64; // Linear in x
                 }
             }
         }
@@ -277,9 +277,9 @@ mod tests {
             for j in 1..9 {
                 for k in 1..9 {
                     assert!(
-                        (deriv[[i, j, k]] - 1.0).abs() < 1e-10,
+                        (deriv[[i, j, k] - 1.0).abs() < 1e-10,
                         "Expected derivative 1.0, got {}",
-                        deriv[[i, j, k]]
+                        deriv[[i, j, k]
                     );
                 }
             }

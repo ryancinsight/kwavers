@@ -4,7 +4,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 
 /// Field analyzer for adaptive selection
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FieldAnalyzer {
     grid: Grid,
 }
@@ -24,12 +24,12 @@ impl FieldAnalyzer {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let center = field[[i, j, k]];
+                    let center = field[[i, j, k];
 
                     // Total variation in all directions
-                    total_variation += (field[[i + 1, j, k]] - center).abs();
-                    total_variation += (field[[i, j + 1, k]] - center).abs();
-                    total_variation += (field[[i, j, k + 1]] - center).abs();
+                    total_variation += (field[[i + 1, j, k] - center).abs();
+                    total_variation += (field[[i, j + 1, k] - center).abs();
+                    total_variation += (field[[i, j, k + 1] - center).abs();
                     count += 3;
                 }
             }
@@ -50,23 +50,23 @@ impl FieldAnalyzer {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let center = field[[i, j, k]];
+                    let center = field[[i, j, k];
 
                     // Check for large jumps
                     let max_jump = [
-                        (field[[i + 1, j, k]] - center).abs(),
-                        (field[[i - 1, j, k]] - center).abs(),
-                        (field[[i, j + 1, k]] - center).abs(),
-                        (field[[i, j - 1, k]] - center).abs(),
-                        (field[[i, j, k + 1]] - center).abs(),
-                        (field[[i, j, k - 1]] - center).abs(),
+                        (field[[i + 1, j, k] - center).abs(),
+                        (field[[i - 1, j, k] - center).abs(),
+                        (field[[i, j + 1, k] - center).abs(),
+                        (field[[i, j - 1, k] - center).abs(),
+                        (field[[i, j, k + 1] - center).abs(),
+                        (field[[i, j, k - 1] - center).abs(),
                     ]
                     .iter()
                     .cloned()
                     .fold(0.0, f64::max);
 
                     if max_jump > threshold * center.abs() {
-                        discontinuities[[i, j, k]] = true;
+                        discontinuities[[i, j, k] = true;
                     }
                 }
             }

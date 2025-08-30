@@ -14,7 +14,7 @@ pub const SPEED_OF_LIGHT: f64 = 2.99792458e8; // m/s
 pub const BOLTZMANN_CONSTANT: f64 = 1.380649e-23; // J/K
 
 /// Bremsstrahlung radiation model
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct BremsstrahlungModel {
     /// Average ion charge number
     pub z_ion: f64,
@@ -200,8 +200,8 @@ pub fn calculate_bremsstrahlung_emission(
     let mut emission_field = Array3::zeros(temperature_field.dim());
 
     for ((i, j, k), &temp) in temperature_field.indexed_iter() {
-        let pressure = pressure_field[[i, j, k]];
-        let radius = bubble_radius_field[[i, j, k]];
+        let pressure = pressure_field[[i, j, k];
+        let radius = bubble_radius_field[[i, j, k];
 
         if radius > 0.0 && temp > 5000.0 {
             // Only significant at high temperatures
@@ -220,7 +220,7 @@ pub fn calculate_bremsstrahlung_emission(
             let power = model.total_power(temp, n_electron, n_ion, volume);
 
             // Power density
-            emission_field[[i, j, k]] = power / volume.max(1e-20);
+            emission_field[[i, j, k] = power / volume.max(1e-20);
         }
     }
 

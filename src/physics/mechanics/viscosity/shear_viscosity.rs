@@ -2,7 +2,7 @@
 use crate::physics::mechanics::viscosity::ViscosityModel;
 use log::debug;
 
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ShearViscosityModel {
     base_viscosity: f64,   // Base viscosity at reference temperature (Pa·s)
     ref_temperature: f64,  // Reference temperature (K)

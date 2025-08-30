@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Types of IMEX-RK schemes
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum IMEXRKType {
     /// IMEX-SSP2(2,2,2) - 2nd order SSP scheme
     SSP2_222,
@@ -19,7 +19,7 @@ pub enum IMEXRKType {
 }
 
 /// Configuration for IMEX-RK schemes
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct IMEXRKConfig {
     /// Type of IMEX-RK scheme
     pub scheme_type: IMEXRKType,
@@ -37,7 +37,7 @@ impl Default for IMEXRKConfig {
 }
 
 /// IMEX Runge-Kutta scheme
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct IMEXRK {
     config: IMEXRKConfig,
     /// Explicit RK coefficients (a_ij)
@@ -88,11 +88,11 @@ impl IMEXRK {
         usize,
     ) {
         // Explicit tableau
-        let a_explicit = vec![vec![0.0, 0.0], vec![1.0, 0.0]];
+        let a_explicit = vec![vec![0.0, 0.0], vec![1.0, 0.0];
 
         // Implicit tableau (L-stable)
         let gamma = 1.0 - 1.0 / 2.0_f64.sqrt();
-        let a_implicit = vec![vec![gamma, 0.0], vec![1.0 - 2.0 * gamma, gamma]];
+        let a_implicit = vec![vec![gamma, 0.0], vec![1.0 - 2.0 * gamma, gamma];
 
         let b = vec![0.5, 0.5];
         let c = vec![gamma, 1.0 - gamma];

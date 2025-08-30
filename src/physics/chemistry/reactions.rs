@@ -4,7 +4,7 @@
 //! following SOLID principles with clear separation of concerns.
 
 /// Represents a chemical reaction with its kinetic parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ChemicalReaction {
     pub name: String,
     pub rate_constant: f64,
@@ -18,20 +18,20 @@ impl ChemicalReaction {
 }
 
 /// Reaction rate value
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ReactionRate {
     pub value: f64,
 }
 
 /// Chemical species with concentration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct Species {
     pub name: String,
     pub concentration: f64,
 }
 
 /// Type of chemical reaction
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq))]
 pub enum ReactionType {
     Dissociation,
     Recombination,
@@ -41,7 +41,7 @@ pub enum ReactionType {
 }
 
 /// Temperature dependence model for reactions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum TemperatureDependence {
     Arrhenius {
         activation_energy: f64,
@@ -54,7 +54,7 @@ pub enum TemperatureDependence {
 }
 
 /// Pressure dependence model for reactions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum PressureDependence {
     Linear { coefficient: f64 },
     Logarithmic { coefficient: f64 },
@@ -62,7 +62,7 @@ pub enum PressureDependence {
 }
 
 /// Light dependence model for photochemical reactions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub enum LightDependence {
     Linear { quantum_yield: f64 },
     Saturable { max_rate: f64, half_saturation: f64 },
@@ -70,7 +70,7 @@ pub enum LightDependence {
 }
 
 /// Configuration for chemical reactions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ChemicalReactionConfig {
     pub reaction_type: ReactionType,
     pub temperature_dependence: TemperatureDependence,

@@ -24,7 +24,7 @@ pub trait ExecutionStrategy: Send + Sync {
 }
 
 /// Sequential execution strategy
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct SequentialStrategy;
 
 impl ExecutionStrategy for SequentialStrategy {
@@ -46,7 +46,7 @@ impl ExecutionStrategy for SequentialStrategy {
 }
 
 /// Plugin executor that manages plugin execution
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PluginExecutor {
     strategy: Box<dyn ExecutionStrategy>,
 }
@@ -96,7 +96,7 @@ impl PluginExecutor {
 ///
 /// Note: This currently executes sequentially due to mutable field access constraints.
 /// True parallelism would require architectural changes (read/write phase separation).
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct ParallelStrategy {
     thread_pool: Option<rayon::ThreadPool>,
 }

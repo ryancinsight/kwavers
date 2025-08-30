@@ -5,7 +5,7 @@ use crate::grid::Grid;
 use ndarray::ArrayView3;
 
 /// Field analysis metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FieldMetrics {
     /// Peak pressure location [x, y, z] (m)
     pub peak_location: [f64; 3],
@@ -60,7 +60,7 @@ pub fn calculate_field_metrics(
     for ix in 0..grid.nx {
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
-                let p = pressure_field[[ix, iy, iz]];
+                let p = pressure_field[[ix, iy, iz];
                 let intensity = p.powi(2) / (2.0 * impedance);
                 total_power += intensity * grid.dx * grid.dy * grid.dz;
                 max_intensity = f64::max(max_intensity, intensity);
@@ -90,7 +90,7 @@ pub fn find_peak_pressure(
     for ix in 0..grid.nx {
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
-                let p = pressure_field[[ix, iy, iz]].abs();
+                let p = pressure_field[[ix, iy, iz].abs();
                 if p > max_pressure {
                     max_pressure = p;
                     max_location = [ix, iy, iz];
@@ -128,11 +128,11 @@ fn calculate_beam_width_at_location(
     let mut left = ix;
     let mut right = ix;
 
-    while left > 0 && pressure_field[[left, iy, iz]].abs() > threshold {
+    while left > 0 && pressure_field[[left, iy, iz].abs() > threshold {
         left -= 1;
     }
 
-    while right < grid.nx - 1 && pressure_field[[right, iy, iz]].abs() > threshold {
+    while right < grid.nx - 1 && pressure_field[[right, iy, iz].abs() > threshold {
         right += 1;
     }
 
@@ -142,11 +142,11 @@ fn calculate_beam_width_at_location(
     let mut bottom = iy;
     let mut top = iy;
 
-    while bottom > 0 && pressure_field[[ix, bottom, iz]].abs() > threshold {
+    while bottom > 0 && pressure_field[[ix, bottom, iz].abs() > threshold {
         bottom -= 1;
     }
 
-    while top < grid.ny - 1 && pressure_field[[ix, top, iz]].abs() > threshold {
+    while top < grid.ny - 1 && pressure_field[[ix, top, iz].abs() > threshold {
         top += 1;
     }
 

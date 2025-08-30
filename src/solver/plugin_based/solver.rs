@@ -19,7 +19,7 @@ use super::field_registry::FieldRegistry;
 use super::performance::PerformanceMonitor;
 
 /// Plugin-based solver for acoustic simulations
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct PluginBasedSolver {
     /// Simulation grid
     grid: Grid,

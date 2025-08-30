@@ -23,7 +23,7 @@ use ndarray::{Array1, Array2, Array3};
 use std::sync::Arc;
 
 /// Configuration for DG solver
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct DGConfig {
     /// Polynomial order (N means polynomials up to degree N)
     pub polynomial_order: usize,
@@ -50,7 +50,7 @@ impl Default for DGConfig {
 }
 
 /// DG solver for hyperbolic conservation laws
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DGSolver {
     /// Configuration
     config: DGConfig,

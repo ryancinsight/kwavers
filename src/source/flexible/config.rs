@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Configuration for flexible transducer arrays
-#[derive(Debug, Clone, Deserialize, Serialize]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FlexibleTransducerConfig {
     /// Number of elements in the array
     pub num_elements: usize,
@@ -37,7 +37,7 @@ impl Default for FlexibleTransducerConfig {
                 thickness: 0.5e-3, // 0.5 mm
             },
             calibration_method: CalibrationMethod::SelfCalibration {
-                reference_reflectors: vec![[0.0, 0.0, 50e-3]],
+                reference_reflectors: vec![[0.0, 0.0, 50e-3],
                 calibration_interval: 1.0, // 1 second
             },
             tracking_frequency: 100.0, // 100 Hz
@@ -46,7 +46,7 @@ impl Default for FlexibleTransducerConfig {
 }
 
 /// Flexibility models for different transducer types
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize))]
 pub enum FlexibilityModel {
     /// Rigid array (no deformation)
     Rigid,
@@ -64,7 +64,7 @@ pub enum FlexibilityModel {
 }
 
 /// Calibration methods for geometry estimation
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize))]
 pub enum CalibrationMethod {
     /// Self-calibration using known reflectors
     SelfCalibration {
@@ -89,7 +89,7 @@ pub enum CalibrationMethod {
 }
 
 /// External tracking system types
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize))]
 pub enum TrackingSystem {
     /// Optical tracking (e.g., OptiTrack, Vicon)
     Optical {

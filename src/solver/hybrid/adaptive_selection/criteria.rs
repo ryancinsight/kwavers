@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Criteria for adaptive method selection
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SelectionCriteria {
     /// Weight for field smoothness in selection
     pub smoothness_weight: f64,

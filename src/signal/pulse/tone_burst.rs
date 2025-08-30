@@ -8,7 +8,7 @@ use super::MAX_TONE_BURST_CYCLES;
 /// Tone burst signal - windowed sinusoid with specific number of cycles
 ///
 /// Common in ultrasound applications for controlled excitation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ToneBurst {
     center_frequency: f64,
     num_cycles: f64,
@@ -18,7 +18,7 @@ pub struct ToneBurst {
     window_type: WindowType,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum WindowType {
     Rectangular,
     Hann,

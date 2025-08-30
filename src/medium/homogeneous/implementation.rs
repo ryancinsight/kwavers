@@ -14,7 +14,7 @@ use ndarray::Array3;
 use std::fmt::Debug;
 
 /// Medium with uniform properties throughout the spatial domain
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct HomogeneousMedium {
     density: f64,
     sound_speed: f64,

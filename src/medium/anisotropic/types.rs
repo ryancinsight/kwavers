@@ -1,7 +1,7 @@
 //! Core types for anisotropic materials
 
 /// Anisotropic material types
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum AnisotropyType {
     /// Isotropic (no directional dependence)
     Isotropic,

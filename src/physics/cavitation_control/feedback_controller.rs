@@ -38,7 +38,7 @@ const CONTROL_DEAD_ZONE: f64 = 0.02;
 const SAFETY_SHUTDOWN_THRESHOLD: f64 = 0.95;
 
 /// Control strategies for feedback
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ControlStrategy {
     AmplitudeOnly, // Control only amplitude
     DutyCycleOnly, // Control only duty cycle
@@ -48,7 +48,7 @@ pub enum ControlStrategy {
 }
 
 /// Feedback configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct FeedbackConfig {
     pub strategy: ControlStrategy,
     pub target_intensity: f64,
@@ -76,7 +76,7 @@ impl Default for FeedbackConfig {
 }
 
 /// Control output from feedback system
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ControlOutput {
     pub amplitude: f64,
     pub duty_cycle: f64,
@@ -90,7 +90,7 @@ pub struct ControlOutput {
 pub use crate::physics::cavitation_control::cavitation_detector::CavitationMetrics;
 
 /// Main feedback controller
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FeedbackController {
     config: FeedbackConfig,
     pid_controller: PIDController,

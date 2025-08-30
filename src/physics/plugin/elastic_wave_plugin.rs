@@ -15,7 +15,7 @@ use crate::source::Source;
 use ndarray::{Array3, Array4};
 
 /// Elastic wave physics plugin
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ElasticWavePlugin {
     /// Plugin metadata
     metadata: PluginMetadata,
@@ -73,9 +73,9 @@ impl ElasticWavePlugin {
 
                     // Get proper elastic properties from medium
                     // The medium provides exact Lamé parameters for the material
-                    lame_lambda[[i, j, k]] = medium.lame_lambda(x, y, z, grid);
-                    lame_mu[[i, j, k]] = medium.lame_mu(x, y, z, grid);
-                    density[[i, j, k]] = medium.density(x, y, z, grid);
+                    lame_lambda[[i, j, k] = medium.lame_lambda(x, y, z, grid);
+                    lame_mu[[i, j, k] = medium.lame_mu(x, y, z, grid);
+                    density[[i, j, k] = medium.density(x, y, z, grid);
                 }
             }
         }
@@ -105,55 +105,55 @@ impl ElasticWavePlugin {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let rho = self.density[[i, j, k]];
+                    let rho = self.density[[i, j, k];
                     if rho <= 0.0 {
                         continue;
                     }
 
                     // Compute stress divergence (force per unit volume)
-                    let fx = (self.stress_fields.txx[[i + 1, j, k]]
-                        - self.stress_fields.txx[[i - 1, j, k]])
+                    let fx = (self.stress_fields.txx[[i + 1, j, k]
+                        - self.stress_fields.txx[[i - 1, j, k])
                         * dx_inv
                         * 0.5
-                        + (self.stress_fields.txy[[i, j + 1, k]]
-                            - self.stress_fields.txy[[i, j - 1, k]])
+                        + (self.stress_fields.txy[[i, j + 1, k]
+                            - self.stress_fields.txy[[i, j - 1, k])
                             * dy_inv
                             * 0.5
-                        + (self.stress_fields.txz[[i, j, k + 1]]
-                            - self.stress_fields.txz[[i, j, k - 1]])
+                        + (self.stress_fields.txz[[i, j, k + 1]
+                            - self.stress_fields.txz[[i, j, k - 1])
                             * dz_inv
                             * 0.5;
 
-                    let fy = (self.stress_fields.txy[[i + 1, j, k]]
-                        - self.stress_fields.txy[[i - 1, j, k]])
+                    let fy = (self.stress_fields.txy[[i + 1, j, k]
+                        - self.stress_fields.txy[[i - 1, j, k])
                         * dx_inv
                         * 0.5
-                        + (self.stress_fields.tyy[[i, j + 1, k]]
-                            - self.stress_fields.tyy[[i, j - 1, k]])
+                        + (self.stress_fields.tyy[[i, j + 1, k]
+                            - self.stress_fields.tyy[[i, j - 1, k])
                             * dy_inv
                             * 0.5
-                        + (self.stress_fields.tyz[[i, j, k + 1]]
-                            - self.stress_fields.tyz[[i, j, k - 1]])
+                        + (self.stress_fields.tyz[[i, j, k + 1]
+                            - self.stress_fields.tyz[[i, j, k - 1])
                             * dz_inv
                             * 0.5;
 
-                    let fz = (self.stress_fields.txz[[i + 1, j, k]]
-                        - self.stress_fields.txz[[i - 1, j, k]])
+                    let fz = (self.stress_fields.txz[[i + 1, j, k]
+                        - self.stress_fields.txz[[i - 1, j, k])
                         * dx_inv
                         * 0.5
-                        + (self.stress_fields.tyz[[i, j + 1, k]]
-                            - self.stress_fields.tyz[[i, j - 1, k]])
+                        + (self.stress_fields.tyz[[i, j + 1, k]
+                            - self.stress_fields.tyz[[i, j - 1, k])
                             * dy_inv
                             * 0.5
-                        + (self.stress_fields.tzz[[i, j, k + 1]]
-                            - self.stress_fields.tzz[[i, j, k - 1]])
+                        + (self.stress_fields.tzz[[i, j, k + 1]
+                            - self.stress_fields.tzz[[i, j, k - 1])
                             * dz_inv
                             * 0.5;
 
                     // Update velocities (Newton's second law)
-                    self.velocity_fields.vx[[i, j, k]] += self.dt * fx / rho;
-                    self.velocity_fields.vy[[i, j, k]] += self.dt * fy / rho;
-                    self.velocity_fields.vz[[i, j, k]] += self.dt * fz / rho;
+                    self.velocity_fields.vx[[i, j, k] += self.dt * fx / rho;
+                    self.velocity_fields.vy[[i, j, k] += self.dt * fy / rho;
+                    self.velocity_fields.vz[[i, j, k] += self.dt * fz / rho;
                 }
             }
         }
@@ -166,45 +166,45 @@ impl ElasticWavePlugin {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let lambda = self.lame_lambda[[i, j, k]];
-                    let mu = self.lame_mu[[i, j, k]];
+                    let lambda = self.lame_lambda[[i, j, k];
+                    let mu = self.lame_mu[[i, j, k];
 
                     // Compute velocity gradients (strain rates)
-                    let dvx_dx = (self.velocity_fields.vx[[i + 1, j, k]]
-                        - self.velocity_fields.vx[[i - 1, j, k]])
+                    let dvx_dx = (self.velocity_fields.vx[[i + 1, j, k]
+                        - self.velocity_fields.vx[[i - 1, j, k])
                         * dx_inv
                         * 0.5;
-                    let dvy_dy = (self.velocity_fields.vy[[i, j + 1, k]]
-                        - self.velocity_fields.vy[[i, j - 1, k]])
+                    let dvy_dy = (self.velocity_fields.vy[[i, j + 1, k]
+                        - self.velocity_fields.vy[[i, j - 1, k])
                         * dy_inv
                         * 0.5;
-                    let dvz_dz = (self.velocity_fields.vz[[i, j, k + 1]]
-                        - self.velocity_fields.vz[[i, j, k - 1]])
+                    let dvz_dz = (self.velocity_fields.vz[[i, j, k + 1]
+                        - self.velocity_fields.vz[[i, j, k - 1])
                         * dz_inv
                         * 0.5;
 
-                    let dvx_dy = (self.velocity_fields.vx[[i, j + 1, k]]
-                        - self.velocity_fields.vx[[i, j - 1, k]])
+                    let dvx_dy = (self.velocity_fields.vx[[i, j + 1, k]
+                        - self.velocity_fields.vx[[i, j - 1, k])
                         * dy_inv
                         * 0.5;
-                    let dvx_dz = (self.velocity_fields.vx[[i, j, k + 1]]
-                        - self.velocity_fields.vx[[i, j, k - 1]])
+                    let dvx_dz = (self.velocity_fields.vx[[i, j, k + 1]
+                        - self.velocity_fields.vx[[i, j, k - 1])
                         * dz_inv
                         * 0.5;
-                    let dvy_dx = (self.velocity_fields.vy[[i + 1, j, k]]
-                        - self.velocity_fields.vy[[i - 1, j, k]])
+                    let dvy_dx = (self.velocity_fields.vy[[i + 1, j, k]
+                        - self.velocity_fields.vy[[i - 1, j, k])
                         * dx_inv
                         * 0.5;
-                    let dvy_dz = (self.velocity_fields.vy[[i, j, k + 1]]
-                        - self.velocity_fields.vy[[i, j, k - 1]])
+                    let dvy_dz = (self.velocity_fields.vy[[i, j, k + 1]
+                        - self.velocity_fields.vy[[i, j, k - 1])
                         * dz_inv
                         * 0.5;
-                    let dvz_dx = (self.velocity_fields.vz[[i + 1, j, k]]
-                        - self.velocity_fields.vz[[i - 1, j, k]])
+                    let dvz_dx = (self.velocity_fields.vz[[i + 1, j, k]
+                        - self.velocity_fields.vz[[i - 1, j, k])
                         * dx_inv
                         * 0.5;
-                    let dvz_dy = (self.velocity_fields.vz[[i, j + 1, k]]
-                        - self.velocity_fields.vz[[i, j - 1, k]])
+                    let dvz_dy = (self.velocity_fields.vz[[i, j + 1, k]
+                        - self.velocity_fields.vz[[i, j - 1, k])
                         * dy_inv
                         * 0.5;
 
@@ -212,17 +212,17 @@ impl ElasticWavePlugin {
                     let div_v = dvx_dx + dvy_dy + dvz_dz;
 
                     // Update normal stresses (Hooke's law)
-                    self.stress_fields.txx[[i, j, k]] +=
+                    self.stress_fields.txx[[i, j, k] +=
                         self.dt * (lambda * div_v + 2.0 * mu * dvx_dx);
-                    self.stress_fields.tyy[[i, j, k]] +=
+                    self.stress_fields.tyy[[i, j, k] +=
                         self.dt * (lambda * div_v + 2.0 * mu * dvy_dy);
-                    self.stress_fields.tzz[[i, j, k]] +=
+                    self.stress_fields.tzz[[i, j, k] +=
                         self.dt * (lambda * div_v + 2.0 * mu * dvz_dz);
 
                     // Update shear stresses
-                    self.stress_fields.txy[[i, j, k]] += self.dt * mu * (dvx_dy + dvy_dx);
-                    self.stress_fields.txz[[i, j, k]] += self.dt * mu * (dvx_dz + dvz_dx);
-                    self.stress_fields.tyz[[i, j, k]] += self.dt * mu * (dvy_dz + dvz_dy);
+                    self.stress_fields.txy[[i, j, k] += self.dt * mu * (dvx_dy + dvy_dx);
+                    self.stress_fields.txz[[i, j, k] += self.dt * mu * (dvx_dz + dvz_dx);
+                    self.stress_fields.tyz[[i, j, k] += self.dt * mu * (dvy_dz + dvz_dy);
                 }
             }
         }
@@ -240,9 +240,9 @@ impl ElasticWavePlugin {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    pressure[[i, j, k]] = -(self.stress_fields.txx[[i, j, k]]
-                        + self.stress_fields.tyy[[i, j, k]]
-                        + self.stress_fields.tzz[[i, j, k]])
+                    pressure[[i, j, k] = -(self.stress_fields.txx[[i, j, k]
+                        + self.stress_fields.tyy[[i, j, k]
+                        + self.stress_fields.tzz[[i, j, k])
                         / 3.0;
                 }
             }

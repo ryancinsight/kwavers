@@ -13,7 +13,7 @@ impl Clone for Box<dyn Phase> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ConstantPhase {
     phase: f64,
 }
@@ -33,7 +33,7 @@ impl Phase for ConstantPhase {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct RandomPhase {
     amplitude: f64,
 }
@@ -55,7 +55,7 @@ impl Phase for RandomPhase {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LinearPhaseShift {
     initial_phase: f64,
     rate: f64,

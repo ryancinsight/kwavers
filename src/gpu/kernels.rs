@@ -1,7 +1,7 @@
 //! GPU compute kernels
 
 /// Collection of GPU compute kernels
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct Kernels;
 
 impl Kernels {

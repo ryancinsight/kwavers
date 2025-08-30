@@ -18,7 +18,7 @@ pub use properties::{ThermalProperties, TissueProperties};
 pub use source::{HeatSource, ThermalSource};
 
 /// Thermal configuration
-#[derive(Debug, Clone, Serialize, Deserialize]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalConfig {
     /// Enable Pennes bioheat equation
     pub use_bioheat: bool,
@@ -60,7 +60,7 @@ impl Default for ThermalConfig {
 }
 
 /// Thermal field state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ThermalState {
     pub temperature: Array3<f64>,
     pub heat_flux: (Array3<f64>, Array3<f64>, Array3<f64>),

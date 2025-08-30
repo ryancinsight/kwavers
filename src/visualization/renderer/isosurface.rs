@@ -4,7 +4,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Isosurface extractor using marching cubes algorithm
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct IsosurfaceExtractor {
     edge_table: Vec<i32>,
     tri_table: Vec<Vec<i32>>,
@@ -30,14 +30,14 @@ impl IsosurfaceExtractor {
                 for k in 0..nz - 1 {
                     // Sample cube corners
                     let cube = [
-                        field[[i, j, k]],
-                        field[[i + 1, j, k]],
-                        field[[i + 1, j + 1, k]],
-                        field[[i, j + 1, k]],
-                        field[[i, j, k + 1]],
-                        field[[i + 1, j, k + 1]],
-                        field[[i + 1, j + 1, k + 1]],
-                        field[[i, j + 1, k + 1]],
+                        field[[i, j, k],
+                        field[[i + 1, j, k],
+                        field[[i + 1, j + 1, k],
+                        field[[i, j + 1, k],
+                        field[[i, j, k + 1],
+                        field[[i + 1, j, k + 1],
+                        field[[i + 1, j + 1, k + 1],
+                        field[[i, j + 1, k + 1],
                     ];
 
                     // Determine cube configuration
@@ -82,7 +82,7 @@ impl IsosurfaceExtractor {
 
         // For now, just add a simple triangle at the center
         if cube_index > 0 && cube_index < 255 {
-            vertices.push([offset[0] + 0.5, offset[1] + 0.5, offset[2]]);
+            vertices.push([offset[0] + 0.5, offset[1] + 0.5, offset[2]);
             vertices.push([offset[0] + 1.0, offset[1] + 0.5, offset[2] + 0.5]);
             vertices.push([offset[0] + 0.5, offset[1] + 1.0, offset[2] + 0.5]);
         }

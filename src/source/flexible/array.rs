@@ -15,7 +15,7 @@ use super::config::{CalibrationMethod, FlexibilityModel, FlexibleTransducerConfi
 use super::geometry::{DeformationState, GeometryState};
 
 /// Flexible transducer array with real-time geometry tracking
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct FlexibleTransducerArray {
     /// Configuration
     config: FlexibleTransducerConfig,
@@ -139,12 +139,12 @@ impl FlexibleTransducerArray {
             // Normalize
             let mag = (normal[0].powi(2) + normal[1].powi(2) + normal[2].powi(2)).sqrt();
             if mag > 0.0 {
-                normals[[i, 0]] = normal[0] / mag;
-                normals[[i, 1]] = normal[1] / mag;
-                normals[[i, 2]] = normal[2] / mag;
+                normals[[i, 0] = normal[0] / mag;
+                normals[[i, 1] = normal[1] / mag;
+                normals[[i, 2] = normal[2] / mag;
             } else {
                 // Default to z-direction if undefined
-                normals[[i, 2]] = 1.0;
+                normals[[i, 2] = 1.0;
             }
         }
 
@@ -263,7 +263,7 @@ impl Source for FlexibleTransducerArray {
 
             // Check bounds and set mask
             if i < grid.nx && j < grid.ny && k < grid.nz {
-                mask[[i, j, k]] = 1.0;
+                mask[[i, j, k] = 1.0;
             }
         }
 

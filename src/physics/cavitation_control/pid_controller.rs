@@ -33,7 +33,7 @@ const DEFAULT_OUTPUT_MAX: f64 = 1.0;
 const DERIVATIVE_WINDOW_SIZE: usize = 5;
 
 /// PID controller gains
-#[derive(Debug, Clone, Copy]
+#[derive(Debug, Clone, Copy)]
 pub struct PIDGains {
     pub kp: f64, // Proportional gain
     pub ki: f64, // Integral gain
@@ -51,7 +51,7 @@ impl Default for PIDGains {
 }
 
 /// PID controller configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct PIDConfig {
     pub gains: PIDGains,
     pub sample_time: f64,
@@ -77,7 +77,7 @@ impl Default for PIDConfig {
 }
 
 /// Error integral state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ErrorIntegral {
     value: f64,
     limit: f64,
@@ -100,7 +100,7 @@ impl ErrorIntegral {
 }
 
 /// Controller output with diagnostics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct ControllerOutput {
     pub control_signal: f64,
     pub proportional_term: f64,
@@ -111,7 +111,7 @@ pub struct ControllerOutput {
 }
 
 /// PID Controller with anti-windup and derivative filtering
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct PIDController {
     config: PIDConfig,
     integral: ErrorIntegral,
@@ -237,7 +237,7 @@ impl PIDController {
 
 /// Discrete-time PID controller using Tustin's method
 /// Better for digital implementation
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct DiscretePIDController {
     gains: PIDGains,
     sample_time: f64,

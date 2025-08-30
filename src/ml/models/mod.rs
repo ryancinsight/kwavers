@@ -20,7 +20,7 @@ pub use tissue_classifier::TissueClassifierModel;
 pub use crate::ml::types::{MLModel, ModelMetadata};
 
 /// Model type enumeration
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum ModelType {
     TissueClassifier,
     ParameterOptimizer,

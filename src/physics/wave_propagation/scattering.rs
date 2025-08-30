@@ -42,7 +42,7 @@ const RAYLEIGH_GANS_ANGULAR_COEFFICIENT: f64 = 3.0 / (16.0 * PI);
 const ISOTROPIC_PHASE_NORMALIZATION: f64 = 1.0 / (4.0 * PI);
 
 /// Scattering regime based on size parameter
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum ScatteringRegime {
     /// Rayleigh scattering (ka << 1)
     Rayleigh,
@@ -53,7 +53,7 @@ pub enum ScatteringRegime {
 }
 
 /// Unified scattering calculator
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct ScatteringCalculator {
     /// Wave frequency [Hz]
     frequency: f64,
@@ -211,7 +211,7 @@ impl ScatteringCalculator {
 }
 
 /// Volume scattering in inhomogeneous media
-#[derive(Debug, Debug)]
+#[derive(Debug, Debug))]
 pub struct VolumeScattering {
     /// Scattering coefficient [1/m]
     pub scattering_coefficient: Array3<f64>,
@@ -222,7 +222,7 @@ pub struct VolumeScattering {
 }
 
 /// Scattering phase function
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy))]
 pub enum PhaseFunction {
     /// Isotropic scattering
     Isotropic,

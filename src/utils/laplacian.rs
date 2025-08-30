@@ -5,7 +5,7 @@ use crate::grid::Grid;
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
 /// Finite difference order for spatial derivatives
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum FiniteDifferenceOrder {
     /// Second-order accurate (3-point stencil)
     Second,
@@ -44,7 +44,7 @@ impl FiniteDifferenceOrder {
 }
 
 /// Configuration for Laplacian computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone))]
 pub struct LaplacianConfig {
     /// Finite difference order
     pub order: FiniteDifferenceOrder,
@@ -53,7 +53,7 @@ pub struct LaplacianConfig {
 }
 
 /// Boundary condition for Laplacian operator
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq))]
 pub enum BoundaryCondition {
     /// Zero at boundaries
     Dirichlet,
@@ -73,7 +73,7 @@ impl Default for LaplacianConfig {
 }
 
 /// Unified Laplacian operator
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct LaplacianOperator {
     config: LaplacianConfig,
     dx2_inv: f64,
@@ -171,11 +171,11 @@ impl LaplacianOperator {
                 let j = j + 1;
                 let k = k + 1;
 
-                let d2_dx2 = (input[[i + 1, j, k]] - 2.0 * input[[i, j, k]] + input[[i - 1, j, k]])
+                let d2_dx2 = (input[[i + 1, j, k] - 2.0 * input[[i, j, k] + input[[i - 1, j, k])
                     * self.dx2_inv;
-                let d2_dy2 = (input[[i, j + 1, k]] - 2.0 * input[[i, j, k]] + input[[i, j - 1, k]])
+                let d2_dy2 = (input[[i, j + 1, k] - 2.0 * input[[i, j, k] + input[[i, j - 1, k])
                     * self.dy2_inv;
-                let d2_dz2 = (input[[i, j, k + 1]] - 2.0 * input[[i, j, k]] + input[[i, j, k - 1]])
+                let d2_dz2 = (input[[i, j, k + 1] - 2.0 * input[[i, j, k] + input[[i, j, k - 1])
                     * self.dz2_inv;
 
                 *out = d2_dx2 + d2_dy2 + d2_dz2;
@@ -197,30 +197,30 @@ impl LaplacianOperator {
         for k in radius..nz - radius {
             for j in radius..ny - radius {
                 for i in radius..nx - radius {
-                    let center_val = input[[i, j, k]];
+                    let center_val = input[[i, j, k];
 
                     // X-direction second derivative
                     let mut d2_dx2 = center_coeff * center_val;
                     for (offset, &coeff) in side_coeffs.iter().enumerate() {
                         let offset = offset + 1;
-                        d2_dx2 += coeff * (input[[i + offset, j, k]] + input[[i - offset, j, k]]);
+                        d2_dx2 += coeff * (input[[i + offset, j, k] + input[[i - offset, j, k]);
                     }
 
                     // Y-direction second derivative
                     let mut d2_dy2 = center_coeff * center_val;
                     for (offset, &coeff) in side_coeffs.iter().enumerate() {
                         let offset = offset + 1;
-                        d2_dy2 += coeff * (input[[i, j + offset, k]] + input[[i, j - offset, k]]);
+                        d2_dy2 += coeff * (input[[i, j + offset, k] + input[[i, j - offset, k]);
                     }
 
                     // Z-direction second derivative
                     let mut d2_dz2 = center_coeff * center_val;
                     for (offset, &coeff) in side_coeffs.iter().enumerate() {
                         let offset = offset + 1;
-                        d2_dz2 += coeff * (input[[i, j, k + offset]] + input[[i, j, k - offset]]);
+                        d2_dz2 += coeff * (input[[i, j, k + offset] + input[[i, j, k - offset]);
                     }
 
-                    output[[i, j, k]] =
+                    output[[i, j, k] =
                         d2_dx2 * self.dx2_inv + d2_dy2 * self.dy2_inv + d2_dz2 * self.dz2_inv;
                 }
             }
@@ -268,10 +268,10 @@ impl LaplacianOperator {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..radius.min(nx) {
-                    output[[i, j, k]] = 0.0; // Simplified: assume zero curvature
+                    output[[i, j, k] = 0.0; // Simplified: assume zero curvature
                 }
                 for i in (nx - radius).max(0)..nx {
-                    output[[i, j, k]] = 0.0;
+                    output[[i, j, k] = 0.0;
                 }
             }
         }
@@ -328,7 +328,7 @@ mod tests {
         for k in 1..9 {
             for j in 1..9 {
                 for i in 1..9 {
-                    assert_relative_eq!(result[[i, j, k]], 0.0, epsilon = 1e-10);
+                    assert_relative_eq!(result[[i, j, k], 0.0, epsilon = 1e-10);
                 }
             }
         }
@@ -343,7 +343,7 @@ mod tests {
         for k in 0..10 {
             for j in 0..10 {
                 for i in 0..10 {
-                    field[[i, j, k]] = i as f64 + j as f64 + k as f64;
+                    field[[i, j, k] = i as f64 + j as f64 + k as f64;
                 }
             }
         }
@@ -355,7 +355,7 @@ mod tests {
         for k in 1..9 {
             for j in 1..9 {
                 for i in 1..9 {
-                    assert_relative_eq!(result[[i, j, k]], 0.0, epsilon = 1e-10);
+                    assert_relative_eq!(result[[i, j, k], 0.0, epsilon = 1e-10);
                 }
             }
         }
@@ -373,7 +373,7 @@ mod tests {
                     let x = i as f64 * 0.1;
                     let y = j as f64 * 0.1;
                     let z = k as f64 * 0.1;
-                    field[[i, j, k]] = (x * std::f64::consts::PI).sin()
+                    field[[i, j, k] = (x * std::f64::consts::PI).sin()
                         * (y * std::f64::consts::PI).sin()
                         * (z * std::f64::consts::PI).sin();
                 }

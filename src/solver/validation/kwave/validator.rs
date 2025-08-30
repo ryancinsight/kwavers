@@ -8,7 +8,7 @@ use super::test_cases::KWaveTestCase;
 use crate::KwaversResult;
 
 /// k-Wave validation suite
-#[derive(Debug)]
+#[derive(Debug))]
 pub struct KWaveValidator {
     /// Grid configuration
     grid: Grid,
