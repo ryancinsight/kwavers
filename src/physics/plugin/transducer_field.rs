@@ -3,7 +3,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::medium::{AcousticProperties, CoreMedium, Medium};
+use crate::medium::{AcousticProperties, Medium};
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;
