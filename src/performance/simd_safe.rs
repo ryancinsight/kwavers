@@ -125,7 +125,11 @@ impl SimdOps {
         if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
             (a.as_slice(), b.as_slice(), out.as_slice_mut())
         {
-            // SAFETY: Feature detection ensures AVX2 is available
+            // SAFETY:
+            // 1. Feature detection via is_x86_feature_detected! ensures AVX2 is available
+            // 2. Slices are guaranteed to have same length from Array3 shape equality
+            // 3. Pointer arithmetic stays within slice bounds
+            // 4. No data races as we have exclusive access to out_slice
             unsafe { Self::add_fields_avx2_inner(a_slice, b_slice, out_slice) }
         }
     }
