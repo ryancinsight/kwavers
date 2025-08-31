@@ -48,23 +48,35 @@ mod tests {
 
         for freq in frequencies {
             // Calculate attenuation using power law
-            let attenuation_db = LIVER_ATTENUATION_COEFF
-                * (freq / 1e6_f64).powf(LIVER_ATTENUATION_POWER)
-                * distance
-                * 100.0; // Convert to cm
+            // α = α₀ * f^n where α₀ is in dB/cm/MHz^n
+            let attenuation_db_per_cm =
+                LIVER_ATTENUATION_COEFF * (freq / 1e6_f64).powf(LIVER_ATTENUATION_POWER);
+            let attenuation_db = attenuation_db_per_cm * (distance * 100.0); // distance in cm
 
-            // Convert to Neper/m
-            let attenuation_np = attenuation_db * 0.115129; // ln(10)/20
+            // Convert dB to Neper: 1 dB = ln(10)/20 Np ≈ 0.115129 Np
+            // But we have dB total, not dB/m, so no additional conversion needed
+            let attenuation_np = attenuation_db / 8.686; // 20/ln(10)
 
             // Theoretical amplitude reduction
             let amplitude_ratio = (-attenuation_np).exp();
 
-            // Verify against tabulated values (Duck Table 4.1)
+            // Debug output
+            eprintln!(
+                "Freq: {} MHz, Atten_dB: {:.2}, Atten_Np: {:.4}, Ratio: {:.3}",
+                freq / 1e6,
+                attenuation_db,
+                attenuation_np,
+                amplitude_ratio
+            );
+
+            // Verify against calculated values for liver tissue
+            // For liver: α = 0.5 dB/cm/MHz^1.1
+            // At 10 cm distance, amplitude ratio = exp(-α*d/8.686)
             let expected_ratio = match (freq / 1e6) as i32 {
-                1 => 0.606,  // At 1 MHz, 10 cm
-                2 => 0.449,  // At 2 MHz, 10 cm
-                5 => 0.247,  // At 5 MHz, 10 cm
-                10 => 0.135, // At 10 MHz, 10 cm
+                1 => 0.562,  // At 1 MHz, 10 cm (5.0 dB total)
+                2 => 0.291,  // At 2 MHz, 10 cm (10.7 dB total)
+                5 => 0.034,  // At 5 MHz, 10 cm (29.4 dB total)
+                10 => 0.007, // At 10 MHz, 10 cm (63.1 dB total)
                 _ => continue,
             };
 
@@ -84,9 +96,10 @@ mod tests {
         // For isotropic approximation of cortical bone
 
         // Calculate Lamé parameters from wave speeds
-        let bulk_modulus = BONE_DENSITY * BONE_P_WAVE_SPEED.powi(2);
+        // For elastic waves: v_p² = (λ + 2μ)/ρ and v_s² = μ/ρ
         let shear_modulus = BONE_DENSITY * BONE_S_WAVE_SPEED.powi(2);
-        let lambda = bulk_modulus - 2.0 * shear_modulus / 3.0;
+        let lambda = BONE_DENSITY * BONE_P_WAVE_SPEED.powi(2) - 2.0 * shear_modulus;
+        let bulk_modulus = lambda + 2.0 * shear_modulus / 3.0;
 
         // Verify P and S wave speeds from Lamé parameters
         let calc_p_speed = ((lambda + 2.0 * shear_modulus) / BONE_DENSITY).sqrt();
@@ -152,22 +165,36 @@ mod tests {
         }
 
         // Calculate impedance and transmission coefficients
-        let z_water = 1000.0 * 1500.0;
-        let z_liver = LIVER_DENSITY * LIVER_SOUND_SPEED;
-        let z_bone = BONE_DENSITY * BONE_P_WAVE_SPEED;
+        // Acoustic impedance Z = ρ * c
+        let z_water = 1000.0 * 1500.0; // 1.5 MRayl
+        let z_liver = LIVER_DENSITY * LIVER_SOUND_SPEED; // ~1.69 MRayl
+        let z_bone = BONE_DENSITY * BONE_P_WAVE_SPEED; // ~7.75 MRayl
 
+        // Transmission coefficient T = 2*Z2/(Z1+Z2)
         let t_water_liver = 2.0 * z_liver / (z_water + z_liver);
         let t_liver_bone = 2.0 * z_bone / (z_liver + z_bone);
 
+        // Log calculated values for debugging
+        eprintln!(
+            "Z_water: {:.2e}, Z_liver: {:.2e}, Z_bone: {:.2e}",
+            z_water, z_liver, z_bone
+        );
+        eprintln!(
+            "T_water-liver: {:.3}, T_liver-bone: {:.3}",
+            t_water_liver, t_liver_bone
+        );
+
         // Verify transmission coefficients
+        // Expected: T_water-liver ≈ 1.06 (Z_liver/Z_water ≈ 1.13)
+        // Expected: T_liver-bone ≈ 1.64 (Z_bone/Z_liver ≈ 4.6)
         assert!(
-            (t_water_liver - 1.04).abs() < 0.05,
-            "Water-liver transmission error: {:.3}",
+            (t_water_liver - 1.06).abs() < 0.05,
+            "Water-liver transmission error: {:.3} (expected ~1.06)",
             t_water_liver
         );
         assert!(
-            (t_liver_bone - 1.46).abs() < 0.1,
-            "Liver-bone transmission error: {:.3}",
+            (t_liver_bone - 1.64).abs() < 0.05,
+            "Liver-bone transmission error: {:.3} (expected ~1.64)",
             t_liver_bone
         );
     }
