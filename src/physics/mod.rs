@@ -26,6 +26,7 @@ pub mod conservation;
 
 #[cfg(test)]
 pub mod validation;
+pub mod validation_tests; // Literature-based validation tests
 
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleParameters, BubbleState};

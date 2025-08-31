@@ -127,6 +127,7 @@ full = ["parallel", "gpu", "ml", "plotting", "advanced-visualization", "vr-suppo
 advanced-visualization = ["dep:three-d", "dep:egui", "dep:eframe", "dep:wgpu", "dep:pollster", "dep:futures", "dep:tokio", "dep:image", "dep:egui-wgpu", "dep:egui-winit"]
 vr-support = ["dep:openxr"]
 web-visualization = ["dep:wasm-bindgen", "dep:web-sys", "dep:js-sys", "dep:console_error_panic_hook"]
+nifti = []  # Feature for NIFTI medical imaging format support
 nightly = []
 
 # Remove unused feature flags that are causing warnings
