@@ -34,8 +34,8 @@ mod tests {
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
         // Natural frequency of bubble (Minnaert frequency)
-        let omega_0 = (1.0 / params.r0)
-            * ((3.0 * params.polytropic_index * params.p0 / params.rho_liquid).sqrt());
+        let gamma = params.gas_species.gamma();
+        let omega_0 = (1.0 / params.r0) * ((3.0 * gamma * params.p0 / params.rho_liquid).sqrt());
 
         // Damping coefficient (simplified, viscous only)
         let delta = 4.0 * params.mu_liquid / (params.rho_liquid * omega * params.r0.powi(2));
@@ -77,8 +77,8 @@ mod tests {
         // For a plane wave: x_shock = ρ₀c₀³/(βωp₀)
         // where β = 1 + B/2A is the nonlinearity parameter
 
-        let frequency = 1e6; // 1 MHz
-        let pressure_amplitude = 1e6; // 1 MPa
+        let frequency: f64 = 1e6; // 1 MHz
+        let pressure_amplitude: f64 = 1e6; // 1 MPa
         let beta = 1.0 + NONLINEARITY_WATER / 2.0;
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
@@ -108,7 +108,7 @@ mod tests {
         let alpha_0 = ABSORPTION_TISSUE; // dB/cm/MHz^y
 
         // Test at different frequencies
-        let test_frequencies = vec![0.5e6, 1e6, 2e6, 5e6, 10e6];
+        let test_frequencies: Vec<f64> = vec![0.5e6, 1e6, 2e6, 5e6, 10e6];
 
         for f in test_frequencies {
             let alpha_expected = alpha_0 * (f / f0).powf(ABSORPTION_POWER);
@@ -155,8 +155,8 @@ mod tests {
         // where P_neg is peak negative pressure in MPa
         // and f_c is center frequency in MHz
 
-        let p_neg_mpa = 2.0; // 2 MPa peak negative pressure
-        let freq_mhz = 2.5; // 2.5 MHz
+        let p_neg_mpa: f64 = 2.0; // 2 MPa peak negative pressure
+        let freq_mhz: f64 = 2.5; // 2.5 MHz
 
         let mi = p_neg_mpa / freq_mhz.sqrt();
 

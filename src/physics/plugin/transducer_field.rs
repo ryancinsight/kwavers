@@ -284,7 +284,6 @@ impl TransducerFieldCalculatorPlugin {
         let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
 
         // Nonlinearity parameter B/A for the medium
-        use crate::medium::CoreMedium;
         let beta =
             1.0 + AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid) / 2.0;
 

@@ -11,7 +11,8 @@
 pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bubble_field;
 pub mod bubble_state;
-pub mod energy_balance; // NEW: Comprehensive energy balance model
+pub mod energy_balance;
+pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod imex_integration;
 pub mod interactions;
 pub mod rayleigh_plesset;
