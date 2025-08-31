@@ -283,7 +283,14 @@ impl MLEngine {
         let output = model.infer(features)?;
 
         // Extract success probability for each sample
-        let probs: Vec<f32> = output.column(1).to_vec();
+        // Handle both single-column (raw score) and two-column (softmax) outputs
+        let probs: Vec<f32> = if output.ncols() == 1 {
+            // Single column: interpret as probability directly
+            output.column(0).to_vec()
+        } else {
+            // Two columns: use second column as success probability
+            output.column(1).to_vec()
+        };
         Ok(probs)
     }
 
