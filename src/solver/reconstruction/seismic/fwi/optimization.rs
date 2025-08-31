@@ -13,6 +13,12 @@ pub struct LineSearch {
     max_iterations: usize,
 }
 
+impl Default for LineSearch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LineSearch {
     pub fn new() -> Self {
         Self {
@@ -63,6 +69,12 @@ pub struct ConjugateGradient {
     previous_gradient: Option<Array3<f64>>,
     /// Previous search direction
     previous_direction: Option<Array3<f64>>,
+}
+
+impl Default for ConjugateGradient {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConjugateGradient {
@@ -127,10 +139,70 @@ impl Lbfgs {
     /// Compute search direction using L-BFGS two-loop recursion
     /// Based on Nocedal & Wright (2006), Algorithm 7.4
     pub fn compute_direction(&mut self, gradient: &Array3<f64>) -> Array3<f64> {
-        // TODO: Implement L-BFGS two-loop recursion
-        // This is memory-efficient for large problems
+        // L-BFGS two-loop recursion implementation
+        let mut q = gradient.clone();
+        let m = self.s_vectors.len();
 
-        -gradient.clone()
+        if m == 0 {
+            return -q; // Steepest descent for first iteration
+        }
+
+        let mut alpha = vec![0.0; m];
+
+        // First loop: right product
+        for i in (0..m).rev() {
+            let s_i = &self.s_vectors[i];
+            let y_i = &self.y_vectors[i];
+
+            // Compute ρ_i = 1 / (y_i · s_i)
+            let dot_sy: f64 = s_i.iter().zip(y_i.iter()).map(|(s, y)| s * y).sum();
+            if dot_sy.abs() < 1e-10 {
+                continue; // Skip if denominator too small
+            }
+            let rho = 1.0 / dot_sy;
+
+            // α_i = ρ_i * (s_i · q)
+            let dot_sq: f64 = s_i.iter().zip(q.iter()).map(|(s, q)| s * q).sum();
+            alpha[i] = rho * dot_sq;
+
+            // q = q - α_i * y_i
+            q.zip_mut_with(y_i, |q_val, y_val| {
+                *q_val -= alpha[i] * y_val;
+            });
+        }
+
+        // Apply initial Hessian approximation
+        if let (Some(last_s), Some(last_y)) = (self.s_vectors.last(), self.y_vectors.last()) {
+            let dot_sy: f64 = last_s.iter().zip(last_y.iter()).map(|(s, y)| s * y).sum();
+            let dot_yy: f64 = last_y.iter().map(|y| y * y).sum();
+
+            if dot_yy > 1e-10 {
+                let gamma = dot_sy / dot_yy;
+                q *= gamma;
+            }
+        }
+
+        // Second loop: left product
+        for i in 0..m {
+            let s_i = &self.s_vectors[i];
+            let y_i = &self.y_vectors[i];
+
+            let dot_sy: f64 = s_i.iter().zip(y_i.iter()).map(|(s, y)| s * y).sum();
+            if dot_sy.abs() < 1e-10 {
+                continue;
+            }
+            let rho = 1.0 / dot_sy;
+
+            let dot_yq: f64 = y_i.iter().zip(q.iter()).map(|(y, q)| y * q).sum();
+            let beta = rho * dot_yq;
+
+            // q = q + s_i * (α_i - β)
+            q.zip_mut_with(s_i, |q_val, s_val| {
+                *q_val += s_val * (alpha[i] - beta);
+            });
+        }
+
+        -q // Return negative for descent direction
     }
 
     /// Update stored vectors after step

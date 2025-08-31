@@ -107,7 +107,7 @@ pub fn gauss_legendre_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1
     let mut weights = Array1::zeros(n);
 
     // Use symmetry
-    let m = (n + 1) / 2;
+    let m = n.div_ceil(2);
 
     for i in 0..m {
         // Initial guess using Chebyshev nodes

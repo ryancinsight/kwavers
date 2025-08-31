@@ -13,6 +13,12 @@ pub struct Regularizer {
     smoothness_weight: f64,
 }
 
+impl Default for Regularizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Regularizer {
     pub fn new() -> Self {
         Self {

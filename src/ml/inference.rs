@@ -70,7 +70,7 @@ impl InferenceEngine {
 
         // Convert back to 2D
         let (batch, classes, _) = output_3d.dim();
-        Ok(output_3d.into_shape((batch, classes)).unwrap())
+        Ok(output_3d.into_shape_with_order((batch, classes)).unwrap())
     }
 
     /// Run inference on a 3-D tensor with shape *(batch, features, 1)* (the

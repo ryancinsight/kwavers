@@ -48,7 +48,7 @@ pub fn benchmark_fdtd(
 
     // Warmup
     for _ in 0..10 {
-        solver.update_pressure(&mut pressure, &vx, &vy, &vz, &density, &sound_speed, dt)?;
+        solver.update_pressure(&mut pressure, &vx, &vy, &vz, density, sound_speed, dt)?;
     }
 
     // Benchmark iterations
@@ -63,9 +63,9 @@ pub fn benchmark_fdtd(
         let start = Instant::now();
 
         for _ in 0..time_steps {
-            solver.update_pressure(&mut pressure, &vx, &vy, &vz, &density, &sound_speed, dt)?;
+            solver.update_pressure(&mut pressure, &vx, &vy, &vz, density, sound_speed, dt)?;
 
-            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, &density, dt)?;
+            solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, density, dt)?;
         }
 
         times.push(start.elapsed());

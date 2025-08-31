@@ -62,18 +62,18 @@ impl HeterogeneousHandler {
         let sound_speed = medium.sound_speed_array();
 
         // Detect interfaces
-        self.interface_mask = Some(self.detector.detect(&density, &sound_speed)?);
+        self.interface_mask = Some(self.detector.detect(density, sound_speed)?);
 
         // Compute sharpness map for adaptive treatment
         if self.config.adaptive_treatment {
-            self.sharpness_map = Some(self.detector.compute_sharpness(&density, &sound_speed));
+            self.sharpness_map = Some(self.detector.compute_sharpness(density, sound_speed));
         }
 
         // Apply smoothing if enabled
         if self.config.mitigate_gibbs {
             let (density_smooth, sound_speed_smooth) = self.smoother.smooth(
-                &density,
-                &sound_speed,
+                density,
+                sound_speed,
                 self.interface_mask.as_ref().unwrap(),
             )?;
             self.density_smooth = Some(density_smooth.clone());

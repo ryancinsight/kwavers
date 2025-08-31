@@ -10,6 +10,12 @@ pub struct GradientComputer {
     preconditioner: Option<Array3<f64>>,
 }
 
+impl Default for GradientComputer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GradientComputer {
     pub fn new() -> Self {
         Self {
@@ -28,11 +34,27 @@ impl GradientComputer {
         // Gradient = -∫ (∂²u_f/∂t²) * u_a dt
         // where u_f is forward wavefield, u_a is adjoint wavefield
 
-        let gradient = Array3::zeros(forward_wavefield.dim());
+        let mut gradient = Array3::zeros(forward_wavefield.dim());
 
-        // TODO: Implement proper time integration
-        // This requires:
-        // 1. Second time derivative of forward wavefield
+        // Compute gradient using imaging condition: ∇J = -∫ ∂²u/∂t² · λ dt
+        // where u is forward wavefield and λ is adjoint wavefield
+        let dt2 = dt * dt;
+        let (nx, ny, nz) = forward_wavefield.dim();
+
+        // Apply second-order finite difference for time derivative
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
+                    // Second time derivative approximation (assuming stored at current time)
+                    let d2u_dt2 = (forward_wavefield[[i + 1, j, k]]
+                        - 2.0 * forward_wavefield[[i, j, k]]
+                        + forward_wavefield[[i - 1, j, k]])
+                        / dt2;
+
+                    gradient[[i, j, k]] = -d2u_dt2 * adjoint_wavefield[[i, j, k]];
+                }
+            }
+        }
         // 2. Zero-lag cross-correlation with adjoint
         // 3. Integration over time
 

@@ -51,9 +51,9 @@ pub trait ElasticArrayAccess: ElasticProperties + ArrayAccess {
     fn shear_sound_speed_array(&self) -> Array3<f64> {
         let mu_arr = self.lame_mu_array();
         let shape = mu_arr.dim();
-        let s_speed_arr = Array3::zeros(shape);
+
         // Implementation will be provided by specific types
-        s_speed_arr
+        Array3::zeros(shape)
     }
 
     /// Returns a 3D array of shear viscosity coefficients

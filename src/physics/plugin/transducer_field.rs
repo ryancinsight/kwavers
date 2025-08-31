@@ -3,7 +3,7 @@
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use crate::medium::{AcousticProperties, CoreMedium, Medium};
+use crate::medium::{AcousticProperties, Medium};
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array2, Array3};
 use std::collections::HashMap;
@@ -284,7 +284,6 @@ impl TransducerFieldCalculatorPlugin {
         let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
 
         // Nonlinearity parameter B/A for the medium
-        use crate::medium::CoreMedium;
         let beta =
             1.0 + AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid) / 2.0;
 

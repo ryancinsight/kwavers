@@ -93,7 +93,7 @@ impl FourierReconstructor {
 
             // Multiply by iω (derivative in frequency domain)
             let omega = 2.0 * PI * freq;
-            *val = *val * Complex::new(0.0, omega);
+            *val *= Complex::new(0.0, omega);
         }
 
         // Inverse FFT

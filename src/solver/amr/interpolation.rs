@@ -20,6 +20,12 @@ pub struct ConservativeInterpolator {
     scheme: InterpolationScheme,
 }
 
+impl Default for ConservativeInterpolator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConservativeInterpolator {
     /// Create a new conservative interpolator
     pub fn new() -> Self {

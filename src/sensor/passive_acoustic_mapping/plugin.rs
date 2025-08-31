@@ -50,7 +50,7 @@ impl crate::physics::plugin::Plugin for PAMPlugin {
     }
 
     fn state(&self) -> PluginState {
-        self.state.clone()
+        self.state
     }
 
     fn required_fields(&self) -> Vec<UnifiedFieldType> {

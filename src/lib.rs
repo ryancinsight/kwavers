@@ -38,6 +38,7 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod config;
+pub mod configuration; // Unified configuration system (SSOT)
 pub mod constants;
 pub mod error;
 pub mod factory;

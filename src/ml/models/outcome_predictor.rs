@@ -10,6 +10,12 @@ pub struct OutcomePredictorModel {
     metadata: ModelMetadata,
 }
 
+impl Default for OutcomePredictorModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OutcomePredictorModel {
     pub fn new() -> Self {
         Self {

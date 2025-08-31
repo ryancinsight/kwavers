@@ -2,7 +2,8 @@
 pub mod bubble_dynamics;
 pub mod cavitation_control;
 pub mod chemistry;
-pub mod constants; // Physical constants (SSOT)
+pub mod constants;
+pub mod constants_physics; // Physical constants (SSOT)
 pub mod phase_modulation;
 // composable module removed - use plugin system instead
 pub mod field_indices; // Unified field indices (SSOT)
@@ -25,6 +26,7 @@ pub mod conservation;
 
 #[cfg(test)]
 pub mod validation;
+pub mod validation_tests; // Literature-based validation tests
 
 // Re-export commonly used types
 pub use bubble_dynamics::{BubbleField, BubbleParameters, BubbleState};

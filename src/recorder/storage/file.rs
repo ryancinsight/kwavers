@@ -33,12 +33,12 @@ impl StorageBackend for FileStorage {
 
     fn store_field(&mut self, name: &str, field: &Array3<f64>, step: usize) -> KwaversResult<()> {
         let filename = self.base_path.join(format!("{}_{:06}.dat", name, step));
-        let mut file = File::create(&filename).map_err(|e| KwaversError::Io(e))?;
+        let mut file = File::create(&filename).map_err(KwaversError::Io)?;
 
         // Write binary data
         for value in field.iter() {
             let bytes = value.to_le_bytes();
-            file.write_all(&bytes).map_err(|e| KwaversError::Io(e))?;
+            file.write_all(&bytes).map_err(KwaversError::Io)?;
         }
 
         Ok(())
@@ -52,9 +52,9 @@ impl StorageBackend for FileStorage {
             "format": "binary_f64_le"
         });
 
-        let mut file = File::create(metadata_path).map_err(|e| KwaversError::Io(e))?;
+        let mut file = File::create(metadata_path).map_err(KwaversError::Io)?;
         file.write_all(metadata.to_string().as_bytes())
-            .map_err(|e| KwaversError::Io(e))?;
+            .map_err(KwaversError::Io)?;
 
         Ok(())
     }
