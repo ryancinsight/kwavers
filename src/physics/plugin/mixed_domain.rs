@@ -8,7 +8,6 @@ use crate::medium::Medium;
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::{Array3, Zip};
 use num_complex::Complex64;
-use rustfft::FftPlanner;
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
@@ -97,14 +96,21 @@ impl MixedDomainPropagationPlugin {
     pub fn to_frequency_domain(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
         // Convert real field to complex for FFT
         let mut complex_field = field.mapv(|x| Complex64::new(x, 0.0));
-        
+
         // Create a dummy grid for FFT (FFT3d requires it)
-        let grid = crate::grid::Grid::new(field.shape()[0], field.shape()[1], field.shape()[2], 1.0, 1.0, 1.0);
-        
+        let grid = crate::grid::Grid::new(
+            field.shape()[0],
+            field.shape()[1],
+            field.shape()[2],
+            1.0,
+            1.0,
+            1.0,
+        );
+
         // Apply 3D FFT
         let mut fft = Fft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);
         fft.process(&mut complex_field, &grid);
-        
+
         Ok(complex_field)
     }
 
@@ -112,14 +118,21 @@ impl MixedDomainPropagationPlugin {
     pub fn to_time_domain(&mut self, field: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         // Clone field for IFFT (process modifies in place)
         let mut complex_field = field.clone();
-        
+
         // Create a dummy grid for IFFT
-        let grid = crate::grid::Grid::new(field.shape()[0], field.shape()[1], field.shape()[2], 1.0, 1.0, 1.0);
-        
+        let grid = crate::grid::Grid::new(
+            field.shape()[0],
+            field.shape()[1],
+            field.shape()[2],
+            1.0,
+            1.0,
+            1.0,
+        );
+
         // Apply 3D IFFT
         let mut ifft = Ifft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);
         let real_field = ifft.process(&mut complex_field, &grid);
-        
+
         Ok(real_field)
     }
 

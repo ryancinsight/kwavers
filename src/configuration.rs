@@ -294,8 +294,8 @@ impl Configuration {
     /// Load configuration from TOML file
     pub fn from_file(path: &PathBuf) -> crate::error::KwaversResult<Self> {
         let contents = std::fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&contents)
-            .map_err(|e| crate::error::ConfigError::ParseError {
+        let config: Self =
+            toml::from_str(&contents).map_err(|e| crate::error::ConfigError::ParseError {
                 line: 0,
                 message: e.to_string(),
             })?;
@@ -305,8 +305,8 @@ impl Configuration {
 
     /// Save configuration to TOML file
     pub fn to_file(&self, path: &PathBuf) -> crate::error::KwaversResult<()> {
-        let contents = toml::to_string_pretty(self)
-            .map_err(|e| crate::error::ConfigError::ParseError {
+        let contents =
+            toml::to_string_pretty(self).map_err(|e| crate::error::ConfigError::ParseError {
                 line: 0,
                 message: e.to_string(),
             })?;
@@ -322,7 +322,8 @@ impl Configuration {
                 parameter: "grid dimensions".to_string(),
                 value: format!("{}x{}x{}", self.grid.nx, self.grid.ny, self.grid.nz),
                 constraint: "must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         // Validate CFL condition
@@ -331,16 +332,21 @@ impl Configuration {
                 parameter: "CFL number".to_string(),
                 value: self.simulation.cfl.to_string(),
                 constraint: "must be in (0, 1]".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         // Validate medium parameters
         if self.medium.density <= 0.0 || self.medium.sound_speed <= 0.0 {
             return Err(crate::error::ConfigError::InvalidValue {
                 parameter: "medium properties".to_string(),
-                value: format!("density={}, sound_speed={}", self.medium.density, self.medium.sound_speed),
+                value: format!(
+                    "density={}, sound_speed={}",
+                    self.medium.density, self.medium.sound_speed
+                ),
                 constraint: "must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         // Validate boundary thickness
@@ -349,7 +355,8 @@ impl Configuration {
                 parameter: "boundary thickness".to_string(),
                 value: self.boundary.thickness.to_string(),
                 constraint: "must be positive".to_string(),
-            }.into());
+            }
+            .into());
         }
 
         Ok(())
