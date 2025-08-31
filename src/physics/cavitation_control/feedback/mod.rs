@@ -1,27 +1,17 @@
-//! Feedback control system for cavitation management
+//! Modular feedback control system for cavitation
 //!
-//! Modular implementation of negative feedback control for maintaining
-//! desired cavitation levels using real-time monitoring.
-//!
-//! # Architecture
-//! - `config`: Configuration and parameters
-//! - `strategy`: Control strategy implementations
-//! - `controller`: Main feedback controller
-//! - `output`: Control output types
-//! - `safety`: Safety monitoring and shutdown
-//!
-//! # References
-//! - Hockham et al. (2013): "Real-time control system for sustaining thermally relevant acoustic cavitation"
-//! - Arvanitis et al. (2013): "Cavitation-enhanced nonthermal ablation in deep brain targets"
+//! This module provides a decomposed, maintainable implementation of
+//! feedback control for acoustic cavitation management.
 
 pub mod config;
 pub mod controller;
-pub mod output;
+pub mod history;
 pub mod safety;
 pub mod strategy;
 
-pub use config::{FeedbackConfig, CONTROL_UPDATE_RATE, DEFAULT_TARGET_INTENSITY};
+// Re-export main types
+pub use config::FeedbackConfig;
 pub use controller::FeedbackController;
-pub use output::ControlOutput;
+pub use history::ControlHistory;
 pub use safety::SafetyMonitor;
-pub use strategy::{ControlStrategy, StrategyExecutor};
+pub use strategy::ControlStrategy;

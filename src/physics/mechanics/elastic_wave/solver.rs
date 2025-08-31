@@ -150,11 +150,7 @@ impl AcousticWaveModel for ElasticWave {
         let (nx, ny, nz) = grid.dimensions();
 
         // For elastic waves, we use velocity components instead of pressure
-        // Field indices: 0=pressure, 1=vx, 2=vy, 3=vz
-        const PRESSURE_IDX: usize = 0;
-        const VX_IDX: usize = 1;
-        const VY_IDX: usize = 2;
-        const VZ_IDX: usize = 3;
+        use crate::physics::field_indices::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
 
         // Extract velocity fields from the 4D array
         let mut vx = fields.index_axis(Axis(0), VX_IDX).to_owned();

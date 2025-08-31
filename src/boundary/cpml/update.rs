@@ -29,11 +29,7 @@ impl CPMLUpdater {
         grid: &Grid,
         config: &CPMLConfig,
     ) -> KwaversResult<()> {
-        // Field indices
-        const PRESSURE_IDX: usize = 0;
-        const VX_IDX: usize = 1;
-        const VY_IDX: usize = 2;
-        const VZ_IDX: usize = 3;
+        // Use field indices from central module
 
         let thickness = config.thickness;
 

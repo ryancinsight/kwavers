@@ -60,15 +60,6 @@ mod tests {
             // Theoretical amplitude reduction
             let amplitude_ratio = (-attenuation_np).exp();
 
-            // Debug output
-            eprintln!(
-                "Freq: {} MHz, Atten_dB: {:.2}, Atten_Np: {:.4}, Ratio: {:.3}",
-                freq / 1e6,
-                attenuation_db,
-                attenuation_np,
-                amplitude_ratio
-            );
-
             // Verify against calculated values for liver tissue
             // For liver: α = 0.5 dB/cm/MHz^1.1
             // At 10 cm distance, amplitude ratio = exp(-α*d/8.686)
@@ -173,16 +164,6 @@ mod tests {
         // Transmission coefficient T = 2*Z2/(Z1+Z2)
         let t_water_liver = 2.0 * z_liver / (z_water + z_liver);
         let t_liver_bone = 2.0 * z_bone / (z_liver + z_bone);
-
-        // Log calculated values for debugging
-        eprintln!(
-            "Z_water: {:.2e}, Z_liver: {:.2e}, Z_bone: {:.2e}",
-            z_water, z_liver, z_bone
-        );
-        eprintln!(
-            "T_water-liver: {:.3}, T_liver-bone: {:.3}",
-            t_water_liver, t_liver_bone
-        );
 
         // Verify transmission coefficients
         // Expected: T_water-liver ≈ 1.06 (Z_liver/Z_water ≈ 1.13)
