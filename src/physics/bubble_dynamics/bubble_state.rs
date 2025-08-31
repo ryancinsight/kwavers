@@ -282,29 +282,32 @@ impl BubbleState {
     /// Create bubble state at exact mechanical equilibrium
     /// This ensures zero acceleration for validation tests
     pub fn at_equilibrium(params: &BubbleParameters) -> Self {
-        // At equilibrium, the internal pressure must balance external forces:
-        // p_internal = p_ambient + p_laplace
-        // where p_laplace = 2σ/r0 (Laplace pressure)
-        // and p_internal = p_gas + p_vapor
+        // At equilibrium for Rayleigh-Plesset equation:
+        // p_gas - p_liquid - 2σ/R = 0
+        // Therefore: p_gas = p_liquid + 2σ/R = p0 + 2σ/r0
 
-        // Total internal pressure at equilibrium
-        let equilibrium_pressure = params.p0 + 2.0 * params.sigma / params.r0;
+        // The gas pressure at equilibrium (including vapor)
+        let p_gas_total = params.p0 + 2.0 * params.sigma / params.r0;
 
-        // Gas pressure is internal pressure minus vapor pressure
-        let gas_pressure = equilibrium_pressure - params.pv;
+        // Pure gas pressure (excluding vapor)
+        let p_gas_pure = p_gas_total - params.pv;
 
-        // Estimate molecule count for this pressure
-        let n_gas = estimate_molecule_count(gas_pressure, params.r0, 293.15);
+        // For polytropic gas: p_gas = p_gas0 * (r0/r)^(3γ)
+        // At equilibrium r = r0, so we need p_gas0 = p_gas_pure
+        // This is stored implicitly through molecule count
+
+        let n_gas = estimate_molecule_count(p_gas_pure, params.r0, 293.15);
+        let n_vapor = estimate_molecule_count(params.pv, params.r0, 293.15);
 
         Self {
             radius: params.r0,
             wall_velocity: 0.0,
             wall_acceleration: 0.0,
             temperature: 293.15,
-            pressure_internal: equilibrium_pressure,
+            pressure_internal: p_gas_total,
             pressure_liquid: params.p0,
             n_gas,
-            n_vapor: estimate_molecule_count(params.pv, params.r0, 293.15),
+            n_vapor,
             gas_species: params.gas_species,
             is_collapsing: false,
             mach_number: 0.0,

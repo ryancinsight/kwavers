@@ -29,36 +29,63 @@ impl RayleighPlessetSolver {
     }
 
     /// Calculate bubble wall acceleration using Rayleigh-Plesset equation
+    /// Standard form: ρ(RR̈ + 3/2Ṙ²) = pg - p∞ - 2σ/R - 4μṘ/R
     pub fn calculate_acceleration(&self, state: &BubbleState, p_acoustic: f64, t: f64) -> f64 {
         let r = state.radius;
         let v = state.wall_velocity;
 
         // Time-dependent acoustic forcing with proper phase tracking
-        // This accounts for phase shifts and nonlinear propagation effects
         let acoustic_phase = 2.0 * std::f64::consts::PI * self.params.driving_frequency * t;
         let p_acoustic_instantaneous = p_acoustic * acoustic_phase.sin();
-        let p_l = self.params.p0 + p_acoustic_instantaneous;
+        let p_liquid_far = self.params.p0 + p_acoustic_instantaneous;
 
-        // Use consistent internal pressure calculation
-        let p_internal = self.calculate_internal_pressure(state);
+        // Gas pressure (not including surface tension - that's a separate force)
+        let p_gas = if !self.params.use_thermal_effects {
+            // Polytropic relation: pg = pg0(R0/R)^(3γ)
+            // At equilibrium (R=R0): pg0 = p0 + 2σ/R0 (total internal pressure)
+            let gamma = state.gas_species.gamma();
+            let p_gas_eq = self.params.p0 + 2.0 * self.params.sigma / self.params.r0;
+            // Total gas pressure including vapor
+            p_gas_eq * (self.params.r0 / r).powf(3.0 * gamma)
+        } else {
+            // Van der Waals equation for thermal effects
+            self.calculate_internal_pressure(state)
+        };
 
-        // Pressure difference
-        let p_diff = p_internal - p_l;
+        // Debug output for equilibrium testing
+        #[cfg(test)]
+        if r == self.params.r0 && v == 0.0 && p_acoustic == 0.0 && t == 0.0 {
+            println!("Debug calculate_acceleration at equilibrium:");
+            println!("  p_gas: {} Pa", p_gas);
+            println!("  p_liquid_far: {} Pa", p_liquid_far);
+            println!(
+                "  Expected p_gas at eq: {} Pa",
+                self.params.p0 + 2.0 * self.params.sigma / self.params.r0
+            );
+        }
 
-        // Viscous term
-        let viscous =
-            crate::constants::bubble_dynamics::VISCOUS_STRESS_COEFF * self.params.mu_liquid * v / r;
+        // Forces on bubble wall (Pa)
+        let pressure_diff = p_gas - p_liquid_far;
+        let surface_tension = 2.0 * self.params.sigma / r;
+        let viscous_stress = 4.0 * self.params.mu_liquid * v / r;
 
-        // Surface tension term
-        let surface =
-            crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma / r;
+        #[cfg(test)]
+        if r == self.params.r0 && v == 0.0 && p_acoustic == 0.0 && t == 0.0 {
+            println!("  pressure_diff: {} Pa", pressure_diff);
+            println!("  surface_tension: {} Pa", surface_tension);
+            println!("  viscous_stress: {} Pa", viscous_stress);
+            println!(
+                "  net_pressure: {} Pa",
+                pressure_diff - surface_tension - viscous_stress
+            );
+            println!("  denominator: {} kg/m²", self.params.rho_liquid * r);
+        }
 
-        // Rayleigh-Plesset equation
-        let numerator = p_diff - viscous - surface;
-        let denominator = self.params.rho_liquid * r;
+        // Rayleigh-Plesset equation: ρ(RR̈ + 3/2Ṙ²) = Δp
+        // Solving for R̈: R̈ = (Δp/ρR) - (3/2)(Ṙ²/R)
+        let net_pressure = pressure_diff - surface_tension - viscous_stress;
 
-        numerator / denominator
-            - crate::constants::bubble_dynamics::KINETIC_ENERGY_COEFF * v * v / r
+        (net_pressure / (self.params.rho_liquid * r)) - (1.5 * v * v / r)
     }
 
     /// Calculate internal pressure using consistent thermodynamics
@@ -346,6 +373,15 @@ mod tests {
         let params = BubbleParameters::default();
         let solver = RayleighPlessetSolver::new(params.clone());
         let state = BubbleState::at_equilibrium(&params);
+
+        // Debug: print values at equilibrium
+        println!("Equilibrium state:");
+        println!("  radius: {} m", state.radius);
+        println!("  r0: {} m", params.r0);
+        println!("  p0: {} Pa", params.p0);
+        println!("  sigma: {} N/m", params.sigma);
+        println!("  pv: {} Pa", params.pv);
+        println!("  rho: {} kg/m³", params.rho_liquid);
 
         // At equilibrium, acceleration should be negligible
         let accel = solver.calculate_acceleration(&state, 0.0, 0.0);
