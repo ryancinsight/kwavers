@@ -276,11 +276,11 @@ impl FeedbackController {
         if control_signal.abs() > threshold {
             // Large error: adjust duty cycle
             let duty_cycle = self.apply_duty_cycle_control(control_signal);
-            (self.amplitude_controller.amplitude(), duty_cycle)
+            (self.amplitude_controller.get_amplitude(), duty_cycle)
         } else {
             // Small error: adjust amplitude
             let amplitude = self.apply_amplitude_control(control_signal);
-            (amplitude, self.duty_cycle_controller.duty_cycle())
+            (amplitude, self.duty_cycle_controller.get_duty_cycle())
         }
     }
 
@@ -347,8 +347,8 @@ impl FeedbackController {
             .back()
             .cloned()
             .unwrap_or(ControlOutput {
-                amplitude: self.amplitude_controller.amplitude(),
-                duty_cycle: self.duty_cycle_controller.duty_cycle(),
+                amplitude: self.amplitude_controller.get_amplitude(),
+                duty_cycle: self.duty_cycle_controller.get_duty_cycle(),
                 modulation_scheme: ModulationScheme::Continuous,
                 error: 0.0,
                 cavitation_intensity: 0.0,

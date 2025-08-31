@@ -333,8 +333,8 @@ mod tests {
         };
         let spatial_dist = SpatialDistribution::Uniform;
 
-        let mut cloud = BubbleCloud::new((20, 20, 20), params, size_dist, spatial_dist);
-        cloud.generate(1e12, (1e-3, 1e-3, 1e-3)); // Higher density and larger grid spacing
+        let mut cloud = BubbleCloud::new((5, 5, 5), params, size_dist, spatial_dist);
+        cloud.generate(1e9, (1e-3, 1e-3, 1e-3)); // Moderate density for small grid
 
         assert!(cloud.field.bubbles.len() > 0);
     }

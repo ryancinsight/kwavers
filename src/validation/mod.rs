@@ -114,7 +114,7 @@ pub fn validate_fdtd_dispersion(grid: &Grid, dt: f64, frequency: f64, c: f64) ->
 pub fn validate_absorption_model(
     frequency: f64,
     measured_alpha: f64,
-    medium: &dyn crate::medium::core::CoreMedium,
+    medium: &dyn crate::medium::Medium,
     grid: &Grid,
 ) -> PhysicsValidation {
     // Szabo's power law: α = α₀|ω|^y
@@ -124,16 +124,25 @@ pub fn validate_absorption_model(
     let alpha_np_m = alpha_theory * 0.1151; // Convert dB/cm to Np/m
 
     // Get implementation's absorption
-    use crate::medium::core::CoreMedium;
-    let alpha_impl = CoreMedium::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
+    use crate::medium::AcousticProperties;
+    let alpha_impl =
+        AcousticProperties::absorption_coefficient(medium, 0.0, 0.0, 0.0, grid, frequency);
 
-    let error = (alpha_impl - alpha_np_m).abs() / alpha_np_m;
+    // Compare with measured value if provided
+    let measurement_error = if measured_alpha > 0.0 {
+        (alpha_impl - measured_alpha).abs() / measured_alpha
+    } else {
+        0.0
+    };
+
+    let theory_error = (alpha_impl - alpha_np_m).abs() / alpha_np_m;
+    let total_error = theory_error.max(measurement_error);
 
     PhysicsValidation {
         test_name: "Power Law Absorption (Szabo)".to_string(),
-        passed: error < 0.05, // 5% error threshold
-        error_l2: error,
-        error_linf: error,
+        passed: total_error < 0.05, // 5% error threshold
+        error_l2: theory_error,
+        error_linf: total_error,
         reference: "Szabo (1994) J. Acoust. Soc. Am. 96(1)".to_string(),
     }
 }
@@ -156,12 +165,24 @@ pub fn validate_cpml_reflection(reflection_coefficient: f64) -> PhysicsValidatio
 pub fn validate_all(
     grid: &Grid,
     dt: f64,
-    medium: &dyn crate::medium::core::CoreMedium,
+    medium: &dyn crate::medium::Medium,
 ) -> Vec<PhysicsValidation> {
     let mut reports = Vec::new();
 
     // CFL validation
-    let c_max = crate::medium::core::max_sound_speed(medium, grid);
+    // Calculate max sound speed directly since we have a trait object
+    let mut c_max = 0.0;
+    for i in 0..grid.nx {
+        for j in 0..grid.ny {
+            for k in 0..grid.nz {
+                let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                let speed = medium.sound_speed(x, y, z, grid);
+                if speed > c_max {
+                    c_max = speed;
+                }
+            }
+        }
+    }
     reports.push(validate_cfl_condition(grid, dt, c_max));
 
     // Dispersion validation

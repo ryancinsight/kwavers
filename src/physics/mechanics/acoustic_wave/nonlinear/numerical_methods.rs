@@ -176,7 +176,7 @@ impl NonlinearWave {
         let kz = grid.compute_kz();
 
         // Get spatially-varying sound speed
-        let c_array = medium.sound_speed_array(grid);
+        let c_array = medium.sound_speed_array();
         let c = c_array.mean().unwrap_or(self.max_sound_speed);
         let mut result_k = Array3::<Complex<f64>>::zeros(pressure_k.raw_dim());
 

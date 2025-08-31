@@ -7,7 +7,7 @@ use crate::medium::{
     core::{ArrayAccess, CoreMedium},
     elastic::{ElasticArrayAccess, ElasticProperties},
     optical::OpticalProperties,
-    thermal::{TemperatureState, ThermalProperties},
+    thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
 use ndarray::{Array3, Zip};
@@ -197,71 +197,51 @@ impl CoreMedium for HeterogeneousTissueMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
-
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let props = self.get_tissue_properties(x, y, z, grid);
-        props.alpha0 * (frequency / self.reference_frequency).powf(props.delta)
-    }
-
-    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_tissue_properties(x, y, z, grid).b_a
-    }
 }
 
 // Array-based access
 impl ArrayAccess for HeterogeneousTissueMedium {
-    fn density_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.density_array
-            .get_or_init(|| {
-                let mut arr = Array3::zeros(self.tissue_map.dim());
-                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
-                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
-                            .get(&TissueType::SoftTissue)
-                            .unwrap()
-                    });
-                    *val = props.density;
+    fn density_array(&self) -> &Array3<f64> {
+        self.density_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                    &tissue::TISSUE_PROPERTIES
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
                 });
-                arr
-            })
-            .clone()
+                *val = props.density;
+            });
+            arr
+        })
     }
 
-    fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.sound_speed_array
-            .get_or_init(|| {
-                let mut arr = Array3::zeros(self.tissue_map.dim());
-                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                    let tissue = self.tissue_map[[i, j, k]];
-                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
-                            .get(&TissueType::SoftTissue)
-                            .unwrap()
-                    });
-                    *val = props.sound_speed;
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        self.sound_speed_array.get_or_init(|| {
+            let mut arr = Array3::zeros(self.tissue_map.dim());
+            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                let tissue = self.tissue_map[[i, j, k]];
+                let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                    &tissue::TISSUE_PROPERTIES
+                        .get(&TissueType::SoftTissue)
+                        .unwrap()
                 });
-                arr
-            })
-            .clone()
+                *val = props.sound_speed;
+            });
+            arr
+        })
     }
 
-    fn absorption_array(&self, grid: &Grid, frequency: f64) -> Array3<f64> {
-        let mut arr = Array3::zeros(self.tissue_map.dim());
-        Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-            *val = CoreMedium::absorption_coefficient(self, x, y, z, grid, frequency);
-        });
-        arr
+    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+        // For tissue medium, we need to initialize if not already done
+        // This is a limitation of the OnceLock pattern - we can't get mutable access
+        // So we'll panic if trying to mutate before initialization
+        panic!("HeterogeneousTissueMedium does not support mutable array access")
     }
 
-    fn nonlinearity_array(&self, grid: &Grid) -> Array3<f64> {
-        let mut arr = Array3::zeros(self.tissue_map.dim());
-        Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-            let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-            *val = CoreMedium::nonlinearity_coefficient(self, x, y, z, grid);
-        });
-        arr
+    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+        panic!("HeterogeneousTissueMedium does not support mutable array access")
     }
 }
 
@@ -381,13 +361,13 @@ impl ThermalProperties for HeterogeneousTissueMedium {
     }
 }
 
-// Temperature state management
-impl TemperatureState for HeterogeneousTissueMedium {
-    fn update_temperature(&mut self, temperature: &Array3<f64>) {
+// Thermal field management
+impl ThermalField for HeterogeneousTissueMedium {
+    fn update_thermal_field(&mut self, temperature: &Array3<f64>) {
         self.temperature = temperature.clone();
     }
 
-    fn temperature(&self) -> &Array3<f64> {
+    fn thermal_field(&self) -> &Array3<f64> {
         &self.temperature
     }
 }

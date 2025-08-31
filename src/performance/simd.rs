@@ -17,26 +17,24 @@ impl SimdOps {
     /// Vectorized field addition using AVX2
     ///
     /// # Safety
-    /// Requires AVX2 CPU support. Falls back to scalar on older CPUs.
-    #[cfg(target_arch = "x86_64")]
+    /// Portable SIMD-aware field addition using iterator combinators
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        if is_x86_feature_detected!("avx2") {
-            unsafe { Self::add_fields_avx2(a, b, out) }
-        } else {
-            Self::add_fields_scalar(a, b, out)
-        }
+        // Use iterator combinators for auto-vectorization
+        out.as_slice_mut()
+            .unwrap()
+            .iter_mut()
+            .zip(a.as_slice().unwrap())
+            .zip(b.as_slice().unwrap())
+            .for_each(|((o, &a_val), &b_val)| {
+                *o = a_val + b_val;
+            });
     }
 
-    /// Scalar fallback for field addition
-    #[cfg(not(target_arch = "x86_64"))]
-    pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        Self::add_fields_scalar(a, b, out)
-    }
-
-    /// AVX2 implementation of field addition
+    /// Legacy AVX2 implementation - replaced with portable SIMD
+    #[allow(dead_code)]
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
-    unsafe fn add_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+    unsafe fn add_fields_avx2_legacy(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         let a_slice = a.as_slice().unwrap();
         let b_slice = b.as_slice().unwrap();
         let out_slice = out.as_slice_mut().unwrap();
@@ -69,18 +67,16 @@ impl SimdOps {
     }
 
     /// Vectorized field multiplication by scalar
-    #[cfg(target_arch = "x86_64")]
+    /// Portable SIMD-aware field scaling using iterator combinators
     pub fn scale_field(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
-        if is_x86_feature_detected!("avx2") {
-            unsafe { Self::scale_field_avx2(field, scalar, out) }
-        } else {
-            Self::scale_field_scalar(field, scalar, out)
-        }
-    }
-
-    #[cfg(not(target_arch = "x86_64"))]
-    pub fn scale_field(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
-        Self::scale_field_scalar(field, scalar, out)
+        // Use iterator combinators for auto-vectorization
+        out.as_slice_mut()
+            .unwrap()
+            .iter_mut()
+            .zip(field.as_slice().unwrap())
+            .for_each(|(o, &f_val)| {
+                *o = f_val * scalar;
+            });
     }
 
     /// AVX2 implementation of field scaling
@@ -112,18 +108,16 @@ impl SimdOps {
     }
 
     /// Compute L2 norm of field using SIMD
-    #[cfg(target_arch = "x86_64")]
+    /// Portable SIMD-aware field norm using iterator combinators
     pub fn field_norm(field: &Array3<f64>) -> f64 {
-        if is_x86_feature_detected!("avx2") {
-            unsafe { Self::field_norm_avx2(field) }
-        } else {
-            Self::field_norm_scalar(field)
-        }
-    }
-
-    #[cfg(not(target_arch = "x86_64"))]
-    pub fn field_norm(field: &Array3<f64>) -> f64 {
-        Self::field_norm_scalar(field)
+        // Use iterator combinators for auto-vectorization
+        field
+            .as_slice()
+            .unwrap()
+            .iter()
+            .map(|&x| x * x)
+            .sum::<f64>()
+            .sqrt()
     }
 
     #[cfg(target_arch = "x86_64")]

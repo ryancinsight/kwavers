@@ -148,8 +148,8 @@ impl Plugin for AcousticWavePlugin {
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         // Cache medium properties
-        self.sound_speed = Some(medium.sound_speed_array(grid).clone());
-        self.density = Some(medium.density_array(grid).clone());
+        self.sound_speed = Some(medium.sound_speed_array().clone());
+        self.density = Some(medium.density_array().clone());
 
         // Initialize previous pressure
         self.prev_pressure = Some(Array3::zeros((grid.nx, grid.ny, grid.nz)));

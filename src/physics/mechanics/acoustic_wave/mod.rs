@@ -109,7 +109,7 @@ pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
     }
 
     let alpha =
-        crate::medium::core::CoreMedium::absorption_coefficient(medium, x, y, z, grid, frequency);
+        crate::medium::AcousticProperties::absorption_coefficient(medium, x, y, z, grid, frequency);
     let c = medium.sound_speed(x, y, z, grid);
     let omega = 2.0 * PI * frequency;
 
@@ -173,7 +173,8 @@ pub fn compute_nonlinearity_coefficient<M: Medium + ?Sized>(
     z: f64,
     grid: &Grid,
 ) -> f64 {
-    let b_over_a = crate::medium::core::CoreMedium::nonlinearity_coefficient(medium, x, y, z, grid);
+    let b_over_a =
+        crate::medium::AcousticProperties::nonlinearity_coefficient(medium, x, y, z, grid);
     1.0 + b_over_a / 2.0
 }
 

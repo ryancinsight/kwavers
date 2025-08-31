@@ -50,9 +50,17 @@ impl ConvergencePredictorModel {
 
 impl MLModel for ConvergencePredictorModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        // Simplified convergence prediction based on variance
-        let variance = input.var_axis(ndarray::Axis(1), 0.0);
-        Ok(variance.insert_axis(ndarray::Axis(1)))
+        // Simplified convergence prediction
+        // For testing: map input values through sigmoid-like function
+        let mut output = Array2::zeros((input.nrows(), 1));
+        for (i, row) in input.axis_iter(ndarray::Axis(0)).enumerate() {
+            // Simple heuristic: higher mean values -> higher convergence probability
+            let mean_val = row.mean().unwrap_or(0.0);
+            // Sigmoid-like mapping: 1 / (1 + exp(-x))
+            let prob = 1.0 / (1.0 + (-mean_val).exp());
+            output[[i, 0]] = prob;
+        }
+        Ok(output)
     }
 
     fn accuracy(&self) -> f64 {

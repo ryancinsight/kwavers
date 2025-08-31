@@ -8,7 +8,7 @@ use crate::medium::{
     core::{ArrayAccess, CoreMedium},
     elastic::{ElasticArrayAccess, ElasticProperties},
     optical::OpticalProperties,
-    thermal::{TemperatureState, ThermalProperties},
+    thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
 use log::debug;
@@ -236,49 +236,24 @@ impl CoreMedium for HeterogeneousMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
-
-    fn absorption_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid, frequency: f64) -> f64 {
-        let (ix, iy, iz) = self.get_indices(x, y, z, grid);
-        let absorption = PowerLawAbsorption {
-            alpha_0: self.alpha0[[ix, iy, iz]],
-            y: self.delta[[ix, iy, iz]],
-            f_ref: self.reference_frequency,
-            dispersion_correction: false,
-        };
-        absorption.absorption_at_frequency(frequency)
-    }
-
-    fn nonlinearity_coefficient(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_field_value(&self.b_a, x, y, z, grid)
-    }
 }
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn density_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.density.clone()
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density
     }
 
-    fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.sound_speed.clone()
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed
     }
 
-    fn absorption_array(&self, _grid: &Grid, frequency: f64) -> Array3<f64> {
-        let mut absorption = Array3::zeros(self.alpha0.raw_dim());
-        for ((ix, iy, iz), alpha) in absorption.indexed_iter_mut() {
-            let power_law = PowerLawAbsorption {
-                alpha_0: self.alpha0[[ix, iy, iz]],
-                y: self.delta[[ix, iy, iz]],
-                f_ref: self.reference_frequency,
-                dispersion_correction: false,
-            };
-            *alpha = power_law.absorption_at_frequency(frequency);
-        }
-        absorption
+    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.density
     }
 
-    fn nonlinearity_array(&self, _grid: &Grid) -> Array3<f64> {
-        self.b_a.clone()
+    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.sound_speed
     }
 }
 
@@ -367,13 +342,13 @@ impl ThermalProperties for HeterogeneousMedium {
     }
 }
 
-// Temperature state management
-impl TemperatureState for HeterogeneousMedium {
-    fn update_temperature(&mut self, temperature: &Array3<f64>) {
+// Thermal field management
+impl ThermalField for HeterogeneousMedium {
+    fn update_thermal_field(&mut self, temperature: &Array3<f64>) {
         self.temperature = temperature.clone();
     }
 
-    fn temperature(&self) -> &Array3<f64> {
+    fn thermal_field(&self) -> &Array3<f64> {
         &self.temperature
     }
 }

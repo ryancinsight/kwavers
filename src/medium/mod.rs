@@ -7,7 +7,6 @@ pub mod absorption;
 pub mod acoustic;
 pub mod anisotropic;
 pub mod bubble;
-pub mod composite;
 pub mod core;
 pub mod elastic;
 pub mod frequency_dependent;
@@ -16,6 +15,7 @@ pub mod homogeneous;
 pub mod interface;
 pub mod optical;
 pub mod thermal;
+pub mod traits;
 pub mod viscous;
 
 // Re-export types from submodules
@@ -27,11 +27,11 @@ pub use homogeneous::HomogeneousMedium;
 // Re-export new modular traits
 pub use acoustic::AcousticProperties;
 pub use bubble::{BubbleProperties, BubbleState};
-pub use composite::{CompositeMedium, Medium};
 pub use core::{ArrayAccess, CoreMedium};
 pub use elastic::{ElasticArrayAccess, ElasticProperties};
 pub use optical::OpticalProperties;
-pub use thermal::{TemperatureState, ThermalProperties};
+pub use thermal::{ThermalField, ThermalProperties};
+pub use traits::Medium;
 pub use viscous::ViscousProperties;
 
 // Re-export utility functions and types
@@ -310,7 +310,7 @@ pub mod iterators {
                     let properties = MediumProperties {
                         density: CoreMedium::density(self.medium, x, y, z, self.grid),
                         sound_speed: CoreMedium::sound_speed(self.medium, x, y, z, self.grid),
-                        absorption: CoreMedium::absorption_coefficient(
+                        absorption: AcousticProperties::absorption_coefficient(
                             self.medium,
                             x,
                             y,
@@ -318,7 +318,7 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                        nonlinearity: AcousticProperties::nonlinearity_coefficient(
                             self.medium,
                             x,
                             y,
@@ -351,7 +351,7 @@ pub mod iterators {
                     let properties = MediumProperties {
                         density: CoreMedium::density(self.medium, x, y, z, self.grid),
                         sound_speed: CoreMedium::sound_speed(self.medium, x, y, z, self.grid),
-                        absorption: CoreMedium::absorption_coefficient(
+                        absorption: AcousticProperties::absorption_coefficient(
                             self.medium,
                             x,
                             y,
@@ -359,7 +359,7 @@ pub mod iterators {
                             self.grid,
                             CoreMedium::reference_frequency(self.medium),
                         ),
-                        nonlinearity: CoreMedium::nonlinearity_coefficient(
+                        nonlinearity: AcousticProperties::nonlinearity_coefficient(
                             self.medium,
                             x,
                             y,

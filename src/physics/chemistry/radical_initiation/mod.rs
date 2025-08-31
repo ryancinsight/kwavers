@@ -38,7 +38,7 @@ impl RadicalInitiation {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let alpha = crate::medium::core::CoreMedium::absorption_coefficient(
+                let alpha = crate::medium::AcousticProperties::absorption_coefficient(
                     medium, x, y, z, grid, frequency,
                 );
 

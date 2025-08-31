@@ -7,7 +7,7 @@ use crate::medium::{
     core::{ArrayAccess, CoreMedium},
     elastic::{ElasticArrayAccess, ElasticProperties},
     optical::OpticalProperties,
-    thermal::{TemperatureState, ThermalProperties},
+    thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
 use ndarray::Array3;
@@ -183,41 +183,24 @@ impl CoreMedium for HomogeneousMedium {
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
     }
-
-    fn absorption_coefficient(
-        &self,
-        _x: f64,
-        _y: f64,
-        _z: f64,
-        _grid: &Grid,
-        frequency: f64,
-    ) -> f64 {
-        self.absorption_alpha * (frequency / self.reference_frequency).powf(self.absorption_power)
-    }
-
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-        self.nonlinearity
-    }
 }
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn density_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.density)
+    fn density_array(&self) -> &Array3<f64> {
+        &self.density_cache
     }
 
-    fn sound_speed_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.sound_speed)
+    fn sound_speed_array(&self) -> &Array3<f64> {
+        &self.sound_speed_cache
     }
 
-    fn absorption_array(&self, grid: &Grid, frequency: f64) -> Array3<f64> {
-        let alpha = self.absorption_alpha
-            * (frequency / self.reference_frequency).powf(self.absorption_power);
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), alpha)
+    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.density_cache
     }
 
-    fn nonlinearity_array(&self, grid: &Grid) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), self.nonlinearity)
+    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+        &mut self.sound_speed_cache
     }
 }
 
@@ -287,13 +270,13 @@ impl ThermalProperties for HomogeneousMedium {
     }
 }
 
-// Temperature state management
-impl TemperatureState for HomogeneousMedium {
-    fn update_temperature(&mut self, temperature: &Array3<f64>) {
+// Thermal field management
+impl ThermalField for HomogeneousMedium {
+    fn update_thermal_field(&mut self, temperature: &Array3<f64>) {
         self.temperature = temperature.clone();
     }
 
-    fn temperature(&self) -> &Array3<f64> {
+    fn thermal_field(&self) -> &Array3<f64> {
         &self.temperature
     }
 }

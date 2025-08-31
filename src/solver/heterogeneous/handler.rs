@@ -58,8 +58,8 @@ impl HeterogeneousHandler {
     /// Initialize with medium properties
     pub fn initialize(&mut self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
         // Get medium properties as arrays
-        let density = medium.density_array(grid);
-        let sound_speed = medium.sound_speed_array(grid);
+        let density = medium.density_array();
+        let sound_speed = medium.sound_speed_array();
 
         // Detect interfaces
         self.interface_mask = Some(self.detector.detect(&density, &sound_speed)?);
@@ -88,8 +88,8 @@ impl HeterogeneousHandler {
                 ));
             }
         } else {
-            self.density_smooth = Some(density);
-            self.sound_speed_smooth = Some(sound_speed);
+            self.density_smooth = Some(density.clone());
+            self.sound_speed_smooth = Some(sound_speed.clone());
         }
 
         Ok(())

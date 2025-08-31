@@ -127,11 +127,7 @@ pub fn compute_sensitivity_matrix(
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let (x, y, z) =
-                        crate::grid::coordinates::CoordinateSystem::indices_to_position(
-                            grid, i, j, k,
-                        )
-                        .unwrap();
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
 
                     // Distance from voxel to detector
                     let dx = x - detector_pos[0];

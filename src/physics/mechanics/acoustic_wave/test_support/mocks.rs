@@ -64,38 +64,23 @@ pub(crate) mod mocks {
         fn reference_frequency(&self) -> f64 {
             1e6
         }
-
-        fn absorption_coefficient(
-            &self,
-            _x: f64,
-            _y: f64,
-            _z: f64,
-            _grid: &Grid,
-            _frequency: f64,
-        ) -> f64 {
-            0.01 // Test value
-        }
-
-        fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
-            3.5 // Test value
-        }
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
-        fn density_array(&self, _grid: &Grid) -> Array3<f64> {
-            self.density.clone()
+        fn density_array(&self) -> &Array3<f64> {
+            &self.density
         }
 
-        fn sound_speed_array(&self, _grid: &Grid) -> Array3<f64> {
-            self.sound_speed.clone()
+        fn sound_speed_array(&self) -> &Array3<f64> {
+            &self.sound_speed
         }
 
-        fn absorption_array(&self, _grid: &Grid, _frequency: f64) -> Array3<f64> {
-            Array3::from_elem(self.density.dim(), 0.01)
+        fn density_array_mut(&mut self) -> &mut Array3<f64> {
+            &mut self.density
         }
 
-        fn nonlinearity_array(&self, _grid: &Grid) -> Array3<f64> {
-            Array3::from_elem(self.density.dim(), 3.5)
+        fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
+            &mut self.sound_speed
         }
     }
 
@@ -305,12 +290,12 @@ pub(crate) mod mocks {
         }
     }
 
-    impl crate::medium::thermal::TemperatureState for HeterogeneousMediumMock {
-        fn temperature(&self) -> &Array3<f64> {
+    impl crate::medium::thermal::ThermalField for HeterogeneousMediumMock {
+        fn thermal_field(&self) -> &Array3<f64> {
             &self.density // Return reference for test
         }
 
-        fn update_temperature(&mut self, _new_temperature: &Array3<f64>) {
+        fn update_thermal_field(&mut self, _new_temperature: &Array3<f64>) {
             // No-op for test
         }
     }

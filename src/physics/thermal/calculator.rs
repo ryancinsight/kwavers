@@ -152,7 +152,7 @@ impl ThermalCalculator {
         // Q = α * I where α is absorption coefficient
         // Using 1 MHz as default frequency for now
 
-        let absorption = crate::medium::core::CoreMedium::absorption_coefficient(
+        let absorption = crate::medium::AcousticProperties::absorption_coefficient(
             medium, 0.0, 0.0, 0.0, grid, 1e6,
         );
         intensity * absorption

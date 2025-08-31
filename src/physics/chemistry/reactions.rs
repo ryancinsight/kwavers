@@ -40,9 +40,9 @@ pub enum ReactionType {
     Polymerization,
 }
 
-/// Temperature dependence model for reactions
+/// Thermal dependence model for reactions
 #[derive(Debug, Clone)]
-pub enum TemperatureDependence {
+pub enum ThermalDependence {
     Arrhenius {
         activation_energy: f64,
         pre_exponential: f64,
@@ -73,7 +73,7 @@ pub enum LightDependence {
 #[derive(Debug, Clone)]
 pub struct ChemicalReactionConfig {
     pub reaction_type: ReactionType,
-    pub temperature_dependence: TemperatureDependence,
+    pub thermal_dependence: ThermalDependence,
     pub pressure_dependence: PressureDependence,
     pub light_dependence: LightDependence,
     pub rate_constant: f64,
@@ -84,7 +84,7 @@ impl Default for ChemicalReactionConfig {
     fn default() -> Self {
         Self {
             reaction_type: ReactionType::Dissociation,
-            temperature_dependence: TemperatureDependence::Constant,
+            thermal_dependence: ThermalDependence::Constant,
             pressure_dependence: PressureDependence::Constant,
             light_dependence: LightDependence::None,
             rate_constant: 1e-3,

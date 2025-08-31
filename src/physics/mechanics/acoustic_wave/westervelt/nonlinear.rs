@@ -20,8 +20,8 @@ pub fn compute_nonlinear_term(
     let mut nonlinear_term = Array3::<f64>::zeros((nx, ny, nz));
 
     // Get spatially varying medium properties
-    let rho_arr = medium.density_array(grid);
-    let c_arr = medium.sound_speed_array(grid);
+    let rho_arr = medium.density_array();
+    let c_arr = medium.sound_speed_array();
 
     Zip::indexed(&mut nonlinear_term)
         .and(pressure)
@@ -35,7 +35,7 @@ pub fn compute_nonlinear_term(
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let beta = crate::medium::core::CoreMedium::nonlinearity_coefficient(
+                let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(
                     medium, x, y, z, grid,
                 );
 
