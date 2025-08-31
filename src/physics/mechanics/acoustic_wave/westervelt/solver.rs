@@ -211,7 +211,7 @@ impl AcousticWaveModel for WesterveltWave {
             &pressure_previous,
             &eta_s_arr,
             &eta_b_arr,
-            &rho_arr,
+            rho_arr,
             grid,
             dt,
         );

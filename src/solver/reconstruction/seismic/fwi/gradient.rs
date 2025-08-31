@@ -10,6 +10,12 @@ pub struct GradientComputer {
     preconditioner: Option<Array3<f64>>,
 }
 
+impl Default for GradientComputer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GradientComputer {
     pub fn new() -> Self {
         Self {

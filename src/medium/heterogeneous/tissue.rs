@@ -207,7 +207,7 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                 let tissue = self.tissue_map[[i, j, k]];
                 let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                    &tissue::TISSUE_PROPERTIES
+                    tissue::TISSUE_PROPERTIES
                         .get(&TissueType::SoftTissue)
                         .unwrap()
                 });
@@ -223,7 +223,7 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                 let tissue = self.tissue_map[[i, j, k]];
                 let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                    &tissue::TISSUE_PROPERTIES
+                    tissue::TISSUE_PROPERTIES
                         .get(&TissueType::SoftTissue)
                         .unwrap()
                 });
@@ -288,7 +288,7 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -306,7 +306,7 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });
@@ -324,7 +324,7 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
                 Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
                     let tissue = self.tissue_map[[i, j, k]];
                     let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                        &tissue::TISSUE_PROPERTIES
+                        tissue::TISSUE_PROPERTIES
                             .get(&TissueType::SoftTissue)
                             .unwrap()
                     });

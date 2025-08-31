@@ -215,7 +215,7 @@ impl AcousticWaveModel for ElasticWave {
             kz: &kz,
             lame_lambda: &lambda,
             lame_mu: &mu,
-            density: &density,
+            density,
             dt,
         };
 
@@ -237,7 +237,7 @@ impl AcousticWaveModel for ElasticWave {
             kx: &kx,
             ky: &ky,
             kz: &kz,
-            density: &density,
+            density,
             dt,
         };
 

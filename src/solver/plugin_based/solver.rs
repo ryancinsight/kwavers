@@ -161,8 +161,7 @@ impl PluginBasedSolver {
         if let Some(fields_array) = self.field_registry.data_mut() {
             // The plugin manager needs mutable access to execute plugins
             // We need to temporarily extract it and put it back
-            let mut plugin_manager =
-                std::mem::replace(&mut self.plugin_manager, PluginManager::new());
+            let mut plugin_manager = std::mem::take(&mut self.plugin_manager);
 
             // Execute all plugins with the field array
             let result = plugin_manager.execute(

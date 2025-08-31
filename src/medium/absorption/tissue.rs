@@ -174,7 +174,7 @@ pub fn tissue_properties() -> HashMap<TissueType, TissueProperties> {
 
 /// Static tissue properties accessor
 pub static TISSUE_PROPERTIES: std::sync::LazyLock<HashMap<TissueType, TissueProperties>> =
-    std::sync::LazyLock::new(|| tissue_properties());
+    std::sync::LazyLock::new(tissue_properties);
 
 /// Tissue-specific absorption model
 #[derive(Debug, Clone)]

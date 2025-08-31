@@ -242,7 +242,7 @@ impl IterativeMethods {
         x_updated.mapv_inplace(|v| v.max(1e-10));
 
         // Divide measurements into ordered subsets
-        let subset_size = (n_measurements + subsets - 1) / subsets;
+        let subset_size = n_measurements.div_ceil(subsets);
 
         // Process each subset
         for subset_idx in 0..subsets {

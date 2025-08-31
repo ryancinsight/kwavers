@@ -12,6 +12,12 @@ pub struct WavefieldModeler {
     pml_width: usize,
 }
 
+impl Default for WavefieldModeler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WavefieldModeler {
     pub fn new() -> Self {
         Self {
@@ -56,14 +62,9 @@ impl WavefieldModeler {
 
     /// Get stored forward wavefield
     pub fn get_forward_wavefield(&self) -> KwaversResult<Array3<f64>> {
-        self.forward_wavefield
-            .as_ref()
-            .map(|w| w.clone())
-            .ok_or_else(|| {
-                crate::error::KwaversError::InvalidInput(
-                    "Forward wavefield not computed".to_string(),
-                )
-            })
+        self.forward_wavefield.clone().ok_or_else(|| {
+            crate::error::KwaversError::InvalidInput("Forward wavefield not computed".to_string())
+        })
     }
 
     /// Apply PML boundary conditions

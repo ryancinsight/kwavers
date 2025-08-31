@@ -29,7 +29,7 @@ pub use source::SourceParameters;
 pub use validation::ValidationParameters;
 
 /// Master configuration structure - Single Source of Truth
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Configuration {
     /// Simulation parameters
     pub simulation: SimulationParameters,
@@ -143,22 +143,6 @@ impl Configuration {
         }
 
         Ok(())
-    }
-}
-
-impl Default for Configuration {
-    fn default() -> Self {
-        Self {
-            simulation: SimulationParameters::default(),
-            grid: GridParameters::default(),
-            medium: MediumParameters::default(),
-            source: SourceParameters::default(),
-            boundary: BoundaryParameters::default(),
-            solver: SolverParameters::default(),
-            output: OutputParameters::default(),
-            performance: PerformanceParameters::default(),
-            validation: ValidationParameters::default(),
-        }
     }
 }
 

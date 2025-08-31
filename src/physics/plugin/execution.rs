@@ -56,6 +56,12 @@ impl std::fmt::Debug for PluginExecutor {
     }
 }
 
+impl Default for PluginExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PluginExecutor {
     /// Create a new plugin executor with sequential strategy
     pub fn new() -> Self {

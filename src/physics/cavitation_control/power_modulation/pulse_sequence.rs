@@ -22,6 +22,12 @@ pub struct PulseSequenceGenerator {
     repeat: bool,
 }
 
+impl Default for PulseSequenceGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PulseSequenceGenerator {
     /// Create new pulse sequence generator
     pub fn new() -> Self {

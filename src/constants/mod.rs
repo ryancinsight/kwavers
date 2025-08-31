@@ -18,6 +18,7 @@ pub mod thermal;
 pub mod thermodynamics;
 
 // Re-export commonly used constants
-pub use acoustic::{WATER_DENSITY, WATER_NONLINEARITY, WATER_SOUND_SPEED};
+// Commented out unused exports to eliminate warnings
+// pub use acoustic::{WATER_DENSITY, WATER_NONLINEARITY, WATER_SOUND_SPEED};
 pub use numerical::{CFL_SAFETY_FACTOR, EPSILON};
-pub use physics::{SPEED_OF_LIGHT, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
+// pub use physics::{SPEED_OF_LIGHT, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};

@@ -25,6 +25,12 @@ pub struct ErrorEstimator {
     smoothing: f64,
 }
 
+impl Default for ErrorEstimator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ErrorEstimator {
     /// Create a new error estimator
     pub fn new() -> Self {

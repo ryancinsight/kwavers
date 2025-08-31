@@ -29,6 +29,12 @@ pub struct KzkSolverPlugin {
     retarded_time_window: Option<f64>,
 }
 
+impl Default for KzkSolverPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KzkSolverPlugin {
     /// Create new KZK solver plugin
     pub fn new() -> Self {
@@ -147,13 +153,13 @@ impl KzkSolverPlugin {
 
         for _step in 0..time_steps {
             // Step 1: Half-step linear propagation (diffraction + absorption)
-            self.apply_linear_step(&mut field, &operators, dz / 2.0)?;
+            self.apply_linear_step(&mut field, operators, dz / 2.0)?;
 
             // Step 2: Full nonlinear step
             self.apply_nonlinear_step(&mut field, beta, density, c0, dz, grid)?;
 
             // Step 3: Half-step linear propagation
-            self.apply_linear_step(&mut field, &operators, dz / 2.0)?;
+            self.apply_linear_step(&mut field, operators, dz / 2.0)?;
         }
 
         Ok(field)
@@ -245,9 +251,8 @@ impl KzkSolverPlugin {
 
         // Shock formation distance: x_shock = ρc³/(βωp₀)
         let omega = 2.0 * PI * frequency;
-        let x_shock = density * sound_speed.powi(3) / (beta * omega * source_pressure);
 
-        x_shock
+        density * sound_speed.powi(3) / (beta * omega * source_pressure)
     }
 
     /// Apply retarded time transformation

@@ -162,7 +162,7 @@ impl PhasedArrayTransducer {
             let z = k as f64 * grid.dz;
 
             for (element, &signal) in self.elements.iter().zip(element_signals.iter()) {
-                let distance = Self::distance_to_element(&element, x, y, z);
+                let distance = Self::distance_to_element(element, x, y, z);
 
                 if distance > 0.0 {
                     // Calculate propagation delay
@@ -244,7 +244,7 @@ impl Source for PhasedArrayTransducer {
         let mut total_pressure = 0.0;
 
         for element in &self.elements {
-            let distance = Self::distance_to_element(&element, x, y, z);
+            let distance = Self::distance_to_element(element, x, y, z);
 
             if distance > 0.0 {
                 let propagation_time = distance / self.sound_speed;
