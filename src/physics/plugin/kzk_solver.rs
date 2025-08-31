@@ -116,8 +116,6 @@ impl KzkSolverPlugin {
         time_steps: usize,
     ) -> KwaversResult<Array3<f64>> {
         use crate::medium::{AcousticProperties, CoreMedium};
-        
-        
 
         // Validate operators are initialized
         let operators =
@@ -168,8 +166,6 @@ impl KzkSolverPlugin {
         operators: &FrequencyOperator,
         step_size: f64,
     ) -> KwaversResult<()> {
-        
-
         // Apply absorption and diffraction in frequency domain
         // For each harmonic component
         for (f_idx, _freq) in operators.frequencies.iter().enumerate() {

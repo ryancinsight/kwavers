@@ -9,6 +9,14 @@
 
 ## Current Sprint Results
 
+### ✅ Completed (Sprint 84 - Test Execution and Failure Discovery)
+- [x] **DISCOVERED**: 3 critical test failures in physics and ML modules
+- [x] **IDENTIFIED**: Bubble dynamics equilibrium bug: -25690 m/s² acceleration
+- [x] **FOUND**: Test suite hanging issue preventing complete execution
+- [x] **VERIFIED**: 278 tests available, majority pass when run individually
+- [x] **DOCUMENTED**: Array dimension mismatch in ML outcome predictor
+- [x] **CONFIRMED**: Library compiles but is not production-ready due to test failures
+
 ### ✅ Completed (Sprint 83 - Comprehensive Implementation and Production Readiness)
 - [x] **IMPLEMENTED**: KZK solver with Strang splitting for second-order accuracy
 - [x] **APPLIED**: Burgers equation solution for nonlinear step
