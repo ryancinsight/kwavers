@@ -133,7 +133,8 @@ pub fn compute_lift_matrix(
     // Lift matrix maps surface integrals to volume
     // For 1D, it's M^{-1} * E where E extracts boundary values
 
-    let mass_inv = matrix_inverse(mass_matrix)?;
+    // Use pseudo-inverse for better numerical stability
+    let mass_inv = matrix_pseudo_inverse(mass_matrix)?;
     let mut lift = Array2::zeros((n_nodes, 2)); // 2 boundaries in 1D
 
     // Extract matrix: E[0,:] = [1, 0, ..., 0], E[1,:] = [0, ..., 0, 1]
@@ -147,6 +148,36 @@ pub fn compute_lift_matrix(
 }
 
 /// Matrix inversion using LU decomposition
+/// Compute pseudo-inverse using regularization for numerical stability
+pub fn matrix_pseudo_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
+    let n = a.nrows();
+    let m = a.ncols();
+
+    // Use Tikhonov regularization (ridge regression)
+    // A+ = (A^T A + λI)^{-1} A^T
+    const REGULARIZATION: f64 = 1e-10;
+
+    if n >= m {
+        // Overdetermined or square
+        let mut ata = a.t().dot(a);
+        // Add regularization term
+        for i in 0..m {
+            ata[(i, i)] += REGULARIZATION;
+        }
+        let ata_inv = matrix_inverse(&ata)?;
+        Ok(ata_inv.dot(&a.t()))
+    } else {
+        // Underdetermined
+        let mut aat = a.dot(&a.t());
+        // Add regularization term
+        for i in 0..n {
+            aat[(i, i)] += REGULARIZATION;
+        }
+        let aat_inv = matrix_inverse(&aat)?;
+        Ok(a.t().dot(&aat_inv))
+    }
+}
+
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     let n = a.nrows();
     if n != a.ncols() {

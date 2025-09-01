@@ -480,6 +480,9 @@ mod tests {
         let grid = Arc::new(Grid::new(32, 32, 32, 0.001, 0.001, 0.001));
         let config = DGConfig::default();
         let solver = DGSolver::new(config, grid);
+        if let Err(e) = &solver {
+            eprintln!("DGSolver creation failed: {:?}", e);
+        }
         assert!(solver.is_ok());
     }
 
