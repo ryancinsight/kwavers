@@ -8,22 +8,13 @@
 //! - Nyborg (1988) "Solutions of the bio-heat transfer equation"
 //! - ter Haar & Coussios (2007) "High intensity focused ultrasound"
 
-pub mod calculator;
 pub mod pennes;
 pub mod perfusion;
 pub mod properties;
 pub mod thermal_dose;
 
-// Legacy modules (to be removed)
-pub mod bioheat;
-pub mod dose;
-pub mod source;
-
 pub use pennes::PennesSolver;
 pub use thermal_dose::ThermalDose;
-
-// Legacy exports for compatibility (to be removed)
-pub use calculator::{ThermalCalculator, ThermalConfig, ThermalState};
 
 /// Thermal properties of tissue
 #[derive(Debug, Clone)]

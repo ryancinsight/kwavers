@@ -4,7 +4,7 @@ use crate::medium::Medium;
 use crate::physics::field_indices::LIGHT_IDX;
 use crate::physics::optics::polarization::LinearPolarization;
 use crate::physics::optics::PolarizationModel as PolarizationModelTrait;
-use crate::physics::thermal::ThermalCalculator;
+use crate::physics::thermal::PennesSolver;
 use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
@@ -22,7 +22,7 @@ pub struct LightDiffusion {
     pub emission_spectrum: Array3<f64>,
     polarization: Option<Box<dyn PolarizationModelTrait>>,
     scattering: Option<ScatteringCalculator>,
-    thermal: Option<ThermalCalculator>,
+    thermal: Option<PennesSolver>,
     enable_polarization: bool,
     enable_scattering: bool,
     enable_thermal: bool,
@@ -64,7 +64,20 @@ impl LightDiffusion {
                 None
             },
             thermal: if enable_thermal {
-                Some(ThermalCalculator::new(grid, 310.15)) // 37°C initial temperature
+                use crate::physics::thermal::ThermalProperties;
+                let properties = ThermalProperties {
+                    k: 0.5,
+                    rho: 1050.0,
+                    c: 3600.0,
+                    w_b: 0.5e-3,
+                    c_b: 3800.0,
+                    T_a: 37.0,
+                    Q_m: 420.0,
+                };
+                PennesSolver::new(
+                    grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, 0.001, properties,
+                )
+                .ok()
             } else {
                 None
             },

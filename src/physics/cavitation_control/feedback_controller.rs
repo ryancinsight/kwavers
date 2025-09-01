@@ -421,8 +421,12 @@ impl StateEstimator {
             intensity: self.alpha * metrics.intensity + (1.0 - self.alpha) * last.intensity,
             subharmonic_level: self.alpha * metrics.subharmonic_level
                 + (1.0 - self.alpha) * last.subharmonic_level,
+            ultraharmonic_level: self.alpha * metrics.ultraharmonic_level
+                + (1.0 - self.alpha) * last.ultraharmonic_level,
             broadband_level: self.alpha * metrics.broadband_level
                 + (1.0 - self.alpha) * last.broadband_level,
+            harmonic_distortion: self.alpha * metrics.harmonic_distortion
+                + (1.0 - self.alpha) * last.harmonic_distortion,
             harmonic_content: self.alpha * metrics.harmonic_content
                 + (1.0 - self.alpha) * last.harmonic_content,
             cavitation_dose: metrics.cavitation_dose, // Don't smooth cumulative dose

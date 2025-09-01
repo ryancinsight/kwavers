@@ -9,6 +9,7 @@ use super::ThermalProperties;
 use ndarray::{Array3, Zip};
 
 /// Pennes bioheat equation solver
+#[derive(Debug)]
 pub struct PennesSolver {
     /// Temperature field (°C)
     temperature: Array3<f64>,

@@ -47,12 +47,7 @@ pub use metrics::TreatmentMetrics;
 pub use modalities::{TherapyMechanism, TherapyModality};
 pub use parameters::TherapyParameters;
 
-use crate::{
-    error::KwaversResult,
-    grid::Grid,
-    medium::Medium,
-    physics::thermal::{calculator::BioheatConfig, ThermalCalculator, ThermalConfig},
-};
+use crate::{error::KwaversResult, grid::Grid, medium::Medium, physics::thermal::PennesSolver};
 use ndarray::{Array3, Zip};
 use std::sync::Arc;
 
@@ -64,7 +59,7 @@ pub struct TherapyCalculator {
     /// Treatment parameters
     pub parameters: TherapyParameters,
     /// Thermal calculator (optional)
-    pub thermal: Option<ThermalCalculator>,
+    pub thermal: Option<PennesSolver>,
     /// Cavitation detector (optional)
     pub cavitation: Option<TherapyCavitationDetector>,
     /// Treatment metrics
@@ -78,25 +73,21 @@ impl TherapyCalculator {
     pub fn new(modality: TherapyModality, parameters: TherapyParameters, grid: &Grid) -> Self {
         // Initialize components based on modality
         let thermal = if modality.has_thermal_effects() {
-            let config = ThermalConfig {
-                use_bioheat: true,
-                bioheat: BioheatConfig {
-                    perfusion_rate: 0.5e-3,
-                    blood_temperature: 310.15,
-                },
-                blood_temperature: 310.15,
-                blood_perfusion: 0.5e-3,
-                perfusion_rate: 0.5e-3,
-                blood_specific_heat: 3617.0,
-                thermal_diffusivity: 1.4e-7,
-                hyperbolic: false,
-                relaxation_time: 20.0,
-                thermal_conductivity: 0.5,
-                specific_heat: 3600.0,
-                ambient_temperature: 37.0,
-                reference_temperature: 316.15, // 43°C
+            use crate::physics::thermal::ThermalProperties;
+            let properties = ThermalProperties {
+                k: 0.5,      // thermal conductivity
+                rho: 1050.0, // density
+                c: 3600.0,   // specific heat
+                w_b: 0.5e-3, // perfusion rate
+                c_b: 3800.0, // blood specific heat
+                T_a: 37.0,   // arterial temperature
+                Q_m: 420.0,  // metabolic heat
             };
-            Some(ThermalCalculator::new(grid, 310.15).with_config(config))
+            PennesSolver::new(
+                grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, 0.001, // dt = 1ms
+                properties,
+            )
+            .ok()
         } else {
             None
         };
@@ -136,7 +127,7 @@ impl TherapyCalculator {
 
             // Update temperature
             if let Some(ref mut thermal_calc) = self.thermal {
-                thermal_calc.update(&heat_source, medium.as_ref(), grid, dt)?;
+                thermal_calc.step(&heat_source);
             }
 
             // Update thermal dose
