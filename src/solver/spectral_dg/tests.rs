@@ -153,10 +153,10 @@ mod integration_tests {
 
         let mut solver = HybridSpectralDGSolver::new(initial_config, grid);
 
-        // Update configuration
+        // Update configuration (keep spectral order compatible with grid)
         let new_config = HybridSpectralDGConfig {
             discontinuity_threshold: 0.05,
-            spectral_order: 8,
+            spectral_order: 8,      // Match grid size
             dg_polynomial_order: 4, // Higher order for better stability
             adaptive_switching: false,
             conservation_tolerance: 1e-12,
@@ -165,10 +165,10 @@ mod integration_tests {
         solver.update_config(new_config.clone());
 
         // Verify that adaptive switching is disabled
-        let field = Array3::from_elem((32, 32, 32), 1.0);
+        let field = Array3::from_elem((8, 8, 8), 1.0);
         let dt = 0.001;
         let _result = solver
-            .solve(&field, dt, &Grid::new(32, 32, 32, 1.0, 1.0, 1.0))
+            .solve(&field, dt, &Grid::new(8, 8, 8, 0.1, 0.1, 0.1))
             .unwrap();
 
         // With adaptive_switching = false, no discontinuity detection should occur
