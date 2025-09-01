@@ -4,7 +4,7 @@
 
 use super::core::{
     calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
-    MIN_FOCAL_DISTANCE, PHASE_QUANTIZATION_LEVELS, SPEED_OF_SOUND,
+    MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
 };
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};

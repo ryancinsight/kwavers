@@ -51,8 +51,8 @@ impl Smoother {
         sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
-        let mut density_smooth = density.clone();
-        let mut sound_speed_smooth = sound_speed.clone();
+        let mut density_smooth = density.to_owned();
+        let mut sound_speed_smooth = sound_speed.to_owned();
 
         let sigma = self.width;
         let kernel_size = (3.0 * sigma).ceil() as usize;
@@ -82,8 +82,8 @@ impl Smoother {
         sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
-        let mut density_smooth = density.clone();
-        let mut sound_speed_smooth = sound_speed.clone();
+        let mut density_smooth = density.to_owned();
+        let mut sound_speed_smooth = sound_speed.to_owned();
 
         for i in 1..self.grid.nx - 1 {
             for j in 1..self.grid.ny - 1 {
@@ -115,8 +115,8 @@ impl Smoother {
         sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
-        let mut density_smooth = density.clone();
-        let mut sound_speed_smooth = sound_speed.clone();
+        let mut density_smooth = density.to_owned();
+        let mut sound_speed_smooth = sound_speed.to_owned();
 
         for i in 2..self.grid.nx - 2 {
             for j in 2..self.grid.ny - 2 {
@@ -144,7 +144,7 @@ impl Smoother {
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         // This would require FFT implementation
         // For now, return original (placeholder for proper implementation)
-        Ok((density.clone(), sound_speed.clone()))
+        Ok((density.to_owned(), sound_speed.to_owned()))
     }
 
     /// Create Gaussian kernel
@@ -208,7 +208,7 @@ impl Smoother {
     /// Weighted average with neighbors
     fn weighted_average(
         &self,
-        field: &Array3<f64>,
+        field: ArrayView3<f64>,
         i: usize,
         j: usize,
         k: usize,
@@ -229,7 +229,7 @@ impl Smoother {
     }
 
     /// Cubic interpolation at a point
-    fn cubic_interpolate(&self, field: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
+    fn cubic_interpolate(&self, field: ArrayView3<f64>, i: usize, j: usize, k: usize) -> f64 {
         // Cubic interpolation using surrounding points
         let points = [
             field[[i - 2, j, k]],

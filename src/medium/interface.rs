@@ -5,7 +5,6 @@
 
 use crate::grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
-use ndarray::Array3;
 use ndarray::ArrayView3;
 
 /// Interface point information

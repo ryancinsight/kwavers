@@ -106,7 +106,7 @@ impl InterfaceDetector {
     }
 
     /// Compute gradient magnitude at a point
-    fn gradient_magnitude(&self, field: &Array3<f64>, i: usize, j: usize, k: usize) -> f64 {
+    fn gradient_magnitude(&self, field: ArrayView3<f64>, i: usize, j: usize, k: usize) -> f64 {
         let dx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / (2.0 * self.grid.dx);
         let dy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) / (2.0 * self.grid.dy);
         let dz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) / (2.0 * self.grid.dz);
