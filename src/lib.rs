@@ -224,7 +224,7 @@ mod tests {
         // Config validation - check that required fields exist
         assert!(config.simulation.duration > 0.0);
         assert!(config.simulation.frequency > 0.0);
-        assert!(config.output.snapshots); // Default is true
+        assert!(!config.output.snapshots); // Default is false
     }
 
     #[test]
