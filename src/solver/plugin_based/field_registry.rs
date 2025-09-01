@@ -9,7 +9,7 @@ use crate::physics::field_mapping::UnifiedFieldType;
 use log::{debug, info};
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct FieldMetadata {
     /// Index in the Array4
     index: usize,

@@ -6,7 +6,6 @@ use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use ndarray::{Array3, Array4};
-use std::fmt;
 
 /// PAM plugin for passive acoustic mapping
 #[derive(Debug)]

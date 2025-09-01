@@ -46,9 +46,16 @@ impl ExecutionStrategy for SequentialStrategy {
 }
 
 /// Plugin executor that manages plugin execution
-#[derive(Debug)]
 pub struct PluginExecutor {
     strategy: Box<dyn ExecutionStrategy>,
+}
+
+impl std::fmt::Debug for PluginExecutor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginExecutor")
+            .field("strategy", &"<dyn ExecutionStrategy>")
+            .finish()
+    }
 }
 
 impl Default for PluginExecutor {

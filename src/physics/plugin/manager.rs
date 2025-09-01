@@ -14,13 +14,24 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 /// Plugin manager for orchestrating plugin lifecycle and execution
-#[derive(Debug)]
 pub struct PluginManager {
     plugins: Vec<Box<dyn Plugin>>,
     execution_order: Vec<usize>,
     execution_strategy: Box<dyn ExecutionStrategy>,
     context: PluginContext,
     performance_metrics: PerformanceMetrics,
+}
+
+impl std::fmt::Debug for PluginManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginManager")
+            .field("plugins_count", &self.plugins.len())
+            .field("execution_order", &self.execution_order)
+            .field("execution_strategy", &"<dyn ExecutionStrategy>")
+            .field("context", &self.context)
+            .field("performance_metrics", &self.performance_metrics)
+            .finish()
+    }
 }
 
 impl PluginManager {

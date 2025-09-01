@@ -93,10 +93,18 @@ where
 }
 
 /// Registry for plugin factories
-#[derive(Debug)]
 pub struct PluginRegistry {
     factories: HashMap<String, Arc<dyn PluginFactory>>,
     metadata_cache: HashMap<String, PluginMetadata>,
+}
+
+impl std::fmt::Debug for PluginRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginRegistry")
+            .field("factories_count", &self.factories.len())
+            .field("metadata_cache", &self.metadata_cache)
+            .finish()
+    }
 }
 
 impl PluginRegistry {

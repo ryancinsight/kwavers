@@ -8,7 +8,6 @@ use super::config::{AcousticModelType, AcousticSolverConfig};
 use super::{kuznetsov::KuznetsovSolver, westervelt::WesterveltSolver};
 
 /// Unified acoustic solver that dispatches to model-specific implementations
-#[derive(Debug)]
 pub struct UnifiedAcousticSolver {
     /// Configuration
     config: AcousticSolverConfig,
@@ -21,6 +20,17 @@ pub struct UnifiedAcousticSolver {
 
     /// Performance metrics
     metrics: SolverMetrics,
+}
+
+impl std::fmt::Debug for UnifiedAcousticSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnifiedAcousticSolver")
+            .field("config", &self.config)
+            .field("grid", &self.grid)
+            .field("solver", &"<dyn AcousticSolver>")
+            .field("metrics", &self.metrics)
+            .finish()
+    }
 }
 
 /// Trait for model-specific acoustic solvers

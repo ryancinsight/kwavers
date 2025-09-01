@@ -19,7 +19,6 @@ use super::field_registry::FieldRegistry;
 use super::performance::PerformanceMonitor;
 
 /// Plugin-based solver for acoustic simulations
-#[derive(Debug)]
 pub struct PluginBasedSolver {
     /// Simulation grid
     grid: Grid,
@@ -41,6 +40,21 @@ pub struct PluginBasedSolver {
     recorder: Option<Box<dyn RecorderTrait>>,
     /// Current time step
     current_step: usize,
+}
+
+impl std::fmt::Debug for PluginBasedSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginBasedSolver")
+            .field("grid", &self.grid)
+            .field("time", &self.time)
+            .field("sources_count", &self.sources.len())
+            .field("field_registry", &self.field_registry)
+            .field("plugin_manager", &self.plugin_manager)
+            .field("performance", &self.performance)
+            .field("has_recorder", &self.recorder.is_some())
+            .field("current_step", &self.current_step)
+            .finish()
+    }
 }
 
 impl PluginBasedSolver {
