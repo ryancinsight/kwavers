@@ -89,9 +89,10 @@ impl ErrorIntegral {
     }
 
     fn update(&mut self, error: f64, dt: f64) {
-        self.value += error * dt;
-        // Anti-windup: clamp integral
-        self.value = self.value.clamp(-self.limit, self.limit);
+        // Update integral with proper clamping
+        let new_value = self.value + error * dt;
+        // Anti-windup: clamp integral to prevent windup
+        self.value = new_value.clamp(-self.limit, self.limit);
     }
 
     fn reset(&mut self) {

@@ -8,7 +8,7 @@
 //! - Chen et al. (2003): "Inertial cavitation dose and hemolysis produced in vitro"
 //! - Mast et al. (2008): "Acoustic emissions during 3.1 MHz ultrasound bulk ablation"
 
-use ndarray::{Array1, ArrayView1};
+use ndarray::{s, Array1, ArrayView1};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::collections::VecDeque;
 
@@ -155,14 +155,31 @@ impl SpectralDetector {
             return 0.0;
         }
 
-        let fundamental_power = psd[fundamental_bin];
+        // Get power around fundamental (with some tolerance for frequency shift)
+        let fundamental_power = if fundamental_bin > 0 && fundamental_bin < psd.len() - 1 {
+            // Take max in a small window around expected frequency
+            let start = fundamental_bin.saturating_sub(1);
+            let end = (fundamental_bin + 1).min(psd.len() - 1);
+            psd.slice(s![start..=end])
+                .iter()
+                .fold(0.0_f64, |a, &b| a.max(b))
+        } else {
+            psd[fundamental_bin]
+        };
 
-        // Check f0/2
+        // Check f0/2 with similar tolerance
         let subharmonic_bin = fundamental_bin / 2;
-        if subharmonic_bin > 0 && subharmonic_bin < psd.len() {
-            let subharmonic_power = psd[subharmonic_bin];
-            if subharmonic_power > SUBHARMONIC_THRESHOLD * fundamental_power {
-                return subharmonic_power / fundamental_power.max(MIN_SPECTRAL_POWER);
+        if subharmonic_bin > 0 && subharmonic_bin < psd.len() - 1 {
+            let start = subharmonic_bin.saturating_sub(1);
+            let end = (subharmonic_bin + 1).min(psd.len() - 1);
+            let subharmonic_power = psd
+                .slice(s![start..=end])
+                .iter()
+                .fold(0.0_f64, |a, &b| a.max(b));
+
+            // Return relative power if above noise floor
+            if subharmonic_power > MIN_SPECTRAL_POWER {
+                return (subharmonic_power / fundamental_power.max(MIN_SPECTRAL_POWER)).min(1.0);
             }
         }
 
