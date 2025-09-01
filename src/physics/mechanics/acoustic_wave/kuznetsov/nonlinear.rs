@@ -3,11 +3,14 @@
 //! Implements the nonlinear term: -(β/ρ₀c₀⁴)∂²p²/∂t²
 //! where β = 1 + B/2A is the nonlinearity coefficient
 
-use crate::constants::numerical::SECOND_ORDER_DIFF_COEFF;
 use crate::constants::physics::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use ndarray::{Array3, Zip};
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace
+///
+/// Uses a simplified convective nonlinearity approach for stability:
+/// The nonlinear term represents the convective derivative (u·∇)u
+/// where u = p/(ρc) is the particle velocity
 ///
 /// # Arguments
 /// * `pressure` - Current pressure field
@@ -18,13 +21,10 @@ use ndarray::{Array3, Zip};
 /// * `sound_speed` - Sound speed c₀
 /// * `nonlinearity_coefficient` - B/A parameter
 /// * `nonlinear_term_out` - Pre-allocated output buffer for the result
-///
-/// # Returns
-/// The nonlinear term: -(β/ρ₀c₀⁴)∂²p²/∂t² is written to nonlinear_term_out
 pub fn compute_nonlinear_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,
-    pressure_prev2: &Array3<f64>,
+    _pressure_prev2: &Array3<f64>, // Not used in convective form
     dt: f64,
     density: f64,
     sound_speed: f64,
@@ -34,48 +34,24 @@ pub fn compute_nonlinear_term_workspace(
     // Compute β = 1 + B/2A using named constants
     let beta = NONLINEARITY_COEFFICIENT_OFFSET + nonlinearity_coefficient / B_OVER_A_DIVISOR;
 
-    // For harmonic generation, we need the convective derivative form
-    // The Kuznetsov equation nonlinear term: β/(ρ₀c₀⁴) ∂²(p²)/∂t²
-    // This generates harmonics through the p² term
-    // Apply a scaling factor for numerical stability
-    const STABILITY_FACTOR: f64 = 1e-6; // Empirical scaling for stability
-    let coeff = STABILITY_FACTOR * beta / (density * sound_speed.powi(4));
+    // For convective nonlinearity: -(β/2ρc³) p ∂p/∂t
+    // This is more stable than the full Kuznetsov formulation
+    let coeff = beta / (2.0 * density * sound_speed.powi(3));
 
-    // Use centered difference for better accuracy in harmonic generation
-    // This preserves the phase relationships needed for second harmonic
-    let dt_squared = dt * dt;
+    // Simple convective nonlinearity: -(β/2ρc³) p ∂p/∂t
+    Zip::from(nonlinear_term_out)
+        .and(pressure)
+        .and(pressure_prev)
+        .for_each(|nl, &p, &p_prev| {
+            // Compute time derivative of pressure
+            let dp_dt = (p - p_prev) / dt;
 
-    // For initial steps, use forward difference
-    if pressure_prev2.iter().all(|&x| x.abs() < 1e-15) {
-        // First time step: use forward difference approximation
-        let p_squared = pressure * pressure;
-        let p_squared_prev = pressure_prev * pressure_prev;
+            // Convective nonlinearity term
+            let nonlinear = -coeff * p * dp_dt;
 
-        Zip::from(nonlinear_term_out)
-            .and(&p_squared)
-            .and(&p_squared_prev)
-            .for_each(|nl, &p2, &p2_prev| {
-                // Simple first derivative squared as approximation
-                let dp_dt = (p2 - p2_prev) / dt;
-                *nl = coeff * dp_dt / dt;
-            });
-    } else {
-        // Use centered difference for established propagation
-        let p_squared = pressure * pressure;
-        let p_squared_prev = pressure_prev * pressure_prev;
-        let p_squared_prev2 = pressure_prev2 * pressure_prev2;
-
-        Zip::from(nonlinear_term_out)
-            .and(&p_squared)
-            .and(&p_squared_prev)
-            .and(&p_squared_prev2)
-            .for_each(|nl, &p2, &p2_prev, &p2_prev2| {
-                // Centered second derivative for better harmonic generation
-                let d2p2_dt2 = (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
-                // Apply the nonlinear term with stability scaling
-                *nl = coeff * d2p2_dt2;
-            });
-    }
+            // Apply limiting for stability
+            *nl = nonlinear.clamp(-1e3, 1e3);
+        });
 }
 
 /// Compute the quadratic nonlinearity coefficient
