@@ -37,7 +37,6 @@ use std::collections::HashMap;
 
 // Core modules
 pub mod boundary;
-pub mod config;
 pub mod configuration; // Unified configuration system (SSOT)
 pub mod constants;
 pub mod error;
@@ -86,7 +85,7 @@ pub use sensor::{ArrayGeometry, BeamformingMethod, PAMConfig, PAMPlugin, Sensor,
 pub use source::Source;
 pub use time::Time;
 // Solver exports
-pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
+pub use configuration::{Configuration, OutputParameters, SimulationParameters, SourceParameters};
 pub use error::{ConfigError, ValidationError};
 pub use solver::amr::{AMRSolver, MemoryStats};
 pub use solver::plugin_based::PluginBasedSolver;

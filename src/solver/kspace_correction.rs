@@ -52,7 +52,7 @@ pub enum CorrectionMethod {
     KWave,
     /// Liu's PSTD correction (Liu 1997)
     LiuPSTD,
-    /// Simple sinc correction (spatial only)
+    /// Sinc correction (spatial only)
     SincSpatial,
 }
 

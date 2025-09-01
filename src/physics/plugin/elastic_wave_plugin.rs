@@ -150,7 +150,7 @@ impl ElasticWavePlugin {
                             * dz_inv
                             * 0.5;
 
-                    // Update velocities (Newton's second law)
+                    // Update velocities (second law of motion)
                     self.velocity_fields.vx[[i, j, k]] += self.dt * fx / rho;
                     self.velocity_fields.vy[[i, j, k]] += self.dt * fy / rho;
                     self.velocity_fields.vz[[i, j, k]] += self.dt * fz / rho;

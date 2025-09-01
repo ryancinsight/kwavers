@@ -88,7 +88,7 @@ impl ImplicitSolver for LinearSolver {
     }
 }
 
-/// Newton solver for nonlinear implicit equations
+/// Nonlinear solver for implicit equations
 #[derive(Debug, Clone)]
 pub struct NonlinearSolver {
     tolerance: f64,
@@ -109,7 +109,7 @@ impl Default for NonlinearSolver {
 }
 
 impl NonlinearSolver {
-    /// Create a new Newton solver
+    /// Create a new nonlinear solver
     pub fn new(tolerance: f64, max_iterations: usize) -> Self {
         Self {
             tolerance,
@@ -164,7 +164,7 @@ impl NonlinearSolver {
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
-        // Conjugate gradient solver for the Newton system
+        // Conjugate gradient solver for the nonlinear system
         // Solves: J * delta = -residual
         // where J is the Jacobian matrix
         let mut delta = Array3::zeros(y.dim());
@@ -219,7 +219,7 @@ impl ImplicitSolver for NonlinearSolver {
                 return Ok(solution);
             }
 
-            // Solve for Newton step
+            // Solve for nonlinear step
             let delta = self.solve_linear_system(&solution, &residual, &residual_fn)?;
 
             // Line search if enabled

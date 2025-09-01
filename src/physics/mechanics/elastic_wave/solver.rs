@@ -92,7 +92,7 @@ impl ElasticWave {
         let mut updated_velocity = SpectralVelocityFields::new(nx, ny, nz);
 
         // Spectral derivatives for force computation
-        // Newton's second law: dv/dt = F/m = (∇·σ)/ρ
+        // Second law of motion: dv/dt = F/m = (∇·σ)/ρ
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -118,7 +118,7 @@ impl ElasticWave {
                     let dtyz_dy = Complex::new(0.0, ky) * params.tyz_fft[[i, j, k]];
                     let dtzz_dz = Complex::new(0.0, kz) * params.tzz_fft[[i, j, k]];
 
-                    // Newton's second law in frequency domain
+                    // Second law of motion in frequency domain
                     updated_velocity.vx[[i, j, k]] = params.vx_fft[[i, j, k]]
                         + Complex::new(params.dt / rho, 0.0) * (dtxx_dx + dtxy_dy + dtxz_dz);
                     updated_velocity.vy[[i, j, k]] = params.vy_fft[[i, j, k]]

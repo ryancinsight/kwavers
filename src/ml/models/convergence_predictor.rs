@@ -54,7 +54,7 @@ impl MLModel for ConvergencePredictorModel {
         // For testing: map input values through sigmoid-like function
         let mut output = Array2::zeros((input.nrows(), 1));
         for (i, row) in input.axis_iter(ndarray::Axis(0)).enumerate() {
-            // Simple heuristic: higher mean values -> higher convergence probability
+            // Heuristic: higher mean values -> higher convergence probability
             let mean_val = row.mean().unwrap_or(0.0);
             // Sigmoid-like mapping: 1 / (1 + exp(-x))
             let prob = 1.0 / (1.0 + (-mean_val).exp());

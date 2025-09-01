@@ -220,7 +220,7 @@ impl NiftiReader {
     }
 }
 
-/// Basic information about a NIFTI file
+/// Information about a NIFTI file
 #[derive(Debug, Clone)]
 pub struct NiftiInfo {
     /// Dimensions of the volume [x, y, z]
