@@ -87,7 +87,7 @@ impl CPMLProfiles {
         n: usize,
         dx: f64,
         config: &CPMLConfig,
-        sound_speed: f64,
+        _sound_speed: f64,
     ) {
         let thickness = config.thickness;
         let m = config.polynomial_order;

@@ -85,6 +85,11 @@ impl MemoryOptimizer {
             })
         })?;
 
+        // SAFETY:
+        // 1. Layout is valid as checked above
+        // 2. alloc returns properly aligned memory or null
+        // 3. We check for null before returning
+        // 4. Caller is responsible for proper deallocation
         unsafe {
             let ptr = alloc(layout) as *mut T;
             if ptr.is_null() {
