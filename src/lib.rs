@@ -220,18 +220,19 @@ mod tests {
 
     #[test]
     fn test_default_config_creation() {
-        let config = Config::default();
+        let config = configuration::Configuration::default();
         // Config validation - check that required fields exist
+        assert!(config.simulation.duration > 0.0);
         assert!(config.simulation.frequency > 0.0);
-        assert!(config.source.frequency.is_some());
-        assert!(!config.output.enable_visualization); // Default is false
+        assert!(config.output.snapshots); // Default is true
     }
 
     #[test]
     fn test_config_with_custom_values() {
-        let config = Config {
-            simulation: config::SimulationConfig {
+        let config = configuration::Configuration {
+            simulation: configuration::SimulationParameters {
                 frequency: 2e6,
+                duration: 0.001,
                 ..Default::default()
             },
             ..Default::default()

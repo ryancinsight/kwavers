@@ -67,12 +67,12 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
-        fn density_array(&self) -> &Array3<f64> {
-            &self.density
+        fn density_array(&self) -> ndarray::ArrayView3<f64> {
+            self.density.view()
         }
 
-        fn sound_speed_array(&self) -> &Array3<f64> {
-            &self.sound_speed
+        fn sound_speed_array(&self) -> ndarray::ArrayView3<f64> {
+            self.sound_speed.view()
         }
 
         fn density_array_mut(&mut self) -> &mut Array3<f64> {
