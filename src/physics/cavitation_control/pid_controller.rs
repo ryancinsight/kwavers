@@ -319,11 +319,13 @@ mod tests {
         controller.set_setpoint(1.0);
 
         let mut measurement = 0.0;
-        for _ in 0..100 {
+        let dt = 0.01; // Time step
+        for _ in 0..200 {
+            // More iterations for convergence
             let output = controller.update(measurement);
-            // Simple first-order system simulation
-            measurement += output.control_signal * 0.01;
-            measurement *= 0.99; // Small damping
+            // Simple first-order system simulation: dx/dt = u - x
+            // Using Euler integration: x(t+dt) = x(t) + dt * (u - x)
+            measurement += dt * (output.control_signal - measurement);
         }
 
         // Should converge close to setpoint

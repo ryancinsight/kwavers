@@ -44,9 +44,10 @@ mod tests {
     fn test_pstd_plane_wave_accuracy() {
         // Validate k-space method accuracy (Treeby & Cox 2010, Section 3.2)
         let n = 128;
-        let dx = 1e-3;
+        // Ensure sufficient sampling: need at least 6 points per wavelength
         let frequency = 1e6;
-        let wavelength = 1500.0 / frequency;
+        let wavelength = 1500.0 / frequency; // 1.5mm at 1MHz
+        let dx = wavelength / (PPW_MINIMUM as f64 * 1.5); // Use 9 points per wavelength for safety
         let ppw = wavelength / dx;
 
         assert!(ppw >= PPW_MINIMUM as f64, "Insufficient spatial sampling");
@@ -100,8 +101,9 @@ mod tests {
             let expected = initial[[i, n / 2, 0]];
             let actual = pressure[[i, n / 2, 0]];
 
-            // Cross-correlation for phase
-            let phase_shift = (actual * expected).acos();
+            // Cross-correlation for phase (clamp to avoid NaN from acos)
+            let correlation = (actual * expected).max(-1.0).min(1.0);
+            let phase_shift = correlation.acos();
             phase_error += phase_shift.abs();
 
             // Amplitude preservation
