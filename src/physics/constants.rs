@@ -67,6 +67,21 @@ pub const ABSORPTION_TISSUE: f64 = 0.5;
 /// Absorption power law exponent
 pub const ABSORPTION_POWER: f64 = 1.1;
 
+/// Conversion: MHz to Hz
+pub const MHZ_TO_HZ: f64 = 1e6;
+
+/// Conversion: cm to m
+pub const CM_TO_M: f64 = 0.01;
+
+/// Minimum points per wavelength for accurate simulation
+pub const MIN_PPW: f64 = 10.0;
+
+/// CFL safety factor for stability
+pub const CFL_SAFETY: f64 = 0.3;
+
+/// Mechanical Index safety threshold
+pub const MI_THRESHOLD: f64 = 1.9;
+
 // ============================================================================
 // Thermal Properties
 // ============================================================================
@@ -171,6 +186,9 @@ pub const MIN_DENSITY: f64 = 0.1;
 
 /// Small value for numerical stability
 pub const EPSILON: f64 = 1e-15;
+
+/// Energy conservation tolerance for validation
+pub const ENERGY_CONSERVATION_TOLERANCE: f64 = 1e-6;
 
 // ============================================================================
 // Conversion Functions
