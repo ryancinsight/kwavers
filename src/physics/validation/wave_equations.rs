@@ -3,7 +3,7 @@
 //! Validates basic wave propagation against analytical solutions
 //! Reference: Pierce (1989) - "Acoustics: An Introduction"
 
-use crate::constants::physics::SOUND_SPEED_WATER;
+use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::grid::Grid;
 use crate::physics::field_indices;
 use crate::physics::state::PhysicsState;
@@ -43,32 +43,41 @@ mod tests {
             .update_field(field_indices::PRESSURE_IDX, &initial_pressure)
             .unwrap();
 
-        // Propagate using simple time stepping
-        // Note: RK4 solver requires a field and RHS function, not PhysicsState
-        // For this test, we'll use simple explicit time stepping
+        // Propagate using leapfrog scheme for wave equation
+        // Using velocity-pressure formulation for stability
         let steps = 100;
 
-        for _ in 0..steps {
-            // Simple wave propagation update (simplified for testing)
-            let pressure = state
-                .get_field(field_indices::PRESSURE_IDX)
-                .unwrap()
-                .to_owned();
-            let mut new_pressure = pressure.clone();
+        // Initialize velocity field
+        let mut velocity: Array3<f64> = Array3::zeros((nx, 1, 1));
+        let mut pressure_prev = initial_pressure.clone();
+        let mut pressure_curr = initial_pressure.clone();
 
-            // Apply simple wave equation update (d²p/dt² = c² ∇²p)
+        for _ in 0..steps {
+            // Update velocity: dv/dt = -(1/ρ) * dp/dx
             for i in 1..nx - 1 {
-                let d2p_dx2 = (pressure[[i + 1, 0, 0]] - 2.0 * pressure[[i, 0, 0]]
-                    + pressure[[i - 1, 0, 0]])
-                    / (dx * dx);
-                new_pressure[[i, 0, 0]] +=
-                    dt * dt * SOUND_SPEED_WATER * SOUND_SPEED_WATER * d2p_dx2;
+                velocity[[i, 0, 0]] -= (dt / DENSITY_WATER)
+                    * (pressure_curr[[i + 1, 0, 0]] - pressure_curr[[i - 1, 0, 0]])
+                    / (2.0 * dx);
             }
 
-            state
-                .update_field(field_indices::PRESSURE_IDX, &new_pressure)
-                .unwrap();
+            // Update pressure: dp/dt = -ρc² * dv/dx
+            let mut pressure_next = pressure_curr.clone();
+            for i in 1..nx - 1 {
+                pressure_next[[i, 0, 0]] = pressure_curr[[i, 0, 0]]
+                    - dt * DENSITY_WATER
+                        * SOUND_SPEED_WATER
+                        * SOUND_SPEED_WATER
+                        * (velocity[[i + 1, 0, 0]] - velocity[[i - 1, 0, 0]])
+                        / (2.0 * dx);
+            }
+
+            pressure_prev = pressure_curr;
+            pressure_curr = pressure_next;
         }
+
+        state
+            .update_field(field_indices::PRESSURE_IDX, &pressure_curr)
+            .unwrap();
 
         // Verify wave has propagated
         let travel_distance = SOUND_SPEED_WATER * dt * steps as f64;
