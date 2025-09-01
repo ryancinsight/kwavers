@@ -7,6 +7,7 @@ use log::{info, warn};
 use ndarray::Array3;
 
 /// Fallback renderer for CPU-based visualization
+#[derive(Debug)]
 pub struct FallbackRenderer {
     /// Whether fallback mode is active
     active: bool,

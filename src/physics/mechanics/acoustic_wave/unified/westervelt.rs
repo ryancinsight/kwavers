@@ -7,6 +7,7 @@ use super::config::AcousticSolverConfig;
 use super::solver::AcousticSolver;
 
 /// Westervelt equation solver
+#[derive(Debug)]
 pub struct WesterveltSolver {
     config: AcousticSolverConfig,
     grid: Grid,

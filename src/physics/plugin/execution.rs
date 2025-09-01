@@ -52,7 +52,9 @@ pub struct PluginExecutor {
 
 impl std::fmt::Debug for PluginExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PluginExecutor").finish()
+        f.debug_struct("PluginExecutor")
+            .field("strategy", &"<dyn ExecutionStrategy>")
+            .finish()
     }
 }
 
@@ -95,6 +97,7 @@ impl PluginExecutor {
 ///
 /// Note: This currently executes sequentially due to mutable field access constraints.
 /// True parallelism would require architectural changes (read/write phase separation).
+#[derive(Debug)]
 pub struct ParallelStrategy {
     thread_pool: Option<rayon::ThreadPool>,
 }

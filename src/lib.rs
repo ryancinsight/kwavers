@@ -37,7 +37,6 @@ use std::collections::HashMap;
 
 // Core modules
 pub mod boundary;
-pub mod config;
 pub mod configuration; // Unified configuration system (SSOT)
 pub mod constants;
 pub mod error;
@@ -86,7 +85,7 @@ pub use sensor::{ArrayGeometry, BeamformingMethod, PAMConfig, PAMPlugin, Sensor,
 pub use source::Source;
 pub use time::Time;
 // Solver exports
-pub use config::{Config, OutputConfig, SimulationConfig, SourceConfig};
+pub use configuration::{Configuration, OutputParameters, SimulationParameters, SourceParameters};
 pub use error::{ConfigError, ValidationError};
 pub use solver::amr::{AMRSolver, MemoryStats};
 pub use solver::plugin_based::PluginBasedSolver;
@@ -221,18 +220,19 @@ mod tests {
 
     #[test]
     fn test_default_config_creation() {
-        let config = Config::default();
+        let config = configuration::Configuration::default();
         // Config validation - check that required fields exist
+        assert!(config.simulation.duration > 0.0);
         assert!(config.simulation.frequency > 0.0);
-        assert!(config.source.frequency.is_some());
-        assert!(!config.output.enable_visualization); // Default is false
+        assert!(!config.output.snapshots); // Default is false
     }
 
     #[test]
     fn test_config_with_custom_values() {
-        let config = Config {
-            simulation: config::SimulationConfig {
+        let config = configuration::Configuration {
+            simulation: configuration::SimulationParameters {
                 frequency: 2e6,
+                duration: 0.001,
                 ..Default::default()
             },
             ..Default::default()

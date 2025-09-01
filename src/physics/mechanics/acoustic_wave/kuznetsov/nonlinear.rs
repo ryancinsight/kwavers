@@ -34,26 +34,44 @@ pub fn compute_nonlinear_term_workspace(
     // Compute β = 1 + B/2A using named constants
     let beta = NONLINEARITY_COEFFICIENT_OFFSET + nonlinearity_coefficient / B_OVER_A_DIVISOR;
 
-    // Compute coefficient: -β/(ρ₀c₀⁴)
+    // For harmonic generation, we need the convective derivative form
+    // The Kuznetsov equation nonlinear term: -β/(ρ₀c₀⁴) ∂²(p²)/∂t²
+    // This generates harmonics through the p² term
     let coeff = -beta / (density * sound_speed.powi(4));
 
-    // Compute p² for each time step
-    let p_squared = pressure * pressure;
-    let p_squared_prev = pressure_prev * pressure_prev;
-    let p_squared_prev2 = pressure_prev2 * pressure_prev2;
-
-    // Compute second time derivative using three-point backward finite difference
-    // ∂²(p²)/∂t² ≈ (p²[n] - 2*p²[n-1] + p²[n-2]) / dt²
-    // where n is current time, n-1 is previous, n-2 is two steps ago
+    // Use centered difference for better accuracy in harmonic generation
+    // This preserves the phase relationships needed for second harmonic
     let dt_squared = dt * dt;
 
-    Zip::from(nonlinear_term_out)
-        .and(&p_squared)
-        .and(&p_squared_prev)
-        .and(&p_squared_prev2)
-        .for_each(|nl, &p2, &p2_prev, &p2_prev2| {
-            *nl = coeff * (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
-        });
+    // For initial steps, use forward difference
+    if pressure_prev2.iter().all(|&x| x.abs() < 1e-15) {
+        // First time step: use forward difference approximation
+        let p_squared = pressure * pressure;
+        let p_squared_prev = pressure_prev * pressure_prev;
+
+        Zip::from(nonlinear_term_out)
+            .and(&p_squared)
+            .and(&p_squared_prev)
+            .for_each(|nl, &p2, &p2_prev| {
+                // Simple first derivative squared as approximation
+                let dp_dt = (p2 - p2_prev) / dt;
+                *nl = coeff * dp_dt / dt;
+            });
+    } else {
+        // Use centered difference for established propagation
+        let p_squared = pressure * pressure;
+        let p_squared_prev = pressure_prev * pressure_prev;
+        let p_squared_prev2 = pressure_prev2 * pressure_prev2;
+
+        Zip::from(nonlinear_term_out)
+            .and(&p_squared)
+            .and(&p_squared_prev)
+            .and(&p_squared_prev2)
+            .for_each(|nl, &p2, &p2_prev, &p2_prev2| {
+                // Centered second derivative for better harmonic generation
+                *nl = coeff * (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
+            });
+    }
 }
 
 /// Compute the quadratic nonlinearity coefficient

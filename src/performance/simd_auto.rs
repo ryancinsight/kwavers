@@ -67,6 +67,7 @@ impl SimdCapability {
 }
 
 /// Auto-dispatching SIMD operations
+#[derive(Debug)]
 pub struct SimdAuto {
     capability: SimdCapability,
 }

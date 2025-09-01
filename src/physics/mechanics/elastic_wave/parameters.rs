@@ -3,7 +3,7 @@
 //! This module defines parameter containers that reduce coupling between
 //! components following SOLID principles.
 
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 use num_complex::Complex;
 
 /// Type alias for complex 3D arrays used in spectral methods
@@ -27,7 +27,7 @@ pub struct StressUpdateParams<'a> {
     pub kz: &'a Array3<f64>,
     pub lame_lambda: &'a Array3<f64>,
     pub lame_mu: &'a Array3<f64>,
-    pub density: &'a Array3<f64>,
+    pub density: ArrayView3<'a, f64>,
     pub dt: f64,
 }
 
@@ -47,6 +47,6 @@ pub struct VelocityUpdateParams<'a> {
     pub kx: &'a Array3<f64>,
     pub ky: &'a Array3<f64>,
     pub kz: &'a Array3<f64>,
-    pub density: &'a Array3<f64>,
+    pub density: ArrayView3<'a, f64>,
     pub dt: f64,
 }

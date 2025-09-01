@@ -68,6 +68,7 @@ impl Default for WesterveltFdtdConfig {
 }
 
 /// Westervelt equation solver using FDTD
+#[derive(Debug)]
 pub struct WesterveltFdtd {
     config: WesterveltFdtdConfig,
     /// Current pressure field p^n

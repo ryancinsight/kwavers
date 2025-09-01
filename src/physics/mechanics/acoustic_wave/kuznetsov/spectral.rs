@@ -12,6 +12,7 @@ use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// Spectral operator for computing derivatives in Fourier space
+#[derive(Debug)]
 pub struct SpectralOperator {
     /// Grid dimensions
     nx: usize,
@@ -178,18 +179,5 @@ impl SpectralOperator {
         grad_x_out.assign(&grad_x_result);
         grad_y_out.assign(&grad_y_result);
         grad_z_out.assign(&grad_z_result);
-    }
-}
-
-impl std::fmt::Debug for SpectralOperator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SpectralOperator")
-            .field("nx", &self.nx)
-            .field("ny", &self.ny)
-            .field("nz", &self.nz)
-            .field("kx_vec_len", &self.kx_vec.len())
-            .field("ky_vec_len", &self.ky_vec.len())
-            .field("kz_vec_len", &self.kz_vec.len())
-            .finish()
     }
 }

@@ -4,6 +4,7 @@ use crate::error::KwaversResult;
 use wgpu::util::DeviceExt;
 
 /// GPU compute manager
+#[derive(Debug)]
 pub struct GpuCompute {
     bind_group_layouts: Vec<wgpu::BindGroupLayout>,
     command_encoder: Option<wgpu::CommandEncoder>,

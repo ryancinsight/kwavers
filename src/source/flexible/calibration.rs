@@ -41,6 +41,7 @@ pub struct QualityMetrics {
 }
 
 /// Calibration manager for flexible arrays
+#[derive(Debug)]
 pub struct CalibrationManager {
     /// Stored calibration data
     pub data: CalibrationData,

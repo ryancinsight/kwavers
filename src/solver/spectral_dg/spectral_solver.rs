@@ -15,6 +15,7 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 /// Spectral solver using FFT-based methods
+#[derive(Debug)]
 pub struct SpectralSolver {
     order: usize,
     grid: Arc<Grid>,

@@ -15,6 +15,7 @@ use super::config::{CalibrationMethod, FlexibilityModel, FlexibleTransducerConfi
 use super::geometry::{DeformationState, GeometryState};
 
 /// Flexible transducer array with real-time geometry tracking
+#[derive(Debug)]
 pub struct FlexibleTransducerArray {
     /// Configuration
     config: FlexibleTransducerConfig,
@@ -236,16 +237,6 @@ impl FlexibleTransducerArray {
     /// Get calibration confidence
     pub fn calibration_confidence(&self) -> f64 {
         self.calibration_processor.get_confidence()
-    }
-}
-
-impl std::fmt::Debug for FlexibleTransducerArray {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FlexibleTransducerArray")
-            .field("config", &self.config)
-            .field("num_elements", &self.config.num_elements)
-            .field("calibration_confidence", &self.calibration_confidence())
-            .finish()
     }
 }
 

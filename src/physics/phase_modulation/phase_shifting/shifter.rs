@@ -4,13 +4,14 @@
 
 use super::core::{
     calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
-    MIN_FOCAL_DISTANCE, PHASE_QUANTIZATION_LEVELS, SPEED_OF_SOUND,
+    MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
 };
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Phase shifter for beam control
+#[derive(Debug)]
 pub struct PhaseShifter {
     strategy: ShiftingStrategy,
     element_positions: Array2<f64>,
@@ -66,7 +67,7 @@ impl PhaseShifter {
             *phase = -k * position[0] * angle_rad.sin();
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 
@@ -102,7 +103,7 @@ impl PhaseShifter {
             *phase = -k * (distance - focal_distance);
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 
@@ -150,7 +151,7 @@ impl PhaseShifter {
 
         if self.quantization_enabled {
             for phase in phases.iter_mut() {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 

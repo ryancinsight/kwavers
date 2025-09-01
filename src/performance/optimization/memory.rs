@@ -17,6 +17,7 @@ pub enum PrefetchStrategy {
 }
 
 /// Bandwidth optimizer for memory transfers
+#[derive(Debug)]
 pub struct BandwidthOptimizer {
     /// Maximum bandwidth in GB/s
     max_bandwidth: f64,
@@ -48,6 +49,7 @@ impl BandwidthOptimizer {
 }
 
 /// Memory optimizer for efficient memory management
+#[derive(Debug)]
 pub struct MemoryOptimizer {
     prefetch_distance: usize,
     alignment: usize,
@@ -85,6 +87,11 @@ impl MemoryOptimizer {
             })
         })?;
 
+        // SAFETY:
+        // 1. Layout is valid as checked above
+        // 2. alloc returns properly aligned memory or null
+        // 3. We check for null before returning
+        // 4. Caller is responsible for proper deallocation
         unsafe {
             let ptr = alloc(layout) as *mut T;
             if ptr.is_null() {
@@ -139,6 +146,7 @@ impl MemoryOptimizer {
 }
 
 /// Memory pool for efficient allocation
+#[derive(Debug)]
 pub struct MemoryPool {
     buffer: Vec<u8>,
     offset: usize,

@@ -8,7 +8,7 @@ use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;
@@ -83,8 +83,8 @@ impl FdtdSolver {
         vx: &Array3<f64>,
         vy: &Array3<f64>,
         vz: &Array3<f64>,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
         // Compute divergence of velocity
@@ -120,7 +120,7 @@ impl FdtdSolver {
         vy: &mut Array3<f64>,
         vz: &mut Array3<f64>,
         pressure: &Array3<f64>,
-        density: &Array3<f64>,
+        density: ArrayView3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
         // Compute pressure gradient

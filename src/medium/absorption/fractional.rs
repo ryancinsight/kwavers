@@ -55,6 +55,7 @@ impl FractionalLaplacian {
 }
 
 /// Fractional derivative calculator
+#[derive(Debug)]
 pub struct FractionalDerivative {
     /// Fractional order
     order: f64,

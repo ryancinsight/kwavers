@@ -56,6 +56,7 @@ impl DispersionModel {
 }
 
 /// Dispersion correction in k-space
+#[derive(Debug)]
 pub struct DispersionCorrection {
     model: DispersionModel,
 }

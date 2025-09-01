@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 /// High-order forward difference coefficients
 /// These maintain the same order of accuracy as the interior stencils
+#[derive(Debug)]
 pub struct BoundaryStencils {
     /// Forward difference coefficients for each order
     forward_coeffs: HashMap<usize, Vec<f64>>,

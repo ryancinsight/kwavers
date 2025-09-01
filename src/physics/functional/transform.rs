@@ -15,6 +15,14 @@ pub struct FieldTransform<F> {
     transforms: Vec<Box<dyn Fn(F) -> F + Send + Sync>>,
 }
 
+impl<F> std::fmt::Debug for FieldTransform<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FieldTransform")
+            .field("transforms_count", &self.transforms.len())
+            .finish()
+    }
+}
+
 impl<F> FieldTransform<F>
 where
     F: Clone + Send + Sync + 'static,
@@ -80,6 +88,15 @@ where
 pub struct ReversibleTransform<F> {
     forward: FieldTransform<F>,
     inverse: Box<dyn Fn(F) -> F + Send + Sync>,
+}
+
+impl<F> std::fmt::Debug for ReversibleTransform<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReversibleTransform")
+            .field("forward", &self.forward)
+            .field("inverse", &"<dyn Fn>")
+            .finish()
+    }
 }
 
 impl<F> ReversibleTransform<F>

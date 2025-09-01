@@ -13,6 +13,7 @@ use crate::error::KwaversResult;
 use crate::physics::constants_physics::*;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
+#[derive(Debug)]
 pub struct GilmoreSolver {
     params: BubbleParameters,
     /// Tait equation parameters for water

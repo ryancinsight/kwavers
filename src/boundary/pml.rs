@@ -217,9 +217,14 @@ impl PMLBoundary {
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
             Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
-                *val = self.acoustic_damping_x[i]
-                    + self.acoustic_damping_y[j]
-                    + self.acoustic_damping_z[k];
+                // Use modulo to handle size mismatch safely
+                let x_idx = i.min(self.acoustic_damping_x.len().saturating_sub(1));
+                let y_idx = j.min(self.acoustic_damping_y.len().saturating_sub(1));
+                let z_idx = k.min(self.acoustic_damping_z.len().saturating_sub(1));
+
+                *val = self.acoustic_damping_x[x_idx]
+                    + self.acoustic_damping_y[y_idx]
+                    + self.acoustic_damping_z[z_idx];
             });
 
             self.acoustic_damping_3d = Some(damping_3d);
@@ -233,7 +238,14 @@ impl PMLBoundary {
             let mut damping_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
             Zip::indexed(&mut damping_3d).for_each(|(i, j, k), val| {
-                *val = self.light_damping_x[i] + self.light_damping_y[j] + self.light_damping_z[k];
+                // Use modulo to handle size mismatch safely
+                let x_idx = i.min(self.light_damping_x.len().saturating_sub(1));
+                let y_idx = j.min(self.light_damping_y.len().saturating_sub(1));
+                let z_idx = k.min(self.light_damping_z.len().saturating_sub(1));
+
+                *val = self.light_damping_x[x_idx]
+                    + self.light_damping_y[y_idx]
+                    + self.light_damping_z[z_idx];
             });
 
             self.light_damping_3d = Some(damping_3d);

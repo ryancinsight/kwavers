@@ -12,7 +12,7 @@ use crate::medium::{
     viscous::ViscousProperties,
 };
 use log::debug;
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 
 // Import physical constants
 use super::constants::*;
@@ -240,12 +240,12 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn density_array(&self) -> &Array3<f64> {
-        &self.density
+    fn density_array(&self) -> ArrayView3<f64> {
+        self.density.view()
     }
 
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        &self.sound_speed
+    fn sound_speed_array(&self) -> ArrayView3<f64> {
+        self.sound_speed.view()
     }
 
     fn density_array_mut(&mut self) -> &mut Array3<f64> {

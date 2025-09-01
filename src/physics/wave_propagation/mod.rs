@@ -126,6 +126,7 @@ impl MediumProperties {
 }
 
 /// Main wave propagation calculator
+#[derive(Debug)]
 pub struct WavePropagationCalculator {
     /// Wave mode
     mode: WaveMode,
@@ -138,6 +139,7 @@ pub struct WavePropagationCalculator {
 }
 
 /// Attenuation calculator for wave propagation in absorbing media
+#[derive(Debug)]
 pub struct AttenuationCalculator {
     /// Absorption coefficient [1/m] or [Np/m]
     absorption_coefficient: f64,

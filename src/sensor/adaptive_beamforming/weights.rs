@@ -12,6 +12,7 @@ pub enum WeightingScheme {
 }
 
 /// Weight calculator
+#[derive(Debug)]
 pub struct WeightCalculator {
     scheme: WeightingScheme,
 }

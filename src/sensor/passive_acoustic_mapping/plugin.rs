@@ -6,9 +6,9 @@ use crate::medium::Medium;
 use crate::physics::field_mapping::UnifiedFieldType;
 use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 use ndarray::{Array3, Array4};
-use std::fmt;
 
 /// PAM plugin for passive acoustic mapping
+#[derive(Debug)]
 pub struct PAMPlugin {
     mapper: super::PassiveAcousticMapper,
     metadata: PluginMetadata,
@@ -32,15 +32,6 @@ impl PAMPlugin {
             },
             state: PluginState::Created,
         })
-    }
-}
-
-impl fmt::Debug for PAMPlugin {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PAMPlugin")
-            .field("metadata", &self.metadata)
-            .field("state", &self.state)
-            .finish()
     }
 }
 

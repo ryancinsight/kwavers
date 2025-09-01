@@ -63,13 +63,11 @@ mod tests {
             // Verify against calculated values for liver tissue
             // For liver: α = 0.5 dB/cm/MHz^1.1
             // At 10 cm distance, amplitude ratio = exp(-α*d/8.686)
-            let expected_ratio = match (freq / 1e6) as i32 {
-                1 => 0.562,  // At 1 MHz, 10 cm (5.0 dB total)
-                2 => 0.291,  // At 2 MHz, 10 cm (10.7 dB total)
-                5 => 0.034,  // At 5 MHz, 10 cm (29.4 dB total)
-                10 => 0.007, // At 10 MHz, 10 cm (63.1 dB total)
-                _ => continue,
-            };
+            // Calculate expected ratio directly for accuracy
+            let expected_atten_db_per_cm = 0.5 * (freq / 1e6_f64).powf(1.1);
+            let expected_atten_db = expected_atten_db_per_cm * 10.0; // 10 cm
+            let expected_atten_np = expected_atten_db / 8.686;
+            let expected_ratio = (-expected_atten_np).exp();
 
             let error = (amplitude_ratio - expected_ratio).abs() / expected_ratio;
             assert!(

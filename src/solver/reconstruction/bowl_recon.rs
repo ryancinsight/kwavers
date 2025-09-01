@@ -11,6 +11,7 @@ use crate::solver::reconstruction::{
 use ndarray::{Array2, Array3};
 
 /// Bowl/Hemispherical array reconstruction
+#[derive(Debug)]
 pub struct BowlRecon {
     /// Bowl center position
     center: [f64; 3],

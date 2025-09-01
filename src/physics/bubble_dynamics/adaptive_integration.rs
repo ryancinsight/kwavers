@@ -65,6 +65,7 @@ impl Default for AdaptiveBubbleConfig {
 }
 
 /// Adaptive integrator for bubble dynamics with sub-cycling
+#[derive(Debug)]
 pub struct AdaptiveBubbleIntegrator<'a> {
     solver: &'a KellerMiksisModel,
     config: AdaptiveBubbleConfig,

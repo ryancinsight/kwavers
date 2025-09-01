@@ -1,103 +1,108 @@
-// physics/thermal/mod.rs - Unified thermal physics module
+//! Thermal module for bioheat transfer
+//!
+//! Implements the Pennes bioheat equation for modeling temperature rise
+//! in tissue during ultrasound exposure.
+//!
+//! References:
+//! - Pennes (1948) "Analysis of tissue and arterial blood temperatures"
+//! - Nyborg (1988) "Solutions of the bio-heat transfer equation"
+//! - ter Haar & Coussios (2007) "High intensity focused ultrasound"
 
-pub mod bioheat;
-pub mod calculator;
-pub mod dose;
+pub mod pennes;
+pub mod perfusion;
 pub mod properties;
-pub mod source;
+pub mod thermal_dose;
 
-use crate::grid::Grid;
-use ndarray::Array3;
-use serde::{Deserialize, Serialize};
+pub use pennes::PennesSolver;
+pub use thermal_dose::ThermalDose;
 
-// Re-export main types - single implementation
-pub use bioheat::{BioheatSolver, PennesEquation};
-pub use calculator::ThermalCalculator;
-pub use dose::{ThermalDose, ThermalDoseCalculator};
-pub use properties::{ThermalProperties, TissueProperties};
-pub use source::{HeatSource, ThermalSource};
-
-/// Thermal configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ThermalConfig {
-    /// Enable Pennes bioheat equation
-    pub use_bioheat: bool,
-    /// Alias for use_bioheat (compatibility)
-    pub bioheat: bool,
-    /// Blood temperature (K)
-    pub blood_temperature: f64,
-    /// Blood perfusion rate (kg/m³/s)
-    pub blood_perfusion: f64,
-    /// Alias for blood_perfusion
-    pub perfusion_rate: f64,
-    /// Blood specific heat (J/kg/K)
-    pub blood_specific_heat: f64,
-    /// Thermal diffusivity (m²/s)
-    pub thermal_diffusivity: f64,
-    /// Enable hyperbolic heat equation
-    pub hyperbolic: bool,
-    /// Relaxation time for hyperbolic model (s)
-    pub relaxation_time: f64,
-    /// Reference temperature for dose calculation (K)
-    pub reference_temperature: f64,
-}
-
-impl Default for ThermalConfig {
-    fn default() -> Self {
-        Self {
-            use_bioheat: true,
-            bioheat: true,
-            blood_temperature: 310.0, // 37°C
-            blood_perfusion: 0.5,
-            perfusion_rate: 0.5,
-            blood_specific_heat: 3617.0,
-            thermal_diffusivity: 1.4e-7,
-            hyperbolic: false,
-            relaxation_time: 20.0,
-            reference_temperature: 316.15, // 43°C
-        }
-    }
-}
-
-/// Thermal field state
+/// Thermal properties of tissue
 #[derive(Debug, Clone)]
-pub struct ThermalState {
-    pub temperature: Array3<f64>,
-    pub heat_flux: (Array3<f64>, Array3<f64>, Array3<f64>),
-    pub thermal_dose: Array3<f64>,
+pub struct ThermalProperties {
+    /// Thermal conductivity (W/m/K)
+    pub k: f64,
+    /// Specific heat capacity (J/kg/K)
+    pub c: f64,
+    /// Density (kg/m³)
+    pub rho: f64,
+    /// Blood perfusion rate (kg/m³/s)
+    pub w_b: f64,
+    /// Blood specific heat (J/kg/K)
+    pub c_b: f64,
+    /// Arterial blood temperature (°C)
+    pub T_a: f64,
+    /// Metabolic heat generation (W/m³)
+    pub Q_m: f64,
 }
 
-impl ThermalState {
-    /// Create new thermal state
-    pub fn new(grid: &Grid, initial_temperature: f64) -> Self {
-        let shape = (grid.nx, grid.ny, grid.nz);
-
+impl Default for ThermalProperties {
+    fn default() -> Self {
+        // Default values for soft tissue
         Self {
-            temperature: Array3::from_elem(shape, initial_temperature),
-            heat_flux: (
-                Array3::zeros(shape),
-                Array3::zeros(shape),
-                Array3::zeros(shape),
-            ),
-            thermal_dose: Array3::zeros(shape),
+            k: 0.5,      // W/m/K
+            c: 3600.0,   // J/kg/K
+            rho: 1050.0, // kg/m³
+            w_b: 0.5,    // kg/m³/s (moderate perfusion)
+            c_b: 3800.0, // J/kg/K (blood)
+            T_a: 37.0,   // °C (body temperature)
+            Q_m: 400.0,  // W/m³ (basal metabolism)
         }
     }
 }
 
-/// Named constants for thermal physics
-pub mod constants {
-    /// Celsius to Kelvin conversion
-    pub const CELSIUS_TO_KELVIN: f64 = 273.15;
+/// Common tissue types with thermal properties
+pub mod tissues {
+    use super::ThermalProperties;
 
-    /// Reference temperature for CEM43 calculation (°C)
-    pub const CEM43_REFERENCE_TEMP: f64 = 43.0;
+    /// Liver tissue properties
+    pub fn liver() -> ThermalProperties {
+        ThermalProperties {
+            k: 0.52,
+            c: 3540.0,
+            rho: 1060.0,
+            w_b: 16.7, // High perfusion
+            c_b: 3800.0,
+            T_a: 37.0,
+            Q_m: 33800.0,
+        }
+    }
 
-    /// Activation energy for protein denaturation (J/mol)
-    pub const ACTIVATION_ENERGY: f64 = 630e3;
+    /// Muscle tissue properties
+    pub fn muscle() -> ThermalProperties {
+        ThermalProperties {
+            k: 0.49,
+            c: 3421.0,
+            rho: 1090.0,
+            w_b: 0.54,
+            c_b: 3800.0,
+            T_a: 37.0,
+            Q_m: 684.0,
+        }
+    }
 
-    /// Universal gas constant (J/mol/K)
-    pub const GAS_CONSTANT: f64 = 8.314;
+    /// Fat tissue properties
+    pub fn fat() -> ThermalProperties {
+        ThermalProperties {
+            k: 0.21,
+            c: 2348.0,
+            rho: 911.0,
+            w_b: 0.3, // Low perfusion
+            c_b: 3800.0,
+            T_a: 37.0,
+            Q_m: 400.0,
+        }
+    }
 
-    /// Threshold for thermal damage (equivalent minutes at 43°C)
-    pub const THERMAL_DAMAGE_THRESHOLD: f64 = 240.0;
+    /// Tumor tissue properties (hypoxic)
+    pub fn tumor() -> ThermalProperties {
+        ThermalProperties {
+            k: 0.55,
+            c: 3600.0,
+            rho: 1050.0,
+            w_b: 0.2, // Poor perfusion
+            c_b: 3800.0,
+            T_a: 37.0,
+            Q_m: 5000.0, // Higher metabolism
+        }
+    }
 }

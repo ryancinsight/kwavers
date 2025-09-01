@@ -52,7 +52,7 @@
 //!
 //! - **SOLID**: Each component has a single responsibility
 //! - **DRY**: Common functionality is abstracted into traits
-//! - **KISS**: Simple interfaces for complex algorithms
+//! - **KISS**: Clear interfaces for complex algorithms
 //! - **Clean Code**: Clear naming and documentation
 
 pub mod imex_bdf;
@@ -157,7 +157,7 @@ impl IMEXSchemeType {
 #[derive(Debug)]
 pub enum ImplicitSolverType {
     Linear(LinearSolver),
-    Newton(NonlinearSolver),
+    Nonlinear(NonlinearSolver),
 }
 
 impl ImplicitSolverType {
@@ -167,7 +167,7 @@ impl ImplicitSolverType {
     {
         match self {
             ImplicitSolverType::Linear(solver) => solver.solve(initial_guess, residual_fn),
-            ImplicitSolverType::Newton(solver) => solver.solve(initial_guess, residual_fn),
+            ImplicitSolverType::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
         }
     }
 }
@@ -179,21 +179,21 @@ impl ImplicitSolver for ImplicitSolverType {
     {
         match self {
             ImplicitSolverType::Linear(solver) => solver.solve(initial_guess, residual_fn),
-            ImplicitSolverType::Newton(solver) => solver.solve(initial_guess, residual_fn),
+            ImplicitSolverType::Nonlinear(solver) => solver.solve(initial_guess, residual_fn),
         }
     }
 
     fn tolerance(&self) -> f64 {
         match self {
             ImplicitSolverType::Linear(solver) => solver.tolerance(),
-            ImplicitSolverType::Newton(solver) => solver.tolerance(),
+            ImplicitSolverType::Nonlinear(solver) => solver.tolerance(),
         }
     }
 
     fn max_iterations(&self) -> usize {
         match self {
             ImplicitSolverType::Linear(solver) => solver.max_iterations(),
-            ImplicitSolverType::Newton(solver) => solver.max_iterations(),
+            ImplicitSolverType::Nonlinear(solver) => solver.max_iterations(),
         }
     }
 }
@@ -218,7 +218,7 @@ pub struct IMEXIntegrator {
 impl IMEXIntegrator {
     /// Create a new IMEX integrator
     pub fn new(config: IMEXConfig, scheme: IMEXSchemeType, grid: Arc<Grid>) -> Self {
-        let implicit_solver = ImplicitSolverType::Newton(NonlinearSolver::new(
+        let implicit_solver = ImplicitSolverType::Nonlinear(NonlinearSolver::new(
             config.tolerance,
             config.max_iterations,
         ));

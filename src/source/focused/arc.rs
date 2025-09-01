@@ -46,6 +46,7 @@ impl Default for ArcConfig {
 }
 
 /// Arc source for 2D simulations (makeArc equivalent)
+#[derive(Debug)]
 pub struct ArcSource {
     config: ArcConfig,
     /// Discretized element positions

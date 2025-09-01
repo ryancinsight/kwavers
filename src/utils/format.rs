@@ -29,8 +29,16 @@ pub fn format_duration(duration: Duration) -> String {
         format!("{}m {}s", minutes, seconds)
     } else if seconds > 0 {
         format!("{}s", seconds)
-    } else {
+    } else if millis > 0 {
         format!("{}ms", millis)
+    } else {
+        // For sub-millisecond durations, show microseconds
+        let micros = duration.subsec_micros();
+        if micros > 0 {
+            format!("{}µs", micros)
+        } else {
+            format!("{}ns", duration.subsec_nanos())
+        }
     }
 }
 
@@ -117,8 +125,9 @@ mod tests {
         assert_eq!(format_si_number(1234.0), "1.23k");
         assert_eq!(format_si_number(1234567.0), "1.23M");
         assert_eq!(format_si_number(1234567890.0), "1.23G");
-        assert_eq!(format_si_number(0.001234), "1.23");
+        assert_eq!(format_si_number(0.001234), "1.23m");
         assert_eq!(format_si_number(0.000001234), "1.23µ");
+        assert_eq!(format_si_number(1.234), "1.23");
     }
 
     #[test]

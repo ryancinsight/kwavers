@@ -24,6 +24,7 @@ pub struct TransducerGeometry {
 }
 
 /// Multi-Element Transducer Field Calculator Plugin
+#[derive(Debug)]
 pub struct TransducerFieldCalculatorPlugin {
     metadata: PluginMetadata,
     state: PluginState,

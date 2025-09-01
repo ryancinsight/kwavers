@@ -108,7 +108,7 @@ impl crate::physics::plugin::Plugin for PstdPlugin {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        // Simple finite difference implementation to avoid FFT issues
+        // Finite difference implementation to avoid FFT issues
         // This is a temporary fix for the segfault - proper spectral implementation needs debugging
 
         // Update pressure using finite differences for divergence

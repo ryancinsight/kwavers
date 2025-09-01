@@ -3,6 +3,7 @@
 //! This module contains tests that validate our numerical implementations
 //! against known analytical solutions from physics literature.
 
+pub mod analytical_solutions;
 pub mod conservation_laws;
 pub mod material_properties;
 pub mod nonlinear_acoustics;

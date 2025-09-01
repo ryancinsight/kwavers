@@ -1,6 +1,7 @@
 //! Refraction calculations for wave propagation
 
 /// Refraction calculator
+#[derive(Debug)]
 pub struct RefractionCalculator {
     // Implementation details
 }

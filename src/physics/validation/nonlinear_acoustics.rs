@@ -54,14 +54,19 @@ mod tests {
         let k = 2.0 * PI / wavelength;
         let amplitude = 1e6; // 1 MPa
 
+        // Calculate time step
+        let dt = 0.5 * dx / 1500.0; // CFL condition
+
         // Initialize fields array (4D: [field_type, x, y, z])
         let mut fields = Array4::zeros((1, nx, 1, 1)); // Single field for pressure
-        let prev_pressure = Array3::zeros((nx, 1, 1));
+        let mut prev_pressure = Array3::zeros((nx, 1, 1));
 
         // Initialize pressure field with sinusoidal wave
         for i in 0..nx {
             let x = i as f64 * dx;
             fields[[0, i, 0, 0]] = amplitude * (k * x).sin();
+            // Initialize prev_pressure for proper time stepping (assuming wave traveling at c)
+            prev_pressure[[i, 0, 0]] = amplitude * (k * (x - 1500.0 * dt)).sin();
         }
 
         // Create a null source and medium for testing
@@ -69,16 +74,31 @@ mod tests {
         use crate::source::NullSource;
         let source = NullSource::new();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
-
-        // Calculate time step
-        let dt = 0.5 * dx / 1500.0; // CFL condition
         let mut t = 0.0;
 
         // Propagate to develop harmonics
         let steps = 100;
-        for _ in 0..steps {
+        for step in 0..steps {
+            // Store current pressure as previous for next step
+            for i in 0..nx {
+                prev_pressure[[i, 0, 0]] = fields[[0, i, 0, 0]];
+            }
+
             solver.update_wave(&mut fields, &prev_pressure, &source, &grid, &medium, dt, t);
             t += dt;
+
+            // Check for NaN
+            if step % 20 == 0 || step == steps - 1 {
+                let max_p = fields.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+                let has_nan = fields.iter().any(|p| p.is_nan());
+                println!(
+                    "Step {}: max pressure = {:.2e}, has NaN = {}",
+                    step, max_p, has_nan
+                );
+                if has_nan {
+                    panic!("NaN detected at step {}", step);
+                }
+            }
         }
 
         // Extract pressure for analysis
@@ -104,20 +124,46 @@ mod tests {
         let fundamental_amp = spectrum[fundamental_idx].norm();
         let second_harmonic_amp = spectrum[second_harmonic_idx].norm();
 
+        println!("Fundamental amplitude: {:.2e}", fundamental_amp);
+        println!("Second harmonic amplitude: {:.2e}", second_harmonic_amp);
+        println!(
+            "Fundamental index: {}, Second harmonic index: {}",
+            fundamental_idx, second_harmonic_idx
+        );
+
         // Theoretical ratio from Blackstock
         let propagation_distance = steps as f64 * dx;
         let shock_distance = 1500.0 / (BETA_WATER * k * amplitude);
         let sigma = propagation_distance / shock_distance;
 
         let expected_ratio = sigma / 2.0; // Linear approximation for small sigma
-        let actual_ratio = second_harmonic_amp / fundamental_amp;
+        let actual_ratio = if fundamental_amp > 1e-10 {
+            second_harmonic_amp / fundamental_amp
+        } else {
+            println!(
+                "Warning: fundamental amplitude too small: {:.2e}",
+                fundamental_amp
+            );
+            0.0
+        };
 
-        let error = (actual_ratio - expected_ratio).abs() / expected_ratio;
-        assert!(
-            error < 0.2,
-            "Second harmonic generation error: {:.2}%",
-            error * 100.0
+        println!(
+            "Expected ratio: {:.4}, Actual ratio: {:.4}",
+            expected_ratio, actual_ratio
         );
+
+        if expected_ratio > 0.0 {
+            let error = (actual_ratio - expected_ratio).abs() / expected_ratio;
+            assert!(
+                error < 0.2,
+                "Second harmonic generation error: {:.2}% (expected: {:.4}, actual: {:.4})",
+                error * 100.0,
+                expected_ratio,
+                actual_ratio
+            );
+        } else {
+            panic!("Invalid expected ratio: {:.4}", expected_ratio);
+        }
     }
 
     #[test]

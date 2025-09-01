@@ -92,6 +92,7 @@ impl Default for LocalizationConfig {
 }
 
 /// Main localization processor
+#[derive(Debug)]
 pub struct LocalizationProcessor {
     config: LocalizationConfig,
     sensor_array: SensorArray,

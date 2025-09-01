@@ -18,6 +18,7 @@ use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
 
 /// Reverse Time Migration reconstructor
 /// Creates subsurface images by cross-correlating forward and backward wavefields
+#[derive(Debug)]
 pub struct ReverseTimeMigration {
     config: SeismicImagingConfig,
     /// Velocity model for migration

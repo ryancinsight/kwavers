@@ -35,25 +35,72 @@ pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<
         return Ok((nodes, weights));
     }
 
+    // Special cases with exact values to avoid numerical issues
+    if n == 3 {
+        nodes[1] = 0.0;
+        weights[0] = 1.0 / 3.0;
+        weights[1] = 4.0 / 3.0;
+        weights[2] = 1.0 / 3.0;
+        return Ok((nodes, weights));
+    }
+
+    if n == 4 {
+        // Exact values for 4-point Gauss-Lobatto
+        let sqrt5 = 5.0_f64.sqrt();
+        nodes[1] = -1.0 / sqrt5;
+        nodes[2] = 1.0 / sqrt5;
+        weights[0] = 1.0 / 6.0;
+        weights[1] = 5.0 / 6.0;
+        weights[2] = 5.0 / 6.0;
+        weights[3] = 1.0 / 6.0;
+        return Ok((nodes, weights));
+    }
+
+    if n == 5 {
+        // Exact values for 5-point Gauss-Lobatto
+        let sqrt21 = 21.0_f64.sqrt();
+        nodes[1] = -(sqrt21 / 7.0);
+        nodes[2] = 0.0;
+        nodes[3] = sqrt21 / 7.0;
+        weights[0] = 1.0 / 10.0;
+        weights[1] = 49.0 / 90.0;
+        weights[2] = 32.0 / 45.0;
+        weights[3] = 49.0 / 90.0;
+        weights[4] = 1.0 / 10.0;
+        return Ok((nodes, weights));
+    }
+
+    // For larger n, use Newton-Raphson iteration
     // Interior nodes are roots of P'_{n-1}(x)
-    // Use Chebyshev nodes as initial guess
+    // Use better initial guess
     for i in 1..n - 1 {
-        let theta = std::f64::consts::PI * (n - 1 - i) as f64 / (n - 1) as f64;
+        // Use roots of Chebyshev polynomial of first kind as initial guess
+        let k = n - 1 - i;
+        let theta = std::f64::consts::PI * (2.0 * k as f64 - 1.0) / (2.0 * (n - 2) as f64);
         nodes[i] = theta.cos();
     }
 
-    // Newton-Raphson iteration for interior nodes
-    for i in 1..n - 1 {
-        let mut x = nodes[i];
-        for _ in 0..MAX_NEWTON_ITERATIONS {
-            let (p, dp) = legendre_poly_deriv(n - 1, x);
-            let dx = -p / dp;
-            x += dx;
-            if dx.abs() < NEWTON_TOLERANCE {
-                break;
+    {
+        // Newton-Raphson iteration for interior nodes
+        // Find roots of P'_{n-1}(x) where P is Legendre polynomial
+        for i in 1..n - 1 {
+            let mut x = nodes[i];
+            for _ in 0..MAX_NEWTON_ITERATIONS {
+                // We need the derivative and second derivative of P_{n-1}
+                let (p_nm1, dp_nm1) = legendre_poly_deriv(n - 1, x);
+
+                // For Newton iteration on P'_{n-1} = 0, we need P' and P''
+                // P''_{n-1} can be computed from recurrence
+                let ddp = ((n - 1) as f64 * (x * dp_nm1 - p_nm1)) / (x * x - 1.0);
+
+                let dx = -dp_nm1 / ddp;
+                x += dx;
+                if dx.abs() < NEWTON_TOLERANCE {
+                    break;
+                }
             }
+            nodes[i] = x;
         }
-        nodes[i] = x;
     }
 
     // Compute weights: w_i = 2 / (n(n-1) [P_{n-1}(x_i)]^2)

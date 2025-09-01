@@ -13,6 +13,7 @@ pub struct DeviceInfo {
 }
 
 /// GPU device wrapper
+#[derive(Debug)]
 pub struct GpuDevice {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,

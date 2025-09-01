@@ -36,6 +36,7 @@ pub enum PhotoacousticAlgorithm {
 }
 
 /// Main photoacoustic reconstructor
+#[derive(Debug)]
 pub struct PhotoacousticReconstructor {
     pub(crate) config: PhotoacousticConfig,
     filters: Filters,

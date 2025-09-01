@@ -11,6 +11,7 @@ use std::path::Path;
 pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject, ReaderOptions};
 
 /// NIFTI file reader with proper endianness and format handling
+#[derive(Debug)]
 pub struct NiftiReader {
     /// Enable verbose logging
     verbose: bool,
@@ -220,7 +221,7 @@ impl NiftiReader {
     }
 }
 
-/// Basic information about a NIFTI file
+/// Information about a NIFTI file
 #[derive(Debug, Clone)]
 pub struct NiftiInfo {
     /// Dimensions of the volume [x, y, z]

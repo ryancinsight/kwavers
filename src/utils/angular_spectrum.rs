@@ -9,6 +9,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 
 /// Angular spectrum method for acoustic field calculations
+#[derive(Debug)]
 pub struct AngularSpectrum {
     /// Grid dimensions
     pub nx: usize,

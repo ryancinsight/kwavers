@@ -39,6 +39,7 @@ pub mod config;
 pub mod diffusion;
 pub mod nonlinear;
 pub mod numerical;
+pub mod operator_splitting;
 pub mod solver;
 pub mod spectral;
 pub mod workspace;

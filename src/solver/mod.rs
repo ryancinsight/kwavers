@@ -116,6 +116,7 @@ impl FieldsSummary {
 }
 
 /// Console progress reporter implementation
+#[derive(Debug)]
 pub struct ConsoleProgressReporter {
     last_report_time: std::time::Instant,
     report_interval: std::time::Duration,
@@ -211,6 +212,7 @@ impl ProgressReporter for NullProgressReporter {
 
 /// Asynchronous console reporter for non-blocking progress reporting
 /// This prevents I/O operations from affecting simulation performance
+#[derive(Debug)]
 pub struct AsyncConsoleReporter {
     sender: std::sync::mpsc::Sender<String>,
     last_report_time: std::time::Instant,

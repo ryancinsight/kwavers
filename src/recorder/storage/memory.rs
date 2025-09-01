@@ -6,6 +6,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Memory storage backend
+#[derive(Debug)]
 pub struct MemoryStorage {
     data: HashMap<String, Vec<Array3<f64>>>,
     shape: Option<(usize, usize, usize)>,

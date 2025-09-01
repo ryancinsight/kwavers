@@ -23,6 +23,18 @@ pub struct AngularSpectrum {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for AngularSpectrum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AngularSpectrum")
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .field("dx", &self.dx)
+            .field("dy", &self.dy)
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl AngularSpectrum {
     /// Create new angular spectrum propagator
     pub fn new(nx: usize, ny: usize, dx: f64, dy: f64) -> Self {

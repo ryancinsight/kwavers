@@ -52,7 +52,7 @@ impl AnomalyDetectorModel {
 
 impl MLModel for AnomalyDetectorModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        // Simple threshold-based anomaly detection
+        // Threshold-based anomaly detection
         Ok(input.mapv(|x| if x.abs() > self.threshold { 1.0 } else { 0.0 }))
     }
 

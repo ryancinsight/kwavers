@@ -22,6 +22,17 @@ pub struct UnifiedAcousticSolver {
     metrics: SolverMetrics,
 }
 
+impl std::fmt::Debug for UnifiedAcousticSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnifiedAcousticSolver")
+            .field("config", &self.config)
+            .field("grid", &self.grid)
+            .field("solver", &"<dyn AcousticSolver>")
+            .field("metrics", &self.metrics)
+            .finish()
+    }
+}
+
 /// Trait for model-specific acoustic solvers
 pub trait AcousticSolver: Send + Sync {
     /// Update the acoustic field for one time step

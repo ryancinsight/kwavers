@@ -12,7 +12,7 @@ pub trait ViscousProperties: CoreMedium {
     fn viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64;
 
     /// Get shear viscosity (Pa·s)
-    /// Also known as dynamic viscosity for Newtonian fluids
+    /// Dynamic viscosity for Newtonian fluids
     fn shear_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // For simple fluids, shear viscosity equals dynamic viscosity
         self.viscosity(x, y, z, grid)

@@ -6,6 +6,7 @@
 use ndarray::Array3;
 
 /// Lazy field iterator that applies transformations on demand
+#[derive(Debug)]
 pub struct LazyFieldIterator<'a, T, F, U> {
     field: &'a Array3<T>,
     transform: F,
@@ -67,6 +68,7 @@ where
 }
 
 /// Chunked lazy iterator for processing fields in chunks
+#[derive(Debug)]
 pub struct ChunkedFieldIterator<'a, T> {
     field: &'a Array3<T>,
     chunk_size: usize,

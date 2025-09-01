@@ -3,7 +3,7 @@
 //! This module provides polynomial basis functions and related operations
 //! for discontinuous Galerkin methods.
 
-use crate::KwaversResult;
+use crate::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 
 /// Basis function type for DG
@@ -86,12 +86,23 @@ pub fn build_vandermonde(
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
     let n_nodes = nodes.len();
-    let mut vandermonde = Array2::zeros((n_nodes, poly_order + 1));
+
+    // For DG methods, we need a square Vandermonde matrix
+    // n_nodes should equal poly_order + 1
+    if n_nodes != poly_order + 1 {
+        return Err(KwaversError::InvalidInput(format!(
+            "Number of nodes ({}) must equal polynomial order + 1 ({})",
+            n_nodes,
+            poly_order + 1
+        )));
+    }
+
+    let mut vandermonde = Array2::zeros((n_nodes, n_nodes));
 
     match basis_type {
         BasisType::Legendre => {
             for (i, &xi) in nodes.iter().enumerate() {
-                for j in 0..=poly_order {
+                for j in 0..n_nodes {
                     vandermonde[(i, j)] = legendre_basis(j, xi);
                 }
             }
@@ -99,9 +110,7 @@ pub fn build_vandermonde(
         BasisType::Lagrange => {
             for (i, &xi) in nodes.iter().enumerate() {
                 for j in 0..n_nodes {
-                    if j <= poly_order {
-                        vandermonde[(i, j)] = lagrange_basis(j, xi, nodes);
-                    }
+                    vandermonde[(i, j)] = lagrange_basis(j, xi, nodes);
                 }
             }
         }

@@ -10,6 +10,7 @@ use ndarray::Array3;
 use wgpu::util::DeviceExt;
 
 /// GPU compute manager with automatic dispatch
+#[derive(Debug)]
 pub struct ComputeManager {
     device: Option<wgpu::Device>,
     queue: Option<wgpu::Queue>,

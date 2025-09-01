@@ -1,6 +1,7 @@
 //! Reflection calculations for wave propagation
 
 /// Reflection calculator
+#[derive(Debug)]
 pub struct ReflectionCalculator {
     // Implementation details
 }

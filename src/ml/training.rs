@@ -8,6 +8,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 
 /// Training pipeline for ML models
+#[derive(Debug)]
 pub struct TrainingPipeline {
     epochs: usize,
     batch_size: usize,

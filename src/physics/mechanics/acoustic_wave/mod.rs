@@ -5,6 +5,7 @@
 
 // Submodules
 pub mod kuznetsov;
+pub mod kzk;
 pub mod nonlinear;
 pub mod unified;
 pub mod westervelt;

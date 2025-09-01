@@ -16,6 +16,7 @@ pub enum InterpolationScheme {
 }
 
 /// Conservative interpolator for AMR
+#[derive(Debug)]
 pub struct ConservativeInterpolator {
     scheme: InterpolationScheme,
 }

@@ -5,6 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Array3, Zip};
 
 /// Gradient computation methods for FWI
+#[derive(Debug)]
 pub struct GradientComputer {
     /// Preconditioning matrix (optional)
     preconditioner: Option<Array3<f64>>,

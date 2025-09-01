@@ -6,6 +6,7 @@ use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
 use ndarray::{Array3, Zip};
 
 /// Volume renderer for 3D fields
+#[derive(Debug)]
 pub struct VolumeRenderer {
     config: VisualizationConfig,
     transfer_function: TransferFunction,

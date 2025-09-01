@@ -15,6 +15,7 @@ impl BufferUsage {
 }
 
 /// GPU buffer wrapper
+#[derive(Debug)]
 pub struct GpuBuffer {
     buffer: wgpu::Buffer,
     size: usize,

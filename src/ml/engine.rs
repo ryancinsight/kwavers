@@ -16,6 +16,7 @@ use super::{
 };
 
 /// Main ML engine for simulation intelligence
+#[derive(Debug)]
 pub struct MLEngine {
     pub(crate) models: HashMap<ModelType, Model>,
     pub(crate) performance_metrics: PerformanceMetrics,

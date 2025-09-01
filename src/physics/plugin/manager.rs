@@ -22,6 +22,18 @@ pub struct PluginManager {
     performance_metrics: PerformanceMetrics,
 }
 
+impl std::fmt::Debug for PluginManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PluginManager")
+            .field("plugins_count", &self.plugins.len())
+            .field("execution_order", &self.execution_order)
+            .field("execution_strategy", &"<dyn ExecutionStrategy>")
+            .field("context", &self.context)
+            .field("performance_metrics", &self.performance_metrics)
+            .finish()
+    }
+}
+
 impl PluginManager {
     /// Initialize all plugins
     pub fn initialize_all(

@@ -49,6 +49,7 @@ pub mod iterators {
     use rayon::prelude::*;
 
     /// Iterator over medium properties at each grid point
+    #[derive(Debug)]
     pub struct MediumPropertyIterator<'a> {
         medium: &'a dyn Medium,
         grid: &'a Grid,
@@ -124,6 +125,7 @@ pub mod iterators {
     }
 
     /// Iterator that finds interfaces in the medium
+    #[derive(Debug)]
     pub struct InterfaceIterator<'a> {
         medium: &'a dyn Medium,
         grid: &'a Grid,
@@ -282,6 +284,7 @@ pub mod iterators {
     }
 
     /// Parallel iterator adapter for medium properties
+    #[derive(Debug)]
     pub struct ParallelMediumIterator<'a> {
         medium: &'a dyn Medium,
         grid: &'a Grid,

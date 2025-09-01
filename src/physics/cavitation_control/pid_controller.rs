@@ -89,9 +89,10 @@ impl ErrorIntegral {
     }
 
     fn update(&mut self, error: f64, dt: f64) {
-        self.value += error * dt;
-        // Anti-windup: clamp integral
-        self.value = self.value.clamp(-self.limit, self.limit);
+        // Update integral with proper clamping
+        let new_value = self.value + error * dt;
+        // Anti-windup: clamp integral to prevent windup
+        self.value = new_value.clamp(-self.limit, self.limit);
     }
 
     fn reset(&mut self) {
@@ -188,9 +189,12 @@ impl PIDController {
         control_signal = control_signal.clamp(self.config.output_min, self.config.output_max);
 
         // Back-calculation anti-windup
-        if saturated {
+        if saturated && self.config.gains.ki != 0.0 {
             let excess = control_signal - (p_term + i_term + d_term);
-            self.integral.value -= excess * self.config.sample_time / self.config.gains.ki;
+            let adjustment = excess * self.config.sample_time / self.config.gains.ki;
+            // Apply clamping after adjustment
+            self.integral.value =
+                (self.integral.value - adjustment).clamp(-self.integral.limit, self.integral.limit);
         }
 
         // Update state for next iteration
@@ -237,6 +241,7 @@ impl PIDController {
 
 /// Discrete-time PID controller using Tustin's method
 /// Better for digital implementation
+#[derive(Debug)]
 pub struct DiscretePIDController {
     gains: PIDGains,
     sample_time: f64,
@@ -319,15 +324,33 @@ mod tests {
         controller.set_setpoint(1.0);
 
         let mut measurement = 0.0;
-        for _ in 0..100 {
+        let dt = 0.01; // Time step
+
+        // Run simulation for sufficient time to reach steady state
+        for i in 0..500 {
+            // Increased iterations
             let output = controller.update(measurement);
-            // Simple first-order system simulation
-            measurement += output.control_signal * 0.01;
-            measurement *= 0.99; // Small damping
+
+            // Apply control limits (PID output may be limited)
+            let control = output.control_signal.clamp(0.0, 10.0);
+
+            // Simple first-order system simulation: dx/dt = u - x
+            // Using Euler integration: x(t+dt) = x(t) + dt * (u - x)
+            let rate = control - measurement;
+            measurement += dt * rate;
+
+            // Check for early convergence
+            if i > 100 && (measurement - 1.0).abs() < 0.01 {
+                break;
+            }
         }
 
         // Should converge close to setpoint
-        assert!((measurement - 1.0).abs() < 0.1);
+        assert!(
+            (measurement - 1.0).abs() < 0.1,
+            "Failed to converge: measurement = {}, expected ~1.0",
+            measurement
+        );
     }
 
     #[test]

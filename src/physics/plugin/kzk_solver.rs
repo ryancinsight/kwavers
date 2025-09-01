@@ -20,6 +20,7 @@ pub struct FrequencyOperator {
 
 /// KZK Equation Solver Plugin
 /// Implements the Khokhlov-Zabolotskaya-Kuznetsov equation for nonlinear beam propagation
+#[derive(Debug)]
 pub struct KzkSolverPlugin {
     metadata: PluginMetadata,
     state: PluginState,

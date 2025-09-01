@@ -20,6 +20,7 @@ use crate::visualization::{FieldType, VisualizationConfig};
 use ndarray::Array3;
 
 /// Main 3D renderer orchestrator
+#[derive(Debug)]
 pub struct Renderer3D {
     config: VisualizationConfig,
     volume: VolumeRenderer,

@@ -9,6 +9,7 @@ use ndarray::Array3;
 use wgpu::util::DeviceExt;
 
 /// Acoustic field compute kernel
+#[derive(Debug)]
 pub struct AcousticFieldKernel {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -283,6 +284,7 @@ impl AcousticFieldKernel {
 }
 
 /// Wave equation solver on GPU
+#[derive(Debug)]
 pub struct WaveEquationGpu {
     kernel: AcousticFieldKernel,
 }

@@ -15,6 +15,7 @@ pub enum WaveletBasis {
 }
 
 /// Wavelet transform for AMR
+#[derive(Debug)]
 pub struct WaveletTransform {
     basis: WaveletBasis,
     levels: usize,

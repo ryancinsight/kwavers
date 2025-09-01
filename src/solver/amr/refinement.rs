@@ -39,6 +39,7 @@ impl RefinementLevel {
 }
 
 /// Manages mesh refinement decisions
+#[derive(Debug)]
 pub struct RefinementManager {
     /// Maximum refinement level
     max_level: usize,

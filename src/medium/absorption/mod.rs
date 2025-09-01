@@ -42,6 +42,7 @@ use crate::error::KwaversResult;
 use ndarray::Array3;
 
 /// Main absorption calculator that orchestrates different models
+#[derive(Debug)]
 pub struct AbsorptionCalculator {
     model: AbsorptionModel,
 }

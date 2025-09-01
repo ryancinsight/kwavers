@@ -7,6 +7,7 @@ use super::schemes::{ModulationScheme, PowerControl};
 use std::f64::consts::PI;
 
 /// Power modulator for controlling ultrasound output
+#[derive(Debug)]
 pub struct PowerModulator {
     scheme: ModulationScheme,
     control: PowerControl,

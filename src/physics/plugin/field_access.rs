@@ -13,6 +13,7 @@ use std::collections::HashSet;
 /// Safe field accessor for plugins
 ///
 /// This struct ensures plugins can only access fields they've declared
+#[derive(Debug)]
 pub struct PluginFieldAccess<'a> {
     /// Reference to the physics state
     state: &'a PhysicsState,
@@ -123,6 +124,7 @@ impl<'a> PluginFieldAccess<'a> {
 ///
 /// This provides direct access to the fields array but with compile-time
 /// guarantees about which fields can be accessed
+#[derive(Debug)]
 pub struct DirectPluginFieldAccess<'a> {
     /// Direct reference to fields array
     fields: &'a mut Array4<f64>,

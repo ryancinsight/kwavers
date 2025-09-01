@@ -13,6 +13,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm
+#[derive(Debug)]
 pub struct FourierReconstructor {
     grid_size: [usize; 3],
     sound_speed: f64,

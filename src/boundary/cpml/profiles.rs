@@ -6,7 +6,7 @@ use crate::grid::Grid;
 use ndarray::Array1;
 
 /// CPML absorption and stretching profiles
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CPMLProfiles {
     pub sigma_x: Array1<f64>,
     pub sigma_y: Array1<f64>,
@@ -87,7 +87,7 @@ impl CPMLProfiles {
         n: usize,
         dx: f64,
         config: &CPMLConfig,
-        sound_speed: f64,
+        _sound_speed: f64,
     ) {
         let thickness = config.thickness;
         let m = config.polynomial_order;

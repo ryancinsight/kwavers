@@ -10,7 +10,7 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 use std::fmt::Debug;
 
 /// Medium with uniform properties throughout the spatial domain
@@ -187,12 +187,12 @@ impl CoreMedium for HomogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn density_array(&self) -> &Array3<f64> {
-        &self.density_cache
+    fn density_array(&self) -> ArrayView3<f64> {
+        self.density_cache.view()
     }
 
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        &self.sound_speed_cache
+    fn sound_speed_array(&self) -> ArrayView3<f64> {
+        self.sound_speed_cache.view()
     }
 
     fn density_array_mut(&mut self) -> &mut Array3<f64> {

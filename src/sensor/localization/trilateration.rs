@@ -3,6 +3,7 @@
 use super::SensorArray;
 
 /// Trilateration solver
+#[derive(Debug)]
 pub struct TrilaterationSolver<'a> {
     array: &'a SensorArray,
 }
