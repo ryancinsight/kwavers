@@ -53,7 +53,7 @@ impl AcousticSolver for WesterveltSolver {
 
         // Compute nonlinear term: β/(2ρ₀c₀⁴) * ∂²p²/∂t²
         // Reference: Hamilton & Blackstock, "Nonlinear Acoustics" (1998)
-        if let (Some(ref prev), Some(ref history)) = (&self.prev_pressure, &self.pressure_history) {
+        if let (Some(prev), Some(history)) = (&self.prev_pressure, &self.pressure_history) {
             let beta = self.config.nonlinearity_scaling;
 
             // Estimate ∂²p²/∂t² using finite differences

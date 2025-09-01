@@ -304,7 +304,7 @@ impl BubbleCloud {
                 rng.sample(normal)
             }
             SizeDistribution::PowerLaw { min, max, exponent } => {
-                let u: f64 = rng.gen();
+                let u: f64 = rng.r#gen();
                 let alpha = exponent + 1.0;
 
                 (u * (max.powf(alpha) - min.powf(alpha)) + min.powf(alpha)).powf(1.0 / alpha)

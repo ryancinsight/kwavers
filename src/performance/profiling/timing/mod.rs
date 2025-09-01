@@ -141,15 +141,14 @@ impl TimingProfiler {
 
     /// Get all timing summaries
     pub fn summaries(&self) -> Vec<TimingSummary> {
-        if let Ok(timings) = self.timings.lock() {
-            timings
+        match self.timings.lock() {
+            Ok(timings) => timings
                 .iter()
                 .map(|(name, measurements)| {
                     TimingSummary::from_measurements(name.clone(), measurements)
                 })
-                .collect()
-        } else {
-            Vec::new()
+                .collect(),
+            _ => Vec::new(),
         }
     }
 

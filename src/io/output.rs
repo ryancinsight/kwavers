@@ -20,17 +20,20 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
     }
     writeln!(file)?;
 
-    if let Some(data) = recorder.pressure_data() {
-        let max_steps = recorder.recorded_steps.len().min(data.ncols());
-        for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
-            write!(file, "{}", time.time_vector()[t].min(time_val))?;
-            data.column(t)
-                .iter()
-                .try_for_each(|&val| write!(file, ",{}", val))?;
-            writeln!(file)?;
+    match recorder.pressure_data() {
+        Some(data) => {
+            let max_steps = recorder.recorded_steps.len().min(data.ncols());
+            for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
+                write!(file, "{}", time.time_vector()[t].min(time_val))?;
+                data.column(t)
+                    .iter()
+                    .try_for_each(|&val| write!(file, ",{}", val))?;
+                writeln!(file)?;
+            }
         }
-    } else {
-        writeln!(file, "No pressure data recorded")?;
+        _ => {
+            writeln!(file, "No pressure data recorded")?;
+        }
     }
     Ok(())
 }
@@ -45,17 +48,20 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
     }
     writeln!(file)?;
 
-    if let Some(data) = recorder.light_data() {
-        let max_steps = recorder.recorded_steps.len().min(data.ncols());
-        for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
-            write!(file, "{}", time.time_vector()[t].min(time_val))?;
-            data.column(t)
-                .iter()
-                .try_for_each(|&val| write!(file, ",{}", val))?;
-            writeln!(file)?;
+    match recorder.light_data() {
+        Some(data) => {
+            let max_steps = recorder.recorded_steps.len().min(data.ncols());
+            for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
+                write!(file, "{}", time.time_vector()[t].min(time_val))?;
+                data.column(t)
+                    .iter()
+                    .try_for_each(|&val| write!(file, ",{}", val))?;
+                writeln!(file)?;
+            }
         }
-    } else {
-        writeln!(file, "No light data recorded")?;
+        _ => {
+            writeln!(file, "No light data recorded")?;
+        }
     }
     Ok(())
 }

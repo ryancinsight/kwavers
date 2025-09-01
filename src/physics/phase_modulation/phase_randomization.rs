@@ -207,8 +207,8 @@ impl PhaseRandomizer {
 
             PhaseDistribution::Gaussian => {
                 // Box-Muller transform for Gaussian distribution
-                let u1: f64 = self.rng.gen();
-                let u2: f64 = self.rng.gen();
+                let u1: f64 = self.rng.r#gen();
+                let u2: f64 = self.rng.r#gen();
                 let gaussian = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos();
                 (gaussian * PI).rem_euclid(2.0 * PI)
             }

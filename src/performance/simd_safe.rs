@@ -102,21 +102,23 @@ impl SimdOps {
     #[target_feature(enable = "avx2")]
     #[inline]
     unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
-        use std::arch::x86_64::*;
+        unsafe {
+            use std::arch::x86_64::*;
 
-        let chunks = a.len() / 4;
-        for i in 0..chunks {
-            let offset = i * 4;
-            let va = _mm256_loadu_pd(a.as_ptr().add(offset));
-            let vb = _mm256_loadu_pd(b.as_ptr().add(offset));
-            let sum = _mm256_add_pd(va, vb);
-            _mm256_storeu_pd(out.as_mut_ptr().add(offset), sum);
-        }
+            let chunks = a.len() / 4;
+            for i in 0..chunks {
+                let offset = i * 4;
+                let va = _mm256_loadu_pd(a.as_ptr().add(offset));
+                let vb = _mm256_loadu_pd(b.as_ptr().add(offset));
+                let sum = _mm256_add_pd(va, vb);
+                _mm256_storeu_pd(out.as_mut_ptr().add(offset), sum);
+            }
 
-        // Handle remainder
-        let remainder_start = chunks * 4;
-        for i in remainder_start..a.len() {
-            out[i] = a[i] + b[i];
+            // Handle remainder
+            let remainder_start = chunks * 4;
+            for i in remainder_start..a.len() {
+                out[i] = a[i] + b[i];
+            }
         }
     }
 
@@ -193,22 +195,24 @@ impl SimdOps {
     #[target_feature(enable = "avx2")]
     #[inline]
     unsafe fn scale_field_avx2_inner(field: &[f64], scalar: f64, out: &mut [f64]) {
-        use std::arch::x86_64::*;
+        unsafe {
+            use std::arch::x86_64::*;
 
-        let scalar_vec = _mm256_set1_pd(scalar);
-        let chunks = field.len() / 4;
+            let scalar_vec = _mm256_set1_pd(scalar);
+            let chunks = field.len() / 4;
 
-        for i in 0..chunks {
-            let offset = i * 4;
-            let v = _mm256_loadu_pd(field.as_ptr().add(offset));
-            let scaled = _mm256_mul_pd(v, scalar_vec);
-            _mm256_storeu_pd(out.as_mut_ptr().add(offset), scaled);
-        }
+            for i in 0..chunks {
+                let offset = i * 4;
+                let v = _mm256_loadu_pd(field.as_ptr().add(offset));
+                let scaled = _mm256_mul_pd(v, scalar_vec);
+                _mm256_storeu_pd(out.as_mut_ptr().add(offset), scaled);
+            }
 
-        // Handle remainder
-        let remainder_start = chunks * 4;
-        for i in remainder_start..field.len() {
-            out[i] = field[i] * scalar;
+            // Handle remainder
+            let remainder_start = chunks * 4;
+            for i in remainder_start..field.len() {
+                out[i] = field[i] * scalar;
+            }
         }
     }
 
@@ -275,30 +279,32 @@ impl SimdOps {
     #[target_feature(enable = "avx2")]
     #[inline]
     unsafe fn norm_avx2_inner(field: &[f64]) -> f64 {
-        use std::arch::x86_64::*;
+        unsafe {
+            use std::arch::x86_64::*;
 
-        let mut sum_vec = _mm256_setzero_pd();
-        let chunks = field.len() / 4;
+            let mut sum_vec = _mm256_setzero_pd();
+            let chunks = field.len() / 4;
 
-        for i in 0..chunks {
-            let offset = i * 4;
-            let v = _mm256_loadu_pd(field.as_ptr().add(offset));
-            let squared = _mm256_mul_pd(v, v);
-            sum_vec = _mm256_add_pd(sum_vec, squared);
+            for i in 0..chunks {
+                let offset = i * 4;
+                let v = _mm256_loadu_pd(field.as_ptr().add(offset));
+                let squared = _mm256_mul_pd(v, v);
+                sum_vec = _mm256_add_pd(sum_vec, squared);
+            }
+
+            // Horizontal sum
+            let mut sum_array = [0.0; 4];
+            _mm256_storeu_pd(sum_array.as_mut_ptr(), sum_vec);
+            let mut sum = sum_array.iter().sum::<f64>();
+
+            // Handle remainder
+            let remainder_start = chunks * 4;
+            for i in remainder_start..field.len() {
+                sum += field[i] * field[i];
+            }
+
+            sum.sqrt()
         }
-
-        // Horizontal sum
-        let mut sum_array = [0.0; 4];
-        _mm256_storeu_pd(sum_array.as_mut_ptr(), sum_vec);
-        let mut sum = sum_array.iter().sum::<f64>();
-
-        // Handle remainder
-        let remainder_start = chunks * 4;
-        for i in remainder_start..field.len() {
-            sum += field[i] * field[i];
-        }
-
-        sum.sqrt()
     }
 
     #[cfg(target_arch = "x86_64")]
