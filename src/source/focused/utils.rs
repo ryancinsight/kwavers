@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix hanging test
+    #[ignore] // TODO: Hangs in parallel processing - needs investigation
     fn test_multi_bowl_phases() {
         // Create two bowls with different phases
         let config1 = BowlConfig {

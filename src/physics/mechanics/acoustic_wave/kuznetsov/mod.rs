@@ -37,7 +37,6 @@
 // Submodules
 pub mod config;
 pub mod diffusion;
-pub mod implicit_solver;
 pub mod nonlinear;
 pub mod numerical;
 pub mod operator_splitting;
