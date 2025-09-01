@@ -1,10 +1,78 @@
-// thermal/calculator.rs - Thermal field calculator
+// thermal/calculator.rs - Thermal field calculator (LEGACY - TO BE REMOVED)
 
-use super::{ThermalConfig, ThermalState};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::{Array3, Zip};
+
+/// Thermal configuration (LEGACY - STUB IMPLEMENTATION)
+#[derive(Debug, Clone)]
+pub struct ThermalConfig {
+    pub thermal_conductivity: f64,
+    pub specific_heat: f64,
+    pub blood_perfusion: f64,
+    pub ambient_temperature: f64,
+    pub use_bioheat: bool,
+    pub bioheat: BioheatConfig,
+    pub blood_temperature: f64,
+    pub perfusion_rate: f64,
+    pub blood_specific_heat: f64,
+    pub thermal_diffusivity: f64,
+    pub hyperbolic: bool,
+    pub relaxation_time: f64,
+    pub reference_temperature: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct BioheatConfig {
+    pub perfusion_rate: f64,
+    pub blood_temperature: f64,
+}
+
+impl Default for BioheatConfig {
+    fn default() -> Self {
+        Self {
+            perfusion_rate: 0.5,
+            blood_temperature: 37.0,
+        }
+    }
+}
+
+impl Default for ThermalConfig {
+    fn default() -> Self {
+        Self {
+            thermal_conductivity: 0.5, // W/m/K
+            specific_heat: 3600.0,     // J/kg/K
+            blood_perfusion: 0.5,      // kg/m³/s
+            ambient_temperature: 37.0, // °C
+            use_bioheat: true,
+            bioheat: BioheatConfig::default(),
+            blood_temperature: 37.0,
+            perfusion_rate: 0.5,
+            blood_specific_heat: 3800.0,
+            thermal_diffusivity: 1.4e-7,
+            hyperbolic: false,
+            relaxation_time: 15.0,
+            reference_temperature: 37.0,
+        }
+    }
+}
+
+/// Thermal state (LEGACY)
+#[derive(Debug)]
+pub struct ThermalState {
+    pub temperature: Array3<f64>,
+    pub heat_source: Array3<f64>,
+}
+
+impl ThermalState {
+    pub fn new(grid: &Grid, initial_temperature: f64) -> Self {
+        Self {
+            temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), initial_temperature),
+            heat_source: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+        }
+    }
+}
 
 /// Thermal calculator for temperature evolution
 #[derive(Debug)]

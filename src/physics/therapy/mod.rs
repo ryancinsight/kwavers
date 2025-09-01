@@ -51,7 +51,7 @@ use crate::{
     error::KwaversResult,
     grid::Grid,
     medium::Medium,
-    physics::thermal::{ThermalCalculator, ThermalConfig},
+    physics::thermal::{calculator::BioheatConfig, ThermalCalculator, ThermalConfig},
 };
 use ndarray::{Array3, Zip};
 use std::sync::Arc;
@@ -80,7 +80,10 @@ impl TherapyCalculator {
         let thermal = if modality.has_thermal_effects() {
             let config = ThermalConfig {
                 use_bioheat: true,
-                bioheat: true,
+                bioheat: BioheatConfig {
+                    perfusion_rate: 0.5e-3,
+                    blood_temperature: 310.15,
+                },
                 blood_temperature: 310.15,
                 blood_perfusion: 0.5e-3,
                 perfusion_rate: 0.5e-3,
@@ -88,6 +91,9 @@ impl TherapyCalculator {
                 thermal_diffusivity: 1.4e-7,
                 hyperbolic: false,
                 relaxation_time: 20.0,
+                thermal_conductivity: 0.5,
+                specific_heat: 3600.0,
+                ambient_temperature: 37.0,
                 reference_temperature: 316.15, // 43°C
             };
             Some(ThermalCalculator::new(grid, 310.15).with_config(config))

@@ -48,7 +48,8 @@ impl ThermalDose {
 
                 if temp > 37.0 {
                     // Only accumulate dose above body temperature
-                    let equiv_time = dt_minutes * r.powf(self.reference_temp - temp);
+                    let r_value: f64 = r;
+                    let equiv_time = dt_minutes * r_value.powf(self.reference_temp - temp);
                     *dose += equiv_time;
                 }
             });

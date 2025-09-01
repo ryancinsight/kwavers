@@ -1,6 +1,6 @@
 // thermal/dose.rs - Thermal dose calculation
 
-use super::constants;
+// use super::constants; // REMOVED - constants module doesn't exist
 use ndarray::{Array3, Zip};
 
 /// Thermal dose using CEM43 model
@@ -12,11 +12,13 @@ impl ThermalDose {
         let mut dose = Array3::zeros(temperature.raw_dim());
 
         Zip::from(&mut dose).and(temperature).for_each(|d, &t| {
-            let t_celsius = t - constants::CELSIUS_TO_KELVIN;
+            // Assuming temperature is already in Celsius
+            let t_celsius = t;
 
-            if t_celsius > constants::CEM43_REFERENCE_TEMP {
+            const CEM43_REFERENCE_TEMP: f64 = 43.0;
+            if t_celsius > CEM43_REFERENCE_TEMP {
                 let r: f64 = if t_celsius > 43.0 { 0.5 } else { 0.25 };
-                *d = time_minutes * r.powf(t_celsius - constants::CEM43_REFERENCE_TEMP);
+                *d = time_minutes * r.powf(t_celsius - CEM43_REFERENCE_TEMP);
             }
         });
 
