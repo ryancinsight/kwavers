@@ -19,7 +19,7 @@
 
 pub mod adaptive_selection;
 pub mod config;
-pub mod coupling; // Refactored from coupling_interface
+pub mod coupling; // Domain coupling interface
 pub mod domain_decomposition;
 pub mod metrics;
 pub mod plugin;

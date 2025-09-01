@@ -138,7 +138,7 @@ impl LaplacianOperator {
         // Handle interior points with selected order
         match self.config.order {
             FiniteDifferenceOrder::Second => {
-                // Optimized second-order implementation
+                // Second-order finite difference implementation
                 self.apply_second_order_interior(input, output.view_mut());
             }
             _ => {
@@ -159,7 +159,7 @@ impl LaplacianOperator {
         Ok(())
     }
 
-    /// Optimized second-order interior computation
+    /// Second-order finite difference interior computation
     #[inline]
     fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
         let (nx, ny, nz) = input.dim();
