@@ -4,8 +4,11 @@
 
 use super::core::{
     calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
-    MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
+    MIN_FOCAL_DISTANCE,
 };
+
+/// Default quantization levels for phase control
+const DEFAULT_QUANTIZATION_LEVELS: usize = 256;
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
@@ -24,7 +27,7 @@ pub struct PhaseShifter {
 impl PhaseShifter {
     /// Create a new phase shifter
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
-        let wavelength = calculate_wavelength(operating_frequency, SPEED_OF_SOUND);
+        let wavelength = calculate_wavelength(operating_frequency);
         let num_elements = element_positions.nrows();
         let phase_offsets = Array1::zeros(num_elements);
 
@@ -67,7 +70,7 @@ impl PhaseShifter {
             *phase = -k * position[0] * angle_rad.sin();
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase);
+                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
             }
         }
 
@@ -103,7 +106,7 @@ impl PhaseShifter {
             *phase = -k * (distance - focal_distance);
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase);
+                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
             }
         }
 
@@ -151,7 +154,7 @@ impl PhaseShifter {
 
         if self.quantization_enabled {
             for phase in phases.iter_mut() {
-                *phase = quantize_phase(*phase);
+                *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
             }
         }
 
@@ -175,7 +178,7 @@ impl PhaseShifter {
                 }
                 self.calculate_linear_phases(target[0])
             }
-            ShiftingStrategy::Parabolic => {
+            ShiftingStrategy::Quadratic => {
                 if target.len() != 3 {
                     return Err(crate::error::KwaversError::InvalidInput(
                         "Spherical focusing requires 3D point".to_string(),

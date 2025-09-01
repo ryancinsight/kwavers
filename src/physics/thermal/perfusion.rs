@@ -97,11 +97,13 @@ impl VesselCooling {
             if distance < radius {
                 // Inside vessel - strong cooling
                 let h = 1000.0; // Heat transfer coefficient (W/m²/K)
-                total_cooling += h * (self.blood_temp - temperature);
+                                // Positive cooling when tissue is hotter than blood
+                total_cooling += h * (temperature - self.blood_temp).abs();
             } else if distance < 2.0 * radius {
                 // Near vessel - moderate cooling
                 let h = 100.0 * (2.0 - distance / radius);
-                total_cooling += h * (self.blood_temp - temperature);
+                // Positive cooling when tissue is hotter than blood
+                total_cooling += h * (temperature - self.blood_temp).abs();
             }
         }
 

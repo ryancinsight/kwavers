@@ -4,8 +4,8 @@
 //! - Christopher & Parker (1991) "New approaches to nonlinear diffractive field propagation"
 //! - Tavakkoli et al. (1998) "A new algorithm for computational simulation of HIFU"
 
-use ndarray::{Array2, Array3, Axis, Zip};
-use rustfft::{num_complex::Complex, FftPlanner};
+use ndarray::{Array2, Array3, Axis};
+use rustfft::FftPlanner;
 use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
@@ -56,6 +56,12 @@ impl KZKSolver {
 
     /// Set initial condition (source plane at z=0)
     pub fn set_source(&mut self, source: Array2<f64>, frequency: f64) {
+        // Store frequency in config for all operators
+        self.config.frequency = frequency;
+        // Re-initialize operators with updated frequency
+        self.diffraction = DiffractionOperator::new(&self.config);
+        self.absorption = AbsorptionOperator::new(&self.config);
+
         // Set source as time-harmonic signal
         let omega = 2.0 * PI * frequency;
         let dt = self.config.dt;

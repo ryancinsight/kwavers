@@ -303,13 +303,18 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix potential deadlock
+    #[ignore] // TODO: Investigate compilation/execution hang
     fn test_physics_state_creation() {
+        println!("Creating grid...");
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        println!("Creating PhysicsState...");
         let state = PhysicsState::new(grid);
+        println!("PhysicsState created");
 
         // Test field retrieval
+        println!("Getting pressure field...");
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
+        println!("Got pressure field");
         assert_eq!(pressure.view().shape(), &[10, 10, 10]);
 
         // Test field initialization

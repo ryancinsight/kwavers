@@ -108,11 +108,13 @@ impl MemoryOptimizer {
 
     /// Deallocate aligned memory
     pub unsafe fn deallocate_aligned<T>(&self, ptr: *mut T, count: usize) {
-        let size = count * std::mem::size_of::<T>();
-        let align = self.alignment.max(std::mem::align_of::<T>());
+        unsafe {
+            let size = count * std::mem::size_of::<T>();
+            let align = self.alignment.max(std::mem::align_of::<T>());
 
-        if let Ok(layout) = Layout::from_size_align(size, align) {
-            dealloc(ptr as *mut u8, layout);
+            if let Ok(layout) = Layout::from_size_align(size, align) {
+                dealloc(ptr as *mut u8, layout);
+            }
         }
     }
 

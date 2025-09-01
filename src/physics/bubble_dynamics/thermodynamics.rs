@@ -197,7 +197,7 @@ impl ThermodynamicsCalculator {
             (17.966, 247.15, 233.7) // Below freezing
         };
 
-        let exponent = a * t_celsius / (b + t_celsius);
+        let exponent: f64 = a * t_celsius / (b + t_celsius);
         611.21 * exponent.exp() // Result in Pa
     }
 

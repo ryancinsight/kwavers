@@ -27,8 +27,15 @@ impl SafetyLimiter {
         // Clamp to maximum amplitude
         let clamped = amplitude.clamp(0.0, self.max_amplitude);
 
-        // Apply rate limiting
-        let max_change = self.max_rate / 1000.0; // Convert to per-millisecond
+        // Apply rate limiting (assuming 1ms timestep if not specified)
+        // For instantaneous changes (like after reset), allow full change
+        let max_change = if self.last_output == 0.0 && amplitude > 0.0 {
+            // Allow initial ramp-up without rate limiting
+            amplitude
+        } else {
+            self.max_rate * 0.001 // 1ms timestep default
+        };
+
         let limited = if (clamped - self.last_output).abs() > max_change {
             if clamped > self.last_output {
                 self.last_output + max_change

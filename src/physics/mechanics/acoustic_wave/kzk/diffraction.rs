@@ -77,9 +77,11 @@ impl DiffractionOperator {
         fft.process(&mut complex_field);
 
         // Apply diffraction propagator in frequency domain
-        // H(kx,ky) = exp(i * step_size * c₀ * (kx² + ky²) / (2k₀))
-        let k0 = 2.0 * PI * 1e6 / self.config.c0; // Assume 1 MHz for now
-        let factor = step_size * self.config.c0 / (2.0 * k0);
+        // For forward propagation in +z direction:
+        // H(kx,ky) = exp(-i * step_size * (kx² + ky²) / (2k₀))
+        // Note the negative sign for proper phase advance
+        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
+        let factor = -step_size / (2.0 * k0); // Negative for forward propagation
 
         for j in 0..ny {
             for i in 0..nx {

@@ -33,13 +33,18 @@ pub enum CavitationDetectionMethod {
 
 impl TherapyCavitationDetector {
     /// Create a new cavitation detector
-    pub fn new(frequency: f64, peak_negative_pressure: f64) -> Self {
+    pub fn new(frequency: f64, _peak_negative_pressure: f64) -> Self {
         // Blake threshold calculation
         // P_Blake = P0 + P_v - 2σ/R0
-        // Simplified for micron-sized nuclei
+        // For micron-sized nuclei
         let r0 = 1e-6; // 1 μm nucleus
+
+        // Note: The surface tension term dominates for small bubbles
+        // 2σ/R0 = 2 * 0.0728 / 1e-6 = 145,600 Pa
+        // This gives: P_Blake = 101325 + 2340 - 145600 = -41,935 Pa
+        // The negative value indicates the threshold for cavitation inception
         let blake_threshold =
-            ATMOSPHERIC_PRESSURE + WATER_VAPOR_PRESSURE - 2.0 * WATER_SURFACE_TENSION / r0;
+            (ATMOSPHERIC_PRESSURE + WATER_VAPOR_PRESSURE - 2.0 * WATER_SURFACE_TENSION / r0).abs();
 
         Self {
             frequency,

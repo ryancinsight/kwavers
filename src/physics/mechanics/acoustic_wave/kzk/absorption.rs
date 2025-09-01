@@ -33,13 +33,14 @@ impl AbsorptionOperator {
     /// Models frequency-dependent attenuation: α(f) = α₀|f|^y
     pub fn apply(&mut self, pressure: &mut Array3<f64>, step_size: f64) {
         // For time-domain implementation, use fractional derivative
-        // Approximation: apply exponential decay based on dominant frequency
+        // Approximation: apply exponential decay based on operating frequency
 
-        // Estimate dominant frequency from spectrum
-        let f0: f64 = 1e6; // 1 MHz nominal, should compute from actual spectrum
+        // Use the actual operating frequency from config
+        let f0 = self.config.frequency;
 
-        // Compute absorption coefficient
-        let alpha = self.alpha0 * f0.powf(self.power - 1.0);
+        // Compute absorption coefficient in Np/m
+        // α(f) = α₀ * f^y where α₀ is already in Np/m/Hz^y
+        let alpha = self.alpha0 * f0.powf(self.power);
 
         // Apply exponential decay: p(z+dz) = p(z) * exp(-α * dz)
         let decay = (-alpha * step_size).exp();

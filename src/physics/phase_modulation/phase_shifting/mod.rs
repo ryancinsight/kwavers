@@ -23,6 +23,9 @@ pub mod shifter;
 // Re-export main types
 pub use array::{PerformanceMetrics, PhaseArray};
 pub use beam::BeamSteering;
-pub use core::{ShiftingStrategy, MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE, SPEED_OF_SOUND};
+pub use core::{
+    calculate_wavelength, normalize_phase, quantize_phase, wrap_phase, ShiftingStrategy,
+    MAX_FOCAL_POINTS, MAX_STEERING_ANGLE, MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
+};
 pub use focus::{ApodizationType, DynamicFocusing};
 pub use shifter::PhaseShifter;

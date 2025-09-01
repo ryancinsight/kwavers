@@ -35,26 +35,28 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn add_fields_avx2_legacy(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        let a_slice = a.as_slice().unwrap();
-        let b_slice = b.as_slice().unwrap();
-        let out_slice = out.as_slice_mut().unwrap();
+        unsafe {
+            let a_slice = a.as_slice().unwrap();
+            let b_slice = b.as_slice().unwrap();
+            let out_slice = out.as_slice_mut().unwrap();
 
-        let chunks = a_slice.len() / 4;
-        let remainder = a_slice.len() % 4;
+            let chunks = a_slice.len() / 4;
+            let remainder = a_slice.len() % 4;
 
-        // Process 4 doubles at a time with AVX2
-        for i in 0..chunks {
-            let idx = i * 4;
-            let va = _mm256_loadu_pd(&a_slice[idx]);
-            let vb = _mm256_loadu_pd(&b_slice[idx]);
-            let result = _mm256_add_pd(va, vb);
-            _mm256_storeu_pd(&mut out_slice[idx], result);
-        }
+            // Process 4 doubles at a time with AVX2
+            for i in 0..chunks {
+                let idx = i * 4;
+                let va = _mm256_loadu_pd(&a_slice[idx]);
+                let vb = _mm256_loadu_pd(&b_slice[idx]);
+                let result = _mm256_add_pd(va, vb);
+                _mm256_storeu_pd(&mut out_slice[idx], result);
+            }
 
-        // Handle remainder
-        let start = chunks * 4;
-        for i in 0..remainder {
-            out_slice[start + i] = a_slice[start + i] + b_slice[start + i];
+            // Handle remainder
+            let start = chunks * 4;
+            for i in 0..remainder {
+                out_slice[start + i] = a_slice[start + i] + b_slice[start + i];
+            }
         }
     }
 
@@ -83,23 +85,25 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn scale_field_avx2(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
-        let field_slice = field.as_slice().unwrap();
-        let out_slice = out.as_slice_mut().unwrap();
+        unsafe {
+            let field_slice = field.as_slice().unwrap();
+            let out_slice = out.as_slice_mut().unwrap();
 
-        let scalar_vec = _mm256_set1_pd(scalar);
-        let chunks = field_slice.len() / 4;
-        let remainder = field_slice.len() % 4;
+            let scalar_vec = _mm256_set1_pd(scalar);
+            let chunks = field_slice.len() / 4;
+            let remainder = field_slice.len() % 4;
 
-        for i in 0..chunks {
-            let idx = i * 4;
-            let v = _mm256_loadu_pd(&field_slice[idx]);
-            let result = _mm256_mul_pd(v, scalar_vec);
-            _mm256_storeu_pd(&mut out_slice[idx], result);
-        }
+            for i in 0..chunks {
+                let idx = i * 4;
+                let v = _mm256_loadu_pd(&field_slice[idx]);
+                let result = _mm256_mul_pd(v, scalar_vec);
+                _mm256_storeu_pd(&mut out_slice[idx], result);
+            }
 
-        let start = chunks * 4;
-        for i in 0..remainder {
-            out_slice[start + i] = field_slice[start + i] * scalar;
+            let start = chunks * 4;
+            for i in 0..remainder {
+                out_slice[start + i] = field_slice[start + i] * scalar;
+            }
         }
     }
 
@@ -123,31 +127,33 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn field_norm_avx2(field: &Array3<f64>) -> f64 {
-        let slice = field.as_slice().unwrap();
-        let chunks = slice.len() / 4;
-        let remainder = slice.len() % 4;
+        unsafe {
+            let slice = field.as_slice().unwrap();
+            let chunks = slice.len() / 4;
+            let remainder = slice.len() % 4;
 
-        let mut sum = _mm256_setzero_pd();
+            let mut sum = _mm256_setzero_pd();
 
-        for i in 0..chunks {
-            let idx = i * 4;
-            let v = _mm256_loadu_pd(&slice[idx]);
-            let squared = _mm256_mul_pd(v, v);
-            sum = _mm256_add_pd(sum, squared);
+            for i in 0..chunks {
+                let idx = i * 4;
+                let v = _mm256_loadu_pd(&slice[idx]);
+                let squared = _mm256_mul_pd(v, v);
+                sum = _mm256_add_pd(sum, squared);
+            }
+
+            // Sum the 4 doubles in the AVX register
+            let mut result = [0.0; 4];
+            _mm256_storeu_pd(&mut result[0], sum);
+            let mut total = result[0] + result[1] + result[2] + result[3];
+
+            // Handle remainder
+            let start = chunks * 4;
+            for i in 0..remainder {
+                total += slice[start + i] * slice[start + i];
+            }
+
+            total.sqrt()
         }
-
-        // Sum the 4 doubles in the AVX register
-        let mut result = [0.0; 4];
-        _mm256_storeu_pd(&mut result[0], sum);
-        let mut total = result[0] + result[1] + result[2] + result[3];
-
-        // Handle remainder
-        let start = chunks * 4;
-        for i in 0..remainder {
-            total += slice[start + i] * slice[start + i];
-        }
-
-        total.sqrt()
     }
 
     fn field_norm_scalar(field: &Array3<f64>) -> f64 {

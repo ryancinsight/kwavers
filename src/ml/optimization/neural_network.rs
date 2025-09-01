@@ -26,11 +26,11 @@ impl NeuralNetwork {
 
         Self {
             weights1: Array2::from_shape_fn((hidden_dim, input_dim), |_| {
-                rng.gen::<f64>() * scale1 - scale1 / 2.0
+                rng.r#gen::<f64>() * scale1 - scale1 / 2.0
             }),
             bias1: Array1::zeros(hidden_dim),
             weights2: Array2::from_shape_fn((output_dim, hidden_dim), |_| {
-                rng.gen::<f64>() * scale2 - scale2 / 2.0
+                rng.r#gen::<f64>() * scale2 - scale2 / 2.0
             }),
             bias2: Array1::zeros(output_dim),
             learning_rate,

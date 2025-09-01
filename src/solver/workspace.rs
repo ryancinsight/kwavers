@@ -114,11 +114,12 @@ impl WorkspacePool {
             }
         };
 
-        let workspace = if let Some(ws) = pool.pop() {
-            ws
-        } else {
-            // Create new workspace if pool is empty
-            SolverWorkspace::new(&self.grid)
+        let workspace = match pool.pop() {
+            Some(ws) => ws,
+            _ => {
+                // Create new workspace if pool is empty
+                SolverWorkspace::new(&self.grid)
+            }
         };
 
         Ok(WorkspaceGuard {

@@ -59,6 +59,8 @@ pub struct KZKConfig {
     pub include_absorption: bool,
     /// Enable nonlinearity
     pub include_nonlinearity: bool,
+    /// Operating frequency (Hz)
+    pub frequency: f64,
 }
 
 impl Default for KZKConfig {
@@ -79,6 +81,7 @@ impl Default for KZKConfig {
             include_diffraction: true,
             include_absorption: true,
             include_nonlinearity: true,
+            frequency: 1e6, // Default 1 MHz
         }
     }
 }

@@ -248,12 +248,12 @@ impl ArrayAccess for HeterogeneousMedium {
         self.sound_speed.view()
     }
 
-    fn density_array_mut(&mut self) -> &mut Array3<f64> {
-        &mut self.density
+    fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
+        Some(&mut self.density)
     }
 
-    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
-        &mut self.sound_speed
+    fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
+        Some(&mut self.sound_speed)
     }
 }
 

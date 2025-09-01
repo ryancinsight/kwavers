@@ -89,7 +89,7 @@ impl ConjugateGradient {
 
     /// Compute search direction using Polak-Ribière formula
     pub fn compute_direction(&mut self, gradient: &Array3<f64>) -> Array3<f64> {
-        let direction = if let (Some(ref prev_grad), Some(ref prev_dir)) =
+        let direction = if let (Some(prev_grad), Some(prev_dir)) =
             (&self.previous_gradient, &self.previous_direction)
         {
             // Polak-Ribière: β = (g_k·(g_k - g_{k-1})) / ||g_{k-1}||²

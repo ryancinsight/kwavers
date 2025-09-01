@@ -2,8 +2,7 @@
 pub mod bubble_dynamics;
 pub mod cavitation_control;
 pub mod chemistry;
-pub mod constants;
-pub mod constants_physics; // Physical constants (SSOT)
+pub mod constants; // Physical constants (SSOT)
 pub mod phase_modulation;
 // composable module removed - use plugin system instead
 pub mod field_indices; // Unified field indices (SSOT)
