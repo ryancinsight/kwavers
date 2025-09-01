@@ -176,15 +176,17 @@ impl OperatorSplittingSolver {
         pressure_prev2: &Array3<f64>,
     ) -> Array3<f64> {
         // Step 1: Linear propagation for dt/2
+        // p_half = linear_step(p, p_prev, dt/2)
         let p_half = self.linear_step_half(pressure, pressure_prev);
 
         // Step 2: Nonlinear correction for full dt
-        // Note: For proper Strang splitting, we need the pressure history at the half step
+        // Apply nonlinear term to p_half
         let mut p_nonlinear = p_half.clone();
-        self.nonlinear_step(&mut p_nonlinear, pressure_prev, pressure_prev2);
+        self.nonlinear_step(&mut p_nonlinear, pressure, pressure_prev);
 
         // Step 3: Linear propagation for dt/2
-        self.linear_step_half(&p_nonlinear, pressure)
+        // For the second half step, p_nonlinear is current, p_half is previous
+        self.linear_step_half(&p_nonlinear, &p_half)
     }
 
     /// Apply boundary conditions (zero gradient for now)
@@ -275,19 +277,31 @@ mod tests {
         }
 
         // Propagate for multiple steps
-        let mut max_pressure = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        let initial_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        let initial_energy: f64 = pressure.iter().map(|p| p * p).sum();
+
         for step in 0..100 {
             let pressure_next = solver.step(&pressure, &pressure_prev, &pressure_prev2);
+
+            // Debug: Check for NaN or extreme values
+            if pressure_next.iter().any(|p| p.is_nan() || p.abs() > 1e10) {
+                panic!(
+                    "Numerical instability at step {}: NaN or overflow detected",
+                    step
+                );
+            }
+
             pressure_prev2.assign(&pressure_prev);
             pressure_prev.assign(&pressure);
             pressure.assign(&pressure_next);
 
-            // Check if wave is still present
-            let current_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
-            if step == 99 {
+            // Track energy conservation
+            if step % 20 == 0 || step == 99 {
+                let current_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+                let current_energy: f64 = pressure.iter().map(|p| p * p).sum();
                 println!(
-                    "Step {}: max pressure = {:.2e} (initial: {:.2e})",
-                    step, current_max, max_pressure
+                    "Step {}: max={:.2e}, energy={:.2e} (initial: max={:.2e}, energy={:.2e})",
+                    step, current_max, current_energy, initial_max, initial_energy
                 );
             }
         }
