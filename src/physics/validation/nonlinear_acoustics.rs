@@ -21,9 +21,12 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Requires proper Kuznetsov equation implementation research
-    fn test_kuznetsov_second_harmonic() {
-        // Test second harmonic generation in nonlinear propagation
+    fn test_kuznetsov_second_harmonic_implicit() {
+        // Test second harmonic generation using implicit solver
+        use crate::physics::mechanics::acoustic_wave::kuznetsov::implicit_solver::{
+            ImplicitKuznetsovConfig, ImplicitKuznetsovSolver,
+        };
+
         let nx = 256;
         let dx = 1e-4;
         let frequency: f64 = 1e6; // 1 MHz

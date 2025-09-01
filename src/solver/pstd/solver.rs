@@ -124,7 +124,8 @@ impl PstdSolver {
                 let rho = medium.density(x, y, z, grid);
                 let c = medium.sound_speed(x, y, z, grid);
 
-                *p -= dt * (rho * c * c * div - s * amplitude);
+                // ∂p/∂t = -ρc²∇·v + source
+                *p += dt * (-rho * c * c * div + s * amplitude);
             });
 
         Ok(())
