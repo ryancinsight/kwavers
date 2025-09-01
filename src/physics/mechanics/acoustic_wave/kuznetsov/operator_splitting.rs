@@ -63,28 +63,54 @@ impl OperatorSplittingSolver {
         let c2 = self.sound_speed * self.sound_speed;
         let dt2 = self.dt * self.dt;
 
-        // Interior points using second-order central differences
-        for k in 1..self.nz - 1 {
-            for j in 1..self.ny - 1 {
-                for i in 1..self.nx - 1 {
-                    // Compute Laplacian
-                    let laplacian_x = (pressure[[i + 1, j, k]] - 2.0 * pressure[[i, j, k]]
-                        + pressure[[i - 1, j, k]])
-                        / (self.dx * self.dx);
+        // Handle different dimensionalities
+        if self.ny == 1 && self.nz == 1 {
+            // 1D case
+            for i in 1..self.nx - 1 {
+                let laplacian = (pressure[[i + 1, 0, 0]] - 2.0 * pressure[[i, 0, 0]]
+                    + pressure[[i - 1, 0, 0]])
+                    / (self.dx * self.dx);
 
-                    let laplacian_y = (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
-                        + pressure[[i, j - 1, k]])
-                        / (self.dy * self.dy);
+                pressure_next[[i, 0, 0]] =
+                    2.0 * pressure[[i, 0, 0]] - pressure_prev[[i, 0, 0]] + dt2 * c2 * laplacian;
+            }
+        } else {
+            // 2D/3D case
+            for k in 1..self.nz.saturating_sub(1).max(1) {
+                for j in 1..self.ny.saturating_sub(1).max(1) {
+                    for i in 1..self.nx.saturating_sub(1).max(1) {
+                        // Compute Laplacian
+                        let laplacian_x = if self.nx > 1 {
+                            (pressure[[i + 1, j, k]] - 2.0 * pressure[[i, j, k]]
+                                + pressure[[i - 1, j, k]])
+                                / (self.dx * self.dx)
+                        } else {
+                            0.0
+                        };
 
-                    let laplacian_z = (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
-                        + pressure[[i, j, k - 1]])
-                        / (self.dz * self.dz);
+                        let laplacian_y = if self.ny > 1 {
+                            (pressure[[i, j + 1, k]] - 2.0 * pressure[[i, j, k]]
+                                + pressure[[i, j - 1, k]])
+                                / (self.dy * self.dy)
+                        } else {
+                            0.0
+                        };
 
-                    let laplacian = laplacian_x + laplacian_y + laplacian_z;
+                        let laplacian_z = if self.nz > 1 {
+                            (pressure[[i, j, k + 1]] - 2.0 * pressure[[i, j, k]]
+                                + pressure[[i, j, k - 1]])
+                                / (self.dz * self.dz)
+                        } else {
+                            0.0
+                        };
 
-                    // Leapfrog time integration
-                    pressure_next[[i, j, k]] =
-                        2.0 * pressure[[i, j, k]] - pressure_prev[[i, j, k]] + dt2 * c2 * laplacian;
+                        let laplacian = laplacian_x + laplacian_y + laplacian_z;
+
+                        // Leapfrog time integration
+                        pressure_next[[i, j, k]] = 2.0 * pressure[[i, j, k]]
+                            - pressure_prev[[i, j, k]]
+                            + dt2 * c2 * laplacian;
+                    }
                 }
             }
         }
@@ -153,11 +179,12 @@ impl OperatorSplittingSolver {
         let p_half = self.linear_step_half(pressure, pressure_prev);
 
         // Step 2: Nonlinear correction for full dt
+        // Note: For proper Strang splitting, we need the pressure history at the half step
         let mut p_nonlinear = p_half.clone();
-        self.nonlinear_step(&mut p_nonlinear, pressure, pressure_prev);
+        self.nonlinear_step(&mut p_nonlinear, pressure_prev, pressure_prev2);
 
         // Step 3: Linear propagation for dt/2
-        self.linear_step_half(&p_nonlinear, &p_half)
+        self.linear_step_half(&p_nonlinear, pressure)
     }
 
     /// Apply boundary conditions (zero gradient for now)
@@ -248,11 +275,21 @@ mod tests {
         }
 
         // Propagate for multiple steps
-        for _ in 0..100 {
+        let mut max_pressure = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        for step in 0..100 {
             let pressure_next = solver.step(&pressure, &pressure_prev, &pressure_prev2);
             pressure_prev2.assign(&pressure_prev);
             pressure_prev.assign(&pressure);
             pressure.assign(&pressure_next);
+
+            // Check if wave is still present
+            let current_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+            if step == 99 {
+                println!(
+                    "Step {}: max pressure = {:.2e} (initial: {:.2e})",
+                    step, current_max, max_pressure
+                );
+            }
         }
 
         // Perform FFT to check for harmonics
@@ -269,11 +306,23 @@ mod tests {
         fft.process(&mut spectrum);
 
         // Find fundamental and second harmonic peaks
-        let fundamental_idx = ((frequency * nx as f64 * dx) / 1500.0) as usize;
+        // For spatial FFT: wavenumber k = 2π/λ = 2πf/c
+        // FFT bin = k * L / (2π) = k * nx * dx / (2π)
+        let wavelength = 1500.0 / frequency;
+        let k_fundamental = 2.0 * PI / wavelength;
+        let fundamental_idx = (k_fundamental * nx as f64 * dx / (2.0 * PI)).round() as usize;
         let second_harmonic_idx = 2 * fundamental_idx;
 
+        // Make sure indices are within bounds
+        let fundamental_idx = fundamental_idx.min(nx / 2 - 1);
+        let second_harmonic_idx = second_harmonic_idx.min(nx / 2 - 1);
+
         let fundamental_amp = spectrum[fundamental_idx].norm();
-        let second_harmonic_amp = spectrum[second_harmonic_idx].norm();
+        let second_harmonic_amp = if second_harmonic_idx < spectrum.len() {
+            spectrum[second_harmonic_idx].norm()
+        } else {
+            0.0
+        };
 
         // Second harmonic should be generated (non-zero)
         assert!(
