@@ -56,10 +56,11 @@ impl KZKSolver {
 
     /// Set initial condition (source plane at z=0)
     pub fn set_source(&mut self, source: Array2<f64>, frequency: f64) {
-        // Store frequency in config for diffraction calculations
+        // Store frequency in config for all operators
         self.config.frequency = frequency;
-        // Re-initialize diffraction operator with updated frequency
+        // Re-initialize operators with updated frequency
         self.diffraction = DiffractionOperator::new(&self.config);
+        self.absorption = AbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal
         let omega = 2.0 * PI * frequency;

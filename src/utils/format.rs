@@ -31,14 +31,13 @@ pub fn format_duration(duration: Duration) -> String {
         format!("{}s", seconds)
     } else if total_millis > 0 {
         format!("{}ms", total_millis)
+    } else if duration.as_micros() > 0 {
+        format!("{}µs", duration.as_micros())
+    } else if duration.as_nanos() > 0 {
+        format!("{}ns", duration.as_nanos())
     } else {
-        // For sub-millisecond durations, show microseconds
-        let micros = duration.as_micros();
-        if micros > 0 {
-            format!("{}µs", micros)
-        } else {
-            format!("{}ns", duration.as_nanos())
-        }
+        // Zero duration
+        format!("0ms")
     }
 }
 
