@@ -5,6 +5,7 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver
+#[derive(Debug)]
 pub struct FdtdGpu {
     pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,

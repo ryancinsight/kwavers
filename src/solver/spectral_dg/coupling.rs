@@ -9,6 +9,7 @@ use crate::KwaversResult;
 use ndarray::{Array3, Zip};
 
 /// Coupler for hybrid spectral-DG methods
+#[derive(Debug)]
 pub struct HybridCoupler {
     conservation_tolerance: f64,
     /// Width of the transition zone between methods (in grid points)

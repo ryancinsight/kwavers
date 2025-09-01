@@ -49,6 +49,7 @@ pub enum RandomizationScheme {
 }
 
 /// Phase randomizer for standing wave suppression
+#[derive(Debug)]
 pub struct PhaseRandomizer {
     scheme: RandomizationScheme,
     distribution: PhaseDistribution,
@@ -242,6 +243,7 @@ impl PhaseRandomizer {
 }
 
 /// Time-domain phase randomization controller
+#[derive(Debug)]
 pub struct TimeRandomization {
     randomizer: PhaseRandomizer,
     update_rate: f64,
@@ -304,6 +306,7 @@ impl TimeRandomization {
 }
 
 /// Spatial phase randomization for multi-element arrays
+#[derive(Debug)]
 pub struct SpatialRandomization {
     randomizer: PhaseRandomizer,
     element_positions: Array2<f64>,
@@ -376,6 +379,7 @@ impl SpatialRandomization {
 }
 
 /// Phase shift keying for cavitation control
+#[derive(Debug)]
 pub struct PhaseShiftKeying {
     num_states: usize,
     current_state: usize,

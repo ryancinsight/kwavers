@@ -15,6 +15,7 @@ use crate::physics::phase_modulation::phase_shifting::focus::DynamicFocusing;
 use crate::physics::phase_modulation::phase_shifting::shifter::PhaseShifter;
 
 /// Phased array system
+#[derive(Debug)]
 pub struct PhaseArray {
     /// Array element positions
     element_positions: Array2<f64>,

@@ -7,6 +7,7 @@
     feature = "gpu-visualization",
     derive(bytemuck::Pod, bytemuck::Zeroable)
 )]
+#[derive(Debug)]
 pub struct VolumeUniforms {
     /// View matrix
     pub view_matrix: [[f32; 4]; 4],

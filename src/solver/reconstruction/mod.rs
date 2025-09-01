@@ -106,6 +106,7 @@ pub trait Reconstructor {
 
 /// Universal back-projection for arbitrary geometries
 /// Based on Xu & Wang (2005)
+#[derive(Debug)]
 pub struct UniversalBackProjection {
     /// Weight function for back-projection
     weight_function: WeightFunction,

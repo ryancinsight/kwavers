@@ -83,6 +83,7 @@ impl StateSnapshot {
 }
 
 /// Interactive controls system with thread-safe state management
+#[derive(Debug)]
 pub struct InteractiveControls {
     states: Arc<RwLock<HashMap<String, ControlState>>>,
     update_callbacks: Arc<RwLock<HashMap<String, Box<dyn Fn(&ParameterValue) + Send + Sync>>>>,

@@ -11,6 +11,7 @@ use crate::solver::reconstruction::{
 use ndarray::{Array2, Array3};
 
 /// Linear array reconstruction
+#[derive(Debug)]
 pub struct LineRecon {
     /// Line direction vector
     direction: [f64; 3],

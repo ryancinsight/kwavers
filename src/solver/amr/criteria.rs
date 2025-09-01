@@ -19,6 +19,7 @@ pub enum RefinementCriterion {
 }
 
 /// Error estimator for adaptive refinement
+#[derive(Debug)]
 pub struct ErrorEstimator {
     criterion: RefinementCriterion,
     /// Smoothing parameter for noise reduction

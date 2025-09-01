@@ -55,6 +55,7 @@ impl DispersionAnalysis {
 }
 
 /// Numerical method for dispersion calculation
+#[derive(Debug)]
 pub enum DispersionMethod {
     /// Finite-difference time-domain with timestep
     FDTD(f64),

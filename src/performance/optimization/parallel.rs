@@ -5,6 +5,7 @@ use rayon::prelude::*;
 use std::sync::Arc;
 
 /// Parallel execution optimizer
+#[derive(Debug)]
 pub struct ParallelOptimizer {
     num_threads: usize,
     chunk_size: usize,

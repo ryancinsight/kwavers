@@ -16,6 +16,7 @@ pub struct CriticalAngles {
 }
 
 /// Snell's law calculator
+#[derive(Debug)]
 pub struct SnellLawCalculator<'a> {
     interface: &'a Interface,
     /// Ratio of wave speeds or refractive indices

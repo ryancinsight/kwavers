@@ -39,6 +39,7 @@ pub enum ApodizationType {
 }
 
 /// Beamformer for PAM processing
+#[derive(Debug)]
 pub struct Beamformer {
     element_positions: Vec<[f64; 3]>,
     config: BeamformingConfig,

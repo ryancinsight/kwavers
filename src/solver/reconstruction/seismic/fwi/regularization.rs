@@ -4,6 +4,7 @@
 use ndarray::{Array3, Zip};
 
 /// Regularization methods for FWI
+#[derive(Debug)]
 pub struct Regularizer {
     /// Tikhonov regularization weight
     tikhonov_weight: f64,

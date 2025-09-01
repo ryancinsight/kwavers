@@ -8,7 +8,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, Array4};
 
 /// CPML field updater
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CPMLUpdater {
     // Pre-computed update coefficients can be stored here
 }

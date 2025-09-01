@@ -6,6 +6,7 @@ use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 
 /// Pennes bioheat equation
+#[derive(Debug)]
 pub struct PennesEquation {
     blood_perfusion: f64,
     blood_temperature: f64,
@@ -35,6 +36,7 @@ impl PennesEquation {
 }
 
 /// Bioheat solver for tissue heating
+#[derive(Debug)]
 pub struct BioheatSolver {
     equation: PennesEquation,
     metabolic_heat: f64,

@@ -37,6 +37,7 @@ pub enum Preconditioner {
 }
 
 /// Iterative solver for sparse systems
+#[derive(Debug)]
 pub struct IterativeSolver {
     config: SolverConfig,
 }

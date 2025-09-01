@@ -11,6 +11,7 @@ use rayon::prelude::*;
 ///
 /// This structure supports transformations over any field type F,
 /// enabling reuse with Array2<T>, Array3<T>, or custom field types.
+#[derive(Debug)]
 pub struct FieldTransform<F> {
     transforms: Vec<Box<dyn Fn(F) -> F + Send + Sync>>,
 }
@@ -77,6 +78,7 @@ where
 }
 
 /// Reversible field transformation
+#[derive(Debug)]
 pub struct ReversibleTransform<F> {
     forward: FieldTransform<F>,
     inverse: Box<dyn Fn(F) -> F + Send + Sync>,

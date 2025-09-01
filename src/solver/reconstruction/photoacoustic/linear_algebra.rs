@@ -7,6 +7,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2, ArrayView1};
 
 /// Linear algebra solver with various regularization methods
+#[derive(Debug)]
 pub struct LinearSolver {
     max_iterations: usize,
     tolerance: f64,

@@ -5,6 +5,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Array3};
 
 /// Wavefield modeling for forward and adjoint problems
+#[derive(Debug)]
 pub struct WavefieldModeler {
     /// Stored forward wavefield for gradient computation
     forward_wavefield: Option<Array3<f64>>,

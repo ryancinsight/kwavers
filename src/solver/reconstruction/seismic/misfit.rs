@@ -21,6 +21,7 @@ pub enum MisfitType {
 }
 
 /// Misfit function calculator
+#[derive(Debug)]
 pub struct MisfitFunction {
     misfit_type: MisfitType,
 }

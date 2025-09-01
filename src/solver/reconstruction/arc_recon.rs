@@ -10,6 +10,7 @@ use crate::solver::reconstruction::{
 use ndarray::{Array2, Array3};
 
 /// Arc/Circular array reconstruction
+#[derive(Debug)]
 pub struct ArcRecon {
     /// Arc center position
     center: [f64; 3],

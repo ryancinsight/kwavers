@@ -43,6 +43,7 @@ impl Default for TransferOptions {
 }
 
 /// GPU data pipeline for visualization
+#[derive(Debug)]
 pub struct DataPipeline {
     gpu_context: Arc<GpuContext>,
 

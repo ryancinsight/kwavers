@@ -4,6 +4,7 @@ use super::{Position, SensorArray};
 use crate::error::KwaversResult;
 
 /// Triangulator for position estimation
+#[derive(Debug)]
 pub struct Triangulator {
     method: TriangulationMethod,
 }

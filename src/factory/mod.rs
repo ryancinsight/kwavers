@@ -55,6 +55,7 @@ impl SimulationFactory {
 }
 
 /// Container for all simulation components
+#[derive(Debug)]
 pub struct SimulationComponents {
     pub grid: crate::grid::Grid,
     pub medium: Box<dyn crate::medium::Medium>,

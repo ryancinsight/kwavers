@@ -117,6 +117,7 @@ impl Default for ConvergenceResults {
 }
 
 /// Comprehensive numerical accuracy validator
+#[derive(Debug)]
 pub struct NumericalValidator {
     grid: Grid,
     medium: HomogeneousMedium,

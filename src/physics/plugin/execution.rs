@@ -46,14 +46,9 @@ impl ExecutionStrategy for SequentialStrategy {
 }
 
 /// Plugin executor that manages plugin execution
+#[derive(Debug)]
 pub struct PluginExecutor {
     strategy: Box<dyn ExecutionStrategy>,
-}
-
-impl std::fmt::Debug for PluginExecutor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PluginExecutor").finish()
-    }
 }
 
 impl Default for PluginExecutor {
@@ -95,6 +90,7 @@ impl PluginExecutor {
 ///
 /// Note: This currently executes sequentially due to mutable field access constraints.
 /// True parallelism would require architectural changes (read/write phase separation).
+#[derive(Debug)]
 pub struct ParallelStrategy {
     thread_pool: Option<rayon::ThreadPool>,
 }

@@ -73,6 +73,7 @@ impl Default for LaplacianConfig {
 }
 
 /// Unified Laplacian operator
+#[derive(Debug)]
 pub struct LaplacianOperator {
     config: LaplacianConfig,
     dx2_inv: f64,

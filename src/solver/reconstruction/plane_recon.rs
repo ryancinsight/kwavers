@@ -11,6 +11,7 @@ use crate::solver::reconstruction::{
 use ndarray::{Array2, Array3};
 
 /// Planar array reconstruction
+#[derive(Debug)]
 pub struct PlaneRecon {
     /// Plane normal vector
     normal: [f64; 3],

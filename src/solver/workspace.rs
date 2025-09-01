@@ -74,6 +74,7 @@ impl SolverWorkspace {
 }
 
 /// Thread-local workspace pool for parallel operations
+#[derive(Debug)]
 pub struct WorkspacePool {
     /// Available workspaces
     workspaces: Arc<Mutex<Vec<SolverWorkspace>>>,
@@ -137,6 +138,7 @@ impl WorkspacePool {
 }
 
 /// RAII guard for workspace borrowing
+#[derive(Debug)]
 pub struct WorkspaceGuard {
     workspace: Option<SolverWorkspace>,
     pool: Arc<Mutex<Vec<SolverWorkspace>>>,

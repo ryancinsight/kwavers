@@ -50,6 +50,7 @@ impl Default for DGConfig {
 }
 
 /// DG solver for hyperbolic conservation laws
+#[derive(Debug)]
 pub struct DGSolver {
     /// Configuration
     config: DGConfig,

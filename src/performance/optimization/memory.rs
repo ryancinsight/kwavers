@@ -17,6 +17,7 @@ pub enum PrefetchStrategy {
 }
 
 /// Bandwidth optimizer for memory transfers
+#[derive(Debug)]
 pub struct BandwidthOptimizer {
     /// Maximum bandwidth in GB/s
     max_bandwidth: f64,
@@ -48,6 +49,7 @@ impl BandwidthOptimizer {
 }
 
 /// Memory optimizer for efficient memory management
+#[derive(Debug)]
 pub struct MemoryOptimizer {
     prefetch_distance: usize,
     alignment: usize,
@@ -144,6 +146,7 @@ impl MemoryOptimizer {
 }
 
 /// Memory pool for efficient allocation
+#[derive(Debug)]
 pub struct MemoryPool {
     buffer: Vec<u8>,
     offset: usize,

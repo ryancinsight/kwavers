@@ -25,6 +25,7 @@ impl ThermalDose {
 }
 
 /// Thermal dose calculator with accumulation
+#[derive(Debug)]
 pub struct ThermalDoseCalculator {
     accumulated_dose: Array3<f64>,
 }

@@ -1,6 +1,7 @@
 //! Cavitation detection using ML techniques
 
 /// Cavitation detector using machine learning
+#[derive(Debug)]
 pub struct CavitationDetector {
     threshold: f64,
     sensitivity: f64,

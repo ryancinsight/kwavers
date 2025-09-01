@@ -4,6 +4,7 @@ use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 
 /// Field analyzer for adaptive selection
+#[derive(Debug)]
 pub struct FieldAnalyzer {
     grid: Grid,
 }

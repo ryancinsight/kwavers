@@ -24,6 +24,7 @@ impl Default for ProcessingConfig {
 }
 
 /// Processing stage for data transformation
+#[derive(Debug)]
 pub struct ProcessingStage {
     config: ProcessingConfig,
 }

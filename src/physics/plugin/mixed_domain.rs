@@ -11,6 +11,7 @@ use num_complex::Complex64;
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
+#[derive(Debug)]
 pub struct MixedDomainPropagationPlugin {
     metadata: PluginMetadata,
     state: PluginState,

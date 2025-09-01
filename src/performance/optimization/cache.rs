@@ -16,6 +16,7 @@ pub enum AccessPattern {
 }
 
 /// Cache optimizer for improving memory access patterns
+#[derive(Debug)]
 pub struct CacheOptimizer {
     block_size: usize,
     l1_cache_size: usize,

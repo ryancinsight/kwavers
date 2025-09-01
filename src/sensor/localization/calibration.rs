@@ -15,12 +15,14 @@ pub struct SensorCalibration {
 }
 
 /// Calibration phantom for sensor calibration
+#[derive(Debug)]
 pub struct CalibrationPhantom {
     /// Phantom positions for calibration
     pub positions: Vec<[f64; 3]>,
 }
 
 /// Calibrator for sensor arrays
+#[derive(Debug)]
 pub struct Calibrator<'a> {
     array: &'a SensorArray,
 }
@@ -47,6 +49,7 @@ impl<'a> Calibrator<'a> {
 }
 
 /// Centroid phantom for calibration
+#[derive(Debug)]
 pub struct CentroidPhantom {
     /// Centroid position
     pub centroid: [f64; 3],

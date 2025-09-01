@@ -14,6 +14,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
 /// Time reversal reconstruction algorithm
+#[derive(Debug)]
 pub struct TimeReversal {
     grid_size: [usize; 3],
     sound_speed: f64,

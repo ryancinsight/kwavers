@@ -16,6 +16,7 @@ pub struct OptimizationExperience {
 }
 
 /// Parameter optimizer using deep reinforcement learning
+#[derive(Debug)]
 pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,

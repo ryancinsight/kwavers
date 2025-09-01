@@ -1,25 +1,31 @@
 //! Pattern recognition for simulation data
 
 /// Pattern recognizer for simulation data
+#[derive(Debug)]
 pub struct PatternRecognizer {
     feature_extractor: FeatureExtractor,
 }
 
 /// Extracted simulation patterns
+#[derive(Debug)]
 pub struct SimulationPatterns {
     pub temporal_patterns: Vec<TimePattern>,
     pub spatial_patterns: Vec<SpatialPattern>,
 }
 
 /// Pattern summary statistics
+#[derive(Debug)]
 pub struct PatternSummary {
     pub pattern_count: usize,
     pub dominant_frequency: f64,
     pub spatial_coherence: f64,
 }
 
+#[derive(Debug)]
 struct FeatureExtractor;
+#[derive(Debug)]
 struct TimePattern;
+#[derive(Debug)]
 struct SpatialPattern;
 
 impl Default for PatternRecognizer {

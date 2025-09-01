@@ -15,6 +15,7 @@ use crate::physics::phase_modulation::phase_shifting::core::{
 use crate::source::transducer::MAX_STEERING_ANGLE;
 
 /// Beam steering controller
+#[derive(Debug)]
 pub struct BeamSteering {
     /// Array element positions
     element_positions: Array2<f64>,

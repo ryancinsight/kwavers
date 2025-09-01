@@ -103,6 +103,21 @@ pub struct FeedbackController {
     state_estimator: StateEstimator,
 }
 
+impl std::fmt::Debug for FeedbackController {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FeedbackController")
+            .field("config", &self.config)
+            .field("pid_controller", &self.pid_controller)
+            .field("amplitude_controller", &self.amplitude_controller)
+            .field("duty_cycle_controller", &self.duty_cycle_controller)
+            .field("power_modulator", &self.power_modulator)
+            .field("cavitation_detector", &"<dyn CavitationDetector>")
+            .field("control_history_len", &self.control_history.len())
+            .field("time_since_update", &self.time_since_update)
+            .finish()
+    }
+}
+
 impl FeedbackController {
     pub fn new(config: FeedbackConfig, fundamental_freq: f64, sample_rate: f64) -> Self {
         let pid_config = PIDConfig {

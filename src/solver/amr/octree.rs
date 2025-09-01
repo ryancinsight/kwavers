@@ -107,6 +107,7 @@ impl OctreeNode {
 }
 
 /// Octree structure for adaptive mesh refinement
+#[derive(Debug)]
 pub struct Octree {
     /// Root node
     root: OctreeNode,

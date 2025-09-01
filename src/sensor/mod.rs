@@ -146,6 +146,7 @@ impl Default for SensorData {
 }
 
 /// Iterator adapter for sensor data processing
+#[derive(Debug)]
 pub struct SensorDataIterator<'a> {
     data: &'a SensorData,
     sensors: Vec<&'a SensorInfo>,

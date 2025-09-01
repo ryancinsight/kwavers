@@ -21,6 +21,7 @@ pub struct PluginMetrics {
 }
 
 /// Performance monitor for the solver
+#[derive(Debug)]
 pub struct PerformanceMonitor {
     /// Per-plugin metrics
     plugin_metrics: HashMap<String, PluginMetrics>,

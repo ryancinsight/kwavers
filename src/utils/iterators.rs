@@ -8,6 +8,7 @@ use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use rayon::prelude::*;
 
 /// Iterator for processing 3D grid points with spatial coordinates
+#[derive(Debug)]
 pub struct GridPointIterator<'a, T> {
     array: ArrayViewMut3<'a, T>,
     nx: usize,
@@ -61,6 +62,7 @@ where
 }
 
 /// Iterator for chunked processing with cache-friendly access patterns
+#[derive(Debug)]
 pub struct ChunkedProcessor<'a, T> {
     array: ArrayViewMut3<'a, T>,
     nx: usize,
@@ -106,6 +108,7 @@ where
 }
 
 /// Iterator for computing gradients with central differences
+#[derive(Debug)]
 pub struct GradientComputer<'a> {
     array: ArrayView3<'a, f64>,
     nx: usize,

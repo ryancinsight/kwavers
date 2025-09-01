@@ -21,6 +21,15 @@ pub struct PAMProcessor {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for PAMProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PAMProcessor")
+            .field("config", &self.config)
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl PAMProcessor {
     /// Create a new PAM processor
     pub fn new(config: PAMConfig) -> KwaversResult<Self> {

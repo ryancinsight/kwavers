@@ -57,6 +57,7 @@ use ndarray::{Array3, Zip};
 use std::sync::Arc;
 
 /// Main therapy calculator
+#[derive(Debug)]
 pub struct TherapyCalculator {
     /// Treatment modality
     pub modality: TherapyModality,

@@ -238,6 +238,7 @@ impl PIDController {
 
 /// Discrete-time PID controller using Tustin's method
 /// Better for digital implementation
+#[derive(Debug)]
 pub struct DiscretePIDController {
     gains: PIDGains,
     sample_time: f64,

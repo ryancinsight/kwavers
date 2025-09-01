@@ -94,6 +94,20 @@ pub struct SpectralDetector {
     cumulative_dose: f64,
 }
 
+impl std::fmt::Debug for SpectralDetector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SpectralDetector")
+            .field("fundamental_freq", &self.fundamental_freq)
+            .field("sample_rate", &self.sample_rate)
+            .field("fft_planner", &"<FftPlanner>")
+            .field("window_len", &self.window.len())
+            .field("history_len", &self.history.len())
+            .field("has_baseline", &self.baseline_spectrum.is_some())
+            .field("cumulative_dose", &self.cumulative_dose)
+            .finish()
+    }
+}
+
 impl SpectralDetector {
     pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
         let fft_planner = FftPlanner::new();
@@ -327,6 +341,7 @@ impl CavitationDetector for SpectralDetector {
 }
 
 /// Broadband emissions detector
+#[derive(Debug)]
 pub struct BroadbandDetector {
     sample_rate: f64,
     noise_floor: f64,
@@ -385,6 +400,7 @@ impl BroadbandDetector {
 }
 
 /// Subharmonic-specific detector
+#[derive(Debug)]
 pub struct SubharmonicDetector {
     fundamental_freq: f64,
     sample_rate: f64,

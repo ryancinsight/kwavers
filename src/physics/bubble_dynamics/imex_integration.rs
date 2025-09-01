@@ -59,6 +59,7 @@ impl Default for BubbleIMEXConfig {
 }
 
 /// IMEX integrator for bubble dynamics
+#[derive(Debug)]
 pub struct BubbleIMEXIntegrator {
     solver: Arc<KellerMiksisModel>,
     config: BubbleIMEXConfig,

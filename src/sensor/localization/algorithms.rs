@@ -38,6 +38,7 @@ pub trait LocalizationAlgorithm {
 }
 
 /// Main algorithm processor
+#[derive(Debug)]
 pub struct LocalizationProcessor {
     method: LocalizationMethod,
 }

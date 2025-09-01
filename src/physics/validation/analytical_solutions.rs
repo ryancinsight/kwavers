@@ -12,6 +12,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 /// Analytical solution for plane wave propagation
+#[derive(Debug)]
 pub struct PlaneWaveSolution {
     /// Wave frequency (Hz)
     pub frequency: f64,
@@ -86,6 +87,7 @@ impl PlaneWaveSolution {
 }
 
 /// Analytical solution for point source (Green's function)
+#[derive(Debug)]
 pub struct PointSourceSolution {
     /// Source frequency (Hz)
     pub frequency: f64,
@@ -147,6 +149,7 @@ impl PointSourceSolution {
 }
 
 /// Analytical solution for standing wave in rectangular cavity
+#[derive(Debug)]
 pub struct StandingWaveSolution {
     /// Cavity dimensions (m)
     pub dimensions: [f64; 3],

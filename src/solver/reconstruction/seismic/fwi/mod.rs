@@ -20,6 +20,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array2, Array3};
 
 /// Full Waveform Inversion (FWI) reconstructor
+#[derive(Debug)]
 pub struct FullWaveformInversion {
     config: SeismicImagingConfig,
     /// Current velocity model

@@ -73,6 +73,7 @@ impl Default for DomainAnalyzer {
 }
 
 /// Quality metrics for domain characterization
+#[derive(Debug)]
 pub struct QualityMetrics {
     /// Homogeneity map (0=heterogeneous, 1=homogeneous)
     pub homogeneity: Array3<f64>,

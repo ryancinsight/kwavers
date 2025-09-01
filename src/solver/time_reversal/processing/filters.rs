@@ -11,6 +11,14 @@ pub struct FrequencyFilter {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for FrequencyFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FrequencyFilter")
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl FrequencyFilter {
     /// Create a new frequency filter
     pub fn new() -> Self {

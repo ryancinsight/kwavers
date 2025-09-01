@@ -1,6 +1,7 @@
 //! Acoustic event analysis using ML
 
 /// Acoustic event analyzer
+#[derive(Debug)]
 pub struct AcousticEventAnalyzer {
     frequency_threshold: f64,
     amplitude_threshold: f64,

@@ -21,6 +21,7 @@ pub enum IterativeAlgorithm {
 }
 
 /// Iterative reconstruction methods
+#[derive(Debug)]
 pub struct IterativeMethods {
     algorithm: IterativeAlgorithm,
     iterations: usize,

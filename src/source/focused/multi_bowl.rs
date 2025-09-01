@@ -8,6 +8,7 @@ use ndarray::{Array3, Zip};
 use std::f64::consts::PI;
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
+#[derive(Debug)]
 pub struct MultiBowlArray {
     /// Individual bowl transducers
     pub(crate) bowls: Vec<BowlTransducer>,

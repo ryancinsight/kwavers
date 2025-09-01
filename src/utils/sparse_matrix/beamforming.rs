@@ -9,6 +9,7 @@ use crate::error::KwaversResult;
 use ndarray::{Array1, Array2};
 
 /// Beamforming matrix operations
+#[derive(Debug)]
 pub struct BeamformingMatrix {
     /// Steering matrix (sparse)
     steering_matrix: CompressedSparseRowMatrix,
