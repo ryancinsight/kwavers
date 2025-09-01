@@ -68,15 +68,26 @@ impl WavefieldModeler {
     }
 
     /// Apply PML boundary conditions
-    /// Based on Berenger (1994): "A perfectly matched layer"
+    /// Based on Berenger (1994): "A perfectly matched layer for the absorption of electromagnetic waves"
+    /// Journal of Computational Physics, 114(2), 185-200
     fn apply_pml(&self, wavefield: &mut Array3<f64>) {
         let (nx, ny, nz) = wavefield.dim();
         let width = self.pml_width;
-        let max_damping = 3.0;
 
-        // Apply damping in boundary regions
+        // PML parameters following Collino & Tsogka (2001)
+        let reflection_coeff: f64 = 1e-6; // Target reflection coefficient
+        let pml_order = 2.0; // Polynomial order for damping profile
+        let max_velocity = 4000.0; // Maximum velocity in model (m/s)
+
+        // Maximum damping coefficient
+        let max_damping = -(pml_order + 1.0) * max_velocity * reflection_coeff.ln()
+            / (2.0 * width as f64 * 0.001); // Assuming 1mm grid spacing
+
+        // Apply damping in boundary regions with polynomial profile
         for i in 0..width {
-            let damping = max_damping * ((width - i) as f64 / width as f64).powi(2);
+            // Damping profile: d(x) = d_max * (x/L)^n
+            let xi = (width - i) as f64 / width as f64;
+            let damping = max_damping * xi.powf(pml_order);
 
             // X boundaries
             for j in 0..ny {
