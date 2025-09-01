@@ -10,6 +10,7 @@
 //! - Arvanitis et al. (2012): "Controlled ultrasound-induced blood-brain barrier disruption"
 
 pub mod cavitation_detector;
+pub mod control; // Modular control components
 pub mod detection; // Modular detection components
 pub mod feedback_controller;
 pub mod pid_controller;

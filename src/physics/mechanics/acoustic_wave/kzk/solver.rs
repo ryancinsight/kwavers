@@ -214,7 +214,8 @@ mod tests {
 
         for j in 0..config.ny {
             for i in 0..config.nx {
-                let r2 = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2)) / sigma.powi(2);
+                let sigma_f64: f64 = sigma;
+                let r2 = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2)) / sigma_f64.powi(2);
                 source[[i, j]] = (-r2).exp();
             }
         }

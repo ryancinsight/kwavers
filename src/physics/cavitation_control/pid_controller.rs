@@ -189,9 +189,12 @@ impl PIDController {
         control_signal = control_signal.clamp(self.config.output_min, self.config.output_max);
 
         // Back-calculation anti-windup
-        if saturated {
+        if saturated && self.config.gains.ki != 0.0 {
             let excess = control_signal - (p_term + i_term + d_term);
-            self.integral.value -= excess * self.config.sample_time / self.config.gains.ki;
+            let adjustment = excess * self.config.sample_time / self.config.gains.ki;
+            // Apply clamping after adjustment
+            self.integral.value =
+                (self.integral.value - adjustment).clamp(-self.integral.limit, self.integral.limit);
         }
 
         // Update state for next iteration

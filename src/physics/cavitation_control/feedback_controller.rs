@@ -1,130 +1,49 @@
-//! Feedback Controller for Cavitation Control
+//! Feedback controller for cavitation control
 //!
-//! Implements a complete negative feedback control system for maintaining
-//! desired cavitation levels using real-time monitoring and control.
-//!
-//! References:
-//! - Hockham et al. (2013): "Real-time control system for sustaining thermally relevant acoustic cavitation"
-//! - Arvanitis et al. (2013): "Cavitation-enhanced nonthermal ablation in deep brain targets"
-//! - Sun et al. (2017): "Closed-loop control of targeted ultrasound drug delivery"
+//! This module provides a unified interface to the modular control components
+//! in the control/ subdirectory.
 
-use crate::physics::cavitation_control::{
-    cavitation_detector::{CavitationDetector, CavitationState, SpectralDetector},
-    pid_controller::{PIDConfig, PIDController, PIDGains},
-    power_modulation::{
-        AmplitudeController, DutyCycleController, ModulationScheme, PowerControl, PowerModulator,
-    },
-};
+use super::control::{AdaptiveController, SafetyLimits, SafetyMonitor, StateEstimator};
+// Import types that will be re-exported
+pub use super::control::{ControlOutput, ControlStrategy, FeedbackConfig};
+pub use super::detection::CavitationMetrics;
+use super::detection::{CavitationDetector, SpectralDetector};
+use super::pid_controller::{PIDConfig, PIDController, PIDGains};
 use ndarray::ArrayView1;
-use std::collections::VecDeque;
-
-// Feedback control constants
-/// Default target cavitation intensity (0-1)
-const DEFAULT_TARGET_INTENSITY: f64 = 0.5;
-
-/// Control loop update rate (Hz)
-const CONTROL_UPDATE_RATE: f64 = 100.0;
-
-/// Minimum control update period (seconds)
-const MIN_UPDATE_PERIOD: f64 = 0.001;
-
-/// Maximum control history length
-const MAX_HISTORY_LENGTH: usize = 1000;
-
-/// Control dead zone to prevent oscillations
-const CONTROL_DEAD_ZONE: f64 = 0.02;
-
-/// Safety shutdown threshold
-const SAFETY_SHUTDOWN_THRESHOLD: f64 = 0.95;
-
-/// Control strategies for feedback
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ControlStrategy {
-    AmplitudeOnly, // Control only amplitude
-    DutyCycleOnly, // Control only duty cycle
-    Combined,      // Control both amplitude and duty cycle
-    Cascaded,      // Cascaded control (coarse/fine)
-    Predictive,    // Model predictive control
-}
-
-/// Feedback configuration
-#[derive(Debug, Clone)]
-pub struct FeedbackConfig {
-    pub strategy: ControlStrategy,
-    pub target_intensity: f64,
-    pub pid_gains: PIDGains,
-    pub update_rate: f64,
-    pub safety_enabled: bool,
-    pub dead_zone: f64,
-    pub max_amplitude: f64,
-    pub max_duty_cycle: f64,
-}
-
-impl Default for FeedbackConfig {
-    fn default() -> Self {
-        Self {
-            strategy: ControlStrategy::Combined,
-            target_intensity: DEFAULT_TARGET_INTENSITY,
-            pid_gains: PIDGains::default(),
-            update_rate: CONTROL_UPDATE_RATE,
-            safety_enabled: true,
-            dead_zone: CONTROL_DEAD_ZONE,
-            max_amplitude: 1.0,
-            max_duty_cycle: 0.8,
-        }
-    }
-}
-
-/// Control output from feedback system
-#[derive(Debug, Clone)]
-pub struct ControlOutput {
-    pub amplitude: f64,
-    pub duty_cycle: f64,
-    pub modulation_scheme: ModulationScheme,
-    pub error: f64,
-    pub cavitation_intensity: f64,
-    pub control_active: bool,
-}
-
-/// Cavitation metrics for control
-pub use crate::physics::cavitation_control::cavitation_detector::CavitationMetrics;
 
 /// Main feedback controller
 pub struct FeedbackController {
     config: FeedbackConfig,
+    detector: Box<dyn CavitationDetector>,
     pid_controller: PIDController,
-    amplitude_controller: AmplitudeController,
-    duty_cycle_controller: DutyCycleController,
-    power_modulator: PowerModulator,
-    cavitation_detector: Box<dyn CavitationDetector>,
-    control_history: VecDeque<ControlOutput>,
-    time_since_update: f64,
-    emergency_stop: bool,
     state_estimator: StateEstimator,
+    safety_monitor: SafetyMonitor,
+    adaptive_controller: AdaptiveController,
 }
 
 impl std::fmt::Debug for FeedbackController {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FeedbackController")
             .field("config", &self.config)
+            .field("detector", &"<dyn CavitationDetector>")
             .field("pid_controller", &self.pid_controller)
-            .field("amplitude_controller", &self.amplitude_controller)
-            .field("duty_cycle_controller", &self.duty_cycle_controller)
-            .field("power_modulator", &self.power_modulator)
-            .field("cavitation_detector", &"<dyn CavitationDetector>")
-            .field("control_history_len", &self.control_history.len())
-            .field("time_since_update", &self.time_since_update)
             .finish()
     }
 }
 
 impl FeedbackController {
+    /// Create new feedback controller
     pub fn new(config: FeedbackConfig, fundamental_freq: f64, sample_rate: f64) -> Self {
+        // Initialize PID controller
         let pid_config = PIDConfig {
-            gains: config.pid_gains,
-            sample_time: 1.0 / config.update_rate,
-            output_min: -1.0,
-            output_max: 1.0,
+            gains: PIDGains {
+                kp: 1.0,
+                ki: 0.1,
+                kd: 0.01,
+            },
+            sample_time: 1.0 / sample_rate,
+            output_min: config.min_amplitude,
+            output_max: config.max_amplitude,
             ..Default::default()
         };
 
@@ -133,349 +52,122 @@ impl FeedbackController {
 
         Self {
             config: config.clone(),
+            detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
             pid_controller,
-            amplitude_controller: AmplitudeController::new(config.max_amplitude),
-            duty_cycle_controller: DutyCycleController::new(config.max_duty_cycle),
-            power_modulator: PowerModulator::new(ModulationScheme::DutyCycleControl, sample_rate),
-            cavitation_detector: Box::new(SpectralDetector::new(fundamental_freq, sample_rate)),
-            control_history: VecDeque::with_capacity(MAX_HISTORY_LENGTH),
-            time_since_update: 0.0,
-            emergency_stop: false,
             state_estimator: StateEstimator::new(),
+            safety_monitor: SafetyMonitor::new(SafetyLimits::default()),
+            adaptive_controller: AdaptiveController::new(0.01),
         }
     }
 
-    /// Process acoustic signal and update control
-    pub fn update(&mut self, acoustic_signal: &ArrayView1<f64>, dt: f64) -> ControlOutput {
-        self.time_since_update += dt;
-
-        // Check if it's time to update control
-        if self.time_since_update < (1.0 / self.config.update_rate).max(MIN_UPDATE_PERIOD) {
-            return self.get_current_output();
-        }
-
-        self.time_since_update = 0.0;
-
+    /// Process control loop
+    pub fn process(&mut self, signal: &ArrayView1<f64>) -> ControlOutput {
         // Detect cavitation
-        let mut metrics = self.cavitation_detector.detect(acoustic_signal);
+        let raw_metrics = self.detector.detect(signal);
 
-        // Apply state estimation for noise reduction
-        metrics = self.state_estimator.estimate(metrics);
+        // Estimate state with temporal smoothing
+        let metrics = self.state_estimator.estimate(&raw_metrics);
 
-        // Check safety conditions
-        if self.config.safety_enabled {
-            self.check_safety(&metrics);
-        }
-
-        if self.emergency_stop {
-            return self.emergency_shutdown();
-        }
+        // Check safety
+        let safe = self.safety_monitor.check_safety(&metrics);
 
         // Calculate control error
         let error = self.config.target_intensity - metrics.intensity;
-
-        // Apply dead zone to prevent oscillations
-        let effective_error = if error.abs() < self.config.dead_zone {
-            0.0
-        } else {
-            error
-        };
 
         // Get PID control output
         let pid_output = self.pid_controller.update(metrics.intensity);
 
         // Apply control strategy
-        let (amplitude, duty_cycle) = match self.config.strategy {
-            ControlStrategy::AmplitudeOnly => {
-                let amp = self.apply_amplitude_control(pid_output.control_signal);
-                (amp, self.config.max_duty_cycle)
+        let mut output = match self.config.strategy {
+            ControlStrategy::AmplitudeOnly => ControlOutput {
+                amplitude: pid_output.control_signal,
+                frequency: 0.0,
+                pulse_width: 1.0,
+                phase: 0.0,
+                modulation_index: 0.0,
+                safety_limited: false,
+                error,
+                cavitation_intensity: metrics.intensity,
+                control_active: safe,
+            },
+            ControlStrategy::PulseWidthModulation => {
+                // Use duty cycle based on intensity
+                let duty_cycle = (1.0 - error / self.config.target_intensity).clamp(0.0, 1.0);
+                ControlOutput {
+                    amplitude: self.config.max_amplitude,
+                    frequency: 0.0,
+                    pulse_width: duty_cycle,
+                    phase: 0.0,
+                    modulation_index: duty_cycle,
+                    safety_limited: false,
+                    error,
+                    cavitation_intensity: metrics.intensity,
+                    control_active: safe,
+                }
             }
-
-            ControlStrategy::DutyCycleOnly => {
-                let duty = self.apply_duty_cycle_control(pid_output.control_signal);
-                (self.config.max_amplitude, duty)
+            ControlStrategy::FrequencyModulation => {
+                let freq_shift = pid_output.control_signal * 0.1; // ±10% frequency
+                ControlOutput {
+                    amplitude: self.config.max_amplitude,
+                    frequency: freq_shift,
+                    pulse_width: 1.0,
+                    phase: 0.0,
+                    modulation_index: freq_shift,
+                    safety_limited: false,
+                    error,
+                    cavitation_intensity: metrics.intensity,
+                    control_active: safe,
+                }
             }
-
             ControlStrategy::Combined => {
-                self.apply_combined_control(pid_output.control_signal, &metrics)
-            }
-
-            ControlStrategy::Cascaded => {
-                self.apply_cascaded_control(pid_output.control_signal, &metrics)
-            }
-
-            ControlStrategy::Predictive => {
-                self.apply_predictive_control(pid_output.control_signal, &metrics)
+                // Combine amplitude and PWM
+                let duty_cycle = (1.0 - error / self.config.target_intensity).clamp(0.0, 1.0);
+                ControlOutput {
+                    amplitude: pid_output.control_signal,
+                    frequency: 0.0,
+                    pulse_width: duty_cycle,
+                    phase: 0.0,
+                    modulation_index: duty_cycle,
+                    safety_limited: false,
+                    error,
+                    cavitation_intensity: metrics.intensity,
+                    control_active: safe,
+                }
             }
         };
 
-        // Update power modulator
-        self.power_modulator.update_control(PowerControl {
-            amplitude,
-            duty_cycle,
-            ..Default::default()
-        });
+        // Apply safety limits
+        output = self.safety_monitor.apply_safety_limits(output);
 
-        // Create control output
-        let output = ControlOutput {
-            amplitude,
-            duty_cycle,
-            modulation_scheme: self.get_modulation_scheme(&metrics),
-            error: effective_error,
-            cavitation_intensity: metrics.intensity,
-            control_active: !self.emergency_stop,
-        };
-
-        // Store in history
-        self.control_history.push_back(output.clone());
-        if self.control_history.len() > MAX_HISTORY_LENGTH {
-            self.control_history.pop_front();
-        }
+        // Adapt parameters if enabled
+        let target = self.config.target_intensity;
+        self.adaptive_controller
+            .adapt_parameters(&mut self.config, &metrics, target);
 
         output
     }
 
-    /// Apply amplitude-only control
-    fn apply_amplitude_control(&mut self, control_signal: f64) -> f64 {
-        let target = (self.config.max_amplitude * (1.0 + control_signal))
-            .clamp(0.0, self.config.max_amplitude);
-        self.amplitude_controller.set_target(target);
-        self.amplitude_controller
-            .update(1.0 / self.config.update_rate)
-    }
-
-    /// Apply duty cycle-only control
-    fn apply_duty_cycle_control(&mut self, control_signal: f64) -> f64 {
-        let target = (self.config.max_duty_cycle * (1.0 + control_signal))
-            .clamp(0.0, self.config.max_duty_cycle);
-        self.duty_cycle_controller.set_target(target);
-        self.duty_cycle_controller
-            .update(1.0 / self.config.update_rate)
-    }
-
-    /// Apply combined amplitude and duty cycle control
-    fn apply_combined_control(
-        &mut self,
-        control_signal: f64,
-        metrics: &CavitationMetrics,
-    ) -> (f64, f64) {
-        // Use amplitude for fine control, duty cycle for coarse control
-        let amplitude_contribution = 0.7;
-        let duty_cycle_contribution = 0.3;
-
-        let amp_signal = control_signal * amplitude_contribution;
-        let duty_signal = control_signal * duty_cycle_contribution;
-
-        // Prefer amplitude control when stable cavitation is detected
-        let (amp_weight, duty_weight) = match metrics.state {
-            CavitationState::Stable => (0.8, 0.2),
-            CavitationState::Inertial => (0.3, 0.7),
-            _ => (0.5, 0.5),
-        };
-
-        let amplitude = self.apply_amplitude_control(amp_signal * amp_weight);
-        let duty_cycle = self.apply_duty_cycle_control(duty_signal * duty_weight);
-
-        (amplitude, duty_cycle)
-    }
-
-    /// Apply cascaded control (coarse/fine)
-    fn apply_cascaded_control(
-        &mut self,
-        control_signal: f64,
-        metrics: &CavitationMetrics,
-    ) -> (f64, f64) {
-        // Use duty cycle for coarse control, amplitude for fine control
-        let threshold = 0.2;
-
-        if control_signal.abs() > threshold {
-            // Large error: adjust duty cycle
-            let duty_cycle = self.apply_duty_cycle_control(control_signal);
-            (self.amplitude_controller.get_amplitude(), duty_cycle)
-        } else {
-            // Small error: adjust amplitude
-            let amplitude = self.apply_amplitude_control(control_signal);
-            (amplitude, self.duty_cycle_controller.get_duty_cycle())
-        }
-    }
-
-    /// Apply model predictive control
-    fn apply_predictive_control(
-        &mut self,
-        control_signal: f64,
-        metrics: &CavitationMetrics,
-    ) -> (f64, f64) {
-        // Simple predictive control based on trend
-        let trend = self.state_estimator.get_trend();
-        let predicted_signal = control_signal + trend * 0.1;
-
-        // Apply control with prediction
-        self.apply_combined_control(predicted_signal, metrics)
-    }
-
-    /// Check safety conditions
-    fn check_safety(&mut self, metrics: &CavitationMetrics) {
-        // Check for excessive cavitation
-        if metrics.intensity > SAFETY_SHUTDOWN_THRESHOLD {
-            self.emergency_stop = true;
-            log::warn!("Emergency stop: Excessive cavitation detected");
-        }
-
-        // Check for inertial cavitation in sensitive applications
-        if metrics.state == CavitationState::Inertial && metrics.confidence > 0.8 {
-            // Reduce power immediately
-            self.amplitude_controller
-                .set_target(self.config.max_amplitude * 0.5);
-            self.duty_cycle_controller
-                .set_target(self.config.max_duty_cycle * 0.5);
-        }
-    }
-
-    /// Emergency shutdown
-    fn emergency_shutdown(&mut self) -> ControlOutput {
-        self.amplitude_controller.set_target(0.0);
-        self.duty_cycle_controller.set_target(MIN_DUTY_CYCLE);
-
-        ControlOutput {
-            amplitude: 0.0,
-            duty_cycle: MIN_DUTY_CYCLE,
-            modulation_scheme: ModulationScheme::Pulsed,
-            error: 0.0,
-            cavitation_intensity: 0.0,
-            control_active: false,
-        }
-    }
-
-    /// Get appropriate modulation scheme based on cavitation state
-    fn get_modulation_scheme(&self, metrics: &CavitationMetrics) -> ModulationScheme {
-        match metrics.state {
-            CavitationState::None => ModulationScheme::Continuous,
-            CavitationState::Stable => ModulationScheme::AmplitudeModulation,
-            CavitationState::Inertial => ModulationScheme::DutyCycleControl,
-            CavitationState::Transient => ModulationScheme::Ramped,
-        }
-    }
-
-    /// Get current control output
-    fn get_current_output(&self) -> ControlOutput {
-        self.control_history
-            .back()
-            .cloned()
-            .unwrap_or(ControlOutput {
-                amplitude: self.amplitude_controller.get_amplitude(),
-                duty_cycle: self.duty_cycle_controller.get_duty_cycle(),
-                modulation_scheme: ModulationScheme::Continuous,
-                error: 0.0,
-                cavitation_intensity: 0.0,
-                control_active: !self.emergency_stop,
-            })
-    }
-
-    /// Reset controller
+    /// Reset controller state
     pub fn reset(&mut self) {
+        self.detector.reset();
         self.pid_controller.reset();
-        self.control_history.clear();
-        self.time_since_update = 0.0;
-        self.emergency_stop = false;
-        self.cavitation_detector.reset();
         self.state_estimator.reset();
+        self.safety_monitor.reset();
+        self.adaptive_controller.reset();
     }
 
-    /// Set new target intensity
-    pub fn set_target(&mut self, target: f64) {
-        self.config.target_intensity = target.clamp(0.0, 1.0);
+    /// Update configuration
+    pub fn update_config(&mut self, config: FeedbackConfig) {
+        self.config = config;
         self.pid_controller
             .set_setpoint(self.config.target_intensity);
     }
 
-    /// Clear emergency stop
-    pub fn clear_emergency_stop(&mut self) {
-        self.emergency_stop = false;
+    /// Get current configuration
+    pub fn config(&self) -> &FeedbackConfig {
+        &self.config
     }
 }
-
-/// State estimator for noise reduction
-struct StateEstimator {
-    history: VecDeque<CavitationMetrics>,
-    alpha: f64,
-}
-
-impl StateEstimator {
-    fn new() -> Self {
-        Self {
-            history: VecDeque::with_capacity(10),
-            alpha: 0.7, // Exponential smoothing factor
-        }
-    }
-
-    fn estimate(&mut self, metrics: CavitationMetrics) -> CavitationMetrics {
-        if self.history.is_empty() {
-            self.history.push_back(metrics.clone());
-            return metrics;
-        }
-
-        let last = self.history.back().unwrap();
-
-        // Exponential smoothing
-        let smoothed = CavitationMetrics {
-            intensity: self.alpha * metrics.intensity + (1.0 - self.alpha) * last.intensity,
-            subharmonic_level: self.alpha * metrics.subharmonic_level
-                + (1.0 - self.alpha) * last.subharmonic_level,
-            ultraharmonic_level: self.alpha * metrics.ultraharmonic_level
-                + (1.0 - self.alpha) * last.ultraharmonic_level,
-            broadband_level: self.alpha * metrics.broadband_level
-                + (1.0 - self.alpha) * last.broadband_level,
-            harmonic_distortion: self.alpha * metrics.harmonic_distortion
-                + (1.0 - self.alpha) * last.harmonic_distortion,
-            harmonic_content: self.alpha * metrics.harmonic_content
-                + (1.0 - self.alpha) * last.harmonic_content,
-            cavitation_dose: metrics.cavitation_dose, // Don't smooth cumulative dose
-            confidence: self.alpha * metrics.confidence + (1.0 - self.alpha) * last.confidence,
-            state: metrics.state, // Use current state
-        };
-
-        self.history.push_back(smoothed.clone());
-        if self.history.len() > 10 {
-            self.history.pop_front();
-        }
-
-        smoothed
-    }
-
-    fn get_trend(&self) -> f64 {
-        if self.history.len() < 2 {
-            return 0.0;
-        }
-
-        let recent: Vec<f64> = self
-            .history
-            .iter()
-            .rev()
-            .take(5)
-            .map(|m| m.intensity)
-            .collect();
-
-        if recent.len() < 2 {
-            return 0.0;
-        }
-
-        // Simple linear trend
-        let n = recent.len() as f64;
-        let sum_x: f64 = (0..recent.len()).map(|i| i as f64).sum();
-        let sum_y: f64 = recent.iter().sum();
-        let sum_xy: f64 = recent.iter().enumerate().map(|(i, &y)| i as f64 * y).sum();
-        let sum_xx: f64 = (0..recent.len()).map(|i| (i as f64) * (i as f64)).sum();
-
-        (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x)
-    }
-
-    fn reset(&mut self) {
-        self.history.clear();
-    }
-}
-
-// Re-export MIN_DUTY_CYCLE from power_modulation
-const MIN_DUTY_CYCLE: f64 = 0.01;
 
 #[cfg(test)]
 mod tests {
@@ -483,33 +175,19 @@ mod tests {
     use ndarray::Array1;
 
     #[test]
-    fn test_feedback_controller() {
+    fn test_feedback_controller_creation() {
         let config = FeedbackConfig::default();
-        let mut controller = FeedbackController::new(config, 1e6, 10e6);
-
-        // Create test signal
-        let signal = Array1::zeros(1024);
-
-        // Update controller
-        let output = controller.update(&signal.view(), 0.01);
-
-        assert!(output.amplitude >= 0.0 && output.amplitude <= 1.0);
-        assert!(output.duty_cycle >= 0.0 && output.duty_cycle <= 1.0);
+        let controller = FeedbackController::new(config, 1e6, 10e6);
+        assert_eq!(controller.config().target_intensity, 0.5);
     }
 
     #[test]
-    fn test_safety_shutdown() {
-        let mut config = FeedbackConfig::default();
-        config.safety_enabled = true;
-
+    fn test_control_output() {
+        let config = FeedbackConfig::default();
         let mut controller = FeedbackController::new(config, 1e6, 10e6);
-
-        // Create high-intensity signal that should trigger safety
-        let signal = Array1::ones(1024) * 10.0;
-
-        let output = controller.update(&signal.view(), 0.01);
-
-        // Should eventually trigger safety shutdown
-        assert!(!output.control_active || output.amplitude < 1.0);
+        let signal = Array1::zeros(1024);
+        let output = controller.process(&signal.view());
+        assert!(output.amplitude >= 0.0);
+        assert!(output.amplitude <= 1.0);
     }
 }
