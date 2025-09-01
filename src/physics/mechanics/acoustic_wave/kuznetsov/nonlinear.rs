@@ -35,9 +35,10 @@ pub fn compute_nonlinear_term_workspace(
     let beta = NONLINEARITY_COEFFICIENT_OFFSET + nonlinearity_coefficient / B_OVER_A_DIVISOR;
 
     // For harmonic generation, we need the convective derivative form
-    // The Kuznetsov equation nonlinear term: -β/(ρ₀c₀⁴) ∂²(p²)/∂t²
+    // The Kuznetsov equation nonlinear term: β/(ρ₀c₀⁴) ∂²(p²)/∂t²
     // This generates harmonics through the p² term
-    let coeff = -beta / (density * sound_speed.powi(4));
+    // Note: positive coefficient for physical shock steepening
+    let coeff = beta / (density * sound_speed.powi(4));
 
     // Use centered difference for better accuracy in harmonic generation
     // This preserves the phase relationships needed for second harmonic
@@ -69,7 +70,10 @@ pub fn compute_nonlinear_term_workspace(
             .and(&p_squared_prev2)
             .for_each(|nl, &p2, &p2_prev, &p2_prev2| {
                 // Centered second derivative for better harmonic generation
-                *nl = coeff * (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
+                let d2p2_dt2 = (p2 - SECOND_ORDER_DIFF_COEFF * p2_prev + p2_prev2) / dt_squared;
+                // Apply limiter to prevent numerical instability
+                let limited = d2p2_dt2.clamp(-1e20, 1e20);
+                *nl = coeff * limited;
             });
     }
 }

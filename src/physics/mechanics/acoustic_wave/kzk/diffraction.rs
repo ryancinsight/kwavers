@@ -78,7 +78,7 @@ impl DiffractionOperator {
 
         // Apply diffraction propagator in frequency domain
         // H(kx,ky) = exp(i * step_size * c₀ * (kx² + ky²) / (2k₀))
-        let k0 = 2.0 * PI * 1e6 / self.config.c0; // Assume 1 MHz for now
+        let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
         let factor = step_size * self.config.c0 / (2.0 * k0);
 
         for j in 0..ny {

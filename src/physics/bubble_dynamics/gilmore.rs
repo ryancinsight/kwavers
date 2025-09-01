@@ -10,7 +10,7 @@
 
 use super::{BubbleParameters, BubbleState};
 use crate::error::KwaversResult;
-use crate::physics::constants_physics::*;
+use crate::physics::constants::*;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]

@@ -131,7 +131,8 @@ impl OperatorSplittingSolver {
         pressure_prev2: &Array3<f64>,
     ) {
         let beta = 1.0 + self.nonlinearity / 2.0; // β = 1 + B/2A
-        let coeff = -beta / (self.density * self.sound_speed.powi(4));
+                                                  // Positive coefficient for shock steepening in compression phase
+        let coeff = beta / (self.density * self.sound_speed.powi(4));
         let dt2 = self.dt * self.dt;
 
         // Compute p² at different time levels
@@ -147,9 +148,12 @@ impl OperatorSplittingSolver {
             .and(&p2_prev2)
             .for_each(|p, &p2_c, &p2_p, &p2_p2| {
                 let d2p2_dt2 = (p2_c - 2.0 * p2_p + p2_p2) / dt2;
+                // The nonlinear term acts as an acceleration term
+                // We multiply by dt² for the discrete update
                 let nonlinear_term = coeff * d2p2_dt2 * dt2;
 
                 // Apply correction (additive splitting)
+                // This steepens the wave fronts
                 *p += nonlinear_term;
             });
     }
@@ -180,9 +184,11 @@ impl OperatorSplittingSolver {
         let p_half = self.linear_step_half(pressure, pressure_prev);
 
         // Step 2: Nonlinear correction for full dt
-        // Apply nonlinear term to p_half
+        // Apply nonlinear term using proper time history
         let mut p_nonlinear = p_half.clone();
-        self.nonlinear_step(&mut p_nonlinear, pressure, pressure_prev);
+        // For operator splitting, we need the correct time levels
+        // p_half is at t+dt/2, pressure is at t, pressure_prev is at t-dt
+        self.nonlinear_step(&mut p_nonlinear, pressure_prev, pressure_prev2);
 
         // Step 3: Linear propagation for dt/2
         // For the second half step, p_nonlinear is current, p_half is previous
