@@ -4,8 +4,8 @@
 //! - Christopher & Parker (1991) "New approaches to nonlinear diffractive field propagation"
 //! - Tavakkoli et al. (1998) "A new algorithm for computational simulation of HIFU"
 
-use ndarray::{Array2, Array3, Axis, Zip};
-use rustfft::{num_complex::Complex, FftPlanner};
+use ndarray::{Array2, Array3, Axis};
+use rustfft::FftPlanner;
 use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;

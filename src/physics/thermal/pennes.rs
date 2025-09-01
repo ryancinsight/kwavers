@@ -6,7 +6,7 @@
 //! Where Q is the heat source from ultrasound absorption.
 
 use super::ThermalProperties;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Pennes bioheat equation solver
 #[derive(Debug)]

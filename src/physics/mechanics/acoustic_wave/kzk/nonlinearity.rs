@@ -4,7 +4,7 @@
 //! Reference: Hamilton & Morfey (1998) "Model equations"
 
 use super::KZKConfig;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Nonlinear operator for KZK equation
 pub struct NonlinearOperator {

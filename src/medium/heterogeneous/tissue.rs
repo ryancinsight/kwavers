@@ -237,15 +237,15 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             .view()
     }
 
-    fn density_array_mut(&mut self) -> &mut Array3<f64> {
+    fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
         // For tissue medium, we need to initialize if not already done
         // This is a limitation of the OnceLock pattern - we can't get mutable access
-        // So we'll panic if trying to mutate before initialization
-        panic!("HeterogeneousTissueMedium does not support mutable array access")
+        // So we return None for immutable media
+        None
     }
 
-    fn sound_speed_array_mut(&mut self) -> &mut Array3<f64> {
-        panic!("HeterogeneousTissueMedium does not support mutable array access")
+    fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
+        None
     }
 }
 
