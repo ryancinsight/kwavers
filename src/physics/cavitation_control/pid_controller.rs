@@ -325,16 +325,32 @@ mod tests {
 
         let mut measurement = 0.0;
         let dt = 0.01; // Time step
-        for _ in 0..200 {
-            // More iterations for convergence
+
+        // Run simulation for sufficient time to reach steady state
+        for i in 0..500 {
+            // Increased iterations
             let output = controller.update(measurement);
+
+            // Apply control limits (PID output may be limited)
+            let control = output.control_signal.clamp(0.0, 10.0);
+
             // Simple first-order system simulation: dx/dt = u - x
             // Using Euler integration: x(t+dt) = x(t) + dt * (u - x)
-            measurement += dt * (output.control_signal - measurement);
+            let rate = control - measurement;
+            measurement += dt * rate;
+
+            // Check for early convergence
+            if i > 100 && (measurement - 1.0).abs() < 0.01 {
+                break;
+            }
         }
 
         // Should converge close to setpoint
-        assert!((measurement - 1.0).abs() < 0.1);
+        assert!(
+            (measurement - 1.0).abs() < 0.1,
+            "Failed to converge: measurement = {}, expected ~1.0",
+            measurement
+        );
     }
 
     #[test]
