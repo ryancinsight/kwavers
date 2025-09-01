@@ -10,7 +10,7 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 use std::sync::OnceLock;
 
 /// Configuration for setting tissue in a specific region
@@ -201,36 +201,40 @@ impl CoreMedium for HeterogeneousTissueMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousTissueMedium {
-    fn density_array(&self) -> &Array3<f64> {
-        self.density_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                    tissue::TISSUE_PROPERTIES
-                        .get(&TissueType::SoftTissue)
-                        .unwrap()
+    fn density_array(&self) -> ArrayView3<f64> {
+        self.density_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
+                    *val = props.density;
                 });
-                *val = props.density;
-            });
-            arr
-        })
+                arr
+            })
+            .view()
     }
 
-    fn sound_speed_array(&self) -> &Array3<f64> {
-        self.sound_speed_array.get_or_init(|| {
-            let mut arr = Array3::zeros(self.tissue_map.dim());
-            Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
-                let tissue = self.tissue_map[[i, j, k]];
-                let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
-                    tissue::TISSUE_PROPERTIES
-                        .get(&TissueType::SoftTissue)
-                        .unwrap()
+    fn sound_speed_array(&self) -> ArrayView3<f64> {
+        self.sound_speed_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = &tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
+                    *val = props.sound_speed;
                 });
-                *val = props.sound_speed;
-            });
-            arr
-        })
+                arr
+            })
+            .view()
     }
 
     fn density_array_mut(&mut self) -> &mut Array3<f64> {

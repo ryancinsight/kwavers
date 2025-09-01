@@ -6,6 +6,7 @@
 use crate::grid::Grid;
 use crate::medium::core::{ArrayAccess, CoreMedium};
 use ndarray::Array3;
+use ndarray::ArrayView3;
 
 /// Interface point information
 #[derive(Debug, Clone)]
@@ -75,7 +76,7 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
 
 /// Efficient array-based interface detection
 fn find_interfaces_from_array(
-    density_array: &Array3<f64>,
+    density_array: ArrayView3<f64>,
     grid: &Grid,
     threshold: f64,
 ) -> Vec<InterfacePoint> {

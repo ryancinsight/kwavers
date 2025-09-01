@@ -66,7 +66,7 @@ impl PhaseShifter {
             *phase = -k * position[0] * angle_rad.sin();
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 
@@ -102,7 +102,7 @@ impl PhaseShifter {
             *phase = -k * (distance - focal_distance);
 
             if self.quantization_enabled {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 
@@ -150,7 +150,7 @@ impl PhaseShifter {
 
         if self.quantization_enabled {
             for phase in phases.iter_mut() {
-                *phase = quantize_phase(*phase, PHASE_QUANTIZATION_LEVELS);
+                *phase = quantize_phase(*phase);
             }
         }
 
