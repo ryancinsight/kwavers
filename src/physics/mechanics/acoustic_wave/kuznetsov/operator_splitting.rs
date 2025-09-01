@@ -131,16 +131,16 @@ impl OperatorSplittingSolver {
         _pressure_prev2: &Array3<f64>,
     ) {
         let beta = 1.0 + self.nonlinearity / 2.0; // β = 1 + B/2A
-        
+
         // Normalization factor for pressure
         let norm_factor = self.density * self.sound_speed * self.sound_speed;
-        
+
         // Create normalized velocity field u = βp/(ρ₀c₀²)
         let u = pressure.mapv(|p| beta * p / norm_factor);
-        
+
         // Compute flux F = u²/2 and its derivative using upwind scheme
         let mut flux_gradient = Array3::zeros(pressure.dim());
-        
+
         for k in 0..self.nz {
             for j in 0..self.ny {
                 // Use conservative form with Godunov flux
@@ -148,31 +148,31 @@ impl OperatorSplittingSolver {
                     let u_left = u[[i - 1, j, k]];
                     let u_center = u[[i, j, k]];
                     let u_right = u[[i + 1, j, k]];
-                    
+
                     // Godunov flux at i+1/2
                     let flux_right = if u_center > 0.0 && u_right > 0.0 {
-                        0.5 * u_center * u_center  // Use left state
+                        0.5 * u_center * u_center // Use left state
                     } else if u_center < 0.0 && u_right < 0.0 {
-                        0.5 * u_right * u_right    // Use right state
+                        0.5 * u_right * u_right // Use right state
                     } else {
-                        0.0  // Sonic point
+                        0.0 // Sonic point
                     };
-                    
+
                     // Godunov flux at i-1/2
                     let flux_left = if u_left > 0.0 && u_center > 0.0 {
-                        0.5 * u_left * u_left      // Use left state
+                        0.5 * u_left * u_left // Use left state
                     } else if u_left < 0.0 && u_center < 0.0 {
-                        0.5 * u_center * u_center  // Use right state
+                        0.5 * u_center * u_center // Use right state
                     } else {
-                        0.0  // Sonic point
+                        0.0 // Sonic point
                     };
-                    
+
                     // Conservative update
                     flux_gradient[[i, j, k]] = (flux_right - flux_left) / self.dx;
                 }
             }
         }
-        
+
         // Apply the nonlinear correction
         Zip::from(pressure)
             .and(&flux_gradient)

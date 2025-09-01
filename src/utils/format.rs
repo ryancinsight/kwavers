@@ -21,7 +21,7 @@ pub fn format_duration(duration: Duration) -> String {
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
     let seconds = total_seconds % 60;
-    let millis = duration.subsec_millis();
+    let total_millis = duration.as_millis();
 
     if hours > 0 {
         format!("{}h {}m {}s", hours, minutes, seconds)
@@ -29,15 +29,15 @@ pub fn format_duration(duration: Duration) -> String {
         format!("{}m {}s", minutes, seconds)
     } else if seconds > 0 {
         format!("{}s", seconds)
-    } else if millis > 0 {
-        format!("{}ms", millis)
+    } else if total_millis > 0 {
+        format!("{}ms", total_millis)
     } else {
         // For sub-millisecond durations, show microseconds
-        let micros = duration.subsec_micros();
+        let micros = duration.as_micros();
         if micros > 0 {
             format!("{}µs", micros)
         } else {
-            format!("{}ns", duration.subsec_nanos())
+            format!("{}ns", duration.as_nanos())
         }
     }
 }
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_format_duration() {
         assert_eq!(format_duration(Duration::from_secs(0)), "0ms");
-        assert_eq!(format_duration(Duration::from_millis(500)), "0ms");
+        assert_eq!(format_duration(Duration::from_millis(500)), "500ms");
         assert_eq!(format_duration(Duration::from_secs(45)), "45s");
         assert_eq!(format_duration(Duration::from_secs(125)), "2m 5s");
         assert_eq!(format_duration(Duration::from_secs(3725)), "1h 2m 5s");

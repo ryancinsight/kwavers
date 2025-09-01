@@ -5,14 +5,24 @@
 use crate::{error::KwaversResult, grid::Grid};
 use ndarray::Array3;
 
-/// Tukey window function
+/// Tukey window function (tapered cosine window)
 pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
+    if n <= 1 {
+        return 1.0;
+    }
+
     let x = i as f64 / (n - 1) as f64;
 
     if x < alpha / 2.0 {
-        0.5 * (1.0 + (2.0 * std::f64::consts::PI * x / alpha).cos())
+        // Rising edge - starts at 0 when x=0
+        // w(x) = 0.5 * (1 + cos(π * (2x/α - 1)))
+        // At x=0: w(0) = 0.5 * (1 + cos(-π)) = 0.5 * (1 - 1) = 0 ✓
+        0.5 * (1.0 + (std::f64::consts::PI * (2.0 * x / alpha - 1.0)).cos())
     } else if x > 1.0 - alpha / 2.0 {
-        0.5 * (1.0 + (2.0 * std::f64::consts::PI * (1.0 - x) / alpha).cos())
+        // Falling edge - ends at 0 when x=1
+        // w(x) = 0.5 * (1 + cos(π * (2(1-x)/α - 1)))
+        // At x=1: w(1) = 0.5 * (1 + cos(-π)) = 0.5 * (1 - 1) = 0 ✓
+        0.5 * (1.0 + (std::f64::consts::PI * (2.0 * (1.0 - x) / alpha - 1.0)).cos())
     } else {
         1.0
     }

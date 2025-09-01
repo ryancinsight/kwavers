@@ -129,9 +129,9 @@ impl WesterveltFdtd {
             4 => {
                 // Fourth-order accurate stencil coefficients from constants
                 // Fourth-order finite difference coefficients
-const FD4_COEFF_0: f64 = -5.0 / 2.0;
-const FD4_COEFF_1: f64 = 4.0 / 3.0;
-const FD4_COEFF_2: f64 = -1.0 / 12.0;
+                const FD4_COEFF_0: f64 = -5.0 / 2.0;
+                const FD4_COEFF_1: f64 = 4.0 / 3.0;
+                const FD4_COEFF_2: f64 = -1.0 / 12.0;
                 const C0: f64 = FD4_COEFF_0;
                 const C1: f64 = FD4_COEFF_1;
                 const C2: f64 = FD4_COEFF_2;

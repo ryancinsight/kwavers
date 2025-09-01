@@ -208,19 +208,29 @@ mod tests {
             ..Default::default()
         };
 
-        let mut solver =
-            PennesSolver::new(16, 16, 16, 1e-3, 1e-3, 1e-3, 0.001, properties).unwrap();
+        // Use larger time step for faster heating
+        let mut solver = PennesSolver::new(16, 16, 16, 1e-3, 1e-3, 1e-3, 0.01, properties).unwrap();
 
         // Apply heat source at center
         let mut heat_source = Array3::zeros((16, 16, 16));
-        heat_source[[8, 8, 8]] = 1e6; // 1 MW/m³
+        heat_source[[8, 8, 8]] = 1e7; // 10 MW/m³ for significant heating
 
+        let initial_temp = solver.get_temperature()[[8, 8, 8]];
+
+        // Run for 1 second (100 steps × 0.01s)
         for _ in 0..100 {
             solver.step(&heat_source);
         }
 
-        // Temperature should rise at source
+        // Temperature should rise significantly at source
+        // Expected: dT/dt = Q/(ρc) = 1e7/(1050*3600) ≈ 2.65 K/s
+        // After 1s: ΔT ≈ 2.65 K (accounting for diffusion)
         let center_temp = solver.get_temperature()[[8, 8, 8]];
-        assert!(center_temp > 37.5, "No heating detected: {}", center_temp);
+        assert!(
+            center_temp > 38.0,
+            "Insufficient heating: initial={:.2}°C, final={:.2}°C",
+            initial_temp,
+            center_temp
+        );
     }
 }
