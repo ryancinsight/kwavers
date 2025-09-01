@@ -2,7 +2,7 @@
 
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Zip};
+use ndarray::{Array3, ArrayView3, Zip};
 
 /// Compute the nonlinear term for the Westervelt equation
 ///
@@ -78,7 +78,7 @@ pub fn compute_viscoelastic_term(
     prev_pressure: &Array3<f64>,
     eta_s_arr: &Array3<f64>, // Shear viscosity
     eta_b_arr: &Array3<f64>, // Bulk viscosity
-    rho_arr: &Array3<f64>,
+    rho_arr: &ArrayView3<f64>,
     grid: &Grid,
     dt: f64,
 ) -> Array3<f64> {

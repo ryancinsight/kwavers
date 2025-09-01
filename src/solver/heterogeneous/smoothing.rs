@@ -5,7 +5,7 @@
 use super::config::SmoothingMethod;
 use crate::grid::Grid;
 use crate::KwaversResult;
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 use std::f64::consts::PI;
 
 /// Smoothing processor for heterogeneous media
@@ -29,12 +29,12 @@ impl Smoother {
     /// Apply smoothing to medium properties
     pub fn smooth(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         match self.method {
-            SmoothingMethod::None => Ok((density.clone(), sound_speed.clone())),
+            SmoothingMethod::None => Ok((density.to_owned(), sound_speed.to_owned())),
             SmoothingMethod::Gaussian => self.gaussian_smooth(density, sound_speed, interface_mask),
             SmoothingMethod::Tanh => self.tanh_smooth(density, sound_speed, interface_mask),
             SmoothingMethod::Polynomial => {
@@ -47,8 +47,8 @@ impl Smoother {
     /// Apply Gaussian smoothing
     fn gaussian_smooth(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         let mut density_smooth = density.clone();
@@ -78,8 +78,8 @@ impl Smoother {
     /// Apply hyperbolic tangent smoothing
     fn tanh_smooth(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         let mut density_smooth = density.clone();
@@ -111,8 +111,8 @@ impl Smoother {
     /// Apply polynomial (cubic) smoothing
     fn polynomial_smooth(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         interface_mask: &Array3<bool>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         let mut density_smooth = density.clone();
@@ -139,8 +139,8 @@ impl Smoother {
     /// Apply spectral filtering
     fn spectral_filter(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>)> {
         // This would require FFT implementation
         // For now, return original (placeholder for proper implementation)
@@ -175,8 +175,8 @@ impl Smoother {
     /// 3D convolution at a point
     fn convolve_3d(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
         i: usize,
         j: usize,
         k: usize,

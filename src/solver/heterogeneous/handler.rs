@@ -88,8 +88,8 @@ impl HeterogeneousHandler {
                 ));
             }
         } else {
-            self.density_smooth = Some(density.clone());
-            self.sound_speed_smooth = Some(sound_speed.clone());
+            self.density_smooth = Some(density.to_owned());
+            self.sound_speed_smooth = Some(sound_speed.to_owned());
         }
 
         Ok(())

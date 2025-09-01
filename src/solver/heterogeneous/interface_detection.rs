@@ -4,7 +4,7 @@
 
 use crate::grid::Grid;
 use crate::KwaversResult;
-use ndarray::Array3;
+use ndarray::{Array3, ArrayView3};
 
 /// Interface detector for heterogeneous media
 #[derive(Debug)]
@@ -24,8 +24,8 @@ impl InterfaceDetector {
     /// Detect interfaces in medium properties
     pub fn detect(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
     ) -> KwaversResult<Array3<bool>> {
         let mut mask = Array3::from_elem((self.grid.nx, self.grid.ny, self.grid.nz), false);
 
@@ -81,8 +81,8 @@ impl InterfaceDetector {
     /// Compute interface sharpness map
     pub fn compute_sharpness(
         &self,
-        density: &Array3<f64>,
-        sound_speed: &Array3<f64>,
+        density: ArrayView3<f64>,
+        sound_speed: ArrayView3<f64>,
     ) -> Array3<f64> {
         let mut sharpness = Array3::zeros((self.grid.nx, self.grid.ny, self.grid.nz));
 
