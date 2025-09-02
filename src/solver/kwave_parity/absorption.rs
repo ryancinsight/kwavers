@@ -10,7 +10,7 @@
 use crate::grid::Grid;
 use crate::solver::kwave_parity::{AbsorptionMode, KWaveConfig};
 use ndarray::{Array3, Zip};
-use rustfft::num_complex::Complex64;
+
 use std::f64::consts::PI;
 
 /// Compute absorption operators τ and η

@@ -11,8 +11,7 @@ use ndarray::{Array2, ArrayViewMut2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-use super::{constants::*, KZKConfig};
-use crate::constants::physics::SOUND_SPEED_WATER;
+use super::KZKConfig;
 
 /// KZK parabolic diffraction operator
 ///

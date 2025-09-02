@@ -105,7 +105,7 @@ impl TransducerFieldCalculatorPlugin {
                         // Spatial impulse response for rectangular piston
                         // h(r,t) = (v₀/2πc) * δ(t - r/c) / r
                         if r > 1e-10 {
-                            let c = medium.sound_speed(x, y, z, grid);
+                            let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
                             response += element_area / (2.0 * std::f64::consts::PI * r);
 
                             // Apply apodization if specified
@@ -140,7 +140,7 @@ impl TransducerFieldCalculatorPlugin {
         use rustfft::{num_complex::Complex, FftPlanner};
 
         let mut pressure_field = Array3::zeros(grid.dimensions());
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid); // Use reference sound speed
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid); // Use reference sound speed
         let k = 2.0 * std::f64::consts::PI * frequency / c; // Wave number
 
         // Initialize source plane (z=0) with transducer aperture function
@@ -282,7 +282,7 @@ impl TransducerFieldCalculatorPlugin {
 
         let mut harmonic_field = Array3::zeros(grid.dimensions());
         let harmonic_freq = fundamental_freq * harmonic as f64;
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
 
         // Nonlinearity parameter B/A for the medium
         let beta =
@@ -294,7 +294,7 @@ impl TransducerFieldCalculatorPlugin {
             for j in 0..grid.ny {
                 for k in 1..grid.nz {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let rho = medium.density(x, y, z, grid);
+                    let rho = crate::medium::density_at(medium, x, y, z, grid);
 
                     // Approximate time derivative using spatial gradient and wave equation
                     let p1 = fundamental_field[[i, j, k]];
@@ -373,8 +373,8 @@ impl TransducerFieldCalculatorPlugin {
             .and(pressure_field)
             .for_each(|(i, j, k), q, &p| {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let density = CoreMedium::density(medium, x, y, z, grid);
-                let sound_speed = CoreMedium::sound_speed(medium, x, y, z, grid);
+                let density = crate::medium::density_at(medium, x, y, z, grid);
+                let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, grid);
                 let alpha =
                     AcousticProperties::absorption_coefficient(medium, x, y, z, grid, frequency);
 

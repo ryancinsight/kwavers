@@ -50,7 +50,7 @@ impl PhasedArrayTransducer {
 
         // Get sound speed at array center
         let (cx, cy, cz) = config.center_position;
-        let sound_speed = medium.sound_speed(cx, cy, cz, grid);
+        let sound_speed = crate::medium::sound_speed_at(medium, cx, cy, cz, grid);
 
         // Create elements
         let elements = Self::create_elements(&config);

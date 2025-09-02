@@ -9,7 +9,7 @@ use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
 
-use crate::physics::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
+use crate::physics::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase, SPEED_OF_SOUND};
 use crate::source::transducer::MAX_STEERING_ANGLE;
 
 /// Beam steering controller
@@ -56,7 +56,7 @@ impl BeamSteering {
 
     /// Calculate phase distribution for current steering angles
     fn calculate_phase_distribution(&mut self) -> KwaversResult<()> {
-        let wavelength = calculate_wavelength(self.frequency);
+        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
 
         let az_rad = self.steering_angles.0.to_radians();
@@ -77,7 +77,7 @@ impl BeamSteering {
 
     /// Check for grating lobes
     pub fn check_grating_lobes(&self) -> bool {
-        let wavelength = calculate_wavelength(self.frequency);
+        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
 
         // Find element spacing
         let mut min_spacing = f64::INFINITY;
@@ -110,7 +110,7 @@ impl BeamSteering {
 
     /// Calculate beam pattern at given angles
     pub fn calculate_beam_pattern(&self, theta: f64, phi: f64) -> f64 {
-        let wavelength = calculate_wavelength(self.frequency);
+        let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
 
         let theta_rad = theta.to_radians();

@@ -1,5 +1,6 @@
 //! Heterogeneous medium implementation with spatially varying properties
 
+use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{
     absorption::PowerLawAbsorption,
@@ -12,7 +13,7 @@ use crate::medium::{
     viscous::ViscousProperties,
 };
 use log::debug;
-use ndarray::{Array3, ArrayView3};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 // Import physical constants
 use super::constants::*;
@@ -232,18 +233,48 @@ impl HeterogeneousMedium {
 
 // Core medium properties
 impl CoreMedium for HeterogeneousMedium {
-    fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_field_value(&self.density, x, y, z, grid)
-            .max(MIN_PHYSICAL_DENSITY)
+    fn density(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.density[[i, j, k]].max(MIN_PHYSICAL_DENSITY)
     }
 
-    fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_field_value(&self.sound_speed, x, y, z, grid)
-            .max(MIN_PHYSICAL_SOUND_SPEED)
+    fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.sound_speed[[i, j, k]].max(MIN_PHYSICAL_SOUND_SPEED)
     }
 
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
+    }
+
+    fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.absorption[[i, j, k]]
+    }
+
+    fn nonlinearity(&self, i: usize, j: usize, k: usize) -> f64 {
+        self.nonlinearity[[i, j, k]]
+    }
+
+    fn max_sound_speed(&self) -> f64 {
+        crate::medium::max_sound_speed(&self.sound_speed)
+    }
+
+    fn is_homogeneous(&self) -> bool {
+        false
+    }
+
+    fn validate(&self, grid: &Grid) -> KwaversResult<()> {
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let expected_shape = [nx, ny, nz];
+        
+        if self.density.shape() != expected_shape {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("{:?}", expected_shape),
+                    actual: format!("{:?}", self.density.shape()),
+                }
+            ));
+        }
+        
+        Ok(())
     }
 }
 
@@ -257,12 +288,12 @@ impl ArrayAccess for HeterogeneousMedium {
         self.sound_speed.view()
     }
 
-    fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-        Some(&mut self.density)
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+        Some(self.density.view_mut())
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-        Some(&mut self.sound_speed)
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+        Some(self.sound_speed.view_mut())
     }
 
     fn absorption_array(&self) -> ArrayView3<f64> {

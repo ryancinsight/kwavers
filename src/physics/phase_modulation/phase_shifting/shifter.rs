@@ -4,11 +4,11 @@
 
 use super::core::{
     calculate_wavelength, quantize_phase, ShiftingStrategy, MAX_FOCAL_POINTS, MAX_STEERING_ANGLE,
-    MIN_FOCAL_DISTANCE,
+    MIN_FOCAL_DISTANCE, SPEED_OF_SOUND,
 };
 
 /// Default quantization levels for phase control
-const DEFAULT_QUANTIZATION_LEVELS: usize = 256;
+const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;
 use crate::KwaversResult;
 use ndarray::{Array1, Array2};
 use std::f64::consts::PI;
@@ -27,7 +27,7 @@ pub struct PhaseShifter {
 impl PhaseShifter {
     /// Create a new phase shifter
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
-        let wavelength = calculate_wavelength(operating_frequency);
+        let wavelength = calculate_wavelength(operating_frequency, SPEED_OF_SOUND);
         let num_elements = element_positions.nrows();
         let phase_offsets = Array1::zeros(num_elements);
 
@@ -178,7 +178,7 @@ impl PhaseShifter {
                 }
                 self.calculate_linear_phases(target[0])
             }
-            ShiftingStrategy::Quadratic => {
+            ShiftingStrategy::Custom => {
                 if target.len() != 3 {
                     return Err(crate::error::KwaversError::InvalidInput(
                         "Spherical focusing requires 3D point".to_string(),

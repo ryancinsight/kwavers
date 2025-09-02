@@ -121,8 +121,8 @@ impl NonlinearWave {
         let x = grid.nx as f64 * grid.dx / 2.0;
         let y = grid.ny as f64 * grid.dy / 2.0;
         let z = grid.nz as f64 * grid.dz / 2.0;
-        let density = medium.density(x, y, z, grid);
-        let sound_speed = medium.sound_speed(x, y, z, grid);
+        let density = crate::medium::density_at(medium, x, y, z, grid);
+        let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, grid);
         let nonlinearity = 3.5; // Default B/A for water (would need to be added to Medium trait)
 
         // Compute pressure gradients using spectral differentiation
@@ -346,7 +346,7 @@ impl NonlinearWave {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
                     let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    let c = medium.sound_speed(x, y, z, grid);
+                    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
                     max_c = max_c.max(c);
                 }
             }

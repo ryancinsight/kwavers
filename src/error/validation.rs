@@ -32,4 +32,16 @@ pub enum ValidationError {
     /// Constraint violation
     #[error("Constraint violation: {message}")]
     ConstraintViolation { message: String },
+
+    /// Dimension mismatch
+    #[error("Dimension mismatch: expected {expected}, actual {actual}")]
+    DimensionMismatch { expected: String, actual: String },
+
+    /// Invalid value
+    #[error("Invalid value for parameter '{parameter}': {value} - {reason}")]
+    InvalidValue {
+        parameter: String,
+        value: f64,
+        reason: String,
+    },
 }

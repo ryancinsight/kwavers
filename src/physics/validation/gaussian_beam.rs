@@ -6,7 +6,7 @@
 //! - Siegman, A.E. (1986) "Lasers", University Science Books
 //! - Saleh & Teich (2007) "Fundamentals of Photonics", Ch. 3
 
-use ndarray::{Array2, Array3};
+use ndarray::Array2;
 use std::f64::consts::PI;
 
 /// Analytical Gaussian beam parameters

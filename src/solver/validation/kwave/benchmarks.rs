@@ -12,7 +12,7 @@ use crate::medium::HomogeneousMedium;
 use crate::physics::constants::*;
 use crate::solver::constants::*;
 use crate::KwaversResult;
-use ndarray::{Array3, Zip};
+
 use std::f64::consts::PI;
 
 /// Benchmark results structure

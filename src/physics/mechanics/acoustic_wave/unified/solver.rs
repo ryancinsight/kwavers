@@ -73,14 +73,12 @@ impl UnifiedAcousticSolver {
                 // Use Westervelt with zero nonlinearity as linear approximation
                 let mut linear_config = config.clone();
                 linear_config.model_type = AcousticModelType::Westervelt;
-                Box::new(WesterveltSolver::new(linear_config, grid.clone())?)
+                Box::new(WesterveltSolver::new(linear_config, &grid)?)
             }
             AcousticModelType::Westervelt => {
-                Box::new(WesterveltSolver::new(config.clone(), grid.clone())?)
+                Box::new(WesterveltSolver::new(config.clone(), &grid)?)
             }
-            AcousticModelType::Kuznetsov => {
-                Box::new(KuznetsovSolver::new(config.clone(), grid.clone())?)
-            }
+            AcousticModelType::Kuznetsov => Box::new(KuznetsovSolver::new(config.clone(), &grid)?),
         };
 
         Ok(Self {

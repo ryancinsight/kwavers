@@ -17,10 +17,10 @@ pub struct WesterveltSolver {
 
 impl WesterveltSolver {
     /// Create a new Westervelt solver
-    pub fn new(config: AcousticSolverConfig, grid: Grid) -> KwaversResult<Self> {
+    pub fn new(config: AcousticSolverConfig, grid: &Grid) -> KwaversResult<Self> {
         Ok(Self {
             config,
-            grid,
+            grid: grid.clone(),
             prev_pressure: None,
             pressure_history: None,
         })
@@ -72,8 +72,8 @@ impl AcousticSolver for WesterveltSolver {
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
 
-                        let rho = medium.density(x, y, z, grid);
-                        let c = medium.sound_speed(x, y, z, grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, grid);
+                        let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                         let nonlinear_factor = beta / (2.0 * rho * c.powi(4));
                         pressure[[i, j, k]] += dt * nonlinear_factor * d2p2_dt2[[i, j, k]];

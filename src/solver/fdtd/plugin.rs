@@ -132,8 +132,8 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        let rho = medium.density(x, y, z, grid);
-                        let c = medium.sound_speed(x, y, z, grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, grid);
+                        let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                         // Update pressure
                         pressure[[i, j, k]] -= dt * rho * c * c * divergence;
@@ -161,7 +161,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
-                            let rho = medium.density(x, y, z, grid);
+                            let rho = crate::medium::density_at(medium, x, y, z, grid);
 
                             vx[[i, j, k]] -= dt * dp_dx / rho;
                         }
@@ -184,7 +184,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
-                            let rho = medium.density(x, y, z, grid);
+                            let rho = crate::medium::density_at(medium, x, y, z, grid);
 
                             vy[[i, j, k]] -= dt * dp_dy / rho;
                         }
@@ -207,7 +207,7 @@ impl crate::physics::plugin::Plugin for FdtdPlugin {
                             let x = i as f64 * grid.dx;
                             let y = j as f64 * grid.dy;
                             let z = k as f64 * grid.dz;
-                            let rho = medium.density(x, y, z, grid);
+                            let rho = crate::medium::density_at(medium, x, y, z, grid);
 
                             vz[[i, j, k]] -= dt * dp_dz / rho;
                         }

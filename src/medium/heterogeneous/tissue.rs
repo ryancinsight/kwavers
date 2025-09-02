@@ -1,4 +1,4 @@
-use crate::error::{ConfigError, KwaversResult};
+use crate::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{
     absorption::{tissue, TissueType},
@@ -10,7 +10,7 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
 use std::sync::OnceLock;
 
 /// Configuration for setting tissue in a specific region
@@ -192,16 +192,72 @@ impl HeterogeneousTissueMedium {
 
 // Core medium properties
 impl CoreMedium for HeterogeneousTissueMedium {
-    fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_tissue_properties(x, y, z, grid).density
+    fn density(&self, i: usize, j: usize, k: usize) -> f64 {
+        use crate::medium::absorption::TISSUE_PROPERTIES;
+        let tissue_type = self.tissue_map[[i, j, k]];
+        TISSUE_PROPERTIES
+            .get(&tissue_type)
+            .map(|p| p.density)
+            .unwrap_or(1000.0) // Default water density
     }
 
-    fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.get_tissue_properties(x, y, z, grid).sound_speed
+    fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
+        use crate::medium::absorption::TISSUE_PROPERTIES;
+        let tissue_type = self.tissue_map[[i, j, k]];
+        TISSUE_PROPERTIES
+            .get(&tissue_type)
+            .map(|p| p.sound_speed)
+            .unwrap_or(1500.0) // Default water sound speed
     }
 
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
+    }
+
+    fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {
+        use crate::medium::absorption::TISSUE_PROPERTIES;
+        let tissue_type = self.tissue_map[[i, j, k]];
+        TISSUE_PROPERTIES
+            .get(&tissue_type)
+            .map(|p| p.alpha_0)
+            .unwrap_or(0.002) // Default water absorption
+    }
+
+    fn nonlinearity(&self, i: usize, j: usize, k: usize) -> f64 {
+        use crate::medium::absorption::TISSUE_PROPERTIES;
+        let tissue_type = self.tissue_map[[i, j, k]];
+        TISSUE_PROPERTIES
+            .get(&tissue_type)
+            .map(|p| p.nonlinearity)
+            .unwrap_or(5.0) // Default water B/A
+    }
+
+    fn max_sound_speed(&self) -> f64 {
+        use crate::medium::absorption::TISSUE_PROPERTIES;
+        TISSUE_PROPERTIES
+            .values()
+            .map(|p| p.sound_speed)
+            .fold(f64::NEG_INFINITY, |max, val| max.max(val))
+    }
+
+    fn is_homogeneous(&self) -> bool {
+        false
+    }
+
+    fn validate(&self, grid: &Grid) -> KwaversResult<()> {
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let expected_shape = [nx, ny, nz];
+        
+        if self.tissue_map.shape() != expected_shape {
+            return Err(KwaversError::Validation(
+                ValidationError::DimensionMismatch {
+                    expected: format!("{:?}", expected_shape),
+                    actual: format!("{:?}", self.tissue_map.shape()),
+                }
+            ));
+        }
+        
+        Ok(())
     }
 }
 
@@ -243,14 +299,14 @@ impl ArrayAccess for HeterogeneousTissueMedium {
             .view()
     }
 
-    fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
         // For tissue medium, we need to initialize if not already done
         // This is a limitation of the OnceLock pattern - we can't get mutable access
         // So we return None for immutable media
         None
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
         None
     }
 

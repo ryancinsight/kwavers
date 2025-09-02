@@ -75,7 +75,7 @@ impl ElasticWavePlugin {
                     // The medium provides exact Lamé parameters for the material
                     lame_lambda[[i, j, k]] = medium.lame_lambda(x, y, z, grid);
                     lame_mu[[i, j, k]] = medium.lame_mu(x, y, z, grid);
-                    density[[i, j, k]] = medium.density(x, y, z, grid);
+                    density[[i, j, k]] = crate::medium::density_at(medium, x, y, z, grid);
                 }
             }
         }

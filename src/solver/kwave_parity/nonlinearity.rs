@@ -10,7 +10,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Default B/A parameter for water at 20°C
 const BA_WATER: f64 = 5.0;
@@ -35,8 +35,8 @@ pub fn update_pressure_with_nonlinearity(
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
 
                 // Get medium properties
-                let rho0 = medium.density(x, y, z, grid);
-                let c0 = medium.sound_speed(x, y, z, grid);
+                let rho0 = crate::medium::density_at(medium, x, y, z, grid);
+                let c0 = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                 // Get B/A parameter (would be from medium in full implementation)
                 let b_over_a = get_nonlinearity_parameter(medium, x, y, z, grid);
@@ -64,7 +64,7 @@ fn get_nonlinearity_parameter(medium: &dyn Medium, x: f64, y: f64, z: f64, grid:
     // In full implementation, this would query the medium
     // For now, use typical values based on sound speed
 
-    let c = medium.sound_speed(x, y, z, grid);
+    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
     if c < 1450.0 {
         // Likely fat/oil
@@ -92,8 +92,8 @@ pub fn compute_cumulative_nonlinearity(
             for i in 0..grid.nx {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
 
-                let rho0 = medium.density(x, y, z, grid);
-                let c0 = medium.sound_speed(x, y, z, grid);
+                let rho0 = crate::medium::density_at(medium, x, y, z, grid);
+                let c0 = crate::medium::sound_speed_at(medium, x, y, z, grid);
                 let b_over_a = get_nonlinearity_parameter(medium, x, y, z, grid);
                 let beta = 1.0 + b_over_a / 2.0;
 

@@ -204,7 +204,7 @@ pub(crate) mod mocks {
         fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             if self.position_dependent {
                 let mu = self.lame_mu(x, y, z, grid);
-                let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
+                let rho = crate::medium::core::crate::medium::density_at(self, x, y, z, grid);
                 if mu > 0.0 {
                     (mu / rho).sqrt()
                 } else {
@@ -216,7 +216,7 @@ pub(crate) mod mocks {
         }
 
         fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            crate::medium::core::CoreMedium::sound_speed(self, x, y, z, grid)
+            crate::medium::core::crate::medium::sound_speed_at(self, x, y, z, grid)
         }
     }
 
@@ -266,7 +266,7 @@ pub(crate) mod mocks {
 
         fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             let k = self.thermal_conductivity(x, y, z, grid);
-            let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
+            let rho = crate::medium::core::crate::medium::density_at(self, x, y, z, grid);
             let cp = self.specific_heat(x, y, z, grid);
             k / (rho * cp)
         }

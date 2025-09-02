@@ -111,7 +111,7 @@ pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
 
     let alpha =
         crate::medium::AcousticProperties::absorption_coefficient(medium, x, y, z, grid, frequency);
-    let c = medium.sound_speed(x, y, z, grid);
+    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
     let omega = 2.0 * PI * frequency;
 
     SOFT_TISSUE_DIFFUSIVITY_APPROXIMATION_FACTOR * alpha * c.powi(3) / (omega * omega)

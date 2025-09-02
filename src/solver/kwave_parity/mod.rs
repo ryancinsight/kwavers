@@ -14,7 +14,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::{Array3, Zip};
 use rustfft::{num_complex::Complex64, FftPlanner};
 use std::f64::consts::PI;
 
@@ -259,7 +259,7 @@ impl KWaveSolver {
             for j in 0..self.grid.ny {
                 for i in 0..self.grid.nx {
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let rho = medium.density(x, y, z, &self.grid);
+                    let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
                     self.ux[[i, j, k]] =
                         self.pml_x[[i, j, k]] * (self.ux[[i, j, k]] - dt * dp_dx[[i, j, k]] / rho);
                 }
@@ -276,7 +276,7 @@ impl KWaveSolver {
             for j in 0..self.grid.ny {
                 for i in 0..self.grid.nx {
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let rho = medium.density(x, y, z, &self.grid);
+                    let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
                     self.uy[[i, j, k]] =
                         self.pml_y[[i, j, k]] * (self.uy[[i, j, k]] - dt * dp_dy[[i, j, k]] / rho);
                 }
@@ -292,7 +292,7 @@ impl KWaveSolver {
             for j in 0..self.grid.ny {
                 for i in 0..self.grid.nx {
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let rho = medium.density(x, y, z, &self.grid);
+                    let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
                     self.uz[[i, j, k]] =
                         self.pml_z[[i, j, k]] * (self.uz[[i, j, k]] - dt * dp_dz[[i, j, k]] / rho);
                 }
@@ -320,8 +320,8 @@ impl KWaveSolver {
                 for j in 0..self.grid.ny {
                     for i in 0..self.grid.nx {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                        let rho = medium.density(x, y, z, &self.grid);
-                        let c = medium.sound_speed(x, y, z, &self.grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
+                        let c = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
                         self.p[[i, j, k]] = self.p[[i, j, k]] - dt * rho * c * c * div_u[[i, j, k]];
                     }
                 }

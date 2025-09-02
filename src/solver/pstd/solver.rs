@@ -121,8 +121,8 @@ impl PstdSolver {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = medium.density(x, y, z, grid);
-                let c = medium.sound_speed(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
+                let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                 // ∂p/∂t = -ρc²∇·v + source
                 *p += dt * (-rho * c * c * div + s * amplitude);
@@ -148,7 +148,7 @@ impl PstdSolver {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let rho = medium.density(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 *v -= dt * grad / rho;
             });
 
@@ -158,7 +158,7 @@ impl PstdSolver {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let rho = medium.density(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 *v -= dt * grad / rho;
             });
 
@@ -168,7 +168,7 @@ impl PstdSolver {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let rho = medium.density(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 *v -= dt * grad / rho;
             });
 

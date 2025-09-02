@@ -49,7 +49,7 @@ impl MatrixArray {
         apodization: A,
     ) -> Self {
         assert!(width > 0.0 && height > 0.0 && num_x > 0 && num_y > 0);
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let wavelength = c / frequency;
         let optimal_dx = wavelength / 2.0;
         let optimal_dy = wavelength / 2.0;
@@ -133,7 +133,7 @@ impl MatrixArray {
         medium: &dyn Medium,
         grid: &Grid,
     ) {
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
         self.phase_delays

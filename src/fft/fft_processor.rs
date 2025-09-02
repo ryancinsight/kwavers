@@ -4,10 +4,10 @@
 //! - rustfft documentation: https://docs.rs/rustfft/latest/rustfft/
 //! - "Numerical Recipes" by Press et al. (2007) for FFT algorithms
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Axis, Zip};
+use ndarray::{Array3, Axis, Zip};
 use num_complex::Complex64;
 use rayon::prelude::*;
-use rustfft::{Fft, FftNum, FftPlanner};
+use rustfft::{Fft, FftPlanner};
 use std::sync::Arc;
 
 /// 3D FFT implementation with parallelization

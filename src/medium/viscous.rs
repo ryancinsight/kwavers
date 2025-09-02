@@ -29,7 +29,7 @@ pub trait ViscousProperties: CoreMedium {
     /// Ratio of dynamic viscosity to density
     fn kinematic_viscosity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let mu = self.viscosity(x, y, z, grid);
-        let rho = self.density(x, y, z, grid);
+        let rho = crate::medium::density_at(self, x, y, z, grid);
         if rho > 0.0 {
             mu / rho
         } else {

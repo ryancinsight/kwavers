@@ -16,12 +16,12 @@ pub struct KuznetsovSolver {
 
 impl KuznetsovSolver {
     /// Create a new Kuznetsov solver
-    pub fn new(config: AcousticSolverConfig, grid: Grid) -> KwaversResult<Self> {
+    pub fn new(config: AcousticSolverConfig, grid: &Grid) -> KwaversResult<Self> {
         let velocity_potential = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
         Ok(Self {
             config,
-            grid,
+            grid: grid.clone(),
             velocity_potential,
         })
     }
@@ -55,7 +55,7 @@ impl AcousticSolver for KuznetsovSolver {
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
 
-                    let c = medium.sound_speed(x, y, z, grid);
+                    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
                     linear_term[[i, j, k]] = c * c * laplacian[[i, j, k]];
                 }
             }
@@ -148,8 +148,8 @@ fn compute_nonlinear_term(
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = medium.density(x, y, z, grid);
-                let c = medium.sound_speed(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
+                let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                 // Simplified: use pressure squared as proxy
                 nonlinear[[i, j, k]] =
