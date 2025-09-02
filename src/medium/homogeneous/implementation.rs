@@ -237,25 +237,21 @@ impl CoreMedium for HomogeneousMedium {
 
     fn validate(&self, _grid: &Grid) -> KwaversResult<()> {
         if self.density <= 0.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::InvalidValue {
-                    parameter: "density".to_string(),
-                    value: self.density,
-                    reason: "Density must be positive".to_string(),
-                }
-            ));
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "density".to_string(),
+                value: self.density,
+                reason: "Density must be positive".to_string(),
+            }));
         }
-        
+
         if self.sound_speed <= 0.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::InvalidValue {
-                    parameter: "sound_speed".to_string(),
-                    value: self.sound_speed,
-                    reason: "Sound speed must be positive".to_string(),
-                }
-            ));
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "sound_speed".to_string(),
+                value: self.sound_speed,
+                reason: "Sound speed must be positive".to_string(),
+            }));
         }
-        
+
         Ok(())
     }
 }

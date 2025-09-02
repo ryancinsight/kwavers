@@ -37,28 +37,24 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::core::CoreMedium for HeterogeneousMediumMock {
-        fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        fn density(&self, i: usize, j: usize, k: usize) -> f64 {
             if self.position_dependent {
                 // Spatially varying density simulating tissue heterogeneity
-                let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
                 let base_density = 1000.0;
                 let variation = 50.0
-                    * ((ix as f64 * 0.1).sin() + (iy as f64 * 0.1).cos() + (iz as f64 * 0.1).sin());
+                    * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos() + (k as f64 * 0.1).sin());
                 base_density + variation
             } else {
                 1000.0
             }
         }
 
-        fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
             if self.position_dependent {
                 // Spatially varying sound speed
-                let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
                 let base_speed = 1500.0;
                 let variation = 40.0
-                    * ((ix as f64 * 0.05).cos()
-                        + (iy as f64 * 0.05).sin()
-                        + (iz as f64 * 0.05).cos());
+                    * ((i as f64 * 0.05).cos() + (j as f64 * 0.05).sin() + (k as f64 * 0.05).cos());
                 base_speed + variation
             } else {
                 1500.0
@@ -67,6 +63,34 @@ pub(crate) mod mocks {
 
         fn reference_frequency(&self) -> f64 {
             1e6
+        }
+
+        fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {
+            if self.position_dependent {
+                0.1 + 0.05 * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos())
+            } else {
+                0.1
+            }
+        }
+
+        fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+            5.0 // B/A parameter for water
+        }
+
+        fn max_sound_speed(&self) -> f64 {
+            if self.position_dependent {
+                1540.0 // max with variations
+            } else {
+                1500.0
+            }
+        }
+
+        fn is_homogeneous(&self) -> bool {
+            !self.position_dependent
+        }
+
+        fn validate(&self, _grid: &Grid) -> KwaversResult<()> {
+            Ok(())
         }
     }
 

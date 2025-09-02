@@ -39,8 +39,8 @@ pub use viscous::ViscousProperties;
 pub use core::{continuous_to_discrete, max_sound_speed, max_sound_speed_pointwise};
 pub use interface::{find_interfaces, InterfacePoint};
 pub use wrapper::{
-    absorption_at, density_at, nonlinearity_at, sound_speed_at,
-    absorption_at_core, density_at_core, nonlinearity_at_core, sound_speed_at_core,
+    absorption_at, absorption_at_core, density_at, density_at_core, nonlinearity_at,
+    nonlinearity_at_core, sound_speed_at, sound_speed_at_core,
 };
 
 // The max_sound_speed function is now provided by the core module
@@ -175,7 +175,8 @@ pub mod iterators {
 
             neighbors.iter().any(|&(ni, nj, nk)| {
                 let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-                let neighbor_density = crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
+                let neighbor_density =
+                    crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
                 ((neighbor_density - center_density).abs() / center_density) > self.threshold
             })
         }
@@ -226,7 +227,8 @@ pub mod iterators {
 
                         if ni < self.grid.nx && nj < self.grid.ny && nk < self.grid.nz {
                             let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-                            let neighbor = crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
+                            let neighbor =
+                                crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
                             max_jump = f64::max(max_jump, (neighbor - center).abs());
                         }
                     }

@@ -264,16 +264,16 @@ impl CoreMedium for HeterogeneousMedium {
     fn validate(&self, grid: &Grid) -> KwaversResult<()> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let expected_shape = [nx, ny, nz];
-        
+
         if self.density.shape() != expected_shape {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
                     expected: format!("{:?}", expected_shape),
                     actual: format!("{:?}", self.density.shape()),
-                }
+                },
             ));
         }
-        
+
         Ok(())
     }
 }

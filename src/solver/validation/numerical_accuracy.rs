@@ -170,7 +170,8 @@ impl NumericalValidator {
         let wavelength = 10.0 * self.grid.dx; // 10 grid points per wavelength
         let k = 2.0 * PI / wavelength;
         let omega = k * crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
-        let dt = 0.5 * self.grid.dx / crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+        let dt = 0.5 * self.grid.dx
+            / crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
         // PSTD dispersion test
         let pstd_config = PstdConfig::default();

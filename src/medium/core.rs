@@ -8,6 +8,12 @@ use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;
 
+/// Minimum physical density to prevent numerical instabilities (kg/m³)
+pub const MIN_PHYSICAL_DENSITY: f64 = 1.0;
+
+/// Minimum physical sound speed to prevent numerical instabilities (m/s)
+pub const MIN_PHYSICAL_SOUND_SPEED: f64 = 1.0;
+
 /// Core trait that all medium types must implement
 ///
 /// Provides the fundamental interface for accessing acoustic properties
@@ -98,7 +104,7 @@ where
     F: Fn(usize, usize, usize) -> f64,
 {
     let mut max_speed = f64::NEG_INFINITY;
-    
+
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -106,7 +112,7 @@ where
             }
         }
     }
-    
+
     max_speed
 }
 

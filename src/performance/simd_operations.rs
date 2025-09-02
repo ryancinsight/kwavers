@@ -165,6 +165,7 @@ pub mod x86_64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use ndarray::Array3;
 
     #[test]
     fn test_simd_add() {
