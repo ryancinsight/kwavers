@@ -29,6 +29,7 @@ impl From<&Grid> for FftCacheKey {
 }
 
 /// Thread-safe FFT cache using parking_lot for better performance
+#[derive(Debug)]
 pub struct FftCache {
     cache: RwLock<HashMap<FftCacheKey, Arc<ModernFft3d>>>,
 }

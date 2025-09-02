@@ -24,6 +24,7 @@ pub mod angular_spectrum_test;
 pub mod constants;
 pub mod diffraction;
 pub mod diffraction_corrected;
+pub mod kzk_diffraction;
 pub mod nonlinearity;
 pub mod solver;
 pub mod validation;

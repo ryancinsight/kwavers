@@ -25,6 +25,16 @@ pub struct ModernFft3d {
     ifft_z: Arc<dyn Fft<f64>>,
 }
 
+impl std::fmt::Debug for ModernFft3d {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModernFft3d")
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .field("nz", &self.nz)
+            .finish()
+    }
+}
+
 impl ModernFft3d {
     /// Create a new 3D FFT processor with cached plans
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {

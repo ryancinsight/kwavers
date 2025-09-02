@@ -5,7 +5,7 @@ mod tests {
     use crate::physics::mechanics::acoustic_wave::kzk::{
         diffraction_corrected::AngularSpectrumOperator, KZKConfig,
     };
-    use crate::physics::validation::GaussianBeamParameters;
+    use crate::physics::validation::{measure_beam_radius, GaussianBeamParameters};
     use ndarray::Array2;
     use std::f64::consts::PI;
 

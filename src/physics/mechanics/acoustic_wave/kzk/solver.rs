@@ -9,8 +9,10 @@ use rustfft::FftPlanner;
 use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
+use super::angular_spectrum_2d::AngularSpectrum2D;
 use super::diffraction::DiffractionOperator;
 use super::diffraction_corrected::AngularSpectrumOperator;
+use super::kzk_diffraction::KzkDiffractionOperator;
 use super::nonlinearity::NonlinearOperator;
 use super::KZKConfig;
 
@@ -21,12 +23,16 @@ pub struct KZKSolver {
     pressure: Array3<f64>,
     /// Previous pressure for time derivatives
     pressure_prev: Array3<f64>,
-    /// Diffraction operator (legacy)
+    /// Diffraction operator (finite difference implementation)
     diffraction: Option<DiffractionOperator>,
-    /// Angular spectrum operator (accurate)
+    /// Angular spectrum operator (accurate but wrong for KZK)
     angular_spectrum: Option<AngularSpectrumOperator>,
-    /// Use angular spectrum method
-    use_angular_spectrum: bool,
+    /// 2D Angular spectrum operator (correct implementation)
+    angular_spectrum_2d: Option<AngularSpectrum2D>,
+    /// KZK parabolic diffraction operator
+    kzk_diffraction: Option<KzkDiffractionOperator>,
+    /// Use KZK parabolic approximation (recommended)
+    use_kzk_diffraction: bool,
     /// Absorption operator
     absorption: AbsorptionOperator,
     /// Nonlinear operator
@@ -43,17 +49,17 @@ impl KZKSolver {
         let pressure = Array3::zeros((config.nx, config.ny, config.nt));
         let pressure_prev = Array3::zeros((config.nx, config.ny, config.nt));
 
-        // Use angular spectrum by default for better accuracy
-        let use_angular_spectrum = true;
+        // Use KZK parabolic approximation by default
+        let use_kzk_diffraction = true;
 
-        let diffraction = if !use_angular_spectrum {
-            Some(DiffractionOperator::new(&config))
-        } else {
-            None
-        };
+        let diffraction = None; // Finite difference implementation not used
 
-        let angular_spectrum = if use_angular_spectrum {
-            Some(AngularSpectrumOperator::new(&config, config.dz))
+        let angular_spectrum = None; // Flawed 1D FFT implementation
+
+        let angular_spectrum_2d = None; // Full angular spectrum (not KZK)
+
+        let kzk_diffraction = if use_kzk_diffraction {
+            Some(KzkDiffractionOperator::new(&config))
         } else {
             None
         };
@@ -68,7 +74,9 @@ impl KZKSolver {
             pressure_prev,
             diffraction,
             angular_spectrum,
-            use_angular_spectrum,
+            angular_spectrum_2d,
+            kzk_diffraction,
+            use_kzk_diffraction,
             absorption,
             nonlinear,
             fft_planner,
@@ -80,11 +88,8 @@ impl KZKSolver {
         // Store frequency in config for all operators
         self.config.frequency = frequency;
         // Re-initialize operators with updated frequency
-        if !self.use_angular_spectrum {
-            self.diffraction = Some(DiffractionOperator::new(&self.config));
-        } else {
-            self.angular_spectrum =
-                Some(AngularSpectrumOperator::new(&self.config, self.config.dz));
+        if self.use_kzk_diffraction {
+            self.kzk_diffraction = Some(KzkDiffractionOperator::new(&self.config));
         }
         self.absorption = AbsorptionOperator::new(&self.config);
 
@@ -146,14 +151,19 @@ impl KZKSolver {
         for t in 0..self.config.nt {
             let mut slice = self.pressure.index_axis_mut(Axis(2), t);
 
-            if self.use_angular_spectrum {
-                if let Some(ref mut angular_spectrum) = self.angular_spectrum {
-                    angular_spectrum.apply(&mut slice, step_size);
+            if self.use_kzk_diffraction {
+                if let Some(ref mut kzk_diffraction) = self.kzk_diffraction {
+                    kzk_diffraction.apply(&mut slice, step_size);
                 }
-            } else {
-                if let Some(ref mut diffraction) = self.diffraction {
-                    diffraction.apply(&mut slice, step_size);
-                }
+            } else if let Some(ref mut angular_spectrum_2d) = self.angular_spectrum_2d {
+                // Full angular spectrum (not KZK parabolic)
+                angular_spectrum_2d.propagate(&mut slice, step_size);
+            } else if let Some(ref mut angular_spectrum) = self.angular_spectrum {
+                // Fallback to flawed 1D implementation (should not happen)
+                angular_spectrum.apply(&mut slice, step_size);
+            } else if let Some(ref mut diffraction) = self.diffraction {
+                // Finite difference implementation
+                diffraction.apply(&mut slice, step_size);
             }
         }
     }
