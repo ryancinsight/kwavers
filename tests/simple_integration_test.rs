@@ -19,12 +19,12 @@ fn test_basic_initialization() {
     // Create water medium
     let medium = HomogeneousMedium::water(&grid);
     // Check properties using CoreMedium trait at grid center
-    let x = grid.nx as f64 / 2.0 * grid.dx;
-    let y = grid.ny as f64 / 2.0 * grid.dy;
-    let z = grid.nz as f64 / 2.0 * grid.dz;
+    let i = grid.nx / 2;
+    let j = grid.ny / 2;
+    let k = grid.nz / 2;
     // Water at 20°C has specific properties
-    assert_eq!(medium.density(x, y, z, &grid), 998.0);
-    assert_eq!(medium.sound_speed(x, y, z, &grid), 1482.0);
+    assert_eq!(medium.density(i, j, k), 998.0);
+    assert_eq!(medium.sound_speed(i, j, k), 1482.0);
 }
 
 /// Test acoustic field propagation

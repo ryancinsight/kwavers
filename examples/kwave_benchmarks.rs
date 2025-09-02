@@ -14,8 +14,8 @@ fn main() {
     println!("=================================================\n");
 
     // Run all benchmarks
-    match KWaveBenchmarks::run_all() {
-        Ok(results) => {
+    let results = KWaveBenchmarks::run_all();
+    {
             println!("\n=================================================");
             println!("Detailed Results:");
             println!("=================================================");
@@ -48,10 +48,5 @@ fn main() {
             if passed < total {
                 std::process::exit(1);
             }
-        }
-        Err(e) => {
-            eprintln!("Error running benchmarks: {}", e);
-            std::process::exit(1);
-        }
     }
 }

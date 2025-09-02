@@ -90,9 +90,9 @@ impl HeterogeneousMedium {
         let j = (y_pos.floor() as usize).min(grid.ny.saturating_sub(2));
         let k = (z_pos.floor() as usize).min(grid.nz.saturating_sub(2));
 
-        let dx = (x_pos - i as f64).min(1.0).max(0.0);
-        let dy = (y_pos - j as f64).min(1.0).max(0.0);
-        let dz = (z_pos - k as f64).min(1.0).max(0.0);
+        let dx = (x_pos - i as f64).clamp(0.0, 1.0);
+        let dy = (y_pos - j as f64).clamp(0.0, 1.0);
+        let dz = (z_pos - k as f64).clamp(0.0, 1.0);
 
         // Get the values at the 8 corner points of the cell
         let c000 = field[[i, j, k]];
