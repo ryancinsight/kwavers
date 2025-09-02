@@ -41,8 +41,9 @@ mod tests {
                 let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
                 let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
-                // Use -2r²/w₀² for proper Gaussian beam profile
-                source[[i, j]] = (-2.0 * r2 / (beam_waist * beam_waist)).exp();
+                // Use -r²/w₀² for field amplitude (not intensity!)
+                // Intensity will be |E|² = exp(-2r²/w₀²)
+                source[[i, j]] = (-r2 / (beam_waist * beam_waist)).exp();
             }
         }
 

@@ -78,6 +78,10 @@ impl KzkDiffractionOperator {
     /// Note: This is different from angular spectrum which uses:
     /// P(z+Δz) = P(z) * exp(i*sqrt(k₀² - k_x² - k_y²)*Δz)
     pub fn apply(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64) {
+        self.apply_with_step(field, step_size, 0);
+    }
+
+    fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, step: usize) {
         let nx = self.config.nx;
         let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;
@@ -101,6 +105,11 @@ impl KzkDiffractionOperator {
 
                 // Parabolic approximation phase
                 let phase = -kt2 * step_size / (2.0 * k0);
+
+                // Debug first few k-space points
+                if i < 3 && j < 3 && step == 0 {
+                    println!("k[{},{}]: kt2={:.3e}, phase={:.3e}", i, j, kt2, phase);
+                }
 
                 // Apply propagator
                 complex_field[[i, j]] *= Complex::new(phase.cos(), phase.sin());
@@ -214,6 +223,8 @@ mod tests {
                 let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
                 let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
+                // For Gaussian beam: E(r) = E0 * exp(-r²/w₀²)
+                // Note: This is field amplitude, intensity I = |E|²
                 field[[i, j]] = (-r2 / (beam_waist * beam_waist)).exp();
             }
         }
@@ -224,15 +235,47 @@ mod tests {
         let steps = 50;
         let dz = z_r / steps as f64;
 
-        for _ in 0..steps {
+        println!(
+            "Grid: {}x{}, dx={:.3}mm",
+            config.nx,
+            config.ny,
+            config.dx * 1000.0
+        );
+        println!("Wavelength: {:.3}mm", wavelength * 1000.0);
+        println!("Rayleigh distance: {:.3}mm", z_r * 1000.0);
+        println!("Step size: {:.3}mm", dz * 1000.0);
+        println!("k0 = {:.3} rad/mm", 2.0 * PI / wavelength / 1000.0);
+
+        // Track beam evolution
+        let initial_power: f64 = field.iter().map(|&x| x * x).sum();
+        println!("Initial power: {:.6}", initial_power);
+
+        for step in 0..steps {
             let mut field_view = field.view_mut();
-            op.apply(&mut field_view, dz);
+            op.apply_with_step(&mut field_view, dz, step);
+
+            if step % 10 == 0 {
+                let power: f64 = field.iter().map(|&x| x * x).sum();
+                println!(
+                    "Step {}: power = {:.6}, ratio = {:.6}",
+                    step,
+                    power,
+                    power / initial_power
+                );
+            }
         }
 
         // Measure beam radius
         let intensity = &field * &field;
         let measured = measure_beam_radius(&intensity, config.dx);
         let expected = beam_waist * 2.0_f64.sqrt(); // At Rayleigh distance
+
+        println!("Measured radius: {:.3}mm", measured * 1000.0);
+        println!("Expected radius: {:.3}mm", expected * 1000.0);
+        println!(
+            "Error: {:.1}%",
+            (measured - expected).abs() / expected * 100.0
+        );
 
         // Should match within 10% (parabolic approximation has some error)
         assert_relative_eq!(measured, expected, epsilon = 0.1 * expected);
