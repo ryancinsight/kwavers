@@ -135,7 +135,9 @@ impl WavefieldModeler {
     pub fn adjoint_model(&self, adjoint_source: &Array2<f64>) -> KwaversResult<Array3<f64>> {
         let forward_field = self.forward_wavefield.as_ref().ok_or_else(|| {
             KwaversError::Physics(PhysicsError::InvalidState {
-                message: "Forward wavefield not computed".to_string(),
+                field: "forward_wavefield".to_string(),
+                value: "None".to_string(),
+                reason: "Forward wavefield must be computed before adjoint modeling".to_string(),
             })
         })?;
 
@@ -174,7 +176,7 @@ impl WavefieldModeler {
 
             // Accumulate gradient: correlation of forward and adjoint fields
             Zip::from(&mut gradient)
-                .and(&forward_field)
+                .and(forward_field)
                 .and(&adj_curr)
                 .for_each(|g, &f, &a| {
                     *g += f * a * dt;
@@ -301,7 +303,7 @@ impl WavefieldModeler {
     /// Compute PML damping profile
     fn compute_pml_profile(&self, thickness: usize, max_dim: usize) -> Array1<f64> {
         let mut profile = Array1::zeros(thickness);
-        let reflection_coeff = 1e-6;
+        let reflection_coeff: f64 = 1e-6;
         let pml_order = 2.0;
         let max_velocity = 4000.0;
 

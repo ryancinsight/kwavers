@@ -4,7 +4,7 @@
 //! established literature and analytical solutions.
 
 use approx::assert_relative_eq;
-use kwavers::physics::constants_physics::*;
+use kwavers::physics::constants::*;
 
 #[cfg(test)]
 mod wave_equation_tests {
@@ -282,7 +282,8 @@ mod cfl_stability_tests {
 
         for k in k_values {
             let kdx = k * dx;
-            let g_squared = (1.0 - 2.0 * r * r * (1.0 - kdx.cos())).powi(2);
+            let kdx_f64: f64 = kdx;
+            let g_squared = (1.0 - 2.0 * r * r * (1.0 - kdx_f64.cos())).powi(2);
 
             // For stability: |G|² ≤ 1
             assert!(g_squared <= 1.0 + 1e-10);

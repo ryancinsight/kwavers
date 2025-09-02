@@ -169,3 +169,95 @@ impl Default for CavitationDose {
         Self::new()
     }
 }
+
+/// Main cavitation model implementation
+#[derive(Debug, Clone)]
+pub struct CavitationModel {
+    /// Threshold model to use
+    pub threshold_model: ThresholdModel,
+    /// Surface tension [N/m]
+    pub surface_tension: f64,
+    /// Initial bubble radius [m]
+    pub initial_radius: f64,
+    /// Ambient pressure [Pa]
+    pub ambient_pressure: f64,
+    /// Vapor pressure [Pa]
+    pub vapor_pressure: f64,
+    /// Current cavitation states
+    pub states: Array3<CavitationState>,
+    /// Cavitation dose accumulator
+    pub dose: CavitationDose,
+}
+
+impl CavitationModel {
+    /// Create new cavitation model
+    pub fn new(grid_shape: (usize, usize, usize)) -> Self {
+        Self {
+            threshold_model: ThresholdModel::MechanicalIndex,
+            surface_tension: 0.0728,    // Water at 20°C
+            initial_radius: 1e-6,       // 1 micron
+            ambient_pressure: 101325.0, // 1 atm
+            vapor_pressure: 2339.0,     // Water at 20°C
+            states: Array3::default(grid_shape),
+            dose: CavitationDose::new(),
+        }
+    }
+
+    /// Update cavitation state based on pressure field
+    pub fn update(&mut self, pressure_field: &Array3<f64>, frequency: f64, dt: f64, time: f64) {
+        let threshold = match self.threshold_model {
+            ThresholdModel::Blake => blake_threshold(
+                self.surface_tension,
+                self.initial_radius,
+                self.ambient_pressure,
+                self.vapor_pressure,
+            ),
+            ThresholdModel::Neppiras => neppiras_threshold(
+                self.ambient_pressure,
+                self.vapor_pressure,
+                self.surface_tension,
+                self.initial_radius,
+            ),
+            _ => 0.5 * self.ambient_pressure, // Default threshold
+        };
+
+        for ((i, j, k), p) in pressure_field.indexed_iter() {
+            let state = &mut self.states[[i, j, k]];
+
+            // Check for cavitation
+            let was_cavitating = state.is_cavitating;
+            state.is_cavitating = *p < -threshold;
+
+            // Update state
+            if state.is_cavitating {
+                state.duration += dt;
+                state.peak_negative_pressure = state.peak_negative_pressure.min(*p);
+                state.mechanical_index = mechanical_index(*p, frequency);
+                state.intensity =
+                    (state.peak_negative_pressure.abs() / self.ambient_pressure).min(1.0);
+
+                // Update dose
+                self.dose.update(state.intensity, dt, time);
+            } else if was_cavitating {
+                // Just stopped cavitating
+                state.duration = 0.0;
+                state.intensity = 0.0;
+            }
+        }
+    }
+}
+
+impl CavitationCore for CavitationModel {
+    fn detect_cavitation(&self, pressure: f64, threshold: f64) -> bool {
+        pressure < -threshold
+    }
+
+    fn cavitation_index(&self, pressure: f64, vapor_pressure: f64, ambient_pressure: f64) -> f64 {
+        (ambient_pressure + pressure - vapor_pressure) / (ambient_pressure - vapor_pressure)
+    }
+
+    fn update(&mut self, pressure_field: &Array3<f64>, dt: f64) -> KwaversResult<()> {
+        self.update(pressure_field, 1e6, dt, 0.0); // Default 1 MHz
+        Ok(())
+    }
+}
