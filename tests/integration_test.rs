@@ -7,9 +7,9 @@
 //! - Energy conservation
 
 use kwavers::{
-    boundary::BoundaryType, configuration::Configuration, grid::Grid,
-    medium::homogeneous::HomogeneousMedium, physics::constants_physics::*,
-    solver::fdtd::FDTDSolver, source::point::PointSource,
+    boundary::BoundaryCondition, configuration::Configuration, grid::Grid,
+    medium::HomogeneousMedium, physics::constants::*, solver::fdtd::FdtdSolver,
+    source::PointSource,
 };
 use ndarray::Array3;
 
