@@ -11,7 +11,6 @@ mod tests {
     /// Test linear propagation of Gaussian beam
     /// Should maintain Gaussian profile with known spreading
     #[test]
-    #[ignore] // TODO: Beam spreading insufficient (2.86mm vs 7.07mm expected)
     fn test_gaussian_beam_diffraction() {
         let mut config = KZKConfig {
             nx: 128,

@@ -20,6 +20,7 @@
 
 pub mod absorption;
 pub mod diffraction;
+pub mod diffraction_corrected;
 pub mod nonlinearity;
 pub mod solver;
 pub mod validation;
