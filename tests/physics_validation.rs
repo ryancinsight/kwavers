@@ -160,7 +160,7 @@ mod absorption_tests {
 
 #[cfg(test)]
 mod finite_difference_tests {
-    use super::*;
+    
     use ndarray::Array1;
 
     /// Validate 2nd order finite difference accuracy

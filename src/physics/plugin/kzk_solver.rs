@@ -122,7 +122,7 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         time_steps: usize,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::medium::{AcousticProperties, CoreMedium};
+        use crate::medium::AcousticProperties;
 
         // Validate operators are initialized
         let operators =
@@ -241,7 +241,7 @@ impl KzkSolverPlugin {
         frequency: f64,
         medium: &dyn Medium,
     ) -> f64 {
-        use crate::medium::{AcousticProperties, CoreMedium};
+        use crate::medium::AcousticProperties;
         use std::f64::consts::PI;
 
         // Get medium properties at origin

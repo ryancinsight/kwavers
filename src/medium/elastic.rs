@@ -18,7 +18,8 @@ pub trait ElasticProperties: CoreMedium {
     /// Calculates shear wave speed (m/s)
     fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let mu = self.lame_mu(x, y, z, grid);
-        let rho = crate::medium::density_at(self, x, y, z, grid);
+        let (i, j, k) = crate::medium::continuous_to_discrete(x, y, z, grid);
+        let rho = self.density(i, j, k);
         if rho > 0.0 {
             (mu / rho).sqrt()
         } else {
@@ -30,7 +31,8 @@ pub trait ElasticProperties: CoreMedium {
     fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let lambda = self.lame_lambda(x, y, z, grid);
         let mu = self.lame_mu(x, y, z, grid);
-        let rho = crate::medium::density_at(self, x, y, z, grid);
+        let (i, j, k) = crate::medium::continuous_to_discrete(x, y, z, grid);
+        let rho = self.density(i, j, k);
         if rho > 0.0 {
             ((lambda + 2.0 * mu) / rho).sqrt()
         } else {

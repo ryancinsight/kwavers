@@ -234,7 +234,7 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
         radius: usize,
     ) {
-        let (_nx, _ny, _nz) = input.dim();
+        let (nx, ny, nz) = input.dim();
 
         match self.config.boundary {
             BoundaryCondition::Dirichlet => {

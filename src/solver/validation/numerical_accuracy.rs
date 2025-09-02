@@ -5,7 +5,7 @@
 //! Currently disabled to focus on core compilation fixes.
 
 use crate::grid::Grid;
-use crate::medium::{core::CoreMedium, HomogeneousMedium};
+use crate::medium::HomogeneousMedium;
 
 /// Validation results for numerical accuracy tests
 #[derive(Debug, Clone, Default)]
@@ -169,8 +169,8 @@ impl NumericalValidator {
         // Test parameters
         let wavelength = 10.0 * self.grid.dx; // 10 grid points per wavelength
         let k = 2.0 * PI / wavelength;
-        let omega = k * self.crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &self.grid);
-        let dt = 0.5 * self.grid.dx / self.crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &self.grid);
+        let omega = k * crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
+        let dt = 0.5 * self.grid.dx / crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
         // PSTD dispersion test
         let pstd_config = PstdConfig::default();
@@ -191,7 +191,7 @@ impl NumericalValidator {
         // Compute numerical wavelength and group velocity
         let numerical_wavelength = 2.0 * PI / (k * (1.0 + pstd_phase_error));
         let group_velocity_error = (pstd_phase_error * omega / k).abs()
-            / self.crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &self.grid);
+            / crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
 
         Ok(DispersionResults {
             pstd_phase_error,
@@ -204,7 +204,7 @@ impl NumericalValidator {
 
     /// Validate numerical stability
     fn validate_stability(&self) -> Result<StabilityResults, Box<dyn std::error::Error>> {
-        let sound_speed = self.crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &self.grid);
+        let sound_speed = crate::medium::sound_speed_at(&self.medium, 0.0, 0.0, 0.0, &self.grid);
         let dt_max = self.grid.dx / (sound_speed * (3.0_f64).sqrt()); // 3D CFL limit
 
         // Test with various CFL numbers

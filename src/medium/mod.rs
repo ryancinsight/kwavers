@@ -38,7 +38,10 @@ pub use viscous::ViscousProperties;
 // Re-export utility functions and types
 pub use core::{continuous_to_discrete, max_sound_speed, max_sound_speed_pointwise};
 pub use interface::{find_interfaces, InterfacePoint};
-pub use wrapper::{absorption_at, density_at, nonlinearity_at, sound_speed_at};
+pub use wrapper::{
+    absorption_at, density_at, nonlinearity_at, sound_speed_at,
+    absorption_at_core, density_at_core, nonlinearity_at_core, sound_speed_at_core,
+};
 
 // The max_sound_speed function is now provided by the core module
 // and re-exported above for backward compatibility
@@ -158,7 +161,7 @@ pub mod iterators {
             }
 
             let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-            let center_density = self.crate::medium::density_at(medium, x, y, z, self.grid);
+            let center_density = crate::medium::density_at(self.medium, x, y, z, self.grid);
 
             // Check all 6 neighbors
             let neighbors = [
@@ -172,7 +175,7 @@ pub mod iterators {
 
             neighbors.iter().any(|&(ni, nj, nk)| {
                 let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-                let neighbor_density = self.crate::medium::density_at(medium, nx, ny, nz, self.grid);
+                let neighbor_density = crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
                 ((neighbor_density - center_density).abs() / center_density) > self.threshold
             })
         }
@@ -207,7 +210,7 @@ pub mod iterators {
     impl<'a> InterfaceIterator<'a> {
         fn calculate_density_jump(&self, i: usize, j: usize, k: usize) -> f64 {
             let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-            let center = self.crate::medium::density_at(medium, x, y, z, self.grid);
+            let center = crate::medium::density_at(self.medium, x, y, z, self.grid);
 
             let mut max_jump = 0.0;
             for di in -1..=1 {
@@ -223,7 +226,7 @@ pub mod iterators {
 
                         if ni < self.grid.nx && nj < self.grid.ny && nk < self.grid.nz {
                             let (nx, ny, nz) = self.grid.indices_to_coordinates(ni, nj, nk);
-                            let neighbor = self.crate::medium::density_at(medium, nx, ny, nz, self.grid);
+                            let neighbor = crate::medium::density_at(self.medium, nx, ny, nz, self.grid);
                             max_jump = f64::max(max_jump, (neighbor - center).abs());
                         }
                     }
@@ -240,8 +243,8 @@ pub mod iterators {
             let dx = if i > 0 && i < self.grid.nx - 1 {
                 let (x1, _, _) = self.grid.indices_to_coordinates(i + 1, j, k);
                 let (x0, _, _) = self.grid.indices_to_coordinates(i - 1, j, k);
-                let d1 = self.crate::medium::density_at(medium, x1, y, z, self.grid);
-                let d0 = self.crate::medium::density_at(medium, x0, y, z, self.grid);
+                let d1 = crate::medium::density_at(self.medium, x1, y, z, self.grid);
+                let d0 = crate::medium::density_at(self.medium, x0, y, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dx)
             } else {
                 0.0
@@ -250,8 +253,8 @@ pub mod iterators {
             let dy = if j > 0 && j < self.grid.ny - 1 {
                 let (_, y1, _) = self.grid.indices_to_coordinates(i, j + 1, k);
                 let (_, y0, _) = self.grid.indices_to_coordinates(i, j - 1, k);
-                let d1 = self.crate::medium::density_at(medium, x, y1, z, self.grid);
-                let d0 = self.crate::medium::density_at(medium, x, y0, z, self.grid);
+                let d1 = crate::medium::density_at(self.medium, x, y1, z, self.grid);
+                let d0 = crate::medium::density_at(self.medium, x, y0, z, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dy)
             } else {
                 0.0
@@ -260,8 +263,8 @@ pub mod iterators {
             let dz = if k > 0 && k < self.grid.nz - 1 {
                 let (_, _, z1) = self.grid.indices_to_coordinates(i, j, k + 1);
                 let (_, _, z0) = self.grid.indices_to_coordinates(i, j, k - 1);
-                let d1 = self.crate::medium::density_at(medium, x, y, z1, self.grid);
-                let d0 = self.crate::medium::density_at(medium, x, y, z0, self.grid);
+                let d1 = crate::medium::density_at(self.medium, x, y, z1, self.grid);
+                let d0 = crate::medium::density_at(self.medium, x, y, z0, self.grid);
                 (d1 - d0) / (2.0 * self.grid.dz)
             } else {
                 0.0

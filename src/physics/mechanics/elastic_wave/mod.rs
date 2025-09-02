@@ -133,16 +133,16 @@ impl ElasticWave {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    let center = crate::medium::density_at(medium, i as f64, j as f64, k as f64, grid);
+                    let center = medium.density(i, j, k);
 
                     // Check neighbors
                     let neighbors = [
-                        crate::medium::density_at(medium, (i + 1) as f64, j as f64, k as f64, grid),
-                        crate::medium::density_at(medium, (i - 1) as f64, j as f64, k as f64, grid),
-                        crate::medium::density_at(medium, i as f64, (j + 1) as f64, k as f64, grid),
-                        crate::medium::density_at(medium, i as f64, (j - 1) as f64, k as f64, grid),
-                        crate::medium::density_at(medium, i as f64, j as f64, (k + 1) as f64, grid),
-                        crate::medium::density_at(medium, i as f64, j as f64, (k - 1) as f64, grid),
+                        medium.density(i + 1, j, k),
+                        medium.density(i.saturating_sub(1), j, k),
+                        medium.density(i, j + 1, k),
+                        medium.density(i, j.saturating_sub(1), k),
+                        medium.density(i, j, k + 1),
+                        medium.density(i, j, k.saturating_sub(1)),
                     ];
 
                     // Check for significant jumps

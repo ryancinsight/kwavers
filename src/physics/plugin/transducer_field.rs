@@ -364,7 +364,7 @@ impl TransducerFieldCalculatorPlugin {
         // where I = p^2 / (2 * rho * c) is acoustic intensity
         // Reference: Nyborg (1981) "Heat generation by ultrasound in a relaxing medium"
 
-        use crate::medium::{AcousticProperties, CoreMedium};
+        use crate::medium::AcousticProperties;
         use ndarray::Zip;
 
         let mut heating = Array3::zeros(pressure_field.dim());

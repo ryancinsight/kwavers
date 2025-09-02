@@ -100,7 +100,7 @@ pub struct KWaveSolver {
 impl KWaveSolver {
     /// Create a new k-Wave solver
     pub fn new(config: KWaveConfig, grid: Grid) -> KwaversResult<Self> {
-        let mut fft_planner = FftPlanner::new();
+        let fft_planner = FftPlanner::new();
 
         // Initialize k-space operators
         let (k_vec, k_max) = compute_k_operators(&grid);
