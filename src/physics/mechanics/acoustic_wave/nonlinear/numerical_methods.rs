@@ -364,8 +364,12 @@ impl NonlinearWave {
 
         // Additional constraint for nonlinear terms
         let dt_nonlinear = if self.nonlinearity_scaling > 0.0 {
-            // TODO: Get B/A from medium properties when interface is extended
-            let beta = 1.0 + 3.5 / 2.0; // Default B/A = 3.5
+            // Get typical B/A from center of grid
+            let cx = grid.nx / 2;
+            let cy = grid.ny / 2;
+            let cz = grid.nz / 2;
+            let (x, y, z) = grid.indices_to_coordinates(cx, cy, cz);
+            let beta = medium.nonlinearity_coefficient(x, y, z, grid);
             min_dx / (beta * max_c)
         } else {
             f64::INFINITY
