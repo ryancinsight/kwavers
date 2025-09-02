@@ -340,7 +340,23 @@ impl NonlinearWave {
     ///
     /// Recommended time step [s]
     pub fn compute_adaptive_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
-        let max_c = self.max_sound_speed;
+        // Get actual maximum sound speed from medium
+        let mut max_c: f64 = 0.0;
+        for k in 0..grid.nz {
+            for j in 0..grid.ny {
+                for i in 0..grid.nx {
+                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
+                    let c = medium.sound_speed(x, y, z, grid);
+                    max_c = max_c.max(c);
+                }
+            }
+        }
+
+        // Fall back to stored value if medium returns zero
+        if max_c <= 0.0 {
+            max_c = self.max_sound_speed;
+        }
+
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
 
         // CFL condition for PSTD
@@ -348,7 +364,8 @@ impl NonlinearWave {
 
         // Additional constraint for nonlinear terms
         let dt_nonlinear = if self.nonlinearity_scaling > 0.0 {
-            let beta = 1.0 + 3.5 / 2.0; // Using default B/A = 3.5
+            // TODO: Get B/A from medium properties when interface is extended
+            let beta = 1.0 + 3.5 / 2.0; // Default B/A = 3.5
             min_dx / (beta * max_c)
         } else {
             f64::INFINITY
