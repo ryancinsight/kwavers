@@ -15,6 +15,7 @@
 //!    of the Acoustical Society of America*, 131(6), 4324-4336. DOI: 10.1121/1.4712021
 
 pub mod analytical;
+pub mod benchmarks;
 pub mod comparison;
 pub mod report;
 pub mod test_cases;
