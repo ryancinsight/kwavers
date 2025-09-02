@@ -5,6 +5,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
+    use crate::physics::validation::{measure_beam_radius, GaussianBeamParameters};
     use ndarray::Array2;
     use std::f64::consts::PI;
 

@@ -19,6 +19,9 @@
 //! - β: coefficient of nonlinearity
 
 pub mod absorption;
+pub mod angular_spectrum_2d;
+pub mod angular_spectrum_test;
+pub mod constants;
 pub mod diffraction;
 pub mod diffraction_corrected;
 pub mod nonlinearity;

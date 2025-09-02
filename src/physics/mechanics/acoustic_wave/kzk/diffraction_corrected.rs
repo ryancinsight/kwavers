@@ -56,7 +56,8 @@ impl AngularSpectrumOperator {
             }
         }
 
-        // Forward FFT
+        // Forward FFT - this is doing 1D FFT on flattened array!
+        // TODO: This should be 2D FFT
         let fft = self.fft_planner.plan_fft_forward(nx * ny);
         fft.process(&mut self.fft_buffer);
 
