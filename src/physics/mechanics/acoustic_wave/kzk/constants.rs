@@ -11,7 +11,7 @@ pub const DEFAULT_FREQUENCY: f64 = 1e6;
 pub const DEFAULT_WAVELENGTH: f64 = SOUND_SPEED_WATER / DEFAULT_FREQUENCY;
 
 /// Default spatial step for KZK simulations
-pub const DEFAULT_DX: f64 = 1e-3; // 1 mm
+pub const DEFAULT_DX: f64 = 0.25e-3; // 0.25 mm (6 points per wavelength at 1 MHz)
 
 /// Default axial step for KZK simulations  
 pub const DEFAULT_DZ: f64 = 1e-3; // 1 mm

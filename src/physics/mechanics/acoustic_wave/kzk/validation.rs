@@ -19,7 +19,7 @@ mod tests {
             ny: DEFAULT_GRID_SIZE,
             nz: 100,
             nt: 50,
-            dx: DEFAULT_WAVELENGTH / 6.0, // 6 points per wavelength
+            dx: DEFAULT_DX,
             dz: DEFAULT_DZ,
             dt: 1e-8, // Small time step for stability
             include_nonlinearity: false,
