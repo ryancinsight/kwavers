@@ -10,6 +10,7 @@ use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
 use super::diffraction::DiffractionOperator;
+use super::diffraction_corrected::AngularSpectrumOperator;
 use super::nonlinearity::NonlinearOperator;
 use super::KZKConfig;
 
@@ -20,8 +21,12 @@ pub struct KZKSolver {
     pressure: Array3<f64>,
     /// Previous pressure for time derivatives
     pressure_prev: Array3<f64>,
-    /// Diffraction operator
-    diffraction: DiffractionOperator,
+    /// Diffraction operator (legacy)
+    diffraction: Option<DiffractionOperator>,
+    /// Angular spectrum operator (accurate)
+    angular_spectrum: Option<AngularSpectrumOperator>,
+    /// Use angular spectrum method
+    use_angular_spectrum: bool,
     /// Absorption operator
     absorption: AbsorptionOperator,
     /// Nonlinear operator
@@ -38,7 +43,21 @@ impl KZKSolver {
         let pressure = Array3::zeros((config.nx, config.ny, config.nt));
         let pressure_prev = Array3::zeros((config.nx, config.ny, config.nt));
 
-        let diffraction = DiffractionOperator::new(&config);
+        // Use angular spectrum by default for better accuracy
+        let use_angular_spectrum = true;
+
+        let diffraction = if !use_angular_spectrum {
+            Some(DiffractionOperator::new(&config))
+        } else {
+            None
+        };
+
+        let angular_spectrum = if use_angular_spectrum {
+            Some(AngularSpectrumOperator::new(&config, config.dz))
+        } else {
+            None
+        };
+
         let absorption = AbsorptionOperator::new(&config);
         let nonlinear = NonlinearOperator::new(&config);
         let fft_planner = FftPlanner::new();
@@ -48,6 +67,8 @@ impl KZKSolver {
             pressure,
             pressure_prev,
             diffraction,
+            angular_spectrum,
+            use_angular_spectrum,
             absorption,
             nonlinear,
             fft_planner,
@@ -59,7 +80,12 @@ impl KZKSolver {
         // Store frequency in config for all operators
         self.config.frequency = frequency;
         // Re-initialize operators with updated frequency
-        self.diffraction = DiffractionOperator::new(&self.config);
+        if !self.use_angular_spectrum {
+            self.diffraction = Some(DiffractionOperator::new(&self.config));
+        } else {
+            self.angular_spectrum =
+                Some(AngularSpectrumOperator::new(&self.config, self.config.dz));
+        }
         self.absorption = AbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal
@@ -119,7 +145,16 @@ impl KZKSolver {
         // Transform to frequency domain for each time slice
         for t in 0..self.config.nt {
             let mut slice = self.pressure.index_axis_mut(Axis(2), t);
-            self.diffraction.apply(&mut slice, step_size);
+
+            if self.use_angular_spectrum {
+                if let Some(ref mut angular_spectrum) = self.angular_spectrum {
+                    angular_spectrum.apply(&mut slice, step_size);
+                }
+            } else {
+                if let Some(ref mut diffraction) = self.diffraction {
+                    diffraction.apply(&mut slice, step_size);
+                }
+            }
         }
     }
 
