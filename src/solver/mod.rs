@@ -3,6 +3,7 @@
 
 // Core solver modules
 pub mod amr;
+pub mod constants;
 pub mod cpml_integration;
 pub mod fdtd;
 pub mod heterogeneous;

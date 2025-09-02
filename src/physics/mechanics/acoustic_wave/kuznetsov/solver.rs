@@ -7,6 +7,7 @@ use super::config::KuznetsovConfig;
 use super::diffusion::compute_diffusive_term_workspace;
 use super::nonlinear::compute_nonlinear_term_workspace;
 use super::workspace::KuznetsovWorkspace;
+use crate::error::KwaversError;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::medium::Medium;
@@ -178,6 +179,13 @@ impl AcousticWaveModel for KuznetsovWave {
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
+        // Validate grid consistency
+        if grid.nx != self.grid.nx || grid.ny != self.grid.ny || grid.nz != self.grid.nz {
+            return Err(KwaversError::InvalidInput(
+                "Grid dimensions mismatch with solver initialization".to_string(),
+            ));
+        }
+
         // Extract pressure field (assuming it's at index 0)
         let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
 

@@ -29,6 +29,7 @@ pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, Solution
 
 use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
+use crate::solver::constants::*;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -51,11 +52,11 @@ pub struct HybridSpectralDGConfig {
 impl Default for HybridSpectralDGConfig {
     fn default() -> Self {
         Self {
-            discontinuity_threshold: 0.1,
-            spectral_order: 8,
+            discontinuity_threshold: DISCONTINUITY_THRESHOLD,
+            spectral_order: DEFAULT_POLYNOMIAL_ORDER,
             dg_polynomial_order: 3,
             adaptive_switching: true,
-            conservation_tolerance: 1e-10,
+            conservation_tolerance: CONSERVATION_TOLERANCE,
         }
     }
 }
@@ -166,8 +167,8 @@ impl HybridSpectralDGSolver {
     ) -> KwaversResult<()> {
         let initial_integral: f64 = initial.sum();
         let final_integral: f64 = final_field.sum();
-        let conservation_error =
-            (final_integral - initial_integral).abs() / initial_integral.abs().max(1e-10);
+        let conservation_error = (final_integral - initial_integral).abs()
+            / initial_integral.abs().max(ABSOLUTE_TOLERANCE);
 
         if conservation_error > self.config.conservation_tolerance {
             log::warn!(
