@@ -10,6 +10,7 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
+use crate::physics::constants::*;
 use ndarray::{Array3, ArrayView3};
 use std::fmt::Debug;
 
@@ -40,6 +41,8 @@ pub struct HomogeneousMedium {
     bubble_velocity: Array3<f64>,
     density_cache: Array3<f64>,
     sound_speed_cache: Array3<f64>,
+    absorption_cache: Array3<f64>,
+    nonlinearity_cache: Array3<f64>,
     lame_lambda: f64,
     lame_mu: f64,
     grid_shape: (usize, usize, usize),
@@ -53,27 +56,32 @@ impl HomogeneousMedium {
             density,
             sound_speed,
             viscosity,
-            surface_tension: 0.0728,     // Water at 20°C [N/m]
-            ambient_pressure: 101325.0,  // 1 atm [Pa]
-            vapor_pressure: 2339.0,      // Water at 20°C [Pa]
-            polytropic_index: 1.4,       // Diatomic gas approximation
-            specific_heat: 4182.0,       // Water [J/(kg·K)]
-            thermal_conductivity: 0.598, // Water at 20°C [W/(m·K)]
+            surface_tension: WATER_SURFACE_TENSION_20C, // Water at 20°C [N/m]
+            ambient_pressure: ATMOSPHERIC_PRESSURE,     // 1 atm [Pa]
+            vapor_pressure: WATER_VAPOR_PRESSURE_20C,   // Water at 20°C [Pa]
+            polytropic_index: AIR_POLYTROPIC_INDEX,     // Diatomic gas approximation
+            specific_heat: WATER_SPECIFIC_HEAT,         // Water [J/(kg·K)]
+            thermal_conductivity: WATER_THERMAL_CONDUCTIVITY, // Water at 20°C [W/(m·K)]
             shear_viscosity: viscosity,
             bulk_viscosity: 2.5 * viscosity, // Stokes' hypothesis
-            absorption_alpha: 0.0022,        // Water absorption coefficient
-            absorption_power: 1.05,          // Power law exponent
+            absorption_alpha: WATER_ABSORPTION_ALPHA_0, // Water absorption coefficient
+            absorption_power: WATER_ABSORPTION_POWER, // Power law exponent
             thermal_expansion: 2.07e-4,      // Water at 20°C [1/K]
             gas_diffusion: 2.0e-9,           // O2 in water [m²/s]
             nonlinearity: 5.0,               // B/A parameter for water
             optical_absorption: mu_a,        // [1/m]
             optical_scattering: mu_s_prime,  // [1/m]
-            reference_frequency: 1e6,        // 1 MHz
+            reference_frequency: REFERENCE_FREQUENCY_MHZ, // 1 MHz
             temperature: Array3::zeros((1, 1, 1)),
             bubble_radius: Array3::zeros((1, 1, 1)),
             bubble_velocity: Array3::zeros((1, 1, 1)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), density),
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
+            absorption_cache: Array3::from_elem(
+                (grid.nx, grid.ny, grid.nz),
+                0.0022 * (1e6_f64 / 1e6).powf(1.05),
+            ), // α at 1 MHz
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 5.0), // B/A for water
             // For fluids, lambda is the bulk modulus, mu is 0
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0, // Fluid has no shear modulus
@@ -97,6 +105,13 @@ impl HomogeneousMedium {
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
         medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
+
+        // Compute absorption at reference frequency
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 
@@ -117,9 +132,16 @@ impl HomogeneousMedium {
         medium.density_cache = Array3::from_elem(shape, medium.density);
         medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
         // Blood has higher viscosity than water
-        medium.viscosity = 3.5e-3;
-        medium.shear_viscosity = 3.5e-3;
-        medium.bulk_viscosity = 2.5 * 3.5e-3;
+        medium.viscosity = BLOOD_VISCOSITY_37C;
+        medium.shear_viscosity = BLOOD_VISCOSITY_37C;
+        medium.bulk_viscosity = 2.5 * BLOOD_VISCOSITY_37C;
+
+        // Update caches
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 
@@ -150,6 +172,11 @@ impl HomogeneousMedium {
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 343.0),
+            absorption_cache: Array3::from_elem(
+                (grid.nx, grid.ny, grid.nz),
+                1.84e-11 * (1e6_f64 / 1e6).powf(2.0),
+            ),
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
@@ -166,6 +193,13 @@ impl HomogeneousMedium {
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, density);
         medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
+
+        // Update absorption and nonlinearity caches
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 }
@@ -201,6 +235,14 @@ impl ArrayAccess for HomogeneousMedium {
 
     fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
         Some(&mut self.sound_speed_cache)
+    }
+
+    fn absorption_array(&self) -> ArrayView3<f64> {
+        self.absorption_cache.view()
+    }
+
+    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+        self.nonlinearity_cache.view()
     }
 }
 

@@ -94,6 +94,10 @@ pub struct HeterogeneousTissueMedium {
     density_array: OnceLock<Array3<f64>>,
     /// Cached sound speed array for performance
     sound_speed_array: OnceLock<Array3<f64>>,
+    /// Cached absorption array for performance
+    absorption_array: OnceLock<Array3<f64>>,
+    /// Cached nonlinearity array for performance
+    nonlinearity_array: OnceLock<Array3<f64>>,
     /// Optional cached pressure amplitude for nonlinear absorption effects
     pub pressure_amplitude: Option<Array3<f64>>,
     /// Cached shear sound speed array
@@ -120,6 +124,8 @@ impl HeterogeneousTissueMedium {
             reference_frequency,
             density_array: OnceLock::new(),
             sound_speed_array: OnceLock::new(),
+            absorption_array: OnceLock::new(),
+            nonlinearity_array: OnceLock::new(),
             pressure_amplitude: None,
             shear_sound_speed_array: OnceLock::new(),
             shear_viscosity_coeff_array: OnceLock::new(),
@@ -246,6 +252,42 @@ impl ArrayAccess for HeterogeneousTissueMedium {
 
     fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
         None
+    }
+
+    fn absorption_array(&self) -> ArrayView3<f64> {
+        self.absorption_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
+                    *val = props.alpha_0;
+                });
+                arr
+            })
+            .view()
+    }
+
+    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+        self.nonlinearity_array
+            .get_or_init(|| {
+                let mut arr = Array3::zeros(self.tissue_map.dim());
+                Zip::indexed(&mut arr).for_each(|(i, j, k), val| {
+                    let tissue = self.tissue_map[[i, j, k]];
+                    let props = tissue::TISSUE_PROPERTIES.get(&tissue).unwrap_or_else(|| {
+                        tissue::TISSUE_PROPERTIES
+                            .get(&TissueType::SoftTissue)
+                            .unwrap()
+                    });
+                    *val = props.nonlinearity;
+                });
+                arr
+            })
+            .view()
     }
 }
 

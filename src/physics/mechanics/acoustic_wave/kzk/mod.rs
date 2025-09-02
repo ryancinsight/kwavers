@@ -19,8 +19,14 @@
 //! - β: coefficient of nonlinearity
 
 pub mod absorption;
-pub mod diffraction;
+pub mod angular_spectrum_2d;
+pub mod beam_debug;
+pub mod complex_parabolic_diffraction;
+pub mod constants;
+pub mod finite_difference_diffraction;
 pub mod nonlinearity;
+pub mod parabolic_diffraction;
+pub mod plane_wave_test;
 pub mod solver;
 pub mod validation;
 

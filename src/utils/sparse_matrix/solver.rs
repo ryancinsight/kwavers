@@ -16,6 +16,8 @@ pub struct SolverConfig {
     pub tolerance: f64,
     /// Preconditioning type
     pub preconditioner: Preconditioner,
+    /// Enable verbose logging
+    pub verbose: bool,
 }
 
 impl Default for SolverConfig {
@@ -24,6 +26,7 @@ impl Default for SolverConfig {
             max_iterations: 1000,
             tolerance: 1e-8,
             preconditioner: Preconditioner::None,
+            verbose: false,
         }
     }
 }
@@ -128,6 +131,9 @@ impl IterativeSolver {
             rho = r0.dot(&r);
 
             if rho.abs() < 1e-14 {
+                if self.config.verbose {
+                    log::info!("BiCGSTAB converged in {} iterations", iteration);
+                }
                 break;
             }
 
@@ -150,15 +156,32 @@ impl IterativeSolver {
             x = x + alpha * &p + omega * &s;
             r = s - omega * t;
 
-            if r.dot(&r).sqrt() < self.config.tolerance {
+            let residual_norm = r.dot(&r).sqrt();
+            if residual_norm < self.config.tolerance {
+                if self.config.verbose {
+                    log::info!(
+                        "BiCGSTAB converged in {} iterations, residual: {:.2e}",
+                        iteration + 1,
+                        residual_norm
+                    );
+                }
                 return Ok(x);
             }
+        }
+
+        let final_residual = r.dot(&r).sqrt();
+        if self.config.verbose {
+            log::warn!(
+                "BiCGSTAB failed to converge after {} iterations, residual: {:.2e}",
+                self.config.max_iterations,
+                final_residual
+            );
         }
 
         Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
             method: "bicgstab".to_string(),
             iterations: self.config.max_iterations,
-            error: r.dot(&r).sqrt(),
+            error: final_residual,
         }))
     }
 }

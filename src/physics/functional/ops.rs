@@ -116,10 +116,20 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         U: Send + Sync,
         Self::Item: Sync,
     {
+        // Create a sequential version first to ensure correctness
+        // TODO: Optimize with proper parallel implementation
         let shape = self.dim();
-        let flat_results: Vec<U> = self.iter().par_bridge().map(f).collect();
+        let mut result = Vec::with_capacity(shape.0 * shape.1 * shape.2);
 
-        Array3::from_shape_vec(shape, flat_results).expect("Shape mismatch in parallel map")
+        for i in 0..shape.0 {
+            for j in 0..shape.1 {
+                for k in 0..shape.2 {
+                    result.push(f(&self[[i, j, k]]));
+                }
+            }
+        }
+
+        Array3::from_shape_vec(shape, result).expect("Shape mismatch")
     }
 
     fn find_element<F>(&self, predicate: F) -> Option<((usize, usize, usize), &Self::Item)>
@@ -377,7 +387,15 @@ mod tests {
         let field = Array3::from_shape_fn((10, 10, 10), |(i, j, k)| (i + j + k) as f64);
         let result = field.par_map_field(|&x| x * 2.0);
 
+        // Verify the input value first
+        assert_abs_diff_eq!(field[[5, 5, 5]], 5.0 + 5.0 + 5.0);
+        // Then verify the mapped result
         assert_abs_diff_eq!(result[[5, 5, 5]], (5.0 + 5.0 + 5.0) * 2.0);
+
+        // Also verify a few other points to ensure correctness
+        assert_abs_diff_eq!(result[[0, 0, 0]], 0.0);
+        assert_abs_diff_eq!(result[[1, 1, 1]], 6.0);
+        assert_abs_diff_eq!(result[[9, 9, 9]], 54.0);
     }
 
     #[test]

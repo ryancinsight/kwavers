@@ -4,6 +4,7 @@
 //! methods for solving acoustic wave equations.
 
 pub mod basis;
+pub mod config;
 pub mod coupling;
 pub mod dg_solver;
 pub mod discontinuity_detector;
@@ -11,20 +12,24 @@ pub mod flux;
 pub mod matrices;
 pub mod quadrature;
 pub mod shock_capturing;
+pub mod shock_detector;
 pub mod spectral_solver;
 pub mod tests;
 pub mod traits;
 
 // Re-exports for convenience
 pub use basis::BasisType;
+pub use config::DGConfig;
 pub use coupling::HybridCoupler;
-pub use dg_solver::{DGConfig, DGSolver};
+pub use dg_solver::DGSolver;
 pub use discontinuity_detector::DiscontinuityDetector;
 pub use flux::{FluxType, LimiterType};
 pub use spectral_solver::SpectralSolver;
 pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, SolutionCoupling};
 
+use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
+use crate::solver::constants::*;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -47,11 +52,11 @@ pub struct HybridSpectralDGConfig {
 impl Default for HybridSpectralDGConfig {
     fn default() -> Self {
         Self {
-            discontinuity_threshold: 0.1,
-            spectral_order: 8,
+            discontinuity_threshold: DISCONTINUITY_THRESHOLD,
+            spectral_order: DEFAULT_POLYNOMIAL_ORDER,
             dg_polynomial_order: 3,
             adaptive_switching: true,
-            conservation_tolerance: 1e-10,
+            conservation_tolerance: CONSERVATION_TOLERANCE,
         }
     }
 }
@@ -162,8 +167,8 @@ impl HybridSpectralDGSolver {
     ) -> KwaversResult<()> {
         let initial_integral: f64 = initial.sum();
         let final_integral: f64 = final_field.sum();
-        let conservation_error =
-            (final_integral - initial_integral).abs() / initial_integral.abs().max(1e-10);
+        let conservation_error = (final_integral - initial_integral).abs()
+            / initial_integral.abs().max(ABSOLUTE_TOLERANCE);
 
         if conservation_error > self.config.conservation_tolerance {
             log::warn!(
@@ -171,6 +176,12 @@ impl HybridSpectralDGSolver {
                 conservation_error,
                 self.config.conservation_tolerance
             );
+            return Err(KwaversError::Physics(PhysicsError::ConservationViolation {
+                quantity: "mass".to_string(),
+                initial: initial_integral,
+                current: final_integral,
+                tolerance: self.config.conservation_tolerance,
+            }));
         }
 
         Ok(())

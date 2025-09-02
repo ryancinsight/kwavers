@@ -63,7 +63,7 @@ impl GradientComputer {
     }
 
     /// Apply preconditioning to gradient
-    /// Based on Shin et al. (2001): "Improved amplitude preservation"
+    /// Based on Shin et al. (2001): "Amplitude preservation for elastic migration"
     pub fn apply_preconditioning(&self, gradient: &mut Array3<f64>) {
         if let Some(ref precond) = self.preconditioner {
             Zip::from(gradient).and(precond).for_each(|g, &p| {

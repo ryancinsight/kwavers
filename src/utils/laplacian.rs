@@ -138,7 +138,7 @@ impl LaplacianOperator {
         // Handle interior points with selected order
         match self.config.order {
             FiniteDifferenceOrder::Second => {
-                // Optimized second-order implementation
+                // Second-order finite difference implementation
                 self.apply_second_order_interior(input, output.view_mut());
             }
             _ => {
@@ -159,7 +159,7 @@ impl LaplacianOperator {
         Ok(())
     }
 
-    /// Optimized second-order interior computation
+    /// Second-order finite difference interior computation
     #[inline]
     fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
         let (nx, ny, nz) = input.dim();
@@ -234,7 +234,7 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
         radius: usize,
     ) {
-        let (nx, ny, nz) = input.dim();
+        let (_nx, _ny, _nz) = input.dim();
 
         match self.config.boundary {
             BoundaryCondition::Dirichlet => {
@@ -283,12 +283,33 @@ impl LaplacianOperator {
     fn apply_periodic_boundaries(
         &self,
         input: ArrayView3<f64>,
-        output: ArrayViewMut3<f64>,
-        radius: usize,
+        mut output: ArrayViewMut3<f64>,
+        _radius: usize,
     ) {
-        // Implement periodic wrapping for boundary regions
-        // This would compute Laplacian using wrapped indices
-        // Implementation details omitted for brevity
+        let (nx, ny, nz) = input.dim();
+
+        // Apply second-order Laplacian with periodic wrapping
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    // Periodic indices
+                    let im = if i == 0 { nx - 1 } else { i - 1 };
+                    let ip = if i == nx - 1 { 0 } else { i + 1 };
+                    let jm = if j == 0 { ny - 1 } else { j - 1 };
+                    let jp = if j == ny - 1 { 0 } else { j + 1 };
+                    let km = if k == 0 { nz - 1 } else { k - 1 };
+                    let kp = if k == nz - 1 { 0 } else { k + 1 };
+
+                    output[[i, j, k]] = (input[[im, j, k]] - 2.0 * input[[i, j, k]]
+                        + input[[ip, j, k]])
+                        * self.dx2_inv
+                        + (input[[i, jm, k]] - 2.0 * input[[i, j, k]] + input[[i, jp, k]])
+                            * self.dy2_inv
+                        + (input[[i, j, km]] - 2.0 * input[[i, j, k]] + input[[i, j, kp]])
+                            * self.dz2_inv;
+                }
+            }
+        }
     }
 }
 

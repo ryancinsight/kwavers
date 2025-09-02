@@ -9,8 +9,10 @@ use rustfft::FftPlanner;
 use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
-use super::diffraction::DiffractionOperator;
+use super::angular_spectrum_2d::AngularSpectrum2D;
+use super::finite_difference_diffraction::DiffractionOperator;
 use super::nonlinearity::NonlinearOperator;
+use super::parabolic_diffraction::KzkDiffractionOperator;
 use super::KZKConfig;
 
 /// KZK equation solver
@@ -20,8 +22,15 @@ pub struct KZKSolver {
     pressure: Array3<f64>,
     /// Previous pressure for time derivatives
     pressure_prev: Array3<f64>,
-    /// Diffraction operator
-    diffraction: DiffractionOperator,
+    /// Diffraction operator (finite difference implementation)
+    diffraction: Option<DiffractionOperator>,
+
+    /// 2D Angular spectrum operator (correct implementation)
+    angular_spectrum_2d: Option<AngularSpectrum2D>,
+    /// KZK parabolic diffraction operator
+    kzk_diffraction: Option<KzkDiffractionOperator>,
+    /// Use KZK parabolic approximation (recommended)
+    use_kzk_diffraction: bool,
     /// Absorption operator
     absorption: AbsorptionOperator,
     /// Nonlinear operator
@@ -38,7 +47,19 @@ impl KZKSolver {
         let pressure = Array3::zeros((config.nx, config.ny, config.nt));
         let pressure_prev = Array3::zeros((config.nx, config.ny, config.nt));
 
-        let diffraction = DiffractionOperator::new(&config);
+        // Use KZK parabolic approximation by default
+        let use_kzk_diffraction = true;
+
+        let diffraction = None; // Finite difference implementation not used
+
+        let angular_spectrum_2d = None; // Full angular spectrum (not KZK)
+
+        let kzk_diffraction = if use_kzk_diffraction {
+            Some(KzkDiffractionOperator::new(&config))
+        } else {
+            None
+        };
+
         let absorption = AbsorptionOperator::new(&config);
         let nonlinear = NonlinearOperator::new(&config);
         let fft_planner = FftPlanner::new();
@@ -48,6 +69,9 @@ impl KZKSolver {
             pressure,
             pressure_prev,
             diffraction,
+            angular_spectrum_2d,
+            kzk_diffraction,
+            use_kzk_diffraction,
             absorption,
             nonlinear,
             fft_planner,
@@ -59,7 +83,9 @@ impl KZKSolver {
         // Store frequency in config for all operators
         self.config.frequency = frequency;
         // Re-initialize operators with updated frequency
-        self.diffraction = DiffractionOperator::new(&self.config);
+        if self.use_kzk_diffraction {
+            self.kzk_diffraction = Some(KzkDiffractionOperator::new(&self.config));
+        }
         self.absorption = AbsorptionOperator::new(&self.config);
 
         // Set source as time-harmonic signal
@@ -119,7 +145,18 @@ impl KZKSolver {
         // Transform to frequency domain for each time slice
         for t in 0..self.config.nt {
             let mut slice = self.pressure.index_axis_mut(Axis(2), t);
-            self.diffraction.apply(&mut slice, step_size);
+
+            if self.use_kzk_diffraction {
+                if let Some(ref mut kzk_diffraction) = self.kzk_diffraction {
+                    kzk_diffraction.apply(&mut slice, step_size);
+                }
+            } else if let Some(ref mut angular_spectrum_2d) = self.angular_spectrum_2d {
+                // Full angular spectrum (not KZK parabolic)
+                angular_spectrum_2d.propagate(&mut slice, step_size);
+            } else if let Some(ref mut diffraction) = self.diffraction {
+                // Finite difference implementation
+                diffraction.apply(&mut slice, step_size);
+            }
         }
     }
 

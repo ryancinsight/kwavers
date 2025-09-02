@@ -5,22 +5,23 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
+    use crate::physics::mechanics::acoustic_wave::kzk::constants::*;
+    use crate::physics::validation::{measure_beam_radius, GaussianBeamParameters};
     use ndarray::Array2;
     use std::f64::consts::PI;
 
     /// Test linear propagation of Gaussian beam
     /// Should maintain Gaussian profile with known spreading
     #[test]
-    #[ignore] // TODO: Beam spreading insufficient (2.86mm vs 7.07mm expected)
     fn test_gaussian_beam_diffraction() {
         let mut config = KZKConfig {
-            nx: 128,
-            ny: 128,
+            nx: DEFAULT_GRID_SIZE,
+            ny: DEFAULT_GRID_SIZE,
             nz: 100,
             nt: 50,
-            dx: 0.25e-3,
-            dz: 1e-3,
-            dt: 1e-8,
+            dx: DEFAULT_DX,
+            dz: DEFAULT_DZ,
+            dt: 1e-8, // Small time step for stability
             include_nonlinearity: false,
             include_absorption: false,
             include_diffraction: true,
@@ -32,7 +33,7 @@ mod tests {
         // Create Gaussian beam with proper normalization
         // For a Gaussian beam: I(r) = I₀ * exp(-2r²/w₀²)
         // where w₀ is the beam waist radius at 1/e² intensity
-        let beam_waist = 5e-3; // 5 mm at 1/e² intensity
+        let beam_waist = DEFAULT_BEAM_WAIST; // 5 mm at 1/e² intensity
         let mut source = Array2::zeros((config.nx, config.ny));
 
         for j in 0..config.ny {
@@ -40,15 +41,16 @@ mod tests {
                 let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
                 let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
-                // Use -2r²/w₀² for proper Gaussian beam profile
-                source[[i, j]] = (-2.0 * r2 / (beam_waist * beam_waist)).exp();
+                // Use -r²/w₀² for field amplitude (not intensity!)
+                // Intensity will be |E|² = exp(-2r²/w₀²)
+                source[[i, j]] = (-r2 / (beam_waist * beam_waist)).exp();
             }
         }
 
-        solver.set_source(source.clone(), 1e6);
+        solver.set_source(source.clone(), DEFAULT_FREQUENCY);
 
         // Propagate to Rayleigh distance
-        let wavelength = config.c0 / 1e6;
+        let wavelength = config.c0 / DEFAULT_FREQUENCY;
         let rayleigh_distance = PI * beam_waist * beam_waist / wavelength;
         let steps = (rayleigh_distance / config.dz) as usize;
 

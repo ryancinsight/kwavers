@@ -1,6 +1,7 @@
 // src/utils/mod.rs
 pub mod array_utils;
 pub mod differential_operators;
+pub mod fft_cache;
 pub mod fft_operations;
 pub mod field_analysis;
 pub mod format;

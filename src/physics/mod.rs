@@ -18,13 +18,13 @@ pub mod state;
 pub mod therapy; // Unified therapy physics module
 pub mod thermal; // Unified thermal physics module
 pub mod traits;
+pub mod validation;
 pub mod wave_propagation; // NEW: Wave propagation with reflection and refraction
 
 pub mod analytical;
 pub mod conservation;
 
 #[cfg(test)]
-pub mod validation;
 pub mod validation_tests; // Literature-based validation tests
 
 // Re-export commonly used types

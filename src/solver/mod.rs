@@ -3,12 +3,14 @@
 
 // Core solver modules
 pub mod amr;
+pub mod constants;
 pub mod cpml_integration;
 pub mod fdtd;
 pub mod heterogeneous;
 pub mod hybrid;
 pub mod imex;
 pub mod kspace_correction;
+pub mod kwave_parity;
 pub mod pstd; // PSTD solver module
 pub mod spectral_dg;
 pub mod time_integration;

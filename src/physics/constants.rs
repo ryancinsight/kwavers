@@ -5,6 +5,11 @@
 
 use std::f64::consts::PI;
 
+pub mod acoustic_parameters;
+
+// Re-export acoustic parameters for convenience
+pub use acoustic_parameters::*;
+
 // ============================================================================
 // Fundamental Physical Constants
 // ============================================================================

@@ -45,6 +45,8 @@ pub struct HeterogeneousMedium {
     pub alpha0: Array3<f64>,
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
+    pub absorption: Array3<f64>,
+    pub nonlinearity: Array3<f64>,
     pub reference_frequency: f64,
     // Viscoelastic properties
     pub shear_sound_speed: Array3<f64>,
@@ -189,6 +191,11 @@ impl HeterogeneousMedium {
             grid.nx, grid.ny, grid.nz, reference_frequency
         );
 
+        // Compute absorption and nonlinearity from parameters
+        let freq_ratio: f64 = reference_frequency / 1e6;
+        let absorption = alpha0.mapv(|a0| a0 * freq_ratio.powf(1.0));
+        let nonlinearity = b_a.clone();
+
         Self {
             use_trilinear_interpolation: false, // Default to nearest neighbor for performance
             density,
@@ -211,6 +218,8 @@ impl HeterogeneousMedium {
             alpha0,
             delta,
             b_a,
+            absorption,
+            nonlinearity,
             reference_frequency,
             shear_sound_speed,
             shear_viscosity_coeff,
@@ -254,6 +263,14 @@ impl ArrayAccess for HeterogeneousMedium {
 
     fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
         Some(&mut self.sound_speed)
+    }
+
+    fn absorption_array(&self) -> ArrayView3<f64> {
+        self.absorption.view()
+    }
+
+    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+        self.nonlinearity.view()
     }
 }
 

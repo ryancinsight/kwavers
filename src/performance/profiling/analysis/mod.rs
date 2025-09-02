@@ -95,8 +95,14 @@ pub fn estimate_fdtd_intensity(grid: &Grid, spatial_order: usize) -> f64 {
         _ => 7,
     };
 
+    // Account for boundary conditions reducing operations
+    let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+    let total_points = (nx * ny * nz) as f64;
+    let boundary_points = (2 * (nx * ny + nx * nz + ny * nz)) as f64;
+    let interior_ratio = (total_points - boundary_points) / total_points;
+
     // Operations: multiply-add for each stencil point
-    let flops_per_point = stencil_points as f64 * 2.0;
+    let flops_per_point = stencil_points as f64 * 2.0 * interior_ratio;
 
     // Memory: read stencil points + write result
     let bytes_per_point = (stencil_points + 1) as f64 * 8.0; // f64 = 8 bytes
