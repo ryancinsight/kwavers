@@ -40,6 +40,8 @@ pub struct HomogeneousMedium {
     bubble_velocity: Array3<f64>,
     density_cache: Array3<f64>,
     sound_speed_cache: Array3<f64>,
+    absorption_cache: Array3<f64>,
+    nonlinearity_cache: Array3<f64>,
     lame_lambda: f64,
     lame_mu: f64,
     grid_shape: (usize, usize, usize),
@@ -74,6 +76,11 @@ impl HomogeneousMedium {
             bubble_velocity: Array3::zeros((1, 1, 1)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), density),
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
+            absorption_cache: Array3::from_elem(
+                (grid.nx, grid.ny, grid.nz),
+                0.0022 * (1e6_f64 / 1e6).powf(1.05),
+            ), // α at 1 MHz
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 5.0), // B/A for water
             // For fluids, lambda is the bulk modulus, mu is 0
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0, // Fluid has no shear modulus
@@ -97,6 +104,13 @@ impl HomogeneousMedium {
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, medium.density);
         medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
+
+        // Compute absorption at reference frequency
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 
@@ -120,6 +134,13 @@ impl HomogeneousMedium {
         medium.viscosity = 3.5e-3;
         medium.shear_viscosity = 3.5e-3;
         medium.bulk_viscosity = 2.5 * 3.5e-3;
+
+        // Update caches
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 
@@ -150,6 +171,11 @@ impl HomogeneousMedium {
             bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
             density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.204),
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 343.0),
+            absorption_cache: Array3::from_elem(
+                (grid.nx, grid.ny, grid.nz),
+                1.84e-11 * (1e6_f64 / 1e6).powf(2.0),
+            ),
+            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
             lame_mu: 0.0,                       // Gas has no shear modulus
             grid_shape: (grid.nx, grid.ny, grid.nz),
@@ -166,6 +192,13 @@ impl HomogeneousMedium {
         medium.bubble_velocity = Array3::zeros(shape);
         medium.density_cache = Array3::from_elem(shape, density);
         medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
+
+        // Update absorption and nonlinearity caches
+        let alpha = medium.absorption_alpha
+            * (medium.reference_frequency / 1e6).powf(medium.absorption_power);
+        medium.absorption_cache = Array3::from_elem(shape, alpha);
+        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
+
         medium
     }
 }
@@ -201,6 +234,14 @@ impl ArrayAccess for HomogeneousMedium {
 
     fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
         Some(&mut self.sound_speed_cache)
+    }
+
+    fn absorption_array(&self) -> ArrayView3<f64> {
+        self.absorption_cache.view()
+    }
+
+    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+        self.nonlinearity_cache.view()
     }
 }
 

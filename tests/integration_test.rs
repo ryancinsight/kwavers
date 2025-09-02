@@ -17,10 +17,16 @@ use ndarray::Array3;
 #[test]
 fn test_spherical_wave_propagation() {
     // Create small test grid
-    let grid = Grid::new(64, 64, 64, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
 
     // Water medium
-    let medium = HomogeneousMedium::new(DENSITY_WATER, SPEED_OF_SOUND_WATER);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER,
+        SPEED_OF_SOUND_WATER,
+        0.01, // Optical absorption [1/m]
+        0.1,  // Optical scattering [1/m]
+        &grid,
+    );
 
     // Point source at center
     let mut source = PointSource::new(
@@ -85,8 +91,14 @@ fn test_spherical_wave_propagation() {
 /// Test energy conservation in lossless medium
 #[test]
 fn test_energy_conservation() {
-    let grid = Grid::new(32, 32, 32, 1e-3);
-    let medium = HomogeneousMedium::new(DENSITY_WATER, SPEED_OF_SOUND_WATER);
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER,
+        SPEED_OF_SOUND_WATER,
+        0.01, // Optical absorption [1/m]
+        0.1,  // Optical scattering [1/m]
+        &grid,
+    );
 
     let mut solver = FDTDSolver::new(&grid, &medium);
     solver.set_boundary(BoundaryType::Periodic); // Periodic for energy conservation
@@ -131,8 +143,14 @@ fn test_energy_conservation() {
 /// Test that PML boundaries absorb outgoing waves
 #[test]
 fn test_pml_absorption() {
-    let grid = Grid::new(64, 64, 64, 1e-3);
-    let medium = HomogeneousMedium::new(DENSITY_WATER, SPEED_OF_SOUND_WATER);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER,
+        SPEED_OF_SOUND_WATER,
+        0.01, // Optical absorption [1/m]
+        0.1,  // Optical scattering [1/m]
+        &grid,
+    );
 
     let mut solver = FDTDSolver::new(&grid, &medium);
     solver.set_boundary(BoundaryType::PML);
@@ -177,8 +195,14 @@ fn test_pml_absorption() {
 /// Test focusing with a phased array
 #[test]
 fn test_phased_array_focusing() {
-    let grid = Grid::new(64, 64, 64, 1e-3);
-    let medium = HomogeneousMedium::new(DENSITY_WATER, SPEED_OF_SOUND_WATER);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let medium = HomogeneousMedium::new(
+        DENSITY_WATER,
+        SPEED_OF_SOUND_WATER,
+        0.01, // Optical absorption [1/m]
+        0.1,  // Optical scattering [1/m]
+        &grid,
+    );
 
     // Create linear array of sources
     let num_elements = 8;

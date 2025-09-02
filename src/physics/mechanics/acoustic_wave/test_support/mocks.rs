@@ -19,6 +19,8 @@ pub(crate) mod mocks {
         pub density: Array3<f64>,
         pub sound_speed: Array3<f64>,
         pub bubble_radius: Array3<f64>,
+        pub absorption: Array3<f64>,
+        pub nonlinearity: Array3<f64>,
     }
 
     impl HeterogeneousMediumMock {
@@ -28,6 +30,8 @@ pub(crate) mod mocks {
                 density: Array3::from_elem((10, 10, 10), 1000.0),
                 sound_speed: Array3::from_elem((10, 10, 10), 1500.0),
                 bubble_radius: Array3::from_elem((10, 10, 10), 1e-6),
+                absorption: Array3::from_elem((10, 10, 10), 0.0022),
+                nonlinearity: Array3::from_elem((10, 10, 10), 5.0),
             }
         }
     }
@@ -81,6 +85,14 @@ pub(crate) mod mocks {
 
         fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
             Some(&mut self.sound_speed)
+        }
+
+        fn absorption_array(&self) -> ndarray::ArrayView3<f64> {
+            self.absorption.view()
+        }
+
+        fn nonlinearity_array(&self) -> ndarray::ArrayView3<f64> {
+            self.nonlinearity.view()
         }
     }
 
