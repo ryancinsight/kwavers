@@ -32,6 +32,7 @@
 
 pub mod benchmarks;
 pub mod metrics;
+pub mod modern_simd;
 pub mod optimization;
 pub mod profiling;
 pub mod simd;

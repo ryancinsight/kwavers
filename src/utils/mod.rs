@@ -8,6 +8,7 @@ pub mod iterators;
 pub mod kwave; // Modular k-Wave utilities
 pub mod laplacian; // Unified Laplacian operator
 pub mod linear_algebra;
+pub mod modern_cache;
 pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;
