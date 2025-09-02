@@ -172,25 +172,47 @@ mod tests {
         let initial_mass: f64 = density.sum() * dx * dx;
 
         // Update density using continuity equation
-        for _ in 0..50 {
-            let mut updated_density = density.clone();
+        // Use double buffering to avoid cloning
+        let mut density_next = Array3::zeros((n, n, 1));
 
-            for i in 1..n - 1 {
-                for j in 1..n - 1 {
-                    // Compute flux divergence
-                    let flux_x = (density[[i + 1, j, 0]] * velocity_x[[i + 1, j, 0]]
-                        - density[[i - 1, j, 0]] * velocity_x[[i - 1, j, 0]])
-                        / (2.0 * dx);
-                    let flux_y = (density[[i, j + 1, 0]] * velocity_y[[i, j + 1, 0]]
-                        - density[[i, j - 1, 0]] * velocity_y[[i, j - 1, 0]])
-                        / (2.0 * dx);
+        for iter in 0..50 {
+            // Alternate between reading from density and density_next
+            if iter % 2 == 0 {
+                for i in 1..n - 1 {
+                    for j in 1..n - 1 {
+                        // Compute flux divergence
+                        let flux_x = (density[[i + 1, j, 0]] * velocity_x[[i + 1, j, 0]]
+                            - density[[i - 1, j, 0]] * velocity_x[[i - 1, j, 0]])
+                            / (2.0 * dx);
+                        let flux_y = (density[[i, j + 1, 0]] * velocity_y[[i, j + 1, 0]]
+                            - density[[i, j - 1, 0]] * velocity_y[[i, j - 1, 0]])
+                            / (2.0 * dx);
 
-                    // Update density
-                    updated_density[[i, j, 0]] = density[[i, j, 0]] - dt * (flux_x + flux_y);
+                        // Update density
+                        density_next[[i, j, 0]] = density[[i, j, 0]] - dt * (flux_x + flux_y);
+                    }
+                }
+            } else {
+                for i in 1..n - 1 {
+                    for j in 1..n - 1 {
+                        // Compute flux divergence
+                        let flux_x = (density_next[[i + 1, j, 0]] * velocity_x[[i + 1, j, 0]]
+                            - density_next[[i - 1, j, 0]] * velocity_x[[i - 1, j, 0]])
+                            / (2.0 * dx);
+                        let flux_y = (density_next[[i, j + 1, 0]] * velocity_y[[i, j + 1, 0]]
+                            - density_next[[i, j - 1, 0]] * velocity_y[[i, j - 1, 0]])
+                            / (2.0 * dx);
+
+                        // Update density
+                        density[[i, j, 0]] = density_next[[i, j, 0]] - dt * (flux_x + flux_y);
+                    }
                 }
             }
+        }
 
-            density = updated_density;
+        // Ensure final result is in density
+        if 50 % 2 == 0 {
+            density.assign(&density_next);
         }
 
         let final_mass: f64 = density.sum() * dx * dx;

@@ -4,6 +4,7 @@
 //! methods for solving acoustic wave equations.
 
 pub mod basis;
+pub mod config;
 pub mod coupling;
 pub mod dg_solver;
 pub mod discontinuity_detector;
@@ -11,14 +12,16 @@ pub mod flux;
 pub mod matrices;
 pub mod quadrature;
 pub mod shock_capturing;
+pub mod shock_detector;
 pub mod spectral_solver;
 pub mod tests;
 pub mod traits;
 
 // Re-exports for convenience
 pub use basis::BasisType;
+pub use config::DGConfig;
 pub use coupling::HybridCoupler;
-pub use dg_solver::{DGConfig, DGSolver};
+pub use dg_solver::DGSolver;
 pub use discontinuity_detector::DiscontinuityDetector;
 pub use flux::{FluxType, LimiterType};
 pub use spectral_solver::SpectralSolver;

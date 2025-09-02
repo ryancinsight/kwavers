@@ -9,45 +9,20 @@
 //! - Cockburn, B., & Shu, C. W. (2001). "Runge-Kutta discontinuous Galerkin methods"
 
 use super::basis::{build_vandermonde, BasisType};
+use super::config::DGConfig;
 use super::flux::{apply_limiter, compute_numerical_flux, FluxType, LimiterType};
 use super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
     matrix_inverse,
 };
 use super::quadrature::gauss_lobatto_quadrature;
+use super::shock_detector::ShockDetector;
 use super::traits::{DGOperations, NumericalSolver};
 use crate::error::KwaversError;
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::{Array1, Array2, Array3};
 use std::sync::Arc;
-
-/// Configuration for DG solver
-#[derive(Debug, Clone)]
-pub struct DGConfig {
-    /// Polynomial order (N means polynomials up to degree N)
-    pub polynomial_order: usize,
-    /// Basis function type
-    pub basis_type: BasisType,
-    /// Numerical flux type
-    pub flux_type: FluxType,
-    /// Enable slope limiting for shock capturing
-    pub use_limiter: bool,
-    /// Limiter type (if enabled)
-    pub limiter_type: LimiterType,
-}
-
-impl Default for DGConfig {
-    fn default() -> Self {
-        Self {
-            polynomial_order: 3,
-            basis_type: BasisType::Legendre,
-            flux_type: FluxType::LaxFriedrichs,
-            use_limiter: true,
-            limiter_type: LimiterType::Minmod,
-        }
-    }
-}
 
 /// DG solver for hyperbolic conservation laws
 #[derive(Debug)]
@@ -445,30 +420,8 @@ impl DGOperations for DGSolver {
 impl DGSolver {
     /// Apply shock detector for adaptive limiting
     pub fn apply_shock_detector(&self, field: &Array3<f64>) -> Array3<bool> {
-        let mut shock_cells = Array3::from_elem(field.raw_dim(), false);
-
-        // Gradient-based shock detection using jump discontinuities
-        for i in 1..field.shape()[0] - 1 {
-            for j in 1..field.shape()[1] - 1 {
-                for k in 1..field.shape()[2] - 1 {
-                    let grad_x =
-                        (field[(i + 1, j, k)] - field[(i - 1, j, k)]) / (2.0 * self.grid.dx);
-                    let grad_y =
-                        (field[(i, j + 1, k)] - field[(i, j - 1, k)]) / (2.0 * self.grid.dy);
-                    let grad_z =
-                        (field[(i, j, k + 1)] - field[(i, j, k - 1)]) / (2.0 * self.grid.dz);
-
-                    let grad_mag = (grad_x * grad_x + grad_y * grad_y + grad_z * grad_z).sqrt();
-
-                    // Threshold for shock detection
-                    if grad_mag > 1000.0 {
-                        shock_cells[(i, j, k)] = true;
-                    }
-                }
-            }
-        }
-
-        shock_cells
+        let detector = ShockDetector::new(self.config.polynomial_order);
+        detector.detect(field)
     }
 }
 
