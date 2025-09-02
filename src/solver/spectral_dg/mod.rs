@@ -27,6 +27,7 @@ pub use flux::{FluxType, LimiterType};
 pub use spectral_solver::SpectralSolver;
 pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, SolutionCoupling};
 
+use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::Array3;
@@ -174,6 +175,12 @@ impl HybridSpectralDGSolver {
                 conservation_error,
                 self.config.conservation_tolerance
             );
+            return Err(KwaversError::Physics(PhysicsError::ConservationViolation {
+                quantity: "mass".to_string(),
+                initial: initial_integral,
+                current: final_integral,
+                tolerance: self.config.conservation_tolerance,
+            }));
         }
 
         Ok(())

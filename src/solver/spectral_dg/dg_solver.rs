@@ -8,9 +8,9 @@
 //! - Hesthaven, J. S., & Warburton, T. (2008). "Nodal discontinuous Galerkin methods"
 //! - Cockburn, B., & Shu, C. W. (2001). "Runge-Kutta discontinuous Galerkin methods"
 
-use super::basis::{build_vandermonde, BasisType};
+use super::basis::build_vandermonde;
 use super::config::DGConfig;
-use super::flux::{apply_limiter, compute_numerical_flux, FluxType, LimiterType};
+use super::flux::{apply_limiter, compute_numerical_flux};
 use super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
     matrix_inverse,

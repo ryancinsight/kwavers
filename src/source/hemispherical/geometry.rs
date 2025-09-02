@@ -48,6 +48,7 @@ impl HemisphereGeometry {
 }
 
 /// Element placement algorithms
+#[derive(Debug)]
 pub struct ElementPlacement;
 
 impl ElementPlacement {

@@ -3,7 +3,7 @@
 //! Implements shock detectors to identify regions requiring limiting.
 
 use crate::KwaversResult;
-use ndarray::{Array1, Array3, Zip};
+use ndarray::Array3;
 
 /// Shock detection threshold constants
 pub const SHOCK_DETECTOR_THRESHOLD: f64 = 0.5;

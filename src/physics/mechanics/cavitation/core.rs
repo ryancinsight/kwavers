@@ -4,7 +4,7 @@
 //! based on acoustic pressure thresholds and bubble dynamics.
 
 use crate::error::KwaversResult;
-use ndarray::{Array1, Array3};
+use ndarray::Array3;
 
 /// Core cavitation detection and modeling
 pub trait CavitationCore: Send + Sync {

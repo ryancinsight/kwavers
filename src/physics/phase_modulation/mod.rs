@@ -12,10 +12,10 @@
 pub mod aberration_correction;
 pub mod phase_encoding;
 pub mod phase_patterns;
-pub mod phase_randomization;
 pub mod phase_shifting;
+pub mod randomization;
 
-pub use phase_randomization::{
+pub use randomization::{
     PhaseDistribution, PhaseRandomizer, RandomizationScheme, SpatialRandomization,
     TimeRandomization,
 };

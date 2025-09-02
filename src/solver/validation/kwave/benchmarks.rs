@@ -8,7 +8,7 @@
 //!   reconstruction of photoacoustic wave fields". J. Biomed. Opt. 15(2), 021314
 
 use crate::grid::Grid;
-use crate::medium::{CoreMedium, HomogeneousMedium};
+use crate::medium::HomogeneousMedium;
 use crate::physics::constants::*;
 use crate::KwaversResult;
 use ndarray::Array3;
