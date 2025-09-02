@@ -4,7 +4,7 @@
 //! based on acoustic pressure thresholds and bubble dynamics.
 
 use crate::error::KwaversResult;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 /// Core cavitation detection and modeling
 pub trait CavitationCore: Send + Sync {
@@ -257,7 +257,31 @@ impl CavitationCore for CavitationModel {
     }
 
     fn update(&mut self, pressure_field: &Array3<f64>, dt: f64) -> KwaversResult<()> {
-        self.update(pressure_field, 1e6, dt, 0.0); // Default 1 MHz
+        // Update cavitation states based on pressure field
+        Zip::from(&mut self.states)
+            .and(pressure_field)
+            .for_each(|state, &pressure| {
+                let threshold = self.calculate_threshold();
+
+                if pressure < threshold {
+                    // Cavitation occurring
+                    if !state.is_cavitating {
+                        state.is_cavitating = true;
+                        state.duration = 0.0;
+                    }
+                    state.duration += dt;
+                    state.intensity = ((threshold - pressure) / threshold).min(1.0);
+                    state.peak_negative_pressure = state.peak_negative_pressure.min(pressure);
+                } else {
+                    // No cavitation
+                    state.is_cavitating = false;
+                    state.intensity = 0.0;
+                }
+            });
+
+        // Update dose
+        self.dose.update(&self.states, dt);
+
         Ok(())
     }
 }
