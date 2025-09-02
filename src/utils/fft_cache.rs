@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::fft::ModernFft3d;
+use crate::fft::ProcessorFft3d;
 use crate::grid::Grid;
 
 /// FFT cache key based on grid dimensions
@@ -31,7 +31,7 @@ impl From<&Grid> for FftCacheKey {
 /// Thread-safe FFT cache using parking_lot for better performance
 #[derive(Debug)]
 pub struct FftCache {
-    cache: RwLock<HashMap<FftCacheKey, Arc<ModernFft3d>>>,
+    cache: RwLock<HashMap<FftCacheKey, Arc<ProcessorFft3d>>>,
 }
 
 impl FftCache {
@@ -43,7 +43,7 @@ impl FftCache {
     }
 
     /// Get or create an FFT instance for the given grid
-    pub fn get_or_create(&self, grid: &Grid) -> Arc<ModernFft3d> {
+    pub fn get_or_create(&self, grid: &Grid) -> Arc<ProcessorFft3d> {
         let key = FftCacheKey::from(grid);
 
         // Try read lock first (common case)
@@ -63,7 +63,7 @@ impl FftCache {
         }
 
         // Create new FFT instance
-        let fft = Arc::new(ModernFft3d::new(grid.nx, grid.ny, grid.nz));
+        let fft = Arc::new(ProcessorFft3d::new(grid.nx, grid.ny, grid.nz));
         cache.insert(key, Arc::clone(&fft));
         fft
     }
@@ -75,7 +75,7 @@ impl FftCache {
         for grid in grids {
             let key = FftCacheKey::from(grid);
             if !cache.contains_key(&key) {
-                let fft = Arc::new(ModernFft3d::new(grid.nx, grid.ny, grid.nz));
+                let fft = Arc::new(ProcessorFft3d::new(grid.nx, grid.ny, grid.nz));
                 cache.insert(key, fft);
             }
         }
@@ -102,7 +102,7 @@ impl Default for FftCache {
 pub static FFT_CACHE: Lazy<FftCache> = Lazy::new(FftCache::new);
 
 /// Convenience function to get FFT for a grid
-pub fn get_fft_for_grid(grid: &Grid) -> Arc<ModernFft3d> {
+pub fn get_fft_for_grid(grid: &Grid) -> Arc<ProcessorFft3d> {
     FFT_CACHE.get_or_create(grid)
 }
 

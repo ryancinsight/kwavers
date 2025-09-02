@@ -1,6 +1,7 @@
 // src/utils/mod.rs
 pub mod array_utils;
 pub mod differential_operators;
+pub mod fft_cache;
 pub mod fft_operations;
 pub mod field_analysis;
 pub mod format;
@@ -8,7 +9,6 @@ pub mod iterators;
 pub mod kwave; // Modular k-Wave utilities
 pub mod laplacian; // Unified Laplacian operator
 pub mod linear_algebra;
-pub mod modern_cache;
 pub mod sparse_matrix;
 pub mod spectral;
 pub mod stencil;

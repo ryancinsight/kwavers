@@ -10,10 +10,9 @@ use std::f64::consts::PI;
 
 use super::absorption::AbsorptionOperator;
 use super::angular_spectrum_2d::AngularSpectrum2D;
-use super::diffraction::DiffractionOperator;
-use super::diffraction_corrected::AngularSpectrumOperator;
-use super::kzk_diffraction::KzkDiffractionOperator;
+use super::finite_difference_diffraction::DiffractionOperator;
 use super::nonlinearity::NonlinearOperator;
+use super::parabolic_diffraction::KzkDiffractionOperator;
 use super::KZKConfig;
 
 /// KZK equation solver
@@ -25,8 +24,7 @@ pub struct KZKSolver {
     pressure_prev: Array3<f64>,
     /// Diffraction operator (finite difference implementation)
     diffraction: Option<DiffractionOperator>,
-    /// Angular spectrum operator (accurate but wrong for KZK)
-    angular_spectrum: Option<AngularSpectrumOperator>,
+
     /// 2D Angular spectrum operator (correct implementation)
     angular_spectrum_2d: Option<AngularSpectrum2D>,
     /// KZK parabolic diffraction operator
@@ -54,8 +52,6 @@ impl KZKSolver {
 
         let diffraction = None; // Finite difference implementation not used
 
-        let angular_spectrum = None; // Flawed 1D FFT implementation
-
         let angular_spectrum_2d = None; // Full angular spectrum (not KZK)
 
         let kzk_diffraction = if use_kzk_diffraction {
@@ -73,7 +69,6 @@ impl KZKSolver {
             pressure,
             pressure_prev,
             diffraction,
-            angular_spectrum,
             angular_spectrum_2d,
             kzk_diffraction,
             use_kzk_diffraction,
@@ -158,9 +153,6 @@ impl KZKSolver {
             } else if let Some(ref mut angular_spectrum_2d) = self.angular_spectrum_2d {
                 // Full angular spectrum (not KZK parabolic)
                 angular_spectrum_2d.propagate(&mut slice, step_size);
-            } else if let Some(ref mut angular_spectrum) = self.angular_spectrum {
-                // Fallback to flawed 1D implementation (should not happen)
-                angular_spectrum.apply(&mut slice, step_size);
             } else if let Some(ref mut diffraction) = self.diffraction {
                 // Finite difference implementation
                 diffraction.apply(&mut slice, step_size);

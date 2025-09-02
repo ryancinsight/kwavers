@@ -77,7 +77,7 @@ impl SimdOps {
         // Process interior points - using standard iteration for simplicity
         for i in half_s..nx - half_s {
             for j in half_s..ny - half_s {
-                // Process z-dimension in chunks for better cache usage
+                // Process z-dimension in chunks for cache efficiency
                 for k in half_s..nz - half_s {
                     let mut sum = 0.0;
 

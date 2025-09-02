@@ -11,7 +11,8 @@ use ndarray::{Array2, ArrayViewMut2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-use super::KZKConfig;
+use super::{constants::*, KZKConfig};
+use crate::constants::physics::SOUND_SPEED_WATER;
 
 /// KZK parabolic diffraction operator
 ///
@@ -194,24 +195,24 @@ mod tests {
     fn test_kzk_gaussian_beam() {
         // Test that KZK diffraction gives expected Gaussian beam spreading
         let config = KZKConfig {
-            nx: 128,
-            ny: 128,
-            dx: 0.25e-3,
-            frequency: 1e6,
-            c0: 1500.0,
+            nx: DEFAULT_GRID_SIZE,
+            ny: DEFAULT_GRID_SIZE,
+            dx: DEFAULT_WAVELENGTH / 6.0, // 6 points per wavelength
+            frequency: DEFAULT_FREQUENCY,
+            c0: SOUND_SPEED_WATER,
             ..Default::default()
         };
 
         let mut op = KzkDiffractionOperator::new(&config);
 
         // Create Gaussian beam
-        let beam_waist = 5e-3;
-        let mut field = Array2::zeros((128, 128));
+        let beam_waist = DEFAULT_BEAM_WAIST;
+        let mut field = Array2::zeros((config.nx, config.ny));
 
-        for i in 0..128 {
-            for j in 0..128 {
-                let x = (i as f64 - 64.0) * config.dx;
-                let y = (j as f64 - 64.0) * config.dx;
+        for i in 0..config.nx {
+            for j in 0..config.ny {
+                let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
+                let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
                 let r2 = x * x + y * y;
                 field[[i, j]] = (-r2 / (beam_waist * beam_waist)).exp();
             }

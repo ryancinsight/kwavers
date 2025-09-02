@@ -10,8 +10,8 @@ use rayon::prelude::*;
 use rustfft::{Fft, FftNum, FftPlanner};
 use std::sync::Arc;
 
-/// Modern 3D FFT implementation with parallelization
-pub struct ModernFft3d {
+/// 3D FFT implementation with parallelization
+pub struct Fft3d {
     planner: FftPlanner<f64>,
     nx: usize,
     ny: usize,
@@ -25,9 +25,9 @@ pub struct ModernFft3d {
     ifft_z: Arc<dyn Fft<f64>>,
 }
 
-impl std::fmt::Debug for ModernFft3d {
+impl std::fmt::Debug for Fft3d {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModernFft3d")
+        f.debug_struct("Fft3d")
             .field("nx", &self.nx)
             .field("ny", &self.ny)
             .field("nz", &self.nz)
@@ -35,7 +35,7 @@ impl std::fmt::Debug for ModernFft3d {
     }
 }
 
-impl ModernFft3d {
+impl Fft3d {
     /// Create a new 3D FFT processor with cached plans
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let mut planner = FftPlanner::new();

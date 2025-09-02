@@ -32,11 +32,11 @@
 
 pub mod benchmarks;
 pub mod metrics;
-pub mod modern_simd;
 pub mod optimization;
 pub mod profiling;
 pub mod simd;
 pub mod simd_auto;
+pub mod simd_operations;
 pub mod simd_portable;
 pub mod simd_safe;
 
