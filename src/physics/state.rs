@@ -7,7 +7,6 @@ use crate::error::{KwaversResult, PhysicsError};
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 // Use the global field_indices module for consistency
 pub use crate::physics::field_indices;

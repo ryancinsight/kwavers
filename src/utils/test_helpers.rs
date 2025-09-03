@@ -29,7 +29,7 @@ pub fn create_default_test_grid() -> Grid {
 /// Create a standard test medium for the given grid
 pub fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(
-        crate::physics::constants::acoustic::WATER_DENSITY,
+        crate::physics::constants::DENSITY_WATER,
         crate::physics::constants::SOUND_SPEED_WATER,
         0.1,
         1.0,

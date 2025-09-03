@@ -178,3 +178,19 @@ pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1e6;
 /// Default sampling frequency (Hz)
 /// Standard: 10 MHz for ultrasound simulations
 pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 10e6;
+
+// ============================================================================
+// Absorption and Attenuation Parameters
+// ============================================================================
+
+/// Tissue absorption coefficient at 1 MHz [dB/(MHz^y cm)]
+pub const ABSORPTION_TISSUE: f64 = 0.75;
+
+/// Absorption power law exponent
+pub const ABSORPTION_POWER: f64 = 1.05;
+
+/// Conversion from dB to Nepers
+pub const DB_TO_NP: f64 = 0.1151;
+
+/// Water nonlinearity parameter (B/A)
+pub const NONLINEARITY_WATER: f64 = 5.2;

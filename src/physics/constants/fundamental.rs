@@ -1,6 +1,5 @@
 //! Fundamental physical constants
 
-use std::f64::consts::PI;
 
 /// Speed of sound in water at 20°C (m/s)
 /// Value: 1482.0 m/s (more precise value)

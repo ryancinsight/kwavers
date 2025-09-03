@@ -6,7 +6,7 @@
 
 use crate::error::{KwaversResult, PhysicsError};
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::state::{FieldView, FieldViewMut, PhysicsState};
+use crate::physics::state::{FieldView, PhysicsState};
 use ndarray::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 
@@ -220,9 +220,8 @@ mod tests {
         let provided = vec![];
         let access = PluginFieldAccess::new(&state, &required, &provided);
 
-        // Try to write to a read-only field
-        let result = access.get_field_mut(UnifiedFieldType::Pressure);
-        assert!(result.is_err());
+        // get_field_mut is not available on immutable accessor
+        // This would require PluginFieldAccessMut
 
         // Try to access an undeclared field
         let result = access.get_field(UnifiedFieldType::Density);

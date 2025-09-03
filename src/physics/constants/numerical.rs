@@ -200,6 +200,31 @@ pub const B_OVER_A_DIVISOR: f64 = 2.0;
 /// Nonlinearity coefficient offset
 pub const NONLINEARITY_COEFFICIENT_OFFSET: f64 = 1.0;
 
+// ============================================================================
+// Unit Conversion Constants
+// ============================================================================
+
+/// Conversion from MHz to Hz
+pub const MHZ_TO_HZ: f64 = 1e6;
+
+/// Conversion from cm to m
+pub const CM_TO_M: f64 = 0.01;
+
+/// Minimum points per wavelength for accurate simulation
+pub const MIN_PPW: f64 = 6.0;
+
+/// CFL safety factor alias
+pub const CFL_SAFETY: f64 = CFL_SAFETY_FACTOR;
+
+/// Mechanical index threshold for safety
+pub const MI_THRESHOLD: f64 = 1.9;
+
+/// Energy conservation tolerance
+pub const ENERGY_CONSERVATION_TOLERANCE: f64 = 1e-6;
+
+/// Default spatial resolution (m)
+pub const DEFAULT_SPATIAL_RESOLUTION: f64 = 1e-3;
+
 /// Default number of frequency steps for sweeps
 pub const DEFAULT_FREQUENCY_STEPS: usize = 100;
 

@@ -79,3 +79,13 @@ pub const PECLET_SCALING_FACTOR: f64 = 0.1;
 
 /// Surface tension coefficient multiplier
 pub const SURFACE_TENSION_COEFF: f64 = 2.0;
+
+// ============================================================================
+// Power Modulation Limits
+// ============================================================================
+
+/// Minimum duty cycle for power modulation
+pub const MIN_DUTY_CYCLE: f64 = 0.01;
+
+/// Maximum duty cycle for power modulation
+pub const MAX_DUTY_CYCLE: f64 = 1.0;

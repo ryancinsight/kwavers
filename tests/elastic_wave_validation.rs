@@ -11,7 +11,7 @@ use kwavers::{
     medium::{thermal::ThermalField, ElasticProperties},
     physics::{
         field_mapping::UnifiedFieldType,
-        plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
+        plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
     },
 };
 use ndarray::Array4;
@@ -91,6 +91,7 @@ fn test_elastic_wave_propagation() {
 
     // Propagate for several timesteps
     let pressure = ndarray::Array3::zeros((100, 100, 100));
+    let pressure = ndarray::Array3::zeros((100, 100, 100));
     let context = PluginContext::new(pressure);
     for _ in 0..10 {
         plugin
@@ -111,6 +112,7 @@ struct TestElasticMedium {
     lame_mu: f64,
     bubble_radius_field: ndarray::Array3<f64>,
     bubble_velocity_field: ndarray::Array3<f64>,
+    thermal_field: ndarray::Array3<f64>,
 }
 
 impl TestElasticMedium {
@@ -121,6 +123,7 @@ impl TestElasticMedium {
             lame_mu,
             bubble_radius_field: ndarray::Array3::zeros((1, 1, 1)),
             bubble_velocity_field: ndarray::Array3::zeros((1, 1, 1)),
+            thermal_field: ndarray::Array3::from_elem((1, 1, 1), 293.15),
         }
     }
 
@@ -216,7 +219,11 @@ impl AcousticProperties for TestElasticMedium {
     fn acoustic_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Acoustic diffusivity = thermal diffusivity / c²
         let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
-        let c = self.sound_speed(x, y, z, grid);
+        // Convert coordinates to indices (simplified for test)
+        let i = (x / grid.dx) as usize;
+        let j = (y / grid.dy) as usize; 
+        let k = (z / grid.dz) as usize;
+        let c = self.sound_speed(i, j, k);
         thermal_diff / (c * c)
     }
 }
@@ -243,9 +250,12 @@ impl ThermalProperties for TestElasticMedium {
 
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         let k = self.thermal_conductivity(x, y, z, grid);
-        let rho = self.density(x, y, z, grid);
+        let i = (x / grid.dx) as usize;
+        let j = (y / grid.dy) as usize;
+        let k = (z / grid.dz) as usize;
+        let rho = self.density(i, j, k);
         let cp = self.specific_heat(x, y, z, grid);
-        k / (rho * cp)
+        k as f64 / (rho * cp)
     }
 
     fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
@@ -253,16 +263,19 @@ impl ThermalProperties for TestElasticMedium {
     }
 }
 
+// Implement ThermalField trait for test
 impl ThermalField for TestElasticMedium {
     fn thermal_field(&self) -> &ndarray::Array3<f64> {
-        // Return uniform temperature field for test
-        ndarray::Array3::from_elem((10, 10, 10), 293.15) // 20°C
+        &self.thermal_field
     }
 
     fn update_thermal_field(&mut self, _temperature: &ndarray::Array3<f64>) {
-        // No-op for test medium
+        // No-op for test
     }
 }
+
+// Implement Medium trait by combining all the sub-traits
+impl Medium for TestElasticMedium {}
 
 impl OpticalProperties for TestElasticMedium {
     fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
