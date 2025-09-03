@@ -14,7 +14,7 @@ mod integration_tests {
     /// Test smooth wave propagation (should use spectral method)
     #[test]
     fn test_smooth_wave_propagation() {
-        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0).unwrap());
         let config = HybridSpectralDGConfig {
             discontinuity_threshold: 0.5, // Higher threshold to avoid false positives
             spectral_order: 8,
@@ -55,7 +55,7 @@ mod integration_tests {
     /// Test shock handling (should use DG method)
     #[test]
     fn test_shock_handling() {
-        let grid = Arc::new(Grid::new(64, 64, 64, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(64, 64, 64, 1.0, 1.0, 1.0).unwrap());
         let config = HybridSpectralDGConfig {
             discontinuity_threshold: 0.05,
             spectral_order: 8,
@@ -104,7 +104,7 @@ mod integration_tests {
     /// Test mixed smooth and discontinuous regions
     #[test]
     fn test_mixed_regions() {
-        let grid = Arc::new(Grid::new(64, 64, 64, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(64, 64, 64, 1.0, 1.0, 1.0).unwrap());
         let config = HybridSpectralDGConfig::default();
 
         let mut solver = HybridSpectralDGSolver::new(config, grid.clone());
@@ -142,7 +142,7 @@ mod integration_tests {
     /// Test configuration update
     #[test]
     fn test_config_update() {
-        let grid = Arc::new(Grid::new(8, 8, 8, 0.1, 0.1, 0.1));
+        let grid = Arc::new(Grid::new(8, 8, 8, 0.1, 0.1, 0.1).unwrap());
         let initial_config = HybridSpectralDGConfig {
             discontinuity_threshold: 0.1,
             spectral_order: 4,
@@ -168,7 +168,7 @@ mod integration_tests {
         let field = Array3::from_elem((8, 8, 8), 1.0);
         let dt = 0.001;
         let _result = solver
-            .solve(&field, dt, &Grid::new(8, 8, 8, 0.1, 0.1, 0.1))
+            .solve(&field, dt, &Grid::new(8, 8, 8, 0.1, 0.1, 0.1).unwrap())
             .unwrap();
 
         // With adaptive_switching = false, no discontinuity detection should occur
@@ -179,7 +179,7 @@ mod integration_tests {
     #[test]
     #[ignore] // Ignore by default as it's computationally expensive
     fn test_large_grid_performance() {
-        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0).unwrap());
         let config = HybridSpectralDGConfig::default();
 
         let mut solver = HybridSpectralDGSolver::new(config, grid.clone());

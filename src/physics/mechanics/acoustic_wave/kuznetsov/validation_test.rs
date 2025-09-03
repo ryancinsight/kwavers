@@ -13,7 +13,6 @@ mod tests {
     use crate::physics::traits::AcousticWaveModel;
     use crate::source::{PointSource, Source};
     use approx::assert_relative_eq;
-    use approx::assert_relative_eq;
     use ndarray::Array4;
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
@@ -33,9 +32,9 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // Point source at center
-        use crate::source::{Signal, SineSignal};
+        use crate::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal = Arc::new(SineSignal::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
         let position = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 
@@ -70,9 +69,9 @@ mod tests {
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
 
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
-        use crate::source::{Signal, SineSignal};
+        use crate::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal = Arc::new(SineSignal::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
         let position = grid.indices_to_coordinates(16, 16, 16);
         let source = PointSource::new(position, signal);
 
@@ -100,7 +99,8 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // No source (zero amplitude)
-        let source = PointSource::new((0, 0, 0), 0.0, 1e6, 0.0, 0.0);
+        use crate::source::NullSource;
+        let source = NullSource::new();
 
         // Initialize with Gaussian pulse
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
@@ -157,7 +157,11 @@ mod tests {
 
         // Sinusoidal source
         let frequency = 1e6; // 1 MHz
-        let source = PointSource::new((10, grid.ny / 2, grid.nz / 2), 1e6, frequency, 0.0, 0.0);
+        use crate::signal::{Signal, SineWave};
+        use std::sync::Arc;
+        let signal = Arc::new(SineWave::new(frequency, 1e6, 0.0)) as Arc<dyn Signal>;
+        let position = grid.indices_to_coordinates(10, grid.ny / 2, grid.nz / 2);
+        let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
         let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
@@ -173,14 +177,12 @@ mod tests {
 
         // Analyze spectrum at a propagated distance
         let pressure = fields.index_axis(ndarray::Axis(0), 0);
-        let probe_point = pressure
-            .slice(ndarray::s![grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2])
-            .to_owned();
+        let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
 
         // In nonlinear propagation, we expect energy at harmonics
         // This is a simplified check - proper spectral analysis would use FFT
         assert!(
-            probe_point.abs() > 0.0,
+            probe_value.abs() > 0.0,
             "Should have non-zero pressure at probe point"
         );
     }

@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_spectral_solver_creation() {
-        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(32, 32, 32, 1.0, 1.0, 1.0).unwrap());
         let solver = SpectralSolver::new(8, grid);
         assert_eq!(solver.order, 8);
     }
@@ -310,7 +310,7 @@ mod tests {
         // Test that the spectral solver can compute derivatives
         // We'll verify basic functionality without checking exact values
         let n = 16;
-        let grid = Arc::new(Grid::new(n, n, n, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(n, n, n, 1.0, 1.0, 1.0).unwrap());
         let solver = SpectralSolver::new(8, grid.clone());
 
         // Test 1: Derivative of a constant field should be zero

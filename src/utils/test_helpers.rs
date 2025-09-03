@@ -19,6 +19,7 @@ pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
         crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
         crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
     )
+    .unwrap()
 }
 
 /// Create a standard test grid with default dimensions (32x32x32)
