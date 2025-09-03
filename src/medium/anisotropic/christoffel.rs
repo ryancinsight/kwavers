@@ -131,26 +131,44 @@ impl ChristoffelEquation {
     /// Get polarization vectors for each wave mode
     pub fn polarization_vectors(&self, direction: &[f64; 3]) -> KwaversResult<[Array1<f64>; 3]> {
         use nalgebra::{Matrix3, SymmetricEigen};
-        
+
         // Compute Christoffel matrix
-        let christoffel = self.compute_matrix(direction)?;
-        
+        let christoffel = self.christoffel_matrix(direction);
+
         // Convert to nalgebra matrix for eigendecomposition
         let matrix = Matrix3::new(
-            christoffel[[0, 0]], christoffel[[0, 1]], christoffel[[0, 2]],
-            christoffel[[1, 0]], christoffel[[1, 1]], christoffel[[1, 2]],
-            christoffel[[2, 0]], christoffel[[2, 1]], christoffel[[2, 2]]
+            christoffel[[0, 0]],
+            christoffel[[0, 1]],
+            christoffel[[0, 2]],
+            christoffel[[1, 0]],
+            christoffel[[1, 1]],
+            christoffel[[1, 2]],
+            christoffel[[2, 0]],
+            christoffel[[2, 1]],
+            christoffel[[2, 2]],
         );
-        
+
         // Compute eigendecomposition
         let eigen = SymmetricEigen::new(matrix);
         let eigenvectors = eigen.eigenvectors;
-        
+
         // Extract polarization vectors (eigenvectors)
         Ok([
-            Array1::from(vec![eigenvectors[(0, 0)], eigenvectors[(1, 0)], eigenvectors[(2, 0)]]),
-            Array1::from(vec![eigenvectors[(0, 1)], eigenvectors[(1, 1)], eigenvectors[(2, 1)]]),
-            Array1::from(vec![eigenvectors[(0, 2)], eigenvectors[(1, 2)], eigenvectors[(2, 2)]]),
+            Array1::from(vec![
+                eigenvectors[(0, 0)],
+                eigenvectors[(1, 0)],
+                eigenvectors[(2, 0)],
+            ]),
+            Array1::from(vec![
+                eigenvectors[(0, 1)],
+                eigenvectors[(1, 1)],
+                eigenvectors[(2, 1)],
+            ]),
+            Array1::from(vec![
+                eigenvectors[(0, 2)],
+                eigenvectors[(1, 2)],
+                eigenvectors[(2, 2)],
+            ]),
         ])
     }
 }

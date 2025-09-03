@@ -15,6 +15,8 @@ pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject, ReaderOptions};
 pub struct NiftiReader {
     /// Enable verbose logging
     verbose: bool,
+    /// Voxel dimensions in mm
+    voxel_dims: [f64; 3],
 }
 
 impl Default for NiftiReader {
@@ -26,12 +28,21 @@ impl Default for NiftiReader {
 impl NiftiReader {
     /// Create a new NIFTI reader
     pub fn new() -> Self {
-        Self { verbose: false }
+        Self {
+            verbose: false,
+            voxel_dims: [1.0, 1.0, 1.0], // Default 1mm isotropic
+        }
     }
 
     /// Enable verbose logging during file operations
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
+        self
+    }
+
+    /// Set voxel dimensions in mm
+    pub fn with_voxel_dims(mut self, dims: [f64; 3]) -> Self {
+        self.voxel_dims = dims;
         self
     }
 
@@ -211,57 +222,60 @@ impl NiftiReader {
     pub fn save<P: AsRef<Path>>(&self, path: P, data: &Array3<f64>) -> KwaversResult<()> {
         use std::fs::File;
         use std::io::Write;
-        
+
         let path = path.as_ref();
         let (nx, ny, nz) = data.dim();
-        
+
         // Create NIFTI header (348 bytes)
         let mut header = vec![0u8; 348];
-        
+
         // Magic number for NIFTI-1 format
         header[0..4].copy_from_slice(&348i32.to_le_bytes());
-        
+
         // Dimensions
         header[40] = 3; // Number of dimensions
         header[42..44].copy_from_slice(&(nx as i16).to_le_bytes());
         header[44..46].copy_from_slice(&(ny as i16).to_le_bytes());
         header[46..48].copy_from_slice(&(nz as i16).to_le_bytes());
         header[48..50].copy_from_slice(&1i16.to_le_bytes()); // time dimension
-        
+
         // Data type (64 = float64)
         header[70..72].copy_from_slice(&64i16.to_le_bytes());
         header[72..74].copy_from_slice(&64i16.to_le_bytes()); // bits per pixel
-        
+
         // Voxel dimensions from metadata
         let pixdim = [
             0.0f32,
             self.voxel_dims[0] as f32,
             self.voxel_dims[1] as f32,
             self.voxel_dims[2] as f32,
-            1.0, 1.0, 1.0, 1.0
+            1.0,
+            1.0,
+            1.0,
+            1.0,
         ];
         for (i, &dim) in pixdim.iter().enumerate() {
-            header[76 + i*4..80 + i*4].copy_from_slice(&dim.to_le_bytes());
+            header[76 + i * 4..80 + i * 4].copy_from_slice(&dim.to_le_bytes());
         }
-        
+
         // vox_offset - data starts immediately after header
         header[108..112].copy_from_slice(&352.0f32.to_le_bytes());
-        
+
         // Magic string "n+1\0"
         header[344..348].copy_from_slice(b"n+1\0");
-        
+
         // Write header and data
         let mut file = File::create(path)?;
         file.write_all(&header)?;
-        
+
         // Pad to 352 bytes
         file.write_all(&[0u8; 4])?;
-        
+
         // Write data in row-major order
         for ((i, j, k), &value) in data.indexed_iter() {
             file.write_all(&value.to_le_bytes())?;
         }
-        
+
         Ok(())
     }
 }

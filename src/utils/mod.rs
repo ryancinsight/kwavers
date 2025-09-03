@@ -35,7 +35,6 @@ pub mod test_helpers;
 
 use crate::fft::{fft3d::Fft3d, ifft3d::Ifft3d};
 use crate::grid::Grid;
-use lazy_static::lazy_static;
 use log::{debug, info, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
@@ -44,7 +43,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc, Mutex,
+    Mutex,
 };
 use std::time::{Duration, Instant};
 
@@ -235,7 +234,7 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
         }
-        
+
         // Process the transform directly with the cached instance
         let fft = cache.get_mut(&key).unwrap();
         let mut result = field_complex.clone();
@@ -281,7 +280,7 @@ pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64>
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
         }
-        
+
         let fft = cache.get_mut(&key).unwrap();
         fft.process(&mut result, grid);
     });

@@ -78,7 +78,7 @@ pub fn apply_kspace_correction(
 
 fn apply_exact_correction(ops: &KSpaceOperators, grid: &Grid) -> KSpaceOperators {
     let mut corrected = ops.clone();
-    
+
     // Apply sinc correction for exact differentiation
     corrected.kx.mapv_inplace(|k| {
         if k.abs() > 0.0 {
@@ -87,7 +87,7 @@ fn apply_exact_correction(ops: &KSpaceOperators, grid: &Grid) -> KSpaceOperators
             0.0
         }
     });
-    
+
     corrected.ky.mapv_inplace(|k| {
         if k.abs() > 0.0 {
             k * (k * grid.dy / 2.0).sin() / (k * grid.dy / 2.0)
@@ -95,7 +95,7 @@ fn apply_exact_correction(ops: &KSpaceOperators, grid: &Grid) -> KSpaceOperators
             0.0
         }
     });
-    
+
     corrected.kz.mapv_inplace(|k| {
         if k.abs() > 0.0 {
             k * (k * grid.dz / 2.0).sin() / (k * grid.dz / 2.0)
@@ -103,7 +103,7 @@ fn apply_exact_correction(ops: &KSpaceOperators, grid: &Grid) -> KSpaceOperators
             0.0
         }
     });
-    
+
     corrected
 }
 

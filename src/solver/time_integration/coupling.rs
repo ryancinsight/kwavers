@@ -111,7 +111,7 @@ impl TimeCoupling for AveragingStrategy {
         // integration requires preserving the initial state while fields are
         // modified during subcycling. Arc is used to share these cloned states
         // efficiently across multiple references.
-        use std::sync::Arc;
+
         let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // First pass: advance all components independently
@@ -143,7 +143,7 @@ impl TimeCoupling for AveragingStrategy {
             for (name, field) in fields.iter_mut() {
                 if let Some(initial) = initial_fields.get(name) {
                     // Simple linear interpolation for demonstration
-                    field.zip_mut_with(initial.as_ref(), |f, &i| *f = 0.5 * (*f + i));
+                    field.zip_mut_with(initial, |f, &i| *f = 0.5 * (*f + i));
                 }
             }
         }
@@ -180,7 +180,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         // Store initial states - we need to clone here because predictor-corrector
         // methods require resetting to the initial state for each iteration.
         // Arc is used to share these cloned states efficiently.
-        use std::sync::Arc;
+
         let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // Predictor-corrector iterations
@@ -189,7 +189,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             if iteration < self.corrector_iterations {
                 for (name, initial) in &initial_fields {
                     if let Some(field) = fields.get_mut(name) {
-                        field.assign(initial.as_ref());
+                        field.assign(initial);
                     }
                 }
             }

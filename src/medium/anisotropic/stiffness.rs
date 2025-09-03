@@ -170,16 +170,16 @@ impl StiffnessTensor {
 
     /// Get compliance matrix (inverse of stiffness)
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
-        use nalgebra::{DMatrix, DVector};
-        
+        use nalgebra::DMatrix;
+
         // Convert to nalgebra matrix
         let mut matrix = DMatrix::zeros(6, 6);
         for i in 0..6 {
             for j in 0..6 {
-                matrix[(i, j)] = self.c[i][j];
+                matrix[(i, j)] = self.c[[i, j]];
             }
         }
-        
+
         // Compute inverse
         match matrix.try_inverse() {
             Some(inv) => {
@@ -196,7 +196,7 @@ impl StiffnessTensor {
                 field: "stiffness_matrix".to_string(),
                 value: "singular".to_string(),
                 constraint: "Stiffness matrix must be invertible".to_string(),
-            }))
+            })),
         }
     }
 

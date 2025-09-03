@@ -13,11 +13,10 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PhysicsState {
     /// Main 4D field array containing all physics quantities
-    /// Direct ownership avoids synchronization overhead
-    fields: Array4<f64>,
+    fields: Arc<RwLock<Array4<f64>>>,
 
     /// Grid dimensions
     grid: Grid,

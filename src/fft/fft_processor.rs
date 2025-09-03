@@ -101,7 +101,8 @@ impl Fft3d {
             .for_each(|mut yz_slice| {
                 yz_slice.axis_iter_mut(Axis(1)).for_each(|mut x_line| {
                     // Process FFT in-place without allocation
-                    x_fft.process_slice(x_line.as_slice_mut().unwrap());
+                    let slice = x_line.as_slice_mut().unwrap();
+                    x_fft.process(slice);
                 });
             });
 
@@ -113,7 +114,8 @@ impl Fft3d {
             .for_each(|mut xz_slice| {
                 xz_slice.axis_iter_mut(Axis(1)).for_each(|mut y_line| {
                     // Process FFT in-place without allocation
-                    y_fft.process_slice(y_line.as_slice_mut().unwrap());
+                    let slice = y_line.as_slice_mut().unwrap();
+                    y_fft.process(slice);
                 });
             });
 

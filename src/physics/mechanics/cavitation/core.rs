@@ -318,7 +318,9 @@ impl CavitationCore for CavitationModel {
             });
 
         // Update dose with average intensity
-        let total_intensity: f64 = self.states.iter()
+        let total_intensity: f64 = self
+            .states
+            .iter()
             .filter(|s| s.is_cavitating)
             .map(|s| s.intensity)
             .sum();
