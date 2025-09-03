@@ -57,14 +57,17 @@ pub fn calculate_wavelength(frequency: f64, sound_speed: f64) -> f64 {
 /// Wrapped phase in [-π, π] range
 #[inline]
 pub fn wrap_phase(phase: f64) -> f64 {
-    let wrapped = phase % TAU;
+    // Wrap phase to [-π, π] range
+    let mut wrapped = phase % TAU;
+    
+    // Handle the sign to ensure proper wrapping
     if wrapped > PI {
-        wrapped - TAU
-    } else if wrapped < -PI {
-        wrapped + TAU
-    } else {
-        wrapped
+        wrapped -= TAU;
+    } else if wrapped <= -PI {
+        wrapped += TAU;
     }
+    
+    wrapped
 }
 
 /// Normalize phase to [0, 2π] range

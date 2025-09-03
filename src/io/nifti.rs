@@ -296,7 +296,7 @@ pub struct NiftiInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    
 
     #[test]
     fn test_nifti_reader_creation() {

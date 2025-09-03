@@ -80,7 +80,7 @@ pub mod tests {
     #[test]
     fn test_heterogeneous_medium_position_dependence() {
         use super::mocks::mocks::HeterogeneousMediumMock;
-        use crate::medium::core::CoreMedium;
+        
 
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
         let medium = HeterogeneousMediumMock::new(true);

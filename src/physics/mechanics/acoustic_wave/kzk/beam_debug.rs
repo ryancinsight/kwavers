@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array2;
+    
     use std::f64::consts::PI;
 
     #[test]

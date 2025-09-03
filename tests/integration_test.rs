@@ -3,7 +3,7 @@
 use kwavers::{
     grid::Grid,
     medium::HomogeneousMedium,
-    signal::{ContinuousWave, Signal},
+    signal::{Signal, SineWave},
     solver::fdtd::{FdtdConfig, FdtdSolver},
     source::{PointSource, Source},
 };
@@ -24,7 +24,7 @@ fn test_point_source_propagation() {
 
     // Create source
     let frequency = 1e6; // 1 MHz
-    let signal = Arc::new(ContinuousWave::new(frequency, 1.0, 0.0));
+    let signal = Arc::new(SineWave::new(1.0, frequency));
     let source = PointSource::new((0.032, 0.032, 0.032), signal);
     let source_mask = source.create_mask(&grid);
 
@@ -35,7 +35,7 @@ fn test_point_source_propagation() {
     let mut velocity_z = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
     // Calculate stable time step
-    let c_max = medium.sound_speed(0.0, 0.0, 0.0, &grid);
+    let c_max = medium.max_sound_speed();
     let dt = solver.max_stable_dt(c_max);
 
     // Run simulation

@@ -7,7 +7,7 @@ mod tests {
         constants::*, parabolic_diffraction::KzkDiffractionOperator, KZKConfig,
     };
     use ndarray::Array2;
-    use std::f64::consts::PI;
+    
 
     #[test]
     fn test_plane_wave_propagation() {

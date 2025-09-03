@@ -8,7 +8,7 @@ pub(crate) mod mocks {
     use crate::grid::Grid;
     use crate::medium::absorption::TissueType;
     use ndarray::{Array3, ArrayViewMut3};
-    use std::f64::consts::PI;
+    
 
     /// Mock heterogeneous medium for testing
     ///
