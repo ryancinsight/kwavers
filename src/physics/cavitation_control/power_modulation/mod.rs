@@ -16,8 +16,8 @@ mod pulse_sequence;
 mod safety;
 mod schemes;
 
-pub use amplitude::AmplitudeController;
 pub use crate::physics::constants::*;
+pub use amplitude::AmplitudeController;
 pub use duty_cycle::DutyCycleController;
 pub use filters::ExponentialFilter;
 pub use modulator::PowerModulator;

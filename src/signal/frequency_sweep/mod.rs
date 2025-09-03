@@ -11,8 +11,8 @@ use crate::signal::Signal;
 use std::fmt::Debug;
 
 // Re-export main types
-pub use chirp::LinearChirp;
 pub use crate::physics::constants::*;
+pub use chirp::LinearChirp;
 pub use exponential::ExponentialSweep;
 pub use hyperbolic::HyperbolicSweep;
 pub use logarithmic::LogarithmicSweep;

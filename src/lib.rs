@@ -38,7 +38,7 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod configuration; // Unified configuration system (SSOT)
-// constants module moved to physics::constants for SSOT
+                       // constants module moved to physics::constants for SSOT
 pub mod error;
 pub mod factory;
 pub mod fft;

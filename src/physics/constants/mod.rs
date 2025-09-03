@@ -4,20 +4,20 @@
 //! used throughout the simulation, eliminating magic numbers and ensuring consistency.
 
 pub mod acoustic_parameters;
-pub mod fundamental;
-pub mod thermodynamic;
-pub mod optical;
 pub mod cavitation;
-pub mod numerical;
-pub mod medical;
 pub mod chemistry;
+pub mod fundamental;
+pub mod medical;
+pub mod numerical;
+pub mod optical;
+pub mod thermodynamic;
 
 // Re-export all constants for convenience
 pub use acoustic_parameters::*;
-pub use fundamental::*;
-pub use thermodynamic::*;
-pub use optical::*;
 pub use cavitation::*;
-pub use numerical::*;
-pub use medical::*;
 pub use chemistry::*;
+pub use fundamental::*;
+pub use medical::*;
+pub use numerical::*;
+pub use optical::*;
+pub use thermodynamic::*;

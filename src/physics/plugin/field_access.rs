@@ -87,8 +87,6 @@ impl<'a> PluginFieldAccess<'a> {
         self.state.get_field(field.index())
     }
 
-
-
     /// Apply a closure to a readable field
     pub fn with_field<F, R>(&self, field: UnifiedFieldType, f: F) -> KwaversResult<R>
     where
@@ -104,8 +102,6 @@ impl<'a> PluginFieldAccess<'a> {
 
         self.state.with_field(field.index(), f)
     }
-
-
 }
 
 /// Direct field access for high-performance plugins

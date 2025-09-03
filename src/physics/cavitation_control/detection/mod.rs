@@ -11,8 +11,8 @@ pub mod traits;
 pub mod types;
 
 // Re-export main types for convenience
-pub use broadband::BroadbandDetector;
 pub use crate::physics::constants::*;
+pub use broadband::BroadbandDetector;
 pub use spectral::SpectralDetector;
 pub use subharmonic::SubharmonicDetector;
 pub use traits::{CavitationDetector, DetectorParameters};

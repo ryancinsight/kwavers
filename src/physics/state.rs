@@ -12,7 +12,7 @@ use std::collections::HashMap;
 pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
-/// 
+///
 /// This struct owns the field data directly, avoiding unnecessary Arc<RwLock>
 /// indirection. For concurrent access, wrap the entire PhysicsState in Arc<RwLock>
 /// at the application level if needed.
@@ -30,7 +30,7 @@ pub struct PhysicsState {
 }
 
 /// Direct field view for zero-copy read access
-/// 
+///
 /// Since PhysicsState now owns data directly, we can return simple borrows
 /// instead of complex guard types that clone data unnecessarily.
 pub type FieldView<'a> = ArrayView3<'a, f64>;
@@ -38,18 +38,11 @@ pub type FieldView<'a> = ArrayView3<'a, f64>;
 /// Direct mutable field view for zero-copy write access
 pub type FieldViewMut<'a> = ArrayViewMut3<'a, f64>;
 
-
-
 impl PhysicsState {
     /// Create a new physics state with the given grid
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
-        let fields = Array4::<f64>::zeros((
-            field_indices::TOTAL_FIELDS,
-            nx,
-            ny,
-            nz,
-        ));
+        let fields = Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz));
 
         let mut field_names = HashMap::new();
         field_names.insert(field_indices::PRESSURE_IDX, "Pressure".to_string());
@@ -207,7 +200,7 @@ impl PhysicsState {
 pub trait HasPhysicsState {
     /// Get reference to the physics state
     fn physics_state(&self) -> &PhysicsState;
-    
+
     /// Get mutable reference to the physics state
     fn physics_state_mut(&mut self) -> &mut PhysicsState;
 

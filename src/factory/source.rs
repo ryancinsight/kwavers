@@ -2,11 +2,11 @@
 //!
 //! Follows Creator pattern for source instantiation
 
-use crate::physics::constants::{
-    DEFAULT_ULTRASOUND_FREQUENCY, STANDARD_PRESSURE_AMPLITUDE, STANDARD_BEAM_WIDTH,
-};
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
+use crate::physics::constants::{
+    DEFAULT_ULTRASOUND_FREQUENCY, STANDARD_BEAM_WIDTH, STANDARD_PRESSURE_AMPLITUDE,
+};
 use crate::signal::{Signal, SineWave};
 use crate::source::{PointSource, Source};
 use std::sync::Arc;

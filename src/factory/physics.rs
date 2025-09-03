@@ -2,8 +2,8 @@
 //!
 //! Follows Creator pattern for physics component instantiation
 
-use crate::physics::constants::DEFAULT_ULTRASOUND_FREQUENCY;
 use crate::error::{ConfigError, KwaversResult};
+use crate::physics::constants::DEFAULT_ULTRASOUND_FREQUENCY;
 use crate::physics::plugin::PluginManager;
 use std::collections::HashMap;
 

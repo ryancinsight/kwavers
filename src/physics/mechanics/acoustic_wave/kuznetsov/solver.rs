@@ -13,9 +13,8 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
-use ndarray::{Array3, Array4, Zip};
 use log;
-use rayon::prelude::*;
+use ndarray::{Array3, Array4, Zip};
 
 /// Main Kuznetsov wave solver
 #[derive(Debug)]
@@ -66,21 +65,24 @@ impl KuznetsovWave {
     ) -> Array3<f64> {
         // Pre-compute medium properties for all grid points if heterogeneous
         let is_heterogeneous = !medium.is_homogeneous();
-        
+
         // For homogeneous media, compute properties once
-        let (uniform_density, uniform_sound_speed, uniform_nonlinearity, uniform_diffusivity) = if !is_heterogeneous {
-            let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
-            let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
-            let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
-            (
-                crate::medium::density_at(medium, center_x, center_y, center_z, &self.grid),
-                crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid),
-                crate::medium::nonlinearity_at(medium, center_x, center_y, center_z, &self.grid),
-                self.config.acoustic_diffusivity,
-            )
-        } else {
-            (0.0, 0.0, 0.0, 0.0) // Will compute per-point
-        };
+        let (uniform_density, uniform_sound_speed, uniform_nonlinearity, uniform_diffusivity) =
+            if !is_heterogeneous {
+                let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
+                let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
+                let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
+                (
+                    crate::medium::density_at(medium, center_x, center_y, center_z, &self.grid),
+                    crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid),
+                    crate::medium::nonlinearity_at(
+                        medium, center_x, center_y, center_z, &self.grid,
+                    ),
+                    self.config.acoustic_diffusivity,
+                )
+            } else {
+                (0.0, 0.0, 0.0, 0.0) // Will compute per-point
+            };
 
         // 1. Compute linear term: c₀²∇²p using spectral methods
         self.workspace.spectral_op.compute_laplacian_workspace(
@@ -137,49 +139,47 @@ impl KuznetsovWave {
         // 4. Combine all terms using efficient iteration
         if is_heterogeneous {
             // HETEROGENEOUS MEDIA: Compute properties per-point
-            use ndarray::Axis;
-            use rayon::prelude::*;
-            
+
             // Use parallel iteration with indices
             let shape = rhs.shape();
             let nx = shape[0];
             let ny = shape[1];
             let nz = shape[2];
-            
+
             // Use parallel iteration for heterogeneous media
             for k in 0..self.grid.nz {
                 for j in 0..self.grid.ny {
                     for i in 0..self.grid.nx {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                        
+
                         // Get local medium properties
-                        let local_sound_speed = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                        let local_sound_speed =
+                            crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
                         let c0_squared = local_sound_speed * local_sound_speed;
-                        
+
                         // Linear term with local sound speed
                         rhs[[i, j, k]] = c0_squared * self.workspace.laplacian[[i, j, k]];
-                        
+
                         // Add source term
                         rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
                     }
                 }
             }
-                
+
             log::warn!("Kuznetsov solver: Heterogeneous media detected but nonlinear and diffusive terms still use averaged properties. Results may be inaccurate.");
         } else {
             // HOMOGENEOUS MEDIA: Use pre-computed uniform properties
             let c0_squared = uniform_sound_speed * uniform_sound_speed;
-            
+
             // Use ndarray::Zip for efficient iteration
-            use ndarray::parallel::prelude::*;
-            
+
             Zip::from(&mut rhs)
                 .and(&self.workspace.laplacian)
                 .par_for_each(|r, &lap| {
                     // Linear term
                     *r = c0_squared * lap;
                 });
-                
+
             // Add source term separately to avoid index complications
             for k in 0..self.grid.nz {
                 for j in 0..self.grid.ny {
@@ -189,14 +189,14 @@ impl KuznetsovWave {
                     }
                 }
             }
-                
+
             // Add nonlinear term if computed
             if include_nonlinearity {
                 Zip::from(&mut rhs)
                     .and(&self.workspace.nonlinear_term)
                     .par_for_each(|r, &nl| *r += nl);
             }
-            
+
             // Add diffusive term if computed
             if include_diffusion {
                 Zip::from(&mut rhs)

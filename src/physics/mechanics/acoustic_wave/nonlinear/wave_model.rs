@@ -2,12 +2,12 @@
 //!
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
-use crate::physics::constants::numerical::{
-    LARGE_GRID_THRESHOLD, MEDIUM_GRID_THRESHOLD, CHUNKED_PROCESSING_THRESHOLD,
-    CHUNK_SIZE_SMALL, CHUNK_SIZE_MEDIUM, CHUNK_SIZE_LARGE, PRESSURE_LIMIT,
-};
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::constants::numerical::{
+    CHUNKED_PROCESSING_THRESHOLD, CHUNK_SIZE_LARGE, CHUNK_SIZE_MEDIUM, CHUNK_SIZE_SMALL,
+    LARGE_GRID_THRESHOLD, MEDIUM_GRID_THRESHOLD, PRESSURE_LIMIT,
+};
 
 use ndarray::Array3;
 use std::f64;
@@ -129,8 +129,7 @@ impl NonlinearWave {
             CHUNK_SIZE_SMALL
         };
 
-        let use_chunked_processing =
-            grid.nx * grid.ny * grid.nz > CHUNKED_PROCESSING_THRESHOLD;
+        let use_chunked_processing = grid.nx * grid.ny * grid.nz > CHUNKED_PROCESSING_THRESHOLD;
 
         Self {
             // Performance metrics

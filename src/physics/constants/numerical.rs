@@ -55,7 +55,8 @@ pub const FD2_BACKWARD_COEFF: [f64; 3] = [0.5, -2.0, 1.5];
 pub const FD4_CENTRAL_COEFF: [f64; 5] = [1.0 / 12.0, -2.0 / 3.0, 0.0, 2.0 / 3.0, -1.0 / 12.0];
 
 /// Fourth-order Laplacian coefficients
-pub const FD4_LAPLACIAN_COEFF: [f64; 5] = [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
+pub const FD4_LAPLACIAN_COEFF: [f64; 5] =
+    [-1.0 / 12.0, 4.0 / 3.0, -5.0 / 2.0, 4.0 / 3.0, -1.0 / 12.0];
 
 // ============================================================================
 // PML (Perfectly Matched Layer) Parameters

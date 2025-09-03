@@ -16,14 +16,14 @@
 //!    - Numerical challenges in bubble dynamics
 
 use super::{BubbleState, KellerMiksisModel};
+use crate::error::{KwaversResult, PhysicsError};
+use crate::physics::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use crate::physics::constants::numerical::{
     DEFAULT_ABSOLUTE_TOLERANCE, DEFAULT_RELATIVE_TOLERANCE, ERROR_CONTROL_EXPONENT,
     HALF_STEP_FACTOR, INITIAL_TIME_STEP_FRACTION, MAX_RADIUS_SAFETY_FACTOR, MAX_SUBSTEPS,
     MAX_TEMPERATURE, MAX_TIME_STEP, MAX_TIME_STEP_DECREASE, MAX_TIME_STEP_INCREASE,
     MAX_VELOCITY_FRACTION, MIN_RADIUS_SAFETY_FACTOR, MIN_TEMPERATURE, MIN_TIME_STEP, SAFETY_FACTOR,
 };
-use crate::physics::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
-use crate::error::{KwaversResult, PhysicsError};
 
 /// Configuration for adaptive bubble integration
 #[derive(Debug, Clone)]

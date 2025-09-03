@@ -27,6 +27,7 @@ pub struct BenchmarkResult {
 }
 
 /// k-Wave benchmark test cases
+#[derive(Debug)]
 pub struct KWaveBenchmarks;
 
 impl KWaveBenchmarks {

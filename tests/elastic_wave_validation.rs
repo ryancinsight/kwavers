@@ -221,7 +221,7 @@ impl AcousticProperties for TestElasticMedium {
         let thermal_diff = self.thermal_diffusivity(x, y, z, grid);
         // Convert coordinates to indices (simplified for test)
         let i = (x / grid.dx) as usize;
-        let j = (y / grid.dy) as usize; 
+        let j = (y / grid.dy) as usize;
         let k = (z / grid.dz) as usize;
         let c = self.sound_speed(i, j, k);
         thermal_diff / (c * c)
@@ -274,8 +274,7 @@ impl ThermalField for TestElasticMedium {
     }
 }
 
-// Implement Medium trait by combining all the sub-traits
-impl Medium for TestElasticMedium {}
+// Medium trait is automatically implemented via blanket impl
 
 impl OpticalProperties for TestElasticMedium {
     fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {

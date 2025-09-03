@@ -2,12 +2,12 @@
 //!
 //! Follows Creator pattern - responsible for creating medium objects
 
-use crate::physics::constants::{
-    DENSITY_WATER, SOUND_SPEED_WATER, DENSITY_TISSUE, SOUND_SPEED_TISSUE,
-};
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::{homogeneous::HomogeneousMedium, Medium};
+use crate::physics::constants::{
+    DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
+};
 use std::collections::HashMap;
 
 /// Medium configuration

@@ -3,9 +3,9 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use crate::{
-    physics::constants::SOUND_SPEED_WATER,
     error::{KwaversError, KwaversResult, ValidationError},
     grid::Grid,
+    physics::constants::SOUND_SPEED_WATER,
 };
 use ndarray::Array3;
 use rayon::prelude::*;

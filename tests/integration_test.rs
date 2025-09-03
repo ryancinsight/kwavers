@@ -19,7 +19,7 @@ fn test_point_source_propagation() {
     // Create medium
     let medium = HomogeneousMedium::new(SOUND_SPEED_WATER, DENSITY_WATER);
 
-    // Create boundary  
+    // Create boundary
     let boundary = PMLBoundary::new(10);
 
     // Create source
@@ -59,7 +59,7 @@ fn test_grid_creation() {
 #[test]
 fn test_medium_properties() {
     let medium = HomogeneousMedium::new(SOUND_SPEED_WATER, DENSITY_WATER);
-    
+
     // Test at various points
     assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_WATER);
     assert_eq!(medium.density(0, 0, 0), DENSITY_WATER);

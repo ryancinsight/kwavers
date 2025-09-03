@@ -2,10 +2,10 @@
 //!
 //! Provides high-level interface for GPU compute operations
 
-use crate::physics::constants::numerical;
 use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
 use crate::performance::simd_auto::simd;
+use crate::physics::constants::numerical;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;
 

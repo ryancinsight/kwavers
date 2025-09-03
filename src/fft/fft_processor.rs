@@ -109,7 +109,10 @@ impl Fft3d {
                         // Non-contiguous slice, need to copy
                         let mut temp: Vec<Complex64> = x_line.iter().cloned().collect();
                         x_fft.process(&mut temp);
-                        x_line.iter_mut().zip(temp.iter()).for_each(|(dst, src)| *dst = *src);
+                        x_line
+                            .iter_mut()
+                            .zip(temp.iter())
+                            .for_each(|(dst, src)| *dst = *src);
                     }
                 });
             });
@@ -128,7 +131,10 @@ impl Fft3d {
                         // Non-contiguous slice, need to copy
                         let mut temp: Vec<Complex64> = y_line.iter().cloned().collect();
                         y_fft.process(&mut temp);
-                        y_line.iter_mut().zip(temp.iter()).for_each(|(dst, src)| *dst = *src);
+                        y_line
+                            .iter_mut()
+                            .zip(temp.iter())
+                            .for_each(|(dst, src)| *dst = *src);
                     }
                 });
             });
@@ -392,17 +398,36 @@ mod tests {
             }
         }
 
-        // Compute energy before
-        let energy_before: f64 = data.iter().map(|x| x * x).sum();
+        // Store original for comparison
+        let original = data.clone();
 
-        // FFT and IFFT
+        // FFT and IFFT round trip
         let spectrum = fft3d.forward(&data);
         let reconstructed = fft3d.inverse(&spectrum);
 
-        // Compute energy after
-        let energy_after: f64 = reconstructed.iter().map(|x| x * x).sum();
+        // Check reconstruction accuracy (more important than energy in frequency domain)
+        let max_error = original
+            .iter()
+            .zip(reconstructed.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0, f64::max);
 
-        // Energy should be conserved (Parseval's theorem)
-        assert_relative_eq!(energy_before, energy_after, epsilon = 1e-10 * energy_before);
+        // Reconstruction should be accurate to machine precision
+        assert!(
+            max_error < 1e-10,
+            "FFT reconstruction error too large: {}",
+            max_error
+        );
+
+        // Also check RMS error
+        let rms_error = (original
+            .iter()
+            .zip(reconstructed.iter())
+            .map(|(a, b)| (a - b).powi(2))
+            .sum::<f64>()
+            / (32.0 * 32.0 * 32.0))
+            .sqrt();
+
+        assert!(rms_error < 1e-12, "FFT RMS error too large: {}", rms_error);
     }
 }

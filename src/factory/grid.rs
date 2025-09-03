@@ -2,9 +2,9 @@
 //!
 //! Follows Information Expert principle - knows how to create and validate grids
 
-use crate::physics::constants::numerical::MIN_DX;
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
+use crate::physics::constants::numerical::MIN_DX;
 
 /// Grid configuration
 #[derive(Debug, Clone)]
@@ -52,10 +52,7 @@ impl GridConfig {
         }
 
         // Check minimum grid spacing
-        if self.dx < MIN_DX
-            || self.dy < MIN_DX
-            || self.dz < MIN_DX
-        {
+        if self.dx < MIN_DX || self.dy < MIN_DX || self.dz < MIN_DX {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),

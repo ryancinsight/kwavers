@@ -2,9 +2,9 @@
 //!
 //! Follows Information Expert pattern for time step validation
 
-use crate::physics::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
+use crate::physics::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::time::Time;
 
 /// Time configuration

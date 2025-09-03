@@ -1,6 +1,5 @@
 //! Fundamental physical constants
 
-
 /// Speed of sound in water at 20°C (m/s)
 /// Value: 1482.0 m/s (more precise value)
 /// Reference: National Physical Laboratory acoustic properties database

@@ -198,8 +198,7 @@ impl BubbleIMEXIntegrator {
         let thermal_diffusion_rate = 3.0 * params.thermal_conductivity
             / (params.rho_liquid * params.specific_heat_liquid * r * r);
         let mass_transfer_coupling = if t_bubble > 0.0 {
-            crate::physics::constants::WATER_LATENT_HEAT_VAPORIZATION
-                * params.accommodation_coeff
+            crate::physics::constants::WATER_LATENT_HEAT_VAPORIZATION * params.accommodation_coeff
                 / (params.specific_heat_liquid * t_bubble)
         } else {
             0.0

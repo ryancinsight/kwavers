@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use crate::physics::constants::{MIN_DUTY_CYCLE, MAX_DUTY_CYCLE};
+    use crate::physics::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 
     #[test]
     fn test_modulation_schemes() {

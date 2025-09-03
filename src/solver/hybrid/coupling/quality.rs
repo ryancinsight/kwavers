@@ -45,8 +45,10 @@ struct QualityThresholds {
 impl Default for QualityThresholds {
     fn default() -> Self {
         Self {
-            max_interpolation_error: crate::physics::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
-            max_conservation_error: crate::physics::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
+            max_interpolation_error:
+                crate::physics::constants::numerical::INTERPOLATION_ERROR_THRESHOLD,
+            max_conservation_error:
+                crate::physics::constants::numerical::CONSERVATION_ERROR_THRESHOLD,
             max_reflection: 0.01,   // 1% reflection
             min_transmission: 0.99, // 99% transmission
         }
