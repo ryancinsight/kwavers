@@ -112,10 +112,7 @@ impl TimeCoupling for AveragingStrategy {
         // modified during subcycling. Arc is used to share these cloned states
         // efficiently across multiple references.
         use std::sync::Arc;
-        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
-            .iter()
-            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
-            .collect();
+        let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // First pass: advance all components independently
         for (name, component) in physics_components {
@@ -184,10 +181,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         // methods require resetting to the initial state for each iteration.
         // Arc is used to share these cloned states efficiently.
         use std::sync::Arc;
-        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
-            .iter()
-            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
-            .collect();
+        let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // Predictor-corrector iterations
         for iteration in 0..=self.corrector_iterations {

@@ -1,4 +1,4 @@
-// Basic render shader for visualization
+// Render shader for visualization
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,

@@ -211,8 +211,8 @@ impl Fft3d {
     }
 }
 
-/// Optimized 2D FFT for special cases
-pub struct ModernFft2d {
+/// 2D FFT processor for grid-based operations
+pub struct Fft2d {
     planner: FftPlanner<f64>,
     nx: usize,
     ny: usize,
@@ -222,7 +222,7 @@ pub struct ModernFft2d {
     ifft_y: Arc<dyn Fft<f64>>,
 }
 
-impl ModernFft2d {
+impl Fft2d {
     pub fn new(nx: usize, ny: usize) -> Self {
         let mut planner = FftPlanner::new();
 

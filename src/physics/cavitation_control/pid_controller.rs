@@ -239,10 +239,10 @@ impl PIDController {
     }
 }
 
-/// Discrete-time PID controller using Tustin's method
-/// Better for digital implementation
+/// PID controller using Tustin's method for discrete-time implementation
+/// Suitable for digital control systems
 #[derive(Debug)]
-pub struct DiscretePIDController {
+pub struct TustinPIDController {
     gains: PIDGains,
     sample_time: f64,
     // State variables for discrete implementation
@@ -253,7 +253,7 @@ pub struct DiscretePIDController {
     output_limits: (f64, f64),
 }
 
-impl DiscretePIDController {
+impl TustinPIDController {
     pub fn new(gains: PIDGains, sample_time: f64) -> Self {
         Self {
             gains,

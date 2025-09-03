@@ -40,6 +40,7 @@ use log::{debug, info, trace};
 use ndarray::{Array3, Array4, Axis, Zip};
 use num_complex::Complex;
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -67,16 +68,11 @@ thread_local! {
 // Cache for FFT instances to avoid recreating them for the same grid dimensions
 //
 // Note: Double mutex pattern is used here because:
-// 1. The outer mutex protects the cache HashMap
-// 2. The inner mutex protects the Fft3d instance which has mutable temp buffers
-//
-// FFT planner instances are thread-safe and can be reused.
-// For production performance, consider using a global planner pool.
-lazy_static! {
-    static ref FFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Mutex<Fft3d>>>> =
-        Mutex::new(HashMap::new());
-    static ref IFFT_CACHE: Mutex<HashMap<(usize, usize, usize), Arc<Ifft3d>>> =
-        Mutex::new(HashMap::new());
+// Thread-local FFT cache to avoid synchronization overhead
+// Each thread maintains its own FFT instances for zero contention
+thread_local! {
+    static FFT_CACHE: RefCell<HashMap<(usize, usize, usize), Box<Fft3d>>> = RefCell::new(HashMap::new());
+    static IFFT_CACHE: RefCell<HashMap<(usize, usize, usize), Box<Ifft3d>>> = RefCell::new(HashMap::new());
 }
 
 /// Initialize and warm up the FFT cache for common grid sizes
@@ -90,28 +86,28 @@ pub fn warm_fft_cache(grid: &Grid) {
     let key = (grid.nx, grid.ny, grid.nz);
 
     // Warm up FFT cache
-    {
-        let mut cache = FFT_CACHE.lock().unwrap();
+    FFT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
         cache.entry(key).or_insert_with(|| {
             debug!(
                 "Pre-creating Fft3d instance for grid {}x{}x{}",
                 grid.nx, grid.ny, grid.nz
             );
-            Arc::new(Mutex::new(Fft3d::new(grid.nx, grid.ny, grid.nz)))
+            Box::new(Fft3d::new(grid.nx, grid.ny, grid.nz))
         });
-    }
+    });
 
     // Warm up IFFT cache
-    {
-        let mut cache = IFFT_CACHE.lock().unwrap();
+    IFFT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
         cache.entry(key).or_insert_with(|| {
             debug!(
                 "Pre-creating IFFT3d instance for grid {}x{}x{}",
                 grid.nx, grid.ny, grid.nz
             );
-            Arc::new(Ifft3d::new(grid.nx, grid.ny, grid.nz))
+            Box::new(Ifft3d::new(grid.nx, grid.ny, grid.nz))
         });
-    }
+    });
 
     // Initialize thread-local buffers for common grid size
     FFT_BUFFER.with(|buffer| {
@@ -223,31 +219,29 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         complex_buffer.clone()
     });
 
-    // Get or create FFT instance from cache
-    let fft = {
-        let mut cache = FFT_CACHE.lock().unwrap();
+    // Get or create FFT instance from cache and process
+    let result = FFT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
         let key = (grid.nx, grid.ny, grid.nz);
 
-        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
+        if !cache.contains_key(&key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
             debug!(
                 "Cache miss: Creating new Fft3d instance for grid {}x{}x{}",
                 grid.nx, grid.ny, grid.nz
             );
-            let fft = Arc::new(Mutex::new(Fft3d::new(grid.nx, grid.ny, grid.nz)));
-            e.insert(Arc::clone(&fft));
-            fft
+            let fft = Box::new(Fft3d::new(grid.nx, grid.ny, grid.nz));
+            cache.insert(key, fft);
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
-            Arc::clone(cache.get(&key).unwrap())
         }
-    };
-
-    // Use the FFT instance directly from Arc
-    let mut result = field_complex.clone();
-
-    // Apply the 3D FFT transform
-    fft.lock().unwrap().process(&mut result, grid);
+        
+        // Process the transform directly with the cached instance
+        let fft = cache.get_mut(&key).unwrap();
+        let mut result = field_complex.clone();
+        fft.process(&mut result, grid);
+        result
+    });
 
     // Update timing statistics
     let elapsed = start_time.elapsed();
@@ -277,21 +271,20 @@ pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64>
     // Step 1: Conjugate the input
     result.mapv_inplace(|c| c.conj());
 
-    let fft = {
-        let mut cache = FFT_CACHE.lock().unwrap();
-        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
+    // Step 2: Apply forward FFT using cached instance
+    FFT_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if !cache.contains_key(&key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
-            let fft = Arc::new(Mutex::new(Fft3d::new(nx, ny, nz)));
-            e.insert(Arc::clone(&fft));
-            fft
+            let fft = Box::new(Fft3d::new(nx, ny, nz));
+            cache.insert(key, fft);
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
-            Arc::clone(cache.get(&key).unwrap())
         }
-    };
-
-    // Step 2: Apply forward FFT
-    fft.lock().unwrap().process(&mut result, grid);
+        
+        let fft = cache.get_mut(&key).unwrap();
+        fft.process(&mut result, grid);
+    });
 
     // Step 3: Conjugate again and normalize
     let normalization = 1.0 / (nx * ny * nz) as f64;

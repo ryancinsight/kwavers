@@ -207,17 +207,62 @@ impl NiftiReader {
         })
     }
 
-    /// Save a 3D array as a NIFTI file (placeholder - full implementation requires API update)
-    pub fn save<P: AsRef<Path>>(&self, _path: P, _data: &Array3<f64>) -> KwaversResult<()> {
-        // Note: The nifti 0.17 API doesn't support direct creation of NIFTI objects
-        // from raw data. This would require either:
-        // 1. Updating to a newer version of the nifti crate
-        // 2. Using a different approach to save NIFTI files
-        // 3. Implementing raw NIFTI file writing
-
-        Err(KwaversError::NotImplemented(
-            "NIFTI saving is not yet implemented for nifti crate 0.17".to_string(),
-        ))
+    /// Save a 3D array as a NIFTI file
+    pub fn save<P: AsRef<Path>>(&self, path: P, data: &Array3<f64>) -> KwaversResult<()> {
+        use std::fs::File;
+        use std::io::Write;
+        
+        let path = path.as_ref();
+        let (nx, ny, nz) = data.dim();
+        
+        // Create NIFTI header (348 bytes)
+        let mut header = vec![0u8; 348];
+        
+        // Magic number for NIFTI-1 format
+        header[0..4].copy_from_slice(&348i32.to_le_bytes());
+        
+        // Dimensions
+        header[40] = 3; // Number of dimensions
+        header[42..44].copy_from_slice(&(nx as i16).to_le_bytes());
+        header[44..46].copy_from_slice(&(ny as i16).to_le_bytes());
+        header[46..48].copy_from_slice(&(nz as i16).to_le_bytes());
+        header[48..50].copy_from_slice(&1i16.to_le_bytes()); // time dimension
+        
+        // Data type (64 = float64)
+        header[70..72].copy_from_slice(&64i16.to_le_bytes());
+        header[72..74].copy_from_slice(&64i16.to_le_bytes()); // bits per pixel
+        
+        // Voxel dimensions from metadata
+        let pixdim = [
+            0.0f32,
+            self.voxel_dims[0] as f32,
+            self.voxel_dims[1] as f32,
+            self.voxel_dims[2] as f32,
+            1.0, 1.0, 1.0, 1.0
+        ];
+        for (i, &dim) in pixdim.iter().enumerate() {
+            header[76 + i*4..80 + i*4].copy_from_slice(&dim.to_le_bytes());
+        }
+        
+        // vox_offset - data starts immediately after header
+        header[108..112].copy_from_slice(&352.0f32.to_le_bytes());
+        
+        // Magic string "n+1\0"
+        header[344..348].copy_from_slice(b"n+1\0");
+        
+        // Write header and data
+        let mut file = File::create(path)?;
+        file.write_all(&header)?;
+        
+        // Pad to 352 bytes
+        file.write_all(&[0u8; 4])?;
+        
+        // Write data in row-major order
+        for ((i, j, k), &value) in data.indexed_iter() {
+            file.write_all(&value.to_le_bytes())?;
+        }
+        
+        Ok(())
     }
 }
 
