@@ -81,17 +81,9 @@ impl Default for Grid {
 }
 
 impl Grid {
-    /// Creates a new grid with specified dimensions and spacing
-    ///
-    /// # Panics
-    /// Panics if dimensions or spacing are not positive
-    #[must_use]
-    pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
-        Self::create(nx, ny, nz, dx, dy, dz).expect("Invalid grid parameters")
-    }
-
-    /// Creates a new grid, returning a structured error if invalid
-    pub fn create(
+    /// Creates a new grid with specified dimensions and spacing.
+    /// Returns a `GridError` if parameters are invalid.
+    pub fn new(
         nx: usize,
         ny: usize,
         nz: usize,
@@ -126,7 +118,7 @@ impl Grid {
 
     /// Creates a new grid with the same spacing in all directions
     pub fn uniform(n: usize, spacing: f64) -> Result<Self, GridError> {
-        Self::create(n, n, n, spacing, spacing, spacing)
+        Self::new(n, n, n, spacing, spacing, spacing)
     }
 
     /// Get the total number of grid points
@@ -138,12 +130,6 @@ impl Grid {
     /// Get dimensions as a tuple
     #[inline]
     pub fn dimensions(&self) -> (usize, usize, usize) {
-        (self.nx, self.ny, self.nz)
-    }
-
-    /// Get dimensions as an array
-    #[inline]
-    pub fn dim(&self) -> (usize, usize, usize) {
         (self.nx, self.ny, self.nz)
     }
 
@@ -166,19 +152,13 @@ impl Grid {
         (i as f64 * self.dx, j as f64 * self.dy, k as f64 * self.dz)
     }
 
-    /// Get coordinate arrays for a specific dimension
-    pub fn coordinates(&self, dim: Dimension) -> Vec<f64> {
+    /// Get an iterator over the coordinates for a specific dimension.
+    pub fn coordinates(&self, dim: Dimension) -> Box<dyn Iterator<Item = f64> + '_> {
         match dim {
-            Dimension::X => (0..self.nx).map(|i| i as f64 * self.dx).collect(),
-            Dimension::Y => (0..self.ny).map(|j| j as f64 * self.dy).collect(),
-            Dimension::Z => (0..self.nz).map(|k| k as f64 * self.dz).collect(),
+            Dimension::X => Box::new((0..self.nx).map(move |i| i as f64 * self.dx)),
+            Dimension::Y => Box::new((0..self.ny).map(move |j| j as f64 * self.dy)),
+            Dimension::Z => Box::new((0..self.nz).map(move |k| k as f64 * self.dz)),
         }
-    }
-
-    /// Get total number of points (alias for size)
-    #[inline]
-    pub fn total_points(&self) -> usize {
-        self.size()
     }
 
     /// Convert position to grid indices
@@ -187,26 +167,29 @@ impl Grid {
         if x < 0.0 || y < 0.0 || z < 0.0 {
             return None;
         }
-        let i = (x / self.dx) as usize;
-        let j = (y / self.dy) as usize;
-        let k = (z / self.dz) as usize;
+        // Round to the nearest index
+        let i = (x / self.dx + 0.5) as usize;
+        let j = (y / self.dy + 0.5) as usize;
+        let k = (z / self.dz + 0.5) as usize;
         if i >= self.nx || j >= self.ny || k >= self.nz {
             return None;
         }
         Some((i, j, k))
     }
 
-    /// Get default CFL timestep
+    /// Get CFL timestep
     #[inline]
-    pub fn cfl_timestep_default(&self, sound_speed: f64) -> f64 {
+    pub fn cfl_timestep(&self, sound_speed: f64) -> f64 {
         let min_dx = self.dx.min(self.dy).min(self.dz);
+        // NOTE: The 0.5 factor should be documented or derived from a
+        // more general stability analysis (e.g., using the SpatialOrder enum).
         0.5 * min_dx / sound_speed
     }
 
-    /// Get CFL timestep (alias for compatibility)
+    /// Get total number of points
     #[inline]
-    pub fn cfl_timestep(&self, sound_speed: f64) -> f64 {
-        self.cfl_timestep_default(sound_speed)
+    pub fn total_points(&self) -> usize {
+        self.size()
     }
 
     /// Create a zero-initialized field with grid dimensions

@@ -36,7 +36,7 @@ impl CPMLSolver {
     /// * `dt` - Time step from the main solver
     /// * `sound_speed` - Reference sound speed (typically max in medium)
     pub fn new(config: CPMLConfig, grid: &Grid, dt: f64, sound_speed: f64) -> KwaversResult<Self> {
-        let cpml = CPMLBoundary::with_cfl(config, grid, dt, sound_speed)?;
+        let cpml = CPMLBoundary::new(config, grid, sound_speed)?;
 
         Ok(Self {
             cpml,
@@ -67,15 +67,10 @@ impl CPMLSolver {
         // Step 1: Compute pressure gradients
         self.compute_pressure_gradients(pressure, grid);
 
-        // Step 2: Update C-PML memory variables
-        self.cpml.update_acoustic_memory(&self.grad_x, 0);
-        self.cpml.update_acoustic_memory(&self.grad_y, 1);
-        self.cpml.update_acoustic_memory(&self.grad_z, 2);
-
-        // Step 3: Apply C-PML to gradients
-        self.cpml.apply_cpml_gradient(&mut self.grad_x, 0);
-        self.cpml.apply_cpml_gradient(&mut self.grad_y, 1);
-        self.cpml.apply_cpml_gradient(&mut self.grad_z, 2);
+        // Step 2: Update C-PML memory and apply corrections
+        self.cpml.update_and_apply_gradient_correction(&mut self.grad_x, 0);
+        self.cpml.update_and_apply_gradient_correction(&mut self.grad_y, 1);
+        self.cpml.update_and_apply_gradient_correction(&mut self.grad_z, 2);
 
         // Step 4: Update velocity field with modified gradients
         self.update_velocity_with_cpml(velocity, grid, medium, dt);

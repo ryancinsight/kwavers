@@ -223,7 +223,7 @@ mod tests {
     #[ignore] // TODO: Investigate compilation/execution hang
     fn test_physics_state_creation() {
         println!("Creating grid...");
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         println!("Creating PhysicsState...");
         let state = PhysicsState::new(grid);
         println!("PhysicsState created");
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_field_updates() {
-        let grid = Grid::new(5, 5, 5, 0.1, 0.1, 0.1);
+        let grid = Grid::new(5, 5, 5, 0.1, 0.1, 0.1).unwrap();
         let mut state = PhysicsState::new(grid);
 
         // Create test data
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_zero_copy_access() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let mut state = PhysicsState::new(grid);
 
         // Test zero-copy read
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix potential deadlock
     fn test_field_guard_deref() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let mut state = PhysicsState::new(grid);
 
         // Initialize field

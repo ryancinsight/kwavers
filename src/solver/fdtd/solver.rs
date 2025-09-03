@@ -8,7 +8,7 @@ use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::physics::mechanics::acoustic_wave::SpatialOrder;
 use log::info;
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::{s, Array3, ArrayView3, Zip};
 
 use super::config::FdtdConfig;
 use super::finite_difference::FiniteDifference;
@@ -30,6 +30,8 @@ pub struct FdtdSolver {
     metrics: FdtdMetrics,
     /// C-PML boundary (if enabled)
     pub(crate) cpml_boundary: Option<CPMLBoundary>,
+    /// Spatial order enum (validated at construction)
+    spatial_order: SpatialOrder,
 }
 
 impl FdtdSolver {
@@ -37,14 +39,13 @@ impl FdtdSolver {
     pub fn new(config: FdtdConfig, grid: &Grid) -> KwaversResult<Self> {
         info!("Initializing FDTD solver with config: {:?}", config);
 
-        // Validate configuration
-        if ![2, 4, 6].contains(&config.spatial_order) {
-            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+        // Validate spatial order by converting to enum
+        let spatial_order = SpatialOrder::from_usize(config.spatial_order)
+            .map_err(|_| KwaversError::Validation(ValidationError::FieldValidation {
                 field: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
-                constraint: "must be 2, 4, or 6".to_string(),
-            }));
-        }
+                constraint: "must be a supported order (e.g., 2, 4, 6)".to_string(),
+            }))?;
 
         // Create finite difference operator
         let fd_operator = FiniteDifference::new(config.spatial_order)?;
@@ -56,6 +57,7 @@ impl FdtdSolver {
             fd_operator,
             metrics: FdtdMetrics::new(),
             cpml_boundary: None,
+            spatial_order,
         })
     }
 
@@ -63,14 +65,13 @@ impl FdtdSolver {
     pub fn enable_cpml(
         &mut self,
         config: crate::boundary::cpml::CPMLConfig,
-        dt: f64,
+        _dt: f64,
         max_sound_speed: f64,
     ) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
-        self.cpml_boundary = Some(CPMLBoundary::with_cfl(
+        self.cpml_boundary = Some(CPMLBoundary::new(
             config,
             &self.grid,
-            dt,
             max_sound_speed,
         )?);
         Ok(())
@@ -176,84 +177,56 @@ impl FdtdSolver {
         axis: usize,
         offset: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut interpolated = Array3::zeros((nx, ny, nz));
-
-        // Simple linear interpolation based on offset
         if offset == 0.0 {
-            interpolated.assign(field);
-        } else if offset == 0.5 {
-            // Interpolate to half-grid positions
-            match axis {
-                0 => {
-                    for i in 0..nx - 1 {
-                        for j in 0..ny {
-                            for k in 0..nz {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i + 1, j, k]]);
-                            }
-                        }
-                    }
-                    // Handle boundary
-                    for j in 0..ny {
-                        for k in 0..nz {
-                            interpolated[[nx - 1, j, k]] = field[[nx - 1, j, k]];
-                        }
-                    }
-                }
-                1 => {
-                    for i in 0..nx {
-                        for j in 0..ny - 1 {
-                            for k in 0..nz {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i, j + 1, k]]);
-                            }
-                        }
-                    }
-                    // Handle boundary
-                    for i in 0..nx {
-                        for k in 0..nz {
-                            interpolated[[i, ny - 1, k]] = field[[i, ny - 1, k]];
-                        }
-                    }
-                }
-                2 => {
-                    for i in 0..nx {
-                        for j in 0..ny {
-                            for k in 0..nz - 1 {
-                                interpolated[[i, j, k]] =
-                                    0.5 * (field[[i, j, k]] + field[[i, j, k + 1]]);
-                            }
-                        }
-                    }
-                    // Handle boundary
-                    for i in 0..nx {
-                        for j in 0..ny {
-                            interpolated[[i, j, nz - 1]] = field[[i, j, nz - 1]];
-                        }
-                    }
-                }
-                _ => {
-                    return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                        field: "axis".to_string(),
-                        value: axis.to_string(),
-                        constraint: "must be 0, 1, or 2".to_string(),
-                    }))
-                }
-            }
+            return Ok(field.to_owned());
+        }
+        if offset != 0.5 {
+            return Err(KwaversError::NotImplemented("Only 0.5 offset supported".to_string()));
         }
 
+        let mut interpolated = Array3::zeros(field.raw_dim());
+        let (nx, ny, nz) = field.dim();
+
+        match axis {
+            0 => {
+                if nx < 2 { return Ok(interpolated); }
+                let mut interp_slice = interpolated.slice_mut(s![..nx - 1, .., ..]);
+                let s1 = field.slice(s![..nx - 1, .., ..]);
+                let s2 = field.slice(s![1.., .., ..]);
+                interp_slice.assign(&((&s1 + &s2) * 0.5));
+                interpolated.slice_mut(s![nx - 1, .., ..]).assign(&field.slice(s![nx - 1, .., ..]));
+            }
+            1 => {
+                if ny < 2 { return Ok(interpolated); }
+                let mut interp_slice = interpolated.slice_mut(s![.., ..ny - 1, ..]);
+                let s1 = field.slice(s![.., ..ny - 1, ..]);
+                let s2 = field.slice(s![.., 1.., ..]);
+                interp_slice.assign(&((&s1 + &s2) * 0.5));
+                interpolated.slice_mut(s![.., ny - 1, ..]).assign(&field.slice(s![.., ny - 1, ..]));
+            }
+            2 => {
+                if nz < 2 { return Ok(interpolated); }
+                let mut interp_slice = interpolated.slice_mut(s![.., .., ..nz - 1]);
+                let s1 = field.slice(s![.., .., ..nz - 1]);
+                let s2 = field.slice(s![.., .., 1..]);
+                interp_slice.assign(&((&s1 + &s2) * 0.5));
+                interpolated.slice_mut(s![.., .., nz - 1]).assign(&field.slice(s![.., .., nz - 1]));
+            }
+            _ => {
+                return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "axis".to_string(),
+                    value: axis.to_string(),
+                    constraint: "must be 0, 1, or 2".to_string(),
+                }));
+            }
+        }
         Ok(interpolated)
     }
 
     /// Calculate maximum stable time step based on CFL condition
     pub fn max_stable_dt(&self, max_sound_speed: f64) -> f64 {
         let min_dx = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-
-        // Use theoretically sound CFL limits for guaranteed stability
-        let spatial_order = SpatialOrder::from_usize(self.config.spatial_order);
-        let cfl_limit = spatial_order.cfl_limit();
-
+        let cfl_limit = self.spatial_order.cfl_limit();
         self.config.cfl_factor * cfl_limit * min_dx / max_sound_speed
     }
 

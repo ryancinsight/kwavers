@@ -87,9 +87,9 @@ impl GridFactory {
     pub fn create_grid(config: &GridConfig) -> KwaversResult<Grid> {
         config.validate()?;
 
-        Ok(Grid::new(
+        Grid::new(
             config.nx, config.ny, config.nz, config.dx, config.dy, config.dz,
-        ))
+        ).map_err(|e| KwaversError::GridError(e))
     }
 
     /// Create a uniform grid with equal spacing
