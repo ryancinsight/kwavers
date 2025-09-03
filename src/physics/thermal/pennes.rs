@@ -102,12 +102,12 @@ impl PennesSolver {
                     let laplacian = laplacian_x + laplacian_y + laplacian_z;
 
                     // Pennes equation
-                    let T = self.temperature_prev[[i, j, k]];
-                    let dt_dt = alpha * laplacian - perfusion_term * (T - self.properties.t_a)
+                    let t = self.temperature_prev[[i, j, k]];
+                    let dt_dt = alpha * laplacian - perfusion_term * (t - self.properties.t_a)
                         + self.properties.q_m / (self.properties.rho * self.properties.c)
                         + heat_source[[i, j, k]] / (self.properties.rho * self.properties.c);
 
-                    self.temperature[[i, j, k]] = T + self.dt * dt_dt;
+                    self.temperature[[i, j, k]] = t + self.dt * dt_dt;
                 }
             }
         }

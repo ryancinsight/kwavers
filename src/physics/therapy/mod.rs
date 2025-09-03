@@ -251,7 +251,7 @@ mod tests {
         assert!(ci > 0.0);
 
         let prob = detector.cavitation_probability(2e6);
-        assert!(prob >= 0.0 && prob <= 1.0);
+        assert!((0.0..=1.0).contains(&prob));
     }
 
     #[test]

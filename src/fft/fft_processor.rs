@@ -4,7 +4,7 @@
 //! - rustfft documentation: <https://docs.rs/rustfft/latest/rustfft>/
 //! - "Numerical Recipes" by Press et al. (2007) for FFT algorithms
 
-use ndarray::{Array3, Axis, Zip};
+use ndarray::{s, Array2, Array3, ArrayView1, Axis, Zip};
 use num_complex::Complex64;
 use rayon::prelude::*;
 use rustfft::{Fft, FftPlanner};
@@ -339,29 +339,28 @@ mod tests {
 
     #[test]
     fn test_fft_2d_gaussian() {
-        let fft2d = Fft2d::new(64, 64);
+        let mut fft2d = Fft2d::new(64, 64);
         let mut data = Array2::zeros((64, 64));
 
-        // Create Gaussian
+        // Create Gaussian (real-valued)
         let sigma = 5.0;
         for i in 0..64 {
             for j in 0..64 {
                 let x = (i as f64 - 32.0) / sigma;
                 let y = (j as f64 - 32.0) / sigma;
-                data[[i, j]] = Complex64::new((-0.5 * (x * x + y * y)).exp(), 0.0);
+                data[[i, j]] = (-0.5 * (x * x + y * y)).exp();
             }
         }
 
         let original = data.clone();
 
         // Forward and inverse transform
-        fft2d.forward(&mut data);
-        fft2d.inverse(&mut data);
+        let complex_data = fft2d.forward(&data);
+        let reconstructed = fft2d.inverse(&complex_data);
 
         // Check reconstruction
-        for ((i, j), val) in data.indexed_iter() {
-            assert_relative_eq!(val.re, original[[i, j]].re, epsilon = 1e-10);
-            assert_relative_eq!(val.im, original[[i, j]].im, epsilon = 1e-10);
+        for ((i, j), &val) in reconstructed.indexed_iter() {
+            assert_relative_eq!(val, original[[i, j]], epsilon = 1e-10);
         }
     }
 
@@ -370,31 +369,27 @@ mod tests {
         let mut fft3d = Fft3d::new(32, 32, 32);
         let mut data = Array3::zeros((32, 32, 32));
 
-        // Create test signal
+        // Create test signal (real-valued)
         let freq = 2.0 * PI / 32.0;
         for i in 0..32 {
             for j in 0..32 {
                 for k in 0..32 {
-                    data[[i, j, k]] =
-                        Complex64::new((freq * i as f64).cos() * (freq * j as f64).cos(), 0.0);
+                    data[[i, j, k]] = (freq * i as f64).cos() * (freq * j as f64).cos();
                 }
             }
         }
 
         // Compute energy before
-        let energy_before: f64 = data.iter().map(|x| x.norm_sqr()).sum();
+        let energy_before: f64 = data.iter().map(|x| x * x).sum();
 
         // FFT and IFFT
-        fft3d.forward(&mut data);
-        fft3d.inverse(&mut data);
+        let spectrum = fft3d.forward(&data);
+        let reconstructed = fft3d.inverse(&spectrum);
 
         // Compute energy after
-        let energy_after: f64 = data.iter().map(|x| x.norm_sqr()).sum();
+        let energy_after: f64 = reconstructed.iter().map(|x| x * x).sum();
 
         // Energy should be conserved (Parseval's theorem)
         assert_relative_eq!(energy_before, energy_after, epsilon = 1e-10 * energy_before);
     }
 }
-
-// Add missing imports at the top
-use ndarray::{s, Array2, ArrayView1};

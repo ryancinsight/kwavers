@@ -333,6 +333,9 @@ pub fn laplacian_second_order(field: ArrayView3<f64>, grid: &Grid) -> KwaversRes
     operator.apply(field)
 }
 
+// Re-export for convenience
+pub use self::FiniteDifferenceOrder as SpatialOrder;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,6 +417,3 @@ mod tests {
         assert!(diff > 1e-6, "Fourth order should differ from second order");
     }
 }
-
-// Re-export for convenience
-pub use self::FiniteDifferenceOrder as SpatialOrder;
