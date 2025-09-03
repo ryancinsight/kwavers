@@ -42,7 +42,7 @@ impl KWaveBenchmarks {
         let ny = 32; // 2D for proper spectral methods
         let nz = 1;
         let dx = DEFAULT_DX; // 0.1 mm
-        let grid = Grid::new(nx, ny, nz, dx, dx, dx);
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
 
         // Medium properties (water at 20°C)
         let c0 = SOUND_SPEED_WATER;

@@ -103,20 +103,12 @@ impl CPMLBoundary {
         component: usize,
     ) {
         // Step 1: Update memory from the original gradient
-        self.updater.update_memory_component(
-            &mut self.memory,
-            gradient,
-            component,
-            &self.profiles,
-        );
+        self.updater
+            .update_memory_component(&mut self.memory, gradient, component, &self.profiles);
 
         // Step 2: Apply the correction to the gradient
-        self.updater.apply_gradient_correction(
-            gradient,
-            &self.memory,
-            component,
-            &self.profiles,
-        );
+        self.updater
+            .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
     }
 
     /// Update acoustic memory for gradient component

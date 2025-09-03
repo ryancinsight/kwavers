@@ -13,13 +13,14 @@ mod tests {
     use crate::physics::traits::AcousticWaveModel;
     use crate::source::{PointSource, Source};
     use approx::assert_relative_eq;
+    use approx::assert_relative_eq;
     use ndarray::Array4;
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
     /// Should match standard linear acoustic wave equation
     #[test]
     fn test_linear_propagation() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-7;
 
         // Create linear configuration
@@ -32,13 +33,11 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
         // Point source at center
-        let source = PointSource::new(
-            (grid.nx / 2, grid.ny / 2, grid.nz / 2),
-            1.0, // amplitude
-            1e6, // 1 MHz frequency
-            0.0, // phase
-            0.0, // start time
-        );
+        use crate::source::{Signal, SineSignal};
+        use std::sync::Arc;
+        let signal = Arc::new(SineSignal::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let position = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
+        let source = PointSource::new(position, signal);
 
         // Initialize pressure field
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
@@ -66,12 +65,16 @@ mod tests {
     /// Test that homogeneous media warning is not triggered
     #[test]
     fn test_homogeneous_no_warning() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = KuznetsovConfig::default();
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
 
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
-        let source = PointSource::new((16, 16, 16), 1.0, 1e6, 0.0, 0.0);
+        use crate::source::{Signal, SineSignal};
+        use std::sync::Arc;
+        let signal = Arc::new(SineSignal::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let position = grid.indices_to_coordinates(16, 16, 16);
+        let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, 32, 32, 32));
         let prev = fields.index_axis(ndarray::Axis(0), 0).to_owned();
@@ -85,7 +88,7 @@ mod tests {
     /// Test energy conservation in linear regime
     #[test]
     fn test_energy_conservation_linear() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
 
         let mut config = KuznetsovConfig::default();
@@ -141,7 +144,7 @@ mod tests {
     /// Test that nonlinear effects produce expected harmonic generation
     #[test]
     fn test_nonlinear_harmonic_generation() {
-        let grid = Grid::new(128, 64, 64, 1e-4, 1e-3, 1e-3);
+        let grid = Grid::new(128, 64, 64, 1e-4, 1e-3, 1e-3).unwrap();
         let dt = 1e-8;
 
         let mut config = KuznetsovConfig::default();

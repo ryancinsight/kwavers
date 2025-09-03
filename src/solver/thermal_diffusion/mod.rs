@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_thermal_diffusion_creation() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = ThermalDiffusionConfig::default();
         let solver = ThermalDiffusionSolver::new(config, &grid);
         assert_eq!(solver.temperature().shape(), &[32, 32, 32]);
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_heat_diffusion() {
-        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         let config = ThermalDiffusionConfig {

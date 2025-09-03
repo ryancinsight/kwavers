@@ -57,10 +57,7 @@ pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
 /// Based on CFL condition for typical ultrasound speeds
 pub const MIN_TIME_STEP: f64 = 1e-10;
 
-/// Maximum time step for accuracy (s)
-/// Value: 1e-6
-/// Ensures adequate temporal resolution for `MHz` frequencies
-pub const MAX_TIME_STEP: f64 = 1e-6;
+// MAX_TIME_STEP moved to numerical.rs to avoid duplication
 
 /// Rayleigh collapse time coefficient
 /// Value: 0.915

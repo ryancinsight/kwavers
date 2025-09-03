@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_cfl_validation() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-7;
         let c = 1500.0;
 

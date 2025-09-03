@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_plugin_field_access() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let state = PhysicsState::new(grid);
 
         // Create accessor with specific permissions
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_unauthorized_access() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let state = PhysicsState::new(grid);
 
         // Create accessor with limited permissions

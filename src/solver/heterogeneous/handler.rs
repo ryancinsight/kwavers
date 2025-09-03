@@ -170,7 +170,7 @@ mod tests {
     #[test]
     fn test_heterogeneous_handler_creation() {
         let config = HeterogeneousConfig::default();
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let handler = HeterogeneousHandler::new(config, grid);
 
         assert!(handler.is_gibbs_mitigation_enabled());
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_initialization_with_homogeneous_medium() {
         let config = HeterogeneousConfig::default();
-        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
         let mut handler = HeterogeneousHandler::new(config, grid.clone());
 
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);

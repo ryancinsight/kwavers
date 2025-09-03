@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_artificial_viscosity_compression() {
         let visc = ArtificialViscosity::default();
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
 
         // Create test data with compression
         let mut velocity = Array4::<f64>::zeros((3, 10, 10, 10));

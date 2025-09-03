@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn test_elastic_wave_constructor() {
-        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let _elastic_wave = ElasticWave::new(&grid).unwrap();
         // Test that the constructor completes successfully
         assert!(true);
@@ -21,7 +21,7 @@ mod tests {
 
     #[test]
     fn test_elastic_wave_single_step() {
-        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let mut elastic_wave = ElasticWave::new(&grid).unwrap();
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         let source = NullSource::new();

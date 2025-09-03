@@ -121,7 +121,7 @@ impl BenchmarkRunner {
     where
         F: Fn(&Grid) -> KwaversResult<()>,
     {
-        let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3)?;
         let mut times = Vec::with_capacity(self.config.iterations);
 
         // Warmup

@@ -108,7 +108,7 @@ impl MixedDomainPropagationPlugin {
             1.0,
             1.0,
             1.0,
-        );
+        )?;
 
         // Apply 3D FFT
         let mut fft = Fft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);
@@ -130,7 +130,7 @@ impl MixedDomainPropagationPlugin {
             1.0,
             1.0,
             1.0,
-        );
+        )?;
 
         // Apply 3D IFFT
         let mut ifft = Ifft3d::new(field.shape()[0], field.shape()[1], field.shape()[2]);

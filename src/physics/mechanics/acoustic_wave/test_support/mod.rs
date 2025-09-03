@@ -14,7 +14,7 @@ pub mod tests {
         use super::mocks::mocks::HeterogeneousMediumMock;
 
         let medium = HeterogeneousMediumMock::new(false);
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
 
         // Zero frequency should give zero diffusivity
         let diffusivity = compute_acoustic_diffusivity(&medium, 0.0, 0.0, 0.0, 0.0, &grid);
@@ -81,7 +81,7 @@ pub mod tests {
     fn test_heterogeneous_medium_position_dependence() {
         use super::mocks::mocks::HeterogeneousMediumMock;
 
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let medium = HeterogeneousMediumMock::new(true);
 
         // Test that different positions give different values

@@ -174,8 +174,8 @@ mod tests {
     fn test_fft_cache() {
         let cache = FftCache::new();
 
-        let grid1 = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
-        let grid2 = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid1 = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let grid2 = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
 
         // Get FFT instances
         let fft1_a = cache.get_or_create(&grid1);

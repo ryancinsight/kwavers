@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_laplacian_constant_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let field = Array3::from_elem((10, 10, 10), 5.0);
 
         let operator = LaplacianOperator::second_order(&grid);
@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_laplacian_linear_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let mut field = Array3::zeros((10, 10, 10));
 
         // Create linear field: f(x,y,z) = x + y + z
@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_different_orders() {
-        let grid = Grid::new(20, 20, 20, 0.1, 0.1, 0.1);
+        let grid = Grid::new(20, 20, 20, 0.1, 0.1, 0.1).unwrap();
         let mut field = Array3::zeros((20, 20, 20));
 
         // Create a smooth test field

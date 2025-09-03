@@ -398,6 +398,7 @@ pub fn integrate_bubble_dynamics_stable(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_rayleigh_plesset_equilibrium() {

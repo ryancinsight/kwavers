@@ -2,7 +2,7 @@
 //!
 //! Follows Information Expert principle - knows how to create and validate grids
 
-use crate::error::{ConfigError, KwaversResult};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use crate::grid::Grid;
 use crate::physics::constants::numerical::MIN_DX;
 
@@ -89,7 +89,8 @@ impl GridFactory {
 
         Grid::new(
             config.nx, config.ny, config.nz, config.dx, config.dy, config.dz,
-        ).map_err(|e| KwaversError::GridError(e))
+        )
+        .map_err(KwaversError::Grid)
     }
 
     /// Create a uniform grid with equal spacing

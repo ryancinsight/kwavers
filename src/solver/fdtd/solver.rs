@@ -16,7 +16,7 @@ use super::metrics::FdtdMetrics;
 use super::staggered_grid::StaggeredGrid;
 
 /// FDTD solver for acoustic wave propagation
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct FdtdSolver {
     /// Configuration
     pub(crate) config: FdtdConfig,
@@ -40,12 +40,15 @@ impl FdtdSolver {
         info!("Initializing FDTD solver with config: {:?}", config);
 
         // Validate spatial order by converting to enum
-        let spatial_order = SpatialOrder::from_usize(config.spatial_order)
-            .map_err(|_| KwaversError::Validation(ValidationError::FieldValidation {
+        let spatial_order = SpatialOrder::from_usize(config.spatial_order);
+        // Validate that we got a valid order (not the default)
+        if config.spatial_order != 2 && config.spatial_order != 4 && config.spatial_order != 6 {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
-                constraint: "must be a supported order (e.g., 2, 4, 6)".to_string(),
-            }))?;
+                constraint: "must be 2, 4, or 6".to_string(),
+            }));
+        }
 
         // Create finite difference operator
         let fd_operator = FiniteDifference::new(config.spatial_order)?;
@@ -69,11 +72,7 @@ impl FdtdSolver {
         max_sound_speed: f64,
     ) -> KwaversResult<()> {
         info!("Enabling C-PML boundary conditions");
-        self.cpml_boundary = Some(CPMLBoundary::new(
-            config,
-            &self.grid,
-            max_sound_speed,
-        )?);
+        self.cpml_boundary = Some(CPMLBoundary::new(config, &self.grid, max_sound_speed)?);
         Ok(())
     }
 
@@ -134,15 +133,10 @@ impl FdtdSolver {
 
         // Apply C-PML if enabled
         if let Some(ref mut cpml) = self.cpml_boundary {
-            // Update C-PML memory variables for each component
-            cpml.update_acoustic_memory(&grad_x, 0);
-            cpml.update_acoustic_memory(&grad_y, 1);
-            cpml.update_acoustic_memory(&grad_z, 2);
-
-            // Apply C-PML to gradients
-            cpml.apply_cpml_gradient(&mut grad_x, 0);
-            cpml.apply_cpml_gradient(&mut grad_y, 1);
-            cpml.apply_cpml_gradient(&mut grad_z, 2);
+            // Update C-PML memory and apply corrections
+            cpml.update_and_apply_gradient_correction(&mut grad_x, 0);
+            cpml.update_and_apply_gradient_correction(&mut grad_y, 1);
+            cpml.update_and_apply_gradient_correction(&mut grad_z, 2);
         }
 
         // Update velocity: v^{n+1/2} = v^{n-1/2} - dt/rho * grad(p)
@@ -181,7 +175,9 @@ impl FdtdSolver {
             return Ok(field.to_owned());
         }
         if offset != 0.5 {
-            return Err(KwaversError::NotImplemented("Only 0.5 offset supported".to_string()));
+            return Err(KwaversError::NotImplemented(
+                "Only 0.5 offset supported".to_string(),
+            ));
         }
 
         let mut interpolated = Array3::zeros(field.raw_dim());
@@ -189,28 +185,40 @@ impl FdtdSolver {
 
         match axis {
             0 => {
-                if nx < 2 { return Ok(interpolated); }
+                if nx < 2 {
+                    return Ok(interpolated);
+                }
                 let mut interp_slice = interpolated.slice_mut(s![..nx - 1, .., ..]);
                 let s1 = field.slice(s![..nx - 1, .., ..]);
                 let s2 = field.slice(s![1.., .., ..]);
                 interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated.slice_mut(s![nx - 1, .., ..]).assign(&field.slice(s![nx - 1, .., ..]));
+                interpolated
+                    .slice_mut(s![nx - 1, .., ..])
+                    .assign(&field.slice(s![nx - 1, .., ..]));
             }
             1 => {
-                if ny < 2 { return Ok(interpolated); }
+                if ny < 2 {
+                    return Ok(interpolated);
+                }
                 let mut interp_slice = interpolated.slice_mut(s![.., ..ny - 1, ..]);
                 let s1 = field.slice(s![.., ..ny - 1, ..]);
                 let s2 = field.slice(s![.., 1.., ..]);
                 interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated.slice_mut(s![.., ny - 1, ..]).assign(&field.slice(s![.., ny - 1, ..]));
+                interpolated
+                    .slice_mut(s![.., ny - 1, ..])
+                    .assign(&field.slice(s![.., ny - 1, ..]));
             }
             2 => {
-                if nz < 2 { return Ok(interpolated); }
+                if nz < 2 {
+                    return Ok(interpolated);
+                }
                 let mut interp_slice = interpolated.slice_mut(s![.., .., ..nz - 1]);
                 let s1 = field.slice(s![.., .., ..nz - 1]);
                 let s2 = field.slice(s![.., .., 1..]);
                 interp_slice.assign(&((&s1 + &s2) * 0.5));
-                interpolated.slice_mut(s![.., .., nz - 1]).assign(&field.slice(s![.., .., nz - 1]));
+                interpolated
+                    .slice_mut(s![.., .., nz - 1])
+                    .assign(&field.slice(s![.., .., nz - 1]));
             }
             _ => {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {

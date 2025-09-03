@@ -350,14 +350,14 @@ mod tests {
 
     #[test]
     fn test_chemical_model_creation() {
-        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let model = ChemicalModel::new(&grid, true, true).unwrap();
         assert_eq!(model.state(), &ChemicalModelState::Initialized);
     }
 
     #[test]
     fn test_reaction_config() {
-        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let mut model = ChemicalModel::new(&grid, true, false).unwrap();
 
         let config = ChemicalReactionConfig {

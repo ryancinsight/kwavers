@@ -26,7 +26,7 @@ mod tests {
         let dx = 1e-3; // 1mm
         let dt = dx / (SOUND_SPEED_WATER * 2.0); // CFL condition
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let state = PhysicsState::new(grid.clone());
 
         // Initialize Gaussian pulse
@@ -112,7 +112,7 @@ mod tests {
         let dx = 1e-3;
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let state = PhysicsState::new(grid.clone());
 
         // Initialize standing wave (first mode)

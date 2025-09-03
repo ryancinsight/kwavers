@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_exact_dispersion_correction() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-6;
         let c_ref = 1500.0;
 
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_correction_methods_consistency() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-6;
         let c_ref = 1500.0;
 

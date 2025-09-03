@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_laplacian_constant_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let field = Array3::from_elem((10, 10, 10), 1.0);
 
         let lap = laplacian(field.view(), &grid, SpatialOrder::Second).unwrap();
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_divergence_uniform_flow() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let vx = Array3::from_elem((10, 10, 10), 1.0);
         let vy = Array3::zeros((10, 10, 10));
         let vz = Array3::zeros((10, 10, 10));

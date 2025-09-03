@@ -241,12 +241,12 @@ impl KzkSolverPlugin {
         source_pressure: f64,
         frequency: f64,
         medium: &dyn Medium,
-    ) -> f64 {
+    ) -> KwaversResult<f64> {
         use crate::medium::AcousticProperties;
         use std::f64::consts::PI;
 
         // Get medium properties at origin
-        let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0); // Dummy grid for point evaluation
+        let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?; // Dummy grid for point evaluation
         let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
         let sound_speed = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
@@ -254,7 +254,7 @@ impl KzkSolverPlugin {
         // Shock formation distance: x_shock = ρc³/(βωp₀)
         let omega = 2.0 * PI * frequency;
 
-        density * sound_speed.powi(3) / (beta * omega * source_pressure)
+        Ok(density * sound_speed.powi(3) / (beta * omega * source_pressure))
     }
 
     /// Apply retarded time transformation

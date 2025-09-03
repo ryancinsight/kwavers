@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_nonlinearity_parameter() {
-        let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::water(&grid);
 
         let b_over_a = get_nonlinearity_parameter(&medium as &dyn Medium, 0.0, 0.0, 0.0, &grid);

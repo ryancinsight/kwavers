@@ -8,7 +8,7 @@ mod tests {
     #[test]
     fn test_kuznetsov_creation() {
         // Test that we can create a Kuznetsov solver with default configuration
-        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
         let config = config::KuznetsovConfig::default();
         let solver = solver::KuznetsovWave::new(config, &grid);
 
@@ -21,7 +21,7 @@ mod tests {
     #[test]
     fn test_kuznetsov_config_validation() {
         // Test configuration validation
-        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
 
         // Test valid config
         let valid_config = config::KuznetsovConfig::default();
@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_numerical_methods() {
         // Test that numerical methods produce correct dimensions
-        let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001);
+        let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap();
         let field = ndarray::Array3::from_elem((16, 16, 16), 1.0);
 
         // Test Laplacian
