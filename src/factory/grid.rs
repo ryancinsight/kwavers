@@ -2,9 +2,9 @@
 //!
 //! Follows Information Expert principle - knows how to create and validate grids
 
-use crate::constants;
-use crate::error::{ConfigError, KwaversResult};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use crate::grid::Grid;
+use crate::physics::constants::numerical::MIN_DX;
 
 /// Grid configuration
 #[derive(Debug, Clone)]
@@ -52,14 +52,11 @@ impl GridConfig {
         }
 
         // Check minimum grid spacing
-        if self.dx < constants::stability::MIN_DX
-            || self.dy < constants::stability::MIN_DX
-            || self.dz < constants::stability::MIN_DX
-        {
+        if self.dx < MIN_DX || self.dy < MIN_DX || self.dz < MIN_DX {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid spacing".to_string(),
                 value: format!("({}, {}, {})", self.dx, self.dy, self.dz),
-                constraint: format!("Spacing must be >= {}", constants::stability::MIN_DX),
+                constraint: format!("Spacing must be >= {}", MIN_DX),
             }
             .into());
         }
@@ -90,9 +87,10 @@ impl GridFactory {
     pub fn create_grid(config: &GridConfig) -> KwaversResult<Grid> {
         config.validate()?;
 
-        Ok(Grid::new(
+        Grid::new(
             config.nx, config.ny, config.nz, config.dx, config.dy, config.dz,
-        ))
+        )
+        .map_err(KwaversError::Grid)
     }
 
     /// Create a uniform grid with equal spacing

@@ -15,10 +15,11 @@ pub fn create_test_grid(nx: usize, ny: usize, nz: usize) -> Grid {
         nx,
         ny,
         nz,
-        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
-        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
-        crate::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
+        crate::physics::constants::numerical::DEFAULT_SPATIAL_RESOLUTION,
     )
+    .unwrap()
 }
 
 /// Create a standard test grid with default dimensions (32x32x32)
@@ -29,8 +30,8 @@ pub fn create_default_test_grid() -> Grid {
 /// Create a standard test medium for the given grid
 pub fn create_test_medium(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(
-        crate::constants::acoustic::WATER_DENSITY,
-        crate::constants::acoustic::WATER_SOUND_SPEED,
+        crate::physics::constants::DENSITY_WATER,
+        crate::physics::constants::SOUND_SPEED_WATER,
         0.1,
         1.0,
         grid,

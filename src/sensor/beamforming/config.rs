@@ -1,6 +1,6 @@
 //! Beamforming configuration
 
-use crate::constants::physics::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
+use crate::physics::constants::{SAMPLING_FREQUENCY_DEFAULT, SOUND_SPEED_TISSUE};
 
 /// Configuration for beamforming operations
 #[derive(Debug, Clone)]

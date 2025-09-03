@@ -127,7 +127,7 @@ impl NumericalValidator {
     /// Create new validator with default test configuration
     #[must_use]
     pub fn new() -> Self {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid");
         let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
         Self { grid, medium }

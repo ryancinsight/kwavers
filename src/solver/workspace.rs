@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_workspace_creation() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let workspace = SolverWorkspace::new(&grid);
 
         assert_eq!(workspace.fft_buffer.shape(), &[64, 64, 64]);
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_workspace_pool() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let pool = WorkspacePool::new(grid, 2);
 
         assert_eq!(pool.size(), 2);

@@ -101,7 +101,7 @@ impl HybridValidationSuite {
         let dt = self.compute_time_step()?;
 
         let cfl = max_eigenvalue * dt;
-        Ok(cfl < crate::constants::numerical::CFL_SAFETY_FACTOR)
+        Ok(cfl < crate::physics::constants::numerical::CFL_SAFETY_FACTOR)
     }
 
     /// Compute error for a given grid size
@@ -125,7 +125,7 @@ impl HybridValidationSuite {
 
     /// Compute relative error
     fn compute_relative_error(&self, computed: &f64, reference: &f64) -> KwaversResult<f64> {
-        if reference.abs() > crate::constants::numerical::EPSILON {
+        if reference.abs() > crate::physics::constants::numerical::EPSILON {
             Ok((computed - reference).abs() / reference.abs())
         } else {
             Ok(computed.abs())

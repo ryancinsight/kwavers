@@ -436,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_water_properties() {
-        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let water = HomogeneousMedium::water(&grid);
 
         assert_eq!(water.density(0, 0, 0), 998.0);
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn test_blood_properties() {
-        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let blood = HomogeneousMedium::blood(&grid);
 
         assert_eq!(blood.density(0, 0, 0), 1060.0);
@@ -457,7 +457,7 @@ mod tests {
 
     #[test]
     fn test_air_properties() {
-        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
+        let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let air = HomogeneousMedium::air(&grid);
 
         assert_eq!(air.density(0, 0, 0), 1.204);

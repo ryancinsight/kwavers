@@ -3,7 +3,7 @@
 //! Validates basic wave propagation against analytical solutions
 //! Reference: Pierce (1989) - "Acoustics: An Introduction"
 
-use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::grid::Grid;
 use crate::physics::field_indices;
 use crate::physics::state::PhysicsState;
@@ -26,7 +26,7 @@ mod tests {
         let dx = 1e-3; // 1mm
         let dt = dx / (SOUND_SPEED_WATER * 2.0); // CFL condition
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let state = PhysicsState::new(grid.clone());
 
         // Initialize Gaussian pulse
@@ -112,7 +112,7 @@ mod tests {
         let dx = 1e-3;
         let dt = dx / (SOUND_SPEED_WATER * 2.0);
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let state = PhysicsState::new(grid.clone());
 
         // Initialize standing wave (first mode)

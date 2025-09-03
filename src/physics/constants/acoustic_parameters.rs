@@ -42,11 +42,6 @@ pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 /// Reference: NIST Chemistry `WebBook`
 pub const WATER_SURFACE_TENSION_20C: f64 = 0.0728;
 
-/// Standard atmospheric pressure (Pa)
-/// Value: 101325
-/// Reference: NIST Special Publication 330
-pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
-
 /// Water vapor pressure at 20°C (Pa)
 /// Value: 2339
 /// Reference: Wagner & Pruss (2002). "The IAPWS formulation for water"
@@ -62,10 +57,7 @@ pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
 /// Based on CFL condition for typical ultrasound speeds
 pub const MIN_TIME_STEP: f64 = 1e-10;
 
-/// Maximum time step for accuracy (s)
-/// Value: 1e-6
-/// Ensures adequate temporal resolution for `MHz` frequencies
-pub const MAX_TIME_STEP: f64 = 1e-6;
+// MAX_TIME_STEP moved to numerical.rs to avoid duplication
 
 /// Rayleigh collapse time coefficient
 /// Value: 0.915
@@ -111,3 +103,91 @@ pub const SHOCK_DETECTION_THRESHOLD: f64 = 0.5;
 /// Value: 1e-3
 /// High-order modes should be < 0.1% for smooth solutions
 pub const MODAL_DECAY_THRESHOLD: f64 = 1e-3;
+
+// ============================================================================
+// Medical Ultrasound Frequency Ranges
+// ============================================================================
+
+/// Minimum diagnostic ultrasound frequency (Hz)
+/// Value: 1 MHz
+pub const DIAGNOSTIC_FREQ_MIN: f64 = 1e6;
+
+/// Maximum diagnostic ultrasound frequency (Hz)
+/// Value: 20 MHz
+pub const DIAGNOSTIC_FREQ_MAX: f64 = 20e6;
+
+/// Minimum therapeutic ultrasound frequency (Hz)
+/// Value: 0.5 MHz
+pub const THERAPEUTIC_FREQ_MIN: f64 = 0.5e6;
+
+/// Maximum therapeutic ultrasound frequency (Hz)
+/// Value: 5 MHz
+pub const THERAPEUTIC_FREQ_MAX: f64 = 5e6;
+
+// ============================================================================
+// HIFU (High-Intensity Focused Ultrasound) Parameters
+// ============================================================================
+
+/// Typical HIFU frequency (Hz)
+/// Value: 1 MHz
+pub const HIFU_FREQUENCY: f64 = 1e6;
+
+/// Minimum HIFU intensity (W/cm²)
+/// Value: 100 W/cm²
+pub const HIFU_INTENSITY_MIN: f64 = 100.0;
+
+/// Maximum HIFU intensity (W/cm²)
+/// Value: 10000 W/cm²
+pub const HIFU_INTENSITY_MAX: f64 = 10000.0;
+
+// ============================================================================
+// Bone Properties
+// ============================================================================
+
+/// Bone sound speed (m/s)
+/// Value: 3500 m/s
+/// Reference: Hosokawa & Otani (1997). "Ultrasonic wave propagation in bovine cancellous bone"
+pub const BONE_SOUND_SPEED: f64 = 3500.0;
+
+/// Bone density (kg/m³)
+/// Value: 1900 kg/m³
+/// Reference: Duck, F. A. (1990). "Physical properties of tissue"
+pub const BONE_DENSITY: f64 = 1900.0;
+
+/// Bone nonlinearity parameter (B/A)
+/// Value: 8.0
+/// Reference: Estimated from tissue properties
+pub const BONE_NONLINEARITY: f64 = 8.0;
+
+/// Bone attenuation coefficient [dB/(MHz·cm)]
+/// Value: 20.0
+/// Reference: Wear, K. A. (2000). "Measurements of phase velocity and group velocity in bone"
+pub const BONE_ATTENUATION: f64 = 20.0;
+
+// ============================================================================
+// Reference Frequencies
+// ============================================================================
+
+/// Reference frequency for absorption calculations (Hz)
+/// Standard reference: 1 MHz
+pub const REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ: f64 = 1e6;
+
+/// Default sampling frequency (Hz)
+/// Standard: 10 MHz for ultrasound simulations
+pub const SAMPLING_FREQUENCY_DEFAULT: f64 = 10e6;
+
+// ============================================================================
+// Absorption and Attenuation Parameters
+// ============================================================================
+
+/// Tissue absorption coefficient at 1 MHz [dB/(MHz^y cm)]
+pub const ABSORPTION_TISSUE: f64 = 0.75;
+
+/// Absorption power law exponent
+pub const ABSORPTION_POWER: f64 = 1.05;
+
+/// Conversion from dB to Nepers
+pub const DB_TO_NP: f64 = 0.1151;
+
+/// Water nonlinearity parameter (B/A)
+pub const NONLINEARITY_WATER: f64 = 5.2;

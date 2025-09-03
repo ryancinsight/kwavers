@@ -3,7 +3,7 @@
 //! Implements stiffness matrices in Voigt notation for various symmetries
 
 use super::types::AnisotropyType;
-use crate::constants::elastic::{LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE};
+use crate::physics::constants::{LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE};
 use crate::{KwaversError, KwaversResult, ValidationError};
 use ndarray::Array2;
 

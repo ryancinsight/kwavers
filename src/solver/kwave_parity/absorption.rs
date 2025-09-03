@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_power_law_coefficients() {
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
 
         // Typical tissue parameters
         let alpha_coeff = 0.75; // dB/(MHz^y cm)

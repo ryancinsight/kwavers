@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::constants::numerical::{
+use crate::physics::constants::numerical::{
     LINEAR_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT, QUADRATIC_VISCOSITY_COEFF,
     VON_NEUMANN_RICHTMYER_COEFF,
 };
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_artificial_viscosity_compression() {
         let visc = ArtificialViscosity::default();
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
 
         // Create test data with compression
         let mut velocity = Array4::<f64>::zeros((3, 10, 10, 10));

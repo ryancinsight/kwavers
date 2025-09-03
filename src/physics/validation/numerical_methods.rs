@@ -54,7 +54,7 @@ mod tests {
         assert!(ppw >= PPW_MINIMUM as f64, "Insufficient spatial sampling");
 
         let config = PstdConfig::default();
-        let grid = Grid::new(n, n, 1, dx, dx, dx);
+        let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
         let mut solver = PstdSolver::new(config, &grid).unwrap();
 
         // Initialize plane wave in the solver
@@ -296,7 +296,7 @@ mod tests {
         let base_n = 32;
         let dx = 1e-3;
 
-        let grid = Grid::new(base_n, base_n, base_n, dx, dx, dx);
+        let grid = Grid::new(base_n, base_n, base_n, dx, dx, dx).unwrap();
         let mut amr = AMRSolver::new(&grid, 3).unwrap();
 
         // Create localized feature requiring refinement

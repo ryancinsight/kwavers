@@ -331,7 +331,7 @@ pub(crate) mod mocks {
             &self.density // Return reference for test
         }
 
-        fn update_thermal_field(&mut self, _new_temperature: &Array3<f64>) {
+        fn update_thermal_field(&mut self, _temperature: &Array3<f64>) {
             // No-op for test
         }
     }

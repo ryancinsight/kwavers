@@ -435,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_dg_solver_creation() {
-        let grid = Arc::new(Grid::new(32, 32, 32, 0.001, 0.001, 0.001));
+        let grid = Arc::new(Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap());
         let config = DGConfig::default();
 
         // Debug: Check intermediate steps
@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn test_upwind_flux() {
-        let grid = Arc::new(Grid::new(32, 32, 32, 0.001, 0.001, 0.001));
+        let grid = Arc::new(Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap());
         let config = DGConfig::default();
         let solver = DGSolver::new(config, grid).unwrap();
 

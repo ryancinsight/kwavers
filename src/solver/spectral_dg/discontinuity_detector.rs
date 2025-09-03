@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn test_smooth_field_detection() {
-        let grid = Grid::new(32, 32, 32, 1.0, 1.0, 1.0);
+        let grid = Grid::new(32, 32, 32, 1.0, 1.0, 1.0).unwrap();
         // Use a higher threshold for smooth field detection
         let detector = DiscontinuityDetector::new(0.5);
 
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_step_function_detection() {
-        let grid = Grid::new(32, 32, 32, 1.0, 1.0, 1.0);
+        let grid = Grid::new(32, 32, 32, 1.0, 1.0, 1.0).unwrap();
         let detector = DiscontinuityDetector::new(0.1);
 
         // Step function - should detect discontinuity

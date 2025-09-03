@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_westervelt_fdtd_creation() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = WesterveltFdtdConfig::default();
         let solver = WesterveltFdtd::new(config, &grid);
 
@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn test_linear_wave_propagation() {
         // Test that with β=0 (no nonlinearity), we get linear wave propagation
-        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let mut medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
         // Set nonlinearity to zero for linear test
         medium.nonlinearity = 0.0;

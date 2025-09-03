@@ -55,14 +55,20 @@ impl CPMLBoundary {
         })
     }
 
-    /// Create with CFL and sound speed (for backward compatibility)
+    /// # Deprecated
+    /// The CFL factor is now handled by the solver. This constructor is provided
+    /// for backward compatibility, and the `_cfl` parameter is ignored.
+    /// Use `CPMLBoundary::new` instead.
+    #[deprecated(
+        since = "3.0.0",
+        note = "CFL factor is now handled by the solver. Use `CPMLBoundary::new` instead."
+    )]
     pub fn with_cfl(
         config: CPMLConfig,
         grid: &Grid,
         _cfl: f64,
         sound_speed: f64,
     ) -> KwaversResult<Self> {
-        // CFL is now handled by the solver, not the boundary
         Self::new(config, grid, sound_speed)
     }
 
@@ -89,13 +95,39 @@ impl CPMLBoundary {
         self.memory.reset();
     }
 
+    /// Updates CPML memory and applies the correction to a gradient field.
+    /// This is the primary method for applying the CPML correction.
+    pub fn update_and_apply_gradient_correction(
+        &mut self,
+        gradient: &mut ndarray::Array3<f64>,
+        component: usize,
+    ) {
+        // Step 1: Update memory from the original gradient
+        self.updater
+            .update_memory_component(&mut self.memory, gradient, component, &self.profiles);
+
+        // Step 2: Apply the correction to the gradient
+        self.updater
+            .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
+    }
+
     /// Update acoustic memory for gradient component
+    /// # Deprecated - Use update_and_apply_gradient_correction instead
+    #[deprecated(
+        since = "3.0.0",
+        note = "Use `update_and_apply_gradient_correction` for the complete CPML update"
+    )]
     pub fn update_acoustic_memory(&mut self, gradient: &ndarray::Array3<f64>, component: usize) {
         self.updater
             .update_memory_component(&mut self.memory, gradient, component, &self.profiles);
     }
 
     /// Apply CPML gradient correction
+    /// # Deprecated - Use update_and_apply_gradient_correction instead
+    #[deprecated(
+        since = "3.0.0",
+        note = "Use `update_and_apply_gradient_correction` for the complete CPML update"
+    )]
     pub fn apply_cpml_gradient(&mut self, gradient: &mut ndarray::Array3<f64>, component: usize) {
         self.updater
             .apply_gradient_correction(gradient, &self.memory, component, &self.profiles);
@@ -107,11 +139,8 @@ impl CPMLBoundary {
         &self.config
     }
 
-    /// Enable dispersive support
-    pub fn enable_dispersive_support(&mut self, _params: DispersiveParameters) {
-        // Dispersive support is handled in the dispersive module
-        // This is a no-op for backward compatibility
-    }
+    // Dispersive support is configured via CPMLConfig and is handled
+    // automatically during initialization. See CPMLConfig documentation.
 
     /// Estimate reflection coefficient
     #[must_use]
@@ -120,15 +149,13 @@ impl CPMLBoundary {
     }
 }
 
-// Implement required traits
+// Note: Clone implementation removed to prevent accidental expensive copies.
+// Use `recreate` method to create a new boundary with fresh state.
 
-impl Clone for CPMLBoundary {
-    fn clone(&self) -> Self {
-        Self {
-            config: self.config.clone(),
-            profiles: self.profiles.clone(),
-            memory: self.memory.clone(),
-            updater: self.updater.clone(),
-        }
+impl CPMLBoundary {
+    /// Creates a new `CPMLBoundary` from the existing configuration,
+    /// with a fresh (zeroed) state.
+    pub fn recreate(&self, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
+        Self::new(self.config.clone(), grid, sound_speed)
     }
 }

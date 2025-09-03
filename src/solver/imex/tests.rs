@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn test_imex_rk_ssp2() {
-        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap());
         let config = IMEXConfig {
             tolerance: 1e-6, // Relax tolerance for tests
             ..Default::default()
@@ -40,7 +40,7 @@ mod tests {
         };
 
         let scheme = IMEXSchemeType::RungeKutta(IMEXRK::new(rk_config));
-        let mut integrator = IMEXIntegrator::new(config, scheme, grid);
+        let mut integrator = IMEXIntegrator::new(config, scheme, grid.clone());
 
         let field = Array3::from_elem((4, 4, 4), 1.0);
         let dt = 0.01;
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn test_imex_rk_ark3() {
-        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap());
         let config = IMEXConfig {
             tolerance: 1e-6, // Relax tolerance for tests
             ..Default::default()
@@ -68,7 +68,7 @@ mod tests {
         };
 
         let scheme = IMEXSchemeType::RungeKutta(IMEXRK::new(rk_config));
-        let mut integrator = IMEXIntegrator::new(config, scheme, grid);
+        let mut integrator = IMEXIntegrator::new(config, scheme, grid.clone());
 
         let field = Array3::from_elem((4, 4, 4), 1.0);
         let dt = 0.01;
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_imex_bdf2() {
-        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap());
         let config = IMEXConfig {
             tolerance: 1e-6, // Relax tolerance for tests
             ..Default::default()
@@ -97,7 +97,7 @@ mod tests {
 
         let mut bdf = IMEXBDF::new(bdf_config.clone());
         let scheme = IMEXSchemeType::BDF(bdf.clone());
-        let mut integrator = IMEXIntegrator::new(config, scheme, grid);
+        let mut integrator = IMEXIntegrator::new(config, scheme, grid.clone());
 
         let mut field = Array3::from_elem((4, 4, 4), 1.0);
         let dt = 0.01;
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn test_conservation() {
         // Test that IMEX schemes preserve linear invariants
-        let grid = Arc::new(Grid::new(8, 8, 8, 1.0, 1.0, 1.0));
+        let grid = Arc::new(Grid::new(8, 8, 8, 1.0, 1.0, 1.0).unwrap());
         let config = IMEXConfig {
             adaptive_stiffness: false,
             check_stability: false,
@@ -211,7 +211,7 @@ mod tests {
         };
 
         let scheme = IMEXSchemeType::RungeKutta(IMEXRK::new(IMEXRKConfig::default()));
-        let mut integrator = IMEXIntegrator::new(config, scheme, grid);
+        let mut integrator = IMEXIntegrator::new(config, scheme, grid.clone());
 
         let field = Array3::from_elem((8, 8, 8), 1.0);
         let dt = 0.01;

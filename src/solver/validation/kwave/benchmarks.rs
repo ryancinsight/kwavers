@@ -10,7 +10,9 @@
 use crate::grid::Grid;
 use crate::medium::HomogeneousMedium;
 use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use crate::solver::constants::{DEFAULT_DX, PLANE_WAVE_ERROR_TOLERANCE};
+// Constants that should be defined in solver module
+const DEFAULT_DX: f64 = 0.1e-3;
+const PLANE_WAVE_ERROR_TOLERANCE: f64 = 0.01;
 use crate::KwaversResult;
 
 use std::f64::consts::PI;
@@ -25,6 +27,7 @@ pub struct BenchmarkResult {
 }
 
 /// k-Wave benchmark test cases
+#[derive(Debug)]
 pub struct KWaveBenchmarks;
 
 impl KWaveBenchmarks {
@@ -39,7 +42,7 @@ impl KWaveBenchmarks {
         let ny = 32; // 2D for proper spectral methods
         let nz = 1;
         let dx = DEFAULT_DX; // 0.1 mm
-        let grid = Grid::new(nx, ny, nz, dx, dx, dx);
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
 
         // Medium properties (water at 20°C)
         let c0 = SOUND_SPEED_WATER;
@@ -159,7 +162,7 @@ impl KWaveBenchmarks {
     /// Test 2: Point source radiation pattern
     /// Validates spherical wave decay: p ∝ 1/r
     pub fn point_source_pattern() -> KwaversResult<BenchmarkResult> {
-        // TODO: Implement when 3D spectral methods are fully validated
+        // TODO: Implement when factory API is stabilized
         Ok(BenchmarkResult {
             test_name: "Point Source 1/r Decay (PSTD)".to_string(),
             max_error: 0.15, // Placeholder

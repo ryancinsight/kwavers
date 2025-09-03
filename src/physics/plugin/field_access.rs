@@ -6,7 +6,7 @@
 
 use crate::error::{KwaversResult, PhysicsError};
 use crate::physics::field_mapping::UnifiedFieldType;
-use crate::physics::state::{FieldReadGuard, FieldWriteGuard, PhysicsState};
+use crate::physics::state::{FieldView, PhysicsState};
 use ndarray::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 
@@ -17,6 +17,17 @@ use std::collections::HashSet;
 pub struct PluginFieldAccess<'a> {
     /// Reference to the physics state
     state: &'a PhysicsState,
+    /// Fields this plugin is allowed to read
+    readable_fields: HashSet<UnifiedFieldType>,
+    /// Fields this plugin is allowed to write
+    writable_fields: HashSet<UnifiedFieldType>,
+}
+
+/// Mutable field accessor for plugins
+#[derive(Debug)]
+pub struct PluginFieldAccessMut<'a> {
+    /// Mutable reference to the physics state
+    state: &'a mut PhysicsState,
     /// Fields this plugin is allowed to read
     readable_fields: HashSet<UnifiedFieldType>,
     /// Fields this plugin is allowed to write
@@ -64,7 +75,7 @@ impl<'a> PluginFieldAccess<'a> {
     }
 
     /// Get read access to a field
-    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<FieldReadGuard<'_>> {
+    pub fn get_field(&self, field: UnifiedFieldType) -> KwaversResult<FieldView<'_>> {
         if !self.can_read(field) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
                 field: field.name().to_string(),
@@ -74,19 +85,6 @@ impl<'a> PluginFieldAccess<'a> {
         }
 
         self.state.get_field(field.index())
-    }
-
-    /// Get write access to a field
-    pub fn get_field_mut(&self, field: UnifiedFieldType) -> KwaversResult<FieldWriteGuard<'_>> {
-        if !self.can_write(field) {
-            return Err(PhysicsError::UnauthorizedFieldAccess {
-                field: field.name().to_string(),
-                operation: "write".to_string(),
-            }
-            .into());
-        }
-
-        self.state.get_field_mut(field.index())
     }
 
     /// Apply a closure to a readable field
@@ -103,22 +101,6 @@ impl<'a> PluginFieldAccess<'a> {
         }
 
         self.state.with_field(field.index(), f)
-    }
-
-    /// Apply a closure to a writable field
-    pub fn with_field_mut<F, R>(&self, field: UnifiedFieldType, f: F) -> KwaversResult<R>
-    where
-        F: FnOnce(ArrayViewMut3<f64>) -> R,
-    {
-        if !self.can_write(field) {
-            return Err(PhysicsError::UnauthorizedFieldAccess {
-                field: field.name().to_string(),
-                operation: "write".to_string(),
-            }
-            .into());
-        }
-
-        self.state.with_field_mut(field.index(), f)
     }
 }
 
@@ -203,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_plugin_field_access() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let state = PhysicsState::new(grid);
 
         // Create accessor with specific permissions
@@ -226,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_unauthorized_access() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let state = PhysicsState::new(grid);
 
         // Create accessor with limited permissions
@@ -234,9 +216,8 @@ mod tests {
         let provided = vec![];
         let access = PluginFieldAccess::new(&state, &required, &provided);
 
-        // Try to write to a read-only field
-        let result = access.get_field_mut(UnifiedFieldType::Pressure);
-        assert!(result.is_err());
+        // get_field_mut is not available on immutable accessor
+        // This would require PluginFieldAccessMut
 
         // Try to access an undeclared field
         let result = access.get_field(UnifiedFieldType::Density);

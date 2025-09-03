@@ -219,7 +219,7 @@ impl Beamformer {
             .sqrt();
 
             // Use water sound speed as default
-            let delay = distance / crate::constants::acoustic::WATER_SOUND_SPEED;
+            let delay = distance / crate::physics::constants::SOUND_SPEED_WATER;
             delays.push(delay);
         }
 

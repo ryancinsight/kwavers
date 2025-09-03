@@ -46,7 +46,7 @@ mod tests {
             diffusivity: 1.0,
         };
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let mut solver =
             KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 
@@ -198,7 +198,7 @@ mod tests {
             diffusivity: 0.0,
         };
 
-        let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let mut solver =
             KuznetsovWave::new(config, &grid).expect("Failed to create Kuznetsov solver");
 

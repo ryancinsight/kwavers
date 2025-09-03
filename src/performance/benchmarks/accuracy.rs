@@ -32,7 +32,7 @@ pub fn benchmark_fd_convergence() -> Vec<AccuracyResult> {
 
     for nx in grid_sizes {
         let dx = domain_size / nx as f64;
-        let _grid = Grid::new(nx, 1, 1, dx, dx, dx);
+        let _grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
 
         // Test function: sin(2πx/L)
         let mut field = Array3::<f64>::zeros((nx, 1, 1));
@@ -91,7 +91,7 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
     // Fixed spatial resolution
     let nx = 128;
     let dx = 1e-3;
-    let _grid = Grid::new(nx, 1, 1, dx, dx, dx);
+    let _grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
 
     // Wave parameters - ensure we have at least 10 points per wavelength
     let c = 1500.0;
@@ -202,7 +202,7 @@ pub fn benchmark_time_integration() -> Vec<AccuracyResult> {
 pub fn benchmark_absorption_models() -> Vec<AccuracyResult> {
     let mut results = Vec::new();
 
-    let grid = Grid::new(100, 1, 1, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(100, 1, 1, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Test power law absorption
     let frequencies = vec![0.5e6, 1.0e6, 2.0e6, 5.0e6]; // MHz

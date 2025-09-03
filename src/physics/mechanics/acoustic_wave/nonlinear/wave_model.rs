@@ -2,9 +2,12 @@
 //!
 //! This module contains the core `NonlinearWave` struct and its basic implementation.
 
-use crate::constants::{performance, stability};
 use crate::grid::Grid;
 use crate::medium::Medium;
+use crate::physics::constants::numerical::{
+    CHUNKED_PROCESSING_THRESHOLD, CHUNK_SIZE_LARGE, CHUNK_SIZE_MEDIUM, CHUNK_SIZE_SMALL,
+    LARGE_GRID_THRESHOLD, MEDIUM_GRID_THRESHOLD, PRESSURE_LIMIT,
+};
 
 use ndarray::Array3;
 use std::f64;
@@ -118,16 +121,15 @@ impl NonlinearWave {
     ///
     /// A new `NonlinearWave` instance with sensible defaults
     pub fn new(grid: &Grid, dt: f64) -> Self {
-        let chunk_size = if grid.nx * grid.ny * grid.nz > performance::LARGE_GRID_THRESHOLD {
-            performance::CHUNK_SIZE_LARGE
-        } else if grid.nx * grid.ny * grid.nz > performance::MEDIUM_GRID_THRESHOLD {
-            performance::CHUNK_SIZE_MEDIUM
+        let chunk_size = if grid.nx * grid.ny * grid.nz > LARGE_GRID_THRESHOLD {
+            CHUNK_SIZE_LARGE
+        } else if grid.nx * grid.ny * grid.nz > MEDIUM_GRID_THRESHOLD {
+            CHUNK_SIZE_MEDIUM
         } else {
-            performance::CHUNK_SIZE_SMALL
+            CHUNK_SIZE_SMALL
         };
 
-        let use_chunked_processing =
-            grid.nx * grid.ny * grid.nz > performance::CHUNKED_PROCESSING_THRESHOLD;
+        let use_chunked_processing = grid.nx * grid.ny * grid.nz > CHUNKED_PROCESSING_THRESHOLD;
 
         Self {
             // Performance metrics
@@ -145,7 +147,7 @@ impl NonlinearWave {
             k_squared: None,
 
             // Stability parameters
-            max_pressure: stability::PRESSURE_LIMIT,
+            max_pressure: PRESSURE_LIMIT,
             stability_threshold: 0.5, // Default CFL stability threshold
             cfl_safety_factor: 0.9,   // Default CFL safety factor
             clamp_gradients: false,

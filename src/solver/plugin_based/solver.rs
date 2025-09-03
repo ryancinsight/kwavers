@@ -69,13 +69,14 @@ impl PluginBasedSolver {
         let mut sources = Vec::new();
         sources.push(source);
 
+        let field_registry = FieldRegistry::new(&grid);
         Self {
-            grid: grid.clone(),
+            grid,
             time,
             medium,
             boundary,
             sources,
-            field_registry: FieldRegistry::new(&grid),
+            field_registry,
             plugin_manager: PluginManager::new(),
             performance: PerformanceMonitor::new(),
             recorder: None,
@@ -263,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_solver_creation() {
-        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
+        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
         let time = Time::new(0.001, 100);
         let medium = Arc::new(HomogeneousMedium::from_minimal(1500.0, 1000.0, &grid));
         let boundary = Box::new(PMLBoundary::new(Default::default()).unwrap());

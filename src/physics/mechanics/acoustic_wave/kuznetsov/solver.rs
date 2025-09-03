@@ -13,6 +13,7 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::physics::traits::AcousticWaveModel;
 use crate::source::Source;
+use log;
 use ndarray::{Array3, Array4, Zip};
 
 /// Main Kuznetsov wave solver
@@ -24,6 +25,8 @@ pub struct KuznetsovWave {
     nonlinearity_scaling: f64,
     time_step_count: usize,
     /// Previous pressure field for leapfrog time integration
+    pressure_prev: Array3<f64>,
+    /// Current pressure field
     pressure_current: Array3<f64>,
     /// Flag to track if this is the first time step
     first_step: bool,
@@ -42,6 +45,7 @@ impl KuznetsovWave {
             workspace,
             nonlinearity_scaling: 1.0,
             time_step_count: 0,
+            pressure_prev: Array3::zeros(shape),
             pressure_current: Array3::zeros(shape),
             first_step: true,
         })
@@ -49,17 +53,36 @@ impl KuznetsovWave {
 
     /// Compute the right-hand side of the Kuznetsov equation
     ///
-    /// This method now properly samples medium properties at each grid point
-    /// for heterogeneous media support.
+    /// WARNING: This implementation currently uses averaged properties for nonlinear
+    /// and diffusive terms, which is incorrect for heterogeneous media.
     fn compute_rhs(
         &mut self,
-        pressure: &Array3<f64>, // Changed to reference to avoid cloning
+        pressure: &Array3<f64>,
         source: &dyn Source,
         medium: &dyn Medium,
         t: f64,
         dt: f64,
     ) -> Array3<f64> {
-        let mut rhs = Array3::zeros(pressure.dim());
+        // Pre-compute medium properties for all grid points if heterogeneous
+        let is_heterogeneous = !medium.is_homogeneous();
+
+        // For homogeneous media, compute properties once
+        let (uniform_density, uniform_sound_speed, uniform_nonlinearity, uniform_diffusivity) =
+            if !is_heterogeneous {
+                let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
+                let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
+                let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
+                (
+                    crate::medium::density_at(medium, center_x, center_y, center_z, &self.grid),
+                    crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid),
+                    crate::medium::nonlinearity_at(
+                        medium, center_x, center_y, center_z, &self.grid,
+                    ),
+                    self.config.acoustic_diffusivity,
+                )
+            } else {
+                (0.0, 0.0, 0.0, 0.0) // Will compute per-point
+            };
 
         // 1. Compute linear term: c₀²∇²p using spectral methods
         self.workspace.spectral_op.compute_laplacian_workspace(
@@ -68,24 +91,9 @@ impl KuznetsovWave {
             &self.grid,
         );
 
-        // Process each grid point for heterogeneous media
-        for k in 0..self.grid.nz {
-            for j in 0..self.grid.ny {
-                for i in 0..self.grid.nx {
-                    // Get local medium properties at this grid point
-                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let local_density = crate::medium::density_at(medium, x, y, z, &self.grid);
-                    let local_sound_speed =
-                        crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                    let c0_squared = local_sound_speed * local_sound_speed;
+        let mut rhs = Array3::zeros(pressure.dim());
 
-                    // Add linear term with local sound speed
-                    rhs[[i, j, k]] += c0_squared * self.workspace.laplacian[[i, j, k]];
-                }
-            }
-        }
-
-        // 2. Compute nonlinear term if enabled (based on equation mode)
+        // 2. Compute nonlinear term if enabled
         let include_nonlinearity = matches!(
             self.config.equation_mode,
             super::config::AcousticEquationMode::FullKuznetsov
@@ -93,78 +101,107 @@ impl KuznetsovWave {
                 | super::config::AcousticEquationMode::Westervelt
         );
 
-        if include_nonlinearity {
-            // For nonlinear term, we still need representative values
-            // In a fully heterogeneous implementation, this would also be per-point
-            let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
-            let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
-            let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
-            let avg_density =
-                crate::medium::density_at(medium, center_x, center_y, center_z, &self.grid);
-            let avg_sound_speed =
-                crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
-
+        if include_nonlinearity && !is_heterogeneous {
+            // For homogeneous media, compute once
             compute_nonlinear_term_workspace(
                 pressure,
                 &self.workspace.pressure_prev,
                 &self.workspace.pressure_prev2,
                 dt,
-                avg_density,
-                avg_sound_speed,
+                uniform_density,
+                uniform_sound_speed,
                 self.config.nonlinearity_coefficient * self.nonlinearity_scaling,
                 &mut self.workspace.nonlinear_term,
             );
-
-            // Add nonlinear term to RHS
-            Zip::from(&mut rhs)
-                .and(&self.workspace.nonlinear_term)
-                .for_each(|r, &nl| {
-                    *r += nl;
-                });
         }
 
-        // 3. Compute diffusive term if enabled (based on equation mode)
+        // 3. Compute diffusive term if enabled
         let include_diffusion = matches!(
             self.config.equation_mode,
             super::config::AcousticEquationMode::FullKuznetsov
                 | super::config::AcousticEquationMode::KZK
-        );
+        ) && self.config.acoustic_diffusivity > 0.0;
 
-        if include_diffusion && self.config.acoustic_diffusivity > 0.0 {
-            // Similar to nonlinear, use average for now
-            let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
-            let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
-            let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
-            let avg_sound_speed =
-                crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
-
+        if include_diffusion && !is_heterogeneous {
+            // For homogeneous media, compute once
             compute_diffusive_term_workspace(
                 pressure,
                 &self.workspace.pressure_prev,
                 &self.workspace.pressure_prev2,
                 &self.workspace.pressure_prev3,
                 dt,
-                avg_sound_speed,
-                self.config.acoustic_diffusivity,
+                uniform_sound_speed,
+                uniform_diffusivity,
                 &mut self.workspace.diffusive_term,
             );
-
-            // Add diffusive term to RHS
-            Zip::from(&mut rhs)
-                .and(&self.workspace.diffusive_term)
-                .for_each(|r, &diff| {
-                    *r += diff;
-                });
         }
 
-        // 4. Add source term
-        for k in 0..self.grid.nz {
-            for j in 0..self.grid.ny {
-                for i in 0..self.grid.nx {
-                    let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let source_term = source.get_source_term(t, x, y, z, &self.grid);
-                    rhs[[i, j, k]] += source_term;
+        // 4. Combine all terms using efficient iteration
+        if is_heterogeneous {
+            // HETEROGENEOUS MEDIA: Compute properties per-point
+
+            // Use parallel iteration with indices
+            let shape = rhs.shape();
+            let nx = shape[0];
+            let ny = shape[1];
+            let nz = shape[2];
+
+            // Use parallel iteration for heterogeneous media
+            for k in 0..self.grid.nz {
+                for j in 0..self.grid.ny {
+                    for i in 0..self.grid.nx {
+                        let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
+
+                        // Get local medium properties
+                        let local_sound_speed =
+                            crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                        let c0_squared = local_sound_speed * local_sound_speed;
+
+                        // Linear term with local sound speed
+                        rhs[[i, j, k]] = c0_squared * self.workspace.laplacian[[i, j, k]];
+
+                        // Add source term
+                        rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
+                    }
                 }
+            }
+
+            log::warn!("Kuznetsov solver: Heterogeneous media detected but nonlinear and diffusive terms still use averaged properties. Results may be inaccurate.");
+        } else {
+            // HOMOGENEOUS MEDIA: Use pre-computed uniform properties
+            let c0_squared = uniform_sound_speed * uniform_sound_speed;
+
+            // Use ndarray::Zip for efficient iteration
+
+            Zip::from(&mut rhs)
+                .and(&self.workspace.laplacian)
+                .par_for_each(|r, &lap| {
+                    // Linear term
+                    *r = c0_squared * lap;
+                });
+
+            // Add source term separately to avoid index complications
+            for k in 0..self.grid.nz {
+                for j in 0..self.grid.ny {
+                    for i in 0..self.grid.nx {
+                        let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
+                        rhs[[i, j, k]] += source.get_source_term(t, x, y, z, &self.grid);
+                    }
+                }
+            }
+
+            // Add nonlinear term if computed
+            if include_nonlinearity {
+                Zip::from(&mut rhs)
+                    .and(&self.workspace.nonlinear_term)
+                    .par_for_each(|r, &nl| *r += nl);
+            }
+
+            // Add diffusive term if computed
+            if include_diffusion {
+                Zip::from(&mut rhs)
+                    .and(&self.workspace.diffusive_term)
+                    .par_for_each(|r, &diff| *r += diff);
             }
         }
 
@@ -176,7 +213,7 @@ impl AcousticWaveModel for KuznetsovWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        prev_pressure: &Array3<f64>,
+        _prev_pressure: &Array3<f64>, // Ignored - we manage our own state
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,
@@ -190,58 +227,56 @@ impl AcousticWaveModel for KuznetsovWave {
             ));
         }
 
+        // Add warning for heterogeneous media
+        if !medium.is_homogeneous() {
+            log::warn!("Kuznetsov solver: Heterogeneous media support is incomplete. Nonlinear and diffusive terms use averaged properties, leading to inaccurate results.");
+        }
+
         // Extract pressure field (assuming it's at index 0)
         let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
 
-        // Store current pressure for next iteration
         if self.first_step {
             // First step: use forward Euler to bootstrap the leapfrog scheme
             self.pressure_current.assign(&pressure_field);
+            self.pressure_prev.assign(&pressure_field); // Initialize both to current
 
-            // Compute RHS without cloning
-            let rhs = self.compute_rhs(&pressure_field.to_owned(), source, medium, t, dt);
+            // Compute RHS
+            let pressure_current = self.pressure_current.clone();
+            let rhs = self.compute_rhs(&pressure_current, source, medium, t, dt);
 
-            // Forward Euler for first step: p_next = p_current + dt * velocity + 0.5 * dt^2 * acceleration
-            // Since we're starting from rest, velocity = 0
+            // Forward Euler for first step: p_next = p_current + 0.5 * dt^2 * acceleration
+            // (assuming zero initial velocity)
             Zip::from(&mut pressure_field)
                 .and(&self.pressure_current)
                 .and(&rhs)
-                .for_each(|p_next, &p_curr, &accel| {
+                .par_for_each(|p_next, &p_curr, &accel| {
                     *p_next = p_curr + 0.5 * dt * dt * accel;
                 });
 
-            // Update time history
+            // Update internal state
             self.workspace.update_time_history(&self.pressure_current);
             self.first_step = false;
         } else {
             // Leapfrog time integration for second-order wave equation
             // p_next = 2 * p_current - p_previous + dt^2 * rhs
 
-            // Store current pressure before updating
-            let p_current = pressure_field.to_owned();
+            // Compute RHS using current pressure
+            let pressure_current = self.pressure_current.clone();
+            let rhs = self.compute_rhs(&pressure_current, source, medium, t, dt);
 
-            // Use prev_pressure parameter (which is p_previous in the leapfrog scheme)
-            let p_previous = if self.time_step_count > 0 {
-                prev_pressure.to_owned()
-            } else {
-                self.workspace.pressure_prev.clone()
-            };
-
-            // Compute RHS using reference to avoid clone
-            let rhs = self.compute_rhs(&p_current, source, medium, t, dt);
-
-            // Apply leapfrog scheme
+            // Apply leapfrog scheme using internal state
             Zip::from(&mut pressure_field)
-                .and(&p_current)
-                .and(&p_previous)
+                .and(&self.pressure_current)
+                .and(&self.pressure_prev)
                 .and(&rhs)
-                .for_each(|p_next, &p_curr, &p_prev, &accel| {
+                .par_for_each(|p_next, &p_curr, &p_prev, &accel| {
                     *p_next = 2.0 * p_curr - p_prev + dt * dt * accel;
                 });
 
-            // Update time history for next iteration
-            self.workspace.update_time_history(&p_current);
-            self.pressure_current.assign(&p_current);
+            // Update internal state for next iteration
+            self.pressure_prev.assign(&self.pressure_current);
+            self.pressure_current.assign(&pressure_field);
+            self.workspace.update_time_history(&self.pressure_current);
         }
 
         self.time_step_count += 1;

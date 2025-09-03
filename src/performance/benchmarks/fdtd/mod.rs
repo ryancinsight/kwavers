@@ -15,7 +15,7 @@ pub fn benchmark_fdtd(
     time_steps: usize,
     iterations: usize,
 ) -> KwaversResult<BenchmarkResult> {
-    let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(grid_size, grid_size, grid_size, 1e-3, 1e-3, 1e-3)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.01, 0.1, &grid);
 
     let config = FdtdConfig {

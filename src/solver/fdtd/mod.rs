@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_fdtd_creation() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
         let solver = FdtdSolver::new(config, &grid);
         assert!(solver.is_ok());
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_finite_difference_coefficients() {
-        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0);
+        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
         let config = FdtdConfig::default();
         let solver = FdtdSolver::new(config, &grid).unwrap();
 
@@ -159,11 +159,11 @@ mod tests {
 
     #[test]
     fn test_cfl_condition() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = FdtdConfig::default();
         let solver = FdtdSolver::new(config, &grid).unwrap();
 
-        let c_max = crate::constants::physics::SOUND_SPEED_WATER;
+        let c_max = crate::physics::constants::SOUND_SPEED_WATER;
         let dt = solver.max_stable_dt(c_max);
 
         // Check that time step is reasonable

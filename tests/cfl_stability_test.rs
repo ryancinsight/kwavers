@@ -3,9 +3,9 @@
 //! Validates that the CFL condition is properly enforced for numerical stability.
 //! Reference: Taflove & Hagness, "Computational Electrodynamics", 2005
 
-use kwavers::constants::numerical::CFL_SAFETY_FACTOR;
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
+use kwavers::physics::constants::CFL_SAFETY_FACTOR;
 
 #[test]
 fn test_cfl_condition_3d_fdtd() {

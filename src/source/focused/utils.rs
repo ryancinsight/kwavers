@@ -145,7 +145,7 @@ mod tests {
         };
 
         let multi_array = MultiBowlArray::new(vec![config1, config2]).unwrap();
-        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001);
+        let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
 
         // Generate sources at different times
         let source_t0 = multi_array.generate_source(&grid, 0.0).unwrap();

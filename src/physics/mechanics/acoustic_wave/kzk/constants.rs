@@ -2,7 +2,7 @@
 //!
 //! Provides named constants to eliminate magic numbers
 
-use crate::constants::physics::SOUND_SPEED_WATER;
+use crate::physics::constants::SOUND_SPEED_WATER;
 
 /// Default test frequency: 1 `MHz`
 pub const DEFAULT_FREQUENCY: f64 = 1e6;

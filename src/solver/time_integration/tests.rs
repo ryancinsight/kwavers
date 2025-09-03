@@ -66,7 +66,7 @@ mod tests {
         let mut stepper = RungeKutta4::new(config);
 
         // Test on simple exponential decay
-        let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0);
+        let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0).unwrap();
         let mut field = Array3::from_elem((8, 8, 8), 1.0);
         let dt = 0.01;
 
@@ -91,7 +91,7 @@ mod tests {
         };
         let mut stepper = AdamsBashforth::new(config);
 
-        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
+        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap();
         let mut field = Array3::from_elem((4, 4, 4), 1.0);
         let dt = 0.01;
 
@@ -125,7 +125,7 @@ mod tests {
             1e-4, // tolerance
         );
 
-        let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0);
+        let grid = Grid::new(8, 8, 8, 1.0, 1.0, 1.0).unwrap();
         let field = Array3::from_elem((8, 8, 8), 1.0);
 
         let rhs_fn = |f: &Array3<f64>| -> KwaversResult<Array3<f64>> { Ok(f.mapv(|v| -v)) };
@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn test_stability_analyzer() {
         let analyzer = StabilityAnalyzer::new(0.9);
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
 
         let physics = MockPhysics {
             wave_speed: 1.0,
@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn test_subcycling_strategy() {
         let strategy = SubcyclingStrategy::new(10);
-        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
+        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap();
 
         let mut fields = HashMap::new();
         fields.insert("fast".to_string(), Array3::from_elem((4, 4, 4), 1.0));
@@ -220,7 +220,7 @@ mod tests {
         let mut config = MultiRateConfig::default();
         config.max_subcycles = 5;
 
-        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0);
+        let grid = Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap();
         let mut integrator = MultiRateTimeIntegrator::new(config, &grid);
 
         let mut fields = HashMap::new();

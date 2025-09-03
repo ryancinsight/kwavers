@@ -3,9 +3,9 @@
 //! Provides focused bowl transducer geometry and source generation.
 
 use crate::{
-    constants::medium_properties::WATER_SOUND_SPEED,
     error::{KwaversError, KwaversResult, ValidationError},
     grid::Grid,
+    physics::constants::SOUND_SPEED_WATER,
 };
 use ndarray::Array3;
 use rayon::prelude::*;
@@ -85,7 +85,7 @@ impl BowlTransducer {
         // Calculate element size if not provided
         let element_size = config.element_size.unwrap_or_else(|| {
             // Use lambda/4 as default element size
-            let speed_of_sound = WATER_SOUND_SPEED;
+            let speed_of_sound = SOUND_SPEED_WATER;
             let wavelength = speed_of_sound / config.frequency;
             wavelength / 4.0
         });
@@ -244,7 +244,7 @@ impl BowlTransducer {
 
     /// Calculate time delays for focusing
     pub(crate) fn calculate_focus_delays(&self) -> Vec<f64> {
-        let speed_of_sound = WATER_SOUND_SPEED;
+        let speed_of_sound = SOUND_SPEED_WATER;
 
         self.element_positions
             .iter()
@@ -296,9 +296,9 @@ impl BowlTransducer {
         // O'Neil's solution for on-axis pressure of a focused bowl transducer
         let r = self.config.radius_of_curvature;
         let a = self.config.diameter / 2.0;
-        let k = 2.0 * PI * self.config.frequency / WATER_SOUND_SPEED; // Wave number
+        let k = 2.0 * PI * self.config.frequency / SOUND_SPEED_WATER; // Wave number
         let omega = 2.0 * PI * self.config.frequency; // Angular frequency
-        let c = WATER_SOUND_SPEED; // Speed of sound in water
+        let c = SOUND_SPEED_WATER; // Speed of sound in water
 
         // Geometric parameters
         // h is the height of the spherical cap

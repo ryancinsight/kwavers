@@ -1,7 +1,7 @@
 //! FDTD solver configuration
 
-use crate::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::error::ValidationError;
+use crate::physics::constants::numerical::CFL_SAFETY_FACTOR;
 use crate::ValidationResult;
 use serde::{Deserialize, Serialize};
 

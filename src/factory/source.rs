@@ -2,9 +2,11 @@
 //!
 //! Follows Creator pattern for source instantiation
 
-use crate::constants::physics;
 use crate::error::{ConfigError, KwaversResult};
 use crate::grid::Grid;
+use crate::physics::constants::{
+    DEFAULT_ULTRASOUND_FREQUENCY, STANDARD_BEAM_WIDTH, STANDARD_PRESSURE_AMPLITUDE,
+};
 use crate::signal::{Signal, SineWave};
 use crate::source::{PointSource, Source};
 use std::sync::Arc;
@@ -64,9 +66,9 @@ impl Default for SourceConfig {
         Self {
             source_type: "point".to_string(),
             position: (0.0, 0.0, 0.0),
-            amplitude: physics::STANDARD_PRESSURE_AMPLITUDE,
-            frequency: physics::DEFAULT_ULTRASOUND_FREQUENCY,
-            radius: Some(physics::STANDARD_BEAM_WIDTH),
+            amplitude: STANDARD_PRESSURE_AMPLITUDE,
+            frequency: DEFAULT_ULTRASOUND_FREQUENCY,
+            radius: Some(STANDARD_BEAM_WIDTH),
             focus: None,
             num_elements: None,
             signal_type: "sine".to_string(),

@@ -1,6 +1,6 @@
 //! Configuration for heterogeneous media handling
 
-use crate::constants::numerical::HETEROGENEOUS_SMOOTHING_FACTOR;
+use crate::physics::constants::numerical::HETEROGENEOUS_SMOOTHING_FACTOR;
 
 /// Configuration for heterogeneous media handling
 #[derive(Debug, Clone)]

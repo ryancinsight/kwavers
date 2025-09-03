@@ -19,7 +19,7 @@ mod tests {
         let dx = 1e-3;
         let dt = dx / (SOUND_SPEED * 2.0);
 
-        let grid = Grid::new(n, n, n, dx, dx, dx);
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
         let mut state = PhysicsState::new(&grid);
 
         // Initialize with Gaussian pulse
@@ -104,7 +104,7 @@ mod tests {
         let n = 32;
         let dx = 2e-3;
 
-        let grid = Grid::new(n, n, n, dx, dx, dx);
+        let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
         let mut state = PhysicsState::new(&grid);
 
         // Initialize with moving pulse
@@ -152,7 +152,7 @@ mod tests {
         let dx = 1e-3;
         let dt = dx / (SOUND_SPEED * 2.0);
 
-        let grid = Grid::new(n, n, 1, dx, dx, dx);
+        let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
         let mut density = Array3::from_elem((n, n, 1), DENSITY);
         let mut velocity_x = Array3::zeros((n, n, 1));
         let mut velocity_y = Array3::zeros((n, n, 1));

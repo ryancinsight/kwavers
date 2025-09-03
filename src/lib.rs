@@ -38,7 +38,7 @@ use std::collections::HashMap;
 // Core modules
 pub mod boundary;
 pub mod configuration; // Unified configuration system (SSOT)
-pub mod constants;
+                       // constants module moved to physics::constants for SSOT
 pub mod error;
 pub mod factory;
 pub mod fft;
@@ -105,7 +105,7 @@ pub use physics::field_mapping::{
     FieldAccessor as UnifiedFieldAccessor, FieldAccessorMut, UnifiedFieldType,
 };
 pub use physics::plugin::{Plugin, PluginContext, PluginManager, PluginMetadata};
-pub use physics::state::{field_indices, PhysicsState};
+pub use physics::state::{field_indices, FieldView, FieldViewMut, PhysicsState};
 
 // Re-export spectral-DG components
 pub use solver::spectral_dg::shock_capturing::{ArtificialViscosity, ShockDetector, WENOLimiter};
