@@ -10,7 +10,9 @@
 use crate::grid::Grid;
 use crate::medium::HomogeneousMedium;
 use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use crate::solver::constants::{DEFAULT_DX, PLANE_WAVE_ERROR_TOLERANCE};
+// Constants that should be defined in solver module
+const DEFAULT_DX: f64 = 0.1e-3;
+const PLANE_WAVE_ERROR_TOLERANCE: f64 = 0.01;
 use crate::KwaversResult;
 
 use std::f64::consts::PI;
@@ -159,13 +161,108 @@ impl KWaveBenchmarks {
     /// Test 2: Point source radiation pattern
     /// Validates spherical wave decay: p ∝ 1/r
     pub fn point_source_pattern() -> KwaversResult<BenchmarkResult> {
-        // TODO: Implement when 3D spectral methods are fully validated
+        use crate::factory::{
+            GridConfig, PhysicsConfig, PhysicsModelConfig, PhysicsModelType,
+            SimulationConfig, SimulationFactory, TimeConfig,
+        };
+        use crate::signal::SineWave;
+        use crate::source::Source;
+        use crate::error::{FieldError, KwaversError};
+        use crate::physics::field_mapping::UnifiedFieldType;
+        use ndarray::Array3;
+        
+        // Create simulation parameters
+        let mut config = SimulationConfig::default();
+        config.grid = GridConfig {
+            nx: 64,
+            ny: 64,
+            nz: 64,
+            dx: 1e-3,
+            dy: 1e-3,
+            dz: 1e-3,
+        };
+        config.time = TimeConfig {
+            cfl: 0.3,
+            end_time: 50e-6,
+        };
+        config.physics = PhysicsConfig {
+            model: PhysicsModelConfig {
+                model_type: PhysicsModelType::Linear,
+                ..Default::default()
+            },
+        };
+        
+        // Create components
+        let components = SimulationFactory::create_components(&config)?;
+        let mut solver = components.create_pstd_solver()?;
+        
+        // Set point source at center
+        let (nx, ny, nz) = components.grid.dimensions();
+        let center = (nx / 2, ny / 2, nz / 2);
+        let signal = Box::new(SineWave::new(1e6, 1e6, 0.0));
+        
+        // Create point source mask
+        let mut mask = Array3::zeros((nx, ny, nz));
+        mask[[center.0, center.1, center.2]] = 1.0;
+        
+        solver.add_pressure_source(mask, signal)?;
+        
+        // Run simulation
+        let num_steps = (config.time.end_time / components.time.dt) as usize;
+        solver.run_for_steps(num_steps)?;
+        
+        // Analyze radial decay
+        let pressure = solver.get_field(UnifiedFieldType::Pressure)
+            .ok_or(KwaversError::Field(FieldError::FieldNotFound("pressure".to_string())))?;
+        
+        let mut errors = Vec::new();
+        let source_amplitude = 1e6;
+        
+        // Sample pressure at different radii
+        for r in 5..20 {
+            let radius = r as f64 * config.grid.dx;
+            let expected = source_amplitude / (4.0 * std::f64::consts::PI * radius);
+            
+            // Sample points on sphere of radius r
+            let samples = sample_sphere_points(center, r, &pressure);
+            let avg_pressure = samples.iter().sum::<f64>() / samples.len() as f64;
+            
+            let error = (avg_pressure - expected).abs() / expected;
+            errors.push(error);
+        }
+        
+        let max_error = errors.iter().cloned().fold(0.0, f64::max);
+        let rms_error = (errors.iter().map(|e| e * e).sum::<f64>() / errors.len() as f64).sqrt();
+        
         Ok(BenchmarkResult {
             test_name: "Point Source 1/r Decay (PSTD)".to_string(),
-            max_error: 0.15, // Placeholder
-            rms_error: 0.08, // Placeholder
-            passed: true,    // Mark as passed for now
+            max_error,
+            rms_error,
+            passed: max_error < 0.1, // 10% tolerance for spherical wave
         })
+    }
+    
+    /// Sample pressure values on a sphere of given radius
+    fn sample_sphere_points(center: (usize, usize, usize), radius: usize, field: &Array3<f64>) -> Vec<f64> {
+        let mut samples = Vec::new();
+        let r = radius as isize;
+        
+        // Sample along principal axes
+        for &(dx, dy, dz) in &[
+            (r, 0, 0), (-r, 0, 0),
+            (0, r, 0), (0, -r, 0),
+            (0, 0, r), (0, 0, -r),
+        ] {
+            let x = (center.0 as isize + dx) as usize;
+            let y = (center.1 as isize + dy) as usize;
+            let z = (center.2 as isize + dz) as usize;
+            
+            if x < field.shape()[0] && y < field.shape()[1] && z < field.shape()[2] {
+                samples.push(field[[x, y, z]]);
+            }
+        }
+        
+        samples
     }
 
     /// Test 3: Reflection from hard boundary

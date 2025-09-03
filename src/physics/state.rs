@@ -13,10 +13,14 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 pub use crate::physics::field_indices;
 
 /// Physics state container - Single Source of Truth for all field data
-#[derive(Clone, Debug)]
+/// 
+/// This struct owns the field data directly, avoiding unnecessary Arc<RwLock>
+/// indirection. For concurrent access, wrap the entire PhysicsState in Arc<RwLock>
+/// at the application level if needed.
+#[derive(Debug)]
 pub struct PhysicsState {
     /// Main 4D field array containing all physics quantities
-    fields: Arc<RwLock<Array4<f64>>>,
+    fields: Array4<f64>,
 
     /// Grid dimensions
     grid: Grid,
@@ -26,79 +30,27 @@ pub struct PhysicsState {
     field_units: HashMap<usize, String>,
 }
 
-/// RAII guard for read-only field access
-/// This struct owns the data it needs to avoid unsafe transmutes
-#[derive(Debug)]
-pub struct FieldReadGuard<'a> {
-    data: Array3<f64>,
-    _guard: RwLockReadGuard<'a, Array4<f64>>,
-}
+/// Direct field view for zero-copy read access
+/// 
+/// Since PhysicsState now owns data directly, we can return simple borrows
+/// instead of complex guard types that clone data unnecessarily.
+pub type FieldView<'a> = ArrayView3<'a, f64>;
 
-impl<'a> FieldReadGuard<'a> {
-    /// Create a new `FieldReadGuard`
-    fn new(guard: RwLockReadGuard<'a, Array4<f64>>, field_index: usize) -> Self {
-        let data = guard.index_axis(Axis(0), field_index).to_owned();
-        Self {
-            data,
-            _guard: guard,
-        }
-    }
+/// Direct mutable field view for zero-copy write access
+pub type FieldViewMut<'a> = ArrayViewMut3<'a, f64>;
 
-    /// Get the field view
-    #[must_use]
-    pub fn view(&self) -> ArrayView3<'_, f64> {
-        self.data.view()
-    }
 
-    /// Convert to owned array
-    #[must_use]
-    pub fn to_owned(&self) -> Array3<f64> {
-        self.data.clone()
-    }
-}
-
-impl<'a> std::ops::Deref for FieldReadGuard<'a> {
-    type Target = Array3<f64>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-/// RAII guard for mutable field access
-#[derive(Debug)]
-pub struct FieldWriteGuard<'a> {
-    guard: RwLockWriteGuard<'a, Array4<f64>>,
-    field_index: usize,
-}
-
-impl<'a> FieldWriteGuard<'a> {
-    /// Get the mutable field view
-    pub fn view_mut(&mut self) -> ArrayViewMut3<f64> {
-        self.guard.index_axis_mut(Axis(0), self.field_index)
-    }
-
-    /// Get an immutable view
-    #[must_use]
-    pub fn view(&self) -> ArrayView3<f64> {
-        self.guard.index_axis(Axis(0), self.field_index)
-    }
-}
-
-// Note: FieldWriteGuard does not implement Deref/DerefMut directly
-// because it cannot safely return a &mut Array3<f64> without owning the data.
-// Use view_mut() method instead for mutable access.
 
 impl PhysicsState {
     /// Create a new physics state with the given grid
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
-        let fields = Arc::new(RwLock::new(Array4::<f64>::zeros((
+        let fields = Array4::<f64>::zeros((
             field_indices::TOTAL_FIELDS,
             nx,
             ny,
             nz,
-        ))));
+        ));
 
         let mut field_names = HashMap::new();
         field_names.insert(field_indices::PRESSURE_IDX, "Pressure".to_string());
@@ -137,31 +89,21 @@ impl PhysicsState {
     }
 
     /// Get a read-only view of a specific field (zero-copy)
-    pub fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard<'_>> {
+    pub fn get_field(&self, field_index: usize) -> KwaversResult<FieldView<'_>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let guard = self
-            .fields
-            .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
-
-        Ok(FieldReadGuard::new(guard, field_index))
+        Ok(self.fields.index_axis(Axis(0), field_index))
     }
 
     /// Get a mutable view of a specific field (zero-copy)
-    pub fn get_field_mut(&self, field_index: usize) -> KwaversResult<FieldWriteGuard<'_>> {
+    pub fn get_field_mut(&mut self, field_index: usize) -> KwaversResult<FieldViewMut<'_>> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let guard = self
-            .fields
-            .write()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
-
-        Ok(FieldWriteGuard { guard, field_index })
+        Ok(self.fields.index_axis_mut(Axis(0), field_index))
     }
 
     /// Apply a closure to a field for reading (zero-copy)
@@ -173,16 +115,11 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let fields = self
-            .fields
-            .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
-
-        Ok(f(fields.index_axis(Axis(0), field_index)))
+        Ok(f(self.fields.index_axis(Axis(0), field_index)))
     }
 
     /// Apply a closure to a field for mutation (zero-copy)
-    pub fn with_field_mut<F, R>(&self, field_index: usize, f: F) -> KwaversResult<R>
+    pub fn with_field_mut<F, R>(&mut self, field_index: usize, f: F) -> KwaversResult<R>
     where
         F: FnOnce(ArrayViewMut3<f64>) -> R,
     {
@@ -190,12 +127,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let mut fields = self
-            .fields
-            .write()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
-
-        Ok(f(fields.index_axis_mut(Axis(0), field_index)))
+        Ok(f(self.fields.index_axis_mut(Axis(0), field_index)))
     }
 
     /// Get a cloned copy of a field (allocates memory)
@@ -205,17 +137,12 @@ impl PhysicsState {
     }
 
     /// Update a specific field with new data
-    pub fn update_field(&self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
+    pub fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
         if field_index >= field_indices::TOTAL_FIELDS {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let mut fields = self
-            .fields
-            .write()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
-
-        let mut field = fields.index_axis_mut(Axis(0), field_index);
+        let mut field = self.fields.index_axis_mut(Axis(0), field_index);
         if data.shape() != field.shape() {
             return Err(PhysicsError::DimensionMismatch.into());
         }
@@ -225,26 +152,16 @@ impl PhysicsState {
 
     /// Get direct access to all fields (for plugin system)
     /// This is more efficient than individual field access when multiple fields are needed
-    pub fn with_all_fields_mut<F, R>(&self, f: F) -> KwaversResult<R>
+    pub fn with_all_fields_mut<F, R>(&mut self, f: F) -> KwaversResult<R>
     where
         F: FnOnce(&mut Array4<f64>) -> R,
     {
-        let mut fields = self
-            .fields
-            .write()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
-
-        Ok(f(&mut fields))
+        Ok(f(&mut self.fields))
     }
 
-    /// Get all fields
-    pub fn get_all_fields(&self) -> KwaversResult<Array4<f64>> {
-        let fields = self
-            .fields
-            .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
-
-        Ok(fields.clone())
+    /// Get all fields - returns a view to avoid cloning
+    pub fn get_all_fields(&self) -> &Array4<f64> {
+        &self.fields
     }
 
     /// Get field metadata
@@ -257,21 +174,20 @@ impl PhysicsState {
     }
 
     /// Initialize field with a constant value
-    pub fn initialize_field(&self, field_index: usize, value: f64) -> KwaversResult<()> {
+    pub fn initialize_field(&mut self, field_index: usize, value: f64) -> KwaversResult<()> {
         self.with_field_mut(field_index, |mut field| {
             field.fill(value);
-            Ok(())
-        })?
+        })
     }
 
     /// Initialize field with a function
-    pub fn initialize_field_with<F>(&self, field_index: usize, init_fn: F) -> KwaversResult<()>
+    pub fn initialize_field_with<F>(&mut self, field_index: usize, init_fn: F) -> KwaversResult<()>
     where
         F: Fn(usize, usize, usize) -> f64,
     {
         self.with_field_mut(field_index, |mut field| {
             let (nx, ny, nz) = (field.shape()[0], field.shape()[1], field.shape()[2]);
-            // Use iterator combinators for better performance (CUPID: Composable)
+            // Use parallel iteration for better performance when available
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {
@@ -279,8 +195,7 @@ impl PhysicsState {
                     }
                 }
             }
-            Ok(())
-        })?
+        })
     }
 
     /// Get grid reference
@@ -293,15 +208,18 @@ impl PhysicsState {
 pub trait HasPhysicsState {
     /// Get reference to the physics state
     fn physics_state(&self) -> &PhysicsState;
+    
+    /// Get mutable reference to the physics state
+    fn physics_state_mut(&mut self) -> &mut PhysicsState;
 
     /// Get a specific field by index
-    fn get_field(&self, field_index: usize) -> KwaversResult<FieldReadGuard<'_>> {
+    fn get_field(&self, field_index: usize) -> KwaversResult<FieldView<'_>> {
         self.physics_state().get_field(field_index)
     }
 
     /// Update a specific field
-    fn update_field(&self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
-        self.physics_state().update_field(field_index, data)
+    fn update_field(&mut self, field_index: usize, data: &Array3<f64>) -> KwaversResult<()> {
+        self.physics_state_mut().update_field(field_index, data)
     }
 }
 
@@ -322,20 +240,21 @@ mod tests {
         println!("Getting pressure field...");
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
         println!("Got pressure field");
-        assert_eq!(pressure.view().shape(), &[10, 10, 10]);
+        assert_eq!(pressure.shape(), &[10, 10, 10]);
 
         // Test field initialization
+        let mut state = state; // Make mutable for initialization
         state
             .initialize_field(field_indices::TEMPERATURE_IDX, 293.15)
             .unwrap();
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert!((temp.view()[[5, 5, 5]] - 293.15).abs() < 1e-10);
+        assert!((temp[[5, 5, 5]] - 293.15).abs() < 1e-10);
     }
 
     #[test]
     fn test_field_updates() {
         let grid = Grid::new(5, 5, 5, 0.1, 0.1, 0.1);
-        let state = PhysicsState::new(grid);
+        let mut state = PhysicsState::new(grid);
 
         // Create test data
         let mut test_data = Array3::zeros((5, 5, 5));
@@ -348,13 +267,13 @@ mod tests {
 
         // Verify update
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(pressure.view()[[2, 2, 2]], 100.0);
+        assert_eq!(pressure[[2, 2, 2]], 100.0);
     }
 
     #[test]
     fn test_zero_copy_access() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
-        let state = PhysicsState::new(grid);
+        let mut state = PhysicsState::new(grid);
 
         // Test zero-copy read
         state
@@ -383,26 +302,25 @@ mod tests {
     #[ignore] // TODO: Fix potential deadlock
     fn test_field_guard_deref() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
-        let state = PhysicsState::new(grid);
+        let mut state = PhysicsState::new(grid);
 
         // Initialize field
         state
             .initialize_field(field_indices::PRESSURE_IDX, 101325.0)
             .unwrap();
 
-        // Test read guard deref
-        let guard = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(guard[[0, 0, 0]], 101325.0);
+        // Test direct field access
+        let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
+        assert_eq!(pressure[[0, 0, 0]], 101325.0);
 
-        // Test write guard deref
-        let mut guard = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
-        let mut view = guard.view_mut();
-        view[[0, 0, 0]] = 273.15;
-        drop(view);
-        drop(guard);
+        // Test mutable field access
+        {
+            let mut temp = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
+            temp[[0, 0, 0]] = 273.15;
+        }
 
         // Verify write
-        let guard = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert_eq!(guard[[0, 0, 0]], 273.15);
+        let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
+        assert_eq!(temp[[0, 0, 0]], 273.15);
     }
 }

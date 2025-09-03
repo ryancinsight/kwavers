@@ -142,23 +142,6 @@ pub fn compute_max_stable_timestep(
     cfl_limit * min_dx / max_sound_speed
 }
 
-/// Compute the maximum stable time step (backward compatibility wrapper)
-///
-/// # Deprecated
-/// Use the version with `SpatialOrder` enum instead
-#[deprecated(note = "Use compute_max_stable_timestep with SpatialOrder enum")]
-pub fn compute_max_stable_timestep_usize(
-    grid: &Grid,
-    max_sound_speed: f64,
-    spatial_order: usize,
-) -> f64 {
-    compute_max_stable_timestep(
-        grid,
-        max_sound_speed,
-        SpatialOrder::from_usize(spatial_order),
-    )
-}
-
 /// Compute nonlinearity coefficient for a given medium
 ///
 /// The nonlinearity coefficient β = 1 + B/(2A) where B/A is the

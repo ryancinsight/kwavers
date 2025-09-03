@@ -69,13 +69,14 @@ impl PluginBasedSolver {
         let mut sources = Vec::new();
         sources.push(source);
 
+        let field_registry = FieldRegistry::new(&grid);
         Self {
-            grid: grid.clone(),
+            grid,
             time,
             medium,
             boundary,
             sources,
-            field_registry: FieldRegistry::new(&grid),
+            field_registry,
             plugin_manager: PluginManager::new(),
             performance: PerformanceMonitor::new(),
             recorder: None,

@@ -42,11 +42,6 @@ pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 /// Reference: NIST Chemistry `WebBook`
 pub const WATER_SURFACE_TENSION_20C: f64 = 0.0728;
 
-/// Standard atmospheric pressure (Pa)
-/// Value: 101325
-/// Reference: NIST Special Publication 330
-pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
-
 /// Water vapor pressure at 20°C (Pa)
 /// Value: 2339
 /// Reference: Wagner & Pruss (2002). "The IAPWS formulation for water"
