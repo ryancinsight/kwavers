@@ -74,8 +74,9 @@ impl KuznetsovWave {
                 for i in 0..self.grid.nx {
                     // Get local medium properties at this grid point
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-                    let local_density = medium.density(x, y, z, &self.grid);
-                    let local_sound_speed = medium.sound_speed(x, y, z, &self.grid);
+                    let local_density = crate::medium::density_at(medium, x, y, z, &self.grid);
+                    let local_sound_speed =
+                        crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
                     let c0_squared = local_sound_speed * local_sound_speed;
 
                     // Add linear term with local sound speed
@@ -98,8 +99,10 @@ impl KuznetsovWave {
             let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
             let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
             let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
-            let avg_density = medium.density(center_x, center_y, center_z, &self.grid);
-            let avg_sound_speed = medium.sound_speed(center_x, center_y, center_z, &self.grid);
+            let avg_density =
+                crate::medium::density_at(medium, center_x, center_y, center_z, &self.grid);
+            let avg_sound_speed =
+                crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
 
             compute_nonlinear_term_workspace(
                 pressure,
@@ -132,7 +135,8 @@ impl KuznetsovWave {
             let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
             let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
             let center_z = self.grid.dz * (self.grid.nz as f64) / 2.0;
-            let avg_sound_speed = medium.sound_speed(center_x, center_y, center_z, &self.grid);
+            let avg_sound_speed =
+                crate::medium::sound_speed_at(medium, center_x, center_y, center_z, &self.grid);
 
             compute_diffusive_term_workspace(
                 pressure,

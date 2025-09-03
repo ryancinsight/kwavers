@@ -2,8 +2,6 @@
 //!
 //! Supports various source types with smoothing
 
-use ndarray::Array3;
-
 /// Source types supported by k-Wave
 #[derive(Debug, Clone)]
 pub enum SourceType {

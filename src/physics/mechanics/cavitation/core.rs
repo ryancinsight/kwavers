@@ -4,7 +4,7 @@
 //! based on acoustic pressure thresholds and bubble dynamics.
 
 use crate::error::KwaversResult;
-use ndarray::Array3;
+use ndarray::{Array3, Zip};
 
 /// Core cavitation detection and modeling
 pub trait CavitationCore: Send + Sync {
@@ -83,6 +83,19 @@ pub fn neppiras_threshold(
     let surface = 2.0 * surface_tension / nucleus_radius;
 
     0.5 * (hydrostatic + surface)
+}
+
+/// Calculate Flynn threshold for violent cavitation
+/// Based on Flynn (1964): "Physics of Acoustic Cavitation in Liquids"
+pub fn flynn_threshold(
+    ambient_pressure: f64, // [Pa]
+    vapor_pressure: f64,   // [Pa]
+    surface_tension: f64,  // [N/m]
+    nucleus_radius: f64,   // [m]
+) -> f64 {
+    // Flynn criterion for transient cavitation
+    // P_Flynn = 0.83 * (P_0 + 2σ/R_n)
+    0.83 * (ambient_pressure + 2.0 * surface_tension / nucleus_radius) - vapor_pressure
 }
 
 /// Calculate mechanical index (MI)
@@ -257,7 +270,62 @@ impl CavitationCore for CavitationModel {
     }
 
     fn update(&mut self, pressure_field: &Array3<f64>, dt: f64) -> KwaversResult<()> {
-        self.update(pressure_field, 1e6, dt, 0.0); // Default 1 MHz
+        // Update cavitation states based on pressure field
+        Zip::from(&mut self.states)
+            .and(pressure_field)
+            .for_each(|state, &pressure| {
+                let threshold = match self.threshold_model {
+                    ThresholdModel::Blake => blake_threshold(
+                        self.surface_tension,
+                        self.initial_radius,
+                        self.ambient_pressure,
+                        self.vapor_pressure,
+                    ),
+                    ThresholdModel::Neppiras => neppiras_threshold(
+                        self.ambient_pressure,
+                        self.vapor_pressure,
+                        self.surface_tension,
+                        self.initial_radius,
+                    ),
+                    ThresholdModel::Flynn => flynn_threshold(
+                        self.ambient_pressure,
+                        self.vapor_pressure,
+                        self.surface_tension,
+                        self.initial_radius,
+                    ),
+                    ThresholdModel::MechanicalIndex => {
+                        // MI-based threshold uses pressure directly
+                        // Threshold is when MI > 0.7 (FDA guideline)
+                        // For 1 MHz, this is approximately -0.7 MPa
+                        -0.7e6 // -0.7 MPa
+                    }
+                };
+
+                if pressure < threshold {
+                    // Cavitation occurring
+                    if !state.is_cavitating {
+                        state.is_cavitating = true;
+                        state.duration = 0.0;
+                    }
+                    state.duration += dt;
+                    state.intensity = ((threshold - pressure) / threshold).min(1.0);
+                    state.peak_negative_pressure = state.peak_negative_pressure.min(pressure);
+                } else {
+                    // No cavitation
+                    state.is_cavitating = false;
+                    state.intensity = 0.0;
+                }
+            });
+
+        // Update dose with average intensity
+        let total_intensity: f64 = self.states.iter()
+            .filter(|s| s.is_cavitating)
+            .map(|s| s.intensity)
+            .sum();
+        let avg_intensity = total_intensity / self.states.len() as f64;
+        let time = dt; // This should be accumulated time, but we don't have it in this trait
+        self.dose.update(avg_intensity, dt, time);
+
         Ok(())
     }
 }

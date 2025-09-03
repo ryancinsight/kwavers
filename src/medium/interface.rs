@@ -49,11 +49,11 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
         for j in 1..(grid.ny - 1) {
             for k in 1..(grid.nz - 1) {
                 let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                let center_density = medium.density(x, y, z, grid);
+                let center_density = crate::medium::density_at_core(medium, x, y, z, grid);
 
                 // Check one neighbor for efficiency
                 let (nx, ny, nz) = grid.indices_to_coordinates(i + 1, j, k);
-                let neighbor_density = medium.density(nx, ny, nz, grid);
+                let neighbor_density = crate::medium::density_at_core(medium, nx, ny, nz, grid);
 
                 if ((neighbor_density - center_density).abs() / center_density) > threshold {
                     // Simplified normal calculation

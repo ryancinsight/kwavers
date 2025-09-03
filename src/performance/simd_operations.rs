@@ -4,7 +4,7 @@
 //! - "SIMD Programming" by Intel (2023)
 //! - Rust portable SIMD RFC: https://github.com/rust-lang/rfcs/pull/2977
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 use rayon::prelude::*;
 
 /// SIMD lane width for f64 on common architectures
@@ -138,7 +138,6 @@ pub mod swar {
 /// Architecture-specific optimizations
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64 {
-    use super::*;
 
     /// Check if AVX2 is available
     pub fn has_avx2() -> bool {
@@ -166,6 +165,7 @@ pub mod x86_64 {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use ndarray::Array3;
 
     #[test]
     fn test_simd_add() {

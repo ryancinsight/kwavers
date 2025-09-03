@@ -35,7 +35,7 @@ impl AmplitudeCorrector {
         let cy = grid.ny as f64 / 2.0 * grid.dy;
         let cz = grid.nz as f64 / 2.0 * grid.dz;
 
-        let c0 = medium.sound_speed(cx, cy, cz, grid);
+        let c0 = crate::medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid);
         let alpha = crate::medium::AcousticProperties::absorption_coefficient(
             medium.as_ref(),
             cx,
@@ -91,7 +91,7 @@ impl AmplitudeCorrector {
         let cy = grid.ny as f64 / 2.0 * grid.dy;
         let cz = grid.nz as f64 / 2.0 * grid.dz;
 
-        let actual_speed = medium.sound_speed(cx, cy, cz, grid);
+        let actual_speed = crate::medium::sound_speed_at(medium.as_ref(), cx, cy, cz, grid);
 
         // Calculate phase correction factor
         let phase_factor = reference_speed / actual_speed;

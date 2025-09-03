@@ -271,7 +271,7 @@ fn test_time_reversal_principle() {
     let reversed_field = boundary_recording;
 
     // Should refocus at original source (simplified check)
-    let focus_value = reversed_field[[source_x, source_y, source_z]];
+    let focus_value: f64 = reversed_field[[source_x, source_y, source_z]];
     let max_value = reversed_field
         .iter()
         .fold(0.0_f64, |a, &b| f64::max(a, b.abs()));

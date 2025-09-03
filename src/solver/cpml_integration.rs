@@ -178,7 +178,7 @@ impl CPMLSolver {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        let rho = medium.density(x, y, z, grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, grid);
                         vx[[i, j, k]] -= dt * self.grad_x[[i, j, k]] / rho;
                     }
                 }
@@ -193,7 +193,7 @@ impl CPMLSolver {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        let rho = medium.density(x, y, z, grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, grid);
                         vy[[i, j, k]] -= dt * self.grad_y[[i, j, k]] / rho;
                     }
                 }
@@ -208,7 +208,7 @@ impl CPMLSolver {
                         let x = i as f64 * grid.dx;
                         let y = j as f64 * grid.dy;
                         let z = k as f64 * grid.dz;
-                        let rho = medium.density(x, y, z, grid);
+                        let rho = crate::medium::density_at(medium, x, y, z, grid);
                         vz[[i, j, k]] -= dt * self.grad_z[[i, j, k]] / rho;
                     }
                 }
@@ -256,8 +256,8 @@ impl CPMLSolver {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    let rho = medium.density(x, y, z, grid);
-                    let c = medium.sound_speed(x, y, z, grid);
+                    let rho = crate::medium::density_at(medium, x, y, z, grid);
+                    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
                     let rho_c2 = rho * c * c;
                     pressure[[i, j, k]] -= dt * rho_c2 * div_v[[i, j, k]];
                 }

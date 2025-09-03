@@ -118,16 +118,16 @@ fn test_homogeneous_medium_properties() {
     let sound_speed = 2000.0;
     let medium = HomogeneousMedium::new(density, sound_speed, 0.001, 0.072, &grid);
 
-    // Test at multiple points
-    let test_points = vec![
-        (0.0, 0.0, 0.0),
-        (15e-3, 15e-3, 15e-3),
-        (31e-3, 31e-3, 31e-3),
+    // Test at multiple grid points
+    let test_indices = vec![
+        (0, 0, 0),
+        (grid.nx / 2, grid.ny / 2, grid.nz / 2),
+        (grid.nx - 1, grid.ny - 1, grid.nz - 1),
     ];
 
-    for (x, y, z) in test_points {
-        assert_eq!(medium.density(x, y, z, &grid), density);
-        assert_eq!(medium.sound_speed(x, y, z, &grid), sound_speed);
+    for (i, j, k) in test_indices {
+        assert_eq!(medium.density(i, j, k), density);
+        assert_eq!(medium.sound_speed(i, j, k), sound_speed);
     }
 }
 

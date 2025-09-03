@@ -46,7 +46,7 @@ impl LinearArray {
         apodization: A,
     ) -> Self {
         assert!(length > 0.0 && num_elements > 0);
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let wavelength = c / frequency;
         let optimal_spacing = wavelength / 2.0;
         let actual_spacing = length / (num_elements.max(2) - 1) as f64;
@@ -84,7 +84,7 @@ impl LinearArray {
         medium: &dyn Medium,
         grid: &Grid,
     ) {
-        let c = medium.sound_speed(0.0, 0.0, 0.0, grid);
+        let c = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let spacing = self.element_spacing();
 
         // Calculate time delays (not phase delays) for proper broadband focusing

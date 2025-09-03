@@ -161,7 +161,8 @@ impl MixedDomainPropagationPlugin {
     ) -> KwaversResult<Array3<Complex64>> {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
-        let k = 2.0 * std::f64::consts::PI / (medium.sound_speed(0.0, 0.0, 0.0, grid) * time_step);
+        let k = 2.0 * std::f64::consts::PI
+            / (crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
 
         Zip::from(&mut result).and(field).for_each(|r, &f| {
             *r = f * Complex64::from_polar(1.0, k * grid.dx);

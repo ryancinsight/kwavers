@@ -253,8 +253,8 @@ impl WesterveltFdtd {
                 let z = k as f64 * grid.dz;
 
                 // Get medium properties
-                let c = medium.sound_speed(x, y, z, grid);
-                let rho = medium.density(x, y, z, grid);
+                let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(
                     medium, x, y, z, grid,
                 );

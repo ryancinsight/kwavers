@@ -1,5 +1,6 @@
 //! Homogeneous medium implementation with uniform properties
 
+use crate::error::{KwaversError, KwaversResult, ValidationError};
 use crate::grid::Grid;
 use crate::medium::{
     acoustic::AcousticProperties,
@@ -11,7 +12,7 @@ use crate::medium::{
     viscous::ViscousProperties,
 };
 use crate::physics::constants::*;
-use ndarray::{Array3, ArrayView3};
+use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;
 
 /// Medium with uniform properties throughout the spatial domain
@@ -206,16 +207,52 @@ impl HomogeneousMedium {
 
 // Core medium properties
 impl CoreMedium for HomogeneousMedium {
-    fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn density(&self, _i: usize, _j: usize, _k: usize) -> f64 {
         self.density
     }
 
-    fn sound_speed(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> f64 {
         self.sound_speed
     }
 
     fn reference_frequency(&self) -> f64 {
         self.reference_frequency
+    }
+
+    fn absorption(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+        self.absorption_alpha
+    }
+
+    fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+        self.nonlinearity
+    }
+
+    fn max_sound_speed(&self) -> f64 {
+        self.sound_speed
+    }
+
+    fn is_homogeneous(&self) -> bool {
+        true
+    }
+
+    fn validate(&self, _grid: &Grid) -> KwaversResult<()> {
+        if self.density <= 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "density".to_string(),
+                value: self.density,
+                reason: "Density must be positive".to_string(),
+            }));
+        }
+
+        if self.sound_speed <= 0.0 {
+            return Err(KwaversError::Validation(ValidationError::InvalidValue {
+                parameter: "sound_speed".to_string(),
+                value: self.sound_speed,
+                reason: "Sound speed must be positive".to_string(),
+            }));
+        }
+
+        Ok(())
     }
 }
 
@@ -229,12 +266,12 @@ impl ArrayAccess for HomogeneousMedium {
         self.sound_speed_cache.view()
     }
 
-    fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-        Some(&mut self.density_cache)
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+        Some(self.density_cache.view_mut())
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-        Some(&mut self.sound_speed_cache)
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+        Some(self.sound_speed_cache.view_mut())
     }
 
     fn absorption_array(&self) -> ArrayView3<f64> {
@@ -398,8 +435,9 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
         let water = HomogeneousMedium::water(&grid);
 
-        assert_eq!(water.density(0.0, 0.0, 0.0, &grid), 998.0);
-        assert_eq!(water.sound_speed(0.0, 0.0, 0.0, &grid), 1482.0);
+        assert_eq!(water.density(0, 0, 0), 998.0);
+        assert_eq!(water.sound_speed(0, 0, 0), 1482.0);
+        // viscosity is still coordinate-based as it's in ViscousProperties trait
         assert_eq!(water.viscosity(0.0, 0.0, 0.0, &grid), 1.0e-3);
     }
 
@@ -408,8 +446,8 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
         let blood = HomogeneousMedium::blood(&grid);
 
-        assert_eq!(blood.density(0.0, 0.0, 0.0, &grid), 1060.0);
-        assert_eq!(blood.sound_speed(0.0, 0.0, 0.0, &grid), 1570.0);
+        assert_eq!(blood.density(0, 0, 0), 1060.0);
+        assert_eq!(blood.sound_speed(0, 0, 0), 1570.0);
         assert_eq!(blood.viscosity(0.0, 0.0, 0.0, &grid), 3.5e-3);
     }
 
@@ -418,7 +456,7 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001);
         let air = HomogeneousMedium::air(&grid);
 
-        assert_eq!(air.density(0.0, 0.0, 0.0, &grid), 1.204);
-        assert_eq!(air.sound_speed(0.0, 0.0, 0.0, &grid), 343.0);
+        assert_eq!(air.density(0, 0, 0), 1.204);
+        assert_eq!(air.sound_speed(0, 0, 0), 343.0);
     }
 }

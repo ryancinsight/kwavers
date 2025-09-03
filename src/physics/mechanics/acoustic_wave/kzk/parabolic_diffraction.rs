@@ -11,8 +11,7 @@ use ndarray::{Array2, ArrayViewMut2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-use super::{constants::*, KZKConfig};
-use crate::constants::physics::SOUND_SPEED_WATER;
+use super::KZKConfig;
 
 /// KZK parabolic diffraction operator
 ///
@@ -195,6 +194,10 @@ impl KzkDiffractionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::physics::SOUND_SPEED_WATER;
+    use crate::physics::mechanics::acoustic_wave::kzk::constants::{
+        DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
+    };
     use crate::physics::validation::measure_beam_radius;
     use approx::assert_relative_eq;
 

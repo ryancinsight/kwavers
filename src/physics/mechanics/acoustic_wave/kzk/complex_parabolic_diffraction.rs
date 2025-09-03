@@ -1,22 +1,22 @@
 //! Complex-valued parabolic diffraction operator for proper energy conservation
 
-use ndarray::{Array2, ArrayView2, ArrayViewMut2};
+use ndarray::{Array2, ArrayViewMut2};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-use super::{constants::*, KZKConfig};
+use super::KZKConfig;
 
-/// Complex parabolic diffraction operator that preserves energy
-pub struct ComplexParabolicOperator {
+/// Parabolic diffraction operator using complex-valued computations for energy preservation
+pub struct ParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
     fft_planner: FftPlanner<f64>,
 }
 
-impl std::fmt::Debug for ComplexParabolicOperator {
+impl std::fmt::Debug for ParabolicDiffractionOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ComplexParabolicOperator")
+        f.debug_struct("ParabolicDiffractionOperator")
             .field("config", &self.config)
             .field("kx2_shape", &self.kx2.shape())
             .field("ky2_shape", &self.ky2.shape())
@@ -24,7 +24,7 @@ impl std::fmt::Debug for ComplexParabolicOperator {
     }
 }
 
-impl ComplexParabolicOperator {
+impl ParabolicDiffractionOperator {
     /// Create new complex parabolic diffraction operator
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
@@ -173,6 +173,9 @@ impl ComplexParabolicOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::physics::mechanics::acoustic_wave::kzk::constants::{
+        DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
+    };
     use crate::physics::validation::measure_beam_radius;
     use approx::assert_relative_eq;
 
@@ -187,7 +190,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut op = ComplexParabolicOperator::new(&config);
+        let mut op = ParabolicDiffractionOperator::new(&config);
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
@@ -231,7 +234,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut op = ComplexParabolicOperator::new(&config);
+        let mut op = ParabolicDiffractionOperator::new(&config);
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;

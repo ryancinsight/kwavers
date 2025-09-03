@@ -166,8 +166,8 @@ impl TherapyCalculator {
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
 
-                let rho = medium.density(x, y, z, grid);
-                let c = medium.sound_speed(x, y, z, grid);
+                let rho = crate::medium::density_at(medium.as_ref(), x, y, z, grid);
+                let c = crate::medium::sound_speed_at(medium.as_ref(), x, y, z, grid);
                 let alpha = crate::medium::AcousticProperties::absorption_coefficient(
                     medium.as_ref(),
                     x,

@@ -32,7 +32,7 @@ impl StreamingModel {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
-                let rho = medium.density(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 *f = -p / rho; // Acoustic force
             });
 

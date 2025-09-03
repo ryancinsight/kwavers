@@ -62,7 +62,7 @@ impl PennesBioheat {
                 let z = k as f64 * grid.dz;
 
                 // Get local tissue properties
-                let rho = medium.density(x, y, z, grid);
+                let rho = crate::medium::density_at(medium, x, y, z, grid);
                 let cp = medium.specific_heat(x, y, z, grid);
 
                 // Perfusion heat source

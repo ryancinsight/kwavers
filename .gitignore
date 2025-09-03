@@ -25,8 +25,10 @@ test_octree
 *.so
 *.dll
 *.exe
-core
-core.*
+# Core dumps (be specific to avoid excluding src files)
+/core
+/core.*
+*.core
 
 # Backup files
 *.bak

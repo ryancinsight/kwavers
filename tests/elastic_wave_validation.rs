@@ -132,31 +132,37 @@ impl TestElasticMedium {
 // Implement required traits for TestElasticMedium
 use kwavers::medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
-    Medium, OpticalProperties, TemperatureState, ThermalProperties, ViscousProperties,
+    Medium, OpticalProperties, ThermalProperties, ViscousProperties,
 };
 
 impl CoreMedium for TestElasticMedium {
-    fn density(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn density(&self, _i: usize, _j: usize, _k: usize) -> f64 {
         self.density
     }
 
-    fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        self.p_wave_speed(x, y, z, grid)
+    fn sound_speed(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+        // P-wave speed approximation
+        ((self.lame_lambda + 2.0 * self.lame_mu) / self.density).sqrt()
     }
 
-    fn absorption_coefficient(
-        &self,
-        _x: f64,
-        _y: f64,
-        _z: f64,
-        _grid: &Grid,
-        _frequency: f64,
-    ) -> f64 {
+    fn absorption(&self, _i: usize, _j: usize, _k: usize) -> f64 {
         0.0 // No absorption in test medium
     }
 
-    fn nonlinearity_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
+    fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> f64 {
         3.5 // Default B/A for water-like media
+    }
+
+    fn max_sound_speed(&self) -> f64 {
+        self.sound_speed(0, 0, 0)
+    }
+
+    fn is_homogeneous(&self) -> bool {
+        true
+    }
+
+    fn validate(&self, _grid: &Grid) -> kwavers::KwaversResult<()> {
+        Ok(())
     }
 }
 

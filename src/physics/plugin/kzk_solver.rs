@@ -122,7 +122,7 @@ impl KzkSolverPlugin {
         medium: &dyn Medium,
         time_steps: usize,
     ) -> KwaversResult<Array3<f64>> {
-        use crate::medium::{AcousticProperties, CoreMedium};
+        use crate::medium::AcousticProperties;
 
         // Validate operators are initialized
         let operators =
@@ -144,8 +144,8 @@ impl KzkSolverPlugin {
         let dz = grid.dz;
 
         // Get medium properties at source plane
-        let density = CoreMedium::density(medium, 0.0, 0.0, 0.0, grid);
-        let c0 = CoreMedium::sound_speed(medium, 0.0, 0.0, 0.0, grid);
+        let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid);
 
         // Operator splitting: Strang splitting for second-order accuracy
@@ -241,13 +241,13 @@ impl KzkSolverPlugin {
         frequency: f64,
         medium: &dyn Medium,
     ) -> f64 {
-        use crate::medium::{AcousticProperties, CoreMedium};
+        use crate::medium::AcousticProperties;
         use std::f64::consts::PI;
 
         // Get medium properties at origin
         let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0); // Dummy grid for point evaluation
-        let density = CoreMedium::density(medium, 0.0, 0.0, 0.0, &grid);
-        let sound_speed = CoreMedium::sound_speed(medium, 0.0, 0.0, 0.0, &grid);
+        let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
+        let sound_speed = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
 
         // Shock formation distance: x_shock = ρc³/(βωp₀)

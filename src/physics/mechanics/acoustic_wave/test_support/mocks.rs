@@ -5,8 +5,9 @@
 #[cfg(test)]
 pub(crate) mod mocks {
     use crate::grid::Grid;
+    use crate::error::KwaversResult;
     use crate::medium::absorption::TissueType;
-    use ndarray::Array3;
+    use ndarray::{Array3, ArrayViewMut3};
     use std::f64::consts::PI;
 
     /// Mock heterogeneous medium for testing
@@ -37,28 +38,24 @@ pub(crate) mod mocks {
     }
 
     impl crate::medium::core::CoreMedium for HeterogeneousMediumMock {
-        fn density(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        fn density(&self, i: usize, j: usize, k: usize) -> f64 {
             if self.position_dependent {
                 // Spatially varying density simulating tissue heterogeneity
-                let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
                 let base_density = 1000.0;
                 let variation = 50.0
-                    * ((ix as f64 * 0.1).sin() + (iy as f64 * 0.1).cos() + (iz as f64 * 0.1).sin());
+                    * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos() + (k as f64 * 0.1).sin());
                 base_density + variation
             } else {
                 1000.0
             }
         }
 
-        fn sound_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+        fn sound_speed(&self, i: usize, j: usize, k: usize) -> f64 {
             if self.position_dependent {
                 // Spatially varying sound speed
-                let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
                 let base_speed = 1500.0;
                 let variation = 40.0
-                    * ((ix as f64 * 0.05).cos()
-                        + (iy as f64 * 0.05).sin()
-                        + (iz as f64 * 0.05).cos());
+                    * ((i as f64 * 0.05).cos() + (j as f64 * 0.05).sin() + (k as f64 * 0.05).cos());
                 base_speed + variation
             } else {
                 1500.0
@@ -67,6 +64,34 @@ pub(crate) mod mocks {
 
         fn reference_frequency(&self) -> f64 {
             1e6
+        }
+
+        fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {
+            if self.position_dependent {
+                0.1 + 0.05 * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos())
+            } else {
+                0.1
+            }
+        }
+
+        fn nonlinearity(&self, _i: usize, _j: usize, _k: usize) -> f64 {
+            5.0 // B/A parameter for water
+        }
+
+        fn max_sound_speed(&self) -> f64 {
+            if self.position_dependent {
+                1540.0 // max with variations
+            } else {
+                1500.0
+            }
+        }
+
+        fn is_homogeneous(&self) -> bool {
+            !self.position_dependent
+        }
+
+        fn validate(&self, _grid: &Grid) -> KwaversResult<()> {
+            Ok(())
         }
     }
 
@@ -79,12 +104,12 @@ pub(crate) mod mocks {
             self.sound_speed.view()
         }
 
-        fn density_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-            Some(&mut self.density)
+        fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+            Some(self.density.view_mut())
         }
 
-        fn sound_speed_array_mut(&mut self) -> Option<&mut Array3<f64>> {
-            Some(&mut self.sound_speed)
+        fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+            Some(self.sound_speed.view_mut())
         }
 
         fn absorption_array(&self) -> ndarray::ArrayView3<f64> {
@@ -204,7 +229,7 @@ pub(crate) mod mocks {
         fn shear_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             if self.position_dependent {
                 let mu = self.lame_mu(x, y, z, grid);
-                let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
+                let rho = crate::medium::density_at(self, x, y, z, grid);
                 if mu > 0.0 {
                     (mu / rho).sqrt()
                 } else {
@@ -216,7 +241,7 @@ pub(crate) mod mocks {
         }
 
         fn compressional_wave_speed(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-            crate::medium::core::CoreMedium::sound_speed(self, x, y, z, grid)
+            crate::medium::sound_speed_at(self, x, y, z, grid)
         }
     }
 
@@ -266,7 +291,7 @@ pub(crate) mod mocks {
 
         fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
             let k = self.thermal_conductivity(x, y, z, grid);
-            let rho = crate::medium::core::CoreMedium::density(self, x, y, z, grid);
+            let rho = crate::medium::density_at(self, x, y, z, grid);
             let cp = self.specific_heat(x, y, z, grid);
             k / (rho * cp)
         }
