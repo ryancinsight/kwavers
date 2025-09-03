@@ -87,6 +87,7 @@ impl WesterveltWave {
     }
 
     /// Get performance summary
+    #[must_use]
     pub fn performance_summary(&self) -> String {
         let metrics = self.metrics.lock().unwrap();
         format!(

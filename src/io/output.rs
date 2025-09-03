@@ -27,7 +27,7 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
                 data.column(t)
                     .iter()
-                    .try_for_each(|&val| write!(file, ",{}", val))?;
+                    .try_for_each(|&val| write!(file, ",{val}"))?;
                 writeln!(file)?;
             }
         }
@@ -55,7 +55,7 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
                 data.column(t)
                     .iter()
-                    .try_for_each(|&val| write!(file, ",{}", val))?;
+                    .try_for_each(|&val| write!(file, ",{val}"))?;
                 writeln!(file)?;
             }
         }
@@ -80,17 +80,17 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
             .iter()
             .fold(f64::NEG_INFINITY, |acc, &val| f64::max(acc, val.abs()));
         let avg_pressure = pressure.iter().sum::<f64>() / pressure.len() as f64;
-        writeln!(file, "Last Step,{}", step)?;
-        writeln!(file, "Max Pressure,{:.6e}", max_pressure)?;
-        writeln!(file, "Avg Pressure,{:.6e}", avg_pressure)?;
+        writeln!(file, "Last Step,{step}")?;
+        writeln!(file, "Max Pressure,{max_pressure:.6e}")?;
+        writeln!(file, "Avg Pressure,{avg_pressure:.6e}")?;
 
         let max_light = light
             .iter()
             .fold(f64::NEG_INFINITY, |acc, &val| f64::max(acc, val));
         let avg_light = light.iter().sum::<f64>() / light.len() as f64;
-        writeln!(file, "Last Light Step,{}", step)?;
-        writeln!(file, "Max Light Fluence,{:.6e}", max_light)?;
-        writeln!(file, "Avg Light Fluence,{:.6e}", avg_light)?;
+        writeln!(file, "Last Light Step,{step}")?;
+        writeln!(file, "Max Light Fluence,{max_light:.6e}")?;
+        writeln!(file, "Avg Light Fluence,{avg_light:.6e}")?;
     }
 
     Ok(())

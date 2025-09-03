@@ -39,12 +39,13 @@ pub struct PennesBioheat {
 }
 
 impl PennesBioheat {
+    #[must_use]
     pub fn new(params: BioheatParameters) -> Self {
         Self { params }
     }
 
     /// Calculate the perfusion heat source term
-    /// Q_perfusion = ω_b * ρ_b * c_b * (T_a - T)
+    /// `Q_perfusion` = `ω_b` * `ρ_b` * `c_b` * (`T_a` - T)
     pub fn perfusion_source(
         &self,
         temperature: &Array3<f64>,
@@ -78,7 +79,7 @@ impl PennesBioheat {
     }
 
     /// Update temperature using Pennes bioheat equation
-    /// ∂T/∂t = α∇²T + Q_perfusion/(ρc) + Q_source/(ρc)
+    /// ∂T/∂t = α∇²T + `Q_perfusion/(ρc)` + `Q_source/(ρc)`
     pub fn update(
         &self,
         temperature: &mut Array3<f64>,
@@ -104,7 +105,7 @@ impl PennesBioheat {
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
 
                 // Add external source if provided
-                let ext_source = external_source.map(|s| s[[i, j, k]]).unwrap_or(0.0);
+                let ext_source = external_source.map_or(0.0, |s| s[[i, j, k]]);
 
                 // Update using forward Euler
                 *t += dt * (alpha * lap + perf + ext_source);

@@ -20,6 +20,7 @@ pub struct ValidationReport {
 
 impl ValidationReport {
     /// Create a new validation report
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -30,21 +31,25 @@ impl ValidationReport {
     }
 
     /// Get total number of tests
+    #[must_use]
     pub fn total_tests(&self) -> usize {
         self.results.len()
     }
 
     /// Get number of passed tests
+    #[must_use]
     pub fn passed_tests(&self) -> usize {
         self.results.iter().filter(|r| r.passed).count()
     }
 
     /// Get number of failed tests
+    #[must_use]
     pub fn failed_tests(&self) -> usize {
         self.results.iter().filter(|r| !r.passed).count()
     }
 
     /// Get pass rate as percentage
+    #[must_use]
     pub fn pass_rate(&self) -> f64 {
         if self.results.is_empty() {
             0.0

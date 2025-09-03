@@ -58,6 +58,7 @@ pub struct TimingSummary {
 
 impl TimingSummary {
     /// Create a new timing summary from measurements
+    #[must_use]
     pub fn from_measurements(name: String, measurements: &[Duration]) -> Self {
         if measurements.is_empty() {
             return Self {
@@ -101,6 +102,7 @@ impl TimingSummary {
     }
 
     /// Get relative percentage of total time
+    #[must_use]
     pub fn percentage_of(&self, total: Duration) -> f64 {
         if total.as_nanos() == 0 {
             0.0
@@ -118,6 +120,7 @@ pub struct TimingProfiler {
 
 impl TimingProfiler {
     /// Create a new timing profiler
+    #[must_use]
     pub fn new() -> Self {
         Self {
             timings: Arc::new(Mutex::new(HashMap::new())),
@@ -125,6 +128,7 @@ impl TimingProfiler {
     }
 
     /// Start a timing scope
+    #[must_use]
     pub fn scope(&self, name: &str) -> TimingScope {
         TimingScope::new(name.to_string(), self.timings.clone())
     }
@@ -140,6 +144,7 @@ impl TimingProfiler {
     }
 
     /// Get all timing summaries
+    #[must_use]
     pub fn summaries(&self) -> Vec<TimingSummary> {
         match self.timings.lock() {
             Ok(timings) => timings

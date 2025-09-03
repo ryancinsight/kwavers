@@ -16,6 +16,7 @@ pub struct SteeringVector;
 
 impl SteeringVector {
     /// Compute steering vector for given direction
+    #[must_use]
     pub fn compute(method: &SteeringVectorMethod, direction: [f64; 3], frequency: f64) -> Vec<f64> {
         // Implementation would go here
         vec![]

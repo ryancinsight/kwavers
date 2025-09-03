@@ -80,6 +80,7 @@ pub struct AdaptiveBubbleIntegrator<'a> {
 
 impl<'a> AdaptiveBubbleIntegrator<'a> {
     /// Create new adaptive integrator
+    #[must_use]
     pub fn new(solver: &'a KellerMiksisModel, config: AdaptiveBubbleConfig) -> Self {
         let dt_adaptive = config.dt_max * INITIAL_TIME_STEP_FRACTION; // Start conservatively
 
@@ -297,6 +298,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
     }
 
     /// Get integration statistics
+    #[must_use]
     pub fn statistics(&self) -> IntegrationStatistics {
         IntegrationStatistics {
             total_substeps: self.total_substeps,

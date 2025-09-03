@@ -21,6 +21,7 @@ pub struct SpectralStressFields {
 
 impl SpectralStressFields {
     /// Create new spectral stress fields
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             txx: Array3::zeros((nx, ny, nz)),
@@ -33,6 +34,7 @@ impl SpectralStressFields {
     }
 
     /// Initialize from real-valued stress fields via FFT
+    #[must_use]
     pub fn from_real(real_fields: &super::fields::StressFields) -> Self {
         use crate::utils::fft_3d_array;
 
@@ -51,6 +53,7 @@ impl SpectralStressFields {
     }
 
     /// Convert back to real-valued fields via inverse FFT
+    #[must_use]
     pub fn to_real(&self) -> super::fields::StressFields {
         use crate::utils::ifft_3d_array;
 
@@ -80,6 +83,7 @@ pub struct SpectralVelocityFields {
 
 impl SpectralVelocityFields {
     /// Create new spectral velocity fields
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             vx: Array3::zeros((nx, ny, nz)),
@@ -89,6 +93,7 @@ impl SpectralVelocityFields {
     }
 
     /// Initialize from real-valued velocity fields via FFT
+    #[must_use]
     pub fn from_real(real_fields: &super::fields::VelocityFields) -> Self {
         use crate::utils::fft_3d_array;
 
@@ -103,6 +108,7 @@ impl SpectralVelocityFields {
     }
 
     /// Convert back to real-valued fields via inverse FFT
+    #[must_use]
     pub fn to_real(&self) -> super::fields::VelocityFields {
         use crate::utils::ifft_3d_array;
 

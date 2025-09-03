@@ -8,7 +8,7 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    medium::ElasticProperties,
+    medium::{thermal::ThermalField, ElasticProperties},
     physics::{
         field_mapping::UnifiedFieldType,
         plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},
@@ -178,24 +178,22 @@ impl ElasticProperties for TestElasticMedium {
 
 // Implement other required traits with defaults
 impl ArrayAccess for TestElasticMedium {
-    fn density_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        ndarray::Array3::from_elem(shape, self.density)
+    fn density_array(&self) -> ndarray::ArrayView3<f64> {
+        // For test purposes, create a small array and return view
+        // In production, this would return a view of stored data
+        panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn sound_speed_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        ndarray::Array3::from_elem(shape, self.sound_speed(0.0, 0.0, 0.0, grid))
+    fn sound_speed_array(&self) -> ndarray::ArrayView3<f64> {
+        panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn absorption_array(&self, grid: &Grid, _frequency: f64) -> ndarray::Array3<f64> {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        ndarray::Array3::zeros(shape) // No absorption in test
+    fn absorption_array(&self) -> ndarray::ArrayView3<f64> {
+        panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn nonlinearity_array(&self, grid: &Grid) -> ndarray::Array3<f64> {
-        let shape = (grid.nx, grid.ny, grid.nz);
-        ndarray::Array3::from_elem(shape, 3.5) // Default B/A
+    fn nonlinearity_array(&self) -> ndarray::ArrayView3<f64> {
+        panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 }
 
@@ -255,13 +253,13 @@ impl ThermalProperties for TestElasticMedium {
     }
 }
 
-impl TemperatureState for TestElasticMedium {
-    fn temperature(&self) -> &ndarray::Array3<f64> {
+impl ThermalField for TestElasticMedium {
+    fn thermal_field(&self) -> &ndarray::Array3<f64> {
         // Return uniform temperature field for test
         ndarray::Array3::from_elem((10, 10, 10), 293.15) // 20°C
     }
 
-    fn update_temperature(&mut self, _temperature: &ndarray::Array3<f64>) {
+    fn update_thermal_field(&mut self, _temperature: &ndarray::Array3<f64>) {
         // No-op for test medium
     }
 }

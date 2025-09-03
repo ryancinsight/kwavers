@@ -27,6 +27,7 @@ pub struct AcousticWavePlugin {
 
 impl AcousticWavePlugin {
     /// Create a new acoustic wave plugin
+    #[must_use]
     pub fn new(cfl_number: f64) -> Self {
         Self {
             metadata: PluginMetadata {

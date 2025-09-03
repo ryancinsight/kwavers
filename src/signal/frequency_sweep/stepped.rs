@@ -1,6 +1,9 @@
 // frequency_sweep/stepped.rs - Stepped frequency sweep
 
-use super::{constants::*, FrequencySweep};
+use super::{
+    constants::{MIN_FREQUENCY, MIN_SWEEP_DURATION, TWO_PI},
+    FrequencySweep,
+};
 use crate::signal::Signal;
 
 /// Stepped frequency sweep
@@ -19,6 +22,7 @@ pub struct SteppedSweep {
 
 impl SteppedSweep {
     /// Create new stepped sweep - USING all parameters
+    #[must_use]
     pub fn new(
         start_freq: f64,
         stop_freq: f64,

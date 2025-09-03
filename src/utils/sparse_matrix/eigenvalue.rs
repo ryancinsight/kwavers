@@ -18,6 +18,7 @@ pub struct EigenvalueSolver {
 
 impl EigenvalueSolver {
     /// Create eigenvalue solver
+    #[must_use]
     pub fn create(max_iterations: usize, tolerance: f64) -> Self {
         Self {
             max_iterations,

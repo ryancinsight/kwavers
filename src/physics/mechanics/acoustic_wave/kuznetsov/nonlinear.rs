@@ -57,6 +57,7 @@ pub fn compute_nonlinear_term_workspace(
 /// Compute the quadratic nonlinearity coefficient
 ///
 /// For the Kuznetsov equation, this includes the β term
+#[must_use]
 pub fn compute_nonlinearity_coefficient(b_over_a: f64) -> f64 {
     NONLINEARITY_COEFFICIENT_OFFSET + b_over_a / B_OVER_A_DIVISOR
 }

@@ -17,6 +17,7 @@ pub struct TissueRegion {
 
 impl TissueRegion {
     /// Create a new tissue region configuration
+    #[must_use]
     pub fn new(
         tissue_type: TissueType,
         x_min: f64,
@@ -67,6 +68,7 @@ impl TissueRegion {
     }
 
     /// Check if a point is within this region
+    #[must_use]
     pub fn contains(&self, x: f64, y: f64, z: f64) -> bool {
         x >= self.x_min
             && x <= self.x_max

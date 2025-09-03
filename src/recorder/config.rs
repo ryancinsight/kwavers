@@ -19,6 +19,7 @@ pub struct RecorderConfig {
 }
 
 impl RecorderConfig {
+    #[must_use]
     pub fn create(filename: &str) -> Self {
         Self {
             filename: filename.to_string(),
@@ -33,27 +34,32 @@ impl RecorderConfig {
         }
     }
 
+    #[must_use]
     pub fn with_pressure_recording(mut self, record: bool) -> Self {
         self.record_pressure = record;
         self
     }
 
+    #[must_use]
     pub fn with_light_recording(mut self, record: bool) -> Self {
         self.record_light = record;
         self
     }
 
+    #[must_use]
     pub fn with_temperature_recording(mut self, record: bool) -> Self {
         self.record_temperature = record;
         self
     }
 
+    #[must_use]
     pub fn with_cavitation_detection(mut self, enable: bool, threshold: f64) -> Self {
         self.record_cavitation = enable;
         self.cavitation_threshold = threshold;
         self
     }
 
+    #[must_use]
     pub fn with_sonoluminescence_detection(
         mut self,
         enable: bool,
@@ -64,6 +70,7 @@ impl RecorderConfig {
         self
     }
 
+    #[must_use]
     pub fn with_snapshot_interval(mut self, interval: usize) -> Self {
         self.snapshot_interval = interval;
         self

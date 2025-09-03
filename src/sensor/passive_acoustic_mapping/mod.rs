@@ -59,6 +59,7 @@ impl PassiveAcousticMapper {
     }
 
     /// Get the current configuration
+    #[must_use]
     pub fn config(&self) -> &PAMConfig {
         self.processor.config()
     }

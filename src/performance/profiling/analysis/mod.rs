@@ -34,6 +34,7 @@ pub struct RooflineAnalysis {
 
 impl RooflineAnalysis {
     /// Create a new roofline analysis
+    #[must_use]
     pub fn new(peak_performance: f64, peak_bandwidth: f64) -> Self {
         Self {
             peak_performance,
@@ -64,6 +65,7 @@ impl RooflineAnalysis {
     }
 
     /// Get efficiency (achieved / theoretical)
+    #[must_use]
     pub fn efficiency(&self) -> f64 {
         let theoretical = self.theoretical_performance();
         if theoretical > 0.0 {
@@ -74,12 +76,14 @@ impl RooflineAnalysis {
     }
 
     /// Get theoretical performance based on roofline model
+    #[must_use]
     pub fn theoretical_performance(&self) -> f64 {
         let bandwidth_limit = self.peak_bandwidth * self.arithmetic_intensity;
         self.peak_performance.min(bandwidth_limit)
     }
 
     /// Estimate ridge point (transition from memory to compute bound)
+    #[must_use]
     pub fn ridge_point(&self) -> f64 {
         self.peak_performance / self.peak_bandwidth
     }
@@ -102,10 +106,10 @@ pub fn estimate_fdtd_intensity(grid: &Grid, spatial_order: usize) -> f64 {
     let interior_ratio = (total_points - boundary_points) / total_points;
 
     // Operations: multiply-add for each stencil point
-    let flops_per_point = stencil_points as f64 * 2.0 * interior_ratio;
+    let flops_per_point = f64::from(stencil_points) * 2.0 * interior_ratio;
 
     // Memory: read stencil points + write result
-    let bytes_per_point = (stencil_points + 1) as f64 * 8.0; // f64 = 8 bytes
+    let bytes_per_point = f64::from(stencil_points + 1) * 8.0; // f64 = 8 bytes
 
     flops_per_point / bytes_per_point
 }

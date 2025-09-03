@@ -1,6 +1,6 @@
 //! Hemisphere geometry and element placement
 
-use super::constants::*;
+use super::constants::MAX_ELEMENT_DENSITY;
 use super::element::ElementConfiguration;
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 use std::f64::consts::PI;
@@ -10,7 +10,7 @@ use std::f64::consts::PI;
 pub struct HemisphereGeometry {
     /// Radius of hemisphere (m)
     pub radius: f64,
-    /// F-number (focal_length/aperture)
+    /// F-number (`focal_length/aperture`)
     pub f_number: f64,
     /// Aperture diameter (m)
     pub aperture: f64,
@@ -42,6 +42,7 @@ impl HemisphereGeometry {
     }
 
     /// Get geometric focus point
+    #[must_use]
     pub fn focal_point(&self) -> [f64; 3] {
         [0.0, 0.0, self.focal_length]
     }

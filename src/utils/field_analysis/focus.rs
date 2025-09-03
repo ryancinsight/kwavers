@@ -76,8 +76,7 @@ pub fn find_focal_plane(
             _ => {
                 // Invalid axis - return error
                 return Err(KwaversError::InvalidInput(format!(
-                    "Invalid axis {} for focus finding, expected 0, 1, or 2",
-                    axis
+                    "Invalid axis {axis} for focus finding, expected 0, 1, or 2"
                 )));
             }
         }

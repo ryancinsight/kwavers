@@ -40,13 +40,13 @@ impl Default for IMEXRKConfig {
 #[derive(Debug)]
 pub struct IMEXRK {
     config: IMEXRKConfig,
-    /// Explicit RK coefficients (a_ij)
+    /// Explicit RK coefficients (`a_ij`)
     a_explicit: Vec<Vec<f64>>,
-    /// Implicit RK coefficients (a_ij)
+    /// Implicit RK coefficients (`a_ij`)
     a_implicit: Vec<Vec<f64>>,
-    /// RK weights (b_i)
+    /// RK weights (`b_i`)
     b: Vec<f64>,
-    /// RK nodes (c_i)
+    /// RK nodes (`c_i`)
     c: Vec<f64>,
     /// Number of stages
     s: usize,
@@ -58,6 +58,7 @@ pub struct IMEXRK {
 
 impl IMEXRK {
     /// Create a new IMEX-RK scheme
+    #[must_use]
     pub fn new(config: IMEXRKConfig) -> Self {
         let (a_explicit, a_implicit, b, c, s, p) = match config.scheme_type {
             IMEXRKType::SSP2_222 => Self::ssp2_222_coefficients(),

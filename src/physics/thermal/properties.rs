@@ -7,18 +7,21 @@
 use super::ThermalProperties;
 
 /// Temperature-dependent thermal conductivity
+#[must_use]
 pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
     // Linear increase with temperature (approximately 0.2%/°C)
     k0 * (1.0 + 0.002 * (temperature - 37.0))
 }
 
 /// Temperature-dependent specific heat
+#[must_use]
 pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
     // Slight increase with temperature
     c0 * (1.0 + 0.001 * (temperature - 37.0))
 }
 
 /// Temperature-dependent blood perfusion
+#[must_use]
 pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
     if temperature < 37.0 {
         // Reduced perfusion when cold
@@ -36,6 +39,7 @@ pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
 }
 
 /// Update thermal properties based on temperature
+#[must_use]
 pub fn update_properties(
     base_properties: &ThermalProperties,
     temperature: f64,
@@ -49,12 +53,14 @@ pub fn update_properties(
 }
 
 /// Acoustic absorption coefficient temperature dependence
+#[must_use]
 pub fn absorption_vs_temperature(alpha0: f64, temperature: f64) -> f64 {
     // Decreases with temperature (approximately -2%/°C)
     alpha0 * (1.0 - 0.02 * (temperature - 37.0).max(0.0))
 }
 
 /// Sound speed temperature dependence
+#[must_use]
 pub fn sound_speed_vs_temperature(c0: f64, temperature: f64) -> f64 {
     // Increases with temperature (approximately 1.5 m/s/°C)
     c0 + 1.5 * (temperature - 37.0)

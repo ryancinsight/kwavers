@@ -24,6 +24,7 @@ pub enum PulseShape {
 }
 
 impl PulseTrain {
+    #[must_use]
     pub fn new(pulse_frequency: f64, carrier_frequency: f64, amplitude: f64) -> Self {
         assert!(pulse_frequency > 0.0, "Pulse frequency must be positive");
         assert!(
@@ -42,6 +43,7 @@ impl PulseTrain {
         }
     }
 
+    #[must_use]
     pub fn with_duty_cycle(mut self, duty_cycle: f64) -> Self {
         assert!(
             duty_cycle > 0.0 && duty_cycle <= 1.0,
@@ -51,6 +53,7 @@ impl PulseTrain {
         self
     }
 
+    #[must_use]
     pub fn with_pulse_shape(mut self, shape: PulseShape) -> Self {
         self.pulse_shape = shape;
         self

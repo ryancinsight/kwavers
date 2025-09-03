@@ -45,6 +45,7 @@ pub struct LocalizationProcessor {
 
 impl LocalizationProcessor {
     /// Create from method
+    #[must_use]
     pub fn from_method(method: LocalizationMethod) -> Self {
         Self { method }
     }

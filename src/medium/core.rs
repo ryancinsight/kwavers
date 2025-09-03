@@ -89,6 +89,7 @@ pub trait ArrayAccess: CoreMedium {
 ///
 /// Efficiently finds the maximum value using iterator combinators
 /// for potential SIMD optimization by the compiler.
+#[must_use]
 pub fn max_sound_speed(sound_speed: &Array3<f64>) -> f64 {
     sound_speed
         .iter()

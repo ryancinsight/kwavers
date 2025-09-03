@@ -42,6 +42,7 @@ pub struct SonochemistryModel {
 
 impl SonochemistryModel {
     /// Create new sonochemistry model
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize, initial_ph: f64) -> Self {
         let shape = (nx, ny, nz);
 
@@ -210,6 +211,7 @@ impl SonochemistryModel {
     }
 
     /// Calculate total sonochemical yield
+    #[must_use]
     pub fn total_yield(&self) -> SonochemicalYield {
         let mut total = SonochemicalYield {
             oh_yield: 0.0,
@@ -238,6 +240,7 @@ impl SonochemistryModel {
     }
 
     /// Get oxidative stress field
+    #[must_use]
     pub fn oxidative_stress(&self) -> Array3<f64> {
         // Create a uniform field with the oxidative stress index value
         let stress_value = self.ros_concentrations.oxidative_stress_index();

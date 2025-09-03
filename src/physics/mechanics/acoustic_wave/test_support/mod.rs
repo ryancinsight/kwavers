@@ -80,22 +80,21 @@ pub mod tests {
     #[test]
     fn test_heterogeneous_medium_position_dependence() {
         use super::mocks::mocks::HeterogeneousMediumMock;
-        use crate::medium::core::CoreMedium;
 
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1);
         let medium = HeterogeneousMediumMock::new(true);
 
         // Test that different positions give different values
-        let density1 = crate::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
-        let density2 = crate::medium::density_at(medium, 0.5, 0.5, 0.5, &grid);
+        let density1 = crate::medium::density_at(&medium, 0.0, 0.0, 0.0, &grid);
+        let density2 = crate::medium::density_at(&medium, 0.5, 0.5, 0.5, &grid);
 
         assert_ne!(
             density1, density2,
             "Position-dependent medium should have varying density"
         );
 
-        let speed1 = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
-        let speed2 = crate::medium::sound_speed_at(medium, 0.5, 0.5, 0.5, &grid);
+        let speed1 = crate::medium::sound_speed_at(&medium, 0.0, 0.0, 0.0, &grid);
+        let speed2 = crate::medium::sound_speed_at(&medium, 0.5, 0.5, 0.5, &grid);
 
         assert_ne!(
             speed1, speed2,

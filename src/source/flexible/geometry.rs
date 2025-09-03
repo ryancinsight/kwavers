@@ -23,6 +23,7 @@ pub struct GeometryState {
 
 impl GeometryState {
     /// Create a new geometry state for a flat array
+    #[must_use]
     pub fn flat_array(num_elements: usize, spacing: f64) -> Self {
         let mut positions = Array2::zeros((num_elements, 3));
         let mut normals = Array2::zeros((num_elements, 3));
@@ -56,6 +57,7 @@ impl GeometryState {
     }
 
     /// Calculate curvature from current positions
+    #[must_use]
     pub fn calculate_curvature(&self) -> f64 {
         if self.element_positions.nrows() < 3 {
             return 0.0;
@@ -90,6 +92,7 @@ impl GeometryState {
     }
 
     /// Get the centroid of all element positions
+    #[must_use]
     pub fn centroid(&self) -> [f64; 3] {
         let n = self.element_positions.nrows() as f64;
         let sum = self.element_positions.sum_axis(ndarray::Axis(0));
@@ -114,6 +117,7 @@ pub struct DeformationState {
 
 impl DeformationState {
     /// Check if deformation is within safe limits
+    #[must_use]
     pub fn is_safe(&self) -> bool {
         self.strain
             .iter()

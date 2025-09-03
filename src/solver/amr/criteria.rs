@@ -34,6 +34,7 @@ impl Default for ErrorEstimator {
 
 impl ErrorEstimator {
     /// Create a new error estimator
+    #[must_use]
     pub fn new() -> Self {
         Self {
             criterion: RefinementCriterion::Gradient,
@@ -149,7 +150,7 @@ impl ErrorEstimator {
                     }
 
                     field[[i, j, k]] = (1.0 - self.smoothing) * field[[i, j, k]]
-                        + self.smoothing * (sum / count as f64);
+                        + self.smoothing * (sum / f64::from(count));
                 }
             }
         }

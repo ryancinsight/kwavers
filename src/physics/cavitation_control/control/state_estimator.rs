@@ -9,7 +9,14 @@ pub struct StateEstimator {
     alpha: f64,
 }
 
+impl Default for StateEstimator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StateEstimator {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             history: VecDeque::with_capacity(10),
@@ -55,6 +62,7 @@ impl StateEstimator {
         self.history.clear();
     }
 
+    #[must_use]
     pub fn get_trend(&self) -> f64 {
         if self.history.len() < 2 {
             return 0.0;

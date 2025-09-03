@@ -47,6 +47,7 @@ pub struct PhotoacousticReconstructor {
 
 impl PhotoacousticReconstructor {
     /// Create a new photoacoustic reconstructor
+    #[must_use]
     pub fn new(config: PhotoacousticConfig) -> Self {
         Self {
             filters: Filters::new(&config),

@@ -69,7 +69,7 @@ impl ConfigValidator {
             return Err(ConfigError::InvalidValue {
                 parameter: "time step".to_string(),
                 value: config.time.dt.to_string(),
-                constraint: format!("Must be <= {} for stability", max_stable_dt),
+                constraint: format!("Must be <= {max_stable_dt} for stability"),
             }
             .into());
         }
@@ -82,10 +82,9 @@ impl ConfigValidator {
         if points_per_wavelength < MIN_POINTS_PER_WAVELENGTH {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid resolution".to_string(),
-                value: format!("{:.2} points per wavelength", points_per_wavelength),
+                value: format!("{points_per_wavelength:.2} points per wavelength"),
                 constraint: format!(
-                    "Need at least {} points per wavelength",
-                    MIN_POINTS_PER_WAVELENGTH
+                    "Need at least {MIN_POINTS_PER_WAVELENGTH} points per wavelength"
                 ),
             }
             .into());

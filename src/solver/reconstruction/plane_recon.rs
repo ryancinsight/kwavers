@@ -23,6 +23,7 @@ pub struct PlaneRecon {
 
 impl PlaneRecon {
     /// Create a new planar array reconstruction
+    #[must_use]
     pub fn new(normal: [f64; 3], center: [f64; 3]) -> Self {
         Self {
             normal,
@@ -32,6 +33,7 @@ impl PlaneRecon {
     }
 
     /// Set weight function for back-projection
+    #[must_use]
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
         self

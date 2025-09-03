@@ -1,6 +1,6 @@
 //! Spectral operator for efficient FFT-based derivative computations
 //!
-//! This module provides a stateful SpectralOperator that pre-allocates
+//! This module provides a stateful `SpectralOperator` that pre-allocates
 //! workspaces and pre-computes wavenumber vectors for efficient spectral
 //! derivative calculations.
 

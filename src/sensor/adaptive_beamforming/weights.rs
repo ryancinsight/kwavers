@@ -18,10 +18,12 @@ pub struct WeightCalculator {
 }
 
 impl WeightCalculator {
+    #[must_use]
     pub fn new(scheme: WeightingScheme) -> Self {
         Self { scheme }
     }
 
+    #[must_use]
     pub fn compute(&self, num_elements: usize) -> Array1<Complex64> {
         match self.scheme {
             WeightingScheme::Uniform => {

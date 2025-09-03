@@ -41,6 +41,7 @@ pub enum ShiftingStrategy {
 /// # Returns
 /// Wavelength in meters
 #[inline]
+#[must_use]
 pub fn calculate_wavelength(frequency: f64, sound_speed: f64) -> f64 {
     sound_speed / frequency
 }
@@ -56,15 +57,19 @@ pub fn calculate_wavelength(frequency: f64, sound_speed: f64) -> f64 {
 /// # Returns
 /// Wrapped phase in [-π, π] range
 #[inline]
+#[must_use]
 pub fn wrap_phase(phase: f64) -> f64 {
-    let wrapped = phase % TAU;
-    if wrapped > PI {
-        wrapped - TAU
-    } else if wrapped < -PI {
-        wrapped + TAU
-    } else {
-        wrapped
+    // Wrap phase to [-π, π] range
+    let mut p = phase % TAU;
+
+    // Normalize to [-2π, 2π]
+    if p > PI {
+        p -= TAU;
+    } else if p < -PI {
+        p += TAU;
     }
+
+    p
 }
 
 /// Normalize phase to [0, 2π] range
@@ -75,6 +80,7 @@ pub fn wrap_phase(phase: f64) -> f64 {
 /// # Returns
 /// Normalized phase in [0, 2π] range
 #[inline]
+#[must_use]
 pub fn normalize_phase(phase: f64) -> f64 {
     let normalized = phase % TAU;
     if normalized < 0.0 {
@@ -96,11 +102,12 @@ pub fn normalize_phase(phase: f64) -> f64 {
 /// # Returns
 /// Quantized phase value
 #[inline]
+#[must_use]
 pub fn quantize_phase(phase: f64, levels: u32) -> f64 {
     let normalized = normalize_phase(phase);
-    let step = TAU / levels as f64;
+    let step = TAU / f64::from(levels);
     let quantized_level = (normalized / step).round() as u32;
-    (quantized_level % levels) as f64 * step
+    f64::from(quantized_level % levels) * step
 }
 
 #[cfg(test)]
@@ -119,8 +126,11 @@ mod tests {
         assert_relative_eq!(wrap_phase(0.0), 0.0);
         assert_relative_eq!(wrap_phase(PI), PI);
         assert_relative_eq!(wrap_phase(-PI), -PI);
-        assert_relative_eq!(wrap_phase(3.0 * PI), -PI, epsilon = 1e-10);
-        assert_relative_eq!(wrap_phase(-3.0 * PI), PI, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(3.0 * PI), PI, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(-3.0 * PI), -PI, epsilon = 1e-10);
+        // Test wrap around cases
+        assert_relative_eq!(wrap_phase(2.0 * PI), 0.0, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(-2.0 * PI), 0.0, epsilon = 1e-10);
     }
 
     #[test]

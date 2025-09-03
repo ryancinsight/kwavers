@@ -20,7 +20,7 @@ pub struct PhotoacousticConfig {
     pub sampling_frequency: f64,
     /// Apply envelope detection
     pub envelope_detection: bool,
-    /// Bandpass filter parameters [low_freq, high_freq] in Hz
+    /// Bandpass filter parameters [`low_freq`, `high_freq`] in Hz
     pub bandpass_filter: Option<[f64; 2]>,
     /// Regularization parameter for iterative methods
     pub regularization_parameter: f64,

@@ -31,6 +31,7 @@ impl InferenceEngine {
     /// * `bias`    – Optional 1-D bias vector of length *classes*.
     /// * `batch_size` – Preferred mini-batch size for inference.
     /// * `use_gpu` – Hint whether GPU execution is desired.
+    #[must_use]
     pub fn from_weights(
         weights: Array2<f32>,
         bias: Option<Array1<f32>>,
@@ -48,6 +49,7 @@ impl InferenceEngine {
     /// Convenience constructor that *initialises* the weight matrix with small
     /// random values.  This retains backward compatibility with the previous
     /// `new` signature while guaranteeing the struct is in a usable state.
+    #[must_use]
     pub fn new(batch_size: usize, use_gpu: bool) -> Self {
         // We create a 1-to-1 feature-to-class mapping by default so that the
         // engine can operate immediately.  The caller can still replace the
@@ -77,7 +79,7 @@ impl InferenceEngine {
     /// last singleton dimension makes it easy to keep compatibility with the
     /// rest of the code-base that mostly works with 3-D data).  The method
     /// returns a tensor with shape *(batch, classes, 1)* where *classes =
-    /// weights.ncols()*.  If the input feature dimension does *not* match
+    /// `weights.ncols()`*.  If the input feature dimension does *not* match
     /// `weights.nrows()` an informative error is returned.
     pub fn infer_batch(&self, input: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let (_batch, features, depth) = input.dim();

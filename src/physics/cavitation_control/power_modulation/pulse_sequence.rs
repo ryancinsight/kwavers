@@ -30,6 +30,7 @@ impl Default for PulseSequenceGenerator {
 
 impl PulseSequenceGenerator {
     /// Create new pulse sequence generator
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sequence: Vec::new(),
@@ -45,6 +46,7 @@ impl PulseSequenceGenerator {
     }
 
     /// Create a standard burst sequence
+    #[must_use]
     pub fn create_burst_sequence(
         num_pulses: usize,
         pulse_duration: f64,
@@ -114,6 +116,7 @@ impl PulseSequenceGenerator {
     }
 
     /// Get total sequence duration
+    #[must_use]
     pub fn total_duration(&self) -> f64 {
         self.sequence.iter().map(|p| p.duration + p.delay).sum()
     }

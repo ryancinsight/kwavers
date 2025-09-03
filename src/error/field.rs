@@ -19,8 +19,8 @@ pub enum FieldError {
 impl fmt::Display for FieldError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotRegistered(name) => write!(f, "Field not registered: {}", name),
-            Self::Inactive(name) => write!(f, "Field inactive: {}", name),
+            Self::NotRegistered(name) => write!(f, "Field not registered: {name}"),
+            Self::Inactive(name) => write!(f, "Field inactive: {name}"),
             Self::DataNotInitialized => write!(f, "Field data not initialized"),
             Self::DimensionMismatch {
                 field,
@@ -29,8 +29,7 @@ impl fmt::Display for FieldError {
             } => {
                 write!(
                     f,
-                    "Field {} dimension mismatch: expected {:?}, got {:?}",
-                    field, expected, actual
+                    "Field {field} dimension mismatch: expected {expected:?}, got {actual:?}"
                 )
             }
         }

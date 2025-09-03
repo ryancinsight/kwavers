@@ -192,6 +192,7 @@ pub fn init_logging() -> KwaversResult<()> {
 /// Get library version and build information
 ///
 /// Implements SSOT principle for version information
+#[must_use]
 pub fn get_version_info() -> HashMap<String, String> {
     let mut info = HashMap::new();
     info.insert("version".to_string(), env!("CARGO_PKG_VERSION").to_string());

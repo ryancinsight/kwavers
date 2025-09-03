@@ -21,6 +21,7 @@ impl std::fmt::Debug for FrequencyFilter {
 
 impl FrequencyFilter {
     /// Create a new frequency filter
+    #[must_use]
     pub fn new() -> Self {
         Self {
             fft_planner: FftPlanner::new(),

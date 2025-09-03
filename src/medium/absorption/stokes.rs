@@ -44,11 +44,13 @@ pub struct StokesAbsorption {
 
 impl StokesAbsorption {
     /// Create a new Stokes absorption model
+    #[must_use]
     pub fn new(params: StokesParameters) -> Self {
         Self { params }
     }
 
     /// Create model for water at given temperature
+    #[must_use]
     pub fn water_at_temperature(temp_celsius: f64) -> Self {
         // Temperature-dependent properties for water
         // Using empirical formulas
@@ -82,6 +84,7 @@ impl StokesAbsorption {
     }
 
     /// Calculate classical (Stokes) absorption coefficient
+    #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         let omega = 2.0 * std::f64::consts::PI * frequency;
         let p = &self.params;
@@ -98,6 +101,7 @@ impl StokesAbsorption {
     }
 
     /// Calculate relaxation absorption (for frequencies where relaxation occurs)
+    #[must_use]
     pub fn relaxation_absorption(&self, frequency: f64, relaxation_freq: f64) -> f64 {
         // Relaxation absorption: α_r = A * f² / (f² + f_r²)
         // where f_r is the relaxation frequency
@@ -109,6 +113,7 @@ impl StokesAbsorption {
     }
 
     /// Get total absorption including relaxation effects
+    #[must_use]
     pub fn total_absorption(&self, frequency: f64) -> f64 {
         // For water, main relaxation frequencies are:
         // - Structural relaxation: ~1 GHz

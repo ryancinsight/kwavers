@@ -1,7 +1,7 @@
-//! Wrapper functions for CoreMedium trait to handle continuous coordinates
+//! Wrapper functions for `CoreMedium` trait to handle continuous coordinates
 //!
 //! This module provides compatibility functions that convert continuous
-//! coordinates to discrete indices before calling CoreMedium methods.
+//! coordinates to discrete indices before calling `CoreMedium` methods.
 
 use crate::grid::Grid;
 use crate::medium::{continuous_to_discrete, CoreMedium, Medium};

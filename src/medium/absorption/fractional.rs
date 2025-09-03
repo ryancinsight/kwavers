@@ -19,11 +19,13 @@ pub struct FractionalLaplacian {
 
 impl FractionalLaplacian {
     /// Create a new fractional Laplacian model
+    #[must_use]
     pub fn new(y: f64, tau: f64, c0: f64) -> Self {
         Self { y, tau, c0 }
     }
 
     /// Calculate absorption coefficient
+    #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         // α(ω) = τ * ω^y / (2 * c₀^3)
         let omega = 2.0 * std::f64::consts::PI * frequency;
@@ -65,6 +67,7 @@ pub struct FractionalDerivative {
 
 impl FractionalDerivative {
     /// Create a new fractional derivative calculator
+    #[must_use]
     pub fn new(order: f64, max_terms: usize) -> Self {
         let gl_coefficients = Self::compute_gl_coefficients(order, max_terms);
 
@@ -87,6 +90,7 @@ impl FractionalDerivative {
     }
 
     /// Apply fractional derivative using Grünwald-Letnikov method
+    #[must_use]
     pub fn apply(&self, signal: &[f64], dt: f64) -> Vec<f64> {
         let n = signal.len();
         let mut result = vec![0.0; n];

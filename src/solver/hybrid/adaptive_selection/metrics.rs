@@ -45,7 +45,7 @@ impl SpectralMetrics {
         }
 
         if count > 0 {
-            total_gradient / count as f64
+            total_gradient / f64::from(count)
         } else {
             0.0
         }
@@ -84,6 +84,7 @@ pub struct MaterialMetrics {
 
 impl MaterialMetrics {
     /// Compute material metrics
+    #[must_use]
     pub fn compute(
         density: ArrayView3<f64>,
         sound_speed: ArrayView3<f64>,

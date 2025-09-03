@@ -28,7 +28,7 @@ pub enum MLBackend {
     ONNX,
     /// TensorFlow Lite for mobile/embedded
     TFLite,
-    /// PyTorch Mobile
+    /// `PyTorch` Mobile
     PyTorchMobile,
     /// Custom Rust implementation
     Native,
@@ -49,6 +49,7 @@ pub enum Model {
 
 impl Model {
     /// Get model type
+    #[must_use]
     pub fn model_type(&self) -> ModelType {
         match self {
             Model::TissueClassifier(_) => ModelType::TissueClassifier,
@@ -69,6 +70,7 @@ impl Model {
     }
 
     /// Get model metadata
+    #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         match self {
             Model::TissueClassifier(m) => m.metadata(),

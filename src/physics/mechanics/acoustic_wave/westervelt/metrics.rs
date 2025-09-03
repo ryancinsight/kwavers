@@ -15,6 +15,7 @@ pub struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     /// Create new metrics instance
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -50,6 +51,7 @@ impl PerformanceMetrics {
     }
 
     /// Get total computation time
+    #[must_use]
     pub fn total_time(&self) -> f64 {
         self.nonlinear_time
             + self.fft_time

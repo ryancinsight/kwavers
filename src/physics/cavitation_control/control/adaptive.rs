@@ -11,6 +11,7 @@ pub struct AdaptiveController {
 }
 
 impl AdaptiveController {
+    #[must_use]
     pub fn new(learning_rate: f64) -> Self {
         Self {
             learning_rate,
@@ -54,6 +55,7 @@ impl AdaptiveController {
         }
     }
 
+    #[must_use]
     pub fn suggest_gain_adjustment(&self, error_trend: f64) -> f64 {
         // Suggest gain adjustment based on error trend
         if error_trend.abs() < 0.01 {

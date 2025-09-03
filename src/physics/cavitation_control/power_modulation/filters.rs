@@ -9,6 +9,7 @@ pub struct ExponentialFilter {
 
 impl ExponentialFilter {
     /// Create new exponential filter with specified time constant
+    #[must_use]
     pub fn new(time_constant: f64) -> Self {
         Self {
             alpha: 1.0 - (-1.0 / time_constant).exp(),
@@ -28,6 +29,7 @@ impl ExponentialFilter {
     }
 
     /// Get current filter state
+    #[must_use]
     pub fn get_state(&self) -> f64 {
         self.state
     }

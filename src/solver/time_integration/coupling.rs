@@ -31,6 +31,7 @@ pub struct SubcyclingStrategy {
 
 impl SubcyclingStrategy {
     /// Create a new subcycling strategy
+    #[must_use]
     pub fn new(max_subcycles: usize) -> Self {
         Self { max_subcycles }
     }
@@ -46,12 +47,12 @@ impl TimeCoupling for SubcyclingStrategy {
         grid: &Grid,
     ) -> KwaversResult<()> {
         // Find maximum number of subcycles
-        let max_cycles = subcycles.values().cloned().max().unwrap_or(1);
+        let max_cycles = subcycles.values().copied().max().unwrap_or(1);
 
         // Advance each component with its own subcycling
         for cycle in 0..max_cycles {
             for (name, component) in physics_components {
-                let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
+                let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
 
                 // Check if this component should be updated in this cycle
                 if cycle % (max_cycles / n_subcycles) == 0 {
@@ -91,6 +92,7 @@ pub struct AveragingStrategy {
 
 impl AveragingStrategy {
     /// Create a new averaging strategy
+    #[must_use]
     pub fn new(interpolation_order: usize) -> Self {
         Self {
             interpolation_order,
@@ -111,11 +113,8 @@ impl TimeCoupling for AveragingStrategy {
         // integration requires preserving the initial state while fields are
         // modified during subcycling. Arc is used to share these cloned states
         // efficiently across multiple references.
-        use std::sync::Arc;
-        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
-            .iter()
-            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
-            .collect();
+
+        let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // First pass: advance all components independently
         for (name, component) in physics_components {
@@ -146,7 +145,7 @@ impl TimeCoupling for AveragingStrategy {
             for (name, field) in fields.iter_mut() {
                 if let Some(initial) = initial_fields.get(name) {
                     // Simple linear interpolation for demonstration
-                    field.zip_mut_with(initial.as_ref(), |f, &i| *f = 0.5 * (*f + i));
+                    field.zip_mut_with(initial, |f, &i| *f = 0.5 * (*f + i));
                 }
             }
         }
@@ -164,6 +163,7 @@ pub struct PredictorCorrectorStrategy {
 
 impl PredictorCorrectorStrategy {
     /// Create a new predictor-corrector strategy
+    #[must_use]
     pub fn new(corrector_iterations: usize) -> Self {
         Self {
             corrector_iterations,
@@ -183,11 +183,8 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         // Store initial states - we need to clone here because predictor-corrector
         // methods require resetting to the initial state for each iteration.
         // Arc is used to share these cloned states efficiently.
-        use std::sync::Arc;
-        let initial_fields: HashMap<String, Arc<Array3<f64>>> = fields
-            .iter()
-            .map(|(k, v)| (k.clone(), Arc::new(v.clone())))
-            .collect();
+
+        let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // Predictor-corrector iterations
         for iteration in 0..=self.corrector_iterations {
@@ -195,14 +192,14 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             if iteration < self.corrector_iterations {
                 for (name, initial) in &initial_fields {
                     if let Some(field) = fields.get_mut(name) {
-                        field.assign(initial.as_ref());
+                        field.assign(initial);
                     }
                 }
             }
 
             // Advance each component
             for (name, component) in physics_components {
-                let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
+                let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
                 let local_dt = global_dt / n_subcycles as f64;
 
                 let field = fields.get_mut(name).ok_or_else(|| {

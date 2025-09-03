@@ -46,6 +46,7 @@ impl Default for CPMLConfig {
 
 impl CPMLConfig {
     /// Create CPML configuration with specified thickness
+    #[must_use]
     pub fn with_thickness(thickness: usize) -> Self {
         Self {
             thickness,
@@ -113,6 +114,7 @@ impl CPMLConfig {
     }
 
     /// Calculate theoretical reflection coefficient for a given angle
+    #[must_use]
     pub fn theoretical_reflection(&self, cos_theta: f64) -> f64 {
         let cos_theta = cos_theta.max(MIN_COS_THETA_FOR_REFLECTION);
         let m = self.polynomial_order;

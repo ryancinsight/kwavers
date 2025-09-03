@@ -1,6 +1,6 @@
 //! Duty cycle control for power modulation
 
-use super::constants::*;
+use super::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 
 /// Duty cycle controller for pulsed operation
 #[derive(Debug, Clone)]
@@ -14,6 +14,7 @@ pub struct DutyCycleController {
 
 impl DutyCycleController {
     /// Create new duty cycle controller
+    #[must_use]
     pub fn new(initial_duty_cycle: f64) -> Self {
         Self {
             target_duty_cycle: initial_duty_cycle.clamp(MIN_DUTY_CYCLE, MAX_DUTY_CYCLE),
@@ -44,6 +45,7 @@ impl DutyCycleController {
     }
 
     /// Get current duty cycle
+    #[must_use]
     pub fn get_duty_cycle(&self) -> f64 {
         self.current_duty_cycle
     }
@@ -68,6 +70,7 @@ impl DutyCycleController {
     }
 
     /// Calculate average power for current duty cycle
+    #[must_use]
     pub fn average_power(&self, peak_power: f64) -> f64 {
         peak_power * self.current_duty_cycle
     }

@@ -108,6 +108,7 @@ impl Default for SeismicImagingPlugin {
 
 impl SeismicImagingPlugin {
     /// Create new seismic imaging plugin
+    #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: PluginMetadata {
@@ -195,6 +196,7 @@ impl SeismicImagingPlugin {
 
     /// Calculate gradient for FWI
     /// Based on Plessix (2006): "A review of the adjoint-state method"
+    #[must_use]
     pub fn calculate_gradient(
         &self,
         forward_field: &Array3<f64>,
@@ -243,6 +245,7 @@ impl SeismicImagingPlugin {
     }
 
     /// Apply imaging condition
+    #[must_use]
     pub fn apply_imaging_condition(
         &self,
         source: &Array3<f64>,

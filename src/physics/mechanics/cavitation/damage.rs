@@ -93,6 +93,7 @@ impl Default for DamageParameters {
 
 impl CavitationDamage {
     /// Create new damage model
+    #[must_use]
     pub fn new(
         grid_shape: (usize, usize, usize),
         material: MaterialProperties,
@@ -207,11 +208,13 @@ impl CavitationDamage {
     }
 
     /// Get total accumulated damage
+    #[must_use]
     pub fn total_damage(&self) -> f64 {
         self.damage_field.sum()
     }
 
     /// Get maximum damage location
+    #[must_use]
     pub fn max_damage_location(&self) -> (usize, usize, usize) {
         let mut max_damage = 0.0;
         let mut max_loc = (0, 0, 0);
@@ -228,7 +231,7 @@ impl CavitationDamage {
 
     /// Calculate mean time to failure based on damage accumulation
     pub fn mean_time_to_failure(&self, dt: f64) -> f64 {
-        let max_damage = self.damage_field.iter().cloned().fold(0.0, f64::max);
+        let max_damage = self.damage_field.iter().copied().fold(0.0, f64::max);
 
         if max_damage > 0.0 {
             let damage_rate = max_damage / dt;
@@ -239,6 +242,7 @@ impl CavitationDamage {
     }
 
     /// Get erosion depth field [m]
+    #[must_use]
     pub fn erosion_depth(&self, time: f64) -> Array3<f64> {
         let mut depth = Array3::zeros(self.erosion_rate.dim());
 
@@ -253,6 +257,7 @@ impl CavitationDamage {
 }
 
 /// Calculate cavitation intensity parameter
+#[must_use]
 pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f64) -> Array3<f64> {
     let shape = bubble_states.radius.dim();
     let mut intensity = Array3::zeros(shape);
@@ -277,6 +282,7 @@ pub struct ErosionPattern;
 
 impl ErosionPattern {
     /// Calculate erosion potential field
+    #[must_use]
     pub fn erosion_potential(
         damage_field: &Array3<f64>,
         flow_velocity: &Array3<f64>,
@@ -300,6 +306,7 @@ impl ErosionPattern {
     }
 
     /// Identify high-risk areas
+    #[must_use]
     pub fn risk_map(damage_field: &Array3<f64>, threshold: f64) -> Array3<bool> {
         damage_field.mapv(|d| d > threshold)
     }

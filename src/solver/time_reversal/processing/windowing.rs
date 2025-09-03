@@ -6,6 +6,7 @@ use crate::{error::KwaversResult, grid::Grid};
 use ndarray::Array3;
 
 /// Tukey window function (tapered cosine window)
+#[must_use]
 pub fn tukey_window(i: usize, n: usize, alpha: f64) -> f64 {
     if n <= 1 {
         return 1.0;
@@ -53,16 +54,19 @@ pub fn apply_spatial_window(
 }
 
 /// Apply Hann window
+#[must_use]
 pub fn hann_window(i: usize, n: usize) -> f64 {
     0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos())
 }
 
 /// Apply Hamming window
+#[must_use]
 pub fn hamming_window(i: usize, n: usize) -> f64 {
     0.54 - 0.46 * (2.0 * std::f64::consts::PI * i as f64 / (n - 1) as f64).cos()
 }
 
 /// Apply Blackman window
+#[must_use]
 pub fn blackman_window(i: usize, n: usize) -> f64 {
     let x = i as f64 / (n - 1) as f64;
     0.42 - 0.5 * (2.0 * std::f64::consts::PI * x).cos()

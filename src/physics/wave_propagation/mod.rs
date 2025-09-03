@@ -103,6 +103,7 @@ pub struct MediumProperties {
 
 impl MediumProperties {
     /// Create properties for water at standard conditions
+    #[must_use]
     pub fn water() -> Self {
         Self {
             wave_speed: SOUND_SPEED_WATER,
@@ -114,11 +115,13 @@ impl MediumProperties {
     }
 
     /// Calculate acoustic impedance Z = ρc
+    #[must_use]
     pub fn acoustic_impedance(&self) -> f64 {
         self.density * self.wave_speed
     }
 
     /// Calculate optical impedance Z = √(μ/ε) ≈ Z₀/n for non-magnetic media
+    #[must_use]
     pub fn optical_impedance(&self) -> f64 {
         const VACUUM_IMPEDANCE: f64 = 376.730313668; // Ohms
         VACUUM_IMPEDANCE / self.refractive_index
@@ -151,6 +154,7 @@ pub struct AttenuationCalculator {
 
 impl AttenuationCalculator {
     /// Create a new attenuation calculator
+    #[must_use]
     pub fn new(absorption_coefficient: f64, frequency: f64, wave_speed: f64) -> Self {
         Self {
             absorption_coefficient,
@@ -161,30 +165,35 @@ impl AttenuationCalculator {
 
     /// Calculate amplitude attenuation over distance using Beer-Lambert law
     /// A(x) = A₀ * exp(-α * x)
+    #[must_use]
     pub fn amplitude_at_distance(&self, initial_amplitude: f64, distance: f64) -> f64 {
         initial_amplitude * (-self.absorption_coefficient * distance).exp()
     }
 
     /// Calculate intensity attenuation (intensity ~ amplitude²)
     /// I(x) = I₀ * exp(-2α * x)
+    #[must_use]
     pub fn intensity_at_distance(&self, initial_intensity: f64, distance: f64) -> f64 {
         initial_intensity * (-2.0 * self.absorption_coefficient * distance).exp()
     }
 
     /// Calculate attenuation in dB over distance
-    /// Attenuation_dB = 20 * log₁₀(A₀/A) = 8.686 * α * x
+    /// `Attenuation_dB` = 20 * log₁₀(A₀/A) = 8.686 * α * x
+    #[must_use]
     pub fn attenuation_db(&self, distance: f64) -> f64 {
         8.686 * self.absorption_coefficient * distance
     }
 
     /// Calculate frequency-dependent absorption for acoustic waves in tissue
     /// α = α₀ * f^n where n is typically 1-2
+    #[must_use]
     pub fn tissue_absorption(frequency: f64, alpha_0: f64, power_law: f64) -> f64 {
         alpha_0 * frequency.powf(power_law)
     }
 
     /// Calculate thermo-viscous absorption in fluids (classical absorption)
-    /// α = 2πf²/ρc³ * (4μ/3 + μ_B + κ(γ-1)/C_p)
+    /// α = 2πf²/ρc³ * (4μ/3 + `μ_B` + κ(γ-1)/C_p)
+    #[must_use]
     pub fn classical_absorption(
         frequency: f64,
         density: f64,
@@ -232,6 +241,7 @@ impl AttenuationCalculator {
 
 impl WavePropagationCalculator {
     /// Create a new calculator
+    #[must_use]
     pub fn new(mode: WaveMode, interface: Interface, frequency: f64) -> Self {
         let wavelength = interface.medium1.wave_speed / frequency;
         Self {
@@ -252,7 +262,7 @@ impl WavePropagationCalculator {
         if !(0.0..=PI / 2.0).contains(&incident_angle) {
             return Err(KwaversError::Physics(PhysicsError::InvalidState {
                 field: "incident_angle".to_string(),
-                value: format!("{}", incident_angle),
+                value: format!("{incident_angle}"),
                 reason: "must be between 0 and π/2".to_string(),
             }));
         }
@@ -374,11 +384,13 @@ pub struct PropagationCoefficients {
 
 impl PropagationCoefficients {
     /// Calculate energy reflection coefficient R = |r|²
+    #[must_use]
     pub fn energy_reflection(&self) -> f64 {
         self.reflection_amplitude.powi(2)
     }
 
     /// Calculate energy transmission coefficient T = |t|²
+    #[must_use]
     pub fn energy_transmission(&self) -> f64 {
         if self.total_internal_reflection {
             0.0
@@ -388,6 +400,7 @@ impl PropagationCoefficients {
     }
 
     /// Verify energy conservation: R + T = 1 (for lossless media)
+    #[must_use]
     pub fn verify_energy_conservation(&self) -> f64 {
         self.energy_reflection() + self.energy_transmission()
     }

@@ -38,6 +38,7 @@ impl Default for KzkSolverPlugin {
 
 impl KzkSolverPlugin {
     /// Create new KZK solver plugin
+    #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: PluginMetadata {

@@ -3,6 +3,7 @@
 use ndarray::{Array3, ArrayView3};
 
 /// Calculate intensity field from pressure
+#[must_use]
 pub fn calculate_intensity(
     pressure_field: ArrayView3<f64>,
     density: f64,
@@ -14,8 +15,9 @@ pub fn calculate_intensity(
 
 /// Calculate Mechanical Index (MI)
 ///
-/// MI = P_neg / sqrt(f_c)
-/// where P_neg is peak negative pressure in MPa and f_c is center frequency in MHz
+/// MI = `P_neg` / `sqrt(f_c)`
+/// where `P_neg` is peak negative pressure in `MPa` and `f_c` is center frequency in `MHz`
+#[must_use]
 pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -> f64 {
     let p_neg_mpa = peak_negative_pressure.abs() / 1e6;
     let freq_mhz = frequency / 1e6;
@@ -30,6 +32,7 @@ pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -
 /// Calculate Thermal Index (TI)
 ///
 /// Simplified calculation based on acoustic power and tissue absorption
+#[must_use]
 pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absorption: f64) -> f64 {
     // Simplified TI calculation
     // Full calculation requires detailed tissue models
@@ -42,6 +45,7 @@ pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absor
 }
 
 /// Calculate derated pressure (accounting for tissue attenuation)
+#[must_use]
 pub fn calculate_derated_pressure(pressure: f64, frequency: f64, depth: f64) -> f64 {
     // FDA derating: 0.3 dB/cm/MHz
     const DERATING_FACTOR: f64 = 0.3; // dB/cm/MHz
@@ -55,7 +59,8 @@ pub fn calculate_derated_pressure(pressure: f64, frequency: f64, depth: f64) -> 
     pressure * attenuation_factor
 }
 
-/// Calculate spatial peak temporal average intensity (I_SPTA)
+/// Calculate spatial peak temporal average intensity (`I_SPTA`)
+#[must_use]
 pub fn calculate_ispta(
     pressure_field: &Array3<f64>,
     density: f64,
@@ -65,7 +70,7 @@ pub fn calculate_ispta(
     let impedance = density * sound_speed;
 
     let mut max_intensity = 0.0;
-    for p in pressure_field.iter() {
+    for p in pressure_field {
         let intensity = p.powi(2) / (2.0 * impedance);
         max_intensity = f64::max(max_intensity, intensity);
     }
@@ -73,12 +78,13 @@ pub fn calculate_ispta(
     max_intensity * duty_cycle
 }
 
-/// Calculate spatial peak pulse average intensity (I_SPPA)
+/// Calculate spatial peak pulse average intensity (`I_SPPA`)
+#[must_use]
 pub fn calculate_isppa(pressure_field: &Array3<f64>, density: f64, sound_speed: f64) -> f64 {
     let impedance = density * sound_speed;
 
     let mut max_intensity = 0.0;
-    for p in pressure_field.iter() {
+    for p in pressure_field {
         let intensity = p.powi(2) / (2.0 * impedance);
         max_intensity = f64::max(max_intensity, intensity);
     }

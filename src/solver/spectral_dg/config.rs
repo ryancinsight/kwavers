@@ -32,6 +32,7 @@ impl Default for DGConfig {
 
 impl DGConfig {
     /// Create configuration for high-order accurate simulations
+    #[must_use]
     pub fn high_order() -> Self {
         Self {
             polynomial_order: 5,
@@ -43,6 +44,7 @@ impl DGConfig {
     }
 
     /// Create configuration for shock-capturing simulations
+    #[must_use]
     pub fn shock_capturing() -> Self {
         Self {
             polynomial_order: 2,

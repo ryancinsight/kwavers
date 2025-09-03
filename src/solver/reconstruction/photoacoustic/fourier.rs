@@ -89,7 +89,7 @@ impl FourierReconstructor {
             let freq = if i <= n / 2 {
                 i as f64 * df
             } else {
-                (i as i32 - n as i32) as f64 * df
+                f64::from(i as i32 - n as i32) * df
             };
 
             // Multiply by iω (derivative in frequency domain)

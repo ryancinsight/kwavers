@@ -21,6 +21,7 @@ impl Default for Regularizer {
 }
 
 impl Regularizer {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             tikhonov_weight: 0.01,

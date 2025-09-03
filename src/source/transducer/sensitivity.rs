@@ -15,12 +15,13 @@ pub struct TransducerSensitivity {
     pub round_trip_sensitivity: f64,
     /// Conversion efficiency (%)
     pub efficiency: f64,
-    /// Maximum acoustic pressure (MPa)
+    /// Maximum acoustic pressure (`MPa`)
     pub max_pressure: f64,
 }
 
 impl TransducerSensitivity {
     /// Calculate sensitivity from transducer parameters
+    #[must_use]
     pub fn from_parameters(coupling: f64, area: f64, impedance: f64, frequency: f64) -> Self {
         // Transmit sensitivity: pressure per volt at 1 meter
         // S_t = k * sqrt(2 * Z * P_elec / A) / r
@@ -54,11 +55,13 @@ impl TransducerSensitivity {
     }
 
     /// Calculate pressure at a given distance and voltage
+    #[must_use]
     pub fn pressure_at_distance(&self, voltage: f64, distance: f64) -> f64 {
         self.transmit_sensitivity * voltage / distance
     }
 
     /// Calculate received voltage for given pressure
+    #[must_use]
     pub fn voltage_from_pressure(&self, pressure: f64) -> f64 {
         self.receive_sensitivity * pressure
     }
@@ -70,6 +73,7 @@ impl TransducerSensitivity {
     /// * `reflection_coeff` - Target reflection coefficient
     /// * `attenuation` - Tissue attenuation (dB/cm/MHz)
     /// * `frequency` - Operating frequency (Hz)
+    #[must_use]
     pub fn calculate_snr(
         &self,
         target_distance: f64,
@@ -97,6 +101,7 @@ impl TransducerSensitivity {
     }
 
     /// Check if sensitivity meets requirements
+    #[must_use]
     pub fn validate_sensitivity(&self, min_snr_db: f64) -> bool {
         // Check at typical imaging depth (10 cm)
         let typical_snr = self.calculate_snr(

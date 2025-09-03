@@ -25,7 +25,7 @@ pub struct OutputParameters {
 pub enum OutputFormat {
     /// HDF5 format
     HDF5,
-    /// NumPy format
+    /// `NumPy` format
     NumPy,
     /// VTK format for visualization
     VTK,

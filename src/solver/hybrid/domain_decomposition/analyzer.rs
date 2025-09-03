@@ -16,6 +16,7 @@ pub struct DomainAnalyzer {
 
 impl DomainAnalyzer {
     /// Create a new domain analyzer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             homogeneity_threshold: 0.01, // 1% variation

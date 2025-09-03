@@ -121,7 +121,7 @@ impl TimeReversal {
             if i <= n / 2 {
                 k[i] = i as f64 * dk;
             } else {
-                k[i] = (i as i32 - n as i32) as f64 * dk;
+                k[i] = f64::from(i as i32 - n as i32) * dk;
             }
         }
 
@@ -205,7 +205,7 @@ impl TimeReversal {
         let ifft = planner.plan_fft_inverse(nx * ny * nz);
 
         // Flatten
-        let mut complex_data: Vec<Complex<f64>> = data.iter().cloned().collect();
+        let mut complex_data: Vec<Complex<f64>> = data.iter().copied().collect();
 
         // Perform inverse FFT
         ifft.process(&mut complex_data);

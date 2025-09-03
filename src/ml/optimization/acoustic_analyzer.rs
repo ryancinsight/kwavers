@@ -27,6 +27,7 @@ pub enum AcousticEventType {
 
 impl AcousticEventAnalyzer {
     /// Create a new acoustic event analyzer
+    #[must_use]
     pub fn new(frequency_threshold: f64, amplitude_threshold: f64) -> Self {
         Self {
             frequency_threshold,

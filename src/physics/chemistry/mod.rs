@@ -91,7 +91,7 @@ impl ChemicalModel {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(ValidationError::FieldValidation {
                 field: "grid_dimensions".to_string(),
-                value: format!("({}, {}, {})", nx, ny, nz),
+                value: format!("({nx}, {ny}, {nz})"),
                 constraint: "All dimensions must be positive".to_string(),
             }
             .into());
@@ -192,6 +192,7 @@ impl ChemicalModel {
     }
 
     /// Get radical concentrations
+    #[must_use]
     pub fn get_radical_concentrations(&self) -> HashMap<String, Array3<f64>> {
         // Return a simple map with the main radical concentration
         // This is a placeholder - the actual implementation would track multiple species
@@ -204,6 +205,7 @@ impl ChemicalModel {
     }
 
     /// Get reaction rates
+    #[must_use]
     pub fn get_reaction_rates(&self) -> HashMap<String, f64> {
         // Return reaction rates if kinetics is enabled
         // This is a placeholder - actual implementation would track rates
@@ -211,6 +213,7 @@ impl ChemicalModel {
     }
 
     /// Get photochemical emission spectrum
+    #[must_use]
     pub fn get_emission_spectrum(&self) -> Option<&Array3<f64>> {
         // Return emission spectrum if photochemical is enabled
         self.photochemical
@@ -219,6 +222,7 @@ impl ChemicalModel {
     }
 
     /// Get performance metrics
+    #[must_use]
     pub fn get_metrics(&self) -> &ChemicalMetrics {
         &self.metrics
     }
@@ -253,11 +257,13 @@ impl ChemicalModel {
     }
 
     /// Get current state
+    #[must_use]
     pub fn state(&self) -> &ChemicalModelState {
         &self.state
     }
 
     /// Get computation statistics
+    #[must_use]
     pub fn get_stats(&self) -> HashMap<String, f64> {
         let mut stats = HashMap::new();
         stats.insert("update_count".to_string(), self.update_count as f64);
@@ -326,6 +332,7 @@ impl ChemicalModelTrait for ChemicalModel {
 
 impl ReactionType {
     /// Convert to string representation
+    #[must_use]
     pub fn to_string(&self) -> String {
         match self {
             ReactionType::Dissociation => "Dissociation".to_string(),

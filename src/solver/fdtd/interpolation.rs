@@ -106,8 +106,7 @@ impl StaggeredInterpolation {
                 }))
             }
             _ => Err(crate::error::KwaversError::InvalidInput(format!(
-                "axis must be 0, 1, or 2, got {}",
-                axis
+                "axis must be 0, 1, or 2, got {axis}"
             ))),
         }
     }
@@ -203,8 +202,7 @@ impl StaggeredInterpolation {
                 }))
             }
             _ => Err(crate::error::KwaversError::InvalidInput(format!(
-                "axis must be 0, 1, or 2, got {}",
-                axis
+                "axis must be 0, 1, or 2, got {axis}"
             ))),
         }
     }

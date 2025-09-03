@@ -29,6 +29,7 @@ pub struct SensorConfig {
 }
 
 impl SensorConfig {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             positions: Vec::new(),
@@ -37,16 +38,19 @@ impl SensorConfig {
         }
     }
 
+    #[must_use]
     pub fn with_positions(mut self, positions: Vec<(f64, f64, f64)>) -> Self {
         self.positions = positions;
         self
     }
 
+    #[must_use]
     pub fn with_pressure_recording(mut self, record: bool) -> Self {
         self.record_pressure = record;
         self
     }
 
+    #[must_use]
     pub fn with_light_recording(mut self, record: bool) -> Self {
         self.record_light = record;
         self
@@ -88,6 +92,7 @@ pub struct SensorInfo {
 }
 
 impl SensorInfo {
+    #[must_use]
     pub fn position(&self) -> &[usize; 3] {
         &self.position
     }
@@ -95,6 +100,7 @@ impl SensorInfo {
 
 impl SensorData {
     /// Create new sensor data collection
+    #[must_use]
     pub fn new() -> Self {
         Self {
             data: HashMap::new(),
@@ -103,11 +109,13 @@ impl SensorData {
     }
 
     /// Check if sensor data is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
 
     /// Get sensor configurations
+    #[must_use]
     pub fn sensors(&self) -> &[SensorInfo] {
         &self.sensors
     }
@@ -118,6 +126,7 @@ impl SensorData {
     }
 
     /// Get data for a specific sensor
+    #[must_use]
     pub fn get_data(&self, sensor_id: usize) -> Option<&Vec<f64>> {
         self.data.get(&sensor_id)
     }
@@ -172,6 +181,7 @@ impl<'a> Iterator for SensorDataIterator<'a> {
 /// Sensor data processing methods
 impl SensorData {
     /// Create an iterator over sensor data
+    #[must_use]
     pub fn iter(&self) -> SensorDataIterator<'_> {
         let sensors: Vec<_> = self.sensors.iter().collect();
         SensorDataIterator {
@@ -201,6 +211,7 @@ impl SensorData {
     }
 
     /// Compute statistics for each sensor using iterator combinators
+    #[must_use]
     pub fn compute_statistics(&self) -> HashMap<usize, SensorStatistics> {
         self.data
             .iter()
@@ -217,6 +228,7 @@ impl SensorData {
     }
 
     /// Find sensors with data exceeding a threshold
+    #[must_use]
     pub fn sensors_exceeding_threshold(&self, threshold: f64) -> Vec<usize> {
         self.data
             .iter()
@@ -367,6 +379,7 @@ impl Sensor {
     }
 
     /// Creates a single point sensor at the specified coordinates
+    #[must_use]
     pub fn point(x: f64, y: f64, z: f64) -> SensorConfig {
         SensorConfig::new().with_positions(vec![(x, y, z)])
     }

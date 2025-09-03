@@ -78,7 +78,7 @@ impl fmt::Display for PhysicsError {
                 value,
                 reason,
             } => {
-                write!(f, "Invalid parameter {}: {} ({})", parameter, value, reason)
+                write!(f, "Invalid parameter {parameter}: {value} ({reason})")
             }
             Self::NumericalInstability {
                 timestep,
@@ -86,8 +86,7 @@ impl fmt::Display for PhysicsError {
             } => {
                 write!(
                     f,
-                    "Numerical instability: timestep {} exceeds CFL limit {}",
-                    timestep, cfl_limit
+                    "Numerical instability: timestep {timestep} exceeds CFL limit {cfl_limit}"
                 )
             }
             Self::ConservationViolation {
@@ -98,8 +97,7 @@ impl fmt::Display for PhysicsError {
             } => {
                 write!(
                     f,
-                    "Conservation violation for {}: initial={}, current={}, tolerance={}",
-                    quantity, initial, current, tolerance
+                    "Conservation violation for {quantity}: initial={initial}, current={current}, tolerance={tolerance}"
                 )
             }
             Self::SolverDivergence {
@@ -108,25 +106,19 @@ impl fmt::Display for PhysicsError {
             } => {
                 write!(
                     f,
-                    "Solver diverged after {} iterations, residual: {}",
-                    iterations, residual
+                    "Solver diverged after {iterations} iterations, residual: {residual}"
                 )
             }
             Self::InvalidBoundaryCondition { boundary, reason } => {
-                write!(f, "Invalid boundary condition at {}: {}", boundary, reason)
+                write!(f, "Invalid boundary condition at {boundary}: {reason}")
             }
             Self::ShockFormation { location, pressure } => {
-                write!(
-                    f,
-                    "Shock formation at {:?}, pressure: {}",
-                    location, pressure
-                )
+                write!(f, "Shock formation at {location:?}, pressure: {pressure}")
             }
             Self::CavitationDetected { location, pressure } => {
                 write!(
                     f,
-                    "Cavitation detected at {:?}, pressure: {}",
-                    location, pressure
+                    "Cavitation detected at {location:?}, pressure: {pressure}"
                 )
             }
             Self::DimensionMismatch => {
@@ -135,8 +127,7 @@ impl fmt::Display for PhysicsError {
             Self::InvalidFieldDimensions { expected, actual } => {
                 write!(
                     f,
-                    "Invalid field dimensions: expected {}, got {}",
-                    expected, actual
+                    "Invalid field dimensions: expected {expected}, got {actual}"
                 )
             }
             Self::InvalidState {
@@ -144,7 +135,7 @@ impl fmt::Display for PhysicsError {
                 value,
                 reason,
             } => {
-                write!(f, "Invalid state for {}: {} ({})", field, value, reason)
+                write!(f, "Invalid state for {field}: {value} ({reason})")
             }
             Self::ConvergenceFailure {
                 solver,
@@ -153,28 +144,26 @@ impl fmt::Display for PhysicsError {
             } => {
                 write!(
                     f,
-                    "Convergence failure in {}: {} iterations, residual {}",
-                    solver, iterations, residual
+                    "Convergence failure in {solver}: {iterations} iterations, residual {residual}"
                 )
             }
             Self::InvalidConfiguration { parameter, reason } => {
-                write!(f, "Invalid configuration for {}: {}", parameter, reason)
+                write!(f, "Invalid configuration for {parameter}: {reason}")
             }
             Self::ModelNotInitialized { model, reason } => {
-                write!(f, "Model '{}' not initialized: {}", model, reason)
+                write!(f, "Model '{model}' not initialized: {reason}")
             }
             Self::UnauthorizedFieldAccess { field, operation } => {
                 write!(
                     f,
-                    "Unauthorized access to field '{}' during '{}' operation",
-                    field, operation
+                    "Unauthorized access to field '{field}' during '{operation}' operation"
                 )
             }
             Self::InvalidFieldIndex(index) => {
-                write!(f, "Invalid field index: {}", index)
+                write!(f, "Invalid field index: {index}")
             }
             Self::StateError(reason) => {
-                write!(f, "State management error: {}", reason)
+                write!(f, "State management error: {reason}")
             }
             Self::Instability {
                 field,
@@ -183,8 +172,7 @@ impl fmt::Display for PhysicsError {
             } => {
                 write!(
                     f,
-                    "Physics instability in {}: value {} exceeds threshold {}",
-                    field, value, threshold
+                    "Physics instability in {field}: value {value} exceeds threshold {threshold}"
                 )
             }
         }

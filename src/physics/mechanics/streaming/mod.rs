@@ -50,6 +50,7 @@ impl StreamingModel {
             });
     }
 
+    #[must_use]
     pub fn velocity(&self) -> &Array3<f64> {
         &self.velocity
     }

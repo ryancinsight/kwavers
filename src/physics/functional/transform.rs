@@ -28,6 +28,7 @@ where
     F: Clone + Send + Sync + 'static,
 {
     /// Create a new empty transformation pipeline
+    #[must_use]
     pub fn new() -> Self {
         Self {
             transforms: Vec::new(),
@@ -51,6 +52,7 @@ where
     }
 
     /// Apply transformations in parallel to multiple fields
+    #[must_use]
     pub fn apply_parallel(&self, fields: Vec<F>) -> Vec<F> {
         fields
             .into_par_iter()
@@ -134,11 +136,13 @@ where
     T: Clone + Send + Sync + 'static + std::ops::Mul<f64, Output = T>,
 {
     /// Create a scaling transformation
+    #[must_use]
     pub fn scale(factor: f64) -> Self {
         Self::new().then(move |field| field.mapv(|x| x * factor))
     }
 
     /// Create a smoothing transformation using a simple kernel
+    #[must_use]
     pub fn smooth() -> Self
     where
         T: Default + std::ops::Add<Output = T> + std::ops::Div<f64, Output = T>,
@@ -171,6 +175,7 @@ where
     T: Clone + Send + Sync + 'static + std::ops::Mul<f64, Output = T>,
 {
     /// Create a scaling transformation for 2D fields
+    #[must_use]
     pub fn scale(factor: f64) -> Self {
         Self::new().then(move |field| field.mapv(|x| x * factor))
     }

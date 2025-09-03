@@ -54,6 +54,7 @@ pub struct DirectivityPattern {
 
 impl ArrayGeometry {
     /// Get element positions for the array geometry
+    #[must_use]
     pub fn element_positions(&self) -> Vec<[f64; 3]> {
         match self {
             ArrayGeometry::Linear {
@@ -154,6 +155,7 @@ impl ArrayGeometry {
     }
 
     /// Get number of elements
+    #[must_use]
     pub fn num_elements(&self) -> usize {
         match self {
             ArrayGeometry::Linear { elements, .. } => *elements,

@@ -36,6 +36,7 @@ impl Default for LinearSolver {
 
 impl LinearSolver {
     /// Create a new linear solver
+    #[must_use]
     pub fn new(tolerance: f64, max_iterations: usize) -> Self {
         Self {
             tolerance,
@@ -110,6 +111,7 @@ impl Default for NonlinearSolver {
 
 impl NonlinearSolver {
     /// Create a new nonlinear solver
+    #[must_use]
     pub fn new(tolerance: f64, max_iterations: usize) -> Self {
         Self {
             tolerance,
@@ -120,6 +122,7 @@ impl NonlinearSolver {
     }
 
     /// Set whether to use line search
+    #[must_use]
     pub fn with_line_search(mut self, line_search: bool) -> Self {
         self.line_search = line_search;
         self

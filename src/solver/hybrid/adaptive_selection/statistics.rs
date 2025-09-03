@@ -25,7 +25,7 @@ impl SelectionStatistics {
         self.fd_count = 0;
         self.dg_count = 0;
 
-        for &method in selection.iter() {
+        for &method in selection {
             match method {
                 SelectedMethod::Spectral => self.spectral_count += 1,
                 SelectedMethod::FiniteDifference => self.fd_count += 1,
@@ -46,6 +46,7 @@ impl SelectionStatistics {
     }
 
     /// Get method distribution as percentages
+    #[must_use]
     pub fn get_distribution(&self) -> (f64, f64, f64) {
         let total = (self.spectral_count + self.fd_count + self.dg_count) as f64;
 
@@ -61,6 +62,7 @@ impl SelectionStatistics {
     }
 
     /// Get average switches per time step
+    #[must_use]
     pub fn switches_per_step(&self) -> f64 {
         if self.time_steps > 0 {
             self.total_switches as f64 / self.time_steps as f64
@@ -76,9 +78,9 @@ impl SelectionStatistics {
         println!("=== Adaptive Selection Statistics ===");
         println!("Time steps: {}", self.time_steps);
         println!("Method distribution:");
-        println!("  Spectral: {:.1}%", spectral_pct);
-        println!("  Finite Difference: {:.1}%", fd_pct);
-        println!("  Discontinuous Galerkin: {:.1}%", dg_pct);
+        println!("  Spectral: {spectral_pct:.1}%");
+        println!("  Finite Difference: {fd_pct:.1}%");
+        println!("  Discontinuous Galerkin: {dg_pct:.1}%");
         println!("Total switches: {}", self.total_switches);
         println!("Switches per step: {:.2}", self.switches_per_step());
     }

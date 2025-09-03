@@ -9,8 +9,8 @@
 
 use crate::grid::Grid;
 use crate::medium::HomogeneousMedium;
-use crate::physics::constants::*;
-use crate::solver::constants::*;
+use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::solver::constants::{DEFAULT_DX, PLANE_WAVE_ERROR_TOLERANCE};
 use crate::KwaversResult;
 
 use std::f64::consts::PI;
@@ -55,8 +55,7 @@ impl KWaveBenchmarks {
         let ppw = wavelength / dx;
         if ppw < 2.0 {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Insufficient spatial sampling: {:.1} points per wavelength (need > 2)",
-                ppw
+                "Insufficient spatial sampling: {ppw:.1} points per wavelength (need > 2)"
             )));
         }
 
@@ -144,7 +143,7 @@ impl KWaveBenchmarks {
         }
 
         let rms_error = if n_samples > 0 {
-            (sum_sq_error / n_samples as f64).sqrt()
+            (sum_sq_error / f64::from(n_samples)).sqrt()
         } else {
             1.0
         };
@@ -194,6 +193,7 @@ impl KWaveBenchmarks {
     }
 
     /// Run all benchmarks
+    #[must_use]
     pub fn run_all() -> Vec<BenchmarkResult> {
         let mut results = Vec::new();
 

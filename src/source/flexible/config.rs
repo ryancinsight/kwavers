@@ -91,7 +91,7 @@ pub enum CalibrationMethod {
 /// External tracking system types
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum TrackingSystem {
-    /// Optical tracking (e.g., OptiTrack, Vicon)
+    /// Optical tracking (e.g., `OptiTrack`, Vicon)
     Optical {
         marker_positions: Vec<[f64; 3]>,
         camera_count: usize,

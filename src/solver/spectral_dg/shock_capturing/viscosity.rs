@@ -37,6 +37,7 @@ impl Default for ArtificialViscosity {
 
 impl ArtificialViscosity {
     /// Create new artificial viscosity with custom coefficients
+    #[must_use]
     pub fn new(c_vnr: f64, c_linear: f64, c_quadratic: f64, max_viscosity: f64) -> Self {
         Self {
             c_vnr,

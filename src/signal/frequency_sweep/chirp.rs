@@ -1,6 +1,9 @@
 // frequency_sweep/chirp.rs - Linear frequency sweep (chirp)
 
-use super::{constants::*, FrequencySweep, SweepDirection};
+use super::{
+    constants::{MIN_SWEEP_DURATION, TWO_PI},
+    FrequencySweep, SweepDirection,
+};
 use crate::signal::Signal;
 
 /// Linear frequency sweep (chirp signal)
@@ -21,6 +24,7 @@ pub struct LinearChirp {
 
 impl LinearChirp {
     /// Create new linear chirp - USING all parameters
+    #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > 0.0, "Start frequency must be positive");
         assert!(stop_freq > 0.0, "Stop frequency must be positive");
@@ -45,6 +49,7 @@ impl LinearChirp {
     }
 
     /// Get sweep direction
+    #[must_use]
     pub fn direction(&self) -> SweepDirection {
         self.direction
     }
@@ -122,8 +127,8 @@ mod tests {
         let chirp = LinearChirp::new(1000.0, 2000.0, 0.001, 1.0);
 
         // Check frequencies
-        assert!((chirp.instantaneous_frequency(0.0) - 1000.0).abs() < FREQUENCY_TOLERANCE);
-        assert!((chirp.instantaneous_frequency(0.001) - 2000.0).abs() < FREQUENCY_TOLERANCE);
+        assert!((chirp.instantaneous_frequency(0.0) - 1000.0).abs() < 1e-6);
+        assert!((chirp.instantaneous_frequency(0.001) - 2000.0).abs() < 1e-6);
 
         // Check sweep rate
         assert!((chirp.sweep_rate(0.0005) - 1e6).abs() < 1.0);

@@ -38,6 +38,7 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Spectral radiance in W/(m²·sr·m)
+    #[must_use]
     pub fn spectral_radiance(&self, wavelength: f64, temperature: f64) -> f64 {
         if temperature <= 0.0 || wavelength <= 0.0 {
             return 0.0;
@@ -73,6 +74,7 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Total radiated power in Watts
+    #[must_use]
     pub fn total_power(&self, temperature: f64, surface_area: f64) -> f64 {
         self.emissivity * STEFAN_BOLTZMANN * surface_area * temperature.powi(4)
     }
@@ -85,6 +87,7 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Array of spectral radiances
+    #[must_use]
     pub fn emission_spectrum(&self, temperature: f64, wavelengths: &Array1<f64>) -> Array1<f64> {
         wavelengths.mapv(|lambda| self.spectral_radiance(lambda, temperature))
     }
@@ -96,6 +99,7 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Peak wavelength in meters
+    #[must_use]
     pub fn peak_wavelength(&self, temperature: f64) -> f64 {
         if temperature <= 0.0 {
             return 0.0;
@@ -111,14 +115,14 @@ impl BlackbodyModel {
     ///
     /// # Returns
     /// Estimated color temperature in Kelvin
+    #[must_use]
     pub fn color_temperature(&self, spectrum: &Array1<f64>, wavelengths: &Array1<f64>) -> f64 {
         // Find peak wavelength
         let max_idx = spectrum
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         let peak_wavelength = wavelengths[max_idx];
 
@@ -132,6 +136,7 @@ impl BlackbodyModel {
 }
 
 /// Calculate blackbody emission field from temperature field
+#[must_use]
 pub fn calculate_blackbody_emission(
     temperature_field: &Array3<f64>,
     bubble_radius_field: &Array3<f64>,

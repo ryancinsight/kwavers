@@ -8,7 +8,7 @@ use ndarray::{Array1, Array2};
 
 use super::basis::{lagrange_basis_deriv, legendre_basis, BasisType};
 
-/// Compute mass matrix M_ij = integral(phi_i * phi_j)
+/// Compute mass matrix `M_ij` = `integral(phi_i` * `phi_j`)
 pub fn compute_mass_matrix(
     vandermonde: &Array2<f64>,
     weights: &Array1<f64>,
@@ -28,7 +28,7 @@ pub fn compute_mass_matrix(
     Ok(mass)
 }
 
-/// Compute stiffness matrix S_ij = integral(phi_i * dphi_j/dxi)
+/// Compute stiffness matrix `S_ij` = `integral(phi_i` * `dphi_j/dxi`)
 pub fn compute_stiffness_matrix(
     vandermonde: &Array2<f64>,
     nodes: &Array1<f64>,
@@ -220,7 +220,7 @@ pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         if aug[(k, k)].abs() < 1e-12 {
             return Err(KwaversError::Numerical(
                 crate::error::NumericalError::SingularMatrix {
-                    operation: format!("Gaussian elimination at pivot {}", k),
+                    operation: format!("Gaussian elimination at pivot {k}"),
                     condition_number: aug[(k, k)].abs(),
                 },
             ));

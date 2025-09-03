@@ -19,6 +19,7 @@ pub struct ElementConfiguration {
 
 impl ElementConfiguration {
     /// Create new element
+    #[must_use]
     pub fn new(position: [f64; 3], normal: [f64; 3], radius: f64) -> Self {
         Self {
             position,
@@ -31,6 +32,7 @@ impl ElementConfiguration {
     }
 
     /// Check if element is active
+    #[must_use]
     pub fn is_active(&self) -> bool {
         matches!(self.state, ElementState::Active)
     }

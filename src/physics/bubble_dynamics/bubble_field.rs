@@ -29,6 +29,7 @@ pub struct BubbleField {
 
 impl BubbleField {
     /// Create new bubble field
+    #[must_use]
     pub fn new(grid_shape: (usize, usize, usize), params: BubbleParameters) -> Self {
         Self {
             bubbles: HashMap::new(),
@@ -66,7 +67,7 @@ impl BubbleField {
         t: f64,
     ) {
         // Update each bubble
-        for ((i, j, k), state) in self.bubbles.iter_mut() {
+        for ((i, j, k), state) in &mut self.bubbles {
             let p_acoustic = pressure_field[[*i, *j, *k]];
             let dp_dt = dp_dt_field[[*i, *j, *k]];
 
@@ -74,10 +75,7 @@ impl BubbleField {
             if let Err(e) =
                 integrate_bubble_dynamics_adaptive(&self.solver, state, p_acoustic, dp_dt, dt, t)
             {
-                eprintln!(
-                    "Bubble dynamics integration failed at position ({}, {}, {}): {:?}",
-                    i, j, k, e
-                );
+                eprintln!("Bubble dynamics integration failed at position ({i}, {j}, {k}): {e:?}");
             }
         }
 
@@ -105,6 +103,7 @@ impl BubbleField {
     }
 
     /// Get bubble state fields for physics modules
+    #[must_use]
     pub fn get_state_fields(&self) -> BubbleStateFields {
         let shape = self.grid_shape;
         let mut fields = BubbleStateFields::new(shape);
@@ -114,7 +113,7 @@ impl BubbleField {
             fields.temperature[[*i, *j, *k]] = state.temperature;
             fields.pressure[[*i, *j, *k]] = state.pressure_internal;
             fields.velocity[[*i, *j, *k]] = state.wall_velocity;
-            fields.is_collapsing[[*i, *j, *k]] = state.is_collapsing as i32 as f64;
+            fields.is_collapsing[[*i, *j, *k]] = f64::from(i32::from(state.is_collapsing));
             fields.compression_ratio[[*i, *j, *k]] = state.compression_ratio;
         }
 
@@ -122,6 +121,7 @@ impl BubbleField {
     }
 
     /// Get statistics about bubble field
+    #[must_use]
     pub fn get_statistics(&self) -> BubbleFieldStats {
         let mut stats = BubbleFieldStats::default();
 
@@ -151,6 +151,7 @@ pub struct BubbleStateFields {
 }
 
 impl BubbleStateFields {
+    #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             radius: Array3::zeros(shape),
@@ -208,6 +209,7 @@ pub enum SpatialDistribution {
 
 impl BubbleCloud {
     /// Create new bubble cloud
+    #[must_use]
     pub fn new(
         grid_shape: (usize, usize, usize),
         params: BubbleParameters,
@@ -339,6 +341,6 @@ mod tests {
         let mut cloud = BubbleCloud::new((5, 5, 5), params, size_dist, spatial_dist);
         cloud.generate(1e9, (1e-3, 1e-3, 1e-3)); // Moderate density for small grid
 
-        assert!(cloud.field.bubbles.len() > 0);
+        assert!(!cloud.field.bubbles.is_empty());
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! Implements hemispherical phased arrays with sparse element control for
 //! increased treatment envelope and improved steering efficiency.
-//! Based on Insightec ExAblate systems and modern MRgFUS technology.
+//! Based on Insightec `ExAblate` systems and modern `MRgFUS` technology.
 //!
 //! References:
 //! - Clement & Hynynen (2002): "A non-invasive method for focusing through the skull"
@@ -74,6 +74,7 @@ impl HemisphericalArray {
     }
 
     /// Get active elements for current configuration
+    #[must_use]
     pub fn get_active_elements(&self) -> Vec<usize> {
         self.elements
             .iter()

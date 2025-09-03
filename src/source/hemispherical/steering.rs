@@ -43,6 +43,7 @@ pub struct SteeringController {
 
 impl SteeringController {
     /// Create new steering controller
+    #[must_use]
     pub fn new(frequency: f64) -> Self {
         Self {
             frequency,

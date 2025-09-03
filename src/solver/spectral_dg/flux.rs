@@ -96,6 +96,7 @@ pub fn compute_numerical_flux(
 }
 
 /// Apply limiter function
+#[must_use]
 pub fn apply_limiter(limiter_type: LimiterType, a: f64, b: f64) -> f64 {
     match limiter_type {
         LimiterType::None => a,
@@ -107,6 +108,7 @@ pub fn apply_limiter(limiter_type: LimiterType, a: f64, b: f64) -> f64 {
 }
 
 /// Minmod limiter
+#[must_use]
 pub fn minmod(a: f64, b: f64) -> f64 {
     if a * b > 0.0 {
         if a.abs() < b.abs() {
@@ -120,6 +122,7 @@ pub fn minmod(a: f64, b: f64) -> f64 {
 }
 
 /// Van Albada limiter
+#[must_use]
 pub fn van_albada(a: f64, b: f64) -> f64 {
     if a * b > 0.0 {
         (a * b * (a + b)) / (a * a + b * b + 1e-10)
@@ -129,6 +132,7 @@ pub fn van_albada(a: f64, b: f64) -> f64 {
 }
 
 /// MC (Monotonized Central) limiter
+#[must_use]
 pub fn mc_limiter(a: f64, b: f64) -> f64 {
     let c = 0.5 * (a + b);
     let d = 2.0 * a;
@@ -142,6 +146,7 @@ pub fn mc_limiter(a: f64, b: f64) -> f64 {
 }
 
 /// Superbee limiter
+#[must_use]
 pub fn superbee(a: f64, b: f64) -> f64 {
     if a * b > 0.0 {
         let s1 = minmod(b, 2.0 * a);
@@ -153,6 +158,7 @@ pub fn superbee(a: f64, b: f64) -> f64 {
 }
 
 /// Compute upwind flux for simple advection
+#[must_use]
 pub fn upwind_flux(velocity: f64, left_value: f64, right_value: f64) -> f64 {
     if velocity > 0.0 {
         velocity * left_value

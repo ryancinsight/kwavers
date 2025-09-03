@@ -35,21 +35,20 @@ impl fmt::Display for SystemError {
             } => {
                 write!(
                     f,
-                    "Memory allocation failed for {} bytes: {}",
-                    requested_bytes, reason
+                    "Memory allocation failed for {requested_bytes} bytes: {reason}"
                 )
             }
             Self::ThreadCreation { reason } => {
-                write!(f, "Thread creation failed: {}", reason)
+                write!(f, "Thread creation failed: {reason}")
             }
             Self::ThreadPoolCreation { reason } => {
-                write!(f, "Thread pool creation failed: {}", reason)
+                write!(f, "Thread pool creation failed: {reason}")
             }
             Self::ResourceExhausted { resource, reason } => {
-                write!(f, "System resource '{}' exhausted: {}", resource, reason)
+                write!(f, "System resource '{resource}' exhausted: {reason}")
             }
             Self::Io { operation, reason } => {
-                write!(f, "IO operation '{}' failed: {}", operation, reason)
+                write!(f, "IO operation '{operation}' failed: {reason}")
             }
         }
     }

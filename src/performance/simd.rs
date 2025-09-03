@@ -7,7 +7,10 @@
 #![allow(unsafe_code)]
 
 use ndarray::{Array3, Zip};
-use std::arch::x86_64::*;
+use std::arch::x86_64::{
+    _mm256_add_pd, _mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_setzero_pd,
+    _mm256_storeu_pd,
+};
 
 /// SIMD-optimized field operations
 #[derive(Debug)]
@@ -35,6 +38,9 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn add_fields_avx2_legacy(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
+        // SAFETY: This function requires AVX2 to be available, enforced by #[target_feature].
+        // Array slices are guaranteed to be properly aligned and non-overlapping.
+        // The function operates on contiguous memory regions with valid f64 values.
         unsafe {
             let a_slice = a.as_slice().unwrap();
             let b_slice = b.as_slice().unwrap();
@@ -85,6 +91,9 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn scale_field_avx2(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
+        // SAFETY: This function requires AVX2 to be available, enforced by #[target_feature].
+        // Input and output arrays must have the same dimensions and be properly aligned.
+        // The scalar broadcast operation is safe for all finite f64 values.
         unsafe {
             let field_slice = field.as_slice().unwrap();
             let out_slice = out.as_slice_mut().unwrap();
@@ -113,6 +122,7 @@ impl SimdOps {
 
     /// Compute L2 norm of field using SIMD
     /// Portable SIMD-aware field norm using iterator combinators
+    #[must_use]
     pub fn field_norm(field: &Array3<f64>) -> f64 {
         // Use iterator combinators for auto-vectorization
         field

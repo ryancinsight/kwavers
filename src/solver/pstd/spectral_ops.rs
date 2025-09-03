@@ -127,6 +127,7 @@ impl SpectralOperations {
 
     /// Apply anti-aliasing (2/3 rule)
     /// Compute divergence of a vector field
+    #[must_use]
     pub fn compute_divergence(
         &self,
         vx: &Array3<f64>,

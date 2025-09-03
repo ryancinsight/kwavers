@@ -18,6 +18,7 @@ pub struct SteeringMatrix {
 }
 
 impl SteeringMatrix {
+    #[must_use]
     pub fn new(num_elements: usize, directions: Vec<(f64, f64)>) -> Self {
         let num_dirs = directions.len();
         let vectors = Array2::from_elem((num_elements, num_dirs), Complex64::new(1.0, 0.0));

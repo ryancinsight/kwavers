@@ -43,6 +43,7 @@ impl Default for SelectionCriteria {
 
 impl SelectionCriteria {
     /// Create criteria optimized for accuracy
+    #[must_use]
     pub fn accuracy_focused() -> Self {
         Self {
             smoothness_weight: 0.4,
@@ -56,6 +57,7 @@ impl SelectionCriteria {
     }
 
     /// Create criteria optimized for performance
+    #[must_use]
     pub fn performance_focused() -> Self {
         Self {
             smoothness_weight: 0.2,
@@ -69,6 +71,7 @@ impl SelectionCriteria {
     }
 
     /// Create criteria for heterogeneous media
+    #[must_use]
     pub fn heterogeneous_media() -> Self {
         Self {
             smoothness_weight: 0.2,
@@ -82,6 +85,7 @@ impl SelectionCriteria {
     }
 
     /// Validate criteria weights sum to 1.0
+    #[must_use]
     pub fn validate(&self) -> bool {
         let total = self.smoothness_weight
             + self.material_weight

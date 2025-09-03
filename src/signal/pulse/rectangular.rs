@@ -22,6 +22,7 @@ pub struct RectangularPulse {
 }
 
 impl RectangularPulse {
+    #[must_use]
     pub fn new(center_frequency: f64, start_time: f64, pulse_width: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
         assert!(pulse_width >= MIN_PULSE_WIDTH, "Pulse width too small");
@@ -40,6 +41,7 @@ impl RectangularPulse {
         }
     }
 
+    #[must_use]
     pub fn with_rise_fall_times(mut self, rise_time: f64, fall_time: f64) -> Self {
         assert!(rise_time >= 0.0 && rise_time < self.pulse_width / 2.0);
         assert!(fall_time >= 0.0 && fall_time < self.pulse_width / 2.0);

@@ -118,7 +118,7 @@ impl TimeReversalReconstructor {
                     crate::error::KwaversError::Validation(
                         crate::error::ValidationError::FieldValidation {
                             field: "sensor_data".to_string(),
-                            value: format!("sensor_{}", sensor_id),
+                            value: format!("sensor_{sensor_id}"),
                             constraint: "no data for sensor".to_string(),
                         },
                     )
@@ -231,7 +231,7 @@ impl TimeReversalReconstructor {
         // Determine propagation time from signal length
         let max_signal_length = reversed_signals
             .values()
-            .map(|s| s.len())
+            .map(std::vec::Vec::len)
             .max()
             .unwrap_or(0);
 

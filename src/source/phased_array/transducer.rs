@@ -43,7 +43,7 @@ impl PhasedArrayTransducer {
         config.validate().map_err(|e| {
             crate::error::KwaversError::Validation(crate::error::ValidationError::FieldValidation {
                 field: "phased_array_config".to_string(),
-                value: format!("{:?}", config),
+                value: format!("{config:?}"),
                 constraint: e,
             })
         })?;
@@ -194,18 +194,21 @@ impl PhasedArrayTransducer {
     }
 
     /// Get beam width at focal distance
+    #[must_use]
     pub fn beam_width(&self) -> f64 {
         self.beamformer
             .calculate_beam_width(self.config.aperture_size())
     }
 
     /// Get focal zone depth
+    #[must_use]
     pub fn focal_zone(&self, focal_distance: f64) -> f64 {
         self.beamformer
             .calculate_focal_zone(self.config.aperture_size(), focal_distance)
     }
 
     /// Get the delays for each element
+    #[must_use]
     pub fn element_delays(&self) -> Vec<f64> {
         self.elements.iter().map(|e| e.phase_delay).collect()
     }

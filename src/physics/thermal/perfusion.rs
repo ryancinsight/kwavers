@@ -11,36 +11,38 @@ pub struct PerfusionModel {
     /// Baseline perfusion rate (kg/m³/s)
     w_b0: f64,
     /// Temperature threshold for perfusion shutdown (°C)
-    T_shutdown: f64,
+    t_shutdown: f64,
     /// Temperature for maximum perfusion (°C)
-    T_max: f64,
+    t_max: f64,
     /// Maximum perfusion multiplier
     max_multiplier: f64,
 }
 
 impl PerfusionModel {
     /// Create new perfusion model
+    #[must_use]
     pub fn new(baseline_perfusion: f64) -> Self {
         Self {
             w_b0: baseline_perfusion,
-            T_shutdown: 50.0,    // Perfusion stops above 50°C
-            T_max: 42.0,         // Maximum perfusion at mild hyperthermia
+            t_shutdown: 50.0,    // Perfusion stops above 50°C
+            t_max: 42.0,         // Maximum perfusion at mild hyperthermia
             max_multiplier: 2.0, // Double perfusion at peak
         }
     }
 
     /// Calculate perfusion rate based on temperature
+    #[must_use]
     pub fn perfusion_rate(&self, temperature: f64) -> f64 {
-        if temperature > self.T_shutdown {
+        if temperature > self.t_shutdown {
             // Perfusion shutdown due to vascular damage
             0.0
-        } else if temperature > self.T_max {
+        } else if temperature > self.t_max {
             // Linear decrease from max to shutdown
-            let fraction = (self.T_shutdown - temperature) / (self.T_shutdown - self.T_max);
+            let fraction = (self.t_shutdown - temperature) / (self.t_shutdown - self.t_max);
             self.w_b0 * self.max_multiplier * fraction
         } else if temperature > 37.0 {
             // Linear increase from baseline to max
-            let fraction = (temperature - 37.0) / (self.T_max - 37.0);
+            let fraction = (temperature - 37.0) / (self.t_max - 37.0);
             self.w_b0 * (1.0 + (self.max_multiplier - 1.0) * fraction)
         } else {
             // Below body temperature
@@ -49,13 +51,15 @@ impl PerfusionModel {
     }
 
     /// Update perfusion field based on temperature field
+    #[must_use]
     pub fn update_perfusion_field(&self, temperature: &Array3<f64>) -> Array3<f64> {
         temperature.mapv(|t| self.perfusion_rate(t))
     }
 
     /// Check if perfusion is shut down
+    #[must_use]
     pub fn is_shutdown(&self, temperature: f64) -> bool {
-        temperature > self.T_shutdown
+        temperature > self.t_shutdown
     }
 }
 
@@ -69,8 +73,15 @@ pub struct VesselCooling {
     blood_temp: f64,
 }
 
+impl Default for VesselCooling {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VesselCooling {
     /// Create new vessel cooling model
+    #[must_use]
     pub fn new() -> Self {
         Self {
             vessels: Vec::new(),
@@ -85,6 +96,7 @@ impl VesselCooling {
     }
 
     /// Calculate cooling effect at a point
+    #[must_use]
     pub fn cooling_rate(&self, i: usize, j: usize, k: usize, dx: f64, temperature: f64) -> f64 {
         let mut total_cooling = 0.0;
 

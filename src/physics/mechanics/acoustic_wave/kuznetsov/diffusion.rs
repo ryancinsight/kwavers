@@ -20,7 +20,7 @@ use ndarray::{Array3, Zip};
 /// * `diffusive_term_out` - Pre-allocated output buffer for the result
 ///
 /// # Returns
-/// The diffusive term: -(δ/c₀⁴)∂³p/∂t³ is written to diffusive_term_out
+/// The diffusive term: -(δ/c₀⁴)∂³p/∂t³ is written to `diffusive_term_out`
 pub fn compute_diffusive_term_workspace(
     pressure: &Array3<f64>,
     pressure_prev: &Array3<f64>,
@@ -53,9 +53,10 @@ pub fn compute_diffusive_term_workspace(
 
 /// Compute frequency-dependent absorption coefficient
 ///
-/// Uses power-law absorption: α = α₀ * (f/f_ref)^n
+/// Uses power-law absorption: α = α₀ * (`f/f_ref)^n`
 /// where α₀ is the absorption coefficient at reference frequency
 /// and n is the power (typically 1-2 for biological tissues)
+#[must_use]
 pub fn compute_absorption_coefficient(frequency: f64, alpha_0: f64, power: f64) -> f64 {
     alpha_0 * (frequency / REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ).powf(power)
 }

@@ -23,6 +23,7 @@ pub struct DiffractionOperator {
 
 impl DiffractionOperator {
     /// Create new diffraction operator
+    #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let mut kx2 = Array2::zeros((config.nx, config.ny));
         let mut ky2 = Array2::zeros((config.nx, config.ny));

@@ -123,6 +123,7 @@ pub enum WeightFunction {
 }
 
 impl UniversalBackProjection {
+    #[must_use]
     pub fn new(weight_function: WeightFunction) -> Self {
         Self { weight_function }
     }

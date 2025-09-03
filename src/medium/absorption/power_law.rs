@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 /// Power-law absorption model configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PowerLawAbsorption {
-    /// Absorption coefficient at 1 MHz [dB/(MHz^y cm)]
+    /// Absorption coefficient at 1 `MHz` [dB/(MHz^y cm)]
     pub alpha_0: f64,
     /// Power law exponent (typically 1.0-1.5)
     pub y: f64,
-    /// Reference frequency for alpha_0 [Hz]
+    /// Reference frequency for `alpha_0` [Hz]
     pub f_ref: f64,
     /// Enable dispersion correction
     pub dispersion_correction: bool,
@@ -28,6 +28,7 @@ impl Default for PowerLawAbsorption {
 
 impl PowerLawAbsorption {
     /// Create absorption model for water at 20°C
+    #[must_use]
     pub fn water() -> Self {
         Self {
             alpha_0: 0.0022, // dB/(MHz^2 cm) for water
@@ -38,6 +39,7 @@ impl PowerLawAbsorption {
     }
 
     /// Create absorption model for soft tissue
+    #[must_use]
     pub fn soft_tissue() -> Self {
         Self {
             alpha_0: 0.75,
@@ -48,6 +50,7 @@ impl PowerLawAbsorption {
     }
 
     /// Calculate absorption coefficient at given frequency
+    #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         // Convert to Np/m from dB/(MHz^y cm)
         const DB_TO_NP: f64 = 1.0 / 8.686; // 1 Np = 8.686 dB
@@ -61,6 +64,7 @@ impl PowerLawAbsorption {
     }
 
     /// Calculate phase velocity from absorption (Kramers-Kronig relations)
+    #[must_use]
     pub fn phase_velocity(&self, frequency: f64, c0: f64) -> f64 {
         if !self.dispersion_correction {
             return c0;
@@ -83,6 +87,7 @@ pub struct PowerLawModel {
 
 impl PowerLawModel {
     /// Create a new power law model
+    #[must_use]
     pub fn new(config: PowerLawAbsorption) -> Self {
         Self { config }
     }

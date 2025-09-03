@@ -24,9 +24,9 @@ pub enum TissueType {
 /// Tissue absorption properties
 #[derive(Debug, Clone, Copy)]
 pub struct TissueProperties {
-    /// Absorption coefficient at 1 MHz [dB/(MHz^y cm)]
+    /// Absorption coefficient at 1 `MHz` [dB/(MHz^y cm)]
     pub alpha_0: f64,
-    /// Alternative notation for alpha_0
+    /// Alternative notation for `alpha_0`
     pub alpha0: f64,
     /// Power law exponent
     pub y: f64,
@@ -100,6 +100,7 @@ impl TissueProperties {
 }
 
 /// Get tissue properties database
+#[must_use]
 pub fn tissue_properties() -> HashMap<TissueType, TissueProperties> {
     let mut map = HashMap::new();
 
@@ -198,11 +199,13 @@ impl TissueAbsorption {
     }
 
     /// Get tissue properties
+    #[must_use]
     pub fn properties(&self) -> &TissueProperties {
         &self.properties
     }
 
     /// Calculate absorption coefficient at given frequency
+    #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {
         // Convert to Np/m from dB/(MHz^y cm)
         const DB_TO_NP: f64 = 1.0 / 8.686;
@@ -216,6 +219,7 @@ impl TissueAbsorption {
     }
 
     /// Get attenuation in dB for given frequency and distance
+    #[must_use]
     pub fn attenuation_db(&self, frequency: f64, distance_cm: f64) -> f64 {
         let f_mhz = frequency / 1e6;
         self.properties.alpha_0 * f_mhz.powf(self.properties.y) * distance_cm

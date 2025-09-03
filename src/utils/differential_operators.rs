@@ -6,7 +6,7 @@
 //!
 //! # Design Principles
 //! - **SSOT/SPOT**: Single implementation for each operator
-//! - **Zero-copy**: Uses ArrayView for input, efficient memory access
+//! - **Zero-copy**: Uses `ArrayView` for input, efficient memory access
 //! - **Configurable accuracy**: Support for 2nd, 4th, and 6th order schemes
 //! - **Domain-agnostic**: Works with any Grid configuration
 
@@ -33,6 +33,7 @@ pub struct FDCoefficients;
 
 impl FDCoefficients {
     /// Get coefficients for first derivative
+    #[must_use]
     pub fn first_derivative(order: SpatialOrder) -> Vec<f64> {
         match order {
             SpatialOrder::Second => vec![0.5],
@@ -44,6 +45,7 @@ impl FDCoefficients {
 
     /// Get off-center pair coefficients for second derivative
     /// Returns coefficients for symmetric pairs at offsets 1..=N
+    #[must_use]
     pub fn second_derivative_pairs(order: SpatialOrder) -> Vec<f64> {
         match order {
             SpatialOrder::Second => vec![1.0],
@@ -55,6 +57,7 @@ impl FDCoefficients {
 
     /// Get the center coefficient for second derivative
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
+    #[must_use]
     pub fn second_derivative_center(order: SpatialOrder) -> f64 {
         match order {
             SpatialOrder::Second => -2.0,          // 3-point stencil

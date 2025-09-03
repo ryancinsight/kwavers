@@ -130,6 +130,7 @@ pub enum TimeStepperType {
 
 impl TimeStepperType {
     /// Get the order of accuracy
+    #[must_use]
     pub fn order(&self) -> usize {
         match self {
             Self::RungeKutta4 => 4,
@@ -141,6 +142,7 @@ impl TimeStepperType {
     }
 
     /// Get the stability factor for CFL calculation
+    #[must_use]
     pub fn stability_factor(&self) -> f64 {
         match self {
             Self::RungeKutta4 => 2.8, // Approximate stability limit

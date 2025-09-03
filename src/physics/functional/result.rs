@@ -126,6 +126,7 @@ pub fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, Vec<E
 }
 
 /// Partition results into successes and failures
+#[must_use]
 pub fn partition_results<T, E>(results: Vec<Result<T, E>>) -> (Vec<T>, Vec<E>) {
     let mut successes = Vec::new();
     let mut errors = Vec::new();
@@ -166,7 +167,7 @@ pub fn chain_operations<T, E>(
 ) -> Result<T, E> {
     operations
         .into_iter()
-        .fold(initial, |acc, op| acc.and_then(op))
+        .fold(initial, std::result::Result::and_then)
 }
 
 /// Retry an operation a specified number of times

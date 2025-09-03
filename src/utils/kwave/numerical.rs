@@ -11,12 +11,14 @@ pub struct NumericalUtils;
 
 impl NumericalUtils {
     /// Create Gaussian distribution
+    #[must_use]
     pub fn gaussian(x: f64, mean: f64, std: f64) -> f64 {
         let exponent = -0.5 * ((x - mean) / std).powi(2);
         (1.0 / (std * (2.0 * std::f64::consts::PI).sqrt())) * exponent.exp()
     }
 
     /// Create Hann window
+    #[must_use]
     pub fn hann_window(n: usize) -> Array1<f64> {
         use std::f64::consts::PI;
         Array1::from_shape_fn(n, |i| {
@@ -39,6 +41,7 @@ impl NumericalUtils {
     }
 
     /// Calculate next power of 2
+    #[must_use]
     pub fn next_pow2(n: usize) -> usize {
         let mut p = 1;
         while p < n {
@@ -48,6 +51,7 @@ impl NumericalUtils {
     }
 
     /// Pad array to specified size
+    #[must_use]
     pub fn pad_array(arr: &Array1<f64>, target_size: usize) -> Array1<f64> {
         let mut padded = Array1::zeros(target_size);
         let copy_size = arr.len().min(target_size);

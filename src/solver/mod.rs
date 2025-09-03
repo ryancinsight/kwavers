@@ -49,7 +49,7 @@ pub trait ProgressData: Send + Sync {}
 /// Generic progress reporter trait - decoupled from specific data structures
 /// This follows the principle of designing to interfaces, not implementations
 pub trait ProgressReporter: Send + Sync {
-    /// Report progress with any type implementing ProgressData
+    /// Report progress with any type implementing `ProgressData`
     fn report(&mut self, progress_json: &str);
 
     /// Called when simulation starts
@@ -74,7 +74,7 @@ pub struct ProgressUpdate {
 // Implement ProgressData for the standard ProgressUpdate
 impl ProgressData for ProgressUpdate {}
 
-/// Flexible field summary using HashMap for extensibility
+/// Flexible field summary using `HashMap` for extensibility
 /// This allows any simulation type to report arbitrary metrics
 #[derive(Debug, Clone, Serialize)]
 pub struct FieldsSummary(HashMap<String, f64>);
@@ -87,6 +87,7 @@ impl Default for FieldsSummary {
 
 impl FieldsSummary {
     /// Create a new empty field summary
+    #[must_use]
     pub fn new() -> Self {
         Self(HashMap::new())
     }
@@ -97,11 +98,13 @@ impl FieldsSummary {
     }
 
     /// Get a field value
+    #[must_use]
     pub fn get(&self, key: &str) -> Option<f64> {
         self.0.get(key).copied()
     }
 
     /// Create a standard acoustic simulation summary
+    #[must_use]
     pub fn acoustic(
         max_pressure: f64,
         max_velocity: f64,
@@ -154,11 +157,11 @@ impl ProgressReporter for ConsoleProgressReporter {
             // Try to extract standard fields if they exist
             let current_step = json
                 .get("current_step")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .unwrap_or(0);
             let total_steps = json
                 .get("total_steps")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .unwrap_or(1);
 
             // Report at start, end, or at intervals
@@ -171,12 +174,12 @@ impl ProgressReporter for ConsoleProgressReporter {
                 // Extract other fields if available
                 let current_time = json
                     .get("current_time")
-                    .and_then(|v| v.as_f64())
+                    .and_then(serde_json::Value::as_f64)
                     .unwrap_or(0.0);
                 let max_pressure = json
                     .get("fields_summary")
                     .and_then(|fs| fs.get("max_pressure"))
-                    .and_then(|v| v.as_f64())
+                    .and_then(serde_json::Value::as_f64)
                     .unwrap_or(0.0);
 
                 log::info!(
@@ -224,6 +227,7 @@ pub struct AsyncConsoleReporter {
 
 impl AsyncConsoleReporter {
     /// Create a new async console reporter with a dedicated reporting thread
+    #[must_use]
     pub fn new() -> Self {
         use std::sync::mpsc;
         use std::thread;
@@ -235,7 +239,7 @@ impl AsyncConsoleReporter {
             for message in receiver {
                 // Perform the actual printing in a separate thread
                 // This ensures the simulation loop is never blocked by I/O
-                println!("{}", message);
+                println!("{message}");
             }
         });
 
@@ -248,6 +252,7 @@ impl AsyncConsoleReporter {
     }
 
     /// Set the reporting interval
+    #[must_use]
     pub fn with_interval(mut self, interval: std::time::Duration) -> Self {
         self.report_interval = interval;
         self
@@ -274,14 +279,14 @@ impl ProgressReporter for AsyncConsoleReporter {
         if now.duration_since(self.last_report_time) >= self.report_interval {
             // Use try_send to avoid blocking the simulation
             // If the channel is full, we skip this update rather than block
-            let _ = self.sender.send(format!("Progress: {}", progress_json));
+            let _ = self.sender.send(format!("Progress: {progress_json}"));
             self.last_report_time = now;
         }
     }
 
     fn on_complete(&mut self) {
         let elapsed = std::time::Instant::now().duration_since(self.start_time);
-        let message = format!("Simulation completed in {:?}", elapsed);
+        let message = format!("Simulation completed in {elapsed:?}");
         let _ = self.sender.send(message);
     }
 }

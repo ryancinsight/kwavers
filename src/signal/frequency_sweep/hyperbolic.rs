@@ -1,6 +1,9 @@
 // frequency_sweep/hyperbolic.rs - Hyperbolic frequency sweep
 
-use super::{constants::*, FrequencySweep};
+use super::{
+    constants::{EPSILON, MIN_FREQUENCY, MIN_SWEEP_DURATION, SINGULARITY_AVOIDANCE_FACTOR, TWO_PI},
+    FrequencySweep,
+};
 use crate::signal::Signal;
 
 /// Hyperbolic frequency sweep
@@ -17,6 +20,7 @@ pub struct HyperbolicSweep {
 
 impl HyperbolicSweep {
     /// Create new hyperbolic sweep - USING all parameters
+    #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > MIN_FREQUENCY, "Start frequency too low");
         assert!(stop_freq > MIN_FREQUENCY, "Stop frequency too low");

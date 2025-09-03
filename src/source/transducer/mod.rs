@@ -40,13 +40,13 @@ pub const MECHANICAL_Q: f64 = 80.0;
 /// Typical electrical quality factor  
 pub const ELECTRICAL_Q: f64 = 50.0;
 
-/// Standard acoustic impedance of PZT (MRayl)
+/// Standard acoustic impedance of PZT (`MRayl`)
 pub const PZT_IMPEDANCE: f64 = 30.0;
 
-/// Acoustic impedance of water/tissue (MRayl)
+/// Acoustic impedance of water/tissue (`MRayl`)
 pub const TISSUE_IMPEDANCE: f64 = 1.5;
 
-/// Acoustic impedance of backing material (MRayl)
+/// Acoustic impedance of backing material (`MRayl`)
 pub const BACKING_IMPEDANCE: f64 = 5.0;
 
 /// Minimum kerf width as fraction of element width

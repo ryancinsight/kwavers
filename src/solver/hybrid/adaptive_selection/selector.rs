@@ -23,6 +23,7 @@ pub struct AdaptiveMethodSelector {
 
 impl AdaptiveMethodSelector {
     /// Create new selector
+    #[must_use]
     pub fn new(criteria: SelectionCriteria) -> Self {
         Self {
             criteria,

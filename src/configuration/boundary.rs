@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Boundary condition parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BoundaryParameters {
-    /// Boundary type for each face [x_min, x_max, y_min, y_max, z_min, z_max]
+    /// Boundary type for each face [`x_min`, `x_max`, `y_min`, `y_max`, `z_min`, `z_max`]
     pub boundary_types: [BoundaryType; 6],
     /// PML layer thickness in grid points
     pub pml_thickness: usize,

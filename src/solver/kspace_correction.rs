@@ -13,7 +13,7 @@
 //! dispersion relation matches the true physical relation ω = ck.
 //!
 //! For the PSTD method with leapfrog time stepping:
-//! - Numerical dispersion: sin(ωΔt/2) = (cΔt/2) * |k_mod|
+//! - Numerical dispersion: sin(ωΔt/2) = (cΔt/2) * |`k_mod`|
 //! - Physical dispersion: ω = c|k|
 //!
 //! The correction factor κ is derived to ensure the numerical scheme propagates
@@ -334,6 +334,7 @@ pub fn apply_correction(field_k: &mut Array3<num_complex::Complex<f64>>, kappa: 
 }
 
 /// Compute the numerical phase velocity for validation
+#[must_use]
 pub fn compute_numerical_phase_velocity(k: f64, dx: f64, dt: f64, c_ref: f64) -> f64 {
     // Modified wavenumber
     let k_mod = 2.0 * (k * dx / 2.0).sin() / dx;
@@ -350,6 +351,7 @@ pub fn compute_numerical_phase_velocity(k: f64, dx: f64, dt: f64, c_ref: f64) ->
 }
 
 /// Compute the dispersion error for a given wavenumber
+#[must_use]
 pub fn compute_dispersion_error(k: f64, dx: f64, dt: f64, c_ref: f64) -> f64 {
     let c_num = compute_numerical_phase_velocity(k, dx, dt, c_ref);
     (c_num - c_ref).abs() / c_ref // Relative error

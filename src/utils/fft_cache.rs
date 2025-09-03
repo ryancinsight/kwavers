@@ -1,4 +1,4 @@
-//! Modern cache implementation using parking_lot and once_cell
+//! Modern cache implementation using `parking_lot` and `once_cell`
 //!
 //! Replaces Arc<Mutex<>> patterns with more efficient alternatives
 
@@ -28,7 +28,7 @@ impl From<&Grid> for FftCacheKey {
     }
 }
 
-/// Thread-safe FFT cache using parking_lot for better performance
+/// Thread-safe FFT cache using `parking_lot` for better performance
 #[derive(Debug)]
 pub struct FftCache {
     cache: RwLock<HashMap<FftCacheKey, Arc<ProcessorFft3d>>>,
@@ -36,6 +36,7 @@ pub struct FftCache {
 
 impl FftCache {
     /// Create a new empty cache
+    #[must_use]
     pub fn new() -> Self {
         Self {
             cache: RwLock::new(HashMap::new()),
@@ -74,10 +75,9 @@ impl FftCache {
 
         for grid in grids {
             let key = FftCacheKey::from(grid);
-            if !cache.contains_key(&key) {
-                let fft = Arc::new(ProcessorFft3d::new(grid.nx, grid.ny, grid.nz));
-                cache.insert(key, fft);
-            }
+            cache
+                .entry(key)
+                .or_insert_with(|| Arc::new(ProcessorFft3d::new(grid.nx, grid.ny, grid.nz)));
         }
     }
 
@@ -141,11 +141,13 @@ pub mod parallel {
     }
 
     /// Parallel reduction
+    #[must_use]
     pub fn par_sum(array: ArrayView3<f64>) -> f64 {
         array.as_slice().unwrap().par_iter().copied().sum()
     }
 
     /// Parallel maximum
+    #[must_use]
     pub fn par_max(array: ArrayView3<f64>) -> Option<f64> {
         array
             .as_slice()
@@ -156,6 +158,7 @@ pub mod parallel {
     }
 
     /// Parallel norm computation
+    #[must_use]
     pub fn par_norm_l2(array: ArrayView3<f64>) -> f64 {
         let sum_sq: f64 = array.as_slice().unwrap().par_iter().map(|&x| x * x).sum();
 

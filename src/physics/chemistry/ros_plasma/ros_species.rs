@@ -44,6 +44,7 @@ pub enum ROSSpecies {
 
 impl ROSSpecies {
     /// Get the name of the species
+    #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
             Self::HydroxylRadical => "•OH",
@@ -61,6 +62,7 @@ impl ROSSpecies {
     }
 
     /// Get the diffusion coefficient in water at 25°C (m²/s)
+    #[must_use]
     pub fn diffusion_coefficient(&self) -> f64 {
         match self {
             Self::HydroxylRadical => 2.3e-9,
@@ -78,6 +80,7 @@ impl ROSSpecies {
     }
 
     /// Get the lifetime in pure water (seconds)
+    #[must_use]
     pub fn lifetime_water(&self) -> f64 {
         match self {
             Self::HydroxylRadical => 1e-9,     // 1 ns
@@ -95,6 +98,7 @@ impl ROSSpecies {
     }
 
     /// Get the standard reduction potential (V vs SHE)
+    #[must_use]
     pub fn reduction_potential(&self) -> f64 {
         match self {
             Self::HydroxylRadical => 2.80, // Strongest oxidant
@@ -125,6 +129,7 @@ pub struct ROSConcentrations {
 
 impl ROSConcentrations {
     /// Create new ROS concentration container
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let shape = (nx, ny, nz);
         let mut fields = HashMap::new();
@@ -153,6 +158,7 @@ impl ROSConcentrations {
     }
 
     /// Get concentration field for a specific species
+    #[must_use]
     pub fn get(&self, species: ROSSpecies) -> Option<&Array3<f64>> {
         self.fields.get(&species)
     }
@@ -171,6 +177,7 @@ impl ROSConcentrations {
     }
 
     /// Calculate oxidative stress index
+    #[must_use]
     pub fn oxidative_stress_index(&self) -> f64 {
         let mut total_stress = 0.0;
 
@@ -197,7 +204,7 @@ impl ROSConcentrations {
 
     /// Apply decay based on species lifetime
     pub fn apply_decay(&mut self, dt: f64) {
-        for (species, conc) in self.fields.iter_mut() {
+        for (species, conc) in &mut self.fields {
             let lifetime = species.lifetime_water();
             let decay_rate = 1.0 / lifetime;
 
@@ -317,6 +324,7 @@ impl ROSConcentrations {
 }
 
 /// Calculate ROS generation rates based on bubble conditions
+#[must_use]
 pub fn calculate_ros_generation(
     temperature: f64,
     pressure: f64,

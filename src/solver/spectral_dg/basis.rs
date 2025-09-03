@@ -16,6 +16,7 @@ pub enum BasisType {
 }
 
 /// Compute Legendre polynomial and its derivative
+#[must_use]
 pub fn legendre_poly_deriv(n: usize, x: f64) -> (f64, f64) {
     if n == 0 {
         return (1.0, 0.0);
@@ -45,11 +46,13 @@ pub fn legendre_poly_deriv(n: usize, x: f64) -> (f64, f64) {
 }
 
 /// Evaluate Legendre basis function
+#[must_use]
 pub fn legendre_basis(n: usize, x: f64) -> f64 {
     legendre_poly_deriv(n, x).0
 }
 
 /// Evaluate Lagrange basis function
+#[must_use]
 pub fn lagrange_basis(j: usize, x: f64, nodes: &Array1<f64>) -> f64 {
     let mut l = 1.0;
     for (i, &xi) in nodes.iter().enumerate() {
@@ -61,6 +64,7 @@ pub fn lagrange_basis(j: usize, x: f64, nodes: &Array1<f64>) -> f64 {
 }
 
 /// Compute derivative of Lagrange basis
+#[must_use]
 pub fn lagrange_basis_deriv(j: usize, x: f64, nodes: &Array1<f64>) -> f64 {
     let mut dl = 0.0;
 

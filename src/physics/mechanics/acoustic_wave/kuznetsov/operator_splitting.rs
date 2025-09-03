@@ -30,6 +30,7 @@ pub struct OperatorSplittingSolver {
 
 impl OperatorSplittingSolver {
     /// Create new operator splitting solver
+    #[must_use]
     pub fn new(
         nx: usize,
         ny: usize,
@@ -58,6 +59,7 @@ impl OperatorSplittingSolver {
 
     /// Step 1: Linear propagation using finite differences
     /// Solves: ∂²p/∂t² = c₀²∇²p for time dt/2
+    #[must_use]
     pub fn linear_step(&self, pressure: &Array3<f64>, pressure_prev: &Array3<f64>) -> Array3<f64> {
         let mut pressure_next = Array3::zeros((self.nx, self.ny, self.nz));
         let c2 = self.sound_speed * self.sound_speed;
@@ -183,6 +185,7 @@ impl OperatorSplittingSolver {
     }
 
     /// Step 3: Linear propagation again for dt/2 (Strang splitting)
+    #[must_use]
     pub fn linear_step_half(
         &self,
         pressure: &Array3<f64>,
@@ -197,6 +200,7 @@ impl OperatorSplittingSolver {
 
     /// Complete time step using Strang splitting
     /// L(dt/2) * N(dt) * L(dt/2)
+    #[must_use]
     pub fn step(
         &self,
         pressure: &Array3<f64>,

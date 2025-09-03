@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use uom::si::dynamic_viscosity::pascal_second;
-use uom::si::f64::*;
+use uom::si::f64::{DynamicViscosity, Length, MassDensity, Pressure};
 use uom::si::length::meter;
 use uom::si::mass_density::kilogram_per_cubic_meter;
 use uom::si::pressure::pascal;
@@ -107,11 +107,13 @@ impl Default for BubbleParameters {
 
 impl BubbleParameters {
     /// Create parameters for an air bubble in water
+    #[must_use]
     pub fn air_in_water() -> Self {
         Self::default()
     }
 
     /// Create parameters for a vapor bubble (cavitation)
+    #[must_use]
     pub fn vapor_bubble() -> Self {
         let mut params = Self::default();
         params.initial_gas_pressure = params.pv;
@@ -132,6 +134,7 @@ impl BubbleParameters {
     }
 
     /// Create parameters for ultrasound contrast agent
+    #[must_use]
     pub fn contrast_agent(shell_elasticity: f64) -> Self {
         let mut params = Self::default();
 
@@ -171,6 +174,7 @@ pub struct DimensionlessParameters {
 }
 
 impl DimensionlessParameters {
+    #[must_use]
     pub fn from_bubble_params(params: &BubbleParameters, velocity_scale: f64) -> Self {
         let r0 = params.r0.get::<meter>();
         let rho = params.rho_liquid.get::<kilogram_per_cubic_meter>();
@@ -188,6 +192,7 @@ impl DimensionlessParameters {
 }
 
 /// Calculate effective molecular weight for gas mixture
+#[must_use]
 pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
     let mut m_eff = 0.0;
     for (species, mole_frac) in &composition.mole_fractions {
@@ -205,6 +210,7 @@ pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
 }
 
 /// Calculate specific heat ratio for gas mixture
+#[must_use]
 pub fn specific_heat_ratio(composition: &GasComposition, temperature: f64) -> f64 {
     // Simplified - would need gas species info for accurate calculation
     let molecular_weight = effective_molecular_weight(composition);

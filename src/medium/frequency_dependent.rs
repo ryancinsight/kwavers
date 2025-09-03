@@ -32,6 +32,7 @@ pub struct FrequencyDependentProperties {
 
 impl FrequencyDependentProperties {
     /// Create new frequency-dependent properties
+    #[must_use]
     pub fn new(c0: f64, nonlinearity_parameter: f64) -> Self {
         Self {
             c0,
@@ -59,6 +60,7 @@ impl FrequencyDependentProperties {
     }
 
     /// Get phase velocity at a given frequency
+    #[must_use]
     pub fn phase_velocity(&self, frequency: f64) -> f64 {
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
@@ -80,6 +82,7 @@ impl FrequencyDependentProperties {
     }
 
     /// Get group velocity at a given frequency
+    #[must_use]
     pub fn group_velocity(&self, frequency: f64) -> f64 {
         // Numerical derivative of phase
         let df = frequency * 1e-6; // Small frequency step
@@ -93,6 +96,7 @@ impl FrequencyDependentProperties {
     }
 
     /// Get frequency-dependent nonlinearity parameter
+    #[must_use]
     pub fn nonlinearity_at_frequency(&self, frequency: f64) -> f64 {
         if self.frequency_dependent_nonlinearity {
             // Empirical model for frequency-dependent B/A
@@ -104,6 +108,7 @@ impl FrequencyDependentProperties {
     }
 
     /// Get attenuation from relaxation processes
+    #[must_use]
     pub fn relaxation_attenuation(&self, frequency: f64) -> f64 {
         let omega = 2.0 * std::f64::consts::PI * frequency;
 
@@ -125,6 +130,7 @@ pub struct TissueFrequencyModels;
 
 impl TissueFrequencyModels {
     /// Get frequency-dependent properties for liver tissue
+    #[must_use]
     pub fn liver() -> FrequencyDependentProperties {
         let mut props = FrequencyDependentProperties::new(1570.0, 6.8);
         props.dispersion_coefficient = 0.002;
@@ -136,6 +142,7 @@ impl TissueFrequencyModels {
     }
 
     /// Get frequency-dependent properties for muscle tissue
+    #[must_use]
     pub fn muscle() -> FrequencyDependentProperties {
         let mut props = FrequencyDependentProperties::new(1580.0, 7.4);
         props.dispersion_coefficient = 0.0015;
@@ -147,6 +154,7 @@ impl TissueFrequencyModels {
     }
 
     /// Get frequency-dependent properties for fat tissue
+    #[must_use]
     pub fn fat() -> FrequencyDependentProperties {
         let mut props = FrequencyDependentProperties::new(1450.0, 10.0);
         props.dispersion_coefficient = 0.003;
@@ -158,6 +166,7 @@ impl TissueFrequencyModels {
     }
 
     /// Get frequency-dependent properties for blood
+    #[must_use]
     pub fn blood() -> FrequencyDependentProperties {
         let mut props = FrequencyDependentProperties::new(1575.0, 6.0);
         props.dispersion_coefficient = 0.001;
@@ -179,6 +188,7 @@ pub struct DispersionCorrection {
 
 impl DispersionCorrection {
     /// Create new dispersion correction
+    #[must_use]
     pub fn new(properties: FrequencyDependentProperties, reference_frequency: f64) -> Self {
         Self {
             _reference_frequency: reference_frequency,

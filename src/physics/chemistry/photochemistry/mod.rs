@@ -52,6 +52,7 @@ impl PhotochemicalEffects {
             });
     }
 
+    #[must_use]
     pub fn reactive_oxygen_species(&self) -> &Array3<f64> {
         &self.reactive_oxygen_species
     }

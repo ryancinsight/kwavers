@@ -28,7 +28,7 @@ impl LinearAlgebra {
         if a.ncols() != n || b.len() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "solve_linear_system".to_string(),
-                expected: format!("{}x{}", n, n),
+                expected: format!("{n}x{n}"),
                 actual: format!("{}x{}", a.nrows(), a.ncols()),
             }));
         }
@@ -107,7 +107,7 @@ impl LinearAlgebra {
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "eigendecomposition".to_string(),
-                expected: format!("{}x{}", n, n),
+                expected: format!("{n}x{n}"),
                 actual: format!("{}x{}", matrix.nrows(), matrix.ncols()),
             }));
         }
@@ -182,7 +182,7 @@ impl LinearAlgebra {
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "matrix_inverse".to_string(),
-                expected: format!("{}x{}", n, n),
+                expected: format!("{n}x{n}"),
                 actual: format!("{}x{}", matrix.nrows(), matrix.ncols()),
             }));
         }

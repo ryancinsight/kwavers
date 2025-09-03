@@ -145,6 +145,7 @@ pub struct RichardsonErrorEstimator {
 
 impl RichardsonErrorEstimator {
     /// Create a new Richardson error estimator
+    #[must_use]
     pub fn new(order: usize) -> Self {
         Self { order }
     }
@@ -209,6 +210,7 @@ pub enum ErrorNorm {
 
 impl EmbeddedRKErrorEstimator {
     /// Create a new embedded RK error estimator
+    #[must_use]
     pub fn new(norm_type: ErrorNorm) -> Self {
         Self { norm_type }
     }
@@ -240,7 +242,7 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
                         sum_sq += (high - low).powi(2);
                         count += 1;
                     });
-                (sum_sq / count as f64).sqrt()
+                (sum_sq / f64::from(count)).sqrt()
             }
             ErrorNorm::L1 => {
                 let mut sum = 0.0;
@@ -251,7 +253,7 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
                         sum += (high - low).abs();
                         count += 1;
                     });
-                sum / count as f64
+                sum / f64::from(count)
             }
         }
     }

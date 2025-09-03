@@ -17,6 +17,7 @@ pub struct CrosstalkModel {
 
 impl CrosstalkModel {
     /// Create cross-talk model
+    #[must_use]
     pub fn create(num_elements: usize, coefficient: f64) -> Self {
         let coupling_matrix = Self::build_coupling_matrix(num_elements, coefficient);
 
@@ -53,11 +54,13 @@ impl CrosstalkModel {
     }
 
     /// Apply cross-talk to element signals
+    #[must_use]
     pub fn apply(&self, signals: &Array1<f64>) -> Array1<f64> {
         self.coupling_matrix.dot(signals)
     }
 
     /// Calculate isolation between elements in dB
+    #[must_use]
     pub fn isolation_db(&self, element1: usize, element2: usize) -> f64 {
         if element1 == element2 {
             0.0

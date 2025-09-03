@@ -78,8 +78,7 @@ impl InterfaceGeometry {
             .iter()
             .enumerate()
             .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
-            .map(|(i, _)| i)
-            .unwrap_or(0);
+            .map_or(0, |(i, _)| i);
 
         // Interface position is at the boundary between grids
         let interface_pos = match interface_dim {
@@ -104,7 +103,7 @@ impl InterfaceGeometry {
             2 => Ok((source.dx * source.nx as f64, source.dy * source.ny as f64)),
             _ => Err(ValidationError::FieldValidation {
                 field: "normal_direction".to_string(),
-                value: format!("{}", normal_direction),
+                value: format!("{normal_direction}"),
                 constraint: "Must be 0, 1, or 2".to_string(),
             }
             .into()),

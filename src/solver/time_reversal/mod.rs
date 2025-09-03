@@ -22,7 +22,7 @@ pub use reconstruction::TimeReversalReconstructor;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rustfft::num_complex::Complex;
+
     use std::f64::consts::PI;
 
     #[test]
@@ -34,7 +34,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut reconstructor = TimeReversalReconstructor::new(config).unwrap();
+        let reconstructor = TimeReversalReconstructor::new(config).unwrap();
 
         // Create a simple test signal
         let n_samples = 1024;

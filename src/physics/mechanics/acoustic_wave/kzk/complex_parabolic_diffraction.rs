@@ -26,6 +26,7 @@ impl std::fmt::Debug for ParabolicDiffractionOperator {
 
 impl ParabolicDiffractionOperator {
     /// Create new complex parabolic diffraction operator
+    #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
         let ny = config.ny;

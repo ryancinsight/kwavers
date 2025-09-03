@@ -89,11 +89,13 @@ impl AMRSolver {
     }
 
     /// Get the refined mesh
+    #[must_use]
     pub fn get_refined_mesh(&self) -> &Octree {
         &self.octree
     }
 
     /// Get memory usage statistics
+    #[must_use]
     pub fn memory_stats(&self) -> MemoryStats {
         MemoryStats {
             nodes: self.octree.node_count(),

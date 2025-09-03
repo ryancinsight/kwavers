@@ -148,22 +148,22 @@ impl Recorder {
             let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX);
             let max_p = pressure_field
                 .iter()
-                .cloned()
+                .copied()
                 .fold(f64::NEG_INFINITY, f64::max);
-            let min_p = pressure_field.iter().cloned().fold(f64::INFINITY, f64::min);
+            let min_p = pressure_field.iter().copied().fold(f64::INFINITY, f64::min);
             self.statistics.update_pressure(max_p);
             self.statistics.update_pressure(min_p);
         }
 
         if self.record_temperature {
             let temp_field = fields.index_axis(Axis(0), TEMPERATURE_IDX);
-            let max_t = temp_field.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let max_t = temp_field.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             self.statistics.update_temperature(max_t);
         }
 
         if self.record_light {
             let light_field = fields.index_axis(Axis(0), LIGHT_IDX);
-            let max_l = light_field.iter().cloned().fold(0.0, f64::max);
+            let max_l = light_field.iter().copied().fold(0.0, f64::max);
             self.statistics.update_light_intensity(max_l);
         }
 
@@ -319,17 +319,17 @@ impl Recorder {
         // Write time series data
         writeln!(file, "\n# Time Series Data")?;
         for (i, &time) in self.recorded_steps.iter().enumerate() {
-            write!(file, "{:.6e}", time)?;
+            write!(file, "{time:.6e}")?;
 
             if self.record_pressure && i < self.pressure_sensor_data.len() {
                 for &val in &self.pressure_sensor_data[i] {
-                    write!(file, "\t{:.6e}", val)?;
+                    write!(file, "\t{val:.6e}")?;
                 }
             }
 
             if self.record_light && i < self.light_sensor_data.len() {
                 for &val in &self.light_sensor_data[i] {
-                    write!(file, "\t{:.6e}", val)?;
+                    write!(file, "\t{val:.6e}")?;
                 }
             }
 

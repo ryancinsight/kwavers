@@ -27,6 +27,7 @@ pub struct CacheStatistics {
 
 impl CacheStatistics {
     /// Get L1 cache hit rate
+    #[must_use]
     pub fn l1_hit_rate(&self) -> f64 {
         let total = self.l1_hits + self.l1_misses;
         if total == 0 {
@@ -37,6 +38,7 @@ impl CacheStatistics {
     }
 
     /// Get L2 cache hit rate
+    #[must_use]
     pub fn l2_hit_rate(&self) -> f64 {
         let total = self.l2_hits + self.l2_misses;
         if total == 0 {
@@ -47,6 +49,7 @@ impl CacheStatistics {
     }
 
     /// Get L3 cache hit rate
+    #[must_use]
     pub fn l3_hit_rate(&self) -> f64 {
         let total = self.l3_hits + self.l3_misses;
         if total == 0 {
@@ -57,6 +60,7 @@ impl CacheStatistics {
     }
 
     /// Get TLB hit rate
+    #[must_use]
     pub fn tlb_hit_rate(&self) -> f64 {
         let total = self.tlb_hits + self.tlb_misses;
         if total == 0 {
@@ -83,7 +87,8 @@ pub struct CacheProfile {
 }
 
 impl CacheProfile {
-    /// Create a new cache profile with typical x86_64 values
+    /// Create a new cache profile with typical `x86_64` values
+    #[must_use]
     pub fn new() -> Self {
         Self {
             cache_line_size: 64,
@@ -95,6 +100,7 @@ impl CacheProfile {
     }
 
     /// Estimate cache efficiency based on hit rates
+    #[must_use]
     pub fn efficiency(&self) -> f64 {
         // Weighted average of cache hit rates
         let l1_weight = 0.5;
@@ -107,6 +113,7 @@ impl CacheProfile {
     }
 
     /// Estimate memory bandwidth utilization
+    #[must_use]
     pub fn bandwidth_utilization(&self, bytes_transferred: usize, time_seconds: f64) -> f64 {
         if time_seconds <= 0.0 {
             return 0.0;
@@ -135,6 +142,7 @@ pub struct CacheProfiler {
 
 impl CacheProfiler {
     /// Create a new cache profiler
+    #[must_use]
     pub fn new() -> Self {
         Self {
             profile: Arc::new(Mutex::new(CacheProfile::new())),
@@ -166,6 +174,7 @@ impl CacheProfiler {
     }
 
     /// Get current cache profile
+    #[must_use]
     pub fn profile(&self) -> CacheProfile {
         self.profile.lock().unwrap().clone()
     }

@@ -64,19 +64,78 @@ fn propagate(@builtin(global_invocation_id) global_id: vec3<u32>) {
     spectrum[idx] = complex_mul(spectrum[idx], propagator);
 }
 
-// Placeholder FFT - in practice would use a proper FFT implementation
-@compute @workgroup_size(8, 8, 8)
+// Cooley-Tukey radix-2 FFT implementation for GPU
+// Based on: Frigo & Johnson (2005) "The Design and Implementation of FFTW3"
+@compute @workgroup_size(64, 1, 1)
 fn fft_forward(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // This is a placeholder - real FFT would be much more complex
-    // For now, just pass through
-    let x = global_id.x;
-    let y = global_id.y;
-    let z = global_id.z;
+    let idx = global_id.x;
+    let stride = global_id.y;
+    let n = params.nx * params.ny * params.nz;
     
-    if (x >= params.nx || y >= params.ny || z >= params.nz) {
+    if (idx >= n) {
         return;
     }
     
-    // In a real implementation, this would perform FFT
-    // For now, it's a no-op placeholder
+    // Bit-reversal permutation
+    var rev_idx = 0u;
+    var temp_idx = idx;
+    for (var i = 0u; i < 32u; i = i + 1u) {
+        if ((1u << i) >= n) {
+            break;
+        }
+        rev_idx = (rev_idx << 1u) | (temp_idx & 1u);
+        temp_idx = temp_idx >> 1u;
+    }
+    
+    if (idx < rev_idx) {
+        // Swap elements at idx and rev_idx
+        let temp = pressure_field[idx];
+        pressure_field[idx] = pressure_field[rev_idx];
+        pressure_field[rev_idx] = temp;
+    }
+    
+    workgroupBarrier();
+    
+    // Cooley-Tukey decimation-in-time
+    var m = 2u;
+    while (m <= n) {
+        let half_m = m >> 1u;
+        let theta = -2.0 * PI / f32(m);
+        
+        if ((idx & (m - 1u)) < half_m) {
+            let k = idx & (half_m - 1u);
+            let j = ((idx >> log2(m)) << log2(m)) + k;
+            let t_idx = j + half_m;
+            
+            let angle = theta * f32(k);
+            let w_real = cos(angle);
+            let w_imag = sin(angle);
+            
+            let t_real = pressure_field[t_idx].real;
+            let t_imag = pressure_field[t_idx].imag;
+            
+            let temp_real = w_real * t_real - w_imag * t_imag;
+            let temp_imag = w_real * t_imag + w_imag * t_real;
+            
+            pressure_field[t_idx].real = pressure_field[j].real - temp_real;
+            pressure_field[t_idx].imag = pressure_field[j].imag - temp_imag;
+            
+            pressure_field[j].real = pressure_field[j].real + temp_real;
+            pressure_field[j].imag = pressure_field[j].imag + temp_imag;
+        }
+        
+        workgroupBarrier();
+        m = m << 1u;
+    }
+}
+
+// Helper function for computing log2
+fn log2(n: u32) -> u32 {
+    var result = 0u;
+    var temp = n >> 1u;
+    while (temp > 0u) {
+        result = result + 1u;
+        temp = temp >> 1u;
+    }
+    return result;
 }

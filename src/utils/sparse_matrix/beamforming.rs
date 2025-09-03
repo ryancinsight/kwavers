@@ -21,6 +21,7 @@ pub struct BeamformingMatrix {
 
 impl BeamformingMatrix {
     /// Create beamforming matrix
+    #[must_use]
     pub fn create(num_elements: usize, num_directions: usize) -> Self {
         let steering_matrix = CompressedSparseRowMatrix::create(num_elements, num_directions);
 
@@ -78,6 +79,7 @@ impl BeamformingMatrix {
     }
 
     /// Compute covariance matrix (sparse approximation)
+    #[must_use]
     pub fn compute_covariance(
         &self,
         data: &Array2<f64>,
@@ -100,6 +102,7 @@ impl BeamformingMatrix {
     }
 
     /// Get steering matrix
+    #[must_use]
     pub fn steering_matrix(&self) -> &CompressedSparseRowMatrix {
         &self.steering_matrix
     }

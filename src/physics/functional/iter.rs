@@ -78,6 +78,7 @@ pub struct ChunkedFieldIterator<'a, T> {
 
 impl<'a, T> ChunkedFieldIterator<'a, T> {
     /// Create a new chunked iterator
+    #[must_use]
     pub fn new(field: &'a Array3<T>, chunk_size: usize) -> Self {
         let total_elements = field.len();
         let total_chunks = total_elements.div_ceil(chunk_size);

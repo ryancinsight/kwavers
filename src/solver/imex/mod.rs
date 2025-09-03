@@ -289,19 +289,20 @@ impl IMEXIntegrator {
 
                 crate::error::KwaversError::Numerical(
                     crate::error::NumericalError::InvalidOperation(format!(
-                        "IMEX scheme {} failed at dt={:.3e}: {}",
-                        scheme_name, dt, e
+                        "IMEX scheme {scheme_name} failed at dt={dt:.3e}: {e}"
                     )),
                 )
             })
     }
 
     /// Get current stiffness metric
+    #[must_use]
     pub fn stiffness_metric(&self) -> Option<StiffnessMetric> {
         self.stiffness_detector.last_metric()
     }
 
     /// Get stability region
+    #[must_use]
     pub fn stability_region(&self) -> StabilityRegion {
         self.stability_analyzer.compute_region(&self.scheme)
     }

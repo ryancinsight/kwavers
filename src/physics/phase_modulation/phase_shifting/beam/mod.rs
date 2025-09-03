@@ -31,6 +31,7 @@ pub struct BeamSteering {
 
 impl BeamSteering {
     /// Create a new beam steering controller
+    #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let num_elements = element_positions.nrows();
         Self {
@@ -46,8 +47,7 @@ impl BeamSteering {
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         if azimuth.abs() > MAX_STEERING_ANGLE || elevation.abs() > MAX_STEERING_ANGLE {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Steering angles exceed maximum of {} degrees",
-                MAX_STEERING_ANGLE
+                "Steering angles exceed maximum of {MAX_STEERING_ANGLE} degrees"
             )));
         }
 
@@ -78,6 +78,7 @@ impl BeamSteering {
     }
 
     /// Check for grating lobes
+    #[must_use]
     pub fn check_grating_lobes(&self) -> bool {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
 
@@ -106,11 +107,13 @@ impl BeamSteering {
     }
 
     /// Get phase distribution
+    #[must_use]
     pub fn get_phase_distribution(&self) -> &Array1<f64> {
         &self.phase_distribution
     }
 
     /// Calculate beam pattern at given angles
+    #[must_use]
     pub fn calculate_beam_pattern(&self, theta: f64, phi: f64) -> f64 {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;

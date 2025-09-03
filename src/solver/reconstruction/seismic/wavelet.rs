@@ -1,6 +1,6 @@
 //! Source wavelet implementations for seismic imaging
 
-use super::constants::*;
+use super::constants::RICKER_TIME_SHIFT;
 use std::f64::consts::PI;
 
 /// Ricker wavelet generator for seismic sources
@@ -14,6 +14,7 @@ pub struct RickerWavelet {
 
 impl RickerWavelet {
     /// Create a new Ricker wavelet with specified frequency
+    #[must_use]
     pub fn new(frequency: f64) -> Self {
         Self {
             frequency,
@@ -25,7 +26,8 @@ impl RickerWavelet {
     ///
     /// The Ricker wavelet is defined as:
     /// w(t) = (1 - 2π²f²t'²) * exp(-π²f²t'²)
-    /// where t' = t - t_shift
+    /// where t' = t - `t_shift`
+    #[must_use]
     pub fn evaluate(&self, t: f64) -> f64 {
         let t_shifted = t - self.time_shift;
         let arg = PI * self.frequency * t_shifted;
@@ -34,6 +36,7 @@ impl RickerWavelet {
     }
 
     /// Generate a time series of the wavelet
+    #[must_use]
     pub fn generate_time_series(&self, dt: f64, n_samples: usize) -> Vec<f64> {
         (0..n_samples)
             .map(|i| self.evaluate(i as f64 * dt))
@@ -44,6 +47,7 @@ impl RickerWavelet {
     ///
     /// The analytical spectrum is:
     /// W(f) = (2f²/√π*f₀³) * exp(-f²/f₀²)
+    #[must_use]
     pub fn frequency_spectrum(&self, freq: f64) -> f64 {
         let f_ratio = freq / self.frequency;
         let f_ratio_squared = f_ratio * f_ratio;
@@ -51,6 +55,7 @@ impl RickerWavelet {
     }
 
     /// Get the peak frequency (which differs from dominant frequency)
+    #[must_use]
     pub fn peak_frequency(&self) -> f64 {
         self.frequency / PI.sqrt()
     }
@@ -67,6 +72,7 @@ pub struct GaussianWavelet {
 
 impl GaussianWavelet {
     /// Create a new Gaussian wavelet
+    #[must_use]
     pub fn new(sigma: f64) -> Self {
         Self {
             sigma,
@@ -75,6 +81,7 @@ impl GaussianWavelet {
     }
 
     /// Evaluate the Gaussian wavelet at time t
+    #[must_use]
     pub fn evaluate(&self, t: f64) -> f64 {
         let t_shifted = t - self.time_shift;
         let arg = -0.5 * (t_shifted / self.sigma).powi(2);
@@ -82,6 +89,7 @@ impl GaussianWavelet {
     }
 
     /// Generate a time series of the wavelet
+    #[must_use]
     pub fn generate_time_series(&self, dt: f64, n_samples: usize) -> Vec<f64> {
         (0..n_samples)
             .map(|i| self.evaluate(i as f64 * dt))
@@ -104,6 +112,7 @@ pub struct OrmsbyWavelet {
 
 impl OrmsbyWavelet {
     /// Create a new Ormsby wavelet with specified frequency band
+    #[must_use]
     pub fn new(f1: f64, f2: f64, f3: f64, f4: f64) -> Self {
         assert!(
             f1 < f2 && f2 < f3 && f3 < f4,
@@ -113,6 +122,7 @@ impl OrmsbyWavelet {
     }
 
     /// Evaluate the Ormsby wavelet at time t
+    #[must_use]
     pub fn evaluate(&self, t: f64) -> f64 {
         if t.abs() < 1e-10 {
             // Handle singularity at t=0
@@ -131,6 +141,7 @@ impl OrmsbyWavelet {
     }
 
     /// Generate a time series of the wavelet
+    #[must_use]
     pub fn generate_time_series(&self, dt: f64, n_samples: usize) -> Vec<f64> {
         (0..n_samples)
             .map(|i| {

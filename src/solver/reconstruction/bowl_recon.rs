@@ -27,6 +27,7 @@ pub struct BowlRecon {
 
 impl BowlRecon {
     /// Create a new bowl array reconstruction
+    #[must_use]
     pub fn new(center: [f64; 3], radius: f64, focus: [f64; 3], opening_angle: f64) -> Self {
         Self {
             center,
@@ -38,6 +39,7 @@ impl BowlRecon {
     }
 
     /// Create a hemispherical array reconstruction
+    #[must_use]
     pub fn hemispherical(center: [f64; 3], radius: f64) -> Self {
         Self::new(
             center,
@@ -48,6 +50,7 @@ impl BowlRecon {
     }
 
     /// Set weight function for back-projection
+    #[must_use]
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
         self

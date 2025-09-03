@@ -160,6 +160,7 @@ impl ElasticWave {
     }
 
     /// Get current metrics
+    #[must_use]
     pub fn metrics(&self) -> &ElasticWaveMetrics {
         &self.metrics
     }

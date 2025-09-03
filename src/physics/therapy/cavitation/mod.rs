@@ -33,6 +33,7 @@ pub enum CavitationDetectionMethod {
 
 impl TherapyCavitationDetector {
     /// Create a new cavitation detector
+    #[must_use]
     pub fn new(frequency: f64, _peak_negative_pressure: f64) -> Self {
         // Blake threshold calculation
         // P_Blake = P0 + P_v - 2σ/R0
@@ -54,6 +55,7 @@ impl TherapyCavitationDetector {
     }
 
     /// Detect cavitation in pressure field
+    #[must_use]
     pub fn detect(&self, pressure: &Array3<f64>) -> Array3<bool> {
         let mut cavitation = Array3::from_elem(pressure.dim(), false);
 
@@ -93,12 +95,14 @@ impl TherapyCavitationDetector {
     }
 
     /// Calculate cavitation index
+    #[must_use]
     pub fn cavitation_index(&self, peak_negative_pressure: f64) -> f64 {
         // CI = |P_neg| / P_Blake
         peak_negative_pressure.abs() / self.blake_threshold
     }
 
     /// Estimate cavitation probability
+    #[must_use]
     pub fn cavitation_probability(&self, peak_negative_pressure: f64) -> f64 {
         let ci = self.cavitation_index(peak_negative_pressure);
 
@@ -109,6 +113,7 @@ impl TherapyCavitationDetector {
     }
 
     /// Check if conditions are safe for stable cavitation
+    #[must_use]
     pub fn is_stable_cavitation(&self, peak_negative_pressure: f64) -> bool {
         let ci = self.cavitation_index(peak_negative_pressure);
         // Stable cavitation typically occurs for 0.5 < CI < 1.0
@@ -116,6 +121,7 @@ impl TherapyCavitationDetector {
     }
 
     /// Check if conditions lead to inertial cavitation
+    #[must_use]
     pub fn is_inertial_cavitation(&self, peak_negative_pressure: f64) -> bool {
         let ci = self.cavitation_index(peak_negative_pressure);
         // Inertial cavitation typically occurs for CI > 1.0

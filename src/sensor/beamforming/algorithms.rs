@@ -12,7 +12,7 @@ pub enum BeamformingAlgorithm {
         diagonal_loading: f64,
         spatial_smoothing: bool,
     },
-    /// MUltiple SIgnal Classification
+    /// `MUltiple` `SIgnal` Classification
     MUSIC {
         signal_subspace_dimension: usize,
         spatial_smoothing: bool,

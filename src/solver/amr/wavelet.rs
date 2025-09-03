@@ -23,6 +23,7 @@ pub struct WaveletTransform {
 
 impl WaveletTransform {
     /// Create a new wavelet transform
+    #[must_use]
     pub fn new(basis: WaveletBasis, levels: usize) -> Self {
         Self { basis, levels }
     }
@@ -153,6 +154,7 @@ impl WaveletTransform {
     }
 
     /// Compute compression ratio
+    #[must_use]
     pub fn compression_ratio(&self, coeffs: &Array3<f64>, threshold: f64) -> f64 {
         let total = coeffs.len();
         let nonzero = coeffs.iter().filter(|&&c| c.abs() >= threshold).count();

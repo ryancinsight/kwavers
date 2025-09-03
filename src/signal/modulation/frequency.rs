@@ -10,6 +10,7 @@ pub struct FrequencyModulation {
 }
 
 impl FrequencyModulation {
+    #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
     }

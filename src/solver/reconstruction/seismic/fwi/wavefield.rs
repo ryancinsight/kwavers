@@ -52,6 +52,7 @@ impl Default for WavefieldModeler {
 }
 
 impl WavefieldModeler {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: WavefieldConfig::default(),
@@ -60,6 +61,7 @@ impl WavefieldModeler {
         }
     }
 
+    #[must_use]
     pub fn with_config(config: WavefieldConfig) -> Self {
         Self {
             config,

@@ -12,8 +12,15 @@ pub struct TissuePropertyCache {
     nonlinearity_cache: HashMap<TissueType, f64>,
 }
 
+impl Default for TissuePropertyCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TissuePropertyCache {
     /// Create a new property cache
+    #[must_use]
     pub fn new() -> Self {
         Self {
             density_cache: HashMap::new(),
@@ -28,8 +35,7 @@ impl TissuePropertyCache {
         *self.density_cache.entry(tissue_type).or_insert_with(|| {
             TISSUE_PROPERTIES
                 .get(&tissue_type)
-                .map(|p| p.density)
-                .unwrap_or(1000.0)
+                .map_or(1000.0, |p| p.density)
         })
     }
 
@@ -41,8 +47,7 @@ impl TissuePropertyCache {
             .or_insert_with(|| {
                 TISSUE_PROPERTIES
                     .get(&tissue_type)
-                    .map(|p| p.sound_speed)
-                    .unwrap_or(1500.0)
+                    .map_or(1500.0, |p| p.sound_speed)
             })
     }
 

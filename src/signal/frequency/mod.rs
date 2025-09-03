@@ -19,6 +19,7 @@ pub struct ConstantFrequency {
 }
 
 impl ConstantFrequency {
+    #[must_use]
     pub fn new(value: f64) -> Self {
         assert!(value > 0.0, "Frequency must be positive");
         Self { value }
@@ -43,6 +44,7 @@ pub struct LinearSweep {
 }
 
 impl LinearSweep {
+    #[must_use]
     pub fn new(start_freq: f64, end_freq: f64, duration: f64, rate: f64) -> Self {
         assert!(start_freq > 0.0 && end_freq > 0.0 && duration > 0.0 && rate > 0.0);
         Self {
@@ -77,6 +79,7 @@ pub struct QuadraticSweep {
 }
 
 impl QuadraticSweep {
+    #[must_use]
     pub fn new(start_freq: f64, end_freq: f64, duration: f64, rate: f64) -> Self {
         assert!(start_freq > 0.0 && end_freq > 0.0 && duration > 0.0 && rate > 0.0);
         Self {

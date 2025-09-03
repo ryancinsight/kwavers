@@ -60,6 +60,7 @@ fn compute_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
 }
 
 /// Compute k² magnitude array for Laplacian operations
+#[must_use]
 pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -> Array3<f64> {
     let mut k_squared = Array3::zeros(kx.dim());
 
@@ -75,6 +76,7 @@ pub fn compute_k_squared(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -
 }
 
 /// Compute k magnitude array
+#[must_use]
 pub fn compute_k_magnitude(kx: &Array3<f64>, ky: &Array3<f64>, kz: &Array3<f64>) -> Array3<f64> {
     let mut k_mag = Array3::zeros(kx.dim());
 
@@ -165,6 +167,7 @@ fn sinc(x: f64) -> f64 {
 }
 
 /// Apply anti-aliasing filter in k-space
+#[must_use]
 pub fn apply_antialiasing_filter(
     k_squared: &Array3<f64>,
     k_max_squared: f64,

@@ -1,6 +1,6 @@
 //! Phase Shift Keying (PSK) implementation
 
-use super::constants::*;
+use super::constants::DEFAULT_SEED;
 use ndarray::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -19,6 +19,7 @@ pub struct PhaseShiftKeying {
 
 impl PhaseShiftKeying {
     /// Create new PSK modulator
+    #[must_use]
     pub fn new(modulation_order: usize, symbol_duration: f64) -> Self {
         assert!(
             modulation_order.is_power_of_two() && modulation_order >= 2,
@@ -50,6 +51,7 @@ impl PhaseShiftKeying {
     }
 
     /// Get current phase
+    #[must_use]
     pub fn current_phase(&self) -> f64 {
         self.phase_states[self.current_symbol]
     }
@@ -63,14 +65,17 @@ impl PhaseShiftKeying {
     }
 
     /// Common PSK configurations
+    #[must_use]
     pub fn bpsk(symbol_duration: f64) -> Self {
         Self::new(2, symbol_duration)
     }
 
+    #[must_use]
     pub fn qpsk(symbol_duration: f64) -> Self {
         Self::new(4, symbol_duration)
     }
 
+    #[must_use]
     pub fn psk8(symbol_duration: f64) -> Self {
         Self::new(8, symbol_duration)
     }

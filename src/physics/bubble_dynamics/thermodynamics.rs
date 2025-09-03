@@ -43,7 +43,10 @@ pub mod constants {
     pub const T_BOILING_WATER: f64 = 373.15;
 }
 
-use constants::*;
+use constants::{
+    H_VAP_WATER_100C, M_WATER, P_ATM, P_CRITICAL_WATER, P_TRIPLE_WATER, R_GAS, T_BOILING_WATER,
+    T_CRITICAL_WATER, T_TRIPLE_WATER,
+};
 
 /// Vapor pressure model selection
 #[derive(Debug, Clone, Copy)]
@@ -85,6 +88,7 @@ impl Default for ThermodynamicsCalculator {
 
 impl ThermodynamicsCalculator {
     /// Create a new calculator with specified model
+    #[must_use]
     pub fn new(model: VaporPressureModel) -> Self {
         Self {
             model,
@@ -99,6 +103,7 @@ impl ThermodynamicsCalculator {
     ///
     /// # Returns
     /// Saturation vapor pressure in Pascals
+    #[must_use]
     pub fn vapor_pressure(&self, temperature: f64) -> f64 {
         // Bounds checking
         if temperature < T_TRIPLE_WATER {
@@ -144,7 +149,7 @@ impl ThermodynamicsCalculator {
 
     /// Clausius-Clapeyron relation
     ///
-    /// ln(P/P_ref) = -ΔH_vap/R * (1/T - 1/T_ref)
+    /// `ln(P/P_ref)` = -`ΔH_vap/R` * (1/T - `1/T_ref`)
     fn clausius_clapeyron(&self, temperature: f64) -> f64 {
         // Temperature-dependent enthalpy of vaporization (Watson correlation)
         let h_vap_t = self.h_vap
@@ -245,6 +250,7 @@ impl ThermodynamicsCalculator {
     /// Calculate enthalpy of vaporization at given temperature
     ///
     /// Uses Watson correlation for temperature dependence
+    #[must_use]
     pub fn enthalpy_vaporization(&self, temperature: f64) -> f64 {
         // Reference values at normal boiling point
         const H_VAP_NBP: f64 = 40660.0; // J/mol at 100°C
@@ -262,6 +268,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate specific heat capacity of water vapor
+    #[must_use]
     pub fn heat_capacity_vapor(&self, temperature: f64) -> f64 {
         // Shomate equation coefficients for water vapor
         // Valid 500-1700 K (extended range)
@@ -276,6 +283,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate thermal conductivity of water vapor
+    #[must_use]
     pub fn thermal_conductivity_vapor(&self, temperature: f64, pressure: f64) -> f64 {
         // Water vapor correlation calculation
         // From IAPWS formulation
@@ -292,6 +300,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate dynamic viscosity of water vapor
+    #[must_use]
     pub fn viscosity_vapor(&self, temperature: f64) -> f64 {
         // Sutherland's formula for water vapor
         const MU_REF: f64 = 1.12e-5; // Pa·s at 373 K
@@ -302,6 +311,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate mass transfer coefficient for evaporation/condensation
+    #[must_use]
     pub fn mass_transfer_coefficient(&self, temperature: f64, accommodation_coeff: f64) -> f64 {
         // Hertz-Knudsen equation coefficient
         let molecular_speed = (8.0 * R_GAS * temperature / (PI * M_WATER)).sqrt();
@@ -309,6 +319,7 @@ impl ThermodynamicsCalculator {
     }
 
     /// Calculate equilibrium vapor concentration
+    #[must_use]
     pub fn vapor_concentration(&self, temperature: f64, pressure: f64) -> f64 {
         let p_sat = self.vapor_pressure(temperature);
         let mole_fraction = p_sat / pressure;
@@ -330,6 +341,7 @@ pub struct MassTransferModel {
 
 impl MassTransferModel {
     /// Create a new mass transfer model
+    #[must_use]
     pub fn new(accommodation_coeff: f64) -> Self {
         Self {
             thermo: ThermodynamicsCalculator::default(),
@@ -347,6 +359,7 @@ impl MassTransferModel {
     ///
     /// # Returns
     /// Mass transfer rate [kg/s] (positive for evaporation)
+    #[must_use]
     pub fn mass_transfer_rate(
         &self,
         temperature: f64,
@@ -376,6 +389,7 @@ impl MassTransferModel {
     }
 
     /// Calculate heat of phase change
+    #[must_use]
     pub fn heat_transfer_rate(&self, mass_rate: f64, temperature: f64) -> f64 {
         let h_vap = self.thermo.enthalpy_vaporization(temperature);
         mass_rate * h_vap / M_WATER // Convert to J/s

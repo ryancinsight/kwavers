@@ -10,7 +10,7 @@
 
 use super::{BubbleParameters, BubbleState};
 use crate::error::KwaversResult;
-use crate::physics::constants::*;
+use crate::physics::constants::ATMOSPHERIC_PRESSURE;
 
 /// Gilmore equation solver for high-amplitude bubble dynamics
 #[derive(Debug)]
@@ -25,6 +25,7 @@ pub struct GilmoreSolver {
 
 impl GilmoreSolver {
     /// Create a new Gilmore solver
+    #[must_use]
     pub fn new(params: BubbleParameters) -> Self {
         // Tait equation parameters for water (Fujikawa & Akamatsu, 1980)
         let tait_b = 3.046e8; // Pa
@@ -65,7 +66,7 @@ impl GilmoreSolver {
     /// Calculate bubble wall acceleration using Gilmore equation
     ///
     /// The Gilmore equation in standard form:
-    /// (1 - u/C) * R * R_ddot + (3/2) * (1 - u/(3C)) * u² =
+    /// (1 - u/C) * R * `R_ddot` + (3/2) * (1 - u/(3C)) * u² =
     ///     (1 + u/C) * H + (1 - u/C) * R/C * dH/dt
     ///
     /// where:
@@ -147,6 +148,7 @@ impl GilmoreSolver {
     }
 
     /// Check if conditions warrant using Gilmore over simpler models
+    #[must_use]
     pub fn should_use_gilmore(&self, state: &BubbleState) -> bool {
         // Use Gilmore when:
         // 1. Wall Mach number > 0.1

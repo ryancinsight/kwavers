@@ -37,7 +37,7 @@ pub const HIFU_FREQUENCY: f64 = 1e6; // 1 MHz typical
 pub const HIFU_INTENSITY_MIN: f64 = 100.0; // W/cm²
 pub const HIFU_INTENSITY_MAX: f64 = 10000.0; // W/cm²
 
-/// Acoustic impedance = density * sound_speed
+/// Acoustic impedance = density * `sound_speed`
 pub const WATER_IMPEDANCE: f64 = WATER_DENSITY * WATER_SOUND_SPEED;
 pub const AIR_IMPEDANCE: f64 = AIR_DENSITY * AIR_SOUND_SPEED;
 pub const TISSUE_IMPEDANCE: f64 = TISSUE_DENSITY * TISSUE_SOUND_SPEED;

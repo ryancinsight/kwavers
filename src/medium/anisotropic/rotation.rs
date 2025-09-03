@@ -12,6 +12,7 @@ pub struct RotationMatrix {
 
 impl RotationMatrix {
     /// Create rotation matrix from Euler angles (ZYX convention)
+    #[must_use]
     pub fn from_euler(phi: f64, theta: f64, psi: f64) -> Self {
         let (sp, cp) = phi.sin_cos();
         let (st, ct) = theta.sin_cos();
@@ -36,6 +37,7 @@ impl RotationMatrix {
     }
 
     /// Create rotation around Z axis
+    #[must_use]
     pub fn z_rotation(angle: f64) -> Self {
         let (s, c) = angle.sin_cos();
         let mut r = Array2::eye(3);
@@ -49,6 +51,7 @@ impl RotationMatrix {
     }
 
     /// Create rotation around Y axis
+    #[must_use]
     pub fn y_rotation(angle: f64) -> Self {
         let (s, c) = angle.sin_cos();
         let mut r = Array2::eye(3);
@@ -62,6 +65,7 @@ impl RotationMatrix {
     }
 
     /// Create rotation around X axis
+    #[must_use]
     pub fn x_rotation(angle: f64) -> Self {
         let (s, c) = angle.sin_cos();
         let mut r = Array2::eye(3);
@@ -75,6 +79,7 @@ impl RotationMatrix {
     }
 
     /// Apply rotation to a vector
+    #[must_use]
     pub fn apply_to_vector(&self, v: &[f64; 3]) -> [f64; 3] {
         let mut result = [0.0; 3];
         for i in 0..3 {
@@ -86,6 +91,7 @@ impl RotationMatrix {
     }
 
     /// Apply rotation to stiffness tensor (Bond transformation)
+    #[must_use]
     pub fn apply_to_stiffness(&self, c: &Array2<f64>) -> Array2<f64> {
         // Bond transformation matrix (6x6)
         let bond = self.bond_matrix();
@@ -150,11 +156,13 @@ impl RotationMatrix {
     }
 
     /// Get the rotation matrix
+    #[must_use]
     pub fn matrix(&self) -> &Array2<f64> {
         &self.r
     }
 
     /// Check if rotation is valid (orthogonal with det = 1)
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         // Check orthogonality: R * R^T = I
         let identity = self.r.dot(&self.r.t());

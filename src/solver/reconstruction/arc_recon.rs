@@ -28,6 +28,7 @@ pub struct ArcRecon {
 
 impl ArcRecon {
     /// Create a new arc array reconstruction
+    #[must_use]
     pub fn new(
         center: [f64; 3],
         radius: f64,
@@ -46,11 +47,13 @@ impl ArcRecon {
     }
 
     /// Create a full circular array reconstruction
+    #[must_use]
     pub fn circular(center: [f64; 3], radius: f64, normal: [f64; 3]) -> Self {
         Self::new(center, radius, 0.0, 2.0 * std::f64::consts::PI, normal)
     }
 
     /// Set weight function for back-projection
+    #[must_use]
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
         self

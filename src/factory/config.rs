@@ -31,6 +31,7 @@ pub struct ConfigBuilder {
 
 impl ConfigBuilder {
     /// Create a new configuration builder with defaults
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: SimulationConfig {
@@ -45,36 +46,42 @@ impl ConfigBuilder {
     }
 
     /// Set grid configuration
+    #[must_use]
     pub fn with_grid(mut self, grid: super::GridConfig) -> Self {
         self.config.grid = grid;
         self
     }
 
     /// Set medium configuration
+    #[must_use]
     pub fn with_medium(mut self, medium: super::MediumConfig) -> Self {
         self.config.medium = medium;
         self
     }
 
     /// Set physics configuration
+    #[must_use]
     pub fn with_physics(mut self, physics: super::PhysicsConfig) -> Self {
         self.config.physics = physics;
         self
     }
 
     /// Set time configuration
+    #[must_use]
     pub fn with_time(mut self, time: super::TimeConfig) -> Self {
         self.config.time = time;
         self
     }
 
     /// Set source configuration
+    #[must_use]
     pub fn with_source(mut self, source: super::SourceConfig) -> Self {
         self.config.source = source;
         self
     }
 
     /// Set validation configuration
+    #[must_use]
     pub fn with_validation(mut self, validation: super::ValidationConfig) -> Self {
         self.config.validation = validation;
         self

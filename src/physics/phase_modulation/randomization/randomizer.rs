@@ -1,6 +1,6 @@
 //! Main phase randomizer implementation
 
-use super::constants::*;
+use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
 use super::distribution::PhaseDistribution;
 use super::scheme::RandomizationScheme;
 use ndarray::{Array1, Array2, ArrayView1};
@@ -21,6 +21,7 @@ pub struct PhaseRandomizer {
 
 impl PhaseRandomizer {
     /// Create a new phase randomizer
+    #[must_use]
     pub fn new(
         scheme: RandomizationScheme,
         distribution: PhaseDistribution,
@@ -122,6 +123,7 @@ impl PhaseRandomizer {
     }
 
     /// Get current phase values
+    #[must_use]
     pub fn phases(&self) -> ArrayView1<f64> {
         self.current_phases.view()
     }

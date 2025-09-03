@@ -11,7 +11,7 @@ use std::ops::Add;
 pub trait FieldOps {
     type Item;
 
-    /// Map a function over all elements (now supports FnMut for stateful closures)
+    /// Map a function over all elements (now supports `FnMut` for stateful closures)
     fn map_field<F, U>(&self, f: F) -> Array3<U>
     where
         F: FnMut(&Self::Item) -> U;

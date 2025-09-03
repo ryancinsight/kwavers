@@ -1,6 +1,6 @@
 //! Spectral-based cavitation detection
 
-use super::constants::*;
+use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
 use ndarray::{s, Array1, ArrayView1};
@@ -32,6 +32,7 @@ impl std::fmt::Debug for SpectralDetector {
 }
 
 impl SpectralDetector {
+    #[must_use]
     pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
         let fft_planner = FftPlanner::new();
         let window = Self::create_hann_window(SPECTRAL_WINDOW_SIZE);
@@ -134,7 +135,7 @@ impl SpectralDetector {
         let mut ultraharmonic_sum = 0.0;
 
         // Check 3f0/2, 5f0/2, 7f0/2
-        for n in [3, 5, 7].iter() {
+        for n in &[3, 5, 7] {
             let ultra_bin = (n * fundamental_bin) / 2;
             if ultra_bin < psd.len() {
                 ultraharmonic_sum += psd[ultra_bin];

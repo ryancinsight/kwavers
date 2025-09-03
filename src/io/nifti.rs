@@ -15,6 +15,8 @@ pub use nifti::{InMemNiftiObject, NiftiHeader, NiftiObject, ReaderOptions};
 pub struct NiftiReader {
     /// Enable verbose logging
     verbose: bool,
+    /// Voxel dimensions in mm
+    voxel_dims: [f64; 3],
 }
 
 impl Default for NiftiReader {
@@ -25,13 +27,25 @@ impl Default for NiftiReader {
 
 impl NiftiReader {
     /// Create a new NIFTI reader
+    #[must_use]
     pub fn new() -> Self {
-        Self { verbose: false }
+        Self {
+            verbose: false,
+            voxel_dims: [1.0, 1.0, 1.0], // Default 1mm isotropic
+        }
     }
 
     /// Enable verbose logging during file operations
+    #[must_use]
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
+        self
+    }
+
+    /// Set voxel dimensions in mm
+    #[must_use]
+    pub fn with_voxel_dims(mut self, dims: [f64; 3]) -> Self {
+        self.voxel_dims = dims;
         self
     }
 
@@ -46,8 +60,7 @@ impl NiftiReader {
         // Load the NIFTI file
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -92,7 +105,7 @@ impl NiftiReader {
                         for i in 0..nx {
                             let idx = i + j * nx + k * nx * ny;
                             if idx < float_data.len() {
-                                array_3d[[i, j, k]] = float_data[idx] as f64;
+                                array_3d[[i, j, k]] = f64::from(float_data[idx]);
                             }
                         }
                     }
@@ -127,8 +140,7 @@ impl NiftiReader {
             }
             _ => {
                 return Err(KwaversError::Data(DataError::IoError(format!(
-                    "Unsupported NIFTI data type: {}. Only FLOAT32 (16) and FLOAT64 (64) are supported.",
-                    datatype
+                    "Unsupported NIFTI data type: {datatype}. Only FLOAT32 (16) and FLOAT64 (64) are supported."
                 ))));
             }
         }
@@ -159,8 +171,7 @@ impl NiftiReader {
         // Load the NIFTI object
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -180,8 +191,7 @@ impl NiftiReader {
         // Load only the header
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -198,26 +208,74 @@ impl NiftiReader {
                 header.dim[3] as usize,
             ],
             voxel_dimensions: [
-                header.pixdim[1] as f64,
-                header.pixdim[2] as f64,
-                header.pixdim[3] as f64,
+                f64::from(header.pixdim[1]),
+                f64::from(header.pixdim[2]),
+                f64::from(header.pixdim[3]),
             ],
             datatype: header.datatype,
             description,
         })
     }
 
-    /// Save a 3D array as a NIFTI file (placeholder - full implementation requires API update)
-    pub fn save<P: AsRef<Path>>(&self, _path: P, _data: &Array3<f64>) -> KwaversResult<()> {
-        // Note: The nifti 0.17 API doesn't support direct creation of NIFTI objects
-        // from raw data. This would require either:
-        // 1. Updating to a newer version of the nifti crate
-        // 2. Using a different approach to save NIFTI files
-        // 3. Implementing raw NIFTI file writing
+    /// Save a 3D array as a NIFTI file
+    pub fn save<P: AsRef<Path>>(&self, path: P, data: &Array3<f64>) -> KwaversResult<()> {
+        use std::fs::File;
+        use std::io::Write;
 
-        Err(KwaversError::NotImplemented(
-            "NIFTI saving is not yet implemented for nifti crate 0.17".to_string(),
-        ))
+        let path = path.as_ref();
+        let (nx, ny, nz) = data.dim();
+
+        // Create NIFTI header (348 bytes)
+        let mut header = vec![0u8; 348];
+
+        // Magic number for NIFTI-1 format
+        header[0..4].copy_from_slice(&348i32.to_le_bytes());
+
+        // Dimensions
+        header[40] = 3; // Number of dimensions
+        header[42..44].copy_from_slice(&(nx as i16).to_le_bytes());
+        header[44..46].copy_from_slice(&(ny as i16).to_le_bytes());
+        header[46..48].copy_from_slice(&(nz as i16).to_le_bytes());
+        header[48..50].copy_from_slice(&1i16.to_le_bytes()); // time dimension
+
+        // Data type (64 = float64)
+        header[70..72].copy_from_slice(&64i16.to_le_bytes());
+        header[72..74].copy_from_slice(&64i16.to_le_bytes()); // bits per pixel
+
+        // Voxel dimensions from metadata
+        let pixdim = [
+            0.0f32,
+            self.voxel_dims[0] as f32,
+            self.voxel_dims[1] as f32,
+            self.voxel_dims[2] as f32,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+        ];
+        for (i, &dim) in pixdim.iter().enumerate() {
+            header[76 + i * 4..80 + i * 4].copy_from_slice(&dim.to_le_bytes());
+        }
+
+        // vox_offset - data starts immediately after header
+        header[108..112].copy_from_slice(&352.0f32.to_le_bytes());
+
+        // Magic string "n+1\0"
+        header[344..348].copy_from_slice(b"n+1\0");
+
+        // Write header and data
+        let mut file = File::create(path)?;
+        file.write_all(&header)?;
+
+        // Pad to 352 bytes
+        file.write_all(&[0u8; 4])?;
+
+        // Write data in row-major order
+        for ((i, j, k), &value) in data.indexed_iter() {
+            file.write_all(&value.to_le_bytes())?;
+        }
+
+        Ok(())
     }
 }
 
@@ -237,7 +295,6 @@ pub struct NiftiInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
 
     #[test]
     fn test_nifti_reader_creation() {

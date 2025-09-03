@@ -19,6 +19,7 @@ pub enum FiniteDifferenceOrder {
 
 impl FiniteDifferenceOrder {
     /// Get the stencil size (number of points on each side of center)
+    #[must_use]
     pub fn stencil_radius(&self) -> usize {
         match self {
             Self::Second => 1,
@@ -29,7 +30,8 @@ impl FiniteDifferenceOrder {
     }
 
     /// Get finite difference coefficients for second derivative
-    /// Returns (center_coefficient, side_coefficients)
+    /// Returns (`center_coefficient`, `side_coefficients`)
+    #[must_use]
     pub fn second_derivative_coefficients(&self) -> (f64, Vec<f64>) {
         match self {
             Self::Second => (-2.0, vec![1.0]),
@@ -331,6 +333,9 @@ pub fn laplacian_second_order(field: ArrayView3<f64>, grid: &Grid) -> KwaversRes
     operator.apply(field)
 }
 
+// Re-export for convenience
+pub use self::FiniteDifferenceOrder as SpatialOrder;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -412,6 +417,3 @@ mod tests {
         assert!(diff > 1e-6, "Fourth order should differ from second order");
     }
 }
-
-// Re-export for convenience
-pub use self::FiniteDifferenceOrder as SpatialOrder;

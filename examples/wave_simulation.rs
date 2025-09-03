@@ -23,8 +23,8 @@ fn main() -> KwaversResult<()> {
     let medium = Arc::new(HomogeneousMedium::water(&grid));
 
     // Access properties through the Medium trait
-    let sound_speed = medium.sound_speed(0.0, 0.0, 0.0, &grid);
-    let density = medium.density(0.0, 0.0, 0.0, &grid);
+    let sound_speed = medium.sound_speed(0, 0, 0);
+    let density = medium.density(0, 0, 0);
     println!("Medium: Water (c={} m/s, ρ={} kg/m³)", sound_speed, density);
 
     // Calculate time step using CFL condition

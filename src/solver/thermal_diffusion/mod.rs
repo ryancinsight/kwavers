@@ -102,6 +102,7 @@ pub struct ThermalDiffusionPlugin {
 }
 
 impl ThermalDiffusionPlugin {
+    #[must_use]
     pub fn new(config: ThermalDiffusionConfig) -> Self {
         Self {
             metadata: PluginMetadata {

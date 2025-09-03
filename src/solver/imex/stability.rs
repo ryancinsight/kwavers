@@ -29,6 +29,7 @@ pub struct IMEXStabilityAnalyzer {
 
 impl IMEXStabilityAnalyzer {
     /// Create a new stability analyzer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             n_test_points: 100,
@@ -37,18 +38,21 @@ impl IMEXStabilityAnalyzer {
     }
 
     /// Set number of test points
+    #[must_use]
     pub fn with_test_points(mut self, n: usize) -> Self {
         self.n_test_points = n;
         self
     }
 
     /// Set safety factor
+    #[must_use]
     pub fn with_safety_factor(mut self, factor: f64) -> Self {
         self.safety_factor = factor;
         self
     }
 
     /// Compute stability region for a scheme
+    #[must_use]
     pub fn compute_region(&self, scheme: &IMEXSchemeType) -> StabilityRegion {
         // For explicit part, estimate based on order
         let explicit_dt_max = match scheme.order() {
@@ -187,6 +191,7 @@ impl IMEXStabilityAnalyzer {
     }
 
     /// Compute stability function value at a point
+    #[must_use]
     pub fn stability_function_at_point(
         &self,
         scheme: &IMEXSchemeType,

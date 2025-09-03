@@ -16,6 +16,7 @@ pub struct NeuralNetwork {
 
 impl NeuralNetwork {
     /// Create a new neural network with specified dimensions
+    #[must_use]
     pub fn new(input_dim: usize, hidden_dim: usize, output_dim: usize, learning_rate: f64) -> Self {
         use rand::Rng;
         let mut rng = rand::thread_rng();
@@ -97,12 +98,12 @@ impl NeuralNetwork {
         Ok(())
     }
 
-    /// ReLU activation function
+    /// `ReLU` activation function
     fn relu(x: f64) -> f64 {
         x.max(0.0)
     }
 
-    /// ReLU derivative
+    /// `ReLU` derivative
     fn relu_derivative(x: f64) -> f64 {
         if x > 0.0 {
             1.0

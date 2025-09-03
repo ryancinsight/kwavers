@@ -19,11 +19,13 @@ pub struct StiffnessMetric {
 
 impl StiffnessMetric {
     /// Check if the problem is stiff
+    #[must_use]
     pub fn is_stiff(&self) -> bool {
         self.is_stiff
     }
 
     /// Get the stiffness ratio
+    #[must_use]
     pub fn ratio(&self) -> f64 {
         self.ratio
     }
@@ -53,6 +55,7 @@ pub enum StiffnessMethod {
 
 impl StiffnessDetector {
     /// Create a new stiffness detector
+    #[must_use]
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -62,6 +65,7 @@ impl StiffnessDetector {
     }
 
     /// Set detection method
+    #[must_use]
     pub fn with_method(mut self, method: StiffnessMethod) -> Self {
         self.method = method;
         self
@@ -95,6 +99,7 @@ impl StiffnessDetector {
     }
 
     /// Get last computed metric
+    #[must_use]
     pub fn last_metric(&self) -> Option<StiffnessMetric> {
         self.last_metric.clone()
     }
@@ -119,7 +124,7 @@ impl StiffnessDetector {
         for _ in 0..10 {
             // Create random perturbation
             let mut perturbation = Array3::zeros(field.dim());
-            for p in perturbation.iter_mut() {
+            for p in &mut perturbation {
                 *p = 2.0 * rand::random::<f64>() - 1.0;
             }
 

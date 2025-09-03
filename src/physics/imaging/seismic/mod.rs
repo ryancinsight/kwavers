@@ -50,6 +50,7 @@ impl Default for SeismicConfig {
 ///
 /// Cross-correlation imaging condition: I(x) = Σₜ S(x,t) * R(x,t)
 /// where S is source wavefield and R is receiver wavefield
+#[must_use]
 pub fn apply_imaging_condition(
     source_wavefield: &Array3<f64>,
     receiver_wavefield: &Array3<f64>,
@@ -58,6 +59,7 @@ pub fn apply_imaging_condition(
 }
 
 /// Compute migration weight based on illumination
+#[must_use]
 pub fn compute_illumination_compensation(
     source_wavefield: &Array3<f64>,
     epsilon: f64,

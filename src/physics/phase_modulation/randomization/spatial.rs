@@ -1,6 +1,6 @@
 //! Spatial phase randomization
 
-use super::constants::*;
+use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
 use ndarray::{Array1, Array2};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -14,6 +14,7 @@ pub struct SpatialRandomization {
 
 impl SpatialRandomization {
     /// Create new spatial randomizer
+    #[must_use]
     pub fn new(correlation_length: f64) -> Self {
         Self {
             correlation_length,

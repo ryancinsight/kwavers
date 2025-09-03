@@ -36,7 +36,7 @@ impl FieldAnalyzer {
         }
 
         if count > 0 {
-            total_variation / count as f64
+            total_variation / f64::from(count)
         } else {
             0.0
         }
@@ -62,7 +62,7 @@ impl FieldAnalyzer {
                         (field[[i, j, k - 1]] - center).abs(),
                     ]
                     .iter()
-                    .cloned()
+                    .copied()
                     .fold(0.0, f64::max);
 
                     if max_jump > threshold * center.abs() {

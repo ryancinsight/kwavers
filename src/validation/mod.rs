@@ -11,6 +11,7 @@ pub struct ValidationResult {
 }
 
 impl ValidationResult {
+    #[must_use]
     pub fn success() -> Self {
         Self {
             is_valid: true,
@@ -18,6 +19,7 @@ impl ValidationResult {
         }
     }
 
+    #[must_use]
     pub fn failure(error: String) -> Self {
         Self {
             is_valid: false,
@@ -25,6 +27,7 @@ impl ValidationResult {
         }
     }
 
+    #[must_use]
     pub fn from_errors(errors: Vec<String>) -> Self {
         Self {
             is_valid: errors.is_empty(),
@@ -56,14 +59,14 @@ mod constants {
     /// Density of water at 20°C (kg/m³) - NIST reference
     pub const WATER_DENSITY: f64 = 998.2;
 
-    /// Absorption in water at 1 MHz (dB/cm/MHz²) - Pinkerton (1949)
+    /// Absorption in water at 1 `MHz` (dB/cm/MHz²) - Pinkerton (1949)
     pub const WATER_ABSORPTION: f64 = 0.0022;
 
     /// CFL limit for 3D FDTD - Taflove & Hagness (2005) Eq. 4.92
     pub const CFL_LIMIT_3D: f64 = 0.577350269; // 1/sqrt(3)
 }
 
-/// Physics validation results (extends ValidationReport)
+/// Physics validation results (extends `ValidationReport`)
 #[derive(Debug)]
 pub struct PhysicsValidation {
     pub test_name: String,
@@ -148,6 +151,7 @@ pub fn validate_absorption_model(
 }
 
 /// Validate CPML boundary implementation
+#[must_use]
 pub fn validate_cpml_reflection(reflection_coefficient: f64) -> PhysicsValidation {
     // Roden & Gedney (2000) achieved R < 10^-5 for normal incidence
     let target_reflection = 1e-5;

@@ -18,6 +18,7 @@ impl Default for GradientComputer {
 }
 
 impl GradientComputer {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             preconditioner: None,
@@ -26,6 +27,7 @@ impl GradientComputer {
 
     /// Compute gradient using adjoint method
     /// Based on Tarantola (1984) formulation
+    #[must_use]
     pub fn compute_adjoint_gradient(
         &self,
         forward_wavefield: &Array3<f64>,
@@ -87,6 +89,7 @@ impl GradientComputer {
 
     /// Compute gradient with source encoding
     /// Based on Krebs et al. (2009): "Fast full-wavefield seismic inversion"
+    #[must_use]
     pub fn encoded_gradient(
         &self,
         encoded_sources: &Array2<f64>,

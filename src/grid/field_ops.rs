@@ -6,6 +6,7 @@ use crate::grid::structure::Grid;
 use ndarray::{Array3, Array4};
 
 /// Field operations for grid-based arrays
+#[derive(Debug)]
 pub struct FieldOperations;
 
 impl FieldOperations {
@@ -63,6 +64,7 @@ impl FieldOperations {
     }
 
     /// Calculate field statistics
+    #[must_use]
     pub fn field_statistics(field: &Array3<f64>) -> FieldStatistics {
         let min = field.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max = field.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));

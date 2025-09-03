@@ -6,12 +6,7 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    medium::HomogeneousMedium,
-    physics::{
-        bubble_dynamics::{BubbleParameters, KellerMiksisModel},
-        constants::*,
-    },
-    solver::fdtd::FdtdSolver,
+    physics::bubble_dynamics::{BubbleParameters, KellerMiksisModel},
 };
 use ndarray::{Array1, Array3};
 use std::f64::consts::PI;

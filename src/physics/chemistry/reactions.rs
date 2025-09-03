@@ -12,6 +12,7 @@ pub struct ChemicalReaction {
 
 impl ChemicalReaction {
     /// Calculate rate constant at given conditions
+    #[must_use]
     pub fn rate_constant(&self, _temperature: f64, _pressure: f64) -> f64 {
         self.rate_constant
     }

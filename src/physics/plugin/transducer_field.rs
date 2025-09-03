@@ -36,6 +36,7 @@ pub struct TransducerFieldCalculatorPlugin {
 
 impl TransducerFieldCalculatorPlugin {
     /// Create new FOCUS-compatible transducer field calculator
+    #[must_use]
     pub fn new(transducer_geometries: Vec<TransducerGeometry>) -> Self {
         Self {
             metadata: PluginMetadata {
@@ -61,7 +62,7 @@ impl TransducerFieldCalculatorPlugin {
         grid: &Grid,
         medium: &dyn Medium,
     ) -> KwaversResult<Array3<f64>> {
-        let cache_key = format!("sir_{}", transducer_index);
+        let cache_key = format!("sir_{transducer_index}");
 
         if let Some(cached) = self.sir_cache.get(&cache_key) {
             return Ok(cached.clone());
@@ -127,7 +128,7 @@ impl TransducerFieldCalculatorPlugin {
     }
 
     /// Calculate pressure field using angular spectrum method
-    /// Based on Zeng & McGough (2008): "Evaluation of the angular spectrum approach"
+    /// Based on Zeng & `McGough` (2008): "Evaluation of the angular spectrum approach"
     pub fn calculate_pressure_field(
         &mut self,
         frequency: f64,

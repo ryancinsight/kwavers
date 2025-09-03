@@ -107,7 +107,7 @@ impl MultiRateTimeIntegrator {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "target_time".to_string(),
                 value: target_time.to_string(),
-                constraint: format!("Must be greater than global_time {}", global_time),
+                constraint: format!("Must be greater than global_time {global_time}"),
             }));
         }
 

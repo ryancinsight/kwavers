@@ -19,6 +19,7 @@ pub enum TriangulationMethod {
 
 impl Triangulator {
     /// Create new triangulator
+    #[must_use]
     pub fn new(method: TriangulationMethod) -> Self {
         Self { method }
     }

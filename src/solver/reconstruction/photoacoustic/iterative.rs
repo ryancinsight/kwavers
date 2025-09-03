@@ -328,7 +328,7 @@ impl IterativeMethods {
             }
 
             if count > 0 {
-                grad_reg[idx] = -laplacian / count as f64;
+                grad_reg[idx] = -laplacian / f64::from(count);
             }
         }
 

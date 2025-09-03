@@ -29,6 +29,7 @@ pub enum DetectionMethod {
 
 impl DiscontinuityDetector {
     /// Create a new discontinuity detector
+    #[must_use]
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -37,6 +38,7 @@ impl DiscontinuityDetector {
     }
 
     /// Create with specific detection method
+    #[must_use]
     pub fn with_method(threshold: f64, method: DetectionMethod) -> Self {
         Self {
             threshold,

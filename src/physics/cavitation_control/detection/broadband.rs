@@ -1,6 +1,6 @@
 //! Broadband noise-based cavitation detection
 
-use super::constants::*;
+use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, TEMPORAL_SMOOTHING};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod, HistoryBuffer};
 use ndarray::ArrayView1;
@@ -14,6 +14,7 @@ pub struct BroadbandDetector {
 }
 
 impl BroadbandDetector {
+    #[must_use]
     pub fn new(sample_rate: f64) -> Self {
         Self {
             sample_rate,

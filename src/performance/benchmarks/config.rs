@@ -49,6 +49,7 @@ impl Default for BenchmarkConfig {
 
 impl BenchmarkConfig {
     /// Create a quick benchmark configuration for testing
+    #[must_use]
     pub fn quick() -> Self {
         Self {
             grid_sizes: vec![32, 64],
@@ -61,6 +62,7 @@ impl BenchmarkConfig {
     }
 
     /// Create a comprehensive benchmark configuration
+    #[must_use]
     pub fn comprehensive() -> Self {
         Self {
             grid_sizes: vec![32, 64, 128, 256, 512],
@@ -88,7 +90,7 @@ impl BenchmarkConfig {
 
         for &size in &self.grid_sizes {
             if size == 0 || size > 2048 {
-                return Err(format!("Invalid grid size: {}", size));
+                return Err(format!("Invalid grid size: {size}"));
             }
         }
 

@@ -1,6 +1,6 @@
 //! Subharmonic-based cavitation detection
 
-use super::constants::*;
+use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationMetrics, CavitationState, DetectionMethod};
 use ndarray::{Array1, ArrayView1};
@@ -15,6 +15,7 @@ pub struct SubharmonicDetector {
 }
 
 impl SubharmonicDetector {
+    #[must_use]
     pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
         Self {
             fundamental_freq,

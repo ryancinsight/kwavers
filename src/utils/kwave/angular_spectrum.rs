@@ -37,6 +37,7 @@ impl std::fmt::Debug for AngularSpectrum {
 
 impl AngularSpectrum {
     /// Create new angular spectrum propagator
+    #[must_use]
     pub fn new(nx: usize, ny: usize, dx: f64, dy: f64) -> Self {
         // Create wavenumber arrays
         let kx_1d = Self::create_k_vector(nx, dx);

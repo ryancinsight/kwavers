@@ -68,10 +68,10 @@ pub fn gradient_3d<T: StencilValue>(
 ) {
     match order {
         StencilOrder::Second => {
-            gradient_3d_order2(input, grad_x, grad_y, grad_z, dx_inv, dy_inv, dz_inv)
+            gradient_3d_order2(input, grad_x, grad_y, grad_z, dx_inv, dy_inv, dz_inv);
         }
         StencilOrder::Fourth => {
-            gradient_3d_order4(input, grad_x, grad_y, grad_z, dx_inv, dy_inv, dz_inv)
+            gradient_3d_order4(input, grad_x, grad_y, grad_z, dx_inv, dy_inv, dz_inv);
         }
     }
 }
@@ -219,6 +219,7 @@ pub struct StencilIterator3D<'a, T> {
 }
 
 impl<'a, T: StencilValue> StencilIterator3D<'a, T> {
+    #[must_use]
     pub fn new(array: ArrayView3<'a, T>) -> Self {
         let bounds = array.dim();
         Self {
@@ -230,6 +231,7 @@ impl<'a, T: StencilValue> StencilIterator3D<'a, T> {
 
     /// Get the value at the current position
     #[inline(always)]
+    #[must_use]
     pub fn center(&self) -> T {
         let (i, j, k) = self.position;
         self.array[[i, j, k]]
@@ -237,6 +239,7 @@ impl<'a, T: StencilValue> StencilIterator3D<'a, T> {
 
     /// Get neighboring values for a 7-point stencil
     #[inline(always)]
+    #[must_use]
     pub fn neighbors_7point(&self) -> [T; 6] {
         let (i, j, k) = self.position;
         [

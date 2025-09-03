@@ -14,6 +14,7 @@ pub struct SafetyMonitor {
 }
 
 impl SafetyMonitor {
+    #[must_use]
     pub fn new(limits: SafetyLimits) -> Self {
         Self {
             limits,
@@ -38,6 +39,7 @@ impl SafetyMonitor {
         !self.emergency_stop
     }
 
+    #[must_use]
     pub fn apply_safety_limits(&self, mut output: ControlOutput) -> ControlOutput {
         if self.emergency_stop {
             output.amplitude = 0.0;
@@ -53,6 +55,7 @@ impl SafetyMonitor {
         output
     }
 
+    #[must_use]
     pub fn is_emergency_stop(&self) -> bool {
         self.emergency_stop
     }
@@ -62,6 +65,7 @@ impl SafetyMonitor {
         self.violation_count = 0;
     }
 
+    #[must_use]
     pub fn get_violation_count(&self) -> usize {
         self.violation_count
     }

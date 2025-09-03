@@ -26,6 +26,7 @@ impl Default for BubbleInteractions {
 
 impl BubbleInteractions {
     /// Calculate interaction pressure field from all bubbles
+    #[must_use]
     pub fn calculate_interaction_field(
         &self,
         bubbles: &HashMap<(usize, usize, usize), BubbleState>,
@@ -83,11 +84,13 @@ pub struct BjerknesForce;
 
 impl BjerknesForce {
     /// Primary Bjerknes force (bubble in pressure gradient)
+    #[must_use]
     pub fn primary(bubble_volume: f64, pressure_gradient: f64) -> f64 {
         -bubble_volume * pressure_gradient
     }
 
     /// Secondary Bjerknes force (bubble-bubble interaction)
+    #[must_use]
     pub fn secondary(
         bubble1: &BubbleState,
         bubble2: &BubbleState,
@@ -108,6 +111,7 @@ impl BjerknesForce {
     }
 
     /// Check if bubbles attract or repel
+    #[must_use]
     pub fn interaction_type(bubble1: &BubbleState, bubble2: &BubbleState) -> InteractionType {
         // In phase: both expanding or both contracting -> attraction
         // Out of phase: one expanding, one contracting -> repulsion
@@ -134,6 +138,7 @@ pub struct CollectiveEffects;
 
 impl CollectiveEffects {
     /// Calculate effective sound speed in bubbly liquid
+    #[must_use]
     pub fn wood_sound_speed(
         void_fraction: f64,
         liquid_density: f64,
@@ -150,16 +155,21 @@ impl CollectiveEffects {
     }
 
     /// Calculate void fraction from bubble field
+    #[must_use]
     pub fn void_fraction(
         bubbles: &HashMap<(usize, usize, usize), BubbleState>,
         grid_volume: f64,
     ) -> f64 {
-        let total_bubble_volume: f64 = bubbles.values().map(|b| b.volume()).sum();
+        let total_bubble_volume: f64 = bubbles
+            .values()
+            .map(super::bubble_state::BubbleState::volume)
+            .sum();
 
         total_bubble_volume / grid_volume
     }
 
     /// Estimate collective oscillation frequency
+    #[must_use]
     pub fn collective_frequency(
         mean_radius: f64,
         void_fraction: f64,

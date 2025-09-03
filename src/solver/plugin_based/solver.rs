@@ -200,7 +200,7 @@ impl PluginBasedSolver {
             .get_field_mut(UnifiedFieldType::Pressure)
         {
             self.boundary
-                .apply_acoustic(pressure, &self.grid, self.current_step);
+                .apply_acoustic(pressure, &self.grid, self.current_step)?;
         }
 
         self.current_step += 1;

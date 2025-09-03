@@ -65,6 +65,7 @@ pub struct ScatteringCalculator {
 
 impl ScatteringCalculator {
     /// Create a new scattering calculator
+    #[must_use]
     pub fn new(frequency: f64, wave_speed: f64) -> Self {
         let wavelength = wave_speed / frequency;
         let wave_number = 2.0 * PI / wavelength;
@@ -77,6 +78,7 @@ impl ScatteringCalculator {
     }
 
     /// Determine scattering regime based on size parameter
+    #[must_use]
     pub fn determine_regime(&self, particle_radius: f64) -> ScatteringRegime {
         let size_parameter = self.wave_number * particle_radius;
 
@@ -90,7 +92,8 @@ impl ScatteringCalculator {
     }
 
     /// Calculate Rayleigh scattering cross-section
-    /// σ_s = (8π/3) * k^4 * a^6 * |m^2 - 1 / m^2 + 2|^2
+    /// `σ_s` = (8π/3) * k^4 * a^6 * |m^2 - 1 / m^2 + 2|^2
+    #[must_use]
     pub fn rayleigh_cross_section(&self, particle_radius: f64, refractive_index_ratio: f64) -> f64 {
         let ka = self.wave_number * particle_radius;
         let ka2 = ka * ka;
@@ -104,6 +107,7 @@ impl ScatteringCalculator {
     }
 
     /// Calculate Rayleigh scattering amplitude
+    #[must_use]
     pub fn rayleigh_amplitude(
         &self,
         particle_radius: f64,
@@ -194,18 +198,15 @@ impl ScatteringCalculator {
     ) -> KwaversResult<f64> {
         let regime = self.determine_regime(particle_radius);
 
-        match regime {
-            ScatteringRegime::Rayleigh => {
-                let total = self.rayleigh_cross_section(particle_radius, refractive_index_ratio);
-                // Rayleigh angular distribution: (1 + cos²θ) / 2
-                let angular = (1.0 + scattering_angle.cos().powi(2)) / 2.0;
-                Ok(total * angular / (4.0 * PI))
-            }
-            _ => {
-                // Simplified for Mie and geometric
-                let total = self.total_cross_section(particle_radius, refractive_index_ratio)?;
-                Ok(total / (4.0 * PI))
-            }
+        if regime == ScatteringRegime::Rayleigh {
+            let total = self.rayleigh_cross_section(particle_radius, refractive_index_ratio);
+            // Rayleigh angular distribution: (1 + cos²θ) / 2
+            let angular = (1.0 + scattering_angle.cos().powi(2)) / 2.0;
+            Ok(total * angular / (4.0 * PI))
+        } else {
+            // Simplified for Mie and geometric
+            let total = self.total_cross_section(particle_radius, refractive_index_ratio)?;
+            Ok(total / (4.0 * PI))
         }
     }
 }
@@ -268,6 +269,7 @@ impl VolumeScattering {
     }
 
     /// Evaluate phase function
+    #[must_use]
     pub fn phase_function_value(&self, cos_theta: f64, g: f64) -> f64 {
         match self.phase_function {
             PhaseFunction::Isotropic => 1.0 / (4.0 * PI),

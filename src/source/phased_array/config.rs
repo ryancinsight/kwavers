@@ -68,11 +68,13 @@ impl PhasedArrayConfig {
     }
 
     /// Calculate array aperture size
+    #[must_use]
     pub fn aperture_size(&self) -> f64 {
         (self.num_elements as f64 - 1.0) * self.element_spacing + self.element_width
     }
 
     /// Calculate Nyquist sampling criterion
+    #[must_use]
     pub fn satisfies_nyquist(&self, sound_speed: f64) -> bool {
         let wavelength = sound_speed / self.frequency;
         self.element_spacing <= wavelength / 2.0

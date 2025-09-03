@@ -81,7 +81,7 @@ pub struct KuznetsovConfig {
     /// Equation mode selector
     pub equation_mode: AcousticEquationMode,
 
-    /// CFL factor for time step calculation (0 < cfl_factor <= 1)
+    /// CFL factor for time step calculation (0 < `cfl_factor` <= 1)
     pub cfl_factor: f64,
 
     /// Nonlinearity coefficient B/A (typical values: 3.5-12 for biological tissues)
@@ -140,6 +140,7 @@ impl Default for KuznetsovConfig {
 
 impl KuznetsovConfig {
     /// Create configuration for KZK parabolic approximation
+    #[must_use]
     pub fn kzk() -> Self {
         Self {
             equation_mode: AcousticEquationMode::KZK,
@@ -149,6 +150,7 @@ impl KuznetsovConfig {
     }
 
     /// Create configuration for Westervelt equation
+    #[must_use]
     pub fn westervelt() -> Self {
         Self {
             equation_mode: AcousticEquationMode::Westervelt,
@@ -158,6 +160,7 @@ impl KuznetsovConfig {
     }
 
     /// Create configuration for linear wave equation
+    #[must_use]
     pub fn linear() -> Self {
         Self {
             equation_mode: AcousticEquationMode::Linear,

@@ -350,7 +350,7 @@ impl HybridSolver {
                 return Err(KwaversError::Validation(
                     crate::error::ValidationError::FieldValidation {
                         field: "pressure".to_string(),
-                        value: format!("NaN: {}, Inf: {}", has_nan, has_inf),
+                        value: format!("NaN: {has_nan}, Inf: {has_inf}"),
                         constraint: "Must be finite".to_string(),
                     },
                 ));

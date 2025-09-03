@@ -61,6 +61,7 @@ pub enum SimdLevel {
 
 impl SimdLevel {
     /// Detect the best available SIMD level for the current CPU
+    #[must_use]
     pub fn detect_best() -> Self {
         #[cfg(target_arch = "x86_64")]
         {
@@ -89,6 +90,7 @@ impl SimdLevel {
     }
 
     /// Get the vector width in f64 elements
+    #[must_use]
     pub fn vector_width(&self) -> usize {
         match self {
             Self::None => 1,

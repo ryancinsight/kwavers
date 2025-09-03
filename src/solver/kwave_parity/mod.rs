@@ -16,12 +16,14 @@ use crate::grid::Grid;
 use crate::medium::Medium;
 use ndarray::{Array3, Zip};
 use rustfft::{num_complex::Complex64, FftPlanner};
-use std::f64::consts::PI;
 
 pub mod absorption;
 pub mod nonlinearity;
+pub mod operators;
 pub mod sensors;
 pub mod sources;
+
+use operators::kspace::compute_k_operators;
 
 /// k-Wave simulation configuration matching MATLAB interface
 #[derive(Debug, Clone)]
@@ -103,7 +105,8 @@ impl KWaveSolver {
         let fft_planner = FftPlanner::new();
 
         // Initialize k-space operators
-        let (k_vec, k_max) = compute_k_operators(&grid);
+        let (k_ops, k_max) = compute_k_operators(&grid);
+        let k_vec = (k_ops.kx.clone(), k_ops.ky.clone(), k_ops.kz.clone());
         let kappa = compute_kspace_correction(&grid, &k_vec);
 
         // Initialize PML
@@ -136,7 +139,7 @@ impl KWaveSolver {
             grid,
             fft_planner,
             kappa,
-            k_vec,
+            k_vec: (k_ops.kx, k_ops.ky, k_ops.kz),
             k_max,
             pml_x,
             pml_y,
@@ -322,7 +325,7 @@ impl KWaveSolver {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                         let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
                         let c = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                        self.p[[i, j, k]] = self.p[[i, j, k]] - dt * rho * c * c * div_u[[i, j, k]];
+                        self.p[[i, j, k]] -= dt * rho * c * c * div_u[[i, j, k]];
                     }
                 }
             }
@@ -361,51 +364,6 @@ impl KWaveSolver {
     ) -> KwaversResult<()> {
         nonlinearity::update_pressure_with_nonlinearity(&mut self.p, div_u, medium, &self.grid, dt)
     }
-}
-
-/// Compute k-space operators
-fn compute_k_operators(grid: &Grid) -> ((Array3<f64>, Array3<f64>, Array3<f64>), f64) {
-    let mut kx = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let mut ky = Array3::zeros((grid.nx, grid.ny, grid.nz));
-    let mut kz = Array3::zeros((grid.nx, grid.ny, grid.nz));
-
-    // k-space grid for x
-    for i in 0..grid.nx {
-        let k = if i <= grid.nx / 2 {
-            2.0 * PI * i as f64 / (grid.nx as f64 * grid.dx)
-        } else {
-            2.0 * PI * (i as f64 - grid.nx as f64) / (grid.nx as f64 * grid.dx)
-        };
-        kx.slice_mut(s![i, .., ..]).fill(k);
-    }
-
-    // k-space grid for y
-    for j in 0..grid.ny {
-        let k = if j <= grid.ny / 2 {
-            2.0 * PI * j as f64 / (grid.ny as f64 * grid.dy)
-        } else {
-            2.0 * PI * (j as f64 - grid.ny as f64) / (grid.ny as f64 * grid.dy)
-        };
-        ky.slice_mut(s![.., j, ..]).fill(k);
-    }
-
-    // k-space grid for z
-    for k in 0..grid.nz {
-        let kval = if k <= grid.nz / 2 {
-            2.0 * PI * k as f64 / (grid.nz as f64 * grid.dz)
-        } else {
-            2.0 * PI * (k as f64 - grid.nz as f64) / (grid.nz as f64 * grid.dz)
-        };
-        kz.slice_mut(s![.., .., k]).fill(kval);
-    }
-
-    // Maximum k for Nyquist
-    let k_max_x = PI / grid.dx;
-    let k_max_y = PI / grid.dy;
-    let k_max_z = PI / grid.dz;
-    let k_max = k_max_x.min(k_max_y).min(k_max_z);
-
-    ((kx, ky, kz), k_max)
 }
 
 /// Compute k-space correction following k-Wave methodology

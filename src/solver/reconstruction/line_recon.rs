@@ -25,6 +25,7 @@ pub struct LineRecon {
 
 impl LineRecon {
     /// Create a new linear array reconstruction
+    #[must_use]
     pub fn new(direction: [f64; 3], center: [f64; 3], pitch: f64) -> Self {
         Self {
             direction,
@@ -35,6 +36,7 @@ impl LineRecon {
     }
 
     /// Set weight function for back-projection
+    #[must_use]
     pub fn with_weight_function(mut self, weight_function: WeightFunction) -> Self {
         self.back_projector = UniversalBackProjection::new(weight_function);
         self

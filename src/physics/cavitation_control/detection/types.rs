@@ -59,6 +59,7 @@ pub struct HistoryBuffer<T> {
 }
 
 impl<T: Clone> HistoryBuffer<T> {
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         Self {
             buffer: VecDeque::with_capacity(capacity),
@@ -77,10 +78,12 @@ impl<T: Clone> HistoryBuffer<T> {
         self.buffer.iter()
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.buffer.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.buffer.is_empty()
     }

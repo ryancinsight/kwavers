@@ -39,6 +39,7 @@ pub struct FresnelCalculator {
 
 impl FresnelCalculator {
     /// Create a new Fresnel calculator
+    #[must_use]
     pub fn new(n1: f64, n2: f64) -> Self {
         Self { n1, n2 }
     }
@@ -164,11 +165,13 @@ impl FresnelCalculator {
     }
 
     /// Calculate Brewster's angle (no reflection for P-polarization)
+    #[must_use]
     pub fn brewster_angle(&self) -> f64 {
         (self.n2 / self.n1).atan()
     }
 
     /// Calculate critical angle for total internal reflection
+    #[must_use]
     pub fn critical_angle(&self) -> Option<f64> {
         if self.n1 > self.n2 {
             Some((self.n2 / self.n1).asin())

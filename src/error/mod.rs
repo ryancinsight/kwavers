@@ -99,7 +99,7 @@ pub enum KwaversError {
     InvalidInput(String),
 }
 
-/// Result type alias for operations that may return a KwaversError
+/// Result type alias for operations that may return a `KwaversError`
 pub type KwaversResult<T> = Result<T, KwaversError>;
 
 // Backward compatibility conversions

@@ -16,6 +16,7 @@ pub struct NonlinearOperator {
 
 impl NonlinearOperator {
     /// Create new nonlinear operator
+    #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         Self {
             beta: 1.0 + config.beta / 2.0, // β = 1 + B/2A
@@ -52,14 +53,16 @@ impl NonlinearOperator {
     }
 
     /// Calculate shock formation distance
-    /// z_shock = ρ₀c₀³/(βωp₀) for plane wave
+    /// `z_shock` = ρ₀c₀³/(βωp₀) for plane wave
+    #[must_use]
     pub fn shock_distance(&self, frequency: f64, amplitude: f64) -> f64 {
         let omega = 2.0 * std::f64::consts::PI * frequency;
         self.config.rho0 * self.config.c0.powi(3) / (self.beta * omega * amplitude)
     }
 
     /// Calculate Gol'dberg number (nonlinearity strength)
-    /// Γ = z/z_shock
+    /// Γ = `z/z_shock`
+    #[must_use]
     pub fn goldberg_number(&self, z: f64, frequency: f64, amplitude: f64) -> f64 {
         z / self.shock_distance(frequency, amplitude)
     }

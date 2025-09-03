@@ -43,6 +43,7 @@ pub struct ThermalDoseCalculator {
 }
 
 impl ThermalDoseCalculator {
+    #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             cumulative_dose: Array3::zeros(shape),
@@ -60,7 +61,10 @@ impl ThermalDoseCalculator {
         dt: f64,
         current_time: f64,
     ) -> KwaversResult<()> {
-        use thresholds::*;
+        use thresholds::{
+            BREAKPOINT_TEMPERATURE_C, MIN_DOSE_TEMPERATURE_C, REFERENCE_TEMPERATURE_C,
+            R_ABOVE_BREAKPOINT, R_BELOW_BREAKPOINT,
+        };
 
         Zip::from(&mut self.cumulative_dose)
             .and(temperature)
@@ -95,26 +99,31 @@ impl ThermalDoseCalculator {
     }
 
     /// Get the cumulative thermal dose field
+    #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
         &self.cumulative_dose
     }
 
     /// Get maximum dose in the field
+    #[must_use]
     pub fn max_dose(&self) -> f64 {
         self.max_dose
     }
 
     /// Get time at which maximum dose was achieved
+    #[must_use]
     pub fn max_dose_time(&self) -> f64 {
         self.max_dose_time
     }
 
     /// Check if thermal damage threshold is exceeded
+    #[must_use]
     pub fn check_damage_threshold(&self, threshold_cem43: f64) -> Array3<bool> {
         self.cumulative_dose.mapv(|dose| dose >= threshold_cem43)
     }
 
     /// Get necrosis volume fraction
+    #[must_use]
     pub fn necrosis_fraction(&self) -> f64 {
         use thresholds::NECROSIS_THRESHOLD_CEM43;
 
@@ -129,6 +138,7 @@ impl ThermalDoseCalculator {
     }
 
     /// Get damage volume fraction
+    #[must_use]
     pub fn damage_fraction(&self) -> f64 {
         use thresholds::DAMAGE_THRESHOLD_CEM43;
 

@@ -32,7 +32,7 @@ pub fn reverse_bits(mut x: u32, n: u32) -> u32 {
             39, 167, 103, 231, 23, 151, 87, 215, 55, 183, 119, 247, 15, 143, 79, 207, 47, 175, 111,
             239, 31, 159, 95, 223, 63, 191, 127, 255,
         ];
-        return (LOOKUP[(x & 0xFF) as usize] as u32) >> (8 - n);
+        return u32::from(LOOKUP[(x & 0xFF) as usize]) >> (8 - n);
     }
 
     // For larger values, use the optimized bit manipulation approach

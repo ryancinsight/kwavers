@@ -136,6 +136,7 @@ impl TransducerDesign {
     }
 
     /// Calculate focal characteristics (if focused)
+    #[must_use]
     pub fn focal_characteristics(&self, focal_length: f64) -> (f64, f64, f64) {
         let wavelength = 1540.0 / self.frequency_response.center_frequency;
         let aperture = self.geometry.width * 64.0; // Assume 64 element array
@@ -153,6 +154,7 @@ impl TransducerDesign {
     }
 
     /// Generate design report
+    #[must_use]
     pub fn design_report(&self) -> String {
         format!(
             "Transducer Design Report\n\

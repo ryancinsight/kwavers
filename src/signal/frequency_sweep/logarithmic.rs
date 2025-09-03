@@ -1,6 +1,9 @@
 // frequency_sweep/logarithmic.rs - Logarithmic frequency sweep
 
-use super::{constants::*, FrequencySweep};
+use super::{
+    constants::{EPSILON, MAX_FREQUENCY_RATIO, MIN_FREQUENCY, MIN_SWEEP_DURATION, TWO_PI},
+    FrequencySweep,
+};
 use crate::signal::Signal;
 
 /// Logarithmic frequency sweep
@@ -18,6 +21,7 @@ pub struct LogarithmicSweep {
 
 impl LogarithmicSweep {
     /// Create new logarithmic sweep - USING all parameters
+    #[must_use]
     pub fn new(start_freq: f64, stop_freq: f64, duration: f64, amplitude: f64) -> Self {
         assert!(start_freq > MIN_FREQUENCY, "Start frequency too low");
         assert!(stop_freq > MIN_FREQUENCY, "Stop frequency too low");

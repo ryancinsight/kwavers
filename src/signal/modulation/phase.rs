@@ -10,6 +10,7 @@ pub struct PhaseModulation {
 }
 
 impl PhaseModulation {
+    #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
     }

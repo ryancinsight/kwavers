@@ -79,6 +79,7 @@ impl CPMLBoundary {
     }
 
     /// Get the CPML thickness
+    #[must_use]
     pub fn thickness(&self) -> usize {
         self.config.thickness
     }
@@ -101,6 +102,7 @@ impl CPMLBoundary {
     }
 
     /// Get configuration
+    #[must_use]
     pub fn config(&self) -> &CPMLConfig {
         &self.config
     }
@@ -112,6 +114,7 @@ impl CPMLBoundary {
     }
 
     /// Estimate reflection coefficient
+    #[must_use]
     pub fn estimate_reflection(&self, angle: f64) -> f64 {
         self.config.theoretical_reflection(angle.cos())
     }

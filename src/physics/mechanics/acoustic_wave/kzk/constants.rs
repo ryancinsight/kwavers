@@ -4,10 +4,10 @@
 
 use crate::constants::physics::SOUND_SPEED_WATER;
 
-/// Default test frequency: 1 MHz
+/// Default test frequency: 1 `MHz`
 pub const DEFAULT_FREQUENCY: f64 = 1e6;
 
-/// Default wavelength in water at 1 MHz
+/// Default wavelength in water at 1 `MHz`
 pub const DEFAULT_WAVELENGTH: f64 = SOUND_SPEED_WATER / DEFAULT_FREQUENCY;
 
 /// Default spatial step for KZK simulations
@@ -22,7 +22,7 @@ pub const DEFAULT_DT: f64 = 1e-6; // 1 μs
 /// Default beam waist for tests: 5 mm
 pub const DEFAULT_BEAM_WAIST: f64 = 5e-3;
 
-/// Default source amplitude: 1 MPa
+/// Default source amplitude: 1 `MPa`
 pub const DEFAULT_AMPLITUDE: f64 = 1e6;
 
 /// Threshold factor for beam width measurement (1/e²)
@@ -37,13 +37,13 @@ pub const B_OVER_A_WATER: f64 = 5.0;
 /// Nonlinearity parameter B/A for soft tissue
 pub const B_OVER_A_TISSUE: f64 = 6.0;
 
-/// Attenuation coefficient for water at 1 MHz [dB/(MHz^y cm)]
+/// Attenuation coefficient for water at 1 `MHz` [dB/(MHz^y cm)]
 pub const ALPHA_WATER: f64 = 0.0022;
 
 /// Attenuation power law exponent for water
 pub const ALPHA_POWER_WATER: f64 = 2.0;
 
-/// Attenuation coefficient for soft tissue at 1 MHz [dB/(MHz^y cm)]
+/// Attenuation coefficient for soft tissue at 1 `MHz` [dB/(MHz^y cm)]
 pub const ALPHA_TISSUE: f64 = 0.5;
 
 /// Attenuation power law exponent for soft tissue

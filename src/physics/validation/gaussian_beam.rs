@@ -16,13 +16,14 @@ pub struct GaussianBeamParameters {
     pub w0: f64,
     /// Wavelength
     pub lambda: f64,
-    /// Rayleigh distance z_R = π*w0²/λ
+    /// Rayleigh distance `z_R` = π*w0²/λ
     pub z_r: f64,
     /// Wave number k = 2π/λ
     pub k: f64,
 }
 
 impl GaussianBeamParameters {
+    #[must_use]
     pub fn new(w0: f64, lambda: f64) -> Self {
         let z_r = PI * w0 * w0 / lambda;
         let k = 2.0 * PI / lambda;
@@ -30,12 +31,14 @@ impl GaussianBeamParameters {
         Self { w0, lambda, z_r, k }
     }
 
-    /// Beam radius at distance z: w(z) = w0 * sqrt(1 + (z/z_R)²)
+    /// Beam radius at distance z: w(z) = w0 * sqrt(1 + (`z/z_R)²`)
+    #[must_use]
     pub fn beam_radius(&self, z: f64) -> f64 {
         self.w0 * (1.0 + (z / self.z_r).powi(2)).sqrt()
     }
 
-    /// Radius of curvature: R(z) = z * (1 + (z_R/z)²)
+    /// Radius of curvature: R(z) = z * (1 + (`z_R/z)²`)
+    #[must_use]
     pub fn radius_of_curvature(&self, z: f64) -> f64 {
         if z.abs() < 1e-10 {
             f64::INFINITY
@@ -44,12 +47,14 @@ impl GaussianBeamParameters {
         }
     }
 
-    /// Gouy phase: ψ(z) = arctan(z/z_R)
+    /// Gouy phase: ψ(z) = `arctan(z/z_R)`
+    #[must_use]
     pub fn gouy_phase(&self, z: f64) -> f64 {
         (z / self.z_r).atan()
     }
 
     /// Field amplitude at (r, z) in paraxial approximation
+    #[must_use]
     pub fn field_amplitude(&self, r: f64, z: f64) -> f64 {
         let w_z = self.beam_radius(z);
         let r_c = self.radius_of_curvature(z);
@@ -66,12 +71,14 @@ impl GaussianBeamParameters {
     }
 
     /// Intensity at (r, z): I(r,z) = |E(r,z)|²
+    #[must_use]
     pub fn intensity(&self, r: f64, z: f64) -> f64 {
         let e = self.field_amplitude(r, z);
         e * e
     }
 
     /// Generate 2D field profile at distance z
+    #[must_use]
     pub fn generate_profile(&self, nx: usize, ny: usize, dx: f64, z: f64) -> Array2<f64> {
         let mut profile = Array2::zeros((nx, ny));
 
@@ -93,6 +100,7 @@ impl GaussianBeamParameters {
 }
 
 /// Measure beam radius from intensity profile using 1/e² criterion
+#[must_use]
 pub fn measure_beam_radius(intensity: &Array2<f64>, dx: f64) -> f64 {
     let (nx, ny) = intensity.dim();
     let cx = nx / 2;

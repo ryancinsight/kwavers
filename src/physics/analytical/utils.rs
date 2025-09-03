@@ -103,7 +103,7 @@ impl PhysicsTestUtils {
         let search_range = (expected_shift_cells * 2.0) as i32;
         for shift_int in -search_range..=search_range {
             for sub_shift in 0..SUB_GRID_SEARCH_STEPS {
-                let total_shift = shift_int as f64 + sub_shift as f64 * 0.1;
+                let total_shift = f64::from(shift_int) + f64::from(sub_shift) * 0.1;
                 let correlation = Self::calculate_cross_correlation(
                     initial_field,
                     final_field,
@@ -156,7 +156,7 @@ impl PhysicsTestUtils {
         }
 
         if count > 0 {
-            correlation / count as f64
+            correlation / f64::from(count)
         } else {
             0.0
         }

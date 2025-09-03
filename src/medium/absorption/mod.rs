@@ -14,8 +14,8 @@
 //! ```
 //! where:
 //! - α is the absorption coefficient [Np/m]
-//! - α₀ is the absorption coefficient at 1 MHz
-//! - f is frequency [MHz]
+//! - α₀ is the absorption coefficient at 1 `MHz`
+//! - f is frequency [`MHz`]
 //! - y is the power law exponent (typically 1.0-1.5 for tissues)
 //!
 //! # References
@@ -62,11 +62,13 @@ pub enum AbsorptionModel {
 
 impl AbsorptionCalculator {
     /// Create a new absorption calculator
+    #[must_use]
     pub fn new(model: AbsorptionModel) -> Self {
         Self { model }
     }
 
     /// Calculate absorption coefficient at a given frequency
+    #[must_use]
     pub fn absorption_coefficient(&self, frequency: f64) -> f64 {
         match &self.model {
             AbsorptionModel::PowerLaw(m) => m.absorption_at_frequency(frequency),

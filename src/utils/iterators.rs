@@ -20,12 +20,14 @@ impl<'a, T> GridPointIterator<'a, T>
 where
     T: Send + Sync + Clone + Default,
 {
+    #[must_use]
     pub fn new(array: ArrayViewMut3<'a, T>) -> Self {
         let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
     }
 
     /// Get reference to element at position
+    #[must_use]
     pub fn get(&self, i: usize, j: usize, k: usize) -> Option<&T> {
         if i < self.nx && j < self.ny && k < self.nz {
             Some(&self.array[[i, j, k]])
@@ -74,6 +76,7 @@ impl<'a, T> ChunkedProcessor<'a, T>
 where
     T: Sync + Send,
 {
+    #[must_use]
     pub fn new(array: ArrayViewMut3<'a, T>) -> Self {
         let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
@@ -117,6 +120,7 @@ pub struct GradientComputer<'a> {
 }
 
 impl<'a> GradientComputer<'a> {
+    #[must_use]
     pub fn new(array: ArrayView3<'a, f64>) -> Self {
         let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
@@ -145,6 +149,7 @@ impl<'a> GradientComputer<'a> {
     }
 
     /// Collect gradients into a result array
+    #[must_use]
     pub fn collect_gradients(
         &self,
         dx: f64,

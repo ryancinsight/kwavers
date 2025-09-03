@@ -115,7 +115,7 @@ impl Configuration {
             if cfl_actual > self.simulation.cfl {
                 return Err(crate::error::ConfigError::InvalidValue {
                     parameter: "dt".to_string(),
-                    value: format!("{}", dt),
+                    value: format!("{dt}"),
                     constraint: format!(
                         "CFL condition violated: {} > {}",
                         cfl_actual, self.simulation.cfl
@@ -135,8 +135,7 @@ impl Configuration {
                 parameter: "grid.spacing".to_string(),
                 value: format!("{:?}", self.grid.spacing),
                 constraint: format!(
-                    "Nyquist criterion violated: {} points per wavelength < 2",
-                    min_ppw
+                    "Nyquist criterion violated: {min_ppw} points per wavelength < 2"
                 ),
             }
             .into());

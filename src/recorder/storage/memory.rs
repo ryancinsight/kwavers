@@ -14,6 +14,7 @@ pub struct MemoryStorage {
 
 impl MemoryStorage {
     /// Create memory storage
+    #[must_use]
     pub fn create() -> Self {
         Self {
             data: HashMap::new(),
@@ -22,6 +23,7 @@ impl MemoryStorage {
     }
 
     /// Get stored data
+    #[must_use]
     pub fn get_data(&self, name: &str) -> Option<&Vec<Array3<f64>>> {
         self.data.get(name)
     }

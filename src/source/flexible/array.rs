@@ -1,6 +1,6 @@
 //! Main flexible transducer array implementation
 //!
-//! This module provides the main FlexibleTransducerArray struct that
+//! This module provides the main `FlexibleTransducerArray` struct that
 //! integrates configuration, geometry, and calibration components.
 
 use crate::error::KwaversResult;
@@ -225,16 +225,19 @@ impl FlexibleTransducerArray {
     }
 
     /// Get current geometry state
+    #[must_use]
     pub fn geometry_state(&self) -> &GeometryState {
         &self.geometry_state
     }
 
     /// Get configuration
+    #[must_use]
     pub fn config(&self) -> &FlexibleTransducerConfig {
         &self.config
     }
 
     /// Get calibration confidence
+    #[must_use]
     pub fn calibration_confidence(&self) -> f64 {
         self.calibration_processor.get_confidence()
     }

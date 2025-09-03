@@ -8,6 +8,7 @@ pub struct BeamPatterns;
 
 impl BeamPatterns {
     /// Calculate beam width at specified dB level
+    #[must_use]
     pub fn beam_width(aperture: f64, wavelength: f64, level_db: f64) -> f64 {
         let factor = match level_db {
             l if l >= -3.0 => 0.88,
@@ -18,6 +19,7 @@ impl BeamPatterns {
     }
 
     /// Calculate directivity pattern
+    #[must_use]
     pub fn directivity(theta: f64, aperture: f64, wavelength: f64) -> f64 {
         use std::f64::consts::PI;
         let k = 2.0 * PI / wavelength;

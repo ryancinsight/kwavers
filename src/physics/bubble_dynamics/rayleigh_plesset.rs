@@ -20,6 +20,7 @@ pub struct RayleighPlessetSolver {
 }
 
 impl RayleighPlessetSolver {
+    #[must_use]
     pub fn new(params: BubbleParameters) -> Self {
         // Use same thermodynamics engine as KellerMiksisModel for consistency
         let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
@@ -31,6 +32,7 @@ impl RayleighPlessetSolver {
 
     /// Calculate bubble wall acceleration using Rayleigh-Plesset equation
     /// Standard form: ρ(RR̈ + 3/2Ṙ²) = pg - p∞ - 2σ/R - 4μṘ/R
+    #[must_use]
     pub fn calculate_acceleration(&self, state: &BubbleState, p_acoustic: f64, t: f64) -> f64 {
         let r = state.radius;
         let v = state.wall_velocity;
@@ -152,6 +154,7 @@ pub struct KellerMiksisModel {
 }
 
 impl KellerMiksisModel {
+    #[must_use]
     pub fn new(params: BubbleParameters) -> Self {
         // Use Wagner equation by default for highest accuracy
         let thermo_calc = ThermodynamicsCalculator::new(VaporPressureModel::Wagner);
@@ -167,6 +170,7 @@ impl KellerMiksisModel {
     }
 
     /// Get the bubble parameters
+    #[must_use]
     pub fn params(&self) -> &BubbleParameters {
         &self.params
     }
@@ -178,6 +182,7 @@ impl KellerMiksisModel {
     /// at moderate conditions, the ideal gas Cv is a reasonable approximation.
     ///
     /// Returns: Molar heat capacity at constant volume in J/(mol·K)
+    #[must_use]
     pub fn molar_heat_capacity_cv(&self, state: &BubbleState) -> f64 {
         // For Van der Waals gas, the heat capacity can differ from ideal gas
         // However, for most conditions in bubble dynamics, the ideal gas approximation
@@ -197,8 +202,8 @@ impl KellerMiksisModel {
     /// Journal of the Acoustical Society of America, 68(2), 628-633
     ///
     /// The standard formulation from the literature is:
-    /// (1 - v/c) * R * R_ddot + (3/2) * v^2 * (1 - v/(3c)) =
-    ///     (1/ρ) * [(P_B - P_∞) * (1 + v/c) + R/c * (dP_B/dt - dP_∞/dt)]
+    /// (1 - v/c) * R * `R_ddot` + (3/2) * v^2 * (1 - v/(3c)) =
+    ///     (1/ρ) * [(`P_B` - P_∞) * (1 + v/c) + R/c * (`dP_B/dt` - dP_∞/dt)]
     pub fn calculate_acceleration(
         &self,
         state: &mut BubbleState,

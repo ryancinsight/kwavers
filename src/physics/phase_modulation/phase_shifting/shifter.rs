@@ -26,6 +26,7 @@ pub struct PhaseShifter {
 
 impl PhaseShifter {
     /// Create a new phase shifter
+    #[must_use]
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
         let wavelength = calculate_wavelength(operating_frequency, SPEED_OF_SOUND);
         let num_elements = element_positions.nrows();
@@ -57,8 +58,7 @@ impl PhaseShifter {
 
         if angle_rad.abs() > MAX_STEERING_ANGLE.to_radians() {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Steering angle exceeds maximum of {} degrees",
-                MAX_STEERING_ANGLE
+                "Steering angle exceeds maximum of {MAX_STEERING_ANGLE} degrees"
             )));
         }
 
@@ -88,8 +88,7 @@ impl PhaseShifter {
 
         if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {} mm",
-                MIN_FOCAL_DISTANCE
+                "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
             )));
         }
 
@@ -121,8 +120,7 @@ impl PhaseShifter {
     ) -> KwaversResult<Array1<f64>> {
         if focal_points.len() > MAX_FOCAL_POINTS {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Number of focal points exceeds maximum of {}",
-                MAX_FOCAL_POINTS
+                "Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"
             )));
         }
 
@@ -153,7 +151,7 @@ impl PhaseShifter {
         }
 
         if self.quantization_enabled {
-            for phase in phases.iter_mut() {
+            for phase in &mut phases {
                 *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
             }
         }
@@ -163,6 +161,7 @@ impl PhaseShifter {
     }
 
     /// Get current phase offsets
+    #[must_use]
     pub fn get_phase_offsets(&self) -> &Array1<f64> {
         &self.phase_offsets
     }

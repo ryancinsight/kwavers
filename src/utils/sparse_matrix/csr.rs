@@ -22,6 +22,7 @@ pub struct CompressedSparseRowMatrix {
 
 impl CompressedSparseRowMatrix {
     /// Create CSR matrix with specified dimensions
+    #[must_use]
     pub fn create(rows: usize, cols: usize) -> Self {
         Self {
             rows,
@@ -34,6 +35,7 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Create CSR matrix from dense matrix with sparsity threshold
+    #[must_use]
     pub fn from_dense(dense: ArrayView2<f64>, threshold: f64) -> Self {
         let (rows, cols) = dense.dim();
         let mut values = Vec::new();
@@ -87,6 +89,7 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Get row as slice
+    #[must_use]
     pub fn get_row(&self, row: usize) -> (&[f64], &[usize]) {
         let start = self.row_pointers[row];
         let end = self.row_pointers[row + 1];
@@ -94,16 +97,19 @@ impl CompressedSparseRowMatrix {
     }
 
     /// Compute Frobenius norm
+    #[must_use]
     pub fn frobenius_norm(&self) -> f64 {
         self.values.iter().map(|v| v * v).sum::<f64>().sqrt()
     }
 
     /// Get sparsity ratio
+    #[must_use]
     pub fn sparsity(&self) -> f64 {
         1.0 - (self.nnz as f64) / ((self.rows * self.cols) as f64)
     }
 
     /// Convert to dense matrix
+    #[must_use]
     pub fn to_dense(&self) -> ndarray::Array2<f64> {
         let mut dense = ndarray::Array2::zeros((self.rows, self.cols));
 

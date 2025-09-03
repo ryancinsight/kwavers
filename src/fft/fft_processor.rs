@@ -1,10 +1,10 @@
 //! Modern FFT implementation using rustfft 6.2 with optimizations
 //!
 //! References:
-//! - rustfft documentation: https://docs.rs/rustfft/latest/rustfft/
+//! - rustfft documentation: <https://docs.rs/rustfft/latest/rustfft>/
 //! - "Numerical Recipes" by Press et al. (2007) for FFT algorithms
 
-use ndarray::{Array3, Axis, Zip};
+use ndarray::{s, Array2, Array3, ArrayView1, Axis, Zip};
 use num_complex::Complex64;
 use rayon::prelude::*;
 use rustfft::{Fft, FftPlanner};
@@ -37,6 +37,7 @@ impl std::fmt::Debug for Fft3d {
 
 impl Fft3d {
     /// Create a new 3D FFT processor with cached plans
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let mut planner = FftPlanner::new();
 
@@ -100,9 +101,9 @@ impl Fft3d {
             .into_par_iter()
             .for_each(|mut yz_slice| {
                 yz_slice.axis_iter_mut(Axis(1)).for_each(|mut x_line| {
-                    let mut buffer: Vec<Complex64> = x_line.to_vec();
-                    x_fft.process(&mut buffer);
-                    x_line.assign(&ArrayView1::from(&buffer));
+                    // Process FFT in-place without allocation
+                    let slice = x_line.as_slice_mut().unwrap();
+                    x_fft.process(slice);
                 });
             });
 
@@ -113,9 +114,9 @@ impl Fft3d {
             .into_par_iter()
             .for_each(|mut xz_slice| {
                 xz_slice.axis_iter_mut(Axis(1)).for_each(|mut y_line| {
-                    let mut buffer: Vec<Complex64> = y_line.to_vec();
-                    y_fft.process(&mut buffer);
-                    y_line.assign(&ArrayView1::from(&buffer));
+                    // Process FFT in-place without allocation
+                    let slice = y_line.as_slice_mut().unwrap();
+                    y_fft.process(slice);
                 });
             });
 
@@ -211,8 +212,8 @@ impl Fft3d {
     }
 }
 
-/// Optimized 2D FFT for special cases
-pub struct ModernFft2d {
+/// 2D FFT processor for grid-based operations
+pub struct Fft2d {
     planner: FftPlanner<f64>,
     nx: usize,
     ny: usize,
@@ -222,7 +223,17 @@ pub struct ModernFft2d {
     ifft_y: Arc<dyn Fft<f64>>,
 }
 
-impl ModernFft2d {
+impl std::fmt::Debug for Fft2d {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Fft2d")
+            .field("nx", &self.nx)
+            .field("ny", &self.ny)
+            .finish()
+    }
+}
+
+impl Fft2d {
+    #[must_use]
     pub fn new(nx: usize, ny: usize) -> Self {
         let mut planner = FftPlanner::new();
 
@@ -294,10 +305,91 @@ impl ModernFft2d {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use num_complex::Complex64;
+    use std::f64::consts::PI;
 
-    // TODO: Fix FFT implementation and enable tests
-    // The current implementation needs debugging for proper normalization
+    #[test]
+    fn test_fft_1d_forward_inverse() {
+        let n = 64;
+        let mut data: Vec<Complex64> = (0..n)
+            .map(|i| Complex64::new((i as f64).sin(), 0.0))
+            .collect();
+
+        let original = data.clone();
+
+        // Forward FFT
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(n);
+        fft.process(&mut data);
+
+        // Inverse FFT
+        let ifft = planner.plan_fft_inverse(n);
+        ifft.process(&mut data);
+
+        // Normalize
+        let norm = 1.0 / n as f64;
+        data.iter_mut().for_each(|x| *x *= norm);
+
+        // Check round-trip
+        for (orig, result) in original.iter().zip(data.iter()) {
+            assert_relative_eq!(orig.re, result.re, epsilon = 1e-10);
+            assert_relative_eq!(orig.im, result.im, epsilon = 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_fft_2d_gaussian() {
+        let mut fft2d = Fft2d::new(64, 64);
+        let mut data = Array2::zeros((64, 64));
+
+        // Create Gaussian (real-valued)
+        let sigma = 5.0;
+        for i in 0..64 {
+            for j in 0..64 {
+                let x = (i as f64 - 32.0) / sigma;
+                let y = (j as f64 - 32.0) / sigma;
+                data[[i, j]] = (-0.5 * (x * x + y * y)).exp();
+            }
+        }
+
+        let original = data.clone();
+
+        // Forward and inverse transform
+        let complex_data = fft2d.forward(&data);
+        let reconstructed = fft2d.inverse(&complex_data);
+
+        // Check reconstruction
+        for ((i, j), &val) in reconstructed.indexed_iter() {
+            assert_relative_eq!(val, original[[i, j]], epsilon = 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_fft_3d_energy_conservation() {
+        let mut fft3d = Fft3d::new(32, 32, 32);
+        let mut data = Array3::zeros((32, 32, 32));
+
+        // Create test signal (real-valued)
+        let freq = 2.0 * PI / 32.0;
+        for i in 0..32 {
+            for j in 0..32 {
+                for k in 0..32 {
+                    data[[i, j, k]] = (freq * i as f64).cos() * (freq * j as f64).cos();
+                }
+            }
+        }
+
+        // Compute energy before
+        let energy_before: f64 = data.iter().map(|x| x * x).sum();
+
+        // FFT and IFFT
+        let spectrum = fft3d.forward(&data);
+        let reconstructed = fft3d.inverse(&spectrum);
+
+        // Compute energy after
+        let energy_after: f64 = reconstructed.iter().map(|x| x * x).sum();
+
+        // Energy should be conserved (Parseval's theorem)
+        assert_relative_eq!(energy_before, energy_after, epsilon = 1e-10 * energy_before);
+    }
 }
-
-// Add missing imports at the top
-use ndarray::{s, Array2, ArrayView1};

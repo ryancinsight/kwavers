@@ -21,6 +21,7 @@ impl Default for LineSearch {
 }
 
 impl LineSearch {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             c1: 1e-4,
@@ -46,6 +47,7 @@ impl LineSearch {
     }
 
     /// Backtracking line search
+    #[must_use]
     pub fn backtracking(
         &self,
         direction: &Array3<f64>,
@@ -80,6 +82,7 @@ impl Default for ConjugateGradient {
 }
 
 impl ConjugateGradient {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             previous_gradient: None,
@@ -131,6 +134,7 @@ pub struct Lbfgs {
 }
 
 impl Lbfgs {
+    #[must_use]
     pub fn new(memory_size: usize) -> Self {
         Self {
             memory_size,

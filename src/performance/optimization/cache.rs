@@ -26,6 +26,7 @@ pub struct CacheOptimizer {
 
 impl CacheOptimizer {
     /// Create a new cache optimizer
+    #[must_use]
     pub fn new(block_size: usize) -> Self {
         Self {
             block_size,
@@ -45,6 +46,7 @@ impl CacheOptimizer {
     }
 
     /// Calculate optimal block size for 3D arrays
+    #[must_use]
     pub fn optimal_block_size_3d(&self, nx: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
         // Calculate block sizes that fit in L1 cache
         let element_size = std::mem::size_of::<f64>();
@@ -96,7 +98,7 @@ impl CacheOptimizer {
                 // SAFETY: We've verified offset is within bounds above.
                 // _mm_prefetch is a hint instruction that doesn't cause memory errors.
                 unsafe {
-                    let ptr = data.as_ptr().add(offset) as *const i8;
+                    let ptr = data.as_ptr().add(offset).cast::<i8>();
                     _mm_prefetch(ptr, _MM_HINT_T0);
                 }
             }

@@ -97,6 +97,7 @@ pub fn apply_power_law_absorption(
 }
 
 /// Compute fractional Laplacian ∇^α in k-space
+#[must_use]
 pub fn fractional_laplacian(
     field: &Array3<f64>,
     alpha: f64,

@@ -47,6 +47,7 @@ impl PluginManager {
         Ok(())
     }
     /// Create a new plugin manager
+    #[must_use]
     pub fn new() -> Self {
         Self {
             plugins: Vec::new(),
@@ -171,8 +172,9 @@ impl PluginManager {
     }
 
     /// Get plugin by index
+    #[must_use]
     pub fn get_plugin(&self, index: usize) -> Option<&dyn Plugin> {
-        self.plugins.get(index).map(|p| p.as_ref())
+        self.plugins.get(index).map(std::convert::AsRef::as_ref)
     }
 
     /// Get mutable plugin by index
@@ -184,21 +186,25 @@ impl PluginManager {
     }
 
     /// Get number of plugins
+    #[must_use]
     pub fn plugin_count(&self) -> usize {
         self.plugins.len()
     }
 
     /// Get the execution order
+    #[must_use]
     pub fn execution_order(&self) -> &[usize] {
         &self.execution_order
     }
 
     /// Get performance metrics
+    #[must_use]
     pub fn performance_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }
 
     /// Get the number of registered plugins
+    #[must_use]
     pub fn component_count(&self) -> usize {
         self.plugins.len()
     }
@@ -226,7 +232,7 @@ impl PluginManager {
                 if let Some(&other) = provides.get(&field) {
                     return Err(ValidationError::FieldValidation {
                         field: "plugin_dependencies".to_string(),
-                        value: format!("{:?}", field),
+                        value: format!("{field:?}"),
                         constraint: format!(
                             "Field {:?} provided by multiple plugins: {} and {}",
                             field,
@@ -262,7 +268,7 @@ impl PluginManager {
                 return Ok(()); // Already visited
             }
             if state[node] == 1 {
-                return Err(format!("Circular dependency detected at plugin {}", node));
+                return Err(format!("Circular dependency detected at plugin {node}"));
             }
 
             state[node] = 1; // Mark as visiting

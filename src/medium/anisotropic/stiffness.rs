@@ -18,6 +18,7 @@ pub struct StiffnessTensor {
 
 impl StiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
+    #[must_use]
     pub fn isotropic(lambda: f64, mu: f64) -> Self {
         let mut c = Array2::zeros((6, 6));
 
@@ -55,7 +56,7 @@ impl StiffnessTensor {
         if c11 <= 0.0 || c33 <= 0.0 || c44 <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "stiffness_components".to_string(),
-                value: format!("c11={}, c33={}, c44={}", c11, c33, c44),
+                value: format!("c11={c11}, c33={c33}, c44={c44}"),
                 constraint: "Diagonal components must be positive".to_string(),
             }));
         }
@@ -125,6 +126,7 @@ impl StiffnessTensor {
     }
 
     /// Check if tensor is positive definite
+    #[must_use]
     pub fn is_positive_definite(&self) -> bool {
         // Use Sylvester's criterion: all leading principal minors must be positive
         for k in 1..=6 {
@@ -170,16 +172,38 @@ impl StiffnessTensor {
 
     /// Get compliance matrix (inverse of stiffness)
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
-        // In production, use proper matrix inversion
-        // This is a placeholder
-        Err(KwaversError::Validation(ValidationError::FieldValidation {
-            field: "compliance".to_string(),
-            value: "not_implemented".to_string(),
-            constraint: "Matrix inversion not yet implemented".to_string(),
-        }))
+        use nalgebra::DMatrix;
+
+        // Convert to nalgebra matrix
+        let mut matrix = DMatrix::zeros(6, 6);
+        for i in 0..6 {
+            for j in 0..6 {
+                matrix[(i, j)] = self.c[[i, j]];
+            }
+        }
+
+        // Compute inverse
+        match matrix.try_inverse() {
+            Some(inv) => {
+                // Convert back to ndarray
+                let mut compliance = Array2::zeros((6, 6));
+                for i in 0..6 {
+                    for j in 0..6 {
+                        compliance[[i, j]] = inv[(i, j)];
+                    }
+                }
+                Ok(compliance)
+            }
+            None => Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "stiffness_matrix".to_string(),
+                value: "singular".to_string(),
+                constraint: "Stiffness matrix must be invertible".to_string(),
+            })),
+        }
     }
 
     /// Apply rotation to stiffness tensor
+    #[must_use]
     pub fn rotate(&self, rotation: &super::rotation::RotationMatrix) -> Self {
         let rotated = rotation.apply_to_stiffness(&self.c);
         Self {

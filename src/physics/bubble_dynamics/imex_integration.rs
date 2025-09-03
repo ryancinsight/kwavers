@@ -67,11 +67,13 @@ pub struct BubbleIMEXIntegrator {
 
 impl BubbleIMEXIntegrator {
     /// Create a new IMEX integrator for bubble dynamics
+    #[must_use]
     pub fn new(solver: Arc<KellerMiksisModel>, config: BubbleIMEXConfig) -> Self {
         Self { solver, config }
     }
 
     /// Create with default configuration
+    #[must_use]
     pub fn with_defaults(solver: Arc<KellerMiksisModel>) -> Self {
         Self::new(solver, BubbleIMEXConfig::default())
     }
@@ -82,11 +84,13 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Get configuration
+    #[must_use]
     pub fn config(&self) -> &BubbleIMEXConfig {
         &self.config
     }
 
     /// Get solver
+    #[must_use]
     pub fn solver(&self) -> &Arc<KellerMiksisModel> {
         &self.solver
     }
@@ -338,6 +342,7 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Calculate stiffness ratio based on characteristic time scales
+    #[must_use]
     pub fn estimate_stiffness(&self, state: &BubbleState) -> f64 {
         let params = self.solver.params();
         let thermal_diffusivity =
@@ -351,6 +356,7 @@ impl BubbleIMEXIntegrator {
     }
 
     /// Suggest time step based on stiffness
+    #[must_use]
     pub fn suggest_timestep(&self, state: &BubbleState) -> f64 {
         let stiffness = self.estimate_stiffness(state);
 
