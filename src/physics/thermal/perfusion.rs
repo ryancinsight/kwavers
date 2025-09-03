@@ -69,6 +69,12 @@ pub struct VesselCooling {
     blood_temp: f64,
 }
 
+impl Default for VesselCooling {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VesselCooling {
     /// Create new vessel cooling model
     pub fn new() -> Self {

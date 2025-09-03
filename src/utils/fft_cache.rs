@@ -74,10 +74,10 @@ impl FftCache {
 
         for grid in grids {
             let key = FftCacheKey::from(grid);
-            if !cache.contains_key(&key) {
+            cache.entry(key).or_insert_with(|| {
                 let fft = Arc::new(ProcessorFft3d::new(grid.nx, grid.ny, grid.nz));
-                cache.insert(key, fft);
-            }
+                fft
+            });
         }
     }
 

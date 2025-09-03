@@ -292,8 +292,6 @@ impl Fft2d {
 
 #[cfg(test)]
 mod tests {
-    
-    
 
     // TODO: Fix FFT implementation and enable tests
     // The current implementation needs debugging for proper normalization

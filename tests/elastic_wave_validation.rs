@@ -8,7 +8,7 @@
 use approx::assert_relative_eq;
 use kwavers::{
     grid::Grid,
-    medium::{ElasticProperties, thermal::ThermalField},
+    medium::{thermal::ThermalField, ElasticProperties},
     physics::{
         field_mapping::UnifiedFieldType,
         plugin::{elastic_wave_plugin::ElasticWavePlugin, PhysicsPlugin, PluginContext},

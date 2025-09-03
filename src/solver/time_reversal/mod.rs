@@ -22,7 +22,7 @@ pub use reconstruction::TimeReversalReconstructor;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     use std::f64::consts::PI;
 
     #[test]

@@ -9,6 +9,12 @@ pub struct StateEstimator {
     alpha: f64,
 }
 
+impl Default for StateEstimator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StateEstimator {
     pub fn new() -> Self {
         Self {

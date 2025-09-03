@@ -6,6 +6,7 @@ use crate::grid::structure::Grid;
 use ndarray::{Array3, Array4};
 
 /// Field operations for grid-based arrays
+#[derive(Debug)]
 pub struct FieldOperations;
 
 impl FieldOperations {

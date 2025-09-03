@@ -12,6 +12,12 @@ pub struct TissuePropertyCache {
     nonlinearity_cache: HashMap<TissueType, f64>,
 }
 
+impl Default for TissuePropertyCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TissuePropertyCache {
     /// Create a new property cache
     pub fn new() -> Self {

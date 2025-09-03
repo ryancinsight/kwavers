@@ -223,14 +223,14 @@ pub fn fft_3d(fields: &Array4<f64>, field_index: usize, grid: &Grid) -> Array3<C
         let mut cache = cache.borrow_mut();
         let key = (grid.nx, grid.ny, grid.nz);
 
-        if !cache.contains_key(&key) {
+        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
             debug!(
                 "Cache miss: Creating new Fft3d instance for grid {}x{}x{}",
                 grid.nx, grid.ny, grid.nz
             );
             let fft = Box::new(Fft3d::new(grid.nx, grid.ny, grid.nz));
-            cache.insert(key, fft);
+            e.insert(fft);
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
         }
@@ -273,10 +273,10 @@ pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64>
     // Step 2: Apply forward FFT using cached instance
     FFT_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
-        if !cache.contains_key(&key) {
+        if let std::collections::hash_map::Entry::Vacant(e) = cache.entry(key) {
             FFT_CACHE_MISSES.fetch_add(1, Ordering::Relaxed);
             let fft = Box::new(Fft3d::new(nx, ny, nz));
-            cache.insert(key, fft);
+            e.insert(fft);
         } else {
             FFT_CACHE_HITS.fetch_add(1, Ordering::Relaxed);
         }

@@ -6,7 +6,7 @@
 mod tests {
     use super::super::*;
     use crate::physics::mechanics::acoustic_wave::kzk::constants::*;
-    
+
     use ndarray::Array2;
     use std::f64::consts::PI;
 

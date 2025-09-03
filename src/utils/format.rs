@@ -37,7 +37,7 @@ pub fn format_duration(duration: Duration) -> String {
         format!("{}ns", duration.as_nanos())
     } else {
         // Zero duration
-        format!("0ms")
+        "0ms".to_string()
     }
 }
 

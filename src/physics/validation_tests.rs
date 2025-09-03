@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    
+
     use crate::physics::bubble_dynamics::{BubbleParameters, BubbleState, RayleighPlessetSolver};
     use crate::physics::constants::*;
     use approx::assert_relative_eq;

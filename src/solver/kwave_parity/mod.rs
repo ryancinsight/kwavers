@@ -325,7 +325,7 @@ impl KWaveSolver {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                         let rho = crate::medium::density_at(medium, x, y, z, &self.grid);
                         let c = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                        self.p[[i, j, k]] = self.p[[i, j, k]] - dt * rho * c * c * div_u[[i, j, k]];
+                        self.p[[i, j, k]] -= dt * rho * c * c * div_u[[i, j, k]];
                     }
                 }
             }

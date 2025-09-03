@@ -6,6 +6,7 @@ use crate::grid::structure::{Dimension, Grid};
 use ndarray::{Array1, Array3};
 
 /// Coordinate system operations
+#[derive(Debug)]
 pub struct CoordinateSystem;
 
 impl CoordinateSystem {
