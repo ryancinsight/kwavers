@@ -100,9 +100,8 @@ impl Fft3d {
             .into_par_iter()
             .for_each(|mut yz_slice| {
                 yz_slice.axis_iter_mut(Axis(1)).for_each(|mut x_line| {
-                    let mut buffer: Vec<Complex64> = x_line.to_vec();
-                    x_fft.process(&mut buffer);
-                    x_line.assign(&ArrayView1::from(&buffer));
+                    // Process FFT in-place without allocation
+                    x_fft.process_slice(x_line.as_slice_mut().unwrap());
                 });
             });
 
@@ -113,9 +112,8 @@ impl Fft3d {
             .into_par_iter()
             .for_each(|mut xz_slice| {
                 xz_slice.axis_iter_mut(Axis(1)).for_each(|mut y_line| {
-                    let mut buffer: Vec<Complex64> = y_line.to_vec();
-                    y_fft.process(&mut buffer);
-                    y_line.assign(&ArrayView1::from(&buffer));
+                    // Process FFT in-place without allocation
+                    y_fft.process_slice(y_line.as_slice_mut().unwrap());
                 });
             });
 

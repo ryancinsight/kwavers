@@ -20,8 +20,11 @@ use std::f64::consts::PI;
 
 pub mod absorption;
 pub mod nonlinearity;
+pub mod operators;
 pub mod sensors;
 pub mod sources;
+
+use operators::kspace::compute_k_operators;
 
 /// k-Wave simulation configuration matching MATLAB interface
 #[derive(Debug, Clone)]
