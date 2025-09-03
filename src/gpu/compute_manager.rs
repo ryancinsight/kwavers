@@ -2,7 +2,7 @@
 //!
 //! Provides high-level interface for GPU compute operations
 
-use crate::constants::physics_constants::numerical;
+use crate::physics::constants::numerical;
 use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
 use crate::performance::simd_auto::simd;
@@ -247,7 +247,7 @@ impl ComputeManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::physics_constants::{tissue, water};
+    use crate::physics::constants::{tissue, water};
 
     #[tokio::test]
     async fn test_compute_manager_creation() {

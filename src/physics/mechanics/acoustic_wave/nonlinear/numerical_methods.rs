@@ -2,7 +2,7 @@
 //!
 //! This module contains the core numerical algorithms for solving nonlinear acoustic equations.
 
-use crate::constants::numerical;
+use crate::physics::constants::numerical;
 use crate::grid::Grid;
 use crate::medium::Medium;
 use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};

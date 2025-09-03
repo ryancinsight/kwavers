@@ -3,7 +3,9 @@
 use std::f64::consts::PI;
 
 /// Speed of sound in water at 20°C (m/s)
-pub const SOUND_SPEED_WATER: f64 = 1500.0;
+/// Value: 1482.0 m/s (more precise value)
+/// Reference: National Physical Laboratory acoustic properties database
+pub const SOUND_SPEED_WATER: f64 = 1482.0;
 
 /// Speed of sound in soft tissue (m/s)
 pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
@@ -12,13 +14,17 @@ pub const SOUND_SPEED_TISSUE: f64 = 1540.0;
 pub const SOUND_SPEED_AIR: f64 = 343.0;
 
 /// Density of water at 20°C (kg/m³)
-pub const DENSITY_WATER: f64 = 1000.0;
+/// Value: 998.2 kg/m³ (precise value)
+/// Reference: NIST Chemistry WebBook
+pub const DENSITY_WATER: f64 = 998.2;
 
 /// Density of soft tissue (kg/m³)
 pub const DENSITY_TISSUE: f64 = 1050.0;
 
 /// Density of air at 20°C (kg/m³)
-pub const DENSITY_AIR: f64 = 1.225;
+/// Value: 1.204 kg/m³ (at 20°C, 1 atm)
+/// Reference: NIST Standard Reference Database
+pub const DENSITY_AIR: f64 = 1.204;
 
 /// Standard atmospheric pressure (Pa)
 pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
@@ -51,3 +57,16 @@ pub const STEFAN_BOLTZMANN: f64 = 5.670374419e-8;
 pub const ELEMENTARY_CHARGE: f64 = 1.602176634e-19;
 
 // Pi is already available through std::f64::consts::PI
+
+// ============================================================================
+// Elastic Constants
+// ============================================================================
+
+/// Bond transformation factor for anisotropic media
+pub const BOND_TRANSFORM_FACTOR: f64 = 1.0;
+
+/// Lamé to stiffness conversion factor
+pub const LAME_TO_STIFFNESS_FACTOR: f64 = 1.0;
+
+/// Symmetry tolerance for elastic tensors
+pub const SYMMETRY_TOLERANCE: f64 = 1e-6;

@@ -3,7 +3,7 @@
 //! Validates basic wave propagation against analytical solutions
 //! Reference: Pierce (1989) - "Acoustics: An Introduction"
 
-use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::grid::Grid;
 use crate::physics::field_indices;
 use crate::physics::state::PhysicsState;

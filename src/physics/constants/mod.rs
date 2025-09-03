@@ -10,6 +10,7 @@ pub mod optical;
 pub mod cavitation;
 pub mod numerical;
 pub mod medical;
+pub mod chemistry;
 
 // Re-export all constants for convenience
 pub use acoustic_parameters::*;
@@ -19,3 +20,4 @@ pub use optical::*;
 pub use cavitation::*;
 pub use numerical::*;
 pub use medical::*;
+pub use chemistry::*;

@@ -24,7 +24,7 @@
 //!    Principles and Applications" (3rd ed.). Springer. ISBN: 978-3030112134
 //!    - Comprehensive acoustic wave propagation theory
 
-use crate::constants::physics::{DENSITY_WATER, SOUND_SPEED_WATER};
+use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;

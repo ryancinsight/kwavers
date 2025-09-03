@@ -2,7 +2,7 @@
 //!
 //! Provides arc-shaped transducer geometry for 2D simulations.
 
-use crate::{constants::medium_properties::WATER_SOUND_SPEED, error::KwaversResult, grid::Grid};
+use crate::{physics::constants::SOUND_SPEED_WATER, error::KwaversResult, grid::Grid};
 use ndarray::{s, Array2, Array3, Zip};
 use std::f64::consts::PI;
 
@@ -60,7 +60,7 @@ impl ArcSource {
     pub fn new(config: ArcConfig) -> KwaversResult<Self> {
         // Calculate element spacing if not provided
         let element_spacing = config.element_spacing.unwrap_or_else(|| {
-            let speed_of_sound = WATER_SOUND_SPEED;
+            let speed_of_sound = SOUND_SPEED_WATER;
             let wavelength = speed_of_sound / config.frequency;
             wavelength / 4.0
         });
@@ -104,7 +104,7 @@ impl ArcSource {
         let focus = self.config.center;
 
         // Calculate delays for focusing
-        let speed_of_sound = WATER_SOUND_SPEED;
+        let speed_of_sound = SOUND_SPEED_WATER;
         let delays: Vec<f64> = self
             .element_positions
             .iter()

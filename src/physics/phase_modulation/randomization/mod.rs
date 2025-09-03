@@ -17,7 +17,7 @@ pub mod spatial;
 pub mod temporal;
 
 // Re-exports
-pub use constants::*;
+pub use crate::physics::constants::*;
 pub use distribution::PhaseDistribution;
 pub use psk::PhaseShiftKeying;
 pub use randomizer::PhaseRandomizer;

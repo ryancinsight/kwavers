@@ -54,7 +54,7 @@ use crate::grid::Grid;
 /// Physical constants for validation
 mod constants {
     /// Speed of sound in water at 20°C (m/s) - NIST reference
-    pub const WATER_SOUND_SPEED: f64 = 1482.0;
+    pub const SOUND_SPEED_WATER: f64 = 1482.0;
 
     /// Density of water at 20°C (kg/m³) - NIST reference
     pub const WATER_DENSITY: f64 = 998.2;

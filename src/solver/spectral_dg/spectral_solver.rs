@@ -32,7 +32,7 @@ pub struct SpectralSolver {
 impl SpectralSolver {
     /// Create a new spectral solver with default wave speed
     pub fn new(order: usize, grid: Arc<Grid>) -> Self {
-        Self::with_wave_speed(order, grid, crate::constants::physics::SOUND_SPEED_WATER)
+        Self::with_wave_speed(order, grid, crate::physics::constants::SOUND_SPEED_WATER)
     }
 
     /// Create a new spectral solver with specified wave speed

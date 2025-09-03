@@ -23,7 +23,7 @@ use crate::error::{KwaversResult, PhysicsError};
 use ndarray::Array1;
 use std::sync::Arc;
 
-use crate::constants::thermodynamics::{
+use crate::physics::constants::thermodynamic::{
     NUSSELT_CONSTANT, NUSSELT_PECLET_COEFF, NUSSELT_PECLET_EXPONENT, R_GAS,
     SHERWOOD_PECLET_EXPONENT, T_AMBIENT, VAPOR_DIFFUSION_COEFFICIENT,
 };
@@ -198,7 +198,7 @@ impl BubbleIMEXIntegrator {
         let thermal_diffusion_rate = 3.0 * params.thermal_conductivity
             / (params.rho_liquid * params.specific_heat_liquid * r * r);
         let mass_transfer_coupling = if t_bubble > 0.0 {
-            crate::constants::bubble_dynamics::WATER_LATENT_HEAT_VAPORIZATION
+            crate::physics::constants::WATER_LATENT_HEAT_VAPORIZATION
                 * params.accommodation_coeff
                 / (params.specific_heat_liquid * t_bubble)
         } else {
@@ -280,7 +280,7 @@ impl BubbleIMEXIntegrator {
 
     /// Calculate effective polytropic index for thermal model
     fn calculate_effective_polytropic_index(&self, state: &BubbleState) -> f64 {
-        use crate::constants::bubble_dynamics::{MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR};
+        use crate::physics::constants::cavitation::{MIN_PECLET_NUMBER, PECLET_SCALING_FACTOR};
 
         let params = self.solver.params();
         let thermal_diffusivity =

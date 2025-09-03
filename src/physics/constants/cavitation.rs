@@ -29,3 +29,53 @@ pub const CAVITATION_THRESHOLD_WATER: f64 = -30.0;
 
 /// Typical bubble damping constant
 pub const BUBBLE_DAMPING_CONSTANT: f64 = 1.5e-9;
+
+// ============================================================================
+// Cavitation Damage Parameters
+// ============================================================================
+
+/// Compression factor exponent for damage calculation
+pub const COMPRESSION_FACTOR_EXPONENT: f64 = 2.0;
+
+/// Default bubble concentration factor
+pub const DEFAULT_CONCENTRATION_FACTOR: f64 = 1e5;
+
+/// Default fatigue rate for material
+pub const DEFAULT_FATIGUE_RATE: f64 = 0.01;
+
+/// Default pit formation efficiency
+pub const DEFAULT_PIT_EFFICIENCY: f64 = 0.1;
+
+/// Default cavitation threshold pressure (Pa)
+pub const DEFAULT_THRESHOLD_PRESSURE: f64 = -1e5;
+
+/// Impact energy coefficient
+pub const IMPACT_ENERGY_COEFFICIENT: f64 = 0.5;
+
+/// Material removal efficiency factor
+pub const MATERIAL_REMOVAL_EFFICIENCY: f64 = 0.05;
+
+// ============================================================================
+// Bubble Dynamics Limits
+// ============================================================================
+
+/// Maximum bubble radius (m)
+pub const MAX_RADIUS: f64 = 1e-3;
+
+/// Minimum bubble radius (m)
+pub const MIN_RADIUS: f64 = 1e-9;
+
+/// Conversion factor from bar·L² to Pa·m⁶
+pub const BAR_L2_TO_PA_M6: f64 = 1e-7;
+
+/// Conversion factor from liters to cubic meters
+pub const L_TO_M3: f64 = 1e-3;
+
+/// Minimum Peclet number for thermal effects
+pub const MIN_PECLET_NUMBER: f64 = 10.0;
+
+/// Peclet number scaling factor
+pub const PECLET_SCALING_FACTOR: f64 = 0.1;
+
+/// Surface tension coefficient multiplier
+pub const SURFACE_TENSION_COEFF: f64 = 2.0;

@@ -1,6 +1,6 @@
 //! Rotation matrices and transformations for anisotropic materials
 
-use crate::constants::elastic::BOND_TRANSFORM_FACTOR;
+use crate::physics::constants::BOND_TRANSFORM_FACTOR;
 use ndarray::Array2;
 
 /// 3D rotation matrix for coordinate transformations

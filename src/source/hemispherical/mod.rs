@@ -18,7 +18,7 @@ mod sparse;
 mod steering;
 mod validation;
 
-pub use constants::*;
+pub use crate::physics::constants::*;
 pub use element::{ElementConfiguration, ElementState};
 pub use geometry::{ElementPlacement, HemisphereGeometry};
 pub use sparse::{ElementSelection, SparseArrayOptimizer};

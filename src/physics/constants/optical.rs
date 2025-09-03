@@ -23,3 +23,19 @@ pub const RYDBERG: f64 = 10973731.568160;
 
 /// Bohr radius (m)
 pub const BOHR_RADIUS: f64 = 5.29177210903e-11;
+
+// ============================================================================
+// Optical Properties for Tissue
+// ============================================================================
+
+/// Tissue absorption coefficient (1/cm)
+pub const TISSUE_ABSORPTION_COEFFICIENT: f64 = 0.1;
+
+/// Tissue diffusion coefficient (cm)
+pub const TISSUE_DIFFUSION_COEFFICIENT: f64 = 0.03;
+
+/// Default polarization factor
+pub const DEFAULT_POLARIZATION_FACTOR: f64 = 1.0;
+
+/// Laplacian center coefficient for optical calculations
+pub const LAPLACIAN_CENTER_COEFF: f64 = -4.0;

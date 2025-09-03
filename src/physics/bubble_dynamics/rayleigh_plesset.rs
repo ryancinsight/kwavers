@@ -6,8 +6,9 @@
 use super::bubble_state::{BubbleParameters, BubbleState};
 use super::energy_balance::{update_temperature_energy_balance, EnergyBalanceCalculator};
 use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPressureModel};
-use crate::constants::bubble_dynamics::{BAR_L2_TO_PA_M6, L_TO_M3};
-use crate::constants::thermodynamics::{AVOGADRO, M_WATER, R_GAS};
+use crate::physics::constants::cavitation::{BAR_L2_TO_PA_M6, L_TO_M3};
+use crate::physics::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
+use crate::physics::constants::thermodynamic::M_WATER;
 use crate::error::KwaversResult;
 
 // Remove duplicate constant definitions - they're now imported from constants module
@@ -286,7 +287,7 @@ impl KellerMiksisModel {
             // Polytropic gas relation
             let gamma = state.gas_species.gamma();
             return (self.params.p0
-                + crate::constants::bubble_dynamics::SURFACE_TENSION_COEFF * self.params.sigma
+                + crate::physics::constants::cavitation::SURFACE_TENSION_COEFF * self.params.sigma
                     / self.params.r0
                 - self.params.pv)
                 * (self.params.r0 / state.radius).powf(3.0 * gamma)

@@ -9,7 +9,7 @@ use crate::physics::wave_propagation::scattering::ScatteringCalculator;
 use log::debug;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::constants::optical::{
+use crate::physics::constants::optical::{
     DEFAULT_POLARIZATION_FACTOR, LAPLACIAN_CENTER_COEFF, TISSUE_ABSORPTION_COEFFICIENT,
     TISSUE_DIFFUSION_COEFFICIENT,
 };

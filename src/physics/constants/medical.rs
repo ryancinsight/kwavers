@@ -32,3 +32,12 @@ pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;
 
 /// Typical HIFU focal intensity (W/cm²)
 pub const HIFU_FOCAL_INTENSITY: f64 = 1000.0;
+
+/// Default ultrasound frequency (Hz)
+pub const DEFAULT_ULTRASOUND_FREQUENCY: f64 = 1e6;
+
+/// Standard pressure amplitude (Pa)
+pub const STANDARD_PRESSURE_AMPLITUDE: f64 = 1e6;
+
+/// Standard beam width (m)
+pub const STANDARD_BEAM_WIDTH: f64 = 0.01;

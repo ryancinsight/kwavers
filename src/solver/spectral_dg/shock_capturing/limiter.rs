@@ -5,7 +5,7 @@
 use crate::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
-use crate::constants::numerical::{
+use crate::physics::constants::numerical::{
     SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO_EPSILON, WENO_WEIGHT_0, WENO_WEIGHT_1,
     WENO_WEIGHT_2,
 };

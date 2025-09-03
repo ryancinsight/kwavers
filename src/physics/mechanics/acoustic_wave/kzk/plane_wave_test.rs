@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::physics::SOUND_SPEED_WATER;
+    use crate::physics::constants::SOUND_SPEED_WATER;
     use crate::physics::mechanics::acoustic_wave::kzk::{
         constants::*, parabolic_diffraction::KzkDiffractionOperator, KZKConfig,
     };

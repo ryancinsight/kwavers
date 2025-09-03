@@ -1,6 +1,6 @@
 //! Configuration for phased array transducers
 
-use crate::constants::medium_properties::TISSUE_SOUND_SPEED;
+use crate::physics::constants::SOUND_SPEED_TISSUE;
 
 /// Configuration for phased array transducer geometry and behavior
 #[derive(Debug, Clone)]
@@ -26,7 +26,7 @@ pub struct PhasedArrayConfig {
 impl Default for PhasedArrayConfig {
     fn default() -> Self {
         // Standard linear array for medical ultrasound
-        let wavelength = TISSUE_SOUND_SPEED / 2.5e6; // λ at 2.5 MHz
+        let wavelength = SOUND_SPEED_TISSUE / 2.5e6; // λ at 2.5 MHz
 
         Self {
             num_elements: 64,

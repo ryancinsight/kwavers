@@ -195,7 +195,7 @@ impl KzkDiffractionOperator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::physics::SOUND_SPEED_WATER;
+    use crate::physics::constants::SOUND_SPEED_WATER;
     use crate::physics::mechanics::acoustic_wave::kzk::constants::{
         DEFAULT_BEAM_WAIST, DEFAULT_FREQUENCY, DEFAULT_GRID_SIZE, DEFAULT_WAVELENGTH,
     };

@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, Array4, Axis};
 
-use crate::constants::numerical::{
+use crate::physics::constants::numerical::{
     LINEAR_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT, QUADRATIC_VISCOSITY_COEFF,
     VON_NEUMANN_RICHTMYER_COEFF,
 };

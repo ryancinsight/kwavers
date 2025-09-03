@@ -6,7 +6,7 @@ use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, Array4};
 
-use crate::constants::numerical::EPSILON;
+use crate::physics::constants::numerical::EPSILON;
 
 /// Shock detector with multiple indicators
 #[derive(Debug, Clone)]

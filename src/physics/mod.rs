@@ -43,7 +43,7 @@ pub use wave_propagation::{
 };
 
 // Re-export commonly used constants
-pub use constants::*;
+pub use crate::physics::constants::*;
 
 /// Functional programming utilities for physics calculations
 ///

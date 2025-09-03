@@ -3,8 +3,8 @@
 //! Implements the diffusive term: -(δ/c₀⁴)∂³p/∂t³
 //! where δ is the acoustic diffusivity
 
-use crate::constants::numerical::THIRD_ORDER_DIFF_COEFF;
-use crate::constants::physics::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
+use crate::physics::constants::numerical::THIRD_ORDER_DIFF_COEFF;
+use crate::physics::constants::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use ndarray::{Array3, Zip};
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace

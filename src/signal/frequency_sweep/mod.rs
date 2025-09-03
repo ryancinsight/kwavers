@@ -12,7 +12,7 @@ use std::fmt::Debug;
 
 // Re-export main types
 pub use chirp::LinearChirp;
-pub use constants::*;
+pub use crate::physics::constants::*;
 pub use exponential::ExponentialSweep;
 pub use hyperbolic::HyperbolicSweep;
 pub use logarithmic::LogarithmicSweep;
