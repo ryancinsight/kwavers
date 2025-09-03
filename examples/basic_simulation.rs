@@ -65,19 +65,19 @@ fn main() -> KwaversResult<()> {
     );
 
     // 6. Test medium properties at center
-    let center_x = grid.nx as f64 / 2.0 * grid.dx;
-    let center_y = grid.ny as f64 / 2.0 * grid.dy;
-    let center_z = grid.nz as f64 / 2.0 * grid.dz;
+    let center_i = grid.nx / 2;
+    let center_j = grid.ny / 2;
+    let center_k = grid.nz / 2;
 
-    let density = medium.density(center_x, center_y, center_z, &grid);
-    let sound_speed = medium.sound_speed(center_x, center_y, center_z, &grid);
+    let density = medium.density(center_i, center_j, center_k);
+    let sound_speed = medium.sound_speed(center_i, center_j, center_k);
 
     println!("\nMedium properties at center:");
     println!(
         "  Position: ({:.1}, {:.1}, {:.1}) mm",
-        center_x * 1000.0,
-        center_y * 1000.0,
-        center_z * 1000.0
+        center_i as f64 * grid.dx * 1000.0,
+        center_j as f64 * grid.dy * 1000.0,
+        center_k as f64 * grid.dz * 1000.0
     );
     println!("  Density: {} kg/m³", density);
     println!("  Sound speed: {} m/s", sound_speed);

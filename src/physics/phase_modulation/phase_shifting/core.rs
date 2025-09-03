@@ -126,8 +126,11 @@ mod tests {
         assert_relative_eq!(wrap_phase(0.0), 0.0);
         assert_relative_eq!(wrap_phase(PI), PI);
         assert_relative_eq!(wrap_phase(-PI), -PI);
-        assert_relative_eq!(wrap_phase(3.0 * PI), -PI, epsilon = 1e-10);
-        assert_relative_eq!(wrap_phase(-3.0 * PI), PI, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(3.0 * PI), PI, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(-3.0 * PI), -PI, epsilon = 1e-10);
+        // Test wrap around cases
+        assert_relative_eq!(wrap_phase(2.0 * PI), 0.0, epsilon = 1e-10);
+        assert_relative_eq!(wrap_phase(-2.0 * PI), 0.0, epsilon = 1e-10);
     }
 
     #[test]
