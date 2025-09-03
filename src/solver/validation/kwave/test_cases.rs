@@ -30,6 +30,7 @@ pub enum ReferenceSource {
 
 impl KWaveTestCase {
     /// Create standard k-Wave test cases
+    #[must_use]
     pub fn standard_test_cases() -> Vec<KWaveTestCase> {
         vec![
             KWaveTestCase {

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct TDOAMeasurement {
     /// Sensor pair (reference sensor, measurement sensor)
     pub sensor_pair: (usize, usize),
-    /// Time difference (t_measurement - t_reference) in seconds
+    /// Time difference (`t_measurement` - `t_reference`) in seconds
     pub time_difference: f64,
     /// Measurement uncertainty in seconds
     pub uncertainty: f64,
@@ -17,6 +17,7 @@ pub struct TDOAMeasurement {
 
 impl TDOAMeasurement {
     /// Create new TDOA measurement
+    #[must_use]
     pub fn new(sensor1: usize, sensor2: usize, time_diff: f64) -> Self {
         Self {
             sensor_pair: (sensor1, sensor2),
@@ -26,6 +27,7 @@ impl TDOAMeasurement {
     }
 
     /// Convert to distance difference
+    #[must_use]
     pub fn to_distance_difference(&self, sound_speed: f64) -> f64 {
         self.time_difference * sound_speed
     }
@@ -40,6 +42,7 @@ pub struct TDOAProcessor {
 
 impl TDOAProcessor {
     /// Create new TDOA processor
+    #[must_use]
     pub fn new(sound_speed: f64) -> Self {
         Self {
             measurements: Vec::new(),
@@ -68,6 +71,7 @@ impl TDOAProcessor {
     }
 
     /// Calculate residuals for given position
+    #[must_use]
     pub fn calculate_residuals(&self, position: &Position, array: &SensorArray) -> Vec<f64> {
         let mut residuals = Vec::new();
 
@@ -89,6 +93,7 @@ impl TDOAProcessor {
     }
 
     /// Get number of measurements
+    #[must_use]
     pub fn num_measurements(&self) -> usize {
         self.measurements.len()
     }

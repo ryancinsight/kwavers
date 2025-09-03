@@ -317,6 +317,7 @@ impl WesterveltFdtd {
     }
 
     /// Get the current pressure field
+    #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }

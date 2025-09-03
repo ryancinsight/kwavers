@@ -33,6 +33,7 @@ impl std::fmt::Debug for FeedbackController {
 
 impl FeedbackController {
     /// Create new feedback controller
+    #[must_use]
     pub fn new(config: FeedbackConfig, fundamental_freq: f64, sample_rate: f64) -> Self {
         // Initialize PID controller
         let pid_config = PIDConfig {
@@ -164,6 +165,7 @@ impl FeedbackController {
     }
 
     /// Get current configuration
+    #[must_use]
     pub fn config(&self) -> &FeedbackConfig {
         &self.config
     }

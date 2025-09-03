@@ -140,11 +140,11 @@ impl PAMProcessor {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0)
+            .map_or(0, |(idx, _)| idx)
     }
 
     /// Get current configuration
+    #[must_use]
     pub fn config(&self) -> &PAMConfig {
         &self.config
     }

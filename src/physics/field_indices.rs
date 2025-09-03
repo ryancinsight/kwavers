@@ -66,6 +66,7 @@ pub const SXZ_IDX: usize = STRESS_XZ_IDX;
 pub const SYZ_IDX: usize = STRESS_YZ_IDX;
 
 /// Get field name from index
+#[must_use]
 pub fn field_name(idx: usize) -> &'static str {
     match idx {
         PRESSURE_IDX => "Pressure",

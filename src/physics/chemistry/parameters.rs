@@ -60,8 +60,7 @@ impl<'a> ChemicalUpdateParams<'a> {
 
         if pressure_shape != grid_shape {
             return Err(crate::KwaversError::InvalidInput(format!(
-                "Pressure array shape {:?} doesn't match grid {:?}",
-                pressure_shape, grid_shape
+                "Pressure array shape {pressure_shape:?} doesn't match grid {grid_shape:?}"
             )));
         }
 
@@ -79,11 +78,13 @@ impl<'a> ChemicalUpdateParams<'a> {
     }
 
     /// Get time step
+    #[must_use]
     pub fn time_step(&self) -> f64 {
         self.dt
     }
 
     /// Get driving frequency
+    #[must_use]
     pub fn driving_frequency(&self) -> f64 {
         self.frequency
     }
@@ -101,6 +102,7 @@ pub struct ChemicalMetrics {
 
 impl ChemicalMetrics {
     /// Create new metrics instance
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -135,6 +137,7 @@ impl ChemicalMetrics {
     }
 
     /// Check if the system is stable
+    #[must_use]
     pub fn is_stable(&self) -> bool {
         self.stability_ratio < 1.0
     }

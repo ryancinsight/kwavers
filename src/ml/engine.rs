@@ -1,6 +1,6 @@
 //! ML Engine implementation
 //!
-//! This module contains the main MLEngine struct and its implementation
+//! This module contains the main `MLEngine` struct and its implementation
 //! for managing machine learning models and inference.
 
 use crate::error::{ConfigError, DataError, KwaversError, KwaversResult, SystemError};
@@ -89,8 +89,7 @@ impl MLEngine {
                 row.iter()
                     .enumerate()
                     .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                    .map(|(idx, _)| idx as u8)
-                    .unwrap_or(0)
+                    .map_or(0, |(idx, _)| idx as u8)
             })
             .collect();
 
@@ -296,6 +295,7 @@ impl MLEngine {
     }
 
     /// Get performance metrics
+    #[must_use]
     pub fn get_metrics(&self) -> &PerformanceMetrics {
         &self.performance_metrics
     }

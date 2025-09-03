@@ -18,6 +18,7 @@ pub struct StiffnessTensor {
 
 impl StiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
+    #[must_use]
     pub fn isotropic(lambda: f64, mu: f64) -> Self {
         let mut c = Array2::zeros((6, 6));
 
@@ -55,7 +56,7 @@ impl StiffnessTensor {
         if c11 <= 0.0 || c33 <= 0.0 || c44 <= 0.0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "stiffness_components".to_string(),
-                value: format!("c11={}, c33={}, c44={}", c11, c33, c44),
+                value: format!("c11={c11}, c33={c33}, c44={c44}"),
                 constraint: "Diagonal components must be positive".to_string(),
             }));
         }
@@ -125,6 +126,7 @@ impl StiffnessTensor {
     }
 
     /// Check if tensor is positive definite
+    #[must_use]
     pub fn is_positive_definite(&self) -> bool {
         // Use Sylvester's criterion: all leading principal minors must be positive
         for k in 1..=6 {
@@ -201,6 +203,7 @@ impl StiffnessTensor {
     }
 
     /// Apply rotation to stiffness tensor
+    #[must_use]
     pub fn rotate(&self, rotation: &super::rotation::RotationMatrix) -> Self {
         let rotated = rotation.apply_to_stiffness(&self.c);
         Self {

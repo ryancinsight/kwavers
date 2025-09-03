@@ -155,7 +155,7 @@ pub mod physical {
 
 /// Unit conversions
 pub mod conversions {
-    /// Convert dB/cm/MHz to Np/m at 1 MHz
+    /// Convert dB/cm/MHz to Np/m at 1 `MHz`
     pub const DB_CM_MHZ_TO_NP_M: f64 = 0.1151 / 0.01;
 
     /// Convert Np to dB

@@ -1,7 +1,7 @@
 //! Safe, portable SIMD operations with architecture-conditional compilation
 //!
 //! This module provides SIMD acceleration with:
-//! - Architecture-specific optimizations (x86_64, aarch64)
+//! - Architecture-specific optimizations (`x86_64`, aarch64)
 //! - SWAR (SIMD Within A Register) fallback for unsupported architectures
 //! - Zero unsafe blocks in public API
 //! - Compile-time feature detection
@@ -24,6 +24,7 @@ pub struct SimdOps;
 impl SimdOps {
     /// Add two fields element-wise using SIMD
     #[inline]
+    #[must_use]
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let shape = a.dim();
         let mut result = Array3::zeros(shape);
@@ -51,6 +52,7 @@ impl SimdOps {
 
     /// Scale field by scalar using SIMD
     #[inline]
+    #[must_use]
     pub fn scale_field(field: &Array3<f64>, scalar: f64) -> Array3<f64> {
         let shape = field.dim();
         let mut result = Array3::zeros(shape);
@@ -78,6 +80,7 @@ impl SimdOps {
 
     /// Compute L2 norm using SIMD
     #[inline]
+    #[must_use]
     pub fn norm(field: &Array3<f64>) -> f64 {
         #[cfg(target_arch = "x86_64")]
         {
@@ -103,7 +106,7 @@ impl SimdOps {
     #[inline]
     unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
         unsafe {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_storeu_pd};
 
             let chunks = a.len() / 4;
             for i in 0..chunks {
@@ -196,7 +199,9 @@ impl SimdOps {
     #[inline]
     unsafe fn scale_field_avx2_inner(field: &[f64], scalar: f64, out: &mut [f64]) {
         unsafe {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{
+                _mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_storeu_pd,
+            };
 
             let scalar_vec = _mm256_set1_pd(scalar);
             let chunks = field.len() / 4;
@@ -280,7 +285,9 @@ impl SimdOps {
     #[inline]
     unsafe fn norm_avx2_inner(field: &[f64]) -> f64 {
         unsafe {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{
+                _mm256_add_pd, _mm256_loadu_pd, _mm256_mul_pd, _mm256_setzero_pd, _mm256_storeu_pd,
+            };
 
             let mut sum_vec = _mm256_setzero_pd();
             let chunks = field.len() / 4;

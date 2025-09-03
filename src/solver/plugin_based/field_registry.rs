@@ -22,13 +22,13 @@ struct FieldMetadata {
 /// Dynamic field registry for type-safe field management
 #[derive(Debug)]
 pub struct FieldRegistry {
-    /// Registered fields indexed by UnifiedFieldType numeric value
+    /// Registered fields indexed by `UnifiedFieldType` numeric value
     fields: Vec<Option<FieldMetadata>>,
     /// Field data storage - dynamically sized
     data: Option<Array4<f64>>,
     /// Grid dimensions for validation
     grid_dims: (usize, usize, usize),
-    /// Flag to defer allocation until build() is called
+    /// Flag to defer allocation until `build()` is called
     deferred_allocation: bool,
     /// Counter for assigned indices in data array
     next_data_index: usize,
@@ -170,12 +170,14 @@ impl FieldRegistry {
     }
 
     /// Check if a field is registered
+    #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         let idx = field_type as usize;
         idx < self.fields.len() && self.fields[idx].is_some()
     }
 
     /// Get list of registered fields
+    #[must_use]
     pub fn registered_fields(&self) -> Vec<UnifiedFieldType> {
         (0..UnifiedFieldType::COUNT)
             .filter_map(|i| {
@@ -196,16 +198,19 @@ impl FieldRegistry {
     }
 
     /// Get the number of registered fields
+    #[must_use]
     pub fn num_fields(&self) -> usize {
         self.next_data_index
     }
 
     /// Get grid dimensions
+    #[must_use]
     pub fn grid_dims(&self) -> (usize, usize, usize) {
         self.grid_dims
     }
 
     /// Get direct access to data array (for advanced operations)
+    #[must_use]
     pub fn data(&self) -> Option<&Array4<f64>> {
         self.data.as_ref()
     }

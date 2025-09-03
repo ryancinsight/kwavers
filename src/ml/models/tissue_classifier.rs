@@ -20,6 +20,7 @@ impl TissueClassifierModel {
     }
 
     /// Create from weights
+    #[must_use]
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
         let (features, classes) = weights.dim();
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
@@ -37,6 +38,7 @@ impl TissueClassifierModel {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
@@ -47,6 +49,7 @@ impl TissueClassifierModel {
     }
 
     /// Create a classifier with random weights
+    #[must_use]
     pub fn with_random_weights(features: usize, classes: usize) -> Self {
         use rand::Rng;
         let mut rng = rand::thread_rng();
@@ -75,8 +78,7 @@ impl TissueClassifierModel {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         Ok(class)
     }

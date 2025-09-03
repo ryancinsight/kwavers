@@ -29,6 +29,7 @@ pub enum WindowType {
 }
 
 impl ToneBurst {
+    #[must_use]
     pub fn new(center_frequency: f64, num_cycles: f64, start_time: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
         assert!(num_cycles > 0.0 && num_cycles <= MAX_TONE_BURST_CYCLES as f64);
@@ -44,6 +45,7 @@ impl ToneBurst {
         }
     }
 
+    #[must_use]
     pub fn with_window(mut self, window_type: WindowType) -> Self {
         self.window_type = window_type;
         self

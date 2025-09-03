@@ -10,6 +10,7 @@ pub struct DispersionAnalysis;
 
 impl DispersionAnalysis {
     /// Calculate numerical dispersion for FDTD method
+    #[must_use]
     pub fn fdtd_dispersion(k: f64, dx: f64, dt: f64, c: f64) -> f64 {
         let cfl = c * dt / dx;
         let kx_dx = k * dx;
@@ -23,6 +24,7 @@ impl DispersionAnalysis {
     }
 
     /// Calculate numerical dispersion for PSTD method
+    #[must_use]
     pub fn pstd_dispersion(k: f64, dx: f64, order: usize) -> f64 {
         // K-space method dispersion (spectral accuracy)
         let kx_dx = k * dx;

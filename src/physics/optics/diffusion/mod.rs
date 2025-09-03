@@ -71,8 +71,8 @@ impl LightDiffusion {
                     c: 3600.0,
                     w_b: 0.5e-3,
                     c_b: 3800.0,
-                    T_a: 37.0,
-                    Q_m: 420.0,
+                    t_a: 37.0,
+                    q_m: 420.0,
                 };
                 PennesSolver::new(
                     grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, 0.001, properties,

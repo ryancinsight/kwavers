@@ -20,6 +20,7 @@ pub struct CavitationRegion {
 
 impl CavitationDetector {
     /// Create detector with threshold
+    #[must_use]
     pub fn create(threshold: f64) -> Self {
         Self {
             threshold,
@@ -47,6 +48,7 @@ impl CavitationDetector {
     }
 
     /// Get detected regions
+    #[must_use]
     pub fn regions(&self) -> &[CavitationRegion] {
         &self.detected_regions
     }

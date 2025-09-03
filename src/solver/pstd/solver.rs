@@ -55,6 +55,7 @@ impl PstdSolver {
     }
 
     /// Get the timestep for this solver
+    #[must_use]
     pub fn get_timestep(&self) -> f64 {
         // CFL condition for PSTD
         0.3 * 1e-3 / 1500.0 // CFL=0.3, assuming water sound speed
@@ -176,16 +177,19 @@ impl PstdSolver {
     }
 
     /// Get pressure field
+    #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Get velocity fields
+    #[must_use]
     pub fn velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.velocity_x, &self.velocity_y, &self.velocity_z)
     }
 
     /// Compute divergence of velocity field
+    #[must_use]
     pub fn compute_divergence(
         &self,
         vx: &Array3<f64>,
@@ -196,11 +200,13 @@ impl PstdSolver {
     }
 
     /// Get the current pressure field
+    #[must_use]
     pub fn get_pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Get the current velocity fields
+    #[must_use]
     pub fn get_velocity(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.velocity_x, &self.velocity_y, &self.velocity_z)
     }

@@ -11,6 +11,7 @@ use ndarray::{Array3, Array4};
 /// * `ny` - Size in y dimension  
 /// * `nz` - Size in z dimension
 #[inline]
+#[must_use]
 pub fn zeros_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
     Array3::zeros((nx, ny, nz))
 }
@@ -23,6 +24,7 @@ pub fn zeros_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
 /// * `n2` - Size in third dimension
 /// * `n3` - Size in fourth dimension
 #[inline]
+#[must_use]
 pub fn zeros_4d(n0: usize, n1: usize, n2: usize, n3: usize) -> Array4<f64> {
     Array4::zeros((n0, n1, n2, n3))
 }
@@ -35,6 +37,7 @@ pub fn zeros_4d(n0: usize, n1: usize, n2: usize, n3: usize) -> Array4<f64> {
 /// * `nz` - Size in z dimension
 /// * `value` - Value to fill the array with
 #[inline]
+#[must_use]
 pub fn filled_3d(nx: usize, ny: usize, nz: usize, value: f64) -> Array3<f64> {
     Array3::from_elem((nx, ny, nz), value)
 }
@@ -53,6 +56,7 @@ pub fn zeros_from_grid(grid: &crate::grid::Grid) -> Array3<f64> {
 /// # Arguments
 /// * `array` - Array to clone and make contiguous
 #[inline]
+#[must_use]
 pub fn to_contiguous_3d(array: &Array3<f64>) -> Array3<f64> {
     if array.is_standard_layout() {
         array.clone()

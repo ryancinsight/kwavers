@@ -1,6 +1,6 @@
 //! Safety limiting for power modulation
 
-use super::constants::*;
+use super::constants::{MAX_AMPLITUDE_RATE, MECHANICAL_INDEX_LIMIT};
 
 /// Safety limiter for preventing excessive power output
 #[derive(Debug, Clone)]
@@ -13,6 +13,7 @@ pub struct SafetyLimiter {
 
 impl SafetyLimiter {
     /// Create new safety limiter
+    #[must_use]
     pub fn new() -> Self {
         Self {
             max_amplitude: 1.0,
@@ -51,6 +52,7 @@ impl SafetyLimiter {
     }
 
     /// Check mechanical index safety
+    #[must_use]
     pub fn check_mechanical_index(&self, pressure_mpa: f64, frequency_mhz: f64) -> bool {
         let mi = pressure_mpa / frequency_mhz.sqrt();
         mi <= self.mechanical_index_limit

@@ -26,11 +26,13 @@ pub struct Position {
 
 impl Position {
     /// Create new position
+    #[must_use]
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
 
     /// Distance to another position
+    #[must_use]
     pub fn distance_to(&self, other: &Position) -> f64 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
@@ -39,11 +41,13 @@ impl Position {
     }
 
     /// Convert to array
+    #[must_use]
     pub fn to_array(&self) -> [f64; 3] {
         [self.x, self.y, self.z]
     }
 
     /// From array
+    #[must_use]
     pub fn from_array(arr: [f64; 3]) -> Self {
         Self::new(arr[0], arr[1], arr[2])
     }
@@ -100,6 +104,7 @@ pub struct LocalizationProcessor {
 
 impl LocalizationProcessor {
     /// Create new processor
+    #[must_use]
     pub fn new(config: LocalizationConfig, sensor_array: SensorArray) -> Self {
         Self {
             config,
@@ -119,6 +124,7 @@ impl LocalizationProcessor {
     }
 
     /// Get sensor array
+    #[must_use]
     pub fn sensor_array(&self) -> &SensorArray {
         &self.sensor_array
     }

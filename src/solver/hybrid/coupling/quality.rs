@@ -61,6 +61,7 @@ impl Default for QualityMonitor {
 
 impl QualityMonitor {
     /// Create a new quality monitor
+    #[must_use]
     pub fn new() -> Self {
         Self {
             history: VecDeque::with_capacity(MAX_HISTORY_SIZE),
@@ -159,8 +160,7 @@ impl QualityMonitor {
                     .partial_cmp(&b.abs())
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         let target_peak_idx = target
             .iter()
@@ -170,8 +170,7 @@ impl QualityMonitor {
                     .partial_cmp(&b.abs())
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
 
         // Calculate phase shift as normalized position difference
         let total_size = interpolated.len();
@@ -194,6 +193,7 @@ impl QualityMonitor {
     }
 
     /// Get current metrics
+    #[must_use]
     pub fn get_metrics(&self) -> InterfaceQualityMetrics {
         self.history
             .back()
@@ -210,6 +210,7 @@ impl QualityMonitor {
     }
 
     /// Check if quality is acceptable
+    #[must_use]
     pub fn is_quality_acceptable(&self) -> bool {
         if let Some(metrics) = self.history.back() {
             metrics.interpolation_error <= self.thresholds.max_interpolation_error

@@ -20,6 +20,7 @@ impl ParameterOptimizerModel {
     }
 
     /// Create model from weights
+    #[must_use]
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
         let (input_dim, output_dim) = weights.dim();
         Self {
@@ -36,6 +37,7 @@ impl ParameterOptimizerModel {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
@@ -45,6 +47,7 @@ impl ParameterOptimizerModel {
         self.predict(input)
     }
 
+    #[must_use]
     pub fn new(input_dim: usize, output_dim: usize) -> Self {
         use rand::Rng;
         let mut rng = rand::thread_rng();

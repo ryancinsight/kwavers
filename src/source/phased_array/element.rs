@@ -23,6 +23,7 @@ pub struct TransducerElement {
 
 impl TransducerElement {
     /// Create element at specified position
+    #[must_use]
     pub fn at_position(id: usize, position: (f64, f64, f64), width: f64, height: f64) -> Self {
         Self {
             id,
@@ -36,6 +37,7 @@ impl TransducerElement {
     }
 
     /// Calculate directivity at given angle
+    #[must_use]
     pub fn directivity(&self, theta: f64, frequency: f64, sound_speed: f64) -> f64 {
         // Rectangular piston directivity pattern
         let wavelength = sound_speed / frequency;
@@ -50,6 +52,7 @@ impl TransducerElement {
     }
 
     /// Apply phase and amplitude to signal
+    #[must_use]
     pub fn apply_modulation(&self, signal: f64, time: f64) -> f64 {
         signal * self.amplitude_weight * (2.0 * PI * time + self.phase_delay).cos()
     }
@@ -83,6 +86,7 @@ impl Default for ElementSensitivity {
 
 impl ElementSensitivity {
     /// Get frequency-dependent sensitivity
+    #[must_use]
     pub fn at_frequency(&self, frequency: f64, center_frequency: f64) -> f64 {
         let normalized_freq = (frequency - center_frequency).abs() / center_frequency;
         let index = (normalized_freq * (self.frequency_response.len() - 1) as f64) as usize;
@@ -95,6 +99,7 @@ impl ElementSensitivity {
     }
 
     /// Calculate beam width at -3dB
+    #[must_use]
     pub fn beam_width_3db(&self) -> f64 {
         self.main_lobe_width * 0.886 // Approximate -3dB width
     }

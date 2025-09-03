@@ -57,21 +57,20 @@ impl fmt::Display for NumericalError {
                 operation,
                 location,
             } => {
-                write!(f, "Division by zero in {} at {}", operation, location)
+                write!(f, "Division by zero in {operation} at {location}")
             }
-            Self::InvalidOperation(op) => write!(f, "Invalid operation: {}", op),
+            Self::InvalidOperation(op) => write!(f, "Invalid operation: {op}"),
             Self::Instability {
                 operation,
                 condition,
             } => {
                 write!(
                     f,
-                    "Numerical instability in {}: condition number {}",
-                    operation, condition
+                    "Numerical instability in {operation}: condition number {condition}"
                 )
             }
             Self::NaN { operation, inputs } => {
-                write!(f, "NaN value in {}: inputs {}", operation, inputs)
+                write!(f, "NaN value in {operation}: inputs {inputs}")
             }
             Self::MatrixDimension {
                 operation,
@@ -80,8 +79,7 @@ impl fmt::Display for NumericalError {
             } => {
                 write!(
                     f,
-                    "Matrix dimension error in {}: expected {}, got {}",
-                    operation, expected, actual
+                    "Matrix dimension error in {operation}: expected {expected}, got {actual}"
                 )
             }
             Self::SingularMatrix {
@@ -90,15 +88,14 @@ impl fmt::Display for NumericalError {
             } => {
                 write!(
                     f,
-                    "Singular matrix in {}: condition number {}",
-                    operation, condition_number
+                    "Singular matrix in {operation}: condition number {condition_number}"
                 )
             }
             Self::UnsupportedOperation { operation, reason } => {
-                write!(f, "Unsupported operation {}: {}", operation, reason)
+                write!(f, "Unsupported operation {operation}: {reason}")
             }
             Self::SolverFailed { method, reason } => {
-                write!(f, "Solver '{}' failed: {}", method, reason)
+                write!(f, "Solver '{method}' failed: {reason}")
             }
             Self::ConvergenceFailed {
                 method,
@@ -107,12 +104,11 @@ impl fmt::Display for NumericalError {
             } => {
                 write!(
                     f,
-                    "Method '{}' failed to converge after {} iterations (error: {:.2e})",
-                    method, iterations, error
+                    "Method '{method}' failed to converge after {iterations} iterations (error: {error:.2e})"
                 )
             }
             Self::NotImplemented { feature } => {
-                write!(f, "Feature not implemented: {}", feature)
+                write!(f, "Feature not implemented: {feature}")
             }
         }
     }

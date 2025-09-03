@@ -48,7 +48,7 @@ pub use wrapper::{
 
 /// Custom iterators for medium property traversal
 pub mod iterators {
-    use super::*;
+    use super::{AcousticProperties, CoreMedium, Debug, Medium};
     use crate::grid::Grid;
 
     use rayon::prelude::*;

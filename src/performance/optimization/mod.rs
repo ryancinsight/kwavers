@@ -29,6 +29,7 @@ pub struct StencilKernel {
 
 impl StencilKernel {
     /// Create a new stencil kernel
+    #[must_use]
     pub fn new(coefficients: Vec<f64>, radius: usize, dimension: usize) -> Self {
         Self {
             coefficients,
@@ -38,6 +39,7 @@ impl StencilKernel {
     }
 
     /// Apply stencil to a point
+    #[must_use]
     pub fn apply(&self, data: &[f64], index: usize, stride: usize) -> f64 {
         let mut result = 0.0;
         let mut coeff_idx = 0;

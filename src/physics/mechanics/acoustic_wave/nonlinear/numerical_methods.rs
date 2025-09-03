@@ -226,7 +226,7 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// Tuple of (grad_x, grad_y, grad_z)
+    /// Tuple of (`grad_x`, `grad_y`, `grad_z`)
     fn compute_spectral_gradient(
         &self,
         field: &Array3<f64>,

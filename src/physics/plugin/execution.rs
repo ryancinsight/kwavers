@@ -66,6 +66,7 @@ impl Default for PluginExecutor {
 
 impl PluginExecutor {
     /// Create a new plugin executor with sequential strategy
+    #[must_use]
     pub fn new() -> Self {
         Self {
             strategy: Box::new(SequentialStrategy),
@@ -73,6 +74,7 @@ impl PluginExecutor {
     }
 
     /// Create with a specific strategy
+    #[must_use]
     pub fn with_strategy(strategy: Box<dyn ExecutionStrategy>) -> Self {
         Self { strategy }
     }
@@ -104,11 +106,13 @@ pub struct ParallelStrategy {
 
 impl ParallelStrategy {
     /// Create a new parallel execution strategy
+    #[must_use]
     pub fn new() -> Self {
         Self { thread_pool: None }
     }
 
     /// Create with a specific thread pool
+    #[must_use]
     pub fn with_thread_pool(pool: rayon::ThreadPool) -> Self {
         Self {
             thread_pool: Some(pool),

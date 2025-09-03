@@ -48,6 +48,7 @@ pub struct OverlapRegion {
 
 impl OverlapRegion {
     /// Create a new overlap region
+    #[must_use]
     pub fn new(
         domain1: usize,
         domain2: usize,

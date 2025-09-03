@@ -11,7 +11,10 @@ use ndarray::{s, Array2, Array3, Array4, Zip};
 
 // Fourth-order finite difference coefficients for Laplacian
 use super::config::{RtmImagingCondition, SeismicImagingConfig};
-use super::constants::*;
+use super::constants::{
+    DEFAULT_RICKER_FREQUENCY, DEFAULT_TIME_STEP, RTM_AMPLITUDE_THRESHOLD, RTM_LAPLACIAN_SCALING,
+    RTM_STORAGE_DECIMATION,
+};
 use super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 use super::wavelet::RickerWavelet;
 use crate::solver::reconstruction::{ReconstructionConfig, Reconstructor};
@@ -31,6 +34,7 @@ pub struct ReverseTimeMigration {
 
 impl ReverseTimeMigration {
     /// Create new RTM reconstructor
+    #[must_use]
     pub fn new(config: SeismicImagingConfig, velocity_model: Array3<f64>) -> Self {
         let image = Array3::zeros(velocity_model.dim());
         let source_illumination = Array3::zeros(velocity_model.dim());
@@ -408,6 +412,7 @@ impl ReverseTimeMigration {
     }
 
     /// Get the migrated image
+    #[must_use]
     pub fn get_image(&self) -> &Array3<f64> {
         &self.image
     }

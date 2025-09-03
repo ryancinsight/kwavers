@@ -16,6 +16,7 @@ pub struct ConservationEnforcer {
 
 impl ConservationEnforcer {
     /// Create a new conservation enforcer
+    #[must_use]
     pub fn new(geometry: &InterfaceGeometry) -> Self {
         Self {
             geometry: geometry.clone(),
@@ -103,6 +104,7 @@ impl ConservationEnforcer {
     }
 
     /// Get conservation metrics
+    #[must_use]
     pub fn get_metrics(&self) -> ConservationMetrics {
         ConservationMetrics {
             mass_error: 0.0,

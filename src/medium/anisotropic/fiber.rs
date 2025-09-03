@@ -18,11 +18,13 @@ pub struct FiberOrientation {
 
 impl FiberOrientation {
     /// Create from angles
+    #[must_use]
     pub fn from_angles(azimuth: f64, elevation: f64) -> Self {
         Self { azimuth, elevation }
     }
 
     /// Convert to unit vector
+    #[must_use]
     pub fn to_vector(&self) -> [f64; 3] {
         let (sin_theta, cos_theta) = self.elevation.sin_cos();
         let (sin_phi, cos_phi) = self.azimuth.sin_cos();
@@ -31,6 +33,7 @@ impl FiberOrientation {
     }
 
     /// Create from vector
+    #[must_use]
     pub fn from_vector(v: &[f64; 3]) -> Self {
         let r = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
         if r < 1e-10 {
@@ -101,11 +104,13 @@ impl MuscleFiberModel {
     }
 
     /// Get fiber orientation at specific location
+    #[must_use]
     pub fn orientation_at(&self, i: usize, j: usize, k: usize) -> &FiberOrientation {
         &self.fiber_field[[i, j, k]]
     }
 
     /// Calculate local stiffness enhancement along fiber direction
+    #[must_use]
     pub fn stiffness_enhancement(&self, along_fiber: bool) -> f64 {
         if along_fiber {
             // Fibers are stiffer along their length
@@ -117,12 +122,14 @@ impl MuscleFiberModel {
     }
 
     /// Apply pennation correction to wave speed
+    #[must_use]
     pub fn pennation_correction(&self, wave_speed: f64) -> f64 {
         // Pennation reduces effective stiffness
         wave_speed * self.pennation_angle.cos()
     }
 
     /// Check if point is within fiber bundle
+    #[must_use]
     pub fn is_fiber_region(&self, i: usize, j: usize, k: usize) -> bool {
         // Could implement more complex fiber bundle geometry
         i < self.fiber_field.shape()[0]

@@ -12,6 +12,7 @@ pub struct ConvergencePredictor {
 
 impl ConvergencePredictor {
     /// Create a new convergence predictor
+    #[must_use]
     pub fn new(history_size: usize) -> Self {
         Self {
             history_size,

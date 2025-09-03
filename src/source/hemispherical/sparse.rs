@@ -77,6 +77,7 @@ pub struct ElementSelection {
 
 impl ElementSelection {
     /// Create new selection
+    #[must_use]
     pub fn new(index: usize) -> Self {
         Self {
             index,

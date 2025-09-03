@@ -17,6 +17,7 @@ pub struct AngularSpectrum2D {
 }
 
 impl AngularSpectrum2D {
+    #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
         let ny = config.ny;

@@ -286,6 +286,7 @@ impl CouplingInterface {
     }
 
     /// Get quality metrics
+    #[must_use]
     pub fn quality_metrics(&self) -> super::InterfaceQualityMetrics {
         self.quality.get_metrics()
     }

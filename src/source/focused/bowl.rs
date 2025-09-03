@@ -291,6 +291,7 @@ impl BowlTransducer {
     ///
     /// Reference: O'Neil, H. T. (1949). "Theory of focusing radiators."
     /// The Journal of the Acoustical Society of America, 21(5), 516-526.
+    #[must_use]
     pub fn oneil_solution(&self, z: f64, time: f64) -> f64 {
         // O'Neil's solution for on-axis pressure of a focused bowl transducer
         let r = self.config.radius_of_curvature;

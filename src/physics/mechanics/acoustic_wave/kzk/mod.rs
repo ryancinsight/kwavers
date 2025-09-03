@@ -110,7 +110,7 @@ pub fn validate_config(config: &KZKConfig) -> Result<(), String> {
     // Check CFL condition for parabolic approximation
     let cfl = config.c0 * config.dt / config.dz;
     if cfl > 0.5 {
-        return Err(format!("CFL number {} exceeds 0.5 for stability", cfl));
+        return Err(format!("CFL number {cfl} exceeds 0.5 for stability"));
     }
 
     // Check parabolic approximation validity

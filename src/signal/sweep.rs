@@ -19,6 +19,7 @@ pub struct SweepSignal {
 }
 
 impl SweepSignal {
+    #[must_use]
     pub fn new(start_freq: f64, end_freq: f64, duration: f64, amplitude: f64, phase: f64) -> Self {
         assert!(start_freq > 0.0 && end_freq > 0.0 && duration > 0.0 && amplitude >= 0.0);
         Self {

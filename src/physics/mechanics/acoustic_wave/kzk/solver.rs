@@ -172,11 +172,13 @@ impl KZKSolver {
     }
 
     /// Get current pressure field
+    #[must_use]
     pub fn get_pressure(&self) -> &Array3<f64> {
         &self.pressure
     }
 
     /// Get pressure at specific point over time
+    #[must_use]
     pub fn get_time_signal(&self, x: usize, y: usize) -> Vec<f64> {
         let mut signal = Vec::with_capacity(self.config.nt);
         for t in 0..self.config.nt {
@@ -186,6 +188,7 @@ impl KZKSolver {
     }
 
     /// Calculate intensity field I = p²/(2ρ₀c₀)
+    #[must_use]
     pub fn get_intensity(&self) -> Array2<f64> {
         let mut intensity = Array2::zeros((self.config.nx, self.config.ny));
         let factor = 1.0 / (2.0 * self.config.rho0 * self.config.c0);
@@ -204,6 +207,7 @@ impl KZKSolver {
     }
 
     /// Calculate peak pressure field
+    #[must_use]
     pub fn get_peak_pressure(&self) -> Array2<f64> {
         let mut peak = Array2::zeros((self.config.nx, self.config.ny));
 

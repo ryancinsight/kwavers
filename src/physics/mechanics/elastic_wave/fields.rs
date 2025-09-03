@@ -33,6 +33,7 @@ pub struct VelocityFields {
 
 impl StressFields {
     /// Create new stress fields with given dimensions
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             txx: Array3::zeros((nx, ny, nz)),
@@ -57,6 +58,7 @@ impl StressFields {
 
 impl VelocityFields {
     /// Create new velocity fields with given dimensions
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             vx: Array3::zeros((nx, ny, nz)),

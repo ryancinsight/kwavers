@@ -109,6 +109,7 @@ impl std::fmt::Debug for PluginRegistry {
 
 impl PluginRegistry {
     /// Create a new plugin registry
+    #[must_use]
     pub fn new() -> Self {
         Self {
             factories: HashMap::new(),
@@ -157,16 +158,19 @@ impl PluginRegistry {
     }
 
     /// Get plugin metadata
+    #[must_use]
     pub fn get_metadata(&self, id: &str) -> Option<&PluginMetadata> {
         self.metadata_cache.get(id)
     }
 
     /// List all registered plugins
+    #[must_use]
     pub fn list_plugins(&self) -> Vec<&PluginMetadata> {
         self.metadata_cache.values().collect()
     }
 
     /// Check if a plugin is registered
+    #[must_use]
     pub fn has_plugin(&self, id: &str) -> bool {
         self.factories.contains_key(id)
     }

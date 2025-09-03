@@ -31,6 +31,7 @@ pub struct BenchmarkResult {
 
 impl BenchmarkResult {
     /// Create a new benchmark result
+    #[must_use]
     pub fn new(name: String, grid_size: usize, times: Vec<Duration>) -> Self {
         let mean_time = Self::calculate_mean(&times);
         let std_dev = Self::calculate_std_dev(&times, mean_time);
@@ -86,11 +87,13 @@ impl BenchmarkResult {
     }
 
     /// Get speedup relative to baseline
+    #[must_use]
     pub fn speedup(&self, baseline: &BenchmarkResult) -> f64 {
         baseline.mean_time.as_secs_f64() / self.mean_time.as_secs_f64()
     }
 
     /// Get efficiency (speedup / cores)
+    #[must_use]
     pub fn efficiency(&self, baseline: &BenchmarkResult, cores: usize) -> f64 {
         self.speedup(baseline) / cores as f64
     }
@@ -124,6 +127,7 @@ pub struct BenchmarkReport {
 
 impl BenchmarkReport {
     /// Create a new benchmark report
+    #[must_use]
     pub fn new() -> Self {
         Self {
             results: Vec::new(),
@@ -139,8 +143,7 @@ impl BenchmarkReport {
         info.insert(
             "cpu_cores".to_string(),
             std::thread::available_parallelism()
-                .map(|n| n.get().to_string())
-                .unwrap_or_else(|_| "unknown".to_string()),
+                .map_or_else(|_| "unknown".to_string(), |n| n.get().to_string()),
         );
 
         // Rust version (if available)
@@ -155,6 +158,7 @@ impl BenchmarkReport {
     }
 
     /// Generate summary statistics
+    #[must_use]
     pub fn summary(&self) -> String {
         let mut summary = String::new();
 
@@ -164,19 +168,20 @@ impl BenchmarkReport {
         if !self.system_info.is_empty() {
             summary.push_str("\nSystem Information:\n");
             for (key, value) in &self.system_info {
-                summary.push_str(&format!("  {}: {}\n", key, value));
+                summary.push_str(&format!("  {key}: {value}\n"));
             }
         }
 
         summary.push_str("\nResults:\n");
         for result in &self.results {
-            summary.push_str(&format!("  {}\n", result));
+            summary.push_str(&format!("  {result}\n"));
         }
 
         summary
     }
 
     /// Export to CSV format
+    #[must_use]
     pub fn to_csv(&self) -> String {
         let mut csv = String::from("name,grid_size,mean_ms,std_dev_ms,throughput_mpoints\n");
 
@@ -195,6 +200,7 @@ impl BenchmarkReport {
     }
 
     /// Export to JSON format
+    #[must_use]
     pub fn to_json(&self) -> String {
         // Simple JSON serialization without serde for now
         format!(

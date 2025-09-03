@@ -18,6 +18,7 @@ use rustfft::FftPlanner;
 /// # References
 /// - Oppenheim & Schafer, "Discrete-Time Signal Processing", 3rd Ed.
 /// - Cooley & Tukey, "An Algorithm for Machine Calculation of Complex Fourier Series", 1965
+#[must_use]
 pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex<f64>> {
     let mut planner = FftPlanner::new();
     let mut result = field.mapv(|v| Complex::new(v, 0.0));
@@ -28,7 +29,7 @@ pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex<f64>> {
         let fft = planner.plan_fft_forward(n);
 
         for mut lane in result.lanes_mut(Axis(axis)) {
-            let mut buffer: Vec<Complex<f64>> = lane.iter().cloned().collect();
+            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect();
             fft.process(&mut buffer);
             for (i, val) in buffer.into_iter().enumerate() {
                 lane[i] = val;
@@ -49,6 +50,7 @@ pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex<f64>> {
 ///
 /// # Note
 /// Applies proper normalization factor of 1/N per dimension
+#[must_use]
 pub fn ifft_3d_array(field_hat: &Array3<Complex<f64>>) -> Array3<f64> {
     let mut planner = FftPlanner::new();
     let mut result = field_hat.clone();
@@ -59,7 +61,7 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex<f64>>) -> Array3<f64> {
         let fft = planner.plan_fft_inverse(n);
 
         for mut lane in result.lanes_mut(Axis(axis)) {
-            let mut buffer: Vec<Complex<f64>> = lane.iter().cloned().collect();
+            let mut buffer: Vec<Complex<f64>> = lane.iter().copied().collect();
             fft.process(&mut buffer);
             // Apply normalization as per DSP convention
             for (i, val) in buffer.into_iter().enumerate() {

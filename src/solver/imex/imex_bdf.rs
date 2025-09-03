@@ -47,6 +47,7 @@ pub struct IMEXBDF {
 
 impl IMEXBDF {
     /// Create a new IMEX-BDF scheme
+    #[must_use]
     pub fn new(config: IMEXBDFConfig) -> Self {
         let order = config.order.min(6).max(1);
         let (alpha, beta) = Self::compute_coefficients(order);

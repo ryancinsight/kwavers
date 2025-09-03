@@ -47,6 +47,7 @@ pub struct IterativeSolver {
 
 impl IterativeSolver {
     /// Create solver with configuration
+    #[must_use]
     pub fn create(config: SolverConfig) -> Self {
         Self { config }
     }
@@ -66,7 +67,7 @@ impl IterativeSolver {
         }
 
         let n = a.rows;
-        let mut x = x0.map(|v| v.to_owned()).unwrap_or_else(|| Array1::zeros(n));
+        let mut x = x0.map_or_else(|| Array1::zeros(n), |v| v.to_owned());
 
         // r = b - Ax
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
@@ -106,7 +107,7 @@ impl IterativeSolver {
         }))
     }
 
-    /// Solve using BiCGSTAB (for non-symmetric matrices)
+    /// Solve using `BiCGSTAB` (for non-symmetric matrices)
     pub fn bicgstab(
         &self,
         a: &CompressedSparseRowMatrix,
@@ -114,7 +115,7 @@ impl IterativeSolver {
         x0: Option<ArrayView1<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         let n = a.rows;
-        let mut x = x0.map(|v| v.to_owned()).unwrap_or_else(|| Array1::zeros(n));
+        let mut x = x0.map_or_else(|| Array1::zeros(n), |v| v.to_owned());
 
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
         let r0 = r.clone();

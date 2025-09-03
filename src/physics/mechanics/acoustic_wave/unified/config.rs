@@ -94,6 +94,7 @@ impl AcousticSolverConfig {
     }
 
     /// Create configuration for linear acoustics
+    #[must_use]
     pub fn linear() -> Self {
         Self {
             model_type: AcousticModelType::Linear,
@@ -102,6 +103,7 @@ impl AcousticSolverConfig {
     }
 
     /// Create configuration for Westervelt equation
+    #[must_use]
     pub fn westervelt(nonlinearity_scaling: f64) -> Self {
         Self {
             model_type: AcousticModelType::Westervelt,
@@ -111,6 +113,7 @@ impl AcousticSolverConfig {
     }
 
     /// Create configuration for Kuznetsov equation
+    #[must_use]
     pub fn kuznetsov(nonlinearity_scaling: f64) -> Self {
         Self {
             model_type: AcousticModelType::Kuznetsov,

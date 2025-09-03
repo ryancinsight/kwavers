@@ -22,6 +22,7 @@ pub struct SonoluminescenceDetector {
 
 impl SonoluminescenceDetector {
     /// Create detector
+    #[must_use]
     pub fn create(config: DetectorConfig) -> Self {
         Self {
             config,
@@ -56,6 +57,7 @@ impl SonoluminescenceDetector {
     }
 
     /// Get detected events
+    #[must_use]
     pub fn events(&self) -> &[SonoluminescenceEvent] {
         &self.events
     }

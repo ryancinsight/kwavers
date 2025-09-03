@@ -18,6 +18,7 @@ pub struct HybridCoupler {
 
 impl HybridCoupler {
     /// Create a new hybrid coupler
+    #[must_use]
     pub fn new(conservation_tolerance: f64) -> Self {
         Self {
             conservation_tolerance,
@@ -26,6 +27,7 @@ impl HybridCoupler {
     }
 
     /// Create with custom transition width
+    #[must_use]
     pub fn with_transition_width(conservation_tolerance: f64, width: usize) -> Self {
         Self {
             conservation_tolerance,

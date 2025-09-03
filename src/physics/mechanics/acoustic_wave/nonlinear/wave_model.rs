@@ -1,6 +1,6 @@
 //! Nonlinear wave model implementation
 //!
-//! This module contains the core NonlinearWave struct and its basic implementation.
+//! This module contains the core `NonlinearWave` struct and its basic implementation.
 
 use crate::constants::{performance, stability};
 use crate::grid::Grid;
@@ -107,7 +107,7 @@ pub struct NonlinearWave {
 }
 
 impl NonlinearWave {
-    /// Creates a new NonlinearWave solver with default settings.
+    /// Creates a new `NonlinearWave` solver with default settings.
     ///
     /// # Arguments
     ///
@@ -116,7 +116,7 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// A new NonlinearWave instance with sensible defaults
+    /// A new `NonlinearWave` instance with sensible defaults
     pub fn new(grid: &Grid, dt: f64) -> Self {
         let chunk_size = if grid.nx * grid.ny * grid.nz > performance::LARGE_GRID_THRESHOLD {
             performance::CHUNK_SIZE_LARGE
@@ -245,6 +245,7 @@ impl NonlinearWave {
     /// # Returns
     ///
     /// The average time spent in each update call [s]
+    #[must_use]
     pub fn get_average_update_time(&self) -> f64 {
         if self.call_count == 0 {
             0.0

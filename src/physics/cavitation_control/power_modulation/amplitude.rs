@@ -1,6 +1,6 @@
 //! Amplitude control for power modulation
 
-use super::constants::*;
+use super::constants::{DEFAULT_FILTER_TIME_CONSTANT, MAX_AMPLITUDE_RATE};
 use super::filters::ExponentialFilter;
 
 /// Amplitude controller with feedback
@@ -14,6 +14,7 @@ pub struct AmplitudeController {
 
 impl AmplitudeController {
     /// Create new amplitude controller
+    #[must_use]
     pub fn new(initial_amplitude: f64) -> Self {
         Self {
             target_amplitude: initial_amplitude,
@@ -44,6 +45,7 @@ impl AmplitudeController {
     }
 
     /// Get current amplitude
+    #[must_use]
     pub fn get_amplitude(&self) -> f64 {
         self.current_amplitude
     }

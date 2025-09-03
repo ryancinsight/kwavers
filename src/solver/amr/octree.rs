@@ -28,6 +28,7 @@ pub enum NodeData {
 
 impl OctreeNode {
     /// Create a new octree node
+    #[must_use]
     pub fn new(bounds: Bounds, level: usize) -> Self {
         Self {
             bounds,
@@ -38,6 +39,7 @@ impl OctreeNode {
     }
 
     /// Check if node is a leaf
+    #[must_use]
     pub fn is_leaf(&self) -> bool {
         self.children.is_none()
     }
@@ -125,6 +127,7 @@ impl Octree {
     }
 
     /// Get the bounds of the octree
+    #[must_use]
     pub fn bounds(&self) -> &Bounds {
         &self.root.bounds
     }
@@ -176,6 +179,7 @@ impl Octree {
     }
 
     /// Count total nodes
+    #[must_use]
     pub fn node_count(&self) -> usize {
         self.count_nodes(&self.root)
     }
@@ -191,6 +195,7 @@ impl Octree {
     }
 
     /// Count leaf nodes
+    #[must_use]
     pub fn leaf_count(&self) -> usize {
         self.count_leaves(&self.root)
     }
@@ -206,6 +211,7 @@ impl Octree {
     }
 
     /// Estimate memory usage
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         self.node_count() * std::mem::size_of::<OctreeNode>()
     }

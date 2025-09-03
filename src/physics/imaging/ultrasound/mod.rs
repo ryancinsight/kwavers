@@ -51,6 +51,7 @@ impl Default for UltrasoundConfig {
 /// 1. Hilbert transform for envelope detection
 /// 2. Log compression
 /// 3. Dynamic range mapping
+#[must_use]
 pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> Array2<f64> {
     let (n_samples, n_lines) = rf_data.dim();
     let mut image = Array2::zeros((n_samples, n_lines));
@@ -140,6 +141,7 @@ fn apply_tgc_with_sampling(
 }
 
 /// Compute Doppler shift from IQ data
+#[must_use]
 pub fn compute_doppler_shift(
     iq_data: &Array2<Complex<f64>>,
     prf: f64, // Pulse repetition frequency
@@ -160,6 +162,7 @@ pub fn compute_doppler_shift(
 }
 
 /// Compute strain from displacement data for elastography
+#[must_use]
 pub fn compute_strain(displacement: &Array2<f64>, spatial_resolution: f64) -> Array2<f64> {
     let (n_depth, n_lines) = displacement.dim();
     let mut strain = Array2::zeros((n_depth - 1, n_lines));

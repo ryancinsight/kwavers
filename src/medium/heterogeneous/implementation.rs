@@ -16,7 +16,7 @@ use log::debug;
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 
 // Import physical constants
-use super::constants::*;
+use super::constants::{MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED};
 
 /// Medium with spatially varying properties
 ///
@@ -268,7 +268,7 @@ impl CoreMedium for HeterogeneousMedium {
         if self.density.shape() != expected_shape {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", expected_shape),
+                    expected: format!("{expected_shape:?}"),
                     actual: format!("{:?}", self.density.shape()),
                 },
             ));

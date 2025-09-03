@@ -92,20 +92,18 @@ impl SourceFactory {
         ));
 
         // Create appropriate source type based on config
-        match config.source_type.as_str() {
-            "point" => {
-                let source = PointSource::new(config.position, signal);
-                Ok(Box::new(source))
-            }
-            _ => {
-                // For now, default to point source for unrecognized types
-                let source = PointSource::new(config.position, signal);
-                Ok(Box::new(source))
-            }
+        if config.source_type.as_str() == "point" {
+            let source = PointSource::new(config.position, signal);
+            Ok(Box::new(source))
+        } else {
+            // For now, default to point source for unrecognized types
+            let source = PointSource::new(config.position, signal);
+            Ok(Box::new(source))
         }
     }
 
     /// Create a point source at specified location
+    #[must_use]
     pub fn create_point_source(
         x: f64,
         y: f64,

@@ -19,6 +19,7 @@ pub enum GasType {
 
 impl GasType {
     /// Get Van der Waals constant a [bar·L²/mol²]
+    #[must_use]
     pub fn vdw_a(&self) -> f64 {
         match self {
             Self::N2 => 1.370, // From literature
@@ -32,6 +33,7 @@ impl GasType {
     }
 
     /// Get Van der Waals constant b [L/mol]
+    #[must_use]
     pub fn vdw_b(&self) -> f64 {
         match self {
             Self::N2 => 0.0387, // From literature
@@ -45,6 +47,7 @@ impl GasType {
     }
 
     /// Get molecular weight [kg/mol]
+    #[must_use]
     pub fn molecular_weight(&self) -> f64 {
         match self {
             Self::N2 => 0.028014,
@@ -58,6 +61,7 @@ impl GasType {
     }
 
     /// Get heat capacity ratio (gamma)
+    #[must_use]
     pub fn gamma(&self) -> f64 {
         match self {
             Self::N2 => 1.4,       // Diatomic
@@ -113,6 +117,7 @@ pub enum GasSpecies {
 
 impl GasSpecies {
     /// Get polytropic index
+    #[must_use]
     pub fn gamma(&self) -> f64 {
         match self {
             Self::Air => 1.4,
@@ -125,6 +130,7 @@ impl GasSpecies {
     }
 
     /// Get molecular weight [kg/mol]
+    #[must_use]
     pub fn molecular_weight(&self) -> f64 {
         match self {
             Self::Air => 0.029,
@@ -142,6 +148,7 @@ impl GasSpecies {
     ///
     /// These are fundamental thermodynamic properties of the gas species,
     /// not derived from gamma to maintain consistency with real gas models.
+    #[must_use]
     pub fn molar_heat_capacity_cv(&self) -> f64 {
         use crate::constants::thermodynamics::R_GAS;
 
@@ -230,6 +237,7 @@ impl Default for BubbleParameters {
 
 impl BubbleParameters {
     /// Create parameters for pure gas bubble
+    #[must_use]
     pub fn with_pure_gas(mut self, gas_type: GasType) -> Self {
         self.gas_composition.clear();
         self.gas_composition.insert(gas_type, 1.0);
@@ -237,6 +245,7 @@ impl BubbleParameters {
     }
 
     /// Calculate effective Van der Waals constants for gas mixture
+    #[must_use]
     pub fn effective_vdw_constants(&self) -> (f64, f64) {
         let mut a_mix = 0.0;
         let mut b_mix = 0.0;
@@ -256,6 +265,7 @@ impl BubbleParameters {
 
 impl BubbleState {
     /// Create new bubble state at equilibrium
+    #[must_use]
     pub fn new(params: &BubbleParameters) -> Self {
         let gas_pressure = params.initial_gas_pressure + 2.0 * params.sigma / params.r0;
         let n_gas = estimate_molecule_count(gas_pressure, params.r0, 293.15);
@@ -281,6 +291,7 @@ impl BubbleState {
 
     /// Create bubble state at exact mechanical equilibrium
     /// This ensures zero acceleration for validation tests
+    #[must_use]
     pub fn at_equilibrium(params: &BubbleParameters) -> Self {
         // At equilibrium for Rayleigh-Plesset equation:
         // p_gas - p_liquid - 2σ/R = 0
@@ -319,21 +330,25 @@ impl BubbleState {
     }
 
     /// Calculate bubble volume
+    #[must_use]
     pub fn volume(&self) -> f64 {
         4.0 / 3.0 * PI * self.radius.powi(3)
     }
 
     /// Calculate bubble surface area
+    #[must_use]
     pub fn surface_area(&self) -> f64 {
         4.0 * PI * self.radius.powi(2)
     }
 
     /// Check if bubble is in violent collapse
+    #[must_use]
     pub fn is_violent_collapse(&self) -> bool {
         self.is_collapsing && (self.mach_number > 0.3 || self.compression_ratio > 5.0)
     }
 
     /// Get total molecule count
+    #[must_use]
     pub fn total_molecules(&self) -> f64 {
         self.n_gas + self.n_vapor
     }
@@ -365,6 +380,7 @@ impl BubbleState {
     }
 
     /// Calculate total mass of gas and vapor in the bubble
+    #[must_use]
     pub fn mass(&self) -> f64 {
         const AVOGADRO: f64 = 6.022e23;
         let molecular_weight = self.gas_species.molecular_weight();

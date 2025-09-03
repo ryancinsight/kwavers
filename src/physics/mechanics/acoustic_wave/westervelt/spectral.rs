@@ -51,6 +51,7 @@ pub fn initialize_kspace_grids(
 }
 
 /// Compute Laplacian using spectral method
+#[must_use]
 pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) -> Array3<f64> {
     // Transform to k-space
     let field_k = fft_3d_array(field);

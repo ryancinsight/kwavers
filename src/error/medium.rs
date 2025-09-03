@@ -29,15 +29,14 @@ impl fmt::Display for MediumError {
             } => {
                 write!(
                     f,
-                    "Invalid medium property {} = {}: {}",
-                    property, value, constraint
+                    "Invalid medium property {property} = {value}: {constraint}"
                 )
             }
             Self::NotFound { medium_name } => {
-                write!(f, "Medium '{}' not found", medium_name)
+                write!(f, "Medium '{medium_name}' not found")
             }
             Self::InitializationFailed { reason } => {
-                write!(f, "Medium initialization failed: {}", reason)
+                write!(f, "Medium initialization failed: {reason}")
             }
         }
     }

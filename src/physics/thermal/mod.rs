@@ -30,9 +30,9 @@ pub struct ThermalProperties {
     /// Blood specific heat (J/kg/K)
     pub c_b: f64,
     /// Arterial blood temperature (°C)
-    pub T_a: f64,
+    pub t_a: f64,
     /// Metabolic heat generation (W/m³)
-    pub Q_m: f64,
+    pub q_m: f64,
 }
 
 impl Default for ThermalProperties {
@@ -44,8 +44,8 @@ impl Default for ThermalProperties {
             rho: 1050.0, // kg/m³
             w_b: 0.5,    // kg/m³/s (moderate perfusion)
             c_b: 3800.0, // J/kg/K (blood)
-            T_a: 37.0,   // °C (body temperature)
-            Q_m: 400.0,  // W/m³ (basal metabolism)
+            t_a: 37.0,   // °C (body temperature)
+            q_m: 400.0,  // W/m³ (basal metabolism)
         }
     }
 }
@@ -55,6 +55,7 @@ pub mod tissues {
     use super::ThermalProperties;
 
     /// Liver tissue properties
+    #[must_use]
     pub fn liver() -> ThermalProperties {
         ThermalProperties {
             k: 0.52,
@@ -62,12 +63,13 @@ pub mod tissues {
             rho: 1060.0,
             w_b: 16.7, // High perfusion
             c_b: 3800.0,
-            T_a: 37.0,
-            Q_m: 33800.0,
+            t_a: 37.0,
+            q_m: 33800.0,
         }
     }
 
     /// Muscle tissue properties
+    #[must_use]
     pub fn muscle() -> ThermalProperties {
         ThermalProperties {
             k: 0.49,
@@ -75,12 +77,13 @@ pub mod tissues {
             rho: 1090.0,
             w_b: 0.54,
             c_b: 3800.0,
-            T_a: 37.0,
-            Q_m: 684.0,
+            t_a: 37.0,
+            q_m: 684.0,
         }
     }
 
     /// Fat tissue properties
+    #[must_use]
     pub fn fat() -> ThermalProperties {
         ThermalProperties {
             k: 0.21,
@@ -88,12 +91,13 @@ pub mod tissues {
             rho: 911.0,
             w_b: 0.3, // Low perfusion
             c_b: 3800.0,
-            T_a: 37.0,
-            Q_m: 400.0,
+            t_a: 37.0,
+            q_m: 400.0,
         }
     }
 
     /// Tumor tissue properties (hypoxic)
+    #[must_use]
     pub fn tumor() -> ThermalProperties {
         ThermalProperties {
             k: 0.55,
@@ -101,8 +105,8 @@ pub mod tissues {
             rho: 1050.0,
             w_b: 0.2, // Poor perfusion
             c_b: 3800.0,
-            T_a: 37.0,
-            Q_m: 5000.0, // Higher metabolism
+            t_a: 37.0,
+            q_m: 5000.0, // Higher metabolism
         }
     }
 }

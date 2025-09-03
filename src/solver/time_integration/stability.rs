@@ -16,6 +16,7 @@ pub struct StabilityAnalyzer {
 
 impl StabilityAnalyzer {
     /// Create a new stability analyzer
+    #[must_use]
     pub fn new(safety_factor: f64) -> Self {
         Self { safety_factor }
     }
@@ -123,6 +124,7 @@ impl CFLCondition {
     }
 
     /// Get a stability report string
+    #[must_use]
     pub fn report(&self) -> String {
         format!(
             "CFL Analysis: number={:.3}, max_dt={:.3e}, wave_speed={:.3e}, dx={:.3e}, stable={}",

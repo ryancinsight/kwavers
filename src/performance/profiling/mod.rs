@@ -89,6 +89,7 @@ pub struct ProfileReport {
 
 impl ProfileReport {
     /// Generate text report
+    #[must_use]
     pub fn to_string(&self) -> String {
         let mut report = String::new();
 

@@ -25,6 +25,7 @@ pub struct SnellLawCalculator<'a> {
 
 impl<'a> SnellLawCalculator<'a> {
     /// Create a new Snell's law calculator
+    #[must_use]
     pub fn new(interface: &'a Interface) -> Self {
         // For acoustic waves: use wave speeds
         // For optical waves: use refractive indices
@@ -42,7 +43,7 @@ impl<'a> SnellLawCalculator<'a> {
         if !(0.0..=PI / 2.0).contains(&incident_angle) {
             return Err(KwaversError::Physics(PhysicsError::InvalidState {
                 field: "incident_angle".to_string(),
-                value: format!("{}", incident_angle),
+                value: format!("{incident_angle}"),
                 reason: "must be between 0 and π/2".to_string(),
             }));
         }
@@ -63,6 +64,7 @@ impl<'a> SnellLawCalculator<'a> {
     }
 
     /// Calculate critical angle for total internal reflection
+    #[must_use]
     pub fn critical_angle(&self) -> Option<f64> {
         let n1 = self.interface.medium1.refractive_index;
         let n2 = self.interface.medium2.refractive_index;
@@ -76,6 +78,7 @@ impl<'a> SnellLawCalculator<'a> {
     }
 
     /// Calculate Brewster's angle (polarization angle)
+    #[must_use]
     pub fn brewster_angle(&self) -> Option<f64> {
         // For optical waves: tan(θB) = n₂/n₁
         let n1 = self.interface.medium1.refractive_index;
@@ -89,6 +92,7 @@ impl<'a> SnellLawCalculator<'a> {
     }
 
     /// Calculate all critical angles
+    #[must_use]
     pub fn critical_angles(&self) -> CriticalAngles {
         CriticalAngles {
             total_internal_reflection: self.critical_angle(),
@@ -97,6 +101,7 @@ impl<'a> SnellLawCalculator<'a> {
     }
 
     /// Check if total internal reflection occurs at given angle
+    #[must_use]
     pub fn is_total_internal_reflection(&self, incident_angle: f64) -> bool {
         if let Some(critical) = self.critical_angle() {
             incident_angle > critical
@@ -106,6 +111,7 @@ impl<'a> SnellLawCalculator<'a> {
     }
 
     /// Calculate the evanescent wave decay constant for total internal reflection
+    #[must_use]
     pub fn evanescent_decay_constant(&self, incident_angle: f64, wavelength: f64) -> Option<f64> {
         if !self.is_total_internal_reflection(incident_angle) {
             return None;

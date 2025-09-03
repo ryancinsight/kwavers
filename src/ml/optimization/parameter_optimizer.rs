@@ -27,6 +27,7 @@ pub struct ParameterOptimizer {
 
 impl ParameterOptimizer {
     /// Create a new parameter optimizer
+    #[must_use]
     pub fn new(state_dim: usize, action_dim: usize) -> Self {
         Self {
             learning_rate: 0.001,

@@ -29,6 +29,7 @@ pub struct MultiRateController {
 
 impl MultiRateController {
     /// Create a new multi-rate controller
+    #[must_use]
     pub fn new(config: MultiRateConfig) -> Self {
         Self {
             config,
@@ -59,7 +60,7 @@ impl MultiRateController {
         // This maximizes efficiency by letting slow components take large steps
         let global_dt = component_time_steps
             .values()
-            .cloned()
+            .copied()
             .fold(0.0, f64::max) // Use maximum, not minimum!
             .min(max_dt) // Still respect the overall maximum
             .max(self.config.min_dt); // And the minimum
@@ -109,11 +110,13 @@ impl MultiRateController {
     }
 
     /// Get total number of steps
+    #[must_use]
     pub fn total_steps(&self) -> usize {
         self.total_steps
     }
 
     /// Get subcycle counts
+    #[must_use]
     pub fn subcycle_counts(&self) -> HashMap<String, usize> {
         self.subcycle_counts.clone()
     }
@@ -123,6 +126,7 @@ impl MultiRateController {
     /// Returns the ratio of work that would be done with single-rate
     /// integration to the actual work done with multi-rate.
     /// Values > 1.0 indicate efficiency gain.
+    #[must_use]
     pub fn efficiency_ratio(&self) -> f64 {
         if self.subcycle_counts.is_empty() || self.total_steps == 0 {
             return 1.0;

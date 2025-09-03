@@ -6,7 +6,7 @@
 //!
 //! # Design Principles
 //! - **Literature-Based**: All algorithms follow established papers
-//! - **Zero-Copy**: Efficient ArrayView usage throughout
+//! - **Zero-Copy**: Efficient `ArrayView` usage throughout
 //! - **Sparse Operations**: Designed for large arrays with sparse matrices
 //! - **Modular Design**: Plugin-compatible architecture
 //!

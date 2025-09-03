@@ -83,6 +83,7 @@ pub struct GpuBuffer {
 
 impl GpuBuffer {
     /// Get buffer size
+    #[must_use]
     pub fn size(&self) -> usize {
         self._size
     }

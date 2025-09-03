@@ -36,6 +36,7 @@ pub enum TherapyMechanism {
 
 impl TherapyModality {
     /// Get the primary mechanism for this modality
+    #[must_use]
     pub fn primary_mechanism(&self) -> TherapyMechanism {
         match self {
             Self::HIFU => TherapyMechanism::Thermal,
@@ -49,11 +50,13 @@ impl TherapyModality {
     }
 
     /// Check if thermal effects are significant
+    #[must_use]
     pub fn has_thermal_effects(&self) -> bool {
         matches!(self, Self::HIFU | Self::MicrobubbleTherapy)
     }
 
     /// Check if cavitation is expected
+    #[must_use]
     pub fn has_cavitation(&self) -> bool {
         matches!(
             self,
@@ -62,6 +65,7 @@ impl TherapyModality {
     }
 
     /// Get typical frequency range [Hz]
+    #[must_use]
     pub fn frequency_range(&self) -> (f64, f64) {
         match self {
             Self::HIFU => (0.5e6, 3.0e6),
@@ -75,6 +79,7 @@ impl TherapyModality {
     }
 
     /// Get typical pressure range [Pa]
+    #[must_use]
     pub fn pressure_range(&self) -> (f64, f64) {
         match self {
             Self::HIFU => (1e6, 10e6),

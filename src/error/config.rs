@@ -31,28 +31,20 @@ impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::MissingParameter { parameter, section } => {
-                write!(
-                    f,
-                    "Missing parameter '{}' in section '{}'",
-                    parameter, section
-                )
+                write!(f, "Missing parameter '{parameter}' in section '{section}'")
             }
             Self::InvalidValue {
                 parameter,
                 value,
                 constraint,
             } => {
-                write!(
-                    f,
-                    "Invalid value for '{}': {} ({})",
-                    parameter, value, constraint
-                )
+                write!(f, "Invalid value for '{parameter}': {value} ({constraint})")
             }
             Self::FileNotFound { path } => {
-                write!(f, "Configuration file not found: {}", path)
+                write!(f, "Configuration file not found: {path}")
             }
             Self::ParseError { line, message } => {
-                write!(f, "Parse error at line {}: {}", line, message)
+                write!(f, "Parse error at line {line}: {message}")
             }
             Self::ValidationFailed {
                 field,
@@ -61,8 +53,7 @@ impl fmt::Display for ConfigError {
             } => {
                 write!(
                     f,
-                    "Validation failed for {}: {} violates {}",
-                    field, value, constraint
+                    "Validation failed for {field}: {value} violates {constraint}"
                 )
             }
         }

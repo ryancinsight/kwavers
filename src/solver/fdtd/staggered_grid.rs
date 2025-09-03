@@ -27,6 +27,7 @@ impl Default for StaggeredGrid {
 
 impl StaggeredGrid {
     /// Create a new staggered grid with custom positions
+    #[must_use]
     pub fn new(
         pressure_pos: (f64, f64, f64),
         vx_pos: (f64, f64, f64),
@@ -42,6 +43,7 @@ impl StaggeredGrid {
     }
 
     /// Get the offset for a specific field component
+    #[must_use]
     pub fn get_offset(&self, component: FieldComponent) -> (f64, f64, f64) {
         match component {
             FieldComponent::Pressure => self.pressure_pos,

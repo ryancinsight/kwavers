@@ -15,6 +15,7 @@ pub struct RecorderStatistics {
 
 impl RecorderStatistics {
     /// Create new statistics instance
+    #[must_use]
     pub fn new() -> Self {
         Self {
             total_snapshots: 0,

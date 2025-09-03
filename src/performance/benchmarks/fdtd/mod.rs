@@ -71,11 +71,8 @@ pub fn benchmark_fdtd(
         times.push(start.elapsed());
     }
 
-    let mut result = BenchmarkResult::new(
-        format!("FDTD_{}x{}", grid_size, grid_size),
-        grid_size,
-        times,
-    );
+    let mut result =
+        BenchmarkResult::new(format!("FDTD_{grid_size}x{grid_size}"), grid_size, times);
 
     // Add memory usage estimate
     let memory_per_array = grid_size * grid_size * grid_size * 8; // f64 = 8 bytes

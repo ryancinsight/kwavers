@@ -8,7 +8,7 @@ use crate::physics::field_indices;
 use std::fmt;
 
 /// Unified field type enum that maps directly to field indices
-/// Uses repr(usize) for O(1) array indexing instead of HashMap lookups
+/// Uses repr(usize) for O(1) array indexing instead of `HashMap` lookups
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(usize)]
 pub enum UnifiedFieldType {
@@ -37,11 +37,13 @@ impl UnifiedFieldType {
 
     /// Get the array index for this field type
     /// Now simply returns the enum's numeric value for O(1) access
+    #[must_use]
     pub fn index(&self) -> usize {
         *self as usize
     }
 
     /// Legacy compatibility - maps to old field indices
+    #[must_use]
     pub fn legacy_index(&self) -> usize {
         match self {
             Self::Pressure => field_indices::PRESSURE_IDX,
@@ -65,6 +67,7 @@ impl UnifiedFieldType {
     }
 
     /// Get human-readable name for this field
+    #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
             Self::Pressure => "Pressure",
@@ -88,6 +91,7 @@ impl UnifiedFieldType {
     }
 
     /// Get unit string for this field
+    #[must_use]
     pub fn unit(&self) -> &'static str {
         match self {
             Self::Pressure => "Pa",
@@ -109,6 +113,7 @@ impl UnifiedFieldType {
     }
 
     /// Get all field types
+    #[must_use]
     pub fn all() -> Vec<Self> {
         vec![
             Self::Pressure,
@@ -132,6 +137,7 @@ impl UnifiedFieldType {
     }
 
     /// Create from index (efficient constant-time lookup)
+    #[must_use]
     pub fn from_index(index: usize) -> Option<Self> {
         match index {
             field_indices::PRESSURE_IDX => Some(Self::Pressure),
@@ -169,26 +175,31 @@ pub struct FieldAccessor<'a> {
 }
 
 impl<'a> FieldAccessor<'a> {
+    #[must_use]
     pub fn new(fields: &'a ndarray::Array4<f64>) -> Self {
         Self { fields }
     }
 
     /// Get a specific field by type
+    #[must_use]
     pub fn get(&self, field_type: UnifiedFieldType) -> ndarray::ArrayView3<'a, f64> {
         self.fields.index_axis(ndarray::Axis(0), field_type.index())
     }
 
     /// Get pressure field
+    #[must_use]
     pub fn pressure(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Pressure)
     }
 
     /// Get temperature field
+    #[must_use]
     pub fn temperature(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Temperature)
     }
 
     /// Get density field
+    #[must_use]
     pub fn density(&self) -> ndarray::ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Density)
     }

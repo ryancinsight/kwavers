@@ -19,6 +19,7 @@ impl AnomalyDetectorModel {
     }
 
     /// Create model from weights
+    #[must_use]
     pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
         // Weights not used in simplified anomaly detector
         // Real implementation would store and use weights for neural network
@@ -26,6 +27,7 @@ impl AnomalyDetectorModel {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
@@ -35,6 +37,7 @@ impl AnomalyDetectorModel {
         self.predict(input)
     }
 
+    #[must_use]
     pub fn new(threshold: f32) -> Self {
         Self {
             threshold,

@@ -39,15 +39,15 @@ pub struct DGSolver {
     weights: Arc<Array1<f64>>,
     /// Vandermonde matrix for basis evaluation
     vandermonde: Arc<Array2<f64>>,
-    /// Mass matrix M_ij = integral(phi_i * phi_j)
+    /// Mass matrix `M_ij` = `integral(phi_i` * `phi_j`)
     mass_matrix: Arc<Array2<f64>>,
-    /// Stiffness matrix S_ij = integral(phi_i * dphi_j/dxi)
+    /// Stiffness matrix `S_ij` = `integral(phi_i` * `dphi_j/dxi`)
     stiffness_matrix: Arc<Array2<f64>>,
     /// Differentiation matrix D = V * Dr * V^{-1}
     diff_matrix: Arc<Array2<f64>>,
     /// Lift matrix for surface integrals
     lift_matrix: Arc<Array2<f64>>,
-    /// Modal coefficients for each element (n_elements x n_nodes x n_vars)
+    /// Modal coefficients for each element (`n_elements` x `n_nodes` x `n_vars`)
     modal_coefficients: Option<Array3<f64>>,
 }
 
@@ -419,6 +419,7 @@ impl DGOperations for DGSolver {
 // Additional methods
 impl DGSolver {
     /// Apply shock detector for adaptive limiting
+    #[must_use]
     pub fn apply_shock_detector(&self, field: &Array3<f64>) -> Array3<bool> {
         let detector = ShockDetector::new(self.config.polynomial_order);
         detector.detect(field)

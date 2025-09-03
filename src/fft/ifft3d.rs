@@ -29,6 +29,7 @@ pub struct Ifft3d {
 }
 
 impl Ifft3d {
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         let padded_nx = next_power_of_two_usize(nx);
         let padded_ny = next_power_of_two_usize(ny);

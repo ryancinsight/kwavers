@@ -28,15 +28,17 @@ pub struct MisfitFunction {
 
 impl MisfitFunction {
     /// Create a new misfit function calculator
+    #[must_use]
     pub fn new(misfit_type: MisfitType) -> Self {
         Self { misfit_type }
     }
 
     /// Compute adjoint source from residual
+    #[must_use]
     pub fn adjoint_source(&self, residual: &Array2<f64>) -> Array2<f64> {
         match self.misfit_type {
             MisfitType::L2Norm => residual.clone(),
-            MisfitType::L1Norm => residual.mapv(|x| x.signum()),
+            MisfitType::L1Norm => residual.mapv(f64::signum),
             MisfitType::Envelope => residual.clone(), // Simplified
             MisfitType::Phase => residual.clone(),    // Simplified
             MisfitType::Correlation => residual.clone(), // Simplified
@@ -72,16 +74,16 @@ impl MisfitFunction {
         }
     }
 
-    /// L2 norm misfit: 0.5 * ||d_obs - d_syn||²
+    /// L2 norm misfit: 0.5 * ||`d_obs` - `d_syn||²`
     fn l2_misfit(&self, observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         let diff = synthetic - observed;
         Ok(0.5 * diff.mapv(|x| x * x).sum())
     }
 
-    /// L1 norm misfit: ||d_obs - d_syn||₁
+    /// L1 norm misfit: ||`d_obs` - `d_syn||₁`
     fn l1_misfit(&self, observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<f64> {
         let diff = synthetic - observed;
-        Ok(diff.mapv(|x| x.abs()).sum())
+        Ok(diff.mapv(f64::abs).sum())
     }
 
     /// Envelope misfit for cycle-skipping mitigation
@@ -140,8 +142,8 @@ impl MisfitFunction {
             let syn_trace = synthetic.row(i).to_owned();
 
             // Normalize to probability distributions
-            let obs_sum = obs_trace.mapv(|x| x.abs()).sum();
-            let syn_sum = syn_trace.mapv(|x| x.abs()).sum();
+            let obs_sum = obs_trace.mapv(f64::abs).sum();
+            let syn_sum = syn_trace.mapv(f64::abs).sum();
 
             if obs_sum > 1e-10 && syn_sum > 1e-10 {
                 let obs_norm = obs_trace.mapv(|x| x.abs() / obs_sum);
@@ -176,7 +178,7 @@ impl MisfitFunction {
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
         let diff = synthetic - observed;
-        Ok(diff.mapv(|x| x.signum()))
+        Ok(diff.mapv(f64::signum))
     }
 
     /// Envelope adjoint source
@@ -245,7 +247,7 @@ impl MisfitFunction {
     fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         // Simplified: just return absolute value
         // Full implementation would use Hilbert transform
-        Ok(signal.mapv(|x| x.abs()))
+        Ok(signal.mapv(f64::abs))
     }
 
     /// Compute instantaneous phase (simplified)

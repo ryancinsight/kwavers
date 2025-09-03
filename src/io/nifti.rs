@@ -27,6 +27,7 @@ impl Default for NiftiReader {
 
 impl NiftiReader {
     /// Create a new NIFTI reader
+    #[must_use]
     pub fn new() -> Self {
         Self {
             verbose: false,
@@ -35,12 +36,14 @@ impl NiftiReader {
     }
 
     /// Enable verbose logging during file operations
+    #[must_use]
     pub fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self
     }
 
     /// Set voxel dimensions in mm
+    #[must_use]
     pub fn with_voxel_dims(mut self, dims: [f64; 3]) -> Self {
         self.voxel_dims = dims;
         self
@@ -57,8 +60,7 @@ impl NiftiReader {
         // Load the NIFTI file
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -103,7 +105,7 @@ impl NiftiReader {
                         for i in 0..nx {
                             let idx = i + j * nx + k * nx * ny;
                             if idx < float_data.len() {
-                                array_3d[[i, j, k]] = float_data[idx] as f64;
+                                array_3d[[i, j, k]] = f64::from(float_data[idx]);
                             }
                         }
                     }
@@ -138,8 +140,7 @@ impl NiftiReader {
             }
             _ => {
                 return Err(KwaversError::Data(DataError::IoError(format!(
-                    "Unsupported NIFTI data type: {}. Only FLOAT32 (16) and FLOAT64 (64) are supported.",
-                    datatype
+                    "Unsupported NIFTI data type: {datatype}. Only FLOAT32 (16) and FLOAT64 (64) are supported."
                 ))));
             }
         }
@@ -170,8 +171,7 @@ impl NiftiReader {
         // Load the NIFTI object
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -191,8 +191,7 @@ impl NiftiReader {
         // Load only the header
         let nifti_object = ReaderOptions::new().read_file(path).map_err(|e| {
             KwaversError::Data(DataError::IoError(format!(
-                "Failed to load NIFTI file: {}",
-                e
+                "Failed to load NIFTI file: {e}"
             )))
         })?;
 
@@ -209,9 +208,9 @@ impl NiftiReader {
                 header.dim[3] as usize,
             ],
             voxel_dimensions: [
-                header.pixdim[1] as f64,
-                header.pixdim[2] as f64,
-                header.pixdim[3] as f64,
+                f64::from(header.pixdim[1]),
+                f64::from(header.pixdim[2]),
+                f64::from(header.pixdim[3]),
             ],
             datatype: header.datatype,
             description,

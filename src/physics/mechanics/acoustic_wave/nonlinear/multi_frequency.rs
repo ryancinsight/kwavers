@@ -46,7 +46,8 @@ impl MultiFrequencyConfig {
     ///
     /// # Returns
     ///
-    /// A new MultiFrequencyConfig instance
+    /// A new `MultiFrequencyConfig` instance
+    #[must_use]
     pub fn new(frequencies: Vec<f64>, weights: Option<Vec<f64>>) -> Self {
         let weights =
             weights.unwrap_or_else(|| vec![1.0 / frequencies.len() as f64; frequencies.len()]);
@@ -67,7 +68,8 @@ impl MultiFrequencyConfig {
     ///
     /// # Returns
     ///
-    /// A MultiFrequencyConfig configured for harmonic analysis
+    /// A `MultiFrequencyConfig` configured for harmonic analysis
+    #[must_use]
     pub fn for_harmonics(fundamental: f64, num_harmonics: usize) -> Self {
         let frequencies: Vec<f64> = (1..=num_harmonics)
             .map(|n| fundamental * n as f64)
@@ -92,7 +94,8 @@ impl MultiFrequencyConfig {
     ///
     /// # Returns
     ///
-    /// A MultiFrequencyConfig for broadband simulation
+    /// A `MultiFrequencyConfig` for broadband simulation
+    #[must_use]
     pub fn broadband(min_freq: f64, max_freq: f64, num_points: usize) -> Self {
         let frequencies: Vec<f64> = Array1::linspace(min_freq, max_freq, num_points).to_vec();
 
@@ -110,6 +113,7 @@ impl MultiFrequencyConfig {
     /// # Returns
     ///
     /// `true` if the configuration is valid, `false` otherwise
+    #[must_use]
     pub fn validate(&self) -> bool {
         !self.frequencies.is_empty()
             && self.frequencies.len() == self.weights.len()
@@ -123,6 +127,7 @@ impl MultiFrequencyConfig {
     /// # Returns
     ///
     /// The fundamental frequency [Hz], or None if no frequencies are configured
+    #[must_use]
     pub fn fundamental_frequency(&self) -> Option<f64> {
         self.frequencies
             .iter()
@@ -135,6 +140,7 @@ impl MultiFrequencyConfig {
     /// # Returns
     ///
     /// The bandwidth [Hz]
+    #[must_use]
     pub fn bandwidth(&self) -> f64 {
         if self.frequencies.is_empty() {
             0.0

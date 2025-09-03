@@ -27,7 +27,7 @@ pub fn benchmark_gpu(
 ) -> KwaversResult<BenchmarkResult> {
     let times = vec![Duration::from_millis(0); iterations];
     Ok(BenchmarkResult::new(
-        format!("GPU_{}x{}_disabled", grid_size, grid_size),
+        format!("GPU_{grid_size}x{grid_size}_disabled"),
         grid_size,
         times,
     ))

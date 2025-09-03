@@ -1,4 +1,4 @@
-//! HeterogeneousTissueMedium implementation
+//! `HeterogeneousTissueMedium` implementation
 
 use super::{TissueMap, TissueRegion};
 use crate::error::{KwaversResult, ValidationError};
@@ -96,7 +96,7 @@ impl CoreMedium for HeterogeneousTissueMedium {
     fn max_sound_speed(&self) -> f64 {
         // Compute max across all tissue types present
         let mut max_speed: f64 = 0.0;
-        for tissue_type in self.tissue_map.iter() {
+        for tissue_type in &self.tissue_map {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 max_speed = max_speed.max(props.sound_speed);
             }

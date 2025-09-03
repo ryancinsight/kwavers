@@ -27,6 +27,7 @@ impl DirectivityPattern {
     /// Calculate directivity for rectangular element
     ///
     /// Uses sinc function model for rectangular aperture
+    #[must_use]
     pub fn rectangular_element(width: f64, height: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = 1540.0 / frequency; // Assume tissue
         let k = 2.0 * PI / wavelength;
@@ -73,6 +74,7 @@ impl DirectivityPattern {
     }
 
     /// Calculate directivity for circular element
+    #[must_use]
     pub fn circular_element(diameter: f64, frequency: f64, num_points: usize) -> Self {
         let wavelength = 1540.0 / frequency;
         let k = 2.0 * PI / wavelength;
@@ -170,11 +172,13 @@ impl DirectivityPattern {
     }
 
     /// Calculate beam divergence angle
+    #[must_use]
     pub fn divergence_angle(&self) -> f64 {
         self.beamwidth_3db
     }
 
     /// Calculate directivity index (DI)
+    #[must_use]
     pub fn directivity_index(&self) -> f64 {
         // DI = 10 * log10(4π / Ω)
         // where Ω is the beam solid angle

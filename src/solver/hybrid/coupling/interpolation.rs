@@ -42,6 +42,7 @@ struct AdaptiveInterpolationCriteria {
 
 impl InterpolationManager {
     /// Create a new interpolation manager
+    #[must_use]
     pub fn new(scheme: InterpolationScheme) -> Self {
         Self {
             scheme,

@@ -30,16 +30,19 @@ pub struct HybridMetrics {
 
 impl HybridMetrics {
     /// Create new metrics instance
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Calculate total computation time
+    #[must_use]
     pub fn total_time(&self) -> Duration {
         self.pstd_time + self.fdtd_time + self.coupling_time + self.decomposition_time
     }
 
     /// Calculate PSTD fraction of computation
+    #[must_use]
     pub fn pstd_fraction(&self) -> f64 {
         let total = (self.pstd_points + self.fdtd_points) as f64;
         if total > 0.0 {

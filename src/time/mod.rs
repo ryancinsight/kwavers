@@ -10,6 +10,7 @@ pub struct Time {
 }
 
 impl Time {
+    #[must_use]
     pub fn new(dt: f64, n_steps: usize) -> Self {
         assert!(
             dt > 0.0 && n_steps > 0,
@@ -23,6 +24,7 @@ impl Time {
         Self { dt, n_steps, t_max }
     }
 
+    #[must_use]
     pub fn from_grid_and_duration(
         dx: f64,
         dy: f64,
@@ -38,18 +40,22 @@ impl Time {
         Self::new(dt, n_steps)
     }
 
+    #[must_use]
     pub fn duration(&self) -> f64 {
         self.t_max
     }
 
+    #[must_use]
     pub fn num_steps(&self) -> usize {
         self.n_steps
     }
 
+    #[must_use]
     pub fn time_vector(&self) -> Array1<f64> {
         Array1::linspace(0.0, self.t_max, self.n_steps)
     }
 
+    #[must_use]
     pub fn is_stable(&self, dx: f64, dy: f64, dz: f64, sound_speed: f64) -> bool {
         let min_dx = dx.min(dy).min(dz);
         let max_dt = min_dx / (sound_speed * 1.414);

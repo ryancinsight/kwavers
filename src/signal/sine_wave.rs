@@ -32,6 +32,7 @@ impl SineWave {
         }
     }
 
+    #[must_use]
     pub fn new(frequency: f64, amplitude: f64, phase: f64) -> Self {
         Self::new_with_components(
             ConstantAmplitude::new(amplitude),
@@ -40,6 +41,7 @@ impl SineWave {
         )
     }
 
+    #[must_use]
     pub fn new_180khz(amplitude: f64) -> Self {
         Self::new(180000.0, amplitude, 0.0)
     }

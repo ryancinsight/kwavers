@@ -31,6 +31,7 @@ pub struct PhaseArray {
 
 impl PhaseArray {
     /// Create a new phased array
+    #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let phase_shifter = PhaseShifter::new(element_positions.clone(), frequency);
         let beam_steering = BeamSteering::new(element_positions.clone(), frequency);
@@ -46,6 +47,7 @@ impl PhaseArray {
     }
 
     /// Configure linear array
+    #[must_use]
     pub fn configure_linear(num_elements: usize, spacing: f64, frequency: f64) -> Self {
         let mut positions = Array2::zeros((num_elements, 3));
         for i in 0..num_elements {
@@ -55,6 +57,7 @@ impl PhaseArray {
     }
 
     /// Configure rectangular array
+    #[must_use]
     pub fn configure_rectangular(nx: usize, ny: usize, dx: f64, dy: f64, frequency: f64) -> Self {
         let num_elements = nx * ny;
         let mut positions = Array2::zeros((num_elements, 3));
@@ -72,6 +75,7 @@ impl PhaseArray {
     }
 
     /// Configure circular array
+    #[must_use]
     pub fn configure_circular(
         num_rings: usize,
         elements_per_ring: usize,
@@ -111,6 +115,7 @@ impl PhaseArray {
     }
 
     /// Get combined phase distribution
+    #[must_use]
     pub fn get_phase_distribution(&self) -> Array1<f64> {
         let steering_phases = self.beam_steering.get_phase_distribution();
         let focusing_phases = self.dynamic_focusing.get_phase_distribution();
@@ -125,6 +130,7 @@ impl PhaseArray {
     }
 
     /// Calculate field at a point
+    #[must_use]
     pub fn calculate_field(&self, x: f64, y: f64, z: f64) -> (f64, f64) {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;
@@ -155,12 +161,14 @@ impl PhaseArray {
     }
 
     /// Calculate intensity at a point
+    #[must_use]
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
         let (real, imag) = self.calculate_field(x, y, z);
         real * real + imag * imag
     }
 
     /// Check system performance
+    #[must_use]
     pub fn check_performance(&self) -> PerformanceMetrics {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
 

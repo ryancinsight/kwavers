@@ -19,6 +19,7 @@ pub enum FiniteDifferenceOrder {
 
 impl FiniteDifferenceOrder {
     /// Get the stencil size (number of points on each side of center)
+    #[must_use]
     pub fn stencil_radius(&self) -> usize {
         match self {
             Self::Second => 1,
@@ -29,7 +30,8 @@ impl FiniteDifferenceOrder {
     }
 
     /// Get finite difference coefficients for second derivative
-    /// Returns (center_coefficient, side_coefficients)
+    /// Returns (`center_coefficient`, `side_coefficients`)
+    #[must_use]
     pub fn second_derivative_coefficients(&self) -> (f64, Vec<f64>) {
         match self {
             Self::Second => (-2.0, vec![1.0]),

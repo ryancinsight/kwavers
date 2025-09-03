@@ -20,6 +20,7 @@ pub struct ThermalDose {
 
 impl ThermalDose {
     /// Create new thermal dose calculator
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             dose: Array3::zeros((nx, ny, nz)),
@@ -56,22 +57,26 @@ impl ThermalDose {
     }
 
     /// Get cumulative thermal dose
+    #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
         &self.dose
     }
 
     /// Get maximum thermal dose
+    #[must_use]
     pub fn get_max_dose(&self) -> f64 {
         self.dose.iter().fold(0.0_f64, |a, &b| a.max(b))
     }
 
     /// Get thermal dose at specific point
+    #[must_use]
     pub fn get_dose_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.dose[[i, j, k]]
     }
 
     /// Check if thermal dose exceeds threshold for tissue damage
     /// Returns fraction of volume exceeding threshold
+    #[must_use]
     pub fn fraction_above_threshold(&self, threshold: f64) -> f64 {
         let count = self.dose.iter().filter(|&&d| d > threshold).count();
         count as f64 / (self.nx * self.ny * self.nz) as f64

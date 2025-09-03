@@ -17,6 +17,7 @@ pub struct RickerWavelet {
 }
 
 impl RickerWavelet {
+    #[must_use]
     pub fn new(peak_frequency: f64, peak_time: f64, amplitude: f64) -> Self {
         assert!(peak_frequency > 0.0, "Peak frequency must be positive");
         assert!(amplitude >= 0.0, "Amplitude must be non-negative");
@@ -30,7 +31,7 @@ impl RickerWavelet {
 
     /// Compute the Ricker wavelet value
     /// r(t) = A * (1 - 2π²f²τ²) * exp(-π²f²τ²)
-    /// where τ = t - t_peak
+    /// where τ = t - `t_peak`
     fn ricker_value(&self, t: f64) -> f64 {
         let tau = t - self.peak_time;
         let f = self.peak_frequency;

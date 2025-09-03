@@ -31,7 +31,7 @@ pub trait Source: Debug + Sync + Send {
     fn signal(&self) -> &dyn Signal;
 
     /// Get source term at a specific position and time
-    /// Uses create_mask() and amplitude() internally for compatibility
+    /// Uses `create_mask()` and `amplitude()` internally for compatibility
     fn get_source_term(&self, t: f64, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Fallback implementation - inefficient but maintains compatibility
         if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {
@@ -108,6 +108,7 @@ pub struct TimeVaryingSource {
 }
 
 impl TimeVaryingSource {
+    #[must_use]
     pub fn new(position: (usize, usize, usize), signal_values: Vec<f64>, dt: f64) -> Self {
         let signal_wrapper = TimeVaryingSignal::new(signal_values.clone(), dt);
         Self {
@@ -160,6 +161,7 @@ pub struct CompositeSource {
 }
 
 impl CompositeSource {
+    #[must_use]
     pub fn new(sources: Vec<Box<dyn Source>>) -> Self {
         Self {
             sources,
@@ -228,6 +230,7 @@ pub struct NullSource {
 }
 
 impl NullSource {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             null_signal: NullSignal,

@@ -29,7 +29,9 @@ pub use traits::{DGOperations, DiscontinuityDetection, NumericalSolver, Solution
 
 use crate::error::{KwaversError, PhysicsError};
 use crate::grid::Grid;
-use crate::solver::constants::*;
+use crate::solver::constants::{
+    ABSOLUTE_TOLERANCE, CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONTINUITY_THRESHOLD,
+};
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::sync::Arc;
@@ -188,6 +190,7 @@ impl HybridSpectralDGSolver {
     }
 
     /// Get the current discontinuity mask
+    #[must_use]
     pub fn discontinuity_mask(&self) -> Option<&Array3<bool>> {
         self.discontinuity_mask.as_ref()
     }

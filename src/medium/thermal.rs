@@ -15,7 +15,7 @@ pub trait ThermalProperties: CoreMedium {
     }
 
     /// Get specific heat at constant volume (J/(kg·K))
-    /// Note: This is different from specific_heat_capacity (Cp)
+    /// Note: This is different from `specific_heat_capacity` (Cp)
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // For liquids, Cv ≈ Cp
         self.specific_heat_capacity(x, y, z, grid)

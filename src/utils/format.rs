@@ -16,6 +16,7 @@ use std::time::Duration;
 /// assert_eq!(format_duration(Duration::from_secs(125)), "2m 5s");
 /// assert_eq!(format_duration(Duration::from_secs(3725)), "1h 2m 5s");
 /// ```
+#[must_use]
 pub fn format_duration(duration: Duration) -> String {
     let total_seconds = duration.as_secs();
     let hours = total_seconds / 3600;
@@ -24,13 +25,13 @@ pub fn format_duration(duration: Duration) -> String {
     let total_millis = duration.as_millis();
 
     if hours > 0 {
-        format!("{}h {}m {}s", hours, minutes, seconds)
+        format!("{hours}h {minutes}m {seconds}s")
     } else if minutes > 0 {
-        format!("{}m {}s", minutes, seconds)
+        format!("{minutes}m {seconds}s")
     } else if seconds > 0 {
-        format!("{}s", seconds)
+        format!("{seconds}s")
     } else if total_millis > 0 {
-        format!("{}ms", total_millis)
+        format!("{total_millis}ms")
     } else if duration.as_micros() > 0 {
         format!("{}µs", duration.as_micros())
     } else if duration.as_nanos() > 0 {
@@ -51,6 +52,7 @@ pub fn format_duration(duration: Duration) -> String {
 /// assert_eq!(format_si_number(1234567.0), "1.23M");
 /// assert_eq!(format_si_number(0.001234), "1.23m");
 /// ```
+#[must_use]
 pub fn format_si_number(value: f64) -> String {
     let abs_value = value.abs();
 
@@ -86,6 +88,7 @@ pub fn format_si_number(value: f64) -> String {
 /// assert_eq!(format_bytes(1024), "1.00 KiB");
 /// assert_eq!(format_bytes(1048576), "1.00 MiB");
 /// ```
+#[must_use]
 pub fn format_bytes(bytes: usize) -> String {
     const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB"];
 

@@ -39,7 +39,7 @@ pub const BLOOD_VISCOSITY_37C: f64 = 3.5e-3;
 
 /// Water surface tension at 20°C (N/m)
 /// Value: 0.0728
-/// Reference: NIST Chemistry WebBook
+/// Reference: NIST Chemistry `WebBook`
 pub const WATER_SURFACE_TENSION_20C: f64 = 0.0728;
 
 /// Standard atmospheric pressure (Pa)
@@ -53,7 +53,7 @@ pub const ATMOSPHERIC_PRESSURE: f64 = 101325.0;
 pub const WATER_VAPOR_PRESSURE_20C: f64 = 2339.0;
 
 /// Reference frequency for absorption calculations (Hz)
-/// Value: 1e6 (1 MHz)
+/// Value: 1e6 (1 `MHz`)
 /// Standard reference in medical ultrasound
 pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
 
@@ -64,7 +64,7 @@ pub const MIN_TIME_STEP: f64 = 1e-10;
 
 /// Maximum time step for accuracy (s)
 /// Value: 1e-6
-/// Ensures adequate temporal resolution for MHz frequencies
+/// Ensures adequate temporal resolution for `MHz` frequencies
 pub const MAX_TIME_STEP: f64 = 1e-6;
 
 /// Rayleigh collapse time coefficient
@@ -99,7 +99,7 @@ pub const AIR_POLYTROPIC_INDEX: f64 = 1.4;
 
 /// Default grid spacing for medical ultrasound (m)
 /// Value: 1e-4 (0.1 mm)
-/// Based on λ/10 criterion at 1.5 MHz
+/// Based on λ/10 criterion at 1.5 `MHz`
 pub const DEFAULT_GRID_SPACING: f64 = 1e-4;
 
 /// Shock detection threshold for gradient-based detectors

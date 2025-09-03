@@ -15,6 +15,7 @@ pub enum AnisotropyType {
 
 impl AnisotropyType {
     /// Number of independent elastic constants
+    #[must_use]
     pub fn num_constants(&self) -> usize {
         match self {
             Self::Isotropic => 2,             // λ and μ (or E and ν)
@@ -25,11 +26,13 @@ impl AnisotropyType {
     }
 
     /// Check if material has symmetry
+    #[must_use]
     pub fn has_symmetry(&self) -> bool {
         !matches!(self, Self::General)
     }
 
     /// Get symmetry planes
+    #[must_use]
     pub fn symmetry_planes(&self) -> Vec<&str> {
         match self {
             Self::Isotropic => vec!["all"],

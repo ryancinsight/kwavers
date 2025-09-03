@@ -28,6 +28,7 @@ impl Default for LinearPolarization {
 }
 
 impl LinearPolarization {
+    #[must_use]
     pub fn new(polarization_factor: f64) -> Self {
         Self {
             polarization_factor: polarization_factor.clamp(0.0, 1.0),

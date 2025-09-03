@@ -15,16 +15,14 @@ pub struct StencilWeights {
 }
 
 /// Compute derivative stencils for given order and accuracy
+#[must_use]
 pub fn compute_derivative_stencils(order: usize, accuracy: usize) -> StencilWeights {
     match (order, accuracy) {
         (1, 2) => second_order_first_derivative(),
         (1, 4) => fourth_order_first_derivative(),
         (2, 2) => second_order_second_derivative(),
         (2, 4) => fourth_order_second_derivative(),
-        _ => panic!(
-            "Unsupported stencil order {} with accuracy {}",
-            order, accuracy
-        ),
+        _ => panic!("Unsupported stencil order {order} with accuracy {accuracy}"),
     }
 }
 

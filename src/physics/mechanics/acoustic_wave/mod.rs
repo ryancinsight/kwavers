@@ -45,6 +45,7 @@ pub enum SpatialOrder {
 
 impl SpatialOrder {
     /// Get the CFL stability limit for this spatial order
+    #[must_use]
     pub fn cfl_limit(&self) -> f64 {
         match self {
             SpatialOrder::Second => 1.0 / (3.0_f64).sqrt(), // Theoretical limit: 1/√3 ≈ 0.577
@@ -54,6 +55,7 @@ impl SpatialOrder {
     }
 
     /// Get the minimum number of grid points required for this spatial order
+    #[must_use]
     pub fn minimum_grid_points(&self) -> usize {
         match self {
             SpatialOrder::Second => 3,
@@ -63,6 +65,7 @@ impl SpatialOrder {
     }
 
     /// Convert from usize for backward compatibility
+    #[must_use]
     pub fn from_usize(order: usize) -> Self {
         match order {
             2 => SpatialOrder::Second,
@@ -79,13 +82,13 @@ impl SpatialOrder {
 ///
 /// # Physics Background
 ///
-/// Acoustic diffusivity δ = (4μ/3 + μ_B + κ(γ-1)/C_p) / ρ₀
+/// Acoustic diffusivity δ = (4μ/3 + `μ_B` + κ(γ-1)/C_p) / ρ₀
 /// Where:
 /// - μ = shear viscosity
-/// - μ_B = bulk viscosity  
+/// - `μ_B` = bulk viscosity  
 /// - κ = thermal conductivity
 /// - γ = specific heat ratio
-/// - C_p = specific heat at constant pressure
+/// - `C_p` = specific heat at constant pressure
 ///
 /// For soft tissues, we use the approximation:
 /// δ ≈ 2αc³/(ω²)
@@ -142,7 +145,7 @@ pub fn compute_max_stable_timestep(
 /// Compute the maximum stable time step (backward compatibility wrapper)
 ///
 /// # Deprecated
-/// Use the version with SpatialOrder enum instead
+/// Use the version with `SpatialOrder` enum instead
 #[deprecated(note = "Use compute_max_stable_timestep with SpatialOrder enum")]
 pub fn compute_max_stable_timestep_usize(
     grid: &Grid,

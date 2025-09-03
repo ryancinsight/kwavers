@@ -35,9 +35,8 @@ impl ElasticProperties {
                 parameter: "ElasticProperties".to_string(),
                 value: density, // Use density as the primary invalid value
                 reason: format!(
-                    "Invalid elastic parameters: density={}, lambda={}, mu={}. \
-                     Requires: density > 0, mu > 0, lambda >= -2/3 * mu",
-                    density, lambda, mu
+                    "Invalid elastic parameters: density={density}, lambda={lambda}, mu={mu}. \
+                     Requires: density > 0, mu > 0, lambda >= -2/3 * mu"
                 ),
             }
             .into());
@@ -77,9 +76,8 @@ impl ElasticProperties {
                 parameter: "ElasticProperties".to_string(),
                 value: poisson_ratio,
                 reason: format!(
-                    "Invalid parameters: E={}, ν={}, ρ={}. \
-                     Requires: E > 0, -1 < ν < 0.5, ρ > 0",
-                    youngs_modulus, poisson_ratio, density
+                    "Invalid parameters: E={youngs_modulus}, ν={poisson_ratio}, ρ={density}. \
+                     Requires: E > 0, -1 < ν < 0.5, ρ > 0"
                 ),
             }
             .into());
@@ -100,8 +98,7 @@ impl ElasticProperties {
                 parameter: "wave speeds".to_string(),
                 value: p_speed,
                 reason: format!(
-                    "Invalid wave speeds: p={}, s={}. Requires: p > s > 0",
-                    p_speed, s_speed
+                    "Invalid wave speeds: p={p_speed}, s={s_speed}. Requires: p > s > 0"
                 ),
             }
             .into());
@@ -122,7 +119,7 @@ pub struct AnisotropicElasticProperties {
     /// Density (kg/m³)
     pub density: f64,
     /// Stiffness tensor in Voigt notation (6x6 symmetric matrix)
-    /// C_ij where i,j = 1..6 corresponding to xx, yy, zz, yz, xz, xy
+    /// `C_ij` where i,j = 1..6 corresponding to xx, yy, zz, yz, xz, xy
     pub stiffness: [[f64; 6]; 6],
 }
 

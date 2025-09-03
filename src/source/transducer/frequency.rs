@@ -130,8 +130,7 @@ impl FrequencyResponse {
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(i, _)| i)
-            .unwrap_or(0);
+            .map_or(0, |(i, _)| i);
 
         // Search for -3dB points
         for i in (0..max_idx).rev() {
@@ -172,6 +171,7 @@ impl FrequencyResponse {
     /// Calculate pulse response characteristics
     ///
     /// Returns (pulse length, axial resolution) in meters
+    #[must_use]
     pub fn pulse_characteristics(&self, sound_speed: f64) -> (f64, f64) {
         // Pulse length ≈ (cycles * wavelength)
         // For typical transducers: 2-3 cycles
@@ -186,6 +186,7 @@ impl FrequencyResponse {
     }
 
     /// Calculate sensitivity roll-off at a given frequency
+    #[must_use]
     pub fn sensitivity_at_frequency(&self, frequency: f64) -> f64 {
         // Linear interpolation in the magnitude response
         let idx = self
@@ -211,11 +212,13 @@ impl FrequencyResponse {
     }
 
     /// Check if response meets bandwidth requirements
+    #[must_use]
     pub fn validate_bandwidth(&self, min_fractional_bw: f64) -> bool {
         self.fractional_bandwidth >= min_fractional_bw
     }
 
     /// Calculate insertion loss at center frequency
+    #[must_use]
     pub fn insertion_loss(&self) -> f64 {
         // Simplified calculation based on impedance mismatch
         let z0 = 50.0; // Reference impedance

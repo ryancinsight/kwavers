@@ -23,6 +23,7 @@ pub struct MixedDomainPropagationPlugin {
 
 impl MixedDomainPropagationPlugin {
     /// Create new mixed-domain propagation plugin
+    #[must_use]
     pub fn new(domain_switch_threshold: f64) -> Self {
         Self {
             metadata: PluginMetadata {
@@ -75,6 +76,7 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Analyze field to determine optimal domain
+    #[must_use]
     pub fn analyze_field(&self, field: &Array3<f64>) -> DomainSelection {
         // Calculate field statistics for domain selection
         let mean = field.mean().unwrap_or(0.0);

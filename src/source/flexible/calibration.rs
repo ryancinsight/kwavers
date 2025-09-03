@@ -23,7 +23,7 @@ pub struct CalibrationData {
 pub struct GeometrySnapshot {
     /// Timestamp
     pub timestamp: f64,
-    /// Element positions [n_elements x 3]
+    /// Element positions [`n_elements` x 3]
     pub positions: Array2<f64>,
     /// Confidence scores per element
     pub confidence: Array1<f64>,
@@ -72,6 +72,7 @@ impl Default for CalibrationManager {
 
 impl CalibrationManager {
     /// Create a new calibration manager
+    #[must_use]
     pub fn new() -> Self {
         Self {
             data: CalibrationData {
@@ -290,7 +291,7 @@ impl CalibrationManager {
             + &kalman.process_noise * (dt * dt * dt * dt);
 
         // Update step
-        let z = DVector::from_iterator(meas_dim, measurements.iter().cloned());
+        let z = DVector::from_iterator(meas_dim, measurements.iter().copied());
 
         let y = z - &h_matrix * &kalman.state; // Innovation
         let s = &h_matrix * &kalman.covariance * h_matrix.transpose() + &kalman.measurement_noise; // Innovation covariance
@@ -451,6 +452,7 @@ impl CalibrationManager {
     }
 
     /// Get calibration confidence
+    #[must_use]
     pub fn get_confidence(&self) -> f64 {
         if let Some(last_snapshot) = self.data.geometry_history.last() {
             last_snapshot.confidence.mean().unwrap_or(0.0)
@@ -460,6 +462,7 @@ impl CalibrationManager {
     }
 
     /// Get calibration data
+    #[must_use]
     pub fn data(&self) -> &CalibrationData {
         &self.data
     }

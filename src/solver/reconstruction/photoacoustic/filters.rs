@@ -366,7 +366,7 @@ impl Filters {
         let sigma2 = 2.0 * sigma * sigma;
 
         for i in 0..size {
-            let x = (i as i32 - radius as i32) as f64;
+            let x = f64::from(i as i32 - radius as i32);
             kernel[i] = norm * (-x * x / sigma2).exp();
         }
 
@@ -392,8 +392,8 @@ impl Filters {
         const INTENSITY_SIGMA: f64 = 0.1; // Relative to data range
 
         // Estimate intensity range for normalization
-        let max_val = image.iter().cloned().fold(0.0_f64, f64::max);
-        let min_val = image.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max_val = image.iter().copied().fold(0.0_f64, f64::max);
+        let min_val = image.iter().copied().fold(f64::INFINITY, f64::min);
         let range = (max_val - min_val).max(1e-10);
         let intensity_sigma = INTENSITY_SIGMA * range;
 
@@ -416,7 +416,7 @@ impl Filters {
                                     let neighbor_val = image[[ii, jj, kk]];
 
                                     // Spatial weight
-                                    let spatial_dist2 = (di * di + dj * dj + dk * dk) as f64;
+                                    let spatial_dist2 = f64::from(di * di + dj * dj + dk * dk);
                                     let spatial_weight = (-spatial_dist2
                                         / (2.0 * spatial_sigma * spatial_sigma))
                                         .exp();

@@ -185,6 +185,7 @@ pub struct PluginFields {
 
 impl PluginFields {
     /// Create new plugin fields container
+    #[must_use]
     pub fn new(pressure: Array3<f64>) -> Self {
         Self {
             pressure,
@@ -200,6 +201,7 @@ impl PluginFields {
     }
 
     /// Get a custom field
+    #[must_use]
     pub fn get_custom(&self, name: &str) -> Option<&Array3<f64>> {
         self.custom.get(name)
     }

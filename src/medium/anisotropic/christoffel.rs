@@ -18,11 +18,13 @@ pub struct ChristoffelEquation {
 
 impl ChristoffelEquation {
     /// Create Christoffel equation solver
+    #[must_use]
     pub fn create(stiffness: StiffnessTensor, density: f64) -> Self {
         Self { stiffness, density }
     }
 
     /// Compute Christoffel matrix for given propagation direction
+    #[must_use]
     pub fn christoffel_matrix(&self, direction: &[f64; 3]) -> Array2<f64> {
         let mut gamma = Array2::zeros((3, 3));
         let c = &self.stiffness.c;

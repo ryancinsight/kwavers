@@ -35,7 +35,7 @@ pub struct FieldReadGuard<'a> {
 }
 
 impl<'a> FieldReadGuard<'a> {
-    /// Create a new FieldReadGuard
+    /// Create a new `FieldReadGuard`
     fn new(guard: RwLockReadGuard<'a, Array4<f64>>, field_index: usize) -> Self {
         let data = guard.index_axis(Axis(0), field_index).to_owned();
         Self {
@@ -45,11 +45,13 @@ impl<'a> FieldReadGuard<'a> {
     }
 
     /// Get the field view
+    #[must_use]
     pub fn view(&self) -> ArrayView3<'_, f64> {
         self.data.view()
     }
 
     /// Convert to owned array
+    #[must_use]
     pub fn to_owned(&self) -> Array3<f64> {
         self.data.clone()
     }
@@ -77,6 +79,7 @@ impl<'a> FieldWriteGuard<'a> {
     }
 
     /// Get an immutable view
+    #[must_use]
     pub fn view(&self) -> ArrayView3<f64> {
         self.guard.index_axis(Axis(0), self.field_index)
     }
@@ -142,7 +145,7 @@ impl PhysicsState {
         let guard = self
             .fields
             .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {}", e)))?;
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
 
         Ok(FieldReadGuard::new(guard, field_index))
     }
@@ -153,9 +156,10 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let guard = self.fields.write().map_err(|e| {
-            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
-        })?;
+        let guard = self
+            .fields
+            .write()
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
 
         Ok(FieldWriteGuard { guard, field_index })
     }
@@ -172,7 +176,7 @@ impl PhysicsState {
         let fields = self
             .fields
             .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {}", e)))?;
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
 
         Ok(f(fields.index_axis(Axis(0), field_index)))
     }
@@ -186,15 +190,16 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let mut fields = self.fields.write().map_err(|e| {
-            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
-        })?;
+        let mut fields = self
+            .fields
+            .write()
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
 
         Ok(f(fields.index_axis_mut(Axis(0), field_index)))
     }
 
     /// Get a cloned copy of a field (allocates memory)
-    /// Prefer get_field() for zero-copy access when possible
+    /// Prefer `get_field()` for zero-copy access when possible
     pub fn clone_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
         self.with_field(field_index, |field| field.to_owned())
     }
@@ -205,9 +210,10 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let mut fields = self.fields.write().map_err(|e| {
-            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
-        })?;
+        let mut fields = self
+            .fields
+            .write()
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
 
         let mut field = fields.index_axis_mut(Axis(0), field_index);
         if data.shape() != field.shape() {
@@ -223,9 +229,10 @@ impl PhysicsState {
     where
         F: FnOnce(&mut Array4<f64>) -> R,
     {
-        let mut fields = self.fields.write().map_err(|e| {
-            PhysicsError::StateError(format!("Failed to acquire write lock: {}", e))
-        })?;
+        let mut fields = self
+            .fields
+            .write()
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire write lock: {e}")))?;
 
         Ok(f(&mut fields))
     }
@@ -235,7 +242,7 @@ impl PhysicsState {
         let fields = self
             .fields
             .read()
-            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {}", e)))?;
+            .map_err(|e| PhysicsError::StateError(format!("Failed to acquire read lock: {e}")))?;
 
         Ok(fields.clone())
     }

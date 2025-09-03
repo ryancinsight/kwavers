@@ -11,7 +11,11 @@ use crate::medium::{
     thermal::{ThermalField, ThermalProperties},
     viscous::ViscousProperties,
 };
-use crate::physics::constants::*;
+use crate::physics::constants::{
+    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, BLOOD_VISCOSITY_37C, REFERENCE_FREQUENCY_MHZ,
+    WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_SPECIFIC_HEAT,
+    WATER_SURFACE_TENSION_20C, WATER_THERMAL_CONDUCTIVITY, WATER_VAPOR_PRESSURE_20C,
+};
 use ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;
 

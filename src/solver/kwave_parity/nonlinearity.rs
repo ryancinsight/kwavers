@@ -110,6 +110,7 @@ pub fn compute_cumulative_nonlinearity(
 }
 
 /// Check if shock formation is occurring
+#[must_use]
 pub fn is_shock_forming(sigma: &Array3<f64>) -> bool {
     // Shock forms when σ > 1
     sigma.iter().any(|&s| s > 1.0)

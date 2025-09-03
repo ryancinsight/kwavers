@@ -26,6 +26,7 @@ impl Default for BoundaryStencils {
 }
 
 impl BoundaryStencils {
+    #[must_use]
     pub fn new() -> Self {
         let mut forward_coeffs = HashMap::new();
         let mut backward_coeffs = HashMap::new();
@@ -92,22 +93,23 @@ impl BoundaryStencils {
     }
 
     /// Get forward difference coefficients for given order
+    #[must_use]
     pub fn get_forward_coeffs(&self, order: usize) -> &[f64] {
         self.forward_coeffs
             .get(&order)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
+            .map_or(&[], std::vec::Vec::as_slice)
     }
 
     /// Get backward difference coefficients for given order
+    #[must_use]
     pub fn get_backward_coeffs(&self, order: usize) -> &[f64] {
         self.backward_coeffs
             .get(&order)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[])
+            .map_or(&[], std::vec::Vec::as_slice)
     }
 
     /// Apply high-order boundary stencil at a point
+    #[must_use]
     pub fn apply_forward_stencil(
         &self,
         field: &ndarray::ArrayView3<f64>,
@@ -145,6 +147,7 @@ impl BoundaryStencils {
     }
 
     /// Apply high-order backward stencil at a point
+    #[must_use]
     pub fn apply_backward_stencil(
         &self,
         field: &ndarray::ArrayView3<f64>,

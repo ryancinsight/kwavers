@@ -85,6 +85,7 @@ pub struct SweepFactory;
 
 impl SweepFactory {
     /// Create sweep from configuration
+    #[must_use]
     pub fn create(config: &SweepConfig) -> Box<dyn FrequencySweep> {
         match config.sweep_type {
             SweepType::Linear => Box::new(LinearChirp::new(

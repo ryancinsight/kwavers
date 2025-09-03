@@ -21,8 +21,7 @@ impl FiniteDifference {
     pub fn new(spatial_order: usize) -> KwaversResult<Self> {
         if ![2, 4, 6].contains(&spatial_order) {
             return Err(KwaversError::InvalidInput(format!(
-                "spatial_order must be 2, 4, or 6, got {}",
-                spatial_order
+                "spatial_order must be 2, 4, or 6, got {spatial_order}"
             )));
         }
 
@@ -41,6 +40,7 @@ impl FiniteDifference {
     }
 
     /// Get coefficients for the current spatial order
+    #[must_use]
     pub fn get_coefficients(&self) -> &Vec<f64> {
         &self.coefficients[&self.spatial_order]
     }
@@ -54,8 +54,7 @@ impl FiniteDifference {
     ) -> KwaversResult<Array3<f64>> {
         if axis > 2 {
             return Err(KwaversError::InvalidInput(format!(
-                "axis must be 0, 1, or 2, got {}",
-                axis
+                "axis must be 0, 1, or 2, got {axis}"
             )));
         }
 

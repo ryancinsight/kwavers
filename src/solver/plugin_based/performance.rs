@@ -35,6 +35,7 @@ pub struct PerformanceMonitor {
 
 impl PerformanceMonitor {
     /// Create a new performance monitor
+    #[must_use]
     pub fn new() -> Self {
         Self {
             plugin_metrics: HashMap::new(),
@@ -84,21 +85,25 @@ impl PerformanceMonitor {
     }
 
     /// Get current iteration
+    #[must_use]
     pub fn iteration(&self) -> u64 {
         self.iteration
     }
 
     /// Get metrics for a specific plugin
+    #[must_use]
     pub fn plugin_metrics(&self, plugin_name: &str) -> Option<&PluginMetrics> {
         self.plugin_metrics.get(plugin_name)
     }
 
     /// Get all plugin metrics
+    #[must_use]
     pub fn all_metrics(&self) -> &HashMap<String, PluginMetrics> {
         &self.plugin_metrics
     }
 
     /// Get total solver time
+    #[must_use]
     pub fn total_time(&self) -> Duration {
         self.total_solver_time
     }
@@ -109,6 +114,7 @@ impl PerformanceMonitor {
     }
 
     /// Generate performance report
+    #[must_use]
     pub fn report(&self) -> String {
         let mut report = format!("Performance Report (Iteration {})\n", self.iteration);
         report.push_str(&format!(
@@ -118,7 +124,7 @@ impl PerformanceMonitor {
         report.push_str("\nPlugin Metrics:\n");
 
         for (name, metrics) in &self.plugin_metrics {
-            report.push_str(&format!("  {}:\n", name));
+            report.push_str(&format!("  {name}:\n"));
             report.push_str(&format!("    Executions: {}\n", metrics.execution_count));
             report.push_str(&format!("    Total Time: {:?}\n", metrics.total_time));
             report.push_str(&format!("    Average Time: {:?}\n", metrics.average_time));

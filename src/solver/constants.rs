@@ -48,7 +48,7 @@ pub const SHOCK_GRADIENT_MIN: f64 = 0.5;
 // ============================================================================
 
 /// Default spatial resolution for medical ultrasound (meters)
-/// 0.1 mm provides λ/10 sampling at 1.5 MHz
+/// 0.1 mm provides λ/10 sampling at 1.5 `MHz`
 pub const DEFAULT_DX: f64 = 1e-4;
 
 /// Fine grid spacing for high-frequency simulations

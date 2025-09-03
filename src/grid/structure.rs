@@ -21,11 +21,13 @@ pub struct Bounds {
 
 impl Bounds {
     /// Create new bounds
+    #[must_use]
     pub fn new(min: [f64; 3], max: [f64; 3]) -> Self {
         Self { min, max }
     }
 
     /// Get the center point
+    #[must_use]
     pub fn center(&self) -> [f64; 3] {
         [
             (self.min[0] + self.max[0]) / 2.0,
@@ -58,7 +60,7 @@ pub struct Grid {
     pub dy: f64,
     /// Spacing in z-direction (meters)
     pub dz: f64,
-    /// Cache for k_squared computation
+    /// Cache for `k_squared` computation
     pub(crate) k_squared_cache: OnceLock<Array3<f64>>,
 }
 
@@ -83,6 +85,7 @@ impl Grid {
     ///
     /// # Panics
     /// Panics if dimensions or spacing are not positive
+    #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize, dx: f64, dy: f64, dz: f64) -> Self {
         Self::create(nx, ny, nz, dx, dy, dz).expect("Invalid grid parameters")
     }

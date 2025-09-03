@@ -20,6 +20,7 @@ pub struct ElementCoupling {
 
 impl ElementCoupling {
     /// Calculate coupling for linear array
+    #[must_use]
     pub fn linear_array(num_elements: usize, pitch: f64, frequency: f64) -> Self {
         let wavelength = 1540.0 / frequency;
         let k = 2.0 * PI / wavelength;
@@ -55,6 +56,7 @@ impl ElementCoupling {
     }
 
     /// Calculate effective element pattern with coupling
+    #[must_use]
     pub fn effective_pattern(&self, element_idx: usize, excitation: &Array1<f64>) -> Array1<f64> {
         let num_elements = self.acoustic_coupling.nrows();
         let mut pattern = Array1::zeros(excitation.len());
@@ -67,6 +69,7 @@ impl ElementCoupling {
     }
 
     /// Calculate crosstalk level in dB
+    #[must_use]
     pub fn crosstalk_level(&self) -> f64 {
         let mut max_crosstalk = 0.0_f64;
         let n = self.acoustic_coupling.nrows();
@@ -83,6 +86,7 @@ impl ElementCoupling {
     }
 
     /// Check if coupling is within acceptable limits
+    #[must_use]
     pub fn validate_coupling(&self, max_crosstalk_db: f64) -> bool {
         self.crosstalk_level() < max_crosstalk_db
     }

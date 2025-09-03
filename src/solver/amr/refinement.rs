@@ -18,6 +18,7 @@ pub struct RefinementLevel {
 
 impl RefinementLevel {
     /// Create a new refinement level
+    #[must_use]
     pub fn new(level: usize, dx: f64, dt: f64, ratio: usize) -> Self {
         Self {
             level,
@@ -28,11 +29,13 @@ impl RefinementLevel {
     }
 
     /// Get refined spacing
+    #[must_use]
     pub fn refined_dx(&self) -> f64 {
         self.dx / self.ratio as f64
     }
 
     /// Get refined time step
+    #[must_use]
     pub fn refined_dt(&self) -> f64 {
         self.dt / self.ratio as f64
     }
@@ -51,6 +54,7 @@ pub struct RefinementManager {
 
 impl RefinementManager {
     /// Create a new refinement manager
+    #[must_use]
     pub fn new(max_level: usize) -> Self {
         let mut levels = Vec::with_capacity(max_level + 1);
 
@@ -60,7 +64,7 @@ impl RefinementManager {
         let ratio = 2;
 
         for level in 0..=max_level {
-            let factor = (ratio as u32).pow(level as u32) as f64;
+            let factor = f64::from((ratio as u32).pow(level as u32));
             levels.push(RefinementLevel::new(
                 level,
                 base_dx / factor,
@@ -171,6 +175,7 @@ impl RefinementManager {
     }
 
     /// Get refinement level info
+    #[must_use]
     pub fn get_level(&self, level: usize) -> Option<&RefinementLevel> {
         self.levels.get(level)
     }

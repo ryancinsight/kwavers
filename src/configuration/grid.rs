@@ -37,7 +37,7 @@ impl GridParameters {
         for (i, &dim) in self.dimensions.iter().enumerate() {
             if dim == 0 {
                 return Err(crate::error::ConfigError::InvalidValue {
-                    parameter: format!("dimensions[{}]", i),
+                    parameter: format!("dimensions[{i}]"),
                     value: dim.to_string(),
                     constraint: "Must be positive".to_string(),
                 }
@@ -49,7 +49,7 @@ impl GridParameters {
         for (i, &dx) in self.spacing.iter().enumerate() {
             if dx <= 0.0 {
                 return Err(crate::error::ConfigError::InvalidValue {
-                    parameter: format!("spacing[{}]", i),
+                    parameter: format!("spacing[{i}]"),
                     value: dx.to_string(),
                     constraint: "Must be positive".to_string(),
                 }
@@ -70,11 +70,13 @@ impl GridParameters {
     }
 
     /// Calculate total number of grid points
+    #[must_use]
     pub fn total_points(&self) -> usize {
         self.dimensions[0] * self.dimensions[1] * self.dimensions[2]
     }
 
     /// Calculate domain size in meters
+    #[must_use]
     pub fn domain_size(&self) -> [f64; 3] {
         [
             self.dimensions[0] as f64 * self.spacing[0],

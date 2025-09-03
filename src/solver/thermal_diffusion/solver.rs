@@ -221,7 +221,7 @@ impl ThermalDiffusionSolver {
                 let z = k as f64 * grid.dz;
 
                 let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let source = external_source.map(|s| s[[i, j, k]]).unwrap_or(0.0);
+                let source = external_source.map_or(0.0, |s| s[[i, j, k]]);
 
                 *temp += dt * (alpha * lap + source);
             });
@@ -230,6 +230,7 @@ impl ThermalDiffusionSolver {
     }
 
     /// Get current temperature field
+    #[must_use]
     pub fn temperature(&self) -> &Array3<f64> {
         &self.temperature
     }
@@ -240,18 +241,27 @@ impl ThermalDiffusionSolver {
     }
 
     /// Get thermal dose if tracking
+    #[must_use]
     pub fn thermal_dose(&self) -> Option<&Array3<f64>> {
-        self.dose_calculator.as_ref().map(|c| c.get_dose())
+        self.dose_calculator
+            .as_ref()
+            .map(super::dose::ThermalDoseCalculator::get_dose)
     }
 
     /// Get maximum thermal dose
+    #[must_use]
     pub fn max_thermal_dose(&self) -> Option<f64> {
-        self.dose_calculator.as_ref().map(|c| c.max_dose())
+        self.dose_calculator
+            .as_ref()
+            .map(super::dose::ThermalDoseCalculator::max_dose)
     }
 
     /// Get necrosis fraction
+    #[must_use]
     pub fn necrosis_fraction(&self) -> Option<f64> {
-        self.dose_calculator.as_ref().map(|c| c.necrosis_fraction())
+        self.dose_calculator
+            .as_ref()
+            .map(super::dose::ThermalDoseCalculator::necrosis_fraction)
     }
 
     /// Reset the solver

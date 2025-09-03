@@ -25,6 +25,7 @@ impl Default for ElasticWaveMetrics {
 
 impl ElasticWaveMetrics {
     /// Create new metrics instance
+    #[must_use]
     pub fn new() -> Self {
         Self {
             total_steps: 0,
@@ -81,6 +82,7 @@ impl ElasticWaveMetrics {
     }
 
     /// Get average FFT time per step
+    #[must_use]
     pub fn avg_fft_time(&self) -> Duration {
         if self.total_steps > 0 {
             self.fft_time / self.total_steps as u32
@@ -90,6 +92,7 @@ impl ElasticWaveMetrics {
     }
 
     /// Get average update time per step
+    #[must_use]
     pub fn avg_update_time(&self) -> Duration {
         if self.total_steps > 0 {
             self.update_time / self.total_steps as u32

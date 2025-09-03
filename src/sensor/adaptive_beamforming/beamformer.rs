@@ -14,6 +14,7 @@ pub struct AdaptiveBeamformer {
 
 impl AdaptiveBeamformer {
     /// Create new beamformer
+    #[must_use]
     pub fn new(num_elements: usize) -> Self {
         Self {
             num_elements,

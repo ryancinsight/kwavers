@@ -10,6 +10,7 @@ pub struct QuadratureAmplitudeModulation {
 }
 
 impl QuadratureAmplitudeModulation {
+    #[must_use]
     pub fn new(params: ModulationParams) -> Self {
         Self { params }
     }

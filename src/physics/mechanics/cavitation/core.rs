@@ -60,6 +60,7 @@ impl Default for CavitationState {
 
 /// Calculate Blake threshold pressure
 /// Based on Blake (1949): "The onset of cavitation in liquids"
+#[must_use]
 pub fn blake_threshold(
     surface_tension: f64,  // [N/m]
     initial_radius: f64,   // [m]
@@ -72,6 +73,7 @@ pub fn blake_threshold(
 
 /// Calculate Neppiras threshold
 /// Based on Neppiras (1980): "Acoustic cavitation"
+#[must_use]
 pub fn neppiras_threshold(
     ambient_pressure: f64, // [Pa]
     vapor_pressure: f64,   // [Pa]
@@ -87,6 +89,7 @@ pub fn neppiras_threshold(
 
 /// Calculate Flynn threshold for violent cavitation
 /// Based on Flynn (1964): "Physics of Acoustic Cavitation in Liquids"
+#[must_use]
 pub fn flynn_threshold(
     ambient_pressure: f64, // [Pa]
     vapor_pressure: f64,   // [Pa]
@@ -99,7 +102,8 @@ pub fn flynn_threshold(
 }
 
 /// Calculate mechanical index (MI)
-/// MI = P_neg / sqrt(f_c) where P_neg in MPa and f_c in MHz
+/// MI = `P_neg` / `sqrt(f_c)` where `P_neg` in `MPa` and `f_c` in `MHz`
+#[must_use]
 pub fn mechanical_index(peak_negative_pressure: f64, center_frequency: f64) -> f64 {
     let p_mpa = peak_negative_pressure.abs() / 1e6; // Convert Pa to MPa
     let f_mhz = center_frequency / 1e6; // Convert Hz to MHz
@@ -109,6 +113,7 @@ pub fn mechanical_index(peak_negative_pressure: f64, center_frequency: f64) -> f
 
 /// Flynn's criterion for violent collapse
 /// Based on Flynn (1964): "Physics of acoustic cavitation in liquids"
+#[must_use]
 pub fn flynn_criterion(
     max_radius: f64,     // [m]
     initial_radius: f64, // [m]
@@ -129,6 +134,7 @@ pub struct CavitationDose {
 }
 
 impl CavitationDose {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             total_dose: 0.0,
@@ -145,6 +151,7 @@ impl CavitationDose {
     }
 
     /// Calculate time-weighted average intensity
+    #[must_use]
     pub fn average_intensity(&self) -> f64 {
         if self.intensity_history.is_empty() {
             0.0
@@ -156,6 +163,7 @@ impl CavitationDose {
 
 /// Rectified diffusion model for bubble growth
 /// Based on Eller & Flynn (1965): "Rectified diffusion during nonlinear pulsations"
+#[must_use]
 pub fn rectified_diffusion_rate(
     radius: f64,            // [m]
     ambient_pressure: f64,  // [Pa]
@@ -204,6 +212,7 @@ pub struct CavitationModel {
 
 impl CavitationModel {
     /// Create new cavitation model
+    #[must_use]
     pub fn new(grid_shape: (usize, usize, usize)) -> Self {
         Self {
             threshold_model: ThresholdModel::MechanicalIndex,

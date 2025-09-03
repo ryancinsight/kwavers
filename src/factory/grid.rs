@@ -46,7 +46,7 @@ impl GridConfig {
             return Err(ConfigError::InvalidValue {
                 parameter: "grid size".to_string(),
                 value: total_points.to_string(),
-                constraint: format!("Total grid points must be <= {}", MAX_GRID_POINTS),
+                constraint: format!("Total grid points must be <= {MAX_GRID_POINTS}"),
             }
             .into());
         }

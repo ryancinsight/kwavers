@@ -7,7 +7,10 @@
 #![allow(unsafe_code)]
 
 use ndarray::{Array3, Zip};
-use std::arch::x86_64::*;
+use std::arch::x86_64::{
+    _mm256_add_pd, _mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_setzero_pd,
+    _mm256_storeu_pd,
+};
 
 /// SIMD-optimized field operations
 #[derive(Debug)]
@@ -119,6 +122,7 @@ impl SimdOps {
 
     /// Compute L2 norm of field using SIMD
     /// Portable SIMD-aware field norm using iterator combinators
+    #[must_use]
     pub fn field_norm(field: &Array3<f64>) -> f64 {
         // Use iterator combinators for auto-vectorization
         field

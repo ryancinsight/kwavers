@@ -1,7 +1,7 @@
 //! Pennes bioheat equation solver
 //!
 //! The Pennes equation models heat transfer in perfused tissue:
-//! ρc ∂T/∂t = ∇·(k∇T) + w_b c_b (T_a - T) + Q_m + Q
+//! ρc ∂T/∂t = ∇·(k∇T) + `w_b` `c_b` (`T_a` - T) + `Q_m` + Q
 //!
 //! Where Q is the heat source from ultrasound absorption.
 
@@ -47,13 +47,12 @@ impl PennesSolver {
 
         if stability > 0.5 {
             return Err(format!(
-                "Unstable time step: stability number {:.3} > 0.5",
-                stability
+                "Unstable time step: stability number {stability:.3} > 0.5"
             ));
         }
 
         // Initialize with body temperature
-        let temperature = Array3::from_elem((nx, ny, nz), properties.T_a);
+        let temperature = Array3::from_elem((nx, ny, nz), properties.t_a);
         let temperature_prev = temperature.clone();
 
         Ok(Self {
@@ -71,7 +70,7 @@ impl PennesSolver {
     }
 
     /// Update temperature for one time step
-    /// heat_source: volumetric heat deposition rate (W/m³)
+    /// `heat_source`: volumetric heat deposition rate (W/m³)
     pub fn step(&mut self, heat_source: &Array3<f64>) {
         let alpha = self.properties.k / (self.properties.rho * self.properties.c);
         let perfusion_term =
@@ -104,11 +103,11 @@ impl PennesSolver {
 
                     // Pennes equation
                     let T = self.temperature_prev[[i, j, k]];
-                    let dT_dt = alpha * laplacian - perfusion_term * (T - self.properties.T_a)
-                        + self.properties.Q_m / (self.properties.rho * self.properties.c)
+                    let dt_dt = alpha * laplacian - perfusion_term * (T - self.properties.t_a)
+                        + self.properties.q_m / (self.properties.rho * self.properties.c)
                         + heat_source[[i, j, k]] / (self.properties.rho * self.properties.c);
 
-                    self.temperature[[i, j, k]] = T + self.dt * dT_dt;
+                    self.temperature[[i, j, k]] = T + self.dt * dt_dt;
                 }
             }
         }
@@ -145,22 +144,26 @@ impl PennesSolver {
     }
 
     /// Get current temperature field
+    #[must_use]
     pub fn get_temperature(&self) -> &Array3<f64> {
         &self.temperature
     }
 
     /// Get maximum temperature
+    #[must_use]
     pub fn get_max_temperature(&self) -> f64 {
         self.temperature.iter().fold(0.0_f64, |a, &b| a.max(b))
     }
 
     /// Get temperature rise above baseline
+    #[must_use]
     pub fn get_temperature_rise(&self) -> Array3<f64> {
-        &self.temperature - self.properties.T_a
+        &self.temperature - self.properties.t_a
     }
 
     /// Calculate heat source from acoustic intensity
     /// Q = 2αI where α is absorption coefficient and I is intensity
+    #[must_use]
     pub fn acoustic_heat_source(
         intensity: &Array3<f64>,
         absorption: f64, // Np/m

@@ -68,12 +68,14 @@ impl Default for PMLConfig {
 
 impl PMLConfig {
     /// Set PML thickness
+    #[must_use]
     pub fn with_thickness(mut self, thickness: usize) -> Self {
         self.thickness = thickness;
         self
     }
 
     /// Set reflection coefficient
+    #[must_use]
     pub fn with_reflection_coefficient(mut self, reflection: f64) -> Self {
         self.target_reflection = Some(reflection);
         self

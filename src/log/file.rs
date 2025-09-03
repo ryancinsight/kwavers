@@ -12,6 +12,7 @@ pub struct CombinedLogger {
 }
 
 impl CombinedLogger {
+    #[must_use]
     pub fn new(console: bool, file: std::fs::File) -> Self {
         Self {
             console,
@@ -29,9 +30,9 @@ impl Log for CombinedLogger {
         if self.enabled(record.metadata()) {
             let message = format_record(record);
             let mut file = self.file.lock().unwrap();
-            let _ = writeln!(file, "{}", message);
+            let _ = writeln!(file, "{message}");
             if self.console {
-                println!("{}", message);
+                println!("{message}");
             }
         }
     }

@@ -39,6 +39,7 @@ impl WaterProperties {
 
     /// Calculate water density as function of temperature
     /// Based on Kell (1975) formula
+    #[must_use]
     pub fn density(temperature: f64) -> f64 {
         // Temperature in Celsius
         let t = temperature;
@@ -56,6 +57,7 @@ impl WaterProperties {
 
     /// Calculate water sound speed as function of temperature
     /// Based on Bilaniuk & Wong (1993)
+    #[must_use]
     pub fn sound_speed(temperature: f64) -> f64 {
         // Temperature in Celsius
         let t = temperature;
@@ -71,6 +73,7 @@ impl WaterProperties {
 
     /// Calculate water absorption coefficient
     /// Based on Francois & Garrison (1982) model
+    #[must_use]
     pub fn absorption_coefficient(
         frequency: f64,   // Hz
         temperature: f64, // Celsius
@@ -110,6 +113,7 @@ impl WaterProperties {
     }
 
     /// Pinkerton model for absorption calculations
+    #[must_use]
     pub fn pinkerton_absorption(frequency: f64, temperature: f64) -> f64 {
         // Pinkerton (1949) model: α = A * f²
         // where A depends on temperature

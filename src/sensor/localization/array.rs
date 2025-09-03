@@ -18,6 +18,7 @@ pub struct Sensor {
 
 impl Sensor {
     /// Create new sensor
+    #[must_use]
     pub fn new(id: usize, position: Position) -> Self {
         Self {
             id,
@@ -28,11 +29,13 @@ impl Sensor {
     }
 
     /// Distance to a point
+    #[must_use]
     pub fn distance_to(&self, point: &Position) -> f64 {
         self.position.distance_to(point)
     }
 
-    /// Time of flight from a point - USING sound_speed parameter
+    /// Time of flight from a point - USING `sound_speed` parameter
+    #[must_use]
     pub fn time_of_flight(&self, point: &Position, sound_speed: f64) -> f64 {
         self.distance_to(point) / sound_speed
     }
@@ -61,6 +64,7 @@ pub struct SensorArray {
 
 impl SensorArray {
     /// Create new sensor array - USING all parameters
+    #[must_use]
     pub fn new(sensors: Vec<Sensor>, sound_speed: f64, geometry: ArrayGeometry) -> Self {
         assert!(!sensors.is_empty(), "Array must have at least one sensor");
         assert!(sound_speed > 0.0, "Sound speed must be positive");
@@ -73,26 +77,31 @@ impl SensorArray {
     }
 
     /// Get sound speed
+    #[must_use]
     pub fn sound_speed(&self) -> f64 {
         self.sound_speed
     }
 
     /// Get sensor positions
+    #[must_use]
     pub fn get_sensor_positions(&self) -> Vec<Position> {
         self.sensors.iter().map(|s| s.position).collect()
     }
 
     /// Get number of sensors
+    #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.sensors.len()
     }
 
     /// Get sensor by ID
+    #[must_use]
     pub fn get_sensor(&self, id: usize) -> Option<&Sensor> {
         self.sensors.iter().find(|s| s.id == id)
     }
 
     /// Calculate array centroid
+    #[must_use]
     pub fn centroid(&self) -> Position {
         let n = self.sensors.len() as f64;
         let sum_x: f64 = self.sensors.iter().map(|s| s.position.x).sum();
@@ -103,6 +112,7 @@ impl SensorArray {
     }
 
     /// Calculate array aperture (maximum dimension)
+    #[must_use]
     pub fn aperture(&self) -> f64 {
         let mut max_distance = 0.0;
 

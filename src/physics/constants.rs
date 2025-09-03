@@ -72,7 +72,7 @@ pub const ABSORPTION_TISSUE: f64 = 0.5;
 /// Absorption power law exponent
 pub const ABSORPTION_POWER: f64 = 1.1;
 
-/// Conversion: MHz to Hz
+/// Conversion: `MHz` to Hz
 pub const MHZ_TO_HZ: f64 = 1e6;
 
 /// Conversion: cm to m
@@ -200,33 +200,39 @@ pub const ENERGY_CONSERVATION_TOLERANCE: f64 = 1e-6;
 // ============================================================================
 
 /// Convert dB/cm/MHz to Np/m at given frequency
+#[must_use]
 pub fn db_cm_mhz_to_np_m(alpha_db_cm_mhz: f64, frequency_hz: f64) -> f64 {
     let frequency_mhz = frequency_hz / 1e6;
     alpha_db_cm_mhz * frequency_mhz * DB_CM_TO_NP_M
 }
 
 /// Convert Np/m to dB/cm/MHz at given frequency
+#[must_use]
 pub fn np_m_to_db_cm_mhz(alpha_np_m: f64, frequency_hz: f64) -> f64 {
     let frequency_mhz = frequency_hz / 1e6;
     alpha_np_m / (frequency_mhz * DB_CM_TO_NP_M)
 }
 
 /// Calculate wavelength from frequency and sound speed
+#[must_use]
 pub fn wavelength(frequency: f64, sound_speed: f64) -> f64 {
     sound_speed / frequency
 }
 
 /// Calculate wavenumber
+#[must_use]
 pub fn wavenumber(frequency: f64, sound_speed: f64) -> f64 {
     2.0 * PI * frequency / sound_speed
 }
 
 /// Convert Kelvin to Celsius
+#[must_use]
 pub fn kelvin_to_celsius(kelvin: f64) -> f64 {
     kelvin - 273.15
 }
 
 /// Convert Celsius to Kelvin
+#[must_use]
 pub fn celsius_to_kelvin(celsius: f64) -> f64 {
     celsius + 273.15
 }

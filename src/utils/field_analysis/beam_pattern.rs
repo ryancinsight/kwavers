@@ -113,6 +113,7 @@ pub fn calculate_beam_pattern(
 }
 
 /// Calculate directivity index
+#[must_use]
 pub fn calculate_directivity(beam_pattern: &Array2<f64>) -> f64 {
     let max_val = beam_pattern.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
     let mean_val = beam_pattern.iter().sum::<f64>() / beam_pattern.len() as f64;

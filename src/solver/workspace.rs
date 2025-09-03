@@ -64,6 +64,7 @@ impl SolverWorkspace {
     }
 
     /// Get the memory usage of this workspace in bytes
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         let complex_size = std::mem::size_of::<Complex<f64>>();
         let real_size = std::mem::size_of::<f64>();
@@ -109,7 +110,7 @@ impl WorkspacePool {
             Err(e) => {
                 return Err(KwaversError::System(SystemError::ResourceExhausted {
                     resource: "workspace pool".to_string(),
-                    reason: format!("Failed to acquire lock: {}", e),
+                    reason: format!("Failed to acquire lock: {e}"),
                 }))
             }
         };
@@ -133,7 +134,10 @@ impl WorkspacePool {
         #[cfg(feature = "parallel")]
         let pool = self.workspaces.lock();
         #[cfg(not(feature = "parallel"))]
-        let pool = self.workspaces.lock().unwrap_or_else(|e| e.into_inner());
+        let pool = self
+            .workspaces
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         pool.len()
     }
 }
@@ -147,6 +151,7 @@ pub struct WorkspaceGuard {
 
 impl WorkspaceGuard {
     /// Get a reference to the workspace
+    #[must_use]
     pub fn get(&self) -> &SolverWorkspace {
         self.workspace.as_ref().expect("Workspace already returned")
     }

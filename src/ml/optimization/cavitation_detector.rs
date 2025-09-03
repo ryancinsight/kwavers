@@ -27,6 +27,7 @@ pub enum CavitationEventType {
 
 impl CavitationDetector {
     /// Create a new cavitation detector
+    #[must_use]
     pub fn new(threshold: f64, sensitivity: f64) -> Self {
         Self {
             threshold,

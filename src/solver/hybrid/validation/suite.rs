@@ -11,6 +11,7 @@ pub struct HybridValidationSuite {
 
 impl HybridValidationSuite {
     /// Create new validation suite
+    #[must_use]
     pub fn new(config: super::ValidationConfig) -> Self {
         Self { config }
     }

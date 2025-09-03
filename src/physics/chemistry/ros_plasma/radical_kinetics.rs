@@ -35,6 +35,7 @@ pub struct RadicalKinetics {
 
 impl RadicalKinetics {
     /// Create new radical kinetics solver
+    #[must_use]
     pub fn new(ph: f64, temperature: f64) -> Self {
         let mut kinetics = Self {
             reactions: Vec::new(),
@@ -106,6 +107,7 @@ impl RadicalKinetics {
     }
 
     /// Calculate rate constant at current conditions
+    #[must_use]
     pub fn rate_constant(&self, reaction: &RadicalReaction) -> f64 {
         let r_gas = 8.314;
 
@@ -124,6 +126,7 @@ impl RadicalKinetics {
     }
 
     /// Calculate reaction rates for given concentrations
+    #[must_use]
     pub fn calculate_rates(
         &self,
         concentrations: &HashMap<ROSSpecies, f64>,
@@ -167,7 +170,7 @@ impl RadicalKinetics {
         // OH scavenging
         if oh_rate > 0.0 {
             self.reactions.push(RadicalReaction {
-                name: format!("{} + OH", scavenger_name),
+                name: format!("{scavenger_name} + OH"),
                 reactants: vec![(ROSSpecies::HydroxylRadical, 1.0)],
                 products: vec![], // Products not tracked
                 rate_constant: oh_rate,
@@ -180,7 +183,7 @@ impl RadicalKinetics {
         for (species, rate) in other_rates {
             if rate > 0.0 {
                 self.reactions.push(RadicalReaction {
-                    name: format!("{} + {:?}", scavenger_name, species),
+                    name: format!("{scavenger_name} + {species:?}"),
                     reactants: vec![(species, 1.0)],
                     products: vec![],
                     rate_constant: rate,
@@ -193,6 +196,7 @@ impl RadicalKinetics {
 }
 
 /// Calculate hydroxyl radical yield (G-value) from energy deposition
+#[must_use]
 pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
     // G-value for OH production (molecules/100 eV)
     let g_oh_neutral = 2.7; // At neutral pH
@@ -214,6 +218,7 @@ pub fn calculate_oh_yield(energy_density: f64, ph: f64) -> f64 {
 }
 
 /// Estimate radical diffusion length before recombination
+#[must_use]
 pub fn radical_diffusion_length(species: ROSSpecies, concentration: f64) -> f64 {
     let d = species.diffusion_coefficient();
     let lifetime = species.lifetime_water();

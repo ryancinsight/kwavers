@@ -29,15 +29,14 @@ pub enum DataError {
 impl fmt::Display for DataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::IoError(msg) => write!(f, "I/O error: {}", msg),
+            Self::IoError(msg) => write!(f, "I/O error: {msg}"),
             Self::FormatError { format, reason } => {
-                write!(f, "Format error in {}: {}", format, reason)
+                write!(f, "Format error in {format}: {reason}")
             }
             Self::DimensionMismatch { expected, actual } => {
                 write!(
                     f,
-                    "Dimension mismatch: expected {:?}, got {:?}",
-                    expected, actual
+                    "Dimension mismatch: expected {expected:?}, got {actual:?}"
                 )
             }
             Self::InsufficientData {
@@ -46,18 +45,17 @@ impl fmt::Display for DataError {
             } => {
                 write!(
                     f,
-                    "Insufficient data: required {}, available {}",
-                    required, available
+                    "Insufficient data: required {required}, available {available}"
                 )
             }
             Self::InvalidFormat { format, reason } => {
-                write!(f, "Invalid format {}: {}", format, reason)
+                write!(f, "Invalid format {format}: {reason}")
             }
             Self::FileNotFound { path } => {
-                write!(f, "File not found: {}", path)
+                write!(f, "File not found: {path}")
             }
             Self::Corruption { location, reason } => {
-                write!(f, "Data corruption at {}: {}", location, reason)
+                write!(f, "Data corruption at {location}: {reason}")
             }
         }
     }

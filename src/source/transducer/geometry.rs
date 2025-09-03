@@ -47,10 +47,7 @@ impl ElementGeometry {
         if width <= 0.0 || height <= 0.0 || thickness <= 0.0 {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "element_dimensions".to_string(),
-                value: format!(
-                    "width={}, height={}, thickness={}",
-                    width, height, thickness
-                ),
+                value: format!("width={width}, height={height}, thickness={thickness}"),
                 constraint: "All dimensions must be positive".to_string(),
             }));
         }
@@ -106,11 +103,13 @@ impl ElementGeometry {
     }
 
     /// Calculate element area
+    #[must_use]
     pub fn area(&self) -> f64 {
         self.width * self.height
     }
 
     /// Calculate element volume
+    #[must_use]
     pub fn volume(&self) -> f64 {
         self.width * self.height * self.thickness
     }
@@ -121,6 +120,7 @@ impl ElementGeometry {
     ///
     /// # Arguments
     /// * `sound_speed` - Speed of sound in the material (m/s)
+    #[must_use]
     pub fn resonance_frequency(&self, sound_speed: f64) -> f64 {
         sound_speed / (2.0 * self.thickness)
     }
@@ -128,6 +128,7 @@ impl ElementGeometry {
     /// Calculate lateral mode frequencies
     ///
     /// Returns (width mode, height mode) frequencies in Hz
+    #[must_use]
     pub fn lateral_modes(&self, sound_speed: f64) -> (f64, f64) {
         let width_mode = sound_speed / (2.0 * self.width);
         let height_mode = sound_speed / (2.0 * self.height);
@@ -137,6 +138,7 @@ impl ElementGeometry {
     /// Check if lateral modes are well separated from main resonance
     ///
     /// Lateral modes should be > 2x the main resonance for clean operation
+    #[must_use]
     pub fn validate_mode_separation(&self, sound_speed: f64) -> bool {
         let main_freq = self.resonance_frequency(sound_speed);
         let (width_mode, height_mode) = self.lateral_modes(sound_speed);
@@ -150,12 +152,14 @@ impl ElementGeometry {
     ///
     /// # Arguments
     /// * `dielectric_constant` - Relative dielectric constant
+    #[must_use]
     pub fn capacitance(&self, dielectric_constant: f64) -> f64 {
         const EPSILON_0: f64 = 8.854e-12; // F/m
         EPSILON_0 * dielectric_constant * self.area() / self.thickness
     }
 
     /// Calculate mechanical compliance
+    #[must_use]
     pub fn compliance(&self, youngs_modulus: f64) -> f64 {
         self.thickness / (youngs_modulus * self.area())
     }

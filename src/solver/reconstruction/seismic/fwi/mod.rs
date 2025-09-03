@@ -40,6 +40,7 @@ pub struct FullWaveformInversion {
 }
 
 impl FullWaveformInversion {
+    #[must_use]
     pub fn new(config: SeismicImagingConfig) -> Self {
         let shape = (config.nx, config.ny, config.nz);
         Self {
@@ -168,6 +169,7 @@ impl FullWaveformInversion {
     }
 
     /// Get configuration
+    #[must_use]
     pub fn get_config(&self) -> &SeismicImagingConfig {
         &self.config
     }

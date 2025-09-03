@@ -23,6 +23,7 @@ impl AmplitudeModulation {
     }
 
     /// Get modulation depth
+    #[must_use]
     pub fn modulation_depth(&self) -> f64 {
         self.params.modulation_index
     }

@@ -41,6 +41,7 @@ pub enum ShiftingStrategy {
 /// # Returns
 /// Wavelength in meters
 #[inline]
+#[must_use]
 pub fn calculate_wavelength(frequency: f64, sound_speed: f64) -> f64 {
     sound_speed / frequency
 }
@@ -56,6 +57,7 @@ pub fn calculate_wavelength(frequency: f64, sound_speed: f64) -> f64 {
 /// # Returns
 /// Wrapped phase in [-π, π] range
 #[inline]
+#[must_use]
 pub fn wrap_phase(phase: f64) -> f64 {
     // Wrap phase to [-π, π] range
     let mut p = phase % TAU;
@@ -78,6 +80,7 @@ pub fn wrap_phase(phase: f64) -> f64 {
 /// # Returns
 /// Normalized phase in [0, 2π] range
 #[inline]
+#[must_use]
 pub fn normalize_phase(phase: f64) -> f64 {
     let normalized = phase % TAU;
     if normalized < 0.0 {
@@ -99,11 +102,12 @@ pub fn normalize_phase(phase: f64) -> f64 {
 /// # Returns
 /// Quantized phase value
 #[inline]
+#[must_use]
 pub fn quantize_phase(phase: f64, levels: u32) -> f64 {
     let normalized = normalize_phase(phase);
-    let step = TAU / levels as f64;
+    let step = TAU / f64::from(levels);
     let quantized_level = (normalized / step).round() as u32;
-    (quantized_level % levels) as f64 * step
+    f64::from(quantized_level % levels) * step
 }
 
 #[cfg(test)]

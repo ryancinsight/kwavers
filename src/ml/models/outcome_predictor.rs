@@ -17,6 +17,7 @@ impl Default for OutcomePredictorModel {
 }
 
 impl OutcomePredictorModel {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: ModelMetadata {

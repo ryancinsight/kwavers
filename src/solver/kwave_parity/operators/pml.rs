@@ -14,6 +14,7 @@ pub struct PMLCoefficients {
 }
 
 /// Compute PML absorption coefficients
+#[must_use]
 pub fn compute_pml_coefficients(
     nx: usize,
     ny: usize,

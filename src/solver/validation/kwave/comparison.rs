@@ -8,6 +8,7 @@ pub struct ComparisonMetrics;
 
 impl ComparisonMetrics {
     /// L2 norm error
+    #[must_use]
     pub fn l2_error(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         let mut sum_squared_diff = 0.0;
         let mut sum_squared_ref = 0.0;
@@ -26,6 +27,7 @@ impl ComparisonMetrics {
     }
 
     /// L-infinity norm error (maximum absolute error)
+    #[must_use]
     pub fn linf_error(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         let mut max_error = 0.0;
 
@@ -37,6 +39,7 @@ impl ComparisonMetrics {
     }
 
     /// Root mean square error
+    #[must_use]
     pub fn rmse(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         let mut sum_squared = 0.0;
         let mut count = 0;
@@ -47,16 +50,14 @@ impl ComparisonMetrics {
             count += 1;
         });
 
-        (sum_squared / count as f64).sqrt()
+        (sum_squared / f64::from(count)).sqrt()
     }
 
     /// Peak signal-to-noise ratio in dB
+    #[must_use]
     pub fn psnr(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         let mse = Self::rmse(computed, reference).powi(2);
-        let max_val = reference
-            .iter()
-            .cloned()
-            .fold(f64::NEG_INFINITY, |a, b| a.max(b));
+        let max_val = reference.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
         if mse > 0.0 {
             20.0 * (max_val / mse.sqrt()).log10()
@@ -66,6 +67,7 @@ impl ComparisonMetrics {
     }
 
     /// Structural similarity index (simplified version)
+    #[must_use]
     pub fn ssim(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         const C1: f64 = 0.01;
         const C2: f64 = 0.03;

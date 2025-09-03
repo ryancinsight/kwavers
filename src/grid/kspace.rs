@@ -34,7 +34,7 @@ impl KSpaceCalculator {
             if i <= n / 2 {
                 k[i] = i as f64 * dk;
             } else {
-                k[i] = (i as i32 - n as i32) as f64 * dk;
+                k[i] = f64::from(i as i32 - n as i32) * dk;
             }
         }
 
@@ -71,6 +71,7 @@ impl KSpaceCalculator {
     }
 
     /// Calculate k-space correction factor for heterogeneous media
+    #[must_use]
     pub fn kspace_correction_factor(kx: f64, ky: f64, kz: f64, dx: f64, dy: f64, dz: f64) -> f64 {
         let sinc_x = if kx.abs() > 1e-10 {
             (kx * dx / 2.0).sin() / (kx * dx / 2.0)

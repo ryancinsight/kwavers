@@ -17,6 +17,7 @@ pub struct ShockDetector {
 
 impl ShockDetector {
     /// Create a new shock detector
+    #[must_use]
     pub fn new(polynomial_order: usize) -> Self {
         Self {
             threshold: SHOCK_DETECTOR_THRESHOLD,
@@ -28,6 +29,7 @@ impl ShockDetector {
     ///
     /// Uses modal decay indicator: if high-order modes contain significant
     /// energy, the solution likely contains a discontinuity.
+    #[must_use]
     pub fn detect(&self, field: &Array3<f64>) -> Array3<bool> {
         let shape = field.dim();
         let mut shock_cells = Array3::from_elem(shape, false);

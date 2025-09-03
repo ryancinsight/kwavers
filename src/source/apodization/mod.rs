@@ -55,6 +55,7 @@ pub struct GaussianApodization {
 }
 
 impl GaussianApodization {
+    #[must_use]
     pub fn new(sigma: f64) -> Self {
         assert!(sigma > 0.0, "Sigma must be positive");
         Self { sigma }

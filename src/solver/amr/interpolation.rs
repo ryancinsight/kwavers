@@ -29,6 +29,7 @@ impl Default for ConservativeInterpolator {
 
 impl ConservativeInterpolator {
     /// Create a new conservative interpolator
+    #[must_use]
     pub fn new() -> Self {
         Self {
             scheme: InterpolationScheme::Conservative,
@@ -47,6 +48,7 @@ impl ConservativeInterpolator {
     }
 
     /// Prolongation: coarse to fine
+    #[must_use]
     pub fn prolongate(&self, coarse: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = coarse.dim();
         let mut fine = Array3::zeros((nx * 2, ny * 2, nz * 2));
@@ -61,6 +63,7 @@ impl ConservativeInterpolator {
     }
 
     /// Restriction: fine to coarse
+    #[must_use]
     pub fn restrict(&self, fine: &Array3<f64>) -> Array3<f64> {
         let (nx, ny, nz) = fine.dim();
         let mut coarse = Array3::zeros((nx / 2, ny / 2, nz / 2));
@@ -178,7 +181,7 @@ impl ConservativeInterpolator {
                     }
 
                     if count > 0 {
-                        coarse[[i, j, k]] = sum / count as f64;
+                        coarse[[i, j, k]] = sum / f64::from(count);
                     }
                 }
             }

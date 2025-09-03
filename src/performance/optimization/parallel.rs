@@ -19,6 +19,7 @@ impl Default for ParallelOptimizer {
 
 impl ParallelOptimizer {
     /// Create a new parallel optimizer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             num_threads: rayon::current_num_threads(),
@@ -84,6 +85,7 @@ impl ParallelOptimizer {
     }
 
     /// Get optimal chunk size based on data size and thread count
+    #[must_use]
     pub fn optimal_chunk_size(&self, data_size: usize) -> usize {
         // Aim for at least 4 chunks per thread for load balancing
         let min_chunks = self.num_threads * 4;

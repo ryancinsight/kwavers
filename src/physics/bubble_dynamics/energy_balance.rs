@@ -6,7 +6,10 @@
 
 use uom::si::area::square_meter;
 use uom::si::energy::joule;
-use uom::si::f64::*;
+use uom::si::f64::{
+    Area, HeatCapacity, Length, Mass, Power, Pressure, ThermalConductivity,
+    ThermodynamicTemperature, Time, Velocity,
+};
 use uom::si::heat_capacity::joule_per_kelvin;
 use uom::si::mass::kilogram;
 use uom::si::power::watt;
@@ -32,6 +35,7 @@ pub struct EnergyBalanceCalculator {
 
 impl EnergyBalanceCalculator {
     /// Create a new energy balance calculator
+    #[must_use]
     pub fn new(params: &BubbleParameters) -> Self {
         Self {
             thermal_conductivity: ThermalConductivity::new::<watt_per_meter_kelvin>(
@@ -47,12 +51,13 @@ impl EnergyBalanceCalculator {
     /// Calculate the rate of change of internal energy (dU/dt)
     ///
     /// The energy balance equation is:
-    /// dU/dt = -P dV/dt + Q_heat + Q_latent
+    /// dU/dt = -P dV/dt + `Q_heat` + `Q_latent`
     ///
     /// Where:
     /// - P dV/dt is the work done by the bubble
-    /// - Q_heat is heat transfer to/from the liquid
-    /// - Q_latent is latent heat from mass transfer
+    /// - `Q_heat` is heat transfer to/from the liquid
+    /// - `Q_latent` is latent heat from mass transfer
+    #[must_use]
     pub fn calculate_energy_rate(
         &self,
         state: &BubbleState,
@@ -79,6 +84,7 @@ impl EnergyBalanceCalculator {
     }
 
     /// Calculate heat transfer rate using Nusselt correlation
+    #[must_use]
     pub fn calculate_heat_transfer_rate(&self, state: &BubbleState, peclet_number: f64) -> Power {
         // Nusselt number correlation for oscillating bubble
         // Nu = 2 + 0.6 * Pe^0.5 (standard correlation)
@@ -108,6 +114,7 @@ impl EnergyBalanceCalculator {
     }
 
     /// Calculate Peclet number for heat transfer
+    #[must_use]
     pub fn calculate_peclet_number(
         &self,
         radius: f64,

@@ -14,6 +14,7 @@ pub struct PerformanceMetrics {
 
 impl PerformanceMetrics {
     /// Create a new performance metrics tracker
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -29,16 +30,19 @@ impl PerformanceMetrics {
     }
 
     /// Get plugin execution time
+    #[must_use]
     pub fn get_plugin_time(&self, plugin_id: &str) -> Option<Duration> {
         self.plugin_times.get(plugin_id).copied()
     }
 
     /// Get total execution time
+    #[must_use]
     pub fn get_total_time(&self) -> Duration {
         self.total_time
     }
 
     /// Get all plugin times
+    #[must_use]
     pub fn get_all_plugin_times(&self) -> &HashMap<String, Duration> {
         &self.plugin_times
     }

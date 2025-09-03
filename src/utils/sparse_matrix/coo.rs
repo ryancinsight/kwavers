@@ -19,6 +19,7 @@ pub struct CoordinateMatrix {
 
 impl CoordinateMatrix {
     /// Create coordinate matrix
+    #[must_use]
     pub fn create(rows: usize, cols: usize) -> Self {
         Self {
             rows,
@@ -39,6 +40,7 @@ impl CoordinateMatrix {
     }
 
     /// Convert to CSR format
+    #[must_use]
     pub fn to_csr(&self) -> CompressedSparseRowMatrix {
         // Sort by row, then column
         let mut triplets: Vec<(usize, usize, f64)> = self
@@ -83,6 +85,7 @@ impl CoordinateMatrix {
     }
 
     /// Get number of non-zeros
+    #[must_use]
     pub fn nnz(&self) -> usize {
         self.values.len()
     }

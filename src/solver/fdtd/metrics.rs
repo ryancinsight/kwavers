@@ -25,6 +25,7 @@ pub struct FdtdMetrics {
 
 impl FdtdMetrics {
     /// Create new metrics instance
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -42,6 +43,7 @@ impl FdtdMetrics {
     }
 
     /// Get average time per time step
+    #[must_use]
     pub fn avg_time_per_step(&self) -> Duration {
         if self.time_steps == 0 {
             Duration::ZERO
@@ -57,6 +59,7 @@ impl FdtdMetrics {
     }
 
     /// Get a summary string
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "FDTD Metrics: {} steps, {:.2} ms/step avg, max CFL: {:.3}",

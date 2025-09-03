@@ -44,7 +44,7 @@ impl Default for EmissionParameters {
 pub struct SpectralField {
     /// Wavelength grid (shared for all spatial points)
     pub wavelengths: Array1<f64>,
-    /// Spectral intensities: dimensions (nx, ny, nz, n_wavelengths)
+    /// Spectral intensities: dimensions (nx, ny, nz, `n_wavelengths`)
     pub intensities: Array4<f64>,
     /// Peak wavelength at each point: dimensions (nx, ny, nz)
     pub peak_wavelength: Array3<f64>,
@@ -56,6 +56,7 @@ pub struct SpectralField {
 
 impl SpectralField {
     /// Create new spectral field
+    #[must_use]
     pub fn new(grid_shape: (usize, usize, usize), wavelengths: Array1<f64>) -> Self {
         let n_wavelengths = wavelengths.len();
         let shape_4d = (grid_shape.0, grid_shape.1, grid_shape.2, n_wavelengths);
@@ -107,6 +108,7 @@ impl SpectralField {
     }
 
     /// Get spectrum at a specific point
+    #[must_use]
     pub fn get_spectrum_at(&self, i: usize, j: usize, k: usize) -> EmissionSpectrum {
         let intensities = self.intensities.slice(s![i, j, k, ..]).to_owned();
         EmissionSpectrum::new(self.wavelengths.clone(), intensities, 0.0)
@@ -132,6 +134,7 @@ pub struct SonoluminescenceEmission {
 
 impl SonoluminescenceEmission {
     /// Create new emission calculator
+    #[must_use]
     pub fn new(grid_shape: (usize, usize, usize), params: EmissionParameters) -> Self {
         Self {
             params,
@@ -184,6 +187,7 @@ impl SonoluminescenceEmission {
     }
 
     /// Calculate spectral emission at a specific point
+    #[must_use]
     pub fn calculate_spectrum_at_point(
         &self,
         temperature: f64,
@@ -267,11 +271,13 @@ impl SonoluminescenceEmission {
     }
 
     /// Get total light output
+    #[must_use]
     pub fn total_light_output(&self) -> f64 {
         self.emission_field.sum()
     }
 
     /// Get peak emission location
+    #[must_use]
     pub fn peak_emission_location(&self) -> (usize, usize, usize) {
         let mut max_val = 0.0;
         let mut max_loc = (0, 0, 0);
@@ -287,24 +293,27 @@ impl SonoluminescenceEmission {
     }
 
     /// Estimate color temperature from peak emission
+    #[must_use]
     pub fn estimate_color_temperature(&self, temperature_field: &Array3<f64>) -> f64 {
         let (i, j, k) = self.peak_emission_location();
         temperature_field[[i, j, k]]
     }
 
     /// Get spectral statistics from the spectral field
+    #[must_use]
     pub fn get_spectral_statistics(&self) -> Option<SpectralStatistics> {
         self.spectral_field
             .as_ref()
             .map(|field| SpectralStatistics {
                 mean_peak_wavelength: field.peak_wavelength.mean().unwrap_or(0.0),
                 mean_color_temperature: field.color_temperature.mean().unwrap_or(0.0),
-                max_total_intensity: field.total_intensity.iter().cloned().fold(0.0, f64::max),
+                max_total_intensity: field.total_intensity.iter().copied().fold(0.0, f64::max),
                 peak_location: self.peak_emission_location(),
             })
     }
 
     /// Get spectrum at peak emission location
+    #[must_use]
     pub fn get_peak_spectrum(&self) -> Option<EmissionSpectrum> {
         self.spectral_field.as_ref().map(|field| {
             let (i, j, k) = self.peak_emission_location();
@@ -341,6 +350,7 @@ pub struct SonoluminescencePulse {
 
 impl SonoluminescencePulse {
     /// Analyze emission time series to extract pulse characteristics
+    #[must_use]
     pub fn from_time_series(
         times: &Array1<f64>,
         intensities: &Array1<f64>,

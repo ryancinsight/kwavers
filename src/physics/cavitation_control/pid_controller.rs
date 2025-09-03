@@ -124,6 +124,7 @@ pub struct PIDController {
 }
 
 impl PIDController {
+    #[must_use]
     pub fn new(config: PIDConfig) -> Self {
         Self {
             integral: ErrorIntegral::new(config.integral_limit),
@@ -229,11 +230,13 @@ impl PIDController {
     }
 
     /// Get current configuration
+    #[must_use]
     pub fn config(&self) -> &PIDConfig {
         &self.config
     }
 
     /// Get current integral value (for monitoring)
+    #[must_use]
     pub fn integral_value(&self) -> f64 {
         self.integral.value
     }
@@ -254,6 +257,7 @@ pub struct TustinPIDController {
 }
 
 impl TustinPIDController {
+    #[must_use]
     pub fn new(gains: PIDGains, sample_time: f64) -> Self {
         Self {
             gains,

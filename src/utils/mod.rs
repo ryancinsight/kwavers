@@ -328,12 +328,14 @@ pub fn ifft_3d(field_complex: &Array3<Complex<f64>>, grid: &Grid) -> Array3<f64>
 
 /// Utility function to check if a value is a power of two
 #[inline]
+#[must_use]
 pub fn is_power_of_two(n: usize) -> bool {
     n != 0 && (n & (n - 1)) == 0
 }
 
 /// Utility function to get the next power of two for a value
 #[inline]
+#[must_use]
 pub fn next_power_of_two(n: usize) -> usize {
     if n == 0 {
         return 1;
@@ -348,6 +350,7 @@ pub fn next_power_of_two(n: usize) -> usize {
 
 /// Utility function to calculate the log2 ceiling of a value
 #[inline]
+#[must_use]
 pub fn log2_ceil(n: usize) -> usize {
     if n <= 1 {
         return 0;
@@ -363,6 +366,7 @@ pub fn log2_ceil(n: usize) -> usize {
 }
 
 /// Compute k-space correction factor for a given frequency
+#[must_use]
 pub fn k_space_correction(k: f64, dt: f64) -> f64 {
     let kdt = k * dt;
     if kdt.abs() < 1e-10 {

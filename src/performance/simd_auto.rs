@@ -15,11 +15,11 @@ use std::arch::is_x86_feature_detected;
 /// SIMD capability detection
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SimdCapability {
-    /// AVX-512 available (x86_64)
+    /// AVX-512 available (`x86_64`)
     Avx512,
-    /// AVX2 available (x86_64)
+    /// AVX2 available (`x86_64`)
     Avx2,
-    /// SSE4.2 available (x86_64)
+    /// SSE4.2 available (`x86_64`)
     Sse42,
     /// NEON available (ARM)
     Neon,
@@ -30,6 +30,7 @@ pub enum SimdCapability {
 impl SimdCapability {
     /// Detect the best available SIMD capability
     #[inline]
+    #[must_use]
     pub fn detect() -> Self {
         #[cfg(target_arch = "x86_64")]
         {
@@ -55,6 +56,7 @@ impl SimdCapability {
 
     /// Vector width in f64 elements
     #[inline]
+    #[must_use]
     pub const fn vector_width(&self) -> usize {
         match self {
             Self::Avx512 => 8,
@@ -75,6 +77,7 @@ pub struct SimdAuto {
 impl SimdAuto {
     /// Create with automatic detection
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             capability: SimdCapability::detect(),
@@ -172,7 +175,7 @@ impl SimdAuto {
     #[inline]
     fn add_avx2(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         if is_x86_feature_detected!("avx2") {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_storeu_pd};
 
             let a_slice = a.as_slice().unwrap();
             let b_slice = b.as_slice().unwrap();
@@ -213,7 +216,7 @@ impl SimdAuto {
     #[inline]
     fn add_sse42(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         if is_x86_feature_detected!("sse4.2") {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{_mm_add_pd, _mm_loadu_pd, _mm_storeu_pd};
 
             let a_slice = a.as_slice().unwrap();
             let b_slice = b.as_slice().unwrap();
@@ -301,7 +304,9 @@ impl SimdAuto {
     #[inline]
     fn scale_avx2(&self, array: &mut Array3<f64>, scalar: f64) {
         if is_x86_feature_detected!("avx2") {
-            use std::arch::x86_64::*;
+            use std::arch::x86_64::{
+                _mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_storeu_pd,
+            };
 
             let slice = array.as_slice_mut().unwrap();
             let chunks = slice.len() / 4;
@@ -399,6 +404,7 @@ lazy_static::lazy_static! {
 
 /// Get the global SIMD processor
 #[inline]
+#[must_use]
 pub fn simd() -> &'static SimdAuto {
     &SIMD
 }

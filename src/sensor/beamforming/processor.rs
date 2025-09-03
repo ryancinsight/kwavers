@@ -15,6 +15,7 @@ pub struct BeamformingProcessor {
 
 impl BeamformingProcessor {
     /// Create new beamforming processor
+    #[must_use]
     pub fn new(config: BeamformingConfig, sensor_positions: Vec<[f64; 3]>) -> Self {
         let num_sensors = sensor_positions.len();
         Self {
@@ -25,11 +26,13 @@ impl BeamformingProcessor {
     }
 
     /// Get number of sensors
+    #[must_use]
     pub fn num_sensors(&self) -> usize {
         self.num_sensors
     }
 
     /// Get sensor positions
+    #[must_use]
     pub fn sensor_positions(&self) -> &[[f64; 3]] {
         &self.sensor_positions
     }

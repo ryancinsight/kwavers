@@ -19,6 +19,7 @@ pub struct ConstantAmplitude {
 }
 
 impl ConstantAmplitude {
+    #[must_use]
     pub fn new(value: f64) -> Self {
         assert!(value >= 0.0, "Amplitude must be non-negative");
         Self { value }
@@ -42,6 +43,7 @@ pub struct PowerModulation {
 }
 
 impl PowerModulation {
+    #[must_use]
     pub fn new(base_amplitude: f64, modulation_freq: f64, modulation_depth: f64) -> Self {
         assert!(
             base_amplitude >= 0.0

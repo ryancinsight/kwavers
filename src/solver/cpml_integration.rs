@@ -266,6 +266,7 @@ impl CPMLSolver {
     }
 
     /// Get C-PML configuration
+    #[must_use]
     pub fn config(&self) -> &CPMLConfig {
         self.cpml.config()
     }
@@ -279,6 +280,7 @@ impl CPMLSolver {
     }
 
     /// Estimate reflection coefficient at given angle
+    #[must_use]
     pub fn estimate_reflection(&self, angle_degrees: f64) -> f64 {
         self.cpml.estimate_reflection(angle_degrees)
     }

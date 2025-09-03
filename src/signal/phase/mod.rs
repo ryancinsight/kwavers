@@ -19,6 +19,7 @@ pub struct ConstantPhase {
 }
 
 impl ConstantPhase {
+    #[must_use]
     pub fn new(phase: f64) -> Self {
         Self { phase }
     }
@@ -39,6 +40,7 @@ pub struct RandomPhase {
 }
 
 impl RandomPhase {
+    #[must_use]
     pub fn new(amplitude: f64) -> Self {
         assert!(amplitude >= 0.0, "Amplitude must be non-negative");
         Self { amplitude }
@@ -62,6 +64,7 @@ pub struct LinearPhaseShift {
 }
 
 impl LinearPhaseShift {
+    #[must_use]
     pub fn new(initial_phase: f64, rate: f64) -> Self {
         Self {
             initial_phase,

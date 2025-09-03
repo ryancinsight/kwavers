@@ -56,10 +56,12 @@ impl ReactionKinetics {
             });
     }
 
+    #[must_use]
     pub fn hydroxyl_concentration(&self) -> &Array3<f64> {
         &self.hydroxyl_concentration
     }
 
+    #[must_use]
     pub fn hydrogen_peroxide(&self) -> &Array3<f64> {
         &self.hydrogen_peroxide
     }

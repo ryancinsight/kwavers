@@ -95,6 +95,7 @@ impl ArcSource {
     }
 
     /// Generate 2D source distribution
+    #[must_use]
     pub fn generate_source_2d(&self, nx: usize, ny: usize, dx: f64, time: f64) -> Array2<f64> {
         let mut source = Array2::zeros((nx, ny));
         let omega = 2.0 * PI * self.config.frequency;

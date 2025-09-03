@@ -25,6 +25,7 @@ pub struct KzkDiffractionOperator {
 }
 
 impl KzkDiffractionOperator {
+    #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
         let ny = config.ny;
@@ -72,10 +73,10 @@ impl KzkDiffractionOperator {
     /// Apply KZK diffraction step
     ///
     /// This implements the parabolic approximation:
-    /// P(z+Δz) = P(z) * exp(-i(k_x² + k_y²)Δz/(2k₀))
+    /// P(z+Δz) = P(z) * exp(-i(k_x² + `k_y²)Δz/(2k₀`))
     ///
     /// Note: This is different from angular spectrum which uses:
-    /// P(z+Δz) = P(z) * exp(i*sqrt(k₀² - k_x² - k_y²)*Δz)
+    /// P(z+Δz) = P(z) * exp(i*sqrt(k₀² - `k_x²` - `k_y²`)*Δz)
     pub fn apply(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64) {
         self.apply_with_step(field, step_size, 0);
     }

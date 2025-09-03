@@ -33,6 +33,7 @@ impl Default for FdtdConfig {
 }
 
 impl FdtdConfig {
+    #[must_use]
     pub fn validate(&self) -> ValidationResult {
         let mut errors = Vec::new();
 

@@ -6,7 +6,7 @@
 //! # Design Principles
 //! - **SOLID**: Single responsibility for each reconstruction algorithm
 //! - **DRY**: Reusable reconstruction components
-//! - **Zero-Copy**: Uses ArrayView for efficient data handling
+//! - **Zero-Copy**: Uses `ArrayView` for efficient data handling
 //! - **KISS**: Clear interfaces for complex reconstruction algorithms
 //!
 //! # Literature References

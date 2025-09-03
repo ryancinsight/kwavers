@@ -10,6 +10,7 @@ pub fn init_logging() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[must_use]
 pub fn format_record(record: &Record) -> String {
     format!(
         "[{}] {}:{} - {}",

@@ -1,8 +1,8 @@
-//! Modern SIMD implementation using safe patterns and portable_simd when stable
+//! Modern SIMD implementation using safe patterns and `portable_simd` when stable
 //!
 //! References:
 //! - "SIMD Programming" by Intel (2023)
-//! - Rust portable SIMD RFC: https://github.com/rust-lang/rfcs/pull/2977
+//! - Rust portable SIMD RFC: <https://github.com/rust-lang/rfcs/pull/2977>
 
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 use rayon::prelude::*;
@@ -37,6 +37,7 @@ impl SimdOps {
     }
 
     /// Compute field norm using SIMD-friendly reduction
+    #[must_use]
     pub fn field_norm(field: ArrayView3<f64>) -> f64 {
         field
             .as_slice()
@@ -48,6 +49,7 @@ impl SimdOps {
     }
 
     /// Compute dot product using SIMD-friendly patterns
+    #[must_use]
     pub fn dot_product(a: ArrayView3<f64>, b: ArrayView3<f64>) -> f64 {
         a.as_slice()
             .unwrap()
@@ -112,9 +114,10 @@ impl SimdOps {
 
 /// SWAR (SIMD Within A Register) operations for portability
 pub mod swar {
-    use super::*;
+    use super::ParallelIterator;
 
     /// Compute sum of 4 f64 values using integer operations
+    #[must_use]
     pub fn sum4_swar(values: [f64; 4]) -> f64 {
         // Convert to bits for manipulation
         let bits: [u64; 4] = [
@@ -130,6 +133,7 @@ pub mod swar {
     }
 
     /// Parallel maximum using SWAR techniques
+    #[must_use]
     pub fn max4_swar(values: [f64; 4]) -> f64 {
         values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
     }
@@ -140,16 +144,19 @@ pub mod swar {
 pub mod x86_64 {
 
     /// Check if AVX2 is available
+    #[must_use]
     pub fn has_avx2() -> bool {
         is_x86_feature_detected!("avx2")
     }
 
     /// Check if AVX-512 is available
+    #[must_use]
     pub fn has_avx512() -> bool {
         is_x86_feature_detected!("avx512f")
     }
 
     /// Select best SIMD width based on CPU features
+    #[must_use]
     pub fn optimal_simd_width() -> usize {
         if has_avx512() {
             8 // 512 bits / 64 bits

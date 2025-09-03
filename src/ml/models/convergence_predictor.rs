@@ -18,6 +18,7 @@ impl ConvergencePredictorModel {
     }
 
     /// Create model from weights
+    #[must_use]
     pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
         // Weights not used in simplified predictor
         // Real implementation would store and use weights
@@ -25,6 +26,7 @@ impl ConvergencePredictorModel {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn metadata(&self) -> &ModelMetadata {
         &self.metadata
     }
@@ -34,6 +36,7 @@ impl ConvergencePredictorModel {
         self.predict(input)
     }
 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: ModelMetadata {

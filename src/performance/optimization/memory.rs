@@ -33,6 +33,7 @@ impl Default for BandwidthOptimizer {
 
 impl BandwidthOptimizer {
     /// Create a new bandwidth optimizer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             max_bandwidth: 50.0, // Typical DDR4 bandwidth
@@ -58,6 +59,7 @@ pub struct MemoryOptimizer {
 
 impl MemoryOptimizer {
     /// Create a new memory optimizer
+    #[must_use]
     pub fn new(prefetch_distance: usize) -> Self {
         Self {
             prefetch_distance,
@@ -93,7 +95,7 @@ impl MemoryOptimizer {
         // 3. We check for null before returning
         // 4. Caller is responsible for proper deallocation
         unsafe {
-            let ptr = alloc(layout) as *mut T;
+            let ptr = alloc(layout).cast::<T>();
             if ptr.is_null() {
                 return Err(crate::error::KwaversError::System(
                     crate::error::SystemError::MemoryAllocation {
@@ -113,12 +115,13 @@ impl MemoryOptimizer {
             let align = self.alignment.max(std::mem::align_of::<T>());
 
             if let Ok(layout) = Layout::from_size_align(size, align) {
-                dealloc(ptr as *mut u8, layout);
+                dealloc(ptr.cast::<u8>(), layout);
             }
         }
     }
 
     /// Create a memory pool for reduced allocation overhead
+    #[must_use]
     pub fn create_pool(&self, size: usize) -> MemoryPool {
         MemoryPool::new(size, self.alignment)
     }
@@ -157,6 +160,7 @@ pub struct MemoryPool {
 
 impl MemoryPool {
     /// Create a new memory pool
+    #[must_use]
     pub fn new(size: usize, alignment: usize) -> Self {
         Self {
             buffer: vec![0u8; size],

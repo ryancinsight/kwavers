@@ -1,6 +1,8 @@
 //! Modulation schemes and power control structures
 
-use super::constants::*;
+use super::constants::{
+    DEFAULT_DUTY_CYCLE, DEFAULT_PRF, DEFAULT_RAMP_TIME, MAX_DUTY_CYCLE, MIN_DUTY_CYCLE,
+};
 
 /// Modulation schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -50,6 +52,7 @@ impl Default for PowerControl {
 
 impl PowerControl {
     /// Create new power control with specified scheme
+    #[must_use]
     pub fn new(scheme: ModulationScheme) -> Self {
         Self {
             scheme,
@@ -68,6 +71,7 @@ impl PowerControl {
     }
 
     /// Calculate instantaneous power
+    #[must_use]
     pub fn instantaneous_power(&self, time: f64) -> f64 {
         match self.scheme {
             ModulationScheme::Continuous => self.amplitude,

@@ -12,6 +12,7 @@ pub struct SimdOptimizer {
 
 impl SimdOptimizer {
     /// Create a new SIMD optimizer
+    #[must_use]
     pub fn new(level: SimdLevel) -> Self {
         Self {
             level,
@@ -32,47 +33,45 @@ impl SimdOptimizer {
     }
 
     /// Vectorized dot product using SIMD
+    #[must_use]
     pub fn dot_product(&self, a: &[f64], b: &[f64]) -> f64 {
         assert_eq!(a.len(), b.len());
 
-        match self.level {
-            SimdLevel::None => {
-                // Scalar fallback
-                a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+        if self.level == SimdLevel::None {
+            // Scalar fallback
+            a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+        } else {
+            // Use chunks for SIMD processing
+            let chunks = a.len() / self.vector_width;
+            let remainder = a.len() % self.vector_width;
+
+            let mut sum = 0.0;
+
+            // Process vectorized chunks
+            for i in 0..chunks {
+                let start = i * self.vector_width;
+                let end = start + self.vector_width;
+
+                // This would be replaced with actual SIMD intrinsics
+                // For now, using iterator for correctness
+                sum += a[start..end]
+                    .iter()
+                    .zip(&b[start..end])
+                    .map(|(x, y)| x * y)
+                    .sum::<f64>();
             }
-            _ => {
-                // Use chunks for SIMD processing
-                let chunks = a.len() / self.vector_width;
-                let remainder = a.len() % self.vector_width;
 
-                let mut sum = 0.0;
-
-                // Process vectorized chunks
-                for i in 0..chunks {
-                    let start = i * self.vector_width;
-                    let end = start + self.vector_width;
-
-                    // This would be replaced with actual SIMD intrinsics
-                    // For now, using iterator for correctness
-                    sum += a[start..end]
-                        .iter()
-                        .zip(&b[start..end])
-                        .map(|(x, y)| x * y)
-                        .sum::<f64>();
-                }
-
-                // Process remainder
-                if remainder > 0 {
-                    let start = chunks * self.vector_width;
-                    sum += a[start..]
-                        .iter()
-                        .zip(&b[start..])
-                        .map(|(x, y)| x * y)
-                        .sum::<f64>();
-                }
-
-                sum
+            // Process remainder
+            if remainder > 0 {
+                let start = chunks * self.vector_width;
+                sum += a[start..]
+                    .iter()
+                    .zip(&b[start..])
+                    .map(|(x, y)| x * y)
+                    .sum::<f64>();
             }
+
+            sum
         }
     }
 
@@ -80,32 +79,29 @@ impl SimdOptimizer {
     pub fn add_arrays(&self, a: &mut [f64], b: &[f64]) {
         assert_eq!(a.len(), b.len());
 
-        match self.level {
-            SimdLevel::None => {
-                // Scalar fallback
-                for (x, y) in a.iter_mut().zip(b.iter()) {
-                    *x += y;
-                }
+        if self.level == SimdLevel::None {
+            // Scalar fallback
+            for (x, y) in a.iter_mut().zip(b.iter()) {
+                *x += y;
             }
-            _ => {
-                // Process in SIMD-width chunks
-                let chunks = a.len() / self.vector_width;
+        } else {
+            // Process in SIMD-width chunks
+            let chunks = a.len() / self.vector_width;
 
-                for i in 0..chunks {
-                    let start = i * self.vector_width;
-                    let end = start + self.vector_width;
+            for i in 0..chunks {
+                let start = i * self.vector_width;
+                let end = start + self.vector_width;
 
-                    // This would use SIMD intrinsics in production
-                    for j in start..end {
-                        a[j] += b[j];
-                    }
-                }
-
-                // Process remainder
-                let start = chunks * self.vector_width;
-                for j in start..a.len() {
+                // This would use SIMD intrinsics in production
+                for j in start..end {
                     a[j] += b[j];
                 }
+            }
+
+            // Process remainder
+            let start = chunks * self.vector_width;
+            for j in start..a.len() {
+                a[j] += b[j];
             }
         }
     }

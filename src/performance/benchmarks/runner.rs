@@ -16,6 +16,7 @@ pub struct BenchmarkRunner {
 
 impl BenchmarkRunner {
     /// Create a new benchmark runner
+    #[must_use]
     pub fn new(config: BenchmarkConfig) -> Self {
         Self {
             config,
@@ -140,6 +141,7 @@ impl BenchmarkRunner {
     }
 
     /// Get the current report
+    #[must_use]
     pub fn report(&self) -> &BenchmarkReport {
         &self.report
     }

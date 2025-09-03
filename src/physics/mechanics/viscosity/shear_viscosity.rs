@@ -10,6 +10,7 @@ pub struct ShearViscosityModel {
 }
 
 impl ShearViscosityModel {
+    #[must_use]
     pub fn new(base_viscosity: f64, ref_temperature: f64, temp_sensitivity: f64) -> Self {
         debug!(
             "Initializing ShearViscosityModel: base = {:.6e} Pa·s, ref_temperature = {:.2} K, sensitivity = {:.6e} 1/K",

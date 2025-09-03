@@ -1,6 +1,6 @@
 //! Main power modulator implementation
 
-use super::constants::*;
+use super::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 use super::filters::ExponentialFilter;
 use super::safety::SafetyLimiter;
 use super::schemes::{ModulationScheme, PowerControl};
@@ -20,6 +20,7 @@ pub struct PowerModulator {
 
 impl PowerModulator {
     /// Create new power modulator
+    #[must_use]
     pub fn new(scheme: ModulationScheme, sample_rate: f64) -> Self {
         Self {
             scheme,
@@ -139,11 +140,13 @@ impl PowerModulator {
     }
 
     /// Get current time
+    #[must_use]
     pub fn get_time(&self) -> f64 {
         self.time
     }
 
     /// Get effective duty cycle
+    #[must_use]
     pub fn get_effective_duty_cycle(&self) -> f64 {
         match self.scheme {
             ModulationScheme::Continuous => 1.0,

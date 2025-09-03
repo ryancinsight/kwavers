@@ -16,6 +16,7 @@ pub struct TrainingPipeline {
 }
 
 impl TrainingPipeline {
+    #[must_use]
     pub fn new(epochs: usize, batch_size: usize, learning_rate: f64) -> Self {
         Self {
             epochs,
@@ -24,7 +25,7 @@ impl TrainingPipeline {
         }
     }
 
-    /// Train the provided TissueClassifierModel on `(samples, features, 1)` data
+    /// Train the provided `TissueClassifierModel` on `(samples, features, 1)` data
     /// with integer class labels stored as `(samples, 1, 1)`.  Returns the loss
     /// at each epoch.
     pub fn train(

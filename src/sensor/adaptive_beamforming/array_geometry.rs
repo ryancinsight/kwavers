@@ -16,6 +16,7 @@ pub struct ArrayGeometry {
 }
 
 impl ArrayGeometry {
+    #[must_use]
     pub fn linear(num_elements: usize, spacing: f64) -> Self {
         let elements = (0..num_elements)
             .map(|i| ElementPosition {

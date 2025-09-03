@@ -11,6 +11,7 @@ impl AnalyticalSolutions {
     /// Plane wave solution in homogeneous medium
     ///
     /// Reference: Kinsler et al., "Fundamentals of Acoustics", 4th ed., 2000
+    #[must_use]
     pub fn plane_wave(x: f64, t: f64, amplitude: f64, frequency: f64, sound_speed: f64) -> f64 {
         let k = 2.0 * PI * frequency / sound_speed; // Wave number
         let omega = 2.0 * PI * frequency; // Angular frequency
@@ -41,6 +42,7 @@ impl AnalyticalSolutions {
     /// Standing wave in rectangular cavity
     ///
     /// Reference: Blackstock, "Fundamentals of Physical Acoustics", 2000
+    #[must_use]
     pub fn cavity_mode(
         x: f64,
         y: f64,
@@ -66,6 +68,7 @@ impl AnalyticalSolutions {
     /// Gaussian beam solution (paraxial approximation)
     ///
     /// Reference: Ding & Zhang, "Acoustic beam propagation", JASA 2004
+    #[must_use]
     pub fn gaussian_beam(x: f64, y: f64, z: f64, beam_width: f64, wavelength: f64) -> f64 {
         let k = 2.0 * PI / wavelength;
         let z_r = PI * beam_width * beam_width / wavelength; // Rayleigh range

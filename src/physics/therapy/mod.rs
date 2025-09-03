@@ -22,7 +22,7 @@
 //! 3. **Hynynen, K., et al. (2001)**. "Noninvasive MR imaging-guided focal
 //!    opening of the blood-brain barrier in rabbits." *Radiology*, 220(3), 640-646.
 //!
-//! 4. **McHale, A. P., et al. (2016)**. "Sonodynamic therapy: concept, mechanism
+//! 4. **`McHale`, A. P., et al. (2016)**. "Sonodynamic therapy: concept, mechanism
 //!    and application to cancer treatment." *Advances in Experimental Medicine
 //!    and Biology*, 880, 429-450.
 //!
@@ -80,8 +80,8 @@ impl TherapyCalculator {
                 c: 3600.0,   // specific heat
                 w_b: 0.5e-3, // perfusion rate
                 c_b: 3800.0, // blood specific heat
-                T_a: 37.0,   // arterial temperature
-                Q_m: 420.0,  // metabolic heat
+                t_a: 37.0,   // arterial temperature
+                q_m: 420.0,  // metabolic heat
             };
             PennesSolver::new(
                 grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, 0.001, // dt = 1ms
@@ -199,11 +199,13 @@ impl TherapyCalculator {
     }
 
     /// Check if treatment is complete
+    #[must_use]
     pub fn is_complete(&self) -> bool {
         self.metrics.is_successful(self.get_target_dose(), 0.8)
     }
 
     /// Get treatment summary
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "Therapy: {:?}\n\

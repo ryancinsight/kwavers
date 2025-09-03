@@ -6,7 +6,7 @@
 //! # Design Principles
 //! - **SOLID**: Single responsibility for field analysis functions
 //! - **DRY**: Reusable field analysis implementations
-//! - **Zero-Copy**: Uses ArrayView and efficient iterators
+//! - **Zero-Copy**: Uses `ArrayView` and efficient iterators
 //! - **KISS**: Clear, well-documented field analysis interfaces
 //!
 //! # Literature References

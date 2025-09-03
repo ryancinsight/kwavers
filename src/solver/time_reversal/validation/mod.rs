@@ -28,7 +28,7 @@ impl InputValidator {
             if pos[0] >= grid.nx || pos[1] >= grid.ny || pos[2] >= grid.nz {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: "sensor_position".to_string(),
-                    value: format!("{:?}", pos),
+                    value: format!("{pos:?}"),
                     constraint: format!(
                         "must be within grid bounds ({}, {}, {})",
                         grid.nx, grid.ny, grid.nz
@@ -59,9 +59,9 @@ impl InputValidator {
         for (i, signal) in signals.iter().enumerate() {
             if signal.len() != first_length {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: format!("signal[{}]", i),
+                    field: format!("signal[{i}]"),
                     value: format!("length={}", signal.len()),
-                    constraint: format!("must match first signal length={}", first_length),
+                    constraint: format!("must match first signal length={first_length}"),
                 }));
             }
         }
@@ -72,7 +72,7 @@ impl InputValidator {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: "signal_length".to_string(),
                     value: first_length.to_string(),
-                    constraint: format!("must be {}", expected),
+                    constraint: format!("must be {expected}"),
                 }));
             }
         }

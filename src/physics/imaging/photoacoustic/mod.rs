@@ -43,6 +43,7 @@ impl Default for PhotoacousticConfig {
 /// - Γ is the Grueneisen parameter
 /// - μₐ is the optical absorption coefficient
 /// - Φ is the optical fluence
+#[must_use]
 pub fn compute_initial_pressure(
     optical_absorption: &Array3<f64>,
     fluence: &Array3<f64>,

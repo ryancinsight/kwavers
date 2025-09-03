@@ -27,17 +27,20 @@ impl Default for SpectralRange {
 
 impl SpectralRange {
     /// Generate wavelength array
+    #[must_use]
     pub fn wavelengths(&self) -> Array1<f64> {
         Array1::linspace(self.lambda_min, self.lambda_max, self.n_points)
     }
 
     /// Generate frequency array
+    #[must_use]
     pub fn frequencies(&self) -> Array1<f64> {
         let c = 2.99792458e8; // Speed of light
         self.wavelengths().mapv(|lambda| c / lambda)
     }
 
     /// Convert wavelength to RGB color
+    #[must_use]
     pub fn wavelength_to_rgb(wavelength: f64) -> (f64, f64, f64) {
         let w = wavelength * 1e9; // Convert to nm
 
@@ -92,6 +95,7 @@ pub struct EmissionSpectrum {
 
 impl EmissionSpectrum {
     /// Create new emission spectrum
+    #[must_use]
     pub fn new(wavelengths: Array1<f64>, intensities: Array1<f64>, time: f64) -> Self {
         assert_eq!(
             wavelengths.len(),
@@ -107,6 +111,7 @@ impl EmissionSpectrum {
     }
 
     /// Calculate total integrated intensity
+    #[must_use]
     pub fn total_intensity(&self) -> f64 {
         // Vectorized trapezoidal integration
         let dlambda = &self.wavelengths.slice(s![1..]) - &self.wavelengths.slice(s![..-1]);
@@ -116,18 +121,19 @@ impl EmissionSpectrum {
     }
 
     /// Find peak wavelength
+    #[must_use]
     pub fn peak_wavelength(&self) -> f64 {
         let max_idx = self
             .intensities
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-            .map(|(idx, _)| idx)
-            .unwrap_or(0);
+            .map_or(0, |(idx, _)| idx);
         self.wavelengths[max_idx]
     }
 
     /// Calculate centroid wavelength
+    #[must_use]
     pub fn centroid_wavelength(&self) -> f64 {
         let mut sum_lambda_i = 0.0;
         let mut sum_i = 0.0;
@@ -145,6 +151,7 @@ impl EmissionSpectrum {
     }
 
     /// Calculate full width at half maximum (FWHM)
+    #[must_use]
     pub fn fwhm(&self) -> f64 {
         let (max_idx, &max_val) = self
             .intensities
@@ -194,6 +201,7 @@ pub struct SpectralAnalyzer {
 
 impl SpectralAnalyzer {
     /// Create new spectral analyzer
+    #[must_use]
     pub fn new(range: SpectralRange) -> Self {
         Self {
             range,
@@ -213,6 +221,7 @@ impl SpectralAnalyzer {
     }
 
     /// Get time evolution of peak wavelength
+    #[must_use]
     pub fn peak_wavelength_evolution(&self) -> (Array1<f64>, Array1<f64>) {
         let n = self.spectra_history.len();
         let mut times = Array1::zeros(n);
@@ -227,6 +236,7 @@ impl SpectralAnalyzer {
     }
 
     /// Get time evolution of total intensity
+    #[must_use]
     pub fn intensity_evolution(&self) -> (Array1<f64>, Array1<f64>) {
         let n = self.spectra_history.len();
         let mut times = Array1::zeros(n);
@@ -241,6 +251,7 @@ impl SpectralAnalyzer {
     }
 
     /// Calculate time-averaged spectrum
+    #[must_use]
     pub fn time_averaged_spectrum(&self) -> Option<EmissionSpectrum> {
         if self.spectra_history.is_empty() {
             return None;
@@ -263,6 +274,7 @@ impl SpectralAnalyzer {
     }
 
     /// Fit blackbody temperature to spectrum
+    #[must_use]
     pub fn fit_blackbody_temperature(&self, spectrum: &EmissionSpectrum) -> f64 {
         // Use Wien's displacement law on peak wavelength
         let peak = spectrum.peak_wavelength();

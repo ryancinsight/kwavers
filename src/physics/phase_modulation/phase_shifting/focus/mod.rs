@@ -30,6 +30,7 @@ pub struct DynamicFocusing {
 
 impl DynamicFocusing {
     /// Create a new dynamic focusing controller
+    #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
         let num_elements = element_positions.nrows();
         Self {
@@ -47,8 +48,7 @@ impl DynamicFocusing {
 
         if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Focal distance below minimum of {} mm",
-                MIN_FOCAL_DISTANCE
+                "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
             )));
         }
 
@@ -61,8 +61,7 @@ impl DynamicFocusing {
     pub fn set_multiple_focal_points(&mut self, points: Vec<[f64; 3]>) -> KwaversResult<()> {
         if points.len() > MAX_FOCAL_POINTS {
             return Err(crate::error::KwaversError::InvalidInput(format!(
-                "Number of focal points exceeds maximum of {}",
-                MAX_FOCAL_POINTS
+                "Number of focal points exceeds maximum of {MAX_FOCAL_POINTS}"
             )));
         }
 
@@ -70,8 +69,7 @@ impl DynamicFocusing {
             let focal_distance = (point[0].powi(2) + point[1].powi(2) + point[2].powi(2)).sqrt();
             if focal_distance < MIN_FOCAL_DISTANCE / 1000.0 {
                 return Err(crate::error::KwaversError::InvalidInput(format!(
-                    "Focal distance below minimum of {} mm",
-                    MIN_FOCAL_DISTANCE
+                    "Focal distance below minimum of {MIN_FOCAL_DISTANCE} mm"
                 )));
             }
         }
@@ -111,7 +109,7 @@ impl DynamicFocusing {
         }
 
         // Wrap phases
-        for phase in self.phase_distribution.iter_mut() {
+        for phase in &mut self.phase_distribution {
             *phase = wrap_phase(*phase);
         }
 
@@ -150,16 +148,19 @@ impl DynamicFocusing {
     }
 
     /// Get phase distribution
+    #[must_use]
     pub fn get_phase_distribution(&self) -> &Array1<f64> {
         &self.phase_distribution
     }
 
     /// Get amplitude weights
+    #[must_use]
     pub fn get_amplitude_weights(&self) -> &Array1<f64> {
         &self.amplitude_weights
     }
 
     /// Calculate intensity at a point
+    #[must_use]
     pub fn calculate_intensity(&self, x: f64, y: f64, z: f64) -> f64 {
         let wavelength = calculate_wavelength(self.frequency, SPEED_OF_SOUND);
         let k = 2.0 * PI / wavelength;

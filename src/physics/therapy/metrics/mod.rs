@@ -38,6 +38,7 @@ impl TreatmentMetrics {
     /// Calculate thermal dose using CEM43 model
     /// CEM43 = Σ R^(43-T) * Δt
     /// where R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
+    #[must_use]
     pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
         const REFERENCE_TEMP: f64 = 316.15; // 43°C in Kelvin
 
@@ -57,11 +58,13 @@ impl TreatmentMetrics {
     }
 
     /// Calculate cavitation dose (cumulative cavitation activity)
+    #[must_use]
     pub fn calculate_cavitation_dose(cavitation_field: &Array3<bool>, dt: f64) -> f64 {
         cavitation_field.iter().filter(|&&cav| cav).count() as f64 * dt
     }
 
     /// Calculate lesion volume from thermal dose field
+    #[must_use]
     pub fn calculate_lesion_volume(
         thermal_dose_field: &Array3<f64>,
         dx: f64,
@@ -88,7 +91,7 @@ impl TreatmentMetrics {
     }
 
     /// Calculate treatment efficiency
-    /// Efficiency = (achieved dose / target dose) * safety_index
+    /// Efficiency = (achieved dose / target dose) * `safety_index`
     pub fn calculate_efficiency(&mut self, target_dose: f64) {
         if target_dose > 0.0 {
             self.efficiency = (self.thermal_dose / target_dose).min(1.0) * self.safety_index;
@@ -118,11 +121,13 @@ impl TreatmentMetrics {
     }
 
     /// Check if treatment goals are met
+    #[must_use]
     pub fn is_successful(&self, target_dose: f64, min_efficiency: f64) -> bool {
         self.thermal_dose >= target_dose && self.efficiency >= min_efficiency
     }
 
     /// Get treatment summary
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "Treatment Metrics:\n\

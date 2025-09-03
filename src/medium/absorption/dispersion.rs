@@ -16,11 +16,13 @@ pub struct DispersionModel {
 
 impl DispersionModel {
     /// Create a new dispersion model
+    #[must_use]
     pub fn new(c0: f64, alpha_0: f64, y: f64) -> Self {
         Self { c0, alpha_0, y }
     }
 
     /// Calculate phase velocity using Kramers-Kronig relations
+    #[must_use]
     pub fn phase_velocity(&self, frequency: f64) -> f64 {
         // For power law absorption, the phase velocity is:
         // c(ω) = c₀ / [1 - (α₀/ω₀^y) * tan(πy/2) * ω^y]
@@ -41,6 +43,7 @@ impl DispersionModel {
     }
 
     /// Calculate group velocity
+    #[must_use]
     pub fn group_velocity(&self, frequency: f64) -> f64 {
         // Group velocity: vg = c²/vp + ω * d(vp)/dω
         let vp = self.phase_velocity(frequency);
@@ -63,6 +66,7 @@ pub struct DispersionCorrection {
 
 impl DispersionCorrection {
     /// Create a new dispersion correction
+    #[must_use]
     pub fn new(model: DispersionModel) -> Self {
         Self { model }
     }
@@ -92,6 +96,7 @@ impl DispersionCorrection {
     }
 
     /// Calculate dispersion relation k(ω)
+    #[must_use]
     pub fn dispersion_relation(&self, frequency: f64) -> f64 {
         let c_phase = self.model.phase_velocity(frequency);
         2.0 * std::f64::consts::PI * frequency / c_phase

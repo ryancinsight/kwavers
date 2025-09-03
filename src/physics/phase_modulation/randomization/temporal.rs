@@ -1,6 +1,6 @@
 //! Temporal phase randomization
 
-use super::constants::*;
+use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT, MIN_SWITCHING_PERIOD};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -15,11 +15,11 @@ pub struct TimeRandomization {
 
 impl TimeRandomization {
     /// Create new temporal randomizer
+    #[must_use]
     pub fn new(switching_period: f64) -> Self {
         assert!(
             switching_period >= MIN_SWITCHING_PERIOD,
-            "Switching period must be >= {} seconds",
-            MIN_SWITCHING_PERIOD
+            "Switching period must be >= {MIN_SWITCHING_PERIOD} seconds"
         );
 
         Self {
@@ -50,6 +50,7 @@ impl TimeRandomization {
     }
 
     /// Get phase history
+    #[must_use]
     pub fn history(&self) -> &[f64] {
         &self.phase_history
     }

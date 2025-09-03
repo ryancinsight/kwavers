@@ -45,6 +45,7 @@ impl Default for TherapyParameters {
 
 impl TherapyParameters {
     /// Create parameters for HIFU therapy
+    #[must_use]
     pub fn hifu() -> Self {
         Self {
             frequency: 1.5e6,             // 1.5 MHz
@@ -60,6 +61,7 @@ impl TherapyParameters {
     }
 
     /// Create parameters for LIFU neuromodulation
+    #[must_use]
     pub fn lifu() -> Self {
         Self {
             frequency: 0.5e6,              // 500 kHz
@@ -75,6 +77,7 @@ impl TherapyParameters {
     }
 
     /// Create parameters for histotripsy
+    #[must_use]
     pub fn histotripsy() -> Self {
         Self {
             frequency: 1e6,               // 1 MHz
@@ -90,6 +93,7 @@ impl TherapyParameters {
     }
 
     /// Create parameters for BBB opening
+    #[must_use]
     pub fn bbb_opening() -> Self {
         Self {
             frequency: 0.25e6,             // 250 kHz
@@ -105,6 +109,7 @@ impl TherapyParameters {
     }
 
     /// Create parameters from modality
+    #[must_use]
     pub fn from_modality(modality: TherapyModality) -> Self {
         match modality {
             TherapyModality::HIFU => Self::hifu(),
@@ -115,7 +120,7 @@ impl TherapyParameters {
         }
     }
 
-    /// Calculate mechanical index: MI = P_neg / sqrt(f)
+    /// Calculate mechanical index: MI = `P_neg` / sqrt(f)
     pub fn calculate_mechanical_index(&mut self) {
         self.mechanical_index = self.peak_negative_pressure / (self.frequency.sqrt() * 1e6);
     }
@@ -128,6 +133,7 @@ impl TherapyParameters {
     }
 
     /// Validate safety parameters
+    #[must_use]
     pub fn validate_safety(&self) -> bool {
         // FDA guidelines: MI < 1.9, TI < 6.0
         const MAX_MI: f64 = 1.9;

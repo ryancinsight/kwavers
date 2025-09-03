@@ -72,7 +72,7 @@ pub fn compute_nonlinear_term(
 
 /// Compute viscoelastic damping term
 ///
-/// Implements the viscoelastic damping: (4μ/3 + μ_B) * ∇²(∂p/∂t)
+/// Implements the viscoelastic damping: (4μ/3 + `μ_B`) * ∇²(∂p/∂t)
 pub fn compute_viscoelastic_term(
     pressure: &Array3<f64>,
     prev_pressure: &Array3<f64>,

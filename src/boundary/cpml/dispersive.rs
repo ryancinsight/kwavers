@@ -33,6 +33,7 @@ impl Default for DispersiveParameters {
 
 impl DispersiveParameters {
     /// Create parameters for a Debye medium
+    #[must_use]
     pub fn debye(tau: f64, epsilon_s: f64, epsilon_inf: f64) -> Self {
         Self {
             num_mechanisms: 1,
@@ -44,6 +45,7 @@ impl DispersiveParameters {
     }
 
     /// Create parameters for a Cole-Cole medium
+    #[must_use]
     pub fn cole_cole(tau: f64, alpha: f64, epsilon_s: f64, epsilon_inf: f64) -> Self {
         // Cole-Cole requires special handling, simplified here
         Self {

@@ -113,6 +113,7 @@ pub struct SonoluminescenceDetector {
 
 impl SonoluminescenceDetector {
     /// Create new sonoluminescence detector
+    #[must_use]
     pub fn new(
         grid_shape: (usize, usize, usize),
         grid_spacing: (f64, f64, f64),
@@ -378,11 +379,13 @@ impl SonoluminescenceDetector {
     }
 
     /// Get all detected events
+    #[must_use]
     pub fn get_events(&self) -> &[SonoluminescenceEvent] {
         &self.events
     }
 
     /// Get events in time window
+    #[must_use]
     pub fn get_events_in_window(
         &self,
         start_time: f64,

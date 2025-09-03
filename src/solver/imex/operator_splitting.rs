@@ -10,6 +10,7 @@ pub struct LieTrotterSplitting;
 
 impl LieTrotterSplitting {
     /// Create a new Lie-Trotter splitting
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -55,6 +56,7 @@ pub struct StrangSplitting;
 
 impl StrangSplitting {
     /// Create a new Strang splitting
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -107,6 +109,7 @@ pub struct YoshidaSplitting {
 
 impl YoshidaSplitting {
     /// Create a new Yoshida splitting
+    #[must_use]
     pub fn new() -> Self {
         let w1 = 1.0 / (2.0 - 2.0_f64.powf(1.0 / 3.0));
         let w0 = 1.0 - 2.0 * w1;
@@ -166,6 +169,7 @@ pub struct RecursiveSplitting {
 
 impl RecursiveSplitting {
     /// Create a new recursive splitting of given order
+    #[must_use]
     pub fn new(order: usize) -> Self {
         let coefficients = Self::compute_coefficients(order);
         Self {

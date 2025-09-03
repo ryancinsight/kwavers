@@ -1,6 +1,6 @@
 //! Core FDTD solver implementation
 //!
-//! This module contains the main FdtdSolver struct and its implementation
+//! This module contains the main `FdtdSolver` struct and its implementation
 //! for acoustic wave propagation using the finite-difference time-domain method.
 
 use crate::boundary::cpml::CPMLBoundary;

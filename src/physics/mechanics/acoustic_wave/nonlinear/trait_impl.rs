@@ -1,6 +1,6 @@
-//! Trait implementations for NonlinearWave
+//! Trait implementations for `NonlinearWave`
 //!
-//! This module contains implementations of various traits for the NonlinearWave struct.
+//! This module contains implementations of various traits for the `NonlinearWave` struct.
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;

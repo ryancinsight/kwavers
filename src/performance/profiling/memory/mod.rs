@@ -33,6 +33,7 @@ pub struct MemoryEvent {
 
 impl MemoryEvent {
     /// Create a new memory event
+    #[must_use]
     pub fn new(size: usize, event_type: MemoryEventType) -> Self {
         Self {
             timestamp: Instant::now(),
@@ -43,6 +44,7 @@ impl MemoryEvent {
     }
 
     /// Create a memory event with description
+    #[must_use]
     pub fn with_description(size: usize, event_type: MemoryEventType, description: String) -> Self {
         Self {
             timestamp: Instant::now(),
@@ -70,6 +72,7 @@ pub struct MemoryProfile {
 
 impl MemoryProfile {
     /// Create a new memory profile
+    #[must_use]
     pub fn new() -> Self {
         Self {
             peak_usage: 0,
@@ -98,6 +101,7 @@ impl MemoryProfile {
     }
 
     /// Get memory efficiency (deallocations / allocations)
+    #[must_use]
     pub fn efficiency(&self) -> f64 {
         if self.total_allocations == 0 {
             1.0
@@ -107,6 +111,7 @@ impl MemoryProfile {
     }
 
     /// Get fragmentation estimate
+    #[must_use]
     pub fn fragmentation(&self) -> f64 {
         if self.peak_usage == 0 {
             0.0
@@ -130,6 +135,7 @@ pub struct MemoryProfiler {
 
 impl MemoryProfiler {
     /// Create a new memory profiler
+    #[must_use]
     pub fn new() -> Self {
         Self {
             profile: Arc::new(Mutex::new(MemoryProfile::new())),
@@ -151,6 +157,7 @@ impl MemoryProfiler {
     }
 
     /// Get current memory profile
+    #[must_use]
     pub fn profile(&self) -> MemoryProfile {
         self.profile.lock().unwrap().clone()
     }

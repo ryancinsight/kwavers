@@ -24,6 +24,7 @@ pub struct PlasmaReaction {
 
 impl PlasmaReaction {
     /// Calculate rate constant at given temperature
+    #[must_use]
     pub fn rate_constant(&self, temperature: f64) -> f64 {
         let r_gas = 8.314; // J/(mol·K)
         self.pre_exponential
@@ -47,6 +48,7 @@ pub struct PlasmaChemistry {
 
 impl PlasmaChemistry {
     /// Create new plasma chemistry model
+    #[must_use]
     pub fn new(temperature: f64, pressure: f64) -> Self {
         let mut chemistry = Self {
             reactions: Vec::new(),
@@ -228,6 +230,7 @@ impl PlasmaChemistry {
     }
 
     /// Get ROS concentrations from plasma species
+    #[must_use]
     pub fn get_ros_concentrations(&self) -> HashMap<ROSSpecies, f64> {
         let mut ros = HashMap::new();
 
@@ -252,6 +255,7 @@ impl PlasmaChemistry {
     }
 
     /// Calculate degree of ionization
+    #[must_use]
     pub fn ionization_fraction(&self) -> f64 {
         let total_conc: f64 = self.concentrations.values().sum();
         let electron_conc = self.concentrations.get("e-").unwrap_or(&0.0);
@@ -288,6 +292,7 @@ impl PlasmaChemistry {
 }
 
 /// Calculate NO production rate (Zeldovich mechanism)
+#[must_use]
 pub fn zeldovich_no_rate(temperature: f64, o2_conc: f64, n2_conc: f64) -> f64 {
     if temperature < 1800.0 {
         return 0.0; // Too cold for thermal NO

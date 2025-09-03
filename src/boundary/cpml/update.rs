@@ -15,6 +15,7 @@ pub struct CPMLUpdater {
 
 impl CPMLUpdater {
     /// Create new updater
+    #[must_use]
     pub fn new(_config: &CPMLConfig) -> Self {
         Self {}
     }

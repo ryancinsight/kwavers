@@ -38,6 +38,7 @@ impl Default for ConservationHistory {
 
 impl ConservationHistory {
     /// Create new empty history
+    #[must_use]
     pub fn new() -> Self {
         Self {
             times: Vec::new(),
@@ -80,6 +81,7 @@ pub struct ConservationError {
 
 impl ConservationError {
     /// Get the maximum error across all conserved quantities
+    #[must_use]
     pub fn max_error(&self) -> f64 {
         self.mass_error
             .max(self.momentum_error)

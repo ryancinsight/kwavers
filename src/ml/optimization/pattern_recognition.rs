@@ -36,6 +36,7 @@ impl Default for PatternRecognizer {
 
 impl PatternRecognizer {
     /// Create a new pattern recognizer
+    #[must_use]
     pub fn new() -> Self {
         Self {
             feature_extractor: FeatureExtractor,

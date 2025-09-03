@@ -43,11 +43,13 @@ impl<'a> FieldProvider<'a> {
     }
 
     /// Check if a field is available to this provider
+    #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         self.allowed_fields.contains(&field_type) && self.registry.has_field(field_type)
     }
 
     /// Get list of fields available to this provider
+    #[must_use]
     pub fn available_fields(&self) -> Vec<UnifiedFieldType> {
         self.allowed_fields
             .iter()

@@ -31,6 +31,7 @@ pub struct SubcyclingStrategy {
 
 impl SubcyclingStrategy {
     /// Create a new subcycling strategy
+    #[must_use]
     pub fn new(max_subcycles: usize) -> Self {
         Self { max_subcycles }
     }
@@ -46,12 +47,12 @@ impl TimeCoupling for SubcyclingStrategy {
         grid: &Grid,
     ) -> KwaversResult<()> {
         // Find maximum number of subcycles
-        let max_cycles = subcycles.values().cloned().max().unwrap_or(1);
+        let max_cycles = subcycles.values().copied().max().unwrap_or(1);
 
         // Advance each component with its own subcycling
         for cycle in 0..max_cycles {
             for (name, component) in physics_components {
-                let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
+                let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
 
                 // Check if this component should be updated in this cycle
                 if cycle % (max_cycles / n_subcycles) == 0 {
@@ -91,6 +92,7 @@ pub struct AveragingStrategy {
 
 impl AveragingStrategy {
     /// Create a new averaging strategy
+    #[must_use]
     pub fn new(interpolation_order: usize) -> Self {
         Self {
             interpolation_order,
@@ -161,6 +163,7 @@ pub struct PredictorCorrectorStrategy {
 
 impl PredictorCorrectorStrategy {
     /// Create a new predictor-corrector strategy
+    #[must_use]
     pub fn new(corrector_iterations: usize) -> Self {
         Self {
             corrector_iterations,
@@ -196,7 +199,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
 
             // Advance each component
             for (name, component) in physics_components {
-                let n_subcycles = subcycles.get(name).cloned().unwrap_or(1);
+                let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
                 let local_dt = global_dt / n_subcycles as f64;
 
                 let field = fields.get_mut(name).ok_or_else(|| {

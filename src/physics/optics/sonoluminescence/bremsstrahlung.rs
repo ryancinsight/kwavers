@@ -45,6 +45,7 @@ impl BremsstrahlungModel {
     ///
     /// # Returns
     /// Emission coefficient in W/(m³·Hz·sr)
+    #[must_use]
     pub fn emission_coefficient(
         &self,
         frequency: f64,
@@ -89,6 +90,7 @@ impl BremsstrahlungModel {
     ///
     /// # Returns
     /// Spectral radiance in W/(m²·sr·m)
+    #[must_use]
     pub fn spectral_radiance(
         &self,
         wavelength: f64,
@@ -114,6 +116,7 @@ impl BremsstrahlungModel {
     ///
     /// # Returns
     /// Total power in Watts
+    #[must_use]
     pub fn total_power(&self, temperature: f64, n_electron: f64, n_ion: f64, volume: f64) -> f64 {
         if temperature <= 0.0 || n_electron <= 0.0 || n_ion <= 0.0 || volume <= 0.0 {
             return 0.0;
@@ -148,6 +151,7 @@ impl BremsstrahlungModel {
     ///
     /// # Returns
     /// Ionization fraction (0-1)
+    #[must_use]
     pub fn saha_ionization(&self, temperature: f64, pressure: f64, ionization_energy: f64) -> f64 {
         if temperature <= 0.0 || pressure <= 0.0 {
             return 0.0;
@@ -175,6 +179,7 @@ impl BremsstrahlungModel {
     }
 
     /// Calculate emission spectrum
+    #[must_use]
     pub fn emission_spectrum(
         &self,
         temperature: f64,
@@ -190,6 +195,7 @@ impl BremsstrahlungModel {
 }
 
 /// Calculate bremsstrahlung emission field
+#[must_use]
 pub fn calculate_bremsstrahlung_emission(
     temperature_field: &Array3<f64>,
     pressure_field: &Array3<f64>,

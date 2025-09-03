@@ -4,7 +4,9 @@ use crate::solver::reconstruction::{InterpolationMethod, ReconstructionConfig};
 use serde::{Deserialize, Serialize};
 
 // Import constants from the constants module
-use super::constants::*;
+use super::constants::{
+    DEFAULT_FWI_ITERATIONS, DEFAULT_FWI_TOLERANCE, DEFAULT_REGULARIZATION_LAMBDA, DEFAULT_TIME_STEP,
+};
 
 /// Seismic imaging configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

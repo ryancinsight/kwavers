@@ -22,6 +22,7 @@ pub struct GaussianPulse {
 }
 
 impl GaussianPulse {
+    #[must_use]
     pub fn new(center_frequency: f64, center_time: f64, pulse_width: f64, amplitude: f64) -> Self {
         assert!(center_frequency > 0.0, "Center frequency must be positive");
         assert!(pulse_width >= MIN_PULSE_WIDTH, "Pulse width too small");
@@ -37,12 +38,14 @@ impl GaussianPulse {
         }
     }
 
+    #[must_use]
     pub fn with_q_factor(mut self, q: f64) -> Self {
         assert!(q > 0.0, "Q factor must be positive");
         self.q_factor = q;
         self
     }
 
+    #[must_use]
     pub fn with_phase(mut self, phase: f64) -> Self {
         self.phase = phase;
         self

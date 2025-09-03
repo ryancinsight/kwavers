@@ -37,6 +37,7 @@ impl Default for ShockDetector {
 
 impl ShockDetector {
     /// Create a new shock detector
+    #[must_use]
     pub fn new(threshold: f64) -> Self {
         Self {
             threshold,
@@ -237,7 +238,7 @@ impl ShockDetector {
         }
 
         // Normalize
-        let max_div = indicator.iter().cloned().fold(0.0_f64, f64::max);
+        let max_div = indicator.iter().copied().fold(0.0_f64, f64::max);
         if max_div > 0.0 {
             indicator /= max_div;
         }

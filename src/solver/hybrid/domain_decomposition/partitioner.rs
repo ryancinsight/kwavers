@@ -18,6 +18,7 @@ pub struct DomainPartitioner {
 
 impl DomainPartitioner {
     /// Create a new domain partitioner
+    #[must_use]
     pub fn new() -> Self {
         Self {
             min_region_size: 8,  // Minimum 8x8x8 region
@@ -86,7 +87,7 @@ impl DomainPartitioner {
         }
 
         if count > 0 {
-            sum / count as f64
+            sum / f64::from(count)
         } else {
             0.5
         }

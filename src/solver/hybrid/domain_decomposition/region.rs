@@ -28,6 +28,7 @@ pub struct DomainRegion {
 
 impl DomainRegion {
     /// Create a new domain region
+    #[must_use]
     pub fn new(
         start: (usize, usize, usize),
         end: (usize, usize, usize),
@@ -43,6 +44,7 @@ impl DomainRegion {
     }
 
     /// Get the size of this region in each dimension
+    #[must_use]
     pub fn size(&self) -> (usize, usize, usize) {
         (
             self.end.0 - self.start.0,
@@ -52,12 +54,14 @@ impl DomainRegion {
     }
 
     /// Get the total number of grid points in this region
+    #[must_use]
     pub fn volume(&self) -> usize {
         let (nx, ny, nz) = self.size();
         nx * ny * nz
     }
 
     /// Check if a point is within this region
+    #[must_use]
     pub fn contains(&self, i: usize, j: usize, k: usize) -> bool {
         i >= self.start.0
             && i < self.end.0

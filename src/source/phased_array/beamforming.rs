@@ -26,6 +26,7 @@ pub struct BeamformingCalculator {
 
 impl BeamformingCalculator {
     /// Create calculator with medium properties
+    #[must_use]
     pub fn with_medium(sound_speed: f64, frequency: f64) -> Self {
         Self {
             sound_speed,
@@ -48,13 +49,14 @@ impl BeamformingCalculator {
             .map(|pos| distance_3d(*pos, target))
             .collect();
 
-        let max_distance = distances.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let max_distance = distances.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
         // Calculate relative delays
         distances.iter().map(|&d| k * (max_distance - d)).collect()
     }
 
     /// Calculate phase delays for beam steering
+    #[must_use]
     pub fn calculate_steering_delays(
         &self,
         element_positions: &[(f64, f64, f64)],
@@ -76,6 +78,7 @@ impl BeamformingCalculator {
     }
 
     /// Calculate delays for plane wave
+    #[must_use]
     pub fn calculate_plane_wave_delays(
         &self,
         element_positions: &[(f64, f64, f64)],
@@ -95,6 +98,7 @@ impl BeamformingCalculator {
     }
 
     /// Calculate beam width for given configuration
+    #[must_use]
     pub fn calculate_beam_width(&self, aperture_size: f64) -> f64 {
         // Rayleigh criterion for beam width
         let wavelength = self.sound_speed / self.frequency;
@@ -102,6 +106,7 @@ impl BeamformingCalculator {
     }
 
     /// Calculate focal zone depth
+    #[must_use]
     pub fn calculate_focal_zone(&self, aperture_size: f64, focal_distance: f64) -> f64 {
         // Depth of field calculation
         let wavelength = self.sound_speed / self.frequency;

@@ -190,7 +190,7 @@ impl StiffnessTensor {
             for j in i + 1..6 {
                 if (self.c[[i, j]] - self.c[[j, i]]).abs() > 1e-10 {
                     return Err(PhysicsError::InvalidParameter {
-                        parameter: format!("c[{},{}]", i, j),
+                        parameter: format!("c[{i},{j}]"),
                         value: self.c[[i, j]],
                         reason: format!(
                             "Stiffness matrix must be symmetric: c[{},{}]={} != c[{},{}]={}",

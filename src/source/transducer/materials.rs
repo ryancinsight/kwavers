@@ -26,7 +26,7 @@ pub struct PiezoMaterial {
     pub density: f64,
     /// Speed of sound (m/s)
     pub sound_speed: f64,
-    /// Acoustic impedance (MRayl)
+    /// Acoustic impedance (`MRayl`)
     pub acoustic_impedance: f64,
     /// Curie temperature (°C)
     pub curie_temperature: f64,
@@ -53,6 +53,7 @@ pub enum PiezoType {
 
 impl PiezoMaterial {
     /// Create PZT-5H material (most common for medical transducers)
+    #[must_use]
     pub fn pzt_5h() -> Self {
         Self {
             material_type: PiezoType::PZT5H,
@@ -68,6 +69,7 @@ impl PiezoMaterial {
     }
 
     /// Create PZT-4 material (higher Q, lower coupling)
+    #[must_use]
     pub fn pzt_4() -> Self {
         Self {
             material_type: PiezoType::PZT4,
@@ -83,6 +85,7 @@ impl PiezoMaterial {
     }
 
     /// Create PMN-PT single crystal (highest coupling)
+    #[must_use]
     pub fn pmn_pt() -> Self {
         Self {
             material_type: PiezoType::PMNPT,
@@ -98,6 +101,7 @@ impl PiezoMaterial {
     }
 
     /// Create PVDF polymer (flexible, broadband)
+    #[must_use]
     pub fn pvdf() -> Self {
         Self {
             material_type: PiezoType::PVDF,
@@ -113,6 +117,7 @@ impl PiezoMaterial {
     }
 
     /// Calculate electromechanical coupling factor
+    #[must_use]
     pub fn effective_coupling(&self) -> f64 {
         self.coupling_k33.powi(2)
     }
@@ -120,6 +125,7 @@ impl PiezoMaterial {
     /// Calculate bandwidth based on coupling and Q
     ///
     /// Fractional bandwidth ≈ k² / Q^0.5
+    #[must_use]
     pub fn bandwidth_estimate(&self) -> f64 {
         self.effective_coupling() / self.mechanical_q.sqrt() * 100.0
     }
@@ -130,9 +136,9 @@ impl PiezoMaterial {
 pub struct BackingLayer {
     /// Backing material type
     pub material: BackingMaterial,
-    /// Acoustic impedance (MRayl)
+    /// Acoustic impedance (`MRayl`)
     pub acoustic_impedance: f64,
-    /// Attenuation coefficient (dB/mm at 1 MHz)
+    /// Attenuation coefficient (dB/mm at 1 `MHz`)
     pub attenuation: f64,
     /// Thickness (m)
     pub thickness: f64,
@@ -151,6 +157,7 @@ pub enum BackingMaterial {
 
 impl BackingLayer {
     /// Create tungsten-epoxy backing (standard for broadband)
+    #[must_use]
     pub fn tungsten_epoxy(thickness: f64) -> Self {
         Self {
             material: BackingMaterial::TungstenEpoxy,
@@ -161,6 +168,7 @@ impl BackingLayer {
     }
 
     /// Create air backing (narrow band, high sensitivity)
+    #[must_use]
     pub fn air_backed() -> Self {
         Self {
             material: BackingMaterial::Air,
@@ -171,6 +179,7 @@ impl BackingLayer {
     }
 
     /// Calculate reflection coefficient at piezo-backing interface
+    #[must_use]
     pub fn reflection_coefficient(&self, piezo_impedance: f64) -> f64 {
         (self.acoustic_impedance - piezo_impedance) / (self.acoustic_impedance + piezo_impedance)
     }
@@ -179,7 +188,7 @@ impl BackingLayer {
 /// Matching layer for impedance matching
 #[derive(Debug, Clone)]
 pub struct MatchingLayer {
-    /// Acoustic impedance (MRayl)
+    /// Acoustic impedance (`MRayl`)
     pub acoustic_impedance: f64,
     /// Thickness (m)
     pub thickness: f64,
@@ -190,7 +199,8 @@ pub struct MatchingLayer {
 impl MatchingLayer {
     /// Design quarter-wave matching layer
     ///
-    /// Optimal impedance: Z_match = sqrt(Z_piezo * Z_medium)
+    /// Optimal impedance: `Z_match` = `sqrt(Z_piezo` * `Z_medium`)
+    #[must_use]
     pub fn quarter_wave(frequency: f64, piezo_impedance: f64, medium_impedance: f64) -> Self {
         let optimal_impedance = (piezo_impedance * medium_impedance).sqrt();
         let sound_speed = 2500.0; // Typical for matching layer materials
@@ -207,6 +217,7 @@ impl MatchingLayer {
     /// Design multi-layer matching for broader bandwidth
     ///
     /// Uses binomial transformer design
+    #[must_use]
     pub fn multi_layer(
         frequency: f64,
         piezo_impedance: f64,
@@ -234,6 +245,7 @@ impl MatchingLayer {
     }
 
     /// Calculate power transmission coefficient
+    #[must_use]
     pub fn transmission_coefficient(&self, piezo_impedance: f64, medium_impedance: f64) -> f64 {
         // Simplified for single quarter-wave layer
         let r1 = (self.acoustic_impedance - piezo_impedance)
@@ -258,9 +270,9 @@ pub struct AcousticLens {
     pub center_thickness: f64,
     /// Speed of sound in lens (m/s)
     pub sound_speed: f64,
-    /// Acoustic impedance (MRayl)
+    /// Acoustic impedance (`MRayl`)
     pub acoustic_impedance: f64,
-    /// Attenuation (dB/mm at 1 MHz)
+    /// Attenuation (dB/mm at 1 `MHz`)
     pub attenuation: f64,
 }
 
@@ -277,6 +289,7 @@ pub enum LensMaterial {
 
 impl AcousticLens {
     /// Create silicone lens (standard for medical transducers)
+    #[must_use]
     pub fn silicone(focal_length: f64, aperture: f64) -> Self {
         let sound_speed_lens = 1000.0; // m/s in silicone
         let sound_speed_tissue = 1540.0; // m/s in tissue
@@ -299,12 +312,14 @@ impl AcousticLens {
     }
 
     /// Calculate focal length in the medium
+    #[must_use]
     pub fn focal_length(&self, medium_sound_speed: f64) -> f64 {
         let speed_ratio = medium_sound_speed / self.sound_speed;
         self.radius_of_curvature * medium_sound_speed / (medium_sound_speed - self.sound_speed)
     }
 
     /// Calculate f-number (focal length / aperture)
+    #[must_use]
     pub fn f_number(&self, aperture: f64, medium_sound_speed: f64) -> f64 {
         self.focal_length(medium_sound_speed) / aperture
     }

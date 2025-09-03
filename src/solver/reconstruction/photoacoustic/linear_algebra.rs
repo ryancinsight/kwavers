@@ -264,7 +264,7 @@ impl LinearSolver {
         let (u, s, vt) = self.power_iteration_svd(a)?;
 
         // Truncate small singular values
-        let s_max = s.iter().cloned().fold(0.0, f64::max);
+        let s_max = s.iter().copied().fold(0.0, f64::max);
         let threshold = truncation * s_max;
 
         // Compute pseudoinverse solution
