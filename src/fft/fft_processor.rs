@@ -292,9 +292,105 @@ impl Fft2d {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use num_complex::Complex64;
+    use std::f64::consts::PI;
 
-    // TODO: Fix FFT implementation and enable tests
-    // The current implementation needs debugging for proper normalization
+    #[test]
+    fn test_fft_1d_forward_inverse() {
+        let n = 64;
+        let mut data: Vec<Complex64> = (0..n)
+            .map(|i| Complex64::new((i as f64).sin(), 0.0))
+            .collect();
+        
+        let original = data.clone();
+        
+        // Forward FFT
+        let mut planner = FftPlanner::new();
+        let fft = planner.plan_fft_forward(n);
+        fft.process(&mut data);
+        
+        // Inverse FFT
+        let ifft = planner.plan_fft_inverse(n);
+        ifft.process(&mut data);
+        
+        // Normalize
+        let norm = 1.0 / n as f64;
+        data.iter_mut().for_each(|x| *x *= norm);
+        
+        // Check round-trip
+        for (orig, result) in original.iter().zip(data.iter()) {
+            assert_relative_eq!(orig.re, result.re, epsilon = 1e-10);
+            assert_relative_eq!(orig.im, result.im, epsilon = 1e-10);
+        }
+    }
+    
+    #[test]
+    fn test_fft_2d_gaussian() {
+        let fft2d = Fft2d::new(64, 64);
+        let mut data = Array2::zeros((64, 64));
+        
+        // Create Gaussian
+        let sigma = 5.0;
+        for i in 0..64 {
+            for j in 0..64 {
+                let x = (i as f64 - 32.0) / sigma;
+                let y = (j as f64 - 32.0) / sigma;
+                data[[i, j]] = Complex64::new((-0.5 * (x * x + y * y)).exp(), 0.0);
+            }
+        }
+        
+        let original = data.clone();
+        
+        // Forward and inverse transform
+        let mut view = data.view_mut();
+        fft2d.forward(&mut view);
+        fft2d.inverse(&mut view);
+        
+        // Check reconstruction
+        for ((i, j), val) in data.indexed_iter() {
+            assert_relative_eq!(val.re, original[[i, j]].re, epsilon = 1e-10);
+            assert_relative_eq!(val.im, original[[i, j]].im, epsilon = 1e-10);
+        }
+    }
+    
+    #[test]
+    fn test_fft_3d_energy_conservation() {
+        let mut fft3d = Fft3d::new(32, 32, 32);
+        let mut data = Array3::zeros((32, 32, 32));
+        
+        // Create test signal
+        let freq = 2.0 * PI / 32.0;
+        for i in 0..32 {
+            for j in 0..32 {
+                for k in 0..32 {
+                    data[[i, j, k]] = Complex64::new(
+                        (freq * i as f64).cos() * (freq * j as f64).cos(),
+                        0.0
+                    );
+                }
+            }
+        }
+        
+        // Compute energy before
+        let energy_before: f64 = data.iter()
+            .map(|x| x.norm_sqr())
+            .sum();
+        
+        // FFT and IFFT
+        let mut view = data.view_mut();
+        fft3d.forward(&mut view);
+        fft3d.inverse(&mut view);
+        
+        // Compute energy after
+        let energy_after: f64 = data.iter()
+            .map(|x| x.norm_sqr())
+            .sum();
+        
+        // Energy should be conserved (Parseval's theorem)
+        assert_relative_eq!(energy_before, energy_after, epsilon = 1e-10 * energy_before);
+    }
 }
 
 // Add missing imports at the top
