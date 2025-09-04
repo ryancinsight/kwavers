@@ -5,6 +5,7 @@ use ndarray::Array3;
 use std::collections::HashMap;
 
 /// Cache for tissue properties to avoid repeated lookups
+#[derive(Debug)]
 pub struct TissuePropertyCache {
     density_cache: HashMap<TissueType, f64>,
     sound_speed_cache: HashMap<TissueType, f64>,

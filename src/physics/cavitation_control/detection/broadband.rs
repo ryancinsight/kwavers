@@ -13,6 +13,17 @@ pub struct BroadbandDetector {
     sensitivity: f64,
 }
 
+impl std::fmt::Debug for BroadbandDetector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BroadbandDetector")
+            .field("sample_rate", &self.sample_rate)
+            .field("baseline_energy", &self.baseline_energy)
+            .field("history", &"<HistoryBuffer>")
+            .field("sensitivity", &self.sensitivity)
+            .finish()
+    }
+}
+
 impl BroadbandDetector {
     #[must_use]
     pub fn new(sample_rate: f64) -> Self {

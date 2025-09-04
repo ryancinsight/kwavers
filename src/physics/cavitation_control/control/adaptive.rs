@@ -4,6 +4,7 @@ use super::super::detection::CavitationMetrics;
 use super::types::FeedbackConfig;
 
 /// Adaptive controller for parameter tuning
+#[derive(Debug)]
 pub struct AdaptiveController {
     learning_rate: f64,
     history_size: usize,

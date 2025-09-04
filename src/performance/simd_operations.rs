@@ -15,6 +15,7 @@ const SIMD_LANES: usize = 4; // AVX2: 256 bits / 64 bits = 4
 const SIMD_LANES: usize = 2; // Fallback for other architectures
 
 /// Vectorized field operations using safe patterns
+#[derive(Debug)]
 pub struct SimdOps;
 
 impl SimdOps {

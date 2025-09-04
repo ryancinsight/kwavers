@@ -4,6 +4,7 @@
 
 #[derive(Debug)]
 pub struct AberrationCorrector;
+#[derive(Debug)]
 pub enum CorrectionMethod {
     TimeReversal,
     AdaptiveFocusing,

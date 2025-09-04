@@ -27,6 +27,7 @@ pub trait PortableSimd {
 }
 
 /// Architecture-optimized SIMD implementation
+#[derive(Debug)]
 pub struct SimdProcessor;
 
 impl PortableSimd for SimdProcessor {

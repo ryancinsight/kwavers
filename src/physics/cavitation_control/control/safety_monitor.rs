@@ -7,6 +7,7 @@ const SAFETY_SHUTDOWN_THRESHOLD: f64 = 0.95;
 const SAFETY_RECOVERY_THRESHOLD: f64 = 0.7;
 
 /// Safety monitor for control system
+#[derive(Debug)]
 pub struct SafetyMonitor {
     limits: SafetyLimits,
     emergency_stop: bool,

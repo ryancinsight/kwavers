@@ -4,6 +4,7 @@ use super::super::detection::CavitationMetrics;
 use std::collections::VecDeque;
 
 /// State estimator for temporal smoothing
+#[derive(Debug)]
 pub struct StateEstimator {
     history: VecDeque<CavitationMetrics>,
     alpha: f64,

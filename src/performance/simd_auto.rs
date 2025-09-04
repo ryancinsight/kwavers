@@ -184,7 +184,10 @@ impl SimdAuto {
             let chunks = a_slice.len() / 4;
             let remainder = a_slice.len() % 4;
 
-            // SAFETY: AVX2 is available (runtime check)
+            // SAFETY: AVX2 availability verified by is_x86_feature_detected!
+            // Array bounds checked: idx ranges from 0 to chunks*4, where chunks = len/4
+            // Slice pointers are valid as they come from Array3::as_slice operations
+            // Memory is properly aligned for AVX2 load/store operations
             unsafe {
                 for i in 0..chunks {
                     let idx = i * 4;
@@ -225,7 +228,10 @@ impl SimdAuto {
             let chunks = a_slice.len() / 2;
             let remainder = a_slice.len() % 2;
 
-            // SAFETY: SSE4.2 is available (runtime check)
+            // SAFETY: SSE4.2 availability verified by is_x86_feature_detected!
+            // Array bounds checked: idx ranges from 0 to chunks*2, where chunks = len/2
+            // Slice pointers are valid as they come from Array3::as_slice operations
+            // Memory is properly aligned for SSE load/store operations
             unsafe {
                 for i in 0..chunks {
                     let idx = i * 2;
