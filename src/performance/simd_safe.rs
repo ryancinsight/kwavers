@@ -19,6 +19,7 @@ const SIMD_WIDTH: usize = 2; // NEON: 128 bits / 64 bits = 2
 const SIMD_WIDTH: usize = 1; // Scalar fallback
 
 /// Portable SIMD operations
+#[derive(Debug)]
 pub struct SimdOps;
 
 impl SimdOps {

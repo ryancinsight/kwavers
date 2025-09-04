@@ -6,6 +6,7 @@ use crate::grid::structure::Grid;
 use crate::physics::constants::numerical::CFL_SAFETY_FACTOR;
 
 /// Stability calculator for numerical schemes
+#[derive(Debug)]
 pub struct StabilityCalculator;
 
 impl StabilityCalculator {

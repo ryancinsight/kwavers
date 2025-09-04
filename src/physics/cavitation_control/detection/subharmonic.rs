@@ -14,6 +14,17 @@ pub struct SubharmonicDetector {
     sensitivity: f64,
 }
 
+impl std::fmt::Debug for SubharmonicDetector {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SubharmonicDetector")
+            .field("fundamental_freq", &self.fundamental_freq)
+            .field("sample_rate", &self.sample_rate)
+            .field("fft_planner", &"<FftPlanner>")
+            .field("sensitivity", &self.sensitivity)
+            .finish()
+    }
+}
+
 impl SubharmonicDetector {
     #[must_use]
     pub fn new(fundamental_freq: f64, sample_rate: f64) -> Self {
