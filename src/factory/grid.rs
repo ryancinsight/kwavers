@@ -4,7 +4,7 @@
 
 use crate::error::{ConfigError, KwaversError, KwaversResult};
 use crate::grid::Grid;
-use crate::physics::constants::numerical::MIN_DX;
+use crate::physics::constants::MIN_DX;
 
 /// Grid configuration
 #[derive(Debug, Clone)]
