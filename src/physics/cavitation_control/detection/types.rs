@@ -53,6 +53,7 @@ impl Default for CavitationMetrics {
 }
 
 /// History buffer for temporal analysis
+#[derive(Debug)]
 pub struct HistoryBuffer<T> {
     buffer: VecDeque<T>,
     capacity: usize,
