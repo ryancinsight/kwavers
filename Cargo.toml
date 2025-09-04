@@ -176,3 +176,6 @@ pre-release-commit-message = "chore: prepare for release {{version}}"
 tag-name = "v{{version}}"
 tag-message = "Release {{version}}"
 
+[workspace]
+members = [".", "xtask"]
+
