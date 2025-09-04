@@ -4,6 +4,7 @@
 
 #[derive(Debug)]
 pub struct PhaseEncoder;
+#[derive(Debug)]
 pub enum EncodingScheme {
     Hadamard,
     Golay,

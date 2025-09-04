@@ -7,6 +7,7 @@
 use ndarray::{Array3, Zip};
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
+#[derive(Debug)]
 pub struct ThermalDose {
     /// Cumulative thermal dose (CEM43 minutes)
     dose: Array3<f64>,

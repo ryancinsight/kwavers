@@ -49,8 +49,9 @@ impl DGSolver {
 
     /// Project modal coefficients back to grid
     pub fn project_to_grid(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
-        let coeffs = self.modal_coefficients.as_ref()
-            .ok_or_else(|| KwaversError::InvalidInput("Modal coefficients not initialized".to_string()))?;
+        let coeffs = self.modal_coefficients.as_ref().ok_or_else(|| {
+            KwaversError::InvalidInput("Modal coefficients not initialized".to_string())
+        })?;
 
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         let n_elements_x = nx / self.n_nodes;

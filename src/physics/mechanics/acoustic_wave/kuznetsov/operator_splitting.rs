@@ -11,6 +11,7 @@
 use ndarray::{Array3, Zip};
 
 /// Operator splitting solver for nonlinear acoustics
+#[derive(Debug)]
 pub struct OperatorSplittingSolver {
     /// Grid dimensions
     nx: usize,

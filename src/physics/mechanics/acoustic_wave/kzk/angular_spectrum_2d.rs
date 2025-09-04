@@ -16,6 +16,17 @@ pub struct AngularSpectrum2D {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for AngularSpectrum2D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AngularSpectrum2D")
+            .field("config", &self.config)
+            .field("kx", &self.kx)
+            .field("ky", &self.ky)
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl AngularSpectrum2D {
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
