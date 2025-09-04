@@ -24,7 +24,7 @@ pub use westervelt::WesterveltWave;
 pub use westervelt_fdtd::{WesterveltFdtd, WesterveltFdtdConfig};
 
 use crate::grid::Grid;
-use crate::medium::{core::CoreMedium, Medium};
+use crate::medium::Medium;
 use std::f64::consts::PI;
 
 // Physical constants

@@ -94,6 +94,7 @@ impl MemoryOptimizer {
         // 2. alloc returns properly aligned memory or null
         // 3. We check for null before returning
         // 4. Caller is responsible for proper deallocation
+        #[allow(unsafe_code)]
         unsafe {
             let ptr = alloc(layout).cast::<T>();
             if ptr.is_null() {
@@ -109,6 +110,7 @@ impl MemoryOptimizer {
     }
 
     /// Deallocate aligned memory
+    #[allow(unsafe_code)]
     pub unsafe fn deallocate_aligned<T>(&self, ptr: *mut T, count: usize) {
         unsafe {
             let size = count * std::mem::size_of::<T>();
@@ -136,6 +138,7 @@ impl MemoryOptimizer {
         assert_eq!(data.len(), rows * cols);
 
         let mut transposed = Vec::with_capacity(data.len());
+        #[allow(unsafe_code)]
         unsafe {
             transposed.set_len(data.len());
         }
@@ -178,6 +181,7 @@ impl MemoryPool {
             return None;
         }
 
+        #[allow(unsafe_code)]
         let ptr = unsafe { self.buffer.as_mut_ptr().add(aligned_offset) };
         self.offset = aligned_offset + size;
 

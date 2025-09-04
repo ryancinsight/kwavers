@@ -2,7 +2,7 @@
 //!
 //! Tests numerical methods against known solutions with varying parameters
 
-use crate::{medium::acoustic::AcousticProperties, Grid, HomogeneousMedium};
+use crate::{Grid, HomogeneousMedium};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
