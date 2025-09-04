@@ -80,8 +80,8 @@ pub const GAS_CONSTANT_AIR: f64 = 287.0;
 /// Polytropic index for adiabatic processes
 pub const POLYTROPIC_INDEX: f64 = 1.4;
 
-/// Blake threshold for cavitation inception (MPa)
-pub const BLAKE_THRESHOLD: f64 = -0.27;
+/// Blake threshold for cavitation inception (MPa) - corrected value
+pub const BLAKE_THRESHOLD: f64 = 0.541;
 
 // Thermal parameters
 /// Specific heat of water (J/kg/K)
@@ -270,6 +270,57 @@ pub const LAME_TO_STIFFNESS_FACTOR: f64 = 1.0; // Placeholder value
 
 /// Symmetry tolerance for material tensors
 pub const SYMMETRY_TOLERANCE: f64 = 1e-9;
+
+// Cavitation parameters
+/// Maximum bubble radius for simulations (m)
+pub const MAX_RADIUS: f64 = 1e-3; // 1 mm maximum
+
+/// Minimum bubble radius for simulations (m)  
+pub const MIN_RADIUS: f64 = 1e-9; // 1 nm minimum
+
+/// Initial bubble radius (m)
+pub const INITIAL_BUBBLE_RADIUS: f64 = 5e-6; // 5 μm
+
+/// Polytropic exponent for air
+pub const POLYTROPIC_EXPONENT_AIR: f64 = 1.4;
+
+/// Van der Waals hard core radius (m)
+pub const VAN_DER_WAALS_RADIUS: f64 = 8.86e-10;
+
+/// Cavitation threshold in water (MPa)
+pub const CAVITATION_THRESHOLD_WATER: f64 = -30.0;
+
+// Numerical solver parameters
+/// Machine epsilon for f64
+pub const MACHINE_EPSILON: f64 = f64::EPSILON;
+
+/// Small value to prevent division by zero
+pub const SMALL_VALUE: f64 = 1e-12;
+
+/// Large value for boundary conditions
+pub const LARGE_VALUE: f64 = 1e12;
+
+/// Default smoothing parameter
+pub const SMOOTHING_PARAMETER: f64 = 0.01;
+
+/// Newton-Raphson tolerance
+pub const NEWTON_TOLERANCE: f64 = 1e-10;
+
+/// Maximum Newton-Raphson iterations
+pub const NEWTON_MAX_ITER: usize = 50;
+
+// Thermodynamic constants needed by bubble dynamics
+/// Gas constant for air (J/kg/K)
+pub const GAS_CONSTANT_AIR_SPEC: f64 = 287.0;
+
+/// Specific heat ratio for air
+pub const GAMMA_AIR: f64 = 1.4;
+
+/// Standard temperature (K)
+pub const STANDARD_TEMPERATURE: f64 = 293.15; // 20°C
+
+/// Standard pressure (Pa)
+pub const STANDARD_PRESSURE: f64 = 101325.0;
 
 // Derived constants for common calculations
 /// Acoustic impedance of water (kg/m²/s)
