@@ -10,6 +10,7 @@ use std::f64::consts::PI;
 use super::KZKConfig;
 
 /// Diffraction operator using angular spectrum method
+#[derive(Debug)]
 pub struct DiffractionOperator {
     /// Wavenumber squared in x direction
     kx2: Array2<f64>,

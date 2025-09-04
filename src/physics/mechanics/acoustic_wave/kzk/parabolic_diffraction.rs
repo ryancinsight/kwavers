@@ -17,6 +17,7 @@ use super::KZKConfig;
 ///
 /// For KZK equation: ∂²p/∂z∂τ = (c₀/2)∇⊥²p
 /// In frequency domain: ∂P/∂z = i(c₀/2ω)∇⊥²P
+#[derive(Debug)]
 pub struct KzkDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,

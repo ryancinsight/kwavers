@@ -270,19 +270,19 @@ impl ArrayAccess for HomogeneousMedium {
         self.sound_speed_cache.view()
     }
 
-    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.density_cache.view_mut())
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.sound_speed_cache.view_mut())
     }
 
-    fn absorption_array(&self) -> ArrayView3<f64> {
+    fn absorption_array(&self) -> ArrayView3<'_, f64> {
         self.absorption_cache.view()
     }
 
-    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+    fn nonlinearity_array(&self) -> ArrayView3<'_, f64> {
         self.nonlinearity_cache.view()
     }
 }

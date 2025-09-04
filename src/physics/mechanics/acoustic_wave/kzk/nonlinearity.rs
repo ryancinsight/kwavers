@@ -7,6 +7,7 @@ use super::KZKConfig;
 use ndarray::Array3;
 
 /// Nonlinear operator for KZK equation
+#[derive(Debug)]
 pub struct NonlinearOperator {
     /// Nonlinearity coefficient
     beta: f64,

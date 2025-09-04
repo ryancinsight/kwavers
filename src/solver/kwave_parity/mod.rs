@@ -70,6 +70,7 @@ impl Default for KWaveConfig {
 }
 
 /// Core k-Wave solver implementing the k-space pseudospectral method
+#[derive(Debug)]
 pub struct KWaveSolver {
     config: KWaveConfig,
     grid: Grid,

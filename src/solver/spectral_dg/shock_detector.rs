@@ -10,6 +10,7 @@ pub const SHOCK_DETECTOR_THRESHOLD: f64 = 0.5;
 pub const MODAL_DECAY_THRESHOLD: f64 = 1e-3;
 
 /// Shock detector for identifying discontinuities
+#[derive(Debug)]
 pub struct ShockDetector {
     threshold: f64,
     polynomial_order: usize,

@@ -16,6 +16,7 @@ use super::parabolic_diffraction::KzkDiffractionOperator;
 use super::KZKConfig;
 
 /// KZK equation solver
+#[derive(Debug)]
 pub struct KZKSolver {
     config: KZKConfig,
     /// Pressure field p(x,y,τ) at current z

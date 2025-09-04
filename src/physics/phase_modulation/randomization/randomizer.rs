@@ -124,7 +124,7 @@ impl PhaseRandomizer {
 
     /// Get current phase values
     #[must_use]
-    pub fn phases(&self) -> ArrayView1<f64> {
+    pub fn phases(&self) -> ArrayView1<'_, f64> {
         self.current_phases.view()
     }
 

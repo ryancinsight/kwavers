@@ -9,7 +9,6 @@ use super::super::matrices::{
     compute_diff_matrix, compute_lift_matrix, compute_mass_matrix, compute_stiffness_matrix,
 };
 use super::super::quadrature::gauss_lobatto_quadrature;
-use crate::error::KwaversError;
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::{Array1, Array2, Array3};
