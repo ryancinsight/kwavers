@@ -86,10 +86,11 @@ mod tests {
     fn test_dg_solver_properties() {
         let grid = Arc::new(Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap());
         let config = DGConfig::default();
+        let polynomial_order = config.polynomial_order; // Extract value before move
         let solver = DGSolver::new(config, grid).unwrap();
 
-        assert_eq!(solver.polynomial_order(), config.polynomial_order);
-        assert_eq!(solver.nodes_per_element(), config.polynomial_order + 1);
+        assert_eq!(solver.polynomial_order(), polynomial_order);
+        assert_eq!(solver.nodes_per_element(), polynomial_order + 1);
         assert!(!solver.has_modal_coefficients());
     }
 }
