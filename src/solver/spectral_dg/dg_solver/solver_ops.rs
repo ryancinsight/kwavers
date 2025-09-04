@@ -3,9 +3,9 @@
 //! This module contains the core solver implementation including
 //! flux computation, limiting, and time stepping operations.
 
-use super::core::DGSolver;
 use super::super::flux::{apply_limiter, compute_numerical_flux};
 use super::super::matrices::matrix_inverse;
+use super::core::DGSolver;
 use crate::error::KwaversError;
 use crate::KwaversResult;
 use ndarray::Array3;
@@ -98,7 +98,7 @@ impl DGSolver {
         // Compute volume integrals
         self.compute_volume_integrals(&coeffs_copy, &mut rhs, &mass_inv, wave_speed)?;
 
-        // Compute surface integrals  
+        // Compute surface integrals
         self.compute_surface_integrals(&coeffs_copy, &mut rhs, &mass_inv, wave_speed)?;
 
         // Apply limiter if enabled
