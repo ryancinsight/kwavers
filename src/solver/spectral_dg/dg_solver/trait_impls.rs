@@ -3,9 +3,9 @@
 //! This module contains the implementations of standard traits
 //! for the DG solver including NumericalSolver and DGOperations.
 
-use super::core::DGSolver;
 use super::super::shock_detector::ShockDetector;
 use super::super::traits::{DGOperations, NumericalSolver};
+use super::core::DGSolver;
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::Array3;
@@ -71,7 +71,7 @@ impl DGOperations for DGSolver {
     }
 
     fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // Simplified reconstruction - return a copy for now  
+        // Simplified reconstruction - return a copy for now
         Ok(coefficients.clone())
     }
 }
@@ -123,12 +123,12 @@ impl DGSolver {
                 Ok(())
             } else {
                 Err(crate::error::KwaversError::InvalidInput(
-                    "Invalid element ID or data size".to_string()
+                    "Invalid element ID or data size".to_string(),
                 ))
             }
         } else {
             Err(crate::error::KwaversError::InvalidInput(
-                "Modal coefficients not initialized".to_string()
+                "Modal coefficients not initialized".to_string(),
             ))
         }
     }

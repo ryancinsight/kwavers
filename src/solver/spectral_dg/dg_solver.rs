@@ -26,11 +26,11 @@ pub use core::DGSolver;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grid::Grid;
     use crate::solver::spectral_dg::basis::build_vandermonde;
     use crate::solver::spectral_dg::config::DGConfig;
     use crate::solver::spectral_dg::matrices::compute_mass_matrix;
     use crate::solver::spectral_dg::quadrature::gauss_lobatto_quadrature;
-    use crate::grid::Grid;
     use std::sync::Arc;
 
     #[test]

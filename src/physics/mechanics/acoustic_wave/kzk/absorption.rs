@@ -7,6 +7,7 @@ use super::KZKConfig;
 use ndarray::{Array3, Zip};
 
 /// Absorption operator with power law dependence
+#[derive(Debug)]
 pub struct AbsorptionOperator {
     /// Absorption coefficient at 1 `MHz`
     alpha0: f64,

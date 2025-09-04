@@ -7,6 +7,7 @@
 use ndarray::Array3;
 
 /// Temperature-dependent perfusion model
+#[derive(Debug)]
 pub struct PerfusionModel {
     /// Baseline perfusion rate (kg/m³/s)
     w_b0: f64,
@@ -64,6 +65,7 @@ impl PerfusionModel {
 }
 
 /// Vessel cooling model for large blood vessels
+#[derive(Debug)]
 pub struct VesselCooling {
     /// Vessel locations (i, j, k, radius)
     vessels: Vec<(usize, usize, usize, f64)>,
