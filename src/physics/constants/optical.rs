@@ -3,9 +3,6 @@
 /// Wien's displacement constant (m·K)
 pub const WIEN_CONSTANT: f64 = 2.897771955e-3;
 
-/// Stefan-Boltzmann constant (W/(m²·K⁴))
-pub const STEFAN_BOLTZMANN: f64 = 5.670374419e-8;
-
 /// Blackbody radiation constant (W·m²)
 pub const BLACKBODY_CONSTANT: f64 = 3.741771852e-16;
 

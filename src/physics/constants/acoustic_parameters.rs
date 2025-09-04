@@ -52,10 +52,10 @@ pub const WATER_VAPOR_PRESSURE_20C: f64 = 2339.0;
 /// Standard reference in medical ultrasound
 pub const REFERENCE_FREQUENCY_MHZ: f64 = 1e6;
 
-/// Minimum time step for numerical stability (s)
+/// Minimum time step for acoustic simulations (s)
 /// Value: 1e-10
 /// Based on CFL condition for typical ultrasound speeds
-pub const MIN_TIME_STEP: f64 = 1e-10;
+pub const MIN_ACOUSTIC_TIME_STEP: f64 = 1e-10;
 
 // MAX_TIME_STEP moved to numerical.rs to avoid duplication
 
@@ -94,10 +94,10 @@ pub const AIR_POLYTROPIC_INDEX: f64 = 1.4;
 /// Based on λ/10 criterion at 1.5 `MHz`
 pub const DEFAULT_GRID_SPACING: f64 = 1e-4;
 
-/// Shock detection threshold for gradient-based detectors
+/// Acoustic shock detection threshold for gradient-based detectors
 /// Value: 0.5 (relative gradient)
 /// Empirically determined for robust shock capture
-pub const SHOCK_DETECTION_THRESHOLD: f64 = 0.5;
+pub const ACOUSTIC_SHOCK_DETECTION_THRESHOLD: f64 = 0.5;
 
 /// Modal decay threshold for smooth solution detection
 /// Value: 1e-3

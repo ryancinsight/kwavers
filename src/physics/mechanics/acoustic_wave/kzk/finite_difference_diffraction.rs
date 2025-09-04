@@ -10,7 +10,6 @@ use std::f64::consts::PI;
 use super::KZKConfig;
 
 /// Diffraction operator using angular spectrum method
-#[derive(Debug)]
 pub struct DiffractionOperator {
     /// Wavenumber squared in x direction
     kx2: Array2<f64>,
@@ -20,6 +19,17 @@ pub struct DiffractionOperator {
     fft_planner: FftPlanner<f64>,
     /// Configuration
     config: KZKConfig,
+}
+
+impl std::fmt::Debug for DiffractionOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DiffractionOperator")
+            .field("kx2", &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()))
+            .field("ky2", &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()))
+            .field("fft_planner", &"<FftPlanner>")
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 impl DiffractionOperator {

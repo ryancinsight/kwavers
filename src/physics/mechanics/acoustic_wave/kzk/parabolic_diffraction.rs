@@ -17,12 +17,22 @@ use super::KZKConfig;
 ///
 /// For KZK equation: ∂²p/∂z∂τ = (c₀/2)∇⊥²p
 /// In frequency domain: ∂P/∂z = i(c₀/2ω)∇⊥²P
-#[derive(Debug)]
 pub struct KzkDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
     fft_planner: FftPlanner<f64>,
+}
+
+impl std::fmt::Debug for KzkDiffractionOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KzkDiffractionOperator")
+            .field("config", &self.config)
+            .field("kx2", &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()))
+            .field("ky2", &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()))
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
 }
 
 impl KzkDiffractionOperator {
