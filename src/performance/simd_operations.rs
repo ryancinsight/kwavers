@@ -202,7 +202,9 @@ mod tests {
     }
 }
 
-/// When portable_simd becomes stable, we can use this module
+// TODO: When portable_simd becomes stable, we can use this module
+// Currently commented out to avoid cfg warnings until stabilized
+/*
 #[cfg(feature = "portable_simd")]
 pub mod portable {
     use std::simd::{f64x4, f64x8, SimdFloat, StdFloat};
@@ -225,3 +227,4 @@ pub mod portable {
         }
     }
 }
+*/

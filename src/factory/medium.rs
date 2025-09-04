@@ -2,7 +2,7 @@
 //!
 //! Follows Creator pattern - responsible for creating medium objects
 
-use crate::error::{ConfigError, KwaversResult};
+use crate::error::{ConfigError, KwaversError, KwaversResult};
 use crate::grid::Grid;
 use crate::medium::{homogeneous::HomogeneousMedium, Medium};
 use crate::physics::constants::{
@@ -167,5 +167,3 @@ impl MediumFactory {
         Self::create_medium(&config, grid)
     }
 }
-
-use crate::error::KwaversError;
