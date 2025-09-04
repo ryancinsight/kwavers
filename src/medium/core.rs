@@ -53,34 +53,34 @@ pub trait CoreMedium: Debug + Send + Sync {
 /// Implements zero-copy principles for performance optimization.
 pub trait ArrayAccess: CoreMedium {
     /// Get sound speed as an array view
-    fn sound_speed_array(&self) -> ArrayView3<f64>;
+    fn sound_speed_array(&self) -> ArrayView3<'_, f64>;
 
     /// Get density as an array view
-    fn density_array(&self) -> ArrayView3<f64>;
+    fn density_array(&self) -> ArrayView3<'_, f64>;
 
     /// Get absorption as an array view
-    fn absorption_array(&self) -> ArrayView3<f64>;
+    fn absorption_array(&self) -> ArrayView3<'_, f64>;
 
     /// Get nonlinearity as an array view
-    fn nonlinearity_array(&self) -> ArrayView3<f64>;
+    fn nonlinearity_array(&self) -> ArrayView3<'_, f64>;
 
     /// Get mutable sound speed array (for heterogeneous media)
-    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         None
     }
 
     /// Get mutable density array (for heterogeneous media)
-    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         None
     }
 
     /// Get mutable absorption array (for heterogeneous media)
-    fn absorption_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn absorption_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         None
     }
 
     /// Get mutable nonlinearity array (for heterogeneous media)
-    fn nonlinearity_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn nonlinearity_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         None
     }
 }
