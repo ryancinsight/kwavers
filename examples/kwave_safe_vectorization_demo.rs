@@ -13,10 +13,10 @@
 use kwavers::{
     error::KwaversResult,
     grid::Grid,
-    medium::{HomogeneousMedium, AcousticProperties, CoreMedium},
+    medium::{HomogeneousMedium, CoreMedium},
     performance::safe_vectorization::SafeVectorOps,
 };
-use ndarray::{Array3, ArrayView3, Zip};
+use ndarray::Array3;
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -219,12 +219,12 @@ fn validate_against_analytical(
     let (nx, ny, nz) = pressure.dim();
     for i in 10..nx-10 {
         for j in 0..ny {
-            for k in 0..nz {
-                let (x, _, _) = grid.indices_to_coordinates(i, j, k);
+            for k_idx in 0..nz {
+                let (x, _, _) = grid.indices_to_coordinates(i, j, k_idx);
                 
                 // Analytical solution: p(x,t) = A * sin(kx - ωt)
                 let analytical = amplitude * (k * x - omega * t).sin();
-                let numerical = pressure[[i, j, k]];
+                let numerical = pressure[[i, j, k_idx]];
                 
                 if analytical.abs() > amplitude * 0.1 {
                     let error = (numerical - analytical).abs() / amplitude;
@@ -271,7 +271,7 @@ fn demo_gaussian_beam_propagation() -> KwaversResult<()> {
     let center_y = ny as f64 / 2.0;
 
     // Use safe iterator approach for initialization
-    pressure.indexed_iter_mut().for_each(|((i, j, k), value)| {
+    pressure.indexed_iter_mut().for_each(|((i, j, _k), value)| {
         let x = (i as f64 - center_x) * dx;
         let y = (j as f64 - center_y) * dx;
         let r2 = x*x + y*y;
@@ -413,7 +413,7 @@ fn demo_nonlinear_wave_propagation() -> KwaversResult<()> {
     // High amplitude source for nonlinear effects
     let frequency = 1e6; // 1 MHz
     let amplitude = 1e6; // 1 MPa (high amplitude)
-    let k = 2.0 * PI * frequency / c0;
+    let _k = 2.0 * PI * frequency / c0;
     let omega = 2.0 * PI * frequency;
 
     println!("   Grid: {} points", nx);

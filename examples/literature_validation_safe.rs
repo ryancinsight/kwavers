@@ -34,10 +34,9 @@
 use kwavers::{
     error::KwaversResult,
     grid::Grid,
-    medium::{HomogeneousMedium, AcousticProperties, CoreMedium},
-    performance::safe_vectorization::SafeVectorOps,
+    medium::{HomogeneousMedium, CoreMedium},
 };
-use ndarray::{Array3, Array2, ArrayView3, Zip};
+use ndarray::{Array3, Array2};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -633,7 +632,7 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = HomogeneousMedium::water(&grid);
-    let frequency = 1e6; // 1 MHz
+    let frequency = 1e6f64; // 1 MHz
     let alpha_theoretical = 0.0022 * (frequency / 1e6).powi(2) * 0.1151; // Convert dB/cm to Np/m
 
     println!("   Grid: {} points", nx);
@@ -760,12 +759,12 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
         
         // Apply nonlinear propagation (simplified Burgers solution)
         let mut evolved_pressure = Array3::<f64>::zeros((nx, ny, nz));
+        let sigma = propagation_distance / shock_distance; // Dimensionless distance
         
         evolved_pressure.indexed_iter_mut().for_each(|((i, _, _), value)| {
             let x = i as f64 * dx;
             
             // Burgers solution with implicit shock steepening
-            let sigma = propagation_distance / shock_distance; // Dimensionless distance
             let phase = k * x;
             
             // Use series expansion for pre-shock solution
@@ -783,7 +782,7 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
         });
 
         // Measure steepness (maximum slope)
-        let mut max_slope = 0.0;
+        let mut max_slope = 0.0f64;
         for i in 1..nx-1 {
             let slope = (evolved_pressure[[i+1, 0, 0]] - evolved_pressure[[i-1, 0, 0]]) / (2.0 * dx);
             max_slope = max_slope.max(slope.abs());
