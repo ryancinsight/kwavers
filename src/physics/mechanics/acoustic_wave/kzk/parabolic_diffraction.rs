@@ -24,6 +24,17 @@ pub struct KzkDiffractionOperator {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for KzkDiffractionOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KzkDiffractionOperator")
+            .field("config", &self.config)
+            .field("kx2", &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()))
+            .field("ky2", &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()))
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl KzkDiffractionOperator {
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {

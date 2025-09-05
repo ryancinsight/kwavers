@@ -73,6 +73,7 @@ impl HeterogeneousMedium {
 
     /// Perform trilinear interpolation on a field
     #[inline]
+    #[allow(dead_code)]
     fn trilinear_interpolate(
         &self,
         field: &Array3<f64>,
@@ -121,6 +122,7 @@ impl HeterogeneousMedium {
 
     /// Get value from field using either nearest neighbor or trilinear interpolation
     #[inline]
+    #[allow(dead_code)]
     fn get_field_value(&self, field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if self.use_trilinear_interpolation {
             self.trilinear_interpolate(field, x, y, z, grid)
@@ -280,27 +282,27 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn density_array(&self) -> ArrayView3<f64> {
+    fn density_array(&self) -> ArrayView3<'_, f64> {
         self.density.view()
     }
 
-    fn sound_speed_array(&self) -> ArrayView3<f64> {
+    fn sound_speed_array(&self) -> ArrayView3<'_, f64> {
         self.sound_speed.view()
     }
 
-    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.density.view_mut())
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.sound_speed.view_mut())
     }
 
-    fn absorption_array(&self) -> ArrayView3<f64> {
+    fn absorption_array(&self) -> ArrayView3<'_, f64> {
         self.absorption.view()
     }
 
-    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+    fn nonlinearity_array(&self) -> ArrayView3<'_, f64> {
         self.nonlinearity.view()
     }
 }

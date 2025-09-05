@@ -54,7 +54,7 @@ pub struct Configuration {
 impl Configuration {
     /// Load configuration from TOML file
     pub fn from_file<P: AsRef<Path>>(path: P) -> crate::error::KwaversResult<Self> {
-        let contents = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+        let contents = std::fs::read_to_string(path.as_ref()).map_err(|_e| {
             crate::error::ConfigError::FileNotFound {
                 path: path.as_ref().display().to_string(),
             }
@@ -77,7 +77,7 @@ impl Configuration {
                 message: e.to_string(),
             })?;
 
-        std::fs::write(path, contents).map_err(|e| {
+        std::fs::write(path, contents).map_err(|_e| {
             crate::error::ConfigError::FileNotFound {
                 path: "config file".to_string(),
             }

@@ -14,7 +14,7 @@ pub struct TissueClassifierModel {
 
 impl TissueClassifierModel {
     /// Load model from path
-    pub fn load(path: &std::path::Path) -> KwaversResult<Self> {
+    pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         // Simplified loading - real implementation would deserialize weights
         Ok(Self::with_random_weights(128, 10))
     }

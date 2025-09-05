@@ -99,6 +99,25 @@ pub struct KWaveSolver {
     absorb_eta: Array3<f64>,
 }
 
+impl std::fmt::Debug for KWaveSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KWaveSolver")
+            .field("config", &self.config)
+            .field("grid", &self.grid)
+            .field("fft_planner", &"<FftPlanner>")
+            .field("kappa", &format!("Array3<f64> {}x{}x{}", 
+                self.kappa.shape()[0], self.kappa.shape()[1], self.kappa.shape()[2]))
+            .field("k_max", &self.k_max)
+            .field("p", &format!("Array3<f64> {}x{}x{}", 
+                self.p.shape()[0], self.p.shape()[1], self.p.shape()[2]))
+            .field("absorb_tau", &format!("Array3<f64> {}x{}x{}", 
+                self.absorb_tau.shape()[0], self.absorb_tau.shape()[1], self.absorb_tau.shape()[2]))
+            .field("absorb_eta", &format!("Array3<f64> {}x{}x{}", 
+                self.absorb_eta.shape()[0], self.absorb_eta.shape()[1], self.absorb_eta.shape()[2]))
+            .finish()
+    }
+}
+
 impl KWaveSolver {
     /// Create a new k-Wave solver
     pub fn new(config: KWaveConfig, grid: Grid) -> KwaversResult<Self> {

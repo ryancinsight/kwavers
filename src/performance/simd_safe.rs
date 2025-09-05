@@ -10,12 +10,15 @@ use ndarray::Array3;
 
 /// SIMD lane width for f64 operations
 #[cfg(target_arch = "x86_64")]
+#[allow(dead_code)]
 const SIMD_WIDTH: usize = 4; // AVX2: 256 bits / 64 bits = 4
 
 #[cfg(target_arch = "aarch64")]
+#[allow(dead_code)]
 const SIMD_WIDTH: usize = 2; // NEON: 128 bits / 64 bits = 2
 
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+#[allow(dead_code)]
 const SIMD_WIDTH: usize = 1; // Scalar fallback
 
 /// Portable SIMD operations

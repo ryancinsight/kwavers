@@ -18,7 +18,6 @@ const WATER_SURFACE_TENSION: f64 = 0.0728; // N/m
 const WATER_VAPOR_PRESSURE: f64 = 2.33e3; // Pa at 20°C
 const AIR_MOLECULAR_WEIGHT: f64 = 0.029; // kg/mol
 const WATER_MOLECULAR_WEIGHT: f64 = 0.018; // kg/mol
-const GAS_CONSTANT: f64 = 8.314; // J/(mol·K)
 const DEFAULT_BUBBLE_RADIUS: f64 = 5e-6; // m
 const ACCOMMODATION_COEFFICIENT: f64 = 0.04;
 

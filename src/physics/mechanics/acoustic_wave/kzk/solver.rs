@@ -39,6 +39,25 @@ pub struct KZKSolver {
     fft_planner: FftPlanner<f64>,
 }
 
+impl std::fmt::Debug for KZKSolver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KZKSolver")
+            .field("config", &self.config)
+            .field("pressure", &format!("Array3<f64> {}x{}x{}", 
+                self.pressure.shape()[0], self.pressure.shape()[1], self.pressure.shape()[2]))
+            .field("pressure_prev", &format!("Array3<f64> {}x{}x{}", 
+                self.pressure_prev.shape()[0], self.pressure_prev.shape()[1], self.pressure_prev.shape()[2]))
+            .field("diffraction", &self.diffraction.is_some())
+            .field("angular_spectrum_2d", &self.angular_spectrum_2d.is_some())
+            .field("kzk_diffraction", &self.kzk_diffraction.is_some())
+            .field("use_kzk_diffraction", &self.use_kzk_diffraction)
+            .field("absorption", &self.absorption)
+            .field("nonlinear", &self.nonlinear)
+            .field("fft_planner", &"<FftPlanner>")
+            .finish()
+    }
+}
+
 impl KZKSolver {
     /// Create new KZK solver
     pub fn new(config: KZKConfig) -> Result<Self, String> {

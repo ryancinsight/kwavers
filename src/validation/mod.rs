@@ -56,9 +56,6 @@ mod constants {
     /// Speed of sound in water at 20°C (m/s) - NIST reference
     pub const SOUND_SPEED_WATER: f64 = 1482.0;
 
-    /// Density of water at 20°C (kg/m³) - NIST reference
-    pub const WATER_DENSITY: f64 = 998.2;
-
     /// Absorption in water at 1 `MHz` (dB/cm/MHz²) - Pinkerton (1949)
     pub const WATER_ABSORPTION: f64 = 0.0022;
 

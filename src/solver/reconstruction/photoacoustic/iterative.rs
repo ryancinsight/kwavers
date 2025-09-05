@@ -5,7 +5,6 @@
 
 use crate::error::KwaversResult;
 use ndarray::{Array1, Array2, Array3, ArrayView2, Zip};
-use rayon::prelude::*;
 
 use super::config::PhotoacousticConfig;
 

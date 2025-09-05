@@ -156,8 +156,8 @@ pub const SYMMETRIC_CORRECTION_FACTOR: f64 = 0.5;
 // Shock Detection Parameters
 // ============================================================================
 
-/// Shock detection threshold for gradient-based detectors
-pub const SHOCK_DETECTION_THRESHOLD: f64 = 0.1;
+/// Numerical shock detection threshold for gradient-based detectors
+pub const NUMERICAL_SHOCK_DETECTION_THRESHOLD: f64 = 0.1;
 
 // ============================================================================
 // Additional Numerical Constants
@@ -278,8 +278,8 @@ pub const MIN_RADIUS_SAFETY_FACTOR: f64 = 0.1;
 /// Minimum temperature limit (K)
 pub const MIN_TEMPERATURE: f64 = 100.0;
 
-/// Minimum time step (s)
-pub const MIN_TIME_STEP: f64 = 1e-15;
+/// Minimum numerical time step (s)
+pub const MIN_NUMERICAL_TIME_STEP: f64 = 1e-15;
 
 /// Safety factor for adaptive stepping
 pub const SAFETY_FACTOR: f64 = 0.9;

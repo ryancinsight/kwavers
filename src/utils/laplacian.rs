@@ -111,7 +111,7 @@ impl LaplacianOperator {
     }
 
     /// Compute Laplacian of a scalar field
-    pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn apply(&self, field: ArrayView3<'_, f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut result = Array3::zeros((nx, ny, nz));
         self.apply_mut(field, result.view_mut())?;
@@ -163,7 +163,7 @@ impl LaplacianOperator {
 
     /// Second-order finite difference interior computation
     #[inline]
-    fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
+    fn apply_second_order_interior(&self, input: ArrayView3<'_, f64>, mut output: ArrayViewMut3<'_, f64>) {
         let (nx, ny, nz) = input.dim();
 
         // Use Zip for parallel iteration when available
@@ -328,7 +328,7 @@ pub fn laplacian(
 }
 
 /// Compute second-order Laplacian (most common case)
-pub fn laplacian_second_order(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+pub fn laplacian_second_order(field: ArrayView3<'_, f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     let operator = LaplacianOperator::second_order(grid);
     operator.apply(field)
 }
