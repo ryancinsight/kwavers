@@ -57,6 +57,7 @@ impl GilmoreSolver {
 
     /// Calculate liquid density from Tait equation
     /// ρ = ρ₀ * [(p+B)/(p₀+B)]^(1/n)
+    #[allow(dead_code)]
     fn calculate_density(&self, pressure: f64) -> f64 {
         let p0 = self.params.p0;
         self.params.rho_liquid
