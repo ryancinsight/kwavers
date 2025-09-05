@@ -43,7 +43,7 @@ fn demonstrate_focus_beamforming() -> KwaversResult<()> {
     println!("-----------------------------------------");
 
     // Create grid and medium
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     // Configure phased array
@@ -111,7 +111,7 @@ fn demonstrate_beam_steering() -> KwaversResult<()> {
     println!("\n🎯 Electronic Beam Steering Demonstration");
     println!("-----------------------------------------");
 
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     let array_config = PhasedArrayConfig {
@@ -174,7 +174,7 @@ fn demonstrate_custom_patterns() -> KwaversResult<()> {
     println!("\n🎨 Custom Beamforming Patterns Demonstration");
     println!("--------------------------------------------");
 
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     let array_config = PhasedArrayConfig {
@@ -252,7 +252,7 @@ fn demonstrate_cross_talk_effects() -> KwaversResult<()> {
     println!("\n🔗 Element Cross-talk Effects Demonstration");
     println!("-------------------------------------------");
 
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)?;
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
 
     // Compare arrays with and without cross-talk

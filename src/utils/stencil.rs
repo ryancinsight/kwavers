@@ -196,7 +196,8 @@ pub trait Stencil<T: StencilValue, const N: usize> {
 }
 
 /// A 7-point stencil for 3D Laplacian
-#[derive(Debug)]
+/// Configuration for 3D Laplacian computation
+#[derive(Debug, Clone, Copy)]
 pub struct Laplacian3D {
     pub dx_inv2: f64,
     pub dy_inv2: f64,
