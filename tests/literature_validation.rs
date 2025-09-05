@@ -66,7 +66,7 @@ fn test_rayleigh_collapse_time() {
 /// Principles and Applications. Acoustical Society of America.
 #[test]
 fn test_acoustic_dispersion_relation() {
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
     let c = 1500.0; // Sound speed in water
 
@@ -109,7 +109,7 @@ fn test_elastic_wave_velocities() {
     // P-wave velocity: Vp = sqrt((λ + 2μ)/ρ)
     // S-wave velocity: Vs = sqrt(μ/ρ)
 
-    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
+    let _grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Rock properties (typical granite)
     let rho = 2700.0; // kg/m³
@@ -142,7 +142,7 @@ fn test_thermal_diffusion_in_bubble() {
     params.thermal_conductivity = 0.6; // W/(m·K) for water
     params.specific_heat_liquid = 4182.0; // J/(kg·K)
 
-    let model = KellerMiksisModel::new(params.clone());
+    let _model = KellerMiksisModel::new(params.clone());
     let mut state = BubbleState::new(&params);
 
     // Small amplitude oscillation
@@ -188,7 +188,7 @@ fn test_thermal_diffusion_in_bubble() {
 /// Mathematische Annalen, 100(1), 32-74.
 #[test]
 fn test_cfl_stability_condition() {
-    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
     let c_max = 1500.0; // Maximum sound speed
 
     // Calculate CFL timestep
@@ -253,7 +253,7 @@ fn test_time_reversal_principle() {
     // Time reversal principle: In a lossless medium, time-reversed waves
     // refocus at the original source location
 
-    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
+    let _grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Source position
     let source_x = 64;

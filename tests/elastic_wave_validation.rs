@@ -20,7 +20,7 @@ use ndarray::Array4;
 #[test]
 fn test_p_wave_velocity() {
     // Create test medium with known elastic properties
-    let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001);
+    let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
 
     // Steel properties (typical values)
     let density = 7850.0_f64; // kg/m³
@@ -50,7 +50,7 @@ fn test_p_wave_velocity() {
 /// Test S-wave velocity in isotropic elastic medium
 #[test]
 fn test_s_wave_velocity() {
-    let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001);
+    let grid = Grid::new(50, 50, 50, 0.001, 0.001, 0.001).unwrap();
 
     // Granite properties (typical values)
     let density = 2700.0_f64; // kg/m³
@@ -70,7 +70,7 @@ fn test_s_wave_velocity() {
 /// Test wave propagation with proper mode separation
 #[test]
 fn test_elastic_wave_propagation() {
-    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001);
+    let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001).unwrap();
     let dt = 1e-6; // 1 microsecond timestep
 
     // Aluminum properties
@@ -90,8 +90,7 @@ fn test_elastic_wave_propagation() {
     fields[[1, 50, 50, 50]] = 1.0; // vx component
 
     // Propagate for several timesteps
-    let pressure = ndarray::Array3::zeros((100, 100, 100));
-    let pressure = ndarray::Array3::zeros((100, 100, 100));
+    let pressure = ndarray::Array3::<f64>::zeros((100, 100, 100));
     let context = PluginContext::new(pressure);
     for _ in 0..10 {
         plugin
@@ -249,13 +248,13 @@ impl ThermalProperties for TestElasticMedium {
     }
 
     fn thermal_diffusivity(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-        let k = self.thermal_conductivity(x, y, z, grid);
+        let thermal_k = self.thermal_conductivity(x, y, z, grid);
         let i = (x / grid.dx) as usize;
         let j = (y / grid.dy) as usize;
         let k = (z / grid.dz) as usize;
         let rho = self.density(i, j, k);
         let cp = self.specific_heat(x, y, z, grid);
-        k as f64 / (rho * cp)
+        thermal_k / (rho * cp)
     }
 
     fn thermal_expansion(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
