@@ -6,8 +6,8 @@ use crate::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
 use ndarray::Array3;
 
 use crate::physics::constants::numerical::{
-    NUMERICAL_SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO_EPSILON, WENO_WEIGHT_0, WENO_WEIGHT_1,
-    WENO_WEIGHT_2,
+    NUMERICAL_SHOCK_DETECTION_THRESHOLD, STENCIL_COEFF_1_4, WENO_EPSILON, WENO_WEIGHT_0,
+    WENO_WEIGHT_1, WENO_WEIGHT_2,
 };
 
 /// WENO-based shock limiter

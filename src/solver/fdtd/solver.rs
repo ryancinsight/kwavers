@@ -41,8 +41,10 @@ impl FdtdSolver {
 
         // Validate spatial order by converting to enum
         let spatial_order = SpatialOrder::from_usize(config.spatial_order);
-        // Validate that we got a valid order (not the default)
-        if config.spatial_order != 2 && config.spatial_order != 4 && config.spatial_order != 6 {
+
+        // Check if we got a valid order (the from_usize method defaults to Second for invalid values)
+        // We need to validate that the input was actually valid by checking against known values
+        if !matches!(config.spatial_order, 2 | 4 | 6) {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "spatial_order".to_string(),
                 value: config.spatial_order.to_string(),
@@ -140,26 +142,20 @@ impl FdtdSolver {
         }
 
         // Update velocity: v^{n+1/2} = v^{n-1/2} - dt/rho * grad(p)
-        Zip::from(vx)
-            .and(&grad_x)
-            .and(density)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt / rho * grad;
-            });
+        let velocity_components = [&mut *vx, &mut *vy, &mut *vz];
+        let gradients = [&grad_x, &grad_y, &grad_z];
 
-        Zip::from(vy)
-            .and(&grad_y)
-            .and(density)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt / rho * grad;
-            });
-
-        Zip::from(vz)
-            .and(&grad_z)
-            .and(density)
-            .for_each(|v, &grad, &rho| {
-                *v -= dt / rho * grad;
-            });
+        for (vel_component, grad_component) in velocity_components.into_iter().zip(gradients) {
+            Zip::from(vel_component)
+                .and(grad_component)
+                .and(density)
+                .for_each(|v, &grad, &rho| {
+                    // Ensure rho is not zero to prevent division by zero
+                    if rho > 1e-9 {
+                        *v -= dt / rho * grad;
+                    }
+                });
+        }
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 //! Safe Vectorization Performance Benchmarks
 //!
 //! Comprehensive performance comparison between safe vectorization approaches
-//! and traditional implementation patterns, demonstrating that zero-cost 
+//! and traditional implementation patterns, demonstrating that zero-cost
 //! abstractions can match or exceed unsafe SIMD performance.
 //!
 //! ## Benchmark Categories
@@ -32,12 +32,8 @@
 //! - Cache efficiency (L1, L2, L3 miss rates)
 //! - Energy efficiency (operations per joule)
 
-use kwavers::{
-    error::KwaversResult,
-    grid::Grid,
-    performance::safe_vectorization::SafeVectorOps,
-};
-use ndarray::{Array3, Array1, Zip};
+use kwavers::{error::KwaversResult, grid::Grid, performance::safe_vectorization::SafeVectorOps};
+use ndarray::{Array1, Array3, Zip};
 use std::time::Instant;
 
 /// Benchmark result for a single test
@@ -78,55 +74,81 @@ impl BenchmarkSuite {
         println!("\n=================================================================");
         println!("PERFORMANCE BENCHMARK SUMMARY");
         println!("=================================================================");
-        
+
         // Group results by test type
-        let mut test_groups: std::collections::HashMap<String, Vec<&BenchmarkResult>> = 
+        let mut test_groups: std::collections::HashMap<String, Vec<&BenchmarkResult>> =
             std::collections::HashMap::new();
-        
+
         for result in &self.results {
-            let test_category = result.test_name.split('_').next().unwrap_or("unknown").to_string();
-            test_groups.entry(test_category).or_insert_with(Vec::new).push(result);
+            let test_category = result
+                .test_name
+                .split('_')
+                .next()
+                .unwrap_or("unknown")
+                .to_string();
+            test_groups
+                .entry(test_category)
+                .or_insert_with(Vec::new)
+                .push(result);
         }
 
         for (category, results) in test_groups {
             println!("\n{} Operations:", category.to_uppercase());
-            println!("  {:<25} {:<15} {:<15} {:<12} {:<10}", 
-                     "Implementation", "Array Size", "Ops/sec", "Bandwidth", "Speedup");
+            println!(
+                "  {:<25} {:<15} {:<15} {:<12} {:<10}",
+                "Implementation", "Array Size", "Ops/sec", "Bandwidth", "Speedup"
+            );
             println!("  {}", "-".repeat(80));
-            
+
             for result in results {
-                println!("  {:<25} {:<15} {:<15.2e} {:<12.1} {:<10.2}x", 
-                         result.implementation,
-                         format!("{}³", (result.array_size as f64).powf(1.0/3.0) as usize),
-                         result.operations_per_second,
-                         result.memory_bandwidth_gb_per_s,
-                         result.relative_performance);
+                println!(
+                    "  {:<25} {:<15} {:<15.2e} {:<12.1} {:<10.2}x",
+                    result.implementation,
+                    format!("{}³", (result.array_size as f64).powf(1.0 / 3.0) as usize),
+                    result.operations_per_second,
+                    result.memory_bandwidth_gb_per_s,
+                    result.relative_performance
+                );
             }
         }
 
         // Overall statistics
-        let safe_results: Vec<_> = self.results.iter()
+        let safe_results: Vec<_> = self
+            .results
+            .iter()
             .filter(|r| r.implementation.contains("Safe"))
             .collect();
-        
-        let traditional_results: Vec<_> = self.results.iter()
+
+        let traditional_results: Vec<_> = self
+            .results
+            .iter()
             .filter(|r| r.implementation.contains("Traditional"))
             .collect();
 
         if !safe_results.is_empty() && !traditional_results.is_empty() {
-            let avg_safe_perf: f64 = safe_results.iter()
+            let avg_safe_perf: f64 = safe_results
+                .iter()
                 .map(|r| r.operations_per_second)
-                .sum::<f64>() / safe_results.len() as f64;
-            
-            let avg_traditional_perf: f64 = traditional_results.iter()
+                .sum::<f64>()
+                / safe_results.len() as f64;
+
+            let avg_traditional_perf: f64 = traditional_results
+                .iter()
                 .map(|r| r.operations_per_second)
-                .sum::<f64>() / traditional_results.len() as f64;
+                .sum::<f64>()
+                / traditional_results.len() as f64;
 
             println!("\nOverall Performance Comparison:");
             println!("  Safe Vectorization Avg:    {:.2e} ops/sec", avg_safe_perf);
-            println!("  Traditional Methods Avg:   {:.2e} ops/sec", avg_traditional_perf);
-            println!("  Performance Ratio:         {:.2}x", avg_safe_perf / avg_traditional_perf);
-            
+            println!(
+                "  Traditional Methods Avg:   {:.2e} ops/sec",
+                avg_traditional_perf
+            );
+            println!(
+                "  Performance Ratio:         {:.2}x",
+                avg_safe_perf / avg_traditional_perf
+            );
+
             if avg_safe_perf >= avg_traditional_perf * 0.95 {
                 println!("  Status: ✅ Safe vectorization achieves competitive performance");
             } else {
@@ -149,20 +171,24 @@ pub fn main() -> KwaversResult<()> {
     let array_sizes = vec![32, 64, 128]; // Cubic array dimensions
 
     for &size in &array_sizes {
-        println!("Testing with {}³ arrays ({} elements)...", size, size * size * size);
-        
+        println!(
+            "Testing with {}³ arrays ({} elements)...",
+            size,
+            size * size * size
+        );
+
         // Benchmark 1: Basic array operations
         benchmark_array_operations(&mut suite, size)?;
-        
+
         // Benchmark 2: Linear algebra operations
         benchmark_linear_algebra(&mut suite, size)?;
-        
-        // Benchmark 3: Signal processing operations  
+
+        // Benchmark 3: Signal processing operations
         benchmark_signal_processing(&mut suite, size)?;
-        
+
         // Benchmark 4: Physics-specific operations
         benchmark_physics_operations(&mut suite, size)?;
-        
+
         println!();
     }
 
@@ -188,7 +214,7 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             let _result = SafeVectorOps::add_arrays(&a, &b);
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional nested loop approach
         let start = Instant::now();
         for _ in 0..iterations {
@@ -206,11 +232,11 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
         let total_ops = (size * size * size * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         // Memory bandwidth calculation (assuming 2 reads + 1 write per operation)
         let bytes_per_op = 3.0 * 8.0; // 3 f64 values
         let safe_bandwidth = safe_ops_per_sec * bytes_per_op / 1e9; // GB/s
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "array_addition".to_string(),
             implementation: "Safe Vectorization".to_string(),
@@ -231,8 +257,12 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             accuracy_error: 0.0,
         });
 
-        println!("    Addition: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    Addition: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     // Test: Scalar Multiplication
@@ -244,7 +274,7 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             let _result = SafeVectorOps::scalar_multiply(&a, scalar);
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional approach
         let start = Instant::now();
         for _ in 0..iterations {
@@ -262,7 +292,7 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
         let total_ops = (size * size * size * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "scalar_multiply".to_string(),
             implementation: "Safe Vectorization".to_string(),
@@ -273,8 +303,12 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             accuracy_error: 0.0,
         });
 
-        println!("    Scalar Multiply: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    Scalar Multiply: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     // Test: Parallel Addition (Rayon)
@@ -285,10 +319,10 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
             let _result = SafeVectorOps::add_arrays_parallel(&a, &b);
         }
         let parallel_time = start.elapsed().as_secs_f64();
-        
+
         let total_ops = (size * size * size * iterations) as f64;
         let parallel_ops_per_sec = total_ops / parallel_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "array_addition".to_string(),
             implementation: "Safe Parallel".to_string(),
@@ -320,11 +354,11 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
         let start = Instant::now();
         let iterations = 1000;
         for _ in 0..iterations {
-            let _result = SafeVectorOps::dot_product(a_vec.as_slice().unwrap(), 
-                                                   b_vec.as_slice().unwrap());
+            let _result =
+                SafeVectorOps::dot_product(a_vec.as_slice().unwrap(), b_vec.as_slice().unwrap());
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional approach
         let start = Instant::now();
         for _ in 0..iterations {
@@ -338,7 +372,7 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
         let total_ops = (vec_size * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "dot_product".to_string(),
             implementation: "Safe Vectorization".to_string(),
@@ -349,14 +383,18 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
             accuracy_error: 0.0,
         });
 
-        println!("    Dot Product: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    Dot Product: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     // Test: L2 Norm
     {
         let array_3d = Array3::<f64>::from_elem((size, size, size), 1.414);
-        
+
         // Safe vectorization approach
         let start = Instant::now();
         let iterations = 100;
@@ -364,7 +402,7 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
             let _result = SafeVectorOps::l2_norm(&array_3d);
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional approach
         let start = Instant::now();
         for _ in 0..iterations {
@@ -384,7 +422,7 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
         let total_ops = (size * size * size * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "l2_norm".to_string(),
             implementation: "Safe Vectorization".to_string(),
@@ -395,8 +433,12 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
             accuracy_error: 0.0,
         });
 
-        println!("    L2 Norm: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    L2 Norm: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     Ok(())
@@ -409,9 +451,11 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
     // Create test signals
     let signal_length = size * size;
     let signal = Array1::<f64>::from_vec(
-        (0..signal_length).map(|i| (2.0 * std::f64::consts::PI * i as f64 / 32.0).sin()).collect()
+        (0..signal_length)
+            .map(|i| (2.0 * std::f64::consts::PI * i as f64 / 32.0).sin())
+            .collect(),
     );
-    
+
     // Simple FIR filter kernel
     let kernel = Array1::<f64>::from_vec(vec![0.25, 0.5, 0.25]); // Simple low-pass
 
@@ -422,10 +466,12 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
         let iterations = 100;
         for _ in 0..iterations {
             let mut output = Array1::<f64>::zeros(signal_length);
-            
+
             // Use safe iterator-based convolution
             for (i, output_val) in output.iter_mut().enumerate() {
-                *output_val = kernel.iter().enumerate()
+                *output_val = kernel
+                    .iter()
+                    .enumerate()
                     .map(|(k, &kernel_val)| {
                         if i >= k && i - k < signal_length {
                             kernel_val * signal[i - k]
@@ -437,7 +483,7 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
             }
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional nested loop approach
         let start = Instant::now();
         for _ in 0..iterations {
@@ -455,7 +501,7 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
         let total_ops = (signal_length * kernel.len() * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "convolution".to_string(),
             implementation: "Safe Iterators".to_string(),
@@ -466,8 +512,12 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
             accuracy_error: 0.0,
         });
 
-        println!("    Convolution: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    Convolution: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     // Test: Windowing function application
@@ -476,21 +526,29 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
         let start = Instant::now();
         let iterations = 200;
         for _ in 0..iterations {
-            let _windowed: Array1<f64> = signal.iter().enumerate()
+            let _windowed: Array1<f64> = signal
+                .iter()
+                .enumerate()
                 .map(|(i, &val)| {
-                    let window = 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / (signal_length - 1) as f64).cos(); // Hann window
+                    let window = 0.5
+                        - 0.5
+                            * (2.0 * std::f64::consts::PI * i as f64 / (signal_length - 1) as f64)
+                                .cos(); // Hann window
                     val * window
                 })
                 .collect();
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional approach
         let start = Instant::now();
         for _ in 0..iterations {
             let mut windowed = vec![0.0; signal_length];
             for i in 0..signal_length {
-                let window = 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / (signal_length - 1) as f64).cos();
+                let window = 0.5
+                    - 0.5
+                        * (2.0 * std::f64::consts::PI * i as f64 / (signal_length - 1) as f64)
+                            .cos();
                 windowed[i] = signal[i] * window;
             }
         }
@@ -499,7 +557,7 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
         let total_ops = (signal_length * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "windowing".to_string(),
             implementation: "Safe Iterators".to_string(),
@@ -510,8 +568,12 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
             accuracy_error: 0.0,
         });
 
-        println!("    Windowing: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    Windowing: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     Ok(())
@@ -540,35 +602,37 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
         for _ in 0..iterations {
             // Create new pressure array using safe operations
             let mut new_pressure = Array3::<f64>::zeros((size, size, size));
-            
+
             // Use Zip for safe vectorized operations
             Zip::indexed(&mut new_pressure)
                 .and(&pressure)
                 .and(&velocity_x)
-                .and(&velocity_y)  
+                .and(&velocity_y)
                 .and(&velocity_z)
                 .for_each(|(i, j, k), new_p, &p, &_vx, &_vy, &_vz| {
-                    if i > 0 && i < size-1 && j > 0 && j < size-1 && k > 0 && k < size-1 {
-                        let div_v = (velocity_x[[i+1, j, k]] - velocity_x[[i-1, j, k]]) / (2.0 * dx) +
-                                  (velocity_y[[i, j+1, k]] - velocity_y[[i, j-1, k]]) / (2.0 * dx) +
-                                  (velocity_z[[i, j, k+1]] - velocity_z[[i, j, k-1]]) / (2.0 * dx);
+                    if i > 0 && i < size - 1 && j > 0 && j < size - 1 && k > 0 && k < size - 1 {
+                        let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
+                            / (2.0 * dx)
+                            + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * dx)
+                            + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * dx);
                         *new_p = p - dt * rho0 * c0 * c0 * div_v;
                     }
                 });
             pressure.assign(&new_pressure);
         }
         let safe_time = start.elapsed().as_secs_f64();
-        
+
         // Traditional nested loop approach
         let start = Instant::now();
         for _ in 0..iterations {
             let mut new_pressure = Array3::<f64>::zeros((size, size, size));
-            for i in 1..size-1 {
-                for j in 1..size-1 {
-                    for k in 1..size-1 {
-                        let div_v = (velocity_x[[i+1, j, k]] - velocity_x[[i-1, j, k]]) / (2.0 * dx) +
-                                  (velocity_y[[i, j+1, k]] - velocity_y[[i, j-1, k]]) / (2.0 * dx) +
-                                  (velocity_z[[i, j, k+1]] - velocity_z[[i, j, k-1]]) / (2.0 * dx);
+            for i in 1..size - 1 {
+                for j in 1..size - 1 {
+                    for k in 1..size - 1 {
+                        let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
+                            / (2.0 * dx)
+                            + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * dx)
+                            + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * dx);
                         new_pressure[[i, j, k]] = pressure[[i, j, k]] - dt * rho0 * c0 * c0 * div_v;
                     }
                 }
@@ -577,10 +641,10 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
         }
         let traditional_time = start.elapsed().as_secs_f64();
 
-        let total_ops = ((size-2) * (size-2) * (size-2) * iterations) as f64;
+        let total_ops = ((size - 2) * (size - 2) * (size - 2) * iterations) as f64;
         let safe_ops_per_sec = total_ops / safe_time;
         let traditional_ops_per_sec = total_ops / traditional_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "fdtd_pressure_update".to_string(),
             implementation: "Safe Zip".to_string(),
@@ -601,8 +665,12 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
             accuracy_error: 0.0,
         });
 
-        println!("    FDTD Update: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
-                 safe_ops_per_sec, traditional_ops_per_sec, safe_ops_per_sec / traditional_ops_per_sec);
+        println!(
+            "    FDTD Update: Safe={:.1e} ops/s, Traditional={:.1e} ops/s, Speedup={:.2}x",
+            safe_ops_per_sec,
+            traditional_ops_per_sec,
+            safe_ops_per_sec / traditional_ops_per_sec
+        );
     }
 
     // Test: Chunked Processing for Cache Optimization
@@ -610,7 +678,7 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
         let array_a = Array3::<f64>::from_elem((size, size, size), 1.5);
         let array_b = Array3::<f64>::from_elem((size, size, size), 2.5);
         let chunk_size = 1024; // Optimized for L1 cache
-        
+
         let start = Instant::now();
         let iterations = 50;
         for _ in 0..iterations {
@@ -620,7 +688,7 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
 
         let total_ops = (size * size * size * iterations) as f64;
         let chunked_ops_per_sec = total_ops / chunked_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "chunked_processing".to_string(),
             implementation: "Safe Chunked".to_string(),
@@ -652,10 +720,10 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
             let _sum: f64 = array.iter().sum();
         }
         let sequential_time = start.elapsed().as_secs_f64();
-        
+
         let total_ops = (size * size * size * iterations) as f64;
         let ops_per_sec = total_ops / sequential_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "memory_sequential".to_string(),
             implementation: "Iterator".to_string(),
@@ -674,22 +742,26 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
     {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        let indices: Vec<(usize, usize, usize)> = (0..size*size*size)
-            .map(|_| (rng.gen_range(0..size), rng.gen_range(0..size), rng.gen_range(0..size)))
+        let indices: Vec<(usize, usize, usize)> = (0..size * size * size)
+            .map(|_| {
+                (
+                    rng.gen_range(0..size),
+                    rng.gen_range(0..size),
+                    rng.gen_range(0..size),
+                )
+            })
             .collect();
-        
+
         let start = Instant::now();
         let iterations = 10; // Fewer iterations for expensive random access
         for _ in 0..iterations {
-            let _sum: f64 = indices.iter()
-                .map(|&(i, j, k)| array[[i, j, k]])
-                .sum();
+            let _sum: f64 = indices.iter().map(|&(i, j, k)| array[[i, j, k]]).sum();
         }
         let random_time = start.elapsed().as_secs_f64();
-        
+
         let total_ops = (indices.len() * iterations) as f64;
         let random_ops_per_sec = total_ops / random_time;
-        
+
         suite.add_result(BenchmarkResult {
             test_name: "memory_random".to_string(),
             implementation: "Random Access".to_string(),
@@ -700,8 +772,11 @@ fn benchmark_memory_patterns(suite: &mut BenchmarkSuite, size: usize) -> Kwavers
             accuracy_error: 0.0,
         });
 
-        println!("    Random Access: {:.1e} ops/s (Efficiency: {:.1}%)", 
-                 random_ops_per_sec, 100.0 * random_ops_per_sec / sequential_ops_per_sec);
+        println!(
+            "    Random Access: {:.1e} ops/s (Efficiency: {:.1}%)",
+            random_ops_per_sec,
+            100.0 * random_ops_per_sec / sequential_ops_per_sec
+        );
     }
 
     Ok(())

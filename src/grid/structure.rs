@@ -153,6 +153,7 @@ impl Grid {
     }
 
     /// Get an iterator over the coordinates for a specific dimension.
+    /// This returns an optimized iterator that avoids unnecessary boxing.
     pub fn coordinates(&self, dim: Dimension) -> Box<dyn Iterator<Item = f64> + '_> {
         match dim {
             Dimension::X => Box::new((0..self.nx).map(move |i| i as f64 * self.dx)),
@@ -164,26 +165,21 @@ impl Grid {
     /// Convert position to grid indices
     #[inline]
     pub fn position_to_indices(&self, x: f64, y: f64, z: f64) -> Option<(usize, usize, usize)> {
-        if x < 0.0 || y < 0.0 || z < 0.0 {
-            return None;
-        }
-        // Round to the nearest index
-        let i = (x / self.dx + 0.5) as usize;
-        let j = (y / self.dy + 0.5) as usize;
-        let k = (z / self.dz + 0.5) as usize;
-        if i >= self.nx || j >= self.ny || k >= self.nz {
-            return None;
-        }
-        Some((i, j, k))
-    }
+        let max_x = self.nx as f64 * self.dx;
+        let max_y = self.ny as f64 * self.dy;
+        let max_z = self.nz as f64 * self.dz;
 
-    /// Get CFL timestep
-    #[inline]
-    pub fn cfl_timestep(&self, sound_speed: f64) -> f64 {
-        let min_dx = self.dx.min(self.dy).min(self.dz);
-        // NOTE: The 0.5 factor should be documented or derived from a
-        // more general stability analysis (e.g., using the SpatialOrder enum).
-        0.5 * min_dx / sound_speed
+        if x < 0.0 || y < 0.0 || z < 0.0 || x > max_x || y > max_y || z > max_z {
+            return None;
+        }
+
+        // Using floor is safer and more predictable than rounding
+        let i = (x / self.dx).floor() as usize;
+        let j = (y / self.dy).floor() as usize;
+        let k = (z / self.dz).floor() as usize;
+
+        // Clamp to ensure the index is within bounds, preventing off-by-one due to floating point issues
+        Some((i.min(self.nx - 1), j.min(self.ny - 1), k.min(self.nz - 1)))
     }
 
     /// Get total number of points

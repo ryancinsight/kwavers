@@ -20,7 +20,11 @@ pub struct SimdOps;
 
 impl SimdOps {
     /// Add two fields using SIMD-friendly patterns
-    pub fn add_fields(a: ArrayView3<'_, f64>, b: ArrayView3<'_, f64>, mut out: ArrayViewMut3<'_, f64>) {
+    pub fn add_fields(
+        a: ArrayView3<'_, f64>,
+        b: ArrayView3<'_, f64>,
+        mut out: ArrayViewMut3<'_, f64>,
+    ) {
         // Use ndarray's parallel zip for automatic vectorization
         Zip::from(&mut out)
             .and(&a)
