@@ -24,8 +24,14 @@ pub struct DiffractionOperator {
 impl std::fmt::Debug for DiffractionOperator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DiffractionOperator")
-            .field("kx2", &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()))
-            .field("ky2", &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()))
+            .field(
+                "kx2",
+                &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()),
+            )
+            .field(
+                "ky2",
+                &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()),
+            )
             .field("fft_planner", &"<FftPlanner>")
             .field("config", &self.config)
             .finish()

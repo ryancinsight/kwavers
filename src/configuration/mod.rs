@@ -8,6 +8,7 @@ use std::path::Path;
 
 // Re-export submodules
 pub mod boundary;
+pub mod builder;
 pub mod grid;
 pub mod medium;
 pub mod output;
@@ -19,6 +20,7 @@ pub mod validation;
 
 // Re-export types
 pub use boundary::BoundaryParameters;
+pub use builder::ConfigurationBuilder;
 pub use grid::GridParameters;
 pub use medium::MediumParameters;
 pub use output::OutputParameters;
@@ -87,61 +89,103 @@ impl Configuration {
 
     /// Validate configuration for consistency
     pub fn validate(&self) -> crate::error::KwaversResult<()> {
-        // Validate each component
-        self.simulation.validate()?;
-        self.grid.validate()?;
-        self.medium.validate()?;
-        self.source.validate()?;
-        self.boundary.validate()?;
-        self.solver.validate()?;
-        self.output.validate()?;
-        self.performance.validate()?;
-        self.validation.validate()?;
+        let mut multi_error = crate::error::MultiError::new();
+
+        // Validate each component - collect errors instead of returning early
+        if let Err(e) = self.simulation.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.grid.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.medium.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.source.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.boundary.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.solver.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.output.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.performance.validate() {
+            multi_error.add(e);
+        }
+        if let Err(e) = self.validation.validate() {
+            multi_error.add(e);
+        }
 
         // Cross-component validation
-        self.validate_cross_dependencies()?;
+        if let Err(e) = self.validate_cross_dependencies() {
+            multi_error.add(e);
+        }
 
-        Ok(())
+        multi_error.into_result()
     }
 
     /// Validate cross-component dependencies
     fn validate_cross_dependencies(&self) -> crate::error::KwaversResult<()> {
-        // CFL condition check
+        let mut multi_error = crate::error::MultiError::new();
+
+        // CFL condition check - require necessary values to be present
         if let Some(dt) = self.simulation.dt {
-            let max_velocity = self.medium.sound_speed_max.unwrap_or(1500.0);
-            let dx = self.grid.spacing[0];
-            let cfl_actual = max_velocity * dt / dx;
+            if let Some(max_velocity) = self.medium.sound_speed_max {
+                // Use minimum grid spacing for most restrictive CFL condition
+                let min_spacing = self.grid.spacing[0]
+                    .min(self.grid.spacing[1])
+                    .min(self.grid.spacing[2]);
+                let cfl_actual = max_velocity * dt / min_spacing;
 
-            if cfl_actual > self.simulation.cfl {
-                return Err(crate::error::ConfigError::InvalidValue {
-                    parameter: "dt".to_string(),
-                    value: format!("{dt}"),
-                    constraint: format!(
-                        "CFL condition violated: {} > {}",
-                        cfl_actual, self.simulation.cfl
-                    ),
+                if cfl_actual > self.simulation.cfl {
+                    multi_error.add(crate::error::ConfigError::InvalidValue {
+                        parameter: "dt".to_string(),
+                        value: format!("{dt}"),
+                        constraint: format!(
+                            "CFL condition violated: {} > {} (max_velocity={}, min_spacing={})",
+                            cfl_actual, self.simulation.cfl, max_velocity, min_spacing
+                        ),
+                    }.into());
                 }
-                .into());
+            } else {
+                multi_error.add(crate::error::ConfigError::MissingParameter {
+                    parameter: "medium.sound_speed_max".to_string(),
+                    section: "Required for CFL validation when dt is specified".to_string(),
+                }.into());
             }
         }
 
-        // Nyquist sampling check
-        let min_wavelength =
-            self.medium.sound_speed_min.unwrap_or(1000.0) / self.simulation.frequency;
-        let min_ppw = min_wavelength / self.grid.spacing[0];
+        // Nyquist sampling check - require necessary values to be present
+        if let Some(min_sound_speed) = self.medium.sound_speed_min {
+            let min_wavelength = min_sound_speed / self.simulation.frequency;
+            // Use maximum grid spacing for most restrictive Nyquist condition
+            let max_spacing = self.grid.spacing[0]
+                .max(self.grid.spacing[1])
+                .max(self.grid.spacing[2]);
+            let min_ppw = min_wavelength / max_spacing;
 
-        if min_ppw < 2.0 {
-            return Err(crate::error::ConfigError::InvalidValue {
-                parameter: "grid.spacing".to_string(),
-                value: format!("{:?}", self.grid.spacing),
-                constraint: format!(
-                    "Nyquist criterion violated: {min_ppw} points per wavelength < 2"
-                ),
+            if min_ppw < 2.0 {
+                multi_error.add(crate::error::ConfigError::InvalidValue {
+                    parameter: "grid.spacing".to_string(),
+                    value: format!("{:?}", self.grid.spacing),
+                    constraint: format!(
+                        "Nyquist criterion violated: {min_ppw} points per wavelength < 2 (min_wavelength={}, max_spacing={})",
+                        min_wavelength, max_spacing
+                    ),
+                }.into());
             }
-            .into());
+        } else {
+            multi_error.add(crate::error::ConfigError::MissingParameter {
+                parameter: "medium.sound_speed_min".to_string(),
+                section: "Required for Nyquist validation".to_string(),
+            }.into());
         }
 
-        Ok(())
+        multi_error.into_result()
     }
 }
 

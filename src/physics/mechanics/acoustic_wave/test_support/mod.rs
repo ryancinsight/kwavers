@@ -17,7 +17,7 @@ pub mod tests {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
 
         // Zero frequency should give zero diffusivity
-        let diffusivity = compute_acoustic_diffusivity(&medium, 0.0, 0.0, 0.0, 0.0, &grid);
+        let diffusivity = compute_diffusivity_from_power_law_absorption(&medium, 0.0, 0.0, 0.0, 0.0, &grid);
         assert_eq!(
             diffusivity, 0.0,
             "Zero frequency should give zero diffusivity"
