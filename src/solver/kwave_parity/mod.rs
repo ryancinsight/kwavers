@@ -197,25 +197,40 @@ impl KWaveSolver {
         let (k_ops, k_max) = compute_k_operators(grid);
         let k_vec = (k_ops.kx.clone(), k_ops.ky.clone(), k_ops.kz.clone());
         let kappa = compute_kspace_correction_factors(grid, &k_vec);
-        
+
         Ok((KSpaceData { kappa, k_vec }, k_max))
     }
 
     /// Initialize PML boundary operators
-    fn initialize_pml_operators(config: &KWaveConfig, grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
+    fn initialize_pml_operators(
+        config: &KWaveConfig,
+        grid: &Grid,
+    ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         if config.pml_size > 0 {
             Self::compute_pml_operators_internal(grid, config.pml_size, config.pml_alpha)
         } else {
             let shape = (grid.nx, grid.ny, grid.nz);
-            (Array3::ones(shape), Array3::ones(shape), Array3::ones(shape))
+            (
+                Array3::ones(shape),
+                Array3::ones(shape),
+                Array3::ones(shape),
+            )
         }
     }
 
     /// Internal PML computation
-    fn compute_pml_operators_internal(_grid: &Grid, _pml_size: usize, _pml_alpha: f64) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
+    fn compute_pml_operators_internal(
+        _grid: &Grid,
+        _pml_size: usize,
+        _pml_alpha: f64,
+    ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         // Simplified implementation for now - returns identity operators
         let shape = (_grid.nx, _grid.ny, _grid.nz);
-        (Array3::ones(shape), Array3::ones(shape), Array3::ones(shape))
+        (
+            Array3::ones(shape),
+            Array3::ones(shape),
+            Array3::ones(shape),
+        )
     }
 
     /// Initialize field variable arrays
@@ -231,7 +246,11 @@ impl KWaveSolver {
     }
 
     /// Initialize absorption operator arrays
-    fn initialize_absorption_operators(config: &KWaveConfig, grid: &Grid, k_max: f64) -> (Array3<f64>, Array3<f64>) {
+    fn initialize_absorption_operators(
+        config: &KWaveConfig,
+        grid: &Grid,
+        k_max: f64,
+    ) -> (Array3<f64>, Array3<f64>) {
         let shape = (grid.nx, grid.ny, grid.nz);
         match config.absorption_mode {
             AbsorptionMode::Lossless => (Array3::zeros(shape), Array3::zeros(shape)),

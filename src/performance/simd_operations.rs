@@ -212,19 +212,18 @@ mod tests {
 /// (RFC 2977), this can be upgraded to explicit SIMD vectors.
 pub mod portable {
     /// Add arrays with compiler auto-vectorization hints
-    /// 
+    ///
     /// The compiler will automatically vectorize this loop on suitable targets.
     /// Performance is comparable to hand-written SIMD for simple operations.
     pub fn add_arrays_autovec(a: &[f64], b: &[f64], out: &mut [f64]) {
         assert_eq!(a.len(), b.len());
         assert_eq!(a.len(), out.len());
-        
+
         // Compiler auto-vectorization with explicit bounds check removal
         for i in 0..a.len() {
             // SAFETY: Loop bounds ensure indices are valid
             unsafe {
-                *out.get_unchecked_mut(i) = 
-                    a.get_unchecked(i) + b.get_unchecked(i);
+                *out.get_unchecked_mut(i) = a.get_unchecked(i) + b.get_unchecked(i);
             }
         }
     }
@@ -232,12 +231,11 @@ pub mod portable {
     /// Scale array with compiler auto-vectorization
     pub fn scale_array_autovec(input: &[f64], scalar: f64, out: &mut [f64]) {
         assert_eq!(input.len(), out.len());
-        
+
         for i in 0..input.len() {
             // SAFETY: Loop bounds ensure indices are valid
             unsafe {
-                *out.get_unchecked_mut(i) = 
-                    input.get_unchecked(i) * scalar;
+                *out.get_unchecked_mut(i) = input.get_unchecked(i) * scalar;
             }
         }
     }

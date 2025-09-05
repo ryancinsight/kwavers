@@ -39,20 +39,19 @@ impl FDCoefficients {
     pub fn first_derivative<T: Float>(order: SpatialOrder) -> Vec<T> {
         match order {
             SpatialOrder::Second => vec![T::from(0.5).unwrap()],
-            SpatialOrder::Fourth => vec![
-                T::from(2.0 / 3.0).unwrap(), 
-                T::from(-1.0 / 12.0).unwrap()
-            ],
+            SpatialOrder::Fourth => {
+                vec![T::from(2.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+            }
             SpatialOrder::Sixth => vec![
-                T::from(3.0 / 4.0).unwrap(), 
-                T::from(-3.0 / 20.0).unwrap(), 
-                T::from(1.0 / 60.0).unwrap()
+                T::from(3.0 / 4.0).unwrap(),
+                T::from(-3.0 / 20.0).unwrap(),
+                T::from(1.0 / 60.0).unwrap(),
             ],
             SpatialOrder::Eighth => vec![
-                T::from(4.0 / 5.0).unwrap(), 
-                T::from(-1.0 / 5.0).unwrap(), 
-                T::from(4.0 / 105.0).unwrap(), 
-                T::from(-1.0 / 280.0).unwrap()
+                T::from(4.0 / 5.0).unwrap(),
+                T::from(-1.0 / 5.0).unwrap(),
+                T::from(4.0 / 105.0).unwrap(),
+                T::from(-1.0 / 280.0).unwrap(),
             ],
         }
     }
@@ -63,20 +62,19 @@ impl FDCoefficients {
     pub fn second_derivative_pairs<T: Float>(order: SpatialOrder) -> Vec<T> {
         match order {
             SpatialOrder::Second => vec![T::from(1.0).unwrap()],
-            SpatialOrder::Fourth => vec![
-                T::from(4.0 / 3.0).unwrap(), 
-                T::from(-1.0 / 12.0).unwrap()
-            ],
+            SpatialOrder::Fourth => {
+                vec![T::from(4.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+            }
             SpatialOrder::Sixth => vec![
-                T::from(3.0 / 2.0).unwrap(), 
-                T::from(-3.0 / 20.0).unwrap(), 
-                T::from(1.0 / 90.0).unwrap()
+                T::from(3.0 / 2.0).unwrap(),
+                T::from(-3.0 / 20.0).unwrap(),
+                T::from(1.0 / 90.0).unwrap(),
             ],
             SpatialOrder::Eighth => vec![
-                T::from(8.0 / 5.0).unwrap(), 
-                T::from(-1.0 / 5.0).unwrap(), 
-                T::from(8.0 / 315.0).unwrap(), 
-                T::from(-1.0 / 560.0).unwrap()
+                T::from(8.0 / 5.0).unwrap(),
+                T::from(-1.0 / 5.0).unwrap(),
+                T::from(8.0 / 315.0).unwrap(),
+                T::from(-1.0 / 560.0).unwrap(),
             ],
         }
     }
@@ -86,9 +84,9 @@ impl FDCoefficients {
     #[must_use]
     pub fn second_derivative_center<T: Float>(order: SpatialOrder) -> T {
         match order {
-            SpatialOrder::Second => T::from(-2.0).unwrap(),          // 3-point stencil
-            SpatialOrder::Fourth => T::from(-5.0 / 2.0).unwrap(),    // 5-point stencil
-            SpatialOrder::Sixth => T::from(-49.0 / 18.0).unwrap(),   // 7-point stencil
+            SpatialOrder::Second => T::from(-2.0).unwrap(), // 3-point stencil
+            SpatialOrder::Fourth => T::from(-5.0 / 2.0).unwrap(), // 5-point stencil
+            SpatialOrder::Sixth => T::from(-49.0 / 18.0).unwrap(), // 7-point stencil
             SpatialOrder::Eighth => T::from(-205.0 / 72.0).unwrap(), // 9-point stencil
         }
     }
