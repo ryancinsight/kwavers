@@ -40,17 +40,7 @@ impl FdtdSolver {
         info!("Initializing FDTD solver with config: {:?}", config);
 
         // Validate spatial order by converting to enum
-        let spatial_order = SpatialOrder::from_usize(config.spatial_order);
-
-        // Check if we got a valid order (the from_usize method defaults to Second for invalid values)
-        // We need to validate that the input was actually valid by checking against known values
-        if !matches!(config.spatial_order, 2 | 4 | 6) {
-            return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "spatial_order".to_string(),
-                value: config.spatial_order.to_string(),
-                constraint: "must be 2, 4, or 6".to_string(),
-            }));
-        }
+        let spatial_order = SpatialOrder::from_usize(config.spatial_order)?;
 
         // Create finite difference operator
         let fd_operator = FiniteDifference::new(config.spatial_order)?;

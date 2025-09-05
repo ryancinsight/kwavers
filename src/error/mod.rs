@@ -21,7 +21,7 @@ pub mod system;
 pub mod validation;
 
 // Re-export main error types
-pub use composite::CompositeError;
+pub use composite::{CompositeError, MultiError};
 pub use config::ConfigError;
 pub use context::ErrorContext;
 pub use field::FieldError;
@@ -97,6 +97,10 @@ pub enum KwaversError {
     /// Invalid input (for backward compatibility, prefer specific error types)
     #[error("Invalid input: {0}")]
     InvalidInput(String),
+
+    /// Multiple errors occurred during validation
+    #[error(transparent)]
+    MultipleErrors(#[from] MultiError),
 }
 
 /// Result type alias for operations that may return a `KwaversError`

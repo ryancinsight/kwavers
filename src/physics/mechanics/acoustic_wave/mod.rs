@@ -30,7 +30,7 @@ use std::f64::consts::PI;
 // Physical constants
 // Coefficient in the simplified acoustic diffusivity formula for soft tissues
 // δ ≈ 2αc³/(ω²) where this constant represents the factor 2
-const SOFT_TISSUE_DIFFUSIVITY_APPROXIMATION_FACTOR: f64 = 2.0;
+const POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR: f64 = 2.0;
 
 /// Spatial discretization order for numerical schemes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,43 +64,56 @@ impl SpatialOrder {
         }
     }
 
-    /// Convert from usize for backward compatibility
-    #[must_use]
-    pub fn from_usize(order: usize) -> Self {
+    /// Convert from usize, returning an error for invalid orders
+    pub fn from_usize(order: usize) -> Result<Self, crate::error::KwaversError> {
         match order {
-            2 => SpatialOrder::Second,
-            4 => SpatialOrder::Fourth,
-            6 => SpatialOrder::Sixth,
-            _ => SpatialOrder::Second, // Default to second order
+            2 => Ok(SpatialOrder::Second),
+            4 => Ok(SpatialOrder::Fourth),
+            6 => Ok(SpatialOrder::Sixth),
+            _ => Err(crate::error::ConfigError::InvalidValue {
+                parameter: "spatial_order".to_string(),
+                value: order.to_string(),
+                constraint: "must be 2, 4, or 6".to_string(),
+            }.into()),
         }
     }
 }
 
-/// Compute acoustic diffusivity from medium properties
+/// Computes acoustic diffusivity from power-law absorption, an approximation valid for many biological tissues
 ///
-/// This is the single source of truth for acoustic diffusivity calculation.
+/// This is the single source of truth for acoustic diffusivity calculation using
+/// the power-law absorption model commonly used for soft tissues.
 ///
 /// # Physics Background
 ///
-/// Acoustic diffusivity δ = (4μ/3 + `μ_B` + κ(γ-1)/C_p) / ρ₀
-/// Where:
-/// - μ = shear viscosity
-/// - `μ_B` = bulk viscosity  
-/// - κ = thermal conductivity
-/// - γ = specific heat ratio
-/// - `C_p` = specific heat at constant pressure
-///
-/// For soft tissues, we use the approximation:
+/// For biological soft tissues, acoustic diffusivity can be approximated as:
 /// δ ≈ 2αc³/(ω²)
 ///
-/// where α is the absorption coefficient and c is the sound speed.
+/// where:
+/// - α is the absorption coefficient
+/// - c is the sound speed  
+/// - ω is the angular frequency
+///
+/// This approximation is valid for many biological tissues but should not be used
+/// for materials like water, bone, or industrial materials where the full viscosity
+/// and thermal conduction terms are necessary.
+///
+/// For the complete formula:
+/// δ = (4μ/3 + μ_B + κ(γ-1)/C_p) / ρ₀
+/// Where:
+/// - μ = shear viscosity
+/// - μ_B = bulk viscosity  
+/// - κ = thermal conductivity
+/// - γ = specific heat ratio
+/// - C_p = specific heat at constant pressure
+/// - ρ₀ = reference density
 ///
 /// # Safety
 ///
 /// Returns 0.0 for zero frequency (static fields) to prevent division by zero.
 /// This is physically sensible as the frequency-dependent absorption model
 /// becomes ill-defined at DC.
-pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
+pub fn compute_diffusivity_from_power_law_absorption<M: Medium + ?Sized>(
     medium: &M,
     x: f64,
     y: f64,
@@ -118,7 +131,7 @@ pub fn compute_acoustic_diffusivity<M: Medium + ?Sized>(
     let c = medium.sound_speed(i, j, k);
     let omega = 2.0 * PI * frequency;
 
-    SOFT_TISSUE_DIFFUSIVITY_APPROXIMATION_FACTOR * alpha * c.powi(3) / (omega * omega)
+    POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR * alpha * c.powi(3) / (omega * omega)
 }
 
 /// Compute the maximum stable time step for acoustic wave propagation
@@ -186,9 +199,9 @@ mod tests {
 
     #[test]
     fn test_spatial_order_from_usize() {
-        assert_eq!(SpatialOrder::from_usize(2), SpatialOrder::Second);
-        assert_eq!(SpatialOrder::from_usize(4), SpatialOrder::Fourth);
-        assert_eq!(SpatialOrder::from_usize(6), SpatialOrder::Sixth);
-        assert_eq!(SpatialOrder::from_usize(99), SpatialOrder::Second); // Invalid defaults to Second
+        assert_eq!(SpatialOrder::from_usize(2).unwrap(), SpatialOrder::Second);
+        assert_eq!(SpatialOrder::from_usize(4).unwrap(), SpatialOrder::Fourth);
+        assert_eq!(SpatialOrder::from_usize(6).unwrap(), SpatialOrder::Sixth);
+        assert!(SpatialOrder::from_usize(99).is_err()); // Invalid returns error
     }
 }

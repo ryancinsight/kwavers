@@ -72,7 +72,17 @@ impl CPMLBoundary {
         Self::new(config, grid, sound_speed)
     }
 
-    /// Apply CPML update to fields
+    /// Apply CPML update to fields (for non-staggered grid solvers)
+    /// 
+    /// This method operates on a 4D array and is intended for use with
+    /// unified field representations where the field components are stored
+    /// in the fourth dimension. For staggered-grid FDTD solvers, use
+    /// `update_and_apply_gradient_correction` instead.
+    /// 
+    /// # Arguments
+    /// * `fields` - 4D field array where the last dimension represents field components
+    /// * `dt` - Time step
+    /// * `grid` - Computational grid
     pub fn apply(&mut self, fields: &mut Array4<f64>, dt: f64, grid: &Grid) -> KwaversResult<()> {
         self.updater.update_fields(
             fields,
@@ -96,7 +106,11 @@ impl CPMLBoundary {
     }
 
     /// Updates CPML memory and applies the correction to a gradient field.
-    /// This is the primary method for applying the CPML correction.
+    /// This is the primary method for applying the CPML correction in split-field FDTD solvers.
+    ///
+    /// # Arguments
+    /// * `gradient`: The gradient field (e.g., ∂p/∂x) to be corrected. Modified in-place.
+    /// * `component`: The vector component (0 for x, 1 for y, 2 for z) this gradient represents.
     pub fn update_and_apply_gradient_correction(
         &mut self,
         gradient: &mut ndarray::Array3<f64>,
@@ -149,12 +163,42 @@ impl CPMLBoundary {
     }
 }
 
-// Note: Clone implementation removed to prevent accidental expensive copies.
-// Use `recreate` method to create a new boundary with fresh state.
+// Note: Efficient Clone implementation provided to share profile data
+// and provide a fresh memory state. The profiles are reused as they
+// only depend on the grid and configuration, not the simulation state.
+
+impl Clone for CPMLBoundary {
+    /// Creates a new `CPMLBoundary` with the same configuration and profiles,
+    /// but with a fresh, zeroed memory state. This is an efficient way to
+    /// get a new boundary instance for a new simulation run without
+    /// re-calculating the expensive static profiles.
+    fn clone(&self) -> Self {
+        // Profiles can be cloned cheaply as they're static for a given configuration
+        let profiles = self.profiles.clone();
+        
+        // Create fresh memory state by cloning and resetting
+        let mut memory = self.memory.clone();
+        memory.reset();
+        
+        // Clone the other components
+        let updater = CPMLUpdater::new(&self.config);
+
+        Self {
+            config: self.config.clone(),
+            profiles,
+            memory,
+            updater,
+        }
+    }
+}
 
 impl CPMLBoundary {
     /// Creates a new `CPMLBoundary` from the existing configuration,
     /// with a fresh (zeroed) state.
+    /// 
+    /// # Deprecated
+    /// Use `.clone()` instead of `recreate` for better ergonomics and standard Rust idioms.
+    #[deprecated(since = "3.1.0", note = "Use `.clone()` instead of `recreate`")]
     pub fn recreate(&self, grid: &Grid, sound_speed: f64) -> KwaversResult<Self> {
         Self::new(self.config.clone(), grid, sound_speed)
     }
