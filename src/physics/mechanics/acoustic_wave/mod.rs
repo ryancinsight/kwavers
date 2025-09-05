@@ -74,7 +74,8 @@ impl SpatialOrder {
                 parameter: "spatial_order".to_string(),
                 value: order.to_string(),
                 constraint: "must be 2, 4, or 6".to_string(),
-            }.into()),
+            }
+            .into()),
         }
     }
 }

@@ -142,20 +142,26 @@ impl Configuration {
                 let cfl_actual = max_velocity * dt / min_spacing;
 
                 if cfl_actual > self.simulation.cfl {
-                    multi_error.add(crate::error::ConfigError::InvalidValue {
-                        parameter: "dt".to_string(),
-                        value: format!("{dt}"),
-                        constraint: format!(
-                            "CFL condition violated: {} > {} (max_velocity={}, min_spacing={})",
-                            cfl_actual, self.simulation.cfl, max_velocity, min_spacing
-                        ),
-                    }.into());
+                    multi_error.add(
+                        crate::error::ConfigError::InvalidValue {
+                            parameter: "dt".to_string(),
+                            value: format!("{dt}"),
+                            constraint: format!(
+                                "CFL condition violated: {} > {} (max_velocity={}, min_spacing={})",
+                                cfl_actual, self.simulation.cfl, max_velocity, min_spacing
+                            ),
+                        }
+                        .into(),
+                    );
                 }
             } else {
-                multi_error.add(crate::error::ConfigError::MissingParameter {
-                    parameter: "medium.sound_speed_max".to_string(),
-                    section: "Required for CFL validation when dt is specified".to_string(),
-                }.into());
+                multi_error.add(
+                    crate::error::ConfigError::MissingParameter {
+                        parameter: "medium.sound_speed_max".to_string(),
+                        section: "Required for CFL validation when dt is specified".to_string(),
+                    }
+                    .into(),
+                );
             }
         }
 
@@ -179,10 +185,13 @@ impl Configuration {
                 }.into());
             }
         } else {
-            multi_error.add(crate::error::ConfigError::MissingParameter {
-                parameter: "medium.sound_speed_min".to_string(),
-                section: "Required for Nyquist validation".to_string(),
-            }.into());
+            multi_error.add(
+                crate::error::ConfigError::MissingParameter {
+                    parameter: "medium.sound_speed_min".to_string(),
+                    section: "Required for Nyquist validation".to_string(),
+                }
+                .into(),
+            );
         }
 
         multi_error.into_result()

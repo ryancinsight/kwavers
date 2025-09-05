@@ -206,29 +206,37 @@ mod tests {
     }
 }
 
-// TODO: When portable_simd becomes stable, we can use this module
-// Currently commented out to avoid cfg warnings until stabilized
-/*
-#[cfg(feature = "portable_simd")]
+/// Future-ready portable SIMD implementation
+///
+/// Currently uses compiler auto-vectorization. When portable_simd stabilizes
+/// (RFC 2977), this can be upgraded to explicit SIMD vectors.
 pub mod portable {
-    use std::simd::{f64x4, f64x8, SimdFloat, StdFloat};
+    /// Add arrays with compiler auto-vectorization hints
+    ///
+    /// The compiler will automatically vectorize this loop on suitable targets.
+    /// Performance is comparable to hand-written SIMD for simple operations.
+    pub fn add_arrays_autovec(a: &[f64], b: &[f64], out: &mut [f64]) {
+        assert_eq!(a.len(), b.len());
+        assert_eq!(a.len(), out.len());
 
-    /// Add arrays using portable SIMD
-    pub fn add_arrays_simd(a: &[f64], b: &[f64], out: &mut [f64]) {
-        let chunks = a.len() / 4;
-
-        for i in 0..chunks {
-            let idx = i * 4;
-            let a_vec = f64x4::from_slice(&a[idx..]);
-            let b_vec = f64x4::from_slice(&b[idx..]);
-            let result = a_vec + b_vec;
-            result.copy_to_slice(&mut out[idx..]);
+        // Compiler auto-vectorization with explicit bounds check removal
+        for i in 0..a.len() {
+            // SAFETY: Loop bounds ensure indices are valid
+            unsafe {
+                *out.get_unchecked_mut(i) = a.get_unchecked(i) + b.get_unchecked(i);
+            }
         }
+    }
 
-        // Handle remainder
-        for i in chunks * 4..a.len() {
-            out[i] = a[i] + b[i];
+    /// Scale array with compiler auto-vectorization
+    pub fn scale_array_autovec(input: &[f64], scalar: f64, out: &mut [f64]) {
+        assert_eq!(input.len(), out.len());
+
+        for i in 0..input.len() {
+            // SAFETY: Loop bounds ensure indices are valid
+            unsafe {
+                *out.get_unchecked_mut(i) = input.get_unchecked(i) * scalar;
+            }
         }
     }
 }
-*/

@@ -3192,6 +3192,7 @@ dependencies = [
  "ndarray",
  "nifti",
  "num-complex",
+ "num-traits",
  "once_cell",
  "openxr",
  "ort",

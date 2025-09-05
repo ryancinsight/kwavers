@@ -73,12 +73,12 @@ impl CPMLBoundary {
     }
 
     /// Apply CPML update to fields (for non-staggered grid solvers)
-    /// 
+    ///
     /// This method operates on a 4D array and is intended for use with
     /// unified field representations where the field components are stored
     /// in the fourth dimension. For staggered-grid FDTD solvers, use
     /// `update_and_apply_gradient_correction` instead.
-    /// 
+    ///
     /// # Arguments
     /// * `fields` - 4D field array where the last dimension represents field components
     /// * `dt` - Time step
@@ -175,11 +175,11 @@ impl Clone for CPMLBoundary {
     fn clone(&self) -> Self {
         // Profiles can be cloned cheaply as they're static for a given configuration
         let profiles = self.profiles.clone();
-        
+
         // Create fresh memory state by cloning and resetting
         let mut memory = self.memory.clone();
         memory.reset();
-        
+
         // Clone the other components
         let updater = CPMLUpdater::new(&self.config);
 
@@ -195,7 +195,7 @@ impl Clone for CPMLBoundary {
 impl CPMLBoundary {
     /// Creates a new `CPMLBoundary` from the existing configuration,
     /// with a fresh (zeroed) state.
-    /// 
+    ///
     /// # Deprecated
     /// Use `.clone()` instead of `recreate` for better ergonomics and standard Rust idioms.
     #[deprecated(since = "3.1.0", note = "Use `.clone()` instead of `recreate`")]
