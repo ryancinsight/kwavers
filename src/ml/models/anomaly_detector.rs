@@ -13,7 +13,7 @@ pub struct AnomalyDetectorModel {
 
 impl AnomalyDetectorModel {
     /// Load model from path
-    pub fn load(path: &std::path::Path) -> KwaversResult<Self> {
+    pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
         // Simplified loading
         Ok(Self::new(3.0))
     }

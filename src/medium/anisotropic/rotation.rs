@@ -16,7 +16,7 @@ impl RotationMatrix {
     pub fn from_euler(phi: f64, theta: f64, psi: f64) -> Self {
         let (sp, cp) = phi.sin_cos();
         let (st, ct) = theta.sin_cos();
-        let (ss, cs) = psi.sin_cos();
+        let (_ss, cs) = psi.sin_cos();
 
         let mut r = Array2::zeros((3, 3));
 

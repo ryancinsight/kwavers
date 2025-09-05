@@ -115,7 +115,6 @@ impl SimdOps {
 
 /// SWAR (SIMD Within A Register) operations for portability
 pub mod swar {
-    use super::ParallelIterator;
 
     /// Compute sum of 4 f64 values using integer operations
     #[must_use]

@@ -271,7 +271,7 @@ impl NiftiReader {
         file.write_all(&[0u8; 4])?;
 
         // Write data in row-major order
-        for ((i, j, k), &value) in data.indexed_iter() {
+        for ((_i, _j, _k), &value) in data.indexed_iter() {
             file.write_all(&value.to_le_bytes())?;
         }
 
