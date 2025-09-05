@@ -34,6 +34,7 @@ pub mod benchmarks;
 pub mod metrics;
 pub mod optimization;
 pub mod profiling;
+pub mod safe_vectorization;
 pub mod simd;
 pub mod simd_auto;
 pub mod simd_operations;
@@ -44,6 +45,8 @@ pub use optimization::{
     AccessPattern, BandwidthOptimizer, CacheOptimizer, OptimizationConfig, PerformanceOptimizer,
     PrefetchStrategy, SimdLevel, StencilKernel,
 };
+
+pub use safe_vectorization::SafeVectorOps;
 
 pub use profiling::{
     CacheProfile, MemoryEventType, MemoryProfile, PerformanceBound, PerformanceProfiler,
