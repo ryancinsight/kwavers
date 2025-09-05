@@ -142,13 +142,13 @@ pub mod parallel {
 
     /// Parallel reduction
     #[must_use]
-    pub fn par_sum(array: ArrayView3<f64>) -> f64 {
+    pub fn par_sum(array: ArrayView3<'_, f64>) -> f64 {
         array.as_slice().unwrap().par_iter().copied().sum()
     }
 
     /// Parallel maximum
     #[must_use]
-    pub fn par_max(array: ArrayView3<f64>) -> Option<f64> {
+    pub fn par_max(array: ArrayView3<'_, f64>) -> Option<f64> {
         array
             .as_slice()
             .unwrap()
@@ -159,7 +159,7 @@ pub mod parallel {
 
     /// Parallel norm computation
     #[must_use]
-    pub fn par_norm_l2(array: ArrayView3<f64>) -> f64 {
+    pub fn par_norm_l2(array: ArrayView3<'_, f64>) -> f64 {
         let sum_sq: f64 = array.as_slice().unwrap().par_iter().map(|&x| x * x).sum();
 
         sum_sq.sqrt()

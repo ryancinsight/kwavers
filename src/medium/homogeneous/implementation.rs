@@ -262,11 +262,11 @@ impl CoreMedium for HomogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HomogeneousMedium {
-    fn density_array(&self) -> ArrayView3<f64> {
+    fn density_array(&self) -> ArrayView3<'_, f64> {
         self.density_cache.view()
     }
 
-    fn sound_speed_array(&self) -> ArrayView3<f64> {
+    fn sound_speed_array(&self) -> ArrayView3<'_, f64> {
         self.sound_speed_cache.view()
     }
 

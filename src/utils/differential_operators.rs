@@ -72,7 +72,7 @@ impl FDCoefficients {
 ///
 /// Returns (∂f/∂x, ∂f/∂y, ∂f/∂z)
 pub fn gradient(
-    field: ArrayView3<f64>,
+    field: ArrayView3<'_, f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
@@ -133,9 +133,9 @@ pub fn gradient(
 ///
 /// Returns ∇·v = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
 pub fn divergence(
-    vx: ArrayView3<f64>,
-    vy: ArrayView3<f64>,
-    vz: ArrayView3<f64>,
+    vx: ArrayView3<'_, f64>,
+    vy: ArrayView3<'_, f64>,
+    vz: ArrayView3<'_, f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<Array3<f64>> {
@@ -173,7 +173,7 @@ pub fn divergence(
 /// Returns ∇²f = ∂²f/∂x² + ∂²f/∂y² + ∂²f/∂z²
 /// This is a compatibility wrapper for the unified Laplacian operator
 pub fn laplacian(
-    field: ArrayView3<f64>,
+    field: ArrayView3<'_, f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<Array3<f64>> {
@@ -194,9 +194,9 @@ pub fn laplacian(
 ///
 /// Returns ∇×v = (∂vz/∂y - ∂vy/∂z, ∂vx/∂z - ∂vz/∂x, ∂vy/∂x - ∂vx/∂y)
 pub fn curl(
-    vx: ArrayView3<f64>,
-    vy: ArrayView3<f64>,
-    vz: ArrayView3<f64>,
+    vx: ArrayView3<'_, f64>,
+    vy: ArrayView3<'_, f64>,
+    vz: ArrayView3<'_, f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
@@ -242,7 +242,7 @@ pub fn curl(
 /// Compute spectral Laplacian using FFT
 ///
 /// More accurate for smooth fields, uses k-space representation
-pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
+pub fn spectral_laplacian(field: ArrayView3<'_, f64>, grid: &Grid) -> KwaversResult<Array3<f64>> {
     use num_complex::Complex;
 
     let (nx, ny, nz) = field.dim();
@@ -314,7 +314,7 @@ pub fn spectral_laplacian(field: ArrayView3<f64>, grid: &Grid) -> KwaversResult<
 ///
 /// Returns ∂²f/∂x² + ∂²f/∂y² (no z-component)
 pub fn transverse_laplacian(
-    field: ArrayView3<f64>,
+    field: ArrayView3<'_, f64>,
     grid: &Grid,
     order: SpatialOrder,
 ) -> KwaversResult<Array3<f64>> {

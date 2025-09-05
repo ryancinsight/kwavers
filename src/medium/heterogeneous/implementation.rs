@@ -280,27 +280,27 @@ impl CoreMedium for HeterogeneousMedium {
 
 // Array-based access
 impl ArrayAccess for HeterogeneousMedium {
-    fn density_array(&self) -> ArrayView3<f64> {
+    fn density_array(&self) -> ArrayView3<'_, f64> {
         self.density.view()
     }
 
-    fn sound_speed_array(&self) -> ArrayView3<f64> {
+    fn sound_speed_array(&self) -> ArrayView3<'_, f64> {
         self.sound_speed.view()
     }
 
-    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn density_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.density.view_mut())
     }
 
-    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<f64>> {
+    fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
         Some(self.sound_speed.view_mut())
     }
 
-    fn absorption_array(&self) -> ArrayView3<f64> {
+    fn absorption_array(&self) -> ArrayView3<'_, f64> {
         self.absorption.view()
     }
 
-    fn nonlinearity_array(&self) -> ArrayView3<f64> {
+    fn nonlinearity_array(&self) -> ArrayView3<'_, f64> {
         self.nonlinearity.view()
     }
 }

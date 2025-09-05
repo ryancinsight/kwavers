@@ -20,7 +20,7 @@ pub struct SimdOps;
 
 impl SimdOps {
     /// Add two fields using SIMD-friendly patterns
-    pub fn add_fields(a: ArrayView3<f64>, b: ArrayView3<f64>, mut out: ArrayViewMut3<f64>) {
+    pub fn add_fields(a: ArrayView3<'_, f64>, b: ArrayView3<'_, f64>, mut out: ArrayViewMut3<'_, f64>) {
         // Use ndarray's parallel zip for automatic vectorization
         Zip::from(&mut out)
             .and(&a)
@@ -31,7 +31,7 @@ impl SimdOps {
     }
 
     /// Scale field by scalar using SIMD-friendly patterns
-    pub fn scale_field(field: ArrayView3<f64>, scalar: f64, mut out: ArrayViewMut3<f64>) {
+    pub fn scale_field(field: ArrayView3<'_, f64>, scalar: f64, mut out: ArrayViewMut3<'_, f64>) {
         Zip::from(&mut out).and(&field).par_for_each(|o, &f_val| {
             *o = f_val * scalar;
         });
@@ -39,7 +39,7 @@ impl SimdOps {
 
     /// Compute field norm using SIMD-friendly reduction
     #[must_use]
-    pub fn field_norm(field: ArrayView3<f64>) -> f64 {
+    pub fn field_norm(field: ArrayView3<'_, f64>) -> f64 {
         field
             .as_slice()
             .unwrap()
@@ -51,7 +51,7 @@ impl SimdOps {
 
     /// Compute dot product using SIMD-friendly patterns
     #[must_use]
-    pub fn dot_product(a: ArrayView3<f64>, b: ArrayView3<f64>) -> f64 {
+    pub fn dot_product(a: ArrayView3<'_, f64>, b: ArrayView3<'_, f64>) -> f64 {
         a.as_slice()
             .unwrap()
             .par_chunks(SIMD_LANES * 16)
