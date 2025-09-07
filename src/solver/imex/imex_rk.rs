@@ -207,7 +207,6 @@ impl IMEXRK {
     fn ark3_c_coefficients() -> Vec<f64> {
         vec![0.0, 1767732205903.0 / 2027836641118.0, 3.0 / 5.0, 1.0]
     }
-    }
 
     /// ARK4 coefficients (4th order)
     fn ark4_coefficients() -> (
