@@ -6,7 +6,6 @@ use crate::grid::Grid;
 use crate::medium::absorption::TissueType;
 use crate::medium::{
     absorption::{tissue::TissueProperties, TISSUE_PROPERTIES},
-    acoustic::AcousticProperties,
     core::{CoreMedium, MIN_PHYSICAL_DENSITY, MIN_PHYSICAL_SOUND_SPEED},
 };
 use ndarray::Array3;

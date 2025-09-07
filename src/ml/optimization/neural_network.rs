@@ -2,6 +2,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2, Axis};
+#[allow(unused_imports)] // Used in initialization code
 use rand::Rng;
 
 /// Neural network for parameter optimization

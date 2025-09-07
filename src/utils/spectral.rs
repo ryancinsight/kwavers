@@ -226,7 +226,7 @@ pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
     fields.index_axis_mut(Axis(0), 0).assign(field);
 
     // Perform FFT using utils function
-    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    let field_fft = crate::utils::fft_3d_array(&fields, 0, grid);
 
     // Get wavenumbers
     let (kx, _, _) = compute_wavenumbers(grid);
@@ -255,7 +255,7 @@ pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
     fields.index_axis_mut(Axis(0), 0).assign(field);
 
     // Perform FFT using utils function
-    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    let field_fft = crate::utils::fft_3d_array(&fields, 0, grid);
 
     // Get wavenumbers
     let (_, ky, _) = compute_wavenumbers(grid);
@@ -284,7 +284,7 @@ pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
     fields.index_axis_mut(Axis(0), 0).assign(field);
 
     // Perform FFT using utils function
-    let field_fft = crate::utils::fft_3d(&fields, 0, grid);
+    let field_fft = crate::utils::fft_3d_array(&fields, 0, grid);
 
     // Get wavenumbers
     let (_, _, kz) = compute_wavenumbers(grid);
