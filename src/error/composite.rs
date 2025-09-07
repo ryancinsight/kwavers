@@ -21,7 +21,7 @@ impl StdError for CompositeError {}
 /// A collection of multiple validation errors
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiError {
-    pub errors: Vec<KwaversError>,
+    pub errors: Vec<String>,
 }
 
 impl MultiError {
@@ -32,7 +32,7 @@ impl MultiError {
 
     /// Add an error to the collection
     pub fn add(&mut self, error: KwaversError) {
-        self.errors.push(error);
+        self.errors.push(error.to_string());
     }
 
     /// Check if there are any errors

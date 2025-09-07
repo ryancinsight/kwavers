@@ -105,7 +105,7 @@ pub fn gradient(
     let mut grad_y = Array3::zeros((nx, ny, nz));
     let mut grad_z = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<f64> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // X-direction gradient
@@ -166,7 +166,7 @@ pub fn divergence(
     let (nx, ny, nz) = vx.dim();
     let mut div = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<f64> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // Compute divergence at interior points
@@ -229,7 +229,7 @@ pub fn curl(
     let mut curl_y = Array3::zeros((nx, ny, nz));
     let mut curl_z = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<f64> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // Compute curl at interior points
@@ -345,8 +345,8 @@ pub fn transverse_laplacian(
     let (nx, ny, nz) = field.dim();
     let mut lap = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::second_derivative_pairs(order);
-    let center_coeff = FDCoefficients::second_derivative_center(order);
+    let coeffs: Vec<f64> = FDCoefficients::second_derivative_pairs(order);
+    let center_coeff: f64 = FDCoefficients::second_derivative_center(order);
     let stencil_size = coeffs.len();
 
     let dx2_inv = 1.0 / (grid.dx * grid.dx);
