@@ -169,7 +169,7 @@ impl MultiRateTimeIntegrator {
                 })?;
 
                 // Get stability constraints from the component
-                let constraints = component.stability_constraints();
+                let _constraints = component.stability_constraints();
 
                 // Compute CFL-limited time step
                 let max_dt = self.stability_analyzer.compute_stable_dt_from_constraints(

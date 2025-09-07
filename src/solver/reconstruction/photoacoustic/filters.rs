@@ -19,7 +19,7 @@ pub struct Filters {
 
 impl Filters {
     /// Create new filter operations
-    pub fn new(config: &PhotoacousticConfig) -> Self {
+    pub fn new(_config: &PhotoacousticConfig) -> Self {
         Self {
             filter_type: FilterType::RamLak, // Default filter type
         }

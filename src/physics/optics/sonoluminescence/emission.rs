@@ -152,7 +152,7 @@ impl SonoluminescenceEmission {
         temperature_field: &Array3<f64>,
         pressure_field: &Array3<f64>,
         radius_field: &Array3<f64>,
-        time: f64,
+        _time: f64,
     ) {
         // Reset emission field
         self.emission_field.fill(0.0);

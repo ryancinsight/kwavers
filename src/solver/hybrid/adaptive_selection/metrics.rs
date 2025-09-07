@@ -58,7 +58,7 @@ impl SpectralMetrics {
         variance.sqrt()
     }
 
-    fn estimate_dispersion_error(field: ArrayView3<f64>, grid: &Grid) -> f64 {
+    fn estimate_dispersion_error(_field: ArrayView3<f64>, grid: &Grid) -> f64 {
         // Estimate numerical dispersion based on grid resolution
         let min_wavelength = 2.0 * grid.dx.min(grid.dy).min(grid.dz);
         let ppw = min_wavelength / grid.dx; // Points per wavelength

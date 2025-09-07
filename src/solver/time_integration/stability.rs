@@ -24,8 +24,8 @@ impl StabilityAnalyzer {
     /// Compute stable time step based on CFL condition
     pub fn compute_stable_dt(
         &self,
-        physics: &dyn crate::physics::plugin::Plugin,
-        field: &Array3<f64>,
+        _physics: &dyn crate::_physics::plugin::Plugin,
+        _field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
         // Get maximum wave speed - using water as default medium

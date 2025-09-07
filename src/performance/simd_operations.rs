@@ -124,7 +124,7 @@ pub mod swar {
     #[must_use]
     pub fn sum4_swar(values: [f64; 4]) -> f64 {
         // Convert to bits for manipulation
-        let bits: [u64; 4] = [
+        let _bits: [u64; 4] = [
             values[0].to_bits(),
             values[1].to_bits(),
             values[2].to_bits(),

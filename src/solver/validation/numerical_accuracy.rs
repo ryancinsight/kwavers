@@ -260,7 +260,7 @@ impl NumericalValidator {
         // Test reflection coefficients for different boundary types
         let pml_reflection = self.test_boundary_reflection("PML")?;
         let cpml_reflection = self.test_boundary_reflection("CPML")?;
-        let abc_reflection = self.test_boundary_reflection("ABC")?;
+        let _abc_reflection = self.test_boundary_reflection("ABC")?;
 
         // Test boundary stability
         let pml_stable = pml_reflection < 0.01;
@@ -278,7 +278,7 @@ impl NumericalValidator {
     fn validate_conservation(&self) -> Result<ConservationResults, Box<dyn std::error::Error>> {
         use crate::solver::time_integration::conservation::ConservationMonitor;
 
-        let monitor = ConservationMonitor::new(&self.grid);
+        let _monitor = ConservationMonitor::new(&self.grid);
 
         // Run a short simulation and check conservation
         let energy_error = self.compute_energy_conservation_error("FDTD", &self.grid);
@@ -402,10 +402,10 @@ impl NumericalValidator {
         }
     }
 
-    fn calculate_absorption_coefficient(&self, solver: &str, grid: &Grid) -> f64 {
+    fn calculate_absorption_coefficient(&self, solver: &str, _grid: &Grid) -> f64 {
         // Calculate absorption using Beer-Lambert law validation
         // A = -ln(I/I0) / (α * d)
-        let frequency = 1e6_f64; // 1 MHz test frequency
+        let _frequency = 1e6_f64; // 1 MHz test frequency
         let distance = 0.1_f64; // 10 cm propagation
         let alpha = match solver {
             "FDTD" => 0.5_f64, // Np/m for water at 1 MHz
@@ -433,7 +433,7 @@ impl NumericalValidator {
         }
     }
 
-    fn compute_energy_conservation_error(&self, solver: &str, grid: &Grid) -> f64 {
+    fn compute_energy_conservation_error(&self, solver: &str, _grid: &Grid) -> f64 {
         // Compute energy conservation error
         // For conservative schemes, this should be machine precision
         match solver {

@@ -210,7 +210,7 @@ pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
 
 /// Calculate specific heat ratio for gas mixture
 #[must_use]
-pub fn specific_heat_ratio(composition: &GasComposition, temperature: f64) -> f64 {
+pub fn specific_heat_ratio(composition: &GasComposition, _temperature: f64) -> f64 {
     // Simplified - would need gas species info for accurate calculation
     let molecular_weight = effective_molecular_weight(composition);
 

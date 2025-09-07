@@ -180,9 +180,9 @@ impl SeismicImagingPlugin {
     /// Based on Tarantola (1984): "Inversion of seismic reflection data"
     pub fn full_waveform_inversion(
         &mut self,
-        observed_data: &Array3<f64>,
+        _observed_data: &Array3<f64>,
         initial_model: &Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         // TODO: Implement FWI
         // This should include:

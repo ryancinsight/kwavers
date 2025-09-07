@@ -48,7 +48,7 @@ fn compute_power_law_operators(
     grid: &Grid,
     alpha_coeff: f64,
     alpha_power: f64,
-    k_max: f64,
+    _k_max: f64,
 ) -> (Array3<f64>, Array3<f64>) {
     let shape = (grid.nx, grid.ny, grid.nz);
     let mut tau = Array3::zeros(shape);
@@ -100,8 +100,8 @@ pub fn apply_power_law_absorption(
 #[must_use]
 pub fn fractional_laplacian(
     field: &Array3<f64>,
-    alpha: f64,
-    k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
+    _alpha: f64,
+    _k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
 ) -> Array3<f64> {
     // This would implement the fractional Laplacian using FFT
     // For ∇^α, multiply by |k|^α in k-space

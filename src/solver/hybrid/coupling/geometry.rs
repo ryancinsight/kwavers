@@ -93,7 +93,7 @@ impl InterfaceGeometry {
 
     fn calculate_extent(
         source: &Grid,
-        target: &Grid,
+        _target: &Grid,
         normal_direction: usize,
     ) -> KwaversResult<(f64, f64)> {
         // Calculate extent in tangential directions

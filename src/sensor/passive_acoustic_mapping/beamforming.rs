@@ -188,7 +188,7 @@ impl Beamformer {
         &self,
         sensor_data: &Array3<f64>,
         sample_rate: f64,
-        num_sources: usize,
+        _num_sources: usize,
     ) -> KwaversResult<Array3<f64>> {
         // Placeholder for MUSIC implementation
         // This would perform eigendecomposition and subspace projection
@@ -206,7 +206,7 @@ impl Beamformer {
     }
 
     /// Compute time delays for a focal point
-    fn compute_delays(&self, ix: usize, iy: usize, sample_rate: f64) -> Vec<f64> {
+    fn compute_delays(&self, ix: usize, iy: usize, _sample_rate: f64) -> Vec<f64> {
         let mut delays = Vec::with_capacity(self.element_positions.len());
 
         // Assume focal point is at (ix * dx, iy * dy, 0)

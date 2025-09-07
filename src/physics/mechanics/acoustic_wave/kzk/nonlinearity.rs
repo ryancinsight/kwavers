@@ -30,7 +30,7 @@ impl NonlinearOperator {
     pub fn apply(
         &mut self,
         pressure: &mut Array3<f64>,
-        pressure_prev: &Array3<f64>,
+        _pressure_prev: &Array3<f64>,
         step_size: f64,
     ) {
         let dt = self.config.dt;

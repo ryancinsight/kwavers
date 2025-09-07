@@ -293,8 +293,8 @@ impl ROSConcentrations {
         conc: &mut Array3<f64>,
         d: f64,
         dx: f64,
-        dy: f64,
-        dz: f64,
+        _dy: f64,
+        _dz: f64,
         dt: f64,
         shape: (usize, usize, usize),
     ) {

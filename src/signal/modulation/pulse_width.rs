@@ -34,7 +34,7 @@ impl Modulation for PulseWidthModulation {
             .collect())
     }
 
-    fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
+    fn demodulate(&self, signal: &[f64], _t: &[f64]) -> KwaversResult<Vec<f64>> {
         // PWM demodulation using low-pass filtering (simplified)
         if signal.is_empty() {
             return Ok(Vec::new());

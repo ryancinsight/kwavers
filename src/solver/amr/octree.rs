@@ -167,13 +167,13 @@ impl Octree {
         Ok(())
     }
 
-    fn check_refinement_marker(node: &OctreeNode, markers: &Array3<i8>) -> bool {
+    fn check_refinement_marker(_node: &OctreeNode, _markers: &Array3<i8>) -> bool {
         // Check if any cell in this node's region is marked for refinement
         // This is a simplified check - real implementation would map bounds to indices
         false // Placeholder
     }
 
-    fn check_coarsening(node: &OctreeNode, markers: &Array3<i8>) -> bool {
+    fn check_coarsening(_node: &OctreeNode, _markers: &Array3<i8>) -> bool {
         // Check if all children can be coarsened
         true // Placeholder
     }

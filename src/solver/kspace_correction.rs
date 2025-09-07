@@ -175,7 +175,7 @@ fn compute_kwave_correction(
     grid: &Grid,
     dt: f64,
     c_ref: f64,
-    cfl: f64,
+    _cfl: f64,
     max_correction: f64,
 ) -> Array3<f64> {
     let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);

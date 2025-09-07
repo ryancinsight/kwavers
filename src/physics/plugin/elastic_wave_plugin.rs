@@ -95,7 +95,7 @@ impl ElasticWavePlugin {
     }
 
     /// Update elastic fields using staggered grid finite difference
-    fn update_fields(&mut self, source: Option<&dyn Source>, grid: &Grid) -> KwaversResult<()> {
+    fn update_fields(&mut self, _source: Option<&dyn Source>, grid: &Grid) -> KwaversResult<()> {
         let (nx, ny, nz) = grid.dimensions();
         let dx_inv = 1.0 / grid.dx;
         let dy_inv = 1.0 / grid.dy;

@@ -160,7 +160,7 @@ impl CavitationDamage {
         &self,
         impact_pressure: f64,
         bubble_radius: f64,
-        impact_count: u32,
+        _impact_count: u32,
     ) -> f64 {
         // Stress intensity factor
         let stress_intensity = impact_pressure * self.params.concentration_factor;

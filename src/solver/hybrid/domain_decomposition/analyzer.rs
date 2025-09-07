@@ -54,7 +54,7 @@ impl DomainAnalyzer {
     }
 
     /// Compute smoothness metric for the field
-    fn compute_smoothness(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
+    fn compute_smoothness(&self, grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
         // Simplified smoothness computation
         // In production, compute actual gradients
         Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))

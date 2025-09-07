@@ -141,7 +141,7 @@ impl SonoluminescenceDetector {
     pub fn detect_events(
         &mut self,
         bubble_states: &BubbleStateFields,
-        pressure_field: &Array3<f64>,
+        _pressure_field: &Array3<f64>,
         initial_radius: &Array3<f64>,
         dt: f64,
     ) -> Vec<SonoluminescenceEvent> {
@@ -249,7 +249,7 @@ impl SonoluminescenceDetector {
     fn calculate_emission_characteristics(
         &mut self,
         temperature: f64,
-        pressure: f64,
+        _pressure: f64,
         radius: f64,
         dt: f64,
     ) -> (f64, f64, f64) {

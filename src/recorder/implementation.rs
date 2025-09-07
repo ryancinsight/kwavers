@@ -221,7 +221,7 @@ impl Recorder {
     fn detect_sonoluminescence_events(
         &mut self,
         fields: &Array4<f64>,
-        step: usize,
+        _step: usize,
         _time: f64,
     ) -> KwaversResult<()> {
         if let Some(ref mut detector) = self.sl_detector {

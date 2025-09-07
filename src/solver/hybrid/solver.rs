@@ -119,8 +119,8 @@ impl HybridSolver {
         &mut self,
         fields: &mut Array4<f64>,
         medium: &dyn Medium,
-        source: &dyn Source,
-        boundary: &mut dyn Boundary,
+        _source: &dyn Source,
+        _boundary: &mut dyn Boundary,
         dt: f64,
         t: f64,
     ) -> KwaversResult<()> {
@@ -176,9 +176,9 @@ impl HybridSolver {
     fn apply_pstd_region(
         &mut self,
         fields: &mut Array4<f64>,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
+        _medium: &dyn Medium,
+        _dt: f64,
+        _t: f64,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
         // Extract region view
@@ -208,9 +208,9 @@ impl HybridSolver {
     fn apply_fdtd_region(
         &mut self,
         fields: &mut Array4<f64>,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
+        _medium: &dyn Medium,
+        _dt: f64,
+        _t: f64,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
         // Extract region view
@@ -240,9 +240,9 @@ impl HybridSolver {
     fn apply_hybrid_region(
         &mut self,
         fields: &mut Array4<f64>,
-        medium: &dyn Medium,
-        dt: f64,
-        t: f64,
+        _medium: &dyn Medium,
+        _dt: f64,
+        _t: f64,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
         // Apply blended approach in transition regions
@@ -334,7 +334,7 @@ impl HybridSolver {
     }
 
     /// Validate solution quality
-    fn validate_solution(&mut self, fields: &Array4<f64>, time: f64) -> KwaversResult<()> {
+    fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
 
         // Check for NaN or infinite values

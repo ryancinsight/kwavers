@@ -105,7 +105,7 @@ pub trait Plugin: Debug + Send + Sync {
     ) -> KwaversResult<()>;
 
     /// Initialize the plugin
-    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
         Ok(())
     }
 
@@ -136,7 +136,7 @@ pub trait Plugin: Debug + Send + Sync {
     }
 
     /// Check if plugin is compatible with another plugin
-    fn is_compatible_with(&self, other: &dyn Plugin) -> bool {
+    fn is_compatible_with(&self, _other: &dyn Plugin) -> bool {
         true
     }
 

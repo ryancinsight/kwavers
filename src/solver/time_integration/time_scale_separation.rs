@@ -144,7 +144,7 @@ impl TimeScaleSeparator {
     pub fn determine_subcycles(
         &self,
         time_scales: &HashMap<String, TimeScale>,
-        global_dt: f64,
+        _global_dt: f64,
         max_subcycles: usize,
     ) -> HashMap<String, usize> {
         let mut subcycles = HashMap::new();

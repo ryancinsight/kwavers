@@ -27,14 +27,14 @@ impl Beamformer {
     }
 
     /// Scan for source direction
-    pub fn scan(&self, data: &Array2<f64>) -> KwaversResult<Position> {
+    pub fn scan(&self, _data: &Array2<f64>) -> KwaversResult<Position> {
         // Simplified implementation
         Ok(Position::new(0.0, 0.0, 0.0))
     }
 
     /// Calculate beam power at direction
     #[must_use]
-    pub fn beam_power(&self, data: &Array2<f64>, direction: f64) -> f64 {
+    pub fn beam_power(&self, _data: &Array2<f64>, _direction: f64) -> f64 {
         // Placeholder
         1.0
     }

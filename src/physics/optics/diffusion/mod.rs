@@ -98,7 +98,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
     fn update_light(
         &mut self,
         fields: &mut Array4<f64>,
-        light_source: &Array3<f64>,
+        _light_source: &Array3<f64>,
         grid: &Grid,
         _medium: &dyn Medium,
         dt: f64,

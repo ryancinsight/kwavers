@@ -106,7 +106,7 @@ impl TransducerFieldCalculatorPlugin {
                         // Spatial impulse response for rectangular piston
                         // h(r,t) = (v₀/2πc) * δ(t - r/c) / r
                         if r > 1e-10 {
-                            let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                            let _c = crate::medium::sound_speed_at(medium, x, y, z, grid);
                             response += element_area / (2.0 * std::f64::consts::PI * r);
 
                             // Apply apodization if specified
@@ -300,7 +300,7 @@ impl TransducerFieldCalculatorPlugin {
                     // Approximate time derivative using spatial gradient and wave equation
                     let p1 = fundamental_field[[i, j, k]];
                     let p1_prev = fundamental_field[[i, j, k.saturating_sub(1)]];
-                    let grad_z = (p1 - p1_prev) / grid.dz;
+                    let _grad_z = (p1 - p1_prev) / grid.dz;
 
                     // Nonlinear source term for nth harmonic
                     let source_strength = match harmonic {
