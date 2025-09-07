@@ -140,8 +140,17 @@ impl IMEXRK {
         usize,
         usize,
     ) {
-        // Explicit tableau
-        let a_explicit = vec![
+        let a_explicit = Self::ark3_explicit_coefficients();
+        let a_implicit = Self::ark3_implicit_coefficients();
+        let b = Self::ark3_b_coefficients();
+        let c = Self::ark3_c_coefficients();
+
+        (a_explicit, a_implicit, b, c, 4, 3)
+    }
+
+    /// Explicit coefficient matrix for ARK3
+    fn ark3_explicit_coefficients() -> Vec<Vec<f64>> {
+        vec![
             vec![0.0, 0.0, 0.0, 0.0],
             vec![1767732205903.0 / 2027836641118.0, 0.0, 0.0, 0.0],
             vec![
@@ -156,10 +165,12 @@ impl IMEXRK {
                 10755448449292.0 / 10357097424841.0,
                 0.0,
             ],
-        ];
+        ]
+    }
 
-        // Implicit tableau (L-stable)
-        let a_implicit = vec![
+    /// Implicit coefficient matrix for ARK3
+    fn ark3_implicit_coefficients() -> Vec<Vec<f64>> {
+        vec![
             vec![0.0, 0.0, 0.0, 0.0],
             vec![
                 1767732205903.0 / 4055673282236.0,
@@ -179,17 +190,23 @@ impl IMEXRK {
                 11266239266428.0 / 11593286722821.0,
                 1767732205903.0 / 4055673282236.0,
             ],
-        ];
+        ]
+    }
 
-        let b = vec![
+    /// B coefficients for ARK3
+    fn ark3_b_coefficients() -> Vec<f64> {
+        vec![
             1471266399579.0 / 7840856788654.0,
             -4482444167858.0 / 7529755066697.0,
             11266239266428.0 / 11593286722821.0,
             1767732205903.0 / 4055673282236.0,
-        ];
-        let c = vec![0.0, 1767732205903.0 / 2027836641118.0, 3.0 / 5.0, 1.0];
+        ]
+    }
 
-        (a_explicit, a_implicit, b, c, 4, 3)
+    /// C coefficients for ARK3
+    fn ark3_c_coefficients() -> Vec<f64> {
+        vec![0.0, 1767732205903.0 / 2027836641118.0, 3.0 / 5.0, 1.0]
+    }
     }
 
     /// ARK4 coefficients (4th order)
@@ -203,7 +220,17 @@ impl IMEXRK {
     ) {
         // Using Kennedy-Carpenter ARK4(3)6L[2]SA coefficients
         // This is a 6-stage, 4th order, L-stable scheme
-        let a_explicit = vec![
+        let a_explicit = Self::ark4_explicit_coefficients();
+        let a_implicit = Self::ark4_implicit_coefficients();
+        let b = Self::ark4_b_coefficients();
+        let c = Self::ark4_c_coefficients();
+
+        (a_explicit, a_implicit, b, c, 6, 4)
+    }
+
+    /// Explicit coefficient matrix for ARK4
+    fn ark4_explicit_coefficients() -> Vec<Vec<f64>> {
+        vec![
             vec![0.0; 6],
             vec![1.0 / 2.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             vec![13861.0 / 62500.0, 6889.0 / 62500.0, 0.0, 0.0, 0.0, 0.0],
@@ -231,9 +258,12 @@ impl IMEXRK {
                 4040.0 / 17871.0,
                 0.0,
             ],
-        ];
+        ]
+    }
 
-        let a_implicit = vec![
+    /// Implicit coefficient matrix for ARK4  
+    fn ark4_implicit_coefficients() -> Vec<Vec<f64>> {
+        vec![
             vec![0.0; 6],
             vec![1.0 / 4.0, 1.0 / 4.0, 0.0, 0.0, 0.0, 0.0],
             vec![
@@ -268,19 +298,24 @@ impl IMEXRK {
                 -2260.0 / 8211.0,
                 1.0 / 4.0,
             ],
-        ];
+        ]
+    }
 
-        let b = vec![
+    /// B coefficients for ARK4
+    fn ark4_b_coefficients() -> Vec<f64> {
+        vec![
             82889.0 / 524892.0,
             0.0,
             15625.0 / 83664.0,
             69875.0 / 102672.0,
             -2260.0 / 8211.0,
             1.0 / 4.0,
-        ];
-        let c = vec![0.0, 1.0 / 2.0, 83.0 / 250.0, 31.0 / 50.0, 17.0 / 20.0, 1.0];
+        ]
+    }
 
-        (a_explicit, a_implicit, b, c, 6, 4)
+    /// C coefficients for ARK4
+    fn ark4_c_coefficients() -> Vec<f64> {
+        vec![0.0, 1.0 / 2.0, 83.0 / 250.0, 31.0 / 50.0, 17.0 / 20.0, 1.0]
     }
 }
 
