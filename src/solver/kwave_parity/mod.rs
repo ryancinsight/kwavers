@@ -40,4 +40,4 @@ pub use config::{AbsorptionMode, KWaveConfig};
 pub use solver::KWaveSolver;
 
 // Internal re-exports for module cohesion
-pub(self) use data::{FieldArrays, KSpaceData};
+// Note: FieldArrays and KSpaceData available but currently unused

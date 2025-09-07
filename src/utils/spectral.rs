@@ -241,7 +241,7 @@ pub fn gradient_x(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
         });
 
     // Perform inverse FFT
-    Ok(crate::utils::ifft_3d(&grad_fft, grid))
+    Ok(crate::utils::fft_operations::ifft_3d_array(&grad_fft))
 }
 
 /// Compute spectral gradient in y direction
@@ -270,7 +270,7 @@ pub fn gradient_y(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
         });
 
     // Perform inverse FFT
-    Ok(crate::utils::ifft_3d(&grad_fft, grid))
+    Ok(crate::utils::fft_operations::ifft_3d_array(&grad_fft))
 }
 
 /// Compute spectral gradient in z direction
@@ -299,7 +299,7 @@ pub fn gradient_z(field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<f64>
         });
 
     // Perform inverse FFT
-    Ok(crate::utils::ifft_3d(&grad_fft, grid))
+    Ok(crate::utils::fft_operations::ifft_3d_array(&grad_fft))
 }
 
 #[cfg(test)]

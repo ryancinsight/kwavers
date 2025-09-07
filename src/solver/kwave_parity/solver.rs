@@ -12,7 +12,7 @@ use rustfft::{num_complex::Complex64, FftPlanner};
 use super::config::{AbsorptionMode, KWaveConfig};
 use super::data::{FieldArrays, KSpaceData};
 use super::operators::kspace::compute_k_operators;
-use super::utils::{compute_kspace_correction, compute_pml_operators};
+use super::utils::compute_pml_operators;
 use crate::utils::spectral::compute_kspace_correction_factors;
 
 /// Core k-Wave solver implementing the k-space pseudospectral method
