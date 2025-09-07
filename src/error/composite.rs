@@ -1,9 +1,9 @@
 //! Composite error types
 
+use crate::error::KwaversError;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 use std::fmt;
-use crate::error::KwaversError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositeError {

@@ -9,10 +9,12 @@
 //! - **Zero-copy**: Uses `ArrayView` for input, efficient memory access
 //! - **Configurable accuracy**: Support for 2nd, 4th, and 6th order schemes
 //! - **Domain-agnostic**: Works with any Grid configuration
+//! - **Generic Float**: Works with f32/f64 for precision flexibility
 
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
+use num_traits::Float;
 
 /// Spatial accuracy order for finite difference schemes
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -32,38 +34,60 @@ pub enum SpatialOrder {
 pub struct FDCoefficients;
 
 impl FDCoefficients {
-    /// Get coefficients for first derivative
+    /// Get coefficients for first derivative (generic over float type)
     #[must_use]
-    pub fn first_derivative(order: SpatialOrder) -> Vec<f64> {
+    pub fn first_derivative<T: Float>(order: SpatialOrder) -> Vec<T> {
         match order {
-            SpatialOrder::Second => vec![0.5],
-            SpatialOrder::Fourth => vec![2.0 / 3.0, -1.0 / 12.0],
-            SpatialOrder::Sixth => vec![3.0 / 4.0, -3.0 / 20.0, 1.0 / 60.0],
-            SpatialOrder::Eighth => vec![4.0 / 5.0, -1.0 / 5.0, 4.0 / 105.0, -1.0 / 280.0],
+            SpatialOrder::Second => vec![T::from(0.5).unwrap()],
+            SpatialOrder::Fourth => {
+                vec![T::from(2.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+            }
+            SpatialOrder::Sixth => vec![
+                T::from(3.0 / 4.0).unwrap(),
+                T::from(-3.0 / 20.0).unwrap(),
+                T::from(1.0 / 60.0).unwrap(),
+            ],
+            SpatialOrder::Eighth => vec![
+                T::from(4.0 / 5.0).unwrap(),
+                T::from(-1.0 / 5.0).unwrap(),
+                T::from(4.0 / 105.0).unwrap(),
+                T::from(-1.0 / 280.0).unwrap(),
+            ],
         }
     }
 
-    /// Get off-center pair coefficients for second derivative
+    /// Get off-center pair coefficients for second derivative (generic)
     /// Returns coefficients for symmetric pairs at offsets 1..=N
     #[must_use]
-    pub fn second_derivative_pairs(order: SpatialOrder) -> Vec<f64> {
+    pub fn second_derivative_pairs<T: Float>(order: SpatialOrder) -> Vec<T> {
         match order {
-            SpatialOrder::Second => vec![1.0],
-            SpatialOrder::Fourth => vec![4.0 / 3.0, -1.0 / 12.0],
-            SpatialOrder::Sixth => vec![3.0 / 2.0, -3.0 / 20.0, 1.0 / 90.0],
-            SpatialOrder::Eighth => vec![8.0 / 5.0, -1.0 / 5.0, 8.0 / 315.0, -1.0 / 560.0],
+            SpatialOrder::Second => vec![T::from(1.0).unwrap()],
+            SpatialOrder::Fourth => {
+                vec![T::from(4.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+            }
+            SpatialOrder::Sixth => vec![
+                T::from(3.0 / 2.0).unwrap(),
+                T::from(-3.0 / 20.0).unwrap(),
+                T::from(1.0 / 90.0).unwrap(),
+            ],
+            SpatialOrder::Eighth => vec![
+                T::from(8.0 / 5.0).unwrap(),
+                T::from(-1.0 / 5.0).unwrap(),
+                T::from(8.0 / 315.0).unwrap(),
+                T::from(-1.0 / 560.0).unwrap(),
+            ],
         }
     }
 
-    /// Get the center coefficient for second derivative
+    /// Get the center coefficient for second derivative (generic)
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
     #[must_use]
-    pub fn second_derivative_center(order: SpatialOrder) -> f64 {
+    pub fn second_derivative_center<T: Float>(order: SpatialOrder) -> T {
         match order {
-            SpatialOrder::Second => -2.0,          // 3-point stencil
-            SpatialOrder::Fourth => -5.0 / 2.0,    // 5-point stencil
-            SpatialOrder::Sixth => -49.0 / 18.0,   // 7-point stencil
-            SpatialOrder::Eighth => -205.0 / 72.0, // 9-point stencil
+            SpatialOrder::Second => T::from(-2.0).unwrap(), // 3-point stencil
+            SpatialOrder::Fourth => T::from(-5.0 / 2.0).unwrap(), // 5-point stencil
+            SpatialOrder::Sixth => T::from(-49.0 / 18.0).unwrap(), // 7-point stencil
+            SpatialOrder::Eighth => T::from(-205.0 / 72.0).unwrap(), // 9-point stencil
         }
     }
 }

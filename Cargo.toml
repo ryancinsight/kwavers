@@ -15,6 +15,7 @@ ndarray = { version = "0.16", features = ["rayon"] }
 rayon = "1.10"
 rustfft = "6.2"
 num-complex = "0.4"
+num-traits = "0.2"
 
 # Unit safety
 uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
