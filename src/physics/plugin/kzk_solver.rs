@@ -207,7 +207,7 @@ impl KzkSolverPlugin {
         density: f64,
         c0: f64,
         step_size: f64,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<()> {
         use ndarray::Zip;
 

@@ -57,8 +57,8 @@ impl GaussianBeamParameters {
     #[must_use]
     pub fn field_amplitude(&self, r: f64, z: f64) -> f64 {
         let w_z = self.beam_radius(z);
-        let r_c = self.radius_of_curvature(z);
-        let psi = self.gouy_phase(z);
+        let _r_c = self.radius_of_curvature(z);
+        let _psi = self.gouy_phase(z);
 
         // Amplitude factor
         let amp = (self.w0 / w_z).sqrt();

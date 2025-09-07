@@ -98,7 +98,7 @@ impl KzkDiffractionOperator {
         self.apply_with_step(field, step_size, 0);
     }
 
-    fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, step: usize) {
+    fn apply_with_step(&mut self, field: &mut ArrayViewMut2<f64>, step_size: f64, _step: usize) {
         let nx = self.config.nx;
         let ny = self.config.ny;
         let k0 = 2.0 * PI * self.config.frequency / self.config.c0;

@@ -56,7 +56,7 @@ impl DGSolver {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         let n_elements_x = nx / self.n_nodes;
         let n_elements_y = ny / self.n_nodes;
-        let n_elements_z = nz / self.n_nodes;
+        let _n_elements_z = nz / self.n_nodes;
 
         // Project coefficients back to grid
         for elem_idx in 0..coeffs.shape()[0] {

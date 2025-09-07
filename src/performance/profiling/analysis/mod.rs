@@ -53,7 +53,7 @@ impl RooflineAnalysis {
 
             // Roofline model: Performance = min(Peak_Performance, Peak_Bandwidth * AI)
             let bandwidth_limit = self.peak_bandwidth * self.arithmetic_intensity;
-            let theoretical_performance = self.peak_performance.min(bandwidth_limit);
+            let _theoretical_performance = self.peak_performance.min(bandwidth_limit);
 
             // Determine performance bound
             self.bound = if bandwidth_limit < self.peak_performance {

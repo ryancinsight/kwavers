@@ -326,7 +326,7 @@ impl KellerMiksisModel {
         let internal_pressure = self.calculate_internal_pressure(state);
 
         // Calculate mass transfer rate for latent heat
-        let p_sat = self.thermo_calc.vapor_pressure(state.temperature);
+        let _p_sat = self.thermo_calc.vapor_pressure(state.temperature);
         let p_vapor_current =
             state.n_vapor * R_GAS * state.temperature / (AVOGADRO * state.volume());
         let mass_rate = self.mass_transfer.mass_transfer_rate(
@@ -353,7 +353,7 @@ impl KellerMiksisModel {
         }
 
         // Use proper thermodynamic model for vapor pressure
-        let p_sat = self.thermo_calc.vapor_pressure(state.temperature);
+        let _p_sat = self.thermo_calc.vapor_pressure(state.temperature);
         let p_vapor_current =
             state.n_vapor * R_GAS * state.temperature / (AVOGADRO * state.volume());
 

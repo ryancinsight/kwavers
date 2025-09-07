@@ -54,7 +54,7 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
     fn update(
         &mut self,
         fields: &mut Array4<f64>,
-        grid: &Grid,
+        _grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
         t: f64,

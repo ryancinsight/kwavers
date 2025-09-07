@@ -80,7 +80,7 @@ impl InterpolationManager {
         &self,
         source_field: &Array3<f64>,
         _source_coords: &[(f64, f64, f64)],
-        target_coords: &[(f64, f64, f64)],
+        _target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
         // Linear interpolation implementation
         let shape = source_field.shape();

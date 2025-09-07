@@ -44,7 +44,7 @@ impl TimeCoupling for SubcyclingStrategy {
         physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<()> {
         // Find maximum number of subcycles
         let max_cycles = subcycles.values().copied().max().unwrap_or(1);
@@ -56,7 +56,7 @@ impl TimeCoupling for SubcyclingStrategy {
 
                 // Check if this component should be updated in this cycle
                 if cycle % (max_cycles / n_subcycles) == 0 {
-                    let field = fields.get_mut(name).ok_or_else(|| {
+                    let _field = fields.get_mut(name).ok_or_else(|| {
                         crate::error::KwaversError::Validation(
                             crate::error::ValidationError::FieldValidation {
                                 field: "fields".to_string(),
@@ -67,7 +67,7 @@ impl TimeCoupling for SubcyclingStrategy {
                     })?;
 
                     // Compute local time step
-                    let local_dt = global_dt * (max_cycles / n_subcycles) as f64;
+                    let _local_dt = global_dt * (max_cycles / n_subcycles) as f64;
 
                     // Evaluate physics and update field
                     // Update physics component using plugin interface
@@ -107,7 +107,7 @@ impl TimeCoupling for AveragingStrategy {
         physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<()> {
         // Store initial states - we need to clone here because the multi-rate
         // integration requires preserving the initial state while fields are
@@ -119,9 +119,9 @@ impl TimeCoupling for AveragingStrategy {
         // First pass: advance all components independently
         for (name, component) in physics_components {
             let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
-            let local_dt = global_dt / n_subcycles as f64;
+            let _local_dt = global_dt / n_subcycles as f64;
 
-            let field = fields.get_mut(name).ok_or_else(|| {
+            let _field = fields.get_mut(name).ok_or_else(|| {
                 crate::error::KwaversError::Validation(
                     crate::error::ValidationError::FieldValidation {
                         field: "fields".to_string(),
@@ -178,7 +178,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
         physics_components: &HashMap<String, Box<dyn crate::physics::plugin::Plugin>>,
         subcycles: &HashMap<String, usize>,
         global_dt: f64,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<()> {
         // Store initial states - we need to clone here because predictor-corrector
         // methods require resetting to the initial state for each iteration.
@@ -200,9 +200,9 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             // Advance each component
             for (name, component) in physics_components {
                 let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
-                let local_dt = global_dt / n_subcycles as f64;
+                let _local_dt = global_dt / n_subcycles as f64;
 
-                let field = fields.get_mut(name).ok_or_else(|| {
+                let _field = fields.get_mut(name).ok_or_else(|| {
                     crate::error::KwaversError::Validation(
                         crate::error::ValidationError::FieldValidation {
                             field: "fields".to_string(),

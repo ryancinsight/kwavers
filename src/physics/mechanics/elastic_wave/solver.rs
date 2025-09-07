@@ -137,7 +137,7 @@ impl AcousticWaveModel for ElasticWave {
     fn update_wave(
         &mut self,
         fields: &mut Array4<f64>,
-        prev_pressure: &Array3<f64>,
+        _prev_pressure: &Array3<f64>,
         source: &dyn Source,
         grid: &Grid,
         medium: &dyn Medium,

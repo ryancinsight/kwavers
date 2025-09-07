@@ -153,7 +153,7 @@ impl AdaptiveMethodSelector {
     /// Compute score for finite difference method
     fn compute_fd_score(
         &self,
-        spectral: &SpectralMetrics,
+        _spectral: &SpectralMetrics,
         material: &MaterialMetrics,
         computational: &ComputationalMetrics,
     ) -> f64 {

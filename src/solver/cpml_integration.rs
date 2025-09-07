@@ -35,7 +35,7 @@ impl CPMLSolver {
     /// * `grid` - Computational grid
     /// * `dt` - Time step from the main solver
     /// * `sound_speed` - Reference sound speed (typically max in medium)
-    pub fn new(config: CPMLConfig, grid: &Grid, dt: f64, sound_speed: f64) -> KwaversResult<Self> {
+    pub fn new(config: CPMLConfig, grid: &Grid, _dt: f64, sound_speed: f64) -> KwaversResult<Self> {
         let cpml = CPMLBoundary::new(config, grid, sound_speed)?;
 
         Ok(Self {
@@ -60,7 +60,7 @@ impl CPMLSolver {
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
-        step: usize,
+        _step: usize,
     ) -> KwaversResult<()> {
         trace!("Updating acoustic field with C-PML");
 

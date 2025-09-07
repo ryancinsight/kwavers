@@ -95,29 +95,35 @@ impl FDCoefficients {
 /// Compute gradient of a scalar field
 ///
 /// Returns (∂f/∂x, ∂f/∂y, ∂f/∂z)
-pub fn gradient(
-    field: ArrayView3<'_, f64>,
+///
+/// # Generic Parameters
+/// * `T` - Float type (f32, f64) implementing num_traits::Float
+pub fn gradient<T>(
+    field: ArrayView3<'_, T>,
     grid: &Grid,
     order: SpatialOrder,
-) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> 
+where
+    T: num_traits::Float + std::default::Default,
+{
     let (nx, ny, nz) = field.dim();
-    let mut grad_x = Array3::zeros((nx, ny, nz));
-    let mut grad_y = Array3::zeros((nx, ny, nz));
-    let mut grad_z = Array3::zeros((nx, ny, nz));
+    let mut grad_x = Array3::default((nx, ny, nz));
+    let mut grad_y = Array3::default((nx, ny, nz));
+    let mut grad_z = Array3::default((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<T> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // X-direction gradient
     for k in 0..nz {
         for j in 0..ny {
             for i in stencil_size..nx - stencil_size {
-                let mut sum = 0.0;
+                let mut sum = T::zero();
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                    sum = sum + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                 }
-                grad_x[[i, j, k]] = sum / grid.dx;
+                grad_x[[i, j, k]] = sum / T::from(grid.dx).unwrap();
             }
         }
     }
@@ -126,12 +132,12 @@ pub fn gradient(
     for k in 0..nz {
         for j in stencil_size..ny - stencil_size {
             for i in 0..nx {
-                let mut sum = 0.0;
+                let mut sum = T::zero();
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                    sum = sum + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                 }
-                grad_y[[i, j, k]] = sum / grid.dy;
+                grad_y[[i, j, k]] = sum / T::from(grid.dy).unwrap();
             }
         }
     }
@@ -140,12 +146,12 @@ pub fn gradient(
     for k in stencil_size..nz - stencil_size {
         for j in 0..ny {
             for i in 0..nx {
-                let mut sum = 0.0;
+                let mut sum = T::zero();
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    sum += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                    sum = sum + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                 }
-                grad_z[[i, j, k]] = sum / grid.dz;
+                grad_z[[i, j, k]] = sum / T::from(grid.dz).unwrap();
             }
         }
     }
@@ -156,35 +162,41 @@ pub fn gradient(
 /// Compute divergence of a vector field
 ///
 /// Returns ∇·v = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
-pub fn divergence(
-    vx: ArrayView3<'_, f64>,
-    vy: ArrayView3<'_, f64>,
-    vz: ArrayView3<'_, f64>,
+///
+/// # Generic Parameters
+/// * `T` - Float type (f32, f64) implementing num_traits::Float
+pub fn divergence<T>(
+    vx: ArrayView3<'_, T>,
+    vy: ArrayView3<'_, T>,
+    vz: ArrayView3<'_, T>,
     grid: &Grid,
     order: SpatialOrder,
-) -> KwaversResult<Array3<f64>> {
+) -> KwaversResult<Array3<T>>
+where
+    T: num_traits::Float + std::default::Default,
+{
     let (nx, ny, nz) = vx.dim();
-    let mut div = Array3::zeros((nx, ny, nz));
+    let mut div = Array3::default((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<T> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // Compute divergence at interior points
     for k in stencil_size..nz - stencil_size {
         for j in stencil_size..ny - stencil_size {
             for i in stencil_size..nx - stencil_size {
-                let mut dvx_dx = 0.0;
-                let mut dvy_dy = 0.0;
-                let mut dvz_dz = 0.0;
+                let mut dvx_dx = T::zero();
+                let mut dvy_dy = T::zero();
+                let mut dvz_dz = T::zero();
 
                 for (s, &coeff) in coeffs.iter().enumerate() {
                     let offset = s + 1;
-                    dvx_dx += coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
-                    dvy_dy += coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
-                    dvz_dz += coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
+                    dvx_dx = dvx_dx + coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
+                    dvy_dy = dvy_dy + coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
+                    dvz_dz = dvz_dz + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
                 }
 
-                div[[i, j, k]] = dvx_dx / grid.dx + dvy_dy / grid.dy + dvz_dz / grid.dz;
+                div[[i, j, k]] = dvx_dx / T::from(grid.dx).unwrap() + dvy_dy / T::from(grid.dy).unwrap() + dvz_dz / T::from(grid.dz).unwrap();
             }
         }
     }
@@ -229,7 +241,7 @@ pub fn curl(
     let mut curl_y = Array3::zeros((nx, ny, nz));
     let mut curl_z = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::first_derivative(order);
+    let coeffs: Vec<f64> = FDCoefficients::first_derivative(order);
     let stencil_size = coeffs.len();
 
     // Compute curl at interior points
@@ -345,8 +357,8 @@ pub fn transverse_laplacian(
     let (nx, ny, nz) = field.dim();
     let mut lap = Array3::zeros((nx, ny, nz));
 
-    let coeffs = FDCoefficients::second_derivative_pairs(order);
-    let center_coeff = FDCoefficients::second_derivative_center(order);
+    let coeffs: Vec<f64> = FDCoefficients::second_derivative_pairs(order);
+    let center_coeff: f64 = FDCoefficients::second_derivative_center(order);
     let stencil_size = coeffs.len();
 
     let dx2_inv = 1.0 / (grid.dx * grid.dx);

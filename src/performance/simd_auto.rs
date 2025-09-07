@@ -182,7 +182,7 @@ impl SimdAuto {
             let out_slice = out.as_slice_mut().unwrap();
 
             let chunks = a_slice.len() / 4;
-            let remainder = a_slice.len() % 4;
+            let _remainder = a_slice.len() % 4;
 
             // SAFETY: AVX2 availability verified by is_x86_feature_detected!
             // Array bounds checked: idx ranges from 0 to chunks*4, where chunks = len/4
@@ -316,7 +316,7 @@ impl SimdAuto {
 
             let slice = array.as_slice_mut().unwrap();
             let chunks = slice.len() / 4;
-            let remainder = slice.len() % 4;
+            let _remainder = slice.len() % 4;
 
             // SAFETY: AVX2 is available (runtime check)
             unsafe {

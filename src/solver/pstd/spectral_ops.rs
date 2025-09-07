@@ -76,7 +76,7 @@ impl SpectralOperations {
     pub fn compute_gradient(
         &self,
         field: &Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
         let field_hat = fft_3d_array(field);
 
@@ -107,7 +107,7 @@ impl SpectralOperations {
     pub fn compute_laplacian(
         &self,
         field: &Array3<f64>,
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let field_hat = fft_3d_array(field);
 

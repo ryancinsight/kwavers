@@ -40,7 +40,7 @@ impl AdaptiveBeamformer {
     }
 
     /// Update weights based on covariance
-    pub fn update_weights(&mut self, covariance: &Array2<Complex64>) {
+    pub fn update_weights(&mut self, _covariance: &Array2<Complex64>) {
         // MVDR implementation would go here
         // Currently using uniform weights
     }

@@ -8,37 +8,44 @@
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
+use num_traits::Float;
 
 /// Calculate total acoustic energy in the domain
 ///
 /// E = (1/2) * ∫ [ρ₀v² + p²/(ρ₀c²)] dV
 ///
 /// where v is particle velocity and p is pressure
-fn calculate_acoustic_energy(
-    pressure: &Array3<f64>,
-    velocity_x: &Array3<f64>,
-    velocity_y: &Array3<f64>,
-    velocity_z: &Array3<f64>,
-    density: f64,
-    sound_speed: f64,
-    dx: f64,
-    dy: f64,
-    dz: f64,
-) -> f64 {
-    let mut energy = 0.0;
+///
+/// # Generic Implementation
+/// 
+/// This function supports both f32 and f64 precision through num_traits::Float bounds,
+/// eliminating the hardcoded f64 antipattern identified in the audit.
+fn calculate_acoustic_energy<T>(
+    pressure: &Array3<T>,
+    velocity_x: &Array3<T>,
+    velocity_y: &Array3<T>,
+    velocity_z: &Array3<T>,
+    density: T,
+    sound_speed: T,
+    dx: T,
+    dy: T,
+    dz: T,
+) -> T 
+where 
+    T: num_traits::Float + std::default::Default + std::iter::Sum,
+{
     let dv = dx * dy * dz; // Volume element
-
+    let half = T::from(0.5).unwrap();
+    
     Zip::from(pressure)
         .and(velocity_x)
         .and(velocity_y)
         .and(velocity_z)
-        .for_each(|&p, &vx, &vy, &vz| {
-            let kinetic = 0.5 * density * (vx * vx + vy * vy + vz * vz);
-            let potential = 0.5 * p * p / (density * sound_speed * sound_speed);
-            energy += (kinetic + potential) * dv;
-        });
-
-    energy
+        .fold(T::default(), |energy, &p, &vx, &vy, &vz| {
+            let kinetic = half * density * (vx * vx + vy * vy + vz * vz);
+            let potential = half * p * p / (density * sound_speed * sound_speed);
+            energy + (kinetic + potential) * dv
+        })
 }
 
 #[test]

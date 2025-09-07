@@ -56,7 +56,7 @@ impl HeterogeneousHandler {
     }
 
     /// Initialize with medium properties
-    pub fn initialize(&mut self, medium: &dyn Medium, grid: &Grid) -> KwaversResult<()> {
+    pub fn initialize(&mut self, medium: &dyn Medium, _grid: &Grid) -> KwaversResult<()> {
         // Get medium properties as arrays
         let density = medium.density_array();
         let sound_speed = medium.sound_speed_array();

@@ -83,7 +83,7 @@ impl DGSolver {
                 KwaversError::InvalidInput("Modal coefficients not initialized".to_string())
             })?
             .raw_dim();
-        let n_elements = coeffs_shape[0];
+        let _n_elements = coeffs_shape[0];
         let wave_speed = 1500.0; // Example wave speed
 
         // Compute RHS of DG formulation

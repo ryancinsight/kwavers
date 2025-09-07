@@ -141,9 +141,9 @@ impl KuznetsovWave {
 
             // Use parallel iteration with indices
             let shape = rhs.shape();
-            let nx = shape[0];
-            let ny = shape[1];
-            let nz = shape[2];
+            let _nx = shape[0];
+            let _ny = shape[1];
+            let _nz = shape[2];
 
             // Use parallel iteration for heterogeneous media
             for k in 0..self.grid.nz {

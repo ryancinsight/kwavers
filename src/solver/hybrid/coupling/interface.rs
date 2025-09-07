@@ -43,7 +43,7 @@ impl CouplingInterface {
         &mut self,
         fields: &mut Array4<f64>,
         regions: &[DomainRegion],
-        grid: &Grid,
+        _grid: &Grid,
     ) -> KwaversResult<()> {
         // Extract field data from source region
         let source_region = regions.first().ok_or_else(|| {

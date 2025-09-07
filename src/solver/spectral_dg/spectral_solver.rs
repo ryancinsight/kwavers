@@ -6,7 +6,7 @@
 use super::traits::{NumericalSolver, SpectralOperations};
 use crate::error::{KwaversError, ValidationError};
 use crate::grid::Grid;
-use crate::utils::ifft_3d;
+use crate::utils::fft_operations::ifft_3d_array;
 use crate::KwaversResult;
 use ndarray::{s, Array3, Zip};
 use num_complex::Complex;
@@ -180,7 +180,7 @@ impl SpectralSolver {
         });
 
         // Transform back to physical space
-        let result_complex = ifft_3d(&field_hat, &self.grid);
+        let result_complex = ifft_3d_array(&field_hat);
         let mut result = result_complex;
 
         // Apply mask to use spectral solution only in smooth regions
@@ -212,7 +212,7 @@ impl NumericalSolver for SpectralSolver {
     fn max_stable_dt(&self, grid: &Grid) -> f64 {
         // CFL condition for spectral methods
         let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-        let k_max = PI / dx_min;
+        let _k_max = PI / dx_min;
 
         // Spectral methods have stricter stability requirements
         0.5 * dx_min / (self.wave_speed * self.order as f64)
@@ -269,7 +269,7 @@ impl SpectralOperations for SpectralSolver {
             .for_each(|f, &filter| *f *= filter);
 
         // Transform back
-        let result_complex = ifft_3d(&field_hat, &self.grid);
+        let result_complex = ifft_3d_array(&field_hat);
         Ok(result_complex)
     }
 
@@ -281,7 +281,7 @@ impl SpectralOperations for SpectralSolver {
             .and(&self.filter)
             .for_each(|f, &filter| *f *= filter);
 
-        let filtered_complex = ifft_3d(&field_hat, &self.grid);
+        let filtered_complex = ifft_3d_array(&field_hat);
         field.assign(&filtered_complex);
     }
 }

@@ -148,7 +148,7 @@ pub fn validate_conservation(
     velocity_y: &Array3<f64>,
     velocity_z: &Array3<f64>,
     density: &Array3<f64>,
-    pressure_previous: Option<&Array3<f64>>,
+    _pressure_previous: Option<&Array3<f64>>,
     velocity_x_previous: Option<&Array3<f64>>,
     velocity_y_previous: Option<&Array3<f64>>,
     velocity_z_previous: Option<&Array3<f64>>,

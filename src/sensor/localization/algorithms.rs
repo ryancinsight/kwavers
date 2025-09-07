@@ -94,9 +94,9 @@ struct TDOAAlgorithm;
 impl LocalizationAlgorithmImpl for TDOAAlgorithm {
     fn localize_impl(
         &self,
-        array: &SensorArray,
-        measurements: &[f64],
-        config: &LocalizationConfig,
+        _array: &SensorArray,
+        _measurements: &[f64],
+        _config: &LocalizationConfig,
     ) -> KwaversResult<LocalizationResult> {
         // Implementation would go here
         // For now, return a placeholder
@@ -116,9 +116,9 @@ struct TOAAlgorithm;
 impl LocalizationAlgorithmImpl for TOAAlgorithm {
     fn localize_impl(
         &self,
-        array: &SensorArray,
-        measurements: &[f64],
-        config: &LocalizationConfig,
+        _array: &SensorArray,
+        _measurements: &[f64],
+        _config: &LocalizationConfig,
     ) -> KwaversResult<LocalizationResult> {
         Ok(LocalizationResult {
             position: Position::new(0.0, 0.0, 0.0),
@@ -136,9 +136,9 @@ struct BeamformingAlgorithm;
 impl LocalizationAlgorithmImpl for BeamformingAlgorithm {
     fn localize_impl(
         &self,
-        array: &SensorArray,
-        measurements: &[f64],
-        config: &LocalizationConfig,
+        _array: &SensorArray,
+        _measurements: &[f64],
+        _config: &LocalizationConfig,
     ) -> KwaversResult<LocalizationResult> {
         Ok(LocalizationResult {
             position: Position::new(0.0, 0.0, 0.0),

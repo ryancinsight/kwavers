@@ -137,7 +137,7 @@ pub fn compute_sensitivity_matrix(
                     let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                     // Sound speed at voxel
-                    let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
+                    let _c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 
                     // Sensitivity decreases with distance (spherical spreading)
                     // and depends on acoustic properties

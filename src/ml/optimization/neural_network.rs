@@ -5,7 +5,11 @@ use ndarray::{Array1, Array2, Axis};
 use rand::Rng;
 
 /// Neural network for parameter optimization
+///
+/// This is a research/experimental implementation for acoustic parameter optimization.
+/// Some fields may be unused in the current implementation phase.
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // Research module - fields may be unused in current implementation
 pub struct NeuralNetwork {
     weights1: Array2<f64>,
     bias1: Array1<f64>,

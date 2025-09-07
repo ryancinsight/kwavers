@@ -101,7 +101,7 @@ impl WaveletTransform {
     }
 
     /// Haar wavelet inverse transform
-    fn haar_inverse(&self, coeffs: &mut Array3<f64>) -> KwaversResult<()> {
+    fn haar_inverse(&self, _coeffs: &mut Array3<f64>) -> KwaversResult<()> {
         // Reverse of forward transform
         // Implementation would be similar but in reverse order
         Ok(())
@@ -125,26 +125,26 @@ impl WaveletTransform {
     }
 
     /// Daubechies wavelet forward transform
-    fn daubechies_forward(&self, data: &mut Array3<f64>, order: usize) -> KwaversResult<()> {
+    fn daubechies_forward(&self, data: &mut Array3<f64>, _order: usize) -> KwaversResult<()> {
         // Daubechies wavelets require filter coefficients
         // This is a placeholder - full implementation would use proper coefficients
         self.haar_forward(data)
     }
 
     /// Daubechies wavelet inverse transform
-    fn daubechies_inverse(&self, coeffs: &mut Array3<f64>, order: usize) -> KwaversResult<()> {
+    fn daubechies_inverse(&self, coeffs: &mut Array3<f64>, _order: usize) -> KwaversResult<()> {
         self.haar_inverse(coeffs)
     }
 
     /// CDF wavelet forward transform
-    fn cdf_forward(&self, data: &mut Array3<f64>, p: usize, q: usize) -> KwaversResult<()> {
+    fn cdf_forward(&self, data: &mut Array3<f64>, _p: usize, _q: usize) -> KwaversResult<()> {
         // Cohen-Daubechies-Feauveau wavelets
         // Placeholder - would need proper implementation
         self.haar_forward(data)
     }
 
     /// CDF wavelet inverse transform
-    fn cdf_inverse(&self, coeffs: &mut Array3<f64>, p: usize, q: usize) -> KwaversResult<()> {
+    fn cdf_inverse(&self, coeffs: &mut Array3<f64>, _p: usize, _q: usize) -> KwaversResult<()> {
         self.haar_inverse(coeffs)
     }
 

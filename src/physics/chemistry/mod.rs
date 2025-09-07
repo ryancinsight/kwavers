@@ -130,7 +130,7 @@ impl ChemicalModel {
     pub fn update(
         &mut self,
         params: &ChemicalUpdateParams,
-        context: &PluginContext,
+        _context: &PluginContext,
     ) -> KwaversResult<()> {
         let start = Instant::now();
         self.state = ChemicalModelState::Running;

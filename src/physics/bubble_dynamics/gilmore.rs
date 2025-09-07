@@ -132,7 +132,7 @@ impl GilmoreSolver {
     /// Estimate time derivative of enthalpy
     fn estimate_enthalpy_derivative(
         &self,
-        state: &BubbleState,
+        _state: &BubbleState,
         p_wall: f64,
         p_acoustic: f64,
         omega: f64,

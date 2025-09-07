@@ -39,8 +39,8 @@ impl ConservativeInterpolator {
     /// Interpolate field to refined mesh
     pub fn interpolate_to_refined(
         &self,
-        octree: &Octree,
-        field: &Array3<f64>,
+        _octree: &Octree,
+        _field: &Array3<f64>,
     ) -> KwaversResult<()> {
         // This would traverse the octree and interpolate values
         // For now, this is a placeholder

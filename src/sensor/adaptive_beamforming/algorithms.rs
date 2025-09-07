@@ -33,7 +33,7 @@ pub struct MinimumVariance;
 impl BeamformingAlgorithm for MinimumVariance {
     fn compute_weights(
         &self,
-        covariance: &Array2<Complex64>,
+        _covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> Array1<Complex64> {
         // MVDR: w = R^-1 * a / (a^H * R^-1 * a)
