@@ -41,7 +41,7 @@ impl FourierReconstructor {
         sensor_data: ArrayView2<f64>,
         sensor_positions: &[[f64; 3]],
     ) -> KwaversResult<Array3<f64>> {
-        let (n_time, n_sensors) = sensor_data.dim();
+        let (_n_time, _n_sensors) = sensor_data.dim();
         let [nx, ny, nz] = self.grid_size;
 
         // Initialize k-space representation

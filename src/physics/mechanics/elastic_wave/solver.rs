@@ -152,11 +152,10 @@ impl AcousticWaveModel for ElasticWave {
         // For elastic waves, we use velocity components instead of pressure
         use crate::physics::field_indices::{PRESSURE_IDX, VX_IDX, VY_IDX, VZ_IDX};
 
-        // Extract velocity fields from the 4D array (currently unused in this implementation)
-        // TODO: Integrate velocity field updates with elastic wave equations
-        let _vx = fields.index_axis(Axis(0), VX_IDX).to_owned();
-        let _vy = fields.index_axis(Axis(0), VY_IDX).to_owned();
-        let _vz = fields.index_axis(Axis(0), VZ_IDX).to_owned();
+        // Extract velocity fields from the 4D array
+        let mut vx = fields.index_axis(Axis(0), VX_IDX).to_owned();
+        let mut vy = fields.index_axis(Axis(0), VY_IDX).to_owned();
+        let mut vz = fields.index_axis(Axis(0), VZ_IDX).to_owned();
 
         // Transform to frequency domain
         // FFT timing will be tracked within spectral field conversions

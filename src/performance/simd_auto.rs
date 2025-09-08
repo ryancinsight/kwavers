@@ -9,6 +9,9 @@
 //! - Safe fallback to SWAR
 //! - In-place operations for zero-copy
 
+// Allow unsafe code for SIMD performance optimization
+#![allow(unsafe_code)]
+
 use ndarray::{Array3, Zip};
 use std::arch::is_x86_feature_detected;
 

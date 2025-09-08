@@ -72,8 +72,8 @@ impl OverlapRegion {
         let mut idx = 0;
 
         for i in start.0..end.0 {
-            for j in start.1..end.1 {
-                for k in start.2..end.2 {
+            for _j in start.1..end.1 {
+                for _k in start.2..end.2 {
                     let weight =
                         self.compute_blend_weight(i - start.0, end.0 - start.0, buffer.blend_type);
 

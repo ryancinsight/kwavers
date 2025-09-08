@@ -1,5 +1,8 @@
 //! AVX2 SIMD implementations for x86_64
 
+// Allow unsafe code for SIMD performance optimization
+#![allow(unsafe_code)]
+
 use ndarray::Array3;
 
 /// Add two fields using AVX2 instructions

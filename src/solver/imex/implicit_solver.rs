@@ -55,7 +55,7 @@ impl ImplicitSolver for LinearSolver {
         let mut solution = initial_guess.clone();
         let mut last_norm = f64::INFINITY;
 
-        for iter in 0..self.max_iterations {
+        for _iter in 0..self.max_iterations {
             let residual = residual_fn(&solution)?;
 
             // Check convergence
@@ -212,7 +212,7 @@ impl ImplicitSolver for NonlinearSolver {
         let mut solution = initial_guess.clone();
         let mut last_norm = f64::INFINITY;
 
-        for iter in 0..self.max_iterations {
+        for _iter in 0..self.max_iterations {
             let residual = residual_fn(&solution)?;
 
             // Check convergence
