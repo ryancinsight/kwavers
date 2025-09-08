@@ -33,6 +33,12 @@ impl MLEngine {
         })
     }
 
+    /// Get current ML backend
+    #[must_use]
+    pub fn backend(&self) -> MLBackend {
+        self.backend
+    }
+
     /// Load a model from file
     pub fn load_model(&mut self, model_type: ModelType, path: &str) -> KwaversResult<()> {
         use std::path::Path;

@@ -101,6 +101,9 @@ impl PerformanceOptimizer {
             self.cache.optimize_blocking()?;
         }
 
+        // Note: Parallel optimization is applied automatically through rayon
+        // when using parallel iterators - no explicit optimization needed
+
         if self.config.prefetching {
             self.memory.enable_prefetching()?;
         }

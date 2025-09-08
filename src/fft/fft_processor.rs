@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 /// 3D FFT implementation with parallelization
 pub struct Fft3d {
-    planner: FftPlanner<f64>,
     nx: usize,
     ny: usize,
     nz: usize,
@@ -50,7 +49,6 @@ impl Fft3d {
         let ifft_z = planner.plan_fft_inverse(nz);
 
         Self {
-            planner,
             nx,
             ny,
             nz,
@@ -233,7 +231,6 @@ impl Fft3d {
 
 /// 2D FFT processor for grid-based operations
 pub struct Fft2d {
-    planner: FftPlanner<f64>,
     nx: usize,
     ny: usize,
     fft_x: Arc<dyn Fft<f64>>,
@@ -263,7 +260,6 @@ impl Fft2d {
             fft_y: planner.plan_fft_forward(ny),
             ifft_x: planner.plan_fft_inverse(nx),
             ifft_y: planner.plan_fft_inverse(ny),
-            planner,
         }
     }
 
