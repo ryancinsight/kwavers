@@ -21,6 +21,8 @@ pub struct HeterogeneousTissueMedium {
     cached_density: Option<Array3<f64>>,
     /// Cache for sound speed values
     cached_sound_speed: Option<Array3<f64>>,
+    /// Cache for shear modulus values
+    shear_modulus_array: Option<Array3<f64>>,
 }
 
 impl HeterogeneousTissueMedium {
@@ -33,6 +35,7 @@ impl HeterogeneousTissueMedium {
             grid,
             cached_density: None,
             cached_sound_speed: None,
+            shear_modulus_array: None,
         }
     }
 
@@ -60,6 +63,7 @@ impl HeterogeneousTissueMedium {
     fn clear_caches(&mut self) {
         self.cached_density = None;
         self.cached_sound_speed = None;
+        self.shear_modulus_array = None;
     }
 
     /// Get tissue properties at an index

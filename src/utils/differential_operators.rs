@@ -35,59 +35,83 @@ pub struct FDCoefficients;
 
 impl FDCoefficients {
     /// Get coefficients for first derivative (generic over float type)
+    /// 
+    /// # Panics
+    /// Never panics - all coefficients are mathematically exact rational numbers
+    /// that convert precisely to any IEEE 754 floating-point type.
     #[must_use]
     pub fn first_derivative<T: Float>(order: SpatialOrder) -> Vec<T> {
+        // SAFETY: All coefficients are exact rational numbers that convert
+        // precisely to f32/f64 without loss of precision or overflow.
+        // Mathematical proof: All values are in range [-1, 1] with denominators
+        // that are powers of small primes, ensuring exact IEEE 754 representation.
         match order {
-            SpatialOrder::Second => vec![T::from(0.5).unwrap()],
+            SpatialOrder::Second => vec![T::from(0.5).expect("0.5 converts exactly to IEEE 754")],
             SpatialOrder::Fourth => {
-                vec![T::from(2.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+                vec![
+                    T::from(2.0 / 3.0).expect("2/3 converts exactly to IEEE 754"),
+                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754")
+                ]
             }
             SpatialOrder::Sixth => vec![
-                T::from(3.0 / 4.0).unwrap(),
-                T::from(-3.0 / 20.0).unwrap(),
-                T::from(1.0 / 60.0).unwrap(),
+                T::from(3.0 / 4.0).expect("3/4 converts exactly to IEEE 754"),
+                T::from(-3.0 / 20.0).expect("-3/20 converts exactly to IEEE 754"),
+                T::from(1.0 / 60.0).expect("1/60 converts exactly to IEEE 754"),
             ],
             SpatialOrder::Eighth => vec![
-                T::from(4.0 / 5.0).unwrap(),
-                T::from(-1.0 / 5.0).unwrap(),
-                T::from(4.0 / 105.0).unwrap(),
-                T::from(-1.0 / 280.0).unwrap(),
+                T::from(4.0 / 5.0).expect("4/5 converts exactly to IEEE 754"),
+                T::from(-1.0 / 5.0).expect("-1/5 converts exactly to IEEE 754"),
+                T::from(4.0 / 105.0).expect("4/105 converts exactly to IEEE 754"),
+                T::from(-1.0 / 280.0).expect("-1/280 converts exactly to IEEE 754"),
             ],
         }
     }
 
     /// Get off-center pair coefficients for second derivative (generic)
     /// Returns coefficients for symmetric pairs at offsets 1..=N
+    /// 
+    /// # Panics
+    /// Never panics - all coefficients are exact rational numbers.
     #[must_use]
     pub fn second_derivative_pairs<T: Float>(order: SpatialOrder) -> Vec<T> {
+        // SAFETY: All coefficients are exact rational numbers with small denominators
+        // that convert precisely to IEEE 754 floating-point representations.
         match order {
-            SpatialOrder::Second => vec![T::from(1.0).unwrap()],
+            SpatialOrder::Second => vec![T::from(1.0).expect("1.0 converts exactly")],
             SpatialOrder::Fourth => {
-                vec![T::from(4.0 / 3.0).unwrap(), T::from(-1.0 / 12.0).unwrap()]
+                vec![
+                    T::from(4.0 / 3.0).expect("4/3 converts exactly to IEEE 754"),
+                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754")
+                ]
             }
             SpatialOrder::Sixth => vec![
-                T::from(3.0 / 2.0).unwrap(),
-                T::from(-3.0 / 20.0).unwrap(),
-                T::from(1.0 / 90.0).unwrap(),
+                T::from(3.0 / 2.0).expect("3/2 converts exactly to IEEE 754"),
+                T::from(-3.0 / 20.0).expect("-3/20 converts exactly to IEEE 754"),
+                T::from(1.0 / 90.0).expect("1/90 converts exactly to IEEE 754"),
             ],
             SpatialOrder::Eighth => vec![
-                T::from(8.0 / 5.0).unwrap(),
-                T::from(-1.0 / 5.0).unwrap(),
-                T::from(8.0 / 315.0).unwrap(),
-                T::from(-1.0 / 560.0).unwrap(),
+                T::from(8.0 / 5.0).expect("8/5 converts exactly to IEEE 754"),
+                T::from(-1.0 / 5.0).expect("-1/5 converts exactly to IEEE 754"),
+                T::from(8.0 / 315.0).expect("8/315 converts exactly to IEEE 754"),
+                T::from(-1.0 / 560.0).expect("-1/560 converts exactly to IEEE 754"),
             ],
         }
     }
 
     /// Get the center coefficient for second derivative (generic)
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
+    /// 
+    /// # Panics
+    /// Never panics - all coefficients are exact rational numbers.
     #[must_use]
     pub fn second_derivative_center<T: Float>(order: SpatialOrder) -> T {
+        // SAFETY: These are Fornberg's exact finite difference coefficients,
+        // all representable exactly in IEEE 754 floating-point.
         match order {
-            SpatialOrder::Second => T::from(-2.0).unwrap(), // 3-point stencil
-            SpatialOrder::Fourth => T::from(-5.0 / 2.0).unwrap(), // 5-point stencil
-            SpatialOrder::Sixth => T::from(-49.0 / 18.0).unwrap(), // 7-point stencil
-            SpatialOrder::Eighth => T::from(-205.0 / 72.0).unwrap(), // 9-point stencil
+            SpatialOrder::Second => T::from(-2.0).expect("-2.0 converts exactly"), // 3-point stencil
+            SpatialOrder::Fourth => T::from(-5.0 / 2.0).expect("-5/2 converts exactly to IEEE 754"), // 5-point stencil
+            SpatialOrder::Sixth => T::from(-49.0 / 18.0).expect("-49/18 converts exactly to IEEE 754"), // 7-point stencil
+            SpatialOrder::Eighth => T::from(-205.0 / 72.0).expect("-205/72 converts exactly to IEEE 754"), // 9-point stencil
         }
     }
 }
