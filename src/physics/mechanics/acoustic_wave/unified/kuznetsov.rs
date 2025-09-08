@@ -167,14 +167,13 @@ fn compute_diffusion_term(pressure: &Array3<f64>, _medium: &dyn Medium, grid: &G
     // where μ is shear viscosity, μ_B is bulk viscosity
 
     let laplacian_p = compute_laplacian(pressure, grid);
-    let mut diffusion = Array3::zeros(pressure.dim());
-
+    
     // Apply diffusion coefficient
     // Note: This requires viscosity properties from medium
     // Using simplified constant diffusivity for now
     const DIFFUSIVITY: f64 = 1e-6; // m²/s (typical for water)
 
-    diffusion = laplacian_p * DIFFUSIVITY;
+    let diffusion = laplacian_p * DIFFUSIVITY;
 
     diffusion
 }
