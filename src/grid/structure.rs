@@ -153,13 +153,14 @@ impl Grid {
     }
 
     /// Get an iterator over the coordinates for a specific dimension.
-    /// This returns an optimized iterator that avoids unnecessary boxing.
-    pub fn coordinates(&self, dim: Dimension) -> Box<dyn Iterator<Item = f64> + '_> {
-        match dim {
-            Dimension::X => Box::new((0..self.nx).map(move |i| i as f64 * self.dx)),
-            Dimension::Y => Box::new((0..self.ny).map(move |j| j as f64 * self.dy)),
-            Dimension::Z => Box::new((0..self.nz).map(move |k| k as f64 * self.dz)),
-        }
+    /// This returns a statically-dispatched iterator with no heap allocation.
+    pub fn coordinates(&self, dim: Dimension) -> impl Iterator<Item = f64> + '_ {
+        let (count, spacing) = match dim {
+            Dimension::X => (self.nx, self.dx),
+            Dimension::Y => (self.ny, self.dy),
+            Dimension::Z => (self.nz, self.dz),
+        };
+        (0..count).map(move |i| i as f64 * spacing)
     }
 
     /// Convert position to grid indices
@@ -182,11 +183,7 @@ impl Grid {
         Some((i.min(self.nx - 1), j.min(self.ny - 1), k.min(self.nz - 1)))
     }
 
-    /// Get total number of points
-    #[inline]
-    pub fn total_points(&self) -> usize {
-        self.size()
-    }
+
 
     /// Create a zero-initialized field with grid dimensions
     #[inline]

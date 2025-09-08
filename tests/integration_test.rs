@@ -53,7 +53,7 @@ fn test_grid_creation() {
     assert_eq!(grid.nx, 100);
     assert_eq!(grid.ny, 100);
     assert_eq!(grid.nz, 100);
-    assert_eq!(grid.total_points(), 1_000_000);
+    assert_eq!(grid.size(), 1_000_000);
 }
 
 #[test]
