@@ -32,7 +32,7 @@ fn test_plane_wave_propagation() {
 /// Test standing wave - both solvers should complete
 #[test]
 fn test_standing_wave_analytical() {
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Grid creation failed");
     let medium = HomogeneousMedium::water(&grid);
 
     // Simple standing wave
@@ -50,7 +50,7 @@ fn test_standing_wave_analytical() {
 /// Test that solvers handle uniform field
 #[test]
 fn test_dispersion_characteristics() {
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Grid creation failed");
     let medium = HomogeneousMedium::water(&grid);
 
     // Uniform pressure field

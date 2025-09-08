@@ -154,6 +154,7 @@ impl AcousticWaveModel for WesterveltWave {
         let rho_arr = medium.density_array();
         let c_arr = medium.sound_speed_array();
         // Get viscosity arrays from ElasticArrayAccess trait
+        #[allow(unused_imports)]
         use crate::medium::elastic::ElasticArrayAccess;
         let eta_s_arr = medium.shear_viscosity_coeff_array();
         let eta_b_arr = medium.bulk_viscosity_coeff_array();

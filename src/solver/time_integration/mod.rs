@@ -43,7 +43,6 @@ pub use traits::{MultiRateConfig, TimeStepper, TimeStepperConfig, TimeStepperTyp
 
 use crate::error::{KwaversError, ValidationError};
 use crate::grid::Grid;
-use crate::physics::plugin::Plugin;
 use crate::KwaversResult;
 use ndarray::Array3;
 use std::collections::HashMap;
