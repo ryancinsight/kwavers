@@ -112,7 +112,7 @@ impl PhaseRandomizer {
 
         for i in 0..n_elements {
             let phase = self.current_phases[i];
-            let (sin_phase, cos_phase) = phase.sin_cos();
+            let (_sin_phase, cos_phase) = phase.sin_cos();
 
             for t in 0..n_time {
                 let real = field[[i, t]];

@@ -66,7 +66,7 @@ impl KuznetsovWave {
         let is_heterogeneous = !medium.is_homogeneous();
 
         // For homogeneous media, compute properties once
-        let (uniform_density, uniform_sound_speed, uniform_nonlinearity, uniform_diffusivity) =
+        let (uniform_density, uniform_sound_speed, _uniform_nonlinearity, uniform_diffusivity) =
             if !is_heterogeneous {
                 let center_x = self.grid.dx * (self.grid.nx as f64) / 2.0;
                 let center_y = self.grid.dy * (self.grid.ny as f64) / 2.0;
