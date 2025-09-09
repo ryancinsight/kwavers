@@ -156,10 +156,10 @@ impl EigenvalueSolver {
             let denominator = v.dot(&w);
             
             if denominator.abs() < 1e-14 {
-                return Err(KwaversError::Numerical(NumericalError::ConvergenceFailure {
+                return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
                     method: "inverse_power_iteration".to_string(),
                     iterations: self.max_iterations,
-                    residual: denominator.abs(),
+                    error: denominator.abs(),
                 }));
             }
             
@@ -182,18 +182,18 @@ impl EigenvalueSolver {
             if norm > 1e-14 {
                 v = w / norm;
             } else {
-                return Err(KwaversError::Numerical(NumericalError::ConvergenceFailure {
+                return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
                     method: "inverse_power_iteration".to_string(),
                     iterations: _iter + 1,
-                    residual: norm,
+                    error: norm,
                 }));
             }
         }
 
-        Err(KwaversError::Numerical(NumericalError::ConvergenceFailure {
+        Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
             method: "inverse_power_iteration".to_string(),
             iterations: self.max_iterations,
-            residual: self.tolerance,
+            error: self.tolerance,
         }))
     }
     
