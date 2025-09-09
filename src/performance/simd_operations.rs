@@ -4,6 +4,9 @@
 //! - "SIMD Programming" by Intel (2023)
 //! - Rust portable SIMD RFC: <https://github.com/rust-lang/rfcs/pull/2977>
 
+// Allow unsafe code for SIMD performance optimization
+#![allow(unsafe_code)]
+
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 use rayon::prelude::*;
 

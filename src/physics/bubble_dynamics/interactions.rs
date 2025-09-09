@@ -175,7 +175,7 @@ impl CollectiveEffects {
         void_fraction: f64,
         liquid_properties: (f64, f64), // (density, sound_speed)
     ) -> f64 {
-        let (rho, c) = liquid_properties;
+        let (rho, _c) = liquid_properties;
 
         // Minnaert frequency modified for void fraction
         let f0 =

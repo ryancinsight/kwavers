@@ -75,7 +75,7 @@ pub mod iterators {
         type Item = MediumProperties;
 
         fn next(&mut self) -> Option<Self::Item> {
-            if self.current >= self.grid.total_points() {
+            if self.current >= self.grid.size() {
                 return None;
             }
 
@@ -112,7 +112,7 @@ pub mod iterators {
         }
 
         fn size_hint(&self) -> (usize, Option<usize>) {
-            let remaining = self.grid.total_points() - self.current;
+            let remaining = self.grid.size() - self.current;
             (remaining, Some(remaining))
         }
     }
@@ -186,7 +186,7 @@ pub mod iterators {
         type Item = InterfacePoint;
 
         fn next(&mut self) -> Option<Self::Item> {
-            while self.current < self.grid.total_points() {
+            while self.current < self.grid.size() {
                 let k = self.current % self.grid.nz;
                 let j = (self.current / self.grid.nz) % self.grid.ny;
                 let i = self.current / (self.grid.ny * self.grid.nz);
@@ -308,7 +308,7 @@ pub mod iterators {
             F: Fn(MediumProperties) -> T + Sync + Send,
             T: Send,
         {
-            (0..self.grid.total_points())
+            (0..self.grid.size())
                 .into_par_iter()
                 .map(|idx| {
                     let k = idx % self.grid.nz;
@@ -349,7 +349,7 @@ pub mod iterators {
         where
             F: Fn(&MediumProperties) -> bool + Sync + Send,
         {
-            (0..self.grid.total_points())
+            (0..self.grid.size())
                 .into_par_iter()
                 .filter_map(|idx| {
                     let k = idx % self.grid.nz;

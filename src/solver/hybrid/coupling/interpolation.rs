@@ -131,7 +131,7 @@ impl InterpolationManager {
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
         // Adaptive interpolation - choose method based on local conditions
-        if let Some(criteria) = &self.adaptive_criteria {
+        if let Some(_criteria) = &self.adaptive_criteria {
             // Analyze field characteristics and choose appropriate method
             // For now, default to cubic spline
             self.cubic_spline_interpolation(source_field, source_coords, target_coords)

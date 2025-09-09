@@ -1,5 +1,8 @@
 //! AVX2 SIMD implementations for x86_64
 
+// Allow unsafe code for SIMD performance optimization
+#![allow(unsafe_code)]
+
 use ndarray::Array3;
 
 /// Add two fields using AVX2 instructions
@@ -15,21 +18,30 @@ use ndarray::Array3;
 /// - No memory allocation or dynamic dispatch
 #[inline]
 unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
-    // SAFETY: Caller must ensure AVX2 availability and equal slice lengths
-    // Mathematical proof: All memory accesses are bounds-checked as shown above
+    // SAFETY: This function requires the following invariants to be maintained:
+    // 1. AVX2 feature must be available (checked by caller via is_x86_feature_detected!)
+    // 2. All slices must have equal length (verified by caller)
+    // 3. Memory alignment: AVX2 loadu/storeu operations handle unaligned access safely
+    // 4. Bounds checking: All pointer arithmetic is within slice bounds
+    //    - chunks * 4 <= a.len() by construction (integer division)
+    //    - remainder loop: remainder_start..a.len() is valid range
+    // 5. No data races: Exclusive access to `out` guaranteed by &mut reference
     unsafe {
         use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_storeu_pd};
 
         let chunks = a.len() / 4;
         for i in 0..chunks {
             let offset = i * 4;
+            // SAFETY: offset = i * 4 where i < chunks and chunks * 4 <= a.len()
+            // Therefore offset + 3 < a.len(), ensuring 4-element read is in bounds
             let va = _mm256_loadu_pd(a.as_ptr().add(offset));
             let vb = _mm256_loadu_pd(b.as_ptr().add(offset));
             let sum = _mm256_add_pd(va, vb);
+            // SAFETY: Same bounds reasoning applies for output slice
             _mm256_storeu_pd(out.as_mut_ptr().add(offset), sum);
         }
 
-        // Handle remainder
+        // Handle remainder elements with scalar operations
         let remainder_start = chunks * 4;
         for i in remainder_start..a.len() {
             out[i] = a[i] + b[i];

@@ -52,7 +52,7 @@ pub trait Validatable {
 use crate::grid::Grid;
 
 /// Physical constants for validation
-mod constants {
+pub mod constants {
     /// Speed of sound in water at 20°C (m/s) - NIST reference
     pub const SOUND_SPEED_WATER: f64 = 1482.0;
 
@@ -62,6 +62,9 @@ mod constants {
     /// CFL limit for 3D FDTD - Taflove & Hagness (2005) Eq. 4.92
     pub const CFL_LIMIT_3D: f64 = 0.577350269; // 1/sqrt(3)
 }
+
+// Re-export constants for backward compatibility
+pub use constants::SOUND_SPEED_WATER;
 
 /// Physics validation results (extends `ValidationReport`)
 #[derive(Debug)]

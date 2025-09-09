@@ -196,7 +196,7 @@ impl ThermodynamicsCalculator {
         let t_celsius = crate::physics::constants::kelvin_to_celsius(temperature);
 
         // Buck (1981) coefficients
-        let (a, b, c) = if t_celsius > 0.0 {
+        let (a, b, _c) = if t_celsius > 0.0 {
             (17.368, 238.88, 234.5) // Above freezing
         } else {
             (17.966, 247.15, 233.7) // Below freezing

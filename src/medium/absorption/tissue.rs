@@ -204,6 +204,12 @@ impl TissueAbsorption {
         &self.properties
     }
 
+    /// Get tissue type
+    #[must_use]
+    pub fn tissue_type(&self) -> TissueType {
+        self.tissue_type
+    }
+
     /// Calculate absorption coefficient at given frequency
     #[must_use]
     pub fn absorption_at_frequency(&self, frequency: f64) -> f64 {

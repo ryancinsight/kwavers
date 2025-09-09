@@ -19,9 +19,8 @@ use super::spectral::{compute_laplacian_spectral, initialize_kspace_grids};
 pub struct WesterveltWave {
     // Precomputed k-space grids
     k_squared: Option<Array3<f64>>,
-    kx: Option<Array3<f64>>,
-    ky: Option<Array3<f64>>,
-    kz: Option<Array3<f64>>,
+    // Note: Individual k-space components removed as they were unused
+    // k_squared contains kx^2 + ky^2 + kz^2 which is sufficient for Laplacian
 
     // Configuration
     nonlinearity_scaling: f64,
@@ -38,14 +37,11 @@ pub struct WesterveltWave {
 impl WesterveltWave {
     /// Create a new Westervelt solver
     pub fn new(grid: &Grid) -> Self {
-        let (k_squared, kx, ky, kz) = initialize_kspace_grids(grid);
+        let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
         Self {
             k_squared: Some(k_squared),
-            kx: Some(kx),
-            ky: Some(ky),
-            kz: Some(kz),
             nonlinearity_scaling: 1.0,
             max_pressure: 1e6,
             pressure_buffers: [

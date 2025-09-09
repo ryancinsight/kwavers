@@ -33,8 +33,8 @@ mod tests {
 
         let prev_pressure = Array3::<f64>::zeros((32, 32, 32));
 
-        // This should run without panicking
-        elastic_wave.update_wave(
+        // This should run without panicking - validate result is handled
+        let result = elastic_wave.update_wave(
             &mut fields,
             &prev_pressure,
             &source,
@@ -43,7 +43,7 @@ mod tests {
             1e-6,
             0.0,
         );
-        // Test passes if no panic occurs
-        assert!(true);
+        // Test passes if update succeeds without error
+        assert!(result.is_ok(), "Elastic wave update should succeed: {:?}", result.err());
     }
 }
