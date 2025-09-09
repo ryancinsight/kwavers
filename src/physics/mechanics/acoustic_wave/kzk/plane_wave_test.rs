@@ -26,7 +26,7 @@ mod tests {
         let mut field = Array2::ones((config.nx, config.ny));
 
         // Store initial field
-        let initial_field = field.clone();
+        let _initial_field = field.clone();
 
         // Propagate one wavelength
         let dz = DEFAULT_WAVELENGTH;

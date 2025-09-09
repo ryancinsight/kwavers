@@ -126,7 +126,7 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::water(&grid);
 
-        let b_over_a = get_nonlinearity_parameter(&medium as &dyn Medium, 0.0, 0.0, 0.0, &grid);
+        let b_over_a = get_nonlinearity_parameter(&medium, 0.0, 0.0, 0.0, &grid);
 
         // Water should have B/A ≈ 5
         assert!((b_over_a - BA_WATER).abs() < 1.0);
