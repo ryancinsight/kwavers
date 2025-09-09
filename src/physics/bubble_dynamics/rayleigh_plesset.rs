@@ -43,37 +43,37 @@ impl RayleighPlessetSolver {
         let p_acoustic_instantaneous = p_acoustic * acoustic_phase.sin();
         let p_liquid_far = self.params.p0 + p_acoustic_instantaneous;
 
-        // Gas pressure (total internal pressure including vapor)
+        // Gas pressure calculation using molecule count method for consistency
         let p_gas = if !self.params.use_thermal_effects {
-            // At equilibrium (R=R0), force balance requires:
-            // p_internal - p_external - 2σ/R = 0
-            // Therefore: p_internal = p0 + 2σ/R0
-
-            // For polytropic gas with vapor:
-            // p_internal = p_gas_pure * (R0/R)^(3γ) + p_vapor
-            // At R=R0: p_internal = p_gas_pure + p_vapor = p0 + 2σ/R0
-            // Therefore: p_gas_pure = p0 + 2σ/R0 - p_vapor
-
-            let gamma = state.gas_species.gamma();
-            let p_gas_pure_eq =
-                self.params.p0 + 2.0 * self.params.sigma / self.params.r0 - self.params.pv;
-            let ratio = self.params.r0 / r;
-
-            #[cfg(test)]
-            if (r - self.params.r0).abs() < 1e-15 {
-                println!("  gamma: {}", gamma);
-                println!("  p_gas_pure_eq: {} Pa", p_gas_pure_eq);
-                println!("  ratio: {}", ratio);
-                println!("  ratio^(3γ): {}", ratio.powf(3.0 * gamma));
-                println!("  p_vapor: {} Pa", self.params.pv);
-                println!(
-                    "  total p_gas: {} Pa",
-                    p_gas_pure_eq * ratio.powf(3.0 * gamma) + self.params.pv
-                );
-            }
-
+            // Use the ideal gas law based on molecule counts for consistency
+            // This matches the BubbleState::at_equilibrium approach
+            let r_cubed = r.powi(3);
+            let r0_cubed = self.params.r0.powi(3);
+            let volume_ratio = r_cubed / r0_cubed;
+            
+            // Calculate pressures from molecule counts using ideal gas law
+            const R_GAS: f64 = 8.314; // J/(mol·K)
+            const AVOGADRO: f64 = 6.022e23;
+            
+            let volume = 4.0 / 3.0 * std::f64::consts::PI * r_cubed;
+            let temperature = state.temperature;
+            
+            // Pure gas pressure from molecule count
+            let p_gas_pure = if state.n_gas > 0.0 {
+                (state.n_gas / AVOGADRO) * R_GAS * temperature / volume
+            } else {
+                0.0
+            };
+            
+            // Vapor pressure from molecule count  
+            let p_vapor = if state.n_vapor > 0.0 {
+                (state.n_vapor / AVOGADRO) * R_GAS * temperature / volume
+            } else {
+                self.params.pv / volume_ratio // Simple approximation if no molecules
+            };
+            
             // Total internal pressure
-            p_gas_pure_eq * ratio.powf(3.0 * gamma) + self.params.pv
+            p_gas_pure + p_vapor
         } else {
             // Van der Waals equation for thermal effects
             self.calculate_internal_pressure(state)
@@ -409,12 +409,39 @@ mod tests {
         let solver = RayleighPlessetSolver::new(params.clone());
         let state = BubbleState::at_equilibrium(&params);
 
-        // At equilibrium, acceleration should be negligible for properly sized bubbles
+        // Verify that the equilibrium state was constructed correctly
+        let expected_p_internal = params.p0 + 2.0 * params.sigma / params.r0;
+        println!("Expected p_internal at equilibrium: {} Pa", expected_p_internal);
+        println!("Actual p_internal in state: {} Pa", state.pressure_internal);
+        
+        // The equilibrium state should have the correct internal pressure
+        assert!(
+            (state.pressure_internal - expected_p_internal).abs() < 0.1,
+            "Equilibrium state internal pressure incorrect: expected {}, got {}",
+            expected_p_internal,
+            state.pressure_internal
+        );
+
+        // At equilibrium, acceleration should be negligible
         let accel = solver.calculate_acceleration(&state, 0.0, 0.0);
 
-        // For a 50μm bubble, equilibrium should be much more stable
+        // The theoretical equilibrium should have zero net force and acceleration
+        // For numerical equilibrium, allow a small tolerance based on precision
+        // The tolerance is based on numerical precision of the pressure calculations
+        let tolerance = 100.0; // 100 m/s² tolerance for equilibrium
+        
+        if accel.abs() >= tolerance {
+            println!("DEBUG: Pressure analysis at equilibrium");
+            println!("  Bubble radius: {} μm", state.radius * 1e6);
+            println!("  Surface tension pressure: {} Pa", 2.0 * params.sigma / state.radius);
+            println!("  Internal pressure: {} Pa", state.pressure_internal);
+            println!("  External pressure: {} Pa", params.p0);
+            println!("  Vapor pressure: {} Pa", params.pv);
+            println!("  Force imbalance: {} Pa", state.pressure_internal - params.p0 - 2.0 * params.sigma / state.radius);
+        }
+
         assert!(
-            accel.abs() < 1000.0, // Reasonable tolerance for numerical equilibrium
+            accel.abs() < tolerance,
             "Acceleration at equilibrium too large: {} m/s²",
             accel
         );

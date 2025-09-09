@@ -294,20 +294,19 @@ impl BubbleState {
     #[must_use]
     pub fn at_equilibrium(params: &BubbleParameters) -> Self {
         // At equilibrium for Rayleigh-Plesset equation:
-        // p_gas - p_liquid - 2σ/R = 0
-        // Therefore: p_gas = p_liquid + 2σ/R = p0 + 2σ/r0
+        // p_internal - p_external - 2σ/R = 0
+        // Therefore: p_internal = p_external + 2σ/R = p0 + 2σ/r0
 
-        // The gas pressure at equilibrium (including vapor)
-        let p_gas_total = params.p0 + 2.0 * params.sigma / params.r0;
+        // The total internal pressure at equilibrium
+        let p_internal_eq = params.p0 + 2.0 * params.sigma / params.r0;
 
-        // Pure gas pressure (excluding vapor)
-        let p_gas_pure = p_gas_total - params.pv;
+        // For molecule count calculation, we use the initial gas pressure
+        // that would give the correct equilibrium pressure when calculated
+        // via polytropic law at r = r0
+        let p_gas_pure_eq = p_internal_eq - params.pv;
 
-        // For polytropic gas: p_gas = p_gas0 * (r0/r)^(3γ)
-        // At equilibrium r = r0, so we need p_gas0 = p_gas_pure
-        // This is stored implicitly through molecule count
-
-        let n_gas = estimate_molecule_count(p_gas_pure, params.r0, 293.15);
+        // Calculate molecule counts based on this equilibrium pressure
+        let n_gas = estimate_molecule_count(p_gas_pure_eq, params.r0, 293.15);
         let n_vapor = estimate_molecule_count(params.pv, params.r0, 293.15);
 
         Self {
@@ -315,7 +314,7 @@ impl BubbleState {
             wall_velocity: 0.0,
             wall_acceleration: 0.0,
             temperature: 293.15,
-            pressure_internal: p_gas_total,
+            pressure_internal: p_internal_eq,
             pressure_liquid: params.p0,
             n_gas,
             n_vapor,
