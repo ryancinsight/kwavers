@@ -294,28 +294,30 @@ impl BubbleState {
     #[must_use]
     pub fn at_equilibrium(params: &BubbleParameters) -> Self {
         // At equilibrium for Rayleigh-Plesset equation:
-        // p_gas - p_liquid - 2σ/R = 0
-        // Therefore: p_gas = p_liquid + 2σ/R = p0 + 2σ/r0
+        // p_internal - p_external - 2σ/R = 0
+        // Therefore: p_internal = p_external + 2σ/R = p0 + 2σ/r0
 
-        // The gas pressure at equilibrium (including vapor)
-        let p_gas_total = params.p0 + 2.0 * params.sigma / params.r0;
+        // Calculate the equilibrium internal pressure using force balance
+        let p_internal_theoretical = params.p0 + 2.0 * params.sigma / params.r0;
 
-        // Pure gas pressure (excluding vapor)
-        let p_gas_pure = p_gas_total - params.pv;
+        // Set up molecule counts based on this theoretical pressure
+        // Split into gas and vapor components
+        let p_gas_pure_eq = p_internal_theoretical - params.pv;
 
-        // For polytropic gas: p_gas = p_gas0 * (r0/r)^(3γ)
-        // At equilibrium r = r0, so we need p_gas0 = p_gas_pure
-        // This is stored implicitly through molecule count
-
-        let n_gas = estimate_molecule_count(p_gas_pure, params.r0, 293.15);
+        // Calculate molecule counts using ideal gas law at equilibrium conditions
+        let n_gas = estimate_molecule_count(p_gas_pure_eq, params.r0, 293.15);
         let n_vapor = estimate_molecule_count(params.pv, params.r0, 293.15);
+
+        // Create initial state with theoretical equilibrium pressure
+        // Note: The actual pressure during solving will be recalculated based on
+        // molecule counts and thermal effects, which may differ slightly
 
         Self {
             radius: params.r0,
             wall_velocity: 0.0,
             wall_acceleration: 0.0,
             temperature: 293.15,
-            pressure_internal: p_gas_total,
+            pressure_internal: p_internal_theoretical, // Store theoretical value
             pressure_liquid: params.p0,
             n_gas,
             n_vapor,

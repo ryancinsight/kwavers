@@ -11,7 +11,7 @@ mod tests {
     use crate::medium::HomogeneousMedium;
     use crate::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
     use crate::physics::traits::AcousticWaveModel;
-    use crate::source::{PointSource, Source};
+    use crate::source::PointSource;
     use approx::assert_relative_eq;
     use ndarray::Array4;
 
@@ -34,7 +34,7 @@ mod tests {
         // Point source at center
         use crate::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let position = grid.indices_to_coordinates(grid.nx / 2, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 
@@ -71,7 +71,7 @@ mod tests {
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
         use crate::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal = Arc::new(SineWave::new(1e6, 1.0, 0.0)) as Arc<dyn Signal>;
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(1e6, 1.0, 0.0));
         let position = grid.indices_to_coordinates(16, 16, 16);
         let source = PointSource::new(position, signal);
 
@@ -159,7 +159,7 @@ mod tests {
         let frequency = 1e6; // 1 MHz
         use crate::signal::{Signal, SineWave};
         use std::sync::Arc;
-        let signal = Arc::new(SineWave::new(frequency, 1e6, 0.0)) as Arc<dyn Signal>;
+        let signal: Arc<dyn Signal> = Arc::new(SineWave::new(frequency, 1e6, 0.0));
         let position = grid.indices_to_coordinates(10, grid.ny / 2, grid.nz / 2);
         let source = PointSource::new(position, signal);
 

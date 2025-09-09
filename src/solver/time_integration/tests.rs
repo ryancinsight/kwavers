@@ -2,7 +2,7 @@
 
 // Tests disabled due to trait changes
 #[cfg(test)]
-#[cfg(feature = "disabled")]
+#[cfg(feature = "disabled")] // Tests are disabled due to incomplete implementation
 mod tests {
     use super::super::*;
     use crate::grid::Grid;
