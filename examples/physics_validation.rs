@@ -27,7 +27,7 @@ fn test_heat_diffusion() {
 
     let nx = 64;
     let dx = 1e-3; // 1mm
-    let grid = Grid::new(nx, nx, 1, dx, dx, dx);
+    let grid = Grid::new(nx, nx, 1, dx, dx, dx)?;
 
     // Thermal parameters
     let alpha = 1.4e-7; // m²/s (water thermal diffusivity)
@@ -235,7 +235,7 @@ fn test_acoustic_absorption() {
 
     let nx = 200;
     let dx = 1e-3;
-    let grid = Grid::new(nx, 1, 1, dx, dx, dx);
+    let grid = Grid::new(nx, 1, 1, dx, dx, dx)?;
 
     // Create medium - note: can't directly set absorption parameters due to private fields
     let medium = HomogeneousMedium::water(&grid);

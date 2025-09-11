@@ -7,11 +7,11 @@ use kwavers::grid::Grid;
 use kwavers::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use ndarray::Array3;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Kwavers Acoustic Simulation - Minimal Demo\n");
 
     // Create a small 3D grid
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3); // 32x32x32 points, 1mm spacing
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3)?; // 32x32x32 points, 1mm spacing
 
     // Initialize pressure field with a Gaussian pulse
     let mut pressure = Array3::zeros((32, 32, 32));
@@ -85,4 +85,5 @@ fn main() {
         529
     );
     println!("Production readiness requires addressing these warnings.");
+    Ok(())
 }

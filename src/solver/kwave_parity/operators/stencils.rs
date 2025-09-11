@@ -16,13 +16,17 @@ pub struct StencilWeights {
 
 /// Compute derivative stencils for given order and accuracy
 #[must_use]
-pub fn compute_derivative_stencils(order: usize, accuracy: usize) -> StencilWeights {
+pub fn compute_derivative_stencils(order: usize, accuracy: usize) -> Result<StencilWeights, KwaversError> {
     match (order, accuracy) {
-        (1, 2) => second_order_first_derivative(),
-        (1, 4) => fourth_order_first_derivative(),
-        (2, 2) => second_order_second_derivative(),
-        (2, 4) => fourth_order_second_derivative(),
-        _ => panic!("Unsupported stencil order {order} with accuracy {accuracy}"),
+        (1, 2) => Ok(second_order_first_derivative()),
+        (1, 4) => Ok(fourth_order_first_derivative()),
+        (2, 2) => Ok(second_order_second_derivative()),
+        (2, 4) => Ok(fourth_order_second_derivative()),
+        _ => Err(KwaversError::Validation(ValidationError::FieldValidation {
+            field: "stencil_config".to_string(),
+            value: format!("order={}, accuracy={}", order, accuracy),
+            constraint: "Supported combinations: (1,2), (1,4), (2,2), (2,4)".to_string(),
+        })),
     }
 }
 

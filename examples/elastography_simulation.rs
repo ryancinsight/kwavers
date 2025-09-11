@@ -1,16 +1,16 @@
 use kwavers::{
-    boundary::PMLBoundary,
-    config::Config,
+    boundary::{PMLBoundary, PMLConfig},
+    configuration::Configuration,
     grid::Grid,
     init_logging,
-    medium::heterogeneous::tissue::HeterogeneousTissueMedium,
+    medium::heterogeneous::tissue::{HeterogeneousTissueMedium, TissueType},
     physics::mechanics::{
         acoustic_wave::NonlinearWave,
-        elasticity::ElasticWave,
+        elastic_wave::ElasticWave,
     },
-    save_pressure_data, generate_summary,
-    source::{FocusedTransducer, Source, HanningApodization},
-    solver::Solver,
+    save_pressure_data,
+    source::{BowlTransducer, BowlConfig, HanningApodization},
+    solver::plugin_based::Solver,
     time::Time,
 };
 use ndarray::{Array3, s};
@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Created {}x{}x{} grid with {} mm spacing", n, n, n, dx * 1000.0);
     
     // Create tissue medium with inclusions of different stiffness
-    let mut medium = HeterogeneousTissueMedium::new(&grid);
+    let mut medium = HeterogeneousTissueMedium::new(grid.clone()?, TissueType::Muscle);
     
     // Create shear modulus distribution with stiff inclusion
     let mut mu = Array3::<f64>::ones((n, n, n)) * 3.0e3;  // 3 kPa background (soft tissue)
@@ -75,17 +75,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     
     // Create focused transducer for push beam
-    let push_source = FocusedTransducer::new(
-        0.01, domain_size/2.0, domain_size/2.0,  // position
-        0.02, domain_size/2.0, domain_size/2.0,  // focus point
-        0.01,                                    // radius
-        signal,
-        Box::new(HanningApodization),
-        Arc::new(medium.clone()),
-    );
+    let bowl_config = BowlConfig {
+        center: [0.01, domain_size/2.0, domain_size/2.0],
+        focus: [0.02, domain_size/2.0, domain_size/2.0],
+        diameter: 0.02,
+        radius_of_curvature: 0.01,
+        frequency: push_freq,
+        amplitude: push_amplitude,
+        phase: 0.0,
+        ..Default::default()
+    };
+    let push_source = BowlTransducer::new(bowl_config)?;
     
     // Configure acoustic solver for push beam
-    let pml = PMLBoundary::new(10, 2.0, &grid);
+    let pml_config = PMLConfig {
+        thickness: 10,
+        sigma_max_acoustic: 2.0,
+        ..Default::default()
+    };
+    let pml = PMLBoundary::new(pml_config)?;
     let mut solver = Solver::new(&grid, Box::new(pml));
     
     // Time parameters for push beam
@@ -127,7 +135,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
-    generate_summary("elastography_simulation")?;
+    // Note: generate_summary requires a Recorder instance
+    // For now, we'll skip summary generation in this example
+    // generate_summary(&recorder, "elastography_simulation")?;
     info!("Simulation complete");
     
     Ok(())

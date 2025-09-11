@@ -15,7 +15,7 @@ fn main() -> KwaversResult<()> {
     println!("=== Wave Simulation Example ===\n");
 
     // Create computational grid
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)?;
     println!("Grid: {}x{}x{}", grid.nx, grid.ny, grid.nz);
     println!("Spacing: {:.1}mm", grid.dx * 1000.0);
 

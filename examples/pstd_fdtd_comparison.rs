@@ -22,7 +22,7 @@ fn main() -> KwaversResult<()> {
     // Create computational grid
     let nx = 128;
     let dx = 1e-3;
-    let grid = Grid::new(nx, nx, nx, dx, dx, dx);
+    let grid = Grid::new(nx, nx, nx, dx, dx, dx)?;
 
     // Create medium
     let medium = Arc::new(HomogeneousMedium::water(&grid));

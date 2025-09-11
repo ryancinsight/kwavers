@@ -10,7 +10,7 @@ use std::f64::consts::PI;
 #[test]
 fn test_wave_speed_in_medium() {
     // Test that wave propagation speed matches the medium's sound speed
-    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let sound_speed = 1500.0; // m/s
     let medium = HomogeneousMedium::new(1000.0, sound_speed, 0.0, 0.0, &grid);
 
@@ -39,7 +39,7 @@ fn test_wave_speed_in_medium() {
 #[test]
 fn test_cfl_stability_condition() {
     // Test that CFL number is correctly enforced for stability
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let sound_speed = 1500.0;
 
     // For 3D FDTD, CFL must be <= 1/sqrt(d) where d is spatial dimensions
@@ -81,7 +81,7 @@ fn test_cfl_stability_condition() {
 fn test_plane_wave_propagation() {
     // Test that a plane wave maintains its shape during propagation
     let nx = 100;
-    let grid = Grid::new(nx, 50, 50, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(nx, 50, 50, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let mut field = grid.create_field();
 
     // Initialize a Gaussian pulse
@@ -106,7 +106,7 @@ fn test_plane_wave_propagation() {
 #[test]
 fn test_energy_conservation_principle() {
     // In a lossless medium, total energy should be conserved
-    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let field = grid.create_field();
 
     // Calculate total energy (proportional to sum of squares)
@@ -125,7 +125,7 @@ fn test_energy_conservation_principle() {
 #[test]
 fn test_dispersion_relation() {
     // Test that the numerical dispersion follows expected patterns
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let wavelength = 10.0 * grid.dx; // 10 grid points per wavelength
     let k = 2.0 * PI / wavelength; // Wave number
 
@@ -141,7 +141,7 @@ fn test_dispersion_relation() {
 #[test]
 fn test_homogeneous_medium_properties() {
     // Test that homogeneous medium returns constant properties
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let density = 1500.0;
     let sound_speed = 2000.0;
     let medium = HomogeneousMedium::new(density, sound_speed, 0.001, 0.072, &grid);
@@ -163,7 +163,7 @@ fn test_homogeneous_medium_properties() {
 fn test_grid_spacing_isotropy() {
     // Test that grid with equal spacing is isotropic
     let spacing = 2e-3;
-    let grid = Grid::new(40, 40, 40, spacing, spacing, spacing);
+    let grid = Grid::new(40, 40, 40, spacing, spacing, spacing).expect("Failed to create grid");
 
     assert_eq!(grid.dx, grid.dy);
     assert_eq!(grid.dy, grid.dz);
@@ -177,7 +177,7 @@ fn test_grid_spacing_isotropy() {
 #[test]
 fn test_numerical_stability_indicator() {
     // Test that we can detect potential instabilities
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     let sound_speed = 1500.0;
 
     // Calculate maximum stable timestep
@@ -199,7 +199,7 @@ fn test_physics_edge_cases_and_boundaries() {
     // Validates that acoustic physics behaves correctly at boundaries and extreme values
     
     // Test 1: Zero sound speed (invalid physics)
-    let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).expect("Failed to create grid");
     
     // Sound speed cannot be zero or negative in any real medium
     let invalid_sound_speeds = vec![0.0, -100.0, -1500.0];
@@ -220,7 +220,7 @@ fn test_physics_edge_cases_and_boundaries() {
     let huge_grid_size = 1000;
     let tiny_spacing = 1e-12; // Nanometer scale
     let grid_extreme = Grid::new(huge_grid_size, huge_grid_size, huge_grid_size, 
-                                tiny_spacing, tiny_spacing, tiny_spacing);
+                                tiny_spacing, tiny_spacing, tiny_spacing).expect("Failed to create extreme grid");
     
     let sound_speed = 1500.0;
     let max_cfl = 1.0 / (3.0_f64).sqrt();

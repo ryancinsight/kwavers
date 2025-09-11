@@ -12,7 +12,7 @@ fn main() -> KwaversResult<()> {
     let grid = Grid::new(
         64, 64, 64, // Grid points (nx, ny, nz)
         1e-3, 1e-3, 1e-3, // Grid spacing in meters
-    );
+    )?;
 
     println!("Grid created: {}x{}x{} points", grid.nx, grid.ny, grid.nz);
     println!(
