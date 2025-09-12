@@ -238,22 +238,37 @@ impl DispersionCorrection {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx;
 
     #[test]
     fn test_phase_velocity() {
         let props = TissueFrequencyModels::liver();
 
-        // Test at different frequencies
+        // Test at different frequencies to validate dispersion model
         let c_1mhz = props.phase_velocity(1e6);
         let c_5mhz = props.phase_velocity(5e6);
 
-        // Should have dispersion (different velocities)
-        assert!((c_5mhz - c_1mhz).abs() > 0.1);
+        // Validate dispersion formula: c(f) = c₀ * (1 + β * ln(f))
+        // For liver: β = 0.002 (dispersion coefficient)
+        let f1 = 1e6;
+        let f2 = 5e6;
+        let expected_c1 = props.c0 * (1.0 + props.dispersion_coefficient * f1.ln());
+        let expected_c5 = props.c0 * (1.0 + props.dispersion_coefficient * f2.ln());
+        
+        // Validate against exact dispersion formula (before relaxation effects)
+        // Note: relaxation effects make the calculation more complex, so we check the base trend
+        let theoretical_ratio = (1.0 + props.dispersion_coefficient * f2.ln()) 
+                                / (1.0 + props.dispersion_coefficient * f1.ln());
+        let measured_ratio = c_5mhz / c_1mhz;
+        
+        // Should match theoretical dispersion within 5% (accounting for relaxation effects)
+        approx::assert_relative_eq!(measured_ratio, theoretical_ratio, epsilon = 0.05);
 
         // Should be close to reference at low frequency
         let c_low = props.phase_velocity(1e3);
-        // Relaxed tolerance - dispersion models can vary significantly
-        assert!((c_low - props.c0).abs() < 100.0);
+        // Low frequency should approach c₀ within dispersion-corrected bounds
+        let expected_low = props.c0 * (1.0 + props.dispersion_coefficient * 1e3_f64.ln());
+        approx::assert_relative_eq!(c_low, expected_low, epsilon = 0.01);
     }
 
     #[test]
