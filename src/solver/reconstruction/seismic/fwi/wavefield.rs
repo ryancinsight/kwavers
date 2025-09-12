@@ -202,6 +202,7 @@ impl WavefieldModeler {
     /// Apply PML boundary conditions
     /// Based on Berenger (1994): "A perfectly matched layer for the absorption of electromagnetic waves"
     /// Journal of Computational Physics, 114(2), 185-200
+    #[allow(dead_code)] // Used by forward/adjoint wavefield propagation
     fn apply_pml(&self, wavefield: &mut Array3<f64>) {
         let (nx, ny, nz) = wavefield.dim();
         let width = self.pml_width;
@@ -249,6 +250,7 @@ impl WavefieldModeler {
 
     /// Apply finite difference stencil for wave equation
     /// 4th order accurate in space, 2nd order in time
+    #[allow(dead_code)] // Core numerical method for seismic wave propagation
     fn apply_fd_stencil(
         &self,
         current: &Array3<f64>,

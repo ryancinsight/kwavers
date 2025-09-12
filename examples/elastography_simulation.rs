@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let domain_size = 0.04f64;  // 4 cm cubic domain
     let dx = 0.0002f64;         // 0.2 mm spacing
     let n = (domain_size / dx).round() as usize;
-    let grid = Grid::new(n, n, n, dx, dx, dx);
+    let grid = Grid::new(n, n, n, dx, dx, dx)?;
     
     info!("Created {}x{}x{} grid with {} mm spacing", n, n, n, dx * 1000.0);
     

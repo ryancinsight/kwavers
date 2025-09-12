@@ -7,21 +7,23 @@ use kwavers::{medium::acoustic::AcousticProperties, Grid, HomogeneousMedium};
 use ndarray::Array3;
 use std::f64::consts::PI;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Physics Validation Examples ===\n");
 
     // Test 1: Heat diffusion with Gaussian initial condition
-    test_heat_diffusion();
+    test_heat_diffusion()?;
 
     // Test 2: Wave propagation with dispersion analysis
-    test_wave_dispersion();
+    test_wave_dispersion()?;
 
     // Test 3: Acoustic absorption validation
-    test_acoustic_absorption();
+    test_acoustic_absorption()?;
+    
+    Ok(())
 }
 
 /// Validate heat diffusion against analytical solution
-fn test_heat_diffusion() {
+fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     println!("1. Heat Diffusion Validation");
     println!("   Testing numerical solution against analytical Gaussian spreading");
 
@@ -128,10 +130,11 @@ fn test_heat_diffusion() {
     } else {
         println!("   ✗ FAILED: Error exceeds tolerance\n");
     }
+    Ok(())
 }
 
 /// Test numerical dispersion for wave propagation
-fn test_wave_dispersion() {
+fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
     println!("2. Wave Dispersion Analysis");
     println!("   Testing phase velocity error for different wavelengths");
 
@@ -226,10 +229,11 @@ fn test_wave_dispersion() {
     }
 
     println!();
+    Ok(())
 }
 
 /// Test acoustic absorption
-fn test_acoustic_absorption() {
+fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
     println!("3. Acoustic Absorption Validation");
     println!("   Testing absorption against Beer-Lambert law");
 
@@ -288,4 +292,5 @@ fn test_acoustic_absorption() {
     }
 
     println!("\n   ✓ All absorption tests show excellent agreement (<0.1% error)");
+    Ok(())
 }

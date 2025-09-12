@@ -4,7 +4,7 @@
 
 use kwavers::{
     error::KwaversResult,
-    grid::Grid,
+    grid::{Grid, stability::StabilityCalculator},
     medium::{core::CoreMedium, HomogeneousMedium},
     solver::plugin_based::PluginBasedSolver,
     source::NullSource,
@@ -28,7 +28,7 @@ fn main() -> KwaversResult<()> {
     println!("Medium: Water (c={} m/s, ρ={} kg/m³)", sound_speed, density);
 
     // Calculate time step using CFL condition
-    let dt = grid.cfl_timestep(sound_speed);
+    let dt = StabilityCalculator::cfl_timestep_fdtd(&grid, sound_speed);
     let num_steps = 100;
     let total_time = dt * num_steps as f64;
 
