@@ -11,7 +11,7 @@ use kwavers::physics::constants::CFL_SAFETY_FACTOR;
 fn test_cfl_condition_3d_fdtd() {
     // Create a 3D grid
     let dx = 1e-3; // 1mm spacing
-    let grid = Grid::new(10, 10, 10, dx, dx, dx);
+    let grid = Grid::new(10, 10, 10, dx, dx, dx).unwrap();
 
     // Create medium with known sound speed
     let sound_speed = 1500.0; // m/s (water)
@@ -51,7 +51,7 @@ fn test_numerical_dispersion() {
 
     // Create grid with proper resolution
     let dx = dx_max / 2.0; // Use half the maximum for safety
-    let grid = Grid::new(100, 100, 100, dx, dx, dx);
+    let _grid = Grid::new(100, 100, 100, dx, dx, dx).unwrap();
 
     // Verify grid resolution
     assert!(

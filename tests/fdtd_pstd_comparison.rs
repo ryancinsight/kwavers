@@ -11,7 +11,7 @@ use ndarray::{Array3, Array4};
 /// Test that both solvers run without crashing
 #[test]
 fn test_plane_wave_propagation() {
-    let grid = Grid::new(32, 32, 32, 0.5e-3, 0.5e-3, 0.5e-3);
+    let grid = Grid::new(32, 32, 32, 0.5e-3, 0.5e-3, 0.5e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
     // Simple initial condition

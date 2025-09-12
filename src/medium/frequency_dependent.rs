@@ -250,8 +250,8 @@ mod tests {
 
         // Validate dispersion formula: c(f) = c₀ * (1 + β * ln(f))
         // For liver: β = 0.002 (dispersion coefficient)
-        let f1 = 1e6;
-        let f2 = 5e6;
+        let f1: f64 = 1e6;
+        let f2: f64 = 5e6;
         let expected_c1 = props.c0 * (1.0 + props.dispersion_coefficient * f1.ln());
         let expected_c5 = props.c0 * (1.0 + props.dispersion_coefficient * f2.ln());
         

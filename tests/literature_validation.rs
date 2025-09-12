@@ -72,9 +72,9 @@ fn test_acoustic_dispersion_relation() {
 
     // Generate k-space
     use kwavers::grid::KSpaceCalculator;
-    let kx = KSpaceCalculator::generate_kx(&grid);
-    let ky = KSpaceCalculator::generate_ky(&grid);
-    let kz = KSpaceCalculator::generate_kz(&grid);
+    let _kx = KSpaceCalculator::generate_kx(&grid);
+    let _ky = KSpaceCalculator::generate_ky(&grid);
+    let _kz = KSpaceCalculator::generate_kz(&grid);
 
     // Test dispersion relation: ω = c*k
     for i in 1..10 {
@@ -192,7 +192,7 @@ fn test_cfl_stability_condition() {
     let c_max = 1500.0; // Maximum sound speed
 
     // Calculate CFL timestep
-    let dt_cfl = grid.cfl_timestep(c_max);
+    let dt_cfl = kwavers::grid::stability::StabilityCalculator::cfl_timestep_fdtd(&grid, c_max);
 
     // For 3D FDTD: dt <= dx / (c * sqrt(3))
     let dx_min = grid.min_spacing();
