@@ -233,6 +233,16 @@ impl LinearAlgebra {
 
         Ok((u, s, v))
     }
+    
+    /// Compute L2 norm of a 3D array
+    pub fn norm_l2_3d(array: &ndarray::Array3<f64>) -> f64 {
+        array.iter().map(|&x| x * x).sum::<f64>().sqrt()
+    }
+}
+
+/// Compute L2 norm of a 3D array (convenience function)
+pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
+    LinearAlgebra::norm_l2_3d(array)
 }
 
 /// Extension trait for ndarray operations
