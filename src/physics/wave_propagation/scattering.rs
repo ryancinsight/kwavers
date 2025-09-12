@@ -37,8 +37,10 @@ const MIE_REGIME_THRESHOLD: f64 = 10.0;
 /// Rayleigh scattering coefficient (8π/3)
 const RAYLEIGH_COEFFICIENT: f64 = 8.0 * PI / 3.0;
 /// Rayleigh-Gans angular factor coefficient
+#[allow(dead_code)] // Physics constants for scattering calculations
 const RAYLEIGH_GANS_ANGULAR_COEFFICIENT: f64 = 3.0 / (16.0 * PI);
 /// Isotropic phase function normalization
+#[allow(dead_code)]
 const ISOTROPIC_PHASE_NORMALIZATION: f64 = 1.0 / (4.0 * PI);
 
 /// Scattering regime based on size parameter

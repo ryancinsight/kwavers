@@ -38,8 +38,11 @@ use radical_initiation::RadicalInitiation;
 use reaction_kinetics::ReactionKinetics;
 
 // Constants for chemical modeling
+#[allow(dead_code)] // Configuration constants for chemistry modeling
 const HIGH_TEMPERATURE_THRESHOLD: f64 = 1000.0; // Kelvin
+#[allow(dead_code)]
 const EXTREME_PRESSURE_THRESHOLD: f64 = 100e6; // 100 MPa
+#[allow(dead_code)]
 const DEFAULT_REACTION_RATE: f64 = 1e-3; // Default rate constant
 
 /// State of the chemical model

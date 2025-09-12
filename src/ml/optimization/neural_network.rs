@@ -14,6 +14,7 @@ pub struct NeuralNetwork {
     bias1: Array1<f64>,
     weights2: Array2<f64>,
     bias2: Array1<f64>,
+    #[allow(dead_code)] // Used in training algorithms not yet implemented
     learning_rate: f64,
 }
 

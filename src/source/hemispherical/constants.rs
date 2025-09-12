@@ -3,6 +3,8 @@
 //! These are physical and engineering constants used in clinical and research applications.
 //! Some constants may be unused in current implementations but are kept for completeness.
 
+#![allow(dead_code)] // Clinical configuration constants for library users
+
 /// Typical radius for clinical hemispherical arrays (m)
 pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150mm radius (Insightec ExAblate)
 

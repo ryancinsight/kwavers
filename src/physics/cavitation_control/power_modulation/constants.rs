@@ -1,5 +1,7 @@
 //! Constants for power modulation
 
+#![allow(dead_code)] // Configuration constants for power modulation functionality
+
 /// Default pulse repetition frequency (PRF) in Hz
 pub const DEFAULT_PRF: f64 = 100.0;
 
