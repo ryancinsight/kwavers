@@ -17,11 +17,13 @@ pub struct InferenceEngine {
     /// Optional bias vector with shape (classes,).
     bias: Option<Array1<f32>>,
     /// Preferred batch size (used for sanity checks only).
-        batch_size: usize,
+    #[allow(dead_code)]
+    batch_size: usize,
     /// True if the caller *prefers* GPU execution.  The current CPU
     /// implementation ignores the flag but keeps the field so that upgrading
     /// to a GPU back-end will be completely non-breaking.
-        use_gpu: bool,
+    #[allow(dead_code)]
+    use_gpu: bool,
 }
 
 impl InferenceEngine {

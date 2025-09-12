@@ -54,7 +54,7 @@ impl FlexibleTransducerArray {
         // Process calibration based on configured method
         let new_positions = match &self.config.calibration_method {
             CalibrationMethod::SelfCalibration {
-                reference_reflectors,
+                reference_reflectors: _,
                 calibration_interval,
             } => {
                 if timestamp - self.last_update_time > *calibration_interval {
@@ -73,7 +73,7 @@ impl FlexibleTransducerArray {
                 }
             }
             CalibrationMethod::ExternalTracking {
-                tracking_system,
+                tracking_system: _,
                 measurement_noise,
             } => {
                 // In real implementation, would interface with tracking system
@@ -169,7 +169,7 @@ impl FlexibleTransducerArray {
             }
             FlexibilityModel::Elastic {
                 young_modulus,
-                poisson_ratio,
+                poisson_ratio: _,
                 thickness,
             } => {
                 // Calculate strain and stress for elastic deformation
@@ -192,7 +192,7 @@ impl FlexibleTransducerArray {
                 self.geometry_state.deformation = deformation;
             }
             FlexibilityModel::FluidFilled {
-                fluid_bulk_modulus,
+                fluid_bulk_modulus: _,
                 membrane_tension,
             } => {
                 // Simplified fluid-filled model

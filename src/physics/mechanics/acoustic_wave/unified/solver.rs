@@ -54,7 +54,7 @@ pub trait AcousticSolver: Send + Sync {
 
 /// Performance metrics for the solver
 #[derive(Debug, Default)]
-struct SolverMetrics {
+pub struct SolverMetrics {
     total_steps: usize,
     total_time: f64,
     fft_time: f64,
