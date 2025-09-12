@@ -98,7 +98,7 @@ impl CalibrationManager {
         sound_speed: f64,
     ) -> KwaversResult<Array2<f64>> {
         let wavelength = sound_speed / frequency;
-        let (nx, ny, nz) = pressure_field.dim();
+        let (_nx, _ny, _nz) = pressure_field.dim();
 
         // Extract peak locations from pressure field
         let peaks = self.extract_peaks(pressure_field, wavelength)?;

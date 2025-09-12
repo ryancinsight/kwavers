@@ -6,7 +6,7 @@
 use kwavers::{
     boundary::pml::{PMLBoundary, PMLConfig},
     error::KwaversResult,
-    grid::Grid,
+    grid::{Grid, stability::StabilityCalculator},
     medium::{HomogeneousMedium, Medium},
     physics::plugin::acoustic_wave_plugin::AcousticWavePlugin,
     solver::plugin_based::PluginBasedSolver,
@@ -23,7 +23,7 @@ fn main() -> KwaversResult<()> {
     // Create computational grid (5cm x 5cm x 5cm)
     let nx = 100;
     let dx = 0.5e-3; // 0.5mm resolution
-    let grid = Grid::new(nx, nx, nx, dx, dx, dx);
+    let grid = Grid::new(nx, nx, nx, dx, dx, dx)?;
 
     println!("Grid Configuration:");
     println!("  Size: {}x{}x{} voxels", nx, nx, nx);
@@ -40,7 +40,7 @@ fn main() -> KwaversResult<()> {
 
     // Time configuration
     let max_sound_speed = 1600.0; // Maximum in tissue
-    let dt = grid.cfl_timestep(max_sound_speed);
+    let dt = StabilityCalculator::cfl_timestep_fdtd(&grid, max_sound_speed);
     let time = Time::new(dt, 200);
 
     println!("\nTiming:");

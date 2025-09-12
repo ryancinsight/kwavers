@@ -184,7 +184,7 @@ impl BowlTransducer {
 
         // Use parallel processing for efficiency
         let source_slice = source.as_slice_mut().unwrap();
-        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let (nx, ny, _nz) = (grid.nx, grid.ny, grid.nz);
         let dx = grid.dx;
 
         source_slice

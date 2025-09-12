@@ -82,7 +82,7 @@ impl AmplitudeCorrector {
     pub fn apply_dispersion_correction(
         &self,
         signal: Vec<f64>,
-        dt: f64,
+        _dt: f64,
         medium: &Arc<dyn Medium>,
         grid: &Grid,
         reference_speed: f64,

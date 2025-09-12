@@ -25,6 +25,7 @@ impl LinearSolver {
     /// Solve regularized least squares: min ||Ax - b||² + λ||Lx||²
     ///
     /// Uses Conjugate Gradient for Normal Equations (CGNE) with Tikhonov regularization
+    #[allow(dead_code)] // Public API - advanced regularization method for reconstruction
     pub fn solve_tikhonov(
         &self,
         a: &Array2<f64>,
@@ -54,6 +55,7 @@ impl LinearSolver {
     }
 
     /// Conjugate Gradient solver for symmetric positive definite systems
+    #[allow(dead_code)] // Public API - core numerical method for linear systems
     pub fn conjugate_gradient(
         &self,
         a: &Array2<f64>,
@@ -194,6 +196,7 @@ impl LinearSolver {
     /// Solve using L1 regularization (Lasso)
     ///
     /// min ||Ax - b||² + λ||x||₁
+    #[allow(dead_code)] // Public API - L1 regularization for sparse reconstruction
     pub fn solve_l1_regularized(
         &self,
         a: &Array2<f64>,
@@ -241,6 +244,7 @@ impl LinearSolver {
     }
 
     /// Soft thresholding operator
+    #[allow(dead_code)] // Used by L1 regularization methods
     fn soft_threshold(&self, x: &Array1<f64>, threshold: f64) -> Array1<f64> {
         x.mapv(|xi| {
             if xi > threshold {
