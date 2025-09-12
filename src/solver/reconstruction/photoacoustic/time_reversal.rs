@@ -150,7 +150,7 @@ impl TimeReversal {
         propagator: &Array3<Complex<f64>>,
         k_squared: &Array3<f64>,
         c0: f64,
-        dt: f64,
+        _dt: f64,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
 

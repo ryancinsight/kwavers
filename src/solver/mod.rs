@@ -53,7 +53,7 @@ pub trait ProgressReporter: Send + Sync {
     fn report(&mut self, progress_json: &str);
 
     /// Called when simulation starts
-    fn on_start(&mut self, total_steps: usize, dt: f64) {}
+    fn on_start(&mut self, total_steps: usize, _dt: f64) {}
 
     /// Called when simulation completes
     fn on_complete(&mut self) {}

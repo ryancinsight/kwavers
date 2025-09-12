@@ -51,7 +51,7 @@ impl TimeCoupling for SubcyclingStrategy {
 
         // Advance each component with its own subcycling
         for cycle in 0..max_cycles {
-            for (name, component) in physics_components {
+            for (name, _component) in physics_components {
                 let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
 
                 // Check if this component should be updated in this cycle
@@ -69,10 +69,12 @@ impl TimeCoupling for SubcyclingStrategy {
                     // Compute local time step
                     let _local_dt = global_dt * (max_cycles / n_subcycles) as f64;
 
-                    // Evaluate physics and update field
-                    // Update physics component using plugin interface
-                    // crate::physics::plugin::Plugin uses update method with fields array
-                    // This is a placeholder for proper field management
+                    // TODO: CRITICAL ARCHITECTURAL ISSUE
+                    // This implementation is incomplete and violates production standards.
+                    // The plugin architecture expects Array4<f64> fields but this method
+                    // uses HashMap<String, Array3<f64>>. This needs complete redesign.
+                    // For now, this placeholder prevents compilation warnings but
+                    // represents non-functional physics coupling.
                 }
             }
         }
@@ -117,7 +119,7 @@ impl TimeCoupling for AveragingStrategy {
         let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // First pass: advance all components independently
-        for (name, component) in physics_components {
+        for (name, _component) in physics_components {
             let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
             let _local_dt = global_dt / n_subcycles as f64;
 
@@ -198,7 +200,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             }
 
             // Advance each component
-            for (name, component) in physics_components {
+            for (name, _component) in physics_components {
                 let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
                 let _local_dt = global_dt / n_subcycles as f64;
 
