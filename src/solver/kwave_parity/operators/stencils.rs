@@ -6,6 +6,8 @@
 
 use ndarray::Array1;
 
+use crate::error::{KwaversError, ValidationError};
+
 /// Stencil weights for finite differences
 #[derive(Debug, Clone)]
 pub struct StencilWeights {

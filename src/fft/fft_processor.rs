@@ -10,6 +10,8 @@ use rayon::prelude::*;
 use rustfft::{Fft, FftPlanner};
 use std::sync::Arc;
 
+use crate::error::{KwaversError, ValidationError};
+
 /// 3D FFT implementation with parallelization
 pub struct Fft3d {
     nx: usize,
