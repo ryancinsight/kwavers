@@ -148,8 +148,8 @@ impl TimeReversal {
         pressure: &Array3<f64>,
         pressure_prev: &Array3<f64>,
         propagator: &Array3<Complex<f64>>,
-        k_squared: &Array3<f64>,
-        c0: f64,
+        _k_squared: &Array3<f64>,
+        _c0: f64,
         _dt: f64,
     ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
