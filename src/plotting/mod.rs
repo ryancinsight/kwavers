@@ -17,8 +17,8 @@ mod plotting_impl {
     use crate::recorder::Recorder;
     use crate::time::Time;
     use log::info;
-    use ndarray::{Array3, Axis};
-    use plotly::{common::Title, HeatMap, Layout, Plot, Scatter, Surface};
+    use ndarray::{Array2, Array3, Axis};
+    use plotly::{common::{Mode, Title, ColorBar}, HeatMap, Layout, Plot, Scatter, Scatter3D, Surface};
     use std::fs::File;
     use std::io::Write;
 
