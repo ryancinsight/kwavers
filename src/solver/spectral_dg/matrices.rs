@@ -50,14 +50,13 @@ pub fn compute_stiffness_matrix(
                         vandermonde_deriv[(i, j)] = 0.0;
                     } else {
                         // Derivative of Legendre polynomial
-                        let mut dp = 0.0;
-                        if j == 1 {
-                            dp = 1.0;
+                        let dp = if j == 1 {
+                            1.0
                         } else {
                             // Use recurrence for derivative
-                            dp = j as f64 * legendre_basis(j - 1, xi)
-                                + xi * vandermonde_deriv[(i, j - 1)];
-                        }
+                            j as f64 * legendre_basis(j - 1, xi)
+                                + xi * vandermonde_deriv[(i, j - 1)]
+                        };
                         vandermonde_deriv[(i, j)] = dp;
                     }
                 }

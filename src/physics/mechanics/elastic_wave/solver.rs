@@ -191,8 +191,8 @@ impl AcousticWaveModel for ElasticWave {
         let ky = self.ky.clone();
         let kz = self.kz.clone();
 
-        // Create spectral fields from real velocity fields
-        let velocity_fields = VelocityFields::new(nx, ny, nz);
+        // Create spectral fields from extracted velocity fields
+        let velocity_fields = VelocityFields { vx, vy, vz };
         let spectral_velocity = SpectralVelocityFields::from_real(&velocity_fields);
 
         // Initialize spectral stress fields

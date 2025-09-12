@@ -34,6 +34,15 @@ impl LinearSolver {
         l: Option<&Array2<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         let (m, n) = a.dim();
+        
+        // Validate dimensions
+        if b.len() != m {
+            return Err(crate::error::NumericalError::MatrixDimension {
+                operation: "Tikhonov regularized least squares".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }.into());
+        }
 
         // Form normal equations: (A^T A + λ L^T L) x = A^T b
         let at = a.t();
@@ -78,6 +87,7 @@ impl LinearSolver {
 
             // Check convergence
             if rsnew.sqrt() < self.tolerance {
+                log::debug!("Conjugate gradient converged after {} iterations", iter + 1);
                 return Ok(x);
             }
 
@@ -87,11 +97,11 @@ impl LinearSolver {
         }
 
         // If we're here, we didn't converge
-        eprintln!(
-            "CG did not converge after {} iterations",
-            self.max_iterations
-        );
-        Ok(x)
+        Err(crate::error::NumericalError::ConvergenceFailed {
+            method: "Conjugate Gradient".to_string(),
+            iterations: self.max_iterations,
+            error: rsold.sqrt(),
+        }.into())
     }
 
     /// Solve using Total Variation regularization
