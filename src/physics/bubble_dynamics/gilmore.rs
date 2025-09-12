@@ -20,6 +20,7 @@ pub struct GilmoreSolver {
     tait_b: f64,
     tait_n: f64,
     /// Reference enthalpy
+    #[allow(dead_code)] // Thermodynamic parameter for Gilmore equation
     h_ref: f64,
 }
 

@@ -54,6 +54,7 @@ impl BandwidthOptimizer {
 pub struct MemoryOptimizer {
     prefetch_distance: usize,
     alignment: usize,
+    #[allow(dead_code)] // Memory optimization configuration for advanced systems
     huge_pages_enabled: bool,
 }
 

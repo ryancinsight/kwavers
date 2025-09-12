@@ -22,6 +22,7 @@ pub struct PhaseArray {
     /// Operating frequency
     frequency: f64,
     /// Phase shifter
+    #[allow(dead_code)] // Phase control hardware interface
     phase_shifter: PhaseShifter,
     /// Beam steering controller
     beam_steering: BeamSteering,
