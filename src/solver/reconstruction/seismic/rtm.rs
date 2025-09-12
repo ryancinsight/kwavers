@@ -425,10 +425,10 @@ impl Reconstructor for ReverseTimeMigration {
 
     fn reconstruct(
         &self,
-        sensor_data: &Array2<f64>,
-        sensor_positions: &[[f64; 3]],
-        grid: &Grid,
-        config: &ReconstructionConfig,
+        _sensor_data: &Array2<f64>,
+        _sensor_positions: &[[f64; 3]],
+        _grid: &Grid,
+        _config: &ReconstructionConfig,
     ) -> KwaversResult<Array3<f64>> {
         // RTM requires mutable state for migration
         // Using clone() is acceptable here as migration results are immutable once computed

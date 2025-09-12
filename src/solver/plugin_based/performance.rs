@@ -46,7 +46,7 @@ impl PerformanceMonitor {
     }
 
     /// Start timing for a plugin
-    pub fn start_plugin(&mut self, plugin_name: &str) {
+    pub fn start_plugin(&mut self, _plugin_name: &str) {
         self.current_start = Some(Instant::now());
     }
 

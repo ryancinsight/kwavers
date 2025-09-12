@@ -12,6 +12,7 @@ pub struct PowerModulator {
     scheme: ModulationScheme,
     control: PowerControl,
     current_phase: f64,
+    #[allow(dead_code)] // Signal processing parameter for modulation
     sample_rate: f64,
     time: f64,
     amplitude_filter: ExponentialFilter,

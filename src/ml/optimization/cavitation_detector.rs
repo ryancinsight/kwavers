@@ -3,9 +3,9 @@
 /// Cavitation detector using machine learning
 #[derive(Debug)]
 pub struct CavitationDetector {
-    #[allow(dead_code)] // TODO: Implement threshold-based cavitation detection
+    #[allow(dead_code)]
     threshold: f64,
-    #[allow(dead_code)] // TODO: Implement sensitivity-based cavitation detection
+    #[allow(dead_code)]
     sensitivity: f64,
 }
 

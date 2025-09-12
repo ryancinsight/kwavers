@@ -53,7 +53,7 @@ pub trait ProgressReporter: Send + Sync {
     fn report(&mut self, progress_json: &str);
 
     /// Called when simulation starts
-    fn on_start(&mut self, total_steps: usize, _dt: f64) {}
+    fn on_start(&mut self, _total_steps: usize, _dt: f64) {}
 
     /// Called when simulation completes
     fn on_complete(&mut self) {}
@@ -176,7 +176,7 @@ impl ProgressReporter for ConsoleProgressReporter {
                     .get("current_time")
                     .and_then(serde_json::Value::as_f64)
                     .unwrap_or(0.0);
-                let max_pressure = json
+                let _max_pressure = json
                     .get("fields_summary")
                     .and_then(|fs| fs.get("max_pressure"))
                     .and_then(serde_json::Value::as_f64)

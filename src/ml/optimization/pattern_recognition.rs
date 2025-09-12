@@ -3,6 +3,7 @@
 /// Pattern recognizer for simulation data
 #[derive(Debug)]
 pub struct PatternRecognizer {
+    #[allow(dead_code)]
     feature_extractor: FeatureExtractor,
 }
 
@@ -24,9 +25,9 @@ pub struct PatternSummary {
 #[derive(Debug)]
 struct FeatureExtractor;
 #[derive(Debug)]
-struct TimePattern;
+pub struct TimePattern;
 #[derive(Debug)]
-struct SpatialPattern;
+pub struct SpatialPattern;
 
 impl Default for PatternRecognizer {
     fn default() -> Self {

@@ -20,7 +20,9 @@ pub enum AccessPattern {
 pub struct CacheOptimizer {
     block_size: usize,
     l1_cache_size: usize,
+    #[allow(dead_code)] // Cache configuration for advanced optimization
     l2_cache_size: usize,
+    #[allow(dead_code)]
     cache_line_size: usize,
 }
 

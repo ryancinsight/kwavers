@@ -15,8 +15,11 @@ use std::f64::consts::PI;
 #[derive(Debug)]
 pub struct SpectralOperator {
     /// Grid dimensions
+    #[allow(dead_code)] // Grid dimensions for spectral operations
     nx: usize,
+    #[allow(dead_code)]
     ny: usize,
+    #[allow(dead_code)]
     nz: usize,
 
     /// Pre-computed wavenumber vectors

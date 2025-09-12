@@ -248,9 +248,9 @@ impl MatchingLayer {
     #[must_use]
     pub fn transmission_coefficient(&self, piezo_impedance: f64, medium_impedance: f64) -> f64 {
         // Simplified for single quarter-wave layer
-        let r1 = (self.acoustic_impedance - piezo_impedance)
+        let _r1 = (self.acoustic_impedance - piezo_impedance)
             / (self.acoustic_impedance + piezo_impedance);
-        let r2 = (medium_impedance - self.acoustic_impedance)
+        let _r2 = (medium_impedance - self.acoustic_impedance)
             / (medium_impedance + self.acoustic_impedance);
 
         let numerator = 4.0 * piezo_impedance * medium_impedance;
@@ -314,7 +314,7 @@ impl AcousticLens {
     /// Calculate focal length in the medium
     #[must_use]
     pub fn focal_length(&self, medium_sound_speed: f64) -> f64 {
-        let speed_ratio = medium_sound_speed / self.sound_speed;
+        let _speed_ratio = medium_sound_speed / self.sound_speed;
         self.radius_of_curvature * medium_sound_speed / (medium_sound_speed - self.sound_speed)
     }
 

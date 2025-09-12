@@ -17,6 +17,7 @@ use crate::physics::constants::{AVOGADRO, GAS_CONSTANT as R_GAS};
 #[derive(Debug)]
 pub struct RayleighPlessetSolver {
     params: BubbleParameters,
+    #[allow(dead_code)] // Thermodynamics calculator for bubble modeling
     thermo_calc: ThermodynamicsCalculator,
 }
 

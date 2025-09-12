@@ -121,9 +121,7 @@ fn calculate_beam_width_at_location(
     let iz = (location[2] / grid.dz).round() as usize;
 
     // Measure width in x and y directions
-    let mut width_x = 0.0;
-    let mut width_y = 0.0;
-
+    
     // X direction
     let mut left = ix;
     let mut right = ix;
@@ -136,7 +134,7 @@ fn calculate_beam_width_at_location(
         right += 1;
     }
 
-    width_x = (right - left) as f64 * grid.dx;
+    let width_x = (right - left) as f64 * grid.dx;
 
     // Y direction
     let mut bottom = iy;
@@ -150,7 +148,7 @@ fn calculate_beam_width_at_location(
         top += 1;
     }
 
-    width_y = (top - bottom) as f64 * grid.dy;
+    let width_y = (top - bottom) as f64 * grid.dy;
 
     // Return average width
     (width_x + width_y) / 2.0

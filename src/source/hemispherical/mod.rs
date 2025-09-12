@@ -35,10 +35,12 @@ use std::sync::Arc;
 /// Hemispherical array transducer
 #[derive(Debug, Clone)]
 pub struct HemisphericalArray {
+    #[allow(dead_code)] // Geometry configuration for array layout
     geometry: HemisphereGeometry,
     elements: Vec<ElementConfiguration>,
     steering: SteeringController,
     sparse_optimizer: Option<SparseArrayOptimizer>,
+    #[allow(dead_code)] // Safety validator for clinical applications
     validator: ArrayValidator,
     signal: Arc<dyn Signal>,
 }

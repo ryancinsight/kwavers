@@ -67,6 +67,7 @@ impl SimdOps {
     }
 
     /// Scalar implementation of field addition
+    /// Scalar fallback implementation
     #[allow(dead_code)]
     fn add_fields_scalar(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         Zip::from(out)
@@ -91,7 +92,10 @@ impl SimdOps {
     /// AVX2 implementation of field scaling
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    /// AVX2 field scaling
     #[allow(dead_code)]
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2")]
     unsafe fn scale_field_avx2(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
         // SAFETY: This function requires AVX2 to be available, enforced by #[target_feature].
         // Input and output arrays must have the same dimensions and be properly aligned.
@@ -118,6 +122,7 @@ impl SimdOps {
         }
     }
 
+    /// Scalar field scaling fallback
     #[allow(dead_code)]
     fn scale_field_scalar(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
         Zip::from(out).and(field).for_each(|o, &f| *o = f * scalar);
@@ -139,7 +144,10 @@ impl SimdOps {
 
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
+    /// AVX2 field norm computation
     #[allow(dead_code)]
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2")]
     unsafe fn field_norm_avx2(field: &Array3<f64>) -> f64 {
         unsafe {
             let slice = field.as_slice().unwrap();
@@ -170,6 +178,7 @@ impl SimdOps {
         }
     }
 
+    /// Scalar field norm fallback
     #[allow(dead_code)]
     fn field_norm_scalar(field: &Array3<f64>) -> f64 {
         field.iter().map(|&x| x * x).sum::<f64>().sqrt()

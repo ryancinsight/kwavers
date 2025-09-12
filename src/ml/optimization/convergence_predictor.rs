@@ -5,8 +5,11 @@ use ndarray::Array1;
 /// Convergence predictor using time series analysis
 #[derive(Debug)]
 pub struct ConvergencePredictor {
+    #[allow(dead_code)]
     history_size: usize,
+    #[allow(dead_code)]
     loss_history: Vec<f64>,
+    #[allow(dead_code)]
     gradient_history: Vec<Array1<f64>>,
 }
 

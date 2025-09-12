@@ -25,8 +25,7 @@ impl LinearSolver {
     /// Solve regularized least squares: min ||Ax - b||² + λ||Lx||²
     ///
     /// Uses Conjugate Gradient for Normal Equations (CGNE) with Tikhonov regularization
-    #[allow(dead_code)] // Public API - advanced regularization method for reconstruction
-    pub fn solve_tikhonov(
+        pub fn solve_tikhonov(
         &self,
         a: &Array2<f64>,
         b: ArrayView1<f64>,
@@ -34,6 +33,15 @@ impl LinearSolver {
         l: Option<&Array2<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         let (m, n) = a.dim();
+        
+        // Validate dimensions
+        if b.len() != m {
+            return Err(crate::error::NumericalError::MatrixDimension {
+                operation: "Tikhonov regularized least squares".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }.into());
+        }
 
         // Form normal equations: (A^T A + λ L^T L) x = A^T b
         let at = a.t();
@@ -55,8 +63,7 @@ impl LinearSolver {
     }
 
     /// Conjugate Gradient solver for symmetric positive definite systems
-    #[allow(dead_code)] // Public API - core numerical method for linear systems
-    pub fn conjugate_gradient(
+        pub fn conjugate_gradient(
         &self,
         a: &Array2<f64>,
         b: &Array1<f64>,
@@ -78,6 +85,7 @@ impl LinearSolver {
 
             // Check convergence
             if rsnew.sqrt() < self.tolerance {
+                log::debug!("Conjugate gradient converged after {} iterations", iter + 1);
                 return Ok(x);
             }
 
@@ -87,11 +95,11 @@ impl LinearSolver {
         }
 
         // If we're here, we didn't converge
-        eprintln!(
-            "CG did not converge after {} iterations",
-            self.max_iterations
-        );
-        Ok(x)
+        Err(crate::error::NumericalError::ConvergenceFailed {
+            method: "Conjugate Gradient".to_string(),
+            iterations: self.max_iterations,
+            error: rsold.sqrt(),
+        }.into())
     }
 
     /// Solve using Total Variation regularization
@@ -106,6 +114,16 @@ impl LinearSolver {
         shape: [usize; 3],
     ) -> KwaversResult<Array1<f64>> {
         let (m, n) = a.dim();
+        
+        // Validate dimensions
+        if b.len() != m {
+            return Err(crate::error::NumericalError::MatrixDimension {
+                operation: "Total Variation regularized least squares".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }.into());
+        }
+        
         let mut x = Array1::zeros(n);
 
         // Use Iterative Shrinkage-Thresholding Algorithm (ISTA)
@@ -196,7 +214,6 @@ impl LinearSolver {
     /// Solve using L1 regularization (Lasso)
     ///
     /// min ||Ax - b||² + λ||x||₁
-    #[allow(dead_code)] // Public API - L1 regularization for sparse reconstruction
     pub fn solve_l1_regularized(
         &self,
         a: &Array2<f64>,
@@ -204,6 +221,16 @@ impl LinearSolver {
         lambda: f64,
     ) -> KwaversResult<Array1<f64>> {
         let (m, n) = a.dim();
+        
+        // Validate dimensions
+        if b.len() != m {
+            return Err(crate::error::NumericalError::MatrixDimension {
+                operation: "L1 regularized least squares (Lasso)".to_string(),
+                expected: format!("RHS vector length {} to match matrix rows {}", m, m),
+                actual: format!("RHS vector length {}", b.len()),
+            }.into());
+        }
+        
         let mut x = Array1::zeros(n);
 
         // Use Fast Iterative Shrinkage-Thresholding Algorithm (FISTA)
@@ -244,8 +271,7 @@ impl LinearSolver {
     }
 
     /// Soft thresholding operator
-    #[allow(dead_code)] // Used by L1 regularization methods
-    fn soft_threshold(&self, x: &Array1<f64>, threshold: f64) -> Array1<f64> {
+        fn soft_threshold(&self, x: &Array1<f64>, threshold: f64) -> Array1<f64> {
         x.mapv(|xi| {
             if xi > threshold {
                 xi - threshold

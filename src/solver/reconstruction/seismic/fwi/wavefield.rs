@@ -202,8 +202,7 @@ impl WavefieldModeler {
     /// Apply PML boundary conditions
     /// Based on Berenger (1994): "A perfectly matched layer for the absorption of electromagnetic waves"
     /// Journal of Computational Physics, 114(2), 185-200
-    #[allow(dead_code)] // Used by forward/adjoint wavefield propagation
-    fn apply_pml(&self, wavefield: &mut Array3<f64>) {
+        fn apply_pml(&self, wavefield: &mut Array3<f64>) {
         let (nx, ny, nz) = wavefield.dim();
         let width = self.pml_width;
 
@@ -250,8 +249,7 @@ impl WavefieldModeler {
 
     /// Apply finite difference stencil for wave equation
     /// 4th order accurate in space, 2nd order in time
-    #[allow(dead_code)] // Core numerical method for seismic wave propagation
-    fn apply_fd_stencil(
+        fn apply_fd_stencil(
         &self,
         current: &Array3<f64>,
         previous: &Array3<f64>,
@@ -305,7 +303,7 @@ impl WavefieldModeler {
     }
 
     /// Compute PML damping profile
-    fn compute_pml_profile(&self, thickness: usize, max_dim: usize) -> Array1<f64> {
+    fn compute_pml_profile(&self, thickness: usize, _max_dim: usize) -> Array1<f64> {
         let mut profile = Array1::zeros(thickness);
         let reflection_coeff: f64 = 1e-6;
         let pml_order = 2.0;
@@ -368,7 +366,7 @@ impl WavefieldModeler {
     }
 
     /// Compute Laplacian at a point (for use in Zip iteration)
-    fn compute_laplacian_at_point(&self, field: &Array3<f64>, center_val: f64) -> f64 {
+    fn compute_laplacian_at_point(&self, _field: &Array3<f64>, center_val: f64) -> f64 {
         // Simplified 2nd order Laplacian
         // In practice, would need neighbor values passed in
         // This is a placeholder for the actual stencil computation

@@ -61,6 +61,7 @@ enum SelectionStrategy {
     /// Optimize for power delivery
     PowerOptimal,
     /// Uniform sparse distribution
+    #[allow(dead_code)] // Alternative selection strategy for future use
     UniformSparse,
 }
 

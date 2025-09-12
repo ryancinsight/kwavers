@@ -28,6 +28,7 @@ pub struct EnergyBalanceCalculator {
     /// Thermal conductivity of the liquid
     thermal_conductivity: ThermalConductivity,
     /// Specific heat capacity of the liquid
+    #[allow(dead_code)] // Thermal physics parameter for energy balance calculations
     specific_heat_liquid: HeatCapacity,
     /// Ambient temperature
     ambient_temperature: ThermodynamicTemperature,

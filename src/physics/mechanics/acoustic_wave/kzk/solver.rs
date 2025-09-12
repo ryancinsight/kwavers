@@ -36,6 +36,7 @@ pub struct KZKSolver {
     /// Nonlinear operator
     nonlinear: NonlinearOperator,
     /// FFT planner for spectral methods
+    #[allow(dead_code)] // FFT infrastructure for KZK equation
     fft_planner: FftPlanner<f64>,
 }
 

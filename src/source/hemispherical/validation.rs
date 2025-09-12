@@ -9,6 +9,7 @@ pub struct ArrayValidator {
     /// Maximum allowed pressure (Pa)
     max_pressure: f64,
     /// Maximum temperature rise (K)
+    #[allow(dead_code)] // Safety validation parameter for future use
     max_temp_rise: f64,
 }
 

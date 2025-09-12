@@ -20,12 +20,16 @@ pub struct OptimizationExperience {
 /// This is a research/experimental implementation for automated acoustic parameter tuning.
 /// Some fields may be unused in the current implementation phase.
 #[derive(Debug)]
-#[allow(dead_code)] // Research module - fields may be unused in current implementation
 pub struct ParameterOptimizer {
+    #[allow(dead_code)]
     learning_rate: f64,
+    #[allow(dead_code)]
     exploration_rate: f64,
+    #[allow(dead_code)]
     experience_buffer: VecDeque<OptimizationExperience>,
+    #[allow(dead_code)]
     neural_network: NeuralNetwork,
+    #[allow(dead_code)]
     convergence_predictor: ConvergencePredictor,
 }
 

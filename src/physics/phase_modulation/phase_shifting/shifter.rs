@@ -18,6 +18,7 @@ use std::f64::consts::PI;
 pub struct PhaseShifter {
     strategy: ShiftingStrategy,
     element_positions: Array2<f64>,
+    #[allow(dead_code)] // Operating frequency for phase calculations
     operating_frequency: f64,
     wavelength: f64,
     phase_offsets: Array1<f64>,

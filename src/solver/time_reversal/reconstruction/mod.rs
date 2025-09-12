@@ -111,7 +111,7 @@ impl TimeReversalReconstructor {
     ) -> KwaversResult<HashMap<usize, Vec<f64>>> {
         let mut reversed_signals = HashMap::new();
 
-        for (sensor_id, sensor) in sensor_data.sensors().iter().enumerate() {
+        for (sensor_id, _sensor) in sensor_data.sensors().iter().enumerate() {
             let mut signal = sensor_data
                 .get_data(sensor_id)
                 .ok_or_else(|| {
@@ -222,10 +222,10 @@ impl TimeReversalReconstructor {
     /// Propagate backwards in time
     fn propagate_backwards(
         &self,
-        grid: &Grid,
+        _grid: &Grid,
         solver: &mut PluginBasedSolver,
-        recorder: &mut Recorder,
-        frequency: f64,
+        _recorder: &mut Recorder,
+        _frequency: f64,
         reversed_signals: &HashMap<usize, Vec<f64>>,
     ) -> KwaversResult<Array3<f64>> {
         // Determine propagation time from signal length

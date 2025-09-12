@@ -9,7 +9,6 @@ use rustfft::{num_complex::Complex64, FftPlanner};
 
 /// Compute k-space correction following k-Wave methodology
 /// Note: k-Wave compatibility function for heterogeneous media
-#[allow(dead_code)]
 pub(super) fn compute_kspace_correction(
     grid: &Grid,
     k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
@@ -99,21 +98,18 @@ pub(super) fn compute_pml_operators(
 }
 
 /// FFT wrapper - k-Wave compatibility function
-#[allow(dead_code)]
 pub(super) fn fft_3d(input: &Array3<f64>, _planner: &mut FftPlanner<f64>) -> Array3<Complex64> {
     // Use modern FFT from utils instead of placeholder
     crate::utils::fft_3d_array(input)
 }
 
 /// IFFT wrapper - k-Wave compatibility function
-#[allow(dead_code)]
 pub(super) fn ifft_3d(input: &Array3<Complex64>, _planner: &mut FftPlanner<f64>) -> Array3<f64> {
     // Use modern IFFT from utils instead of placeholder
     crate::utils::ifft_3d_array(input)
 }
 
 /// Smooth source for stability - k-Wave compatibility function
-#[allow(dead_code)]
 pub(super) fn smooth_source(source: &Array3<f64>, _grid: &Grid) -> Array3<f64> {
     // Apply spatial smoothing filter
     // For now, return original - proper smoothing would use convolution

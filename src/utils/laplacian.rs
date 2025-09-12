@@ -124,7 +124,7 @@ impl LaplacianOperator {
         input: ArrayView3<f64>,
         mut output: ArrayViewMut3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = input.dim();
+        let (_nx, _ny, _nz) = input.dim();
 
         if input.dim() != output.dim() {
             return Err(crate::error::KwaversError::InvalidInput(format!(
@@ -240,7 +240,7 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
         radius: usize,
     ) {
-        let (nx, ny, nz) = input.dim();
+        let (_nx, _ny, _nz) = input.dim();
 
         match self.config.boundary {
             BoundaryCondition::Dirichlet => {

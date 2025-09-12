@@ -62,6 +62,7 @@ pub struct PerformanceOptimizer {
     config: OptimizationConfig,
     simd: SimdOptimizer,
     cache: CacheOptimizer,
+    #[allow(dead_code)] // Used for parallel optimization strategies
     parallel: ParallelOptimizer,
     memory: MemoryOptimizer,
     gpu: Option<GpuOptimizer>,

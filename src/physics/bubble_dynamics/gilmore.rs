@@ -20,6 +20,7 @@ pub struct GilmoreSolver {
     tait_b: f64,
     tait_n: f64,
     /// Reference enthalpy
+    #[allow(dead_code)] // Thermodynamic parameter for Gilmore equation
     h_ref: f64,
 }
 
@@ -57,8 +58,7 @@ impl GilmoreSolver {
 
     /// Calculate liquid density from Tait equation
     /// ρ = ρ₀ * [(p+B)/(p₀+B)]^(1/n)
-    #[allow(dead_code)]
-    fn calculate_density(&self, pressure: f64) -> f64 {
+        fn calculate_density(&self, pressure: f64) -> f64 {
         let p0 = self.params.p0;
         self.params.rho_liquid
             * ((pressure + self.tait_b) / (p0 + self.tait_b)).powf(1.0 / self.tait_n)
