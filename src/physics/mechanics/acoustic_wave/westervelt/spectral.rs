@@ -112,7 +112,6 @@ pub fn apply_kspace_correction(
 
 /// Compute density gradients for k-space correction
 /// Note: Reserved for future heterogeneous media implementation
-#[allow(dead_code)]
 pub fn compute_density_gradients(
     rho_arr: &Array3<f64>,
     grid: &Grid,

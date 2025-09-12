@@ -38,18 +38,15 @@ impl PstdPlugin {
         })
     }
 
-    #[allow(dead_code)] // Plugin state management - called via trait dispatch
-    fn set_state(&mut self, state: PluginState) {
+        fn set_state(&mut self, state: PluginState) {
         self.state = state;
     }
 
-    #[allow(dead_code)] // Type downcasting support - used by plugin manager
-    fn as_any(&self) -> &dyn std::any::Any {
+        fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    #[allow(dead_code)] // Type downcasting support - used by plugin manager
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }

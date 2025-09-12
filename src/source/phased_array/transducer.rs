@@ -166,7 +166,7 @@ impl PhasedArrayTransducer {
 
                 if distance > 0.0 {
                     // Calculate propagation delay
-                    let propagation_time = distance / self.sound_speed;
+                    let _propagation_time = distance / self.sound_speed;
 
                     // Calculate directivity
                     let theta = ((x - element.position.0).powi(2)

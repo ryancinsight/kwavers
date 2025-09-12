@@ -113,14 +113,14 @@ impl BowlTransducer {
         // Calculate bowl parameters
         let r = config.radius_of_curvature;
         let a = config.diameter / 2.0;
-        let h = r - (r * r - a * a).sqrt(); // Height of spherical cap
+        let _h = r - (r * r - a * a).sqrt(); // Height of spherical cap
 
         // Angular extent of the bowl
         let theta_max = (a / r).asin();
 
         // Number of angular divisions
         let n_theta = ((2.0 * PI * r * theta_max) / element_size).ceil() as usize;
-        let n_phi = ((2.0 * PI * a) / element_size).ceil() as usize;
+        let _n_phi = ((2.0 * PI * a) / element_size).ceil() as usize;
 
         // Generate elements using spherical coordinates
         for i in 0..n_theta {
@@ -298,7 +298,7 @@ impl BowlTransducer {
         let a = self.config.diameter / 2.0;
         let k = 2.0 * PI * self.config.frequency / SOUND_SPEED_WATER; // Wave number
         let omega = 2.0 * PI * self.config.frequency; // Angular frequency
-        let c = SOUND_SPEED_WATER; // Speed of sound in water
+        let _c = SOUND_SPEED_WATER; // Speed of sound in water
 
         // Geometric parameters
         // h is the height of the spherical cap

@@ -70,7 +70,7 @@ impl FrequencyResponse {
         let mut impedance = Array1::zeros(num_points);
 
         // Effective bandwidth factor
-        let bandwidth_factor = coupling.powi(2) / mechanical_q.sqrt();
+        let _bandwidth_factor = coupling.powi(2) / mechanical_q.sqrt();
 
         for (i, &freq) in frequencies.iter().enumerate() {
             let normalized_freq = freq / center_freq;

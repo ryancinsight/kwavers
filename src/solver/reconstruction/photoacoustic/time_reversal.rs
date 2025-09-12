@@ -48,7 +48,7 @@ impl TimeReversal {
         sensor_positions: &[[f64; 3]],
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (n_time, n_sensors) = sensor_data.dim();
+        let (n_time, _n_sensors) = sensor_data.dim();
         let [nx, ny, nz] = self.grid_size;
 
         // Initialize pressure field

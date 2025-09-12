@@ -64,7 +64,7 @@ pub fn calculate_beam_pattern(
     let mut pattern = Array2::zeros((n_theta, n_phi));
 
     // Calculate far-field distance
-    let far_field_distance =
+    let _far_field_distance =
         calculate_far_field_distance(grid, wavelength, &config.far_field_method);
 
     // Calculate beam pattern for each angle

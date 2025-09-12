@@ -22,7 +22,7 @@ pub struct TransducerSensitivity {
 impl TransducerSensitivity {
     /// Calculate sensitivity from transducer parameters
     #[must_use]
-    pub fn from_parameters(coupling: f64, area: f64, impedance: f64, frequency: f64) -> Self {
+    pub fn from_parameters(coupling: f64, area: f64, impedance: f64, _frequency: f64) -> Self {
         // Transmit sensitivity: pressure per volt at 1 meter
         // S_t = k * sqrt(2 * Z * P_elec / A) / r
         let electrical_power = 1.0; // 1W reference

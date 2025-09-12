@@ -20,7 +20,6 @@ pub struct OptimizationExperience {
 /// This is a research/experimental implementation for automated acoustic parameter tuning.
 /// Some fields may be unused in the current implementation phase.
 #[derive(Debug)]
-#[allow(dead_code)] // Research module - fields may be unused in current implementation
 pub struct ParameterOptimizer {
     learning_rate: f64,
     exploration_rate: f64,

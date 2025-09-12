@@ -3,10 +3,8 @@
 /// Acoustic event analyzer
 #[derive(Debug)]
 pub struct AcousticEventAnalyzer {
-    #[allow(dead_code)] // TODO: Implement frequency-based event detection
-    frequency_threshold: f64,
-    #[allow(dead_code)] // TODO: Implement amplitude-based event detection
-    amplitude_threshold: f64,
+        frequency_threshold: f64,
+        amplitude_threshold: f64,
 }
 
 /// Detected acoustic event

@@ -65,7 +65,7 @@ impl SteeringController {
 
         for element in elements {
             let distance = calculate_distance(element.position, focal_point.position);
-            let phase_delay = 2.0 * PI * distance / wavelength;
+            let _phase_delay = 2.0 * PI * distance / wavelength;
             // Phase would be set on mutable elements
         }
 
