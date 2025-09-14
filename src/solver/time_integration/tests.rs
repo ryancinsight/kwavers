@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::solver::time_integration::coupling::SubcyclingStrategy;
     
     #[test]
     fn test_time_integration_module_compiles() {
@@ -16,7 +16,7 @@ mod tests {
         // Verify the TimeCoupling trait interface is well-defined
         use crate::solver::time_integration::coupling::SubcyclingStrategy;
         
-        let strategy = SubcyclingStrategy::new(10);
+        let _strategy = SubcyclingStrategy::new(10);
         // Interface is properly defined and follows SOLID principles
         assert!(true, "Coupling strategy interface is production-ready");
     }
