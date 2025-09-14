@@ -10,6 +10,7 @@ use super::solver::AcousticSolver;
 #[derive(Debug)]
 pub struct KuznetsovSolver {
     config: AcousticSolverConfig,
+    #[allow(dead_code)]
     grid: Grid,
     velocity_potential: Array3<f64>,
 }

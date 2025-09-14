@@ -6,6 +6,7 @@ use ndarray::{Array3, ArrayView3};
 /// Field analyzer for adaptive selection
 #[derive(Debug)]
 pub struct FieldAnalyzer {
+    #[allow(dead_code)]
     grid: Grid,
 }
 

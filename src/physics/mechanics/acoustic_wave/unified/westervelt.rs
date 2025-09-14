@@ -10,6 +10,7 @@ use super::solver::AcousticSolver;
 #[derive(Debug)]
 pub struct WesterveltSolver {
     config: AcousticSolverConfig,
+    #[allow(dead_code)]
     grid: Grid,
     prev_pressure: Option<Array3<f64>>,
     pressure_history: Option<Array3<f64>>,

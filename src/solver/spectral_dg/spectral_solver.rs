@@ -18,6 +18,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct SpectralSolver {
     order: usize,
+    #[allow(dead_code)]
     grid: Arc<Grid>,
     /// Wavenumber arrays for spectral derivatives
     kx: Array3<f64>,
