@@ -152,15 +152,26 @@ mod tests {
     #[test]
     fn test_configuration_builder_validation() {
         // This should work with reasonable parameters
+        // For 1 MHz frequency and 1000 m/s sound speed:
+        // wavelength = 1000/1e6 = 0.001 m = 1 mm
+        // For Nyquist criterion (2 points per wavelength):
+        // max_spacing = wavelength/2 = 0.0005 m = 0.5 mm
         let result = ConfigurationBuilder::new()
-            .grid_spacing([0.001, 0.001, 0.001])
-            .frequency(1e6)
-            .sound_speed_range(1000.0, 1600.0)
+            .grid_spacing([0.0005, 0.0005, 0.0005])  // 0.5 mm spacing
+            .grid_dimensions(100, 100, 100)  // Add required grid dimensions
+            .frequency(1e6)  // 1 MHz
+            .sound_speed_range(1000.0, 1600.0)  // 1000-1600 m/s
             .cfl(0.5)
             .time_step(1e-7)
             .build();
 
-        assert!(result.is_ok());
+        // Debug validation errors if any
+        match &result {
+            Ok(_) => println!("Configuration validation passed"),
+            Err(e) => println!("Configuration validation failed: {}", e),
+        }
+
+        assert!(result.is_ok(), "Configuration validation failed: {:?}", result.err());
     }
 
     #[test]
