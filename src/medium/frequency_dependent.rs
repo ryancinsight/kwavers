@@ -254,13 +254,13 @@ mod tests {
         let f2: f64 = 5e6;
         let expected_c1 = props.c0 * (1.0 + props.dispersion_coefficient * f1.ln());
         let expected_c5 = props.c0 * (1.0 + props.dispersion_coefficient * f2.ln());
-        
+
         // Validate against exact dispersion formula (before relaxation effects)
         // Note: relaxation effects make the calculation more complex, so we check the base trend
-        let theoretical_ratio = (1.0 + props.dispersion_coefficient * f2.ln()) 
-                                / (1.0 + props.dispersion_coefficient * f1.ln());
+        let theoretical_ratio = (1.0 + props.dispersion_coefficient * f2.ln())
+            / (1.0 + props.dispersion_coefficient * f1.ln());
         let measured_ratio = c_5mhz / c_1mhz;
-        
+
         // Should match theoretical dispersion within 5% (accounting for relaxation effects)
         approx::assert_relative_eq!(measured_ratio, theoretical_ratio, epsilon = 0.05);
 

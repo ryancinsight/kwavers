@@ -36,15 +36,15 @@ impl GradientComputer {
     ) -> Array3<f64> {
         // Gradient = -∫ (∂²u_f/∂t²) * u_a dt
         // where u_f is forward wavefield, u_a is adjoint wavefield
-        // 
+        //
         // For acoustic media, this simplifies to:
         // ∂J/∂c = 2 * ∫ (1/c³) * u_f * u_a dt
-        // 
+        //
         // This is the correlation of forward and adjoint wavefields
         // multiplied by the proper scaling factor
 
         let mut gradient = Array3::zeros(forward_wavefield.dim());
-        
+
         // Compute zero-lag correlation between forward and adjoint wavefields
         Zip::from(&mut gradient)
             .and(forward_wavefield)
@@ -56,11 +56,9 @@ impl GradientComputer {
 
         // Apply preconditioning if available
         if let Some(ref precond) = self.preconditioner {
-            Zip::from(&mut gradient)
-                .and(precond)
-                .for_each(|grad, &p| {
-                    *grad *= p;
-                });
+            Zip::from(&mut gradient).and(precond).for_each(|grad, &p| {
+                *grad *= p;
+            });
         }
 
         gradient
@@ -77,9 +75,9 @@ impl GradientComputer {
     ) -> Array3<f64> {
         // Compute gradient using imaging condition: ∇J = -∫ u_f · u_a dt
         // where u_f is forward wavefield and u_a is adjoint wavefield
-        
+
         let mut gradient = Array3::zeros(forward_wavefield.dim());
-        
+
         // Zero-lag cross-correlation between forward and adjoint wavefields
         Zip::from(&mut gradient)
             .and(forward_wavefield)
@@ -109,7 +107,7 @@ impl GradientComputer {
         _forward_wavefield: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
         // H*dm = ∂²J/∂m² * dm
-        // 
+        //
         // For Gauss-Newton approximation:
         // H_GN ≈ J^T * J
         // where J is the Jacobian matrix
@@ -124,11 +122,11 @@ impl GradientComputer {
 
         let (nx, ny, nz) = model_perturbation.dim();
         let mut hessian_product = Array3::zeros((nx, ny, nz));
-        
+
         // Gauss-Newton approximation: H_GN = J^T * J
         // This can be computed via the second-order adjoint method
         // For now, implement a simplified diagonal approximation
-        
+
         Zip::from(&mut hessian_product)
             .and(model_perturbation)
             .for_each(|hvp, &dm| {
@@ -149,7 +147,7 @@ impl GradientComputer {
         _encoded_residuals: &Array2<f64>,
     ) -> Array3<f64> {
         // Simultaneous source gradient computation
-        // 
+        //
         // The encoded gradient allows multiple sources to be processed
         // simultaneously, dramatically reducing computational cost.
         //
@@ -160,7 +158,7 @@ impl GradientComputer {
         // 1. Decode the simultaneous source residuals
         // 2. Compute individual gradients
         // 3. Linearly combine with encoding weights
-        
+
         // For this initial implementation, return zero gradient
         // This maintains interface compatibility while indicating
         // the feature needs full implementation

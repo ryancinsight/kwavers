@@ -120,6 +120,7 @@ impl ThermalDiffusionPlugin {
         }
     }
 
+    #[allow(dead_code)]
     fn set_state(&mut self, state: PluginState) {
         self.state = state;
     }

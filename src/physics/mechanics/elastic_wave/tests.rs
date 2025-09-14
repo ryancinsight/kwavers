@@ -44,6 +44,10 @@ mod tests {
             0.0,
         );
         // Test passes if update succeeds without error
-        assert!(result.is_ok(), "Elastic wave update should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Elastic wave update should succeed: {:?}",
+            result.err()
+        );
     }
 }

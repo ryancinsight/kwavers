@@ -37,7 +37,7 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
         unsafe {
             let vs = vdupq_n_f64(scalar);
             let chunks = field_slice.len() / 2;
-            
+
             for i in 0..chunks {
                 let offset = i * 2;
                 let vfield = vld1q_f64(field_slice.as_ptr().add(offset));

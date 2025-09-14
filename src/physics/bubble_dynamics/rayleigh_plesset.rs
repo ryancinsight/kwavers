@@ -50,13 +50,13 @@ impl RayleighPlessetSolver {
             // For isothermal bubble dynamics, use polytropic relation: p * V^γ = constant
             // At equilibrium: p_eq * (4/3 * π * r0³)^γ = p * (4/3 * π * r³)^γ
             // Therefore: p = p_eq * (r0/r)^(3γ)
-            
+
             let gamma = state.gas_species.gamma();
-            
+
             // The equilibrium pressure is determined by force balance:
             // p_internal = p_external + 2σ/r0 (Young-Laplace equation)
             let p_internal_equilibrium = self.params.p0 + 2.0 * self.params.sigma / self.params.r0;
-            
+
             // Apply polytropic scaling for current radius
             let radius_ratio = self.params.r0 / r;
             p_internal_equilibrium * radius_ratio.powf(3.0 * gamma)
@@ -398,9 +398,12 @@ mod tests {
 
         // Verify that the equilibrium state was constructed correctly
         let expected_p_internal = params.p0 + 2.0 * params.sigma / params.r0;
-        println!("Expected p_internal at equilibrium: {} Pa", expected_p_internal);
+        println!(
+            "Expected p_internal at equilibrium: {} Pa",
+            expected_p_internal
+        );
         println!("Actual p_internal in state: {} Pa", state.pressure_internal);
-        
+
         // The equilibrium state should have the correct internal pressure
         assert!(
             (state.pressure_internal - expected_p_internal).abs() < 0.1,
@@ -418,15 +421,24 @@ mod tests {
         // Reference: Van der Waals equation accounts for finite molecular size and intermolecular forces
         // Literature: Qin et al. (2023) "Numerical investigation on acoustic cavitation characteristics"
         let tolerance = 5000.0; // Accept Van der Waals pressure differences as physically accurate
-        
+
         if accel.abs() >= tolerance {
             println!("DEBUG: Advanced pressure analysis at equilibrium");
             println!("  Bubble radius: {} μm", state.radius * 1e6);
-            println!("  Surface tension pressure: {} Pa", 2.0 * params.sigma / state.radius);
-            println!("  Internal pressure (stored): {} Pa", state.pressure_internal);
+            println!(
+                "  Surface tension pressure: {} Pa",
+                2.0 * params.sigma / state.radius
+            );
+            println!(
+                "  Internal pressure (stored): {} Pa",
+                state.pressure_internal
+            );
             println!("  External pressure: {} Pa", params.p0);
             println!("  Vapor pressure: {} Pa", params.pv);
-            println!("  Force imbalance: {} Pa", state.pressure_internal - params.p0 - 2.0 * params.sigma / state.radius);
+            println!(
+                "  Force imbalance: {} Pa",
+                state.pressure_internal - params.p0 - 2.0 * params.sigma / state.radius
+            );
             println!("  Thermal effects enabled: {}", params.use_thermal_effects);
         }
 

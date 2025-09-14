@@ -35,7 +35,7 @@ pub struct FDCoefficients;
 
 impl FDCoefficients {
     /// Get coefficients for first derivative (generic over float type)
-    /// 
+    ///
     /// # Panics
     /// Never panics - all coefficients are mathematically exact rational numbers
     /// that convert precisely to any IEEE 754 floating-point type.
@@ -50,7 +50,7 @@ impl FDCoefficients {
             SpatialOrder::Fourth => {
                 vec![
                     T::from(2.0 / 3.0).expect("2/3 converts exactly to IEEE 754"),
-                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754")
+                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754"),
                 ]
             }
             SpatialOrder::Sixth => vec![
@@ -69,7 +69,7 @@ impl FDCoefficients {
 
     /// Get off-center pair coefficients for second derivative (generic)
     /// Returns coefficients for symmetric pairs at offsets 1..=N
-    /// 
+    ///
     /// # Panics
     /// Never panics - all coefficients are exact rational numbers.
     #[must_use]
@@ -81,7 +81,7 @@ impl FDCoefficients {
             SpatialOrder::Fourth => {
                 vec![
                     T::from(4.0 / 3.0).expect("4/3 converts exactly to IEEE 754"),
-                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754")
+                    T::from(-1.0 / 12.0).expect("-1/12 converts exactly to IEEE 754"),
                 ]
             }
             SpatialOrder::Sixth => vec![
@@ -100,7 +100,7 @@ impl FDCoefficients {
 
     /// Get the center coefficient for second derivative (generic)
     /// Standard central-difference coefficients (Fornberg) for 3-, 5-, 7-point stencils
-    /// 
+    ///
     /// # Panics
     /// Never panics - all coefficients are exact rational numbers.
     #[must_use]
@@ -110,8 +110,12 @@ impl FDCoefficients {
         match order {
             SpatialOrder::Second => T::from(-2.0).expect("-2.0 converts exactly"), // 3-point stencil
             SpatialOrder::Fourth => T::from(-5.0 / 2.0).expect("-5/2 converts exactly to IEEE 754"), // 5-point stencil
-            SpatialOrder::Sixth => T::from(-49.0 / 18.0).expect("-49/18 converts exactly to IEEE 754"), // 7-point stencil
-            SpatialOrder::Eighth => T::from(-205.0 / 72.0).expect("-205/72 converts exactly to IEEE 754"), // 9-point stencil
+            SpatialOrder::Sixth => {
+                T::from(-49.0 / 18.0).expect("-49/18 converts exactly to IEEE 754")
+            } // 7-point stencil
+            SpatialOrder::Eighth => {
+                T::from(-205.0 / 72.0).expect("-205/72 converts exactly to IEEE 754")
+            } // 9-point stencil
         }
     }
 }
@@ -126,7 +130,7 @@ pub fn gradient<T>(
     field: ArrayView3<'_, T>,
     grid: &Grid,
     order: SpatialOrder,
-) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)> 
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
     T: num_traits::Float + std::default::Default,
 {
@@ -220,7 +224,9 @@ where
                     dvz_dz = dvz_dz + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
                 }
 
-                div[[i, j, k]] = dvx_dx / T::from(grid.dx).unwrap() + dvy_dy / T::from(grid.dy).unwrap() + dvz_dz / T::from(grid.dz).unwrap();
+                div[[i, j, k]] = dvx_dx / T::from(grid.dx).unwrap()
+                    + dvy_dy / T::from(grid.dy).unwrap()
+                    + dvz_dz / T::from(grid.dz).unwrap();
             }
         }
     }

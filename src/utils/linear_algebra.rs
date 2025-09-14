@@ -233,7 +233,7 @@ impl LinearAlgebra {
 
         Ok((u, s, v))
     }
-    
+
     /// Compute L2 norm of a 3D array
     pub fn norm_l2_3d(array: &ndarray::Array3<f64>) -> f64 {
         array.iter().map(|&x| x * x).sum::<f64>().sqrt()

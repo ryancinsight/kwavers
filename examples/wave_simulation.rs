@@ -4,7 +4,7 @@
 
 use kwavers::{
     error::KwaversResult,
-    grid::{Grid, stability::StabilityCalculator},
+    grid::{stability::StabilityCalculator, Grid},
     medium::{core::CoreMedium, HomogeneousMedium},
     solver::plugin_based::PluginBasedSolver,
     source::NullSource,

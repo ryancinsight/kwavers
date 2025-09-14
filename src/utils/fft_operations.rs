@@ -78,23 +78,30 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex<f64>>) -> Array3<f64> {
 // These will be removed in a future refactor when all callers are updated
 
 /// Legacy wrapper for fft_3d that accepts Array4 and extracts a slice
-/// 
+///
 /// # Note
 /// This is a compatibility shim for legacy code. New code should use fft_3d_array directly.
 #[must_use]
 #[deprecated(note = "Use fft_3d_array directly with Array3")]
-pub fn fft_3d(fields: &ndarray::Array4<f64>, slice_idx: usize, _grid: &crate::grid::Grid) -> ndarray::Array3<Complex<f64>> {
+pub fn fft_3d(
+    fields: &ndarray::Array4<f64>,
+    slice_idx: usize,
+    _grid: &crate::grid::Grid,
+) -> ndarray::Array3<Complex<f64>> {
     let slice = fields.index_axis(ndarray::Axis(0), slice_idx);
     fft_3d_array(&slice.to_owned())
 }
 
 /// Legacy wrapper for ifft_3d that returns a 3D array
-/// 
+///
 /// # Note
 /// This is a compatibility shim for legacy code. New code should use ifft_3d_array directly.
 #[must_use]
 #[deprecated(note = "Use ifft_3d_array directly")]
-pub fn ifft_3d(field_hat: &ndarray::Array3<Complex<f64>>, _grid: &crate::grid::Grid) -> ndarray::Array3<f64> {
+pub fn ifft_3d(
+    field_hat: &ndarray::Array3<Complex<f64>>,
+    _grid: &crate::grid::Grid,
+) -> ndarray::Array3<f64> {
     ifft_3d_array(field_hat)
 }
 

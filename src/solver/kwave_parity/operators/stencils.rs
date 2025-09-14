@@ -18,7 +18,10 @@ pub struct StencilWeights {
 
 /// Compute derivative stencils for given order and accuracy
 #[must_use]
-pub fn compute_derivative_stencils(order: usize, accuracy: usize) -> Result<StencilWeights, KwaversError> {
+pub fn compute_derivative_stencils(
+    order: usize,
+    accuracy: usize,
+) -> Result<StencilWeights, KwaversError> {
     match (order, accuracy) {
         (1, 2) => Ok(second_order_first_derivative()),
         (1, 4) => Ok(fourth_order_first_derivative()),
