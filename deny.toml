@@ -1,0 +1,61 @@
+# License and Security Configuration for Kwavers
+# Enforces strict license compliance and security audit standards
+
+[licenses]
+# Allow list for acceptable licenses
+allow = [
+    "MIT",
+    "Apache-2.0", 
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",  # Unicode tables used by regex
+    "Zlib",             # Used by some graphics libraries
+    "BSL-1.0",          # Boost Software License
+]
+
+# Confidence threshold for license detection
+confidence-threshold = 0.8
+
+# Allow specific crates with different licenses if needed
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+name = "webpki-roots"  # Mozilla Public License for cert validation
+
+[bans]
+# Deny specific crates that are known problematic
+deny = [
+    # No vulnerable or deprecated crates
+]
+
+# Skip dev dependencies in license checking
+skip-tree = [
+    { name = "criterion" },
+    { name = "proptest" },
+]
+
+[advisories]
+# Security vulnerability database
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+
+# Vulnerability handling
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "warn"
+notice = "warn"
+
+# Ignore specific advisories if needed (add IDs as necessary)
+ignore = []
+
+[sources]
+# Allowed registries and Git sources
+unknown-registry = "warn"
+unknown-git = "warn"
+
+# Only allow crates.io and approved sources
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+# Allow git dependencies for specific cases
+allow-git = []

@@ -116,20 +116,20 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         U: Send + Sync,
         Self::Item: Sync,
     {
-        // Create a sequential version first to ensure correctness
-        // TODO: Optimize with proper parallel implementation
+        // Optimized parallel implementation using rayon
+        // Leverages work-stealing for optimal load balancing
+        use rayon::prelude::*;
+        
         let shape = self.dim();
-        let mut result = Vec::with_capacity(shape.0 * shape.1 * shape.2);
+        let result: Vec<U> = self
+            .iter()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(f)
+            .collect();
 
-        for i in 0..shape.0 {
-            for j in 0..shape.1 {
-                for k in 0..shape.2 {
-                    result.push(f(&self[[i, j, k]]));
-                }
-            }
-        }
-
-        Array3::from_shape_vec(shape, result).expect("Shape mismatch")
+        Array3::from_shape_vec(shape, result)
+            .expect("Shape mismatch in parallel map operation")
     }
 
     fn find_element<F>(&self, predicate: F) -> Option<((usize, usize, usize), &Self::Item)>
