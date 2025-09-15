@@ -4,6 +4,7 @@
 //! Runge-Kutta and Adams-Bashforth schemes.
 
 use super::traits::{TimeStepper, TimeStepperConfig};
+use crate::error::{KwaversError, SystemError};
 use crate::grid::Grid;
 use crate::KwaversResult;
 use ndarray::{Array3, Zip};
@@ -85,11 +86,37 @@ impl TimeStepper for RungeKutta4 {
             self.intermediate_field = Some(Array3::zeros(shape));
         }
 
-        let k1 = self.k1.as_mut().unwrap();
-        let k2 = self.k2.as_mut().unwrap();
-        let k3 = self.k3.as_mut().unwrap();
-        let k4 = self.k4.as_mut().unwrap();
-        let intermediate_field = self.intermediate_field.as_mut().unwrap();
+        // Safe access to pre-allocated storage
+        let k1 = self.k1.as_mut().ok_or_else(|| {
+            KwaversError::System(SystemError::ResourceExhausted {
+                resource: "RK4 k1 storage".to_string(),
+                reason: "Storage not initialized".to_string(),
+            })
+        })?;
+        let k2 = self.k2.as_mut().ok_or_else(|| {
+            KwaversError::System(SystemError::ResourceExhausted {
+                resource: "RK4 k2 storage".to_string(),
+                reason: "Storage not initialized".to_string(),
+            })
+        })?;
+        let k3 = self.k3.as_mut().ok_or_else(|| {
+            KwaversError::System(SystemError::ResourceExhausted {
+                resource: "RK4 k3 storage".to_string(),
+                reason: "Storage not initialized".to_string(),
+            })
+        })?;
+        let k4 = self.k4.as_mut().ok_or_else(|| {
+            KwaversError::System(SystemError::ResourceExhausted {
+                resource: "RK4 k4 storage".to_string(),
+                reason: "Storage not initialized".to_string(),
+            })
+        })?;
+        let intermediate_field = self.intermediate_field.as_mut().ok_or_else(|| {
+            KwaversError::System(SystemError::ResourceExhausted {
+                resource: "RK4 intermediate field storage".to_string(),
+                reason: "Storage not initialized".to_string(),
+            })
+        })?;
 
         // Stage 1: k1 = f(t, y)
         *k1 = rhs_fn(field)?;
