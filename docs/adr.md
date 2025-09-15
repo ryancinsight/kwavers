@@ -33,12 +33,36 @@ Selected Rust as the primary implementation language for the Kwavers library.
 
 ---
 
-## ADR-002: Plugin-Based Architecture
+## ADR-002: Memory Safety in High-Performance Physics Code
+
+### Status
+**CRITICAL REVISION** - Production Safety Requirement
+
+### Context
+Original lock-free implementation in `state_lockfree.rs` contained critical memory safety violations with RefCell lifetime mismatches that would cause undefined behavior in production.
+
+### Decision
+**REMOVED** unsafe thread-local implementation and replaced with Arc<RwLock<>> pattern for guaranteed memory safety.
+
+### Rationale
+- **Memory Safety**: Eliminates use-after-free vulnerabilities from RefCell lifetime violations
+- **Production Compliance**: No unsafe code without rigorous invariant documentation
+- **Concurrent Safety**: Proper synchronization primitives instead of flawed lock-free patterns
+- **Maintainability**: Clear ownership semantics vs. complex unsafe pointer arithmetic
+
+### Consequences
+- **Positive**: Guaranteed memory safety, production-ready concurrent access
+- **Negative**: Slight performance cost vs. (broken) lock-free approach
+- **Trade-offs**: Safety over marginal performance gains
+
+---
+
+## ADR-003: Plugin-Based Architecture  
 
 ### Status
 **ACCEPTED** - Core Architecture Pattern
 
-### Context
+### Context  
 Need for extensible simulation framework supporting multiple physics models, numerical methods, and solver configurations.
 
 ### Decision
@@ -46,7 +70,7 @@ Implement a plugin-based architecture using Rust traits and dynamic dispatch whe
 
 ### Rationale
 - **Extensibility**: Easy addition of new physics models and numerical methods
-- **Modularity**: Clear separation of concerns between components
+- **Modularity**: Clear separation of concerns between components  
 - **SOLID Compliance**: Follows Open/Closed principle for extension without modification
 - **Testing**: Individual components can be tested in isolation
 - **Maintenance**: Reduces coupling between modules
