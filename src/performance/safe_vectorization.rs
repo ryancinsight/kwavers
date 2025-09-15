@@ -108,20 +108,28 @@ impl SafeVectorOps {
     pub fn add_arrays_chunked(a: &Array3<f64>, b: &Array3<f64>, chunk_size: usize) -> Array3<f64> {
         debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
 
-        let result: Vec<f64> = a
-            .as_slice()
-            .unwrap()
-            .chunks(chunk_size)
-            .zip(b.as_slice().unwrap().chunks(chunk_size))
-            .flat_map(|(a_chunk, b_chunk)| {
-                a_chunk
-                    .iter()
-                    .zip(b_chunk.iter())
-                    .map(|(a_val, b_val)| a_val + b_val)
-            })
-            .collect();
+        // Use safe iteration for non-contiguous arrays
+        if let (Some(a_slice), Some(b_slice)) = (a.as_slice(), b.as_slice()) {
+            let result: Vec<f64> = a_slice
+                .chunks(chunk_size)
+                .zip(b_slice.chunks(chunk_size))
+                .flat_map(|(a_chunk, b_chunk)| {
+                    a_chunk
+                        .iter()
+                        .zip(b_chunk.iter())
+                        .map(|(a_val, b_val)| a_val + b_val)
+                })
+                .collect();
 
-        Array3::from_shape_vec(a.dim(), result).expect("Shape and data length must match")
+            Array3::from_shape_vec(a.dim(), result).expect("Shape and data length must match")
+        } else {
+            // Fallback for non-contiguous arrays
+            let mut result = Array3::zeros(a.dim());
+            result.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((out, &a_val), &b_val)| {
+                *out = a_val + b_val;
+            });
+            result
+        }
     }
 }
 

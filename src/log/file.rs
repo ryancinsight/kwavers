@@ -29,8 +29,9 @@ impl Log for CombinedLogger {
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
             let message = format_record(record);
-            let mut file = self.file.lock().unwrap();
-            let _ = writeln!(file, "{message}");
+            if let Ok(mut file) = self.file.lock() {
+                let _ = writeln!(file, "{message}");
+            }
             if self.console {
                 println!("{message}");
             }
@@ -38,7 +39,9 @@ impl Log for CombinedLogger {
     }
 
     fn flush(&self) {
-        let _ = self.file.lock().unwrap().flush();
+        if let Ok(mut file) = self.file.lock() {
+            let _ = file.flush();
+        }
     }
 }
 

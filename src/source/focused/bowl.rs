@@ -182,62 +182,90 @@ impl BowlTransducer {
         // Calculate phase delays for focusing
         let focus_delays = self.calculate_focus_delays();
 
-        // Use parallel processing for efficiency
-        let source_slice = source.as_slice_mut().unwrap();
-        let (nx, ny, _nz) = (grid.nx, grid.ny, grid.nz);
-        let dx = grid.dx;
+        // Use parallel processing for efficiency with safe array access
+        if let Some(source_slice) = source.as_slice_mut() {
+            let (nx, ny, _nz) = (grid.nx, grid.ny, grid.nz);
+            let dx = grid.dx;
 
-        source_slice
-            .par_chunks_mut(nx * ny)
-            .enumerate()
-            .for_each(|(iz, chunk)| {
-                for iy in 0..ny {
-                    for ix in 0..nx {
-                        let idx = iy * nx + ix;
-                        if idx < chunk.len() {
-                            // Grid point position
-                            let x = ix as f64 * dx;
-                            let y = iy as f64 * dx;
-                            let z = iz as f64 * dx;
+            source_slice
+                .par_chunks_mut(nx * ny)
+                .enumerate()
+                .for_each(|(iz, chunk)| {
+                    for iy in 0..ny {
+                        for ix in 0..nx {
+                            let idx = iy * nx + ix;
+                            if idx < chunk.len() {
+                                // Grid point position
+                                let x = ix as f64 * dx;
+                                let y = iy as f64 * dx;
+                                let z = iz as f64 * dx;
 
-                            // Accumulate contributions from all elements
-                            let mut pressure = 0.0;
+                                // Accumulate contributions from all elements
+                                let mut pressure = 0.0;
 
-                            for (i, &pos) in self.element_positions.iter().enumerate() {
-                                // Distance from element to grid point
-                                let r = ((x - pos[0]).powi(2)
-                                    + (y - pos[1]).powi(2)
-                                    + (z - pos[2]).powi(2))
-                                .sqrt();
+                                for (i, &pos) in self.element_positions.iter().enumerate() {
+                                    // Distance from element to grid point
+                                    let r = ((x - pos[0]).powi(2)
+                                        + (y - pos[1]).powi(2)
+                                        + (z - pos[2]).powi(2))
+                                    .sqrt();
 
-                                if r > 0.0 {
-                                    // Apply directivity if enabled
-                                    let directivity = if self.config.apply_directivity {
-                                        self.calculate_directivity(i, [x, y, z])
-                                    } else {
-                                        1.0
-                                    };
+                                    if r > 0.0 {
+                                        // Apply directivity if enabled
+                                        let directivity = if self.config.apply_directivity {
+                                            self.calculate_directivity(i, [x, y, z])
+                                        } else {
+                                            1.0
+                                        };
 
-                                    // Phase with focusing delay
-                                    let phase =
-                                        omega * (time - focus_delays[i]) + self.config.phase;
+                                        // Phase with focusing delay
+                                        let phase =
+                                            omega * (time - focus_delays[i]) + self.config.phase;
 
-                                    // Pressure contribution with spherical spreading
-                                    let element_pressure = self.config.amplitude
-                                        * self.element_areas[i]
-                                        * directivity
-                                        * phase.sin()
-                                        / (4.0 * PI * r);
+                                        // Pressure contribution with spherical spreading
+                                        let element_pressure = self.config.amplitude
+                                            * self.element_areas[i]
+                                            * directivity
+                                            * phase.sin()
+                                            / (4.0 * PI * r);
 
-                                    pressure += element_pressure;
+                                        pressure += element_pressure;
+                                    }
                                 }
-                            }
 
-                            chunk[idx] = pressure;
+                                chunk[idx] = pressure;
+                            }
                         }
                     }
+                });
+        } else {
+            // Fallback for non-contiguous arrays
+            for iz in 0..grid.nz {
+                for iy in 0..grid.ny {
+                    for ix in 0..grid.nx {
+                        let x = ix as f64 * grid.dx;
+                        let y = iy as f64 * grid.dx;
+                        let z = iz as f64 * grid.dx;
+
+                        let mut pressure = 0.0;
+                        for (i, &pos) in self.element_positions.iter().enumerate() {
+                            let r = ((x - pos[0]).powi(2) + (y - pos[1]).powi(2) + (z - pos[2]).powi(2)).sqrt();
+                            if r > 0.0 {
+                                let directivity = if self.config.apply_directivity {
+                                    self.calculate_directivity(i, [x, y, z])
+                                } else {
+                                    1.0
+                                };
+                                let phase = omega * (time - focus_delays[i]) + self.config.phase;
+                                let element_pressure = self.config.amplitude * self.element_areas[i] * directivity * phase.sin() / (4.0 * PI * r);
+                                pressure += element_pressure;
+                            }
+                        }
+                        source[[ix, iy, iz]] = pressure;
+                    }
                 }
-            });
+            }
+        }
 
         Ok(source)
     }

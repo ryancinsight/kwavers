@@ -254,7 +254,7 @@ impl AcousticFieldKernel {
         let buffer_slice = staging_buffer.slice(..);
         let (sender, receiver) = futures::channel::oneshot::channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            sender.send(result).unwrap();
+            let _ = sender.send(result); // Ignore send errors on channel closure
         });
         
         self.device.poll(wgpu::Maintain::Wait);
@@ -272,8 +272,19 @@ impl AcousticFieldKernel {
         
         // Convert back to f64
         let mut result = Array3::zeros((nx, ny, nz));
-        for (i, &val) in result_f32.iter().enumerate() {
-            result.as_slice_mut().unwrap()[i] = val as f64;
+        if let Some(result_slice) = result.as_slice_mut() {
+            for (i, &val) in result_f32.iter().enumerate() {
+                if i < result_slice.len() {
+                    result_slice[i] = val as f64;
+                }
+            }
+        } else {
+            // Fallback for non-contiguous arrays
+            for (i, &val) in result_f32.iter().enumerate() {
+                if let Some(elem) = result.get_mut([i % nx, (i / nx) % ny, i / (nx * ny)]) {
+                    *elem = val as f64;
+                }
+            }
         }
         
         drop(data);

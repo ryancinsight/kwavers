@@ -53,7 +53,9 @@ impl AngularSpectrum {
         for mut row in spectrum.rows_mut() {
             let mut row_vec: Vec<Complex64> = row.to_vec();
             fft.process(&mut row_vec);
-            row.assign(&Array2::from_shape_vec((1, self.nx), row_vec).unwrap().row(0));
+            let row_array = Array2::from_shape_vec((1, self.nx), row_vec)
+                .map_err(|e| KwaversError::InvalidDimensions(format!("FFT row reshape failed: {}", e)))?;
+            row.assign(&row_array.row(0));
         }
         
         // Apply propagation in frequency domain
@@ -93,7 +95,9 @@ impl AngularSpectrum {
         for mut row in spectrum.rows_mut() {
             let mut row_vec: Vec<Complex64> = row.to_vec();
             ifft.process(&mut row_vec);
-            row.assign(&Array2::from_shape_vec((1, self.nx), row_vec).unwrap().row(0));
+            let row_array = Array2::from_shape_vec((1, self.nx), row_vec)
+                .map_err(|e| KwaversError::InvalidDimensions(format!("IFFT row reshape failed: {}", e)))?;
+            row.assign(&row_array.row(0));
         }
         
         // Normalize
