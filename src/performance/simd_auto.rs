@@ -142,28 +142,31 @@ impl SimdAuto {
     fn add_avx512(&self, a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         use std::arch::x86_64::*;
 
-        let a_slice = a.as_slice().unwrap();
-        let b_slice = b.as_slice().unwrap();
-        let out_slice = out.as_slice_mut().unwrap();
+        // Safe access to slices with fallback
+        if let (Some(a_slice), Some(b_slice), Some(out_slice)) = 
+            (a.as_slice(), b.as_slice(), out.as_slice_mut()) {
+            let chunks = a_slice.len() / 8;
+            let remainder = a_slice.len() % 8;
 
-        let chunks = a_slice.len() / 8;
-        let remainder = a_slice.len() % 8;
-
-        // SAFETY: AVX-512 is available (checked in detect())
-        unsafe {
-            for i in 0..chunks {
-                let idx = i * 8;
-                let va = _mm512_loadu_pd(&a_slice[idx]);
-                let vb = _mm512_loadu_pd(&b_slice[idx]);
-                let vr = _mm512_add_pd(va, vb);
-                _mm512_storeu_pd(&mut out_slice[idx], vr);
+            // SAFETY: AVX-512 is available (checked in detect())
+            unsafe {
+                for i in 0..chunks {
+                    let idx = i * 8;
+                    let va = _mm512_loadu_pd(&a_slice[idx]);
+                    let vb = _mm512_loadu_pd(&b_slice[idx]);
+                    let vr = _mm512_add_pd(va, vb);
+                    _mm512_storeu_pd(&mut out_slice[idx], vr);
+                }
             }
-        }
 
-        // Handle remainder
-        let remainder_start = chunks * 8;
-        for i in remainder_start..a_slice.len() {
-            out_slice[i] = a_slice[i] + b_slice[i];
+            // Handle remainder
+            let remainder_start = chunks * 8;
+            for i in remainder_start..a_slice.len() {
+                out_slice[i] = a_slice[i] + b_slice[i];
+            }
+        } else {
+            // Fallback for non-contiguous arrays
+            self.add_swar(a, b, out);
         }
     }
 

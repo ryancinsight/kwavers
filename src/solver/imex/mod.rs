@@ -212,6 +212,7 @@ pub struct IMEXIntegrator {
     /// Stability analyzer
     stability_analyzer: IMEXStabilityAnalyzer,
     /// Grid reference
+    #[allow(dead_code)]
     grid: Arc<Grid>,
 }
 

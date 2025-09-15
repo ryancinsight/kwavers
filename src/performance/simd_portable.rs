@@ -86,24 +86,29 @@ impl SimdProcessor {
     fn add_arrays_swar(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
         let mut result = Array3::zeros(a.dim());
 
-        // Process 2 elements at a time using u128 for 2xf64
-        let a_slice = a.as_slice().unwrap();
-        let b_slice = b.as_slice().unwrap();
-        let result_slice = result.as_slice_mut().unwrap();
+        // Safe access to slices with fallback
+        if let (Some(a_slice), Some(b_slice), Some(result_slice)) = 
+            (a.as_slice(), b.as_slice(), result.as_slice_mut()) {
+            // Process 2 elements at a time using u128 for 2xf64
+            let chunks = a_slice.len() / 2;
+            let remainder_start = chunks * 2;
 
-        let chunks = a_slice.len() / 2;
-        let remainder_start = chunks * 2;
+            for i in 0..chunks {
+                let idx = i * 2;
+                // SWAR: Process two f64 values simultaneously
+                result_slice[idx] = a_slice[idx] + b_slice[idx];
+                result_slice[idx + 1] = a_slice[idx + 1] + b_slice[idx + 1];
+            }
 
-        for i in 0..chunks {
-            let idx = i * 2;
-            // SWAR: Process two f64 values simultaneously
-            result_slice[idx] = a_slice[idx] + b_slice[idx];
-            result_slice[idx + 1] = a_slice[idx + 1] + b_slice[idx + 1];
-        }
-
-        // Handle remainder
-        for i in remainder_start..a_slice.len() {
-            result_slice[i] = a_slice[i] + b_slice[i];
+            // Handle remainder
+            for i in remainder_start..a_slice.len() {
+                result_slice[i] = a_slice[i] + b_slice[i];
+            }
+        } else {
+            // Fallback for non-contiguous arrays
+            result.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((out, &a_val), &b_val)| {
+                *out = a_val + b_val;
+            });
         }
 
         result

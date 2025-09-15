@@ -176,7 +176,7 @@ impl CacheProfiler {
     /// Get current cache profile
     #[must_use]
     pub fn profile(&self) -> CacheProfile {
-        self.profile.lock().unwrap().clone()
+        self.profile.lock().map(|p| p.clone()).unwrap_or_else(|_| CacheProfile::new())
     }
 
     /// Clear cache statistics

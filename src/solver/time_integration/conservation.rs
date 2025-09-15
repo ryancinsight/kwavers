@@ -248,30 +248,28 @@ impl ConservationMonitor {
         let has_velocity = velocity_x.is_some() && velocity_y.is_some() && velocity_z.is_some();
 
         if has_velocity {
-            // Complete acoustic energy computation
-            let vx = velocity_x.unwrap();
-            let vy = velocity_y.unwrap();
-            let vz = velocity_z.unwrap();
+            // Complete acoustic energy computation with safe access
+            if let (Some(vx), Some(vy), Some(vz)) = (velocity_x, velocity_y, velocity_z) {
+                Zip::indexed(pressure).and(vx).and(vy).and(vz).for_each(
+                    |(i, j, k), &p, &vx_val, &vy_val, &vz_val| {
+                        let x = i as f64 * self.grid.dx;
+                        let y = j as f64 * self.grid.dy;
+                        let z = k as f64 * self.grid.dz;
 
-            Zip::indexed(pressure).and(vx).and(vy).and(vz).for_each(
-                |(i, j, k), &p, &vx_val, &vy_val, &vz_val| {
-                    let x = i as f64 * self.grid.dx;
-                    let y = j as f64 * self.grid.dy;
-                    let z = k as f64 * self.grid.dz;
+                        let density = crate::medium::density_at(medium, x, y, z, &self.grid);
+                        let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
 
-                    let density = crate::medium::density_at(medium, x, y, z, &self.grid);
-                    let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                        // Potential energy density: Ep = p²/(2ρc²)
+                        let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
 
-                    // Potential energy density: Ep = p²/(2ρc²)
-                    let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
+                        // Kinetic energy density: Ek = ρv²/2
+                        let kinetic_energy =
+                            0.5 * density * (vx_val * vx_val + vy_val * vy_val + vz_val * vz_val);
 
-                    // Kinetic energy density: Ek = ρv²/2
-                    let kinetic_energy =
-                        0.5 * density * (vx_val * vx_val + vy_val * vy_val + vz_val * vz_val);
-
-                    total_energy += (potential_energy + kinetic_energy) * dv;
-                },
-            );
+                        total_energy += (potential_energy + kinetic_energy) * dv;
+                    },
+                );
+            }
         } else {
             // Potential energy only
             Zip::indexed(pressure).for_each(|(i, j, k), &p| {

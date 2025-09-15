@@ -57,7 +57,9 @@ pub trait AcousticSolver: Send + Sync {
 pub struct SolverMetrics {
     total_steps: usize,
     total_time: f64,
+    #[allow(dead_code)]
     fft_time: f64,
+    #[allow(dead_code)]
     nonlinear_time: f64,
 }
 

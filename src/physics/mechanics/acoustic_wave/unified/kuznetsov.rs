@@ -10,6 +10,7 @@ use super::solver::AcousticSolver;
 #[derive(Debug)]
 pub struct KuznetsovSolver {
     config: AcousticSolverConfig,
+    #[allow(dead_code)]
     grid: Grid,
     velocity_potential: Array3<f64>,
 }
@@ -162,12 +163,16 @@ fn compute_nonlinear_term(
 }
 
 /// Compute diffusion term for thermoviscous losses
-fn compute_diffusion_term(pressure: &Array3<f64>, _medium: &dyn Medium, grid: &Grid) -> Array3<f64> {
+fn compute_diffusion_term(
+    pressure: &Array3<f64>,
+    _medium: &dyn Medium,
+    grid: &Grid,
+) -> Array3<f64> {
     // Diffusivity of sound: δ = (4μ/3 + μ_B)/(ρ₀c₀²)
     // where μ is shear viscosity, μ_B is bulk viscosity
 
     let laplacian_p = compute_laplacian(pressure, grid);
-    
+
     // Apply diffusion coefficient
     // Note: This requires viscosity properties from medium
     // Using simplified constant diffusivity for now

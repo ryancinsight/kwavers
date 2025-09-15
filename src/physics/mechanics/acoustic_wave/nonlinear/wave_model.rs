@@ -66,6 +66,7 @@ pub struct NonlinearWave {
     /// Scaling factor for the nonlinearity term, allowing adjustment for strong nonlinear effects.
     pub(crate) nonlinearity_scaling: f64,
     /// Flag to enable or disable adaptive time-stepping for potentially more stable simulations.
+    #[allow(dead_code)]
     pub(crate) use_adaptive_timestep: bool,
 
     // Precomputed arrays
@@ -84,12 +85,15 @@ pub struct NonlinearWave {
 
     // Iterator optimization settings
     /// Chunk size for cache-friendly processing
+    #[allow(dead_code)]
     pub(crate) chunk_size: usize,
     /// Whether to use chunked processing for large grids
+    #[allow(dead_code)]
     pub(crate) use_chunked_processing: bool,
 
     // Multi-frequency simulation support
     /// Configuration for multi-frequency analysis
+    #[allow(dead_code)]
     pub(crate) multi_freq_config: Option<MultiFrequencyConfig>,
 
     // Frequency-dependent physics
@@ -104,8 +108,11 @@ pub struct NonlinearWave {
     /// Time step size for the simulation [s]
     pub(crate) dt: f64,
     /// Spatial step sizes [m]
+    #[allow(dead_code)]
     pub(crate) dx: f64,
+    #[allow(dead_code)]
     pub(crate) dy: f64,
+    #[allow(dead_code)]
     pub(crate) dz: f64,
 }
 

@@ -75,8 +75,10 @@ impl TimingSummary {
         let count = measurements.len();
         let total: Duration = measurements.iter().sum();
         let mean = total / count as u32;
-        let min = *measurements.iter().min().unwrap();
-        let max = *measurements.iter().max().unwrap();
+        
+        // Safe min/max calculation
+        let min = measurements.iter().min().copied().unwrap_or_default();
+        let max = measurements.iter().max().copied().unwrap_or_default();
 
         // Calculate standard deviation
         let mean_secs = mean.as_secs_f64();

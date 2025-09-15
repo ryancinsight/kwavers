@@ -2,12 +2,12 @@
 //!
 //! This module provides exact compatibility with k-Wave MATLAB toolbox,
 //! implementing the core algorithms following GRASP architectural principles.
-//! 
+//!
 //! ## Architecture
-//! 
+//!
 //! Modules are organized by concern (<500 lines each, GRASP compliance):
 //! - `config`: Configuration types and enums
-//! - `solver`: Core solver implementation 
+//! - `solver`: Core solver implementation
 //! - `data`: Internal data structures
 //! - `utils`: Helper functions
 //! - `operators`: k-space and differential operators

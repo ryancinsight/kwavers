@@ -47,30 +47,39 @@ impl SimdOps {
     /// Compute field norm using SIMD-friendly reduction
     #[must_use]
     pub fn field_norm(field: ArrayView3<'_, f64>) -> f64 {
-        field
-            .as_slice()
-            .unwrap()
-            .par_chunks(SIMD_LANES * 16) // Process multiple SIMD vectors at once
-            .map(|chunk| chunk.iter().map(|&x| x * x).sum::<f64>())
-            .sum::<f64>()
-            .sqrt()
+        // Use safe iteration for non-contiguous arrays
+        if let Some(slice) = field.as_slice() {
+            slice
+                .par_chunks(SIMD_LANES * 16) // Process multiple SIMD vectors at once
+                .map(|chunk| chunk.iter().map(|&x| x * x).sum::<f64>())
+                .sum::<f64>()
+                .sqrt()
+        } else {
+            // Fallback for non-contiguous arrays
+            field.iter().map(|&x| x * x).sum::<f64>().sqrt()
+        }
     }
 
     /// Compute dot product using SIMD-friendly patterns
     #[must_use]
     pub fn dot_product(a: ArrayView3<'_, f64>, b: ArrayView3<'_, f64>) -> f64 {
-        a.as_slice()
-            .unwrap()
-            .par_chunks(SIMD_LANES * 16)
-            .zip(b.as_slice().unwrap().par_chunks(SIMD_LANES * 16))
-            .map(|(a_chunk, b_chunk)| {
-                a_chunk
-                    .iter()
-                    .zip(b_chunk.iter())
-                    .map(|(&a, &b)| a * b)
-                    .sum::<f64>()
-            })
-            .sum()
+        // Use safe iteration for non-contiguous arrays
+        if let (Some(a_slice), Some(b_slice)) = (a.as_slice(), b.as_slice()) {
+            a_slice
+                .par_chunks(SIMD_LANES * 16)
+                .zip(b_slice.par_chunks(SIMD_LANES * 16))
+                .map(|(a_chunk, b_chunk)| {
+                    a_chunk
+                        .iter()
+                        .zip(b_chunk.iter())
+                        .map(|(&a, &b)| a * b)
+                        .sum::<f64>()
+                })
+                .sum()
+        } else {
+            // Fallback for non-contiguous arrays
+            a.iter().zip(b.iter()).map(|(&a, &b)| a * b).sum()
+        }
     }
 
     /// Apply stencil operation with SIMD-friendly access patterns

@@ -17,7 +17,7 @@ use num_traits::Float;
 /// where v is particle velocity and p is pressure
 ///
 /// # Generic Implementation
-/// 
+///
 /// This function supports both f32 and f64 precision through num_traits::Float bounds,
 /// eliminating the hardcoded f64 antipattern identified in the audit.
 fn calculate_acoustic_energy<T>(
@@ -30,13 +30,13 @@ fn calculate_acoustic_energy<T>(
     dx: T,
     dy: T,
     dz: T,
-) -> T 
-where 
+) -> T
+where
     T: num_traits::Float + std::default::Default + std::iter::Sum,
 {
     let dv = dx * dy * dz; // Volume element
     let half = T::from(0.5).unwrap();
-    
+
     Zip::from(pressure)
         .and(velocity_x)
         .and(velocity_y)

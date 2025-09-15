@@ -202,7 +202,8 @@ impl WavefieldModeler {
     /// Apply PML boundary conditions
     /// Based on Berenger (1994): "A perfectly matched layer for the absorption of electromagnetic waves"
     /// Journal of Computational Physics, 114(2), 185-200
-        fn apply_pml(&self, wavefield: &mut Array3<f64>) {
+    #[allow(dead_code)]
+    fn apply_pml(&self, wavefield: &mut Array3<f64>) {
         let (nx, ny, nz) = wavefield.dim();
         let width = self.pml_width;
 
@@ -249,7 +250,8 @@ impl WavefieldModeler {
 
     /// Apply finite difference stencil for wave equation
     /// 4th order accurate in space, 2nd order in time
-        fn apply_fd_stencil(
+    #[allow(dead_code)]
+    fn apply_fd_stencil(
         &self,
         current: &Array3<f64>,
         previous: &Array3<f64>,

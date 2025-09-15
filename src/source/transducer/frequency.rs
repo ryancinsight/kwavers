@@ -129,7 +129,7 @@ impl FrequencyResponse {
         let max_idx = magnitude
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map_or(0, |(i, _)| i);
 
         // Search for -3dB points

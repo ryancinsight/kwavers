@@ -27,7 +27,10 @@ fn test_point_source_propagation() {
     let boundary = PMLBoundary::new(pml_config).expect("Failed to create PML boundary");
 
     // Create source
-    let source = PointSource::new((32.0, 32.0, 32.0), Arc::new(kwavers::signal::sine_wave::SineWave::new(1e6, 1.0, 0.0)));
+    let source = PointSource::new(
+        (32.0, 32.0, 32.0),
+        Arc::new(kwavers::signal::sine_wave::SineWave::new(1e6, 1.0, 0.0)),
+    );
 
     // Create time settings
     let time = Time::new(1e-7, 100); // Small timestep, 100 steps

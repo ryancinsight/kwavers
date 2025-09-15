@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 3: Acoustic absorption validation
     test_acoustic_absorption()?;
-    
+
     Ok(())
 }
 

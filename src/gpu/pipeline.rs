@@ -109,7 +109,7 @@ impl PipelineLayout {
         name: &str,
         bind_group_layouts: &[&wgpu::BindGroupLayout],
         push_constant_ranges: &[wgpu::PushConstantRange],
-    ) -> &wgpu::PipelineLayout {
+    ) -> Result<&wgpu::PipelineLayout, crate::error::KwaversError> {
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some(name),
             bind_group_layouts,
@@ -117,7 +117,12 @@ impl PipelineLayout {
         });
 
         self.layouts.insert(name.to_string(), layout);
-        self.layouts.get(name).unwrap()
+        self.layouts.get(name).ok_or_else(|| {
+            crate::error::KwaversError::System(crate::error::SystemError::ResourceExhausted {
+                resource: format!("Pipeline layout '{}'", name),
+                reason: "Layout not found after creation".to_string(),
+            })
+        })
     }
 
     /// Get a pipeline layout by name

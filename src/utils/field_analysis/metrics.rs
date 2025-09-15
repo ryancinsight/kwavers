@@ -121,7 +121,7 @@ fn calculate_beam_width_at_location(
     let iz = (location[2] / grid.dz).round() as usize;
 
     // Measure width in x and y directions
-    
+
     // X direction
     let mut left = ix;
     let mut right = ix;

@@ -6,12 +6,12 @@
 use ndarray::Array3;
 
 /// Add two fields using AVX2 instructions
-/// 
+///
 /// SAFETY REQUIREMENTS:
 /// - AVX2 must be available (checked by caller)
 /// - Input slices must have equal length
 /// - Memory accesses are bounds-checked through slice operations
-/// 
+///
 /// Performance characteristics:
 /// - 4x parallelism for main chunks (AVX2 256-bit operations)
 /// - Remainder handled sequentially to maintain correctness
@@ -67,13 +67,11 @@ pub fn add_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
 #[inline]
 unsafe fn scale_field_avx2_inner(field: &[f64], scalar: f64, out: &mut [f64]) {
     unsafe {
-        use std::arch::x86_64::{
-            _mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_storeu_pd,
-        };
+        use std::arch::x86_64::{_mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_storeu_pd};
 
         let vs = _mm256_set1_pd(scalar);
         let chunks = field.len() / 4;
-        
+
         for i in 0..chunks {
             let offset = i * 4;
             let vfield = _mm256_loadu_pd(field.as_ptr().add(offset));

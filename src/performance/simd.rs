@@ -22,15 +22,23 @@ impl SimdOps {
     /// # Safety
     /// Portable SIMD-aware field addition using iterator combinators
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        // Use iterator combinators for auto-vectorization
-        out.as_slice_mut()
-            .unwrap()
-            .iter_mut()
-            .zip(a.as_slice().unwrap())
-            .zip(b.as_slice().unwrap())
-            .for_each(|((o, &a_val), &b_val)| {
+        // Use safe iteration for non-contiguous arrays
+        if let (Some(out_slice), Some(a_slice), Some(b_slice)) = 
+            (out.as_slice_mut(), a.as_slice(), b.as_slice()) {
+            // Use iterator combinators for auto-vectorization
+            out_slice
+                .iter_mut()
+                .zip(a_slice)
+                .zip(b_slice)
+                .for_each(|((o, &a_val), &b_val)| {
+                    *o = a_val + b_val;
+                });
+        } else {
+            // Fallback for non-contiguous arrays
+            out.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((o, &a_val), &b_val)| {
                 *o = a_val + b_val;
             });
+        }
     }
 
     /// Legacy AVX2 implementation - replaced with portable SIMD

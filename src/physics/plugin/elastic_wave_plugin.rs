@@ -22,6 +22,7 @@ pub struct ElasticWavePlugin {
     /// Plugin state
     state: PluginState,
     /// Core elastic wave solver
+    #[allow(dead_code)]
     solver: ElasticWave,
     /// Stress field components (6 components: xx, yy, zz, xy, xz, yz)
     stress_fields: ElasticStressFields,

@@ -35,7 +35,8 @@ fn test_fdtd_solver() {
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
-    ).expect("Failed to create grid");
+    )
+    .expect("Failed to create grid");
     let medium = HomogeneousMedium::water(&grid);
 
     // Initialize fields array (7 components: pressure, vx, vy, vz, temperature, density, source)
@@ -96,7 +97,8 @@ fn test_pstd_solver() {
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
-    ).expect("Failed to create grid");
+    )
+    .expect("Failed to create grid");
     let medium = HomogeneousMedium::water(&grid);
 
     // Initialize fields array
@@ -163,7 +165,8 @@ fn test_wave_propagation() {
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
         TEST_GRID_SPACING,
-    ).expect("Failed to create grid");
+    )
+    .expect("Failed to create grid");
     let medium = HomogeneousMedium::water(&grid);
 
     // Initialize fields with Gaussian pulse

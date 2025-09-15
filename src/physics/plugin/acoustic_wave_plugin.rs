@@ -22,6 +22,7 @@ pub struct AcousticWavePlugin {
     /// Previous pressure for time integration
     prev_pressure: Option<Array3<f64>>,
     /// CFL number for stability
+    #[allow(dead_code)]
     cfl_number: f64,
 }
 

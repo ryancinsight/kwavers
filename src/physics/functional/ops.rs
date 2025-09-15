@@ -119,7 +119,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
         // Optimized parallel implementation using rayon
         // Leverages work-stealing for optimal load balancing
         use rayon::prelude::*;
-        
+
         let shape = self.dim();
         let result: Vec<U> = self
             .iter()
@@ -128,8 +128,7 @@ impl<T: Clone + Send + Sync> FieldOps for Array3<T> {
             .map(f)
             .collect();
 
-        Array3::from_shape_vec(shape, result)
-            .expect("Shape mismatch in parallel map operation")
+        Array3::from_shape_vec(shape, result).expect("Shape mismatch in parallel map operation")
     }
 
     fn find_element<F>(&self, predicate: F) -> Option<((usize, usize, usize), &Self::Item)>

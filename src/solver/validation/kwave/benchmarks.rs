@@ -164,39 +164,39 @@ impl KWaveBenchmarks {
     /// Based on Pierce (2019): "Acoustics", Chapter 4.1
     pub fn point_source_pattern() -> KwaversResult<BenchmarkResult> {
         use crate::physics::constants::SOUND_SPEED_WATER;
-        
+
         // Create test parameters
         let frequency = 1e6; // 1 MHz
         let wavelength = SOUND_SPEED_WATER / frequency;
         let source_amplitude = 1e5; // Pa
-        
+
         // Test grid
         let grid_size = 64;
         let dx = wavelength / 8.0; // 8 points per wavelength
         let center = grid_size / 2;
-        
+
         // Analytical solution for monopole point source
         // p(r,t) = (A / 4πr) * exp(i(kr - ωt))
         let mut max_error = 0.0f64;
         let mut sum_squared_error = 0.0f64;
         let mut num_points = 0;
-        
-        for i in 1..grid_size-1 {
-            for j in 1..grid_size-1 {
-                for k in 1..grid_size-1 {
+
+        for i in 1..grid_size - 1 {
+            for j in 1..grid_size - 1 {
+                for k in 1..grid_size - 1 {
                     let dx_val = (i as f64 - center as f64) * dx;
                     let dy_val = (j as f64 - center as f64) * dx;
                     let dz_val = (k as f64 - center as f64) * dx;
                     let r = (dx_val * dx_val + dy_val * dy_val + dz_val * dz_val).sqrt();
-                    
+
                     if r > wavelength && r < 5.0 * wavelength {
                         // Analytical pressure amplitude at distance r
                         let analytical = source_amplitude / (4.0 * PI * r);
-                        
+
                         // Simulated result (simplified approximation for validation)
                         let k = 2.0 * PI / wavelength;
                         let simulated = source_amplitude / (4.0 * PI * r) * (k * r).cos();
-                        
+
                         let error = (simulated - analytical).abs() / analytical;
                         max_error = max_error.max(error);
                         sum_squared_error += error * error;
@@ -205,9 +205,9 @@ impl KWaveBenchmarks {
                 }
             }
         }
-        
+
         let rms_error = (sum_squared_error / num_points as f64).sqrt();
-        
+
         Ok(BenchmarkResult {
             test_name: "Point Source 1/r Decay (PSTD)".to_string(),
             max_error,
@@ -221,23 +221,23 @@ impl KWaveBenchmarks {
     /// Based on Kinsler et al. (2000): "Fundamentals of Acoustics", Section 5.4
     pub fn rigid_boundary_reflection() -> KwaversResult<BenchmarkResult> {
         use crate::physics::constants::SOUND_SPEED_WATER;
-        
+
         // Test parameters for normal incidence reflection
         let frequency: f64 = 1e6; // 1 MHz
         let _wavelength = SOUND_SPEED_WATER / frequency;
         let incident_amplitude: f64 = 1e5; // Pa
-        
+
         // For normal incidence on rigid boundary:
         // Reflection coefficient R = 1 (perfect reflection)
         // Total pressure = incident + reflected = 2 * incident
         let expected_pressure = 2.0 * incident_amplitude;
-        
+
         // Simple reflection calculation
         let reflection_coefficient: f64 = 1.0; // Rigid boundary
         let simulated_pressure = incident_amplitude * (1.0 + reflection_coefficient);
-        
+
         let error = (simulated_pressure - expected_pressure).abs() / expected_pressure;
-        
+
         Ok(BenchmarkResult {
             test_name: "Rigid Boundary Reflection".to_string(),
             max_error: error,
@@ -251,24 +251,24 @@ impl KWaveBenchmarks {
     /// Based on Fornberg (1988): "The pseudospectral method"
     pub fn numerical_dispersion() -> KwaversResult<BenchmarkResult> {
         use crate::physics::constants::SOUND_SPEED_WATER;
-        
+
         // Test parameters
         let c0 = SOUND_SPEED_WATER;
         let frequencies = vec![0.5e6, 1.0e6, 2.0e6, 5.0e6]; // Multiple frequencies
         let points_per_wavelength = vec![4.0, 6.0, 8.0, 10.0, 12.0];
-        
+
         let mut max_error = 0.0f64;
         let mut sum_squared_error = 0.0f64;
         let mut num_tests = 0;
-        
+
         for &freq in &frequencies {
             let wavelength = c0 / freq;
             let omega = 2.0 * PI * freq;
             let k_analytical = omega / c0;
-            
+
             for &ppw in &points_per_wavelength {
                 let dx = wavelength / ppw;
-                
+
                 // Numerical wavenumber for FDTD (2nd order)
                 // k_numerical = (2/dx) * arcsin(k_analytical * dx / 2)
                 let k_numerical = if k_analytical * dx / 2.0 < 1.0 {
@@ -276,19 +276,19 @@ impl KWaveBenchmarks {
                 } else {
                     k_analytical // Fallback for aliasing case
                 };
-                
+
                 // Phase velocity error
                 let c_numerical = omega / k_numerical;
                 let error = (c_numerical - c0).abs() / c0;
-                
+
                 max_error = max_error.max(error);
                 sum_squared_error += error * error;
                 num_tests += 1;
             }
         }
-        
+
         let rms_error = (sum_squared_error / num_tests as f64).sqrt();
-        
+
         Ok(BenchmarkResult {
             test_name: "Numerical Dispersion Analysis".to_string(),
             max_error,
@@ -335,7 +335,10 @@ mod tests {
         assert!(result.max_error > 0.0, "Should compute non-zero error");
         // Spectral accuracy implemented through PSTD methods
         // Achievement: <5% error through pseudospectral derivatives and FFT-based operations
-        assert!(result.max_error < 0.05, "Should achieve <5% error with spectral methods");
+        assert!(
+            result.max_error < 0.05,
+            "Should achieve <5% error with spectral methods"
+        );
     }
 
     #[test]

@@ -74,7 +74,7 @@ impl HeterogeneousMedium {
     /// Perform trilinear interpolation on a field
     #[allow(dead_code)]
     #[inline]
-        fn trilinear_interpolate(
+    fn trilinear_interpolate(
         &self,
         field: &Array3<f64>,
         x: f64,
@@ -123,7 +123,7 @@ impl HeterogeneousMedium {
     /// Get value from field using either nearest neighbor or trilinear interpolation
     #[allow(dead_code)]
     #[inline]
-        fn get_field_value(&self, field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
+    fn get_field_value(&self, field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         if self.use_trilinear_interpolation {
             self.trilinear_interpolate(field, x, y, z, grid)
         } else {

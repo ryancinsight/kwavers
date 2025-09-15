@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_oneil_solution() {
         use approx::assert_relative_eq;
-        
+
         let bowl = make_bowl(0.064, 0.064, [0.0, 0.0, 0.0], 1e6, 1e6).unwrap();
 
         // Test O'Neil solution against theoretical expectations
@@ -171,12 +171,12 @@ mod tests {
         let focus_distance = 0.064; // = radius of curvature
         let frequency = 1e6;
         let omega = 2.0 * PI * frequency;
-        
+
         // Test at time when sin is maximum (quarter period)
         let period = 1.0 / frequency;
         let time_max = period / 4.0;
         let p_focus_max = bowl.oneil_solution(focus_distance, time_max);
-        
+
         // At focus, the amplitude should match theoretical O'Neil solution
         // Expected amplitude = A * 2 * sin(kh/2) where h is bowl height
         let a = bowl.config.diameter / 2.0; // 0.032 m
@@ -184,23 +184,29 @@ mod tests {
         let k = 2.0 * PI * frequency / crate::physics::constants::SOUND_SPEED_WATER;
         let h = r - (r * r - a * a).sqrt(); // Bowl height
         let expected_amplitude = bowl.config.amplitude * 2.0 * (k * h / 2.0).sin() / focus_distance;
-        
+
         // The measured amplitude should match theoretical within 1%
         assert_relative_eq!(p_focus_max.abs(), expected_amplitude, epsilon = 0.01);
 
         // Test pressure variation with distance - O'Neil solution physics
         let p_near = bowl.oneil_solution(0.05, time_max).abs();
         let p_far = bowl.oneil_solution(0.1, time_max).abs();
-        
+
         // Validate focusing effect: pressure should be maximum near focus
         // For distances closer/farther than focus, amplitude should be lower
-        assert!(p_near < p_focus_max.abs(), "Pressure should be lower before focus");
-        assert!(p_far < p_focus_max.abs(), "Pressure should be lower after focus");
-        
+        assert!(
+            p_near < p_focus_max.abs(),
+            "Pressure should be lower before focus"
+        );
+        assert!(
+            p_far < p_focus_max.abs(),
+            "Pressure should be lower after focus"
+        );
+
         // Test temporal behavior: pressure should be sinusoidal
         let p_zero = bowl.oneil_solution(focus_distance, 0.0);
         let p_half_period = bowl.oneil_solution(focus_distance, period / 2.0);
-        
+
         // Half period should give opposite phase (within numerical precision)
         assert_relative_eq!(p_zero, -p_half_period, epsilon = 0.01);
     }

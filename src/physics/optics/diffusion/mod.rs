@@ -20,13 +20,20 @@ use std::time::Instant;
 pub struct LightDiffusion {
     pub fluence_rate: Array4<f64>,
     pub emission_spectrum: Array3<f64>,
+    #[allow(dead_code)]
     polarization: Option<Box<dyn PolarizationModelTrait>>,
+    #[allow(dead_code)]
     scattering: Option<ScatteringCalculator>,
+    #[allow(dead_code)]
     thermal: Option<PennesSolver>,
+    #[allow(dead_code)]
     enable_polarization: bool,
+    #[allow(dead_code)]
     enable_scattering: bool,
+    #[allow(dead_code)]
     enable_thermal: bool,
     // Performance metrics
+    #[allow(dead_code)]
     update_time: f64,
     fft_time: f64,
     diffusion_time: f64,

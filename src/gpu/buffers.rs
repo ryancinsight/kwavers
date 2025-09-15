@@ -142,7 +142,12 @@ impl BufferManager {
         self.total_memory += size;
         self.buffers.insert(name.to_string(), buffer);
 
-        Ok(self.buffers.get(name).unwrap())
+        self.buffers.get(name).ok_or_else(|| {
+            crate::error::KwaversError::System(crate::error::SystemError::ResourceExhausted {
+                resource: format!("GPU buffer '{}'", name),
+                reason: "Buffer not found after creation".to_string(),
+            })
+        })
     }
 
     /// Get buffer by name

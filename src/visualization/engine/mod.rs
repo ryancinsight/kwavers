@@ -196,7 +196,12 @@ impl VisualizationEngine {
 
     /// Update a visualization parameter
     pub fn update_parameter(&mut self, name: &str, value: f64) -> KwaversResult<()> {
-        let mut params = self.parameters.lock().unwrap();
+        let mut params = self.parameters.lock().map_err(|_| {
+            KwaversError::System(crate::error::SystemError::ResourceExhausted {
+                resource: "Visualization parameters mutex".to_string(),
+                reason: "Mutex poisoned".to_string(),
+            })
+        })?;
         params.insert(name.to_string(), value);
         debug!("Updated parameter {} = {}", name, value);
         Ok(())

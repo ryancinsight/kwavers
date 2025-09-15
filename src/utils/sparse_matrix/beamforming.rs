@@ -87,32 +87,33 @@ impl BeamformingMatrix {
         diagonal_loading: f64,
     ) -> CompressedSparseRowMatrix {
         let (n_elements, n_snapshots) = data.dim();
-        
+
         // Use coordinate matrix for efficient construction
         let mut coo = super::coo::CoordinateMatrix::create(n_elements, n_elements);
-        
+
         // Compute sample covariance: R = (1/N) * X * X^T + λI
         for i in 0..n_elements {
-            for j in i..n_elements { // Only upper triangular due to symmetry
+            for j in i..n_elements {
+                // Only upper triangular due to symmetry
                 let mut sum = 0.0;
-                
+
                 // Compute cross-correlation between elements i and j
                 for k in 0..n_snapshots {
                     sum += data[[i, k]] * data[[j, k]];
                 }
-                
+
                 let value = sum / n_snapshots as f64;
-                
+
                 // Add diagonal loading to diagonal elements
-                let final_value = if i == j { 
-                    value + diagonal_loading 
-                } else { 
-                    value 
+                let final_value = if i == j {
+                    value + diagonal_loading
+                } else {
+                    value
                 };
-                
+
                 if final_value.abs() > 1e-14 {
                     coo.add_triplet(i, j, final_value);
-                    
+
                     // Add symmetric element for off-diagonal
                     if i != j {
                         coo.add_triplet(j, i, final_value);
@@ -120,7 +121,7 @@ impl BeamformingMatrix {
                 }
             }
         }
-        
+
         coo.to_csr()
     }
 

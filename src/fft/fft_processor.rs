@@ -156,7 +156,11 @@ impl Fft3d {
     }
 
     /// Apply spectral derivative (k-space multiplication)
-    pub fn spectral_derivative(&mut self, field: &Array3<f64>, axis: usize) -> Result<Array3<f64>, KwaversError> {
+    pub fn spectral_derivative(
+        &mut self,
+        field: &Array3<f64>,
+        axis: usize,
+    ) -> Result<Array3<f64>, KwaversError> {
         // Forward FFT
         let mut spectrum = self.forward(field);
 
@@ -165,11 +169,13 @@ impl Fft3d {
             0 => self.get_kx(),
             1 => self.get_ky(),
             2 => self.get_kz(),
-            _ => return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "axis".to_string(),
-                value: axis.to_string(),
-                constraint: "Axis must be 0, 1, or 2".to_string(),
-            })),
+            _ => {
+                return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "axis".to_string(),
+                    value: axis.to_string(),
+                    constraint: "Axis must be 0, 1, or 2".to_string(),
+                }))
+            }
         };
 
         // Apply ik multiplication in k-space

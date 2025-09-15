@@ -87,7 +87,13 @@ impl KWaveSolver {
     fn initialize_kspace_operators(grid: &Grid) -> KwaversResult<(KSpaceData, f64)> {
         let (k_ops, k_max) = compute_k_operators(grid);
         let k_vec = (k_ops.kx.clone(), k_ops.ky.clone(), k_ops.kz.clone());
-        let kappa = compute_kspace_correction_factors(&k_vec.0, &k_vec.1, &k_vec.2, grid, crate::utils::spectral::CorrectionType::Liu1997);
+        let kappa = compute_kspace_correction_factors(
+            &k_vec.0,
+            &k_vec.1,
+            &k_vec.2,
+            grid,
+            crate::utils::spectral::CorrectionType::Liu1997,
+        );
 
         Ok((KSpaceData { kappa, k_vec }, k_max))
     }
@@ -132,7 +138,10 @@ impl KWaveSolver {
                 tau.fill(1.0);
                 eta.fill(0.1);
             }
-            AbsorptionMode::PowerLaw { alpha_coeff, alpha_power: _ } => {
+            AbsorptionMode::PowerLaw {
+                alpha_coeff,
+                alpha_power: _,
+            } => {
                 // Power law absorption implementation
                 tau.fill(1.0);
                 eta.fill(alpha_coeff);

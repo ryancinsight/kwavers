@@ -75,7 +75,7 @@ impl TimeCoupling for SubcyclingStrategy {
                         // Create a minimal context for physics advancement
                         // This follows the established plugin architecture pattern
                         let mut field_copy = field.clone(); // Working copy for updates
-                        
+
                         // Apply physics component evolution for local timestep
                         // Note: This is a simplified coupling - production implementation
                         // would use proper field transformations and boundary conditions
@@ -88,7 +88,7 @@ impl TimeCoupling for SubcyclingStrategy {
                                 }
                             }
                         }
-                        
+
                         // Update the field registry with evolved values
                         *field = field_copy;
                     }

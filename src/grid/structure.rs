@@ -183,8 +183,6 @@ impl Grid {
         Some((i.min(self.nx - 1), j.min(self.ny - 1), k.min(self.nz - 1)))
     }
 
-
-
     /// Create a zero-initialized field with grid dimensions
     #[inline]
     pub fn create_field(&self) -> ndarray::Array3<f64> {

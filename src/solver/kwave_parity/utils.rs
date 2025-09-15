@@ -53,11 +53,7 @@ pub(super) fn compute_kspace_correction(
 }
 
 /// Compute PML absorption operators
-pub(super) fn compute_pml_operators(
-    grid: &Grid,
-    pml_size: usize,
-    pml_alpha: f64,
-) -> Array3<f64> {
+pub(super) fn compute_pml_operators(grid: &Grid, pml_size: usize, pml_alpha: f64) -> Array3<f64> {
     let mut pml = Array3::ones((grid.nx, grid.ny, grid.nz));
 
     // Apply PML in each direction

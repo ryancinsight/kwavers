@@ -112,13 +112,12 @@ impl AngularSpectrum {
         let k = 2.0 * PI / wavelength;
         let sign = if forward { 1.0 } else { -1.0 };
 
-        // Convert to complex for FFT
-        let mut complex_field: Vec<Complex<f64>> = field
-            .as_slice()
-            .unwrap()
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect();
+        // Convert to complex for FFT - handle potentially non-contiguous arrays safely
+        let mut complex_field: Vec<Complex<f64>> = if let Some(slice) = field.as_slice() {
+            slice.iter().map(|&x| Complex::new(x, 0.0)).collect()
+        } else {
+            field.iter().map(|&x| Complex::new(x, 0.0)).collect()
+        };
 
         // Forward FFT
         let fft = self.fft_planner.plan_fft_forward(self.nx * self.ny);
