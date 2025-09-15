@@ -34,6 +34,13 @@ pub enum GridError {
         nz: usize,
         min: usize,
     },
+
+    /// Failed to convert grid spacing to target numeric type
+    #[error("Failed to convert grid spacing {value} to {target_type}")]
+    GridConversion {
+        value: f64,
+        target_type: &'static str,
+    },
 }
 
 // Note: From<GridError> for KwaversError is not needed as GridError is already
