@@ -65,7 +65,7 @@ pub(crate) mod mocks {
             1e6
         }
 
-        fn absorption(&self, i: usize, j: usize, k: usize) -> f64 {
+        fn absorption(&self, i: usize, j: usize, _k: usize) -> f64 {
             if self.position_dependent {
                 0.1 + 0.05 * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos())
             } else {

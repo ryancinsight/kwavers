@@ -42,6 +42,8 @@ pub use transducer_field::{TransducerFieldCalculatorPlugin, TransducerGeometry};
 pub enum PluginState {
     /// Plugin is created but not initialized
     Created,
+    /// Plugin is configured with parameters
+    Configured,
     /// Plugin is initialized and ready
     Initialized,
     /// Plugin is actively processing
