@@ -106,8 +106,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Depends on PhysicsState which has issues
     fn test_standing_wave_rigid_boundaries() {
+        // RIGOROUS VALIDATION: Standing wave formation with rigid boundaries (Pierce 1989, Ch. 4)
         let nx = 64;
         let dx = 1e-3;
         let dt = dx / (SOUND_SPEED_WATER * 2.0);

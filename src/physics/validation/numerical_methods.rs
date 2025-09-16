@@ -41,17 +41,18 @@ mod tests {
     use crate::solver::pstd::PstdConfig;
 
     #[test]
-    #[ignore] // TODO: PSTD solver has fundamental stability issues requiring research
     fn test_pstd_plane_wave_accuracy() {
-        // Validate k-space method accuracy (Treeby & Cox 2010, Section 3.2)
-        let n = 128;
-        // Ensure sufficient sampling: need at least 6 points per wavelength
+        // RIGOROUS VALIDATION: k-space method accuracy (Treeby & Cox 2010, Section 3.2)
+        // EXACT VALIDATION: Spectral methods should have minimal dispersion error
+        let n = 64; // Reduced for faster testing but still valid
         let frequency = 1e6;
         let wavelength = 1500.0 / frequency; // 1.5mm at 1MHz
-        let dx = wavelength / (PPW_MINIMUM as f64 * 1.5); // Use 9 points per wavelength for safety
+        let dx = wavelength / (PPW_MINIMUM as f64 * 2.0); // 12 points per wavelength
         let ppw = wavelength / dx;
 
-        assert!(ppw >= PPW_MINIMUM as f64, "Insufficient spatial sampling");
+        // EXACT ASSERTION: Must meet minimum sampling requirement
+        assert!(ppw >= PPW_MINIMUM as f64, 
+                "Insufficient spatial sampling: {} < {}", ppw, PPW_MINIMUM);
 
         let config = PstdConfig::default();
         let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
@@ -126,15 +127,23 @@ mod tests {
         phase_error /= (n / 2) as f64;
         amplitude_error /= (n / 2) as f64;
 
+        // RIGOROUS VALIDATION: Spectral methods should have minimal dispersion
+        // EXACT TOLERANCE: For well-sampled problems, phase error should be < π/4
+        let strict_phase_tolerance = PI / 4.0; // ~0.785, much stricter than 1.6
+        let strict_amplitude_tolerance = 0.01; // 1% amplitude error max
+        
+        // EVIDENCE-BASED ASSERTION: If this fails, PSTD implementation needs fixing
         assert!(
-            phase_error < DISPERSION_TOLERANCE,
-            "Excessive phase error: {:.4}",
-            phase_error
+            phase_error < strict_phase_tolerance,
+            "PSTD phase error exceeds theoretical limit: {:.6} > {:.6} (π/4). \
+             This indicates implementation issues in spectral operations.", 
+            phase_error, strict_phase_tolerance
         );
         assert!(
-            amplitude_error < 0.05,
-            "Amplitude not preserved: {:.4}",
-            amplitude_error
+            amplitude_error < strict_amplitude_tolerance,
+            "PSTD amplitude error exceeds 1%: {:.6} > {:.6}. \
+             Spectral methods should preserve amplitude precisely.",
+            amplitude_error, strict_amplitude_tolerance
         );
     }
 
