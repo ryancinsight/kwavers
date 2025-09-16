@@ -273,7 +273,7 @@ mod tests {
     use std::f64::consts::PI;
 
     #[test]
-    fn test_harmonic_generation() {
+    fn test_harmonic_generation() -> Result<(), crate::error::KwaversError> {
         // Test that nonlinear propagation generates harmonics
         let nx = 128;
         let ny = 1;
@@ -318,12 +318,13 @@ mod tests {
         for step in 0..100 {
             let pressure_next = solver.step(&pressure, &pressure_prev, &pressure_prev2);
 
-            // Debug: Check for NaN or extreme values
+            // Check for numerical instability and return proper error
             if pressure_next.iter().any(|p| p.is_nan() || p.abs() > 1e10) {
-                panic!(
-                    "Numerical instability at step {}: NaN or overflow detected",
-                    step
-                );
+                return Err(crate::error::KwaversError::Physics(
+                    crate::error::PhysicsError::NumericalInstabilityGeneral {
+                        message: format!("Numerical instability at step {}: NaN or overflow detected", step)
+                    }
+                ));
             }
 
             pressure_prev2.assign(&pressure_prev);
@@ -380,6 +381,8 @@ mod tests {
             fundamental_amp,
             second_harmonic_amp
         );
+        
+        Ok(())
     }
 
     #[test]

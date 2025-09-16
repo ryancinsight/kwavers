@@ -21,7 +21,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_kuznetsov_second_harmonic() {
+    fn test_kuznetsov_second_harmonic() -> Result<(), crate::error::KwaversError> {
         // RIGOROUS VALIDATION: Second harmonic generation (Hamilton & Blackstock 1998, Ch. 3)
         // EXACT PHYSICS: Weak nonlinearity theory predicts linear growth of 2nd harmonic
         let nx = 256;
@@ -97,7 +97,11 @@ mod tests {
                     step, max_p, has_nan
                 );
                 if has_nan {
-                    panic!("NaN detected at step {}", step);
+                    return Err(crate::error::KwaversError::Physics(
+                        crate::error::PhysicsError::NumericalInstabilityGeneral {
+                            message: format!("NaN detected at step {} during nonlinear harmonic test", step)
+                        }
+                    ));
                 }
             }
         }
@@ -184,6 +188,8 @@ mod tests {
                 "Unexpected second harmonic in linear regime: {:.6}", actual_ratio
             );
         }
+        
+        Ok(())
     }
 
     #[test]

@@ -13,8 +13,10 @@ pub enum PhysicsError {
         value: f64,
         reason: String,
     },
-    /// Numerical instability detected
+    /// Numerical instability detected with CFL violation
     NumericalInstability { timestep: f64, cfl_limit: f64 },
+    /// General numerical instability with custom message
+    NumericalInstabilityGeneral { message: String },
     /// Conservation law violation
     ConservationViolation {
         quantity: String,
@@ -88,6 +90,9 @@ impl fmt::Display for PhysicsError {
                     f,
                     "Numerical instability: timestep {timestep} exceeds CFL limit {cfl_limit}"
                 )
+            }
+            Self::NumericalInstabilityGeneral { message } => {
+                write!(f, "Numerical instability: {message}")
             }
             Self::ConservationViolation {
                 quantity,
