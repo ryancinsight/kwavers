@@ -39,8 +39,6 @@ pub struct LightDiffusion {
     diffusion_time: f64,
     effect_time: f64,
     call_count: usize,
-    // Precomputed arrays for better performance
-    d_inv: Option<Array3<f64>>,
 }
 
 impl LightDiffusion {
@@ -96,7 +94,6 @@ impl LightDiffusion {
             diffusion_time: 0.0,
             effect_time: 0.0,
             call_count: 0,
-            d_inv: None,
         }
     }
 }

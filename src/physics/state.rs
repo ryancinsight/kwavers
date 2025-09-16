@@ -220,27 +220,33 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Investigate compilation/execution hang
     fn test_physics_state_creation() {
+        // RIGOROUS VALIDATION: Physics state creation and field access must be fast and correct
         println!("Creating grid...");
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         println!("Creating PhysicsState...");
         let state = PhysicsState::new(grid);
-        println!("PhysicsState created");
+        println!("PhysicsState created successfully");
 
-        // Test field retrieval
+        // EXACT ASSERTION: Field retrieval must work correctly
         println!("Getting pressure field...");
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        println!("Got pressure field");
-        assert_eq!(pressure.shape(), &[10, 10, 10]);
+        println!("Got pressure field with shape: {:?}", pressure.shape());
+        
+        // EXACT VALIDATION: Dimensions must match grid exactly  
+        assert_eq!(pressure.shape(), &[10, 10, 10], 
+                   "Pressure field dimensions don't match grid");
 
-        // Test field initialization
+        // EXACT ASSERTION: Field initialization must be precise
         let mut state = state; // Make mutable for initialization
         state
             .initialize_field(field_indices::TEMPERATURE_IDX, 293.15)
             .unwrap();
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert!((temp[[5, 5, 5]] - 293.15).abs() < 1e-10);
+        
+        // EXACT VALIDATION: Initialization value must be preserved exactly
+        assert!((temp[[5, 5, 5]] - 293.15).abs() < f64::EPSILON,
+                "Temperature initialization failed: expected 293.15, got {}", temp[[5, 5, 5]]);
     }
 
     #[test]
@@ -291,28 +297,30 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix potential deadlock
     fn test_field_guard_deref() {
+        // RIGOROUS VALIDATION: Field access must be deadlock-free and correct
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
         let mut state = PhysicsState::new(grid);
 
-        // Initialize field
+        // EXACT ASSERTION: Field initialization must work precisely
         state
             .initialize_field(field_indices::PRESSURE_IDX, 101325.0)
             .unwrap();
 
-        // Test direct field access
+        // EXACT VALIDATION: Direct field access must return exact values
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(pressure[[0, 0, 0]], 101325.0);
+        assert_eq!(pressure[[0, 0, 0]], 101325.0, 
+                   "Pressure field initialization failed");
 
-        // Test mutable field access
+        // EXACT ASSERTION: Mutable field access must work without deadlocks
         {
             let mut temp = state.get_field_mut(field_indices::TEMPERATURE_IDX).unwrap();
             temp[[0, 0, 0]] = 273.15;
-        }
+        } // Scope ensures mutable borrow is dropped
 
-        // Verify write
+        // EXACT VALIDATION: Write operations must persist correctly
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert_eq!(temp[[0, 0, 0]], 273.15);
+        assert_eq!(temp[[0, 0, 0]], 273.15, 
+                   "Temperature field write operation failed");
     }
 }
