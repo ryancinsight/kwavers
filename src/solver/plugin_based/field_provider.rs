@@ -82,10 +82,10 @@ mod tests {
 
         // Register multiple fields
         registry
-            .register_field(UnifiedFieldType::Pressure, "Pressure".to_string())
+            .register_field(UnifiedFieldType::Pressure)
             .unwrap();
         registry
-            .register_field(UnifiedFieldType::Temperature, "Temperature".to_string())
+            .register_field(UnifiedFieldType::Temperature)
             .unwrap();
         registry.build().unwrap();
 

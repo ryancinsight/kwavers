@@ -13,8 +13,6 @@ use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 struct FieldMetadata {
     /// Index in the Array4
     index: usize,
-    /// Field description
-    description: String,
     /// Whether field is currently active
     active: bool,
 }
@@ -70,7 +68,6 @@ impl FieldRegistry {
     pub fn register_field(
         &mut self,
         field_type: UnifiedFieldType,
-        description: String,
     ) -> KwaversResult<()> {
         let idx = field_type as usize;
 
@@ -86,7 +83,6 @@ impl FieldRegistry {
 
         self.fields[idx] = Some(FieldMetadata {
             index: idx,
-            description,
             active: true,
         });
         self.next_data_index += 1;
@@ -101,9 +97,9 @@ impl FieldRegistry {
     }
 
     /// Register multiple fields at once
-    pub fn register_fields(&mut self, fields: &[(UnifiedFieldType, String)]) -> KwaversResult<()> {
-        for (field_type, description) in fields {
-            self.register_field(*field_type, description.clone())?;
+    pub fn register_fields(&mut self, fields: &[UnifiedFieldType]) -> KwaversResult<()> {
+        for field_type in fields {
+            self.register_field(*field_type)?;
         }
         Ok(())
     }
@@ -265,14 +261,11 @@ mod tests {
 
         // Register fields
         registry
-            .register_field(UnifiedFieldType::Pressure, "Pressure field".to_string())
+            .register_field(UnifiedFieldType::Pressure)
             .unwrap();
 
         registry
-            .register_field(
-                UnifiedFieldType::Temperature,
-                "Temperature field".to_string(),
-            )
+            .register_field(UnifiedFieldType::Temperature)
             .unwrap();
 
         // Build the registry

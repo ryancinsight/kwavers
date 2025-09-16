@@ -89,7 +89,7 @@ impl PluginBasedSolver {
         // Register required fields
         for field in plugin.required_fields() {
             self.field_registry
-                .register_field(field, format!("{} field", field.name()))?;
+                .register_field(field)?;
         }
 
         self.plugin_manager.add_plugin(plugin)?;
