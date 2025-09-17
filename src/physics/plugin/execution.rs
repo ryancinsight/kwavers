@@ -101,22 +101,20 @@ impl PluginExecutor {
 /// True parallelism would require architectural changes (read/write phase separation).
 #[derive(Debug)]
 pub struct ParallelStrategy {
-    thread_pool: Option<rayon::ThreadPool>,
+    // Future: thread_pool field will be added when parallel execution is implemented
 }
 
 impl ParallelStrategy {
     /// Create a new parallel execution strategy
     #[must_use]
     pub fn new() -> Self {
-        Self { thread_pool: None }
+        Self {}
     }
 
-    /// Create with a specific thread pool
+    /// Create with a specific thread pool (future implementation)
     #[must_use]
-    pub fn with_thread_pool(pool: rayon::ThreadPool) -> Self {
-        Self {
-            thread_pool: Some(pool),
-        }
+    pub fn with_thread_pool(_pool: rayon::ThreadPool) -> Self {
+        Self {}
     }
 }
 

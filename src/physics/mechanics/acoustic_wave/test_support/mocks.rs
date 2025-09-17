@@ -123,9 +123,9 @@ pub(crate) mod mocks {
     impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
         fn absorption_coefficient(
             &self,
-            x: f64,
-            y: f64,
-            z: f64,
+            _x: f64,
+            _y: f64,
+            _z: f64,
             grid: &Grid,
             frequency: f64,
         ) -> f64 {
@@ -184,7 +184,7 @@ pub(crate) mod mocks {
 
         fn tissue_type(&self, x: f64, y: f64, z: f64, grid: &Grid) -> Option<TissueType> {
             if self.position_dependent {
-                let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
+                let (_ix, _iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
 
                 // Simple tissue segmentation based on grid regions
                 if iz < grid.nz / 3 {

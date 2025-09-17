@@ -2,8 +2,6 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::solver::time_integration::coupling::SubcyclingStrategy;
-
     #[test]
     fn test_time_integration_module_compiles() {
         // Production-ready placeholder confirming architectural soundness

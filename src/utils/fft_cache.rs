@@ -109,7 +109,6 @@ pub fn get_fft_for_grid(grid: &Grid) -> Arc<ProcessorFft3d> {
 /// Modern parallel utilities using rayon
 pub mod parallel {
     use ndarray::{ArrayView3, ArrayViewMut3, Zip};
-    use rayon::prelude::*;
 
     /// Apply a function to each element in parallel
     pub fn par_map_inplace<F>(mut array: ArrayViewMut3<f64>, f: F)

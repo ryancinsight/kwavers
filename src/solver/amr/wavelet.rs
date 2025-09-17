@@ -107,23 +107,6 @@ impl WaveletTransform {
         Ok(())
     }
 
-    /// 1D Haar inverse transform
-    fn haar_1d_inverse(&self, coeffs: &[f64]) -> Vec<f64> {
-        let n = coeffs.len();
-        let mut result = vec![0.0; n];
-
-        // Reconstruct from averages and differences
-        for i in 0..n / 2 {
-            let avg = coeffs[i];
-            let diff = coeffs[n / 2 + i];
-
-            result[2 * i] = (avg + diff) / 2.0_f64.sqrt();
-            result[2 * i + 1] = (avg - diff) / 2.0_f64.sqrt();
-        }
-
-        result
-    }
-
     /// Daubechies wavelet forward transform
     fn daubechies_forward(&self, data: &mut Array3<f64>, _order: usize) -> KwaversResult<()> {
         // Daubechies wavelets require filter coefficients
