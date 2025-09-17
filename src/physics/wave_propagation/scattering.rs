@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_phase_function_normalization() {
-        let grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
+        let _grid = Grid::new(10, 10, 10, 1.0, 1.0, 1.0).unwrap();
         let vol = VolumeScattering {
             scattering_coefficient: Array3::from_elem((10, 10, 10), 1.0),
             anisotropy: Array3::from_elem((10, 10, 10), 1.0) * 0.9,

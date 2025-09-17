@@ -123,8 +123,8 @@ pub(crate) mod mocks {
     impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
         fn absorption_coefficient(
             &self,
-            _x: f64,
-            _y: f64,
+            x: f64,
+            y: f64,
             _z: f64,
             grid: &Grid,
             frequency: f64,
