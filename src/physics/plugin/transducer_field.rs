@@ -389,3 +389,79 @@ impl TransducerFieldCalculatorPlugin {
         Ok(heating)
     }
 }
+
+// Plugin trait implementation
+impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+
+    fn state(&self) -> PluginState {
+        self.state
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![] // No required fields - generates pressure from transducer definitions
+    }
+
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    }
+
+    fn update(
+        &mut self,
+        fields: &mut ndarray::Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        _dt: f64,
+        t: f64,
+        _context: &crate::physics::plugin::PluginContext,
+    ) -> KwaversResult<()> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        // Calculate frequency from time
+        let frequency = 1e6; // Default 1 MHz - should be configurable
+        
+        // Calculate pressure field from transducer geometries
+        let pressure_field = self.calculate_pressure_field(frequency, grid, medium)?;
+        
+        // Apply time-dependent modulation if needed
+        let time_factor = (2.0 * std::f64::consts::PI * frequency * t).sin();
+        let modulated_field = pressure_field.mapv(|p| p * time_factor);
+        
+        // Update pressure field in the fields array
+        let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        pressure_slice.assign(&modulated_field);
+        
+        Ok(())
+    }
+
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = PluginState::Initialized;
+        Ok(())
+    }
+
+    fn finalize(&mut self) -> KwaversResult<()> {
+        self.state = PluginState::Finalized;
+        self.sir_cache.clear();
+        Ok(())
+    }
+
+    fn reset(&mut self) -> KwaversResult<()> {
+        self.sir_cache.clear();
+        self.state = PluginState::Created;
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}

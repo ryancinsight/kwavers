@@ -282,3 +282,89 @@ impl KzkSolverPlugin {
         Ok(field.clone())
     }
 }
+
+// Plugin trait implementation
+impl crate::physics::plugin::Plugin for KzkSolverPlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+
+    fn state(&self) -> PluginState {
+        self.state
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    }
+
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    }
+
+    fn update(
+        &mut self,
+        fields: &mut ndarray::Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        _t: f64,
+        _context: &crate::physics::plugin::PluginContext,
+    ) -> KwaversResult<()> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        // Extract pressure field
+        let pressure_field = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let mut pressure_array = pressure_field.to_owned();
+        
+        // Apply one KZK step
+        if let Some(operators) = &self.frequency_operators {
+            self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
+            
+            // Get medium properties for nonlinear step
+            let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+            let c0 = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+            let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid);
+            
+            self.apply_nonlinear_step(&mut pressure_array, beta, density, c0, dt, grid)?;
+            self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
+            
+            // Update pressure field in the fields array
+            let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            pressure_slice.assign(&pressure_array);
+        }
+        
+        Ok(())
+    }
+
+    fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
+        // Use a default frequency for initialization
+        let default_freq = 1e6; // 1 MHz
+        self.initialize_operators(grid, medium, default_freq)?;
+        self.state = PluginState::Initialized;
+        Ok(())
+    }
+
+    fn finalize(&mut self) -> KwaversResult<()> {
+        self.state = PluginState::Finalized;
+        Ok(())
+    }
+
+    fn reset(&mut self) -> KwaversResult<()> {
+        self.frequency_operators = None;
+        self.retarded_time_window = None;
+        self.state = PluginState::Created;
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+}
