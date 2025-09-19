@@ -58,8 +58,10 @@ pub enum ScatteringRegime {
 #[derive(Debug)]
 pub struct ScatteringCalculator {
     /// Wave frequency [Hz]
+    #[allow(dead_code)]
     frequency: f64,
     /// Wavelength [m]
+    #[allow(dead_code)]
     wavelength: f64,
     /// Wave number k = 2π/λ
     wave_number: f64,

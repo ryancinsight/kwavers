@@ -143,8 +143,9 @@ impl SimdAuto {
         use std::arch::x86_64::*;
 
         // Safe access to slices with fallback
-        if let (Some(a_slice), Some(b_slice), Some(out_slice)) = 
-            (a.as_slice(), b.as_slice(), out.as_slice_mut()) {
+        if let (Some(a_slice), Some(b_slice), Some(out_slice)) =
+            (a.as_slice(), b.as_slice(), out.as_slice_mut())
+        {
             let chunks = a_slice.len() / 8;
             let remainder = a_slice.len() % 8;
 

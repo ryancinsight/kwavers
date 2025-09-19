@@ -5,12 +5,8 @@
 
 use crate::error::{KwaversError, KwaversResult, PhysicsError};
 use crate::physics::wave_propagation::{
-    coefficients::PropagationCoefficients,
-    fresnel::{FresnelCalculator, FresnelCoefficients},
-    interface::{Interface, InterfaceType},
-    medium::MediumProperties,
-    snell::SnellLawCalculator,
-    WaveMode, Polarization,
+    coefficients::PropagationCoefficients, fresnel::FresnelCalculator, interface::Interface,
+    snell::SnellLawCalculator, Polarization, WaveMode,
 };
 use std::f64::consts::PI;
 
@@ -39,13 +35,13 @@ impl WavePropagationCalculator {
             wavelength,
         }
     }
-    
+
     /// Get the wave number (k = 2π/λ)
     #[must_use]
     pub fn wave_number(&self) -> f64 {
         2.0 * PI / self.wavelength
     }
-    
+
     /// Calculate the Fresnel reflection coefficient for normal incidence
     #[must_use]
     pub fn normal_reflection_coefficient(&self) -> f64 {
@@ -53,7 +49,7 @@ impl WavePropagationCalculator {
         let z2 = self.interface.medium2.impedance();
         ((z2 - z1) / (z2 + z1)).abs()
     }
-    
+
     /// Check if frequency is appropriate for the wavelength assumption
     #[must_use]
     pub fn validate_frequency_wavelength_consistency(&self) -> bool {
@@ -180,7 +176,6 @@ mod tests {
         interface::{Interface, InterfaceType},
         medium::MediumProperties,
     };
-    use approx::assert_relative_eq;
 
     fn create_test_interface() -> Interface {
         Interface {
@@ -202,7 +197,7 @@ mod tests {
     fn test_calculator_creation() {
         let interface = create_test_interface();
         let calc = WavePropagationCalculator::new(WaveMode::Acoustic, interface, 1000.0);
-        
+
         assert!(calc.validate_frequency_wavelength_consistency());
         assert!(calc.wave_number() > 0.0);
     }
@@ -211,13 +206,13 @@ mod tests {
     fn test_normal_incidence() {
         let interface = create_test_interface();
         let calc = WavePropagationCalculator::new(WaveMode::Acoustic, interface, 1000.0);
-        
+
         let coeffs = calc.calculate_coefficients(0.0, None).unwrap();
-        
+
         // Energy conservation check
         let error = coeffs.energy_conservation_error();
         assert!(error < 1e-10, "Energy conservation error: {}", error);
-        
+
         // No total internal reflection at normal incidence
         assert!(!coeffs.total_internal_reflection);
         assert!(coeffs.transmitted_angle.is_some());

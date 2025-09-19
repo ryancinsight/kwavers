@@ -249,7 +249,10 @@ impl BowlTransducer {
 
                         let mut pressure = 0.0;
                         for (i, &pos) in self.element_positions.iter().enumerate() {
-                            let r = ((x - pos[0]).powi(2) + (y - pos[1]).powi(2) + (z - pos[2]).powi(2)).sqrt();
+                            let r = ((x - pos[0]).powi(2)
+                                + (y - pos[1]).powi(2)
+                                + (z - pos[2]).powi(2))
+                            .sqrt();
                             if r > 0.0 {
                                 let directivity = if self.config.apply_directivity {
                                     self.calculate_directivity(i, [x, y, z])
@@ -257,7 +260,11 @@ impl BowlTransducer {
                                     1.0
                                 };
                                 let phase = omega * (time - focus_delays[i]) + self.config.phase;
-                                let element_pressure = self.config.amplitude * self.element_areas[i] * directivity * phase.sin() / (4.0 * PI * r);
+                                let element_pressure = self.config.amplitude
+                                    * self.element_areas[i]
+                                    * directivity
+                                    * phase.sin()
+                                    / (4.0 * PI * r);
                                 pressure += element_pressure;
                             }
                         }

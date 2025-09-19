@@ -1,5 +1,5 @@
 //! Seismic Imaging Parameters and Configuration
-//! 
+//!
 //! Configuration structures for Full Waveform Inversion and Reverse Time Migration
 //! Following GRASP principles: Information Expert pattern for parameter management
 
@@ -138,7 +138,7 @@ impl Default for MigrationAperture {
     fn default() -> Self {
         Self {
             half_angle: std::f64::consts::PI / 6.0, // 30 degrees
-            max_distance: 1000.0, // 1km
+            max_distance: 1000.0,                   // 1km
             taper: TaperFunction::Cosine,
         }
     }

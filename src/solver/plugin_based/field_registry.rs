@@ -65,10 +65,7 @@ impl FieldRegistry {
     }
 
     /// Register a new field dynamically
-    pub fn register_field(
-        &mut self,
-        field_type: UnifiedFieldType,
-    ) -> KwaversResult<()> {
+    pub fn register_field(&mut self, field_type: UnifiedFieldType) -> KwaversResult<()> {
         let idx = field_type as usize;
 
         // Check if already registered
@@ -260,9 +257,7 @@ mod tests {
         let mut registry = FieldRegistry::new(&grid);
 
         // Register fields
-        registry
-            .register_field(UnifiedFieldType::Pressure)
-            .unwrap();
+        registry.register_field(UnifiedFieldType::Pressure).unwrap();
 
         registry
             .register_field(UnifiedFieldType::Temperature)

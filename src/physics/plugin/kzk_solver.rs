@@ -315,28 +315,32 @@ impl crate::physics::plugin::Plugin for KzkSolverPlugin {
         _context: &crate::physics::plugin::PluginContext,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
-        
+
         // Extract pressure field
-        let pressure_field = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure_field =
+            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         let mut pressure_array = pressure_field.to_owned();
-        
+
         // Apply one KZK step
         if let Some(operators) = &self.frequency_operators {
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
-            
+
             // Get medium properties for nonlinear step
             let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, grid);
             let c0 = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
-            let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, grid);
-            
+            let beta = crate::medium::AcousticProperties::nonlinearity_coefficient(
+                medium, 0.0, 0.0, 0.0, grid,
+            );
+
             self.apply_nonlinear_step(&mut pressure_array, beta, density, c0, dt, grid)?;
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
-            
+
             // Update pressure field in the fields array
-            let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            let mut pressure_slice =
+                fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
             pressure_slice.assign(&pressure_array);
         }
-        
+
         Ok(())
     }
 

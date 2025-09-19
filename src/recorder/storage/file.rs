@@ -11,6 +11,7 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct FileStorage {
     base_path: PathBuf,
+    #[allow(dead_code)]
     files: Vec<File>,
     shape: Option<(usize, usize, usize)>,
 }

@@ -54,13 +54,13 @@ impl AttenuationCalculator {
     pub fn frequency_dependent_absorption(&self, alpha_0: f64, power_law: f64) -> f64 {
         alpha_0 * self.frequency.powf(power_law)
     }
-    
+
     /// Calculate wave number (k = 2π/λ = 2πf/c)
-    #[must_use]  
+    #[must_use]
     pub fn wave_number(&self) -> f64 {
         2.0 * PI * self.frequency / self.wave_speed
     }
-    
+
     /// Calculate penetration depth (distance where amplitude drops to 1/e)
     #[must_use]
     pub fn penetration_depth(&self) -> f64 {
@@ -133,7 +133,7 @@ mod tests {
         let initial = 1.0;
         let distance = 10.0;
         let attenuated = calc.amplitude_at_distance(initial, distance);
-        let expected = initial * (-0.1 * 10.0).exp();
+        let expected = initial * (-0.1_f64 * 10.0).exp();
         assert_relative_eq!(attenuated, expected, epsilon = 1e-10);
     }
 
@@ -149,7 +149,7 @@ mod tests {
         let calc = AttenuationCalculator::new(0.1, 1000.0, 1500.0);
         let distance = 10.0;
         let db = calc.attenuation_db(distance);
-        let expected = 8.686 * 0.1 * 10.0;
+        let expected = 8.686_f64 * 0.1 * 10.0;
         assert_relative_eq!(db, expected, epsilon = 1e-10);
     }
 }

@@ -46,7 +46,7 @@ impl MediumProperties {
         const VACUUM_IMPEDANCE: f64 = 376.730313668; // Ohms
         VACUUM_IMPEDANCE / self.refractive_index
     }
-    
+
     /// Generic impedance calculation (defaults to acoustic impedance)
     #[must_use]
     pub fn impedance(&self) -> f64 {

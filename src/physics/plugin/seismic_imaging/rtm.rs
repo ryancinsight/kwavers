@@ -3,9 +3,9 @@
 //! RTM algorithm implementation following GRASP principles
 //! Reference: Baysal et al. (1983): "Reverse time migration"
 
+use super::parameters::{ImagingCondition, RtmSettings};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use super::parameters::{RtmSettings, ImagingCondition};
 use ndarray::Array3;
 
 /// Reverse Time Migration processor
@@ -39,7 +39,11 @@ impl RtmProcessor {
                 self.apply_zero_lag_correlation(&mut image, source_wavefield, receiver_wavefield);
             }
             ImagingCondition::Normalized => {
-                self.apply_normalized_correlation(&mut image, source_wavefield, receiver_wavefield)?;
+                self.apply_normalized_correlation(
+                    &mut image,
+                    source_wavefield,
+                    receiver_wavefield,
+                )?;
             }
         }
 
@@ -172,7 +176,7 @@ mod tests {
 
         let image = result.unwrap();
         assert_eq!(image.dim(), (10, 10, 10));
-        
+
         // For unit fields, zero-lag correlation should produce unit image
         assert!((image[[5, 5, 5]] - 1.0).abs() < f64::EPSILON);
     }
@@ -181,7 +185,7 @@ mod tests {
     fn test_laplacian_computation() {
         let processor = RtmProcessor::default();
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).unwrap();
-        
+
         // Create a field with known Laplacian
         let mut field = Array3::zeros((5, 5, 5));
         field[[2, 2, 2]] = 6.0; // Center point
@@ -191,9 +195,9 @@ mod tests {
         field[[2, 3, 2]] = 1.0;
         field[[2, 2, 1]] = 1.0;
         field[[2, 2, 3]] = 1.0;
-        
+
         let laplacian = processor.compute_laplacian_3d(&field, 2, 2, 2, &grid);
-        
+
         // Expected: (1+1-2*6) + (1+1-2*6) + (1+1-2*6) = -10 + -10 + -10 = -30
         assert!((laplacian + 30.0).abs() < f64::EPSILON);
     }

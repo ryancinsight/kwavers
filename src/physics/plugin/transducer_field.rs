@@ -422,21 +422,22 @@ impl crate::physics::plugin::Plugin for TransducerFieldCalculatorPlugin {
         _context: &crate::physics::plugin::PluginContext,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
-        
+
         // Calculate frequency from time
         let frequency = 1e6; // Default 1 MHz - should be configurable
-        
+
         // Calculate pressure field from transducer geometries
         let pressure_field = self.calculate_pressure_field(frequency, grid, medium)?;
-        
+
         // Apply time-dependent modulation if needed
         let time_factor = (2.0 * std::f64::consts::PI * frequency * t).sin();
         let modulated_field = pressure_field.mapv(|p| p * time_factor);
-        
+
         // Update pressure field in the fields array
-        let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let mut pressure_slice =
+            fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         pressure_slice.assign(&modulated_field);
-        
+
         Ok(())
     }
 

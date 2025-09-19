@@ -23,8 +23,9 @@ impl SimdOps {
     /// Portable SIMD-aware field addition using iterator combinators
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
         // Use safe iteration for non-contiguous arrays
-        if let (Some(out_slice), Some(a_slice), Some(b_slice)) = 
-            (out.as_slice_mut(), a.as_slice(), b.as_slice()) {
+        if let (Some(out_slice), Some(a_slice), Some(b_slice)) =
+            (out.as_slice_mut(), a.as_slice(), b.as_slice())
+        {
             // Use iterator combinators for auto-vectorization
             out_slice
                 .iter_mut()
@@ -35,9 +36,12 @@ impl SimdOps {
                 });
         } else {
             // Fallback for non-contiguous arrays
-            out.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((o, &a_val), &b_val)| {
-                *o = a_val + b_val;
-            });
+            out.iter_mut()
+                .zip(a.iter())
+                .zip(b.iter())
+                .for_each(|((o, &a_val), &b_val)| {
+                    *o = a_val + b_val;
+                });
         }
     }
 

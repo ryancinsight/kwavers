@@ -77,7 +77,11 @@ impl MixedDomainPropagationPlugin {
 
     /// Select optimal domain for propagation
     #[must_use]
-    pub fn select_optimal_domain(&self, field: &Array3<f64>, _grid: &Grid) -> KwaversResult<DomainSelection> {
+    pub fn select_optimal_domain(
+        &self,
+        field: &Array3<f64>,
+        _grid: &Grid,
+    ) -> KwaversResult<DomainSelection> {
         Ok(self.analyze_field(field))
     }
 
@@ -243,14 +247,15 @@ impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
         _context: &crate::physics::plugin::PluginContext,
     ) -> KwaversResult<()> {
         use crate::physics::field_mapping::UnifiedFieldType;
-        
+
         // Extract pressure field
-        let pressure_field = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure_field =
+            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         let pressure_array = pressure_field.to_owned();
-        
+
         // Determine optimal domain based on field characteristics
         let domain = self.select_optimal_domain(&pressure_array, grid)?;
-        
+
         let result = match domain {
             DomainSelection::TimeDomain => {
                 self.propagate_time_domain(&pressure_array, grid, medium, dt)
@@ -268,11 +273,12 @@ impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
                 self.apply_nonlinear_correction(&time_result, grid, medium, dt)
             }
         }?;
-        
+
         // Update pressure field in the fields array
-        let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let mut pressure_slice =
+            fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
         pressure_slice.assign(&result);
-        
+
         Ok(())
     }
 

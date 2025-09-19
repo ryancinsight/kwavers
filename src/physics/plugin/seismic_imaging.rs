@@ -1,5 +1,5 @@
 //! Seismic Imaging Plugin
-//! 
+//!
 //! Unified plugin interface for RTM and FWI algorithms
 //! Refactored following GRASP principles - maintains backward compatibility
 //! Based on Claerbout (1985): "Imaging the Earth's Interior"
@@ -9,20 +9,19 @@ use crate::grid::Grid;
 use crate::physics::plugin::{PluginMetadata, PluginState};
 use ndarray::Array3;
 
+mod fwi;
 mod parameters;
 mod rtm;
-mod fwi;
 
 // Re-export types for backward compatibility
 pub use parameters::{
-    FwiParameters, RegularizationParameters, ConvergenceCriteria,
-    RtmSettings, ImagingCondition, StorageStrategy, BoundaryType,
-    MigrationAperture, TaperFunction
+    BoundaryType, ConvergenceCriteria, FwiParameters, ImagingCondition, MigrationAperture,
+    RegularizationParameters, RtmSettings, StorageStrategy, TaperFunction,
 };
 
 // Import processors
-use rtm::RtmProcessor;
 use fwi::FwiProcessor;
+use rtm::RtmProcessor;
 
 /// Seismic Imaging Plugin
 /// Provides RTM and FWI capabilities for subsurface imaging
@@ -154,7 +153,7 @@ mod tests {
     fn test_rtm_configuration() {
         let mut plugin = SeismicImagingPlugin::new();
         let settings = RtmSettings::default();
-        
+
         plugin.configure_rtm(settings);
         assert!(plugin.rtm_processor.is_some());
         assert!(matches!(plugin.state, PluginState::Configured));
@@ -164,7 +163,7 @@ mod tests {
     fn test_fwi_configuration() {
         let mut plugin = SeismicImagingPlugin::new();
         let parameters = FwiParameters::default();
-        
+
         plugin.configure_fwi(parameters);
         assert!(plugin.fwi_processor.is_some());
         assert!(matches!(plugin.state, PluginState::Configured));
@@ -175,7 +174,7 @@ mod tests {
         let mut plugin = SeismicImagingPlugin::new();
         let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
         let field = Array3::ones((10, 10, 10));
-        
+
         let result = plugin.reverse_time_migration(&field, &field, &grid);
         assert!(result.is_err());
     }

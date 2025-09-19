@@ -9,6 +9,7 @@ use num_complex::Complex64;
 pub struct AdaptiveBeamformer {
     num_elements: usize,
     weights: Array1<Complex64>,
+    #[allow(dead_code)]
     steering_angles: Vec<f64>,
 }
 
