@@ -11,6 +11,7 @@ pub struct TransferOperators {
     /// Operators for each field type
     operators: HashMap<String, TransferOperator>,
     /// Interface geometry
+    #[allow(dead_code)]
     geometry: InterfaceGeometry,
 }
 

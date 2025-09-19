@@ -13,6 +13,7 @@ use ndarray::{Array3, Zip};
 /// PSTD solver state
 #[derive(Debug)]
 pub struct PstdSolver {
+    #[allow(dead_code)]
     pub(crate) config: PstdConfig,
     pub(crate) spectral: SpectralOperations,
     pub(crate) pressure: Array3<f64>,

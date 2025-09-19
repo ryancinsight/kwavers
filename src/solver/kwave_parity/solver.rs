@@ -17,10 +17,13 @@ use crate::utils::spectral::compute_kspace_correction_factors;
 
 /// Core k-Wave solver implementing the k-space pseudospectral method
 pub struct KWaveSolver {
+    #[allow(dead_code)]
     config: KWaveConfig,
+    #[allow(dead_code)]
     grid: Grid,
 
     // FFT planning
+    #[allow(dead_code)]
     fft_planner: FftPlanner<f64>,
 
     // k-space operators

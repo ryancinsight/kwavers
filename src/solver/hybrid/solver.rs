@@ -17,6 +17,7 @@ use ndarray::{s, Array4};
 use std::time::Instant;
 
 /// Context for regional solver application
+#[allow(dead_code)]
 struct RegionalContext<'a> {
     source: &'a dyn Source,
     boundary: &'a mut dyn Boundary,
@@ -32,9 +33,11 @@ pub struct HybridSolver {
     grid: Grid,
 
     /// PSTD solver for smooth regions
+    #[allow(dead_code)]
     pstd_solver: PstdSolver,
 
     /// FDTD solver for discontinuous regions
+    #[allow(dead_code)]
     fdtd_solver: FdtdSolver,
 
     /// Domain decomposer

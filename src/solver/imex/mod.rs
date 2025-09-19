@@ -117,6 +117,7 @@ impl IMEXSchemeType {
         }
     }
 
+    #[allow(dead_code)]
     fn stages(&self) -> usize {
         match self {
             IMEXSchemeType::RungeKutta(rk) => rk.stages(),

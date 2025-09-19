@@ -35,8 +35,11 @@ pub struct InterpolationManager {
 /// Criteria for adaptive interpolation
 #[derive(Debug)]
 struct AdaptiveInterpolationCriteria {
+    #[allow(dead_code)]
     gradient_threshold: f64,
+    #[allow(dead_code)]
     smoothness_threshold: f64,
+    #[allow(dead_code)]
     frequency_cutoff: f64,
 }
 

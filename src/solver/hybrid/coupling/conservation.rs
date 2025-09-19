@@ -9,6 +9,7 @@ use ndarray::Array3;
 #[derive(Debug)]
 pub struct ConservationEnforcer {
     /// Interface geometry
+    #[allow(dead_code)]
     geometry: InterfaceGeometry,
     /// Conservation tolerance
     tolerance: f64,

@@ -47,6 +47,7 @@ pub struct IMEXRK {
     /// RK weights (`b_i`)
     b: Vec<f64>,
     /// RK nodes (`c_i`)
+    #[allow(dead_code)]
     c: Vec<f64>,
     /// Number of stages
     s: usize,

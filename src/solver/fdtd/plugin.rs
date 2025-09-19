@@ -39,14 +39,17 @@ impl FdtdPlugin {
         })
     }
 
+    #[allow(dead_code)]
     fn set_state(&mut self, state: PluginState) {
         self.state = state;
     }
 
+    #[allow(dead_code)]
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
+    #[allow(dead_code)]
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
