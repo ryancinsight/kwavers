@@ -17,7 +17,7 @@ fn test_point_source_propagation() {
     let grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).expect("Failed to create grid");
 
     // Create medium
-    let medium = HomogeneousMedium::new(SOUND_SPEED_WATER, DENSITY_WATER, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
     // Create boundary
     let pml_config = kwavers::boundary::PMLConfig {
@@ -67,10 +67,12 @@ fn test_grid_creation() {
 #[test]
 fn test_medium_properties() {
     let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).expect("Failed to create grid");
-    let medium = HomogeneousMedium::new(SOUND_SPEED_WATER, DENSITY_WATER, 0.0, 0.0, &grid);
+    let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
 
-    // Test at various points
-    assert_eq!(medium.sound_speed(0, 0, 0), SOUND_SPEED_WATER);
-    assert_eq!(medium.density(0, 0, 0), DENSITY_WATER);
+    // Test at various points - use approximate equality for floating point
+    assert!((medium.sound_speed(0, 0, 0) - SOUND_SPEED_WATER).abs() < 1e-6, 
+           "Sound speed mismatch: expected {}, got {}", SOUND_SPEED_WATER, medium.sound_speed(0, 0, 0));
+    assert!((medium.density(0, 0, 0) - DENSITY_WATER).abs() < 1e-6,
+           "Density mismatch: expected {}, got {}", DENSITY_WATER, medium.density(0, 0, 0));
     assert!(medium.is_homogeneous());
 }
