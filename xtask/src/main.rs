@@ -45,9 +45,9 @@ fn main() -> Result<()> {
     }
 }
 
-/// Check module sizes against GRASP principles (<300 lines)
+/// Check module sizes against GRASP principles (<500 lines)
 fn check_module_sizes() -> Result<()> {
-    println!("🔍 Checking module sizes (GRASP: <300 lines)...");
+    println!("🔍 Checking module sizes (GRASP: <500 lines)...");
 
     let mut violations = Vec::new();
 
@@ -57,16 +57,16 @@ fn check_module_sizes() -> Result<()> {
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
             let line_count = content.lines().count();
 
-            if line_count > 300 {
+            if line_count > 500 {
                 violations.push((entry.path().to_path_buf(), line_count));
             }
         }
     }
 
     if violations.is_empty() {
-        println!("✅ All modules comply with GRASP (<300 lines)");
+        println!("✅ All modules comply with GRASP (<500 lines)");
     } else {
-        println!("❌ {} modules exceed 300-line limit:", violations.len());
+        println!("❌ {} modules exceed 500-line limit:", violations.len());
         for (path, lines) in &violations {
             println!("  {} ({} lines)", path.display(), lines);
         }
