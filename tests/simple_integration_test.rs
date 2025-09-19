@@ -30,7 +30,7 @@ fn test_basic_initialization() {
 #[test]
 fn test_acoustic_field() {
     let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::water(&grid);
+    let _medium = HomogeneousMedium::water(&grid); // Prefix with _ to indicate intentional unused
 
     // Initialize pressure field with Gaussian pulse
     let mut pressure = Array3::zeros((50, 50, 50));

@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_wavenumber_computation() {
-        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
+        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Failed to create test grid");
         let (kx, ky, kz) = compute_wavenumbers(&grid);
 
         // Check dimensions

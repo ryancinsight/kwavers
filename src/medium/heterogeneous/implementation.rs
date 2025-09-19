@@ -197,6 +197,7 @@ impl HeterogeneousMedium {
         // Compute absorption and nonlinearity from parameters
         let freq_ratio: f64 = reference_frequency / 1e6;
         let absorption = alpha0.mapv(|a0| a0 * freq_ratio.powf(1.0));
+        // Keep clone for now due to multiple usage - TODO: refactor struct to use references
         let nonlinearity = b_a.clone();
 
         Self {
