@@ -163,7 +163,7 @@ impl HeterogeneousMedium {
             let base_speed = 3.0; // m/s (typical for muscle tissue)
             let variation =
                 0.5 * ((i as f64 / grid.nx as f64).sin() + (j as f64 / grid.ny as f64).cos());
-            (base_speed + variation).max(1.0).min(8.0)
+            (base_speed + variation).clamp(1.0, 8.0)
         });
 
         let shear_viscosity_coeff =

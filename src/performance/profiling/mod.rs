@@ -16,6 +16,7 @@ pub use timing::{TimingProfiler, TimingScope, TimingSummary};
 
 use crate::grid::Grid;
 use std::time::Duration;
+use std::fmt;
 
 /// Comprehensive performance profiler
 #[derive(Debug)]
@@ -90,7 +91,7 @@ pub struct ProfileReport {
 impl ProfileReport {
     /// Generate text report
     #[must_use]
-    pub fn to_string(&self) -> String {
+    pub fn report(&self) -> String {
         let mut report = String::new();
 
         // Timing section
@@ -145,5 +146,11 @@ impl ProfileReport {
         report.push_str(&self.performance_analysis);
 
         report
+    }
+}
+
+impl fmt::Display for ProfileReport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.report())
     }
 }

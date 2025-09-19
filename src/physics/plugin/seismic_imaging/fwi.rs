@@ -270,7 +270,7 @@ impl FwiProcessor {
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s
         let max_velocity = SOUND_SPEED_WATER * 4.0; // 6000 m/s
 
-        model.mapv_inplace(|v| v.max(min_velocity).min(max_velocity));
+        model.mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
     }
 
     /// Forward modeling (placeholder - should be implemented based on specific solver)

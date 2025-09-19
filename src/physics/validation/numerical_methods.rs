@@ -116,7 +116,7 @@ mod tests {
             let actual = pressure[[i, n / 2, 0]];
 
             // Cross-correlation for phase (clamp to avoid NaN from acos)
-            let correlation = (actual * expected).max(-1.0).min(1.0);
+            let correlation = (actual * expected).clamp(-1.0, 1.0);
             let phase_shift = correlation.acos();
             phase_error += phase_shift.abs();
 
@@ -236,7 +236,7 @@ mod tests {
         let dt_slow = dt_thermal;
         for slow_step in 0..steps_thermal {
             // Multiple fast steps per slow step (capped for testing)
-            let fast_per_slow = ((time_scale_ratio as usize).max(1)).min(10);
+            let fast_per_slow = (time_scale_ratio as usize).clamp(1, 10);
 
             for _ in 0..fast_per_slow {
                 // Acoustic wave propagation using proper wave equation
