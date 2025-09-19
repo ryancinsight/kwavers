@@ -34,11 +34,11 @@ mod tests {
             ..Default::default()
         };
 
-        let reconstructor = TimeReversalReconstructor::new(config).unwrap();
+        let _reconstructor = TimeReversalReconstructor::new(config).unwrap();
 
         // Create a simple test signal
         let n_samples = 1024;
-        let dt = 1e-6;
+        let _dt = 1e-6;
 
         // Test that we can call apply_frequency_filter multiple times
         // without recreating the planner

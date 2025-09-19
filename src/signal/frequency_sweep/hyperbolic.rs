@@ -15,6 +15,7 @@ pub struct HyperbolicSweep {
     stop_frequency: f64,
     duration: f64,
     amplitude: f64,
+    #[allow(dead_code)]
     hyperbolic_rate: f64,
 }
 

@@ -6,6 +6,7 @@ use crate::error::KwaversResult;
 /// Triangulator for position estimation
 #[derive(Debug)]
 pub struct Triangulator {
+    #[allow(dead_code)]
     method: TriangulationMethod,
 }
 
