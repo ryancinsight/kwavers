@@ -15,6 +15,7 @@ use crate::physics::plugin::{PluginContext, PluginMetadata, PluginState};
 pub struct PstdPlugin {
     metadata: PluginMetadata,
     state: PluginState,
+    #[allow(dead_code)]
     solver: PstdSolver,
 }
 

@@ -7,10 +7,13 @@ use ndarray::{Array3, Zip};
 #[derive(Debug)]
 pub struct LineSearch {
     /// Armijo constant for sufficient decrease
+    #[allow(dead_code)]
     c1: f64,
     /// Wolfe constant for curvature condition
+    #[allow(dead_code)]
     c2: f64,
     /// Maximum iterations
+    #[allow(dead_code)]
     max_iterations: usize,
 }
 

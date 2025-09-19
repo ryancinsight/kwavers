@@ -26,6 +26,7 @@ pub trait TimeCoupling: Send + Sync + Debug {
 #[derive(Debug)]
 pub struct SubcyclingStrategy {
     /// Maximum allowed subcycles
+    #[allow(dead_code)]
     max_subcycles: usize,
 }
 

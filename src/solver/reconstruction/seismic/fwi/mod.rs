@@ -30,6 +30,7 @@ pub struct FullWaveformInversion {
     /// Optimizer
     optimizer: ConjugateGradient,
     /// Line search
+    #[allow(dead_code)]
     line_search: LineSearch,
     /// Regularizer
     regularizer: Regularizer,

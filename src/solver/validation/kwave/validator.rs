@@ -11,6 +11,7 @@ use crate::KwaversResult;
 #[derive(Debug)]
 pub struct KWaveValidator {
     /// Grid configuration
+    #[allow(dead_code)]
     grid: Grid,
     /// Test cases
     test_cases: Vec<KWaveTestCase>,
