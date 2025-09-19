@@ -6,7 +6,10 @@
 //! Reference: Treeby et al., "Modeling power law absorption and dispersion
 //! for acoustic propagation using the fractional Laplacian", JASA 2010
 
-use kwavers::constants::medium_properties::{TISSUE_SOUND_SPEED, WATER_SOUND_SPEED};
+use kwavers::validation::constants::SOUND_SPEED_WATER;
+
+// Define tissue sound speed constant locally since it's not exported
+const TISSUE_SOUND_SPEED: f64 = 1540.0;
 
 /// Power law absorption coefficient
 ///
@@ -155,7 +158,7 @@ fn test_thermoviscous_absorption() {
     // Reference: Pierce, "Acoustics", 1989, Eq. 10-3.8
 
     let frequency = 1e6; // 1 MHz
-    let c = WATER_SOUND_SPEED;
+    let c = SOUND_SPEED_WATER;
     let rho = 1000.0; // kg/m³
 
     // Water properties at 20°C
