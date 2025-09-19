@@ -451,10 +451,11 @@ mod tests {
 
     #[test]
     fn test_laplacian_constant_field() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).expect("Failed to create test grid");
         let field = Array3::from_elem((10, 10, 10), 1.0);
 
-        let lap = laplacian(field.view(), &grid, SpatialOrder::Second).unwrap();
+        let lap = laplacian(field.view(), &grid, SpatialOrder::Second)
+            .expect("Laplacian calculation should succeed for valid inputs");
 
         // Laplacian of constant field should be zero (at interior points)
         for k in 1..9 {
@@ -468,12 +469,13 @@ mod tests {
 
     #[test]
     fn test_divergence_uniform_flow() {
-        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).expect("Failed to create test grid");
         let vx = Array3::from_elem((10, 10, 10), 1.0);
         let vy = Array3::zeros((10, 10, 10));
         let vz = Array3::zeros((10, 10, 10));
 
-        let div = divergence(vx.view(), vy.view(), vz.view(), &grid, SpatialOrder::Second).unwrap();
+        let div = divergence(vx.view(), vy.view(), vz.view(), &grid, SpatialOrder::Second)
+            .expect("Divergence calculation should succeed for valid inputs");
 
         // Divergence of uniform flow should be zero
         for k in 1..9 {

@@ -6,6 +6,34 @@
 use crate::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, Array2};
 use num_complex::Complex;
+use num_traits::{Float, NumCast, Zero};
+
+/// Generic numeric operations for improved type safety and reusability
+pub trait NumericOps<T>: Clone + Copy + PartialOrd + Zero
+where
+    T: Float + NumCast,
+{
+    /// Generic dot product for any float type
+    fn dot_product(a: &[T], b: &[T]) -> Option<T> {
+        if a.len() != b.len() {
+            return None;
+        }
+        Some(a.iter().zip(b.iter()).map(|(&x, &y)| x * y).fold(T::zero(), |acc, val| acc + val))
+    }
+    
+    /// Generic vector normalization
+    fn normalize(vector: &mut [T]) -> bool {
+        let norm_sq = vector.iter().map(|&x| x * x).fold(T::zero(), |acc, val| acc + val);
+        if norm_sq <= T::zero() {
+            return false;
+        }
+        let norm = norm_sq.sqrt();
+        for x in vector.iter_mut() {
+            *x = *x / norm;
+        }
+        true
+    }
+}
 
 /// Tolerance constants for numerical operations
 pub mod tolerance {
@@ -16,6 +44,10 @@ pub mod tolerance {
     /// Maximum iterations for iterative methods
     pub const MAX_ITERATIONS: usize = 1000;
 }
+
+// Implement NumericOps for standard float types
+impl NumericOps<f64> for f64 {}
+impl NumericOps<f32> for f32 {}
 
 /// Pure Rust implementation of basic linear algebra operations
 #[derive(Debug)]
