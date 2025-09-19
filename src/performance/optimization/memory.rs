@@ -111,6 +111,11 @@ impl MemoryOptimizer {
     }
 
     /// Deallocate aligned memory
+    /// 
+    /// # Safety
+    /// The pointer must have been returned by a previous call to `allocate_aligned` with
+    /// the same allocator and count. The memory must not be accessed after deallocation.
+    /// The count must match exactly the count used during allocation.
     #[allow(unsafe_code)]
     pub unsafe fn deallocate_aligned<T>(&self, ptr: *mut T, count: usize) {
         unsafe {

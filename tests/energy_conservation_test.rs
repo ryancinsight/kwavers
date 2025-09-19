@@ -50,7 +50,7 @@ where
 
 #[test]
 fn test_energy_conservation_in_closed_domain() {
-    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
     // Initialize fields with a Gaussian pulse
@@ -105,7 +105,7 @@ fn test_reciprocity_principle() {
     // This is a fundamental principle that must be satisfied
     // Reference: Morse & Ingard, "Theoretical Acoustics", 1968
 
-    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Position A
     let source_a = (25, 50, 50);

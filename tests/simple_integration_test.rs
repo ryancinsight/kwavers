@@ -3,7 +3,6 @@
 use kwavers::{
     grid::Grid,
     medium::{ArrayAccess, CoreMedium, HomogeneousMedium},
-    physics::constants::*,
 };
 use ndarray::Array3;
 
@@ -11,7 +10,7 @@ use ndarray::Array3;
 #[test]
 fn test_basic_initialization() {
     // Create grid
-    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
     assert_eq!(grid.nx, 32);
     assert_eq!(grid.ny, 32);
     assert_eq!(grid.nz, 32);
@@ -30,7 +29,7 @@ fn test_basic_initialization() {
 /// Test acoustic field propagation
 #[test]
 fn test_acoustic_field() {
-    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::water(&grid);
 
     // Initialize pressure field with Gaussian pulse
@@ -62,7 +61,7 @@ fn test_acoustic_field() {
 /// Test medium array access
 #[test]
 fn test_medium_arrays() {
-    let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(10, 10, 10, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(1500.0, 1000.0, &grid);
 
     // Test array access
