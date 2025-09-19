@@ -30,7 +30,7 @@ mod plane_wave_validation {
         let c0 = 1500.0; // m/s
         let rho0 = 1000.0; // kg/m³
 
-        let grid = Grid::new(nx, ny, nz, dx, dx, dx);
+        let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
         let wavelength = c0 / freq;
         let k = 2.0 * PI / wavelength;
 
@@ -343,7 +343,7 @@ mod numerical_stability_tests {
 
     #[test]
     fn test_cfl_condition_limits() {
-        let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
         let c_max = 4000.0; // Steel sound speed
 
         // FDTD CFL: dt <= dx / (c * sqrt(3))
