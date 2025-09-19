@@ -126,6 +126,12 @@ impl MediumProperties {
         const VACUUM_IMPEDANCE: f64 = 376.730313668; // Ohms
         VACUUM_IMPEDANCE / self.refractive_index
     }
+    
+    /// Generic impedance calculation (defaults to acoustic impedance)
+    #[must_use]
+    pub fn impedance(&self) -> f64 {
+        self.acoustic_impedance()
+    }
 }
 
 /// Main wave propagation calculator
@@ -182,6 +188,24 @@ impl AttenuationCalculator {
     #[must_use]
     pub fn attenuation_db(&self, distance: f64) -> f64 {
         8.686 * self.absorption_coefficient * distance
+    }
+
+    /// Calculate frequency-dependent absorption for this calculator's frequency
+    #[must_use]
+    pub fn frequency_dependent_absorption(&self, alpha_0: f64, power_law: f64) -> f64 {
+        alpha_0 * self.frequency.powf(power_law)
+    }
+    
+    /// Calculate wave number (k = 2π/λ = 2πf/c)
+    #[must_use]  
+    pub fn wave_number(&self) -> f64 {
+        2.0 * PI * self.frequency / self.wave_speed
+    }
+    
+    /// Calculate penetration depth (distance where amplitude drops to 1/e)
+    #[must_use]
+    pub fn penetration_depth(&self) -> f64 {
+        1.0 / self.absorption_coefficient
     }
 
     /// Calculate frequency-dependent absorption for acoustic waves in tissue
@@ -250,6 +274,27 @@ impl WavePropagationCalculator {
             frequency,
             wavelength,
         }
+    }
+    
+    /// Get the wave number (k = 2π/λ)
+    #[must_use]
+    pub fn wave_number(&self) -> f64 {
+        2.0 * PI / self.wavelength
+    }
+    
+    /// Calculate the Fresnel reflection coefficient for normal incidence
+    #[must_use]
+    pub fn normal_reflection_coefficient(&self) -> f64 {
+        let z1 = self.interface.medium1.impedance();
+        let z2 = self.interface.medium2.impedance();
+        ((z2 - z1) / (z2 + z1)).abs()
+    }
+    
+    /// Check if frequency is appropriate for the wavelength assumption
+    #[must_use]
+    pub fn validate_frequency_wavelength_consistency(&self) -> bool {
+        let expected_wavelength = self.interface.medium1.wave_speed / self.frequency;
+        (self.wavelength - expected_wavelength).abs() < 1e-10
     }
 
     /// Calculate reflection and transmission for given incident angle

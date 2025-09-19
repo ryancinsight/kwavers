@@ -109,19 +109,32 @@ impl VesselCooling {
             .sqrt();
 
             if distance < radius {
-                // Inside vessel - strong cooling
-                let h = 1000.0; // Heat transfer coefficient (W/m²/K)
-                                // Positive cooling when tissue is hotter than blood
+                // Inside vessel - strong cooling dependent on flow velocity
+                // Nusselt number correlation: Nu = 0.023 * Re^0.8 * Pr^0.4
+                let reynolds = self.calculate_reynolds_number(radius);
+                let prandtl: f64 = 7.0; // Blood Prandtl number
+                let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
+                
+                // Heat transfer coefficient scales with Nusselt number
+                let h = nusselt * 10.0; // Base heat transfer coefficient
                 total_cooling += h * (temperature - self.blood_temp).abs();
             } else if distance < 2.0 * radius {
-                // Near vessel - moderate cooling
-                let h = 100.0 * (2.0 - distance / radius);
-                // Positive cooling when tissue is hotter than blood
+                // Near vessel - moderate cooling with velocity effects
+                let velocity_factor = (self.velocity / 0.1).sqrt(); // Normalized to 10 cm/s
+                let h = 100.0 * (2.0 - distance / radius) * velocity_factor;
                 total_cooling += h * (temperature - self.blood_temp).abs();
             }
         }
 
         total_cooling
+    }
+    
+    /// Calculate Reynolds number for blood flow
+    fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
+        const BLOOD_DENSITY: f64 = 1060.0; // kg/m³
+        const BLOOD_VISCOSITY: f64 = 0.004; // Pa·s
+        
+        (BLOOD_DENSITY * self.velocity * diameter) / BLOOD_VISCOSITY
     }
 }
 

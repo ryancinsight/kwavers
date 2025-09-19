@@ -75,6 +75,12 @@ impl MixedDomainPropagationPlugin {
         }
     }
 
+    /// Select optimal domain for propagation
+    #[must_use]
+    pub fn select_optimal_domain(&self, field: &Array3<f64>, _grid: &Grid) -> KwaversResult<DomainSelection> {
+        Ok(self.analyze_field(field))
+    }
+
     /// Analyze field to determine optimal domain
     #[must_use]
     pub fn analyze_field(&self, field: &Array3<f64>) -> DomainSelection {
@@ -203,4 +209,95 @@ pub enum DomainSelection {
     TimeDomain,
     FrequencyDomain,
     Hybrid,
+}
+
+// Plugin trait implementation
+impl crate::physics::plugin::Plugin for MixedDomainPropagationPlugin {
+    fn metadata(&self) -> &PluginMetadata {
+        &self.metadata
+    }
+
+    fn state(&self) -> PluginState {
+        self.state
+    }
+
+    fn set_state(&mut self, state: PluginState) {
+        self.state = state;
+    }
+
+    fn required_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    }
+
+    fn provided_fields(&self) -> Vec<crate::physics::field_mapping::UnifiedFieldType> {
+        vec![crate::physics::field_mapping::UnifiedFieldType::Pressure]
+    }
+
+    fn update(
+        &mut self,
+        fields: &mut ndarray::Array4<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+        dt: f64,
+        _t: f64,
+        _context: &crate::physics::plugin::PluginContext,
+    ) -> KwaversResult<()> {
+        use crate::physics::field_mapping::UnifiedFieldType;
+        
+        // Extract pressure field
+        let pressure_field = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure_array = pressure_field.to_owned();
+        
+        // Determine optimal domain based on field characteristics
+        let domain = self.select_optimal_domain(&pressure_array, grid)?;
+        
+        let result = match domain {
+            DomainSelection::TimeDomain => {
+                self.propagate_time_domain(&pressure_array, grid, medium, dt)
+            }
+            DomainSelection::FrequencyDomain => {
+                // Convert real field to complex and propagate
+                let complex_field = pressure_array.mapv(|x| Complex64::new(x, 0.0));
+                let result = self.propagate_frequency_domain(&complex_field, grid, medium, dt)?;
+                // Convert complex result back to real (take real part)
+                Ok(result.mapv(|c| c.re))
+            }
+            DomainSelection::Hybrid => {
+                // Apply hybrid method: time domain + frequency domain correction
+                let time_result = self.propagate_time_domain(&pressure_array, grid, medium, dt)?;
+                self.apply_nonlinear_correction(&time_result, grid, medium, dt)
+            }
+        }?;
+        
+        // Update pressure field in the fields array
+        let mut pressure_slice = fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        pressure_slice.assign(&result);
+        
+        Ok(())
+    }
+
+    fn initialize(&mut self, _grid: &Grid, _medium: &dyn Medium) -> KwaversResult<()> {
+        self.state = PluginState::Initialized;
+        Ok(())
+    }
+
+    fn finalize(&mut self) -> KwaversResult<()> {
+        self.state = PluginState::Finalized;
+        self.frequency_buffer = None;
+        Ok(())
+    }
+
+    fn reset(&mut self) -> KwaversResult<()> {
+        self.frequency_buffer = None;
+        self.state = PluginState::Created;
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
 }

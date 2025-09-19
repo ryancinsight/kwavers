@@ -84,7 +84,7 @@ fn test_medium_arrays() {
 /// Test grid calculations
 #[test]
 fn test_grid_calculations() {
-    let grid = Grid::new(100, 50, 25, 0.001, 0.002, 0.004);
+    let grid = Grid::new(100, 50, 25, 0.001, 0.002, 0.004).unwrap();
 
     // Test grid spacing
     assert_eq!(grid.dx, 0.001);
