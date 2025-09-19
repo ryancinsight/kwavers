@@ -3,9 +3,9 @@
 //! FWI algorithm implementation following GRASP principles
 //! Reference: Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
 
+use super::parameters::FwiParameters;
 use crate::error::KwaversResult;
 use crate::grid::Grid;
-use super::parameters::{FwiParameters};
 use ndarray::Array3;
 
 /// Full Waveform Inversion processor
@@ -185,9 +185,9 @@ impl FwiProcessor {
                     let dx = model[[i + 1, j, k]] - model[[i - 1, j, k]];
                     let dy = model[[i, j + 1, k]] - model[[i, j - 1, k]];
                     let dz = model[[i, j, k + 1]] - model[[i, j, k - 1]];
-                    
+
                     let grad_mag = (dx * dx + dy * dy + dz * dz).sqrt();
-                    
+
                     if grad_mag > f64::EPSILON {
                         tv_gradient[[i, j, k]] = grad_mag;
                     }
@@ -207,9 +207,12 @@ impl FwiProcessor {
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {
                 for i in 1..nx - 1 {
-                    laplacian[[i, j, k]] = model[[i + 1, j, k]] + model[[i - 1, j, k]]
-                        + model[[i, j + 1, k]] + model[[i, j - 1, k]]
-                        + model[[i, j, k + 1]] + model[[i, j, k - 1]]
+                    laplacian[[i, j, k]] = model[[i + 1, j, k]]
+                        + model[[i - 1, j, k]]
+                        + model[[i, j + 1, k]]
+                        + model[[i, j - 1, k]]
+                        + model[[i, j, k + 1]]
+                        + model[[i, j, k - 1]]
                         - 6.0 * model[[i, j, k]];
                 }
             }
@@ -278,7 +281,11 @@ impl FwiProcessor {
     }
 
     /// Adjoint modeling (placeholder - should be implemented based on specific solver)
-    fn adjoint_model(&self, _adjoint_source: &Array3<f64>, _grid: &Grid) -> KwaversResult<Array3<f64>> {
+    fn adjoint_model(
+        &self,
+        _adjoint_source: &Array3<f64>,
+        _grid: &Grid,
+    ) -> KwaversResult<Array3<f64>> {
         // This is a placeholder - in reality, this would run the adjoint solver
         // with the adjoint source to compute the adjoint wavefield
         todo!("Adjoint modeling implementation depends on specific solver integration")
@@ -305,12 +312,12 @@ mod tests {
     #[test]
     fn test_gradient_calculation() {
         let processor = FwiProcessor::default();
-        
+
         let forward_field = Array3::ones((10, 10, 10));
         let adjoint_field = Array3::from_elem((10, 10, 10), 2.0);
-        
+
         let gradient = processor.calculate_gradient(&forward_field, &adjoint_field);
-        
+
         // Expected: -1.0 * 2.0 = -2.0 (after smoothing, will be close to -2.0)
         assert!((gradient[[5, 5, 5]] + 2.0).abs() < 0.1); // Allow for smoothing effects
     }
@@ -319,9 +326,9 @@ mod tests {
     fn test_adjoint_source_computation() {
         let processor = FwiProcessor::default();
         let residual = Array3::from_elem((5, 5, 5), 3.0);
-        
+
         let adjoint_source = processor.compute_adjoint_source(&residual);
-        
+
         // Expected: -3.0
         assert!((adjoint_source[[2, 2, 2]] + 3.0).abs() < f64::EPSILON);
     }
@@ -330,9 +337,9 @@ mod tests {
     fn test_model_constraints() {
         let processor = FwiProcessor::default();
         let mut model = Array3::from_elem((5, 5, 5), 10000.0); // Too high
-        
+
         processor.apply_model_constraints(&mut model);
-        
+
         // Should be clamped to max velocity
         assert!(model[[2, 2, 2]] <= 6000.0);
         assert!(model[[2, 2, 2]] >= 750.0);

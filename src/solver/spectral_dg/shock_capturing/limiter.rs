@@ -18,6 +18,7 @@ pub struct WENOLimiter {
     /// Small parameter to avoid division by zero
     epsilon: f64,
     /// Power parameter for smoothness indicators
+    #[allow(dead_code)]
     p: f64,
     /// Threshold for shock detection
     shock_threshold: f64,

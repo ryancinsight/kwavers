@@ -14,12 +14,16 @@ use ndarray::{Array2, Array3};
 #[derive(Debug)]
 pub struct BowlRecon {
     /// Bowl center position
+    #[allow(dead_code)]
     center: [f64; 3],
     /// Bowl radius
+    #[allow(dead_code)]
     radius: f64,
     /// Bowl focus position
+    #[allow(dead_code)]
     focus: [f64; 3],
     /// Opening angle (radians)
+    #[allow(dead_code)]
     opening_angle: f64,
     /// Back-projection algorithm
     back_projector: UniversalBackProjection,

@@ -75,7 +75,7 @@ impl TimingSummary {
         let count = measurements.len();
         let total: Duration = measurements.iter().sum();
         let mean = total / count as u32;
-        
+
         // Safe min/max calculation
         let min = measurements.iter().min().copied().unwrap_or_default();
         let max = measurements.iter().max().copied().unwrap_or_default();

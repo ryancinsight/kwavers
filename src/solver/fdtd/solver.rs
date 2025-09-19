@@ -23,6 +23,7 @@ pub struct FdtdSolver {
     /// Grid reference
     pub(crate) grid: Grid,
     /// Staggered grid positions
+    #[allow(dead_code)]
     pub(crate) staggered: StaggeredGrid,
     /// Finite difference operator
     pub(crate) fd_operator: FiniteDifference,

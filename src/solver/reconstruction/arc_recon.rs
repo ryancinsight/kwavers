@@ -13,14 +13,19 @@ use ndarray::{Array2, Array3};
 #[derive(Debug)]
 pub struct ArcRecon {
     /// Arc center position
+    #[allow(dead_code)]
     center: [f64; 3],
     /// Arc radius
+    #[allow(dead_code)]
     radius: f64,
     /// Arc start angle (radians)
+    #[allow(dead_code)]
     start_angle: f64,
     /// Arc end angle (radians)
+    #[allow(dead_code)]
     end_angle: f64,
     /// Normal to arc plane
+    #[allow(dead_code)]
     normal: [f64; 3],
     /// Back-projection algorithm
     back_projector: UniversalBackProjection,

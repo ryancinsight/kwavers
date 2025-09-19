@@ -45,6 +45,7 @@ impl RefinementLevel {
 #[derive(Debug)]
 pub struct RefinementManager {
     /// Maximum refinement level
+    #[allow(dead_code)]
     max_level: usize,
     /// Refinement levels
     levels: Vec<RefinementLevel>,

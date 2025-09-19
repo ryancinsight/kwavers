@@ -97,7 +97,7 @@ impl Grid {
     }
 
     /// Calculate CFL timestep for given sound speed
-    /// 
+    ///
     /// Uses FDTD stability condition with safety factor
     #[inline]
     pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {

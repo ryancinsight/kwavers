@@ -14,8 +14,10 @@ use ndarray::{Array2, Array3};
 #[derive(Debug)]
 pub struct PlaneRecon {
     /// Plane normal vector
+    #[allow(dead_code)]
     normal: [f64; 3],
     /// Plane center position
+    #[allow(dead_code)]
     center: [f64; 3],
     /// Back-projection algorithm
     back_projector: UniversalBackProjection,

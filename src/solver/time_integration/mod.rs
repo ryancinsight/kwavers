@@ -54,6 +54,7 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct MultiRateTimeIntegrator {
     /// Configuration for multi-rate integration
+    #[allow(dead_code)]
     config: MultiRateConfig,
     /// Controller for managing multiple time scales
     controller: MultiRateController,
@@ -66,8 +67,10 @@ pub struct MultiRateTimeIntegrator {
     /// CFL safety factor
     cfl_safety_factor: f64,
     /// Time scale separator for automatic detection
+    #[allow(dead_code)]
     time_scale_separator: TimeScaleSeparator,
     /// Conservation monitor
+    #[allow(dead_code)]
     conservation_monitor: ConservationMonitor,
 }
 

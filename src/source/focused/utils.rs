@@ -170,7 +170,7 @@ mod tests {
         // For a focused bowl transducer at focus (z = radius_of_curvature)
         let focus_distance = 0.064; // = radius of curvature
         let frequency = 1e6;
-        let omega = 2.0 * PI * frequency;
+        let _omega = 2.0 * PI * frequency;
 
         // Test at time when sin is maximum (quarter period)
         let period = 1.0 / frequency;

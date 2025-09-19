@@ -88,6 +88,7 @@ pub struct SensorInfo {
     /// Position in grid coordinates
     position: [usize; 3],
     /// Position in physical coordinates (meters)
+    #[allow(dead_code)]
     position_meters: [f64; 3],
 }
 

@@ -17,31 +17,42 @@ use crate::utils::spectral::compute_kspace_correction_factors;
 
 /// Core k-Wave solver implementing the k-space pseudospectral method
 pub struct KWaveSolver {
+    #[allow(dead_code)]
     config: KWaveConfig,
+    #[allow(dead_code)]
     grid: Grid,
 
     // FFT planning
+    #[allow(dead_code)]
     fft_planner: FftPlanner<f64>,
 
     // k-space operators
+    #[allow(dead_code)]
     kappa: Array3<f64>,                             // k-space correction
+    #[allow(dead_code)]
     k_vec: (Array3<f64>, Array3<f64>, Array3<f64>), // k-vectors
     k_max: f64,                                     // Maximum supported k
 
     // PML operators
+    #[allow(dead_code)]
     pml_x: Array3<f64>,
+    #[allow(dead_code)]
     pml_y: Array3<f64>,
+    #[allow(dead_code)]
     pml_z: Array3<f64>,
 
     // Field variables
     p: Array3<f64>,         // Pressure
+    #[allow(dead_code)]
     p_k: Array3<Complex64>, // Pressure in k-space
     ux: Array3<f64>,        // Velocity x
     uy: Array3<f64>,        // Velocity y
     uz: Array3<f64>,        // Velocity z
 
     // Absorption variables
+    #[allow(dead_code)]
     absorb_tau: Array3<f64>,
+    #[allow(dead_code)]
     absorb_eta: Array3<f64>,
 }
 

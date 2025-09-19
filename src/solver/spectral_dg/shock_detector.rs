@@ -13,6 +13,7 @@ pub const MODAL_DECAY_THRESHOLD: f64 = 1e-3;
 #[derive(Debug)]
 pub struct ShockDetector {
     threshold: f64,
+    #[allow(dead_code)]
     polynomial_order: usize,
 }
 

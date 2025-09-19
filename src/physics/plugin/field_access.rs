@@ -158,7 +158,10 @@ impl<'a> PluginFieldAccessMut<'a> {
     }
 
     /// Get mutable access to a field
-    pub fn get_field_mut(&mut self, field: UnifiedFieldType) -> KwaversResult<ArrayViewMut3<'_, f64>> {
+    pub fn get_field_mut(
+        &mut self,
+        field: UnifiedFieldType,
+    ) -> KwaversResult<ArrayViewMut3<'_, f64>> {
         if !self.can_write(field) {
             return Err(PhysicsError::UnauthorizedFieldAccess {
                 field: field.name().to_string(),

@@ -232,10 +232,13 @@ mod tests {
         println!("Getting pressure field...");
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
         println!("Got pressure field with shape: {:?}", pressure.shape());
-        
-        // EXACT VALIDATION: Dimensions must match grid exactly  
-        assert_eq!(pressure.shape(), &[10, 10, 10], 
-                   "Pressure field dimensions don't match grid");
+
+        // EXACT VALIDATION: Dimensions must match grid exactly
+        assert_eq!(
+            pressure.shape(),
+            &[10, 10, 10],
+            "Pressure field dimensions don't match grid"
+        );
 
         // EXACT ASSERTION: Field initialization must be precise
         let mut state = state; // Make mutable for initialization
@@ -243,10 +246,13 @@ mod tests {
             .initialize_field(field_indices::TEMPERATURE_IDX, 293.15)
             .unwrap();
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        
+
         // EXACT VALIDATION: Initialization value must be preserved exactly
-        assert!((temp[[5, 5, 5]] - 293.15).abs() < f64::EPSILON,
-                "Temperature initialization failed: expected 293.15, got {}", temp[[5, 5, 5]]);
+        assert!(
+            (temp[[5, 5, 5]] - 293.15).abs() < f64::EPSILON,
+            "Temperature initialization failed: expected 293.15, got {}",
+            temp[[5, 5, 5]]
+        );
     }
 
     #[test]
@@ -309,8 +315,11 @@ mod tests {
 
         // EXACT VALIDATION: Direct field access must return exact values
         let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-        assert_eq!(pressure[[0, 0, 0]], 101325.0, 
-                   "Pressure field initialization failed");
+        assert_eq!(
+            pressure[[0, 0, 0]],
+            101325.0,
+            "Pressure field initialization failed"
+        );
 
         // EXACT ASSERTION: Mutable field access must work without deadlocks
         {
@@ -320,7 +329,10 @@ mod tests {
 
         // EXACT VALIDATION: Write operations must persist correctly
         let temp = state.get_field(field_indices::TEMPERATURE_IDX).unwrap();
-        assert_eq!(temp[[0, 0, 0]], 273.15, 
-                   "Temperature field write operation failed");
+        assert_eq!(
+            temp[[0, 0, 0]],
+            273.15,
+            "Temperature field write operation failed"
+        );
     }
 }

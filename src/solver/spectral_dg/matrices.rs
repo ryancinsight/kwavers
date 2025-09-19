@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_mass_matrix_properties() {
         // Mass matrix should be symmetric and positive definite
-        let nodes = Array1::from(vec![-1.0, 0.0, 1.0]);
+        let _nodes = Array1::from(vec![-1.0, 0.0, 1.0]);
         let weights = Array1::from(vec![1.0 / 3.0, 4.0 / 3.0, 1.0 / 3.0]);
         let vandermonde = Array2::eye(3);
 

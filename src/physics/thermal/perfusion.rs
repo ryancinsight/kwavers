@@ -114,7 +114,7 @@ impl VesselCooling {
                 let reynolds = self.calculate_reynolds_number(radius);
                 let prandtl: f64 = 7.0; // Blood Prandtl number
                 let nusselt = 0.023 * reynolds.powf(0.8) * prandtl.powf(0.4);
-                
+
                 // Heat transfer coefficient scales with Nusselt number
                 let h = nusselt * 10.0; // Base heat transfer coefficient
                 total_cooling += h * (temperature - self.blood_temp).abs();
@@ -128,12 +128,12 @@ impl VesselCooling {
 
         total_cooling
     }
-    
+
     /// Calculate Reynolds number for blood flow
     fn calculate_reynolds_number(&self, diameter: f64) -> f64 {
         const BLOOD_DENSITY: f64 = 1060.0; // kg/m³
         const BLOOD_VISCOSITY: f64 = 0.004; // Pa·s
-        
+
         (BLOOD_DENSITY * self.velocity * diameter) / BLOOD_VISCOSITY
     }
 }

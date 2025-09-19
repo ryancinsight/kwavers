@@ -88,8 +88,7 @@ impl PluginBasedSolver {
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Register required fields
         for field in plugin.required_fields() {
-            self.field_registry
-                .register_field(field)?;
+            self.field_registry.register_field(field)?;
         }
 
         self.plugin_manager.add_plugin(plugin)?;

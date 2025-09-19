@@ -151,10 +151,11 @@ where
                     let offset = s + 1;
                     sum = sum + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                 }
-                let dx = T::from(grid.dx).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dx,
-                    target_type: "generic float",
-                })?;
+                let dx =
+                    T::from(grid.dx).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dx,
+                        target_type: "generic float",
+                    })?;
                 grad_x[[i, j, k]] = sum / dx;
             }
         }
@@ -169,10 +170,11 @@ where
                     let offset = s + 1;
                     sum = sum + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                 }
-                let dy = T::from(grid.dy).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dy,
-                    target_type: "generic float",
-                })?;
+                let dy =
+                    T::from(grid.dy).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dy,
+                        target_type: "generic float",
+                    })?;
                 grad_y[[i, j, k]] = sum / dy;
             }
         }
@@ -187,10 +189,11 @@ where
                     let offset = s + 1;
                     sum = sum + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                 }
-                let dz = T::from(grid.dz).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dz,
-                    target_type: "generic float",
-                })?;
+                let dz =
+                    T::from(grid.dz).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dz,
+                        target_type: "generic float",
+                    })?;
                 grad_z[[i, j, k]] = sum / dz;
             }
         }
@@ -236,18 +239,21 @@ where
                     dvz_dz = dvz_dz + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
                 }
 
-                let dx = T::from(grid.dx).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dx,
-                    target_type: "generic float",
-                })?;
-                let dy = T::from(grid.dy).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dy,
-                    target_type: "generic float",
-                })?;
-                let dz = T::from(grid.dz).ok_or_else(|| crate::error::GridError::GridConversion {
-                    value: grid.dz,
-                    target_type: "generic float",
-                })?;
+                let dx =
+                    T::from(grid.dx).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dx,
+                        target_type: "generic float",
+                    })?;
+                let dy =
+                    T::from(grid.dy).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dy,
+                        target_type: "generic float",
+                    })?;
+                let dz =
+                    T::from(grid.dz).ok_or_else(|| crate::error::GridError::GridConversion {
+                        value: grid.dz,
+                        target_type: "generic float",
+                    })?;
 
                 div[[i, j, k]] = dvx_dx / dx + dvy_dy / dy + dvz_dz / dz;
             }

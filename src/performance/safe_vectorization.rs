@@ -125,9 +125,13 @@ impl SafeVectorOps {
         } else {
             // Fallback for non-contiguous arrays
             let mut result = Array3::zeros(a.dim());
-            result.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((out, &a_val), &b_val)| {
-                *out = a_val + b_val;
-            });
+            result
+                .iter_mut()
+                .zip(a.iter())
+                .zip(b.iter())
+                .for_each(|((out, &a_val), &b_val)| {
+                    *out = a_val + b_val;
+                });
             result
         }
     }

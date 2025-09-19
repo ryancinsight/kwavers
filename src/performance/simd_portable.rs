@@ -87,8 +87,9 @@ impl SimdProcessor {
         let mut result = Array3::zeros(a.dim());
 
         // Safe access to slices with fallback
-        if let (Some(a_slice), Some(b_slice), Some(result_slice)) = 
-            (a.as_slice(), b.as_slice(), result.as_slice_mut()) {
+        if let (Some(a_slice), Some(b_slice), Some(result_slice)) =
+            (a.as_slice(), b.as_slice(), result.as_slice_mut())
+        {
             // Process 2 elements at a time using u128 for 2xf64
             let chunks = a_slice.len() / 2;
             let remainder_start = chunks * 2;
@@ -106,9 +107,13 @@ impl SimdProcessor {
             }
         } else {
             // Fallback for non-contiguous arrays
-            result.iter_mut().zip(a.iter()).zip(b.iter()).for_each(|((out, &a_val), &b_val)| {
-                *out = a_val + b_val;
-            });
+            result
+                .iter_mut()
+                .zip(a.iter())
+                .zip(b.iter())
+                .for_each(|((out, &a_val), &b_val)| {
+                    *out = a_val + b_val;
+                });
         }
 
         result

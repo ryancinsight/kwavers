@@ -18,8 +18,10 @@ pub struct ShockDetector {
     /// Use jump indicator
     use_jump_indicator: bool,
     /// Use entropy residual
+    #[allow(dead_code)]
     use_entropy_residual: bool,
     /// Smoothness exponent for modal decay
+    #[allow(dead_code)]
     smoothness_exponent: f64,
 }
 

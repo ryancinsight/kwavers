@@ -257,7 +257,8 @@ impl ConservationMonitor {
                         let z = k as f64 * self.grid.dz;
 
                         let density = crate::medium::density_at(medium, x, y, z, &self.grid);
-                        let sound_speed = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
+                        let sound_speed =
+                            crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
 
                         // Potential energy density: Ep = p²/(2ρc²)
                         let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);

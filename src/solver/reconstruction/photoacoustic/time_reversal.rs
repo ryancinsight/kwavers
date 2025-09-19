@@ -19,6 +19,7 @@ pub struct TimeReversal {
     grid_size: [usize; 3],
     sound_speed: f64,
     sampling_frequency: f64,
+    #[allow(dead_code)]
     time_steps: usize,
 }
 

@@ -9,8 +9,10 @@ use ndarray::Array3;
 #[derive(Debug)]
 pub struct DomainAnalyzer {
     /// Threshold for considering a region homogeneous
+    #[allow(dead_code)]
     homogeneity_threshold: f64,
     /// Threshold for gradient smoothness
+    #[allow(dead_code)]
     smoothness_threshold: f64,
 }
 

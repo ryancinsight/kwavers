@@ -81,9 +81,7 @@ mod tests {
         let mut registry = FieldRegistry::new(&grid);
 
         // Register multiple fields
-        registry
-            .register_field(UnifiedFieldType::Pressure)
-            .unwrap();
+        registry.register_field(UnifiedFieldType::Pressure).unwrap();
         registry
             .register_field(UnifiedFieldType::Temperature)
             .unwrap();

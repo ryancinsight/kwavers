@@ -7,8 +7,11 @@ use ndarray::Array2;
 /// Beamformer for source localization
 #[derive(Debug)]
 pub struct Beamformer {
+    #[allow(dead_code)]
     steering_vectors: Array2<f64>,
+    #[allow(dead_code)]
     frequency: f64,
+    #[allow(dead_code)]
     sound_speed: f64,
 }
 

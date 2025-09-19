@@ -14,10 +14,13 @@ use ndarray::{Array2, Array3};
 #[derive(Debug)]
 pub struct LineRecon {
     /// Line direction vector
+    #[allow(dead_code)]
     direction: [f64; 3],
     /// Line center position
+    #[allow(dead_code)]
     center: [f64; 3],
     /// Array element pitch (spacing)
+    #[allow(dead_code)]
     pitch: f64,
     /// Back-projection algorithm
     back_projector: UniversalBackProjection,

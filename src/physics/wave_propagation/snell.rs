@@ -20,6 +20,7 @@ pub struct CriticalAngles {
 pub struct SnellLawCalculator<'a> {
     interface: &'a Interface,
     /// Ratio of wave speeds or refractive indices
+    #[allow(dead_code)]
     speed_ratio: f64,
 }
 

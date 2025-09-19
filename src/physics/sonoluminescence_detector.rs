@@ -256,14 +256,18 @@ impl SonoluminescenceDetector {
         // Use emission calculator for more sophisticated spectral analysis
         // For now, we'll use Stefan-Boltzmann with the emission calculator's parameters
         let emission_params = &self.emission_calculator.params;
-        
+
         // Stefan-Boltzmann law for total power
         let sigma = 5.67e-8; // Stefan-Boltzmann constant
         let surface_area = 4.0 * std::f64::consts::PI * radius.powi(2);
         let power = sigma * surface_area * temperature.powi(4);
 
         // Apply emission efficiency factor if available
-        let efficiency = if emission_params.use_blackbody { 1.0 } else { 0.5 };
+        let efficiency = if emission_params.use_blackbody {
+            1.0
+        } else {
+            0.5
+        };
         let energy = power * dt * efficiency;
 
         // Photon count with improved calculation using emission parameters

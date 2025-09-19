@@ -322,8 +322,11 @@ mod tests {
             if pressure_next.iter().any(|p| p.is_nan() || p.abs() > 1e10) {
                 return Err(crate::error::KwaversError::Physics(
                     crate::error::PhysicsError::NumericalInstabilityGeneral {
-                        message: format!("Numerical instability at step {}: NaN or overflow detected", step)
-                    }
+                        message: format!(
+                            "Numerical instability at step {}: NaN or overflow detected",
+                            step
+                        ),
+                    },
                 ));
             }
 
@@ -381,7 +384,7 @@ mod tests {
             fundamental_amp,
             second_harmonic_amp
         );
-        
+
         Ok(())
     }
 
