@@ -67,13 +67,13 @@ impl SeismicImagingPlugin {
     /// Configure RTM settings
     pub fn configure_rtm(&mut self, settings: RtmSettings) {
         self.rtm_processor = Some(RtmProcessor::new(settings));
-        self.state = PluginState::Initialized;
+        self.state = PluginState::Configured;
     }
 
     /// Configure FWI parameters
     pub fn configure_fwi(&mut self, parameters: FwiParameters) {
         self.fwi_processor = Some(FwiProcessor::new(parameters));
-        self.state = PluginState::Initialized;
+        self.state = PluginState::Configured;
     }
 
     /// Perform Reverse Time Migration
