@@ -117,14 +117,14 @@ mod tests {
         let model = KellerMiksisModel::new(params);
         
         // Verify model initialization
-        assert!(model.params().equilibrium_radius > 0.0);
+        assert!(model.params().r0 > 0.0);
     }
     
     #[test]
     fn test_heat_capacity_calculation() {
         let params = BubbleParameters::default();
-        let model = KellerMiksisModel::new(params);
-        let state = BubbleState::default();
+        let model = KellerMiksisModel::new(params.clone());
+        let state = BubbleState::new(&params);
         
         let cv = model.molar_heat_capacity_cv(&state);
         assert!(cv > 0.0, "Heat capacity should be positive");

@@ -76,8 +76,8 @@ mod tests {
     
     #[test]
     fn test_integration_input_validation() {
-        let state = BubbleState::default();
         let params = BubbleParameters::default();
+        let state = BubbleState::new(&params);
         
         // Test negative time step
         let result = integrate_bubble_dynamics_stable(
@@ -100,8 +100,8 @@ mod tests {
     
     #[test]
     fn test_integration_success() {
-        let state = BubbleState::default();
         let params = BubbleParameters::default();
+        let state = BubbleState::new(&params);
         
         let result = integrate_bubble_dynamics_stable(
             state,
