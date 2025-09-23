@@ -29,18 +29,31 @@
 
 **29 MONOLITHIC FILES >400 LINES** violating GRASP principles (Evidence-Based):
 
-| File | Lines | Risk | Issue | ToT Path |
-|------|-------|------|-------|----------|
-| `differential_operators.rs` | 489 | 10 | Utility function god-object | Path A: Extract operators by type |
-| `simd_auto.rs` | 483 | 9 | SIMD performance concentration | Path B: Separate arch-specific modules |
-| `heterogeneous/implementation.rs` | 479 | 9 | Medium trait mega-implementation | Path C: Trait segregation |
-| `imex_integration.rs` | 475 | 8 | Integration scheme monolith | Path D: Method-specific modules |
-| `linear_algebra.rs` | 472 | 8 | Mathematical operations dumping | Path E: Operation categorization |
+| File | Lines | Risk | Issue | ToT Path | Status |
+|------|-------|------|-------|----------|--------|
+| `differential_operators_old.rs` | 489 | 10 | Utility function god-object | Path A: Extract operators by type | ✅ EXTRACTED |
+| `simd_auto_old.rs` | 483 | 9 | SIMD performance concentration | Path B: Separate arch-specific modules | ✅ EXTRACTED |
+| `heterogeneous/implementation.rs` | 479 | 9 | Medium trait mega-implementation | Path C: Trait segregation | 📋 QUEUED |
+| `imex_integration.rs` | 475 | 8 | Integration scheme monolith | Path D: Method-specific modules | 📋 QUEUED |
+| `linear_algebra.rs` | 472 | 8 | Mathematical operations dumping | Path E: Operation categorization | 📋 QUEUED |
 
-**Citations**: 
-- Rust Book Ch.7: Module organization principles
-- IEEE TSE 2022: "Understanding Memory and Thread Safety Practices"
-- GRASP Principles: Information Expert, Single Responsibility
+### 🔴 PRIORITY 1: Redundant Naming Antipatterns (Risk Score: 8)
+
+**EVIDENCE-BASED VIOLATIONS** per mitigation scenario #8:
+- **155 mod.rs files**: Excessive flat hierarchies violating deep structure principles
+- **22 config.rs files**: Redundant naming without intent-revealing precision
+- **13 solver.rs files**: Generic naming violating DRY/YAGNI principles
+
+**ToT Path F**: Enforce precise, intent-revealing names eliminating verbose adjectives
+
+### 🔴 PRIORITY 1: Flat Hierarchy Violations (Risk Score: 8)
+
+**EVIDENCE-BASED MEASUREMENT** per mitigation scenario #9:
+- **Level 2 files**: 130 (flat structure indicator)
+- **Level 3 files**: 497 (3.8x depth ratio - INSUFFICIENT)
+- **Target**: >10x depth ratio per Rust Book Ch.7 hierarchical organization
+
+**ToT Path G**: Implement dendrogram analysis and deep vertical hierarchies
 
 ### 🟡 PRIORITY 2: Property-Based Testing Gap (Risk Score: 7)
 

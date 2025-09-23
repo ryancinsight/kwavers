@@ -23,10 +23,13 @@ pub use self::field_analysis::{
 pub use self::sparse_matrix::CompressedSparseRowMatrix;
 pub use self::stencil::{Stencil, StencilValue};
 
-// Export differential operators with unique names to avoid conflicts
+// Export differential operators from modular structure
 pub use self::differential_operators::{
-    curl, divergence, gradient, laplacian, FDCoefficients, SpatialOrder,
+    curl, divergence, gradient, FDCoefficients, SpatialOrder,
 };
+
+// Export unified laplacian from dedicated module
+pub use self::laplacian::laplacian;
 
 // Use modern FFT cache instead of RefCell antipattern
 pub use self::fft_cache::{get_fft_for_grid, FFT_CACHE};
