@@ -25,9 +25,7 @@ pub use self::stencil::{Stencil, StencilValue};
 
 // Export differential operators with unique names to avoid conflicts
 pub use self::differential_operators::{
-    curl as curl_op, divergence as divergence_op, gradient as gradient_op,
-    laplacian as laplacian_op, spectral_laplacian, transverse_laplacian, FDCoefficients,
-    SpatialOrder,
+    curl, divergence, gradient, laplacian, FDCoefficients, SpatialOrder,
 };
 
 // Use modern FFT cache instead of RefCell antipattern
