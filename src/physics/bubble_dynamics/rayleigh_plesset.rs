@@ -369,7 +369,7 @@ impl KellerMiksisModel {
 /// This is the recommended integration method that uses adaptive time-stepping
 /// with sub-cycling to handle the stiff nature of bubble dynamics equations.
 pub fn integrate_bubble_dynamics_stable(
-    solver: &KellerMiksisModel,
+    solver: &crate::physics::bubble_dynamics::keller_miksis::KellerMiksisModel,
     state: &mut BubbleState,
     p_acoustic: f64,
     dp_dt: f64,

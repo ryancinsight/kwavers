@@ -15,7 +15,8 @@
 //! 3. **Lauterborn & Kurz (2010)**. "Physics of bubble oscillations"
 //!    - Numerical challenges in bubble dynamics
 
-use super::{BubbleState, KellerMiksisModel};
+use super::BubbleState;
+use super::keller_miksis::KellerMiksisModel;
 use crate::error::{KwaversResult, PhysicsError};
 use crate::physics::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use crate::physics::constants::numerical::{
@@ -224,7 +225,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         // Note: calculate_acceleration requires mutable state, but doesn't mutate solver
         let k1_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t);
+            .calculate_acceleration(state, p_acoustic, dp_dt, t)?;
         let k1_v = state.wall_velocity;
 
         // k2
@@ -232,7 +233,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k1_a;
         let k2_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt)?;
         let k2_v = state.wall_velocity;
 
         // k3
@@ -240,7 +241,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         state.wall_velocity = state0.wall_velocity + 0.5 * dt * k2_a;
         let k3_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt);
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + 0.5 * dt)?;
         let k3_v = state.wall_velocity;
 
         // k4
@@ -248,7 +249,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
         state.wall_velocity = state0.wall_velocity + dt * k3_a;
         let k4_a = self
             .solver
-            .calculate_acceleration(state, p_acoustic, dp_dt, t + dt);
+            .calculate_acceleration(state, p_acoustic, dp_dt, t + dt)?;
         let k4_v = state.wall_velocity;
 
         // Combine
@@ -262,7 +263,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
 
         // Update temperature and mass transfer with smaller time step
         self.solver.update_temperature(state, dt);
-        self.solver.update_mass_transfer(state, dt);
+        self.solver.update_mass_transfer(state, dt)?;
 
         Ok(())
     }

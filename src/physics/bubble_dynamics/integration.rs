@@ -24,24 +24,28 @@ use crate::error::{KwaversError, KwaversResult, PhysicsError};
 /// Returns error if integration becomes unstable or parameters are invalid
 pub fn integrate_bubble_dynamics_stable(
     initial_state: BubbleState,
-    params: &BubbleParameters,
+    _params: &BubbleParameters,
     time_span: (f64, f64),
     dt: f64,
 ) -> KwaversResult<BubbleState> {
     // Validate inputs
     if dt <= 0.0 {
-        return Err(KwaversError::Physics(PhysicsError::InvalidParameter(
-            "Time step must be positive".to_string()
-        )));
+        return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+            parameter: "dt".to_string(),
+            value: dt,
+            reason: "Time step must be positive".to_string(),
+        }));
     }
     
     if time_span.1 <= time_span.0 {
-        return Err(KwaversError::Physics(PhysicsError::InvalidParameter(
-            "End time must be greater than start time".to_string()
-        )));
+        return Err(KwaversError::Physics(PhysicsError::InvalidParameter {
+            parameter: "time_span".to_string(),
+            value: time_span.1,
+            reason: "End time must be greater than start time".to_string(),
+        }));
     }
     
-    let mut state = initial_state;
+    let state = initial_state;
     let mut t = time_span.0;
     
     // Simple forward Euler for demonstration
@@ -49,9 +53,9 @@ pub fn integrate_bubble_dynamics_stable(
     while t < time_span.1 {
         // Stability check
         if state.radius <= 0.0 {
-            return Err(KwaversError::Physics(PhysicsError::NumericalError(
-                "Bubble radius became non-positive".to_string()
-            )));
+            return Err(KwaversError::Physics(PhysicsError::NumericalInstabilityGeneral {
+                message: "Bubble radius became non-positive".to_string()
+            }));
         }
         
         // Update state (simplified)

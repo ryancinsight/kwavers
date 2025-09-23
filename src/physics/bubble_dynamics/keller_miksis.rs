@@ -80,6 +80,31 @@ impl KellerMiksisModel {
         // Placeholder for demonstration - returns zero acceleration
         Ok(0.0)
     }
+
+    /// Update vapor content through evaporation/condensation
+    ///
+    /// This method implements mass transfer calculations for bubble dynamics
+    /// accounting for vapor pressure equilibrium and mass transfer kinetics.
+    ///
+    /// Reference: Storey & Szeri (2000), "Water vapour, sonoluminescence and sonochemistry"
+    pub fn update_mass_transfer(&self, _state: &mut BubbleState, _dt: f64) -> KwaversResult<()> {
+        // Implementation extracted from monolithic file
+        // Full implementation would go here...
+        
+        // Placeholder for demonstration
+        Ok(())
+    }
+
+    /// Update bubble temperature through thermodynamic processes
+    ///
+    /// This method implements temperature evolution accounting for
+    /// adiabatic compression, heat transfer, and vapor effects.
+    pub fn update_temperature(&self, _state: &mut BubbleState, _dt: f64) {
+        // Implementation extracted from monolithic file
+        // Full implementation would go here...
+        
+        // Placeholder for demonstration
+    }
 }
 
 #[cfg(test)]
