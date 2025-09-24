@@ -84,8 +84,8 @@ impl HomogeneousMedium {
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
-                0.0022 * (1e6_f64 / 1e6).powf(1.05),
-            ), // α at 1 MHz
+                0.0022 * 1.0_f64.powf(1.05), // α at 1 MHz reference frequency
+            ),
             nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 5.0), // B/A for water
             // For fluids, lambda is the bulk modulus, mu is 0
             lame_lambda: density * sound_speed * sound_speed,
@@ -179,7 +179,7 @@ impl HomogeneousMedium {
             sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 343.0),
             absorption_cache: Array3::from_elem(
                 (grid.nx, grid.ny, grid.nz),
-                1.84e-11 * (1e6_f64 / 1e6).powf(2.0),
+                1.84e-11 * 1.0_f64.powf(2.0), // Atmospheric absorption at 1 MHz
             ),
             nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.4),
             lame_lambda: 1.204 * 343.0 * 343.0, // Bulk modulus
