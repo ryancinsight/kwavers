@@ -66,6 +66,12 @@ pub fn add_fields_avx2(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
 /// Scale field by scalar using AVX2 instructions
 #[inline]
 unsafe fn scale_field_avx2_inner(field: &[f64], scalar: f64, out: &mut [f64]) {
+    // SAFETY: AVX2 scaling operation with comprehensive safety guarantees
+    // Precondition: field.len() == out.len() (enforced by caller)  
+    // Bounds safety: chunks*4 <= field.len() by integer division, remainder handled separately
+    // Pointer safety: slice data guaranteed contiguous and valid during function execution
+    // Alignment: _mm256_loadu_pd/_mm256_storeu_pd handle unaligned loads/stores safely
+    // AVX2 availability: Enforced by target_feature annotation on calling function
     unsafe {
         use std::arch::x86_64::{_mm256_loadu_pd, _mm256_mul_pd, _mm256_set1_pd, _mm256_storeu_pd};
 
@@ -133,7 +139,11 @@ unsafe fn norm_avx2_inner(field: &[f64]) -> f64 {
 #[cfg(target_arch = "x86_64")]
 pub fn norm_avx2(field: &Array3<f64>) -> f64 {
     if let Some(field_slice) = field.as_slice() {
-        // SAFETY: Same safety conditions as add_fields_avx2
+        // SAFETY: AVX2 L2 norm computation with comprehensive memory safety guarantees
+        // Preconditions: field_slice is contiguous f64 data from Array3 (enforced by as_slice())
+        // Bounds safety: norm_avx2_inner performs bounds checking for all memory accesses
+        // AVX2 availability: Target feature enforcement prevents execution on unsupported CPUs  
+        // Memory ordering: Read-only access to field data, no concurrent modification possible
         unsafe { norm_avx2_inner(field_slice) }
     } else {
         0.0

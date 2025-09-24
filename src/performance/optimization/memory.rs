@@ -144,6 +144,11 @@ impl MemoryOptimizer {
         assert_eq!(data.len(), rows * cols);
 
         let mut transposed = Vec::with_capacity(data.len());
+        // SAFETY: Cache-friendly matrix transpose with rigorous memory safety guarantees
+        // Invariants: transposed.capacity() >= data.len() (enforced by with_capacity above)
+        // Memory safety: set_len() to valid capacity, all indices within bounds by construction
+        // Initialization: All elements written in nested loops below before any reads
+        // Performance justification: Avoids double initialization for large matrices
         #[allow(unsafe_code)]
         unsafe {
             transposed.set_len(data.len());

@@ -34,6 +34,11 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
     use std::arch::aarch64::*;
 
     if let (Some(field_slice), Some(out_slice)) = (field.as_slice(), out.as_slice_mut()) {
+        // SAFETY: NEON intrinsics require proper alignment and bounds checking.
+        // Preconditions: field_slice and out_slice have equal length (enforced by assert_eq! above)
+        // Bounds safety: chunks*2 <= field_slice.len() by construction, remainder handled separately
+        // Pointer safety: as_ptr() and as_mut_ptr() return valid pointers to contiguous data
+        // Alignment: f64 data naturally aligned, NEON load/store handle alignment requirements
         unsafe {
             let vs = vdupq_n_f64(scalar);
             let chunks = field_slice.len() / 2;
@@ -59,6 +64,11 @@ pub fn norm_neon(field: &Array3<f64>) -> f64 {
     use std::arch::aarch64::*;
 
     if let Some(field_slice) = field.as_slice() {
+        // SAFETY: NEON norm calculation with proper memory safety guarantees
+        // Bounds safety: chunks*2 <= field_slice.len() ensures valid indices
+        // Pointer safety: field_slice.as_ptr() provides valid pointer to contiguous f64 data
+        // Memory ordering: Read-only access to field data, no concurrent modification
+        // Alignment: NEON load instructions handle f64 alignment automatically
         unsafe {
             let mut sum_vec = vdupq_n_f64(0.0);
             let chunks = field_slice.len() / 2;
