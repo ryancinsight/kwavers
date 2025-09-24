@@ -116,7 +116,7 @@ impl BubbleIMEXIntegrator {
             // Calculate mechanical acceleration
             let accel = self
                 .solver
-                .calculate_acceleration(&mut temp_state, p_acoustic, dp_dt, t);
+                .calculate_acceleration(&mut temp_state, p_acoustic, dp_dt, t)?;
 
             // Update radius and velocity explicitly
             y_explicit[0] = y0[0] + dt * temp_state.wall_velocity; // R

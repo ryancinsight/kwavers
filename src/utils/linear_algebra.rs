@@ -33,6 +33,47 @@ where
         }
         true
     }
+
+    /// Generic element-wise addition for arrays
+    fn add_arrays(a: &[T], b: &[T], out: &mut [T]) -> Result<(), &'static str> {
+        if a.len() != b.len() || b.len() != out.len() {
+            return Err("Array length mismatch");
+        }
+        for ((a_val, b_val), out_val) in a.iter().zip(b.iter()).zip(out.iter_mut()) {
+            *out_val = *a_val + *b_val;
+        }
+        Ok(())
+    }
+
+    /// Generic scalar multiplication
+    fn scale_array(input: &[T], scalar: T, out: &mut [T]) -> Result<(), &'static str> {
+        if input.len() != out.len() {
+            return Err("Array length mismatch");
+        }
+        for (input_val, out_val) in input.iter().zip(out.iter_mut()) {
+            *out_val = *input_val * scalar;
+        }
+        Ok(())
+    }
+
+    /// Generic L2 norm calculation
+    fn l2_norm(array: &[T]) -> T {
+        array.iter().map(|&x| x * x).fold(T::zero(), |acc, val| acc + val).sqrt()
+    }
+
+    /// Generic maximum absolute value
+    fn max_abs(array: &[T]) -> T {
+        array.iter().map(|&x| x.abs()).fold(T::zero(), |acc, val| acc.max(val))
+    }
+
+    /// Safe division with tolerance check
+    fn safe_divide(numerator: T, denominator: T, tolerance: T) -> Option<T> {
+        if denominator.abs() > tolerance {
+            Some(numerator / denominator)
+        } else {
+            None
+        }
+    }
 }
 
 /// Tolerance constants for numerical operations
@@ -338,7 +379,57 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_abs_diff_eq;
+    use approx::{assert_relative_eq, assert_abs_diff_eq};
+
+    #[test]
+    fn test_numeric_ops_add_arrays() {
+        let a = [1.0, 2.0, 3.0];
+        let b = [4.0, 5.0, 6.0];
+        let mut out = [0.0; 3];
+
+        assert!(f64::add_arrays(&a, &b, &mut out).is_ok());
+        assert_eq!(out, [5.0, 7.0, 9.0]);
+    }
+
+    #[test]
+    fn test_numeric_ops_scale_array() {
+        let input = [1.0, 2.0, 3.0];
+        let mut out = [0.0; 3];
+
+        assert!(f64::scale_array(&input, 2.0, &mut out).is_ok());
+        assert_eq!(out, [2.0, 4.0, 6.0]);
+    }
+
+    #[test]
+    fn test_numeric_ops_l2_norm() {
+        let array = [3.0, 4.0];
+        let norm = f64::l2_norm(&array);
+        assert_relative_eq!(norm, 5.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_numeric_ops_safe_divide() {
+        assert_eq!(f64::safe_divide(10.0, 2.0, 1e-10), Some(5.0));
+        assert_eq!(f64::safe_divide(10.0, 1e-12, 1e-10), None);
+    }
+
+    #[test]
+    fn test_numeric_ops_max_abs() {
+        let array = [-5.0, 3.0, -2.0, 4.0];
+        assert_eq!(f64::max_abs(&array), 5.0);
+    }
+
+    #[test]
+    fn test_generic_float_types() {
+        // Test that the trait works with both f64 and f32
+        let a_f64 = [1.0_f64, 2.0, 3.0];
+        let norm_f64 = f64::l2_norm(&a_f64);
+        
+        let a_f32 = [1.0_f32, 2.0, 3.0];
+        let norm_f32 = f32::l2_norm(&a_f32);
+        
+        assert_relative_eq!(norm_f64 as f32, norm_f32, epsilon = 1e-6);
+    }
 
     #[test]
     fn test_solve_linear_system() {

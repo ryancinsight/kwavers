@@ -4,7 +4,7 @@
 
 use super::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use super::bubble_state::{BubbleParameters, BubbleState};
-use super::rayleigh_plesset::KellerMiksisModel;
+use super::keller_miksis::KellerMiksisModel;
 use ndarray::Array3;
 use rand::prelude::*;
 use rand_distr::{LogNormal, Normal, Uniform};
