@@ -58,6 +58,7 @@ pub mod sensor;
 pub mod signal;
 pub mod solver;
 pub mod source;
+pub mod testing; // Property-based testing framework per FSE 2025
 pub mod time;
 pub mod utils;
 pub mod validation;
