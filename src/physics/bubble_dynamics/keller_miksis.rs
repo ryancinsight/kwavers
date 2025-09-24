@@ -12,11 +12,17 @@ use super::thermodynamics::{MassTransferModel, ThermodynamicsCalculator, VaporPr
 use crate::error::KwaversResult;
 
 /// Keller-Miksis equation solver (compressible)
+/// 
+/// **Literature**: Keller & Miksis (1980), Hamilton & Blackstock Ch.11
+/// **Note**: Thermodynamic calculators reserved for future implementation
 #[derive(Debug, Clone)]
 pub struct KellerMiksisModel {
     params: BubbleParameters,
+    #[allow(dead_code)] // Reserved for future thermodynamic coupling
     thermo_calc: ThermodynamicsCalculator,
+    #[allow(dead_code)] // Reserved for future mass transfer modeling  
     mass_transfer: MassTransferModel,
+    #[allow(dead_code)] // Reserved for future energy balance calculations
     energy_calculator: EnergyBalanceCalculator,
 }
 
