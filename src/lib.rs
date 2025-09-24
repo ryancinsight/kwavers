@@ -159,7 +159,7 @@ pub use recorder::RecorderConfig;
 pub use sensor::SensorConfig;
 
 // Re-export benchmarks from performance module
-pub use performance::{BenchmarkConfig, BenchmarkReport, BenchmarkRunner, OutputFormat};
+pub use performance::{BenchmarkResult, ProductionBenchmarks, run_production_benchmarks};
 
 // Re-export solver validation
 pub use solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};

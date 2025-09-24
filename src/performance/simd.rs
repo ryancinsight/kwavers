@@ -161,6 +161,10 @@ impl SimdOps {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     unsafe fn field_norm_avx2(field: &Array3<f64>) -> f64 {
+        // SAFETY: This function requires AVX2 to be available, enforced by #[target_feature].
+        // Array slice is guaranteed to be contiguous and properly aligned.
+        // Bounds checking: chunks*4 <= slice.len() by construction, remainder handled separately.
+        // Memory safety: slice data valid throughout function execution via borrow checker.
         unsafe {
             let slice = field.as_slice().unwrap();
             let chunks = slice.len() / 4;
