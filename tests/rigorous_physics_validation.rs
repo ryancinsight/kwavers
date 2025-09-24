@@ -187,9 +187,9 @@ fn test_attenuation_exact_exponential() {
 
     for freq in frequencies {
         // Convert to SI units: Np/m
-        let freq_mhz = freq / 1e6;
+        let freq_mhz: f64 = freq / 1e6;
         let alpha_db_cm = alpha_0 * freq_mhz.powf(y);
-        let alpha_np_m = alpha_db_cm * 100.0 / 8.686; // dB→Np, cm→m
+        let alpha_np_m: f64 = alpha_db_cm * 100.0 / 8.686; // dB→Np, cm→m
 
         // Test attenuation over distances
         let distances = vec![0.001, 0.01, 0.1, 1.0]; // meters
@@ -197,7 +197,7 @@ fn test_attenuation_exact_exponential() {
 
         for d in distances {
             // Exact exponential decay
-            let p_expected = p0 * (-alpha_np_m * d).exp();
+            let p_expected: f64 = p0 * (-alpha_np_m * d).exp();
 
             // Verify exponential properties
             assert!(p_expected > 0.0, "Attenuated pressure must be positive");
@@ -207,8 +207,8 @@ fn test_attenuation_exact_exponential() {
             );
 
             // Test logarithmic relationship
-            let log_ratio = (p_expected / p0).ln();
-            let expected_log_ratio = -alpha_np_m * d;
+            let log_ratio: f64 = (p_expected / p0).ln();
+            let expected_log_ratio: f64 = -alpha_np_m * d;
             assert_relative_eq!(
                 log_ratio,
                 expected_log_ratio,

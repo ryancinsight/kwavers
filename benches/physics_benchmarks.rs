@@ -14,7 +14,8 @@ fn grid_creation_benchmark(c: &mut Criterion) {
 fn medium_creation_benchmark(c: &mut Criterion) {
     c.bench_function("medium_creation", |b| {
         b.iter(|| {
-            let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+            let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)
+                .expect("Grid creation should succeed for valid parameters");
             let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
             black_box(medium)
         })

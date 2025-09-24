@@ -3,7 +3,8 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers::Grid;
 
 fn grid_dimensions_benchmark(c: &mut Criterion) {
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)
+        .expect("Grid creation should succeed for valid parameters");
 
     c.bench_function("grid_dimensions", |b| {
         b.iter(|| {
@@ -14,7 +15,8 @@ fn grid_dimensions_benchmark(c: &mut Criterion) {
 }
 
 fn grid_spacing_benchmark(c: &mut Criterion) {
-    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4);
+    let grid = Grid::new(64, 64, 64, 1e-4, 1e-4, 1e-4)
+        .expect("Grid creation should succeed for valid parameters");
 
     c.bench_function("grid_spacing", |b| {
         b.iter(|| {

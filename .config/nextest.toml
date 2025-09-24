@@ -1,0 +1,41 @@
+# Nextest Configuration for Production CI/CD
+# Enforces SRS 30-second constraint with fail-fast parallel execution
+
+[profile.ci]
+# Fast parallel execution for CI/CD
+max-threads = 4
+retries = 0
+fail-fast = true
+
+[profile.ci.timeout]
+# SRS constraint: All tests must complete within 30 seconds
+per-test = { period = "10s" }
+# Individual test timeout
+global = { period = "30s" }
+# Total test suite timeout
+
+[profile.local]
+# Local development with more generous timeouts
+max-threads = 8  
+retries = 1
+fail-fast = false
+
+[profile.local.timeout]
+per-test = { period = "30s" }
+global = { period = "120s" }
+
+[profile.production]
+# Production validation profile
+max-threads = 2
+retries = 2
+fail-fast = true
+
+[profile.production.timeout]
+per-test = { period = "5s" }
+global = { period = "25s" }
+
+# Test execution optimization
+[test-groups]
+# Group slow integration tests separately
+integration = { filter = "test(/.*integration.*/)" }
+unit = { filter = "test(/^((?!integration).)*$/)" }
