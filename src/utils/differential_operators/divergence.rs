@@ -49,7 +49,7 @@ where
     if vy.shape() != shape || vz.shape() != shape {
         return Err(crate::error::KwaversError::Grid(
             crate::error::GridError::DimensionMismatch {
-                expected: format!("Vector field components must have same dimensions"),
+                expected: "Vector field components must have same dimensions".to_string(),
                 actual: format!("vx: {:?}, vy: {:?}, vz: {:?}", vx.shape(), vy.shape(), vz.shape()),
             },
         ));

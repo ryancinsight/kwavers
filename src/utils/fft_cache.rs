@@ -90,6 +90,11 @@ impl FftCache {
     pub fn len(&self) -> usize {
         self.cache.read().len()
     }
+
+    /// Check if the cache is empty
+    pub fn is_empty(&self) -> bool {
+        self.cache.read().is_empty()
+    }
 }
 
 impl Default for FftCache {

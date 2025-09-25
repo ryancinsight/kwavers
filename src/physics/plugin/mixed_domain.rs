@@ -76,7 +76,6 @@ impl MixedDomainPropagationPlugin {
     }
 
     /// Select optimal domain for propagation
-    #[must_use]
     pub fn select_optimal_domain(
         &self,
         field: &Array3<f64>,

@@ -139,7 +139,7 @@ pub mod grid_properties {
         
         // Verify grid field creation doesn't panic
         let field = grid.create_field();
-        if field.shape() != &[grid.nx, grid.ny, grid.nz] {
+        if field.shape() != [grid.nx, grid.ny, grid.nz] {
             return Err(format!("Field shape {:?} doesn't match grid dimensions [{}, {}, {}]", 
                              field.shape(), grid.nx, grid.ny, grid.nz));
         }
