@@ -1,12 +1,20 @@
 //! Factory patterns for creating simulation components
 //!
-//! This module follows GRASP principles with domain-based organization:
+//! Deep hierarchical organization following GRASP principles:
 //! - Information Expert: Objects that have the information needed to fulfill a responsibility
 //! - Creator: Objects responsible for creating other objects they use
 //! - Controller: Objects that coordinate and control system operations
 //! - Low Coupling: Minimize dependencies between objects
 //! - High Cohesion: Keep related functionality together
 
+// Deep hierarchical component organization
+pub mod component {
+    pub mod grid;
+    pub mod medium;
+    pub mod physics;
+}
+
+// Legacy flat modules for backward compatibility
 pub mod config;
 pub mod grid;
 pub mod medium;
@@ -15,7 +23,7 @@ pub mod source;
 pub mod time;
 pub mod validation;
 
-// Re-export main types
+// Re-export main types - maintaining backward compatibility
 pub use config::{ConfigBuilder, SimulationConfig};
 pub use grid::{GridConfig, GridFactory};
 pub use medium::{MediumConfig, MediumFactory, MediumType};
@@ -23,6 +31,11 @@ pub use physics::{PhysicsConfig, PhysicsFactory, PhysicsModelConfig, PhysicsMode
 pub use source::{SourceConfig, SourceFactory};
 pub use time::{TimeConfig, TimeFactory};
 pub use validation::{ConfigValidator, ValidationConfig};
+
+// New hierarchical exports
+pub use component::grid as hierarchical_grid;
+pub use component::medium as hierarchical_medium;
+pub use component::physics as hierarchical_physics;
 
 use crate::error::KwaversResult;
 
