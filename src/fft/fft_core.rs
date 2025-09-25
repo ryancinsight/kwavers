@@ -131,6 +131,7 @@ pub fn butterfly_1d(data: &mut [Complex<f64>], twiddles: &[Complex<f64>], n: usi
 /// Apply bit reversal permutation to a 3D complex array
 /// This is shared between FFT and IFFT implementations to avoid code duplication
 /// Uses efficient in-place swaps to avoid allocations
+#[allow(clippy::needless_range_loop)] // Index-based access required for bit-reversal algorithm
 pub fn apply_bit_reversal_3d(
     field: &mut Array3<Complex<f64>>,
     bit_reverse_indices_x: &[usize],

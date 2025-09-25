@@ -38,27 +38,30 @@ impl FieldOperations {
     pub fn apply_periodic_boundary(field: &mut Array3<f64>) {
         let (nx, ny, nz) = field.dim();
 
-        // X boundaries
+        // X boundaries - proper periodic wrapping
         for j in 0..ny {
             for k in 0..nz {
+                let temp = field[[0, j, k]];
                 field[[0, j, k]] = field[[nx - 1, j, k]];
-                field[[nx - 1, j, k]] = field[[0, j, k]];
+                field[[nx - 1, j, k]] = temp;
             }
         }
 
-        // Y boundaries
+        // Y boundaries - proper periodic wrapping
         for i in 0..nx {
             for k in 0..nz {
+                let temp = field[[i, 0, k]];
                 field[[i, 0, k]] = field[[i, ny - 1, k]];
-                field[[i, ny - 1, k]] = field[[i, 0, k]];
+                field[[i, ny - 1, k]] = temp;
             }
         }
 
-        // Z boundaries
+        // Z boundaries - proper periodic wrapping
         for i in 0..nx {
             for j in 0..ny {
+                let temp = field[[i, j, 0]];
                 field[[i, j, 0]] = field[[i, j, nz - 1]];
-                field[[i, j, nz - 1]] = field[[i, j, 0]];
+                field[[i, j, nz - 1]] = temp;
             }
         }
     }

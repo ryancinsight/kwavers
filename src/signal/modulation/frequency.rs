@@ -49,7 +49,7 @@ impl Modulation for FrequencyModulation {
 
         // Use phase difference method
         let mut prev_phase = 0.0;
-        for (_i, &sample) in signal.iter().enumerate() {
+        for &sample in signal.iter() {
             let phase = sample.atan2(0.0); // Simplified - real implementation needs Hilbert transform
             let phase_diff = phase - prev_phase;
 
