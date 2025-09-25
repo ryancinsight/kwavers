@@ -178,7 +178,5 @@ fn compute_diffusion_term(
     // Using simplified constant diffusivity for now
     const DIFFUSIVITY: f64 = 1e-6; // m²/s (typical for water)
 
-    let diffusion = laplacian_p * DIFFUSIVITY;
-
-    diffusion
+    laplacian_p * DIFFUSIVITY
 }

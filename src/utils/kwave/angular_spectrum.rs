@@ -70,11 +70,11 @@ impl AngularSpectrum {
         let mut k = vec![0.0; n];
         let dk = 2.0 * PI / (n as f64 * d);
 
-        for i in 0..n {
+        for (i, k_val) in k.iter_mut().enumerate().take(n) {
             if i <= n / 2 {
-                k[i] = i as f64 * dk;
+                *k_val = i as f64 * dk;
             } else {
-                k[i] = (i as f64 - n as f64) * dk;
+                *k_val = (i as f64 - n as f64) * dk;
             }
         }
 

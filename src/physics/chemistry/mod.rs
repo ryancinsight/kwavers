@@ -333,17 +333,16 @@ impl ChemicalModelTrait for ChemicalModel {
     }
 }
 
-impl ReactionType {
-    /// Convert to string representation
-    #[must_use]
-    pub fn to_string(&self) -> String {
-        match self {
-            ReactionType::Dissociation => "Dissociation".to_string(),
-            ReactionType::Recombination => "Recombination".to_string(),
-            ReactionType::Oxidation => "Oxidation".to_string(),
-            ReactionType::Reduction => "Reduction".to_string(),
-            ReactionType::Polymerization => "Polymerization".to_string(),
-        }
+impl std::fmt::Display for ReactionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            ReactionType::Dissociation => "Dissociation",
+            ReactionType::Recombination => "Recombination",
+            ReactionType::Oxidation => "Oxidation",
+            ReactionType::Reduction => "Reduction",
+            ReactionType::Polymerization => "Polymerization",
+        };
+        write!(f, "{name}")
     }
 }
 

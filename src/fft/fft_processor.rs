@@ -80,10 +80,9 @@ impl Fft3d {
     /// Core 3D transform for real input
     fn transform_3d(&mut self, input: &Array3<f64>, forward: bool) -> Array3<Complex64> {
         // Convert to complex
-        let mut data = input.mapv(|x| Complex64::new(x, 0.0));
+        let data = input.mapv(|x| Complex64::new(x, 0.0));
 
-        self.transform_3d_complex(&mut data, forward);
-        data
+        self.transform_3d_complex(&data, forward)
     }
 
     /// Core 3D transform for complex data

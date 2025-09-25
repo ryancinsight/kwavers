@@ -12,7 +12,7 @@ pub const HEMISPHERE_RADIUS_DEFAULT: f64 = 0.15; // 150mm radius (Insightec ExAb
 pub const HALF_WAVELENGTH_SPACING: f64 = 1.15e-3; // λ/2 at 650 kHz
 
 /// Maximum steering angle from geometric focus (radians)
-pub const MAX_STEERING_ANGLE_RAD: f64 = 0.5236; // 30 degrees
+pub const MAX_STEERING_ANGLE_RAD: f64 = std::f64::consts::PI / 6.0; // 30 degrees (π/6)
 
 /// Minimum element density for sparse arrays (elements per m²)
 pub const MIN_ELEMENT_DENSITY: f64 = 5000.0; // 0.5 per cm²

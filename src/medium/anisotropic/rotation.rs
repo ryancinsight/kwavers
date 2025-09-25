@@ -82,9 +82,9 @@ impl RotationMatrix {
     #[must_use]
     pub fn apply_to_vector(&self, v: &[f64; 3]) -> [f64; 3] {
         let mut result = [0.0; 3];
-        for i in 0..3 {
-            for j in 0..3 {
-                result[i] += self.r[[i, j]] * v[j];
+        for (i, result_item) in result.iter_mut().enumerate() {
+            for (j, &v_item) in v.iter().enumerate().take(3) {
+                *result_item += self.r[[i, j]] * v_item;
             }
         }
         result

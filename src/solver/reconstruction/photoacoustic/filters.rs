@@ -128,15 +128,15 @@ impl Filters {
         fft.process(&mut complex_signal);
 
         // Apply Hilbert transform in frequency domain
-        for i in 0..n {
+        for (i, complex_val) in complex_signal.iter_mut().enumerate().take(n) {
             if i == 0 || i == n / 2 {
                 // DC and Nyquist components unchanged
             } else if i < n / 2 {
                 // Positive frequencies doubled
-                complex_signal[i] *= 2.0;
+                *complex_val *= 2.0;
             } else {
                 // Negative frequencies zeroed
-                complex_signal[i] = Complex::new(0.0, 0.0);
+                *complex_val = Complex::new(0.0, 0.0);
             }
         }
 
@@ -292,11 +292,11 @@ impl Filters {
                     let mut sum = 0.0;
                     let mut weight_sum = 0.0;
 
-                    for ki in 0..kernel.len() {
+                    for (ki, &kernel_val) in kernel.iter().enumerate() {
                         let ii = (i as i32 + ki as i32 - KERNEL_RADIUS as i32) as usize;
                         if ii < nx {
-                            sum += image[[ii, j, k]] * kernel[ki];
-                            weight_sum += kernel[ki];
+                            sum += image[[ii, j, k]] * kernel_val;
+                            weight_sum += kernel_val;
                         }
                     }
 
@@ -315,11 +315,11 @@ impl Filters {
                     let mut sum = 0.0;
                     let mut weight_sum = 0.0;
 
-                    for kj in 0..kernel.len() {
+                    for (kj, &kernel_val) in kernel.iter().enumerate() {
                         let jj = (j as i32 + kj as i32 - KERNEL_RADIUS as i32) as usize;
                         if jj < ny {
-                            sum += temp1[[i, jj, k]] * kernel[kj];
-                            weight_sum += kernel[kj];
+                            sum += temp1[[i, jj, k]] * kernel_val;
+                            weight_sum += kernel_val;
                         }
                     }
 
@@ -337,11 +337,11 @@ impl Filters {
                     let mut sum = 0.0;
                     let mut weight_sum = 0.0;
 
-                    for kk in 0..kernel.len() {
+                    for (kk, &kernel_val) in kernel.iter().enumerate() {
                         let zz = (k as i32 + kk as i32 - KERNEL_RADIUS as i32) as usize;
                         if zz < nz {
-                            sum += temp2[[i, j, zz]] * kernel[kk];
-                            weight_sum += kernel[kk];
+                            sum += temp2[[i, j, zz]] * kernel_val;
+                            weight_sum += kernel_val;
                         }
                     }
 
@@ -365,9 +365,9 @@ impl Filters {
         let norm = 1.0 / (sigma * (2.0 * PI).sqrt());
         let sigma2 = 2.0 * sigma * sigma;
 
-        for i in 0..size {
+        for (i, kernel_val) in kernel.iter_mut().enumerate().take(size) {
             let x = f64::from(i as i32 - radius as i32);
-            kernel[i] = norm * (-x * x / sigma2).exp();
+            *kernel_val = norm * (-x * x / sigma2).exp();
         }
 
         // Normalize

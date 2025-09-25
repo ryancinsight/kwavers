@@ -42,14 +42,12 @@ impl StencilKernel {
     #[must_use]
     pub fn apply(&self, data: &[f64], index: usize, stride: usize) -> f64 {
         let mut result = 0.0;
-        let mut coeff_idx = 0;
 
-        for offset in -(self.radius as isize)..=(self.radius as isize) {
+        for (coeff_idx, offset) in (-(self.radius as isize)..=(self.radius as isize)).enumerate() {
             let data_idx = (index as isize + offset * stride as isize) as usize;
             if data_idx < data.len() {
                 result += data[data_idx] * self.coefficients[coeff_idx];
             }
-            coeff_idx += 1;
         }
 
         result

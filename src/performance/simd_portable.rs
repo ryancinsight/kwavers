@@ -229,8 +229,8 @@ impl SimdProcessor {
                 slice[idx + 3] *= scalar;
             }
 
-            for i in remainder_start..slice.len() {
-                slice[i] *= scalar;
+            for item in slice.iter_mut().skip(remainder_start) {
+                *item *= scalar;
             }
         }
     }

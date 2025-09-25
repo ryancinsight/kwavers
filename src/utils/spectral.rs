@@ -26,14 +26,14 @@ pub fn compute_wavenumbers(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64
     let mut kz = Array3::zeros((nx, ny, nz));
 
     // Use broadcasting for efficient filling
-    for i in 0..nx {
-        kx.slice_mut(s![i, .., ..]).fill(kx_1d[i]);
+    for (i, &kx_val) in kx_1d.iter().enumerate().take(nx) {
+        kx.slice_mut(s![i, .., ..]).fill(kx_val);
     }
-    for j in 0..ny {
-        ky.slice_mut(s![.., j, ..]).fill(ky_1d[j]);
+    for (j, &ky_val) in ky_1d.iter().enumerate().take(ny) {
+        ky.slice_mut(s![.., j, ..]).fill(ky_val);
     }
-    for k in 0..nz {
-        kz.slice_mut(s![.., .., k]).fill(kz_1d[k]);
+    for (k_idx, &kz_val) in kz_1d.iter().enumerate().take(nz) {
+        kz.slice_mut(s![.., .., k_idx]).fill(kz_val);
     }
 
     (kx, ky, kz)
@@ -44,11 +44,11 @@ fn compute_1d_wavenumbers(n: usize, dx: f64) -> Vec<f64> {
     let mut k = vec![0.0; n];
     let dk = 2.0 * PI / (n as f64 * dx);
 
-    for i in 0..n {
+    for (i, k_val) in k.iter_mut().enumerate().take(n) {
         if i <= n / 2 {
-            k[i] = i as f64 * dk;
+            *k_val = i as f64 * dk;
         } else {
-            k[i] = -((n - i) as f64) * dk;
+            *k_val = -((n - i) as f64) * dk;
         }
     }
 

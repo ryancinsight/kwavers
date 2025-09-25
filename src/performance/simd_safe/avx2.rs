@@ -128,8 +128,8 @@ unsafe fn norm_avx2_inner(field: &[f64]) -> f64 {
 
         // Handle remainder
         let remainder_start = chunks * 4;
-        for i in remainder_start..field.len() {
-            sum += field[i] * field[i];
+        for item in field.iter().skip(remainder_start) {
+            sum += item * item;
         }
 
         sum.sqrt()

@@ -185,10 +185,14 @@ impl Octree {
     }
 
     fn count_nodes(&self, node: &OctreeNode) -> usize {
+        Self::count_nodes_recursive(node)
+    }
+
+    fn count_nodes_recursive(node: &OctreeNode) -> usize {
         let mut count = 1;
         if let Some(ref children) = node.children {
             for child in children.iter() {
-                count += self.count_nodes(child);
+                count += Self::count_nodes_recursive(child);
             }
         }
         count
@@ -201,10 +205,14 @@ impl Octree {
     }
 
     fn count_leaves(&self, node: &OctreeNode) -> usize {
+        Self::count_leaves_recursive(node)
+    }
+
+    fn count_leaves_recursive(node: &OctreeNode) -> usize {
         if node.is_leaf() {
             1
         } else if let Some(ref children) = node.children {
-            children.iter().map(|c| self.count_leaves(c)).sum()
+            children.iter().map(Self::count_leaves_recursive).sum()
         } else {
             0
         }

@@ -17,7 +17,6 @@ pub struct StencilWeights {
 }
 
 /// Compute derivative stencils for given order and accuracy
-#[must_use]
 pub fn compute_derivative_stencils(
     order: usize,
     accuracy: usize,

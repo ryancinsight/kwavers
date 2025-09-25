@@ -77,7 +77,7 @@ impl FresnelCalculator {
 
         // Calculate phase shifts
         let r_phase = if r < 0.0 { PI } else { r_phase };
-        let t_phase = t_phase; // Transmission typically has no phase shift
+        // t_phase already calculated, transmission typically has no phase shift
 
         Ok(FresnelCoefficients {
             reflection_amplitude: r.abs(),

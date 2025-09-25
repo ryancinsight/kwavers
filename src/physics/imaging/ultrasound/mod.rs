@@ -74,7 +74,7 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
         for (i, &value) in compensated.iter().enumerate() {
             let log_value = 20.0 * (value.max(1e-10)).log10();
             let normalized = (log_value + config.dynamic_range) / config.dynamic_range;
-            image[[i, line_idx]] = normalized.max(0.0).min(1.0);
+            image[[i, line_idx]] = normalized.clamp(0.0, 1.0);
         }
     }
 
