@@ -64,7 +64,7 @@ impl MediumValidator {
         const MIN_SOUND_SPEED: f64 = 200.0;  // m/s (air-like minimum)
         const MAX_SOUND_SPEED: f64 = 6000.0; // m/s (bone maximum)
         
-        if density < MIN_DENSITY || density > MAX_DENSITY {
+        if !(MIN_DENSITY..=MAX_DENSITY).contains(&density) {
             return Err(ConfigError::InvalidValue {
                 parameter: "density".to_string(),
                 value: density.to_string(),
@@ -72,7 +72,7 @@ impl MediumValidator {
             }.into());
         }
         
-        if sound_speed < MIN_SOUND_SPEED || sound_speed > MAX_SOUND_SPEED {
+        if !(MIN_SOUND_SPEED..=MAX_SOUND_SPEED).contains(&sound_speed) {
             return Err(ConfigError::InvalidValue {
                 parameter: "sound_speed".to_string(),
                 value: sound_speed.to_string(),

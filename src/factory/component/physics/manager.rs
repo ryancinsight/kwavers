@@ -25,7 +25,7 @@ impl PhysicsManager {
         }
         
         // Future: Apply global parameters
-        for (_key, _value) in &config.global_parameters {
+        for _value in config.global_parameters.values() {
             // Parameter setting will be implemented in future iterations
         }
         
