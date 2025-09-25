@@ -307,11 +307,11 @@ impl LinearSolver {
 
         // Compute pseudoinverse solution
         let mut x = Array1::zeros(vt.nrows());
-        for i in 0..s.len() {
-            if s[i] > threshold {
+        for (i, &s_val) in s.iter().enumerate() {
+            if s_val > threshold {
                 let ui = u.column(i);
                 let vi = vt.row(i);
-                x += &(vi.to_owned() * (ui.dot(&b) / s[i]));
+                x += &(vi.to_owned() * (ui.dot(&b) / s_val));
             }
         }
 

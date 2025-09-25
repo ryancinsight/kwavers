@@ -66,8 +66,7 @@ impl PluginBasedSolver {
         boundary: Box<dyn Boundary>,
         source: Box<dyn Source>,
     ) -> Self {
-        let mut sources = Vec::new();
-        sources.push(source);
+        let sources = vec![source];
 
         let field_registry = FieldRegistry::new(&grid);
         Self {

@@ -52,7 +52,7 @@ impl TimeCoupling for SubcyclingStrategy {
 
         // Advance each component with its own subcycling
         for cycle in 0..max_cycles {
-            for (name, _component) in physics_components {
+            for name in physics_components.keys() {
                 let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
 
                 // Check if this component should be updated in this cycle
@@ -137,7 +137,7 @@ impl TimeCoupling for AveragingStrategy {
         let initial_fields: HashMap<String, Array3<f64>> = fields.clone();
 
         // First pass: advance all components independently
-        for (name, _component) in physics_components {
+        for name in physics_components.keys() {
             let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
             let _local_dt = global_dt / n_subcycles as f64;
 
@@ -218,7 +218,7 @@ impl TimeCoupling for PredictorCorrectorStrategy {
             }
 
             // Advance each component
-            for (name, _component) in physics_components {
+            for name in physics_components.keys() {
                 let n_subcycles = subcycles.get(name).copied().unwrap_or(1);
                 let _local_dt = global_dt / n_subcycles as f64;
 

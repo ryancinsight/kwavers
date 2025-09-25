@@ -140,11 +140,11 @@ impl SpectralSolver {
         let mut k = vec![0.0; n];
         let l = n as f64 * dx; // Total domain size
 
-        for i in 0..n {
+        for (i, k_val) in k.iter_mut().enumerate().take(n) {
             if i <= n / 2 {
-                k[i] = 2.0 * PI * i as f64 / l;
+                *k_val = 2.0 * PI * i as f64 / l;
             } else {
-                k[i] = 2.0 * PI * (i as f64 - n as f64) / l;
+                *k_val = 2.0 * PI * (i as f64 - n as f64) / l;
             }
         }
 

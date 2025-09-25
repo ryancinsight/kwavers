@@ -81,11 +81,10 @@ impl LineSearch {
 
         // For this implementation, apply conservative shrinking
         // Full implementation would evaluate objective function
-        for _i in 0..max_iterations {
+        if let Some(_i) = (0..max_iterations).next() {
             // In practice, would check: f(x + α*p) ≤ f(x) + c1*α*∇f·p
             // For now, shrink once for safety
             alpha *= shrink_factor;
-            break;
         }
 
         alpha.max(1e-6) // Ensure minimum step size

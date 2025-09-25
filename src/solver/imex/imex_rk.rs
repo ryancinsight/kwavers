@@ -342,19 +342,19 @@ impl IMEXScheme for IMEXRK {
             let mut stage_value = field.clone();
 
             // Add explicit contributions
-            for j in 0..i {
+            for (j, k_exp) in k_explicit.iter().enumerate().take(i) {
                 if self.a_explicit[i][j] != 0.0 {
                     Zip::from(&mut stage_value)
-                        .and(&k_explicit[j])
+                        .and(k_exp)
                         .for_each(|s, &k| *s += dt * self.a_explicit[i][j] * k);
                 }
             }
 
             // Add implicit contributions from previous stages
-            for j in 0..i {
+            for (j, k_imp) in k_implicit.iter().enumerate().take(i) {
                 if self.a_implicit[i][j] != 0.0 {
                     Zip::from(&mut stage_value)
-                        .and(&k_implicit[j])
+                        .and(k_imp)
                         .for_each(|s, &k| *s += dt * self.a_implicit[i][j] * k);
                 }
             }
@@ -420,7 +420,7 @@ impl IMEXScheme for IMEXRK {
 
     fn adjust_for_stiffness(&mut self, stiffness_ratio: f64) {
         // Adjust implicit solver tolerance based on stiffness
-        self.stiffness_factor = (stiffness_ratio / 10.0).min(10.0).max(0.1);
+        self.stiffness_factor = (stiffness_ratio / 10.0).clamp(0.1, 10.0);
     }
 
     fn stability_function(&self, z: f64) -> f64 {
