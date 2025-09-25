@@ -215,7 +215,7 @@ impl Lbfgs {
         }
 
         // Second loop: left product
-        for i in 0..m {
+        for (i, &alpha_i) in alpha.iter().enumerate() {
             let s_i = &self.s_vectors[i];
             let y_i = &self.y_vectors[i];
 
@@ -230,7 +230,7 @@ impl Lbfgs {
 
             // q = q + s_i * (α_i - β)
             q.zip_mut_with(s_i, |q_val, s_val| {
-                *q_val += s_val * (alpha[i] - beta);
+                *q_val += s_val * (alpha_i - beta);
             });
         }
 
