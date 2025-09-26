@@ -64,7 +64,7 @@ fn test_error_handling_basic() {
     assert!(invalid_grid.is_err());
     
     match invalid_grid {
-        Err(GridError::InvalidDimensions(_)) => {}, // Expected
+        Err(GridError::ZeroDimension { .. }) => {}, // Expected
         _ => panic!("Unexpected error type"),
     }
 }
