@@ -73,7 +73,13 @@ minimal = []           # Core functionality only
 parallel = ["ndarray/rayon"] # Add back parallel feature
 gpu = ["dep:wgpu", "dep:bytemuck", "dep:pollster"]
 plotting = ["dep:plotly"] 
-full = ["gpu", "plotting", "parallel"]
+# Additional features referenced in code
+nifti = []             # Medical imaging support
+nightly = []           # Nightly Rust features
+advanced-visualization = ["plotting"] # Advanced visualization features
+web-visualization = ["plotting"]      # Web-based visualization
+vr-support = []        # VR headset support (future)
+full = ["gpu", "plotting", "parallel", "nifti", "advanced-visualization"]
 
 [profile.dev]
 # Fast development builds
@@ -90,15 +96,30 @@ codegen-units = 1
 panic = "abort"
 
 [profile.test]
-# Fast test compilation
-opt-level = 1
-debug = true
-codegen-units = 256
+# SRS NFR-002 compliant: optimize for fast compilation (<30s total)
+opt-level = 0          # Minimize optimization time
+debug = false          # Reduce binary size and compilation time
+codegen-units = 256    # Maximize parallelization
+incremental = true     # Enable incremental compilation
+debug-assertions = false # Skip expensive debug checks
 
-# Production test harness
+# SRS NFR-002 Compliant Test Configuration
+# Fast unit tests - <30s execution for CI/CD
 [[test]]
 name = "integration_test"
 harness = true
+required-features = []  # Minimal dependencies
+
+# Optional slow tests - separate execution
+[[test]]  
+name = "validation_suite"
+harness = true
+required-features = ["full"]  # Full validation requires all features
+
+[[test]]
+name = "literature_validation" 
+harness = true
+required-features = ["full"]  # Literature benchmarks need full setup
 
 [lib]
 test = true
