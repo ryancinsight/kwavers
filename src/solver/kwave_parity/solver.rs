@@ -140,7 +140,7 @@ impl KWaveSolver {
         let mut tau = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let mut eta = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
-        match config.absorption_mode {
+        match &config.absorption_mode {
             AbsorptionMode::Lossless => {
                 // No absorption - arrays remain zero
             }
@@ -155,7 +155,30 @@ impl KWaveSolver {
             } => {
                 // Power law absorption implementation
                 tau.fill(1.0);
-                eta.fill(alpha_coeff);
+                eta.fill(*alpha_coeff);
+            }
+            AbsorptionMode::MultiRelaxation { tau: rel_tau, weights } => {
+                // Multi-relaxation absorption - compute effective coefficients
+                let mut effective_tau = 0.0;
+                let mut effective_eta = 0.0;
+                for (&tau_val, &weight) in rel_tau.iter().zip(weights.iter()) {
+                    effective_tau += weight * tau_val;
+                    effective_eta += weight * tau_val * tau_val;
+                }
+                tau.fill(effective_tau);
+                eta.fill(effective_eta);
+            }
+            AbsorptionMode::Causal { relaxation_times, alpha_0 } => {
+                // Causal absorption with multiple relaxation times
+                let mut effective_tau = 0.0;
+                let mut effective_eta = 0.0;
+                for &tau_val in relaxation_times.iter() {
+                    let contribution = alpha_0 / (relaxation_times.len() as f64);
+                    effective_tau += contribution * tau_val;
+                    effective_eta += contribution * tau_val * tau_val;
+                }
+                tau.fill(effective_tau);
+                eta.fill(effective_eta);
             }
         }
 
