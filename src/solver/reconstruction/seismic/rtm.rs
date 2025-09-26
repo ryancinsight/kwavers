@@ -93,9 +93,9 @@ impl ReverseTimeMigration {
         let source_time_function = wavelet.generate_time_series(DEFAULT_TIME_STEP, n_time_steps);
 
         // Time stepping
-        for t in 0..n_time_steps {
+        for (t, &source_value) in source_time_function.iter().enumerate() {
             // Apply source
-            pressure[source_position] += source_time_function[t];
+            pressure[source_position] += source_value;
 
             // Update wavefield
             self.update_wavefield(&mut pressure, &pressure_previous, grid)?;

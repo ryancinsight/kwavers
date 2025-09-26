@@ -118,11 +118,11 @@ impl TimeReversal {
         let mut k = vec![0.0; n];
         let dk = 2.0 * PI / (n as f64 * dx);
 
-        for i in 0..n {
+        for (i, k_val) in k.iter_mut().enumerate() {
             if i <= n / 2 {
-                k[i] = i as f64 * dk;
+                *k_val = i as f64 * dk;
             } else {
-                k[i] = f64::from(i as i32 - n as i32) * dk;
+                *k_val = f64::from(i as i32 - n as i32) * dk;
             }
         }
 

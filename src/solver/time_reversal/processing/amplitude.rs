@@ -104,14 +104,14 @@ impl AmplitudeCorrector {
         let mut corrected = vec![0.0; n_corrected];
 
         // Linear interpolation for time-axis resampling
-        for i in 0..n_corrected {
+        for (i, corrected_val) in corrected.iter_mut().enumerate() {
             let original_index = i as f64 / phase_factor;
             let idx_low = original_index.floor() as usize;
             let idx_high = (idx_low + 1).min(n_original - 1);
             let fraction = original_index - idx_low as f64;
 
             if idx_low < n_original {
-                corrected[i] = signal[idx_low] * (1.0 - fraction) + signal[idx_high] * fraction;
+                *corrected_val = signal[idx_low] * (1.0 - fraction) + signal[idx_high] * fraction;
             }
         }
 
