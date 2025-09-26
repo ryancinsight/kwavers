@@ -115,12 +115,28 @@
    - ✅ Found timeout mechanisms and nextest binary for future use
    - ⚠️ Recommend using `timeout 60 cargo test` for reliable execution
 
-### Medium-Term Goals (Next Sprint) - **PRIORITY: TEST INFRASTRUCTURE**
-1. **Test Suite Stabilization**: ❌ CRITICAL - Fix hanging tests (production blocker)
-2. **Warning Reduction Phase 3**: Target 31 → <20 warnings (production quality)
-3. **Documentation Accuracy**: Align all claims with verified metrics  
-4. **Performance Benchmarking**: Validate performance claims with actual benchmarks
-5. **Clippy Warning Reduction**: Target 96 → <50 clippy warnings
+## NEXT PHASE: k-Wave Parity Achievement (Sprint 96+)
+
+**Phase**: Core Feature Implementation - k-Space Pseudospectral Priority  
+**Objective**: Achieve feature parity with k-Wave through systematic gap closure
+
+### Sprint 96-98: k-Space Pseudospectral Implementation (P0 - CRITICAL)
+- [ ] **P0 - k-Space Foundation**: Power-law absorption with exact k-Wave numerical parity
+- [ ] **P0 - Dispersion Correction**: k-space operator implementation for arbitrary absorption
+- [ ] **P0 - Validation Suite**: Comprehensive benchmarks vs k-Wave test cases
+- [ ] **P0 - Integration Testing**: End-to-end pseudospectral solver validation
+
+### Sprint 99-101: Clinical Source Ecosystem (P1 - HIGH)  
+- [ ] **P1 - Transducer Modeling**: Phased array elements with directivity patterns
+- [ ] **P1 - Beamforming**: Delay-and-sum with apodization algorithms
+- [ ] **P1 - Advanced Sources**: Focused bowl transducers and histotripsy sequences
+- [ ] **P1 - Clinical Validation**: Realistic ultrasound phantom simulations
+
+### Sprint 102-104: Medical Reconstruction (P1 - HIGH)
+- [ ] **P1 - Time-Reversal**: Photoacoustic reconstruction foundation
+- [ ] **P1 - Advanced Algorithms**: Model-based iterative reconstruction  
+- [ ] **P1 - Clinical Pipeline**: Complete medical imaging workflow
+- [ ] **P1 - Performance**: Real-time reconstruction optimization
 
 ### Long-Term Vision (Next Month) - **EVIDENCE-BASED TARGETS**
 1. **A-Grade Quality**: <20 compiler warnings, test reliability, verified documentation

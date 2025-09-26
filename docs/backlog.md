@@ -86,23 +86,28 @@
 
 **ToT Path G**: Implement dendrogram analysis and deep vertical hierarchies
 
-### 🟡 PRIORITY 2: Hierarchy Analysis (Risk Score: 7 - **REASSESSED**)
+## NEXT-PHASE PRIORITIES (Post-Core Implementation)
 
-**EVIDENCE-BASED REASSESSMENT** per actual metrics:
-- **Deep Structure Files**: **621** files at depth 3+ (good architectural depth)
-- **Flat Structure Files**: **131** files at depth 2 (reasonable for leaf modules)  
-- **Mod.rs Ratio**: 170/753 = 22.6% (healthy modularization ratio)
-- **GRASP Compliance**: All modules <500 lines (verified by xtask audit)
+### 🟡 PRIORITY 2: Advanced Physics Enhancement (Risk Score: 7)
 
-**Status**: Architecture is actually **well-structured** - documentation was inaccurate
+**ENHANCEMENT OPPORTUNITIES** per gap analysis:
+- **Boundary Conditions**: Advanced elastic interfaces, layered media coupling
+- **Nonlinear Models**: Burgers equation, KZK models, shock capturing  
+- **Sensor Physics**: Realistic directivity and bandwidth modeling
 
-### 🟡 PRIORITY 2: Property-Based Testing Gap (Risk Score: 7)
+### 🟡 PRIORITY 2: Property-Based Testing Integration (Risk Score: 7)
 
-**Missing proptest integration** per ACM FSE 2025 "Property-Based Testing for Rust Safety"
+**MISSING ROBUST VALIDATION**:
+- **Current**: Basic unit tests with fixed inputs
+- **Gap**: Property-based testing with proptest for edge case discovery
+- **Target**: Comprehensive invariant validation per ACM FSE 2025 standards
 
-### 🟡 PRIORITY 3: Context Overflow Risk (Risk Score: 6)
+### 🟡 PRIORITY 3: Performance Optimization (Risk Score: 6)
 
-**Documentation proliferation** requires aggressive compression per Context Survey 2025
+**POST-FEATURE OPTIMIZATION**:
+- **Target**: 2-5x performance improvement over k-Wave MATLAB
+- **Methods**: SIMD optimization, GPU compute kernel tuning
+- **Validation**: Continuous benchmarking with criterion
 
 ---
 
