@@ -1,0 +1,49 @@
+{
+  "description": "Basic wave propagation replicating k-Wave methodology",
+  "example_name": "basic_wave_propagation",
+  "grid": {
+    "Nx": 128,
+    "Ny": 128,
+    "Nz": 1,
+    "domain_size_mm": [
+      12.8,
+      12.8,
+      0.1
+    ],
+    "dx": 0.0001,
+    "dy": 0.0001,
+    "dz": 0.0001
+  },
+  "initial_condition": {
+    "amplitude_pa": 1000000.0,
+    "center_mm": [
+      6.4,
+      6.4
+    ],
+    "type": "gaussian_pulse",
+    "width_pixels": 8
+  },
+  "kwave_equivalent": "Basic wave equation solver with Gaussian initial condition",
+  "medium": {
+    "density_kgm3": 1000.0,
+    "sound_speed_ms": 1500.0,
+    "type": "homogeneous_water"
+  },
+  "physics_validation": {
+    "cfl_stable": true,
+    "energy_conservation": "approximate",
+    "wave_speed_theoretical": 1500.0
+  },
+  "reference": "k-Wave basic wave propagation methodology",
+  "simulation_results": {
+    "execution_time_ms": 12393,
+    "final_pressure_center_pa": -7028.339421910236,
+    "max_pressure_pa": 1000000.0
+  },
+  "time": {
+    "Nt": 1000,
+    "cfl_number": 0.3,
+    "dt_s": 2e-8,
+    "t_end_us": 20.0
+  }
+}
