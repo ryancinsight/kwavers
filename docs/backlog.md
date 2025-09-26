@@ -86,13 +86,28 @@
 
 **ToT Path G**: Implement dendrogram analysis and deep vertical hierarchies
 
-### 🟡 PRIORITY 2: Property-Based Testing Gap (Risk Score: 7)
+## NEXT-PHASE PRIORITIES (Post-Core Implementation)
 
-**Missing proptest integration** per ACM FSE 2025 "Property-Based Testing for Rust Safety"
+### 🟡 PRIORITY 2: Advanced Physics Enhancement (Risk Score: 7)
 
-### 🟡 PRIORITY 3: Context Overflow Risk (Risk Score: 6)
+**ENHANCEMENT OPPORTUNITIES** per gap analysis:
+- **Boundary Conditions**: Advanced elastic interfaces, layered media coupling
+- **Nonlinear Models**: Burgers equation, KZK models, shock capturing  
+- **Sensor Physics**: Realistic directivity and bandwidth modeling
 
-**Documentation proliferation** requires aggressive compression per Context Survey 2025
+### 🟡 PRIORITY 2: Property-Based Testing Integration (Risk Score: 7)
+
+**MISSING ROBUST VALIDATION**:
+- **Current**: Basic unit tests with fixed inputs
+- **Gap**: Property-based testing with proptest for edge case discovery
+- **Target**: Comprehensive invariant validation per ACM FSE 2025 standards
+
+### 🟡 PRIORITY 3: Performance Optimization (Risk Score: 6)
+
+**POST-FEATURE OPTIMIZATION**:
+- **Target**: 2-5x performance improvement over k-Wave MATLAB
+- **Methods**: SIMD optimization, GPU compute kernel tuning
+- **Validation**: Continuous benchmarking with criterion
 
 ---
 
