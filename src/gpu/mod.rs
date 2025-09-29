@@ -111,7 +111,7 @@ impl GpuContext {
             })?;
 
         let capabilities = GpuCapabilities {
-            max_buffer_size: limits.max_buffer_size as u64,
+            max_buffer_size: limits.max_buffer_size,
             max_workgroup_size: [
                 limits.max_compute_workgroup_size_x,
                 limits.max_compute_workgroup_size_y,

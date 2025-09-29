@@ -1,5 +1,6 @@
 //! GPU compute pipeline management
 
+#[allow(unused_imports)]
 use crate::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
@@ -82,9 +83,9 @@ impl ComputePipeline {
     /// Calculate dispatch size for given problem size
     pub fn dispatch_size(&self, problem_size: [u32; 3]) -> [u32; 3] {
         [
-            (problem_size[0] + self.workgroup_size[0] - 1) / self.workgroup_size[0],
-            (problem_size[1] + self.workgroup_size[1] - 1) / self.workgroup_size[1],
-            (problem_size[2] + self.workgroup_size[2] - 1) / self.workgroup_size[2],
+            problem_size[0].div_ceil(self.workgroup_size[0]),
+            problem_size[1].div_ceil(self.workgroup_size[1]),
+            problem_size[2].div_ceil(self.workgroup_size[2]),
         ]
     }
 }
@@ -93,6 +94,12 @@ impl ComputePipeline {
 #[derive(Debug)]
 pub struct PipelineLayout {
     layouts: HashMap<String, wgpu::PipelineLayout>,
+}
+
+impl Default for PipelineLayout {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PipelineLayout {

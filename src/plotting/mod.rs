@@ -3,21 +3,27 @@
 //! This module provides visualization capabilities for Kwavers simulation results.
 //! It supports 2D/3D plotting of acoustic fields, pressure distributions, and temporal evolution.
 
+#[allow(unused_imports)]
 use ndarray::Array3;
 
 // Note: Field indices imported from physics::field_indices for SSOT
 
 #[cfg(feature = "plotting")]
+#[allow(unused_imports)]
 use plotly::{HeatMap, Layout, Plot, Scatter, Surface};
 
 #[cfg(feature = "plotting")]
 mod plotting_impl {
     use crate::grid::Grid;
+    #[allow(unused_imports)]
     use crate::physics::field_indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
     use crate::recorder::Recorder;
+    #[allow(unused_imports)]
     use crate::time::Time;
     use log::info;
+    #[allow(unused_imports)]
     use ndarray::{Array2, Array3, Axis};
+    #[allow(unused_imports)]
     use plotly::{
         common::{ColorBar, Mode, Title},
         HeatMap, Layout, Plot, Scatter, Scatter3D, Surface,

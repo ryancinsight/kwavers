@@ -3,6 +3,7 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::Array3;
+#[allow(unused_imports)]
 use num_complex::Complex;
 
 /// GPU-accelerated k-space solver
@@ -180,11 +181,11 @@ impl KSpaceGpu {
             compute_pass.set_push_constants(0, bytemuck::cast_slice(&push_constants));
 
             let workgroups_x =
-                (grid.nx as u32 + self.workgroup_size[0] - 1) / self.workgroup_size[0];
+                (grid.nx as u32).div_ceil(self.workgroup_size[0]);
             let workgroups_y =
-                (grid.ny as u32 + self.workgroup_size[1] - 1) / self.workgroup_size[1];
+                (grid.ny as u32).div_ceil(self.workgroup_size[1]);
             let workgroups_z =
-                (grid.nz as u32 + self.workgroup_size[2] - 1) / self.workgroup_size[2];
+                (grid.nz as u32).div_ceil(self.workgroup_size[2]);
 
             compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
         }
@@ -209,11 +210,11 @@ impl KSpaceGpu {
             compute_pass.set_push_constants(0, bytemuck::cast_slice(&push_constants));
 
             let workgroups_x =
-                (grid.nx as u32 + self.workgroup_size[0] - 1) / self.workgroup_size[0];
+                (grid.nx as u32).div_ceil(self.workgroup_size[0]);
             let workgroups_y =
-                (grid.ny as u32 + self.workgroup_size[1] - 1) / self.workgroup_size[1];
+                (grid.ny as u32).div_ceil(self.workgroup_size[1]);
             let workgroups_z =
-                (grid.nz as u32 + self.workgroup_size[2] - 1) / self.workgroup_size[2];
+                (grid.nz as u32).div_ceil(self.workgroup_size[2]);
 
             compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
         }

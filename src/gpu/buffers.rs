@@ -122,7 +122,7 @@ impl BufferManager {
         Self {
             buffers: HashMap::new(),
             total_memory: 0,
-            max_memory: limits.max_buffer_size as u64,
+            max_memory: limits.max_buffer_size,
         }
     }
 

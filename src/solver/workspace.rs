@@ -7,6 +7,7 @@
 //! - **Performance**: Zero-allocation hot paths
 //! - **Memory Efficiency**: 30-50% reduction in allocations
 
+#[allow(unused_imports)]
 use crate::error::{KwaversError, KwaversResult, SystemError};
 use crate::grid::Grid;
 use ndarray::Array3;

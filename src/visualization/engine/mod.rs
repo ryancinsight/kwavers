@@ -100,7 +100,7 @@ impl VisualizationEngine {
         field_type: FieldType,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
 
         #[cfg(feature = "gpu-visualization")]
         {

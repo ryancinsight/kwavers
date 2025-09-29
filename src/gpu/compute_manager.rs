@@ -7,6 +7,7 @@ use crate::gpu::shaders;
 use crate::performance::simd_auto::SimdAuto;
 use crate::physics::constants::numerical;
 use ndarray::Array3;
+#[allow(unused_imports)]
 use wgpu::util::DeviceExt;
 
 /// GPU compute manager with automatic dispatch
@@ -239,7 +240,7 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Use SIMD for element-wise operations
         let decay = absorption.mapv(|a| (-a * dt).exp());
-        let simd_dispatcher = SimdAuto::new();
+        let _simd_dispatcher = SimdAuto::new();
         // Apply decay using element-wise multiplication instead of scale_inplace
         pressure.zip_mut_with(&decay, |p, &d| *p *= d);
 
