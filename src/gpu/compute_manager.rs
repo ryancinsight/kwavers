@@ -68,7 +68,7 @@ impl ComputeManager {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| KwaversError::Gpu("No GPU adapter found".into()))?;
+            .ok_or_else(|| KwaversError::GpuError("No GPU adapter found".into()))?;
 
         let (device, queue) = adapter
             .request_device(
@@ -81,7 +81,7 @@ impl ComputeManager {
                 None,
             )
             .await
-            .map_err(|e| KwaversError::Gpu(format!("Failed to create device: {}", e)))?;
+            .map_err(|e| KwaversError::GpuError(format!("Failed to create device: {}", e)))?;
 
         Ok((device, queue))
     }
@@ -239,7 +239,9 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Use SIMD for element-wise operations
         let decay = absorption.mapv(|a| (-a * dt).exp());
-        simd().scale_inplace(pressure, 1.0); // Placeholder for actual decay application
+        let simd_dispatcher = SimdAuto::new();
+        // Apply decay using element-wise multiplication instead of scale_inplace
+        pressure.zip_mut_with(&decay, |p, &d| *p *= d);
 
         Ok(())
     }
