@@ -4,7 +4,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
-use crate::performance::simd_auto::simd;
+use crate::performance::simd_auto::SimdAuto;
 use crate::physics::constants::numerical;
 use ndarray::Array3;
 use wgpu::util::DeviceExt;
@@ -18,6 +18,7 @@ pub struct ComputeManager {
 }
 
 /// Collection of compute pipelines
+#[derive(Debug)]
 struct ComputePipelines {
     fdtd: Option<wgpu::ComputePipeline>,
     kspace: Option<wgpu::ComputePipeline>,
@@ -155,11 +156,11 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Validate CFL condition
         let cfl = dt * c0 * ((1.0 / dx).powi(2) + (1.0 / dy).powi(2) + (1.0 / dz).powi(2)).sqrt();
-        if cfl > numerical::MAX_CFL {
+        if cfl > numerical::CFL_MAX {
             return Err(KwaversError::InvalidInput(format!(
                 "CFL number {} exceeds maximum {}",
                 cfl,
-                numerical::MAX_CFL
+                numerical::CFL_MAX
             )));
         }
 

@@ -113,7 +113,7 @@ impl VisualizationConfig {
                 crate::error::ValidationError::OutOfRange {
                     value: self.target_fps,
                     min: 0.0,
-                    max: unlimited,
+                    max: f64::INFINITY,
                 }, /* field: target_fps */
             ));
         }
@@ -121,9 +121,9 @@ impl VisualizationConfig {
         if self.max_texture_size == 0 {
             return Err(crate::error::KwaversError::Validation(
                 crate::error::ValidationError::OutOfRange {
-                    value: self.max_texture_size,
-                    min: 1,
-                    max: unlimited,
+                    value: self.max_texture_size as f64,
+                    min: 1.0,
+                    max: f64::INFINITY,
                 }, /* field: max_texture_size */
             ));
         }

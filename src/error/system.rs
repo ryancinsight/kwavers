@@ -20,6 +20,13 @@ pub enum SystemError {
         resource: String,
         reason: String,
     },
+    ResourceUnavailable {
+        resource: String,
+    },
+    InvalidOperation {
+        operation: String,
+        reason: String,
+    },
     Io {
         operation: String,
         reason: String,
@@ -46,6 +53,12 @@ impl fmt::Display for SystemError {
             }
             Self::ResourceExhausted { resource, reason } => {
                 write!(f, "System resource '{resource}' exhausted: {reason}")
+            }
+            Self::ResourceUnavailable { resource } => {
+                write!(f, "System resource '{resource}' unavailable")
+            }
+            Self::InvalidOperation { operation, reason } => {
+                write!(f, "Invalid operation '{operation}': {reason}")
             }
             Self::Io { operation, reason } => {
                 write!(f, "IO operation '{operation}' failed: {reason}")

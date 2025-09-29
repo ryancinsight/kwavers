@@ -3,7 +3,9 @@
 //! Core engine for managing visualization pipeline.
 
 use crate::{
-    error::KwaversResult, grid::Grid, physics::field_mapping::UnifiedFieldType as FieldType,
+    error::{KwaversError, KwaversResult}, 
+    grid::Grid, 
+    physics::field_mapping::UnifiedFieldType as FieldType,
 };
 use log::{debug, info, warn};
 use ndarray::{Array3, Array4};

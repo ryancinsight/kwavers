@@ -133,7 +133,8 @@ impl BufferManager {
         if self.buffers.contains_key(name) {
             return Err(KwaversError::System(
                 crate::error::SystemError::InvalidOperation {
-                    operation: format!("Buffer '{}' already exists", name),
+                    operation: format!("Buffer '{}' creation", name),
+                    reason: "Buffer already exists".to_string(),
                 },
             ));
         }

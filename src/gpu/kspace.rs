@@ -114,6 +114,7 @@ impl KSpaceGpu {
             module: &fft_module,
             entry_point: "fft_forward",
             compilation_options: Default::default(),
+            cache: None,
         });
 
         // Create propagation pipeline
@@ -123,6 +124,7 @@ impl KSpaceGpu {
             module: &propagate_module,
             entry_point: "propagate",
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let workgroup_size = [8, 8, 8];

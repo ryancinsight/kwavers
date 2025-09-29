@@ -128,6 +128,7 @@ impl FdtdGpu {
             module: &shader,
             entry_point: "main",
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let workgroup_size = [8, 8, 8];

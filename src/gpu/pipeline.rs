@@ -54,6 +54,7 @@ impl ComputePipeline {
             module: &shader,
             entry_point,
             compilation_options: Default::default(),
+            cache: None,
         });
 
         Ok(Self {
