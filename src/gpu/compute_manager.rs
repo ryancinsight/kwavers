@@ -4,9 +4,10 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::shaders;
-use crate::performance::simd_auto::simd;
+use crate::performance::simd_auto::SimdAuto;
 use crate::physics::constants::numerical;
 use ndarray::Array3;
+#[allow(unused_imports)]
 use wgpu::util::DeviceExt;
 
 /// GPU compute manager with automatic dispatch
@@ -18,6 +19,7 @@ pub struct ComputeManager {
 }
 
 /// Collection of compute pipelines
+#[derive(Debug)]
 struct ComputePipelines {
     fdtd: Option<wgpu::ComputePipeline>,
     kspace: Option<wgpu::ComputePipeline>,
@@ -67,7 +69,7 @@ impl ComputeManager {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| KwaversError::Gpu("No GPU adapter found".into()))?;
+            .ok_or_else(|| KwaversError::GpuError("No GPU adapter found".into()))?;
 
         let (device, queue) = adapter
             .request_device(
@@ -80,7 +82,7 @@ impl ComputeManager {
                 None,
             )
             .await
-            .map_err(|e| KwaversError::Gpu(format!("Failed to create device: {}", e)))?;
+            .map_err(|e| KwaversError::GpuError(format!("Failed to create device: {}", e)))?;
 
         Ok((device, queue))
     }
@@ -155,11 +157,11 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Validate CFL condition
         let cfl = dt * c0 * ((1.0 / dx).powi(2) + (1.0 / dy).powi(2) + (1.0 / dz).powi(2)).sqrt();
-        if cfl > numerical::MAX_CFL {
+        if cfl > numerical::CFL_MAX {
             return Err(KwaversError::InvalidInput(format!(
                 "CFL number {} exceeds maximum {}",
                 cfl,
-                numerical::MAX_CFL
+                numerical::CFL_MAX
             )));
         }
 
@@ -238,7 +240,9 @@ impl ComputeManager {
     ) -> KwaversResult<()> {
         // Use SIMD for element-wise operations
         let decay = absorption.mapv(|a| (-a * dt).exp());
-        simd().scale_inplace(pressure, 1.0); // Placeholder for actual decay application
+        let _simd_dispatcher = SimdAuto::new();
+        // Apply decay using element-wise multiplication instead of scale_inplace
+        pressure.zip_mut_with(&decay, |p, &d| *p *= d);
 
         Ok(())
     }

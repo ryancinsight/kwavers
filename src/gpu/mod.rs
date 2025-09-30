@@ -51,6 +51,7 @@ impl GpuContext {
         // Create instance with all backends
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
+            flags: wgpu::InstanceFlags::default(),
             dx12_shader_compiler: Default::default(),
             gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
@@ -98,6 +99,7 @@ impl GpuContext {
                         max_push_constant_size: 128,
                         ..Default::default()
                     },
+                    memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
             )
@@ -109,7 +111,7 @@ impl GpuContext {
             })?;
 
         let capabilities = GpuCapabilities {
-            max_buffer_size: limits.max_buffer_size as u64,
+            max_buffer_size: limits.max_buffer_size,
             max_workgroup_size: [
                 limits.max_compute_workgroup_size_x,
                 limits.max_compute_workgroup_size_y,

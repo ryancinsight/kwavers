@@ -118,3 +118,16 @@ impl From<&str> for KwaversError {
         KwaversError::InvalidInput(s.to_string())
     }
 }
+
+#[cfg(feature = "gpu")]
+impl From<wgpu::BufferAsyncError> for KwaversError {
+    fn from(err: wgpu::BufferAsyncError) -> Self {
+        Self::GpuError(format!("Buffer async error: {:?}", err))
+    }
+}
+
+impl From<flume::RecvError> for KwaversError {
+    fn from(err: flume::RecvError) -> Self {
+        Self::GpuError(format!("Channel receive error: {}", err))
+    }
+}

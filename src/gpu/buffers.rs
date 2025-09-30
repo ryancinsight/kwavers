@@ -69,7 +69,8 @@ impl GpuBuffer {
         if !self.usage.contains(wgpu::BufferUsages::MAP_READ) {
             return Err(KwaversError::System(
                 crate::error::SystemError::InvalidOperation {
-                    operation: "Buffer not created with MAP_READ usage".to_string(),
+                    operation: "Buffer reading".to_string(),
+                    reason: "Buffer not created with MAP_READ usage".to_string(),
                 },
             ));
         }
@@ -82,11 +83,14 @@ impl GpuBuffer {
         });
 
         // Wait for mapping to complete
-        rx.recv_async().await.map_err(|e| {
+        let result = rx.recv_async().await.map_err(|e| {
             KwaversError::System(crate::error::SystemError::InvalidOperation {
-                operation: format!("Buffer mapping failed: {}", e),
+                operation: "Buffer mapping channel".to_string(),
+                reason: format!("Failed: {}", e),
             })
-        })??;
+        })?;
+        
+        result?;
 
         let data = buffer_slice.get_mapped_range();
         let result: Vec<T> = bytemuck::cast_slice(&data).to_vec();
@@ -118,7 +122,7 @@ impl BufferManager {
         Self {
             buffers: HashMap::new(),
             total_memory: 0,
-            max_memory: limits.max_buffer_size as u64,
+            max_memory: limits.max_buffer_size,
         }
     }
 
@@ -133,7 +137,8 @@ impl BufferManager {
         if self.buffers.contains_key(name) {
             return Err(KwaversError::System(
                 crate::error::SystemError::InvalidOperation {
-                    operation: format!("Buffer '{}' already exists", name),
+                    operation: format!("Buffer '{}' creation", name),
+                    reason: "Buffer already exists".to_string(),
                 },
             ));
         }

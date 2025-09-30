@@ -1,6 +1,6 @@
 //! GPU-accelerated FDTD solver
 
-use crate::error::KwaversResult;
+use crate::error::{KwaversError, KwaversResult};
 use crate::grid::Grid;
 use ndarray::Array3;
 
@@ -128,6 +128,7 @@ impl FdtdGpu {
             module: &shader,
             entry_point: "main",
             compilation_options: Default::default(),
+            cache: None,
         });
 
         let workgroup_size = [8, 8, 8];
@@ -152,6 +153,7 @@ impl FdtdGpu {
     pub async fn download_pressure(
         &self,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let size = (grid.nx * grid.ny * grid.nz * std::mem::size_of::<f32>()) as u64;
@@ -172,7 +174,7 @@ impl FdtdGpu {
         encoder.copy_buffer_to_buffer(&self.pressure_buffer, 0, &staging_buffer, 0, size);
 
         // Submit commands
-        device.queue().submit(std::iter::once(encoder.finish()));
+        queue.submit(std::iter::once(encoder.finish()));
 
         // Map and read buffer
         let buffer_slice = staging_buffer.slice(..);
@@ -183,7 +185,10 @@ impl FdtdGpu {
         });
 
         device.poll(wgpu::Maintain::Wait);
-        rx.recv_async().await.unwrap()?;
+        let result = rx.recv_async().await.map_err(|e| {
+            KwaversError::GpuError(format!("Channel receive error: {}", e))
+        })?;
+        result?;
 
         let data = buffer_slice.get_mapped_range();
         let float_data: &[f32] = bytemuck::cast_slice(&data);

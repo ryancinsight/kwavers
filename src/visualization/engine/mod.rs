@@ -3,7 +3,9 @@
 //! Core engine for managing visualization pipeline.
 
 use crate::{
-    error::KwaversResult, grid::Grid, physics::field_mapping::UnifiedFieldType as FieldType,
+    error::{KwaversError, KwaversResult}, 
+    grid::Grid, 
+    physics::field_mapping::UnifiedFieldType as FieldType,
 };
 use log::{debug, info, warn};
 use ndarray::{Array3, Array4};
@@ -98,7 +100,7 @@ impl VisualizationEngine {
         field_type: FieldType,
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
 
         #[cfg(feature = "gpu-visualization")]
         {
