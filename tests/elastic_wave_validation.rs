@@ -10,7 +10,6 @@ use kwavers::{
     grid::Grid,
     medium::{thermal::ThermalField, ElasticProperties},
     physics::{
-        field_mapping::UnifiedFieldType,
         plugin::{elastic_wave_plugin::ElasticWavePlugin, Plugin, PluginContext},
     },
 };
@@ -40,7 +39,7 @@ fn test_p_wave_velocity() {
 
     // Initialize elastic wave plugin
     let dt = 1e-7; // Time step
-    let mut plugin = ElasticWavePlugin::new(&grid, &medium, dt).unwrap();
+    let mut _plugin = ElasticWavePlugin::new(&grid, &medium, dt).unwrap();
 
     // Verify P-wave velocity matches theory
     let computed_cp = medium.p_wave_speed(0.0, 0.0, 0.0, &grid);
@@ -134,7 +133,7 @@ impl TestElasticMedium {
 // Implement required traits for TestElasticMedium
 use kwavers::medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
-    Medium, OpticalProperties, ThermalProperties, ViscousProperties,
+    OpticalProperties, ThermalProperties, ViscousProperties,
 };
 
 impl CoreMedium for TestElasticMedium {
