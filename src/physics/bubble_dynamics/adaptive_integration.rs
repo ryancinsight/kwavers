@@ -356,10 +356,12 @@ mod tests {
         let mut state = BubbleState::new(&params);
 
         // Create a custom config with more relaxed tolerances for testing
-        let mut config = AdaptiveBubbleConfig::default();
-        config.max_substeps = 10000; // Allow more substeps for stiff problem
-        config.rtol = 1e-4; // Relax relative tolerance
-        config.atol = 1e-6; // Relax absolute tolerance
+        let config = AdaptiveBubbleConfig {
+            max_substeps: 10000, // Allow more substeps for stiff problem
+            rtol: 1e-4,          // Relax relative tolerance
+            atol: 1e-6,          // Relax absolute tolerance
+            ..AdaptiveBubbleConfig::default()
+        };
         let mut integrator = AdaptiveBubbleIntegrator::new(&solver, config);
 
         // Test integration with moderate acoustic forcing
