@@ -101,6 +101,20 @@ pub enum KwaversError {
     /// Multiple errors occurred during validation
     #[error(transparent)]
     MultipleErrors(#[from] MultiError),
+
+    /// Concurrency error (lock acquisition failure)
+    #[error("Concurrency error: {message}")]
+    ConcurrencyError {
+        /// Error message
+        message: String,
+    },
+
+    /// Visualization error
+    #[error("Visualization error: {message}")]
+    Visualization {
+        /// Error message
+        message: String,
+    },
 }
 
 /// Result type alias for operations that may return a `KwaversError`

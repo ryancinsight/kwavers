@@ -3,6 +3,7 @@
 //! This module provides GPU-accelerated implementations of core algorithms
 //! using wgpu-rs for cross-platform GPU compute.
 
+pub mod backend;
 pub mod buffers;
 pub mod compute;
 pub mod compute_manager;
@@ -12,6 +13,7 @@ pub mod kspace;
 pub mod pipeline;
 pub mod shaders;
 
+pub use backend::GpuBackend;
 pub use buffers::{BufferManager, GpuBuffer};
 pub use compute::GpuCompute;
 pub use fdtd::FdtdGpu;

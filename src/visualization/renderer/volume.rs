@@ -67,9 +67,9 @@ impl VolumeRenderer {
         // Simple maximum intensity projection for now
         for i in 0..nx {
             for j in 0..ny {
-                let mut max_val = 0.0;
+                let mut max_val = 0.0_f32;
                 for k in 0..nz {
-                    max_val = max_val.max(field[[i, j, k]].abs());
+                    max_val = max_val.max(field[[i, j, k]].abs() as f32);
                 }
 
                 let color = self.transfer_function.map_value(max_val);
@@ -91,6 +91,7 @@ impl VolumeRenderer {
 }
 
 /// Transfer function for mapping values to colors
+#[derive(Debug)]
 struct TransferFunction {
     color_map: Vec<[f32; 4]>, // RGBA
 }
@@ -104,6 +105,8 @@ impl TransferFunction {
             ColorScheme::Inferno => Self::inferno_colormap(),
             ColorScheme::Magma => Self::magma_colormap(),
             ColorScheme::Turbo => Self::turbo_colormap(),
+            ColorScheme::Grayscale => Self::grayscale_colormap(),
+            ColorScheme::Custom => Self::viridis_colormap(), // Fallback to viridis for custom
         };
 
         Self { color_map }
@@ -152,9 +155,22 @@ impl TransferFunction {
     fn turbo_colormap() -> Vec<[f32; 4]> {
         Self::viridis_colormap() // Placeholder
     }
+
+    /// Grayscale colormap
+    fn grayscale_colormap() -> Vec<[f32; 4]> {
+        vec![
+            [0.0, 0.0, 0.0, 1.0],
+            [0.2, 0.2, 0.2, 1.0],
+            [0.4, 0.4, 0.4, 1.0],
+            [0.6, 0.6, 0.6, 1.0],
+            [0.8, 0.8, 0.8, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+        ]
+    }
 }
 
 /// Ray marching for volume rendering
+#[derive(Debug)]
 struct RayMarcher {
     samples: usize,
 }

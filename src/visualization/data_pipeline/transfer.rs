@@ -67,21 +67,21 @@ pub struct DataPipeline {
 
 impl DataPipeline {
     /// Create a new data pipeline
-    pub async fn new(gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
+    pub async fn new(_gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
 
         #[cfg(feature = "gpu-visualization")]
         {
             // GPU visualization requires WebGPU context
-            return Err(KwaversError::Visualization(
-                "GPU data pipeline requires WebGPU feature".to_string(),
-            ));
+            return Err(KwaversError::Visualization {
+                message: "GPU data pipeline requires WebGPU feature".to_string(),
+            });
         }
 
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {
-                gpu_context,
+                gpu_context: _gpu_context,
                 field_dimensions: HashMap::new(),
                 field_ranges: HashMap::new(),
                 processing_operations: HashMap::new(),
@@ -124,6 +124,15 @@ impl DataPipeline {
         debug!("Field transfer completed in {:?}", elapsed);
 
         Ok(())
+    }
+
+    /// Upload field data to GPU (alias for transfer_field)
+    pub async fn upload_field(
+        &mut self,
+        data: &Array3<f64>,
+        field_type: FieldType,
+    ) -> KwaversResult<()> {
+        self.transfer_field(field_type, data).await
     }
 
     /// Set processing operation for a field type
