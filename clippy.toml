@@ -1,0 +1,14 @@
+# Clippy configuration for Kwavers
+# Temporary allowances for Sprint 99 - to be addressed in follow-on micro-sprints
+
+# Allow assertions on constants in tests (Sprint 99: 9 occurrences)
+# Rationale: Compile-time constant validation useful for documentation
+# TODO Sprint 100: Convert to static_assertions crate for compile-time checks
+
+# Allow field assignment after Default::default() (Sprint 99: 9 occurrences)
+# Rationale: Test code clarity priority over builder pattern verbosity
+# TODO Sprint 101: Refactor test fixtures to use builder methods
+
+# Allow module inception (Sprint 99: 6 occurrences)
+# Rationale: Test modules conventionally named 'tests' within parent modules
+# TODO Sprint 102: Evaluate test organization patterns
