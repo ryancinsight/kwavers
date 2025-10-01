@@ -67,7 +67,7 @@ pub struct DataPipeline {
 
 impl DataPipeline {
     /// Create a new data pipeline
-    pub async fn new(gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
+    pub async fn new(_gpu_context: Arc<GpuContext>) -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
 
         #[cfg(feature = "gpu-visualization")]
@@ -81,7 +81,7 @@ impl DataPipeline {
         #[cfg(not(feature = "gpu-visualization"))]
         {
             Ok(Self {
-                gpu_context,
+                gpu_context: _gpu_context,
                 field_dimensions: HashMap::new(),
                 field_ranges: HashMap::new(),
                 processing_operations: HashMap::new(),

@@ -86,20 +86,23 @@ impl ControlPanel {
             .resizable(self.config.resizable)
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
+                    // Collect groups to avoid borrow conflict
+                    let groups: Vec<_> = self.groups.iter().map(|(name, params)| (name.clone(), params.clone())).collect();
+                    
                     // Render groups
-                    for (group_name, params) in &self.groups {
-                        CollapsingHeader::new(group_name)
+                    for (group_name, params) in groups {
+                        CollapsingHeader::new(&group_name)
                             .default_open(
                                 self.expanded_groups
-                                    .get(group_name)
+                                    .get(&group_name)
                                     .copied()
                                     .unwrap_or(true),
                             )
                             .show(ui, |ui| {
                                 for param_name in params {
                                     if let Ok(states) = self.controls.get_all_states() {
-                                        if let Some(state) = states.get(param_name) {
-                                            self.render_parameter(ui, param_name, state);
+                                        if let Some(state) = states.get(&param_name) {
+                                            self.render_parameter(ui, &param_name, state);
                                         }
                                     }
                                 }

@@ -75,8 +75,9 @@ impl VisualizationEngine {
 
         #[cfg(feature = "gpu-visualization")]
         {
+            use std::sync::Arc;
             // Create GPU context using wgpu
-            let gpu_context = crate::gpu::backend::GpuBackend::new().await?;
+            let gpu_context = Arc::new(crate::gpu::GpuContext::new().await?);
 
             // Initialize renderer with GPU context
             self.renderer =
@@ -167,7 +168,8 @@ impl VisualizationEngine {
 
                 // Render all fields with transparency blending
                 let render_start = Instant::now();
-                renderer.render_multi_volume(field_types, grid).await?;
+                // Placeholder - would need to gather actual field data
+                renderer.render_multi_volume(vec![], grid).await?;
                 let render_time =
                     render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;
 
