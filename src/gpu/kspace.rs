@@ -12,7 +12,7 @@ pub struct KSpaceGpu {
     fft_pipeline: wgpu::ComputePipeline,
     propagate_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
-    spectrum_buffer: wgpu::Buffer,
+    _spectrum_buffer: wgpu::Buffer,
     kspace_buffer: wgpu::Buffer,
     workgroup_size: [u32; 3],
 }
@@ -134,7 +134,7 @@ impl KSpaceGpu {
             fft_pipeline,
             propagate_pipeline,
             bind_group,
-            spectrum_buffer,
+            _spectrum_buffer: spectrum_buffer,
             kspace_buffer,
             workgroup_size,
         })

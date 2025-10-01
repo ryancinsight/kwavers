@@ -5,6 +5,8 @@ use crate::grid::Grid;
 use ndarray::Array3;
 
 /// GPU-accelerated FDTD solver
+/// NOTE: Some fields currently unused - part of future GPU pipeline implementation
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct FdtdGpu {
     pipeline: wgpu::ComputePipeline,
@@ -222,9 +224,9 @@ impl FdtdGpu {
         compute_pass.set_push_constants(0, bytemuck::cast_slice(&push_constants));
 
         // Calculate workgroup counts
-        let workgroups_x = (grid.nx as u32 + self.workgroup_size[0] - 1) / self.workgroup_size[0];
-        let workgroups_y = (grid.ny as u32 + self.workgroup_size[1] - 1) / self.workgroup_size[1];
-        let workgroups_z = (grid.nz as u32 + self.workgroup_size[2] - 1) / self.workgroup_size[2];
+        let workgroups_x = (grid.nx as u32).div_ceil(self.workgroup_size[0]);
+        let workgroups_y = (grid.ny as u32).div_ceil(self.workgroup_size[1]);
+        let workgroups_z = (grid.nz as u32).div_ceil(self.workgroup_size[2]);
 
         compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, workgroups_z);
     }

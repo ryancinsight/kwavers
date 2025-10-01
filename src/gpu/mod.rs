@@ -38,6 +38,8 @@ pub struct GpuCapabilities {
 }
 
 /// Main GPU context for acoustic simulations
+/// NOTE: Some fields currently unused - part of future GPU pipeline implementation
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct GpuContext {
     device: wgpu::Device,

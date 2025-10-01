@@ -10,7 +10,7 @@ pub struct GpuContext {
     #[cfg(feature = "gpu-visualization")]
     device: std::sync::Arc<wgpu::Device>,
     #[cfg(feature = "gpu-visualization")]
-    queue: std::sync::Arc<wgpu::Queue>,
+    _queue: std::sync::Arc<wgpu::Queue>,
     memory_usage: usize,
 }
 
@@ -56,7 +56,7 @@ impl GpuContext {
 
             Ok(Self {
                 device: std::sync::Arc::new(device),
-                queue: std::sync::Arc::new(queue),
+                _queue: std::sync::Arc::new(queue),
                 memory_usage: 0,
             })
         }
@@ -71,7 +71,7 @@ impl GpuContext {
     pub fn upload_volume(&mut self, data: &[f32]) -> KwaversResult<()> {
         #[cfg(feature = "gpu-visualization")]
         {
-            let buffer_size = data.len() * std::mem::size_of::<f32>();
+            let buffer_size = std::mem::size_of_val(data);
             self.memory_usage += buffer_size;
 
             // Create buffer and upload data

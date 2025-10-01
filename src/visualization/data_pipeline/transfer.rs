@@ -5,7 +5,7 @@ use crate::error::{KwaversError, KwaversResult};
 use crate::gpu::GpuContext;
 use crate::visualization::FieldType;
 use log::{debug, info};
-use ndarray::{Array3, Array4};
+use ndarray::Array3;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -43,6 +43,8 @@ impl Default for TransferOptions {
 }
 
 /// GPU data pipeline for visualization
+/// NOTE: Some fields currently unused - part of future GPU visualization pipeline
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct DataPipeline {
     gpu_context: Arc<GpuContext>,
@@ -73,9 +75,9 @@ impl DataPipeline {
         #[cfg(feature = "gpu-visualization")]
         {
             // GPU visualization requires WebGPU context
-            return Err(KwaversError::Visualization {
+            Err(KwaversError::Visualization {
                 message: "GPU data pipeline requires WebGPU feature".to_string(),
-            });
+            })
         }
 
         #[cfg(not(feature = "gpu-visualization"))]

@@ -10,7 +10,7 @@ pub struct GpuBuffer {
     buffer: wgpu::Buffer,
     size: u64,
     usage: wgpu::BufferUsages,
-    label: String,
+    _label: String,
 }
 
 impl GpuBuffer {
@@ -27,7 +27,7 @@ impl GpuBuffer {
             buffer,
             size,
             usage,
-            label: label.to_string(),
+            _label: label.to_string(),
         }
     }
 
@@ -44,13 +44,13 @@ impl GpuBuffer {
             usage,
         });
 
-        let size = (data.len() * std::mem::size_of::<T>()) as u64;
+        let size = std::mem::size_of_val(data) as u64;
 
         Self {
             buffer,
             size,
             usage,
-            label: label.to_string(),
+            _label: label.to_string(),
         }
     }
 
@@ -112,7 +112,7 @@ impl GpuBuffer {
 pub struct BufferManager {
     buffers: HashMap<String, GpuBuffer>,
     total_memory: u64,
-    max_memory: u64,
+    _max_memory: u64,
 }
 
 impl BufferManager {
@@ -122,7 +122,7 @@ impl BufferManager {
         Self {
             buffers: HashMap::new(),
             total_memory: 0,
-            max_memory: limits.max_buffer_size,
+            _max_memory: limits.max_buffer_size,
         }
     }
 
