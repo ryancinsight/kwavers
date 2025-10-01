@@ -157,6 +157,7 @@ impl ComputePipeline {
             module: &shader,
             entry_point,
             compilation_options: Default::default(),
+            cache: None,
         });
 
         self.pipeline = Some(pipeline);

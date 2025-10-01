@@ -2,7 +2,7 @@
 
 /// Volume rendering uniforms
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[cfg_attr(
     feature = "gpu-visualization",
     derive(bytemuck::Pod, bytemuck::Zeroable)

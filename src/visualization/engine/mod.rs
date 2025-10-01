@@ -80,7 +80,7 @@ impl VisualizationEngine {
 
             // Initialize renderer with GPU context
             self.renderer =
-                Some(renderer::Renderer3D::create(&self.config, gpu_context.clone()).await?);
+                Some(renderer::Renderer3D::create(self.config.clone())?);
 
             // Initialize data pipeline for efficient GPU transfers
             self.data_pipeline = Some(data_pipeline::DataPipeline::new(gpu_context).await?);
@@ -231,17 +231,23 @@ impl VisualizationEngine {
         if current_fps < target_fps * 0.8 {
             // Downgrade quality if performance is poor
             self.config.quality = match self.config.quality {
+                RenderQuality::Publication => RenderQuality::Production,
+                RenderQuality::Production => RenderQuality::High,
                 RenderQuality::High => RenderQuality::Medium,
                 RenderQuality::Medium => RenderQuality::Low,
                 RenderQuality::Low => RenderQuality::Low,
+                RenderQuality::Draft => RenderQuality::Draft,
             };
             debug!("Downgraded render quality to {:?}", self.config.quality);
         } else if current_fps > target_fps * 1.2 {
             // Upgrade quality if performance is good
             self.config.quality = match self.config.quality {
+                RenderQuality::Draft => RenderQuality::Low,
                 RenderQuality::Low => RenderQuality::Medium,
                 RenderQuality::Medium => RenderQuality::High,
-                RenderQuality::High => RenderQuality::High,
+                RenderQuality::High => RenderQuality::Production,
+                RenderQuality::Production => RenderQuality::Publication,
+                RenderQuality::Publication => RenderQuality::Publication,
             };
             debug!("Upgraded render quality to {:?}", self.config.quality);
         }
@@ -258,8 +264,9 @@ impl VisualizationEngine {
 
         #[cfg(feature = "gpu-visualization")]
         {
+            use std::path::Path;
             if let Some(renderer) = &self.renderer {
-                renderer.export_frame(filename).await?;
+                renderer.export_frame(Path::new(filename))?;
             } else {
                 super::fallback::export_field(field, field_type, filename)?;
             }

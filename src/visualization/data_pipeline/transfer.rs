@@ -73,9 +73,9 @@ impl DataPipeline {
         #[cfg(feature = "gpu-visualization")]
         {
             // GPU visualization requires WebGPU context
-            return Err(KwaversError::Visualization(
-                "GPU data pipeline requires WebGPU feature".to_string(),
-            ));
+            return Err(KwaversError::Visualization {
+                message: "GPU data pipeline requires WebGPU feature".to_string(),
+            });
         }
 
         #[cfg(not(feature = "gpu-visualization"))]

@@ -59,6 +59,15 @@ impl Renderer3D {
             crate::visualization::RenderQuality::Draft => {
                 self.volume.render_draft(field, field_type, grid)
             }
+            crate::visualization::RenderQuality::Low => {
+                self.volume.render_draft(field, field_type, grid)
+            }
+            crate::visualization::RenderQuality::Medium => {
+                self.volume.render_production(field, field_type, grid)
+            }
+            crate::visualization::RenderQuality::High => {
+                self.volume.render_production(field, field_type, grid)
+            }
             crate::visualization::RenderQuality::Production => {
                 self.volume.render_production(field, field_type, grid)
             }

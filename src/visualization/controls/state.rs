@@ -83,12 +83,22 @@ impl StateSnapshot {
 }
 
 /// Interactive controls system with thread-safe state management
-#[derive(Debug)]
 pub struct InteractiveControls {
     states: Arc<RwLock<HashMap<String, ControlState>>>,
+    #[allow(clippy::type_complexity)]
     update_callbacks: Arc<RwLock<HashMap<String, Box<dyn Fn(&ParameterValue) + Send + Sync>>>>,
     history: Arc<RwLock<Vec<StateSnapshot>>>,
     max_history_size: usize,
+}
+
+impl std::fmt::Debug for InteractiveControls {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InteractiveControls")
+            .field("states", &self.states)
+            .field("history", &self.history)
+            .field("max_history_size", &self.max_history_size)
+            .finish()
+    }
 }
 
 impl InteractiveControls {
