@@ -126,6 +126,15 @@ impl DataPipeline {
         Ok(())
     }
 
+    /// Upload field data to GPU (alias for transfer_field)
+    pub async fn upload_field(
+        &mut self,
+        data: &Array3<f64>,
+        field_type: FieldType,
+    ) -> KwaversResult<()> {
+        self.transfer_field(field_type, data).await
+    }
+
     /// Set processing operation for a field type
     pub fn set_processing(&mut self, field_type: FieldType, operation: ProcessingOperation) {
         self.processing_operations.insert(field_type, operation);

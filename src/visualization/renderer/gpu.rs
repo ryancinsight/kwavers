@@ -2,6 +2,7 @@
 
 use crate::error::{KwaversError, KwaversResult};
 use crate::visualization::VisualizationConfig;
+use wgpu::util::DeviceExt;
 
 /// GPU context for accelerated rendering
 #[derive(Debug)]
@@ -22,6 +23,8 @@ impl GpuContext {
             let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
                 dx12_shader_compiler: Default::default(),
+                flags: wgpu::InstanceFlags::default(),
+                gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
             });
 
             let adapter =

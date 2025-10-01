@@ -83,4 +83,27 @@ impl Renderer3D {
             + self.isosurface.memory_usage()
             + self.gpu.as_ref().map_or(0, |g| g.memory_usage())
     }
+
+    /// Create a new renderer (alias for new)
+    pub fn create(config: VisualizationConfig) -> KwaversResult<Self> {
+        Self::new(config)
+    }
+
+    /// Render volume data
+    pub async fn render_volume(&mut self, field_type: FieldType, grid: &Grid) -> KwaversResult<Vec<u8>> {
+        // Placeholder - would integrate with actual volume rendering
+        Ok(vec![])
+    }
+
+    /// Render multiple volume fields
+    pub async fn render_multi_volume(&mut self, fields: Vec<(FieldType, &Array3<f64>)>, grid: &Grid) -> KwaversResult<Vec<u8>> {
+        // Placeholder - would integrate with multi-field rendering
+        Ok(vec![])
+    }
+
+    /// Export rendered frame
+    pub fn export_frame(&self, path: &std::path::Path) -> KwaversResult<()> {
+        // Placeholder - would export current frame
+        Ok(())
+    }
 }
