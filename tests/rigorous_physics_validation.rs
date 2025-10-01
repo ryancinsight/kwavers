@@ -11,9 +11,8 @@
 
 use approx::assert_relative_eq;
 use kwavers::{
-    grid::Grid, medium::homogeneous::HomogeneousMedium, physics::constants::PhysicalConstants,
+    grid::Grid, physics::constants::SOUND_SPEED_WATER,
 };
-use ndarray::{Array3, Axis};
 use std::f64::consts::PI;
 
 /// Test precision bounds for numerical validation
@@ -27,7 +26,7 @@ const NUMERICAL_PRECISION: f64 = 1e-10; // For numerical methods (FDTD/PSTD)
 /// Tests ALL edge cases: r→0, t→0, negative values, precision limits
 #[test]
 fn test_greens_function_point_source_exact() {
-    let sound_speed = PhysicalConstants::water_sound_speed();
+    let _sound_speed = SOUND_SPEED_WATER;
     let grid = Grid::new(64, 64, 64, 0.1e-3, 0.1e-3, 0.1e-3).expect("Grid creation failed");
 
     // Test analytical Green's function at multiple points
@@ -63,9 +62,7 @@ fn test_greens_function_point_source_exact() {
             assert_relative_eq!(
                 expected_amplitude,
                 analytical,
-                epsilon = PHYSICS_PRECISION,
-                "Green's function amplitude validation failed at r={:.3e}",
-                r
+                epsilon = PHYSICS_PRECISION
             );
         }
     }
@@ -93,9 +90,7 @@ fn test_wave_equation_exact_solution() {
         assert_relative_eq!(
             omega,
             reconstructed_omega,
-            epsilon = MACHINE_EPSILON * omega.abs(),
-            "Dispersion relation ω=ck failed for f={:.1e} Hz",
-            freq
+            epsilon = MACHINE_EPSILON * omega.abs()
         );
 
         // Test phase velocity calculation
@@ -103,9 +98,7 @@ fn test_wave_equation_exact_solution() {
         assert_relative_eq!(
             phase_velocity,
             sound_speed,
-            epsilon = MACHINE_EPSILON * sound_speed,
-            "Phase velocity calculation failed for f={:.1e} Hz",
-            freq
+            epsilon = MACHINE_EPSILON * sound_speed
         );
 
         // Verify wavelength calculation
@@ -113,9 +106,7 @@ fn test_wave_equation_exact_solution() {
         assert_relative_eq!(
             wavelength,
             reconstructed_wavelength,
-            epsilon = MACHINE_EPSILON * wavelength,
-            "Wavelength calculation failed for f={:.1e} Hz",
-            freq
+            epsilon = MACHINE_EPSILON * wavelength
         );
     }
 }
@@ -166,9 +157,7 @@ fn test_cfl_stability_exact_bounds() {
         assert_relative_eq!(
             c,
             reconstructed_c,
-            epsilon = MACHINE_EPSILON * c,
-            "CFL-velocity reconstruction failed for c={:.1e}",
-            c
+            epsilon = MACHINE_EPSILON * c
         );
     }
 }
@@ -212,10 +201,7 @@ fn test_attenuation_exact_exponential() {
             assert_relative_eq!(
                 log_ratio,
                 expected_log_ratio,
-                epsilon = MACHINE_EPSILON * log_ratio.abs().max(MACHINE_EPSILON),
-                "Exponential decay validation failed: f={:.1e} Hz, d={:.3e} m",
-                freq,
-                d
+                epsilon = MACHINE_EPSILON * log_ratio.abs().max(MACHINE_EPSILON)
             );
 
             // Verify power law relationship
@@ -226,10 +212,7 @@ fn test_attenuation_exact_exponential() {
                 assert_relative_eq!(
                     freq,
                     freq_power,
-                    epsilon = NUMERICAL_PRECISION * freq,
-                    "Power law validation failed: expected f={:.1e}, reconstructed f={:.1e}",
-                    freq,
-                    freq_power
+                    epsilon = NUMERICAL_PRECISION * freq
                 );
             }
         }
@@ -249,12 +232,12 @@ fn test_spatial_sampling_nyquist_exact() {
     for freq in frequencies {
         let wavelength = sound_speed / freq;
 
-        for dx in grid_spacings {
-            let points_per_wavelength = wavelength / dx;
+        for dx in &grid_spacings {
+            let points_per_wavelength = wavelength / *dx;
             let nyquist_limit = wavelength / 2.0;
 
             // Exact Nyquist validation
-            if dx <= nyquist_limit {
+            if *dx <= nyquist_limit {
                 assert!(
                     points_per_wavelength >= 2.0,
                     "Nyquist criterion violated: {:.1} PPW < 2.0 for f={:.1e} Hz, dx={:.1e} m",
@@ -283,8 +266,7 @@ fn test_spatial_sampling_nyquist_exact() {
             assert_relative_eq!(
                 freq,
                 reconstructed_freq,
-                epsilon = MACHINE_EPSILON * freq,
-                "Wavelength-frequency relationship failed"
+                epsilon = MACHINE_EPSILON * freq
             );
         }
     }
@@ -296,7 +278,7 @@ fn test_spatial_sampling_nyquist_exact() {
 #[test]
 fn test_edge_cases_comprehensive() {
     // Test zero frequency (DC component)
-    let freq_zero = 0.0;
+    let _freq_zero = 0.0;
     let wavelength_inf = f64::INFINITY;
     assert!(
         wavelength_inf.is_infinite(),

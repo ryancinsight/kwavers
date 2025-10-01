@@ -173,9 +173,10 @@ mod tests {
         let anomalies = engine.detect_anomalies(&field).unwrap();
         assert_eq!(anomalies.dim(), field.dim());
 
-        // Check boolean values
+        // Check boolean values - anomalies should contain valid boolean data
         for &a in anomalies.iter() {
-            assert!(a || !a); // Must be true or false
+            // Verify we got a boolean value (true or false) without panicking
+            let _ = a;
         }
     }
 }
