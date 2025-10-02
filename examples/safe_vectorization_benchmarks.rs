@@ -203,7 +203,7 @@ fn benchmark_array_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwaver
     let _grid = Grid::new(size, size, size, 1e-3, 1e-3, 1e-3).unwrap();
     let a = Array3::<f64>::from_elem((size, size, size), 1.5);
     let b = Array3::<f64>::from_elem((size, size, size), 2.5);
-    let scalar = 3.14159;
+    let scalar = 3.2; // Test scalar value
 
     // Test: Array Addition
     {

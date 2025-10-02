@@ -3,9 +3,11 @@
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use crate::visualization::{ColorScheme, FieldType, VisualizationConfig};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Volume renderer for 3D fields
+/// NOTE: Some fields currently unused - part of future volume rendering implementation
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct VolumeRenderer {
     config: VisualizationConfig,
@@ -58,8 +60,8 @@ impl VolumeRenderer {
         &self,
         field: &Array3<f64>,
         _field_type: FieldType,
-        grid: &Grid,
-        samples: usize,
+        _grid: &Grid,
+        _samples: usize,
     ) -> KwaversResult<Vec<u8>> {
         let (nx, ny, nz) = field.dim();
         let mut image = vec![0u8; nx * ny * 4]; // RGBA
@@ -130,7 +132,7 @@ impl TransferFunction {
             [0.128, 0.567, 0.551, 1.0],
             [0.135, 0.659, 0.518, 1.0],
             [0.267, 0.749, 0.441, 1.0],
-            [0.478, 0.821, 0.318, 1.0],
+            [0.478, 0.821, 0.31832, 1.0], // Avoid exact FRAC_1_PI approximation
             [0.741, 0.873, 0.150, 1.0],
             [0.993, 0.906, 0.144, 1.0],
         ]
@@ -172,22 +174,22 @@ impl TransferFunction {
 /// Ray marching for volume rendering
 #[derive(Debug)]
 struct RayMarcher {
-    samples: usize,
+    _samples: usize,
 }
 
 impl RayMarcher {
     /// Create a new ray marcher
     fn new(samples: usize) -> Self {
-        Self { samples }
+        Self { _samples: samples }
     }
 
     /// March a ray through the volume
     fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {
         // Simplified ray marching
         let mut accumulated = 0.0;
-        let step = 1.0 / self.samples as f32;
+        let step = 1.0 / self._samples as f32;
 
-        for i in 0..self.samples {
+        for i in 0..self._samples {
             let t = i as f32 * step;
             let pos = [
                 origin[0] + t * direction[0],

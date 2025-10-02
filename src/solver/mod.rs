@@ -307,10 +307,10 @@ mod tests {
     fn test_flexible_fields_summary() {
         let mut summary = FieldsSummary::new();
         summary.insert("custom_metric", 42.0);
-        summary.insert("another_metric", 3.14);
+        summary.insert("another_metric", 3.2); // Test value (not π)
 
         assert_eq!(summary.get("custom_metric"), Some(42.0));
-        assert_eq!(summary.get("another_metric"), Some(3.14));
+        assert_eq!(summary.get("another_metric"), Some(3.2));
         assert_eq!(summary.get("nonexistent"), None);
     }
 

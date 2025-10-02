@@ -64,7 +64,7 @@ impl ControlPanel {
             let group = state.definition.group.clone();
             self.groups
                 .entry(group.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(name);
 
             // Initialize expanded state for group
@@ -119,7 +119,7 @@ impl ControlPanel {
         name: &str,
         state: &super::state::ControlState,
     ) {
-        use egui::{Checkbox, ComboBox, Slider};
+        use egui::Slider;
 
         ui.horizontal(|ui| {
             ui.label(&state.definition.display_name);

@@ -99,19 +99,19 @@ impl Renderer3D {
     }
 
     /// Render volume data
-    pub async fn render_volume(&mut self, field_type: FieldType, grid: &Grid) -> KwaversResult<Vec<u8>> {
+    pub async fn render_volume(&mut self, _field_type: FieldType, _grid: &Grid) -> KwaversResult<Vec<u8>> {
         // Placeholder - would integrate with actual volume rendering
         Ok(vec![])
     }
 
     /// Render multiple volume fields
-    pub async fn render_multi_volume(&mut self, fields: Vec<(FieldType, &Array3<f64>)>, grid: &Grid) -> KwaversResult<Vec<u8>> {
+    pub async fn render_multi_volume(&mut self, _fields: Vec<(FieldType, &Array3<f64>)>, _grid: &Grid) -> KwaversResult<Vec<u8>> {
         // Placeholder - would integrate with multi-field rendering
         Ok(vec![])
     }
 
     /// Export rendered frame
-    pub fn export_frame(&self, path: &std::path::Path) -> KwaversResult<()> {
+    pub fn export_frame(&self, _path: &std::path::Path) -> KwaversResult<()> {
         // Placeholder - would export current frame
         Ok(())
     }

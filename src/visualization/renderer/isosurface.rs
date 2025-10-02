@@ -72,9 +72,9 @@ impl IsosurfaceExtractor {
     fn generate_triangles(
         &self,
         vertices: &mut Vec<[f32; 3]>,
-        cube: &[f64; 8],
+        _cube: &[f64; 8],
         cube_index: usize,
-        threshold: f64,
+        _threshold: f64,
         offset: [f32; 3],
     ) {
         // Simplified triangle generation

@@ -1,7 +1,7 @@
 //! Data processing stages for visualization
 
 use super::ProcessingOperation;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3, Zip};
+use ndarray::Array3;
 
 /// Processing configuration
 #[derive(Debug, Clone)]

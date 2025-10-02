@@ -123,8 +123,8 @@ impl VisualizationEngine {
                 self.metrics.update(render_time, transfer_time);
 
                 debug!(
-                    "Rendered {} field: {:.2}ms render, {:.2}ms transfer",
-                    format!("{:?}", field_type),
+                    "Rendered {:?} field: {:.2}ms render, {:.2}ms transfer",
+                    field_type,
                     render_time,
                     transfer_time
                 );
