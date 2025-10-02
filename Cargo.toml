@@ -107,23 +107,102 @@ codegen-units = 256    # Maximize parallelization
 incremental = true     # Enable incremental compilation
 debug-assertions = false # Skip expensive debug checks
 
-# SRS NFR-002 Compliant Test Configuration
-# Fast unit tests - <30s execution for CI/CD
+# SRS NFR-002 Compliant Test Configuration Strategy
+# ================================================
+# TIER 1: Fast unit tests (<10s) - Always run in CI/CD
+# - Library unit tests: cargo test --lib
+# - Fast integration tests below
+#
+# TIER 2: Standard tests (<30s) - Run on PR validation  
+# - All tests in tests/ directory with required-features = []
+#
+# TIER 3: Comprehensive validation (>30s) - Run on release validation
+# - Tests requiring "full" feature set
+# - Literature validation benchmarks
+# - Physics validation suites
+
+# TIER 1: Fast integration tests (<10s execution)
+[[test]]
+name = "infrastructure_test"
+harness = true
+required-features = []
+
 [[test]]
 name = "integration_test"
 harness = true
-required-features = []  # Minimal dependencies
+required-features = []
 
-# Optional slow tests - separate execution
+[[test]]
+name = "fast_unit_tests"
+harness = true
+required-features = []
+
+[[test]]
+name = "simple_integration_test"
+harness = true
+required-features = []
+
+# TIER 2: Standard validation tests (<30s each when run separately)
+[[test]]
+name = "cfl_stability_test"
+harness = true
+required-features = []
+
+[[test]]
+name = "energy_conservation_test"
+harness = true
+required-features = []
+
+# TIER 3: Comprehensive validation tests (>30s) - Requires full feature set
 [[test]]  
 name = "validation_suite"
 harness = true
-required-features = ["full"]  # Full validation requires all features
+required-features = ["full"]
 
 [[test]]
 name = "literature_validation" 
 harness = true
-required-features = ["full"]  # Literature benchmarks need full setup
+required-features = ["full"]
+
+[[test]]
+name = "physics_validation_test"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "rigorous_physics_validation"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "solver_test"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "absorption_validation_test"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "dispersion_validation_test"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "elastic_wave_validation"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "fdtd_pstd_comparison"
+harness = true
+required-features = ["full"]
+
+[[test]]
+name = "physics_validation"
+harness = true
+required-features = ["full"]
 
 [lib]
 test = true
