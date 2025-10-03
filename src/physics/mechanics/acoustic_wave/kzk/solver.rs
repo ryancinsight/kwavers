@@ -271,7 +271,12 @@ mod tests {
         assert!(solver.is_ok());
     }
 
+    /// Test Gaussian beam propagation (COMPREHENSIVE - Tier 3)
+    /// 
+    /// This test uses a 64×64×128 grid for thorough validation.
+    /// Execution time: >30s, classified as Tier 3 comprehensive validation.
     #[test]
+    #[ignore = "Tier 3: Comprehensive validation (>30s execution time)"]
     fn test_gaussian_beam_propagation() {
         let mut config = KZKConfig {
             nx: 64,
@@ -305,6 +310,52 @@ mod tests {
 
         // Propagate
         for _ in 0..10 {
+            solver.step();
+        }
+
+        // Check that beam has propagated (peak should shift)
+        let intensity = solver.get_intensity();
+        assert!(intensity.sum() > 0.0);
+    }
+
+    /// Test Gaussian beam propagation (FAST - Tier 1)
+    /// 
+    /// Fast version with reduced grid (16×16×32) for CI/CD.
+    /// Execution time: <2s, classified as Tier 1 fast validation.
+    #[test]
+    fn test_gaussian_beam_propagation_fast() {
+        let mut config = KZKConfig {
+            nx: 16,
+            ny: 16,
+            nz: 32,
+            nt: 20,
+            dx: 1e-3,
+            dz: 1e-3,
+            dt: 1e-8,
+            ..Default::default()
+        };
+        config.include_nonlinearity = false; // Linear case first
+
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+        // Create Gaussian source
+        let mut source = Array2::zeros((config.nx, config.ny));
+        let cx = config.nx as f64 / 2.0;
+        let cy = config.ny as f64 / 2.0;
+        let sigma = 3.0; // Grid points (smaller for smaller grid)
+
+        for j in 0..config.ny {
+            for i in 0..config.nx {
+                let sigma_f64: f64 = sigma;
+                let r2 = ((i as f64 - cx).powi(2) + (j as f64 - cy).powi(2)) / sigma_f64.powi(2);
+                source[[i, j]] = (-r2).exp();
+            }
+        }
+
+        solver.set_source(source, 1e6); // 1 MHz
+
+        // Propagate fewer steps for fast validation
+        for _ in 0..3 {
             solver.step();
         }
 
