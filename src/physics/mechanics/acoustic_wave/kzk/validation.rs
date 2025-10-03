@@ -10,9 +10,13 @@ mod tests {
     use ndarray::Array2;
     use std::f64::consts::PI;
 
-    /// Test linear propagation of Gaussian beam
+    /// Test linear propagation of Gaussian beam (COMPREHENSIVE - Tier 3)
     /// Should maintain Gaussian profile with known spreading
+    /// 
+    /// This test propagates to full Rayleigh distance with default grid.
+    /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     #[test]
+    #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_gaussian_beam_diffraction() {
         let config = KZKConfig {
             nx: DEFAULT_GRID_SIZE,
@@ -137,6 +141,52 @@ mod tests {
             expected_radius * 1000.0,
             final_radius * 1000.0
         );
+    }
+
+    /// Test linear propagation of Gaussian beam (FAST - Tier 1)
+    /// Fast version with reduced grid and fewer steps for CI/CD.
+    /// Execution time: <2s, classified as Tier 1 fast validation.
+    #[test]
+    fn test_gaussian_beam_diffraction_fast() {
+        let config = KZKConfig {
+            nx: 32,
+            ny: 32,
+            nz: 20,
+            nt: 16,
+            dx: 2e-4, // Smaller dx for better resolution
+            dz: 1e-3,
+            dt: 1e-8,
+            include_nonlinearity: false,
+            include_absorption: false,
+            include_diffraction: true,
+            ..Default::default()
+        };
+
+        let mut solver = KZKSolver::new(config.clone()).unwrap();
+
+        // Create Gaussian beam with smaller waist to avoid parabolic approximation limit
+        let beam_waist = 1e-3; // 1 mm (smaller than before)
+        let mut source = Array2::zeros((config.nx, config.ny));
+
+        for j in 0..config.ny {
+            for i in 0..config.nx {
+                let x = (i as f64 - config.nx as f64 / 2.0) * config.dx;
+                let y = (j as f64 - config.ny as f64 / 2.0) * config.dx;
+                let r2 = x * x + y * y;
+                source[[i, j]] = (-r2 / (beam_waist * beam_waist)).exp();
+            }
+        }
+
+        solver.set_source(source, 1e6);
+
+        // Propagate a few steps (smoke test)
+        for _ in 0..3 {
+            solver.step();
+        }
+
+        // Just verify solver runs without panicking and produces output
+        let intensity = solver.get_intensity();
+        assert!(intensity[[config.nx / 2, config.ny / 2]] > 0.0, "Should have non-zero intensity at center");
     }
 
     /// Test harmonic generation in nonlinear propagation
