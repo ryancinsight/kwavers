@@ -18,10 +18,10 @@ mod tests {
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
     /// Should match standard linear acoustic wave equation
     /// 
-    /// Fast version with reduced grid (32³) for CI/CD (<1s execution).
+    /// Fast version with reduced grid (16³) and 20 steps for CI/CD (<1s execution).
     #[test]
     fn test_linear_propagation() {
-        let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
+        let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 1e-7;
 
         // Create linear configuration
@@ -45,7 +45,7 @@ mod tests {
         let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
 
         // Propagate for fewer time steps for fast validation
-        let n_steps = 50;
+        let n_steps = 20;
         for step in 0..n_steps {
             let t = step as f64 * dt;
             solver
