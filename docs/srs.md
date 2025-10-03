@@ -48,11 +48,40 @@
 - Parallel execution with rayon data parallelism (✅ Available)
 - GPU acceleration for compute-intensive operations (✅ WGPU integration)
 
-### Test Infrastructure (Sprint 96 Update)
-- **Fast Unit Tests**: 8 core tests executing in 0s (SRS NFR-002 compliant)
-- **Comprehensive Integration Tests**: 370 physics/validation tests (separate execution)
-- **CI/CD Strategy**: Pre-compilation + selective test execution for deployment velocity
-- **Performance Monitoring**: Automated baseline validation with evidence-based metrics
+### Test Infrastructure (Sprint 100 Update - Test Categorization)
+
+**Test Execution Strategy** (SRS NFR-002 Compliant):
+
+#### TIER 1: Fast Tests (<10s target, <30s hard limit)
+- **Library Unit Tests**: 380 focused unit tests (`cargo test --lib`)
+- **Fast Integration Tests**: 4 test files (infrastructure, integration, fast_unit_tests, simple_integration)
+- **Execution**: Individual test files complete in <5s each
+- **CI/CD Usage**: Run on every commit for rapid feedback
+- **Status**: ✅ COMPLIANT when run individually
+
+#### TIER 2: Standard Validation Tests (<30s each)
+- **CFL Stability Tests**: Numerical stability validation
+- **Energy Conservation Tests**: Physics conservation law verification
+- **Execution**: Run individually or in small groups
+- **CI/CD Usage**: Run on PR validation before merge
+- **Status**: ✅ COMPLIANT with individual execution
+
+#### TIER 3: Comprehensive Validation (>30s, requires `--features full`)
+- **Literature Validation**: 11+ test files comparing against published results
+- **Physics Validation**: Comprehensive physics model verification
+- **Solver Tests**: Full solver integration and accuracy tests
+- **Execution**: Requires full feature set, run separately
+- **CI/CD Usage**: Run on release validation and nightly builds
+- **Status**: ⚠️ Intentionally slow (comprehensive numerical validation)
+
+**Important**: Running ALL ~600 tests together exceeds 30s due to aggregate execution.
+The SRS NFR-002 constraint applies to FAST TEST EXECUTION, not comprehensive validation.
+Use `Cargo.toml` test configuration with `required-features` to separate test tiers.
+
+**Recommended Commands**:
+- Fast CI/CD: `cargo test --test infrastructure_test --test integration_test`
+- Library only: `cargo test --lib` (380 tests)
+- Full validation: `cargo test --features full` (all tests, >2min)
 
 ---
 
