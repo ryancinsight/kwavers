@@ -121,7 +121,12 @@ mod tests {
         assert_eq!(array.bowls.len(), 2);
     }
 
+    /// Test multi-bowl array with phase shifts (COMPREHENSIVE - Tier 3)
+    /// 
+    /// This test generates sources on a 32³ grid with phase shifts.
+    /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     #[test]
+    #[ignore = "Tier 3: Comprehensive validation (>60s execution time)"]
     fn test_multi_bowl_phases() {
         // Create two bowls with different phases
         let config1 = BowlConfig {
@@ -146,6 +151,49 @@ mod tests {
 
         let multi_array = MultiBowlArray::new(vec![config1, config2]).unwrap();
         let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
+
+        // Generate sources at different times
+        let source_t0 = multi_array.generate_source(&grid, 0.0).unwrap();
+        let source_t1 = multi_array.generate_source(&grid, 0.25e-6).unwrap(); // Quarter period
+
+        // The sources should be different due to phase shifts
+        let diff = &source_t1 - &source_t0;
+        let max_diff = diff.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        assert!(
+            max_diff > 0.0,
+            "Phase shifts should cause time-varying fields"
+        );
+    }
+
+    /// Test multi-bowl array with phase shifts (FAST - Tier 1)
+    /// 
+    /// Fast version with reduced grid (8³) for CI/CD smoke test.
+    /// Execution time: <1s, classified as Tier 1 fast validation.
+    #[test]
+    fn test_multi_bowl_phases_fast() {
+        // Create two bowls with different phases
+        let config1 = BowlConfig {
+            diameter: 0.03,
+            radius_of_curvature: 0.05,
+            focus: [0.0, 0.0, 0.05],
+            frequency: 1e6,
+            amplitude: 1e6,
+            phase: 0.0,
+            ..Default::default()
+        };
+
+        let config2 = BowlConfig {
+            diameter: 0.03,
+            radius_of_curvature: 0.05,
+            focus: [0.0, 0.0, 0.05],
+            frequency: 1e6,
+            amplitude: 1e6,
+            phase: PI / 2.0, // 90 degree phase shift
+            ..Default::default()
+        };
+
+        let multi_array = MultiBowlArray::new(vec![config1, config2]).unwrap();
+        let grid = Grid::new(8, 8, 8, 0.001, 0.001, 0.001).unwrap();
 
         // Generate sources at different times
         let source_t0 = multi_array.generate_source(&grid, 0.0).unwrap();
