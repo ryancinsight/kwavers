@@ -78,7 +78,7 @@ impl SpectralDetector {
         let psd: Array1<f64> = windowed
             .iter()
             .take(SPECTRAL_WINDOW_SIZE / 2)
-            .map(|c| (c.norm_sqr() / (SPECTRAL_WINDOW_SIZE as f64 * self.sample_rate)))
+            .map(|c| c.norm_sqr() / (SPECTRAL_WINDOW_SIZE as f64 * self.sample_rate))
             .collect();
 
         psd
