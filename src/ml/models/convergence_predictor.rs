@@ -10,6 +10,12 @@ pub struct ConvergencePredictorModel {
     metadata: ModelMetadata,
 }
 
+impl Default for ConvergencePredictorModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConvergencePredictorModel {
     /// Load model from path
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
