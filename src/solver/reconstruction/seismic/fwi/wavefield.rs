@@ -104,14 +104,19 @@ impl WavefieldModeler {
             }
 
             // Update wavefield using finite difference stencil
-            Zip::from(&mut u_next)
-                .and(&u_curr)
-                .and(&u_prev)
-                .and(&v2)
-                .for_each(|u_n, &u_c, &u_p, &v2_local| {
-                    let laplacian = self.compute_laplacian_at_point(&u_curr, u_c);
-                    *u_n = 2.0 * u_c - u_p + dt * dt * v2_local * laplacian / dx2;
-                });
+            // Cannot use Zip here as we need neighbor access for stencil
+            for i in 2..nx-2 {
+                for j in 2..ny-2 {
+                    for k in 2..nz-2 {
+                        let laplacian = self.compute_laplacian_stencil_7pt(&u_curr, i, j, k, dx2);
+                        let u_c = u_curr[[i, j, k]];
+                        let u_p = u_prev[[i, j, k]];
+                        let v2_local = v2[[i, j, k]];
+                        
+                        u_next[[i, j, k]] = 2.0 * u_c - u_p + dt * dt * v2_local * laplacian;
+                    }
+                }
+            }
 
             // Apply PML boundary conditions
             self.apply_pml_boundaries(&mut u_next, &pml_damping, nx, ny, nz, pml_thickness);
@@ -163,13 +168,17 @@ impl WavefieldModeler {
             }
 
             // Update adjoint wavefield (same wave equation, backward in time)
-            Zip::from(&mut adj_next)
-                .and(&adj_curr)
-                .and(&adj_prev)
-                .for_each(|a_n, &a_c, &a_p| {
-                    let laplacian = self.compute_laplacian_at_point(&adj_curr, a_c);
-                    *a_n = 2.0 * a_c - a_p + dt * dt * laplacian;
-                });
+            for i in 2..nx-2 {
+                for j in 2..ny-2 {
+                    for k in 2..nz-2 {
+                        let laplacian = self.compute_laplacian_stencil_7pt(&adj_curr, i, j, k, self.config.dx * self.config.dx);
+                        let a_c = adj_curr[[i, j, k]];
+                        let a_p = adj_prev[[i, j, k]];
+                        
+                        adj_next[[i, j, k]] = 2.0 * a_c - a_p + dt * dt * laplacian;
+                    }
+                }
+            }
 
             // Apply PML boundaries (same as forward)
             let pml_thickness = 10;
@@ -367,12 +376,18 @@ impl WavefieldModeler {
         }
     }
 
-    /// Compute Laplacian at a point (for use in Zip iteration)
-    fn compute_laplacian_at_point(&self, _field: &Array3<f64>, center_val: f64) -> f64 {
-        // Simplified 2nd order Laplacian
-        // In practice, would need neighbor values passed in
-        // This is a placeholder for the actual stencil computation
-        -6.0 * center_val // Placeholder
+    /// Compute 7-point stencil Laplacian (2nd order accurate)
+    /// ∇²u ≈ (u_{i+1} + u_{i-1} + u_{j+1} + u_{j-1} + u_{k+1} + u_{k-1} - 6u_{i,j,k}) / dx²
+    /// 
+    /// References: 
+    /// - LeVeque (2007): "Finite Difference Methods for Ordinary and Partial Differential Equations"
+    fn compute_laplacian_stencil_7pt(&self, field: &Array3<f64>, i: usize, j: usize, k: usize, dx2: f64) -> f64 {
+        let center = field[[i, j, k]];
+        let neighbors_sum = field[[i+1, j, k]] + field[[i-1, j, k]]
+                          + field[[i, j+1, k]] + field[[i, j-1, k]]
+                          + field[[i, j, k+1]] + field[[i, j, k-1]];
+        
+        (neighbors_sum - 6.0 * center) / dx2
     }
 
     /// Generate Ricker wavelet source

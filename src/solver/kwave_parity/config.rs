@@ -8,6 +8,8 @@ use ndarray::Array3;
 /// k-Wave simulation configuration matching MATLAB interface
 #[derive(Debug, Clone)]
 pub struct KWaveConfig {
+    /// Time step size [s]
+    pub dt: f64,
     /// Enable power law absorption
     pub absorption_mode: AbsorptionMode,
     /// Enable nonlinear acoustics
@@ -50,6 +52,7 @@ pub enum AbsorptionMode {
 impl Default for KWaveConfig {
     fn default() -> Self {
         Self {
+            dt: 1e-7, // 100 ns default time step
             absorption_mode: AbsorptionMode::Lossless,
             nonlinearity: false,
             pml_size: 20,
