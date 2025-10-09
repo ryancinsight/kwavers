@@ -160,7 +160,9 @@ impl Filters {
             FilterType::RamLak => self.apply_ram_lak_filter(&mut filtered)?,
             FilterType::SheppLogan => self.apply_shepp_logan_filter(&mut filtered)?,
             FilterType::Cosine => self.apply_cosine_filter(&mut filtered)?,
-            _ => {} // Other filter types not implemented
+            FilterType::Hamming => self.apply_hamming_filter(&mut filtered)?,
+            FilterType::Hann => self.apply_hann_filter(&mut filtered)?,
+            FilterType::None => {} // No filtering applied
         }
 
         Ok(filtered)
@@ -233,6 +235,78 @@ impl Filters {
             let freq = i as f64 / n as f64;
             let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
             filter[i] = ram_lak * (PI * freq / 2.0).cos();
+        }
+        filter
+    }
+
+    /// Apply Hamming filter
+    ///
+    /// Hamming window: w(n) = 0.54 - 0.46*cos(2πn/(N-1))
+    /// Applied to Ram-Lak filter for improved noise reduction
+    fn apply_hamming_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
+        let (n_samples, _) = data.dim();
+        let filter = self.create_hamming_filter(n_samples);
+
+        for mut col in data.columns_mut() {
+            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+            col.assign(&filtered);
+        }
+
+        Ok(())
+    }
+
+    /// Apply Hann filter
+    ///
+    /// Hann window: w(n) = 0.5 * (1 - cos(2πn/(N-1)))
+    /// Applied to Ram-Lak filter for smooth frequency response
+    fn apply_hann_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
+        let (n_samples, _) = data.dim();
+        let filter = self.create_hann_filter(n_samples);
+
+        for mut col in data.columns_mut() {
+            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+            col.assign(&filtered);
+        }
+
+        Ok(())
+    }
+
+    /// Create Hamming filter
+    ///
+    /// Combines Ram-Lak filter with Hamming window for improved sidelobe suppression
+    /// Literature: Hamming, R. W. (1989). Digital Filters, 3rd ed.
+    fn create_hamming_filter(&self, n: usize) -> Array1<f64> {
+        let mut filter = Array1::zeros(n);
+        for i in 0..n {
+            let freq = i as f64 / n as f64;
+            let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
+            // Hamming window: 0.54 - 0.46*cos(2πn/(N-1))
+            let hamming_window = if n > 1 {
+                0.54 - 0.46 * (2.0 * PI * i as f64 / (n - 1) as f64).cos()
+            } else {
+                1.0
+            };
+            filter[i] = ram_lak * hamming_window;
+        }
+        filter
+    }
+
+    /// Create Hann filter
+    ///
+    /// Combines Ram-Lak filter with Hann window for smooth frequency rolloff
+    /// Literature: Blackman, R. B., & Tukey, J. W. (1958). The Measurement of Power Spectra
+    fn create_hann_filter(&self, n: usize) -> Array1<f64> {
+        let mut filter = Array1::zeros(n);
+        for i in 0..n {
+            let freq = i as f64 / n as f64;
+            let ram_lak = if i <= n / 2 { freq } else { 1.0 - freq };
+            // Hann window: 0.5 * (1 - cos(2πn/(N-1)))
+            let hann_window = if n > 1 {
+                0.5 * (1.0 - (2.0 * PI * i as f64 / (n - 1) as f64).cos())
+            } else {
+                1.0
+            };
+            filter[i] = ram_lak * hann_window;
         }
         filter
     }

@@ -1,19 +1,22 @@
 //! GPU backend abstraction
+//!
+//! This module provides backward-compatible type alias for GpuBackend.
+//! The actual implementation is in GpuContext.
 
 use crate::KwaversResult;
-use crate::error::KwaversError;
+use super::GpuContext;
 
 /// GPU backend for acoustic simulations
-#[derive(Debug)]
-pub struct GpuBackend {
-    // Placeholder for future GPU implementation
-    _placeholder: (),
-}
+///
+/// Type alias for GpuContext to maintain API compatibility.
+/// All GPU operations should use GpuContext directly.
+pub type GpuBackend = GpuContext;
 
-impl GpuBackend {
-    /// Create GPU backend
-    pub async fn new() -> KwaversResult<Self> {
-        // Placeholder implementation
-        Err(KwaversError::GpuError("GPU backend not yet fully implemented".to_string()))
-    }
+/// Create GPU backend (compatibility wrapper)
+///
+/// This function provides backward compatibility with older API.
+/// New code should use `GpuContext::new()` directly.
+#[deprecated(since = "2.14.0", note = "Use GpuContext::new() directly")]
+pub async fn create_gpu_backend() -> KwaversResult<GpuBackend> {
+    GpuContext::new().await
 }

@@ -97,18 +97,42 @@ pub fn norm_neon(field: &Array3<f64>) -> f64 {
     }
 }
 
-// Stub implementations for non-aarch64 targets
+/// Cross-platform compatibility stubs for non-aarch64 targets
+///
+/// These functions provide a consistent API surface across all platforms,
+/// but are NEVER invoked at runtime due to compile-time architecture checks
+/// in the calling code (see operations.rs). The `#[cfg(target_arch = "aarch64")]`
+/// guards in operations.rs ensure these stubs are unreachable.
+///
+/// **SAFETY GUARANTEE**: Operations.rs only calls NEON functions inside
+/// `#[cfg(target_arch = "aarch64")]` blocks, making these stubs unreachable.
+/// This architectural pattern is preferred over conditional compilation
+/// in the public API to maintain a uniform interface.
 #[cfg(not(target_arch = "aarch64"))]
 pub fn add_fields_neon(_a: &Array3<f64>, _b: &Array3<f64>, _out: &mut Array3<f64>) {
-    // Empty stub - will never be called due to feature detection
+    // Unreachable: guarded by #[cfg(target_arch = "aarch64")] in operations.rs
+    #[cfg(debug_assertions)]
+    panic!("NEON operations should never be called on non-aarch64 platforms");
 }
 
+/// Cross-platform compatibility stub for scale_field on non-aarch64 targets
+///
+/// **SAFETY GUARANTEE**: See documentation on `add_fields_neon`.
 #[cfg(not(target_arch = "aarch64"))]
 pub fn scale_field_neon(_field: &Array3<f64>, _scalar: f64, _out: &mut Array3<f64>) {
-    // Empty stub - will never be called due to feature detection
+    // Unreachable: guarded by #[cfg(target_arch = "aarch64")] in operations.rs
+    #[cfg(debug_assertions)]
+    panic!("NEON operations should never be called on non-aarch64 platforms");
 }
 
+/// Cross-platform compatibility stub for norm on non-aarch64 targets
+///
+/// **SAFETY GUARANTEE**: See documentation on `add_fields_neon`.
 #[cfg(not(target_arch = "aarch64"))]
 pub fn norm_neon(_field: &Array3<f64>) -> f64 {
-    0.0 // Empty stub - will never be called due to feature detection
+    // Unreachable: guarded by #[cfg(target_arch = "aarch64")] in operations.rs
+    #[cfg(debug_assertions)]
+    panic!("NEON operations should never be called on non-aarch64 platforms");
+    #[cfg(not(debug_assertions))]
+    0.0
 }
