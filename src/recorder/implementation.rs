@@ -168,7 +168,7 @@ impl Recorder {
         }
 
         // Store snapshot if needed
-        if step % self.snapshot_interval == 0 {
+        if step.is_multiple_of(self.snapshot_interval) {
             self.fields_snapshots.push((step, fields.clone()));
             self.statistics.total_snapshots += 1;
         }

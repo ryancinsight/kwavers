@@ -151,7 +151,7 @@ impl IMEXBDF {
 
         if self.step_count < self.current_order + 1 {
             self.current_order.min(max_possible_order)
-        } else if self.current_order < self.config.max_order && self.step_count % 5 == 0 {
+        } else if self.current_order < self.config.max_order && self.step_count.is_multiple_of(5) {
             // Consider increasing order
             (self.current_order + 1).min(max_possible_order)
         } else {

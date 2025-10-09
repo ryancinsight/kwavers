@@ -99,7 +99,7 @@ impl MultiRateController {
         self.total_steps += 1;
 
         // Log efficiency gain
-        if self.total_steps % 100 == 0 {
+        if self.total_steps.is_multiple_of(100) {
             info!(
                 "Multi-rate efficiency ratio: {:.2}x",
                 self.efficiency_ratio()
