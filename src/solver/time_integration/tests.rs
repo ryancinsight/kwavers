@@ -10,6 +10,7 @@ fn test_time_integration_module_compiles() {
 #[test]
 fn test_coupling_strategy_interface() {
     // Verify the TimeCoupling trait interface is well-defined
+#[cfg(test)]
     use crate::solver::time_integration::coupling::SubcyclingStrategy;
 
     let _strategy = SubcyclingStrategy::new(10);

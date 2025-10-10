@@ -1,6 +1,8 @@
 //! Tests for Kuznetsov equation solver
 
+#[cfg(test)]
 use super::*;
+#[cfg(test)]
 use crate::grid::Grid;
 
 #[test]

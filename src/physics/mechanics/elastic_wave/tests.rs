@@ -1,10 +1,16 @@
 // src/physics/mechanics/elastic_wave/tests.rs
 
+#[cfg(test)]
 use crate::grid::Grid;
+#[cfg(test)]
 use crate::medium::homogeneous::HomogeneousMedium;
+#[cfg(test)]
 use crate::physics::field_mapping::UnifiedFieldType;
+#[cfg(test)]
 use crate::physics::mechanics::elastic_wave::ElasticWave;
+#[cfg(test)]
 use crate::source::NullSource;
+#[cfg(test)]
 use ndarray::{Array3, Array4};
 
 #[test]

@@ -3,9 +3,13 @@
 //! This module contains mock implementations used for testing acoustic wave physics.
 
 
+#[cfg(test)]
 use crate::error::KwaversResult;
+#[cfg(test)]
 use crate::grid::Grid;
+#[cfg(test)]
 use crate::medium::absorption::TissueType;
+#[cfg(test)]
 use ndarray::{Array3, ArrayViewMut3};
 
 /// Mock heterogeneous medium for testing

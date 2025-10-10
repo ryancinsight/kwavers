@@ -1,11 +1,18 @@
 //! Tests for IMEX schemes
 
+#[cfg(test)]
 use super::imex_bdf::{IMEXBDFConfig, IMEXBDF};
+#[cfg(test)]
 use super::imex_rk::{IMEXRKConfig, IMEXRKType, IMEXRK};
+#[cfg(test)]
 use super::*;
+#[cfg(test)]
 use crate::error::KwaversResult;
+#[cfg(test)]
 use crate::grid::Grid;
+#[cfg(test)]
 use ndarray::Array3;
+#[cfg(test)]
 use std::sync::Arc;
 
 /// Test problem: dy/dt = -y (stiff) + sin(t) (non-stiff)

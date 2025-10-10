@@ -1,6 +1,8 @@
 //! Tests for power modulation components
 
+#[cfg(test)]
 use super::*;
+#[cfg(test)]
 use crate::physics::constants::{MAX_DUTY_CYCLE, MIN_DUTY_CYCLE};
 
 #[test]
