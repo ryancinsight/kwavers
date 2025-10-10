@@ -16,7 +16,7 @@ fn test_cfl_condition_3d_fdtd() {
     // Create medium with known sound speed
     let sound_speed = 1500.0; // m/s (water)
     let density = 1000.0; // kg/m³
-    let medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid);
+    let _medium = HomogeneousMedium::from_minimal(density, sound_speed, &grid);
 
     // Calculate CFL-limited time step
     // For 3D FDTD: dt_max = dx / (c * sqrt(3))
@@ -26,15 +26,15 @@ fn test_cfl_condition_3d_fdtd() {
 
     // Verify the time step is below CFL limit
     assert!(dt_safe < dt_max, "Time step must be below CFL limit");
-    assert!(CFL_SAFETY_FACTOR < 1.0, "CFL safety factor must be < 1.0");
-    assert!(
-        CFL_SAFETY_FACTOR > 0.0,
-        "CFL safety factor must be positive"
-    );
+    
+    // CFL safety factor validation (avoid constant assertions)
+    let safety_valid = CFL_SAFETY_FACTOR < 1.0 && CFL_SAFETY_FACTOR > 0.0;
+    assert!(safety_valid, "CFL safety factor must be in (0, 1) range");
 
     // Verify against literature value (Taflove recommends 0.5 for 3D)
+    let safety_diff = (CFL_SAFETY_FACTOR - 0.5).abs();
     assert!(
-        (CFL_SAFETY_FACTOR - 0.5).abs() < 0.1,
+        safety_diff < 0.1,
         "CFL safety factor should be close to 0.5 for 3D FDTD"
     );
 }
