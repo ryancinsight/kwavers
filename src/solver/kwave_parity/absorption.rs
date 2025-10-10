@@ -10,6 +10,7 @@
 use crate::grid::Grid;
 use crate::solver::kwave_parity::{AbsorptionMode, KWaveConfig};
 use ndarray::{Array3, Zip};
+use rustfft::{num_complex::Complex64, FftPlanner};
 
 use std::f64::consts::PI;
 
@@ -103,17 +104,94 @@ pub fn apply_power_law_absorption(
 }
 
 /// Compute fractional Laplacian ∇^α in k-space
+/// 
+/// Implements the fractional derivative operator using FFT:
+/// ∇^α f = FFT^{-1}[|k|^α · FFT[f]]
+/// 
+/// References:
+/// - Caputo (1967): "Linear models of dissipation whose Q is almost frequency independent"
+/// - Treeby & Cox (2010): "Modeling power law absorption and dispersion for acoustic propagation"
 #[must_use]
 pub fn fractional_laplacian(
     field: &Array3<f64>,
-    _alpha: f64,
-    _k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
+    alpha: f64,
+    k_vec: &(Array3<f64>, Array3<f64>, Array3<f64>),
 ) -> Array3<f64> {
-    // This would implement the fractional Laplacian using FFT
-    // For ∇^α, multiply by |k|^α in k-space
-
-    // Placeholder - returns zero absorption
-    Array3::zeros(field.dim())
+    let (nx, ny, nz) = field.dim();
+    
+    // Handle trivial case
+    if alpha.abs() < 1e-14 {
+        return field.clone();
+    }
+    
+    // Compute magnitude of k-vector: |k| = sqrt(kx² + ky² + kz²)
+    let mut k_magnitude = Array3::zeros((nx, ny, nz));
+    Zip::from(&mut k_magnitude)
+        .and(&k_vec.0)
+        .and(&k_vec.1)
+        .and(&k_vec.2)
+        .for_each(|k_mag, &kx, &ky, &kz| {
+            *k_mag = (kx * kx + ky * ky + kz * kz).sqrt();
+        });
+    
+    // Compute fractional power: |k|^α
+    let k_power = k_magnitude.mapv(|k| {
+        if k.abs() < 1e-14 {
+            0.0  // Avoid singularity at k=0
+        } else {
+            k.powf(alpha)
+        }
+    });
+    
+    // Transform field to k-space
+    let mut field_k = Array3::zeros((nx, ny, nz));
+    let mut planner = FftPlanner::new();
+    
+    // Forward FFT for each z-slice
+    for k in 0..nz {
+        for j in 0..ny {
+            let mut buffer: Vec<Complex64> = (0..nx)
+                .map(|i| Complex64::new(field[[i, j, k]], 0.0))
+                .collect();
+            
+            let fft = planner.plan_fft_forward(nx);
+            fft.process(&mut buffer);
+            
+            for (i, val) in buffer.iter().enumerate() {
+                field_k[[i, j, k]] = val.re;
+            }
+        }
+    }
+    
+    // Apply fractional power in k-space
+    let mut result_k = Array3::zeros((nx, ny, nz));
+    Zip::from(&mut result_k)
+        .and(&field_k)
+        .and(&k_power)
+        .for_each(|res, &fk, &kp| {
+            *res = fk * kp;
+        });
+    
+    // Inverse FFT
+    let mut result = Array3::zeros((nx, ny, nz));
+    for k in 0..nz {
+        for j in 0..ny {
+            let mut buffer: Vec<Complex64> = (0..nx)
+                .map(|i| Complex64::new(result_k[[i, j, k]], 0.0))
+                .collect();
+            
+            let ifft = planner.plan_fft_inverse(nx);
+            ifft.process(&mut buffer);
+            
+            // Normalize and extract real part
+            let scale = 1.0 / (nx as f64);
+            for (i, val) in buffer.iter().enumerate() {
+                result[[i, j, k]] = val.re * scale;
+            }
+        }
+    }
+    
+    result
 }
 
 /// Compute multi-relaxation absorption operators
