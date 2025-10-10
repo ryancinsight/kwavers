@@ -49,7 +49,7 @@ pub struct BenchmarkResult {
 }
 
 /// Complete benchmark suite
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BenchmarkSuite {
     pub results: Vec<BenchmarkResult>,
     pub baseline_performance: f64,
@@ -57,10 +57,7 @@ pub struct BenchmarkSuite {
 
 impl BenchmarkSuite {
     pub fn new() -> Self {
-        Self {
-            results: Vec::new(),
-            baseline_performance: 0.0,
-        }
+        Self::default()
     }
 
     pub fn add_result(&mut self, result: BenchmarkResult) {
@@ -88,7 +85,7 @@ impl BenchmarkSuite {
                 .to_string();
             test_groups
                 .entry(test_category)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(result);
         }
 

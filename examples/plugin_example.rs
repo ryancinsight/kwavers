@@ -85,11 +85,11 @@ impl Plugin for FrequencyAbsorptionPlugin {
     fn update(
         &mut self,
         fields: &mut Array4<f64>,
-        grid: &Grid,
+        _grid: &Grid,
         _medium: &dyn kwavers::medium::Medium,
         dt: f64,
         _t: f64,
-        context: &PluginContext,
+        _context: &PluginContext,
     ) -> KwaversResult<()> {
         // Get absorption coefficient for current frequency
         // In a real implementation, frequency would come from simulation parameters
@@ -194,7 +194,7 @@ impl Plugin for StatisticsPlugin {
             .min(pressure.iter().fold(f64::INFINITY, |a, &b| a.min(b)));
         self.update_count += 1;
 
-        if self.update_count % 100 == 0 {
+        if self.update_count.is_multiple_of(100) {
             println!(
                 "Statistics at t = {:.3e}: P_max = {:.3e}, P_min = {:.3e}",
                 t, self.max_pressure, self.min_pressure
@@ -271,7 +271,7 @@ fn main() -> KwaversResult<()> {
         }
     }
 
-    let dt = 1e-6;
+    let _dt = 1e-6;
 
     // Demonstrate plugin execution (simplified to avoid hanging)
     println!("  Simulating 10 time steps...");
@@ -289,7 +289,7 @@ fn main() -> KwaversResult<()> {
 
     // Display performance metrics
     println!("\nPerformance metrics:");
-    let metrics = plugin_manager.performance_metrics();
+    let _metrics = plugin_manager.performance_metrics();
     println!("  Total plugins: {}", plugin_manager.plugin_count());
 
     println!("\n=== Plugin system demonstration complete ===");

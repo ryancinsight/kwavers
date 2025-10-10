@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: Medium Initialization Performance
     let start = Instant::now();
-    let medium = HomogeneousMedium::water(&grid);
+    let _medium = HomogeneousMedium::water(&grid);
     let medium_creation_time = start.elapsed();
     println!("✅ Medium Creation: {:.2}ms", medium_creation_time.as_secs_f64() * 1000.0);
 
