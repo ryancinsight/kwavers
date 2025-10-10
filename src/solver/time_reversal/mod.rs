@@ -78,9 +78,9 @@ mod tests {
 
         // Add frequency components: 500 Hz (should be filtered),
         // 2000 Hz (should pass), 10000 Hz (should be filtered)
-        for i in 0..n {
+        for (i, sample) in signal.iter_mut().enumerate().take(n) {
             let t = i as f64 * dt;
-            signal[i] = (2.0 * PI * 500.0 * t).sin()
+            *sample = (2.0 * PI * 500.0 * t).sin()
                 + (2.0 * PI * 2000.0 * t).sin()
                 + (2.0 * PI * 10000.0 * t).sin();
         }
@@ -124,25 +124,38 @@ mod tests {
         assert!(valid_config.validate().is_ok());
 
         // Test invalid iterations
-        let mut invalid_config = TimeReversalConfig::default();
-        invalid_config.iterations = 0;
+        let invalid_config = TimeReversalConfig {
+            iterations: 0,
+            ..Default::default()
+        };
         assert!(invalid_config.validate().is_err());
 
-        // Test invalid tolerance
-        invalid_config = TimeReversalConfig::default();
-        invalid_config.tolerance = 0.0;
-        assert!(invalid_config.validate().is_err());
+        // Test invalid tolerance (zero)
+        let invalid_tolerance_zero = TimeReversalConfig {
+            tolerance: 0.0,
+            ..Default::default()
+        };
+        assert!(invalid_tolerance_zero.validate().is_err());
 
-        invalid_config.tolerance = 1.0;
-        assert!(invalid_config.validate().is_err());
+        // Test invalid tolerance (too high)
+        let invalid_tolerance_high = TimeReversalConfig {
+            tolerance: 1.0,
+            ..Default::default()
+        };
+        assert!(invalid_tolerance_high.validate().is_err());
 
         // Test invalid frequency range
-        invalid_config = TimeReversalConfig::default();
-        invalid_config.frequency_range = Some((5000.0, 1000.0));
-        assert!(invalid_config.validate().is_err());
+        let invalid_freq_range = TimeReversalConfig {
+            frequency_range: Some((5000.0, 1000.0)),
+            ..Default::default()
+        };
+        assert!(invalid_freq_range.validate().is_err());
 
         // Test negative frequency
-        invalid_config.frequency_range = Some((-1000.0, 5000.0));
-        assert!(invalid_config.validate().is_err());
+        let invalid_neg_freq = TimeReversalConfig {
+            frequency_range: Some((-1000.0, 5000.0)),
+            ..Default::default()
+        };
+        assert!(invalid_neg_freq.validate().is_err());
     }
 }

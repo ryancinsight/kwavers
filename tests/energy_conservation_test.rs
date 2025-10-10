@@ -8,7 +8,15 @@
 use kwavers::grid::Grid;
 use kwavers::medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
-use num_traits::Float;
+
+/// Parameters for acoustic energy calculation
+struct EnergyParams<T> {
+    density: T,
+    sound_speed: T,
+    dx: T,
+    dy: T,
+    dz: T,
+}
 
 /// Calculate total acoustic energy in the domain
 ///
@@ -25,16 +33,12 @@ fn calculate_acoustic_energy<T>(
     velocity_x: &Array3<T>,
     velocity_y: &Array3<T>,
     velocity_z: &Array3<T>,
-    density: T,
-    sound_speed: T,
-    dx: T,
-    dy: T,
-    dz: T,
+    params: &EnergyParams<T>,
 ) -> T
 where
     T: num_traits::Float + std::default::Default + std::iter::Sum,
 {
-    let dv = dx * dy * dz; // Volume element
+    let dv = params.dx * params.dy * params.dz; // Volume element
     let half = T::from(0.5).unwrap();
 
     Zip::from(pressure)
@@ -42,8 +46,8 @@ where
         .and(velocity_y)
         .and(velocity_z)
         .fold(T::default(), |energy, &p, &vx, &vy, &vz| {
-            let kinetic = half * density * (vx * vx + vy * vy + vz * vz);
-            let potential = half * p * p / (density * sound_speed * sound_speed);
+            let kinetic = half * params.density * (vx * vx + vy * vy + vz * vz);
+            let potential = half * p * p / (params.density * params.sound_speed * params.sound_speed);
             energy + (kinetic + potential) * dv
         })
 }
@@ -51,7 +55,7 @@ where
 #[test]
 fn test_energy_conservation_in_closed_domain() {
     let grid = Grid::new(50, 50, 50, 1e-3, 1e-3, 1e-3).unwrap();
-    let medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
+    let _medium = HomogeneousMedium::from_minimal(1000.0, 1500.0, &grid);
 
     // Initialize fields with a Gaussian pulse
     let mut pressure = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -78,16 +82,19 @@ fn test_energy_conservation_in_closed_domain() {
     }
 
     // Calculate initial energy
+    let params = EnergyParams {
+        density: 1000.0,
+        sound_speed: 1500.0,
+        dx: grid.dx,
+        dy: grid.dy,
+        dz: grid.dz,
+    };
     let initial_energy = calculate_acoustic_energy(
         &pressure,
         &velocity_x,
         &velocity_y,
         &velocity_z,
-        1000.0,
-        1500.0,
-        grid.dx,
-        grid.dy,
-        grid.dz,
+        &params,
     );
 
     assert!(initial_energy > 0.0, "Initial energy must be positive");
@@ -105,7 +112,7 @@ fn test_reciprocity_principle() {
     // This is a fundamental principle that must be satisfied
     // Reference: Morse & Ingard, "Theoretical Acoustics", 1968
 
-    let grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
+    let _grid = Grid::new(100, 100, 100, 1e-3, 1e-3, 1e-3).unwrap();
 
     // Position A
     let source_a = (25, 50, 50);

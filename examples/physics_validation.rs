@@ -29,7 +29,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
 
     let nx = 64;
     let dx = 1e-3; // 1mm
-    let grid = Grid::new(nx, nx, 1, dx, dx, dx)?;
+    let _grid = Grid::new(nx, nx, 1, dx, dx, dx)?;
 
     // Thermal parameters
     let alpha = 1.4e-7; // m²/s (water thermal diffusivity)
@@ -39,7 +39,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     let sigma0 = 5.0 * dx;
     let x0 = nx as f64 / 2.0 * dx;
     let y0 = nx as f64 / 2.0 * dx;
-    let T0 = 10.0; // Initial temperature rise
+    let t0 = 10.0; // Initial temperature rise
 
     // Initialize temperature field
     let mut temperature = Array3::<f64>::zeros((nx, nx, 1));
@@ -51,7 +51,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
             let x = i as f64 * dx;
             let y = j as f64 * dx;
             let r2 = (x - x0).powi(2) + (y - y0).powi(2);
-            *value = T0 * (-r2 / (2.0 * sigma0 * sigma0)).exp();
+            *value = t0 * (-r2 / (2.0 * sigma0 * sigma0)).exp();
         });
 
     // Store initial max temperature
@@ -93,7 +93,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
             let x = i as f64 * dx;
             let y = j as f64 * dx;
             let r2 = (x - x0).powi(2) + (y - y0).powi(2);
-            let analytical = T0 * amplitude_ratio * (-r2 / (2.0 * sigma_t * sigma_t)).exp();
+            let analytical = t0 * amplitude_ratio * (-r2 / (2.0 * sigma_t * sigma_t)).exp();
             let numerical = temperature[[i, j, 0]];
 
             if analytical > 0.1 {
@@ -120,7 +120,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     println!("     - Final max temperature: {:.2} K", final_max);
     println!(
         "     - Expected max (analytical): {:.2} K",
-        T0 * amplitude_ratio
+        t0 * amplitude_ratio
     );
     println!("     - Maximum relative error: {:.2}%", max_error * 100.0);
     println!("     - Average relative error: {:.2}%", avg_error * 100.0);
@@ -257,7 +257,7 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
         // In production, use proper constructors or builder patterns
 
         // Initial amplitude
-        let A0 = 1.0;
+        let a0 = 1.0;
         let distance = 0.1; // 10 cm
 
         // Get absorption coefficient from medium
@@ -268,24 +268,24 @@ fn test_acoustic_absorption() -> Result<(), Box<dyn std::error::Error>> {
         let alpha_actual = alpha;
 
         // Expected amplitude after propagation
-        let A_expected = A0 * (-alpha_actual * distance).exp();
+        let a_expected = a0 * (-alpha_actual * distance).exp();
 
         // Simulation: apply absorption
         let n_steps = 100;
         let dx_step = distance / n_steps as f64;
-        let mut amplitude = A0;
+        let mut amplitude = a0;
 
         for _ in 0..n_steps {
             amplitude *= (-alpha_actual * dx_step).exp();
         }
 
-        let error = ((amplitude - A_expected) / A_expected).abs();
+        let error = ((amplitude - a_expected) / a_expected).abs();
 
         println!(
             "   {:8.1} | {:8.1} cm | {:8.4} | {:8.4} | {:.2}%",
             alpha_np,
             distance * 100.0,
-            A_expected,
+            a_expected,
             amplitude,
             error * 100.0
         );

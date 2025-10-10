@@ -3,8 +3,8 @@
 
 #[test]
 fn test_compilation_success() {
-    // Verify basic compilation and execution
-    assert!(true, "Basic test execution works");
+    // Verify basic compilation and execution - test passes if compiled
+    // No assertions needed for compilation check
 }
 
 #[test]
