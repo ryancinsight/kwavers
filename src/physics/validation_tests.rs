@@ -17,13 +17,15 @@ mod tests {
     #[test]
     fn test_prosperetti_linear_oscillations() {
         // Small amplitude oscillations around equilibrium
-        let mut params = BubbleParameters::default();
-        params.r0 = 10e-6; // 10 μm bubble
-        params.p0 = ATMOSPHERIC_PRESSURE;
-        params.sigma = SURFACE_TENSION_WATER;
-        params.rho_liquid = DENSITY_WATER;
-        params.mu_liquid = VISCOSITY_WATER;
-        params.use_thermal_effects = false; // Isothermal for simplicity
+        let params = BubbleParameters {
+            r0: 10e-6, // 10 μm bubble
+            p0: ATMOSPHERIC_PRESSURE,
+            sigma: SURFACE_TENSION_WATER,
+            rho_liquid: DENSITY_WATER,
+            mu_liquid: VISCOSITY_WATER,
+            use_thermal_effects: false, // Isothermal for simplicity
+            ..Default::default()
+        };
 
         let solver = RayleighPlessetSolver::new(params.clone());
         let mut state = BubbleState::new(&params);
@@ -179,8 +181,9 @@ mod tests {
         // This is a placeholder for a more complex test that would
         // require running a simulation and tracking energy
 
-        // For now, just verify our tolerance is reasonable
-        assert!(ENERGY_CONSERVATION_TOLERANCE > 0.0);
-        assert!(ENERGY_CONSERVATION_TOLERANCE < 1e-3); // Should be small
+        // For now, just verify our tolerance is reasonable using static_assertions
+        // Note: These assertions are compile-time checks ensuring tolerance is within bounds
+        const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE > 0.0);
+        const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE < 1e-3); // Should be small
     }
 }

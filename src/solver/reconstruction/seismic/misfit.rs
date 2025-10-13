@@ -378,11 +378,11 @@ impl MisfitFunction {
             // DC and Nyquist: keep as is
             
             // Zero out negative frequencies, double positive frequencies
-            for k in 1..nsamples / 2 {
-                buffer[k] *= Complex::new(2.0, 0.0);
+            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= Complex::new(2.0, 0.0);
             }
-            for k in (nsamples / 2 + 1)..nsamples {
-                buffer[k] = Complex::new(0.0, 0.0);
+            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = Complex::new(0.0, 0.0);
             }
             
             // Step 3: IFFT to get analytic signal
@@ -434,11 +434,11 @@ impl MisfitFunction {
             fft.process(&mut buffer);
             
             // Apply Hilbert transform in frequency domain
-            for k in 1..nsamples / 2 {
-                buffer[k] *= Complex::new(2.0, 0.0);
+            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= Complex::new(2.0, 0.0);
             }
-            for k in (nsamples / 2 + 1)..nsamples {
-                buffer[k] = Complex::new(0.0, 0.0);
+            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = Complex::new(0.0, 0.0);
             }
             
             let ifft = fft_planner.plan_fft_inverse(nsamples);

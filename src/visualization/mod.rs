@@ -197,13 +197,17 @@ mod tests {
         assert!(valid_config.validate().is_ok());
 
         // Invalid target_fps
-        let mut invalid_config = VisualizationConfig::default();
-        invalid_config.target_fps = 0.0;
+        let invalid_config = VisualizationConfig {
+            target_fps: 0.0,
+            ..Default::default()
+        };
         assert!(invalid_config.validate().is_err());
 
         // Invalid max_texture_size
-        invalid_config = VisualizationConfig::default();
-        invalid_config.max_texture_size = 0;
+        let invalid_config = VisualizationConfig {
+            max_texture_size: 0,
+            ..Default::default()
+        };
         assert!(invalid_config.validate().is_err());
     }
 

@@ -155,8 +155,10 @@ mod tests {
     #[test]
     fn test_rayleigh_plesset_equilibrium() {
         // Create parameters with a larger bubble to avoid numerical issues
-        let mut params = BubbleParameters::default();
-        params.r0 = 50e-6; // 50 μm bubble instead of 5 μm
+        let params = BubbleParameters {
+            r0: 50e-6, // 50 μm bubble instead of 5 μm
+            ..Default::default()
+        };
 
         let solver = RayleighPlessetSolver::new(params.clone());
         let state = BubbleState::at_equilibrium(&params);

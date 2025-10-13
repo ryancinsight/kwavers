@@ -10,10 +10,10 @@ use kwavers::testing::grid_properties::*;
 use kwavers::{Grid, medium::{HomogeneousMedium, CoreMedium}};
 use proptest::prelude::*;
 
-/// Property test: Density must always be physically valid (positive, finite)
-///
-/// **Physical Constraint**: Density ρ > 0 for all materials
-/// **Reference**: Hamilton & Blackstock (1998), Chapter 1
+// Property test: Density must always be physically valid (positive, finite)
+//
+// **Physical Constraint**: Density ρ > 0 for all materials
+// **Reference**: Hamilton & Blackstock (1998), Chapter 1
 #[cfg(test)]
 proptest! {
     #[test]
@@ -54,10 +54,10 @@ proptest! {
     }
 }
 
-/// Property test: Grid operations must be safe for all valid inputs
-///
-/// **Safety Property**: Index conversions never panic within bounds
-/// **Reference**: Rust Bounds Checking Safety Guarantees
+// Property test: Grid operations must be safe for all valid inputs
+//
+// **Safety Property**: Index conversions never panic within bounds
+// **Reference**: Rust Bounds Checking Safety Guarantees
 #[cfg(test)]
 proptest! {
     #[test]

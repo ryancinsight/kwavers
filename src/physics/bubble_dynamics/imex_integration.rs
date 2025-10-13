@@ -431,9 +431,11 @@ mod tests {
 
     #[test]
     fn test_thermal_mass_coupling() {
-        let mut params = BubbleParameters::default();
-        params.use_thermal_effects = true;
-        params.use_mass_transfer = true;
+        let params = BubbleParameters {
+            use_thermal_effects: true,
+            use_mass_transfer: true,
+            ..Default::default()
+        };
 
         let solver = Arc::new(KellerMiksisModel::new(params.clone()));
         let state = BubbleState::new(&params);
