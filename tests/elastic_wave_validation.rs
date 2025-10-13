@@ -185,15 +185,15 @@ impl ArrayAccess for TestElasticMedium {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn sound_speed_array(&self) -> ndarray::ArrayView3<f64> {
+    fn sound_speed_array(&self) -> ndarray::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn absorption_array(&self) -> ndarray::ArrayView3<f64> {
+    fn absorption_array(&self) -> ndarray::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn nonlinearity_array(&self) -> ndarray::ArrayView3<f64> {
+    fn nonlinearity_array(&self) -> ndarray::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 }

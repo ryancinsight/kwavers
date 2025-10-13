@@ -25,10 +25,12 @@ mod tests {
         let dt = 1e-7;
 
         // Create linear configuration
-        let mut config = KuznetsovConfig::default();
-        config.equation_mode = AcousticEquationMode::Linear;
-        config.nonlinearity_coefficient = 0.0;
-        config.acoustic_diffusivity = 0.0;
+        let config = KuznetsovConfig {
+            equation_mode: AcousticEquationMode::Linear,
+            nonlinearity_coefficient: 0.0,
+            acoustic_diffusivity: 0.0,
+            ..Default::default()
+        };
 
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
@@ -97,10 +99,12 @@ mod tests {
         let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
 
-        let mut config = KuznetsovConfig::default();
-        config.equation_mode = AcousticEquationMode::Linear;
-        config.nonlinearity_coefficient = 0.0;
-        config.acoustic_diffusivity = 0.0;
+        let config = KuznetsovConfig {
+            equation_mode: AcousticEquationMode::Linear,
+            nonlinearity_coefficient: 0.0,
+            acoustic_diffusivity: 0.0,
+            ..Default::default()
+        };
 
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
@@ -160,10 +164,12 @@ mod tests {
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap();
         let dt = 5e-8; // Small timestep for stability
 
-        let mut config = KuznetsovConfig::default();
-        config.equation_mode = AcousticEquationMode::Linear;
-        config.nonlinearity_coefficient = 0.0;
-        config.acoustic_diffusivity = 0.0;
+        let config = KuznetsovConfig {
+            equation_mode: AcousticEquationMode::Linear,
+            nonlinearity_coefficient: 0.0,
+            acoustic_diffusivity: 0.0,
+            ..Default::default()
+        };
 
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
@@ -224,10 +230,12 @@ mod tests {
         let grid = Grid::new(128, 64, 64, 1e-4, 1e-3, 1e-3).unwrap();
         let dt = 1e-8;
 
-        let mut config = KuznetsovConfig::default();
-        config.equation_mode = AcousticEquationMode::Westervelt; // Nonlinear, no diffusion
-        config.nonlinearity_coefficient = 5.2; // Water B/A parameter
-        config.acoustic_diffusivity = 0.0;
+        let config = KuznetsovConfig {
+            equation_mode: AcousticEquationMode::Westervelt, // Nonlinear, no diffusion
+            nonlinearity_coefficient: 5.2, // Water B/A parameter
+            acoustic_diffusivity: 0.0,
+            ..Default::default()
+        };
 
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);
@@ -273,10 +281,12 @@ mod tests {
         let grid = Grid::new(32, 16, 16, 1e-4, 1e-3, 1e-3).unwrap();
         let dt = 1e-8;
 
-        let mut config = KuznetsovConfig::default();
-        config.equation_mode = AcousticEquationMode::Westervelt; // Nonlinear, no diffusion
-        config.nonlinearity_coefficient = 5.2; // Water B/A parameter
-        config.acoustic_diffusivity = 0.0;
+        let config = KuznetsovConfig {
+            equation_mode: AcousticEquationMode::Westervelt, // Nonlinear, no diffusion
+            nonlinearity_coefficient: 5.2, // Water B/A parameter
+            acoustic_diffusivity: 0.0,
+            ..Default::default()
+        };
 
         let mut solver = KuznetsovWave::new(config, &grid).unwrap();
         let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.0, 0.0, &grid);

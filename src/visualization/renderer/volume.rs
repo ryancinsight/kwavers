@@ -184,6 +184,10 @@ impl RayMarcher {
     }
 
     /// March a ray through the volume
+    /// 
+    /// Note: This method is reserved for future volume rendering implementation.
+    /// It implements ray marching for 3D volume visualization.
+    #[allow(dead_code)]
     fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {
         // Simplified ray marching
         let mut accumulated = 0.0;
