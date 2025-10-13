@@ -11,7 +11,7 @@ fn grid_creation_benchmark(c: &mut Criterion) {
 
     for size in [32, 64, 128].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
-            b.iter(|| Grid::new(size, size, size, 1e-3, 1e-3, 1e-3));
+            b.iter(|| Grid::new(size, size, size, 1e-3, 1e-3, 1e-3).expect("Grid creation"));
         });
     }
 
@@ -22,7 +22,8 @@ fn field_creation_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("field_creation");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3);
+        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
+            .expect("Grid creation should succeed");
         group.bench_with_input(BenchmarkId::from_parameter(size), &grid, |b, grid| {
             b.iter(|| grid.create_field());
         });
@@ -35,7 +36,8 @@ fn field_operations_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("field_operations");
 
     // Benchmark field addition
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)
+        .expect("Grid creation should succeed");
     let field1 = grid.create_field();
     let field2 = grid.create_field();
 
@@ -60,22 +62,24 @@ fn field_operations_benchmark(c: &mut Criterion) {
 fn medium_evaluation_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("medium_evaluation");
 
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)
+        .expect("Grid creation should succeed");
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 1e-3, 0.072, &grid);
 
     group.bench_function("density_lookup", |b| {
-        b.iter(|| medium.density(black_box(32e-3), black_box(32e-3), black_box(32e-3), &grid));
+        b.iter(|| medium.density(black_box(32), black_box(32), black_box(32)));
     });
 
     group.bench_function("sound_speed_lookup", |b| {
-        b.iter(|| medium.sound_speed(black_box(32e-3), black_box(32e-3), black_box(32e-3), &grid));
+        b.iter(|| medium.sound_speed(black_box(32), black_box(32), black_box(32)));
     });
 
     group.finish();
 }
 
 fn position_to_indices_benchmark(c: &mut Criterion) {
-    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3);
+    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3)
+        .expect("Grid creation should succeed");
 
     c.bench_function("position_to_indices", |b| {
         b.iter(|| grid.position_to_indices(black_box(64e-3), black_box(64e-3), black_box(64e-3)));
@@ -89,7 +93,8 @@ fn memory_usage_benchmark(c: &mut Criterion) {
     for size in [32, 64, 128].iter() {
         group.bench_with_input(BenchmarkId::new("grid_memory", size), size, |b, &size| {
             b.iter(|| {
-                let grid = Grid::new(size, size, size, 1e-3, 1e-3, 1e-3);
+                let grid = Grid::new(size, size, size, 1e-3, 1e-3, 1e-3)
+                    .expect("Grid creation should succeed");
                 let _field = grid.create_field();
                 black_box(grid);
             });
