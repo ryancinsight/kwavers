@@ -9,6 +9,8 @@ use crate::physics::field_mapping::UnifiedFieldType;
 #[cfg(test)]
 use crate::physics::mechanics::elastic_wave::ElasticWave;
 #[cfg(test)]
+use crate::physics::traits::AcousticWaveModel;
+#[cfg(test)]
 use crate::source::NullSource;
 #[cfg(test)]
 use ndarray::{Array3, Array4};
