@@ -43,12 +43,12 @@ impl PhysicsTestUtils {
         let omega = 2.0 * PI * frequency;
 
         // Apply dispersion correction for k-space methods
-        let k_corrected =
+        let k_dispersed =
             k * (1.0 + DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx * grid.dx);
 
         for i in 0..grid.nx {
             let x = i as f64 * grid.dx;
-            let phase = k_corrected * x - omega * time;
+            let phase = k_dispersed * x - omega * time;
             let value = amplitude * phase.sin();
 
             for j in 0..grid.ny {

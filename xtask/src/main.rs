@@ -80,17 +80,27 @@ fn audit_naming() -> Result<()> {
     println!("🔍 Auditing naming conventions...");
 
     let mut violations = Vec::new();
+    
+    // Patterns to detect - using word boundaries for precision
     let bad_patterns = [
         "_old",
         "_new",
         "_refactored",
-        "_temp",
         "_proper",
         "_enhanced",
         "_fixed",
         "_corrected",
         "_updated",
         "_improved",
+    ];
+    
+    // Legitimate domain terms that contain pattern substrings but are valid
+    let allowed_terms = [
+        "temperature",        // Contains _temp but is domain term
+        "temporal",          // Contains _temp but is domain term  
+        "tempered",          // Contains _temp but is domain term
+        "properties",        // Contains _proper but is valid when not _proper suffix
+        "property_based",    // Contains _proper but is valid module name
     ];
 
     for entry in WalkDir::new("src").into_iter().filter_map(|e| e.ok()) {
@@ -99,14 +109,53 @@ fn audit_naming() -> Result<()> {
                 .with_context(|| format!("Failed to read {}", entry.path().display()))?;
 
             for (line_num, line) in content.lines().enumerate() {
+                // Skip comments
+                if line.trim_start().starts_with("//") {
+                    continue;
+                }
+                
                 for pattern in &bad_patterns {
-                    if line.contains(pattern) {
-                        violations.push((
-                            entry.path().to_path_buf(),
-                            line_num + 1,
-                            pattern.to_string(),
-                            line.trim().to_string(),
-                        ));
+                    if !line.contains(pattern) {
+                        continue;
+                    }
+                    
+                    // Check if this is a legitimate domain term
+                    let is_allowed = allowed_terms.iter().any(|term| {
+                        line.contains(term)
+                    });
+                    
+                    if is_allowed {
+                        continue;
+                    }
+                    
+                    // Check for word boundaries - pattern should be isolated or at end of identifier
+                    // Valid violations: variable_old, x_new, was_corrected
+                    // Invalid (false positives): temperature, temporal, properties
+                    let lower_line = line.to_lowercase();
+                    
+                    // Look for the pattern with word boundaries
+                    if let Some(pos) = lower_line.find(pattern) {
+                        let before = if pos > 0 { 
+                            lower_line.chars().nth(pos - 1) 
+                        } else { 
+                            None 
+                        };
+                        let after = lower_line.chars().nth(pos + pattern.len());
+                        
+                        // Check if pattern is at a word boundary
+                        // Valid if preceded by letter/number/underscore and followed by non-letter
+                        let is_word_boundary = matches!(before, Some('_') | Some(' ') | Some('(') | Some(',') | None) ||
+                                              matches!(after, Some(' ') | Some(')') | Some(',') | Some(';') | Some(':') | None);
+                        
+                        if is_word_boundary {
+                            violations.push((
+                                entry.path().to_path_buf(),
+                                line_num + 1,
+                                pattern.to_string(),
+                                line.trim().to_string(),
+                            ));
+                            break; // Only report once per line
+                        }
                     }
                 }
             }

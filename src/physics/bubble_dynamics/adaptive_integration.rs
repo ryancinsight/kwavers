@@ -119,7 +119,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             let dt = self.dt_adaptive.min(t_end - t);
 
             // Try a step with current dt
-            let (success, dt_new) = self.try_step(state, p_acoustic, dp_dt, dt, t)?;
+            let (success, dt_next) = self.try_step(state, p_acoustic, dp_dt, dt, t)?;
 
             if success {
                 // Step accepted, advance time
@@ -136,7 +136,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             }
 
             // Update adaptive time step
-            self.dt_adaptive = dt_new.max(self.config.dt_min).min(self.config.dt_max);
+            self.dt_adaptive = dt_next.max(self.config.dt_min).min(self.config.dt_max);
         }
 
         if substeps >= self.config.max_substeps {
@@ -185,7 +185,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             ((error_r / scale_r).powi(2) + (error_v / scale_v).powi(2)).sqrt() / 2.0_f64.sqrt();
 
         // Compute new time step based on error
-        let dt_new = if error_norm > 0.0 {
+        let dt_next = if error_norm > 0.0 {
             let factor =
                 self.config.safety_factor * (1.0 / error_norm).powf(ERROR_CONTROL_EXPONENT); // 4th order method
             let factor = factor
@@ -204,7 +204,7 @@ impl<'a> AdaptiveBubbleIntegrator<'a> {
             *state = state_half;
         }
 
-        Ok((accept, dt_new))
+        Ok((accept, dt_next))
     }
 
     /// Perform a single RK4 step
