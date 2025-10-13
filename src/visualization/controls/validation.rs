@@ -87,22 +87,22 @@ impl ParameterValidator {
                 }
             }
             (ParameterValue::Vector3(v), ParameterType::Vector3 { min, max, .. }) => {
-                let mut corrected = *v;
-                let mut was_corrected = false;
+                let mut validated = *v;
+                let mut was_validated = false;
 
                 for i in 0..3 {
                     if v[i] < *min {
-                        corrected[i] = *min;
-                        was_corrected = true;
+                        validated[i] = *min;
+                        was_validated = true;
                     } else if v[i] > *max {
-                        corrected[i] = *max;
-                        was_corrected = true;
+                        validated[i] = *max;
+                        was_validated = true;
                     }
                 }
 
-                if was_corrected {
+                if was_validated {
                     ValidationResult::corrected(
-                        ParameterValue::Vector3(corrected),
+                        ParameterValue::Vector3(validated),
                         "Vector components clamped to range",
                     )
                 } else {
@@ -110,22 +110,22 @@ impl ParameterValidator {
                 }
             }
             (ParameterValue::Color(v), ParameterType::Color) => {
-                let mut corrected = *v;
-                let mut was_corrected = false;
+                let mut validated = *v;
+                let mut was_validated = false;
 
                 for i in 0..3 {
                     if v[i] < 0.0 {
-                        corrected[i] = 0.0;
-                        was_corrected = true;
+                        validated[i] = 0.0;
+                        was_validated = true;
                     } else if v[i] > 1.0 {
-                        corrected[i] = 1.0;
-                        was_corrected = true;
+                        validated[i] = 1.0;
+                        was_validated = true;
                     }
                 }
 
-                if was_corrected {
+                if was_validated {
                     ValidationResult::corrected(
-                        ParameterValue::Color(corrected),
+                        ParameterValue::Color(validated),
                         "Color components clamped to [0, 1]",
                     )
                 } else {

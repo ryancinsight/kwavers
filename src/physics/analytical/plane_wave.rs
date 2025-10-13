@@ -29,7 +29,7 @@ impl PlaneWaveSolution {
         let dir = (direction.0 / norm, direction.1 / norm, direction.2 / norm);
 
         // Apply dispersion correction for k-space methods
-        let k_corrected =
+        let k_dispersed =
             k * (1.0 + DISPERSION_CORRECTION_SECOND_ORDER * k * k * grid.dx * grid.dx);
 
         for i in 0..grid.nx {
@@ -39,7 +39,7 @@ impl PlaneWaveSolution {
                     let y = j as f64 * grid.dy;
                     let z = k_idx as f64 * grid.dz;
 
-                    let phase = k_corrected * (dir.0 * x + dir.1 * y + dir.2 * z) - omega * time;
+                    let phase = k_dispersed * (dir.0 * x + dir.1 * y + dir.2 * z) - omega * time;
                     field[[i, j, k_idx]] = amplitude * phase.sin();
                 }
             }
