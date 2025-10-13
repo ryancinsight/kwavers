@@ -189,12 +189,12 @@ impl NonlinearSolver {
                 .and(&jp)
                 .for_each(|ri, &jpi| *ri -= alpha * jpi);
 
-            let r_norm_sq_updated: f64 = r.iter().map(|&x| x * x).sum();
-            if r_norm_sq_updated.sqrt() < self.tolerance {
+            let r_norm_sq_next: f64 = r.iter().map(|&x| x * x).sum();
+            if r_norm_sq_next.sqrt() < self.tolerance {
                 break;
             }
 
-            let beta = r_norm_sq_updated / r_norm_sq;
+            let beta = r_norm_sq_next / r_norm_sq;
             Zip::from(&mut p)
                 .and(&r)
                 .for_each(|pi, &ri| *pi = ri + beta * *pi);

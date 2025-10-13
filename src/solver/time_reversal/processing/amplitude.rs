@@ -99,19 +99,19 @@ impl AmplitudeCorrector {
 
         // Apply phase correction via time stretching/compression
         let n_original = signal.len();
-        let n_corrected = (n_original as f64 * phase_factor) as usize;
+        let n_resampled = (n_original as f64 * phase_factor) as usize;
 
-        let mut corrected = vec![0.0; n_corrected];
+        let mut resampled_signal = vec![0.0; n_resampled];
 
         // Linear interpolation for time-axis resampling
-        for (i, corrected_val) in corrected.iter_mut().enumerate() {
+        for (i, resampled_val) in resampled_signal.iter_mut().enumerate() {
             let original_index = i as f64 / phase_factor;
             let idx_low = original_index.floor() as usize;
             let idx_high = (idx_low + 1).min(n_original - 1);
             let fraction = original_index - idx_low as f64;
 
             if idx_low < n_original {
-                *corrected_val = signal[idx_low] * (1.0 - fraction) + signal[idx_high] * fraction;
+                *resampled_val = signal[idx_low] * (1.0 - fraction) + signal[idx_high] * fraction;
             }
         }
 
@@ -119,7 +119,7 @@ impl AmplitudeCorrector {
             "Applied dispersion correction with phase factor {:.3}",
             phase_factor
         );
-        Ok(corrected)
+        Ok(resampled_signal)
     }
 }
 

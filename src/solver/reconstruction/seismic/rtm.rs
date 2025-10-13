@@ -204,9 +204,9 @@ impl ReverseTimeMigration {
             .and(pressure_previous)
             .and(&laplacian)
             .and(&self.velocity_model)
-            .for_each(|p, &p_old, &lap, &vel| {
+            .for_each(|p, &p_prev, &lap, &vel| {
                 let vel2_dt2 = vel * vel * dt * dt;
-                *p = 2.0 * *p - p_old + vel2_dt2 * lap;
+                *p = 2.0 * *p - p_prev + vel2_dt2 * lap;
             });
 
         Ok(())
