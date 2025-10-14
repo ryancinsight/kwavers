@@ -1,6 +1,6 @@
 # Kwavers: Acoustic Wave Simulation Library
 
-[![Version](https://img.shields.io/badge/version-2.22.0-blue.svg)](https://github.com/kwavers/kwavers)
+[![Version](https://img.shields.io/badge/version-2.14.0-blue.svg)](https://github.com/kwavers/kwavers)
 [![Status](https://img.shields.io/badge/status-PRODUCTION_READY-green.svg)](docs/checklist.md)
 [![Build](https://img.shields.io/badge/build-SUCCESS-green.svg)](https://github.com/kwavers/kwavers)
 [![Architecture](https://img.shields.io/badge/architecture-GRASP%20COMPLIANT-green.svg)](https://github.com/kwavers/kwavers)
@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-kwavers = "2.22.0"
+kwavers = "2.14.0"
 ```
 
 ## Architecture
