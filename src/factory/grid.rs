@@ -1,8 +1,7 @@
-//! Grid factory - Backward compatibility wrapper
+//! Grid factory convenience wrapper
 //!
-//! Maintains existing API while delegating to hierarchical implementation
+//! Re-exports hierarchical implementation with additional convenience methods
 
-// Re-export hierarchical components for backward compatibility
 pub use super::component::grid::{GridConfig, GridFactory, GridValidator, GridCreator};
 
 // Additional convenience methods for the factory

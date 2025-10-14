@@ -1,16 +1,14 @@
-//! Medium factory - Backward compatibility wrapper
+//! Medium factory convenience wrapper
 //!
-//! Maintains existing API while delegating to hierarchical implementation
+//! Re-exports hierarchical implementation with additional convenience methods
 
-// Re-export hierarchical components for backward compatibility
 pub use super::component::medium::{MediumConfig, MediumFactory, MediumType};
 
-// Legacy imports for constants
 use crate::physics::constants::{
     DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER,
 };
 
-// Additional convenience methods for the factory
+// Convenience methods for the factory
 impl MediumFactory {
     /// Create water medium with standard properties
     pub fn create_water() -> crate::error::KwaversResult<Box<dyn crate::medium::Medium>> {

@@ -18,6 +18,6 @@ pub mod x86_64;
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
 
-// Re-export main types for backward compatibility
+// Re-export main types
 pub use capability::SimdCapability;
 pub use dispatcher::SimdAuto;

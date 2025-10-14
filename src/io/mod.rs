@@ -6,6 +6,6 @@ pub mod nifti;
 
 pub use nifti::{NiftiHeader, NiftiInfo, NiftiReader};
 
-// Re-export output functions for backward compatibility
+// Re-export output functions
 mod output;
 pub use output::{generate_summary, save_light_data, save_pressure_data};

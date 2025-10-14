@@ -15,20 +15,9 @@ pub mod interpolation;
 // Factory patterns for medium creation
 pub mod factory;
 
-// Legacy modules (maintained for compatibility)
+// Domain-specific modules
 pub mod constants;
 pub mod tissue;
 
-// Backward compatibility - use new modular structure
 pub use core::HeterogeneousMedium;
 pub use factory::TissueFactory;
-
-// Maintain existing API compatibility
-impl HeterogeneousMedium {
-    /// Create a heterogeneous tissue medium (legacy API)
-    ///
-    /// **Migration Path**: Use `TissueFactory::create_tissue_medium()` for new code
-    pub fn tissue(grid: &crate::grid::Grid) -> Self {
-        TissueFactory::create_tissue_medium(grid)
-    }
-}

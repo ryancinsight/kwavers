@@ -15,5 +15,5 @@ pub use field_registry::FieldRegistry;
 pub use performance::PerformanceMonitor;
 pub use solver::PluginBasedSolver;
 
-// Re-export for backward compatibility
+// Convenience alias
 pub use solver::PluginBasedSolver as Solver;
