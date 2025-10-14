@@ -1,7 +1,7 @@
 # k-Wave to Kwavers Migration Guide
 
 **Status**: Production Ready - Feature Parity Achieved  
-**Last Updated**: Sprint 109  
+**Last Updated**: Current  
 **Target Audience**: k-Wave MATLAB users migrating to Rust
 
 ---
@@ -660,5 +660,5 @@ Found an issue or want to improve this guide? Please open an issue or PR on GitH
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: Sprint 109  
+**Last Updated**: Current  
 **Status**: Production Ready
