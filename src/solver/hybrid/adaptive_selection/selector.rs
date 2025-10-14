@@ -217,12 +217,11 @@ impl AdaptiveMethodSelector {
         }
     }
 
-    /// Update internal metrics (for compatibility)
+    /// Update internal metrics
     pub fn update_metrics(&mut self, _fields: &Array4<f64>) {
         // Metrics are computed on-demand in select_methods
-        // This method exists for backward compatibility
     }
 }
 
-// For backward compatibility
+/// Type alias for convenience
 pub type AdaptiveSelector = AdaptiveMethodSelector;

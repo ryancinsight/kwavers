@@ -16,7 +16,7 @@ pub mod divergence;
 pub mod curl;
 pub mod laplacian;
 
-// Re-export main types for backward compatibility
+// Re-export main types
 pub use coefficients::{FDCoefficients, SpatialOrder};
 pub use gradient::gradient;
 pub use divergence::divergence;

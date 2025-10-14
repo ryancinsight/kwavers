@@ -12,11 +12,9 @@
 
 pub mod criteria;
 pub mod metrics;
-pub mod selector;
 pub mod statistics;
 
 pub use criteria::SelectionCriteria;
 pub use metrics::{DetailedMetrics, QualityMetrics};
-// Note: AdaptiveSelector moved to adaptive_selection module
 pub use crate::solver::hybrid::adaptive_selection::AdaptiveSelector;
 pub use statistics::{FrequencySpectrum, StatisticalMetrics};

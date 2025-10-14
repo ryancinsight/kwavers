@@ -43,9 +43,6 @@ pub use wrapper::{
     nonlinearity_at_core, sound_speed_at, sound_speed_at_core,
 };
 
-// The max_sound_speed function is now provided by the core module
-// and re-exported above for backward compatibility
-
 /// Custom iterators for medium property traversal
 pub mod iterators {
     use super::{AcousticProperties, CoreMedium, Debug, Medium};

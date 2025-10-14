@@ -319,9 +319,9 @@ impl LaplacianOperator {
     }
 }
 
-// Convenience functions for backward compatibility
+// Convenience functions
 
-/// Compute Laplacian with specified order (backward compatibility)
+/// Compute Laplacian with specified order
 pub fn laplacian(
     field: ArrayView3<f64>,
     grid: &Grid,
