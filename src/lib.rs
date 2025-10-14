@@ -42,6 +42,7 @@ pub mod configuration; // Unified configuration system (SSOT)
 pub mod error;
 pub mod factory;
 pub mod fft;
+pub mod geometry; // k-Wave compatible geometry helpers
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
@@ -79,6 +80,7 @@ pub mod visualization;
 // Re-export commonly used types for convenience
 pub use boundary::{Boundary, CPMLBoundary, CPMLConfig, PMLBoundary, PMLConfig};
 pub use error::{KwaversError, KwaversResult};
+pub use geometry::{make_ball, make_disc, make_line, make_sphere}; // k-Wave compatible geometry helpers
 pub use grid::Grid;
 pub use medium::{homogeneous::HomogeneousMedium, Medium};
 pub use recorder::Recorder;
