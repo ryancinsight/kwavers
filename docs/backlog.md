@@ -11,50 +11,137 @@
 
 ## Current Priorities
 
-### High Priority (P0) - Critical Path
+### Ultra High Priority (P0) - Advanced Physics Foundation
+**NEW**: Based on 2025 Gap Analysis ([docs/gap_analysis_advanced_physics_2025.md](gap_analysis_advanced_physics_2025.md))
+
+1. **Fast Nearfield Method (FNM) Implementation**: 2-3 sprints
+   - O(n) complexity transducer field calculation vs O(n²) current
+   - 10-100× speedup for phased array simulations (>256 elements)
+   - Validate against FOCUS benchmarks
+   - **Impact**: CRITICAL - Enables practical large-scale transducer modeling
+   - **Files**: `src/physics/transducer/fast_nearfield.rs` (~300 lines)
+   - **Sprint**: 108
+
+2. **Physics-Informed Neural Networks (PINN) Foundation**: 2-3 sprints
+   - 1000× faster inference after training vs FDTD
+   - 1D wave equation proof-of-concept with burn/candle ML framework
+   - Physics-informed loss functions (data + PDE residual + boundary)
+   - **Impact**: CRITICAL - Revolutionary speed for real-time applications
+   - **Files**: `src/ml/pinn/mod.rs` (~400 lines)
+   - **Sprint**: 109
+
+### High Priority (P0) - Production Readiness (Existing)
 ~~1. **Benchmark Infrastructure Configuration**: 30min~~ ✅ **COMPLETE** (Sprint 107)
-   - ✅ Configure Cargo.toml with [[bench]] sections
-   - ✅ Enable criterion benchmark execution
-   - ✅ Required for: Performance baseline tracking
-   - ✅ Impact: HIGH - Unblocks data-driven optimization
-   - ✅ Evidence: `docs/sprint_107_benchmark_metrics.md`
-
 ~~2. **Performance Baseline Execution**: 30min~~ ✅ **COMPLETE** (Sprint 107)
-   - ✅ Run criterion benchmarks for FDTD derivatives (9 variants)
-   - ✅ Run criterion benchmarks for k-space operators (4 grid sizes)
-   - ✅ Run criterion benchmarks for grid/medium/field operations
-   - ✅ Document baseline metrics
-   - ✅ Impact: HIGH - Enables optimization decisions
-   - ✅ Evidence: Baseline metrics documented in sprint report
 
-### Standard Priority (P1) - Important
-3. **Remaining Test Failures Investigation**: 1-2h
+### Standard Priority (P1) - Advanced Physics Implementation
+**NEW**: Next wave of capabilities from 2025 Gap Analysis
+
+3. **Shear Wave Elastography (SWE) Module**: 2-3 sprints
+   - Complete elastic wave solver with acoustic radiation force impulse (ARFI)
+   - Time-of-flight, phase gradient, and direct inversion methods
+   - Clinical tissue characterization (liver fibrosis, tumor detection)
+   - **Impact**: HIGH - Standard of care clinical diagnostic capability
+   - **Files**: `src/physics/imaging/elastography/mod.rs` (~350 lines)
+   - **Sprint**: 110
+
+4. **Microbubble Dynamics & Contrast Agents**: 2-3 sprints
+   - Encapsulated bubble equation (modified Rayleigh-Plesset)
+   - Nonlinear scattering cross-section for contrast ultrasound
+   - Perfusion curve modeling for dynamic CEUS
+   - **Impact**: HIGH - FDA-approved contrast imaging capability
+   - **Files**: `src/physics/contrast_agents/mod.rs` (~300 lines)
+   - **Sprint**: 111
+
+5. **Multi-GPU Support & Unified Memory**: 2 sprints
+   - Domain decomposition across 2-4 GPUs
+   - Load balancing and communication optimization
+   - Unified memory management for large grids
+   - **Impact**: HIGH - 2-4× speedup for large simulations
+   - **Files**: Update `src/gpu/` (~200 lines added)
+   - **Sprint**: 115
+
+6. **Beamforming-Integrated Neural Networks**: 3-4 sprints
+   - Hybrid traditional + learned beamforming
+   - End-to-end differentiable pipeline with burn framework
+   - Real-time inference (<16ms latency for 30 fps)
+   - **Impact**: HIGH - State-of-the-art beamforming performance
+   - **Files**: `src/sensor/beamforming/neural.rs` (~400 lines)
+   - **Sprint**: 116
+
+### Standard Priority (P1) - Important (Existing)
+7. **Remaining Test Failures Investigation**: 1-2h
    - Triage 3 documented failures (Keller-Miksis, k-Wave benchmarks)
    - Categorize: physics bugs vs validation tolerance issues
    - Create targeted fixes or document as known limitations
-   - Impact: HIGH - Path to 100% test coverage
-
-4. **Property Test Expansion**: 2-3h
-   - Add proptest for FDTD time-stepping invariants (CFL condition)
-   - Add proptest for source/sensor geometry validation
-   - Add proptest for boundary condition consistency
    - Impact: MEDIUM - Enhanced edge case coverage
 
-5. **Clone Optimization Review**: 2-3h
+8. **Clone Optimization Review**: 2-3h
    - Review 406 clone instances for unnecessary allocations
    - Focus on hot paths identified by profiling
    - Replace with views/borrows where appropriate
    - Impact: MEDIUM - Performance optimization
 
-6. **Module Size Compliance**: 2-4h
+9. **Module Size Compliance**: 2-4h
    - Refactor 27 files exceeding 400-line limit
    - Apply GRASP principles for extraction
    - Maintain functional cohesion
    - Impact: MEDIUM - Architecture quality
 
+### Medium Priority (P2) - Advanced Physics Extensions
+**NEW**: Follow-on implementations from 2025 Gap Analysis
+
+10. **PINN Extensions to 2D/3D**: 2-3 sprints
+    - Extend PINN architecture to 2D/3D wave equations
+    - Heterogeneous media support with transfer learning
+    - **Impact**: MEDIUM - Full PINN capability for production
+    - **Sprint**: 112
+
+11. **Transcranial Focused Ultrasound (tFUS)**: 3-4 sprints
+    - CT-to-acoustic properties conversion for skull bone
+    - Phase aberration correction (time reversal)
+    - Patient-specific targeting accuracy
+    - **Impact**: MEDIUM - Enables neuromodulation applications
+    - **Files**: `src/physics/transcranial/mod.rs` (~350 lines)
+    - **Sprint**: 113
+
+12. **Hybrid Angular Spectrum Method (HAS)**: 2 sprints
+    - Angular spectrum propagation with O(N log N) complexity
+    - Nonlinear harmonic generation (quasi-linear approximation)
+    - Inhomogeneity correction for MRgFUS
+    - **Impact**: MEDIUM - Alternative to FDTD for smooth geometries
+    - **Files**: `src/solver/angular_spectrum/mod.rs` (~300 lines)
+    - **Sprint**: 114
+
+13. **Uncertainty Quantification Framework**: 2-3 sprints
+    - Monte Carlo uncertainty estimation
+    - Bayesian inference for parameter estimation (MCMC)
+    - Confidence interval computation for safety-critical apps
+    - **Impact**: MEDIUM - Regulatory compliance (FDA)
+    - **Files**: `src/uncertainty/mod.rs` (~300 lines)
+    - **Sprint**: 117
+
+### Low Priority (P3) - Research & Exploration
+
+14. **Poroelastic Tissue Modeling**: 3-4 sprints
+    - Biot's equations for fluid-filled tissues (liver, kidney, brain)
+    - Biphasic fluid-solid coupling
+    - **Impact**: LOW - Advanced research capability
+    - **Sprint**: Post-120
+
 ---
 
 ## Recent Achievements ✅
+
+### Sprint 108: Advanced Physics Gap Analysis ✅ COMPLETE
+- [x] **COMPREHENSIVE RESEARCH**: 12 web searches, 60+ literature citations (2024-2025)
+- [x] **GAP IDENTIFICATION**: 8 major physics gaps with P0-P3 priorities
+- [x] **MODERNIZATION OPPORTUNITIES**: 6 GPU/ML optimization areas
+- [x] **IMPLEMENTATION ROADMAP**: 12-sprint plan (24-36 weeks) across 4 phases
+- [x] **DOCUMENTATION**: Created `docs/gap_analysis_advanced_physics_2025.md` (47KB)
+- [x] **EVIDENCE-BASED**: Citations from k-Wave, FOCUS, PINNs, SWE, microbubbles
+- [x] **COMPETITIVE ANALYSIS**: Positioned vs k-Wave, FOCUS, Verasonics
+- [x] **IMPACT**: Strategic direction for industry-leading ultrasound simulation platform
 
 ### Sprint 107: Benchmark Infrastructure (CURRENT)
 - ✅ Configured 7 benchmark suites in Cargo.toml with [[bench]] sections

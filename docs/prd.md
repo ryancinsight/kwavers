@@ -10,18 +10,28 @@ Kwavers is a comprehensive acoustic wave simulation library in Rust with validat
 
 ## Product Vision
 
-To provide the most accurate, performant, and maintainable acoustic wave simulation library in the Rust ecosystem, with validated physics implementations and strict architectural compliance.
+To provide the most accurate, performant, and maintainable acoustic wave simulation library in the Rust ecosystem, with validated physics implementations, strict architectural compliance, AND next-generation advanced physics capabilities (PINNs, FNM, SWE, microbubbles, transcranial ultrasound) that position Kwavers as the premier platform for 2025 and beyond.
 
 ## Core Requirements
 
-### Functional Requirements ✅
+### Functional Requirements ✅ CURRENT + 🔄 PLANNED (2025)
 
-#### Physics Accuracy
+#### Physics Accuracy (Current)
 - ✅ Linear and nonlinear wave propagation (FDTD/PSTD/DG)
 - ✅ Heterogeneous and anisotropic media support
 - ✅ Thermal coupling with multirate integration
 - ✅ Bubble dynamics with proper equilibrium
 - ✅ Literature-validated implementations throughout
+
+#### Physics Accuracy (Advanced - 2025 Roadmap)
+- 🔄 **Fast Nearfield Method (FNM)** - O(n) transducer field calculation (Sprint 108)
+- 🔄 **Physics-Informed Neural Networks (PINNs)** - 1000× faster inference (Sprints 109, 112)
+- 🔄 **Shear Wave Elastography (SWE)** - Clinical tissue characterization (Sprint 110)
+- 🔄 **Microbubble Dynamics** - Contrast-enhanced ultrasound imaging (Sprint 111)
+- 🔄 **Transcranial Ultrasound (tFUS)** - Skull heterogeneity modeling (Sprint 113)
+- 🔄 **Hybrid Angular Spectrum (HAS)** - Efficient nonlinear propagation (Sprint 114)
+- 🔄 **Poroelastic Tissue** - Biphasic fluid-solid coupling (Post-Sprint 120)
+- 🔄 **Uncertainty Quantification** - Bayesian inference framework (Sprint 117)
 
 #### Numerical Methods
 - ✅ FDTD with 2nd/4th/6th/8th order accuracy
@@ -36,6 +46,9 @@ To provide the most accurate, performant, and maintainable acoustic wave simulat
 - ✅ Zero-copy operations with views
 - ✅ SIMD acceleration with safety documentation
 - ✅ GPU acceleration via wgpu
+- 🔄 **Multi-GPU support** (2-4 GPU scaling) - Sprint 115
+- 🔄 **PINN fast inference** (1000× speedup) - Sprints 109, 112
+- 🔄 **Neural beamforming** (<16ms real-time) - Sprint 116
 
 ### Non-Functional Requirements ✅
 
@@ -181,6 +194,33 @@ The kwavers acoustic simulation library has achieved **HIGH-QUALITY DEVELOPMENT*
 
 ---
 
-*Document Version: 2.0*  
-*Last Updated: Evidence-Based Senior Engineer Audit*  
-*Status: HIGH-QUALITY DEVELOPMENT*
+## 2025 Advanced Physics Roadmap
+
+See detailed analysis in [`docs/gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md)
+
+### Phase 1: Foundation (Sprints 108-110) - Q1 2025
+- **Sprint 108**: Fast Nearfield Method (FNM) implementation
+- **Sprint 109**: PINN foundation (1D wave equation)
+- **Sprint 110**: Shear Wave Elastography (SWE) module
+
+### Phase 2: Advanced Physics (Sprints 111-114) - Q2 2025
+- **Sprint 111**: Microbubble dynamics & contrast agents
+- **Sprint 112**: PINN extensions to 2D/3D heterogeneous media
+- **Sprint 113**: Transcranial focused ultrasound (tFUS)
+- **Sprint 114**: Hybrid Angular Spectrum Method (HAS)
+
+### Phase 3: Modernization (Sprints 115-117) - Q3 2025
+- **Sprint 115**: Multi-GPU support & unified memory
+- **Sprint 116**: Beamforming-integrated neural networks
+- **Sprint 117**: Uncertainty quantification framework
+
+### Phase 4: Validation & Documentation (Sprints 118-120) - Q4 2025
+- **Sprint 118**: Advanced physics validation suite
+- **Sprint 119**: Performance benchmarking
+- **Sprint 120**: Documentation & examples
+
+---
+
+*Document Version: 3.0 - Advanced Physics 2025 Roadmap*  
+*Last Updated: Sprint 108 - Comprehensive Gap Analysis*  
+*Status: PRODUCTION READY + ADVANCED PHYSICS PLANNING*
