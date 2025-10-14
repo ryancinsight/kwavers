@@ -14,9 +14,9 @@ pub struct FresnelCoefficients {
     pub reflection_amplitude: f64,
     /// Transmission amplitude coefficient  
     pub transmission_amplitude: f64,
-    /// Reflection phase shift [radians]
+    /// Reflection phase shift \[radians\]
     pub reflection_phase: f64,
-    /// Transmission phase shift [radians]
+    /// Transmission phase shift \[radians\]
     pub transmission_phase: f64,
     /// Reflection coefficient for S-polarization
     pub rs: f64,

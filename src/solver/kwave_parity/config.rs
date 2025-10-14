@@ -8,7 +8,7 @@ use ndarray::Array3;
 /// k-Wave simulation configuration matching MATLAB interface
 #[derive(Debug, Clone)]
 pub struct KWaveConfig {
-    /// Time step size [s]
+    /// Time step size \[s\]
     pub dt: f64,
     /// Enable power law absorption
     pub absorption_mode: AbsorptionMode,

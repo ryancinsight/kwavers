@@ -11,9 +11,9 @@ pub struct TreatmentMetrics {
     pub thermal_dose: f64,
     /// Cavitation dose (cumulative)
     pub cavitation_dose: f64,
-    /// Lesion volume [m³]
+    /// Lesion volume \[m³\]
     pub lesion_volume: f64,
-    /// Peak temperature reached [K]
+    /// Peak temperature reached \[K\]
     pub peak_temperature: f64,
     /// Treatment efficiency (0-1)
     pub efficiency: f64,

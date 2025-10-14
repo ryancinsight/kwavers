@@ -7,15 +7,15 @@ use crate::physics::constants::SOUND_SPEED_TISSUE;
 pub struct PhasedArrayConfig {
     /// Number of elements in the array
     pub num_elements: usize,
-    /// Element spacing [m]
+    /// Element spacing \[m\]
     pub element_spacing: f64,
-    /// Element width [m]
+    /// Element width \[m\]
     pub element_width: f64,
-    /// Element height [m]
+    /// Element height \[m\]
     pub element_height: f64,
-    /// Array center position (x, y, z) [m]
+    /// Array center position (x, y, z) \[m\]
     pub center_position: (f64, f64, f64),
-    /// Operating frequency [Hz]
+    /// Operating frequency \[Hz\]
     pub frequency: f64,
     /// Enable element cross-talk modeling
     pub enable_crosstalk: bool,

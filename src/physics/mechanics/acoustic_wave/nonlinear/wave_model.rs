@@ -97,7 +97,7 @@ pub struct NonlinearWave {
     pub(crate) multi_freq_config: Option<MultiFrequencyConfig>,
 
     // Frequency-dependent physics
-    /// Source frequency for frequency-dependent absorption and dispersion [Hz]
+    /// Source frequency for frequency-dependent absorption and dispersion \[Hz\]
     pub(crate) source_frequency: f64,
 
     // Performance optimization caches
@@ -105,9 +105,9 @@ pub struct NonlinearWave {
     pub(crate) max_sound_speed: f64,
 
     // Numerical scheme parameters
-    /// Time step size for the simulation [s]
+    /// Time step size for the simulation \[s\]
     pub(crate) dt: f64,
-    /// Spatial step sizes [m]
+    /// Spatial step sizes \[m\]
     #[allow(dead_code)]
     pub(crate) dx: f64,
     #[allow(dead_code)]
@@ -122,7 +122,7 @@ impl NonlinearWave {
     /// # Arguments
     ///
     /// * `grid` - The computational grid
-    /// * `dt` - Time step size [s]
+    /// * `dt` - Time step size \[s\]
     ///
     /// # Returns
     ///
@@ -229,7 +229,7 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// The recommended time step size [s]
+    /// The recommended time step size \[s\]
     pub fn get_stable_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
         // Get actual maximum sound speed from the medium
         let c_array = medium.sound_speed_array();
@@ -253,7 +253,7 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// The average time spent in each update call [s]
+    /// The average time spent in each update call \[s\]
     #[must_use]
     pub fn get_average_update_time(&self) -> f64 {
         if self.call_count == 0 {

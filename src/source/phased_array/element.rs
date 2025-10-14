@@ -7,13 +7,13 @@ use std::f64::consts::PI;
 pub struct TransducerElement {
     /// Element ID
     pub id: usize,
-    /// Position (x, y, z) [m]
+    /// Position (x, y, z) \[m\]
     pub position: (f64, f64, f64),
-    /// Width [m]
+    /// Width \[m\]
     pub width: f64,
-    /// Height [m]
+    /// Height \[m\]
     pub height: f64,
-    /// Phase delay [rad]
+    /// Phase delay \[rad\]
     pub phase_delay: f64,
     /// Amplitude weight [0.0-1.0]
     pub amplitude_weight: f64,
@@ -61,9 +61,9 @@ impl TransducerElement {
 /// Element sensitivity pattern modeling
 #[derive(Debug, Clone)]
 pub struct ElementSensitivity {
-    /// Main lobe width [rad]
+    /// Main lobe width \[rad\]
     pub main_lobe_width: f64,
-    /// Side lobe level [dB]
+    /// Side lobe level \[dB\]
     pub side_lobe_level: f64,
     /// Frequency response coefficients
     pub frequency_response: Vec<f64>,

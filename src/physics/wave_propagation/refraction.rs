@@ -9,10 +9,10 @@ pub struct RefractionCalculator {
 /// Refraction angles
 #[derive(Debug, Clone)]
 pub struct RefractionAngles {
-    /// Incident angle [radians]
+    /// Incident angle \[radians\]
     pub incident: f64,
-    /// Refracted angle [radians]
+    /// Refracted angle \[radians\]
     pub refracted: f64,
-    /// Critical angle for total internal reflection [radians]
+    /// Critical angle for total internal reflection \[radians\]
     pub critical: Option<f64>,
 }

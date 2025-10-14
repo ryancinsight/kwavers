@@ -7,19 +7,19 @@ use super::modalities::TherapyModality;
 /// Therapy treatment parameters
 #[derive(Debug, Clone)]
 pub struct TherapyParameters {
-    /// Acoustic frequency [Hz]
+    /// Acoustic frequency \[Hz\]
     pub frequency: f64,
-    /// Peak negative pressure [Pa]
+    /// Peak negative pressure \[Pa\]
     pub peak_negative_pressure: f64,
-    /// Peak positive pressure [Pa]
+    /// Peak positive pressure \[Pa\]
     pub peak_positive_pressure: f64,
-    /// Pulse duration [s]
+    /// Pulse duration \[s\]
     pub pulse_duration: f64,
-    /// Pulse repetition frequency [Hz]
+    /// Pulse repetition frequency \[Hz\]
     pub prf: f64,
     /// Duty cycle (0-1)
     pub duty_cycle: f64,
-    /// Total treatment duration [s]
+    /// Total treatment duration \[s\]
     pub treatment_duration: f64,
     /// Mechanical index (MI)
     pub mechanical_index: f64,

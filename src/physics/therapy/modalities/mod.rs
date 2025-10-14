@@ -64,7 +64,7 @@ impl TherapyModality {
         )
     }
 
-    /// Get typical frequency range [Hz]
+    /// Get typical frequency range \[Hz\]
     #[must_use]
     pub fn frequency_range(&self) -> (f64, f64) {
         match self {
@@ -78,7 +78,7 @@ impl TherapyModality {
         }
     }
 
-    /// Get typical pressure range [Pa]
+    /// Get typical pressure range \[Pa\]
     #[must_use]
     pub fn pressure_range(&self) -> (f64, f64) {
         match self {

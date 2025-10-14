@@ -17,9 +17,9 @@ pub struct WavePropagationCalculator {
     mode: WaveMode,
     /// Interface configuration
     interface: Interface,
-    /// Frequency [Hz]
+    /// Frequency \[Hz\]
     frequency: f64,
-    /// Wavelength [m]
+    /// Wavelength \[m\]
     wavelength: f64,
 }
 

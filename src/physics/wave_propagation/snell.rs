@@ -9,9 +9,9 @@ use std::f64::consts::PI;
 /// Critical angles for wave propagation
 #[derive(Debug, Clone)]
 pub struct CriticalAngles {
-    /// Critical angle for total internal reflection [radians]
+    /// Critical angle for total internal reflection \[radians\]
     pub total_internal_reflection: Option<f64>,
-    /// Brewster's angle (polarization angle) [radians]
+    /// Brewster's angle (polarization angle) \[radians\]
     pub brewster: Option<f64>,
 }
 

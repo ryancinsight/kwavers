@@ -10,15 +10,15 @@ pub struct PropagationCoefficients {
     pub reflection_amplitude: f64,
     /// Transmission amplitude coefficient  
     pub transmission_amplitude: f64,
-    /// Reflection phase shift [radians]
+    /// Reflection phase shift \[radians\]
     pub reflection_phase: f64,
-    /// Transmission phase shift [radians]
+    /// Transmission phase shift \[radians\]
     pub transmission_phase: f64,
     /// Whether total internal reflection occurs
     pub total_internal_reflection: bool,
-    /// Incident angle [radians]
+    /// Incident angle \[radians\]
     pub incident_angle: f64,
-    /// Transmitted angle [radians] (None for total internal reflection)
+    /// Transmitted angle \[radians\] (None for total internal reflection)
     pub transmitted_angle: Option<f64>,
     /// Acoustic impedance of medium 1 (optional, for energy conservation)
     pub impedance1: Option<f64>,

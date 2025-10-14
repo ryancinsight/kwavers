@@ -7,13 +7,13 @@ use ndarray::{Array1, Array2, Array3, Zip};
 /// Configuration for wavefield modeling
 #[derive(Debug, Clone)]
 pub struct WavefieldConfig {
-    /// Grid spacing [m]
+    /// Grid spacing \[m\]
     pub dx: f64,
-    /// Time step [s]
+    /// Time step \[s\]
     pub dt: f64,
-    /// Maximum simulation time [s]
+    /// Maximum simulation time \[s\]
     pub max_time: f64,
-    /// Peak frequency for source wavelet [Hz]
+    /// Peak frequency for source wavelet \[Hz\]
     pub peak_frequency: f64,
     /// Source position (i, j, k)
     pub source_position: Option<(usize, usize, usize)>,

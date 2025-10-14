@@ -9,6 +9,6 @@ pub struct PhantomTarget {
     pub position: [f64; 3],
     /// Target reflectivity
     pub reflectivity: f64,
-    /// Target size [m]
+    /// Target size \[m\]
     pub size: f64,
 }

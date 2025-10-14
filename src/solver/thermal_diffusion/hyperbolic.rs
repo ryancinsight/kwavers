@@ -11,7 +11,7 @@ use ndarray::{Array3, Zip};
 /// Cattaneo-Vernotte model parameters
 #[derive(Debug, Clone)]
 pub struct HyperbolicParameters {
-    /// Thermal relaxation time [s]
+    /// Thermal relaxation time \[s\]
     pub relaxation_time: f64,
     /// Thermal wave speed [m/s]
     pub thermal_wave_speed: f64,

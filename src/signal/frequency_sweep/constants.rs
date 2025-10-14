@@ -12,7 +12,7 @@ pub const FREQUENCY_TOLERANCE: f64 = 1e-6;
 /// Relative tolerance for frequency comparison
 pub const RELATIVE_FREQUENCY_TOLERANCE: f64 = 0.01;
 
-/// Minimum frequency to avoid numerical issues [Hz]
+/// Minimum frequency to avoid numerical issues \[Hz\]
 pub const MIN_FREQUENCY: f64 = 1.0;
 
 /// Maximum frequency ratio for logarithmic sweeps
@@ -21,7 +21,7 @@ pub const MAX_FREQUENCY_RATIO: f64 = 1e6;
 /// Default number of steps for stepped frequency sweep
 pub const DEFAULT_FREQUENCY_STEPS: usize = 10;
 
-/// Minimum sweep duration [seconds]
+/// Minimum sweep duration \[seconds\]
 pub const MIN_SWEEP_DURATION: f64 = 1e-9;
 
 /// Two pi constant for phase calculations

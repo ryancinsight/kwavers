@@ -119,7 +119,7 @@ pub const ENERGY_THRESHOLD: f64 = 1e-10;
 /// Amplitude threshold for small value cutoff
 pub const AMPLITUDE_THRESHOLD: f64 = 1e-12;
 
-/// Maximum pressure clamp value [Pa] (100 MPa)
+/// Maximum pressure clamp value \[Pa\] (100 MPa)
 pub const MAX_PRESSURE_CLAMP: f64 = 1e8;
 
 // ============================================================================

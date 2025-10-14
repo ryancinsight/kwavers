@@ -26,7 +26,7 @@ pub struct CavitationDamage {
     pub damage_field: Array3<f64>,
     /// Erosion rate field [kg/(m²·s)]
     pub erosion_rate: Array3<f64>,
-    /// Impact pressure field [Pa]
+    /// Impact pressure field \[Pa\]
     pub impact_pressure: Array3<f64>,
     /// Number of impacts field
     pub impact_count: Array3<u32>,
@@ -39,11 +39,11 @@ pub struct CavitationDamage {
 /// Material properties for damage calculation
 #[derive(Debug, Clone)]
 pub struct MaterialProperties {
-    /// Yield strength [Pa]
+    /// Yield strength \[Pa\]
     pub yield_strength: f64,
-    /// Ultimate tensile strength [Pa]
+    /// Ultimate tensile strength \[Pa\]
     pub ultimate_strength: f64,
-    /// Hardness [Pa]
+    /// Hardness \[Pa\]
     pub hardness: f64,
     /// Density [kg/m³]
     pub density: f64,
@@ -70,7 +70,7 @@ impl Default for MaterialProperties {
 /// Damage calculation parameters
 #[derive(Debug, Clone)]
 pub struct DamageParameters {
-    /// Minimum impact pressure for damage [Pa]
+    /// Minimum impact pressure for damage \[Pa\]
     pub threshold_pressure: f64,
     /// Pit formation efficiency
     pub pit_efficiency: f64,
@@ -241,7 +241,7 @@ impl CavitationDamage {
         }
     }
 
-    /// Get erosion depth field [m]
+    /// Get erosion depth field \[m\]
     #[must_use]
     pub fn erosion_depth(&self, time: f64) -> Array3<f64> {
         let mut depth = Array3::zeros(self.erosion_rate.dim());

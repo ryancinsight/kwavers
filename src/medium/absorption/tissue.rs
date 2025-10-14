@@ -44,9 +44,9 @@ pub struct TissueProperties {
     pub thermal_conductivity: f64,
     /// Specific heat capacity [J/(kg·K)]
     pub specific_heat: f64,
-    /// Lamé first parameter [Pa]
+    /// Lamé first parameter \[Pa\]
     pub lame_lambda: f64,
-    /// Lamé second parameter (shear modulus) [Pa]
+    /// Lamé second parameter (shear modulus) \[Pa\]
     pub lame_mu: f64,
     /// Thermal expansion coefficient [1/K]
     pub thermal_expansion: f64,

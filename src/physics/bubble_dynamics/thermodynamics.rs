@@ -27,19 +27,19 @@ pub mod constants {
     pub const AVOGADRO: f64 = 6.02214076e23;
     /// Molecular weight of water [kg/mol]
     pub const M_WATER: f64 = 0.01801528;
-    /// Critical temperature of water [K]
+    /// Critical temperature of water \[K\]
     pub const T_CRITICAL_WATER: f64 = 647.096;
-    /// Critical pressure of water [Pa]
+    /// Critical pressure of water \[Pa\]
     pub const P_CRITICAL_WATER: f64 = 22.064e6;
-    /// Triple point temperature of water [K]
+    /// Triple point temperature of water \[K\]
     pub const T_TRIPLE_WATER: f64 = 273.16;
-    /// Triple point pressure of water [Pa]
+    /// Triple point pressure of water \[Pa\]
     pub const P_TRIPLE_WATER: f64 = 611.657;
-    /// Standard atmospheric pressure [Pa]
+    /// Standard atmospheric pressure \[Pa\]
     pub const P_ATM: f64 = 101325.0;
     /// Enthalpy of vaporization for water at 100°C [J/mol]
     pub const H_VAP_WATER_100C: f64 = 40660.0;
-    /// Boiling point of water at 1 atm [K]
+    /// Boiling point of water at 1 atm \[K\]
     pub const T_BOILING_WATER: f64 = 373.15;
 }
 
@@ -69,9 +69,9 @@ pub struct ThermodynamicsCalculator {
     model: VaporPressureModel,
     /// Enthalpy of vaporization [J/mol]
     h_vap: f64,
-    /// Reference temperature for Clausius-Clapeyron [K]
+    /// Reference temperature for Clausius-Clapeyron \[K\]
     t_ref: f64,
-    /// Reference pressure for Clausius-Clapeyron [Pa]
+    /// Reference pressure for Clausius-Clapeyron \[Pa\]
     p_ref: f64,
 }
 
@@ -353,9 +353,9 @@ impl MassTransferModel {
     /// Calculate mass transfer rate for bubble
     ///
     /// # Arguments
-    /// * `temperature` - Bubble temperature [K]
-    /// * `pressure_vapor` - Current vapor pressure in bubble [Pa]
-    /// * `surface_area` - Bubble surface area [m²]
+    /// * `temperature` - Bubble temperature \[K\]
+    /// * `pressure_vapor` - Current vapor pressure in bubble \[Pa\]
+    /// * `surface_area` - Bubble surface area \[m²\]
     ///
     /// # Returns
     /// Mass transfer rate [kg/s] (positive for evaporation)

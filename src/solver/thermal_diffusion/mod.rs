@@ -61,11 +61,11 @@ pub struct ThermalDiffusionConfig {
     pub blood_density: f64,
     /// Blood specific heat [J/(kg·K)]
     pub blood_specific_heat: f64,
-    /// Arterial blood temperature [K]
+    /// Arterial blood temperature \[K\]
     pub arterial_temperature: f64,
     /// Enable hyperbolic heat transfer (Cattaneo-Vernotte)
     pub enable_hyperbolic: bool,
-    /// Thermal relaxation time [s]
+    /// Thermal relaxation time \[s\]
     pub relaxation_time: f64,
     /// Enable thermal dose tracking
     pub track_thermal_dose: bool,
