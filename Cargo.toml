@@ -206,3 +206,38 @@ required-features = ["full"]
 
 [lib]
 test = true
+
+# BENCHMARK CONFIGURATION (Sprint 107 - P0 Priority)
+# ===================================================
+# Statistical performance benchmarks using criterion
+# Execute: cargo bench (full suite) or cargo bench --bench <name> (individual)
+# Purpose: Establish baseline metrics for optimization tracking
+# Target: Document performance characteristics per ADR-010
+
+[[bench]]
+name = "performance_baseline"
+harness = false
+
+[[bench]]
+name = "critical_path_benchmarks"
+harness = false
+
+[[bench]]
+name = "grid_benchmarks"
+harness = false
+
+[[bench]]
+name = "physics_benchmarks"
+harness = false
+
+[[bench]]
+name = "cpml_benchmark"
+harness = false
+
+[[bench]]
+name = "testing_infrastructure"
+harness = false
+
+[[bench]]
+name = "validation_benchmarks"
+harness = false

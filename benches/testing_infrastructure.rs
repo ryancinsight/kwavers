@@ -52,7 +52,7 @@ fn bench_medium_validation(c: &mut Criterion) {
     group.bench_function("verify_properties", |b| {
         b.iter(|| {
             let result = verify_medium_properties_physically_valid(&medium, &grid);
-            black_box(result);
+            let _ = black_box(result);
         });
     });
     
@@ -69,7 +69,7 @@ fn bench_grid_indexing(c: &mut Criterion) {
     group.bench_function("verify_safe_indexing", |b| {
         b.iter(|| {
             let result = verify_grid_indexing_safe(&grid);
-            black_box(result);
+            let _ = black_box(result);
         });
     });
     
