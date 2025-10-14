@@ -60,14 +60,392 @@
 
 ---
 
-## Next Priorities
+## Sprint 108: Advanced Physics Audit ✅ COMPLETE
 
-### High Priority (P0)
-- [x] **Benchmark Infrastructure**: Configure Cargo.toml [[bench]] sections ✅ **COMPLETE** (Sprint 107)
-- [x] **Baseline Metrics**: Execute criterion benchmarks, document results ✅ **COMPLETE** (Sprint 107)
+### Deliverables Completed
+- [x] **Comprehensive Gap Analysis**: 60+ literature citations, 8 major gaps identified
+- [x] **Documentation**: Created `gap_analysis_advanced_physics_2025.md` (47KB)
+- [x] **Executive Summary**: Created `AUDIT_SUMMARY_SPRINT_108.md` (17KB)
+- [x] **Updated Core Docs**: PRD, SRS, backlog with 2025 roadmap
+- [x] **12-Sprint Roadmap**: 4 phases (Foundation, Advanced, Modernization, Validation)
+- [x] **Competitive Analysis**: Positioned vs k-Wave, FOCUS, Verasonics
+- [x] **Implementation Plans**: Detailed code examples for each gap
 
+---
 
-### Standard Priority (P1)
+## Next Priorities - ADVANCED PHYSICS ROADMAP (2025)
+
+### Ultra High Priority (P0) - Foundation Phase (Sprints 109-110)
+
+#### Sprint 109: Fast Nearfield Method (FNM) Implementation - 2-3 weeks
+**Status**: 🔄 **READY TO START** (pending approval)
+
+- [ ] **Design Phase** (Week 1)
+  - [ ] Review FOCUS FNM algorithm implementation details
+  - [ ] Design Rust trait hierarchy for FNM kernel
+  - [ ] Create test plan with FOCUS benchmark comparisons
+  - [ ] Select FFT library integration strategy (rustfft)
+
+- [ ] **Implementation Phase** (Week 1-2)
+  - [ ] Create `src/physics/transducer/fast_nearfield.rs` module
+  - [ ] Implement FNM basis function computation (O(n) complexity)
+  - [ ] Implement pressure field calculation with k-space caching
+  - [ ] Add spatial impulse response using FNM
+  - [ ] Integrate with existing transducer geometry system
+
+- [ ] **Validation Phase** (Week 2-3)
+  - [ ] Create validation tests vs FOCUS benchmarks
+  - [ ] Test rectangular and circular transducers
+  - [ ] Verify <1% error vs analytical Gaussian beam solutions
+  - [ ] Benchmark performance: 10-100× speedup vs Rayleigh-Sommerfeld
+  - [ ] Document results in `tests/advanced_physics/fast_nearfield/`
+
+- [ ] **Documentation** (Week 3)
+  - [ ] Add inline documentation with LaTeX equations
+  - [ ] Create example: `examples/fnm_transducer_demo.rs`
+  - [ ] Update user guide with FNM usage patterns
+  - [ ] Add literature references (McGough 2004, Kelly & McGough 2006)
+
+**Success Metrics**:
+- ✅ <1% error vs FOCUS for standard transducer geometries
+- ✅ 10-100× speedup for arrays with >256 elements
+- ✅ GRASP compliance (<500 lines per module)
+
+---
+
+#### Sprint 110: PINN Foundation (1D Wave Equation) - 2-3 weeks
+**Status**: 🔄 **NEXT** (after Sprint 109)
+
+- [ ] **ML Framework Selection** (Week 1)
+  - [ ] Evaluate `burn` vs `candle` for PINN implementation
+  - [ ] Benchmark autodiff performance for PDE residual computation
+  - [ ] Test GPU backend integration (WGPU compatibility)
+  - [ ] Create proof-of-concept with simple 1D wave equation
+
+- [ ] **Architecture Design** (Week 1)
+  - [ ] Design PINN trait hierarchy (`PIINSolver`, `PhysicsInformedLoss`)
+  - [ ] Create training data generation pipeline
+  - [ ] Design physics-informed loss function structure
+  - [ ] Plan integration with existing solver infrastructure
+
+- [ ] **1D Implementation** (Week 1-2)
+  - [ ] Create `src/ml/pinn/mod.rs` module structure
+  - [ ] Implement 1D wave equation PINN network
+  - [ ] Implement physics-informed loss (data + PDE residual + boundary)
+  - [ ] Create training loop with burn/candle
+  - [ ] Add automatic differentiation for PDE residual
+
+- [ ] **Validation Phase** (Week 2-3)
+  - [ ] Validate vs analytical 1D wave solutions
+  - [ ] Test <5% error threshold vs FDTD reference
+  - [ ] Benchmark inference speed (target: 100-1000× faster)
+  - [ ] Test transfer learning across different frequencies
+  - [ ] Document training convergence characteristics
+
+- [ ] **Documentation** (Week 3)
+  - [ ] Create `docs/technical/pinn_architecture.md`
+  - [ ] Add example: `examples/pinn_1d_wave_demo.rs`
+  - [ ] Document training best practices
+  - [ ] Add literature references (Raissi et al. 2019)
+
+**Success Metrics**:
+- ✅ <5% error vs FDTD on 1D test cases
+- ✅ 100-1000× faster inference after training
+- ✅ Successful training convergence (<4 hours on GPU)
+
+---
+
+### High Priority (P1) - Advanced Physics Phase (Sprints 111-112)
+
+#### Sprint 111: Shear Wave Elastography (SWE) Module - 2-3 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Elastic Wave Solver** (Week 1)
+  - [ ] Implement coupled acoustic-elastic wave equations
+  - [ ] Add shear modulus and Lamé parameters to medium
+  - [ ] Create elastic wave propagation solver
+  - [ ] Implement ARFI (Acoustic Radiation Force Impulse) generation
+
+- [ ] **Tracking & Inversion** (Week 1-2)
+  - [ ] Implement ultrafast plane wave tracking
+  - [ ] Add displacement estimation methods
+  - [ ] Implement time-of-flight inversion algorithm
+  - [ ] Add phase gradient inversion method
+  - [ ] Create direct inversion option
+
+- [ ] **Clinical Validation** (Week 2-3)
+  - [ ] Create phantom validation tests (known stiffness)
+  - [ ] Test multi-layer tissue configurations
+  - [ ] Validate <10% elasticity error vs ground truth
+  - [ ] Benchmark reconstruction time (<1s target)
+  - [ ] Create `src/physics/imaging/elastography/mod.rs`
+
+- [ ] **Documentation & Examples** (Week 3)
+  - [ ] Create clinical SWE example (liver fibrosis)
+  - [ ] Document inversion algorithms with equations
+  - [ ] Add literature citations (Sarvazyan 1998, Bercoff 2004)
+
+**Success Metrics**:
+- ✅ <10% elasticity measurement error
+- ✅ <1s reconstruction time for 2D elasticity map
+- ✅ Multi-layer tissue validation
+
+---
+
+#### Sprint 112: Microbubble Dynamics & Contrast Agents - 2-3 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Encapsulated Bubble Equation** (Week 1)
+  - [ ] Implement modified Rayleigh-Plesset for shell-encapsulated bubbles
+  - [ ] Add shell properties (thickness, elasticity, viscosity)
+  - [ ] Implement gas core dynamics
+  - [ ] Add size distribution modeling (log-normal)
+
+- [ ] **Nonlinear Scattering** (Week 1-2)
+  - [ ] Compute nonlinear scattering cross-section
+  - [ ] Implement harmonic generation (2nd, 3rd harmonics)
+  - [ ] Add contrast-to-tissue ratio (CTR) computation
+  - [ ] Model microbubble cloud dynamics
+
+- [ ] **CEUS Simulation** (Week 2-3)
+  - [ ] Create perfusion curve modeling
+  - [ ] Implement bolus injection simulation
+  - [ ] Add time-intensity curve generation
+  - [ ] Create `src/physics/contrast_agents/mod.rs`
+
+- [ ] **Validation** (Week 2-3)
+  - [ ] Validate vs experimental microbubble oscillation data
+  - [ ] Test 2nd/3rd harmonic generation (±20% accuracy)
+  - [ ] Create blood flow phantom simulations
+  - [ ] Document in `tests/advanced_physics/microbubbles/`
+
+**Success Metrics**:
+- ✅ 2nd/3rd harmonic generation within ±20% of experimental
+- ✅ Real-time capable simulation
+- ✅ Validated perfusion curve modeling
+
+---
+
+#### Sprint 113: PINN Extensions (2D/3D Heterogeneous Media) - 2-3 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **2D Wave Equation PINN** (Week 1)
+  - [ ] Extend 1D architecture to 2D spatial domains
+  - [ ] Implement 2D k-space operators in PINN loss
+  - [ ] Test on 2D analytical solutions (Gaussian beams)
+
+- [ ] **3D Implementation** (Week 1-2)
+  - [ ] Extend to 3D wave equation with full tensor support
+  - [ ] Optimize memory usage for 3D training data
+  - [ ] Implement domain decomposition for large 3D grids
+
+- [ ] **Heterogeneous Media** (Week 2)
+  - [ ] Add spatially-varying material properties to PINN
+  - [ ] Implement interface handling in physics loss
+  - [ ] Test on multi-layer tissue configurations
+
+- [ ] **Transfer Learning** (Week 2-3)
+  - [ ] Implement transfer learning across geometries
+  - [ ] Test generalization to new transducer configurations
+  - [ ] Benchmark fine-tuning time vs full training
+  - [ ] Expand `src/ml/pinn/` (target: 600 lines total)
+
+**Success Metrics**:
+- ✅ <5% error vs FDTD on 3D heterogeneous test cases
+- ✅ Transfer learning reduces training time by 50%+
+- ✅ Memory-efficient 3D implementation
+
+---
+
+### Medium Priority (P2) - Advanced Applications (Sprints 114-116)
+
+#### Sprint 114: Transcranial Focused Ultrasound (tFUS) - 3-4 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Skull Bone Modeling** (Week 1-2)
+  - [ ] Implement CT Hounsfield units to acoustic properties conversion
+  - [ ] Create skull heterogeneity model (density, speed, attenuation)
+  - [ ] Add trabecular structure support (optional high-resolution)
+  - [ ] Create `src/physics/transcranial/mod.rs`
+
+- [ ] **Phase Aberration Correction** (Week 2-3)
+  - [ ] Implement ray tracing through skull for phase computation
+  - [ ] Add time reversal phase conjugation
+  - [ ] Implement iterative adaptive focusing
+  - [ ] Create phase correction algorithms
+
+- [ ] **Validation** (Week 3-4)
+  - [ ] Validate with ex vivo skull phantoms
+  - [ ] Test ±2mm targeting accuracy
+  - [ ] Compare with published tFUS simulation results
+  - [ ] Benchmark planning time (<10s target)
+
+**Success Metrics**:
+- ✅ ±2mm targeting accuracy on skull phantoms
+- ✅ <10s treatment planning time
+- ✅ Phase aberration correction validated
+
+---
+
+#### Sprint 115: Hybrid Angular Spectrum Method (HAS) - 2 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Angular Spectrum Kernel** (Week 1)
+  - [ ] Implement Fourier domain transfer functions
+  - [ ] Add O(N log N) propagation via FFT
+  - [ ] Create angular spectrum operators (kx, ky)
+  - [ ] Implement propagation distance stepping
+
+- [ ] **Nonlinear Extension** (Week 1-2)
+  - [ ] Add quasi-linear approximation for harmonics
+  - [ ] Implement slowly varying envelope approximation (SVEA)
+  - [ ] Add second/third harmonic propagation
+  - [ ] Create `src/solver/angular_spectrum/mod.rs`
+
+- [ ] **Inhomogeneity Correction** (Week 2)
+  - [ ] Add correction for tissue heterogeneity
+  - [ ] Implement hybrid approach for MRgFUS applications
+
+- [ ] **Validation** (Week 2)
+  - [ ] Compare with FDTD for Gaussian beams (<2% error)
+  - [ ] Benchmark 5-10× speedup for smooth geometries
+  - [ ] Test on focused ultrasound applications
+
+**Success Metrics**:
+- ✅ <2% error vs FDTD for analytical test cases
+- ✅ 5-10× faster than FDTD for smooth geometries
+- ✅ Nonlinear harmonic generation validated
+
+---
+
+#### Sprint 116: Multi-GPU Support & Unified Memory - 2 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Domain Decomposition** (Week 1)
+  - [ ] Implement spatial domain splitting across GPUs
+  - [ ] Add halo exchange for boundary communication
+  - [ ] Create load balancing strategy
+  - [ ] Update `src/gpu/` with multi-GPU support
+
+- [ ] **Unified Memory Management** (Week 1-2)
+  - [ ] Implement zero-copy GPU memory access
+  - [ ] Add memory pooling for buffer reuse
+  - [ ] Optimize GPU-GPU communication overhead
+
+- [ ] **Performance Validation** (Week 2)
+  - [ ] Benchmark 2-4 GPU scaling efficiency (>70% target)
+  - [ ] Test on large grids (>512³ voxels)
+  - [ ] Profile communication vs computation overlap
+
+**Success Metrics**:
+- ✅ >70% scaling efficiency on 2-4 GPUs
+- ✅ Unified memory reduces data transfer overhead
+- ✅ Linear speedup for large domains
+
+---
+
+#### Sprint 117: Beamforming-Integrated Neural Networks - 3-4 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Hybrid Beamformer Design** (Week 1-2)
+  - [ ] Create hybrid traditional + learned architecture
+  - [ ] Implement end-to-end differentiable pipeline
+  - [ ] Add training data generation from simulations
+
+- [ ] **Neural Network Training** (Week 2-3)
+  - [ ] Train on synthetic ultrasound RF data
+  - [ ] Implement loss functions for image quality
+  - [ ] Optimize for real-time inference (<16ms)
+  - [ ] Create `src/sensor/beamforming/neural.rs`
+
+- [ ] **Real-Time Validation** (Week 3-4)
+  - [ ] Test <16ms latency for 30 fps imaging
+  - [ ] Compare image quality vs traditional beamforming
+  - [ ] Benchmark on clinical-like data
+
+**Success Metrics**:
+- ✅ <16ms inference latency (30 fps capable)
+- ✅ Image quality equals or exceeds traditional methods
+- ✅ Real-time capable on modern GPUs
+
+---
+
+#### Sprint 118: Uncertainty Quantification Framework - 2-3 weeks
+**Status**: 🔄 **PLANNED**
+
+- [ ] **Monte Carlo Framework** (Week 1)
+  - [ ] Implement parameter sampling from distributions
+  - [ ] Create parallel Monte Carlo simulation runner
+  - [ ] Add statistics computation (mean, std, CI)
+  - [ ] Create `src/uncertainty/mod.rs`
+
+- [ ] **Bayesian Inference** (Week 1-2)
+  - [ ] Implement MCMC (Markov Chain Monte Carlo) sampler
+  - [ ] Add posterior distribution computation
+  - [ ] Create Bayesian parameter estimation
+
+- [ ] **Validation** (Week 2-3)
+  - [ ] Test on synthetic data with known ground truth
+  - [ ] Verify 95% confidence interval coverage
+  - [ ] Benchmark computational cost (<20% overhead)
+
+**Success Metrics**:
+- ✅ 95% confidence interval coverage verified
+- ✅ <20% computational overhead
+- ✅ Bayesian inference framework operational
+
+---
+
+### Low Priority (P3) - Research & Long-Term
+
+#### Sprint 119+: Advanced Physics Validation Suite - 2-3 weeks
+- [ ] Create comprehensive validation tests for all advanced physics
+- [ ] FNM validation against FOCUS benchmarks
+- [ ] PINN accuracy tests vs FDTD reference solutions
+- [ ] SWE phantom studies with clinical validation
+- [ ] Microbubble dynamics vs experimental data
+- [ ] tFUS skull phantom validation
+- [ ] Document results in `tests/advanced_physics/`
+
+#### Sprint 120+: Performance Benchmarking & Optimization - 2 weeks
+- [ ] Benchmark multi-GPU scaling characteristics
+- [ ] Profile PINN inference speed (1000× target)
+- [ ] Measure real-time pipeline latency
+- [ ] Create performance regression test suite
+- [ ] Document in `benches/advanced_physics/`
+
+#### Sprint 121+: Documentation & Examples - 2 weeks
+- [ ] Update all documentation with advanced physics
+- [ ] Create 10+ advanced physics examples
+- [ ] Write migration guide for advanced features
+- [ ] Complete API documentation with LaTeX equations
+- [ ] Create video tutorials for complex features
+
+#### Future: Poroelastic Tissue Modeling - 3-4 weeks
+- [ ] Implement Biot's equations for poroelastic media
+- [ ] Add biphasic fluid-solid coupling
+- [ ] Validate against literature benchmarks
+- [ ] Target: Post-Sprint 121
+
+---
+
+## Current Sprint Status
+
+**Active Sprint**: Sprint 108 ✅ **COMPLETE** (Audit & Planning)  
+**Next Sprint**: Sprint 109 🔄 **READY** (FNM Implementation - pending approval)
+
+**Overall Roadmap Progress**: 1/12 sprints complete (8%)
+- ✅ Phase 0: Sprint 108 (Audit) - COMPLETE
+- 🔄 Phase 1: Sprints 109-110 (Foundation) - READY
+- 🔄 Phase 2: Sprints 111-113 (Advanced Physics) - PLANNED
+- 🔄 Phase 3: Sprints 114-118 (Modernization) - PLANNED
+- 🔄 Phase 4: Sprints 119-121+ (Validation) - PLANNED
+
+---
+
+## Legacy Priorities (Pre-Sprint 108)
+
+### Standard Priority (P1) - Maintenance
 - [ ] **Remaining Test Failures**: Investigate 3 documented failures (1-2h)
 - [ ] **Property Test Expansion**: FDTD/source/sensor edge cases (2-3h)
 - [ ] **Clone Optimization**: Review 406 clone instances for unnecessary allocations
@@ -101,6 +479,19 @@ The kwavers library demonstrates exceptional technical maturity:
 
 ## Recommendation
 
-**STATUS: PRODUCTION READY** - A+ Grade (98.95%)
+**STATUS: PRODUCTION READY + ADVANCED PHYSICS ROADMAP DEFINED**
 
-The kwavers acoustic simulation library has achieved high-quality development status with comprehensive physics implementations, sound architectural patterns, and functional test infrastructure. Evidence-based assessment confirms the codebase has systematic quality processes in place and demonstrates strong production trajectory.
+**Current State**: A+ Grade (98.95%) - Production-ready with validated physics  
+**Future State (Post-Sprint 121)**: A++ Grade (>99%) - Industry-leading platform
+
+The kwavers acoustic simulation library has achieved high-quality development status with comprehensive physics implementations, sound architectural patterns, and functional test infrastructure. 
+
+**Sprint 108 Achievement**: Evidence-based comprehensive audit identifies clear path to industry leadership through 12-sprint roadmap implementing cutting-edge physics (PINNs, FNM, SWE, CEUS, tFUS) with Rust's unique advantages.
+
+**Next Action**: Begin Sprint 109 (Fast Nearfield Method) pending stakeholder approval and resource allocation.
+
+---
+
+*Checklist Version: 4.0*  
+*Last Updated: Sprint 108 - Advanced Physics Roadmap*  
+*Status: PRODUCTION READY + 12-SPRINT ROADMAP TO INDUSTRY LEADERSHIP*

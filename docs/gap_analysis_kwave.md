@@ -506,7 +506,24 @@ pub trait GPUCompute {
 2. **EXCEEDED** k-Wave with advanced capabilities (FWI, seismic imaging, production-grade beamforming, GPU acceleration)
 3. **SUPERIOR** architecture with memory safety, modularity, and performance
 
-**Remaining Work**: Focus on **validation**, **documentation**, and **ecosystem development** rather than core feature implementation.
+**Remaining Work**: Focus on **validation**, **documentation**, **ecosystem development**, AND **ADVANCED PHYSICS** (see 2025 Gap Analysis).
+
+### **2025 Update: Advanced Physics Gaps**
+
+**NEW ANALYSIS**: Comprehensive 2024-2025 research identifies **8 MAJOR GAPS** for next-generation capabilities:
+- See [`docs/gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md) for detailed analysis
+
+**Priority Gaps**:
+1. **Fast Nearfield Method (FNM)** - O(n) transducer fields (vs O(n²)) | P0
+2. **Physics-Informed Neural Networks (PINNs)** - 1000× faster inference | P0  
+3. **Shear Wave Elastography (SWE)** - Clinical tissue characterization | P1
+4. **Microbubble Dynamics** - Contrast-enhanced ultrasound | P1
+5. **Transcranial Ultrasound (tFUS)** - Skull heterogeneity modeling | P2
+6. **Hybrid Angular Spectrum (HAS)** - Efficient nonlinear propagation | P2
+7. **Poroelastic Tissue** - Biphasic fluid-solid coupling | P3
+8. **Uncertainty Quantification** - Bayesian inference framework | P2
+
+**Implementation Roadmap**: 12 sprints (24-36 weeks) across 4 phases to achieve industry leadership.
 
 ### **Immediate Actions** (Sprint 102-103)
 
@@ -576,7 +593,22 @@ pub trait GPUCompute {
 
 ---
 
-*Document Version: 2.0 - Evidence-Based Implementation Audit*  
-*Analysis Date: Sprint 101*  
-*Next Review: Sprint 103 (Post-Validation)*  
-*Quality Grade: COMPREHENSIVE ANALYSIS COMPLETE - VALIDATION PHASE*
+## Related Documents
+
+- **Advanced Physics Gaps (2025)**: [`gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md)
+  - 8 major physics gaps with detailed implementation plans
+  - 12-sprint roadmap for industry-leading capabilities
+  - 60+ literature citations from 2024-2025 research
+  
+- **Product Requirements**: [`prd.md`](prd.md) - Feature specifications
+- **Software Requirements**: [`srs.md`](srs.md) - Technical requirements
+- **Architecture Decisions**: [`adr.md`](adr.md) - Design decisions
+- **Development Checklist**: [`checklist.md`](checklist.md) - Progress tracking
+- **Sprint Backlog**: [`backlog.md`](backlog.md) - Prioritized tasks
+
+---
+
+*Document Version: 2.1 - k-Wave Parity + Advanced Physics Roadmap*  
+*Analysis Date: Sprint 101 (Original), Sprint 108 (Advanced Physics Update)*  
+*Next Review: Sprint 114 (Post-Phase 2 Advanced Physics)*  
+*Quality Grade: COMPREHENSIVE ANALYSIS COMPLETE - VALIDATION + ADVANCED PHYSICS PHASE*

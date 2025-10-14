@@ -15,6 +15,19 @@
 | **FR-009** | Real-time visualization | <16ms frame rendering for interactive use |
 | **FR-010** | Medical imaging reconstruction | Standard ultrasound/photoacoustic algorithms |
 
+## Advanced Functional Requirements (2025 Roadmap)
+
+| ID | Requirement | Verification Criteria | Sprint |
+|----|-------------|----------------------|--------|
+| **FR-011** | Fast Nearfield Method (FNM) | <1% error vs FOCUS, 10-100× speedup | 108 |
+| **FR-012** | Physics-Informed Neural Networks (PINNs) | <5% error vs FDTD, 100-1000× faster inference | 109, 112 |
+| **FR-013** | Shear Wave Elastography (SWE) | <10% elasticity error, <1s reconstruction | 110 |
+| **FR-014** | Microbubble dynamics & contrast agents | 2nd/3rd harmonic ±20%, real-time capable | 111 |
+| **FR-015** | Transcranial focused ultrasound (tFUS) | ±2mm targeting accuracy, <10s planning | 113 |
+| **FR-016** | Hybrid Angular Spectrum Method (HAS) | <2% error vs FDTD, 5-10× faster | 114 |
+| **FR-017** | Poroelastic tissue modeling | Validation vs Biot theory benchmarks | Post-120 |
+| **FR-018** | Uncertainty quantification | 95% confidence interval coverage | 117 |
+
 ## Non-Functional Requirements
 
 | ID | Requirement | Verification Criteria |
@@ -29,6 +42,19 @@
 | **NFR-008** | Performance | C-level performance with zero-cost abstractions |
 | **NFR-009** | Numerical accuracy | Literature-validated tolerance specifications |
 | **NFR-010** | Error handling | No panics, typed Result<T,E> error patterns |
+
+## Advanced Non-Functional Requirements (2025 Roadmap)
+
+| ID | Requirement | Verification Criteria | Sprint |
+|----|-------------|----------------------|--------|
+| **NFR-011** | PINN training time | <4 hours on GPU for 3D domain | 109, 112 |
+| **NFR-012** | PINN inference speed | <1ms per forward pass (real-time) | 109, 112 |
+| **NFR-013** | Multi-GPU scaling | >70% efficiency on 2-4 GPUs | 115 |
+| **NFR-014** | FNM performance | 10-100× faster than Rayleigh-Sommerfeld | 108 |
+| **NFR-015** | Neural beamforming latency | <16ms for 30 fps imaging | 116 |
+| **NFR-016** | SWE reconstruction time | <1s for clinical 2D elasticity map | 110 |
+| **NFR-017** | Uncertainty estimation overhead | <20% computational cost increase | 117 |
+| **NFR-018** | Advanced physics module size | All modules <500 lines (GRASP) | All |
 
 ## Quality Assurance
 
@@ -95,5 +121,41 @@
 
 ---
 
-*SRS Version: 4.0 - Sprint 102 test infrastructure optimization*  
-*Compliance: ✅ Production-ready with SRS NFR-002 compliance achieved (16.81s < 30s target)*
+## Advanced Physics Validation Requirements
+
+See detailed validation strategy in [`docs/gap_analysis_advanced_physics_2025.md`](gap_analysis_advanced_physics_2025.md)
+
+### Fast Nearfield Method (Sprint 108)
+- **Accuracy**: <1% error vs FOCUS for rectangular/circular transducers
+- **Performance**: 10-100× speedup vs Rayleigh-Sommerfeld integration
+- **Coverage**: Gaussian beam analytical solutions
+
+### Physics-Informed Neural Networks (Sprints 109, 112)
+- **Accuracy**: <5% error vs FDTD on synthetic test cases
+- **Performance**: 100-1000× faster inference after training
+- **Generalization**: Transfer learning across transducer geometries
+
+### Shear Wave Elastography (Sprint 110)
+- **Accuracy**: <10% elasticity error vs phantom ground truth
+- **Clinical**: Multi-layer tissues with varying stiffness (liver fibrosis)
+- **Inversion**: Time-of-flight, phase gradient, direct methods
+
+### Microbubble Dynamics (Sprint 111)
+- **Oscillation**: Compare with experimental microbubble data
+- **Harmonics**: 2nd/3rd harmonic generation ±20%
+- **Perfusion**: Validate contrast-to-tissue ratio (CTR)
+
+### Transcranial Ultrasound (Sprint 113)
+- **Phantom**: Ex vivo skull phantoms with hydrophone measurements
+- **Targeting**: ±2mm accuracy for focused delivery
+- **Phase Correction**: Time reversal aberration correction
+
+### Hybrid Angular Spectrum (Sprint 114)
+- **Analytical**: Gaussian beam solutions
+- **Numerical**: Validate vs FDTD for inhomogeneous media
+- **Performance**: 5-10× faster than full-wave methods
+
+---
+
+*SRS Version: 5.0 - Advanced Physics 2025 Roadmap*  
+*Compliance: ✅ Production-ready + Advanced physics planning (Sprints 108-120)*
