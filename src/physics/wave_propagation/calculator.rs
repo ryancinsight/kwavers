@@ -95,6 +95,16 @@ impl WavePropagationCalculator {
             }
         };
 
+        // Get impedances for acoustic mode (for energy conservation validation)
+        let (impedance1, impedance2) = if matches!(self.mode, WaveMode::Acoustic) {
+            (
+                Some(self.interface.medium1.acoustic_impedance()),
+                Some(self.interface.medium2.acoustic_impedance()),
+            )
+        } else {
+            (None, None)
+        };
+
         Ok(PropagationCoefficients {
             reflection_amplitude: coefficients.0,
             transmission_amplitude: coefficients.1,
@@ -107,6 +117,8 @@ impl WavePropagationCalculator {
             } else {
                 Some(transmitted_angle)
             },
+            impedance1,
+            impedance2,
         })
     }
 

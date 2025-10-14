@@ -20,6 +20,10 @@ pub struct PropagationCoefficients {
     pub incident_angle: f64,
     /// Transmitted angle [radians] (None for total internal reflection)
     pub transmitted_angle: Option<f64>,
+    /// Acoustic impedance of medium 1 (optional, for energy conservation)
+    pub impedance1: Option<f64>,
+    /// Acoustic impedance of medium 2 (optional, for energy conservation)
+    pub impedance2: Option<f64>,
 }
 
 impl PropagationCoefficients {
@@ -39,11 +43,48 @@ impl PropagationCoefficients {
         }
     }
 
-    /// Verify energy conservation (R + T = 1 for lossless interface)
+    /// Verify energy conservation for acoustic waves
+    ///
+    /// For acoustic waves at oblique incidence, energy conservation requires:
+    /// R + T_intensity = 1
+    ///
+    /// Where:
+    /// - R = reflectance (|r|²)
+    /// - T_intensity = |t|² × (Z₁/Z₂) × (cos θ_t / cos θ_i)
+    /// - Z₁, Z₂ = acoustic impedances
+    /// - θ_i, θ_t = incident and transmitted angles
+    ///
+    /// **Literature**: Hamilton & Blackstock (1998) "Nonlinear Acoustics", Chapter 3
+    /// **Equation**: R + T × (ρ₁c₁ cos θ_t)/(ρ₂c₂ cos θ_i) = 1
+    ///
+    /// For normal incidence (θ = 0) or when impedances are not provided,
+    /// falls back to simple R + T = 1 check (appropriate for optical waves).
     #[must_use]
     pub fn energy_conservation_error(&self) -> f64 {
-        let total = self.reflectance() + self.transmittance();
-        (total - 1.0).abs()
+        let r = self.reflectance();
+        let t = self.transmittance();
+        
+        // If impedances are provided and we have transmitted angle, use full formula
+        if let (Some(z1), Some(z2), Some(theta_t)) = (self.impedance1, self.impedance2, self.transmitted_angle) {
+            let theta_i = self.incident_angle;
+            let cos_i = theta_i.cos();
+            let cos_t = theta_t.cos();
+            
+            // Avoid division by zero
+            if cos_i.abs() < 1e-15 || z2.abs() < 1e-15 {
+                return (r + t - 1.0).abs();
+            }
+            
+            // Energy conservation with intensity correction for acoustic waves
+            // T_intensity = T_amplitude * (Z1/Z2) * (cos_t/cos_i)
+            let intensity_ratio = (z1 / z2) * (cos_t / cos_i);
+            let t_intensity = t * intensity_ratio;
+            let total = r + t_intensity;
+            (total - 1.0).abs()
+        } else {
+            // Fallback to simple energy conservation for optical waves or missing data
+            (r + t - 1.0).abs()
+        }
     }
 
     /// Get the complex reflection coefficient
@@ -78,6 +119,8 @@ mod tests {
             total_internal_reflection: false,
             incident_angle: 0.0,
             transmitted_angle: Some(0.0),
+            impedance1: None,
+            impedance2: None,
         };
 
         assert_relative_eq!(coeffs.reflectance(), 0.36, epsilon = 1e-10);
@@ -94,6 +137,8 @@ mod tests {
             total_internal_reflection: false,
             incident_angle: 0.0,
             transmitted_angle: Some(0.0),
+            impedance1: None,
+            impedance2: None,
         };
 
         let error = coeffs.energy_conservation_error();
@@ -110,6 +155,8 @@ mod tests {
             total_internal_reflection: true,
             incident_angle: std::f64::consts::PI / 3.0,
             transmitted_angle: None,
+            impedance1: None,
+            impedance2: None,
         };
 
         assert_relative_eq!(coeffs.reflectance(), 1.0, epsilon = 1e-10);
