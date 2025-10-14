@@ -106,7 +106,7 @@ pub fn apply_power_law_absorption(
 /// Compute fractional Laplacian ∇^α in k-space
 /// 
 /// Implements the fractional derivative operator using FFT:
-/// ∇^α f = FFT^{-1}[|k|^α · FFT[f]]
+/// ∇^α f = FFT^{-1}\[|k|^α · FFT\[f\]\]
 /// 
 /// References:
 /// - Caputo (1967): "Linear models of dissipation whose Q is almost frequency independent"

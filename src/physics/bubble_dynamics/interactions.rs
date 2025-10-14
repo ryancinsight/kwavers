@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// Bubble interaction calculator
 #[derive(Debug)]
 pub struct BubbleInteractions {
-    /// Interaction cutoff distance [m]
+    /// Interaction cutoff distance \[m\]
     pub cutoff_distance: f64,
     /// Interaction strength factor
     pub interaction_strength: f64,

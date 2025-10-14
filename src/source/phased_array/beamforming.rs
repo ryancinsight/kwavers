@@ -7,11 +7,11 @@ use std::f64::consts::PI;
 /// Beamforming algorithms for phased array control
 #[derive(Debug, Clone)]
 pub enum BeamformingMode {
-    /// Focus at specific point (x, y, z) [m]
+    /// Focus at specific point (x, y, z) \[m\]
     Focus { target: (f64, f64, f64) },
-    /// Steer beam to angle (theta, phi) [rad]
+    /// Steer beam to angle (theta, phi) \[rad\]
     Steer { theta: f64, phi: f64 },
-    /// Custom phase delays [rad]
+    /// Custom phase delays \[rad\]
     Custom { delays: Vec<f64> },
     /// Plane wave transmission
     PlaneWave { direction: (f64, f64, f64) },

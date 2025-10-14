@@ -10,7 +10,7 @@ use rayon::prelude::*;
 /// Generic field transformation pipeline
 ///
 /// This structure supports transformations over any field type F,
-/// enabling reuse with Array2<T>, Array3<T>, or custom field types.
+/// enabling reuse with Array2<``T``>, Array3<``T``>, or custom field types.
 pub struct FieldTransform<F> {
     transforms: Vec<Box<dyn Fn(F) -> F + Send + Sync>>,
 }

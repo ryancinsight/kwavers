@@ -38,9 +38,9 @@ pub enum InterfaceType {
 pub struct InterfaceProperties {
     /// Interface type
     pub interface_type: InterfaceType,
-    /// Surface roughness RMS [m]
+    /// Surface roughness RMS \[m\]
     pub roughness: f64,
-    /// Interface curvature radius [m] (for curved interfaces)
+    /// Interface curvature radius \[m\] (for curved interfaces)
     pub curvature_radius: Option<f64>,
 }
 

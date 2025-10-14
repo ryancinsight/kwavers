@@ -9,7 +9,7 @@ pub struct PowerLawAbsorption {
     pub alpha_0: f64,
     /// Power law exponent (typically 1.0-1.5)
     pub y: f64,
-    /// Reference frequency for `alpha_0` [Hz]
+    /// Reference frequency for `alpha_0` \[Hz\]
     pub f_ref: f64,
     /// Enable dispersion correction
     pub dispersion_correction: bool,

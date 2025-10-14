@@ -43,10 +43,10 @@ pub const MIN_HISTORY_LEVELS: usize = 2;
 /// Default history levels for RK4 time stepping
 pub const DEFAULT_HISTORY_LEVELS: usize = 4;
 
-/// Maximum pressure threshold for shock detection [Pa]
+/// Maximum pressure threshold for shock detection \[Pa\]
 pub const MAX_PRESSURE_THRESHOLD: f64 = 1e8;
 
-/// Minimum grid spacing for stability [m]
+/// Minimum grid spacing for stability \[m\]
 pub const MIN_GRID_SPACING: f64 = 1e-6;
 
 /// Maximum nonlinearity coefficient B/A
@@ -102,7 +102,7 @@ pub struct KuznetsovConfig {
     /// Enable adaptive time stepping
     pub adaptive_time_stepping: bool,
 
-    /// Maximum pressure before limiting [Pa]
+    /// Maximum pressure before limiting \[Pa\]
     pub max_pressure: f64,
 
     /// Enable shock capturing for strong nonlinearity

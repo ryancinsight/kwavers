@@ -17,7 +17,7 @@ pub struct BioheatParameters {
     pub blood_density: f64,
     /// Blood specific heat [J/(kg·K)]
     pub blood_specific_heat: f64,
-    /// Arterial blood temperature [K]
+    /// Arterial blood temperature \[K\]
     pub arterial_temperature: f64,
 }
 

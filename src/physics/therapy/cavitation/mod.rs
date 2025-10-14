@@ -12,9 +12,9 @@ const ATMOSPHERIC_PRESSURE: f64 = 101325.0; // Pa
 /// Cavitation detector for therapy
 #[derive(Debug)]
 pub struct TherapyCavitationDetector {
-    /// Frequency [Hz]
+    /// Frequency \[Hz\]
     frequency: f64,
-    /// Blake threshold pressure [Pa]
+    /// Blake threshold pressure \[Pa\]
     pub blake_threshold: f64,
     /// Detection method
     method: CavitationDetectionMethod,

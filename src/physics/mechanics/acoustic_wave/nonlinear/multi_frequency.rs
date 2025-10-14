@@ -12,7 +12,7 @@ use ndarray::Array1;
 /// - Frequency-dependent absorption modeling
 #[derive(Debug, Clone)]
 pub struct MultiFrequencyConfig {
-    /// Array of frequencies to simulate [Hz]
+    /// Array of frequencies to simulate \[Hz\]
     pub frequencies: Vec<f64>,
     /// Weights for each frequency component
     pub weights: Vec<f64>,
@@ -20,7 +20,7 @@ pub struct MultiFrequencyConfig {
     pub track_harmonics: bool,
     /// Maximum harmonic order to track
     pub max_harmonic_order: usize,
-    /// Frequency resolution for spectral analysis [Hz]
+    /// Frequency resolution for spectral analysis \[Hz\]
     pub frequency_resolution: f64,
 }
 
@@ -41,7 +41,7 @@ impl MultiFrequencyConfig {
     ///
     /// # Arguments
     ///
-    /// * `frequencies` - Vector of frequencies to simulate [Hz]
+    /// * `frequencies` - Vector of frequencies to simulate \[Hz\]
     /// * `weights` - Optional weights for each frequency (defaults to equal weights)
     ///
     /// # Returns
@@ -63,7 +63,7 @@ impl MultiFrequencyConfig {
     ///
     /// # Arguments
     ///
-    /// * `fundamental` - Fundamental frequency [Hz]
+    /// * `fundamental` - Fundamental frequency \[Hz\]
     /// * `num_harmonics` - Number of harmonics to track
     ///
     /// # Returns
@@ -88,8 +88,8 @@ impl MultiFrequencyConfig {
     ///
     /// # Arguments
     ///
-    /// * `min_freq` - Minimum frequency [Hz]
-    /// * `max_freq` - Maximum frequency [Hz]
+    /// * `min_freq` - Minimum frequency \[Hz\]
+    /// * `max_freq` - Maximum frequency \[Hz\]
     /// * `num_points` - Number of frequency points
     ///
     /// # Returns
@@ -126,7 +126,7 @@ impl MultiFrequencyConfig {
     ///
     /// # Returns
     ///
-    /// The fundamental frequency [Hz], or None if no frequencies are configured
+    /// The fundamental frequency \[Hz\], or None if no frequencies are configured
     #[must_use]
     pub fn fundamental_frequency(&self) -> Option<f64> {
         self.frequencies
@@ -139,7 +139,7 @@ impl MultiFrequencyConfig {
     ///
     /// # Returns
     ///
-    /// The bandwidth [Hz]
+    /// The bandwidth \[Hz\]
     #[must_use]
     pub fn bandwidth(&self) -> f64 {
         if self.frequencies.is_empty() {

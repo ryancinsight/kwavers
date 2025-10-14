@@ -38,9 +38,9 @@ pub struct CavitationState {
     pub is_cavitating: bool,
     /// Cavitation intensity (0-1)
     pub intensity: f64,
-    /// Time since cavitation onset [s]
+    /// Time since cavitation onset \[s\]
     pub duration: f64,
-    /// Peak negative pressure reached [Pa]
+    /// Peak negative pressure reached \[Pa\]
     pub peak_negative_pressure: f64,
     /// Mechanical index value
     pub mechanical_index: f64,
@@ -198,11 +198,11 @@ pub struct CavitationModel {
     pub threshold_model: ThresholdModel,
     /// Surface tension [N/m]
     pub surface_tension: f64,
-    /// Initial bubble radius [m]
+    /// Initial bubble radius \[m\]
     pub initial_radius: f64,
-    /// Ambient pressure [Pa]
+    /// Ambient pressure \[Pa\]
     pub ambient_pressure: f64,
-    /// Vapor pressure [Pa]
+    /// Vapor pressure \[Pa\]
     pub vapor_pressure: f64,
     /// Current cavitation states
     pub states: Array3<CavitationState>,

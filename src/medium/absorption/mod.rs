@@ -13,9 +13,9 @@
 //! α(f) = α₀ * f^y
 //! ```
 //! where:
-//! - α is the absorption coefficient [Np/m]
+//! - α is the absorption coefficient \[Np/m\]
 //! - α₀ is the absorption coefficient at 1 `MHz`
-//! - f is frequency [`MHz`]
+//! - f is frequency \[MHz\]
 //! - y is the power law exponent (typically 1.0-1.5 for tissues)
 //!
 //! # References

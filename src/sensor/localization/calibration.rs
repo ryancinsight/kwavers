@@ -8,7 +8,7 @@ use crate::error::KwaversResult;
 pub struct SensorCalibration {
     /// Position offset [x, y, z] in meters
     pub position_offset: [f64; 3],
-    /// Time delay [seconds]
+    /// Time delay \[seconds\]
     pub time_delay: f64,
     /// Sensitivity correction factor
     pub sensitivity_factor: f64,

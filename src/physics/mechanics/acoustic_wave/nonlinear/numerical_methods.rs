@@ -25,7 +25,7 @@ impl NonlinearWave {
     ///
     /// # Arguments
     ///
-    /// * `pressure` - Current pressure field [Pa]
+    /// * `pressure` - Current pressure field \[Pa\]
     /// * `source` - Source term array [Pa/s²]
     /// * `medium` - Medium properties
     /// * `grid` - Computational grid
@@ -103,7 +103,7 @@ impl NonlinearWave {
     ///
     /// # Arguments
     ///
-    /// * `pressure` - Current pressure field [Pa]
+    /// * `pressure` - Current pressure field \[Pa\]
     /// * `medium` - Medium properties
     /// * `grid` - Computational grid
     ///
@@ -338,7 +338,7 @@ impl NonlinearWave {
     ///
     /// # Returns
     ///
-    /// Recommended time step [s]
+    /// Recommended time step \[s\]
     pub fn compute_adaptive_timestep(&self, medium: &dyn Medium, grid: &Grid) -> f64 {
         // Get actual maximum sound speed from medium
         let mut max_c: f64 = 0.0;
