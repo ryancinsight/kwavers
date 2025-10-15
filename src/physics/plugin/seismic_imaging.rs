@@ -13,15 +13,15 @@ mod fwi;
 mod parameters;
 mod rtm;
 
-// Re-export types for backward compatibility
+// Re-export types for backward compatibility and direct access
 pub use parameters::{
     BoundaryType, ConvergenceCriteria, FwiParameters, ImagingCondition, MigrationAperture,
     RegularizationParameters, RtmSettings, StorageStrategy, TaperFunction,
 };
 
-// Import processors
-use fwi::FwiProcessor;
-use rtm::RtmProcessor;
+// Re-export processors for direct usage
+pub use fwi::FwiProcessor;
+pub use rtm::RtmProcessor;
 
 /// Seismic Imaging Plugin
 /// Provides RTM and FWI capabilities for subsurface imaging
