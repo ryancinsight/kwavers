@@ -1,15 +1,16 @@
-//! Filter operations for photoacoustic reconstruction
+//! Core filter operations for photoacoustic reconstruction
 //!
-//! This module provides various filtering operations used in
-//! photoacoustic image reconstruction.
+//! This module provides the main Filters struct and frequency-domain
+//! filtering operations (bandpass, envelope detection, FBP filters).
 
 use crate::error::KwaversResult;
 use crate::solver::reconstruction::FilterType;
+use super::spatial;
 use ndarray::{Array1, Array2, Array3};
 use rustfft::{num_complex::Complex, FftPlanner};
 use std::f64::consts::PI;
 
-use super::config::PhotoacousticConfig;
+use crate::solver::reconstruction::photoacoustic::config::PhotoacousticConfig;
 
 /// Filter operations for photoacoustic reconstruction
 #[derive(Debug)]
@@ -346,177 +347,24 @@ impl Filters {
 
     /// Apply reconstruction filter for regularization and denoising
     pub fn apply_reconstruction_filter(&self, image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = image.dim();
-        let mut filtered = Array3::zeros((nx, ny, nz));
-
         // Apply 3D Gaussian filter for noise reduction
-        // Using separable implementation for efficiency
         const GAUSSIAN_SIGMA: f64 = 1.0; // Standard deviation in voxels
         const KERNEL_RADIUS: usize = 3; // 7x7x7 kernel
-
-        // Generate 1D Gaussian kernel
-        let kernel = self.create_gaussian_kernel(KERNEL_RADIUS, GAUSSIAN_SIGMA);
-
-        // Apply separable filtering in each dimension
-        // First pass: filter along X
-        let mut temp1 = Array3::zeros((nx, ny, nz));
-        for j in 0..ny {
-            for k in 0..nz {
-                for i in 0..nx {
-                    let mut sum = 0.0;
-                    let mut weight_sum = 0.0;
-
-                    for (ki, &kernel_val) in kernel.iter().enumerate() {
-                        let ii = (i as i32 + ki as i32 - KERNEL_RADIUS as i32) as usize;
-                        if ii < nx {
-                            sum += image[[ii, j, k]] * kernel_val;
-                            weight_sum += kernel_val;
-                        }
-                    }
-
-                    if weight_sum > 0.0 {
-                        temp1[[i, j, k]] = sum / weight_sum;
-                    }
-                }
-            }
-        }
-
-        // Second pass: filter along Y
-        let mut temp2 = Array3::zeros((nx, ny, nz));
-        for i in 0..nx {
-            for k in 0..nz {
-                for j in 0..ny {
-                    let mut sum = 0.0;
-                    let mut weight_sum = 0.0;
-
-                    for (kj, &kernel_val) in kernel.iter().enumerate() {
-                        let jj = (j as i32 + kj as i32 - KERNEL_RADIUS as i32) as usize;
-                        if jj < ny {
-                            sum += temp1[[i, jj, k]] * kernel_val;
-                            weight_sum += kernel_val;
-                        }
-                    }
-
-                    if weight_sum > 0.0 {
-                        temp2[[i, j, k]] = sum / weight_sum;
-                    }
-                }
-            }
-        }
-
-        // Third pass: filter along Z
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let mut sum = 0.0;
-                    let mut weight_sum = 0.0;
-
-                    for (kk, &kernel_val) in kernel.iter().enumerate() {
-                        let zz = (k as i32 + kk as i32 - KERNEL_RADIUS as i32) as usize;
-                        if zz < nz {
-                            sum += temp2[[i, j, zz]] * kernel_val;
-                            weight_sum += kernel_val;
-                        }
-                    }
-
-                    if weight_sum > 0.0 {
-                        filtered[[i, j, k]] = sum / weight_sum;
-                    }
-                }
-            }
-        }
-
-        // Apply edge-preserving bilateral filter for better feature preservation
-        let bilateral_filtered = self.apply_bilateral_filter(&filtered, GAUSSIAN_SIGMA)?;
-
-        Ok(bilateral_filtered)
-    }
-
-    /// Create 1D Gaussian kernel
-    fn create_gaussian_kernel(&self, radius: usize, sigma: f64) -> Vec<f64> {
-        let size = 2 * radius + 1;
-        let mut kernel = vec![0.0; size];
-        let norm = 1.0 / (sigma * (2.0 * PI).sqrt());
-        let sigma2 = 2.0 * sigma * sigma;
-
-        for (i, kernel_val) in kernel.iter_mut().enumerate().take(size) {
-            let x = f64::from(i as i32 - radius as i32);
-            *kernel_val = norm * (-x * x / sigma2).exp();
-        }
-
-        // Normalize
-        let sum: f64 = kernel.iter().sum();
-        for val in &mut kernel {
-            *val /= sum;
-        }
-
-        kernel
-    }
-
-    /// Apply bilateral filter for edge preservation
-    fn apply_bilateral_filter(
-        &self,
-        image: &Array3<f64>,
-        spatial_sigma: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = image.dim();
-        let mut filtered = image.clone();
-
         const WINDOW_RADIUS: usize = 2;
         const INTENSITY_SIGMA: f64 = 0.1; // Relative to data range
 
-        // Estimate intensity range for normalization
-        let max_val = image.iter().copied().fold(0.0_f64, f64::max);
-        let min_val = image.iter().copied().fold(f64::INFINITY, f64::min);
-        let range = (max_val - min_val).max(1e-10);
-        let intensity_sigma = INTENSITY_SIGMA * range;
+        // Apply Gaussian filtering using separable implementation
+        let gaussian_filtered = spatial::apply_gaussian_filter(image, GAUSSIAN_SIGMA, KERNEL_RADIUS)?;
 
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let center_val = image[[i, j, k]];
-                    let mut sum = 0.0;
-                    let mut weight_sum = 0.0;
+        // Apply edge-preserving bilateral filter for better feature preservation
+        let bilateral_filtered = spatial::apply_bilateral_filter(
+            &gaussian_filtered,
+            GAUSSIAN_SIGMA,
+            WINDOW_RADIUS,
+            INTENSITY_SIGMA,
+        )?;
 
-                    // Apply bilateral filter in local window
-                    for di in -(WINDOW_RADIUS as i32)..=(WINDOW_RADIUS as i32) {
-                        for dj in -(WINDOW_RADIUS as i32)..=(WINDOW_RADIUS as i32) {
-                            for dk in -(WINDOW_RADIUS as i32)..=(WINDOW_RADIUS as i32) {
-                                let ii = (i as i32 + di) as usize;
-                                let jj = (j as i32 + dj) as usize;
-                                let kk = (k as i32 + dk) as usize;
-
-                                if ii < nx && jj < ny && kk < nz {
-                                    let neighbor_val = image[[ii, jj, kk]];
-
-                                    // Spatial weight
-                                    let spatial_dist2 = f64::from(di * di + dj * dj + dk * dk);
-                                    let spatial_weight = (-spatial_dist2
-                                        / (2.0 * spatial_sigma * spatial_sigma))
-                                        .exp();
-
-                                    // Intensity weight
-                                    let intensity_diff = neighbor_val - center_val;
-                                    let intensity_weight = (-(intensity_diff * intensity_diff)
-                                        / (2.0 * intensity_sigma * intensity_sigma))
-                                        .exp();
-
-                                    let weight = spatial_weight * intensity_weight;
-                                    sum += neighbor_val * weight;
-                                    weight_sum += weight;
-                                }
-                            }
-                        }
-                    }
-
-                    if weight_sum > 0.0 {
-                        filtered[[i, j, k]] = sum / weight_sum;
-                    }
-                }
-            }
-        }
-
-        Ok(filtered)
+        Ok(bilateral_filtered)
     }
 }
 
