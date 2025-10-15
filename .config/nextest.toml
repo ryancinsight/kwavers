@@ -37,5 +37,5 @@ global = { period = "25s" }
 # Test execution optimization
 [test-groups]
 # Group slow integration tests separately
-integration = { filter = "test(/.*integration.*/)" }
-unit = { filter = "test(/^((?!integration).)*$/)" }
+integration = { max-threads = 2, filter = "test(/.*integration.*/)" }
+unit = { max-threads = 8, filter = "test(/^((?!integration).)*$/)" }
