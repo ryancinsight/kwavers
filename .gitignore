@@ -49,6 +49,9 @@ test_octree
 *.html
 *.log
 
+# k-Wave example replication output directories
+kwave_replication_outputs_*/
+
 # Build artifacts
 *.o
 *.so
