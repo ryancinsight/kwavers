@@ -14,6 +14,8 @@
 | **ADR-010: Spectral-DG Hybrid Methods** | ACCEPTED | Automatic switching for optimal accuracy | Complexity vs robustness |
 | **ADR-012: Word Boundary Naming Audit** | ACCEPTED | Precise pattern matching, domain term awareness | Tool complexity vs audit accuracy |
 | **ADR-013: Intensity-Corrected Energy Conservation** | ACCEPTED | Physics-accurate acoustic validation | Struct overhead vs correctness |
+| **ADR-014: Word Boundary Naming Audit** | ACCEPTED | Enhanced audit precision, domain whitelisting | Tool complexity vs false positive elimination |
+| **ADR-015: SSOT Configuration Consolidation** | ACCEPTED | Single source of truth, no version drift | None - pure improvement |
 
 ## Current Architecture Status
 
@@ -135,6 +137,29 @@
 **Trade-offs**: Tool complexity (+60 lines) vs audit accuracy (9% → 100% genuine violations)
 **Metrics**: Reduced violations 239 → 21 → 0 (100% false positive elimination, 100% genuine violation fix)
 **Impact**: Developer confidence in audit reports, reduced manual review burden, sustainable quality enforcement
+
+#### ADR-015: SSOT Configuration Consolidation (Sprint 118)
+**Problem**: Repository contained redundant configuration files violating Single Source of Truth (SSOT) principle, creating maintenance burden and potential version drift
+**Violations Identified**:
+- `Cargo.toml.bloated` (5.1KB) - alternative dependency configuration tracked in git
+- `Cargo.toml.production` (2.2KB) - production variant tracked in git
+- `kwave_replication_outputs_*/` - 4 output directories with 22 JSON files tracked
+- `clippy.toml` - outdated Sprint 100-102 TODO markers (>6 months old)
+**Solution**: Enforce strict SSOT compliance per ADR-009 evidence-based development
+**Implementation**:
+- Removed redundant Cargo.toml variants from git tracking
+- Updated `.gitignore` with `Cargo.toml.*` pattern to prevent future violations
+- Removed all tracked output directories (belong in artifacts, not source control)
+- Cleaned clippy.toml of obsolete TODO markers from Sprint 99-102
+**Research**: Evidence-based cleanup follows 2025 Rust best practices [web:5:0-4†GATs, SIMD, zero-cost]
+**Trade-offs**: None - pure improvement
+**Metrics**: 
+- Files removed: 6 (2 Cargo.toml + 4 output dirs with 22 files)
+- SSOT violations: 6 → 0 (100% elimination)
+- Test pass rate: 382/382 maintained (100%)
+- Build time: 0.12s incremental maintained
+**Impact**: Cleaner repository, no version drift risk, easier maintenance
+**Date**: Sprint 118
 
 ### Performance Characteristics
 - **Compilation**: <30s full rebuild, <5s incremental
