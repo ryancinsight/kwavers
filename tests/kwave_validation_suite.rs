@@ -46,7 +46,7 @@ fn test_plane_wave_analytical_validation() -> KwaversResult<()> {
     let ny = 32;
     let nz = 1;
     let dx = 0.1e-3; // 0.1 mm
-    let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
+    let _grid = Grid::new(nx, ny, nz, dx, dx, dx)?;
 
     // Medium properties (water at 20°C)
     let c0 = SOUND_SPEED_WATER;
