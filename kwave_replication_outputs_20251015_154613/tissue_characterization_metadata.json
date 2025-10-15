@@ -1,0 +1,22 @@
+{
+  "description": "Multi-layer tissue characterization",
+  "example_name": "tissue_characterization",
+  "kwave_equivalent": "k-Wave heterogeneous medium examples",
+  "layers": [
+    [
+      "Water",
+      1500.0,
+      1000.0
+    ],
+    [
+      "Fat",
+      1450.0,
+      950.0
+    ],
+    [
+      "Muscle",
+      1580.0,
+      1050.0
+    ]
+  ]
+}

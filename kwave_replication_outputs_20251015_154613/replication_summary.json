@@ -1,0 +1,126 @@
+{
+  "individual_results": [
+    {
+      "execution_time_ms": 12184,
+      "max_pressure_pa": 1000000.0,
+      "name": "basic_wave_propagation",
+      "output_files_count": 3,
+      "reference": "k-Wave User Manual, basic wave propagation",
+      "rms_error": 0.7296724949847775,
+      "validation_passed": false
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 1000000.0,
+      "name": "frequency_response_analysis",
+      "output_files_count": 2,
+      "reference": "k-Wave spectral analysis examples",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 70,
+      "max_pressure_pa": 0.0,
+      "name": "focused_bowl_transducer",
+      "output_files_count": 3,
+      "reference": "k-Wave example_ivp_focused_bowl_2D",
+      "rms_error": 0.0,
+      "validation_passed": false
+    },
+    {
+      "execution_time_ms": 656,
+      "max_pressure_pa": 10624.594071133331,
+      "name": "phased_array_beamforming",
+      "output_files_count": 2,
+      "reference": "k-Wave example_pr_2D_TR_phased_array",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 2,
+      "max_pressure_pa": 19582198.745051883,
+      "name": "time_reversal_reconstruction",
+      "output_files_count": 3,
+      "reference": "k-Wave time reversal examples",
+      "rms_error": 1.0,
+      "validation_passed": false
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 100000.0,
+      "name": "photoacoustic_imaging",
+      "output_files_count": 1,
+      "reference": "Treeby & Cox (2010) - Photoacoustic imaging",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 0.0,
+      "name": "nonlinear_propagation",
+      "output_files_count": 1,
+      "reference": "Hamilton & Blackstock (1998) Ch. 4",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 0.0,
+      "name": "tissue_characterization",
+      "output_files_count": 1,
+      "reference": "k-Wave heterogeneous medium examples",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 0.0,
+      "name": "hifu_therapy",
+      "output_files_count": 1,
+      "reference": "k-Wave HIFU simulation examples",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 0.0,
+      "name": "3d_heterogeneous",
+      "output_files_count": 1,
+      "reference": "k-Wave 3D examples",
+      "rms_error": 0.0,
+      "validation_passed": true
+    },
+    {
+      "execution_time_ms": 0,
+      "max_pressure_pa": 0.0,
+      "name": "absorption_comparison",
+      "output_files_count": 1,
+      "reference": "Treeby et al. (2012) - Absorption models",
+      "rms_error": 0.0,
+      "validation_passed": true
+    }
+  ],
+  "kwave_replication_methodology": {
+    "approach": "Conceptual replication of k-Wave physics and methodology",
+    "output_formats": [
+      "CSV",
+      "JSON",
+      "metadata"
+    ],
+    "quality_gates": "Evidence-based validation with literature references",
+    "validation_criteria": "Physics consistency and numerical stability"
+  },
+  "quality_metrics": {
+    "average_output_files_per_example": 1.7272727272727273,
+    "total_output_files": 19
+  },
+  "replication_suite_summary": {
+    "average_rms_error": 0.15724295408952524,
+    "passed_examples": 8,
+    "success_rate_percent": 72.72727272727273,
+    "timestamp": "2025-10-15T15:46:28.463707430+00:00",
+    "total_examples": 11,
+    "total_execution_time_ms": 12915,
+    "validation_enabled": true
+  }
+}
