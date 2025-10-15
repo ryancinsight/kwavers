@@ -75,11 +75,15 @@ impl KellerMiksisModel {
     /// Journal of the Acoustical Society of America, 68(2), 628-633
     pub fn calculate_acceleration(
         &self,
-        _state: &mut BubbleState,
+        state: &mut BubbleState,
         _p_acoustic: f64,
         _dp_dt: f64, // This is d(p_acoustic)/dt
         _t: f64,
     ) -> KwaversResult<f64> {
+        // Update Mach number based on wall velocity
+        // Reference: Keller & Miksis (1980), Eq. 2.5
+        state.mach_number = state.wall_velocity.abs() / self.params.c_liquid;
+        
         // Implementation extracted from monolithic file
         // Full implementation would go here...
         
