@@ -1,0 +1,8 @@
+{
+  "description": "HIFU therapy simulation",
+  "example_name": "hifu_therapy",
+  "focal_depth_m": 0.03,
+  "frequency_hz": 1000000.0,
+  "kwave_equivalent": "k-Wave HIFU examples",
+  "power_w": 10.0
+}

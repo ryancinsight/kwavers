@@ -1,0 +1,12 @@
+{
+  "description": "Photoacoustic imaging with dual vessel pattern",
+  "example_name": "photoacoustic_imaging",
+  "grid": {
+    "Nx": 64,
+    "Ny": 64,
+    "Nz": 1,
+    "dx": 0.0001
+  },
+  "initial_pressure_max_pa": 100000.0,
+  "kwave_equivalent": "k-Wave photoacoustic forward problem"
+}
