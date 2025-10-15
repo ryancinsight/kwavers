@@ -80,7 +80,7 @@ impl KWaveReplicationSuite {
         // Medium properties (water, typical k-Wave default)
         let sound_speed = 1500.0; // m/s
         let density = 1000.0;     // kg/m³
-        let medium = Arc::new(HomogeneousMedium::new(
+        let _medium = Arc::new(HomogeneousMedium::new(
             density, sound_speed, 0.0, 0.0, &grid
         ));
         
@@ -91,7 +91,7 @@ impl KWaveReplicationSuite {
         let dt = cfl_number * dx / sound_speed;
         let t_end = 20e-6; // 20 µs total simulation time
         let num_steps = (t_end / dt) as usize;
-        let time = Time::new(dt, num_steps);
+        let _time = Time::new(dt, num_steps);
         
         println!("Time: dt={:.2e} s, steps={}, duration={:.1} µs", 
                 dt, num_steps, t_end * 1e6);
@@ -342,7 +342,7 @@ impl KWaveReplicationSuite {
             let domain_wavelengths = 4.0; // Domain size in wavelengths
             let grid_size = (domain_wavelengths * points_per_wavelength) as usize;
             
-            let grid = Grid::new(grid_size, grid_size, 1, dx, dx, dx)?;
+            let _grid = Grid::new(grid_size, grid_size, 1, dx, dx, dx)?;
             println!("    Grid: {}x{} points, dx={:.1e} m, λ={:.1e} m", 
                     grid_size, grid_size, dx, wavelength);
             
@@ -359,7 +359,7 @@ impl KWaveReplicationSuite {
                     dt, num_steps, source_duration * 1e6);
             
             // Simulate pressure field at source location
-            let center = grid_size / 2;
+            let _center = grid_size / 2;
             let mut max_amplitude: f64 = 0.0;
             let mut phase_delay = 0.0;
             
@@ -498,7 +498,7 @@ impl KWaveReplicationSuite {
         println!("Transducer: f={:.1} MHz, R={:.1} mm, aperture={:.1} mm", 
                 frequency * 1e-6, radius_of_curvature * 1000.0, aperture_diameter * 1000.0);
         
-        let medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
+        let _medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
         
         // Time stepping
         let cfl = 0.3;
@@ -506,7 +506,7 @@ impl KWaveReplicationSuite {
         let periods = 3.0; // Simulate 3 periods
         let duration = periods / frequency;
         let num_steps = (duration / dt) as usize;
-        let time = Time::new(dt, num_steps);
+        let _time = Time::new(dt, num_steps);
         
         println!("Time: dt={:.2e} s, {} steps, duration={:.1} µs", dt, num_steps, duration * 1e6);
         
@@ -528,7 +528,7 @@ impl KWaveReplicationSuite {
         let focal_i = (focal_x / dx) as usize;
         let focal_j = ny / 2;
         
-        let mut focal_pressure_history = Vec::new();
+        let mut focal_pressure_history: Vec<(f64, f64)> = Vec::new();
         
         println!("Simulating focused wave propagation...");
         
@@ -661,7 +661,7 @@ impl KWaveReplicationSuite {
         println!("Array: {} elements, pitch={:.1} mm, f={:.1} MHz", 
                 num_elements, element_pitch * 1000.0, frequency * 1e-6);
         
-        let medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
+        let _medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
         
         // Steering angle
         let steering_angle = 15.0f64.to_radians(); // 15 degrees
@@ -723,7 +723,7 @@ impl KWaveReplicationSuite {
             }
             
             // Track maximum
-            let step_max = pressure.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+            let step_max = pressure.iter().fold(0.0f64, |a, &b: &f64| a.max(b.abs()));
             max_pressure = max_pressure.max(step_max);
             
             if step % (num_steps / 10) == 0 {
@@ -806,7 +806,7 @@ impl KWaveReplicationSuite {
         
         let sound_speed = 1500.0;
         let density = 1000.0;
-        let medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
+        let _medium = Arc::new(HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid));
         
         // Forward propagation: point source
         let source_i = nx / 4;
@@ -832,8 +832,8 @@ impl KWaveReplicationSuite {
             let t = step as f64 * dt;
             
             // Point source (Gaussian pulse)
-            let t0 = 5e-6;
-            let sigma = 1e-6;
+            let t0 = 5e-6_f64;
+            let sigma = 1e-6_f64;
             let amplitude = 1.0e6 * (-(t - t0).powi(2) / (2.0 * sigma.powi(2))).exp();
             
             pressure_forward[[source_i, source_j, 0]] += amplitude;
@@ -846,7 +846,7 @@ impl KWaveReplicationSuite {
             sensor_data.push(sensor_line);
         }
         
-        let max_forward = pressure_forward.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        let max_forward = pressure_forward.iter().fold(0.0f64, |a, &b: &f64| a.max(b.abs()));
         println!("Forward max pressure: {:.2e} Pa", max_forward);
         
         // Time reversal
@@ -864,7 +864,7 @@ impl KWaveReplicationSuite {
             }
         }
         
-        let max_reversed = pressure_reversed.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
+        let max_reversed = pressure_reversed.iter().fold(0.0f64, |a, &b: &f64| a.max(b.abs()));
         println!("Reconstructed max pressure: {:.2e} Pa", max_reversed);
         
         // Check reconstruction at source location
@@ -934,7 +934,7 @@ impl KWaveReplicationSuite {
             example_name: example_name.to_string(),
             execution_time,
             max_pressure: max_forward,
-            rms_error: (1.0 - reconstruction_quality).abs(),
+            rms_error: (1.0_f64 - reconstruction_quality).abs(),
             validation_passed: reconstruction_quality > 0.5,
             output_files,
             reference_citation: "k-Wave time reversal examples".to_string(),
