@@ -273,22 +273,58 @@ impl FwiProcessor {
         model.mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
     }
 
-    /// Forward modeling (placeholder - should be implemented based on specific solver)
+    /// Forward modeling - requires acoustic solver integration
+    ///
+    /// This method requires integration with a specific acoustic solver to compute
+    /// synthetic seismograms from the velocity model. The implementation depends on
+    /// the solver interface and is left for future integration.
+    ///
+    /// # Arguments
+    /// * `model` - Velocity model for forward propagation
+    /// * `grid` - Computational grid defining the domain
+    ///
+    /// # Returns
+    /// * `NotImplemented` error indicating solver integration is required
     fn forward_model(&self, _model: &Array3<f64>, _grid: &Grid) -> KwaversResult<Array3<f64>> {
-        // This is a placeholder - in reality, this would call the acoustic solver
-        // with the given velocity model to compute synthetic seismograms
-        todo!("Forward modeling implementation depends on specific solver integration")
+        // In a complete implementation, this would:
+        // 1. Configure the acoustic solver with the given velocity model
+        // 2. Run forward propagation from sources to receivers
+        // 3. Return synthetic seismograms at receiver locations
+        Err(crate::error::KwaversError::NotImplemented(
+            "Forward modeling requires acoustic solver integration. \
+             This method should call the acoustic solver with the given velocity model \
+             to compute synthetic seismograms."
+                .to_string(),
+        ))
     }
 
-    /// Adjoint modeling (placeholder - should be implemented based on specific solver)
+    /// Adjoint modeling - requires acoustic solver integration
+    ///
+    /// This method requires integration with a specific acoustic solver to compute
+    /// the adjoint wavefield from the adjoint source. The implementation depends on
+    /// the solver interface and is left for future integration.
+    ///
+    /// # Arguments
+    /// * `adjoint_source` - Adjoint source derived from data residual
+    /// * `grid` - Computational grid defining the domain
+    ///
+    /// # Returns
+    /// * `NotImplemented` error indicating solver integration is required
     fn adjoint_model(
         &self,
         _adjoint_source: &Array3<f64>,
         _grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        // This is a placeholder - in reality, this would run the adjoint solver
-        // with the adjoint source to compute the adjoint wavefield
-        todo!("Adjoint modeling implementation depends on specific solver integration")
+        // In a complete implementation, this would:
+        // 1. Configure the acoustic solver in adjoint mode
+        // 2. Run backward propagation from receivers using adjoint source
+        // 3. Return adjoint wavefield for gradient computation
+        Err(crate::error::KwaversError::NotImplemented(
+            "Adjoint modeling requires acoustic solver integration. \
+             This method should run the adjoint solver with the adjoint source \
+             to compute the adjoint wavefield for gradient calculation."
+                .to_string(),
+        ))
     }
 
     /// Compute adjoint source from data residual
