@@ -1,0 +1,26 @@
+{
+  "description": "Focused bowl transducer simulation",
+  "example_name": "focused_bowl_transducer",
+  "grid": {
+    "dx_mm": 0.1875,
+    "nx": 138,
+    "ny": 69,
+    "nz": 1
+  },
+  "kwave_equivalent": "example_ivp_focused_bowl_2D",
+  "medium": {
+    "density_kgm3": 1000.0,
+    "sound_speed_ms": 1500.0
+  },
+  "reference": "k-Wave focused transducer examples",
+  "results": {
+    "execution_time_ms": 67,
+    "max_focal_pressure_pa": 0.0
+  },
+  "transducer": {
+    "aperture_diameter_mm": 15.0,
+    "focal_depth_mm": 16.0,
+    "frequency_mhz": 1.0,
+    "radius_of_curvature_mm": 20.0
+  }
+}
