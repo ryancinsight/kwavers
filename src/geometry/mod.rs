@@ -26,18 +26,13 @@ use ndarray::Array3;
 
 /// Create a 2D circular disc mask
 ///
-/// Generates a binary mask with value `true` inside a circular region
-/// and `false` outside, matching k-Wave's `makeDisc` function.
+/// Generates a binary mask with `true` inside disc, `false` outside (k-Wave `makeDisc`).
 ///
 /// # Arguments
 ///
 /// * `grid` - Grid defining spatial discretization
 /// * `center` - Center point \[x, y, z\] in meters
 /// * `radius` - Disc radius in meters
-///
-/// # Returns
-///
-/// Binary mask with `true` inside disc, `false` outside
 ///
 /// # Mathematical Definition
 ///

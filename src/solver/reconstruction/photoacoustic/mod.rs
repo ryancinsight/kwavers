@@ -26,6 +26,7 @@ mod utils;
 
 pub use algorithms::{PhotoacousticAlgorithm, PhotoacousticReconstructor};
 pub use config::PhotoacousticConfig;
+pub use filters::Filters;
 pub use iterative::IterativeAlgorithm;
 
 use crate::error::KwaversResult;
