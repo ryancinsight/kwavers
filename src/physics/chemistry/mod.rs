@@ -194,25 +194,86 @@ impl ChemicalModel {
         Ok(())
     }
 
-    /// Get radical concentrations
+    /// Get radical concentrations for all tracked species
+    ///
+    /// Returns concentrations for:
+    /// - OH (hydroxyl radical) from reaction kinetics (if enabled)
+    /// - H2O2 (hydrogen peroxide) from reaction kinetics (if enabled)
+    /// - General radical precursors from initiation
     #[must_use]
     pub fn get_radical_concentrations(&self) -> HashMap<String, Array3<f64>> {
-        // Return a simple map with the main radical concentration
-        // This is a placeholder - the actual implementation would track multiple species
         let mut map = HashMap::new();
+        
+        // If kinetics is enabled, get tracked species concentrations
+        if let Some(ref kinetics) = self.kinetics {
+            // Primary hydroxyl radical from reaction kinetics
+            map.insert(
+                "OH".to_string(),
+                kinetics.hydroxyl_concentration().clone(),
+            );
+            
+            // Hydrogen peroxide from reaction kinetics
+            map.insert(
+                "H2O2".to_string(),
+                kinetics.hydrogen_peroxide().clone(),
+            );
+        }
+        
+        // General radical precursors (H•, OH• precursors) from initiation
+        // Always available regardless of kinetics setting
         map.insert(
-            "OH".to_string(),
+            "radical_precursors".to_string(),
             self.radical_initiation.radical_concentration.clone(),
         );
+        
         map
     }
 
-    /// Get reaction rates
+    /// Get reaction rates for tracked chemical reactions
+    ///
+    /// Returns rate constants for:
+    /// - OH production rate (from radical initiation)
+    /// - H2O2 production rate (from OH recombination)
+    /// - Total reaction count
+    ///
+    /// Rates are computed from the current concentrations and reaction kinetics
     #[must_use]
     pub fn get_reaction_rates(&self) -> HashMap<String, f64> {
-        // Return reaction rates if kinetics is enabled
-        // This is a placeholder - actual implementation would track rates
-        HashMap::new()
+        let mut rates = HashMap::new();
+        
+        if let Some(ref kinetics) = self.kinetics {
+            // Calculate average OH production rate from radical initiation
+            let radical_conc = &self.radical_initiation.radical_concentration;
+            let oh_conc = kinetics.hydroxyl_concentration();
+            let h2o2_conc = kinetics.hydrogen_peroxide();
+            
+            // Average concentrations across grid
+            let avg_radical = radical_conc.mean().unwrap_or(0.0);
+            let avg_oh = oh_conc.mean().unwrap_or(0.0);
+            let avg_h2o2 = h2o2_conc.mean().unwrap_or(0.0);
+            
+            // OH production from radicals (using base rate constant)
+            rates.insert(
+                "OH_production_rate".to_string(),
+                avg_radical * crate::physics::constants::thermodynamic::SONOCHEMISTRY_BASE_RATE,
+            );
+            
+            // H2O2 production from OH recombination (2 OH → H2O2)
+            rates.insert(
+                "H2O2_production_rate".to_string(),
+                avg_oh * avg_oh * crate::physics::constants::thermodynamic::SECONDARY_REACTION_RATE,
+            );
+            
+            // Store current average concentrations for reference
+            rates.insert("OH_concentration_avg".to_string(), avg_oh);
+            rates.insert("H2O2_concentration_avg".to_string(), avg_h2o2);
+        }
+        
+        // Total number of reaction updates performed
+        rates.insert("update_count".to_string(), self.update_count as f64);
+        rates.insert("reactions_total".to_string(), self.metrics.total_reactions as f64);
+        
+        rates
     }
 
     /// Get photochemical emission spectrum

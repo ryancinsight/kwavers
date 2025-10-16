@@ -81,6 +81,10 @@ pub struct LocalizationConfig {
     pub use_gpu: bool,
     /// Localization method
     pub method: LocalizationMethod,
+    /// Frequency of signal [Hz] (for beamforming)
+    pub frequency: f64,
+    /// Search radius for grid-based methods [m]
+    pub search_radius: Option<f64>,
 }
 
 impl Default for LocalizationConfig {
@@ -91,6 +95,8 @@ impl Default for LocalizationConfig {
             tolerance: 1e-6,
             use_gpu: false,
             method: LocalizationMethod::TDOA,
+            frequency: 1e6, // 1 MHz default
+            search_radius: None, // Auto-determined
         }
     }
 }
