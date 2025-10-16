@@ -318,7 +318,7 @@ impl KWaveSolver {
         // Step 6: Apply absorption using fractional Laplacian if enabled
         if !matches!(self.config.absorption_mode, super::config::AbsorptionMode::Lossless) {
             use super::absorption::apply_power_law_absorption;
-            apply_power_law_absorption(&mut self.p, &self.absorb_tau, &self.absorb_eta, dt)?;
+            apply_power_law_absorption(&mut self.p, &self.absorb_tau, &self.absorb_eta, dt, &self.k_vec)?;
         }
         
         // Step 7: Apply PML boundary conditions to absorb outgoing waves
