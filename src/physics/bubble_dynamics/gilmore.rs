@@ -131,6 +131,19 @@ impl GilmoreSolver {
     }
 
     /// Estimate time derivative of enthalpy
+    ///
+    /// Computes dH/dt using the Tait equation of state and chain rule.
+    /// For the Tait equation: H = (n/(n-1)) * (p + B)/ρ
+    /// where ρ/ρ_∞ = ((p + B)/(p_∞ + B))^(1/n)
+    ///
+    /// The time derivative is:
+    /// dH/dt = (∂H/∂p) * dp/dt
+    ///
+    /// where ∂H/∂p can be derived from the Tait equation.
+    ///
+    /// # References
+    /// - Gilmore (1952), "The growth or collapse of a spherical bubble"
+    /// - Hamilton & Blackstock (1998), Chapter 3
     fn estimate_enthalpy_derivative(
         &self,
         _state: &BubbleState,
@@ -139,14 +152,29 @@ impl GilmoreSolver {
         omega: f64,
         t: f64,
     ) -> f64 {
-        // Simplified estimate based on acoustic forcing rate
+        // Time derivative of acoustic pressure
         let dp_inf_dt = p_acoustic * omega * (omega * t).cos();
 
-        // Chain rule: dH/dt = (∂H/∂p) * dp/dt
-        // For Tait equation, this involves complex derivatives
-        // Simplified approximation:
-        let c_wall = self.calculate_sound_speed(p_wall);
-        dp_inf_dt / (self.params.rho_liquid * c_wall)
+        // Tait equation parameters
+        let n = self.tait_n; // Polytropic index from Tait equation
+        let p_inf = self.params.p0;
+        let rho_inf = self.params.rho_liquid;
+        let b_tait = self.tait_b; // Tait constant B
+        
+        // Density ratio from Tait equation
+        let rho_ratio = ((p_wall + b_tait) / (p_inf + b_tait)).powf(1.0 / n);
+        let rho_wall = rho_inf * rho_ratio;
+        
+        // Derivative of enthalpy with respect to pressure
+        // For Tait equation: ∂H/∂p = (n/(n-1)) * [1/ρ - (p+B)/(n*ρ²) * ∂ρ/∂p]
+        // where ∂ρ/∂p = ρ/(n*(p+B))
+        // Simplifying: ∂H/∂p = (n/(n-1)) * (1/ρ) * (1 - 1/n) = 1/ρ
+        let dh_dp = 1.0 / rho_wall;
+        
+        // Time derivative of enthalpy
+        // Note: This uses proper thermodynamic relationship from Tait equation
+        // rather than simplified c_wall approximation
+        dh_dp * dp_inf_dt
     }
 
     /// Check if conditions warrant using Gilmore over simpler models
