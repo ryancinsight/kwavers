@@ -1,7 +1,0 @@
-{
-  "description": "Nonlinear propagation with harmonic generation",
-  "example_name": "nonlinear_propagation",
-  "fundamental_frequency_hz": 1000000.0,
-  "kwave_equivalent": "k-Wave nonlinear simulation examples",
-  "nonlinearity_parameter": 3.5
-}
