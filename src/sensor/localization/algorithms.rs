@@ -202,7 +202,7 @@ impl LocalizationAlgorithmImpl for BeamformingAlgorithm {
         Ok(LocalizationResult {
             position: best_position,
             uncertainty: Position::new(uncertainty, uncertainty, uncertainty),
-            confidence: (best_power / measurements.len() as f64).min(1.0).max(0.0),
+            confidence: (best_power / measurements.len() as f64).clamp(0.0, 1.0),
             method: LocalizationMethod::Beamforming,
             computation_time,
         })
@@ -227,7 +227,7 @@ impl BeamformingAlgorithm {
         // Calculate delays from position to each sensor
         let mut delayed_sum = 0.0;
         
-        for i in 0..array.num_sensors() {
+        for (i, &measurement) in measurements.iter().enumerate().take(array.num_sensors()) {
             let sensor_pos = array.get_sensor_position(i);
             let distance = position.distance_to(sensor_pos);
             let delay = distance / c;
@@ -238,7 +238,7 @@ impl BeamformingAlgorithm {
             
             // Apply phase shift and weight (uniform weights = 1/N)
             let weight = 1.0 / (array.num_sensors() as f64);
-            delayed_sum += weight * measurements[i] * phase.cos();
+            delayed_sum += weight * measurement * phase.cos();
         }
         
         // Return power (magnitude squared)

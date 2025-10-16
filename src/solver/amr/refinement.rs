@@ -195,12 +195,11 @@ impl RefinementManager {
                                     let nj = (j as i32 + dj) as usize;
                                     let nk = (k as i32 + dk) as usize;
                                     
-                                    if ni < nx && nj < ny && nk < nz {
-                                        if old_markers[[ni, nj, nk]] == 1 {
+                                    if ni < nx && nj < ny && nk < nz
+                                        && old_markers[[ni, nj, nk]] == 1 {
                                             has_refined_neighbor = true;
                                             break;
                                         }
-                                    }
                                 }
                                 if has_refined_neighbor { break; }
                             }
