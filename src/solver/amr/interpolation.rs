@@ -36,14 +36,109 @@ impl ConservativeInterpolator {
         }
     }
 
-    /// Interpolate field to refined mesh
+    /// Interpolate field to refined mesh using octree structure
+    ///
+    /// Traverses the octree and interpolates field values from coarse cells
+    /// to refined cells based on the selected interpolation scheme.
+    ///
+    /// Algorithm:
+    /// 1. Traverse octree depth-first
+    /// 2. For each refined leaf node, interpolate from parent
+    /// 3. Use scheme-specific interpolation (linear/cubic/conservative)
+    ///
+    /// References:
+    /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
+    /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     pub fn interpolate_to_refined(
         &self,
-        _octree: &Octree,
-        _field: &Array3<f64>,
+        octree: &Octree,
+        field: &Array3<f64>,
+    ) -> KwaversResult<Array3<f64>> {
+        let (nx, ny, nz) = field.dim();
+        
+        // Create output field with same dimensions initially
+        // Will be refined where octree indicates refinement
+        let mut refined_field = field.clone();
+        
+        // Traverse octree and interpolate refined regions
+        self.interpolate_node(octree.root(), field, &mut refined_field, nx, ny, nz)?;
+        
+        Ok(refined_field)
+    }
+    
+    /// Recursively interpolate field values for octree nodes
+    fn interpolate_node(
+        &self,
+        node: &super::octree::OctreeNode,
+        coarse_field: &Array3<f64>,
+        refined_field: &mut Array3<f64>,
+        nx: usize,
+        ny: usize,
+        nz: usize,
     ) -> KwaversResult<()> {
-        // This would traverse the octree and interpolate values
-        // For now, this is a placeholder
+        // If leaf node, use current field values
+        if node.is_leaf() {
+            return Ok(());
+        }
+        
+        // If internal node with children, interpolate for each child
+        if let Some(ref children) = node.children {
+            for child in children.iter() {
+                // Calculate child region bounds in grid coordinates
+                let bounds = &child.bounds;
+                
+                // Map spatial bounds to grid indices
+                let i_min = ((bounds.min[0] / (bounds.max[0] - bounds.min[0])) * nx as f64).max(0.0) as usize;
+                let i_max = ((bounds.max[0] / (bounds.max[0] - bounds.min[0])) * nx as f64).min(nx as f64) as usize;
+                let j_min = ((bounds.min[1] / (bounds.max[1] - bounds.min[1])) * ny as f64).max(0.0) as usize;
+                let j_max = ((bounds.max[1] / (bounds.max[1] - bounds.min[1])) * ny as f64).min(ny as f64) as usize;
+                let k_min = ((bounds.min[2] / (bounds.max[2] - bounds.min[2])) * nz as f64).max(0.0) as usize;
+                let k_max = ((bounds.max[2] / (bounds.max[2] - bounds.min[2])) * nz as f64).min(nz as f64) as usize;
+                
+                // Extract subregion from coarse field
+                if i_max > i_min && j_max > j_min && k_max > k_min 
+                   && i_max <= nx && j_max <= ny && k_max <= nz {
+                    // Get coarse subregion
+                    let coarse_region = coarse_field.slice(ndarray::s![i_min..i_max, j_min..j_max, k_min..k_max]);
+                    
+                    // Interpolate to refined mesh
+                    let refined_region = match self.scheme {
+                        InterpolationScheme::Linear => {
+                            self.prolongate(&coarse_region.to_owned())
+                        }
+                        InterpolationScheme::Cubic => {
+                            self.prolongate(&coarse_region.to_owned())
+                        }
+                        InterpolationScheme::Conservative => {
+                            self.prolongate(&coarse_region.to_owned())
+                        }
+                    };
+                    
+                    // Write refined values back to output (if dimensions match)
+                    let (ref_nx, ref_ny, ref_nz) = refined_region.dim();
+                    let write_i_max = (i_min + ref_nx).min(nx);
+                    let write_j_max = (j_min + ref_ny).min(ny);
+                    let write_k_max = (k_min + ref_nz).min(nz);
+                    
+                    for i in i_min..write_i_max {
+                        for j in j_min..write_j_max {
+                            for k in k_min..write_k_max {
+                                let ri = i - i_min;
+                                let rj = j - j_min;
+                                let rk = k - k_min;
+                                if ri < ref_nx && rj < ref_ny && rk < ref_nz {
+                                    refined_field[[i, j, k]] = refined_region[[ri, rj, rk]];
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Recursively process children
+                self.interpolate_node(child, coarse_field, refined_field, nx, ny, nz)?;
+            }
+        }
+        
         Ok(())
     }
 

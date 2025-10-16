@@ -131,6 +131,12 @@ impl Octree {
     pub fn bounds(&self) -> &Bounds {
         &self.root.bounds
     }
+    
+    /// Get a reference to the root node
+    #[must_use]
+    pub fn root(&self) -> &OctreeNode {
+        &self.root
+    }
 
     /// Update refinement based on markers
     pub fn update_refinement(&mut self, markers: &Array3<i8>) -> KwaversResult<()> {
