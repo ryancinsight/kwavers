@@ -137,38 +137,120 @@ impl RefinementManager {
         Ok(())
     }
 
-    /// Enforce proper nesting (2:1 balance)
+    /// Enforce proper nesting (2:1 balance constraint)
+    ///
+    /// Ensures that neighboring cells differ by at most one refinement level,
+    /// which is essential for:
+    /// - Smooth interpolation at level boundaries
+    /// - Stable numerical schemes
+    /// - Efficient data structures
+    ///
+    /// Algorithm (iterative relaxation):
+    /// 1. For each cell marked for coarsening (-1):
+    ///    - Check all 26 neighbors (6 face + 12 edge + 8 corner)
+    ///    - If any neighbor is marked for refinement (+1), cancel coarsening (0)
+    /// 2. For each cell marked for refinement (+1):
+    ///    - Check face neighbors
+    ///    - If any face neighbor is marked for coarsening, mark it no-change (0)
+    /// 3. Repeat until no changes (fixed point)
+    ///
+    /// References:
+    /// - Berger & Rigoutsos (1991): "An algorithm for point clustering and grid generation"
+    /// - Khokhlov (1998): "Fully threaded tree algorithms for adaptive refinement"
+    /// - Burstedde et al. (2011): "p4est: Scalable algorithms for parallel AMR"
     fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
-        // Ensure no cell differs by more than one level from neighbors
-        // This is a simplified version - full implementation would be more complex
-
         let (nx, ny, nz) = markers.dim();
-        let mut changed = true;
-
-        while changed {
-            changed = false;
+        let mut iteration = 0;
+        const MAX_ITERATIONS: usize = 100;
+        
+        loop {
             let old_markers = markers.clone();
+            let mut changed = false;
+            iteration += 1;
+            
+            if iteration > MAX_ITERATIONS {
+                log::warn!("AMR nesting enforcement exceeded max iterations");
+                break;
+            }
 
+            // Pass 1: Handle coarsening constraints
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
                     for k in 1..nz - 1 {
-                        // Check neighbors
-                        let neighbors = [
-                            old_markers[[i - 1, j, k]],
-                            old_markers[[i + 1, j, k]],
-                            old_markers[[i, j - 1, k]],
-                            old_markers[[i, j + 1, k]],
-                            old_markers[[i, j, k - 1]],
-                            old_markers[[i, j, k + 1]],
-                        ];
-
-                        // If any neighbor is refined, this cell cannot coarsen
-                        if neighbors.contains(&1) && markers[[i, j, k]] == -1 {
+                        if old_markers[[i, j, k]] != -1 {
+                            continue; // Only process cells marked for coarsening
+                        }
+                        
+                        // Check all 26 neighbors (6 faces + 12 edges + 8 corners)
+                        let mut has_refined_neighbor = false;
+                        
+                        for di in -1..=1 {
+                            for dj in -1..=1 {
+                                for dk in -1..=1 {
+                                    if di == 0 && dj == 0 && dk == 0 {
+                                        continue; // Skip self
+                                    }
+                                    
+                                    let ni = (i as i32 + di) as usize;
+                                    let nj = (j as i32 + dj) as usize;
+                                    let nk = (k as i32 + dk) as usize;
+                                    
+                                    if ni < nx && nj < ny && nk < nz {
+                                        if old_markers[[ni, nj, nk]] == 1 {
+                                            has_refined_neighbor = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if has_refined_neighbor { break; }
+                            }
+                            if has_refined_neighbor { break; }
+                        }
+                        
+                        // If has refined neighbor, cancel coarsening
+                        if has_refined_neighbor {
                             markers[[i, j, k]] = 0;
                             changed = true;
                         }
                     }
                 }
+            }
+            
+            // Pass 2: Handle refinement constraints
+            for i in 1..nx - 1 {
+                for j in 1..ny - 1 {
+                    for k in 1..nz - 1 {
+                        if old_markers[[i, j, k]] != 1 {
+                            continue; // Only process cells marked for refinement
+                        }
+                        
+                        // Check face neighbors (6 directions)
+                        let face_neighbors = [
+                            (i.wrapping_sub(1), j, k),
+                            (i + 1, j, k),
+                            (i, j.wrapping_sub(1), k),
+                            (i, j + 1, k),
+                            (i, j, k.wrapping_sub(1)),
+                            (i, j, k + 1),
+                        ];
+                        
+                        for &(ni, nj, nk) in &face_neighbors {
+                            if ni < nx && nj < ny && nk < nz {
+                                // If face neighbor wants to coarsen, prevent it
+                                if old_markers[[ni, nj, nk]] == -1 {
+                                    markers[[ni, nj, nk]] = 0;
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Check convergence
+            if !changed {
+                log::debug!("AMR nesting converged in {} iterations", iteration);
+                break;
             }
         }
 
