@@ -13,6 +13,7 @@ pub struct KuznetsovSolver {
     #[allow(dead_code)]
     grid: Grid,
     velocity_potential: Array3<f64>,
+    velocity_potential_prev: Array3<f64>,  // Added for proper time derivative
     // Store previous fields for computing time derivatives
     pressure_prev: Array3<f64>,
     pressure_prev_prev: Array3<f64>,
@@ -22,6 +23,7 @@ impl KuznetsovSolver {
     /// Create a new Kuznetsov solver
     pub fn new(config: AcousticSolverConfig, grid: &Grid) -> KwaversResult<Self> {
         let velocity_potential = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let velocity_potential_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let pressure_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
         let pressure_prev_prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
 
@@ -29,6 +31,7 @@ impl KuznetsovSolver {
             config,
             grid: grid.clone(),
             velocity_potential,
+            velocity_potential_prev,
             pressure_prev,
             pressure_prev_prev,
         })
@@ -85,6 +88,9 @@ impl AcousticSolver for KuznetsovSolver {
         let diffusion_term = compute_diffusion_term(pressure, medium, grid);
 
         // Update velocity potential
+        // Store previous potential before update for time derivative computation
+        self.velocity_potential_prev = self.velocity_potential.clone();
+        
         self.velocity_potential =
             &self.velocity_potential + &(dt * (&linear_term + &nonlinear_term + &diffusion_term));
 
@@ -93,11 +99,12 @@ impl AcousticSolver for KuznetsovSolver {
         self.pressure_prev = pressure.clone();
 
         // Convert velocity potential to pressure: p = ρ₀ ∂φ/∂t
-        // Using finite difference approximation
+        // Using backward difference for proper time derivative: ∂φ/∂t ≈ (φ_n - φ_{n-1})/dt
         Zip::from(pressure)
             .and(&self.velocity_potential)
-            .for_each(|p, &phi| {
-                *p = phi / dt; // Simplified - should track previous potential
+            .and(&self.velocity_potential_prev)
+            .for_each(|p, &phi, &phi_prev| {
+                *p = (phi - phi_prev) / dt;
             });
 
         Ok(())
