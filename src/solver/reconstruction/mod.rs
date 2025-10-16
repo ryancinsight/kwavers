@@ -271,16 +271,120 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 }
 
 /// Shepp-Logan filter
+///
+/// Implements the Shepp-Logan filter with frequency response:
+/// H(f) = |f| * (2/π) * sin(πf/2f_max)
+///
+/// The Shepp-Logan filter provides better suppression of high frequencies
+/// compared to Ram-Lak while maintaining good resolution.
+///
+/// # References
+/// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
+/// - Shepp & Logan (1974): "The Fourier reconstruction of a head section"
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    // Similar to Ram-Lak but with modified frequency response
-    // H(f) = |f| * (2/π) * sin(πf/2f_max)
-    apply_ram_lak_filter(data, sampling_freq) // Simplified for now
+    use rustfft::FftPlanner;
+    use num_complex::Complex;
+    use std::f64::consts::PI;
+
+    let mut planner = FftPlanner::new();
+    let n = data.dim().1;
+    let fft = planner.plan_fft_forward(n);
+    let ifft = planner.plan_fft_inverse(n);
+    let f_max = sampling_freq / 2.0;
+
+    let mut filtered = Array2::zeros(data.dim());
+
+    for sensor_idx in 0..data.dim().0 {
+        // Convert to complex
+        let mut complex_data: Vec<Complex<f64>> = data
+            .row(sensor_idx)
+            .iter()
+            .map(|&x| Complex::new(x, 0.0))
+            .collect();
+
+        // Forward FFT
+        fft.process(&mut complex_data);
+
+        // Apply Shepp-Logan filter: H(f) = |f| * (2/π) * sin(πf/(2*f_max))
+        let df = sampling_freq / n as f64;
+        for (i, val) in complex_data.iter_mut().enumerate() {
+            let freq = if i <= n / 2 {
+                i as f64 * df
+            } else {
+                (n - i) as f64 * df
+            };
+            let filter_value = freq.abs() * (2.0 / PI) * (PI * freq / (2.0 * f_max)).sin();
+            *val *= filter_value;
+        }
+
+        // Inverse FFT
+        ifft.process(&mut complex_data);
+
+        // Store real part (normalized)
+        for (i, val) in complex_data.iter().enumerate() {
+            filtered[[sensor_idx, i]] = val.re / n as f64;
+        }
+    }
+
+    Ok(filtered)
 }
 
 /// Cosine filter
+///
+/// Implements the cosine filter with frequency response:
+/// H(f) = |f| * cos(πf/2f_max)
+///
+/// The cosine filter provides smooth frequency response with gradual
+/// high-frequency attenuation, reducing ringing artifacts.
+///
+/// # References
+/// - Kak & Slaney (1988): "Principles of Computerized Tomographic Imaging", Chapter 3
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    // H(f) = |f| * cos(πf/2f_max)
-    apply_ram_lak_filter(data, sampling_freq) // Simplified for now
+    use rustfft::FftPlanner;
+    use num_complex::Complex;
+    use std::f64::consts::PI;
+
+    let mut planner = FftPlanner::new();
+    let n = data.dim().1;
+    let fft = planner.plan_fft_forward(n);
+    let ifft = planner.plan_fft_inverse(n);
+    let f_max = sampling_freq / 2.0;
+
+    let mut filtered = Array2::zeros(data.dim());
+
+    for sensor_idx in 0..data.dim().0 {
+        // Convert to complex
+        let mut complex_data: Vec<Complex<f64>> = data
+            .row(sensor_idx)
+            .iter()
+            .map(|&x| Complex::new(x, 0.0))
+            .collect();
+
+        // Forward FFT
+        fft.process(&mut complex_data);
+
+        // Apply cosine filter: H(f) = |f| * cos(πf/(2*f_max))
+        let df = sampling_freq / n as f64;
+        for (i, val) in complex_data.iter_mut().enumerate() {
+            let freq = if i <= n / 2 {
+                i as f64 * df
+            } else {
+                (n - i) as f64 * df
+            };
+            let filter_value = freq.abs() * (PI * freq / (2.0 * f_max)).cos();
+            *val *= filter_value;
+        }
+
+        // Inverse FFT
+        ifft.process(&mut complex_data);
+
+        // Store real part (normalized)
+        for (i, val) in complex_data.iter().enumerate() {
+            filtered[[sensor_idx, i]] = val.re / n as f64;
+        }
+    }
+
+    Ok(filtered)
 }
 
 /// Hamming window filter
