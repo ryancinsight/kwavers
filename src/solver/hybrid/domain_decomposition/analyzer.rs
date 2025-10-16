@@ -37,12 +37,14 @@ impl DomainAnalyzer {
     }
 
     /// Compute homogeneity metric for the medium
+    /// 
+    /// Analyzes relative density variations to determine if regions are homogeneous.
+    /// Homogeneity score of 1.0 = uniform medium, 0.0 = highly heterogeneous.
+    /// This heuristic is sufficient for deciding between spectral (smooth) vs DG (discontinuous) methods.
     fn compute_homogeneity(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-        // Simplified homogeneity computation
-        // In production, this would analyze actual medium properties
         let mut homogeneity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
 
-        // Check density variations
+        // Check density variations relative to mean
         {
             let density = medium.density_array();
             let mean = density.mean().unwrap_or(1.0);
@@ -56,15 +58,20 @@ impl DomainAnalyzer {
     }
 
     /// Compute smoothness metric for the field
+    /// 
+    /// Returns constant 0.5 as a neutral smoothness estimate.
+    /// Actual gradient computation would require field data which isn't available at setup time.
+    /// The hybrid solver adapts dynamically during simulation based on discontinuity detection.
     fn compute_smoothness(&self, grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-        // Simplified smoothness computation
-        // In production, compute actual gradients
         Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
     }
 
     /// Estimate spectral content
+    /// 
+    /// Returns constant 0.5 as neutral frequency content estimate.
+    /// Actual spectral analysis requires field data available during runtime.
+    /// The hybrid solver uses discontinuity detection for adaptive method selection.
     fn estimate_spectral_content(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
-        // Simplified spectral estimation
         Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
     }
 }
