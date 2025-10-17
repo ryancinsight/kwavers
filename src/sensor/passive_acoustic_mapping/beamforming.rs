@@ -162,7 +162,11 @@ impl Beamformer {
         let shape = sensor_data.shape();
         let (n_elements, _, n_samples) = (shape[0], shape[1], shape[2]);
 
-        // Compute sample covariance matrix
+        if n_elements < 2 {
+            return self.delay_and_sum(sensor_data, sample_rate);
+        }
+
+        // Compute sample covariance matrix: R = (1/N) Σ x(n)x^H(n)
         let mut covariance = Array2::zeros((n_elements, n_elements));
         for t in 0..n_samples {
             for i in 0..n_elements {
@@ -173,14 +177,65 @@ impl Beamformer {
         }
         covariance /= n_samples as f64;
 
-        // Apply diagonal loading for robustness
+        // Apply diagonal loading for robustness: R' = R + δI
         for i in 0..n_elements {
             covariance[[i, i]] += diagonal_loading;
         }
 
-        // For now, fall back to delay-and-sum with covariance weighting
-        // Full matrix inversion would require linear algebra libraries
-        self.delay_and_sum(sensor_data, sample_rate)
+        // Convert to nalgebra for matrix inversion
+        use nalgebra::{DMatrix, DVector};
+        
+        let mut na_cov = DMatrix::zeros(n_elements, n_elements);
+        for i in 0..n_elements {
+            for j in 0..n_elements {
+                na_cov[(i, j)] = covariance[[i, j]];
+            }
+        }
+
+        // Compute inverse covariance matrix: R^(-1)
+        let inv_cov = match na_cov.clone().try_inverse() {
+            Some(inv) => inv,
+            None => {
+                log::warn!("Covariance matrix inversion failed, falling back to DAS");
+                return self.delay_and_sum(sensor_data, sample_rate);
+            }
+        };
+
+        // Create output with same shape as input (simplified for PAM)
+        let mut output = sensor_data.clone();
+
+        // Apply MVDR beamforming: w = R^(-1)a / (a^H R^(-1) a)
+        // Simplified implementation: compute single beamformed output
+        
+        // Compute average steering vector (simple approximation)
+        let steering = DVector::from_element(n_elements, 1.0 / (n_elements as f64).sqrt());
+
+        // Compute MVDR weights: w = R^(-1)a / (a^H R^(-1) a)
+        let inv_cov_a = &inv_cov * &steering;
+        let denominator = steering.dot(&inv_cov_a);
+
+        if denominator.abs() > 1e-10 {
+            let weights = inv_cov_a / denominator;
+
+            // Apply weights across all time samples
+            for t in 0..n_samples {
+                let mut beamformed_value: f64 = 0.0;
+                for i in 0..n_elements {
+                    beamformed_value += weights[i] * sensor_data[[i, 0, t]];
+                }
+                // Store in first element (channel reduction)
+                output[[0, 0, t]] = beamformed_value.abs();
+            }
+            
+            // Zero out other channels
+            for i in 1..n_elements {
+                for t in 0..n_samples {
+                    output[[i, 0, t]] = 0.0;
+                }
+            }
+        }
+
+        Ok(output)
     }
 
     /// MUSIC algorithm for source localization
@@ -246,13 +301,15 @@ impl Beamformer {
                 })
                 .collect(),
             ApodizationType::Kaiser { beta } => {
-                // Simplified Kaiser window
+                // Kaiser window using modified Bessel function of first kind I_0
+                // w(n) = I_0(β√(1-(2n/(N-1)-1)²)) / I_0(β)
+                // where I_0 is the zeroth-order modified Bessel function
+                let i0_beta = modified_bessel_i0(beta);
                 (0..n)
                     .map(|i| {
                         let x = 2.0 * i as f64 / (n - 1) as f64 - 1.0;
                         let arg = beta * (1.0 - x * x).sqrt();
-                        // Simplified - would use modified Bessel function
-                        (1.0 + arg).ln() / (1.0 + beta).ln()
+                        modified_bessel_i0(arg) / i0_beta
                     })
                     .collect()
             }
@@ -276,4 +333,35 @@ impl Default for BeamformingConfig {
             apodization: ApodizationType::Hamming,
         }
     }
+}
+
+/// Modified Bessel function of the first kind I_0(x)
+///
+/// Uses series expansion for accurate computation:
+/// I_0(x) = Σ_{k=0}^∞ [(x/2)^(2k)] / [(k!)^2]
+///
+/// # References
+/// - Abramowitz & Stegun (1964), Section 9.8
+/// - Kaiser & Schafer (1980), "On the use of the I0-sinh window"
+fn modified_bessel_i0(x: f64) -> f64 {
+    const MAX_ITERATIONS: usize = 50;
+    const TOLERANCE: f64 = 1e-12;
+    
+    let x_abs = x.abs();
+    let x_half = x_abs / 2.0;
+    
+    let mut term = 1.0;
+    let mut sum = 1.0;
+    
+    for k in 1..MAX_ITERATIONS {
+        // term_{k} = term_{k-1} * (x/2)^2 / k^2
+        term *= (x_half * x_half) / ((k * k) as f64);
+        sum += term;
+        
+        if term < TOLERANCE * sum {
+            break;
+        }
+    }
+    
+    sum
 }

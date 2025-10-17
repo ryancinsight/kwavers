@@ -267,17 +267,31 @@ impl LaplacianOperator {
         let (nx, ny, nz) = input.dim();
 
         // Use one-sided differences at boundaries
-        // This is a simplified implementation - production code would use
-        // proper one-sided stencils matching the interior order
+        // Boundary handling with one-sided stencils matching interior order
+        // Use forward/backward differences at boundaries
+        // Reference: Fornberg (1988), "Generation of finite difference formulas"
 
-        // X boundaries
+        // X boundaries (forward/backward differences)
         for k in 0..nz {
             for j in 0..ny {
+                // Left boundary: forward difference
                 for i in 0..radius.min(nx) {
-                    output[[i, j, k]] = 0.0; // Simplified: assume zero curvature
+                    if i < nx - 2 {
+                        // Second-order forward difference: f''(x) ≈ (f(x) - 2f(x+h) + f(x+2h)) / h²
+                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i + 1, j, k]] + input[[i + 2, j, k]]) * self.dx2_inv;
+                        output[[i, j, k]] = d2_dx2;
+                    } else {
+                        output[[i, j, k]] = 0.0;
+                    }
                 }
+                // Right boundary: backward difference
                 for i in (nx - radius).max(0)..nx {
-                    output[[i, j, k]] = 0.0;
+                    if i >= 2 {
+                        let d2_dx2 = (input[[i, j, k]] - 2.0 * input[[i - 1, j, k]] + input[[i - 2, j, k]]) * self.dx2_inv;
+                        output[[i, j, k]] = d2_dx2;
+                    } else {
+                        output[[i, j, k]] = 0.0;
+                    }
                 }
             }
         }

@@ -157,16 +157,92 @@ impl FullWaveformInversion {
     }
 
     /// Apply Butterworth bandpass filter to data
+    /// Apply 4th order Butterworth bandpass filter
+    ///
+    /// Implements digital Butterworth filter in frequency domain:
+    /// H(f) = 1 / √(1 + (f/f_c)^(2n))
+    /// where n is filter order (4 for this implementation)
+    ///
+    /// # References
+    /// - Butterworth (1930): "On the Theory of Filter Amplifiers"
+    /// - Oppenheim & Schafer (2009): "Discrete-Time Signal Processing"
     fn apply_frequency_filter(
         &self,
         data: &Array2<f64>,
         f_min: f64,
         f_max: f64,
     ) -> KwaversResult<Array2<f64>> {
-        // Implement 4th order Butterworth filter
-        // For now, return original data with frequency band annotation
-        log::debug!("Applying frequency filter: {:.1} - {:.1} Hz", f_min, f_max);
-        Ok(data.clone())
+        use rustfft::{FftPlanner, num_complex::Complex};
+        
+        let shape = data.shape();
+        let n_traces = shape[0];
+        let n_samples = shape[1];
+        
+        // Assume sampling parameters (could be made configurable)
+        let dt = 0.004; // 4ms sampling interval (250 Hz)
+        let nyquist = 0.5 / dt; // Nyquist frequency
+        
+        let mut result = data.clone();
+        
+        // Process each trace independently
+        let mut planner = FftPlanner::new();
+        
+        for trace_idx in 0..n_traces {
+            // Extract trace
+            let trace: Vec<f64> = (0..n_samples)
+                .map(|i| data[[trace_idx, i]])
+                .collect();
+            
+            // Convert to complex for FFT
+            let mut buffer: Vec<Complex<f64>> = trace
+                .iter()
+                .map(|&x| Complex::new(x, 0.0))
+                .collect();
+            
+            // Forward FFT
+            let fft = planner.plan_fft_forward(n_samples);
+            fft.process(&mut buffer);
+            
+            // Apply 4th order Butterworth bandpass filter
+            for (i, coeff) in buffer.iter_mut().enumerate() {
+                let freq = (i as f64) * nyquist / (n_samples as f64);
+                
+                // 4th order Butterworth highpass at f_min
+                let hp_response = if f_min > 0.0 {
+                    let ratio = freq / f_min;
+                    let ratio4 = ratio.powi(4);
+                    (ratio4 / (1.0 + ratio4)).sqrt()
+                } else {
+                    1.0
+                };
+                
+                // 4th order Butterworth lowpass at f_max
+                let lp_response = if f_max < nyquist {
+                    let ratio = freq / f_max;
+                    let ratio4 = ratio.powi(4);
+                    (1.0 / (1.0 + ratio4)).sqrt()
+                } else {
+                    1.0
+                };
+                
+                // Combined bandpass response
+                let filter_response = hp_response * lp_response;
+                *coeff *= filter_response;
+            }
+            
+            // Inverse FFT
+            let ifft = planner.plan_fft_inverse(n_samples);
+            ifft.process(&mut buffer);
+            
+            // Extract real part and normalize
+            let norm_factor = 1.0 / (n_samples as f64);
+            for (i, coeff) in buffer.iter().enumerate() {
+                result[[trace_idx, i]] = coeff.re * norm_factor;
+            }
+        }
+        
+        log::debug!("Applied 4th order Butterworth filter: {:.1} - {:.1} Hz", f_min, f_max);
+        Ok(result)
     }
 
     /// Get configuration

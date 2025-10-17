@@ -56,8 +56,33 @@ pub fn find_interfaces_pointwise<M: CoreMedium + ?Sized>(
                 let neighbor_density = crate::medium::density_at_core(medium, nx, ny, nz, grid);
 
                 if ((neighbor_density - center_density).abs() / center_density) > threshold {
-                    // Simplified normal calculation
-                    let normal = [1.0, 0.0, 0.0]; // Assume x-direction for simplicity
+                    // Calculate proper interface normal via central differences
+                    // ∇ρ = (∂ρ/∂x, ∂ρ/∂y, ∂ρ/∂z)
+                    let (xp, _, _) = grid.indices_to_coordinates(i + 1, j, k);
+                    let (xm, _, _) = grid.indices_to_coordinates(i.saturating_sub(1), j, k);
+                    let rho_xp = crate::medium::density_at_core(medium, xp, y, z, grid);
+                    let rho_xm = crate::medium::density_at_core(medium, xm, y, z, grid);
+                    let drhox = (rho_xp - rho_xm) / (xp - xm);
+
+                    let (_, yp, _) = grid.indices_to_coordinates(i, j + 1, k);
+                    let (_, ym, _) = grid.indices_to_coordinates(i, j.saturating_sub(1), k);
+                    let rho_yp = crate::medium::density_at_core(medium, x, yp, z, grid);
+                    let rho_ym = crate::medium::density_at_core(medium, x, ym, z, grid);
+                    let drhoz = (rho_yp - rho_ym) / (yp - ym);
+
+                    let (_, _, zp) = grid.indices_to_coordinates(i, j, k + 1);
+                    let (_, _, zm) = grid.indices_to_coordinates(i, j, k.saturating_sub(1));
+                    let rho_zp = crate::medium::density_at_core(medium, x, y, zp, grid);
+                    let rho_zm = crate::medium::density_at_core(medium, x, y, zm, grid);
+                    let drhoz_z = (rho_zp - rho_zm) / (zp - zm);
+
+                    // Normalize gradient to unit normal
+                    let grad_mag = (drhox * drhox + drhoz * drhoz + drhoz_z * drhoz_z).sqrt();
+                    let normal = if grad_mag > 1e-10 {
+                        [drhox / grad_mag, drhoz / grad_mag, drhoz_z / grad_mag]
+                    } else {
+                        [1.0, 0.0, 0.0] // Fallback to x-direction if gradient is zero
+                    };
 
                     interfaces.push(InterfacePoint {
                         position: (x, y, z),

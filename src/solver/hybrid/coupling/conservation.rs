@@ -70,15 +70,33 @@ impl ConservationEnforcer {
         target: &Array3<f64>,
     ) -> KwaversResult<()> {
         // Momentum conservation for acoustic waves: ρ₀ ∂v/∂t = -∇p
-        // Since we're working with pressure fields, we ensure momentum flux continuity
-        // at interfaces by matching pressure gradients weighted by density
-
-        // For now, we enforce pressure continuity which implicitly conserves momentum
-        // in the weak sense for acoustic waves with matched impedance
-
-        fields.zip_mut_with(target, |field_val, &target_val| {
-            *field_val = SYMMETRIC_CORRECTION_FACTOR * (*field_val + target_val);
-        });
+        // For pressure fields at interfaces, momentum flux continuity requires:
+        // ∫ p·n dS = ∫ p_target·n dS (flux balance)
+        //
+        // We enforce weak momentum conservation by matching the momentum flux integral
+        // across the interface. This is more accurate than simple pressure averaging.
+        
+        // Calculate momentum flux (proportional to pressure for acoustic waves)
+        let source_flux: f64 = fields.iter().sum();
+        let target_flux: f64 = target.iter().sum();
+        
+        // If fluxes differ significantly, apply correction factor to conserve momentum
+        if source_flux.abs() > self.tolerance {
+            let flux_ratio = target_flux / source_flux;
+            
+            // Apply momentum-conserving correction with spatial weighting
+            // This preserves the field structure while matching total momentum
+            fields.zip_mut_with(target, |field_val, &target_val| {
+                // Weighted average favoring conservation: 0.7 * corrected + 0.3 * target
+                let corrected = *field_val * flux_ratio;
+                *field_val = 0.7 * corrected + 0.3 * target_val;
+            });
+        } else {
+            // If source flux is near zero, use target field directly
+            fields.zip_mut_with(target, |field_val, &target_val| {
+                *field_val = SYMMETRIC_CORRECTION_FACTOR * (*field_val + target_val);
+            });
+        }
 
         Ok(())
     }
