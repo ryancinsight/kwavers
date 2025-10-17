@@ -17,6 +17,7 @@
 | **ADR-014: Word Boundary Naming Audit** | ACCEPTED | Enhanced audit precision, domain whitelisting | Tool complexity vs false positive elimination |
 | **ADR-015: SSOT Configuration Consolidation** | ACCEPTED | Single source of truth, no version drift | None - pure improvement |
 | **ADR-016: Clippy Compliance Policy** | ACCEPTED | Zero warnings with `-D warnings` enforced | CI overhead vs code quality |
+| **ADR-017: Pattern Documentation Standard** | ACCEPTED | Literature citations for all approximations | Documentation time vs comprehension |
 
 ## Current Architecture Status
 
@@ -74,6 +75,17 @@
 **Evidence**: docs/sprint_114_audit_report.md [web:0-2†sources: cargo-nextest, GATs, SIMD]
 **Recommendations**: Sprint 115 GAT refactoring, Sprint 116 physics validation, Sprint 117 config consolidation
 **Date**: Sprint 114
+
+#### ADR-017: Pattern Documentation Standard
+**Decision**: Require literature citations for all physics/numerical approximations (Sprint 125)
+**Rationale**: Comprehensive audit of 131 code patterns revealed 94% are valid implementations requiring only proper documentation. Evidence-based methodology from Sprints 121-124 demonstrated that "simplified" labels often misleading.
+**Tools**: Pattern audit scripts, literature validation via web_search
+**Implementation**: Enhanced 23 files with 21 literature citations (IEC, Roe, Kuznetsov, Lyons, etc.)
+**Outcome**: 81% pattern resolution (106 of 131), zero regressions, A+ grade maintained
+**Evidence**: docs/sprint_125_pattern_elimination.md (17.7KB comprehensive report)
+**Impact**: Prevents unnecessary reimplementation, clarifies valid approximations vs genuine gaps
+**Standards**: IEC 62359:2017, IEEE standards, peer-reviewed papers from 1941-2012
+**Date**: Sprint 125
 
 #### ADR-009: Production Readiness Audit Framework
 **Decision**: Implement comprehensive audit per senior Rust engineer persona (Sprint 111)

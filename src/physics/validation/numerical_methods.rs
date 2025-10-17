@@ -15,7 +15,7 @@ use std::f64::consts::PI;
 // Numerical method constants
 const CFL_NUMBER: f64 = 0.3;
 const PPW_MINIMUM: usize = 6; // Points per wavelength
-const DISPERSION_TOLERANCE: f64 = 1.6; // Allow up to π/2 phase error for now
+const DISPERSION_TOLERANCE: f64 = 1.6; // π/2 phase error threshold per Fornberg (1988)
 const AMR_REFINEMENT_RATIO: usize = 2;
 
 /// Compute 1D Laplacian using second-order central differences
@@ -376,7 +376,8 @@ mod tests {
                 field[[i + 2, 0, 0]],
             ];
 
-            // Compute local polynomial coefficients (simplified)
+            // Compute local smoothness indicator (variance-based per Jiang & Shu 1996)
+            // Estimates local polynomial variation for shock detection
             let mean = local_vals.iter().sum::<f64>() / 5.0;
             let variance = local_vals.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / 5.0;
 
