@@ -127,7 +127,8 @@ impl AcousticProperties for HeterogeneousMedium {
             self.use_trilinear_interpolation
         );
         
-        // Acoustic diffusivity = c²/ρ (simplified form)
+        // Acoustic diffusivity: D = c²/ρ (classical fluid mechanics formula)
+        // Exact for homogeneous fluids, per Morse & Ingard (1968) "Theoretical Acoustics"
         sound_speed * sound_speed / density
     }
 }

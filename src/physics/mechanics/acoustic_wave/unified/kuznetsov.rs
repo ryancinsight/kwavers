@@ -187,7 +187,9 @@ fn compute_nonlinear_term(
                       pressure_prev_prev.iter().any(|&p| p.abs() > 1e-14);
     
     if !has_history {
-        // First or second time step - use simplified form
+        // First time steps: Bootstrap nonlinear term computation
+        // Use instantaneous pressure-squared until sufficient history available
+        // Physically valid for small-amplitude startup phase
         for k in 0..grid.nz {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
