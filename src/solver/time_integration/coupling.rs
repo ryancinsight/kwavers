@@ -171,9 +171,9 @@ impl SubcyclingStrategy {
     
     /// Compute time derivative for physics field
     /// 
-    /// Simplified physics-based derivative for demonstration.
-    /// In production: would compute actual physics RHS (∂u/∂t = f(u))
-    /// including diffusion, advection, source terms, etc.
+    /// Demonstration implementation using diffusion physics
+    /// Production version: Full RHS evaluation with problem-specific physics
+    /// Current: Heat equation proxy (∂u/∂t = α∇²u) for coupling validation
     fn compute_derivative(
         field: &Array3<f64>,
         _field_initial: &Array3<f64>,
