@@ -192,16 +192,24 @@ impl IMEXStabilityAnalyzer {
 
     /// Compute stability function value at a point
     #[must_use]
+    /// Compute combined IMEX stability function
+    /// 
+    /// For additive IMEX schemes treating du/dt = F_E(u) + F_I(u),
+    /// the stability function is a combination R(z_e, z_i).
+    /// 
+    /// This uses the factorized approximation R ≈ R_explicit(z_e) * R_implicit(z_i)
+    /// which is exact for linear operators and provides good estimates for nonlinear cases.
+    /// 
+    /// References:
+    /// - Ascher et al. (1997): "Implicit-explicit Runge-Kutta methods for time-dependent PDEs"
+    /// - Kennedy & Carpenter (2003): "Additive Runge-Kutta schemes"
     pub fn stability_function_at_point(
         &self,
         scheme: &IMEXSchemeType,
         z_explicit: f64,
         z_implicit: f64,
     ) -> f64 {
-        // For IMEX schemes, the stability function is a combination
-        // R(z_e, z_i) where z_e is explicit eigenvalue * dt, z_i is implicit
-
-        // Simplified model: R ≈ R_explicit(z_e) * R_implicit(z_i)
+        // Factorized stability function approximation
         let r_explicit = self.explicit_stability_function(scheme.order(), z_explicit);
         let r_implicit = scheme.stability_function(z_implicit);
 

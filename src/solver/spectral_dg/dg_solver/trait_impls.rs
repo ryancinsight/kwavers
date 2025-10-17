@@ -66,12 +66,25 @@ impl DGOperations for DGSolver {
     }
 
     fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // Simplified projection - return a copy for now
+        // ARCHITECTURAL PLACEHOLDER: Full DG projection requires transformation to polynomial basis
+        // using quadrature rules and mass matrix inversion. Current implementation returns identity
+        // transformation as the hybrid solver uses spectral methods for smooth regions.
+        // 
+        // Full implementation would compute: û = M^(-1) ∫ u(x) φ_i(x) dx
+        // where φ_i are the DG basis functions (Legendre/Lagrange polynomials).
+        //
+        // Deferred to Sprint 122+ for full discontinuous Galerkin solver expansion.
         Ok(field.clone())
     }
 
     fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        // Simplified reconstruction - return a copy for now
+        // ARCHITECTURAL PLACEHOLDER: Full DG reconstruction requires evaluation of polynomial
+        // expansion at quadrature points: u(x) = Σ û_i φ_i(x)
+        //
+        // Current implementation returns identity as the spectral-DG hybrid uses the coupling
+        // module for interface handling rather than explicit basis transformations.
+        //
+        // Deferred to Sprint 122+ for full discontinuous Galerkin solver expansion.
         Ok(coefficients.clone())
     }
 }

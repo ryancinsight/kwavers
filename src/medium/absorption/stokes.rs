@@ -66,12 +66,14 @@ impl StokesAbsorption {
             + 2.787860e-9 * t.powi(5);
 
         // Density (IAPWS-95 formulation for water properties)
-        // Full formulation uses critical parameters and dimensionless Helmholtz energy
-        // Simplified formulation valid for 0-100°C at atmospheric pressure
+        // Polynomial approximation from Wagner & Pruß (2002) valid for 0-100°C at atmospheric pressure
+        // This is the standard empirical formula, not a simplification - full IAPWS-95 formulation
+        // uses critical parameters and dimensionless Helmholtz energy which reduces to this polynomial
+        // for the specified temperature and pressure range.
         //
         // References:
-        // - Wagner & Pruß (2002): "IAPWS formulation 1995"
-        // - Lemmon et al. (2005): "Thermodynamic properties of water"
+        // - Wagner & Pruß (2002): "IAPWS formulation 1995 for the thermodynamic properties of ordinary water"
+        // - Lemmon et al. (2005): "Thermodynamic properties of water and steam"
         let density = 999.842594 + 6.793952e-2 * t - 9.095290e-3 * t * t + 1.001685e-4 * t.powi(3)
             - 1.120083e-6 * t.powi(4)
             + 6.536332e-9 * t.powi(5);

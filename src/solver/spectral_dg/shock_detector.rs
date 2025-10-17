@@ -138,12 +138,12 @@ impl ShockDetector {
                     let tvb_parameter = 50.0;
                     let cell_size_estimate = 1.0; // Would come from actual grid
                     
-                    // TVB shock indicator with characteristic scaling
+                    // TVB shock indicator with characteristic scaling (Cockburn & Shu 1989)
                     let scaled_threshold = MODAL_DECAY_THRESHOLD * tvb_parameter * cell_size_estimate;
                     
-                    // Mark as shock if high-mode energy is significant
-                    // Persson-Peraire indicator: s_e = -log(E_N/E_0) < s_κ
-                    // Simplified: decay_indicator > threshold indicates shock
+                    // Persson-Peraire modal decay indicator: s_e = -log(E_N/E_0)
+                    // Shock detected when decay is insufficient: s_e < s_κ
+                    // Equivalent to: E_N/E_0 > exp(-s_κ), or decay_indicator > threshold
                     shock_cells[[i, j, k]] = decay_indicator > scaled_threshold;
                     
                     // Additional conservative check: flag large jumps across cell interfaces

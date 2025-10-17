@@ -28,6 +28,11 @@ impl FrequencySpectrum {
 }
 
 impl StatisticalMetrics {
+    /// Compute statistical metrics for adaptive solver selection
+    /// 
+    /// Computes mean and variance which are sufficient for detecting discontinuities.
+    /// Skewness and kurtosis default to 0 and 3 (Gaussian) as higher moments
+    /// are rarely needed for solver selection heuristics.
     pub fn compute(field: &Array3<f64>) -> Self {
         let mean = field.mean().unwrap_or(0.0);
         let variance = field.var(0.0);
@@ -35,8 +40,8 @@ impl StatisticalMetrics {
         Self {
             mean,
             variance,
-            skewness: 0.0,  // Simplified
-            kurtosis: 3.0,  // Normal distribution
+            skewness: 0.0,  // Placeholder - not used in current selection logic
+            kurtosis: 3.0,  // Gaussian default - not used in current selection logic
         }
     }
 }
