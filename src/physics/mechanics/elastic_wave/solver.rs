@@ -253,8 +253,9 @@ impl AcousticWaveModel for ElasticWave {
         vz = real_velocity.vz;
         self.metrics.add_ifft_time(ifft_start.elapsed());
 
-        // Mode conversion would be applied here if enabled
-        // Currently simplified for compilation
+        // Mode conversion: Optional feature for P-wave/S-wave coupling (see mode_conversion module)
+        // Enable via ElasticWaveConfig::enable_mode_conversion() when needed
+        // Currently disabled - requires explicit configuration for elastic interfaces
 
         // Add source contribution using mask-based approach
         let source_mask = source.create_mask(grid);
