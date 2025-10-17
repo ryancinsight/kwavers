@@ -239,24 +239,40 @@ impl Beamformer {
     }
 
     /// MUSIC algorithm for source localization
+    /// 
+    /// **Implementation Status**: Placeholder - returns delay-and-sum beamforming result
+    /// **Rationale**: MUSIC (Multiple Signal Classification) requires eigendecomposition
+    /// of sensor covariance matrix and subspace projection (Schmidt 1986). Full implementation
+    /// deferred pending advanced beamforming feature set (Sprint 125+ roadmap).
+    /// 
+    /// **References**:
+    /// - Schmidt (1986) "Multiple Emitter Location and Signal Parameter Estimation"
+    /// - Van Trees (2002) "Optimum Array Processing" Chapter 8
     fn music_algorithm(
         &self,
         sensor_data: &Array3<f64>,
         sample_rate: f64,
         _num_sources: usize,
     ) -> KwaversResult<Array3<f64>> {
-        // Placeholder for MUSIC implementation
-        // This would perform eigendecomposition and subspace projection
+        // Fallback to delay-and-sum until full MUSIC implementation available
         self.delay_and_sum(sensor_data, sample_rate)
     }
 
     /// Eigenspace-based minimum variance beamforming
+    /// 
+    /// **Implementation Status**: Placeholder - returns delay-and-sum beamforming result
+    /// **Rationale**: Eigenspace MV requires eigendecomposition and adaptive weight computation
+    /// (Carlson 1988). Full implementation deferred pending advanced beamforming feature set.
+    /// 
+    /// **References**:
+    /// - Carlson (1988) "Covariance Matrix Estimation Errors and Diagonal Loading"
+    /// - Van Trees (2002) "Optimum Array Processing" Chapter 6
     fn eigenspace_min_variance(
         &self,
         sensor_data: &Array3<f64>,
         sample_rate: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Placeholder for eigenspace MV implementation
+        // Fallback to delay-and-sum until full eigenspace MV implementation available
         self.delay_and_sum(sensor_data, sample_rate)
     }
 
