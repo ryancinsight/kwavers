@@ -77,10 +77,14 @@ impl IsosurfaceExtractor {
         _threshold: f64,
         offset: [f32; 3],
     ) {
-        // Simplified triangle generation
-        // Full implementation would use edge and triangle tables
+        // **Implementation Status**: Simplified marching cubes triangle generation
+        // Full implementation requires 256-entry edge and triangle lookup tables per Lorensen (1987)
+        // Current: Generates placeholder triangle for non-empty cubes
+        // Complete implementation deferred to Sprint 125+ advanced visualization
+        // 
+        // **Reference**: Lorensen & Cline (1987) "Marching Cubes: High Resolution 3D Surface"
 
-        // For now, just add a simple triangle at the center
+        // Generate placeholder triangle for demonstration
         if cube_index > 0 && cube_index < 255 {
             vertices.push([offset[0] + 0.5, offset[1] + 0.5, offset[2]]);
             vertices.push([offset[0] + 1.0, offset[1] + 0.5, offset[2] + 0.5]);
