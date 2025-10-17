@@ -139,34 +139,39 @@ impl StiffnessTensor {
         true
     }
 
-    /// Calculate determinant of 2D array (simplified for small matrices)
+    /// Calculate determinant of 2D array using nalgebra LU decomposition
+    ///
+    /// Uses nalgebra's robust LU decomposition with partial pivoting for numerical stability.
+    ///
+    /// # References
+    /// - Golub & Van Loan (2013): "Matrix Computations", Algorithm 3.4.1
     fn determinant_2d(matrix: &Array2<f64>) -> f64 {
+        use nalgebra::DMatrix;
+        
         let n = matrix.shape()[0];
+        
+        // Fast path for small matrices
         if n == 1 {
-            matrix[[0, 0]]
+            return matrix[[0, 0]];
         } else if n == 2 {
-            matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[1, 0]]
-        } else {
-            // LU decomposition for larger matrices
-            // Simplified implementation - in production use nalgebra or similar
-            let mut det = 1.0;
-            let mut work = matrix.clone();
-
-            for i in 0..n {
-                let pivot = work[[i, i]];
-                if pivot.abs() < 1e-10 {
-                    return 0.0;
-                }
-                det *= pivot;
-
-                for j in i + 1..n {
-                    let factor = work[[j, i]] / pivot;
-                    for k in i + 1..n {
-                        work[[j, k]] -= factor * work[[i, k]];
-                    }
-                }
+            return matrix[[0, 0]] * matrix[[1, 1]] - matrix[[0, 1]] * matrix[[1, 0]];
+        }
+        
+        // For larger matrices (3x3 and above), use nalgebra's LU decomposition
+        // Convert ndarray to nalgebra DMatrix
+        let mut na_matrix = DMatrix::zeros(n, n);
+        for i in 0..n {
+            for j in 0..n {
+                na_matrix[(i, j)] = matrix[[i, j]];
             }
-            det
+        }
+        
+        // Compute LU decomposition with partial pivoting
+        // det(A) = det(P) * det(L) * det(U) = (-1)^p * ∏ u_ii
+        // where p is the number of permutations in P
+        match na_matrix.clone().lu().determinant() {
+            det if det.is_finite() => det,
+            _ => 0.0, // Handle NaN/Inf cases
         }
     }
 
