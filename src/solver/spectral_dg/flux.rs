@@ -50,7 +50,8 @@ pub fn compute_numerical_flux(
             0.5 * (left_flux + right_flux - max_speed * (right_state - left_state) * normal)
         }
         FluxType::Roe => {
-            // Roe flux - simplified for scalar case
+            // Roe flux for scalar conservation laws
+            // Simplified Roe averaging: exact for scalar case per Roe (1981)
             let a_roe = if (right_state - left_state).abs() > 1e-10 {
                 (right_flux - left_flux) / (right_state - left_state)
             } else {
@@ -78,8 +79,9 @@ pub fn compute_numerical_flux(
             }
         }
         FluxType::HLLC => {
-            // HLLC flux - for now, defaults to HLL for scalar case
-            // Full HLLC requires additional wave structure
+            // HLLC flux: Defaults to HLL for scalar equations
+            // Full HLLC contact discontinuity only meaningful for systems (Euler/MHD)
+            // Per Toro (2009) "Riemann Solvers": scalar case degenerates to HLL
             compute_numerical_flux(
                 FluxType::HLL,
                 left_state,
