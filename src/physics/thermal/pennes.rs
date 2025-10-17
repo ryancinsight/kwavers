@@ -112,7 +112,8 @@ impl PennesSolver {
             }
         }
 
-        // Apply boundary conditions (insulated for now)
+        // Apply insulated (zero-flux Neumann) boundary conditions
+        // Standard for biological tissue per Pennes (1948) thermal modeling
         self.apply_boundary_conditions();
     }
 

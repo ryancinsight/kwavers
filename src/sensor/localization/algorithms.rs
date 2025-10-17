@@ -98,8 +98,10 @@ impl LocalizationAlgorithmImpl for TDOAAlgorithm {
         _measurements: &[f64],
         _config: &LocalizationConfig,
     ) -> KwaversResult<LocalizationResult> {
-        // Implementation would go here
-        // For now, return a placeholder
+        // TDOA localization algorithm deferred to Sprint 124+ (multi-sensor triangulation)
+        // Current: Placeholder return maintains API contract for test infrastructure
+        // Future: Implement GCC-PHAT or SRP-PHAT algorithm per Knapp & Carter (1976)
+        // Literature: "The Generalized Correlation Method for Estimation of Time Delay"
         Ok(LocalizationResult {
             position: Position::new(0.0, 0.0, 0.0),
             uncertainty: Position::new(0.1, 0.1, 0.1),

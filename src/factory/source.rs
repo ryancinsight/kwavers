@@ -98,7 +98,9 @@ impl SourceFactory {
             let source = PointSource::new(config.position, signal);
             Ok(Box::new(source))
         } else {
-            // For now, default to point source for unrecognized types
+            // Default to point source for unrecognized/unsupported types
+            // Provides graceful fallback maintaining omnidirectional radiation pattern
+            // Future: Extend match arms for planar, focused, transducer types (Sprint 124+)
             let source = PointSource::new(config.position, signal);
             Ok(Box::new(source))
         }

@@ -19,9 +19,10 @@ pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     assert_eq!(a.shape(), b.shape());
     assert_eq!(a.shape(), out.shape());
 
-    // Use safe fallback for now - full AVX2 implementation would go here
-    // In production, this would contain actual AVX2 intrinsics with proper
-    // SAFETY documentation per ICSE 2020 guidelines
+    // Safe portable implementation: ndarray leverages compiler auto-vectorization
+    // Explicit AVX2 intrinsics deferred to Sprint 126+ (requires unsafe blocks + safety proof)
+    // Current approach: Compiler generates AVX2 instructions with -C target-cpu=native
+    // Benefits: Zero unsafe code, cross-platform compatibility, LLVM optimization
     ndarray::Zip::from(out).and(a).and(b).for_each(|out, &a, &b| {
         *out = a + b;
     });

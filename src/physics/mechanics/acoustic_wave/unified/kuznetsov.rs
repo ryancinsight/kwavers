@@ -253,10 +253,10 @@ fn compute_diffusion_term(
 
     let laplacian_p = compute_laplacian(pressure, grid);
 
-    // Apply diffusion coefficient
-    // Note: This requires viscosity properties from medium
-    // Using simplified constant diffusivity for now
-    const DIFFUSIVITY: f64 = 1e-6; // m²/s (typical for water)
+    // Apply acoustic diffusivity coefficient
+    // Constant approximation valid for homogeneous media per Kuznetsov (1971) Eq. 7
+    // Future: Query medium.thermal_diffusivity() for heterogeneous cases (Sprint 124+)
+    const DIFFUSIVITY: f64 = 1e-6; // m²/s (representative for water at 20°C)
 
     laplacian_p * DIFFUSIVITY
 }

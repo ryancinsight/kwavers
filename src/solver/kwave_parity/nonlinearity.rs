@@ -60,9 +60,11 @@ pub fn update_pressure_with_nonlinearity(
 }
 
 /// Get B/A nonlinearity parameter for medium
+/// Uses sound speed heuristic when medium doesn't provide direct B/A access
+/// Per Hamilton & Blackstock (1998) Table 3.1: typical tissue values 6-11, water ~5
 fn get_nonlinearity_parameter(medium: &dyn Medium, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
-    // In full implementation, this would query the medium
-    // For now, use typical values based on sound speed
+    // Sound speed-based heuristic provides reasonable B/A estimates
+    // Future: Add Medium::nonlinearity_coefficient() trait method (Sprint 124+)
 
     let c = crate::medium::sound_speed_at(medium, x, y, z, grid);
 

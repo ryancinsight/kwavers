@@ -241,9 +241,10 @@ impl TimeReversalReconstructor {
         for step in 0..propagation_steps {
             solver.step()?;
 
-            // Record if needed
+            // Record at intervals if needed
             if step % 10 == 0 {
-                // Skip recording for now - recorder API needs to be fixed
+                // Recording disabled: Solver API returns Array4<f64> but recorder expects HashMap<UnifiedFieldType, Array3>
+                // Future: Unified field interface for solver/recorder compatibility (Sprint 123+)
                 // recorder.record(solver.fields(), solver.time().current)?;
             }
         }
