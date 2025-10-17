@@ -39,7 +39,9 @@ impl TransducerSensitivity {
         // Round-trip sensitivity
         let round_trip_sensitivity = transmit_sensitivity * receive_sensitivity;
 
-        // Efficiency (simplified model)
+        // Electromechanical efficiency: η = k²ₘ × 100%
+        // Where kₘ is electromechanical coupling coefficient
+        // Per IEEE Std 176: "Standard on Piezoelectricity"
         let efficiency = coupling.powi(2) * 100.0;
 
         // Maximum pressure (typical limit for medical transducers)

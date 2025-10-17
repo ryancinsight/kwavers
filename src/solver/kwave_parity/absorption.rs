@@ -90,8 +90,9 @@ fn compute_power_law_operators(
 ///
 /// where α(k) = α₀ * |k|^y is the frequency-dependent absorption coefficient.
 ///
-/// This replaces the simplified spatial-domain absorption with proper
-/// spectral-domain computation that preserves causality and stability.
+/// This implementation uses proper spectral-domain computation (Fourier space)
+/// rather than spatial-domain approximations, preserving causality and numerical stability
+/// per Treeby & Cox (2010) exact power-law absorption model.
 ///
 /// # References
 /// - Treeby & Cox (2010): "Modeling power law absorption and dispersion"

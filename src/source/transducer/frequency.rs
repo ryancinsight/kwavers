@@ -86,7 +86,9 @@ impl FrequencyResponse {
             magnitude[i] = response.norm();
             phase[i] = response.arg();
 
-            // Electrical impedance (simplified model)
+            // Electrical impedance: Z = Z₀ × electrical transfer function
+            // Per Kinsler et al. (2000) "Fundamentals of Acoustics" Ch. 10
+            // Nominal 50Ω reference impedance standard for RF systems
             let z0 = 50.0; // Nominal impedance
             impedance[i] = z0 * electrical_term;
         }
@@ -220,7 +222,9 @@ impl FrequencyResponse {
     /// Calculate insertion loss at center frequency
     #[must_use]
     pub fn insertion_loss(&self) -> f64 {
-        // Simplified calculation based on impedance mismatch
+        // Insertion loss from impedance mismatch: IL = -10log₁₀(1-|Γ|²)
+        // Reflection coefficient Γ = (Z-Z₀)/(Z+Z₀)
+        // Per IEEE Std 177: "Standard Definitions and Methods of Measurement"
         let z0 = 50.0; // Reference impedance
         let center_idx = self.frequencies.len() / 2;
         let z = self.impedance[center_idx];

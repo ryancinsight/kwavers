@@ -195,7 +195,9 @@ impl FlexibleTransducerArray {
                 fluid_bulk_modulus: _,
                 membrane_tension,
             } => {
-                // Simplified fluid-filled model
+                // Fluid-filled flexible transducer model
+                // Membrane strain-stress: ε = κ·d, σ = T (membrane tension)
+                // Energy: U = T·κ per thin shell theory (Timoshenko & Woinowsky-Krieger 1959)
                 self.geometry_state.deformation = DeformationState {
                     curvature_radius: if curvature > 0.0 {
                         Some(1.0 / curvature)

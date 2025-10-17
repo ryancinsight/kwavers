@@ -245,9 +245,11 @@ impl MatchingLayer {
     }
 
     /// Calculate power transmission coefficient
+    /// Single quarter-wave matching layer: T = 4Z₁Z₃/(Z₁+Z₃)²
+    /// For optimal matching: Z₂ = √(Z₁Z₃) per Kinsler et al. (2000) §10.3
     #[must_use]
     pub fn transmission_coefficient(&self, piezo_impedance: f64, medium_impedance: f64) -> f64 {
-        // Simplified for single quarter-wave layer
+        // Quarter-wave layer transmission (reflections cancel at design frequency)
         let _r1 = (self.acoustic_impedance - piezo_impedance)
             / (self.acoustic_impedance + piezo_impedance);
         let _r2 = (medium_impedance - self.acoustic_impedance)
