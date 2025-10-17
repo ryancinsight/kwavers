@@ -246,7 +246,9 @@ impl KzkSolverPlugin {
         use std::f64::consts::PI;
 
         // Get medium properties at origin
-        let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?; // Dummy grid for point evaluation
+        // Note: Minimal grid created only for API compatibility with point evaluation functions
+        // Medium properties are evaluated at single point (origin), grid dimensions irrelevant
+        let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?;
         let density = crate::medium::density_at(medium, 0.0, 0.0, 0.0, &grid);
         let sound_speed = crate::medium::sound_speed_at(medium, 0.0, 0.0, 0.0, &grid);
         let beta = AcousticProperties::nonlinearity_coefficient(medium, 0.0, 0.0, 0.0, &grid);
