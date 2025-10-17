@@ -60,8 +60,9 @@ impl crate::physics::plugin::Plugin for HybridPlugin {
         t: f64,
         _context: &PluginContext,
     ) -> KwaversResult<()> {
-        // Create dummy source and boundary for now
-        // This is a limitation of the plugin architecture that needs redesign
+        // Plugin architecture limitation: Solver requires source/boundary but plugin interface doesn't provide them
+        // Using NullSource (no-op) and default PML boundary as hybrid solver manages these internally
+        // Future: Extend plugin interface to accept optional source/boundary parameters
         use crate::boundary::pml::PMLBoundary;
         use crate::source::NullSource;
 

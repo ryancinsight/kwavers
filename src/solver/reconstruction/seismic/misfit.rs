@@ -51,10 +51,11 @@ impl MisfitFunction {
         Self { misfit_type }
     }
 
-    /// Compute adjoint source from residual (simplified interface)
+    /// Compute adjoint source from residual (direct interface for L1/L2 norms)
     ///
     /// Note: For envelope and phase misfits, use `compute_adjoint_source` instead
-    /// for proper Hilbert transform-based adjoint computation.
+    /// for proper Hilbert transform-based adjoint computation per Fichtner et al. (2008).
+    /// This method provides direct adjoint for simple norms, falls back to residual for complex misfits.
     #[must_use]
     pub fn adjoint_source(&self, residual: &Array2<f64>) -> Array2<f64> {
         match self.misfit_type {
@@ -313,7 +314,7 @@ impl MisfitFunction {
     /// - `∂z/∂t` = time derivative of analytic signal
     /// - Im[·] = imaginary part
     ///
-    /// This can be simplified to:
+    /// Analytical simplification yields:
     /// ```text
     /// δφ = (φ_syn - φ_obs) * [s*H'(s) - s'(t)*H(s)] / (s² + H(s)²)
     /// ```

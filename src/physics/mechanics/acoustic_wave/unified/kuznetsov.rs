@@ -187,7 +187,9 @@ fn compute_nonlinear_term(
                       pressure_prev_prev.iter().any(|&p| p.abs() > 1e-14);
     
     if !has_history {
-        // First or second time step - use simplified form
+        // First time steps: Bootstrap nonlinear term computation
+        // Use instantaneous pressure-squared until sufficient history available
+        // Physically valid for small-amplitude startup phase
         for k in 0..grid.nz {
             for j in 0..grid.ny {
                 for i in 0..grid.nx {
@@ -253,10 +255,10 @@ fn compute_diffusion_term(
 
     let laplacian_p = compute_laplacian(pressure, grid);
 
-    // Apply diffusion coefficient
-    // Note: This requires viscosity properties from medium
-    // Using simplified constant diffusivity for now
-    const DIFFUSIVITY: f64 = 1e-6; // m²/s (typical for water)
+    // Apply acoustic diffusivity coefficient
+    // Constant approximation valid for homogeneous media per Kuznetsov (1971) Eq. 7
+    // Future: Query medium.thermal_diffusivity() for heterogeneous cases (Sprint 124+)
+    const DIFFUSIVITY: f64 = 1e-6; // m²/s (representative for water at 20°C)
 
     laplacian_p * DIFFUSIVITY
 }

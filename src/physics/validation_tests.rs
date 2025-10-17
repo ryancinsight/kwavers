@@ -175,15 +175,15 @@ mod tests {
     /// Validate energy conservation in lossless medium
     #[test]
     fn test_energy_conservation() {
-        // In a lossless medium, total energy should be conserved
-        // E = (1/2) * ρ * ∫(v² + c²(∇p)²) dV
-
-        // This is a placeholder for a more complex test that would
-        // require running a simulation and tracking energy
-
-        // For now, just verify our tolerance is reasonable using static_assertions
-        // Note: These assertions are compile-time checks ensuring tolerance is within bounds
+        // Energy conservation test framework
+        // Full test requires: simulation run + energy tracking over time
+        // E_total = (1/2)ρ∫(v² + c²(∇p)²)dV = const for lossless media
+        //
+        // Per Blackstock (2000) §1.5: Energy density in acoustic field
+        // Current: Compile-time tolerance validation (runtime test deferred)
+        
+        // Compile-time assertions ensuring tolerance bounds are reasonable
         const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE > 0.0);
-        const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE < 1e-3); // Should be small
+        const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE < 1e-3); // Must be stringent
     }
 }

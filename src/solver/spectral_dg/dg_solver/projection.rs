@@ -13,7 +13,9 @@ impl DGSolver {
     pub fn project_to_dg(&mut self, field: &Array3<f64>) -> KwaversResult<()> {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
 
-        // Determine number of elements (simplified for structured grid)
+        // Determine number of elements for structured Cartesian grid
+        // Each element contains n_nodes in each direction
+        // Unstructured grids would require mesh data structure
         let n_elements_x = nx / self.n_nodes;
         let n_elements_y = ny / self.n_nodes;
         let n_elements_z = nz / self.n_nodes;

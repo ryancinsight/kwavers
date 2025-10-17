@@ -375,9 +375,8 @@ impl ChemicalModelTrait for ChemicalModel {
 
         match params_result {
             Ok(params) => {
-                // Create a dummy context for now
-                let dummy_pressure = Array3::zeros((1, 1, 1));
-                let context = PluginContext::new(dummy_pressure);
+                // Create context with actual pressure field
+                let context = PluginContext::new(p.clone());
                 if let Err(e) = self.update(&params, &context) {
                     log::error!("Chemical update failed: {}", e);
                 }

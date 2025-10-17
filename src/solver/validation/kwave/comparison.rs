@@ -66,7 +66,9 @@ impl ComparisonMetrics {
         }
     }
 
-    /// Structural similarity index (simplified version)
+    /// Structural Similarity Index (SSIM) for image/field comparison
+    /// Simplified single-scale implementation per Wang et al. (2004)
+    /// Full SSIM uses multi-scale analysis, this uses global statistics
     #[must_use]
     pub fn ssim(computed: &Array3<f64>, reference: &Array3<f64>) -> f64 {
         const C1: f64 = 0.01;

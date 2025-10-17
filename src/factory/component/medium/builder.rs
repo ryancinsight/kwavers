@@ -86,8 +86,10 @@ impl MediumBuilder {
             }
         }
         
-        // For now, return homogeneous medium with typical tissue properties
-        // Future: Use HeterogeneousMedium::from_arrays when constructor is stabilized
+        // Homogeneous medium with typical soft tissue properties (Duck 1990)
+        // Fallback when property maps unavailable or HeterogeneousMedium constructor issues
+        // Properties: ρ=1000 kg/m³, c=1500 m/s, α=0.5 dB/(MHz·cm), B/A=10
+        // Future: HeterogeneousMedium::from_arrays when stabilized (Sprint 124+)
         log::debug!("Building heterogeneous medium for grid {}x{}x{}", nx, ny, nz);
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 10.0, grid);
         Ok(Box::new(medium))

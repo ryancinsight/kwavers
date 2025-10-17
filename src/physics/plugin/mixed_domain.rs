@@ -109,7 +109,8 @@ impl MixedDomainPropagationPlugin {
         // Convert real field to complex for FFT
         let mut complex_field = field.mapv(|x| Complex64::new(x, 0.0));
 
-        // Create a dummy grid for FFT (FFT3d requires it)
+        // Create grid for FFT operation (dimensions match field, spacing is 1.0 for normalized k-space)
+        // Grid provides metadata for FFT wavenumber calculations
         let grid = crate::grid::Grid::new(
             field.shape()[0],
             field.shape()[1],
@@ -131,7 +132,8 @@ impl MixedDomainPropagationPlugin {
         // Clone field for IFFT (process modifies in place)
         let mut complex_field = field.clone();
 
-        // Create a dummy grid for IFFT
+        // Create grid for IFFT operation (dimensions match field, spacing is 1.0 for normalized k-space)
+        // Grid provides metadata for IFFT wavenumber calculations
         let grid = crate::grid::Grid::new(
             field.shape()[0],
             field.shape()[1],

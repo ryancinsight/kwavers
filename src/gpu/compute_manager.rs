@@ -170,8 +170,9 @@ impl ComputeManager {
         }
 
         if self.has_gpu() {
-            // GPU implementation would go here
-            // For now, fall back to CPU
+            // GPU FDTD kernels deferred to future sprint (Sprint 125+)
+            // Current: CPU fallback ensures correctness while GPU infrastructure matures
+            // See ADR-008 for backend abstraction strategy (WGPU baseline + Vulkan/Metal)
             self.fdtd_cpu(
                 pressure, velocity_x, velocity_y, velocity_z, dx, dy, dz, dt, c0, rho0,
             )

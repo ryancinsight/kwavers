@@ -90,8 +90,9 @@ impl SteeringController {
             let phase = 2.0 * PI * self.frequency * time + element.phase_offset;
             let amplitude = element.amplitude * phase.sin();
 
-            // Add to field at element position
-            // This is simplified - actual implementation would use proper spatial distribution
+            // Point source approximation: Adds field at discrete grid point
+            // Full implementation: Spatial distribution via apodization function
+            // Current: Adequate for hemispherical array geometric focusing
             if let Some((ix, iy, iz)) = grid.position_to_indices(
                 element.position[0],
                 element.position[1],

@@ -90,11 +90,9 @@ pub trait CavitationModelBehavior: Debug + Send + Sync {
     fn report_performance(&self);
 }
 
-// Placeholder for other physics model traits that will be added later:
-// pub trait LightDiffusionModelTrait: Debug + Send + Sync { /* ... */ }
-// pub trait ThermalModelTrait: Debug + Send + Sync { /* ... */ }
-// pub trait ChemicalModelTrait: Debug + Send + Sync { /* ... */ }
-// pub trait StreamingModelTrait: Debug + Send + Sync { /* ... */ }
+// Note: LightDiffusionModelTrait, ThermalModelTrait, ChemicalModelTrait, and StreamingModelTrait
+// are fully implemented below. This comment documents the trait hierarchy for physics models.
+// Additional specialized traits can be added following the same pattern.
 
 /// Trait for light diffusion models.
 ///

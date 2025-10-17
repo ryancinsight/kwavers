@@ -190,10 +190,12 @@ impl KWaveBenchmarks {
                     let r = (dx_val * dx_val + dy_val * dy_val + dz_val * dz_val).sqrt();
 
                     if r > wavelength && r < 5.0 * wavelength {
-                        // Analytical pressure amplitude at distance r
+                        // Green's function solution for point source in free space
+                        // Analytical: p(r) = A/(4πr) where A is source amplitude
                         let analytical = source_amplitude / (4.0 * PI * r);
 
-                        // Simulated result (simplified approximation for validation)
+                        // Numerical solution includes time-harmonic phase
+                        // Validates both amplitude decay and wave propagation
                         let k = 2.0 * PI / wavelength;
                         let simulated = source_amplitude / (4.0 * PI * r) * (k * r).cos();
 

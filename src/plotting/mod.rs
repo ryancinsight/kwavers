@@ -210,18 +210,29 @@ mod plotting_impl {
         Ok(())
     }
 
-    pub fn plot_recorder_data(_recorder: &Recorder, filename: &str) {
+    pub fn plot_recorder_data(recorder: &Recorder, filename: &str) {
         info!("Generating recorder data plot: {}", filename);
 
-        // For now, just create a simple plot with dummy data
-        let time_points: Vec<f64> = (0..100).map(|i| i as f64 * 1e-6).collect(); // Dummy time points
-        let pressure_data: Vec<f64> = (0..100).map(|i| (i as f64 * 0.1).sin()).collect(); // Dummy pressure data
+        // Extract actual recorded data from sensor points
+        if recorder.pressure_sensor_data.is_empty() {
+            log::warn!("No pressure data recorded - skipping plot generation");
+            return;
+        }
 
-        let trace = Scatter::new(time_points, pressure_data)
-            .mode(Mode::Lines)
-            .name("Pressure");
+        // Generate time points based on snapshot interval and data length
+        let num_points = recorder.pressure_sensor_data[0].len();
+        let dt = 1e-6; // Default time step, should be configurable in future
+        let time_points: Vec<f64> = (0..num_points).map(|i| i as f64 * dt).collect();
+
         let mut plot = Plot::new();
-        plot.add_trace(trace);
+        
+        // Plot each sensor's pressure evolution
+        for (sensor_idx, pressure_data) in recorder.pressure_sensor_data.iter().enumerate() {
+            let trace = Scatter::new(time_points.clone(), pressure_data.clone())
+                .mode(Mode::Lines)
+                .name(format!("Sensor {}", sensor_idx));
+            plot.add_trace(trace);
+        }
 
         let layout = Layout::new()
             .title(Title::new("Recorded Pressure Evolution"))
@@ -230,7 +241,7 @@ mod plotting_impl {
         plot.set_layout(layout);
 
         plot.write_html(filename);
-        info!("Plot saved to {}", filename);
+        info!("Plot saved to {} with {} sensors", filename, recorder.pressure_sensor_data.len());
     }
 }
 

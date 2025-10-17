@@ -303,7 +303,9 @@ impl NumericalValidator {
         _omega: f64,
         _dt: f64,
     ) -> Result<f64, Box<dyn std::error::Error>> {
-        // Simplified - would run actual plane wave test
+        // Placeholder for dispersion validation test
+        // Future: Implement plane wave propagation with analytical comparison
+        // Per Kreiss & Oliger (1973): "Methods for the Approximate Solution of Time Dependent Problems"
         Ok(0.001)
     }
 

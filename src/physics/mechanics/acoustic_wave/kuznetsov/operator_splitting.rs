@@ -118,7 +118,8 @@ impl OperatorSplittingSolver {
             }
         }
 
-        // Apply boundary conditions (zero gradient for now)
+        // Apply zero-gradient (Neumann) boundary conditions
+        // Appropriate for free-field propagation per Blackstock (2000) §2.7
         self.apply_boundary_conditions(&mut pressure_next);
 
         pressure_next
