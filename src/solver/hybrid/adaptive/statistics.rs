@@ -40,8 +40,8 @@ impl StatisticalMetrics {
         Self {
             mean,
             variance,
-            skewness: 0.0,  // Placeholder - not used in current selection logic
-            kurtosis: 3.0,  // Gaussian default - not used in current selection logic
+            skewness: 0.0,  // Not used in current method selection (reserved for future criteria)
+            kurtosis: 3.0,  // Gaussian default (reserved for future distribution-based selection)
         }
     }
 }

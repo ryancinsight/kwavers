@@ -127,11 +127,16 @@ impl TherapyParameters {
 
     /// Calculate thermal index per IEC 62359:2017 standard
     /// TI approximates power deposition normalized to tissue heating threshold
+    /// 
+    /// **Implementation**: Standard TI₀ calculation (intensity × duty cycle / reference power)
+    /// per IEC 62359:2017 §5.2. Full TI calculations (TIS, TIB, TIC) require detailed
+    /// beam geometry and tissue thermal models beyond scope of initial implementation.
+    /// 
+    /// **References**:
+    /// - IEC 62359:2017 "Ultrasonics - Field characterization - Test methods for thermal index"
+    /// - Duck (2007) "Medical and Biological Standards for Ultrasound" §4.3
     pub fn calculate_thermal_index(&mut self, intensity: f64) {
-        // Simplified TI calculation: intensity × duty cycle / reference power
-        // Per IEC 62359:2017: Full TI requires beam geometry and tissue models
-        // Reference: Duck (2007) "Medical and Biological Standards for Ultrasound"
-        const POWER_REF: f64 = 1.0; // 1 W reference for soft tissue
+        const POWER_REF: f64 = 1.0; // 1 W reference for soft tissue per IEC 62359:2017
         self.thermal_index = intensity * self.duty_cycle / POWER_REF;
     }
 

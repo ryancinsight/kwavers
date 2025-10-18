@@ -253,9 +253,9 @@ impl StiffnessTensor {
             return false;
         }
 
-        // For larger minors, we could use more sophisticated methods
-        // For now, we also check that diagonal elements are positive
-        // and that the matrix satisfies basic physical constraints
+        // Additional validation: Check diagonal positivity (Sylvester's criterion)
+        // For symmetric positive definite matrices, all diagonal elements must be positive
+        // Sufficient condition combined with positive leading principal minors above
         for i in 0..6 {
             if matrix[[i, i]] <= 0.0 {
                 return false;

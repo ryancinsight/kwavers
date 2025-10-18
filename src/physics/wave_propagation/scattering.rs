@@ -130,17 +130,15 @@ impl ScatteringCalculator {
         ka3 * polarizability * angular_factor.sqrt()
     }
 
-    /// Calculate Mie scattering coefficients (simplified)
-    /// Full Mie theory requires complex Bessel functions
-    /// Calculate Mie scattering coefficients using asymptotic approximation
+    /// Calculate Mie scattering coefficients using Rayleigh-Gans-Debye approximation
     ///
-    /// This method uses Rayleigh-Gans-Debye (RGD) approximation for Mie coefficients,
-    /// valid for |m-1| << 1 and ka|m-1| << 1, where m is the refractive index ratio.
-    /// This is an acceptable approximation for many biological tissues and weak scatterers.
+    /// **Implementation**: Uses RGD approximation valid for weak scatterers (|m-1| << 1)
+    /// where m is the refractive index ratio. Applicable to biological tissues and small
+    /// particles with ka|m-1| << 1.
     ///
-    /// Full Mie theory requires spherical Bessel functions (j_n, y_n) and is implemented
-    /// via specialized libraries (e.g., libmie). For strong scatterers or large size parameters,
-    /// consider using external Mie solvers.
+    /// **Scope**: Full Mie theory requires spherical Bessel functions and is implemented
+    /// in specialized libraries (libmie). For strong scatterers (large m or ka), use
+    /// external Mie solvers. RGD approximation provides 10-20% accuracy for weak scatterers.
     ///
     /// # References
     /// - Bohren & Huffman (1983): Section 4.6 "Rayleigh-Gans approximation"

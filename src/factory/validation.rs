@@ -57,10 +57,11 @@ impl ConfigValidator {
         // Check CFL condition compatibility
         let min_spacing = config.grid.dx.min(config.grid.dy).min(config.grid.dz);
 
-        // Estimate sound speed from medium (simplified)
+        // Estimate sound speed from medium type (conservative fallback for heterogeneous)
+        // Heterogeneous media use maximum sound speed for CFL validation per Courant (1928)
         let sound_speed = match &config.medium.medium_type {
             super::MediumType::Homogeneous { sound_speed, .. } => *sound_speed,
-            _ => 1500.0, // Default assumption
+            _ => 1500.0, // Conservative water-like medium assumption
         };
 
         let max_stable_dt = config.time.cfl_factor * min_spacing / sound_speed;

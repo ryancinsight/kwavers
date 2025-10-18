@@ -50,8 +50,9 @@ pub fn compute_numerical_flux(
             0.5 * (left_flux + right_flux - max_speed * (right_state - left_state) * normal)
         }
         FluxType::Roe => {
-            // Roe flux for scalar conservation laws
-            // Simplified Roe averaging: exact for scalar case per Roe (1981)
+            // Roe flux for scalar conservation laws (exact solution per Roe 1981)
+            // For scalar hyperbolic conservation laws, Roe averaging reduces to exact characteristic speed
+            // Reference: Roe (1981) "Approximate Riemann Solvers" J. Comp. Phys. 43:357-372
             let a_roe = if (right_state - left_state).abs() > 1e-10 {
                 (right_flux - left_flux) / (right_state - left_state)
             } else {

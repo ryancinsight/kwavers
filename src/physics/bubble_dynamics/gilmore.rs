@@ -89,7 +89,9 @@ impl GilmoreSolver {
         let p_acoustic_inst = p_acoustic * (omega * t).sin();
         let p_inf = self.params.p0 + p_acoustic_inst;
 
-        // Internal bubble pressure (simplified - should include thermal effects)
+        // Internal bubble pressure (polytropic gas law per Gilmore 1952)
+        // Neglects thermal damping (adiabatic approximation valid for acoustic frequencies)
+        // Full thermal effects require heat diffusion equation (Prosperetti 1977)
         let gamma = state.gas_species.gamma();
         let p_gas = self.params.p0 * (self.params.r0 / r).powf(3.0 * gamma);
 
@@ -106,7 +108,8 @@ impl GilmoreSolver {
         // Sound speed at bubble wall
         let c_wall = self.calculate_sound_speed(p_wall);
 
-        // Time derivative of enthalpy (simplified - assumes quasi-static)
+        // Time derivative of enthalpy (quasi-static approximation per Gilmore 1952)
+        // Assumes slow pressure variation relative to acoustic period
         let dh_dt = self.estimate_enthalpy_derivative(state, p_wall, p_acoustic, omega, t);
 
         // Gilmore equation solved for R_ddot

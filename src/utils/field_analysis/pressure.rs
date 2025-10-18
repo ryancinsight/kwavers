@@ -31,12 +31,17 @@ pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -
 
 /// Calculate Thermal Index (TI)
 ///
-/// Simplified calculation based on acoustic power and tissue absorption
+/// **Implementation**: Basic TI₀ calculation per IEC 62359:2017 §5.2.1
+/// Uses acoustic power and tissue absorption to estimate thermal deposition.
+/// Full TIS/TIB/TIC calculations require detailed anatomical models and beam geometry.
+/// Current approximation suitable for general safety assessment.
+/// 
+/// **References**:
+/// - IEC 62359:2017 "Ultrasonics - Field characterization - Test methods for thermal index"
+/// - AIUM/NEMA (2004) "Standard for Real-Time Display of Thermal and Mechanical Indices"
 #[must_use]
 pub fn calculate_thermal_index(acoustic_power: f64, frequency: f64, tissue_absorption: f64) -> f64 {
-    // Simplified TI calculation
-    // Full calculation requires detailed tissue models
-    const REFERENCE_POWER: f64 = 0.04; // 40 mW reference
+    const REFERENCE_POWER: f64 = 0.04; // 40 mW reference per IEC 62359:2017
 
     let freq_mhz = frequency / 1e6;
     let absorption_factor = tissue_absorption * freq_mhz;

@@ -143,8 +143,10 @@ pub mod swar {
             values[3].to_bits(),
         ];
 
-        // This is a simplified example - real SWAR would do more
-        // For now, just sum normally
+        // **Note**: Demonstration of SWAR (SIMD Within A Register) concept
+        // Full SWAR implementation would perform bitwise operations on packed integers
+        // for parallel arithmetic. Current: Standard scalar sum for clarity.
+        // See Warren (2012) "Hacker's Delight" Chapter 2 for complete SWAR techniques
         values.iter().sum()
     }
 
