@@ -140,24 +140,76 @@ impl TransferFunction {
         ]
     }
 
-    /// Plasma colormap
+    /// Plasma colormap (perceptually uniform, matplotlib-inspired)
+    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
     fn plasma_colormap() -> Vec<[f32; 4]> {
-        Self::viridis_colormap() // Placeholder
+        // Plasma colormap: purple → pink → orange → yellow
+        // Perceptually uniform for scientific visualization
+        vec![
+            [0.050, 0.030, 0.529, 1.0],
+            [0.283, 0.024, 0.627, 1.0],
+            [0.478, 0.007, 0.659, 1.0],
+            [0.648, 0.060, 0.620, 1.0],
+            [0.786, 0.184, 0.520, 1.0],
+            [0.893, 0.335, 0.384, 1.0],
+            [0.966, 0.505, 0.243, 1.0],
+            [0.989, 0.690, 0.138, 1.0],
+            [0.940, 0.876, 0.132, 1.0],
+        ]
     }
 
-    /// Inferno colormap
+    /// Inferno colormap (perceptually uniform, matplotlib-inspired)
+    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
     fn inferno_colormap() -> Vec<[f32; 4]> {
-        Self::viridis_colormap() // Placeholder
+        // Inferno colormap: black → purple → red → orange → yellow
+        // Excellent for thermal/heat visualization
+        vec![
+            [0.001, 0.000, 0.014, 1.0],
+            [0.100, 0.031, 0.184, 1.0],
+            [0.276, 0.044, 0.397, 1.0],
+            [0.478, 0.066, 0.467, 1.0],
+            [0.659, 0.137, 0.432, 1.0],
+            [0.821, 0.268, 0.326, 1.0],
+            [0.937, 0.449, 0.208, 1.0],
+            [0.988, 0.653, 0.118, 1.0],
+            [0.988, 0.880, 0.381, 1.0],
+        ]
     }
 
-    /// Magma colormap
+    /// Magma colormap (perceptually uniform, matplotlib-inspired)
+    /// Reference: Smith & van der Walt (2015) "Colormaps" matplotlib documentation
     fn magma_colormap() -> Vec<[f32; 4]> {
-        Self::viridis_colormap() // Placeholder
+        // Magma colormap: black → purple → red → orange → white
+        // Ideal for density/intensity visualization
+        vec![
+            [0.001, 0.000, 0.014, 1.0],
+            [0.118, 0.051, 0.260, 1.0],
+            [0.304, 0.080, 0.437, 1.0],
+            [0.504, 0.119, 0.500, 1.0],
+            [0.689, 0.196, 0.483, 1.0],
+            [0.857, 0.328, 0.422, 1.0],
+            [0.974, 0.524, 0.384, 1.0],
+            [0.998, 0.730, 0.524, 1.0],
+            [0.987, 0.914, 0.764, 1.0],
+        ]
     }
 
-    /// Turbo colormap
+    /// Turbo colormap (Google's improved rainbow, high dynamic range)
+    /// Reference: Anton Mikhailov (2019) "Turbo, An Improved Rainbow Colormap"
     fn turbo_colormap() -> Vec<[f32; 4]> {
-        Self::viridis_colormap() // Placeholder
+        // Turbo: improved rainbow with better perceptual uniformity
+        // High dynamic range, reduces rainbow artifacts
+        vec![
+            [0.190, 0.073, 0.022, 1.0],
+            [0.230, 0.318, 0.545, 1.0],
+            [0.160, 0.519, 0.698, 1.0],
+            [0.214, 0.682, 0.634, 1.0],
+            [0.464, 0.801, 0.455, 1.0],
+            [0.739, 0.872, 0.260, 1.0],
+            [0.945, 0.869, 0.168, 1.0],
+            [0.990, 0.683, 0.085, 1.0],
+            [0.879, 0.314, 0.065, 1.0],
+        ]
     }
 
     /// Grayscale colormap
