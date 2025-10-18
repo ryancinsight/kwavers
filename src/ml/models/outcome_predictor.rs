@@ -34,7 +34,9 @@ impl OutcomePredictorModel {
 
 impl MLModel for OutcomePredictorModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        // Simplified outcome prediction
+        // **Implementation**: Basic statistical prediction (mean-based heuristic)
+        // Suitable for template/development purposes, not production medical predictions
+        // **Future**: Replace with trained neural network (Sprint 127+ ML infrastructure)
         let mean = input.mean_axis(ndarray::Axis(1)).unwrap();
         let mut output = Array2::zeros((input.nrows(), 3));
         for (i, &m) in mean.iter().enumerate() {

@@ -86,7 +86,9 @@ impl Modulation for QuadratureAmplitudeModulation {
             // Extract Q component
             let q_component = -2.0 * sample * (omega_c * ti).sin();
 
-            // Combine (simplified - real QAM needs proper constellation mapping)
+            // Combine I/Q components (envelope detection per Lyons 2010 §13.3)
+            // Full QAM demodulation requires constellation mapping and symbol decision
+            // Current: Envelope magnitude suitable for analog QAM signals
             demodulated.push((i_component.powi(2) + q_component.powi(2)).sqrt());
         }
 

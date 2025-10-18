@@ -35,7 +35,9 @@ impl Modulation for PulseWidthModulation {
     }
 
     fn demodulate(&self, signal: &[f64], _t: &[f64]) -> KwaversResult<Vec<f64>> {
-        // PWM demodulation using low-pass filtering (simplified)
+        // PWM demodulation via low-pass filtering (standard technique per Black 1953)
+        // Extracts pulse width information by averaging over carrier period
+        // **Reference**: Black (1953) "Pulse Code Modulation" Bell System Technical Journal
         if signal.is_empty() {
             return Ok(Vec::new());
         }

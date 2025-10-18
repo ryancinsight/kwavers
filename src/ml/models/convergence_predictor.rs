@@ -18,16 +18,21 @@ impl Default for ConvergencePredictorModel {
 
 impl ConvergencePredictorModel {
     /// Load model from path
+    /// 
+    /// **Implementation Status**: Template model for API compatibility
+    /// **Future**: Sprint 127+ will integrate trained convergence prediction model
+    /// with proper checkpoint deserialization and neural network inference.
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
-        // Simplified loading
         Ok(Self::new())
     }
 
     /// Create model from weights
+    /// 
+    /// **Implementation Status**: Template mode - weights not used
+    /// Provides functional interface for testing and development workflow.
+    /// Production implementation deferred pending ML framework selection.
     #[must_use]
     pub fn from_weights(_weights: Array2<f32>, _bias: Option<Array1<f32>>) -> Self {
-        // Weights not used in simplified predictor
-        // Real implementation would store and use weights
         Self::new()
     }
 
