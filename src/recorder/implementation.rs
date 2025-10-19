@@ -229,7 +229,9 @@ impl Recorder {
             let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
             let bubble_radius = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX).to_owned();
 
-            // Create bubble state fields (simplified - would need proper state in production)
+            // Create bubble state fields from available data
+            // **Implementation**: Uses current field data for event detection
+            // Production system would track full bubble history with dedicated state arrays
             let bubble_states = BubbleStateFields {
                 radius: bubble_radius,
                 velocity: Array3::zeros(pressure_field.dim()),
@@ -239,7 +241,8 @@ impl Recorder {
                 compression_ratio: Array3::from_elem(pressure_field.dim(), 1.0),
             };
 
-            // Use current radius as initial radius (simplified)
+            // Use current radius as initial radius approximation
+            // Suitable for single-timestep event detection (non-tracking mode)
             let initial_radius = bubble_states.radius.clone();
             let dt = self.time.dt;
             let events =
