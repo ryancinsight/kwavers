@@ -23,7 +23,7 @@ impl DGSolver {
         let mut coeffs = Array3::zeros((
             n_elements_x * n_elements_y * n_elements_z,
             self.n_nodes,
-            1, // Single variable for now
+            1, // Scalar field (pressure); multi-component systems require tensor extension
         ));
 
         // Project field onto modal basis

@@ -139,7 +139,9 @@ impl KzkSolverPlugin {
                     },
                 ))?;
 
-        // Working field (complex representation would be ideal, using real for now)
+        // Real-valued field representation (complex field requires FFT infrastructure)
+        // Suitable for weakly nonlinear regime per Collins (1970)
+        // Full complex representation deferred to Sprint 128+ KZK enhancement
         let mut field = initial_field.clone();
 
         // Time step for operator splitting
