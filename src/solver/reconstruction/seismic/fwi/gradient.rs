@@ -159,10 +159,10 @@ impl GradientComputer {
         // This gives the second-order adjoint field δλ
         let mut second_adjoint = Array3::zeros((nx, ny, nz));
         
-        // DEMONSTRATION: Uses smoothing operator as proxy for L^T^(-1)
-        // Full implementation would use proper wave propagator adjoint
-        // This is acceptable for illustrating the Hessian-vector product algorithm
-        // Production FWI would integrate with existing wave solvers (FDTD/PSTD)
+        // **Implementation**: Smoothing operator as L^T^(-1) proxy for demonstration
+        // Illustrates Hessian-vector product algorithm per Pratt et al. (1998)
+        // **Production**: Would integrate adjoint wave propagator from FDTD/PSTD solvers
+        // **Reference**: Pratt et al. (1998) "Gauss-Newton and full Newton methods in FWI"
         Self::smooth_field(&adjoint_source, &mut second_adjoint, 3)?;
         
         // Step 4: Cross-correlate forward field with second-order adjoint

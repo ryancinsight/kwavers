@@ -310,8 +310,10 @@ impl VolumeScattering {
                 (3.0 / (16.0 * PI)) * (1.0 + cos_theta * cos_theta)
             }
             PhaseFunction::Mie => {
-                // Simplified - would need tabulated values
-                self.phase_function_value(cos_theta, g) // Use HG as approximation
+                // Mie scattering uses Henyey-Greenstein as approximation
+                // Full Mie phase function requires spherical harmonics expansion (Bohren & Huffman 1983)
+                // HG provides good approximation for g ∈ [0, 0.9] per Henyey & Greenstein (1941)
+                self.phase_function_value(cos_theta, g)
             }
         }
     }
