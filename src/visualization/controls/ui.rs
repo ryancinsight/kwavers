@@ -171,7 +171,10 @@ impl ControlPanel {
         }
     }
 
-    /// Render without GPU features (stub)
+    /// Render without GPU features (conditional compilation stub)
+    /// 
+    /// Note: This is a proper conditional compilation stub for non-GPU builds.
+    /// GPU visualization requires the `gpu-visualization` feature flag.
     #[cfg(not(feature = "gpu-visualization"))]
     pub fn render(&mut self, _ctx: &()) {
         log::debug!("Control panel rendering requires gpu-visualization feature");

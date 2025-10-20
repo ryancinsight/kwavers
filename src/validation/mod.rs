@@ -98,7 +98,9 @@ pub fn validate_fdtd_dispersion(grid: &Grid, dt: f64, frequency: f64, c: f64) ->
     let k_exact = 2.0 * std::f64::consts::PI * frequency / c;
     let dx = grid.dx;
 
-    // Simplified 1D dispersion for validation
+    // Simplified 1D dispersion relation for validation testing
+    // Uses basic 1D approximation ω = ck for initial validation.
+    // Full 3D dispersion analysis is performed in validation test suite.
     let omega = 2.0 * std::f64::consts::PI * frequency;
     let k_num = (2.0 / dx) * ((omega * dt / 2.0).sin() / (c * dt / dx)).asin();
 

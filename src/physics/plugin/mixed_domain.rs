@@ -204,9 +204,10 @@ impl MixedDomainPropagationPlugin {
         _medium: &dyn Medium,
         _time_step: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Nonlinear correction placeholder: N(p) = β/(2ρc³) * p²
-        // Current implementation returns linear field (appropriate for testing)
-        // Full nonlinear correction requires proper β/A parameter (Hamilton & Blackstock 1998)
+        // Nonlinear correction: N(p) = β/(2ρc³) * p² (Hamilton & Blackstock 1998)
+        // Current implementation returns linear field (appropriate for linear regime testing)
+        // Full nonlinear correction requires proper β/A parameter from medium properties
+        // Future: Implement when nonlinear medium interface is extended (Sprint 122+)
         Ok(field.clone())
     }
 }

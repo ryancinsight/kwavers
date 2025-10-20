@@ -44,10 +44,10 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     /// Sets the scaling factor for the nonlinearity term.
     fn set_nonlinearity_scaling(&mut self, scaling: f64);
 
-    // Consider adding methods for configuration if common settings are identifiable
-    // e.g., set_adaptive_timestep, etc.
-    // However, these might be too implementation-specific for a general trait.
-    // For now, they are omitted. Implementations can provide their own config methods.
+    // Consider adding methods for configuration if common settings are identifiable.
+    // Adaptive timestep configuration methods are implementation-specific and vary
+    // significantly between FDTD, PSTD, and DG solvers. Each implementation provides
+    // its own configuration API rather than enforcing a common interface here.
 }
 
 /// Trait for cavitation models.

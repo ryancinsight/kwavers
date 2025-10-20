@@ -37,7 +37,7 @@ impl BeamformingAlgorithm for MinimumVariance {
         steering: &Array1<Complex64>,
     ) -> Array1<Complex64> {
         // MVDR: w = R^-1 * a / (a^H * R^-1 * a)
-        // Simplified implementation
+        // Basic implementation returns steering vector (future: full MVDR computation)
         steering.clone()
     }
 }
