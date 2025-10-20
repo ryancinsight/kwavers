@@ -253,8 +253,9 @@ impl SonoluminescenceDetector {
         radius: f64,
         dt: f64,
     ) -> (f64, f64, f64) {
-        // Use emission calculator for more sophisticated spectral analysis
-        // For now, we'll use Stefan-Boltzmann with the emission calculator's parameters
+        // Stefan-Boltzmann approximation for thermal emission
+        // Using emission calculator parameters for consistency with spectral model
+        // Reference: Planck (1901) for blackbody radiation, modified by emission efficiency
         let emission_params = &self.emission_calculator.params;
 
         // Stefan-Boltzmann law for total power

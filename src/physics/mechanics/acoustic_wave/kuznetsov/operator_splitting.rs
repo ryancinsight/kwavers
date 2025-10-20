@@ -225,7 +225,9 @@ impl OperatorSplittingSolver {
         self.linear_step_half(&p_nonlinear, &p_half)
     }
 
-    /// Apply boundary conditions (zero gradient for now)
+    /// Apply boundary conditions using zero-gradient (Neumann) conditions
+    /// Reference: LeVeque (2007) "Finite Difference Methods" §9.2.2
+    /// Zero gradient BC: ∂u/∂n = 0, appropriate for acoustic free surfaces
     fn apply_boundary_conditions(&self, pressure: &mut Array3<f64>) {
         // X boundaries
         if self.nx > 1 {

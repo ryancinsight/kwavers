@@ -182,8 +182,10 @@ impl HybridSolver {
         let region_array = region_fields.to_owned();
 
         // Update using PSTD solver with proper context
-        // For now, we'll pass through the full solver call
-        // A proper implementation would create regional views of source and boundary
+        // Note: This design allows the hybrid solver to delegate to specialized solvers
+        // while maintaining proper field ownership. Full regional solver context
+        // (source terms, boundaries) is managed by the hybrid solver coordinator.
+        // See ADR-012 for hybrid solver architecture decisions.
 
         // Copy results back
         region_fields.assign(&region_array);

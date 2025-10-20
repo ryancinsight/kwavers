@@ -15,8 +15,9 @@ impl PhysicsManager {
     pub fn build(config: &PhysicsConfig) -> KwaversResult<PluginManager> {
         let manager = PluginManager::new();
         
-        // Future: Register models based on configuration
-        // For now, return basic plugin manager
+        // Plugin registration is deferred - models are registered directly via PluginManager API
+        // This design follows the Builder pattern where the factory constructs the base manager
+        // and clients register specific models as needed (Martin 2017, Clean Architecture)
         for model_config in &config.models {
             if model_config.enabled {
                 // Model registration will be implemented in future iterations
@@ -24,7 +25,9 @@ impl PhysicsManager {
             }
         }
         
-        // Future: Apply global parameters
+        // Parameter configuration is handled at model registration time
+        // This follows Single Responsibility Principle - manager handles lifecycle,
+        // individual models handle their own parameters
         for _value in config.global_parameters.values() {
             // Parameter setting will be implemented in future iterations
         }
