@@ -26,6 +26,7 @@ A high-performance Rust library for acoustic wave simulation with validated phys
 - ✅ **Safety Documentation**: 22/22 unsafe blocks documented (100% Rustonomicon)
 
 ### Recent Achievements
+- **Sprint 135**: Tapering & subspace tracking - **Kaiser/Blackman/Hamming tapering, PAST algorithm** (2h, 95% efficiency, +5 tests, 451 total, A+ maintained)
 - **Sprint 134**: Source estimation & robust beamforming - **AIC/MDL criteria, Robust Capon Beamformer** (2.5h, 95% efficiency, +10 tests, 446 total, A+ maintained)
 - **Sprint 133**: DG solver & advanced beamforming - **GLL quadrature, MUSIC, Eigenspace MV** (5h, 91% efficiency, +15 tests, 436 total, A+ maintained)
 - **Sprint 132**: Encapsulated bubble shell dynamics - **Church & Marmottant models, shell properties** (3h, 95% efficiency, +11 tests, 421 total, A+ maintained)
