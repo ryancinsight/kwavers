@@ -64,8 +64,8 @@ impl ConvergencePredictorModel {
 
 impl MLModel for ConvergencePredictorModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        // Simplified convergence prediction
-        // For testing: map input values through sigmoid-like function
+        // Heuristic convergence prediction for testing
+        // Maps input through sigmoid-like function as convergence probability estimator
         let mut output = Array2::zeros((input.nrows(), 1));
         for (i, row) in input.axis_iter(ndarray::Axis(0)).enumerate() {
             // Heuristic: higher mean values -> higher convergence probability

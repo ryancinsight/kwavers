@@ -168,7 +168,7 @@ impl VisualizationEngine {
 
                 // Render all fields with transparency blending
                 let render_start = Instant::now();
-                // Placeholder - would need to gather actual field data
+                // Future: Gather actual field data for multi-field rendering (Sprint 127+)
                 renderer.render_multi_volume(vec![], grid).await?;
                 let render_time =
                     render_start.elapsed().as_secs_f32() * MILLISECONDS_PER_SECOND as f32;

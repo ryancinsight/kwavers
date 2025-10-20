@@ -37,7 +37,8 @@ impl GradientComputer {
         // Gradient = -∫ (∂²u_f/∂t²) * u_a dt
         // where u_f is forward wavefield, u_a is adjoint wavefield
         //
-        // For acoustic media, this simplifies to:
+        // For acoustic media, the gradient expression simplifies to
+        // the correlation of forward and adjoint wavefields (Virieux & Operto 2009)
         // ∂J/∂c = 2 * ∫ (1/c³) * u_f * u_a dt
         //
         // This is the correlation of forward and adjoint wavefields

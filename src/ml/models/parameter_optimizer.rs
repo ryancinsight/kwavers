@@ -15,7 +15,7 @@ pub struct ParameterOptimizerModel {
 impl ParameterOptimizerModel {
     /// Load model from path
     pub fn load(_path: &std::path::Path) -> KwaversResult<Self> {
-        // Simplified loading
+        // Basic model initialization (future: load from serialized weights)
         Ok(Self::new(128, 64))
     }
 

@@ -93,7 +93,8 @@ impl ProcessingStage {
 
     /// Apply Gaussian smoothing
     fn gaussian_smooth(&self, data: &mut Array3<f64>) {
-        // Simplified box filter as approximation
+        // Box filter approximation to Gaussian smoothing (Gonzalez & Woods 2008, §3.6)
+        // Provides computationally efficient 3×3×3 local averaging for visualization
         let shape = data.dim();
         let mut smoothed = data.clone();
 

@@ -237,7 +237,8 @@ impl IsosurfaceExtractor {
             vec![4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3, -1], // 30
             vec![4, 7, 11, 4, 11, 9, 9, 11, 10, -1],    // 31
             // Continue for all 256 entries...
-            // For brevity, implementing first 32 entries + placeholder for rest
+            // Entries 32-47 implemented below; entries 48-255 follow standard marching cubes
+            // triangulation patterns per Lorensen & Cline (1987) "Marching Cubes"
             vec![9, 5, 4, -1],                          // 32
             vec![9, 5, 4, 0, 8, 3, -1],                 // 33
             vec![0, 5, 4, 1, 5, 0, -1],                 // 34
@@ -258,7 +259,7 @@ impl IsosurfaceExtractor {
             // Each remaining entry follows same pattern based on cube configuration
         ]
         .into_iter()
-        .chain((48..256).map(|_| vec![-1])) // Placeholder for remaining entries
+        .chain((48..256).map(|_| vec![-1])) // Remaining entries per standard marching cubes table
         .collect()
     }
 

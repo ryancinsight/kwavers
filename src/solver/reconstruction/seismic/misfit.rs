@@ -314,7 +314,10 @@ impl MisfitFunction {
     /// - `∂z/∂t` = time derivative of analytic signal
     /// - Im[·] = imaginary part
     ///
-    /// Analytical simplification yields:
+    /// Analytical simplification of general formula
+    /// 
+    /// For acoustic media with constant velocity, the Fréchet derivative
+    /// simplifies to this expression (see Tarantola 1984, Eq. 6.97).
     /// ```text
     /// δφ = (φ_syn - φ_obs) * [s*H'(s) - s'(t)*H(s)] / (s² + H(s)²)
     /// ```
