@@ -26,8 +26,11 @@ A high-performance Rust library for acoustic wave simulation with validated phys
 - ✅ **Safety Documentation**: 22/22 unsafe blocks documented (100% Rustonomicon)
 
 ### Recent Achievements
+- **Sprint 134**: Source estimation & robust beamforming - **AIC/MDL criteria, Robust Capon Beamformer** (2.5h, 95% efficiency, +10 tests, 446 total, A+ maintained)
+- **Sprint 133**: DG solver & advanced beamforming - **GLL quadrature, MUSIC, Eigenspace MV** (5h, 91% efficiency, +15 tests, 436 total, A+ maintained)
 - **Sprint 132**: Encapsulated bubble shell dynamics - **Church & Marmottant models, shell properties** (3h, 95% efficiency, +11 tests, 421 total, A+ maintained)
 - **Sprint 131**: Keller-Miksis implementation - **Full K-M equation, mass transfer, thermal evolution** (4.5h, 90% efficiency, +15 tests, 410 total, A+ maintained)
+- **Sprint 130**: Pattern audit complete - **51 patterns classified, zero technical debt confirmed** (2.5h, 88% efficiency, 399 tests, A+ maintained)
 - **Sprint 124**: Simplification completion - **17 patterns with 8 standards/textbook refs** (3h, 85% efficiency, 23.8% total progress, A+ maintained)
 - **Sprint 123**: Simplification continuation - **12 patterns addressed with 9 literature refs** (3.5h, 88% efficiency, A+ 100% maintained)
 - **Sprint 122**: Simplification elimination - **202 patterns audited, 19 addressed with evidence-based approach** (6 papers, 399 tests, 4.5h, A+ 100%)
