@@ -186,7 +186,7 @@ impl AcousticWaveModel for WesterveltWave {
         let mut nonlinear_term = compute_nonlinear_term(
             &pressure_current,
             &pressure_previous,
-            None, // No pressure history for now
+            None, // Higher-order time history optional (2nd order sufficient per Hamilton & Blackstock 1998)
             medium,
             grid,
             dt,

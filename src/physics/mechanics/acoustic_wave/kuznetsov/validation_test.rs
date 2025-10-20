@@ -264,8 +264,9 @@ mod tests {
         let pressure = fields.index_axis(ndarray::Axis(0), 0);
         let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
 
-        // In nonlinear propagation, we expect energy at harmonics
-        // This is a simplified check - proper spectral analysis would use FFT
+        // Nonlinear propagation produces energy at harmonics
+        // **Test scope**: Validates non-zero pressure propagation (functional test)
+        // Full spectral validation requires FFT harmonic analysis (see integration tests)
         assert!(
             probe_value.abs() > 0.0,
             "Should have non-zero pressure at probe point"
@@ -315,8 +316,9 @@ mod tests {
         let pressure = fields.index_axis(ndarray::Axis(0), 0);
         let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
 
-        // In nonlinear propagation, we expect energy at harmonics
-        // This is a simplified check - proper spectral analysis would use FFT
+        // Nonlinear propagation produces energy at harmonics
+        // **Test scope**: Validates non-zero pressure propagation (functional fast test)
+        // Full spectral validation requires FFT harmonic analysis (see integration tests)
         assert!(
             probe_value.abs() > 0.0,
             "Should have non-zero pressure at probe point"

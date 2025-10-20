@@ -32,7 +32,9 @@ impl PhysicsManager {
         Ok(manager)
     }
     
-    // Future methods for model registration (placeholder implementations)
+    // **Future Enhancement**: Model registration API for dynamic plugin loading
+    // Current: Static model initialization via PluginManager configuration
+    // Sprint 129+: Could add runtime model registration with dependency injection
     /*
     /// Register individual physics model
     fn register_model(

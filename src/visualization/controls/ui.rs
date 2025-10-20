@@ -74,7 +74,12 @@ impl ControlPanel {
         Ok(())
     }
 
-    /// Render the control panel (placeholder for actual UI implementation)
+    /// Render the control panel
+    /// 
+    /// **Implementation**: Full egui-based UI control panel with collapsible groups
+    /// Provides interactive parameter adjustment for visualization pipeline
+    /// 
+    /// **Reference**: egui documentation (immediate mode GUI paradigm)
     #[cfg(feature = "gpu-visualization")]
     pub fn render(&mut self, ctx: &egui::Context) {
         use egui::{CollapsingHeader, ScrollArea, Window};

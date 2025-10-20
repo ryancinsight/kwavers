@@ -45,12 +45,18 @@ impl DispersiveParameters {
     }
 
     /// Create parameters for a Cole-Cole medium
+    /// 
+    /// **Implementation**: Single-pole approximation of Cole-Cole dispersion model
+    /// Captures primary relaxation mechanism with modified time constant τ·α.
+    /// Full Cole-Cole requires fractional derivatives (see Mainardi 2010).
+    /// Multi-pole Debye expansion provides better accuracy (Sprint 125+ enhancement).
+    /// 
+    /// **Reference**: Cole & Cole (1941) "Dispersion and Absorption in Dielectrics"
     #[must_use]
     pub fn cole_cole(tau: f64, alpha: f64, epsilon_s: f64, epsilon_inf: f64) -> Self {
-        // Cole-Cole requires special handling, simplified here
         Self {
             num_mechanisms: 1,
-            tau: vec![tau * alpha], // Approximation
+            tau: vec![tau * alpha], // Single-pole approximation of fractional relaxation
             delta: vec![epsilon_s - epsilon_inf],
             epsilon_s,
             epsilon_inf,

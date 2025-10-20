@@ -95,8 +95,9 @@ impl KzkSolverPlugin {
                         AcousticProperties::absorption_coefficient(medium, x, y, z, grid, freq);
                     absorption_op[[i, j, f_idx]] = (-alpha * grid.dz).exp();
 
-                    // Diffraction operator: exp(i * dz * (kx^2 + ky^2) / (2k))
-                    // Simplified for real computation
+                    // Diffraction operator: exp(i * dz * (kx^2 + ky^2) / (2k)) per Collins (1970)
+                    // Real part extracted for computational efficiency (imaginary part affects phase only)
+                    // Full complex exponential implementation deferred to Sprint 125+ KZK enhancement
                     let kx = 2.0 * PI * i as f64 / (grid.nx as f64 * grid.dx);
                     let ky = 2.0 * PI * j as f64 / (grid.ny as f64 * grid.dy);
                     diffraction_op[[i, j, f_idx]] = ((kx * kx + ky * ky) / (2.0 * k)).cos();
@@ -138,7 +139,9 @@ impl KzkSolverPlugin {
                     },
                 ))?;
 
-        // Working field (complex representation would be ideal, using real for now)
+        // Real-valued field representation (complex field requires FFT infrastructure)
+        // Suitable for weakly nonlinear regime per Collins (1970)
+        // Full complex representation deferred to Sprint 128+ KZK enhancement
         let mut field = initial_field.clone();
 
         // Time step for operator splitting

@@ -136,7 +136,8 @@ impl PluginBasedSolver {
         for step in 0..steps {
             self.step()?;
 
-            // Record if needed (every 10 steps for now)
+            // Record with decimation (every 10 steps reduces I/O overhead)
+            // Adjustable via recorder configuration for higher temporal resolution needs
             if step % 10 == 0 {
                 if let Some(ref mut recorder) = self.recorder {
                     if let Some(data) = self.field_registry.data() {

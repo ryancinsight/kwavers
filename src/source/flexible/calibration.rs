@@ -386,8 +386,12 @@ impl CalibrationManager {
     ) -> KwaversResult<Vec<(usize, usize)>> {
         let mut correspondences = Vec::new();
 
-        // Hungarian algorithm for optimal assignment
-        // For now, use nearest neighbor matching
+        // **Implementation**: Greedy nearest-neighbor assignment O(n²)
+        // **Optimal**: Hungarian algorithm O(n³) provides global optimum (Kuhn 1955)
+        // **Rationale**: Nearest-neighbor sufficient for well-separated reflectors (typical case)
+        // For dense reflector arrays, consider Hungarian algorithm enhancement (Sprint 127+)
+        // 
+        // **Reference**: Kuhn (1955) "The Hungarian Method for Assignment Problems"
         for (i, peak) in peaks.iter().enumerate() {
             let mut min_dist = f64::INFINITY;
             let mut best_match = 0;

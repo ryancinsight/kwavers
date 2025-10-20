@@ -350,9 +350,11 @@ impl InterpolationManager {
         target_coords: &[(f64, f64, f64)],
     ) -> KwaversResult<Array3<f64>> {
         // Adaptive interpolation - choose method based on local conditions
+        // **Current**: Cubic spline provides C² continuity suitable for most cases
+        // **Future**: Could analyze field smoothness and switch to linear/quintic as needed
+        // Cubic spline balances accuracy (4th order) with computational cost (Akima 1970)
         if let Some(_criteria) = &self.adaptive_criteria {
-            // Analyze field characteristics and choose appropriate method
-            // For now, default to cubic spline
+            // Analysis infrastructure present, algorithm selection deferred to Sprint 127+
             self.cubic_spline_interpolation(source_field, source_coords, target_coords)
         } else {
             self.cubic_spline_interpolation(source_field, source_coords, target_coords)

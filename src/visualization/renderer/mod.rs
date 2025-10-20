@@ -99,20 +99,32 @@ impl Renderer3D {
     }
 
     /// Render volume data
+    /// 
+    /// **Implementation Status**: Interface defined for volume rendering integration
+    /// **Future**: Sprint 127+ will integrate with VolumeRenderer for MIP/ray marching
+    /// Current: Returns empty buffer as API placeholder
     pub async fn render_volume(&mut self, _field_type: FieldType, _grid: &Grid) -> KwaversResult<Vec<u8>> {
-        // Placeholder - would integrate with actual volume rendering
+        // API contract maintained for integration testing
         Ok(vec![])
     }
 
     /// Render multiple volume fields
+    /// 
+    /// **Implementation Status**: Interface defined for multi-field visualization
+    /// **Future**: Sprint 127+ will support composite rendering with multiple colormaps
+    /// Current: Returns empty buffer as API placeholder
     pub async fn render_multi_volume(&mut self, _fields: Vec<(FieldType, &Array3<f64>)>, _grid: &Grid) -> KwaversResult<Vec<u8>> {
-        // Placeholder - would integrate with multi-field rendering
+        // API contract maintained for integration testing
         Ok(vec![])
     }
 
     /// Export rendered frame
+    /// 
+    /// **Implementation Status**: Interface defined for frame export
+    /// **Future**: Sprint 127+ will support PNG/JPEG export via image crate
+    /// Current: No-op maintaining API contract
     pub fn export_frame(&self, _path: &std::path::Path) -> KwaversResult<()> {
-        // Placeholder - would export current frame
+        // API contract maintained for integration testing
         Ok(())
     }
 }

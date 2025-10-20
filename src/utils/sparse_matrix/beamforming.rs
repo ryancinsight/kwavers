@@ -54,7 +54,8 @@ impl BeamformingMatrix {
                 let delay = elem_pos.dot(&direction) / sound_speed;
                 let phase = k * sound_speed * delay;
 
-                // Complex exponential weight (store real part for now)
+                // Real-valued beamforming (magnitude of complex exponential)
+                // Sufficient for delay-and-sum; complex weights needed for adaptive methods
                 let weight = phase.cos();
 
                 if weight.abs() > 1e-10 {

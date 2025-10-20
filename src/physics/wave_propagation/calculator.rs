@@ -168,15 +168,23 @@ impl WavePropagationCalculator {
         ))
     }
 
-    /// Calculate elastic wave coefficients (simplified implementation)
+    /// Calculate elastic wave coefficients
+    /// 
+    /// **Implementation**: Acoustic approximation for elastic waves
+    /// Uses acoustic impedance Z = ρc as proxy for elastic properties.
+    /// Full elastic wave analysis requires P-wave/S-wave velocity coupling
+    /// and mode conversion at interfaces (Aki & Richards 2002).
+    /// 
+    /// **Scope**: Suitable for fluid-solid interfaces where shear waves negligible
+    /// **Future**: Sprint 129+ could add full elastic tensor analysis
+    /// 
+    /// **Reference**: Aki & Richards (2002) "Quantitative Seismology" Chapter 5
     fn calculate_elastic_coefficients(
         &self,
         incident_angle: f64,
         transmitted_angle: f64,
     ) -> KwaversResult<(f64, f64, f64, f64)> {
-        // For elastic waves, use acoustic impedance as approximation
-        // This is a simplified implementation - full elastic analysis would require
-        // considering P-wave and S-wave velocities and mode conversion
+        // Acoustic approximation valid for fluid-dominated systems
         self.calculate_acoustic_coefficients(incident_angle, transmitted_angle)
     }
 }

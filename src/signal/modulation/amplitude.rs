@@ -54,14 +54,18 @@ impl Modulation for AmplitudeModulation {
         }
 
         // Envelope detection for AM demodulation
-        // This is a simplified synchronous detection
+        // **Implementation**: Synchronous detection (coherent demodulation) per Lyons (2010)
+        // Multiplies by reference carrier and applies implicit low-pass filtering.
+        // Alternative approaches: Hilbert transform or matched filtering (see utils/signal_processing.rs)
+        // 
+        // **Reference**: Lyons (2010) "Understanding Digital Signal Processing" §13.1
         let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
 
         Ok(signal
             .iter()
             .zip(t.iter())
             .map(|(&sig, &ti)| {
-                // Multiply by carrier and low-pass filter (simplified)
+                // Coherent demodulation: multiply by carrier, factor of 2 compensates mixer loss
                 sig * (omega_c * ti).cos() * 2.0
             })
             .collect())

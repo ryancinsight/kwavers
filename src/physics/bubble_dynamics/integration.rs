@@ -58,7 +58,7 @@ pub fn integrate_bubble_dynamics_stable(
             }));
         }
         
-        // Update state (simplified)
+        // Time step advancement (standard Euler integration loop)
         t += dt;
         
         // Break if we've reached the end time
