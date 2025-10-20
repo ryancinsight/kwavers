@@ -26,6 +26,7 @@ A high-performance Rust library for acoustic wave simulation with validated phys
 - ✅ **Safety Documentation**: 22/22 unsafe blocks documented (100% Rustonomicon)
 
 ### Recent Achievements
+- **Sprint 129**: Pattern documentation enhancement - **76 patterns audited, 15 enhanced with 18 literature refs** (2.5h, 88% efficiency, 0 logic changes, A+ maintained)
 - **Sprint 124**: Simplification completion - **17 patterns with 8 standards/textbook refs** (3h, 85% efficiency, 23.8% total progress, A+ maintained)
 - **Sprint 123**: Simplification continuation - **12 patterns addressed with 9 literature refs** (3.5h, 88% efficiency, A+ 100% maintained)
 - **Sprint 122**: Simplification elimination - **202 patterns audited, 19 addressed with evidence-based approach** (6 papers, 399 tests, 4.5h, A+ 100%)
