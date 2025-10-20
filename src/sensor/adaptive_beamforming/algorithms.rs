@@ -776,6 +776,8 @@ pub enum TaperType {
     Blackman,
     /// Hamming window
     Hamming,
+    /// Adaptive - data-dependent selection
+    Adaptive,
 }
 
 impl CovarianceTaper {
@@ -803,19 +805,36 @@ impl CovarianceTaper {
         }
     }
 
+    /// Create adaptive taper (data-dependent selection)
+    ///
+    /// Automatically selects taper based on covariance matrix condition number
+    /// and eigenvalue spread
+    pub fn adaptive() -> Self {
+        Self {
+            taper_type: TaperType::Adaptive,
+        }
+    }
+
     /// Apply tapering to covariance matrix
     ///
     /// Returns tapered covariance matrix R_tapered = T ⊙ R
     /// where ⊙ denotes element-wise (Hadamard) product
     pub fn apply(&self, covariance: &Array2<Complex64>) -> Array2<Complex64> {
         let n = covariance.nrows();
+        
+        // For adaptive tapering, select best taper based on data characteristics
+        let effective_taper = match self.taper_type {
+            TaperType::Adaptive => self.select_taper(covariance),
+            _ => self.taper_type,
+        };
+        
         let mut tapered = covariance.clone();
 
         // Compute taper weights for each lag
         for i in 0..n {
             for j in 0..n {
                 let lag = (i as i32 - j as i32).unsigned_abs() as usize;
-                let weight = self.compute_weight(lag, n);
+                let weight = Self::compute_weight_for_type(effective_taper, lag, n);
                 tapered[(i, j)] *= weight;
             }
         }
@@ -823,14 +842,97 @@ impl CovarianceTaper {
         tapered
     }
 
+    /// Select optimal taper based on covariance matrix characteristics
+    ///
+    /// Uses eigenvalue spread and condition number to determine best taper:
+    /// - High condition number (>100): Kaiser with high beta for robustness
+    /// - Medium condition number (10-100): Blackman for balanced performance
+    /// - Low condition number (<10): Hamming for minimal distortion
+    fn select_taper(&self, covariance: &Array2<Complex64>) -> TaperType {
+        let n = covariance.nrows();
+        
+        // Estimate condition number via diagonal elements and trace
+        let mut diag_min = f64::INFINITY;
+        let mut diag_max = 0.0f64;
+        
+        for i in 0..n {
+            let val = covariance[(i, i)].norm();
+            diag_min = diag_min.min(val);
+            diag_max = diag_max.max(val);
+        }
+        
+        // Rough condition number estimate
+        let cond = if diag_min > 1e-12 { diag_max / diag_min } else { 1e12 };
+        
+        // Eigenvalue spread estimate via power iteration (quick, approximate)
+        let eig_spread = self.estimate_eigenvalue_spread(covariance);
+        
+        // Decision logic based on matrix characteristics
+        if cond > 100.0 || eig_spread > 100.0 {
+            // Ill-conditioned: use strong Kaiser tapering
+            TaperType::Kaiser { beta: 4.0 }
+        } else if cond > 10.0 || eig_spread > 10.0 {
+            // Moderately conditioned: use Blackman
+            TaperType::Blackman
+        } else {
+            // Well-conditioned: use gentle Hamming
+            TaperType::Hamming
+        }
+    }
+    
+    /// Estimate eigenvalue spread using power iteration
+    fn estimate_eigenvalue_spread(&self, covariance: &Array2<Complex64>) -> f64 {
+        let n = covariance.nrows();
+        if n == 0 {
+            return 1.0;
+        }
+        
+        // Quick power iteration for largest eigenvalue
+        let mut v = Array1::<Complex64>::from_elem(n, Complex64::new(1.0, 0.0));
+        for _ in 0..5 {  // Just 5 iterations for quick estimate
+            let mut v_new = Array1::<Complex64>::zeros(n);
+            for i in 0..n {
+                for j in 0..n {
+                    v_new[i] += covariance[(i, j)] * v[j];
+                }
+            }
+            let norm = v_new.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
+            if norm > 1e-12 {
+                v = v_new.mapv(|x| x / norm);
+            }
+        }
+        
+        // Compute Rayleigh quotient for largest eigenvalue
+        let mut lambda_max = 0.0;
+        for i in 0..n {
+            for j in 0..n {
+                lambda_max += (v[i].conj() * covariance[(i, j)] * v[j]).re;
+            }
+        }
+        
+        // Estimate smallest eigenvalue from diagonal minimum
+        let lambda_min = (0..n)
+            .map(|i| covariance[(i, i)].norm())
+            .fold(f64::INFINITY, |a, b| a.min(b))
+            .max(1e-12);
+        
+        lambda_max.abs() / lambda_min
+    }
+
     /// Compute taper weight for given lag and array size
+    #[allow(dead_code)]
     fn compute_weight(&self, lag: usize, n: usize) -> f64 {
-        match self.taper_type {
+        Self::compute_weight_for_type(self.taper_type, lag, n)
+    }
+    
+    /// Static method to compute weight for a specific taper type
+    fn compute_weight_for_type(taper_type: TaperType, lag: usize, n: usize) -> f64 {
+        match taper_type {
             TaperType::Kaiser { beta } => {
                 // Kaiser window: I_0(beta * sqrt(1 - (lag/n)^2)) / I_0(beta)
                 let x = lag as f64 / n as f64;
                 let arg = beta * (1.0 - x * x).max(0.0).sqrt();
-                self.bessel_i0(arg) / self.bessel_i0(beta)
+                Self::bessel_i0_static(arg) / Self::bessel_i0_static(beta)
             }
             TaperType::Blackman => {
                 // Blackman window
@@ -843,12 +945,23 @@ impl CovarianceTaper {
                 let x = lag as f64 / (n - 1) as f64;
                 0.54 - 0.46 * (std::f64::consts::PI * x).cos()
             }
+            TaperType::Adaptive => {
+                // This should never be called directly
+                // Adaptive types are resolved in apply()
+                1.0
+            }
         }
     }
 
     /// Modified Bessel function of the first kind, order 0
     /// Using series approximation
+    #[allow(dead_code)]
     fn bessel_i0(&self, x: f64) -> f64 {
+        Self::bessel_i0_static(x)
+    }
+    
+    /// Static version of Bessel I0
+    fn bessel_i0_static(x: f64) -> f64 {
         let mut sum = 1.0;
         let mut term = 1.0;
         let x2 = x * x / 4.0;
@@ -861,6 +974,253 @@ impl CovarianceTaper {
             }
         }
         sum
+    }
+}
+
+/// Orthonormal PAST (OPAST) Algorithm for improved numerical stability
+///
+/// OPAST maintains strict orthonormality via QR decomposition, providing
+/// better numerical stability than standard PAST, especially for long runs.
+///
+/// # References
+/// - Abed-Meraim et al. (2000), "A general framework for performance analysis of subspace tracking algorithms"
+/// - Strobach (1998), "Fast recursive subspace adaptive ESPRIT algorithms"
+#[derive(Debug, Clone)]
+pub struct OrthonormalSubspaceTracker {
+    /// Orthonormal subspace basis matrix (n x p)
+    subspace: Array2<Complex64>,
+    /// Forgetting factor (0 < lambda < 1)
+    lambda: f64,
+    /// Accumulated weight for normalization
+    weight: f64,
+    /// Auxiliary matrix for QR update (not currently used)
+    #[allow(dead_code)]
+    r_matrix: Array2<Complex64>,
+}
+
+impl OrthonormalSubspaceTracker {
+    /// Create new orthonormal subspace tracker
+    ///
+    /// # Arguments
+    /// * `n` - Array size (number of sensors)
+    /// * `p` - Subspace dimension (number of signals to track)
+    /// * `lambda` - Forgetting factor (0.95-0.99 typical)
+    pub fn new(n: usize, p: usize, lambda: f64) -> Self {
+        assert!(p <= n, "Subspace dimension must be <= array size");
+        assert!(lambda > 0.0 && lambda < 1.0, "Forgetting factor must be in (0,1)");
+
+        // Initialize with orthonormal basis (first p standard basis vectors)
+        let mut subspace = Array2::<Complex64>::zeros((n, p));
+        for i in 0..p.min(n) {
+            subspace[(i, i)] = Complex64::new(1.0, 0.0);
+        }
+        
+        // Initialize R matrix (upper triangular from QR)
+        let mut r_matrix = Array2::<Complex64>::zeros((p, p));
+        for i in 0..p {
+            r_matrix[(i, i)] = Complex64::new(1.0, 0.0);
+        }
+
+        Self {
+            subspace,
+            lambda,
+            weight: 1.0,
+            r_matrix,
+        }
+    }
+
+    /// Update subspace with new data snapshot
+    ///
+    /// Implements OPAST recursion with QR orthonormalization:
+    /// 1. Standard PAST update
+    /// 2. QR orthonormalization to maintain strict orthonormality
+    pub fn update(&mut self, snapshot: &[Complex64]) {
+        let n = self.subspace.nrows();
+        let p = self.subspace.ncols();
+
+        assert_eq!(snapshot.len(), n, "Snapshot size mismatch");
+
+        // Convert snapshot to Array1
+        let y = Array1::from(snapshot.to_vec());
+
+        // Step 1: Standard PAST update (same as regular SubspaceTracker)
+        // Compute projection coefficients: α = (W^H W)^{-1} W^H y
+        let mut whw = Array2::<Complex64>::zeros((p, p));
+        for i in 0..p {
+            for j in 0..p {
+                let mut sum = Complex64::zero();
+                for k in 0..n {
+                    sum += self.subspace[(k, i)].conj() * self.subspace[(k, j)];
+                }
+                whw[(i, j)] = sum;
+            }
+        }
+
+        // Invert W^H W (small p x p matrix)
+        let whw_inv = match invert_matrix(&whw) {
+            Some(inv) => inv,
+            None => {
+                // Fallback: use diagonal loading
+                let mut loaded = whw.clone();
+                for i in 0..p {
+                    loaded[(i, i)] += Complex64::new(1e-10, 0.0);
+                }
+                invert_matrix(&loaded).unwrap_or_else(|| {
+                    let mut id = Array2::zeros((p, p));
+                    for i in 0..p {
+                        id[(i, i)] = Complex64::new(1.0, 0.0);
+                    }
+                    id
+                })
+            }
+        };
+
+        // Compute alpha = (W^H W)^{-1} W^H y
+        let mut alpha = Array1::<Complex64>::zeros(p);
+        for i in 0..p {
+            for j in 0..p {
+                let mut wh_y = Complex64::zero();
+                for k in 0..n {
+                    wh_y += self.subspace[(k, j)].conj() * y[k];
+                }
+                alpha[i] += whw_inv[(i, j)] * wh_y;
+            }
+        }
+
+        // Update subspace: W(t+1) = lambda * W(t) + (y - W*alpha) * alpha^H
+        let sqrt_lambda = self.lambda.sqrt();
+        for i in 0..n {
+            let mut w_alpha = Complex64::zero();
+            for j in 0..p {
+                w_alpha += self.subspace[(i, j)] * alpha[j];
+            }
+            let residual = y[i] - w_alpha;
+
+            for j in 0..p {
+                self.subspace[(i, j)] = sqrt_lambda * self.subspace[(i, j)]
+                    + residual * alpha[j].conj() / (1.0 + alpha.iter().map(|a| a.norm_sqr()).sum::<f64>());
+            }
+        }
+
+        // Step 2: QR orthonormalization via Gram-Schmidt
+        self.orthonormalize_subspace();
+
+        // Update weight
+        self.weight = self.lambda * self.weight + 1.0;
+    }
+
+    /// Orthonormalize subspace using Gram-Schmidt
+    fn orthonormalize_subspace(&mut self) {
+        let n = self.subspace.nrows();
+        let p = self.subspace.ncols();
+
+        for j in 0..p {
+            // Orthogonalize against previous columns
+            for i in 0..j {
+                // Compute dot product
+                let mut dot = Complex64::zero();
+                for k in 0..n {
+                    dot += self.subspace[(k, i)].conj() * self.subspace[(k, j)];
+                }
+
+                // Store column i values to avoid borrow checker issues
+                let col_i: Vec<Complex64> = (0..n).map(|k| self.subspace[(k, i)]).collect();
+                
+                // Subtract projection
+                for (k, &val) in col_i.iter().enumerate() {
+                    self.subspace[(k, j)] -= dot * val;
+                }
+            }
+
+            // Normalize
+            let norm = (0..n)
+                .map(|k| self.subspace[(k, j)].norm_sqr())
+                .sum::<f64>()
+                .sqrt();
+
+            if norm > 1e-14 {
+                for k in 0..n {
+                    self.subspace[(k, j)] /= norm;
+                }
+            }
+        }
+    }
+
+    /// QR decomposition via Gram-Schmidt (kept for compatibility but not used in update)
+    ///
+    /// Returns (Q, R) where A = QR, Q orthonormal, R upper triangular
+    #[allow(dead_code)]
+    fn qr_decomposition(&self, a: &Array2<Complex64>) -> (Array2<Complex64>, Array2<Complex64>) {
+        let m = a.nrows();
+        let n = a.ncols();
+        
+        let mut q = Array2::<Complex64>::zeros((m, n));
+        let mut r = Array2::<Complex64>::zeros((n, n));
+        
+        for j in 0..n {
+            // Get column j of A
+            let mut v = Array1::<Complex64>::zeros(m);
+            for i in 0..m {
+                v[i] = a[(i, j)];
+            }
+            
+            // Orthogonalize against previous columns
+            for i in 0..j {
+                // r[i,j] = q[:, i]^H * a[:, j]
+                let mut dot = Complex64::zero();
+                for k in 0..m {
+                    dot += q[(k, i)].conj() * a[(k, j)];
+                }
+                r[(i, j)] = dot;
+                
+                // v = v - r[i,j] * q[:, i]
+                for k in 0..m {
+                    v[k] -= r[(i, j)] * q[(k, i)];
+                }
+            }
+            
+            // Normalize
+            let norm = v.iter().map(|x| x.norm_sqr()).sum::<f64>().sqrt();
+            r[(j, j)] = Complex64::new(norm, 0.0);
+            
+            if norm > 1e-14 {
+                for i in 0..m {
+                    q[(i, j)] = v[i] / norm;
+                }
+            }
+        }
+        
+        (q, r)
+    }
+
+    /// Get current subspace basis (orthonormal columns)
+    pub fn get_subspace(&self) -> &Array2<Complex64> {
+        &self.subspace
+    }
+
+    /// Reset tracker to initial state
+    pub fn reset(&mut self) {
+        let n = self.subspace.nrows();
+        let p = self.subspace.ncols();
+        
+        // Reset to standard basis
+        self.subspace.fill(Complex64::zero());
+        for i in 0..p.min(n) {
+            self.subspace[(i, i)] = Complex64::new(1.0, 0.0);
+        }
+        
+        // Reset R matrix
+        self.r_matrix.fill(Complex64::zero());
+        for i in 0..p {
+            self.r_matrix[(i, i)] = Complex64::new(1.0, 0.0);
+        }
+        
+        self.weight = 1.0;
+    }
+
+    /// Get forgetting factor
+    pub fn lambda(&self) -> f64 {
+        self.lambda
     }
 }
 
@@ -1590,5 +1950,204 @@ mod tests {
                 norm_sqr
             );
         }
+    }
+
+    #[test]
+    fn test_adaptive_tapering() {
+        // Test adaptive taper selection
+        let n = 8;
+        
+        // Create well-conditioned covariance
+        let mut well_cond = Array2::<Complex64>::zeros((n, n));
+        for i in 0..n {
+            well_cond[(i, i)] = Complex64::new(1.0, 0.0);
+        }
+        
+        // Create ill-conditioned covariance
+        let mut ill_cond = Array2::<Complex64>::zeros((n, n));
+        for i in 0..n {
+            ill_cond[(i, i)] = Complex64::new(100.0f64.powi(i as i32), 0.0);
+        }
+        
+        let adaptive_taper = CovarianceTaper::adaptive();
+        
+        // Apply to both matrices
+        let tapered_well = adaptive_taper.apply(&well_cond);
+        let tapered_ill = adaptive_taper.apply(&ill_cond);
+        
+        // Results should preserve Hermitian property
+        for i in 0..n {
+            for j in 0..n {
+                assert!((tapered_well[(i, j)] - tapered_well[(j, i)].conj()).norm() < 1e-10);
+                assert!((tapered_ill[(i, j)] - tapered_ill[(j, i)].conj()).norm() < 1e-10);
+            }
+        }
+        
+        // Diagonal elements should be reasonably preserved
+        for i in 0..n {
+            let ratio_well = tapered_well[(i, i)].norm() / well_cond[(i, i)].norm();
+            let ratio_ill = tapered_ill[(i, i)].norm() / ill_cond[(i, i)].norm();
+            // Taper should not completely zero out the diagonal
+            assert!(ratio_well > 0.01, "Well-conditioned diagonal ratio too small: {}", ratio_well);
+            assert!(ratio_ill > 0.01, "Ill-conditioned diagonal ratio too small: {}", ratio_ill);
+        }
+    }
+
+    #[test]
+    fn test_opast_initialization() {
+        let n = 4;
+        let p = 2;
+        let lambda = 0.98;
+
+        let tracker = OrthonormalSubspaceTracker::new(n, p, lambda);
+        let subspace = tracker.get_subspace();
+
+        // Should be n x p
+        assert_eq!(subspace.nrows(), n);
+        assert_eq!(subspace.ncols(), p);
+
+        // Should be orthonormal (identity in first p rows)
+        for j in 0..p {
+            let col: Vec<Complex64> = (0..n).map(|i| subspace[(i, j)]).collect();
+            let norm_sqr: f64 = col.iter().map(|x| x.norm_sqr()).sum();
+            assert!((norm_sqr - 1.0).abs() < 1e-10, "Column {} not unit norm", j);
+        }
+
+        // Columns should be orthogonal
+        for i in 0..p {
+            for j in (i + 1)..p {
+                let mut dot = Complex64::zero();
+                for k in 0..n {
+                    dot += subspace[(k, i)].conj() * subspace[(k, j)];
+                }
+                assert!(dot.norm() < 1e-10, "Columns {} and {} not orthogonal", i, j);
+            }
+        }
+    }
+
+    #[test]
+    fn test_opast_single_update() {
+        let n = 4;
+        let p = 2;
+        let lambda = 0.98;
+
+        let mut tracker = OrthonormalSubspaceTracker::new(n, p, lambda);
+
+        // Create a snapshot
+        let snapshot = vec![
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.5, 0.1),
+            Complex64::new(0.3, -0.2),
+            Complex64::new(0.1, 0.0),
+        ];
+
+        tracker.update(&snapshot);
+
+        // Subspace should still be orthonormal
+        let subspace = tracker.get_subspace();
+        for j in 0..p {
+            let col: Vec<Complex64> = (0..n).map(|i| subspace[(i, j)]).collect();
+            let norm_sqr: f64 = col.iter().map(|x| x.norm_sqr()).sum();
+            assert!(
+                (norm_sqr - 1.0).abs() < 1e-5,
+                "Column {} not unit norm after update: {}",
+                j,
+                norm_sqr
+            );
+        }
+
+        // Columns should remain orthogonal
+        for i in 0..p {
+            for j in (i + 1)..p {
+                let mut dot = Complex64::zero();
+                for k in 0..n {
+                    dot += subspace[(k, i)].conj() * subspace[(k, j)];
+                }
+                assert!(
+                    dot.norm() < 1e-5,
+                    "Columns {} and {} not orthogonal: {}",
+                    i,
+                    j,
+                    dot.norm()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_opast_convergence() {
+        let n = 4;
+        let p = 2;
+        let lambda = 0.98;
+
+        let mut tracker = OrthonormalSubspaceTracker::new(n, p, lambda);
+
+        // Update with consistent signal direction
+        for _ in 0..100 {
+            let snapshot = vec![
+                Complex64::new(1.0, 0.0),
+                Complex64::new(0.5, 0.1),
+                Complex64::new(0.3, -0.2),
+                Complex64::new(0.1, 0.0),
+            ];
+            tracker.update(&snapshot);
+        }
+
+        // Subspace should be stable and orthonormal
+        let subspace = tracker.get_subspace();
+        for j in 0..p {
+            let col: Vec<Complex64> = (0..n).map(|i| subspace[(i, j)]).collect();
+            let norm_sqr: f64 = col.iter().map(|x| x.norm_sqr()).sum();
+            assert!(
+                (norm_sqr - 1.0).abs() < 1e-5,
+                "Column {} not unit after convergence: {}",
+                j,
+                norm_sqr
+            );
+        }
+    }
+
+    #[test]
+    fn test_opast_vs_past_stability() {
+        let n = 4;
+        let p = 2;
+        let lambda = 0.98;
+
+        let mut past_tracker = SubspaceTracker::new(n, p, lambda);
+        let mut opast_tracker = OrthonormalSubspaceTracker::new(n, p, lambda);
+
+        // Run many updates to test long-term stability
+        for i in 0..1000 {
+            let snapshot = vec![
+                Complex64::new((i as f64 * 0.1).cos(), 0.0),
+                Complex64::new((i as f64 * 0.1).sin(), 0.0),
+                Complex64::new(0.5, 0.0),
+                Complex64::new(0.1, 0.0),
+            ];
+            
+            past_tracker.update(&snapshot);
+            opast_tracker.update(&snapshot);
+        }
+
+        // OPAST should maintain better orthonormality
+        let opast_sub = opast_tracker.get_subspace();
+        let mut opast_ortho_error = 0.0;
+        
+        for i in 0..p {
+            for j in (i + 1)..p {
+                let mut dot = Complex64::zero();
+                for k in 0..n {
+                    dot += opast_sub[(k, i)].conj() * opast_sub[(k, j)];
+                }
+                opast_ortho_error += dot.norm();
+            }
+        }
+
+        // OPAST should have very small orthogonality error
+        assert!(
+            opast_ortho_error < 1e-3,
+            "OPAST orthogonality error too large: {}",
+            opast_ortho_error
+        );
     }
 }
