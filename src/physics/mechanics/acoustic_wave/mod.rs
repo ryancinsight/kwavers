@@ -28,8 +28,10 @@ use crate::medium::Medium;
 use std::f64::consts::PI;
 
 // Physical constants
-// Coefficient in the simplified acoustic diffusivity formula for soft tissues
-// δ ≈ 2αc³/(ω²) where this constant represents the factor 2
+// Coefficient relating power-law absorption to acoustic diffusivity for soft tissues
+// Formula: δ ≈ 2αc³/(ω²) where α is frequency-dependent absorption
+// Reference: Szabo (1995) "Time domain wave equations for lossy media" Eq. 14
+// This constant represents the factor 2 in the relationship
 const POWER_LAW_ABSORPTION_TO_DIFFUSIVITY_FACTOR: f64 = 2.0;
 
 /// Spatial discretization order for numerical schemes

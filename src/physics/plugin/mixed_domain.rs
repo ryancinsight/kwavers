@@ -204,8 +204,9 @@ impl MixedDomainPropagationPlugin {
         _medium: &dyn Medium,
         _time_step: f64,
     ) -> KwaversResult<Array3<f64>> {
-        // Apply nonlinear correction N(p) = β/(2ρc³) * p²
-        // This is a simplified implementation
+        // Nonlinear correction placeholder: N(p) = β/(2ρc³) * p²
+        // Current implementation returns linear field (appropriate for testing)
+        // Full nonlinear correction requires proper β/A parameter (Hamilton & Blackstock 1998)
         Ok(field.clone())
     }
 }

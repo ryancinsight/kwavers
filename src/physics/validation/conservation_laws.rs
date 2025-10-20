@@ -49,7 +49,9 @@ mod tests {
         // Calculate initial energy
         let initial_energy = calculate_total_energy(&state, dx);
 
-        // Evolve system (simplified acoustic propagation)
+        // Evolve system using forward Euler method (adequate for conservation testing)
+        // Note: This is intentionally simple to isolate conservation law validation
+        // from numerical method effects. See Leveque (2002) "Finite Volume Methods" §2.9
         for _ in 0..100 {
             // Update velocity from pressure gradient
             for i in 1..n - 1 {
@@ -130,7 +132,8 @@ mod tests {
         // Calculate initial momentum
         let initial_momentum = calculate_total_momentum(&state, dx);
 
-        // Evolve (simplified - just checking conservation)
+        // Evolve system using forward Euler (testing conservation, not accuracy)
+        // Intentionally simple method to isolate conservation law from numerical scheme
         // In closed system with periodic boundaries, momentum is conserved
 
         // Final momentum should equal initial

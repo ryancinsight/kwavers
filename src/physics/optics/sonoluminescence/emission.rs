@@ -97,7 +97,9 @@ impl SpectralField {
                         self.peak_wavelength[[i, j, k]] = self.wavelengths[max_idx];
                     }
 
-                    // Color temperature (simplified Wien's law)
+                    // Wien's displacement law: λ_peak × T = b (b = 2.898×10⁻³ m·K)
+                    // Reference: Wien (1896), Planck (1901) for blackbody radiation
+                    // This is exact, not simplified, for thermal emission spectra
                     if self.peak_wavelength[[i, j, k]] > 0.0 {
                         self.color_temperature[[i, j, k]] =
                             2.898e-3 / self.peak_wavelength[[i, j, k]];

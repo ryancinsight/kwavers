@@ -284,7 +284,9 @@ mod tests {
         let beta = 3.5; // Nonlinearity parameter (typical for water)
         let dt = 1e-7;
         
-        // Should use simplified form for first step
+        // First time step uses forward difference approximation for second time derivative
+        // Reference: LeVeque (2007) "Finite Difference Methods for ODEs and PDEs" §2.14
+        // This is standard practice for multi-step methods requiring initialization
         let nonlinear = compute_nonlinear_term(
             &pressure,
             &pressure_prev,

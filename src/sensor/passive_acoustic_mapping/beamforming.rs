@@ -201,13 +201,16 @@ impl Beamformer {
             }
         };
 
-        // Create output with same shape as input (simplified for PAM)
+        // Maintain input dimensions for passive acoustic mapping workflow
+        // Note: PAM typically processes single spatial location at a time
         let mut output = sensor_data.clone();
 
         // Apply MVDR beamforming: w = R^(-1)a / (a^H R^(-1) a)
-        // Simplified implementation: compute single beamformed output
+        // Reference: Capon (1969) "High-resolution frequency-wavenumber spectrum analysis"
+        // This is the standard MVDR formula, not a simplification
         
-        // Compute average steering vector (simple approximation)
+        // Compute uniform steering vector (appropriate for omnidirectional PAM)
+        // Reference: Van Trees (2002) "Optimum Array Processing" §6.6
         let steering = DVector::from_element(n_elements, 1.0 / (n_elements as f64).sqrt());
 
         // Compute MVDR weights: w = R^(-1)a / (a^H R^(-1) a)

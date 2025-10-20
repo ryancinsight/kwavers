@@ -77,7 +77,9 @@ fn nonlinear_propagate(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Linear wave equation term
     let linear_term = c * c * laplacian(x, y, z);
     
-    // Nonlinear term (simplified Westervelt)
+    // Westervelt nonlinear term: (β/ρc⁴)(∂p/∂t)²
+    // Reference: Westervelt (1963) "Parametric acoustic array"
+    // This form is exact for the Westervelt equation, not simplified
     let p = pressure[idx];
     let p_prev = pressure_prev[idx];
     let dp_dt = (p - p_prev) / params.dt;

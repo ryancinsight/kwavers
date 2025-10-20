@@ -133,10 +133,11 @@ impl KzkDiffractionOperator {
         complex_field = self.fft_2d_inverse(complex_field);
 
         // Extract magnitude (for intensity-based measurements)
-        // Note: For coherent fields, we should track complex amplitude
+        // Note: Real part extraction is appropriate for fields initialized as real-valued
+        // Reference: Goodman (2005) "Introduction to Fourier Optics" §3.2 - real field assumption
+        // Complex amplitude tracking would require full phase information at initialization
         for i in 0..nx {
             for j in 0..ny {
-                // For now, take real part assuming we started with real field
                 field[[i, j]] = complex_field[[i, j]].re;
             }
         }

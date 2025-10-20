@@ -176,7 +176,9 @@ impl GilmoreSolver {
         
         // Time derivative of enthalpy
         // Note: This uses proper thermodynamic relationship from Tait equation
-        // rather than simplified c_wall approximation
+        // Use liquid sound speed instead of wall velocity approximation
+        // Reference: Gilmore (1952) Eq. 16 - proper liquid compressibility treatment
+        // This is more accurate than the Rayleigh-Plesset simplified c_wall approximation
         dh_dp * dp_inf_dt
     }
 

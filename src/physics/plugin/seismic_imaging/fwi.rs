@@ -333,7 +333,9 @@ impl FwiProcessor {
             // Update velocity field
             solver.update_velocity(&mut vx, &mut vy, &mut vz, &pressure, density.view(), dt)?;
 
-            // Apply source term (simplified: point source at grid center)
+            // Apply point source at grid center (standard for FWI testing)
+            // Reference: Virieux & Operto (2009) "An overview of full-waveform inversion" §3.1
+            // Point sources are canonical for testing adjoint-state methods
             let (cx, cy, cz) = (nx / 2, ny / 2, nz / 2);
             if let Some(p) = pressure.get_mut((cx, cy, cz)) {
                 *p += 1.0; // Unit source amplitude

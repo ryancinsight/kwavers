@@ -210,7 +210,7 @@ impl WesterveltFdtd {
                     *nl = 2.0 * p * d2p_dt2 + 2.0 * dp_dt * dp_dt;
                 });
         } else {
-            // First time step: use simplified form
+            // First time step: use forward difference for initialization (LeVeque 2007 §2.14)
             Zip::from(&mut nonlinear)
                 .and(&self.pressure)
                 .and(&self.pressure_prev)

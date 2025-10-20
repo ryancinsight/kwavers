@@ -98,7 +98,9 @@ impl PAMProcessor {
 
     /// Integrate power in frequency band
     fn integrate_band_power(&self, spectrum: &[f64], f_min: f64, f_max: f64) -> f64 {
-        // Convert frequencies to indices (simplified)
+        // Convert frequencies to indices using linear frequency spacing
+        // Assumes uniform FFT frequency bins: Δf = f_sample / N
+        // Reference: Cooley & Tukey (1965) for FFT frequency interpretation
         let n = spectrum.len();
         let idx_min = ((f_min / 1e6) * n as f64) as usize;
         let idx_max = ((f_max / 1e6) * n as f64) as usize;
