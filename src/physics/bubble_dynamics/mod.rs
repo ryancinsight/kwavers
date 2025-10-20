@@ -11,6 +11,7 @@
 pub mod adaptive_integration; // NEW: Adaptive time-stepping for stiff ODEs
 pub mod bubble_field;
 pub mod bubble_state;
+pub mod encapsulated; // NEW: Encapsulated bubbles with shell dynamics (Church, Marmottant)
 pub mod energy_balance;
 pub mod gilmore; // Gilmore equation for violent collapse // NEW: Comprehensive energy balance model
 pub mod imex_integration;
@@ -27,6 +28,7 @@ pub use adaptive_integration::{
 };
 pub use bubble_field::{BubbleCloud, BubbleField, BubbleStateFields};
 pub use bubble_state::{BubbleParameters, BubbleState, GasSpecies};
+pub use encapsulated::{ChurchModel, MarmottantModel, ShellProperties}; // NEW: Encapsulated bubble models
 pub use imex_integration::{
     integrate_bubble_dynamics_imex, BubbleIMEXConfig, BubbleIMEXIntegrator,
 };
