@@ -230,7 +230,7 @@ pub fn build_mass_matrix(
     for i in 0..n {
         for j in 0..n {
             let mut integral = 0.0;
-            for (_k, (&x_k, &w_k)) in nodes.iter().zip(weights.iter()).enumerate() {
+            for (&x_k, &w_k) in nodes.iter().zip(weights.iter()) {
                 let phi_i = match basis_type {
                     BasisType::Legendre => legendre_basis(i, x_k),
                     BasisType::Lagrange => lagrange_basis(i, x_k, nodes),
@@ -276,7 +276,7 @@ pub fn build_stiffness_matrix(
     for i in 0..n {
         for j in 0..n {
             let mut integral = 0.0;
-            for (_k, (&x_k, &w_k)) in nodes.iter().zip(weights.iter()).enumerate() {
+            for (&x_k, &w_k) in nodes.iter().zip(weights.iter()) {
                 let phi_i = match basis_type {
                     BasisType::Legendre => legendre_basis(i, x_k),
                     BasisType::Lagrange => lagrange_basis(i, x_k, nodes),
