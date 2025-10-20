@@ -701,12 +701,12 @@ impl KWaveReplicationSuite {
             let t = step as f64 * dt;
             
             // Apply delayed sources for each element
-            for elem in 0..num_elements {
+            for (elem, &delay) in element_delays.iter().enumerate() {
                 let elem_y = array_center_y + (elem as f64 - center_element) * element_pitch;
                 let elem_j = (elem_y / dx).round() as usize;
                 
                 if elem_j < ny {
-                    let phase = 2.0 * std::f64::consts::PI * frequency * (t - element_delays[elem]);
+                    let phase = 2.0 * std::f64::consts::PI * frequency * (t - delay);
                     let amplitude = 1.0e5 * phase.sin(); // 100 kPa per element
                     
                     // Apply to small region around element

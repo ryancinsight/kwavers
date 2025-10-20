@@ -6,7 +6,6 @@
 
 use kwavers::{Grid, medium::{HomogeneousMedium, CoreMedium}};
 use kwavers::physics::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use kwavers::testing::acoustic_properties::*;
 
 const PI: f64 = std::f64::consts::PI;
 
@@ -295,7 +294,7 @@ fn test_nonlinearity_parameter_biological_range() {
     let biological_values = vec![ba_water, ba_blood, ba_fat, ba_muscle, ba_liver];
     
     for &ba in &biological_values {
-        assert!(ba >= 3.0 && ba <= 12.0,
+        assert!((3.0..=12.0).contains(&ba),
             "B/A = {:.1} outside biological tissue range [3, 12]", ba);
         assert!(ba.is_finite(), "B/A must be finite");
     }

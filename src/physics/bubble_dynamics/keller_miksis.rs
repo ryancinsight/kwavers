@@ -515,9 +515,11 @@ mod tests {
     #[test]
     fn test_keller_miksis_compression() {
         // Test compression phase (negative velocity)
-        let mut params = BubbleParameters::default();
-        params.p0 = 101325.0; // 1 atm
-        params.r0 = 5e-6; // 5 microns
+        let params = BubbleParameters {
+            p0: 101325.0, // 1 atm
+            r0: 5e-6, // 5 microns
+            ..Default::default()
+        };
         
         let model = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
@@ -538,9 +540,11 @@ mod tests {
     #[test]
     fn test_keller_miksis_expansion() {
         // Test expansion phase (positive velocity)
-        let mut params = BubbleParameters::default();
-        params.p0 = 101325.0;
-        params.r0 = 5e-6;
+        let params = BubbleParameters {
+            p0: 101325.0,
+            r0: 5e-6,
+            ..Default::default()
+        };
         
         let model = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
@@ -560,8 +564,10 @@ mod tests {
     #[test]
     fn test_keller_miksis_acoustic_forcing() {
         // Test response to acoustic pressure
-        let mut params = BubbleParameters::default();
-        params.driving_frequency = 1e6; // 1 MHz
+        let params = BubbleParameters {
+            driving_frequency: 1e6, // 1 MHz
+            ..Default::default()
+        };
         
         let model = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
@@ -608,8 +614,10 @@ mod tests {
     #[test]
     fn test_mass_transfer_evaporation() {
         // Test evaporation when T > T_sat
-        let mut params = BubbleParameters::default();
-        params.accommodation_coeff = 0.4; // Typical value
+        let params = BubbleParameters {
+            accommodation_coeff: 0.4, // Typical value
+            ..Default::default()
+        };
         
         let model = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);
@@ -689,8 +697,10 @@ mod tests {
     #[test]
     fn test_vdw_pressure_calculation() {
         // Test Van der Waals pressure for thermal effects
-        let mut params = BubbleParameters::default();
-        params.use_thermal_effects = true;
+        let params = BubbleParameters {
+            use_thermal_effects: true,
+            ..Default::default()
+        };
         
         let model = KellerMiksisModel::new(params.clone());
         let state = BubbleState::new(&params);

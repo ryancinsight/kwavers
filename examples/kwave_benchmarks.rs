@@ -7,7 +7,7 @@ use kwavers::solver::validation::kwave::benchmarks::KWaveBenchmarks;
 
 fn main() {
     // Initialize logging
-    kwavers::init_logging();
+    let _ = kwavers::init_logging();
 
     println!("=================================================");
     println!("k-Wave Benchmark Comparisons for kwavers");
