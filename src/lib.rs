@@ -55,6 +55,7 @@ pub mod performance;
 pub mod physics;
 pub mod plotting;
 pub mod recorder;
+pub mod runtime; // Sprint 138: Async I/O, tracing, zero-copy (Persona Requirements)
 pub mod sensor;
 pub mod signal;
 pub mod solver;
