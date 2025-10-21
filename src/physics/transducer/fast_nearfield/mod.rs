@@ -29,6 +29,7 @@
 //! - **Accuracy**: <1% error vs analytical solutions
 
 pub mod basis;
+pub mod geometry;
 pub mod pressure;
 
 use crate::error::KwaversResult;
@@ -37,6 +38,7 @@ use ndarray::Array3;
 use num_complex::Complex;
 
 pub use basis::BasisFunctions;
+pub use geometry::{TransducerGeometry, TransducerType};
 pub use pressure::PressureFieldCalculator;
 
 /// Fast Nearfield Method configuration
