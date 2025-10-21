@@ -107,9 +107,15 @@ impl FDCoefficients {
     pub fn second_derivative_center<T: Float>(order: SpatialOrder) -> T {
         match order {
             SpatialOrder::Second => T::from(-2.0).expect("-2.0 is exact in IEEE 754"),
-            SpatialOrder::Fourth => T::from(-5.0 / 2.0).expect("Exact fraction converts to IEEE 754"),
-            SpatialOrder::Sixth => T::from(-49.0 / 18.0).expect("Exact fraction converts to IEEE 754"),
-            SpatialOrder::Eighth => T::from(-205.0 / 72.0).expect("Exact fraction converts to IEEE 754"),
+            SpatialOrder::Fourth => {
+                T::from(-5.0 / 2.0).expect("Exact fraction converts to IEEE 754")
+            }
+            SpatialOrder::Sixth => {
+                T::from(-49.0 / 18.0).expect("Exact fraction converts to IEEE 754")
+            }
+            SpatialOrder::Eighth => {
+                T::from(-205.0 / 72.0).expect("Exact fraction converts to IEEE 754")
+            }
         }
     }
 }
@@ -130,7 +136,7 @@ mod tests {
     fn test_second_derivative_coefficients() {
         let pairs: Vec<f64> = FDCoefficients::second_derivative_pairs(SpatialOrder::Second);
         let center: f64 = FDCoefficients::second_derivative_center(SpatialOrder::Second);
-        
+
         assert_eq!(pairs.len(), 1);
         assert_relative_eq!(pairs[0], 1.0, epsilon = 1e-15);
         assert_relative_eq!(center, -2.0, epsilon = 1e-15);
@@ -140,7 +146,7 @@ mod tests {
     fn test_generic_float_types() {
         let coeffs_f64: Vec<f64> = FDCoefficients::first_derivative(SpatialOrder::Fourth);
         let coeffs_f32: Vec<f32> = FDCoefficients::first_derivative(SpatialOrder::Fourth);
-        
+
         assert_eq!(coeffs_f64.len(), coeffs_f32.len());
         for (c64, c32) in coeffs_f64.iter().zip(coeffs_f32.iter()) {
             assert_relative_eq!(*c64 as f32, *c32, epsilon = 1e-6);

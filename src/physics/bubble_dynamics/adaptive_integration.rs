@@ -15,8 +15,8 @@
 //! 3. **Lauterborn & Kurz (2010)**. "Physics of bubble oscillations"
 //!    - Numerical challenges in bubble dynamics
 
-use super::BubbleState;
 use super::keller_miksis::KellerMiksisModel;
+use super::BubbleState;
 use crate::error::{KwaversResult, PhysicsError};
 use crate::physics::constants::cavitation::{MAX_RADIUS, MIN_RADIUS};
 use crate::physics::constants::numerical::{

@@ -180,7 +180,7 @@ mod tests {
         //
         // Per Blackstock (2000) §1.5: Energy density in acoustic field
         // Current: Compile-time tolerance validation (runtime test deferred)
-        
+
         // Compile-time assertions ensuring tolerance bounds are reasonable
         const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE > 0.0);
         const _: () = assert!(ENERGY_CONSERVATION_TOLERANCE < 1e-3); // Must be stringent

@@ -31,15 +31,9 @@ pub enum PhysicsModelType {
         nucleation: bool,
     },
     /// Thermal diffusion and heating
-    ThermalDiffusion {
-        bioheat: bool,
-        perfusion: bool,
-    },
+    ThermalDiffusion { bioheat: bool, perfusion: bool },
     /// Optical propagation and absorption
-    OpticalPropagation {
-        scattering: bool,
-        anisotropy: f64,
-    },
+    OpticalPropagation { scattering: bool, anisotropy: f64 },
     /// Mechanical stress and strain
     MechanicalStress {
         elastic_modulus: f64,
@@ -92,7 +86,7 @@ impl PhysicsModelConfig {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Create nonlinear acoustics configuration
     pub fn nonlinear_acoustics(equation: NonlinearEquation, harmonics: usize) -> Self {
         Self {

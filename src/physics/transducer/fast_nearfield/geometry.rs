@@ -239,19 +239,17 @@ mod tests {
         let geometry = TransducerGeometry::circular(radius, [0.0, 0.0, 0.0]);
         assert_eq!(geometry.transducer_type, TransducerType::Circular);
         assert_eq!(geometry.num_elements(), 1);
-        
+
         let expected_area = PI * radius * radius;
         assert!((geometry.aperture_area() - expected_area).abs() < 1e-10);
     }
 
     #[test]
     fn test_phased_array() {
-        let geometry = TransducerGeometry::phased_array(
-            64, 0.0003, 0.005, 0.0004, [0.0, 0.0, 0.0]
-        );
+        let geometry = TransducerGeometry::phased_array(64, 0.0003, 0.005, 0.0004, [0.0, 0.0, 0.0]);
         assert_eq!(geometry.num_elements(), 64);
         assert_eq!(geometry.transducer_type, TransducerType::Rectangular);
-        
+
         // Check element spacing
         let x0 = geometry.element_positions[[0, 0]];
         let x1 = geometry.element_positions[[1, 0]];
@@ -261,10 +259,9 @@ mod tests {
     #[test]
     fn test_apodization() {
         let weights = vec![1.0, 0.9, 0.8, 0.7];
-        let geometry = TransducerGeometry::phased_array(
-            4, 0.001, 0.005, 0.0015, [0.0, 0.0, 0.0]
-        ).with_apodization(weights.clone());
-        
+        let geometry = TransducerGeometry::phased_array(4, 0.001, 0.005, 0.0015, [0.0, 0.0, 0.0])
+            .with_apodization(weights.clone());
+
         assert!(geometry.apodization.is_some());
         assert_eq!(geometry.apodization.unwrap(), weights);
     }
@@ -272,10 +269,9 @@ mod tests {
     #[test]
     fn test_delays() {
         let delays = vec![0.0, 1e-7, 2e-7, 3e-7];
-        let geometry = TransducerGeometry::phased_array(
-            4, 0.001, 0.005, 0.0015, [0.0, 0.0, 0.0]
-        ).with_delays(delays.clone());
-        
+        let geometry = TransducerGeometry::phased_array(4, 0.001, 0.005, 0.0015, [0.0, 0.0, 0.0])
+            .with_delays(delays.clone());
+
         assert!(geometry.delays.is_some());
         assert_eq!(geometry.delays.unwrap(), delays);
     }

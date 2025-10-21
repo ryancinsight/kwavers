@@ -1,6 +1,6 @@
 //! Displacement Field Estimation for Shear Wave Tracking
 //!
-//! Tracks shear wave propagation by estimating tissue displacement from 
+//! Tracks shear wave propagation by estimating tissue displacement from
 //! ultrasound echo data.
 //!
 //! ## Methods
@@ -11,9 +11,9 @@
 //!
 //! ## References
 //!
-//! - Pinton, G. F., et al. (2006). "Rapid tracking of small displacements with 
+//! - Pinton, G. F., et al. (2006). "Rapid tracking of small displacements with
 //!   ultrasound." *IEEE TUFFC*, 53(6), 1103-1117.
-//! - Kasai, C., et al. (1985). "Real-time two-dimensional blood flow imaging 
+//! - Kasai, C., et al. (1985). "Real-time two-dimensional blood flow imaging
 //!   using an autocorrelation technique." *IEEE Trans. Sonics Ultrason.*, 32(3), 458-464.
 
 use crate::error::KwaversResult;
@@ -102,7 +102,7 @@ impl DisplacementEstimator {
     /// Full implementation would use cross-correlation or phase tracking.
     pub fn estimate(&self, initial_displacement: &Array3<f64>) -> KwaversResult<DisplacementField> {
         let (nx, ny, nz) = initial_displacement.dim();
-        
+
         // For now, assume dominant axial (z) displacement
         // Full implementation would use speckle tracking
         let uz = initial_displacement.clone();
@@ -134,7 +134,7 @@ mod tests {
     fn test_displacement_magnitude() {
         let mut field = DisplacementField::zeros(5, 5, 5);
         field.uz[[2, 2, 2]] = 1.0;
-        
+
         let mag = field.magnitude();
         assert!((mag[[2, 2, 2]] - 1.0).abs() < 1e-10);
         assert!(mag[[0, 0, 0]].abs() < 1e-10);
@@ -144,10 +144,10 @@ mod tests {
     fn test_displacement_estimator() {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         let estimator = DisplacementEstimator::new(&grid);
-        
+
         let initial = Array3::from_elem((20, 20, 20), 1.0e-6);
         let result = estimator.estimate(&initial);
-        
+
         assert!(result.is_ok());
         let field = result.unwrap();
         assert_eq!(field.uz.dim(), (20, 20, 20));

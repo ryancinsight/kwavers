@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn test_keller_miksis_mach_number() {
         use super::super::keller_miksis::KellerMiksisModel;
-        
+
         let params = BubbleParameters::default();
         let solver = KellerMiksisModel::new(params.clone());
         let mut state = BubbleState::new(&params);

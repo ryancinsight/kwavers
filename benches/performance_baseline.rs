@@ -22,8 +22,8 @@ fn field_creation_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("field_creation");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         group.bench_with_input(BenchmarkId::from_parameter(size), &grid, |b, grid| {
             b.iter(|| grid.create_field());
         });
@@ -36,8 +36,7 @@ fn field_operations_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("field_operations");
 
     // Benchmark field addition
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)
-        .expect("Grid creation should succeed");
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
     let field1 = grid.create_field();
     let field2 = grid.create_field();
 
@@ -62,8 +61,7 @@ fn field_operations_benchmark(c: &mut Criterion) {
 fn medium_evaluation_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("medium_evaluation");
 
-    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3)
-        .expect("Grid creation should succeed");
+    let grid = Grid::new(64, 64, 64, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
     let medium = HomogeneousMedium::new(1000.0, 1500.0, 1e-3, 0.072, &grid);
 
     group.bench_function("density_lookup", |b| {
@@ -78,8 +76,7 @@ fn medium_evaluation_benchmark(c: &mut Criterion) {
 }
 
 fn position_to_indices_benchmark(c: &mut Criterion) {
-    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3)
-        .expect("Grid creation should succeed");
+    let grid = Grid::new(128, 128, 128, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
 
     c.bench_function("position_to_indices", |b| {
         b.iter(|| grid.position_to_indices(black_box(64e-3), black_box(64e-3), black_box(64e-3)));

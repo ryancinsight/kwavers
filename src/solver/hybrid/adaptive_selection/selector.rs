@@ -207,13 +207,13 @@ impl AdaptiveMethodSelector {
         previous: &Array3<SelectedMethod>,
     ) {
         let threshold = self.criteria.hysteresis_factor;
-        
+
         // Hysteresis prevents method switching unless significant change warranted
         // threshold < 0.5: Allow more switching (responsive)
         // threshold > 0.5: Prevent switching (stable)
         // threshold = 0.0: No hysteresis (fully responsive)
         // threshold = 1.0: Maximum hysteresis (very stable)
-        
+
         for ((i, j, k), current) in selection.indexed_iter_mut() {
             if *current != previous[[i, j, k]] {
                 // Prevent switching if hysteresis threshold indicates stability preference

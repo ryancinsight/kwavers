@@ -127,13 +127,13 @@ impl SensorArray {
 
         max_distance
     }
-    
+
     /// Get maximum baseline (alias for aperture)
     #[must_use]
     pub fn max_baseline(&self) -> f64 {
         self.aperture()
     }
-    
+
     /// Get sensor position by index
     #[must_use]
     pub fn get_sensor_position(&self, index: usize) -> &Position {

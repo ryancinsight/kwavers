@@ -2,7 +2,6 @@
 //!
 //! This module contains mock implementations used for testing acoustic wave physics.
 
-
 #[cfg(test)]
 use crate::error::KwaversResult;
 #[cfg(test)]
@@ -44,8 +43,8 @@ impl crate::medium::core::CoreMedium for HeterogeneousMediumMock {
         if self.position_dependent {
             // Spatially varying density simulating tissue heterogeneity
             let base_density = 1000.0;
-            let variation = 50.0
-                * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos() + (k as f64 * 0.1).sin());
+            let variation =
+                50.0 * ((i as f64 * 0.1).sin() + (j as f64 * 0.1).cos() + (k as f64 * 0.1).sin());
             base_density + variation
         } else {
             1000.0
@@ -124,14 +123,7 @@ impl crate::medium::core::ArrayAccess for HeterogeneousMediumMock {
 }
 
 impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
-    fn absorption_coefficient(
-        &self,
-        x: f64,
-        y: f64,
-        _z: f64,
-        grid: &Grid,
-        frequency: f64,
-    ) -> f64 {
+    fn absorption_coefficient(&self, x: f64, y: f64, _z: f64, grid: &Grid, frequency: f64) -> f64 {
         // Power law absorption: α = α₀ * f^y
         const ALPHA_0: f64 = 0.5; // dB/cm/MHz
         const POWER_LAW_EXPONENT: f64 = 1.1;
@@ -139,10 +131,7 @@ impl crate::medium::acoustic::AcousticProperties for HeterogeneousMediumMock {
 
         if self.position_dependent {
             let spatial_factor = 1.0 + 0.2 * ((x / grid.dx).sin() + (y / grid.dy).cos());
-            ALPHA_0
-                * (frequency / 1e6).powf(POWER_LAW_EXPONENT)
-                * DB_TO_NP_PER_M
-                * spatial_factor
+            ALPHA_0 * (frequency / 1e6).powf(POWER_LAW_EXPONENT) * DB_TO_NP_PER_M * spatial_factor
         } else {
             ALPHA_0 * (frequency / 1e6).powf(POWER_LAW_EXPONENT) * DB_TO_NP_PER_M
         }
@@ -267,8 +256,7 @@ impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
             let (ix, iy, _iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
             let tissue_fraction =
                 (ix as f64 / grid.nx as f64) * 0.3 + (iy as f64 / grid.ny as f64) * 0.2;
-            WATER_SPECIFIC_HEAT * (1.0 - tissue_fraction)
-                + TISSUE_SPECIFIC_HEAT * tissue_fraction
+            WATER_SPECIFIC_HEAT * (1.0 - tissue_fraction) + TISSUE_SPECIFIC_HEAT * tissue_fraction
         } else {
             WATER_SPECIFIC_HEAT
         }
@@ -283,8 +271,8 @@ impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
 
         if self.position_dependent {
             let (ix, iy, iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
-            let variation = 0.1
-                * ((ix as f64 * 0.1).sin() + (iy as f64 * 0.1).cos() + (iz as f64 * 0.1).sin());
+            let variation =
+                0.1 * ((ix as f64 * 0.1).sin() + (iy as f64 * 0.1).cos() + (iz as f64 * 0.1).sin());
             BASE_CONDUCTIVITY * (1.0 + variation)
         } else {
             BASE_CONDUCTIVITY
@@ -304,8 +292,7 @@ impl crate::medium::thermal::ThermalProperties for HeterogeneousMediumMock {
 
         if self.position_dependent {
             let (ix, iy, _iz) = grid.position_to_indices(x, y, z).unwrap_or((0, 0, 0));
-            let tissue_fraction =
-                (ix as f64 / grid.nx as f64 + iy as f64 / grid.ny as f64) * 0.5;
+            let tissue_fraction = (ix as f64 / grid.nx as f64 + iy as f64 / grid.ny as f64) * 0.5;
             WATER_EXPANSION * (1.0 - tissue_fraction) + TISSUE_EXPANSION * tissue_fraction
         } else {
             WATER_EXPANSION

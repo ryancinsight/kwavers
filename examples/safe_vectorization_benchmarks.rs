@@ -83,10 +83,7 @@ impl BenchmarkSuite {
                 .next()
                 .unwrap_or("unknown")
                 .to_string();
-            test_groups
-                .entry(test_category)
-                .or_default()
-                .push(result);
+            test_groups.entry(test_category).or_default().push(result);
         }
 
         for (category, results) in test_groups {

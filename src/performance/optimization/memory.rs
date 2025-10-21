@@ -111,7 +111,7 @@ impl MemoryOptimizer {
     }
 
     /// Deallocate aligned memory
-    /// 
+    ///
     /// # Safety
     /// The pointer must have been returned by a previous call to `allocate_aligned` with
     /// the same allocator and count. The memory must not be accessed after deallocation.

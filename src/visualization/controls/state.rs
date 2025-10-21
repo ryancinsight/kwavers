@@ -122,7 +122,9 @@ impl InteractiveControls {
         let mut states = self
             .states
             .write()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "register_parameter on states: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "register_parameter on states: Lock poisoned".to_string(),
+            })?;
 
         let name = definition.name.clone();
         states.insert(name.clone(), ControlState::from_definition(definition));
@@ -138,7 +140,9 @@ impl InteractiveControls {
             let mut states = self
                 .states
                 .write()
-                .map_err(|_| KwaversError::ConcurrencyError { message: "update_parameter on states: Lock poisoned".to_string() })?;
+                .map_err(|_| KwaversError::ConcurrencyError {
+                    message: "update_parameter on states: Lock poisoned".to_string(),
+                })?;
 
             let state = states.get_mut(name).ok_or_else(|| {
                 KwaversError::InvalidInput(format!("Parameter {} not found", name))
@@ -152,7 +156,9 @@ impl InteractiveControls {
             let callbacks =
                 self.update_callbacks
                     .read()
-                    .map_err(|_| KwaversError::ConcurrencyError { message: "update_parameter on callbacks: Lock poisoned".to_string() })?;
+                    .map_err(|_| KwaversError::ConcurrencyError {
+                        message: "update_parameter on callbacks: Lock poisoned".to_string(),
+                    })?;
 
             if let Some(callback) = callbacks.get(name) {
                 callback(&value);
@@ -168,7 +174,9 @@ impl InteractiveControls {
         let states = self
             .states
             .read()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "get_value on states: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "get_value on states: Lock poisoned".to_string(),
+            })?;
 
         states
             .get(name)
@@ -184,7 +192,9 @@ impl InteractiveControls {
         let mut callbacks =
             self.update_callbacks
                 .write()
-                .map_err(|_| KwaversError::ConcurrencyError { message: "register_callback on callbacks: Lock poisoned".to_string() })?;
+                .map_err(|_| KwaversError::ConcurrencyError {
+                    message: "register_callback on callbacks: Lock poisoned".to_string(),
+                })?;
 
         callbacks.insert(name.clone(), Box::new(callback));
         debug!("Registered callback for parameter: {}", name);
@@ -196,14 +206,18 @@ impl InteractiveControls {
         let states = self
             .states
             .read()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "save_snapshot on states: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "save_snapshot on states: Lock poisoned".to_string(),
+            })?;
 
         let snapshot = StateSnapshot::from_states(&states);
 
         let mut history = self
             .history
             .write()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "save_snapshot on history: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "save_snapshot on history: Lock poisoned".to_string(),
+            })?;
 
         history.push(snapshot);
 
@@ -220,7 +234,9 @@ impl InteractiveControls {
         let history = self
             .history
             .read()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "restore_snapshot on history: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "restore_snapshot on history: Lock poisoned".to_string(),
+            })?;
 
         let snapshot = history.get(index).ok_or_else(|| {
             KwaversError::InvalidInput(format!("Snapshot index {} out of range", index))
@@ -229,7 +245,9 @@ impl InteractiveControls {
         let mut states = self
             .states
             .write()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "restore_snapshot on states: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "restore_snapshot on states: Lock poisoned".to_string(),
+            })?;
 
         snapshot.apply_to_states(&mut states)?;
 
@@ -242,7 +260,9 @@ impl InteractiveControls {
         let states = self
             .states
             .read()
-            .map_err(|_| KwaversError::ConcurrencyError { message: "get_all_states on states: Lock poisoned".to_string() })?;
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "get_all_states on states: Lock poisoned".to_string(),
+            })?;
 
         Ok(states.clone())
     }

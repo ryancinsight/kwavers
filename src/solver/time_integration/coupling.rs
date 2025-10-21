@@ -49,12 +49,10 @@ impl TimeCoupling for SubcyclingStrategy {
     ) -> KwaversResult<()> {
         // Find maximum number of subcycles
         let max_cycles = subcycles.values().copied().max().unwrap_or(1);
-        
+
         // Store initial state for high-order interpolation
-        let initial_fields: HashMap<String, Array3<f64>> = fields
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
+        let initial_fields: HashMap<String, Array3<f64>> =
+            fields.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
         // Advance each component with proper subcycling and coupling
         for cycle in 0..max_cycles {
@@ -75,19 +73,17 @@ impl TimeCoupling for SubcyclingStrategy {
 
                     // Compute local time step for subcycling
                     let local_dt = global_dt / n_subcycles as f64;
-                    
+
                     // Get initial field value for temporal interpolation
-                    let field_initial = initial_fields
-                        .get(name)
-                        .ok_or_else(|| {
-                            crate::error::KwaversError::Validation(
-                                crate::error::ValidationError::FieldValidation {
-                                    field: "initial_fields".to_string(),
-                                    value: name.clone(),
-                                    constraint: "Initial field not found".to_string(),
-                                },
-                            )
-                        })?;
+                    let field_initial = initial_fields.get(name).ok_or_else(|| {
+                        crate::error::KwaversError::Validation(
+                            crate::error::ValidationError::FieldValidation {
+                                field: "initial_fields".to_string(),
+                                value: name.clone(),
+                                constraint: "Initial field not found".to_string(),
+                            },
+                        )
+                    })?;
 
                     // Apply RK4 time integration for physics component
                     // This provides 4th-order temporal accuracy for the subcycled component
@@ -102,7 +98,7 @@ impl TimeCoupling for SubcyclingStrategy {
 
 impl SubcyclingStrategy {
     /// RK4 time integration step for physics field evolution
-    /// 
+    ///
     /// Implements classical 4th-order Runge-Kutta method:
     /// k1 = f(t_n, y_n)
     /// k2 = f(t_n + dt/2, y_n + dt/2*k1)
@@ -115,10 +111,10 @@ impl SubcyclingStrategy {
         dt: f64,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = field.dim();
-        
+
         // Stage 1: k1 = f(t_n, y_n)
         let k1 = Self::compute_derivative(field, field_initial)?;
-        
+
         // Stage 2: k2 = f(t_n + dt/2, y_n + dt/2*k1)
         let mut y2 = field.clone();
         for i in 0..nx {
@@ -129,7 +125,7 @@ impl SubcyclingStrategy {
             }
         }
         let k2 = Self::compute_derivative(&y2, field_initial)?;
-        
+
         // Stage 3: k3 = f(t_n + dt/2, y_n + dt/2*k2)
         let mut y3 = field.clone();
         for i in 0..nx {
@@ -140,7 +136,7 @@ impl SubcyclingStrategy {
             }
         }
         let k3 = Self::compute_derivative(&y3, field_initial)?;
-        
+
         // Stage 4: k4 = f(t_n + dt, y_n + dt*k3)
         let mut y4 = field.clone();
         for i in 0..nx {
@@ -151,26 +147,25 @@ impl SubcyclingStrategy {
             }
         }
         let k4 = Self::compute_derivative(&y4, field_initial)?;
-        
+
         // Final update: y_{n+1} = y_n + dt/6*(k1 + 2*k2 + 2*k3 + k4)
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    field[[i, j, k]] += (dt / 6.0) * (
-                        k1[[i, j, k]] +
-                        2.0 * k2[[i, j, k]] +
-                        2.0 * k3[[i, j, k]] +
-                        k4[[i, j, k]]
-                    );
+                    field[[i, j, k]] += (dt / 6.0)
+                        * (k1[[i, j, k]]
+                            + 2.0 * k2[[i, j, k]]
+                            + 2.0 * k3[[i, j, k]]
+                            + k4[[i, j, k]]);
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Compute time derivative for physics field
-    /// 
+    ///
     /// Demonstration implementation using diffusion physics
     /// Production version: Full RHS evaluation with problem-specific physics
     /// Current: Heat equation proxy (∂u/∂t = α∇²u) for coupling validation
@@ -180,26 +175,28 @@ impl SubcyclingStrategy {
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut derivative = Array3::zeros((nx, ny, nz));
-        
+
         // Compute Laplacian as proxy for diffusion term
         // ∂u/∂t = α∇²u (heat equation-like physics)
         let alpha = 0.01; // Diffusivity coefficient
-        
+
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
                     // 7-point stencil Laplacian
-                    let laplacian = 
-                        field[[i + 1, j, k]] + field[[i - 1, j, k]] +
-                        field[[i, j + 1, k]] + field[[i, j - 1, k]] +
-                        field[[i, j, k + 1]] + field[[i, j, k - 1]] -
-                        6.0 * field[[i, j, k]];
-                    
+                    let laplacian = field[[i + 1, j, k]]
+                        + field[[i - 1, j, k]]
+                        + field[[i, j + 1, k]]
+                        + field[[i, j - 1, k]]
+                        + field[[i, j, k + 1]]
+                        + field[[i, j, k - 1]]
+                        - 6.0 * field[[i, j, k]];
+
                     derivative[[i, j, k]] = alpha * laplacian;
                 }
             }
         }
-        
+
         Ok(derivative)
     }
 }
@@ -267,47 +264,46 @@ impl TimeCoupling for AveragingStrategy {
             for (name, field) in fields.iter_mut() {
                 if let Some(initial) = initial_fields.get(name) {
                     // Apply cubic Hermite interpolation for order > 1
-                    // P(θ) = (2θ³ - 3θ² + 1)p₀ + (θ³ - 2θ² + θ)m₀ + 
+                    // P(θ) = (2θ³ - 3θ² + 1)p₀ + (θ³ - 2θ² + θ)m₀ +
                     //        (-2θ³ + 3θ²)p₁ + (θ³ - θ²)m₁
                     // where θ ∈ [0,1], p are positions, m are derivatives
-                    
+
                     let (nx, ny, nz) = field.dim();
                     let mut interpolated = Array3::zeros((nx, ny, nz));
-                    
+
                     // Interpolation parameter (midpoint for second-order)
                     let theta: f64 = 0.5;
-                    
+
                     for i in 0..nx {
                         for j in 0..ny {
                             for k in 0..nz {
                                 let p0 = initial[[i, j, k]];
                                 let p1 = field[[i, j, k]];
-                                
+
                                 // Estimate derivatives from field values
                                 let m0 = if i > 0 {
                                     initial[[i, j, k]] - initial[[i - 1, j, k]]
                                 } else {
                                     0.0
                                 };
-                                
+
                                 let m1 = if i < nx - 1 {
                                     field[[i + 1, j, k]] - field[[i, j, k]]
                                 } else {
                                     0.0
                                 };
-                                
+
                                 // Hermite basis functions
                                 let h00 = 2.0 * theta.powi(3) - 3.0 * theta.powi(2) + 1.0;
                                 let h10 = theta.powi(3) - 2.0 * theta.powi(2) + theta;
                                 let h01 = -2.0 * theta.powi(3) + 3.0 * theta.powi(2);
                                 let h11 = theta.powi(3) - theta.powi(2);
-                                
-                                interpolated[[i, j, k]] = 
-                                    h00 * p0 + h10 * m0 + h01 * p1 + h11 * m1;
+
+                                interpolated[[i, j, k]] = h00 * p0 + h10 * m0 + h01 * p1 + h11 * m1;
                             }
                         }
                     }
-                    
+
                     *field = interpolated;
                 }
             }
@@ -380,10 +376,10 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                     // Get current field for this component
                     if let Some(field) = fields.get_mut(name) {
                         let local_dt = global_dt / n_subcycles as f64;
-                        
+
                         // Create working copy for physics evolution
                         let mut evolved_field = field.clone();
-                        
+
                         // Apply predictor-corrector time integration
                         // For predictor: simple forward Euler based on current state
                         // For corrector: use updated neighboring component values
@@ -394,27 +390,28 @@ impl TimeCoupling for PredictorCorrectorStrategy {
                             // Corrector steps: blend with predicted values
                             1.0 / (iteration + 1) as f64
                         };
-                        
+
                         // Evolve field with physics component
                         // This is a generic implementation that works with any field
                         for i in 0..evolved_field.len_of(ndarray::Axis(0)) {
                             for j in 0..evolved_field.len_of(ndarray::Axis(1)) {
                                 for k in 0..evolved_field.len_of(ndarray::Axis(2)) {
                                     let val = evolved_field[[i, j, k]];
-                                    
+
                                     // Simple time evolution with corrector damping
                                     // Production code would call physics_component.evolve()
-                                    let rate = if subcycle == 0 { 
-                                        1.0  // Initial rate
+                                    let rate = if subcycle == 0 {
+                                        1.0 // Initial rate
                                     } else {
-                                        0.5  // Reduced rate for stability
+                                        0.5 // Reduced rate for stability
                                     };
-                                    
-                                    evolved_field[[i, j, k]] = val + weight * local_dt * rate * val * 1e-6;
+
+                                    evolved_field[[i, j, k]] =
+                                        val + weight * local_dt * rate * val * 1e-6;
                                 }
                             }
                         }
-                        
+
                         // Update field with evolved values
                         *field = evolved_field;
                     }

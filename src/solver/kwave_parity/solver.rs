@@ -28,10 +28,10 @@ pub struct KWaveSolver {
 
     // k-space operators
     #[allow(dead_code)]
-    kappa: Array3<f64>,                             // k-space correction
+    kappa: Array3<f64>, // k-space correction
     #[allow(dead_code)]
     k_vec: (Array3<f64>, Array3<f64>, Array3<f64>), // k-vectors
-    k_max: f64,                                     // Maximum supported k
+    k_max: f64, // Maximum supported k
 
     // PML operators
     #[allow(dead_code)]
@@ -42,12 +42,12 @@ pub struct KWaveSolver {
     pml_z: Array3<f64>,
 
     // Field variables
-    p: Array3<f64>,         // Pressure
+    p: Array3<f64>, // Pressure
     #[allow(dead_code)]
     p_k: Array3<Complex64>, // Pressure in k-space
-    ux: Array3<f64>,        // Velocity x
-    uy: Array3<f64>,        // Velocity y
-    uz: Array3<f64>,        // Velocity z
+    ux: Array3<f64>, // Velocity x
+    uy: Array3<f64>, // Velocity y
+    uz: Array3<f64>, // Velocity z
 
     // Absorption variables
     #[allow(dead_code)]
@@ -157,7 +157,10 @@ impl KWaveSolver {
                 tau.fill(1.0);
                 eta.fill(*alpha_coeff);
             }
-            AbsorptionMode::MultiRelaxation { tau: rel_tau, weights } => {
+            AbsorptionMode::MultiRelaxation {
+                tau: rel_tau,
+                weights,
+            } => {
                 // Multi-relaxation absorption - compute effective coefficients
                 let mut effective_tau = 0.0;
                 let mut effective_eta = 0.0;
@@ -168,7 +171,10 @@ impl KWaveSolver {
                 tau.fill(effective_tau);
                 eta.fill(effective_eta);
             }
-            AbsorptionMode::Causal { relaxation_times, alpha_0 } => {
+            AbsorptionMode::Causal {
+                relaxation_times,
+                alpha_0,
+            } => {
                 // Causal absorption with multiple relaxation times
                 let mut effective_tau = 0.0;
                 let mut effective_eta = 0.0;
@@ -194,14 +200,14 @@ impl KWaveSolver {
     }
 
     /// Perform a single time step using k-space pseudospectral method
-    /// 
+    ///
     /// Implements the k-Wave algorithm following Treeby & Cox (2010):
     /// 1. Compute spatial derivatives in k-space (spectral accuracy)
     /// 2. Update particle velocities from pressure gradients
     /// 3. Update pressure from velocity divergence
     /// 4. Apply absorption using fractional Laplacian
     /// 5. Apply PML boundary conditions
-    /// 
+    ///
     /// References:
     /// - Treeby & Cox (2010) "k-Wave: MATLAB toolbox" J. Biomed. Opt. 15(2)
     /// - Liu (1997) "Weighted essentially non-oscillatory schemes" J. Comput. Phys.
@@ -209,45 +215,45 @@ impl KWaveSolver {
         use super::nonlinearity::update_pressure_with_nonlinearity;
         use crate::utils::fft_operations::{fft_3d_array, ifft_3d_array};
         use ndarray::Zip;
-        
+
         let dt = self.config.dt;
         let (nx, ny, nz) = self.p.dim();
-        
+
         // Step 1: Transform pressure to k-space for spectral derivatives
         let p_k = fft_3d_array(&self.p);
-        
+
         // Step 2: Compute pressure gradients in k-space (spectral accuracy)
         // ∂p/∂x = ifft(ikx · fft(p))
         let mut dpx_k = Array3::zeros((nx, ny, nz));
         let mut dpy_k = Array3::zeros((nx, ny, nz));
         let mut dpz_k = Array3::zeros((nx, ny, nz));
-        
+
         Zip::from(&mut dpx_k)
             .and(&p_k)
             .and(&self.k_vec.0)
             .for_each(|dpx, &pk, &kx| {
                 *dpx = Complex64::new(0.0, kx) * pk;
             });
-            
+
         Zip::from(&mut dpy_k)
             .and(&p_k)
             .and(&self.k_vec.1)
             .for_each(|dpy, &pk, &ky| {
                 *dpy = Complex64::new(0.0, ky) * pk;
             });
-            
+
         Zip::from(&mut dpz_k)
             .and(&p_k)
             .and(&self.k_vec.2)
             .for_each(|dpz, &pk, &kz| {
                 *dpz = Complex64::new(0.0, kz) * pk;
             });
-        
+
         // Transform gradients back to physical space
         let dpx = ifft_3d_array(&dpx_k);
         let dpy = ifft_3d_array(&dpy_k);
         let dpz = ifft_3d_array(&dpz_k);
-        
+
         // Step 3: Update particle velocities using momentum equation
         // ρ₀ ∂u/∂t = -∇p
         for k in 0..nz {
@@ -255,23 +261,23 @@ impl KWaveSolver {
                 for i in 0..nx {
                     let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                     let rho0 = crate::medium::density_at(medium, x, y, z, &self.grid);
-                    
+
                     self.ux[[i, j, k]] -= (dt / rho0) * dpx[[i, j, k]];
                     self.uy[[i, j, k]] -= (dt / rho0) * dpy[[i, j, k]];
                     self.uz[[i, j, k]] -= (dt / rho0) * dpz[[i, j, k]];
                 }
             }
         }
-        
+
         // Step 4: Compute velocity divergence in k-space
         // ∇·u = ∂ux/∂x + ∂uy/∂y + ∂uz/∂z
         let ux_k = fft_3d_array(&self.ux);
         let uy_k = fft_3d_array(&self.uy);
         let uz_k = fft_3d_array(&self.uz);
-        
+
         let mut div_u_k = Array3::zeros((nx, ny, nz));
         let i = Complex64::new(0.0, 1.0);
-        
+
         // Compute divergence term by term to avoid Zip limitation
         for kk in 0..nz {
             for jj in 0..ny {
@@ -279,27 +285,20 @@ impl KWaveSolver {
                     let kx = self.k_vec.0[[ii, jj, kk]];
                     let ky = self.k_vec.1[[ii, jj, kk]];
                     let kz = self.k_vec.2[[ii, jj, kk]];
-                    
-                    div_u_k[[ii, jj, kk]] = i * (
-                        kx * ux_k[[ii, jj, kk]] + 
-                        ky * uy_k[[ii, jj, kk]] + 
-                        kz * uz_k[[ii, jj, kk]]
-                    );
+
+                    div_u_k[[ii, jj, kk]] = i
+                        * (kx * ux_k[[ii, jj, kk]]
+                            + ky * uy_k[[ii, jj, kk]]
+                            + kz * uz_k[[ii, jj, kk]]);
                 }
             }
         }
-        
+
         let div_u = ifft_3d_array(&div_u_k);
-        
+
         // Step 5: Update pressure using continuity equation with nonlinearity
         if self.config.nonlinearity {
-            update_pressure_with_nonlinearity(
-                &mut self.p,
-                &div_u,
-                medium,
-                &self.grid,
-                dt,
-            )?;
+            update_pressure_with_nonlinearity(&mut self.p, &div_u, medium, &self.grid, dt)?;
         } else {
             // Linear case: ∂p/∂t = -ρ₀c² ∇·u
             for k in 0..nz {
@@ -308,29 +307,38 @@ impl KWaveSolver {
                         let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
                         let rho0 = crate::medium::density_at(medium, x, y, z, &self.grid);
                         let c0 = crate::medium::sound_speed_at(medium, x, y, z, &self.grid);
-                        
+
                         self.p[[i, j, k]] -= dt * rho0 * c0 * c0 * div_u[[i, j, k]];
                     }
                 }
             }
         }
-        
+
         // Step 6: Apply absorption using fractional Laplacian if enabled
-        if !matches!(self.config.absorption_mode, super::config::AbsorptionMode::Lossless) {
+        if !matches!(
+            self.config.absorption_mode,
+            super::config::AbsorptionMode::Lossless
+        ) {
             use super::absorption::apply_power_law_absorption;
-            apply_power_law_absorption(&mut self.p, &self.absorb_tau, &self.absorb_eta, dt, &self.k_vec)?;
+            apply_power_law_absorption(
+                &mut self.p,
+                &self.absorb_tau,
+                &self.absorb_eta,
+                dt,
+                &self.k_vec,
+            )?;
         }
-        
+
         // Step 7: Apply PML boundary conditions to absorb outgoing waves
         self.apply_pml_damping();
-        
+
         Ok(())
     }
-    
+
     /// Apply PML damping to boundaries
     fn apply_pml_damping(&mut self) {
         use ndarray::Zip;
-        
+
         // Apply exponential damping in PML regions
         Zip::from(&mut self.p)
             .and(&self.pml_x)
@@ -341,7 +349,7 @@ impl KWaveSolver {
                 let pml_factor = pml_x * pml_y * pml_z;
                 *p *= pml_factor;
             });
-            
+
         // Also damp velocities
         Zip::from(&mut self.ux)
             .and(&self.pml_x)
@@ -350,7 +358,7 @@ impl KWaveSolver {
             .for_each(|u, &pml_x, &pml_y, &pml_z| {
                 *u *= pml_x * pml_y * pml_z;
             });
-            
+
         Zip::from(&mut self.uy)
             .and(&self.pml_x)
             .and(&self.pml_y)
@@ -358,7 +366,7 @@ impl KWaveSolver {
             .for_each(|u, &pml_x, &pml_y, &pml_z| {
                 *u *= pml_x * pml_y * pml_z;
             });
-            
+
         Zip::from(&mut self.uz)
             .and(&self.pml_x)
             .and(&self.pml_y)

@@ -69,15 +69,15 @@ mod tests {
     #[test]
     fn test_capability_detection() {
         let capability = SimdCapability::detect();
-        
+
         // Should detect some capability on any architecture
         assert!(matches!(
             capability,
-            SimdCapability::Avx512 | 
-            SimdCapability::Avx2 | 
-            SimdCapability::Sse42 | 
-            SimdCapability::Neon | 
-            SimdCapability::Swar
+            SimdCapability::Avx512
+                | SimdCapability::Avx2
+                | SimdCapability::Sse42
+                | SimdCapability::Neon
+                | SimdCapability::Swar
         ));
     }
 

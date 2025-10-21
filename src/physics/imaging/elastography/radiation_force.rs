@@ -20,7 +20,7 @@
 //!
 //! - Nightingale, K., et al. (2002). "Acoustic radiation force impulse imaging."
 //!   *Ultrasound in Medicine & Biology*, 28(2), 227-235.
-//! - Palmeri, M. L., et al. (2005). "Ultrasonic tracking of acoustic radiation 
+//! - Palmeri, M. L., et al. (2005). "Ultrasonic tracking of acoustic radiation
 //!   force-induced displacements." *IEEE TUFFC*, 52(8), 1300-1313.
 
 use crate::error::{KwaversError, KwaversResult};
@@ -54,10 +54,10 @@ pub struct PushPulseParameters {
 impl Default for PushPulseParameters {
     fn default() -> Self {
         Self {
-            frequency: 5.0e6,      // 5 MHz
-            duration: 150e-6,       // 150 μs
-            intensity: 1000.0,      // 1 kW/m²
-            focal_depth: 0.04,      // 40 mm
+            frequency: 5.0e6,  // 5 MHz
+            duration: 150e-6,  // 150 μs
+            intensity: 1000.0, // 1 kW/m²
+            focal_depth: 0.04, // 40 mm
             f_number: 2.0,
         }
     }
@@ -86,7 +86,7 @@ impl PushPulseParameters {
                     parameter: "frequency".to_string(),
                     value: frequency,
                     reason: "must be positive".to_string(),
-                }
+                },
             ));
         }
         if duration <= 0.0 {
@@ -95,7 +95,7 @@ impl PushPulseParameters {
                     parameter: "duration".to_string(),
                     value: duration,
                     reason: "must be positive".to_string(),
-                }
+                },
             ));
         }
         if intensity <= 0.0 {
@@ -104,7 +104,7 @@ impl PushPulseParameters {
                     parameter: "intensity".to_string(),
                     value: intensity,
                     reason: "must be positive".to_string(),
-                }
+                },
             ));
         }
 
@@ -149,7 +149,7 @@ impl AcousticRadiationForce {
 
         let sound_speed = medium.sound_speed(ci, cj, ck);
         let density = medium.density(ci, cj, ck);
-        
+
         // Estimate absorption coefficient
         // For soft tissue at 5 MHz: α ≈ 0.5 dB/cm/MHz ≈ 5.8 Np/m
         let absorption = 5.8; // Np/m (simplified for now)
@@ -194,15 +194,14 @@ impl AcousticRadiationForce {
 
         // Calculate radiation force density
         // F = (2αI)/c (N/m³)
-        let force_density = (2.0 * self.absorption * self.parameters.intensity) 
-            / self.sound_speed;
+        let force_density = (2.0 * self.absorption * self.parameters.intensity) / self.sound_speed;
 
         // Calculate initial displacement from force impulse
         // u₀ = (F × Δt) / (ρ × ω₀)
         // where ω₀ is characteristic frequency
         let omega = 2.0 * PI * self.parameters.frequency;
-        let displacement_scale = (force_density * self.parameters.duration) 
-            / (self.density * omega);
+        let displacement_scale =
+            (force_density * self.parameters.duration) / (self.density * omega);
 
         // Calculate focal region dimensions
         // Lateral: FWHM ≈ 1.2 × λ × F-number
@@ -283,13 +282,19 @@ mod tests {
 
         // Check displacement field properties
         assert_eq!(displacement.dim(), (50, 50, 50));
-        
+
         // Maximum displacement should be at or near focal point
-        let max_disp = displacement.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let max_disp = displacement
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
         assert!(max_disp > 0.0, "Maximum displacement should be positive");
-        
+
         // Displacement should decay away from focal point
         let corner_disp = displacement[[0, 0, 0]];
-        assert!(corner_disp < max_disp * 0.1, "Displacement should be localized");
+        assert!(
+            corner_disp < max_disp * 0.1,
+            "Displacement should be localized"
+        );
     }
 }

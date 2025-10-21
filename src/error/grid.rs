@@ -44,10 +44,7 @@ pub enum GridError {
 
     /// Dimension mismatch between arrays and grid
     #[error("Dimension mismatch: expected {expected}, got {actual}")]
-    DimensionMismatch {
-        expected: String,
-        actual: String,
-    },
+    DimensionMismatch { expected: String, actual: String },
 }
 
 // Note: From<GridError> for KwaversError is not needed as GridError is already

@@ -35,7 +35,7 @@ impl BasisFunctions {
     pub fn new(num_functions: usize) -> KwaversResult<Self> {
         // Generate Gauss-Legendre quadrature nodes and weights
         let (nodes, weights) = Self::gauss_legendre_quadrature(num_functions);
-        
+
         // Compute basis function coefficients
         let coefficients = Self::compute_legendre_basis(num_functions, &nodes);
 
@@ -81,7 +81,7 @@ impl BasisFunctions {
             // P₀(x) = 1
             // P₁(x) = x
             // Pₙ₊₁(x) = ((2n+1)xPₙ(x) - nPₙ₋₁(x))/(n+1)
-            
+
             if n > 0 {
                 basis[[0, i]] = 1.0;
             }
@@ -160,7 +160,7 @@ mod tests {
     fn test_basis_creation() {
         let result = BasisFunctions::new(32);
         assert!(result.is_ok());
-        
+
         let basis = result.unwrap();
         assert_eq!(basis.count(), 32);
     }
@@ -168,15 +168,15 @@ mod tests {
     #[test]
     fn test_legendre_polynomials() {
         let basis = BasisFunctions::new(5).unwrap();
-        
+
         // P₀(x) = 1
         assert!((basis.evaluate(0, 0.5) - 1.0).abs() < 1e-10);
         assert!((basis.evaluate(0, -0.5) - 1.0).abs() < 1e-10);
-        
+
         // P₁(x) = x
         assert!((basis.evaluate(1, 0.5) - 0.5).abs() < 1e-10);
         assert!((basis.evaluate(1, -0.5) + 0.5).abs() < 1e-10);
-        
+
         // P₂(x) = (3x² - 1)/2
         let p2_at_half = (3.0 * 0.5 * 0.5 - 1.0) / 2.0;
         assert!((basis.evaluate(2, 0.5) - p2_at_half).abs() < 1e-10);
@@ -186,9 +186,12 @@ mod tests {
     fn test_quadrature_weights() {
         let basis = BasisFunctions::new(16).unwrap();
         let weights = basis.weights();
-        
+
         // Weights should sum to approximately 2 for interval [-1, 1]
         let sum: f64 = weights.iter().sum();
-        assert!((sum - PI).abs() < 0.1, "Weight sum should be approximately π");
+        assert!(
+            (sum - PI).abs() < 0.1,
+            "Weight sum should be approximately π"
+        );
     }
 }

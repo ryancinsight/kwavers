@@ -35,7 +35,7 @@ pub fn calculate_mechanical_index(peak_negative_pressure: f64, frequency: f64) -
 /// Uses acoustic power and tissue absorption to estimate thermal deposition.
 /// Full TIS/TIB/TIC calculations require detailed anatomical models and beam geometry.
 /// Current approximation suitable for general safety assessment.
-/// 
+///
 /// **References**:
 /// - IEC 62359:2017 "Ultrasonics - Field characterization - Test methods for thermal index"
 /// - AIUM/NEMA (2004) "Standard for Real-Time Display of Thermal and Mechanical Indices"

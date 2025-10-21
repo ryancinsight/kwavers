@@ -24,8 +24,8 @@ fn cpml_gradient_correction_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cpml_gradient_correction");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = CPMLConfig::with_thickness(10);
         let mut boundary = CPMLBoundary::new(config, &grid, 1500.0)
             .expect("CPML boundary creation should succeed");
@@ -47,8 +47,8 @@ fn cpml_field_update_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cpml_field_update");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = CPMLConfig::with_thickness(10);
         let mut boundary = CPMLBoundary::new(config, &grid, 1500.0)
             .expect("CPML boundary creation should succeed");
@@ -73,8 +73,8 @@ fn pml_apply_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("pml_apply");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = PMLConfig::default();
         let mut boundary = PMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field = grid.create_field();
@@ -97,8 +97,8 @@ fn pml_freq_domain_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("pml_freq_domain");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = PMLConfig::default();
         let mut boundary = PMLBoundary::new(config).expect("PML boundary creation should succeed");
         let mut field_freq = Array3::from_elem(
@@ -125,8 +125,8 @@ fn cpml_vs_pml_thickness_comparison(c: &mut Criterion) {
 
     let sizes = [32, 64, 128];
     for size in sizes.iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
 
         // CPML with varying thickness
         for thickness in [5, 10, 20].iter() {
@@ -174,22 +174,18 @@ fn memory_usage_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("memory_usage");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
 
         // CPML memory allocation
-        group.bench_with_input(
-            BenchmarkId::new("cpml_creation", size),
-            size,
-            |b, _| {
-                b.iter(|| {
-                    let config = CPMLConfig::with_thickness(10);
-                    let boundary = CPMLBoundary::new(config, &grid, 1500.0)
-                        .expect("CPML boundary creation should succeed");
-                    black_box(boundary);
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("cpml_creation", size), size, |b, _| {
+            b.iter(|| {
+                let config = CPMLConfig::with_thickness(10);
+                let boundary = CPMLBoundary::new(config, &grid, 1500.0)
+                    .expect("CPML boundary creation should succeed");
+                black_box(boundary);
+            });
+        });
 
         // PML memory allocation
         group.bench_with_input(BenchmarkId::new("pml_creation", size), size, |b, _| {
@@ -210,8 +206,8 @@ fn cpml_reset_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cpml_reset");
 
     for size in [32, 64, 128].iter() {
-        let grid = Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3)
-            .expect("Grid creation should succeed");
+        let grid =
+            Grid::new(*size, *size, *size, 1e-3, 1e-3, 1e-3).expect("Grid creation should succeed");
         let config = CPMLConfig::with_thickness(10);
         let mut boundary = CPMLBoundary::new(config, &grid, 1500.0)
             .expect("CPML boundary creation should succeed");

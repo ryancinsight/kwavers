@@ -3,11 +3,11 @@
 //! This module owns gradient computation knowledge following GRASP principles.
 //! Single responsibility: Computing spatial gradients with various accuracy orders.
 
+use super::coefficients::{FDCoefficients, SpatialOrder};
 use crate::error::KwaversResult;
 use crate::grid::Grid;
 use ndarray::{Array3, ArrayView3};
 use num_traits::Float;
-use super::coefficients::{FDCoefficients, SpatialOrder};
 
 /// Compute the gradient of a 3D field
 ///
@@ -77,7 +77,8 @@ where
                 let mut grad_val = T::zero();
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val = grad_val + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                    grad_val =
+                        grad_val + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                 }
                 grad_x[[i, j, k]] = grad_val * dx_inv;
             }
@@ -92,7 +93,8 @@ where
                 let mut grad_val = T::zero();
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val = grad_val + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                    grad_val =
+                        grad_val + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                 }
                 grad_y[[i, j, k]] = grad_val * dy_inv;
             }
@@ -107,7 +109,8 @@ where
                 let mut grad_val = T::zero();
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val = grad_val + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                    grad_val =
+                        grad_val + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                 }
                 grad_z[[i, j, k]] = grad_val * dz_inv;
             }
@@ -127,7 +130,7 @@ mod tests {
     fn test_gradient_linear_function() -> KwaversResult<()> {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
         let mut field = Array3::<f64>::zeros((5, 5, 5));
-        
+
         // Create linear function f(x,y,z) = 2x + 3y + z
         for i in 0..5 {
             for j in 0..5 {

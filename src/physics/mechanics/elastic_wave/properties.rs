@@ -163,7 +163,7 @@ impl AnisotropicElasticProperties {
         // References:
         // - Ting (1996): "Anisotropic Elasticity" - stability criteria
         // - Auld (1990): "Acoustic Fields and Waves in Solids" - elastic constants
-        
+
         // Check first principal minor (1x1)
         if stiffness[0][0] <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
@@ -173,7 +173,7 @@ impl AnisotropicElasticProperties {
             }
             .into());
         }
-        
+
         // Check second principal minor (2x2 upper-left)
         let det_2x2 = stiffness[0][0] * stiffness[1][1] - stiffness[0][1] * stiffness[1][0];
         if det_2x2 <= 0.0 {
@@ -184,11 +184,14 @@ impl AnisotropicElasticProperties {
             }
             .into());
         }
-        
+
         // Check third principal minor (3x3 upper-left)
-        let det_3x3 = stiffness[0][0] * (stiffness[1][1] * stiffness[2][2] - stiffness[1][2] * stiffness[2][1])
-                    - stiffness[0][1] * (stiffness[1][0] * stiffness[2][2] - stiffness[1][2] * stiffness[2][0])
-                    + stiffness[0][2] * (stiffness[1][0] * stiffness[2][1] - stiffness[1][1] * stiffness[2][0]);
+        let det_3x3 = stiffness[0][0]
+            * (stiffness[1][1] * stiffness[2][2] - stiffness[1][2] * stiffness[2][1])
+            - stiffness[0][1]
+                * (stiffness[1][0] * stiffness[2][2] - stiffness[1][2] * stiffness[2][0])
+            + stiffness[0][2]
+                * (stiffness[1][0] * stiffness[2][1] - stiffness[1][1] * stiffness[2][0]);
         if det_3x3 <= 0.0 {
             return Err(PhysicsError::InvalidParameter {
                 parameter: "det(C_3x3)".to_string(),
@@ -197,7 +200,7 @@ impl AnisotropicElasticProperties {
             }
             .into());
         }
-        
+
         // For computational efficiency, we check necessary conditions for the 4x4, 5x5, 6x6 minors
         // by verifying physical stability conditions for common elastic symmetries:
         //

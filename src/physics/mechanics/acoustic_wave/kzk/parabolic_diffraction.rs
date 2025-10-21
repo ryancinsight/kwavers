@@ -300,7 +300,7 @@ mod tests {
         // Evidence-based tolerance for KZK parabolic diffraction:
         // Literature reports 20-30% errors are typical for finite-difference KZK implementations
         // This is due to discretization effects in the parabolic approximation
-        // References: Hamilton & Blackstock (1998), Lee & Hamilton (1995) 
+        // References: Hamilton & Blackstock (1998), Lee & Hamilton (1995)
         // Adjusting tolerance to reflect realistic numerical accuracy for production use
         assert_relative_eq!(measured, expected, epsilon = 0.30 * expected);
     }

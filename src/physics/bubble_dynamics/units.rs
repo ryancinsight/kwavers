@@ -209,10 +209,10 @@ pub fn effective_molecular_weight(composition: &GasComposition) -> f64 {
 }
 
 /// Calculate specific heat ratio for gas mixture
-/// 
+///
 /// Uses molecular weight-based heuristic to estimate γ (gamma).
 /// This is a standard engineering approximation when detailed composition is unavailable.
-/// 
+///
 /// - Light gases (H2, He): γ ≈ 1.66 (nearly monatomic)
 /// - Diatomic gases (N2, O2, air): γ ≈ 1.4
 /// - Heavy/polyatomic gases: γ ≈ 1.3

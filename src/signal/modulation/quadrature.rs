@@ -31,7 +31,7 @@ impl Modulation for QuadratureAmplitudeModulation {
         // - Haykin (2001): "Communication Systems" Chapter 6
         use crate::utils::signal_processing::hilbert_transform;
         use ndarray::Array1;
-        
+
         if carrier.len() != t.len() {
             return Err(crate::error::KwaversError::InvalidInput(
                 "Carrier and time arrays must have same length".to_string(),
@@ -39,28 +39,29 @@ impl Modulation for QuadratureAmplitudeModulation {
         }
 
         let omega_c = 2.0 * std::f64::consts::PI * self.params.carrier_freq;
-        
+
         // Convert I component to ndarray
         let i_signal = Array1::from_vec(carrier.to_vec());
-        
+
         // Generate Q component using Hilbert transform (90° phase shift)
         let q_signal_complex = hilbert_transform(&i_signal);
-        
+
         // Extract imaginary part as Q component (90° phase shift)
         let q_signal: Vec<f64> = q_signal_complex.iter().map(|c| c.im).collect();
 
         // Generate QAM signal
-        let qam: Vec<f64> = t.iter()
+        let qam: Vec<f64> = t
+            .iter()
             .enumerate()
             .map(|(idx, &ti)| {
                 let i_comp = i_signal[idx];
                 let q_comp = q_signal[idx];
-                
+
                 // QAM signal = I*cos(ωt) - Q*sin(ωt)
                 i_comp * (omega_c * ti).cos() - q_comp * (omega_c * ti).sin()
             })
             .collect();
-        
+
         Ok(qam)
     }
 
@@ -104,25 +105,30 @@ mod tests {
     fn test_qam_modulation_with_hilbert() {
         // Test that QAM modulation using Hilbert transform produces valid output
         let params = ModulationParams {
-            carrier_freq: 1000.0,    // 1 kHz carrier
-            sample_rate: 10000.0,    // 10 kHz sampling
+            carrier_freq: 1000.0, // 1 kHz carrier
+            sample_rate: 10000.0, // 10 kHz sampling
             modulation_index: 1.0,
         };
 
         let qam = QuadratureAmplitudeModulation::new(params);
-        
+
         // Create message signal
         let t: Vec<f64> = (0..100).map(|i| i as f64 / 10000.0).collect();
-        let message: Vec<f64> = t.iter().map(|&ti| (2.0 * std::f64::consts::PI * 10.0 * ti).sin()).collect();
+        let message: Vec<f64> = t
+            .iter()
+            .map(|&ti| (2.0 * std::f64::consts::PI * 10.0 * ti).sin())
+            .collect();
 
         // Modulate
         let modulated = qam.modulate(&message, &t).unwrap();
-        
+
         assert_eq!(modulated.len(), 100);
-        assert!(modulated.iter().all(|&x| x.is_finite()),
-                "QAM modulated signal should be finite");
+        assert!(
+            modulated.iter().all(|&x| x.is_finite()),
+            "QAM modulated signal should be finite"
+        );
     }
-    
+
     #[test]
     fn test_qam_quadrature_orthogonality() {
         // Test that I and Q components are properly orthogonal
@@ -133,22 +139,24 @@ mod tests {
         };
 
         let qam = QuadratureAmplitudeModulation::new(params);
-        
+
         // Use constant I component
         let t: Vec<f64> = (0..200).map(|i| i as f64 / 10000.0).collect();
         let i_component = vec![1.0; 200];
 
         let modulated = qam.modulate(&i_component, &t).unwrap();
-        
+
         // QAM signal should have both positive and negative values
         // (indicating proper quadrature mixing)
         let has_positive = modulated.iter().any(|&x| x > 0.0);
         let has_negative = modulated.iter().any(|&x| x < 0.0);
-        
-        assert!(has_positive && has_negative,
-                "QAM signal should have both positive and negative values");
+
+        assert!(
+            has_positive && has_negative,
+            "QAM signal should have both positive and negative values"
+        );
     }
-    
+
     #[test]
     fn test_qam_modulation_demodulation_roundtrip() {
         // Test basic modulation-demodulation cycle
@@ -159,15 +167,17 @@ mod tests {
         };
 
         let qam = QuadratureAmplitudeModulation::new(params);
-        
+
         let t: Vec<f64> = (0..100).map(|i| i as f64 / 10000.0).collect();
         let message = vec![0.8; 100];
 
         let modulated = qam.modulate(&message, &t).unwrap();
         let demodulated = qam.demodulate(&modulated, &t).unwrap();
-        
+
         assert_eq!(demodulated.len(), 100);
-        assert!(demodulated.iter().all(|&x| x.is_finite()),
-                "Demodulated QAM signal should be finite");
+        assert!(
+            demodulated.iter().all(|&x| x.is_finite()),
+            "Demodulated QAM signal should be finite"
+        );
     }
 }

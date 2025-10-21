@@ -2,7 +2,7 @@
 //!
 //! **Architecture**: Deep hierarchical organization per Rust Book Ch.7
 //! **Principle**: Separation of Concerns following Clean Architecture
-//! 
+//!
 //! **Note**: Only essential acoustic traits implemented initially
 //! Additional traits to be added incrementally per SOLID principles
 

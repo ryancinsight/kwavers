@@ -12,7 +12,7 @@ mod tests {
 
     /// Test linear propagation of Gaussian beam (COMPREHENSIVE - Tier 3)
     /// Should maintain Gaussian profile with known spreading
-    /// 
+    ///
     /// This test propagates to full Rayleigh distance with default grid.
     /// Execution time: >60s, classified as Tier 3 comprehensive validation.
     #[test]
@@ -186,7 +186,10 @@ mod tests {
 
         // Just verify solver runs without panicking and produces output
         let intensity = solver.get_intensity();
-        assert!(intensity[[config.nx / 2, config.ny / 2]] > 0.0, "Should have non-zero intensity at center");
+        assert!(
+            intensity[[config.nx / 2, config.ny / 2]] > 0.0,
+            "Should have non-zero intensity at center"
+        );
     }
 
     /// Test harmonic generation in nonlinear propagation

@@ -63,18 +63,20 @@ impl PropagationCoefficients {
     pub fn energy_conservation_error(&self) -> f64 {
         let r = self.reflectance();
         let t = self.transmittance();
-        
+
         // If impedances are provided and we have transmitted angle, use full formula
-        if let (Some(z1), Some(z2), Some(theta_t)) = (self.impedance1, self.impedance2, self.transmitted_angle) {
+        if let (Some(z1), Some(z2), Some(theta_t)) =
+            (self.impedance1, self.impedance2, self.transmitted_angle)
+        {
             let theta_i = self.incident_angle;
             let cos_i = theta_i.cos();
             let cos_t = theta_t.cos();
-            
+
             // Avoid division by zero
             if cos_i.abs() < 1e-15 || z2.abs() < 1e-15 {
                 return (r + t - 1.0).abs();
             }
-            
+
             // Energy conservation with intensity correction for acoustic waves
             // T_intensity = T_amplitude * (Z1/Z2) * (cos_t/cos_i)
             let intensity_ratio = (z1 / z2) * (cos_t / cos_i);

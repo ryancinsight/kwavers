@@ -18,9 +18,12 @@ pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     assert_eq!(a.shape(), b.shape());
     assert_eq!(a.shape(), out.shape());
 
-    ndarray::Zip::from(out).and(a).and(b).for_each(|out, &a, &b| {
-        *out = a + b;
-    });
+    ndarray::Zip::from(out)
+        .and(a)
+        .and(b)
+        .for_each(|out, &a, &b| {
+            *out = a + b;
+        });
 }
 
 /// Scale array using SSE4.2 instructions

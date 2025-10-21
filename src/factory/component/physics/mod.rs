@@ -5,14 +5,14 @@
 //! - Config: Configuration validation and management
 //! - Manager: Plugin manager construction and coordination
 
-pub mod models;
 pub mod config;
 pub mod manager;
+pub mod models;
 
 // Re-export main types
-pub use models::{PhysicsModelConfig, PhysicsModelType};
 pub use config::PhysicsConfig;
 pub use manager::PhysicsManager;
+pub use models::{PhysicsModelConfig, PhysicsModelType};
 
 /// Main physics factory interface
 #[derive(Debug)]
@@ -21,11 +21,11 @@ pub struct PhysicsFactory;
 impl PhysicsFactory {
     /// Create physics plugin manager from configuration
     pub fn create_physics(
-        config: &PhysicsConfig
+        config: &PhysicsConfig,
     ) -> crate::error::KwaversResult<crate::physics::plugin::PluginManager> {
         // Validate through specialized validator
         config.validate()?;
-        
+
         // Build through specialized manager
         PhysicsManager::build(config)
     }

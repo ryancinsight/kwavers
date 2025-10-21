@@ -69,7 +69,7 @@ impl DGOperations for DGSolver {
         // ARCHITECTURAL PLACEHOLDER: Full DG projection requires transformation to polynomial basis
         // using quadrature rules and mass matrix inversion. Current implementation returns identity
         // transformation as the hybrid solver uses spectral methods for smooth regions.
-        // 
+        //
         // Full implementation would compute: û = M^(-1) ∫ u(x) φ_i(x) dx
         // where φ_i are the DG basis functions (Legendre/Lagrange polynomials).
         //

@@ -16,7 +16,7 @@ use ndarray::Array3;
 pub struct HeterogeneousMedium {
     /// Whether to use trilinear interpolation for point queries
     pub use_trilinear_interpolation: bool,
-    
+
     // Core acoustic properties
     pub density: Array3<f64>,
     pub sound_speed: Array3<f64>,
@@ -25,7 +25,7 @@ pub struct HeterogeneousMedium {
     pub ambient_pressure: f64,
     pub vapor_pressure: Array3<f64>,
     pub polytropic_index: Array3<f64>,
-    
+
     // Thermal properties
     pub specific_heat: Array3<f64>,
     pub thermal_conductivity: Array3<f64>,
@@ -33,31 +33,31 @@ pub struct HeterogeneousMedium {
     pub gas_diffusion_coeff: Array3<f64>,
     pub thermal_diffusivity: Array3<f64>,
     pub temperature: Array3<f64>,
-    
+
     // Optical properties
     pub mu_a: Array3<f64>,
     pub mu_s_prime: Array3<f64>,
-    
+
     // Bubble dynamics
     pub bubble_radius: Array3<f64>,
     pub bubble_velocity: Array3<f64>,
-    
+
     // Acoustic parameters
     pub alpha0: Array3<f64>,
     pub delta: Array3<f64>,
     pub b_a: Array3<f64>,
     pub absorption: Array3<f64>,
     pub nonlinearity: Array3<f64>,
-    
+
     // Viscoelastic properties
     pub shear_sound_speed: Array3<f64>,
     pub shear_viscosity_coeff: Array3<f64>,
     pub bulk_viscosity_coeff: Array3<f64>,
-    
+
     // Elastic properties
     pub lame_lambda: Array3<f64>,
     pub lame_mu: Array3<f64>,
-    
+
     // Frequency reference
     pub reference_frequency: f64,
 }
@@ -65,14 +65,9 @@ pub struct HeterogeneousMedium {
 impl HeterogeneousMedium {
     /// Create new heterogeneous medium with default initialization
     ///
-    /// **Evidence-Based Design**: Following Hamilton & Blackstock (1998) 
+    /// **Evidence-Based Design**: Following Hamilton & Blackstock (1998)
     /// acoustic parameter initialization standards.
-    pub fn new(
-        nx: usize, 
-        ny: usize, 
-        nz: usize,
-        use_trilinear_interpolation: bool,
-    ) -> Self {
+    pub fn new(nx: usize, ny: usize, nz: usize, use_trilinear_interpolation: bool) -> Self {
         Self {
             use_trilinear_interpolation,
             density: Array3::zeros((nx, ny, nz)),

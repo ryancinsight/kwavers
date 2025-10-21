@@ -10,9 +10,7 @@
 //! - Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 
 use approx::assert_relative_eq;
-use kwavers::{
-    grid::Grid, physics::constants::SOUND_SPEED_WATER,
-};
+use kwavers::{grid::Grid, physics::constants::SOUND_SPEED_WATER};
 use std::f64::consts::PI;
 
 /// Test precision bounds for numerical validation
@@ -59,11 +57,7 @@ fn test_greens_function_point_source_exact() {
         if r > 10.0 * MACHINE_EPSILON {
             // For non-singular points, verify exact 1/r scaling
             let analytical = 1.0 / (4.0 * PI * r);
-            assert_relative_eq!(
-                expected_amplitude,
-                analytical,
-                epsilon = PHYSICS_PRECISION
-            );
+            assert_relative_eq!(expected_amplitude, analytical, epsilon = PHYSICS_PRECISION);
         }
     }
 }
@@ -154,11 +148,7 @@ fn test_cfl_stability_exact_bounds() {
 
         // Verify reconstruction precision
         let reconstructed_c = safe_dt * c / (safe_cfl * min_dx);
-        assert_relative_eq!(
-            c,
-            reconstructed_c,
-            epsilon = MACHINE_EPSILON * c
-        );
+        assert_relative_eq!(c, reconstructed_c, epsilon = MACHINE_EPSILON * c);
     }
 }
 
@@ -209,11 +199,7 @@ fn test_attenuation_exact_exponential() {
                 let alpha_reconstructed = -log_ratio / d;
                 let freq_dependency = alpha_reconstructed / alpha_0 / 100.0 * 8.686;
                 let freq_power = freq_dependency.powf(1.0 / y) * 1e6;
-                assert_relative_eq!(
-                    freq,
-                    freq_power,
-                    epsilon = NUMERICAL_PRECISION * freq
-                );
+                assert_relative_eq!(freq, freq_power, epsilon = NUMERICAL_PRECISION * freq);
             }
         }
     }
@@ -263,11 +249,7 @@ fn test_spatial_sampling_nyquist_exact() {
 
             // Verify wavelength calculation precision
             let reconstructed_freq = sound_speed / wavelength;
-            assert_relative_eq!(
-                freq,
-                reconstructed_freq,
-                epsilon = MACHINE_EPSILON * freq
-            );
+            assert_relative_eq!(freq, reconstructed_freq, epsilon = MACHINE_EPSILON * freq);
         }
     }
 }

@@ -143,18 +143,28 @@ impl StokesAbsorption {
             freq: f64,      // Relaxation frequency [Hz]
             amplitude: f64, // Amplitude factor relative to classical
         }
-        
+
         let modes = [
-            RelaxationMode { freq: 1e9,  amplitude: 0.15 }, // Structural (dominant)
-            RelaxationMode { freq: 1e8,  amplitude: 0.08 }, // Thermal
-            RelaxationMode { freq: 1e7,  amplitude: 0.03 }, // Viscous
+            RelaxationMode {
+                freq: 1e9,
+                amplitude: 0.15,
+            }, // Structural (dominant)
+            RelaxationMode {
+                freq: 1e8,
+                amplitude: 0.08,
+            }, // Thermal
+            RelaxationMode {
+                freq: 1e7,
+                amplitude: 0.03,
+            }, // Viscous
         ];
-        
+
         // Sum all relaxation contributions
         let mut relaxation_total = 0.0;
         for mode in &modes {
             let f_ratio = frequency / mode.freq;
-            let relaxation_contrib = classical * mode.amplitude * f_ratio.powi(2) / (1.0 + f_ratio.powi(2));
+            let relaxation_contrib =
+                classical * mode.amplitude * f_ratio.powi(2) / (1.0 + f_ratio.powi(2));
             relaxation_total += relaxation_contrib;
         }
 

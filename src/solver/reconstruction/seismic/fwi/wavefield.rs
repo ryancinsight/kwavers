@@ -105,14 +105,14 @@ impl WavefieldModeler {
 
             // Update wavefield using finite difference stencil
             // Cannot use Zip here as we need neighbor access for stencil
-            for i in 2..nx-2 {
-                for j in 2..ny-2 {
-                    for k in 2..nz-2 {
+            for i in 2..nx - 2 {
+                for j in 2..ny - 2 {
+                    for k in 2..nz - 2 {
                         let laplacian = self.compute_laplacian_stencil_7pt(&u_curr, i, j, k, dx2);
                         let u_c = u_curr[[i, j, k]];
                         let u_p = u_prev[[i, j, k]];
                         let v2_local = v2[[i, j, k]];
-                        
+
                         u_next[[i, j, k]] = 2.0 * u_c - u_p + dt * dt * v2_local * laplacian;
                     }
                 }
@@ -168,13 +168,19 @@ impl WavefieldModeler {
             }
 
             // Update adjoint wavefield (same wave equation, backward in time)
-            for i in 2..nx-2 {
-                for j in 2..ny-2 {
-                    for k in 2..nz-2 {
-                        let laplacian = self.compute_laplacian_stencil_7pt(&adj_curr, i, j, k, self.config.dx * self.config.dx);
+            for i in 2..nx - 2 {
+                for j in 2..ny - 2 {
+                    for k in 2..nz - 2 {
+                        let laplacian = self.compute_laplacian_stencil_7pt(
+                            &adj_curr,
+                            i,
+                            j,
+                            k,
+                            self.config.dx * self.config.dx,
+                        );
                         let a_c = adj_curr[[i, j, k]];
                         let a_p = adj_prev[[i, j, k]];
-                        
+
                         adj_next[[i, j, k]] = 2.0 * a_c - a_p + dt * dt * laplacian;
                     }
                 }
@@ -378,15 +384,25 @@ impl WavefieldModeler {
 
     /// Compute 7-point stencil Laplacian (2nd order accurate)
     /// ∇²u ≈ (u_{i+1} + u_{i-1} + u_{j+1} + u_{j-1} + u_{k+1} + u_{k-1} - 6u_{i,j,k}) / dx²
-    /// 
-    /// References: 
+    ///
+    /// References:
     /// - LeVeque (2007): "Finite Difference Methods for Ordinary and Partial Differential Equations"
-    fn compute_laplacian_stencil_7pt(&self, field: &Array3<f64>, i: usize, j: usize, k: usize, dx2: f64) -> f64 {
+    fn compute_laplacian_stencil_7pt(
+        &self,
+        field: &Array3<f64>,
+        i: usize,
+        j: usize,
+        k: usize,
+        dx2: f64,
+    ) -> f64 {
         let center = field[[i, j, k]];
-        let neighbors_sum = field[[i+1, j, k]] + field[[i-1, j, k]]
-                          + field[[i, j+1, k]] + field[[i, j-1, k]]
-                          + field[[i, j, k+1]] + field[[i, j, k-1]];
-        
+        let neighbors_sum = field[[i + 1, j, k]]
+            + field[[i - 1, j, k]]
+            + field[[i, j + 1, k]]
+            + field[[i, j - 1, k]]
+            + field[[i, j, k + 1]]
+            + field[[i, j, k - 1]];
+
         (neighbors_sum - 6.0 * center) / dx2
     }
 

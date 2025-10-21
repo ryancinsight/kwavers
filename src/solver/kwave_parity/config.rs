@@ -37,13 +37,13 @@ pub enum AbsorptionMode {
     PowerLaw { alpha_coeff: f64, alpha_power: f64 },
     /// Multi-relaxation absorption model for complex media
     /// References: Szabo, T. L. (1995). "Time domain wave equations for lossy media"
-    MultiRelaxation { 
-        tau: Vec<f64>,      // Relaxation times [s]
-        weights: Vec<f64>,  // Relaxation weights [dimensionless]
+    MultiRelaxation {
+        tau: Vec<f64>,     // Relaxation times [s]
+        weights: Vec<f64>, // Relaxation weights [dimensionless]
     },
     /// Causal absorption with configurable relaxation times
     /// References: Chen, W. & Holm, S. (2003). "Modified Szabo's wave equation models"
-    Causal { 
+    Causal {
         relaxation_times: Vec<f64>, // Multiple relaxation times [s]
         alpha_0: f64,               // Low-frequency absorption [Np/m]
     },

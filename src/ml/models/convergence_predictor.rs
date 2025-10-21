@@ -18,7 +18,7 @@ impl Default for ConvergencePredictorModel {
 
 impl ConvergencePredictorModel {
     /// Load model from path
-    /// 
+    ///
     /// **Implementation Status**: Template model for API compatibility
     /// **Future**: Sprint 127+ will integrate trained convergence prediction model
     /// with proper checkpoint deserialization and neural network inference.
@@ -27,7 +27,7 @@ impl ConvergencePredictorModel {
     }
 
     /// Create model from weights
-    /// 
+    ///
     /// **Implementation Status**: Template mode - weights not used
     /// Provides functional interface for testing and development workflow.
     /// Production implementation deferred pending ML framework selection.

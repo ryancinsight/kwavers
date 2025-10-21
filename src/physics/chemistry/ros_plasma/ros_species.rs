@@ -321,7 +321,7 @@ impl ROSConcentrations {
         // Full ADI (Alternating Direction Implicit) requires Y and Z sweeps for 3D isotropy
         // Current: 1D provides numerical stability for dominant diffusion direction
         // Complete 3D ADI implementation deferred to Sprint 125+ chemistry enhancement
-        // 
+        //
         // **Reference**: Peaceman & Rachford (1955) "The Numerical Solution of Parabolic Equations"
         *conc = temp;
     }

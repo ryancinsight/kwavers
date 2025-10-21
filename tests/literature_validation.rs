@@ -59,7 +59,7 @@ fn test_rayleigh_collapse_time() -> Result<(), kwavers::KwaversError> {
         "Rayleigh collapse time error: {:.2}%",
         error * 100.0
     );
-    
+
     Ok(())
 }
 

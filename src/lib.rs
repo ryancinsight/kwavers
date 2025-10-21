@@ -161,7 +161,7 @@ pub use recorder::RecorderConfig;
 pub use sensor::SensorConfig;
 
 // Re-export benchmarks from performance module
-pub use performance::{BenchmarkResult, ProductionBenchmarks, run_production_benchmarks};
+pub use performance::{run_production_benchmarks, BenchmarkResult, ProductionBenchmarks};
 
 // Re-export solver validation
 pub use solver::validation::{KWaveTestCase, KWaveValidator, ValidationReport};
@@ -261,7 +261,7 @@ mod tests {
     fn test_grid_creation_minimal() {
         let grid = grid::Grid::new(8, 8, 8, 0.001, 0.001, 0.001).expect("Grid creation");
         assert_eq!(grid.nx, 8);
-        assert_eq!(grid.ny, 8); 
+        assert_eq!(grid.ny, 8);
         assert_eq!(grid.nz, 8);
         assert_eq!(grid.size(), 512);
     }
@@ -270,11 +270,13 @@ mod tests {
     fn test_medium_basic_properties() {
         let grid = grid::Grid::new(4, 4, 4, 0.001, 0.001, 0.001).expect("Grid creation");
         let medium = medium::HomogeneousMedium::new(
-            physics::constants::DENSITY_WATER, 
-            physics::constants::SOUND_SPEED_WATER, 
-            0.0, 0.0, &grid
+            physics::constants::DENSITY_WATER,
+            physics::constants::SOUND_SPEED_WATER,
+            0.0,
+            0.0,
+            &grid,
         );
-        
+
         assert!(medium.is_homogeneous());
         assert!((medium.sound_speed(0, 0, 0) - physics::constants::SOUND_SPEED_WATER).abs() < 1e-6);
         assert!((medium.density(0, 0, 0) - physics::constants::DENSITY_WATER).abs() < 1e-6);
@@ -285,11 +287,11 @@ mod tests {
         // Physics constants are compile-time verified through const definitions
         // No runtime assertions needed for const values (clippy::assertions_on_constants)
         use physics::constants::*;
-        
+
         // Validate that constants are accessible and have expected types
         let _density: f64 = DENSITY_WATER;
         let _speed: f64 = SOUND_SPEED_WATER;
-        
+
         // Constants are defined in physics::constants::fundamental
         // DENSITY_WATER = 998.2 kg/m³ (valid water density)
         // SOUND_SPEED_WATER = 1482.0 m/s (valid water sound speed)
@@ -302,10 +304,10 @@ mod tests {
         let cfl = 0.4; // Conservative CFL for 3D
         let min_dx = grid.dx.min(grid.dy).min(grid.dz);
         let dt = cfl * min_dx / sound_speed;
-        
+
         assert!(dt > 0.0);
         assert!(dt < 1e-6); // Reasonable timestep for acoustics
-        
+
         // CFL stability condition: c*dt/dx <= CFL_max
         let actual_cfl = sound_speed * dt / min_dx;
         assert!((actual_cfl - cfl).abs() < 1e-10);
@@ -314,14 +316,14 @@ mod tests {
     #[test]
     fn test_error_handling_basic() {
         // Test basic error type creation
-        use error::{KwaversError, ConfigError};
-        
+        use error::{ConfigError, KwaversError};
+
         let config_error = ConfigError::InvalidValue {
             parameter: "test".to_string(),
             value: "invalid".to_string(),
             constraint: "must be positive".to_string(),
         };
-        
+
         let kwavers_error = KwaversError::Config(config_error);
         assert!(matches!(kwavers_error, KwaversError::Config(_)));
     }

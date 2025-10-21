@@ -75,15 +75,15 @@ impl ConservationEnforcer {
         //
         // We enforce weak momentum conservation by matching the momentum flux integral
         // across the interface. This is more accurate than simple pressure averaging.
-        
+
         // Calculate momentum flux (proportional to pressure for acoustic waves)
         let source_flux: f64 = fields.iter().sum();
         let target_flux: f64 = target.iter().sum();
-        
+
         // If fluxes differ significantly, apply correction factor to conserve momentum
         if source_flux.abs() > self.tolerance {
             let flux_ratio = target_flux / source_flux;
-            
+
             // Apply momentum-conserving correction with spatial weighting
             // This preserves the field structure while matching total momentum
             fields.zip_mut_with(target, |field_val, &target_val| {

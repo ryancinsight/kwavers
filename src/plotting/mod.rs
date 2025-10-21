@@ -225,7 +225,7 @@ mod plotting_impl {
         let time_points: Vec<f64> = (0..num_points).map(|i| i as f64 * dt).collect();
 
         let mut plot = Plot::new();
-        
+
         // Plot each sensor's pressure evolution
         for (sensor_idx, pressure_data) in recorder.pressure_sensor_data.iter().enumerate() {
             let trace = Scatter::new(time_points.clone(), pressure_data.clone())
@@ -241,7 +241,11 @@ mod plotting_impl {
         plot.set_layout(layout);
 
         plot.write_html(filename);
-        info!("Plot saved to {} with {} sensors", filename, recorder.pressure_sensor_data.len());
+        info!(
+            "Plot saved to {} with {} sensors",
+            filename,
+            recorder.pressure_sensor_data.len()
+        );
     }
 }
 

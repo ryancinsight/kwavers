@@ -68,9 +68,7 @@ impl Default for ImagingConfig {
 }
 
 // Re-export commonly used types
-pub use elastography::{
-    ElasticityMap, InversionMethod, ShearWaveElastography,
-};
+pub use elastography::{ElasticityMap, InversionMethod, ShearWaveElastography};
 pub use photoacoustic::{compute_initial_pressure, PhotoacousticConfig};
 pub use seismic::{SeismicConfig, SeismicMethod};
 pub use ultrasound::{UltrasoundConfig, UltrasoundMode};

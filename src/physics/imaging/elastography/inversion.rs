@@ -17,9 +17,9 @@
 //!
 //! ## References
 //!
-//! - McLaughlin, J., & Renzi, D. (2006). "Shear wave speed recovery in transient 
+//! - McLaughlin, J., & Renzi, D. (2006). "Shear wave speed recovery in transient
 //!   elastography." *Inverse Problems*, 22(3), 707.
-//! - Deffieux, T., et al. (2011). "On the effects of reflected waves in transient 
+//! - Deffieux, T., et al. (2011). "On the effects of reflected waves in transient
 //!   shear wave elastography." *IEEE TUFFC*, 58(10), 2032-2035.
 
 use crate::error::KwaversResult;
@@ -91,8 +91,16 @@ impl ElasticityMap {
     /// Get elasticity statistics (min, max, mean)
     #[must_use]
     pub fn statistics(&self) -> (f64, f64, f64) {
-        let min = self.youngs_modulus.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max = self.youngs_modulus.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min = self
+            .youngs_modulus
+            .iter()
+            .cloned()
+            .fold(f64::INFINITY, f64::min);
+        let max = self
+            .youngs_modulus
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
         let mean = self.youngs_modulus.mean().unwrap_or(0.0);
         (min, max, mean)
     }
@@ -170,13 +178,13 @@ impl ShearWaveInversion {
 
         // Simplified TOF: estimate from spatial gradient of displacement
         // Real implementation would track peak arrival times
-        for k in 1..nz-1 {
-            for j in 1..ny-1 {
-                for i in 1..nx-1 {
+        for k in 1..nz - 1 {
+            for j in 1..ny - 1 {
+                for i in 1..nx - 1 {
                     // Spatial gradient approximation
-                    let dudz = (displacement.uz[[i, j, k+1]] - displacement.uz[[i, j, k-1]]) 
+                    let dudz = (displacement.uz[[i, j, k + 1]] - displacement.uz[[i, j, k - 1]])
                         / (2.0 * grid.dz);
-                    
+
                     // Estimate shear wave speed (heuristic)
                     // Typical soft tissue: 1-10 m/s
                     let cs = if dudz.abs() > 1e-10 {
@@ -184,7 +192,7 @@ impl ShearWaveInversion {
                     } else {
                         3.0 // Default for soft tissue
                     };
-                    
+
                     shear_wave_speed[[i, j, k]] = cs;
                 }
             }
@@ -193,7 +201,10 @@ impl ShearWaveInversion {
         // Fill boundaries with interior values
         self.fill_boundaries(&mut shear_wave_speed);
 
-        Ok(ElasticityMap::from_shear_wave_speed(shear_wave_speed, self.density))
+        Ok(ElasticityMap::from_shear_wave_speed(
+            shear_wave_speed,
+            self.density,
+        ))
     }
 
     /// Phase gradient inversion (more accurate)
@@ -233,28 +244,28 @@ impl ShearWaveInversion {
     /// Fill boundary values with nearest interior values
     fn fill_boundaries(&self, array: &mut Array3<f64>) {
         let (nx, ny, nz) = array.dim();
-        
+
         // Fill i=0 and i=nx-1
         for k in 0..nz {
             for j in 0..ny {
                 array[[0, j, k]] = array[[1, j, k]];
-                array[[nx-1, j, k]] = array[[nx-2, j, k]];
+                array[[nx - 1, j, k]] = array[[nx - 2, j, k]];
             }
         }
-        
+
         // Fill j=0 and j=ny-1
         for k in 0..nz {
             for i in 0..nx {
                 array[[i, 0, k]] = array[[i, 1, k]];
-                array[[i, ny-1, k]] = array[[i, ny-2, k]];
+                array[[i, ny - 1, k]] = array[[i, ny - 2, k]];
             }
         }
-        
+
         // Fill k=0 and k=nz-1
         for j in 0..ny {
             for i in 0..nx {
                 array[[i, j, 0]] = array[[i, j, 1]];
-                array[[i, j, nz-1]] = array[[i, j, nz-2]];
+                array[[i, j, nz - 1]] = array[[i, j, nz - 2]];
             }
         }
     }
@@ -268,13 +279,13 @@ mod tests {
     fn test_elasticity_map_from_speed() {
         let speed = Array3::from_elem((10, 10, 10), 3.0); // 3 m/s
         let density = 1000.0; // kg/m³
-        
+
         let map = ElasticityMap::from_shear_wave_speed(speed, density);
-        
+
         // Check physics: μ = ρcs²
         let expected_shear_modulus = density * 3.0 * 3.0; // 9000 Pa
         let expected_youngs_modulus = 3.0 * expected_shear_modulus; // 27000 Pa
-        
+
         assert!((map.shear_modulus[[5, 5, 5]] - expected_shear_modulus).abs() < 1e-6);
         assert!((map.youngs_modulus[[5, 5, 5]] - expected_youngs_modulus).abs() < 1e-6);
     }
@@ -283,10 +294,10 @@ mod tests {
     fn test_elasticity_statistics() {
         let mut speed = Array3::from_elem((10, 10, 10), 3.0);
         speed[[5, 5, 5]] = 5.0; // Higher stiffness region
-        
+
         let map = ElasticityMap::from_shear_wave_speed(speed, 1000.0);
         let (min, max, mean) = map.statistics();
-        
+
         assert!(min < max);
         assert!(mean > min && mean < max);
     }
@@ -295,7 +306,7 @@ mod tests {
     fn test_inversion_methods() {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         let displacement = DisplacementField::zeros(20, 20, 20);
-        
+
         for method in [
             InversionMethod::TimeOfFlight,
             InversionMethod::PhaseGradient,
@@ -303,7 +314,11 @@ mod tests {
         ] {
             let inversion = ShearWaveInversion::new(method);
             let result = inversion.reconstruct(&displacement, &grid);
-            assert!(result.is_ok(), "Inversion method {:?} should succeed", method);
+            assert!(
+                result.is_ok(),
+                "Inversion method {:?} should succeed",
+                method
+            );
         }
     }
 }

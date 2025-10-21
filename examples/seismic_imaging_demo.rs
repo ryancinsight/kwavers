@@ -6,14 +6,14 @@
 use kwavers::error::KwaversResult;
 use kwavers::grid::Grid;
 use kwavers::physics::plugin::seismic_imaging::{
-    FwiParameters, FwiProcessor, RegularizationParameters,
-    ImagingCondition, RtmProcessor, RtmSettings, StorageStrategy, BoundaryType,
+    BoundaryType, FwiParameters, FwiProcessor, ImagingCondition, RegularizationParameters,
+    RtmProcessor, RtmSettings, StorageStrategy,
 };
 use ndarray::Array3;
 
 fn main() -> KwaversResult<()> {
     env_logger::init();
-    
+
     println!("=== Seismic Imaging Example ===\n");
 
     // Create computational grid (small for demonstration)
@@ -23,19 +23,26 @@ fn main() -> KwaversResult<()> {
     let dx = 10.0; // 10 meters spacing
     let dy = 10.0;
     let dz = 10.0;
-    
+
     let grid = Grid::new(nx, ny, nz, dx, dy, dz)?;
-    println!("Grid created: {}x{}x{} ({}m x {}m x {}m)", nx, ny, nz, 
-             nx as f64 * dx, ny as f64 * dy, nz as f64 * dz);
+    println!(
+        "Grid created: {}x{}x{} ({}m x {}m x {}m)",
+        nx,
+        ny,
+        nz,
+        nx as f64 * dx,
+        ny as f64 * dy,
+        nz as f64 * dz
+    );
 
     // Example 1: Full Waveform Inversion (FWI)
     println!("\n--- Full Waveform Inversion ---");
-    
+
     // Create initial velocity model (homogeneous)
     let mut initial_model = Array3::from_elem((nx, ny, nz), 1500.0); // 1500 m/s (water)
-    
+
     // Add a simple layer structure
-    for k in nz/2..nz {
+    for k in nz / 2..nz {
         for j in 0..ny {
             for i in 0..nx {
                 initial_model[[i, j, k]] = 2000.0; // 2000 m/s (sediment)
@@ -47,10 +54,10 @@ fn main() -> KwaversResult<()> {
     // Create true velocity model (target for inversion)
     let mut true_model = initial_model.clone();
     // Add a velocity anomaly
-    let (cx, cy, cz) = (nx/2, ny/2, nz/2);
-    for k in (cz-4)..(cz+4) {
-        for j in (cy-4)..(cy+4) {
-            for i in (cx-4)..(cx+4) {
+    let (cx, cy, cz) = (nx / 2, ny / 2, nz / 2);
+    for k in (cz - 4)..(cz + 4) {
+        for j in (cy - 4)..(cy + 4) {
+            for i in (cx - 4)..(cx + 4) {
                 if i < nx && j < ny && k < nz {
                     true_model[[i, j, k]] = 2500.0; // 2500 m/s (anomaly)
                 }
@@ -73,7 +80,10 @@ fn main() -> KwaversResult<()> {
 
     // Create FWI processor
     let fwi = FwiProcessor::new(fwi_params);
-    println!("FWI processor created with max_iterations={}, tolerance={}", 10, 1e-6);
+    println!(
+        "FWI processor created with max_iterations={}, tolerance={}",
+        10, 1e-6
+    );
 
     // Generate synthetic observed data using forward modeling
     println!("Generating synthetic observed data...");
@@ -119,12 +129,12 @@ fn main() -> KwaversResult<()> {
     // Create synthetic source and receiver wavefields
     let mut source_wavefield = Array3::zeros((nx, ny, nz));
     let mut receiver_wavefield = Array3::zeros((nx, ny, nz));
-    
+
     // Add simple wavefield patterns
     source_wavefield[[cx, cy, cz]] = 1.0;
-    receiver_wavefield[[cx, cy, cz/2]] = 0.5;
+    receiver_wavefield[[cx, cy, cz / 2]] = 0.5;
     receiver_wavefield[[cx, cy, cz]] = 0.3;
-    
+
     println!("Source and receiver wavefields initialized");
 
     // Run RTM migration

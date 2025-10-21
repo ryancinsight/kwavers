@@ -390,7 +390,7 @@ impl CalibrationManager {
         // **Optimal**: Hungarian algorithm O(n³) provides global optimum (Kuhn 1955)
         // **Rationale**: Nearest-neighbor sufficient for well-separated reflectors (typical case)
         // For dense reflector arrays, consider Hungarian algorithm enhancement (Sprint 127+)
-        // 
+        //
         // **Reference**: Kuhn (1955) "The Hungarian Method for Assignment Problems"
         for (i, peak) in peaks.iter().enumerate() {
             let mut min_dist = f64::INFINITY;

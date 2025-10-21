@@ -13,7 +13,7 @@ pub struct KuznetsovSolver {
     #[allow(dead_code)]
     grid: Grid,
     velocity_potential: Array3<f64>,
-    velocity_potential_prev: Array3<f64>,  // Added for proper time derivative
+    velocity_potential_prev: Array3<f64>, // Added for proper time derivative
     // Store previous fields for computing time derivatives
     pressure_prev: Array3<f64>,
     pressure_prev_prev: Array3<f64>,
@@ -90,7 +90,7 @@ impl AcousticSolver for KuznetsovSolver {
         // Update velocity potential
         // Store previous potential before update for time derivative computation
         self.velocity_potential_prev = self.velocity_potential.clone();
-        
+
         self.velocity_potential =
             &self.velocity_potential + &(dt * (&linear_term + &nonlinear_term + &diffusion_term));
 
@@ -181,11 +181,11 @@ fn compute_nonlinear_term(
     dt: f64,
 ) -> Array3<f64> {
     let mut nonlinear = Array3::zeros(pressure.dim());
-    
+
     // Check if we have enough history for second-order time derivative
-    let has_history = pressure_prev.iter().any(|&p| p.abs() > 1e-14) ||
-                      pressure_prev_prev.iter().any(|&p| p.abs() > 1e-14);
-    
+    let has_history = pressure_prev.iter().any(|&p| p.abs() > 1e-14)
+        || pressure_prev_prev.iter().any(|&p| p.abs() > 1e-14);
+
     if !has_history {
         // First time steps: Bootstrap nonlinear term computation
         // Use instantaneous pressure-squared until sufficient history available
@@ -232,7 +232,7 @@ fn compute_nonlinear_term(
                 let phi_dot_sq_prev2 = (p_prev2 / rho).powi(2);
 
                 // Second time derivative using central differences
-                let d2_phi_dot_sq_dt2 = 
+                let d2_phi_dot_sq_dt2 =
                     (phi_dot_sq_curr - 2.0 * phi_dot_sq_prev + phi_dot_sq_prev2) / (dt * dt);
 
                 // Kuznetsov nonlinear term
@@ -273,17 +273,17 @@ mod tests {
         // Test that nonlinear term works correctly in first few time steps
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 10.0, &grid);
-        
+
         // Create pressure field (small amplitude)
         let mut pressure = Array3::zeros((8, 8, 8));
         pressure[[4, 4, 4]] = 1000.0; // 1 kPa
-        
+
         let pressure_prev = Array3::zeros((8, 8, 8));
         let pressure_prev_prev = Array3::zeros((8, 8, 8));
-        
+
         let beta = 3.5; // Nonlinearity parameter (typical for water)
         let dt = 1e-7;
-        
+
         // First time step uses forward difference approximation for second time derivative
         // Reference: LeVeque (2007) "Finite Difference Methods for ODEs and PDEs" §2.14
         // This is standard practice for multi-step methods requiring initialization
@@ -296,22 +296,26 @@ mod tests {
             beta,
             dt,
         );
-        
+
         // Nonlinear term should be non-zero at source location
-        assert!(nonlinear[[4, 4, 4]].abs() > 0.0, 
-                "Nonlinear term should be non-zero");
-        
+        assert!(
+            nonlinear[[4, 4, 4]].abs() > 0.0,
+            "Nonlinear term should be non-zero"
+        );
+
         // Should be negative (energy dissipation)
-        assert!(nonlinear[[4, 4, 4]] < 0.0,
-                "Nonlinear term should be negative for positive pressure");
+        assert!(
+            nonlinear[[4, 4, 4]] < 0.0,
+            "Nonlinear term should be negative for positive pressure"
+        );
     }
-    
+
     #[test]
     fn test_nonlinear_term_computation_is_finite() {
         // Test that nonlinear term computation produces finite values
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 10.0, &grid);
-        
+
         let mut pressure = Array3::zeros((8, 8, 8));
         for i in 0..8 {
             for j in 0..8 {
@@ -320,13 +324,13 @@ mod tests {
                 }
             }
         }
-        
+
         let pressure_prev = (&pressure * 0.9).to_owned();
         let pressure_prev_prev = (&pressure * 0.8).to_owned();
-        
+
         let beta = 3.5;
         let dt = 1e-7;
-        
+
         let nonlinear = compute_nonlinear_term(
             &pressure,
             &pressure_prev,
@@ -336,64 +340,85 @@ mod tests {
             beta,
             dt,
         );
-        
+
         // All values should be finite
-        assert!(nonlinear.iter().all(|&x| x.is_finite()),
-                "All nonlinear term values should be finite");
+        assert!(
+            nonlinear.iter().all(|&x| x.is_finite()),
+            "All nonlinear term values should be finite"
+        );
     }
-    
+
     #[test]
     fn test_nonlinear_term_proportional_to_pressure() {
         // Test that nonlinear term scales with pressure amplitude
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 10.0, &grid);
-        
+
         let mut pressure_low = Array3::zeros((8, 8, 8));
         pressure_low[[4, 4, 4]] = 100.0;
-        
+
         let mut pressure_high = Array3::zeros((8, 8, 8));
         pressure_high[[4, 4, 4]] = 200.0;
-        
+
         let pressure_prev = Array3::zeros((8, 8, 8));
         let pressure_prev_prev = Array3::zeros((8, 8, 8));
-        
+
         let beta = 3.5;
         let dt = 1e-7;
-        
+
         let nonlinear_low = compute_nonlinear_term(
-            &pressure_low, &pressure_prev, &pressure_prev_prev,
-            &medium, &grid, beta, dt,
+            &pressure_low,
+            &pressure_prev,
+            &pressure_prev_prev,
+            &medium,
+            &grid,
+            beta,
+            dt,
         );
-        
+
         let nonlinear_high = compute_nonlinear_term(
-            &pressure_high, &pressure_prev, &pressure_prev_prev,
-            &medium, &grid, beta, dt,
+            &pressure_high,
+            &pressure_prev,
+            &pressure_prev_prev,
+            &medium,
+            &grid,
+            beta,
+            dt,
         );
-        
+
         // Higher pressure should give stronger nonlinear term
         let ratio = nonlinear_high[[4, 4, 4]].abs() / nonlinear_low[[4, 4, 4]].abs();
-        assert!(ratio > 1.5,
-                "Higher pressure should give stronger nonlinear term: ratio = {}", ratio);
+        assert!(
+            ratio > 1.5,
+            "Higher pressure should give stronger nonlinear term: ratio = {}",
+            ratio
+        );
     }
-    
+
     #[test]
     fn test_kuznetsov_solver_creation() {
         // Test that solver can be created successfully
         let config = AcousticSolverConfig::kuznetsov(3.5);
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-        
+
         let solver = KuznetsovSolver::new(config, &grid);
-        assert!(solver.is_ok(), "Kuznetsov solver should be created successfully");
-        
+        assert!(
+            solver.is_ok(),
+            "Kuznetsov solver should be created successfully"
+        );
+
         let solver = solver.unwrap();
-        assert_eq!(solver.name(), "Kuznetsov Nonlinear Acoustic Solver with Diffusion");
+        assert_eq!(
+            solver.name(),
+            "Kuznetsov Nonlinear Acoustic Solver with Diffusion"
+        );
     }
-    
+
     #[test]
     fn test_compute_laplacian() {
         // Test Laplacian computation on simple field
         let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
-        
+
         // Create quadratic field: f(x,y,z) = x² + y² + z²
         // Laplacian should be: ∇²f = 2 + 2 + 2 = 6
         let mut field = Array3::zeros((8, 8, 8));
@@ -403,18 +428,21 @@ mod tests {
                     let x = i as f64 * grid.dx;
                     let y = j as f64 * grid.dy;
                     let z = k as f64 * grid.dz;
-                    field[[i, j, k]] = x*x + y*y + z*z;
+                    field[[i, j, k]] = x * x + y * y + z * z;
                 }
             }
         }
-        
+
         let laplacian = compute_laplacian(&field, &grid);
-        
+
         // Check center point (away from boundaries)
         let center_value = laplacian[[4, 4, 4]];
-        
+
         // Should be approximately 6.0 (2 + 2 + 2 from three dimensions)
-        assert!((center_value - 6.0).abs() < 1.0,
-                "Laplacian of x²+y²+z² should be ~6.0, got {}", center_value);
+        assert!(
+            (center_value - 6.0).abs() < 1.0,
+            "Laplacian of x²+y²+z² should be ~6.0, got {}",
+            center_value
+        );
     }
 }

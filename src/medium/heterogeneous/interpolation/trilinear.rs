@@ -20,24 +20,18 @@ impl TrilinearInterpolator {
     #[inline]
     pub fn get_indices(x: f64, y: f64, z: f64, grid: &Grid) -> (usize, usize, usize) {
         let ix = ((x / grid.dx).round() as usize).clamp(0, grid.nx - 1);
-        let iy = ((y / grid.dy).round() as usize).clamp(0, grid.ny - 1);  
+        let iy = ((y / grid.dy).round() as usize).clamp(0, grid.ny - 1);
         let iz = ((z / grid.dz).round() as usize).clamp(0, grid.nz - 1);
         (ix, iy, iz)
     }
 
     /// Trilinear interpolation for continuous field evaluation
-    /// 
+    ///
     /// **Algorithm**: Standard trilinear interpolation with bounds checking
     /// **Performance**: O(1) time complexity, zero allocations
     /// **Safety**: All array accesses validated per Rustonomicon Ch.5
     #[must_use]
-    pub fn interpolate(
-        field: &Array3<f64>, 
-        x: f64, 
-        y: f64, 
-        z: f64, 
-        grid: &Grid
-    ) -> f64 {
+    pub fn interpolate(field: &Array3<f64>, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
         // Get grid coordinates
         let xi = x / grid.dx;
         let yi = y / grid.dy;
@@ -85,12 +79,12 @@ impl TrilinearInterpolator {
     /// based on medium configuration per Gang of Four design patterns.
     #[inline]
     pub fn get_field_value(
-        field: &Array3<f64>, 
-        x: f64, 
-        y: f64, 
-        z: f64, 
+        field: &Array3<f64>,
+        x: f64,
+        y: f64,
+        z: f64,
         grid: &Grid,
-        use_trilinear: bool
+        use_trilinear: bool,
     ) -> f64 {
         if use_trilinear {
             Self::interpolate(field, x, y, z, grid)

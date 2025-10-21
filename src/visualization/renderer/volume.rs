@@ -239,10 +239,10 @@ impl RayMarcher {
     }
 
     /// March a ray through the volume
-    /// 
+    ///
     /// Note: This method is reserved for future volume rendering implementation.
     /// It implements basic ray marching for 3D volume visualization per Levoy (1988).
-    /// 
+    ///
     /// **Reference**: Levoy (1988) "Display of Surfaces from Volume Data" IEEE CG&A
     #[allow(dead_code)]
     fn march_ray(&self, origin: [f32; 3], direction: [f32; 3], volume: &Array3<f64>) -> f32 {

@@ -54,6 +54,4 @@ pub use profiling::{
 };
 
 // Re-export benchmarking functionality
-pub use benchmarks::{
-    BenchmarkResult, ProductionBenchmarks, run_production_benchmarks,
-};
+pub use benchmarks::{run_production_benchmarks, BenchmarkResult, ProductionBenchmarks};

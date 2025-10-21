@@ -26,7 +26,7 @@ fn test_cfl_condition_3d_fdtd() {
 
     // Verify the time step is below CFL limit
     assert!(dt_safe < dt_max, "Time step must be below CFL limit");
-    
+
     // CFL safety factor validation (avoid constant assertions)
     let safety_valid = CFL_SAFETY_FACTOR < 1.0 && CFL_SAFETY_FACTOR > 0.0;
     assert!(safety_valid, "CFL safety factor must be in (0, 1) range");

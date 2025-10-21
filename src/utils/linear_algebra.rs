@@ -18,12 +18,20 @@ where
         if a.len() != b.len() {
             return None;
         }
-        Some(a.iter().zip(b.iter()).map(|(&x, &y)| x * y).fold(T::zero(), |acc, val| acc + val))
+        Some(
+            a.iter()
+                .zip(b.iter())
+                .map(|(&x, &y)| x * y)
+                .fold(T::zero(), |acc, val| acc + val),
+        )
     }
-    
+
     /// Generic vector normalization
     fn normalize(vector: &mut [T]) -> bool {
-        let norm_sq = vector.iter().map(|&x| x * x).fold(T::zero(), |acc, val| acc + val);
+        let norm_sq = vector
+            .iter()
+            .map(|&x| x * x)
+            .fold(T::zero(), |acc, val| acc + val);
         if norm_sq <= T::zero() {
             return false;
         }
@@ -58,12 +66,19 @@ where
 
     /// Generic L2 norm calculation
     fn l2_norm(array: &[T]) -> T {
-        array.iter().map(|&x| x * x).fold(T::zero(), |acc, val| acc + val).sqrt()
+        array
+            .iter()
+            .map(|&x| x * x)
+            .fold(T::zero(), |acc, val| acc + val)
+            .sqrt()
     }
 
     /// Generic maximum absolute value
     fn max_abs(array: &[T]) -> T {
-        array.iter().map(|&x| x.abs()).fold(T::zero(), |acc, val| acc.max(val))
+        array
+            .iter()
+            .map(|&x| x.abs())
+            .fold(T::zero(), |acc, val| acc.max(val))
     }
 
     /// Safe division with tolerance check
@@ -379,7 +394,7 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::{assert_relative_eq, assert_abs_diff_eq};
+    use approx::{assert_abs_diff_eq, assert_relative_eq};
 
     #[test]
     fn test_numeric_ops_add_arrays() {
@@ -424,10 +439,10 @@ mod tests {
         // Test that the trait works with both f64 and f32
         let a_f64 = [1.0_f64, 2.0, 3.0];
         let norm_f64 = f64::l2_norm(&a_f64);
-        
+
         let a_f32 = [1.0_f32, 2.0, 3.0];
         let norm_f32 = f32::l2_norm(&a_f32);
-        
+
         assert_relative_eq!(norm_f64 as f32, norm_f32, epsilon = 1e-6);
     }
 

@@ -101,35 +101,35 @@ impl ErrorEstimator {
     }
 
     /// Richardson extrapolation error estimation
-    /// 
+    ///
     /// Estimates truncation error by comparing solutions on different grid resolutions.
     /// The difference between fine and coarse solutions provides an error estimate.
-    /// 
+    ///
     /// For a pth-order method: error ≈ (u_h - u_2h) / (2^p - 1)
-    /// 
+    ///
     /// References:
     /// - Richardson (1911): "The approximate arithmetical solution by finite differences"
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     fn richardson_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use super::interpolation::ConservativeInterpolator;
-        
+
         // Create interpolator for grid transfers
         let interpolator = ConservativeInterpolator::new();
-        
+
         // Restrict to coarse grid
         let coarse = interpolator.restrict(field);
-        
+
         // Prolongate back to fine grid
         let prolonged = interpolator.prolongate(&coarse);
-        
+
         // Error estimate from difference between fine and prolonged solutions
         // For 2nd order methods: error ≈ (u_h - u_2h) / 3
         let (nx, ny, nz) = field.dim();
         let mut error = Array3::zeros(field.dim());
-        
+
         let order = 2.0; // Assume 2nd order spatial discretization
         let scaling = 1.0 / (2.0_f64.powf(order) - 1.0);
-        
+
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -139,37 +139,37 @@ impl ErrorEstimator {
                 }
             }
         }
-        
+
         // Apply smoothing to reduce noise in error estimate
         if self.smoothing > 0.0 {
             self.smooth_field(&mut error)?;
         }
-        
+
         Ok(error)
     }
 
     /// Wavelet-based error estimation
-    /// 
+    ///
     /// Uses multiresolution wavelet analysis to detect discontinuities and sharp features.
     /// High-frequency wavelet coefficients indicate regions requiring refinement.
-    /// 
+    ///
     /// Based on:
     /// - Harten (1995): "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
     /// - Cohen et al. (2003): "Wavelet methods in numerical analysis"
     fn wavelet_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use super::wavelet::{WaveletBasis, WaveletTransform};
-        
+
         // Use Daubechies-4 wavelets for good localization and smoothness
         let wavelet = WaveletTransform::new(WaveletBasis::Daubechies(4), 2);
-        
+
         // Forward wavelet transform
         let coeffs = wavelet.forward(field)?;
-        
+
         // Error estimate from high-frequency wavelet coefficients
         // Detail coefficients in second half of each dimension indicate local irregularity
         let (nx, ny, nz) = coeffs.dim();
         let mut error = Array3::zeros(field.dim());
-        
+
         // Compute error from wavelet detail coefficients
         // Higher detail coefficients indicate regions needing refinement
         for i in 0..nx {
@@ -177,7 +177,7 @@ impl ErrorEstimator {
                 for k in 0..nz {
                     // Aggregate detail energy across all wavelet subbands
                     let mut detail_energy = 0.0;
-                    
+
                     // High-frequency components in x, y, z directions
                     if i >= nx / 2 {
                         detail_energy += coeffs[[i, j, k]].abs();
@@ -188,44 +188,44 @@ impl ErrorEstimator {
                     if k >= nz / 2 {
                         detail_energy += coeffs[[i, j, k]].abs();
                     }
-                    
+
                     error[[i, j, k]] = detail_energy;
                 }
             }
         }
-        
+
         // Normalize error by maximum for stability
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
             error.mapv_inplace(|e| e / max_error);
         }
-        
+
         // Apply smoothing to reduce noise in error estimate
         if self.smoothing > 0.0 {
             self.smooth_field(&mut error)?;
         }
-        
+
         Ok(error)
     }
 
     /// Physics-based error estimation
-    /// 
+    ///
     /// Detects physical features requiring refinement:
     /// - Shocks and discontinuities via gradient jumps
     /// - High curvature regions via Laplacian
     /// - Vortical structures via Q-criterion (when applicable)
-    /// 
+    ///
     /// References:
     /// - Lohner (1987): "An adaptive finite element scheme for transient problems"
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     fn physics_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = field.dim();
         let mut error = Array3::zeros(field.dim());
-        
+
         // Compute both gradient and curvature for comprehensive detection
         let grad = self.gradient_error(field)?;
         let curv = self.curvature_error(field)?;
-        
+
         // Combine using weighted sum with shock detection
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -233,7 +233,7 @@ impl ErrorEstimator {
                     let gradient = grad[[i, j, k]];
                     let curvature = curv[[i, j, k]];
                     let value = field[[i, j, k]];
-                    
+
                     // Shock indicator: ratio of second to first derivative
                     // Large values indicate discontinuities
                     let shock_indicator = if gradient > 1e-10 {
@@ -241,7 +241,7 @@ impl ErrorEstimator {
                     } else {
                         0.0
                     };
-                    
+
                     // Normalized field variation for scale-invariance
                     let max_neighbor = [
                         field[[i + 1, j, k]],
@@ -253,29 +253,29 @@ impl ErrorEstimator {
                     ]
                     .iter()
                     .fold(value.abs(), |max, &v| max.max(v.abs()));
-                    
+
                     let normalized_variation = if max_neighbor > 1e-10 {
                         gradient / max_neighbor
                     } else {
                         0.0
                     };
-                    
+
                     // Combine indicators with physics-based weighting
                     // Emphasize shock regions (high curvature relative to gradient)
                     let shock_weight = 2.0 * shock_indicator.abs().min(1.0);
                     let gradient_weight = 1.0 + normalized_variation;
-                    
+
                     error[[i, j, k]] = shock_weight * curvature + gradient_weight * gradient;
                 }
             }
         }
-        
+
         // Normalize for stability
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
             error.mapv_inplace(|e| e / max_error);
         }
-        
+
         Ok(error)
     }
 
