@@ -13,6 +13,7 @@ pub mod mechanics;
 pub mod imaging; // Unified imaging physics module
 pub mod optics;
 pub mod plugin; // Plugin architecture for extensible physics
+pub mod skull; // Sprint 139: Transcranial focused ultrasound (tFUS)
 pub mod sonoluminescence_detector;
 pub mod state;
 pub mod therapy; // Unified therapy physics module
