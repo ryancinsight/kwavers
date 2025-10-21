@@ -379,7 +379,7 @@ fn test_focused_bowl_transducer() -> KwaversResult<()> {
 
     // Verify F-number is reasonable for medical ultrasound
     assert!(
-        f_number >= 0.5 && f_number <= 2.0,
+        (0.5..=2.0).contains(&f_number),
         "F-number {f_number:.2} outside typical range [0.5, 2.0]"
     );
 
@@ -413,7 +413,7 @@ fn test_power_law_absorption() -> KwaversResult<()> {
 
     // Verify power law exponent is in typical range
     assert!(
-        y >= 1.0 && y <= 2.0,
+        (1.0..=2.0).contains(&y),
         "Power law exponent {y:.2} outside typical range [1.0, 2.0]"
     );
 

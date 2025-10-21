@@ -1649,7 +1649,7 @@ mod tests {
         // Should correctly estimate close to 2 sources for high SNR
         // MDL may be conservative, so allow 1-3 sources
         assert!(
-            estimated >= 1 && estimated <= 3,
+            (1..=3).contains(&estimated),
             "Should estimate 1-3 sources, got {}",
             estimated
         );

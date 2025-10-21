@@ -2,6 +2,7 @@
 //!
 //! This module provides various imaging modalities for acoustic and optical imaging.
 
+pub mod elastography;
 pub mod photoacoustic;
 pub mod seismic;
 pub mod ultrasound;
@@ -67,6 +68,9 @@ impl Default for ImagingConfig {
 }
 
 // Re-export commonly used types
+pub use elastography::{
+    ElasticityMap, InversionMethod, ShearWaveElastography,
+};
 pub use photoacoustic::{compute_initial_pressure, PhotoacousticConfig};
 pub use seismic::{SeismicConfig, SeismicMethod};
 pub use ultrasound::{UltrasoundConfig, UltrasoundMode};

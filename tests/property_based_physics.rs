@@ -347,7 +347,7 @@ proptest! {
         // Reasonable physical range: 10μm (high freq ultrasound) to 100m (low freq sound)
         // At 10MHz and 100 m/s: λ = 10μm
         // At 1kHz and 6000 m/s: λ = 6m
-        prop_assert!(wavelength >= 1e-5 && wavelength <= 100.0,
+        prop_assert!((1e-5..=100.0).contains(&wavelength),
             "Wavelength {} should be in reasonable range [10μm, 100m]", wavelength);
     }
     
