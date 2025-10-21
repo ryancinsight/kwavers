@@ -74,10 +74,10 @@ impl Default for FnmConfiguration {
 /// # fn example() -> kwavers::error::KwaversResult<()> {
 /// # let grid = Grid::new(100, 100, 100, 0.001, 0.001, 0.001)?;
 /// let config = FnmConfiguration::default();
-/// let fnm = FastNearfieldMethod::new(config)?;
+/// let mut fnm = FastNearfieldMethod::new(config)?;
 ///
-/// // Compute pressure field with O(n) complexity
-/// let pressure = fnm.compute_pressure_field(&grid, 5.0e6)?;
+/// // Compute pressure field with FFT acceleration (O(n log n))
+/// let pressure = fnm.compute_pressure_field_fft(&grid, 5.0e6)?;
 /// # Ok(())
 /// # }
 /// ```
@@ -133,6 +133,33 @@ impl FastNearfieldMethod {
         frequency: f64,
     ) -> KwaversResult<Array3<Complex<f64>>> {
         self.calculator.compute_pressure(grid, frequency, &self.basis)
+    }
+
+    /// Compute pressure field with FFT-based k-space convolution (O(n log n))
+    ///
+    /// # Arguments
+    ///
+    /// * `grid` - Computational grid for field calculation
+    /// * `frequency` - Ultrasound frequency (Hz)
+    ///
+    /// # Returns
+    ///
+    /// Complex pressure field (amplitude and phase)
+    ///
+    /// # Performance
+    ///
+    /// O(n log n) complexity using FFT-based angular spectrum method.
+    /// Provides 10-100× speedup for large arrays compared to O(n²) methods.
+    ///
+    /// # References
+    ///
+    /// Zeng & McGough (2008): FFT-accelerated angular spectrum propagation
+    pub fn compute_pressure_field_fft(
+        &mut self,
+        grid: &Grid,
+        frequency: f64,
+    ) -> KwaversResult<Array3<Complex<f64>>> {
+        self.calculator.compute_pressure_fft(grid, frequency, &self.basis)
     }
 
     /// Compute spatial impulse response using FNM
@@ -205,5 +232,24 @@ mod tests {
 
         let pressure = result.unwrap();
         assert_eq!(pressure.dim(), (30, 30, 30));
+    }
+
+    #[test]
+    fn test_pressure_field_fft_computation() {
+        let config = FnmConfiguration::default();
+        let mut fnm = FastNearfieldMethod::new(config).unwrap();
+        let grid = Grid::new(30, 30, 30, 0.001, 0.001, 0.001).unwrap();
+
+        let result = fnm.compute_pressure_field_fft(&grid, 5.0e6);
+        assert!(result.is_ok(), "FFT pressure field computation should succeed");
+
+        let pressure = result.unwrap();
+        assert_eq!(pressure.dim(), (30, 30, 30));
+        
+        // Check that field has non-zero values
+        let max_magnitude = pressure.iter()
+            .map(|c| c.norm())
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!(max_magnitude > 0.0, "Pressure field should have non-zero values");
     }
 }
