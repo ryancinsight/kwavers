@@ -17,6 +17,7 @@ pub mod sonoluminescence_detector;
 pub mod state;
 pub mod therapy; // Unified therapy physics module
 pub mod thermal; // Unified thermal physics module
+pub mod transducer; // NEW: Transducer field calculation (Fast Nearfield Method)
 pub mod traits;
 pub mod validation;
 pub mod wave_propagation; // NEW: Wave propagation with reflection and refraction
