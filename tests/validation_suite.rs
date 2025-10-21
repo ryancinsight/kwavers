@@ -30,7 +30,7 @@ mod plane_wave_validation {
         let c0 = 1500.0; // m/s
         let rho0 = 1000.0; // kg/m³
 
-        let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
+        let _grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
         let wavelength = c0 / freq;
         let k = 2.0 * PI / wavelength;
 
@@ -38,7 +38,7 @@ mod plane_wave_validation {
         let dt = 0.6 * dx / c0;
         let periods = 3.0;
         let t_end = periods / freq;
-        let nt = (t_end / dt) as usize;
+        let _nt = (t_end / dt) as usize;
 
         // Initialize pressure field with sinusoidal initial condition
         let mut pressure = Array3::zeros((nx, ny, nz));
@@ -234,7 +234,7 @@ mod thermal_effects_validation {
     #[test]
     fn test_cem43_thermal_dose() {
         // CEM43: Cumulative equivalent minutes at 43°C
-        let r: f64 = 0.5; // R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
+        let _r: f64 = 0.5; // R = 0.5 for T > 43°C, R = 0.25 for T < 43°C
         let test_cases = vec![
             (44.0, 10.0, 20.0), // 44°C for 10 min = 20 CEM43
             (42.0, 40.0, 10.0), // 42°C for 40 min = 10 CEM43
@@ -255,7 +255,7 @@ mod thermal_effects_validation {
     /// J. Appl. Physiol. 1, 93-122
     #[test]
     fn test_pennes_bioheat_steady_state() {
-        let k: f64 = 0.5; // Thermal conductivity W/(m·K)
+        let _k: f64 = 0.5; // Thermal conductivity W/(m·K)
         let w_b: f64 = 0.5e-3; // Blood perfusion rate 1/s
         let rho_b: f64 = 1050.0; // Blood density kg/m³
         let c_b: f64 = 3840.0; // Blood specific heat J/(kg·K)
@@ -287,7 +287,7 @@ mod edge_case_tests {
         };
 
         // Verify parameters are handled without panic
-        let model = KellerMiksisModel::new(params.clone());
+        let _model = KellerMiksisModel::new(params.clone());
         // Model creation succeeds without panic
 
         // Check collapse intensity scaling

@@ -196,6 +196,7 @@ impl TransferFunction {
 
     /// Turbo colormap (Google's improved rainbow, high dynamic range)
     /// Reference: Anton Mikhailov (2019) "Turbo, An Improved Rainbow Colormap"
+    #[allow(clippy::approx_constant)] // False positive: RGB values, not math constants
     fn turbo_colormap() -> Vec<[f32; 4]> {
         // Turbo: improved rainbow with better perceptual uniformity
         // High dynamic range, reduces rainbow artifacts
