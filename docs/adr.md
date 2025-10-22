@@ -18,6 +18,7 @@
 | **ADR-015: SSOT Configuration Consolidation** | ACCEPTED | Single source of truth, no version drift | None - pure improvement |
 | **ADR-016: Clippy Compliance Policy** | ACCEPTED | Zero warnings with `-D warnings` enforced | CI overhead vs code quality |
 | **ADR-017: Pattern Documentation Standard** | ACCEPTED | Literature citations for all approximations | Documentation time vs comprehension |
+| **ADR-018: Dead Code Allowance Policy** | ACCEPTED | Architectural fields allowed with justification | Pragmatism vs strict lint enforcement |
 
 ## Current Architecture Status
 
@@ -86,6 +87,34 @@
 **Impact**: Prevents unnecessary reimplementation, clarifies valid approximations vs genuine gaps
 **Standards**: IEC 62359:2017, IEEE standards, peer-reviewed papers from 1941-2012
 **Date**: Sprint 125
+
+#### ADR-018: Dead Code Allowance Policy
+**Decision**: Allow #[allow(dead_code)] for architecturally required but temporarily unused struct fields (Sprint 138)
+**Rationale**: Some struct fields are essential for complete type information, future extensibility, and API consistency, even when not actively accessed in current implementation.
+**Context**: Clippy compliance effort with `-D warnings` flag exposed 2 fields:
+- HybridAngularSpectrum::grid - Reserved for future grid-aware optimizations
+- PoroelasticSolver::material - Maintained for material property queries
+**Alternatives Considered**:
+1. Remove fields: ❌ Breaks API, reduces extensibility, loses type information
+2. Make fields public: ❌ Exposes internals unnecessarily, violates encapsulation
+3. Add dummy usage: ❌ Introduces code smell, misleading intent
+4. Allow with justification: ✅ Pragmatic, maintains architecture
+**Implementation**: 
+- Explicit #[allow(dead_code)] attribute on each field
+- Documentation comment explaining rationale
+- ADR entry for policy standardization
+**Trade-offs**:
+- Pros: Maintains complete types, enables extensibility, preserves API stability
+- Cons: Requires lint allowance, must be justified case-by-case
+**Guidelines**:
+1. Use sparingly - only for architectural necessity
+2. Document rationale in code comment
+3. Plan future usage - not indefinite
+4. Consider removal after 2 major versions if still unused
+**Metrics**: 2 instances across 756 modules (0.26% usage), both justified
+**Evidence**: docs/sprint_138_clippy_compliance_persona.md
+**Impact**: Zero warnings with pragmatic allowances, production-ready quality
+**Date**: Sprint 138
 
 #### ADR-009: Production Readiness Audit Framework
 **Decision**: Implement comprehensive audit per senior Rust engineer persona (Sprint 111)
