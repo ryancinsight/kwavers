@@ -3,6 +3,7 @@
 pub mod acoustic_wave;
 pub mod cavitation;
 pub mod elastic_wave;
+pub mod poroelastic; // Sprint 139: Poroelastic tissue with Biot theory
 pub mod streaming;
 pub mod viscosity;
 
